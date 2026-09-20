@@ -37,7 +37,12 @@ from backend.config import settings
 from backend.database import execute_with_retry, get_db
 from backend.services.billing import invalidate_access_cache, is_owner_email
 from backend.services.referral_codes import eigenaar_van_code
-from backend.services.referral_mail import email_van, mail_aanmelding, mail_beloning
+from backend.services.referral_mail import (
+    email_van,
+    mail_aanmelding,
+    mail_beloning,
+    mail_beloning_mislukt,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -351,14 +356,33 @@ def _sluit_af(beloning: dict, status: str, manier: str, bedrag: int, uitleg: str
 
 
 def _noteer_mislukking(beloning: dict, fout: Exception) -> None:
+    """Houdt bij hoe vaak het misging, en slaat alarm als het definitief is.
+
+    WAAROM HET ALARM: zonder deze mail is een beloning die blijft hangen het
+    stilste soort storing dat er is. De klant weet niet dat hem een maand is
+    beloofd die nooit kwam, en wij zien het alleen als we toevallig op de
+    beheerpagina kijken. Iets wat "voor altijd" moet werken heeft een stem
+    nodig op het moment dat het stopt met werken.
+    """
     db = get_db()
+    pogingen = (beloning.get("attempts") or 0) + 1
+    definitief = pogingen >= MAX_POGINGEN
     try:
         execute_with_retry(db.table("referral_rewards").update({
-            "attempts": (beloning.get("attempts") or 0) + 1,
+            "attempts": pogingen,
+            # 'failed' is eindstation: de herstelronde pakt alleen 'pending' op,
+            # dus deze overgang gebeurt precies één keer. Daarom hangt de mail
+            # eraan vast en kan hij niet elk uur opnieuw gaan.
+            "status": "failed" if definitief else "pending",
             "last_error": f"{type(fout).__name__}: {fout}"[:500],
         }).eq("referred_user_id", beloning["referred_user_id"]))
     except Exception:
         logger.exception("Kon de mislukte poging niet vastleggen")
+        return
+    if definitief:
+        mail_beloning_mislukt(beloning.get("referrer_user_id") or "?",
+                              beloning.get("referred_user_id") or "?",
+                              f"{type(fout).__name__}: {fout}")
 
 
 # ── De herstelronde ──────────────────────────────────────────────────────────

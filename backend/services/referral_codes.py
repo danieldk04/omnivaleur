@@ -34,6 +34,11 @@ _VERBODEN = {
 # Hoeveel eigen codes iemand mag hebben. Een hernoeming maakt een nieuwe code en
 # laat de oude staan, zodat een al gedeelde link blijft werken; zonder bovengrens
 # zou iemand de hele codenaamruimte kunnen opkopen.
+# Merknamen mogen nergens in een klantcode voorkomen, ook niet als deel van een
+# langer woord. Een link die eruitziet alsof hij van ons komt is een link
+# waarmee je namens ons kunt spreken.
+_MERKEN = ("omnivaleur", "revaleur", "crosslist", "support", "official", "admin")
+
 MAX_CODES_PER_GEBRUIKER = 5
 
 
@@ -51,6 +56,11 @@ def schoon_code(code: str | None) -> str | None:
     if not all(c.isalnum() or c in "-_" for c in code):
         return None
     if code in _VERBODEN:
+        return None
+    # Ook als deel van een langere code: omnivaleur.com/r/omnivaleur-support
+    # leest als een officiële link van ons, en dat is precies wat iemand met
+    # slechte bedoelingen zou kiezen.
+    if any(merk in code for merk in _MERKEN):
         return None
     return code
 
@@ -102,8 +112,12 @@ def zorg_voor_code(user_id: str, email: str | None) -> str:
         return bestaand[0]["code"]
 
     basis = _basis_uit_email(email)
+    # "friend" is de terugval voor een adres waar geen naam uit te halen valt.
+    # Die mag nooit kaal vergeven worden: dan bezit de eerste de ene mooie
+    # algemene link en krijgt de rest hem nooit meer.
+    kaal_mag = basis != "friend"
     for poging in range(12):
-        kandidaat = basis if poging == 0 else f"{basis}-{_toeval(3 if poging < 6 else 5)}"
+        kandidaat = basis if (poging == 0 and kaal_mag) else f"{basis}-{_toeval(3 if poging < 6 else 5)}"
         if _code_bestaat(db, kandidaat):
             continue
         try:

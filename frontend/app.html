@@ -805,6 +805,18 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <div style="font-size:12px;color:#047857;margin-top:3px" id="paywall-promo-detail"></div>
       </div>
       <button onclick="startCheckout()" style="width:100%;padding:14px;background:var(--grad);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px" id="paywall-cta">Start 7-day free trial →</button>
+      <!-- Wie op slot staat kan nergens meer heen in de app, ook niet naar het
+           verwijsscherm: dit venster ligt eroverheen. Juist deze groep kan met
+           één gedeelde link een maand terugverdienen, dus de link staat hier
+           zelf in plaats van achter een knop die hij niet kan bereiken. -->
+      <div id="paywall-referral" style="display:none;margin:14px 0 4px;padding-top:14px;border-top:1px solid var(--border);text-align:left">
+        <div style="font-size:13px;font-weight:700;margin-bottom:2px">Or earn a month free</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:8px">Invite a seller you know. The moment they subscribe you get a month free, and they start with 50% off.</div>
+        <div style="display:flex;gap:6px">
+          <input id="paywall-referral-link" readonly onclick="this.select()" style="flex:1;min-width:0;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;font-weight:600;background:#f8faff">
+          <button onclick="referralCopy(document.getElementById('paywall-referral-link').value, this)" style="background:#0f172a;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Copy</button>
+        </div>
+      </div>
       <button onclick="SESSIE.wisAlles(); sessionStorage.clear(); window.location.href='/'" style="width:100%;padding:10px;background:transparent;border:none;color:var(--muted);font-size:13px;cursor:pointer">Log out</button>
     </div>
   </div>
@@ -3552,6 +3564,7 @@ function renderBilling(data) {
     document.getElementById('paywall-msg').textContent = msg;
     document.getElementById('paywall-cta').textContent = cta;
     fillPromoBox('paywall-promo', lastPromo);
+    vulPaywallVerwijzing();
     paywall.style.display = 'flex';
   }
   function hidePaywall() { paywall.style.display = 'none'; }
@@ -3896,7 +3909,17 @@ function referralEmail() {
     + '&body=' + encodeURIComponent(referralShareText());
 }
 
+function vulPaywallVerwijzing() {
+  const vak = document.getElementById('paywall-referral');
+  const veld = document.getElementById('paywall-referral-link');
+  if (!vak || !veld) return;
+  if (!_referral || !_referral.ready) { vak.style.display = 'none'; return; }
+  veld.value = _referral.link;
+  vak.style.display = 'block';
+}
+
 function renderReferralTeaser() {
+  vulPaywallVerwijzing();
   const doel = document.getElementById('referral-teaser');
   if (!doel) return;
   const badgeUit = document.getElementById('nav-referral-badge');

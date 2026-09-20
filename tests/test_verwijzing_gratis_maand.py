@@ -554,3 +554,46 @@ def test_zonder_abonnementsrij_blijft_de_beloning_openstaan(rw, monkeypatch):
     beloning = db.data["referral_rewards"][0]
     assert beloning["status"] == "pending"
     assert beloning["attempts"] == 1
+
+
+# ── 7. Wat er gebeurt als het blijft misgaan ────────────────────────────────
+
+def test_na_zes_mislukte_pogingen_gaat_er_een_alarm_naar_daniel(rw, monkeypatch):
+    """Een beloning die blijft hangen is de stilste storing die er is: de klant
+    weet niet dat hem iets beloofd is dat nooit kwam. Na de laatste poging gaat
+    de rij op 'failed' en krijgt Daniel één mail."""
+    db = _basis({"user_id": AANBRENGER, "status": "active",
+                 "stripe_subscription_id": "sub_1", "stripe_customer_id": "cus_1"})
+    _zet_db(monkeypatch, rw, db)
+    monkeypatch.setattr(rw, "stripe", NepStripe(stuk=True))
+    alarmen = []
+    monkeypatch.setattr(rw, "mail_beloning_mislukt", lambda *a: alarmen.append(a) or True)
+
+    for _ in range(rw.MAX_POGINGEN):
+        rw.verwerk_beloning(VRIEND)
+
+    beloning = db.data["referral_rewards"][0]
+    assert beloning["attempts"] == rw.MAX_POGINGEN
+    assert beloning["status"] == "failed", "eindstation, anders blijft hij elk uur opnieuw proberen"
+    assert len(alarmen) == 1, "precies één mail, niet elk uur opnieuw"
+    assert alarmen[0][0] == AANBRENGER
+
+
+def test_een_opgegeven_beloning_wordt_niet_elk_uur_opnieuw_geprobeerd(rw, monkeypatch):
+    import asyncio
+
+    db = _basis({"user_id": AANBRENGER, "status": "active",
+                 "stripe_subscription_id": "sub_1", "stripe_customer_id": "cus_1"})
+    db.data["subscriptions"].append({"user_id": VRIEND, "status": "active",
+                                     "stripe_subscription_id": "sub_vriend"})
+    db.data["referral_rewards"].append({
+        "referrer_user_id": AANBRENGER, "referred_user_id": VRIEND, "code": "daniel",
+        "status": "failed", "attempts": rw.MAX_POGINGEN, "last_error": "iets ouds"})
+    _zet_db(monkeypatch, rw, db)
+    stripe = NepStripe({"status": "active", "customer": "cus_1"})
+    monkeypatch.setattr(rw, "stripe", stripe)
+
+    uitkomst = asyncio.run(rw.verwerk_openstaande_beloningen())
+
+    assert uitkomst["toegekend"] == 0
+    assert not stripe.tegoeden, "er hoort niets naar Stripe te gaan"

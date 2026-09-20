@@ -93,3 +93,23 @@ def test_onbruikbare_naam_wordt_geweigerd(codes, monkeypatch):
     with pytest.raises(ValueError):
         codes.kies_eigen_code("u1", "a b")
     assert db.data["referral_codes"] == []
+
+
+def test_een_code_mag_nooit_op_ons_lijken(codes):
+    """omnivaleur.com/r/omnivaleur-support leest als een officiële link van ons.
+    Dat is precies wat iemand met slechte bedoelingen zou kiezen."""
+    for naam in ("omnivaleur-support", "team-revaleur", "crosslist-team",
+                 "support-nl", "officialshop", "admin2"):
+        assert codes.schoon_code(naam) is None, naam
+    assert codes.schoon_code("daniel-resell") == "daniel-resell"
+
+
+def test_de_algemene_terugval_wordt_nooit_kaal_vergeven(codes, monkeypatch):
+    """Uit info@bedrijf.nl valt geen naam te halen. Zou de eerste zo iemand de
+    kale link /r/friend krijgen, dan is die voorgoed van hem."""
+    db = _db()
+    monkeypatch.setattr(codes, "get_db", lambda: db)
+    eerste = codes.zorg_voor_code("u1", "info@bedrijf.nl")
+    tweede = codes.zorg_voor_code("u2", "admin@winkel.be")
+    assert eerste.startswith("friend-") and eerste != "friend"
+    assert tweede.startswith("friend-") and tweede != eerste

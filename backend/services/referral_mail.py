@@ -108,3 +108,27 @@ Omnivaleur
 {CONTACT_EMAIL}
 """
     return bool(send_email(subject=onderwerp, body=tekst, to=adres, reply_to=CONTACT_EMAIL))
+
+
+def mail_beloning_mislukt(aanbrenger: str, aangebrachte: str, reden: str) -> bool:
+    """Alarm naar Daniel zelf. Niet naar de klant: die hoort pas iets als zijn
+    maand er echt is, niet dat er iets kapot is aan onze kant."""
+    from backend.config import settings
+    from backend.services.email import send_email
+
+    onderwerp = "Verwijzing: een gratis maand is niet toegekend"
+    tekst = f"""Een klant heeft iemand aangebracht die is gaan betalen, maar de gratis
+maand is na meerdere pogingen niet toegekend.
+
+Aanbrenger:   {aanbrenger} ({email_van(aanbrenger) or 'adres onbekend'})
+Aangebrachte: {aangebrachte}
+Laatste fout: {reden}
+
+Wat er nu NIET gebeurt: de herstelronde probeert het niet meer. De rij staat in
+referral_rewards op 'failed'. Zet hem op 'pending' met attempts op 0 zodra de
+oorzaak weg is, dan pakt de ronde van het volgende uur hem alsnog op.
+
+Deze mail komt één keer per beloning.
+"""
+    adres = settings.owner_email
+    return bool(send_email(subject=onderwerp, body=tekst, to=adres))
