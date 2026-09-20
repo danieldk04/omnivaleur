@@ -397,16 +397,37 @@
       return false;
     };
 
+    // EERST WACHTEN, DAN PAS OPGEVEN (20-09-2026, Blackbird Guitars). Hier werd
+    // één keer gekeken of Volgende/Publiceren aanklikbaar was, en zo niet: fout.
+    // Facebook houdt die knoppen óók uitgeschakeld zolang het de zojuist
+    // geüploade foto's nog verwerkt, en de uploadstap wacht maar op het EERSTE
+    // miniatuur. Bij 7 tot 19 foto's — de normale maat bij deze verkoper — is
+    // dat seconden later. Gemeten: 25 pogingen op rij "de knop bleef
+    // uitgeschakeld", nul geplaatste advertenties, en geen enkele klacht van
+    // Facebook zelf om het aan op te hangen.
+    const uit = (b) => !b || b.getAttribute("aria-disabled") === "true" || b.disabled;
+    const wachtOpKnop = async (re, ms) => {
+      const eind = Date.now() + ms;
+      let knop = knopMet(re);
+      while (Date.now() < eind && uit(knop)) {
+        await sleep(500);
+        knop = knopMet(re);
+      }
+      return knop;
+    };
+
     // FB Marketplace has a "Next"/"Volgende" step before "Publish"/"Publiceren".
-    if (clickByText(/^(volgende|next)$/i)) await sleep(1800);
-    const publiceer = knopMet(/^(publiceren|publish)$/i);
-    if (!publiceer) throw new Error("Publish/Volgende button not found (Facebook layout changed?)");
+    const volgende = await wachtOpKnop(/^(volgende|next)$/i, 30000);
+    if (volgende && !uit(volgende)) { volgende.click(); await sleep(1800); }
+    const publiceer = await wachtOpKnop(/^(publiceren|publish)$/i, 30000);
+    if (!publiceer) throw new Error(
+      "Publish/Volgende button not found (Facebook layout changed?)" + formulierstand());
     // EEN UITGESCHAKELDE KNOP IS GEEN PUBLICATIE (17-09-2026, Johan Kist). Facebook
     // houdt Publiceren uitgeschakeld zolang er een verplicht veld leeg is. Klikken
     // doet dan niets, en hieronder werd dat na 15 seconden toch "klaar".
-    if (publiceer.getAttribute("aria-disabled") === "true" || publiceer.disabled) {
-      throw new Error("Facebook did not publish this listing: its Publish button stayed disabled, "
-        + "which means a required field is still empty" + klachtenFb() + ". Nothing was published.");
+    if (uit(publiceer)) {
+      throw new Error("Facebook did not publish this listing: its Publish button stayed disabled for "
+        + "30 seconds" + klachtenFb() + formulierstand() + ". Nothing was published.");
     }
     publiceer.click();
 
