@@ -4018,6 +4018,57 @@ let _laatsteVerwijderpagina = "niet gekeken";
 // nu toe ALLEMAAL hetzelfde uit ("deleted_via_ad_page"), en dat vertelt niets.
 let _laatsteVerwijderDiag = [];
 
+// ── HET BEVESTIGVENSTER VAN MARKTPLAATS/2DEHANDS, OP ÉÉN PLEK ───────────────
+//
+// Er zijn twee verwijderroutes — via het overzicht en via de advertentiepagina
+// zelf — en allebei hadden hun eigen lijstje met JA-woorden. Die lijstjes waren
+// uit elkaar gegroeid: de route via het overzicht kende het kale "Ja", de route
+// via de advertentiepagina alleen "ja, verwijderen". Marktplaats zet er "Ja".
+//
+// Gemeten bij De Juiste Toon (20-09-2026, uit haar eigen diagnostiek): het
+// venster ging open met de knoppen ["", "Annuleren", "Ja"], er werd niets
+// geklikt ("clicked": false), het venster bleef gewoon openstaan en daarna zei
+// de controle terecht dat de advertentie er nog stond. Gevolg: vijf tapijten
+// die sinds 14-09 elke nacht opnieuw stukliepen, want een herplaatsing die zijn
+// oude advertentie niet weg krijgt, plaatst bewust geen nieuwe.
+//
+// Deze functie draait IN DE PAGINA (execInTab stuurt hem als tekst mee), dus
+// hij mag niets gebruiken van buiten: alles komt via zijn twee argumenten.
+const BEVESTIG_JA_BRON = "^(ja|yes|verwijder(en)?|ja,? verwijder(en)?|bevestig(en)?|yes,? delete|delete|remove|confirm|doorgaan|ok)\\b";
+const BEVESTIG_NEE_BRON = "^(annuleren|annuleer|cancel|nee|no|terug|back|sluiten|close|niet nu|later)\\b";
+
+function _bevestigInVenster(jaBron, neeBron) {
+  const JA = new RegExp(jaBron, "i");
+  const NEE = new RegExp(neeBron, "i");
+  // getClientRects in plaats van offsetParent: een venster staat vaak op
+  // position:fixed, en dan is offsetParent null terwijl de knop gewoon op het
+  // scherm staat.
+  const zichtbaar = (el) => !!el && el.getClientRects().length > 0
+    && !el.disabled && el.getAttribute("aria-disabled") !== "true";
+  const naam = (el) => ((el.textContent || "").replace(/\s+/g, " ").trim()
+    || (el.getAttribute("aria-label") || "").trim());
+  const venster = [...document.querySelectorAll('.ReactModalPortal, [role="dialog"], [aria-modal="true"]')]
+    .find((el) => el.getClientRects().length > 0 && (el.innerText || "").trim());
+  if (!venster) return { open: false };
+  const knoppen = [...venster.querySelectorAll('button, a[role="button"], [role="button"]')].filter(zichtbaar);
+  const labels = knoppen.map(naam).slice(0, 12);
+  const venstertekst = (venster.innerText || "").replace(/\s+/g, " ").trim().slice(0, 300);
+  const overig = knoppen.filter((b) => naam(b) && !NEE.test(naam(b)));
+  const kies =
+    // 1. De verkoopvraag ("Heb je dit verkocht via Marktplaats?") krijgt altijd
+    //    het antwoord NEE: ja klikken boekt een verkoop die er niet was.
+    knoppen.find((b) => /niet\s+verkocht/i.test(naam(b)))
+    // 2. De gewone bevestiging. Nooit een knop die annuleert, sluit of teruggaat.
+    || knoppen.find((b) => JA.test(naam(b)) && !NEE.test(naam(b)))
+    // 3. Laatste redmiddel: blijft er precies één knop over die niet annuleert,
+    //    en gaat dit venster niet over verkopen, dan is dat de bevestiging. Zo
+    //    blijft een hernoemde knop niet opnieuw jarenlang hangen.
+    || (!/verkocht|sold/i.test(venstertekst) && overig.length === 1 ? overig[0] : null);
+  if (!kies) return { open: true, clicked: false, labels, venstertekst };
+  kies.click();
+  return { open: true, clicked: true, picked: naam(kies), labels, venstertekst };
+}
+
 async function verwijderViaAdvertentiepagina(tabId, adUrl, platform) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   try {
