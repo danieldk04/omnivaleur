@@ -156,3 +156,39 @@ def test_de_korte_vraag_van_de_dashboardkaart_doet_geen_extra_werk(klant, monkey
     assert body["link"].endswith("/r/daniel")
     assert body["friends"] == []
     assert gevraagd == [], "geen enkele naam opgezocht"
+
+
+def test_de_zelftest_zegt_eerlijk_wat_er_ontbreekt(monkeypatch):
+    """De knop voor Daniel. Ontbreekt er een tabel of de coupon, dan moet dat er
+    staan; hij mag nooit groen zeggen omdat er toevallig niets stukging."""
+    from backend.api import referrals
+    from backend.services import referral_rewards
+
+    db = NepDb(referral_codes=[], referrals=[], referral_rewards=[])
+    monkeypatch.setattr(referrals, "get_db", lambda: db)
+    monkeypatch.setattr(referrals, "_is_owner_email", lambda e: True)
+    monkeypatch.setattr(referral_rewards, "vriendenkorting_coupon", lambda: None)
+
+    app = FastAPI()
+    app.include_router(referrals.router)
+    app.dependency_overrides[referrals.get_current_user_full] = lambda: GEBRUIKER
+    body = TestClient(app).get("/api/referrals/admin/zelftest").json()
+
+    assert body["alles_goed"] is False
+    coupon = [p for p in body["proeven"] if "Stripe" in p["naam"]][0]
+    assert coupon["ok"] is False
+
+    # en met een coupon erbij is alles groen
+    monkeypatch.setattr(referral_rewards, "vriendenkorting_coupon", lambda: "omnivaleur-vriendenkorting-50")
+    body = TestClient(app).get("/api/referrals/admin/zelftest").json()
+    assert body["alles_goed"] is True
+
+
+def test_de_zelftest_is_alleen_voor_de_eigenaar(monkeypatch):
+    from backend.api import referrals
+
+    monkeypatch.setattr(referrals, "_is_owner_email", lambda e: False)
+    app = FastAPI()
+    app.include_router(referrals.router)
+    app.dependency_overrides[referrals.get_current_user_full] = lambda: GEBRUIKER
+    assert TestClient(app).get("/api/referrals/admin/zelftest").status_code == 403

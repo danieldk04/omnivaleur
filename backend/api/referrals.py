@@ -468,3 +468,47 @@ def _klanten_die_aanbrengen(klant_codes: list[dict], verwijzingen: list[dict],
         "maanden_weggegeven": maanden,
         "beloningen_open": openstaand,
     }
+
+
+@router.get("/api/referrals/admin/zelftest")
+def zelftest(user=Depends(get_current_user_full)):
+    """Staat alles klaar? Eén knop, echte aanroepen, geen aannames.
+
+    Bestaat omdat de twee dingen die buiten de code liggen precies de twee
+    dingen zijn die stil kunnen ontbreken: de tabellen in Supabase en de
+    kortingscoupon bij Stripe. Zonder deze proef merk je dat pas als de eerste
+    aangebrachte klant zijn beloofde korting niet krijgt.
+    """
+    if not _is_owner_email(user.email):
+        raise HTTPException(status_code=403, detail="Not allowed")
+
+    from backend.services.referral_rewards import (
+        VRIENDENKORTING_PROCENT,
+        vriendenkorting_coupon,
+    )
+
+    db = get_db()
+    uitslag = []
+
+    def proef(naam: str, doe):
+        try:
+            uitslag.append({"naam": naam, "ok": True, "detail": doe()})
+        except Exception as e:
+            uitslag.append({"naam": naam, "ok": False, "detail": f"{type(e).__name__}: {e}"})
+
+    proef("Codetabel kent eigenaren", lambda: (
+        f"{len(execute_with_retry(db.table('referral_codes').select('code, kind, owner_user_id')).data or [])} code(s)"))
+    proef("Aanmeldingen zijn gekoppeld", lambda: (
+        f"{len(execute_with_retry(db.table('referrals').select('user_id, aanmelding_gemeld_at')).data or [])} aanmelding(en)"))
+    proef("Kasboek van de gratis maanden", lambda: (
+        f"{len(execute_with_retry(db.table('referral_rewards').select('referred_user_id, status')).data or [])} beloning(en)"))
+
+    def coupon():
+        code = vriendenkorting_coupon()
+        if not code:
+            raise RuntimeError("Stripe gaf geen coupon terug (staat de sleutel goed?)")
+        return f"{code} ({VRIENDENKORTING_PROCENT}% op de eerste maand)"
+
+    proef("Vriendenkorting bij Stripe", coupon)
+
+    return {"alles_goed": all(r["ok"] for r in uitslag), "proeven": uitslag}
