@@ -352,6 +352,10 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
 
     <h2>Hun links</h2>
     <div class="breed"><table id="cr-links"></table></div>
+
+    <h2>Klanten die klanten aanbrengen</h2>
+    <p style="color:#64748b;font-size:13px;margin:-6px 0 10px">Iedere klant heeft een eigen link. Brengt hij iemand binnen die gaat betalen, dan krijgt hij een maand gratis en betaalt die ander zijn eerste maand voor de helft. Hier gaat dus geen geld uit, maar omzet die je een maand later pas ziet.</p>
+    <div class="raster" id="cr-gebruikers"></div>
   </section>
 
   <section id="tab-systeem" hidden>
@@ -857,6 +861,21 @@ function toonCreators(d) {
       <td class="num">${getal(r.commissie_rijp)}</td>
       <td class="num">€${r.uitgegeven_eur}</td>
       <td class="num">${r.cac_eur ? '€' + r.cac_eur : ''}</td></tr>`);
+
+  // Klanten die elkaar aanbrengen staan bewust apart: daar gaat geen geld
+  // naartoe maar een gratis maand, en die twee bij elkaar optellen geeft een
+  // kostenplaatje dat nergens op slaat.
+  const g = d.gebruikers || {};
+  const gDoel = el('cr-gebruikers');
+  if (gDoel) gDoel.innerHTML =
+      kaart('Eigen links', getal(g.codes), 'klanten met een persoonlijke link')
+    + kaart('Kliks', getal(g.klikken), 'op klantlinks samen')
+    + kaart('Aanmeldingen', getal(g.aanmeldingen),
+            g.klikken ? Math.round(100 * g.aanmeldingen / g.klikken) + '% van de kliks' : 'nog geen kliks')
+    + kaart('Betalend', getal(g.betalend), 'binnengebracht door klanten', g.betalend ? 'op' : '')
+    + kaart('Maanden weggegeven', getal(g.maanden_weggegeven),
+            g.beloningen_open ? getal(g.beloningen_open) + ' nog niet gelukt' : 'alles toegekend',
+            g.beloningen_open ? 'af' : '');
 
   tabel('cr-links', ['Creator', 'Link die je deelt', 'Profiel'], d.creators,
     (r) => `<tr><td>${veilig(r.creator_name || r.code)}</td>

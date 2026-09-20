@@ -25,6 +25,19 @@ from backend.config import settings
 from backend.database import execute_with_retry, get_db
 from backend.api.deps import get_current_user_full
 from backend.services.billing import is_owner_email as _is_owner_email
+from backend.services.referral_codes import (
+    codes_van,
+    kies_eigen_code,
+    link_voor,
+    schoon_code,
+    zorg_voor_code,
+)
+from backend.services.referral_mail import email_van, maskeer
+from backend.services.referral_rewards import (
+    BETALEND,
+    vergeet_kortingsrecht,
+    verwerk_beloning,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,21 +48,11 @@ router = APIRouter(tags=["referrals"])
 COMMISSIE_NA_DAGEN = 60
 STANDAARD_BOUNTY_CENTS = 2500
 
-_CODE_MAX = 40
-
-
 def _schoon(code: str | None) -> str | None:
-    """Codes zijn kort, kleine letters, cijfers, streepje. Al het andere weigeren
-    we in plaats van op te schonen: een half opgeschoonde code koppelt stilletjes
-    aan de verkeerde creator."""
-    if not code:
-        return None
-    code = code.strip().lower()
-    if not code or len(code) > _CODE_MAX:
-        return None
-    if not all(c.isalnum() or c in "-_" for c in code):
-        return None
-    return code
+    """Zie backend/services/referral_codes.schoon_code. Hier alleen nog als naam,
+    zodat de regels op één plek staan: de app, het aanmelden en het toekennen
+    accepteren daardoor gegarandeerd dezelfde codes."""
+    return schoon_code(code)
 
 
 def registreer_verwijzing(user_id: str, code: str | None) -> None:
@@ -79,9 +82,15 @@ def registreer_verwijzing(user_id: str, code: str | None) -> None:
 
 
 def stempel_eerste_betaling(user_id: str) -> None:
-    """Zet first_paid_at zodra een verwezen gebruiker echt gaat betalen. Wordt
-    vanuit de Stripe-webhook aangeroepen. Eén keer stempelen: een latere
-    statuswijziging mag de klok niet opnieuw laten beginnen."""
+    """Zet first_paid_at zodra een verwezen gebruiker echt gaat betalen, en kent
+    meteen de gratis maand toe aan wie hem heeft aangebracht. Wordt vanuit de
+    Stripe-webhook aangeroepen.
+
+    Eén keer stempelen: een latere statuswijziging mag de commissieklok niet
+    opnieuw laten beginnen. Het toekennen gebeurt daarna WEL elke keer, want dat
+    is uit zichzelf al eenmalig (zie verwerk_beloning) en zo wordt een beloning
+    die de vorige keer niet lukte alsnog goed gezet.
+    """
     if not user_id:
         return
     try:
@@ -90,24 +99,33 @@ def stempel_eerste_betaling(user_id: str) -> None:
             db.table("referrals").select("user_id, first_paid_at").eq("user_id", user_id)
         )
         data = rij.data or []
-        if not data or data[0].get("first_paid_at"):
+        if not data:
             return
-        execute_with_retry(
-            db.table("referrals").update({
-                "first_paid_at": datetime.now(timezone.utc).isoformat()
-            }).eq("user_id", user_id)
-        )
-        logger.info("Eerste betaling gestempeld voor verwezen gebruiker %s", user_id)
+        if not data[0].get("first_paid_at"):
+            execute_with_retry(
+                db.table("referrals").update({
+                    "first_paid_at": datetime.now(timezone.utc).isoformat()
+                }).eq("user_id", user_id)
+            )
+            logger.info("Eerste betaling gestempeld voor verwezen gebruiker %s", user_id)
     except Exception:
         logger.exception("Kon eerste betaling niet stempelen voor %s", user_id)
+
+    # De vriendenkorting geldt alleen tot de eerste betaling; het onthouden
+    # antwoord klopt vanaf nu niet meer.
+    vergeet_kortingsrecht(user_id)
+
+    # Bewust buiten de try hierboven: ook als het stempelen mislukte hoort de
+    # aanbrenger zijn maand te krijgen. verwerk_beloning vangt zelf alles af.
+    verwerk_beloning(user_id)
 
 
 @router.get("/r/{code}")
 def volg_klik(code: str, request: Request) -> RedirectResponse:
-    """De link die een creator deelt. Telt de klik en stuurt door naar de
-    Nederlandse landingspagina met de code erin."""
+    """De link die iemand deelt. Telt de klik en stuurt door naar de
+    landingspagina met de code erin."""
     schoon = _schoon(code)
-    doel = f"{settings.app_url}/nl.html"
+    doel = f"{settings.app_url}/{_landingspagina(request)}"
     if not schoon:
         return RedirectResponse(url=doel, status_code=302)
 
@@ -126,6 +144,19 @@ def volg_klik(code: str, request: Request) -> RedirectResponse:
         logger.exception("Kon klik niet loggen voor code %s", schoon)
 
     return RedirectResponse(url=f"{doel}?ref={schoon}", status_code=302)
+
+
+def _landingspagina(request: Request) -> str:
+    """Nederlands of Engels, op de taalvoorkeur van de browser.
+
+    Klantlinks gaan van verkoper naar verkoper en blijven dus meestal binnen
+    Nederland en Vlaanderen, maar niet altijd. Eerder ging iedereen hoe dan ook
+    naar de Nederlandse pagina, en dan landt een Duitse of Poolse verkoper op
+    een tekst die hij niet leest.
+    """
+    talen = (request.headers.get("accept-language") or "").lower()
+    eerste = talen.split(",")[0].strip()
+    return "nl.html" if eerste.startswith("nl") else "index.html"
 
 
 class NieuweCode(BaseModel):
@@ -152,6 +183,7 @@ def maak_code(body: NieuweCode, user=Depends(get_current_user_full)):
         "profile_url": body.profile_url,
         "bounty_cents": body.bounty_cents,
         "fee_paid_cents": body.fee_paid_cents,
+        "kind": "creator",
         "active": True,
     }, on_conflict="code"))
     return {"ok": True, "code": code, "link": f"{settings.app_url}/r/{code}"}
@@ -187,6 +219,13 @@ def overzicht(user=Depends(get_current_user_full)):
     klik_per_code: dict[str, int] = {}
     for k in kliks:
         klik_per_code[k["code"]] = klik_per_code.get(k["code"], 0) + 1
+
+    # Klanten die elkaar aanbrengen staan in dezelfde codetabel, maar horen niet
+    # in dit lijstje: daar gaat geen geld naartoe maar een gratis maand. Zonder
+    # deze scheiding zou de commissieteller bedragen optellen die nooit betaald
+    # worden. Ze krijgen hun eigen blok onderaan.
+    klant_codes = [c for c in codes if c.get("owner_user_id")]
+    codes = [c for c in codes if not c.get("owner_user_id")]
 
     nu = datetime.now(timezone.utc)
     betalend_nu = {"active", "payment_processing"}
@@ -249,6 +288,7 @@ def overzicht(user=Depends(get_current_user_full)):
 
     return {
         "creators": regels,
+        "gebruikers": _klanten_die_aanbrengen(klant_codes, verwijzingen, abos, klik_per_code),
         "totaal": {
             "klikken": totaal["klikken"],
             "aanmeldingen": totaal["aanmeldingen"],
@@ -260,4 +300,171 @@ def overzicht(user=Depends(get_current_user_full)):
                         if totaal["betalend"] else None),
         },
         "commissie_na_dagen": COMMISSIE_NA_DAGEN,
+    }
+
+
+# ── De eigen verwijspagina in de app ─────────────────────────────────────────
+
+# Zoveel namen zoeken we hoogstens op voor het lijstje "wie heb ik uitgenodigd".
+# Elk adres is een aparte vraag aan Supabase; bij iemand met honderd uitnodigingen
+# zou de pagina anders staan te wachten op honderd rondjes.
+_MAX_VRIENDEN = 20
+
+
+def _stand_van(abo: dict | None) -> str:
+    """Waar staat een uitgenodigde vriend: betaalt hij, zit hij in proef, of is
+    hij afgehaakt."""
+    if not abo:
+        return "signed_up"
+    status = abo.get("status")
+    if status in BETALEND and abo.get("stripe_subscription_id"):
+        return "paying"
+    if status in ("trialing", "payment_processing"):
+        return "trial"
+    return "inactive"
+
+
+def _tegoed_eur(user_id: str) -> float | None:
+    """Het openstaande tegoed bij Stripe in euro's, of None als we het niet
+    kunnen weten. Bewust live opgehaald en niet zelf bijgehouden: Stripe haalt er
+    bij elke factuur vanaf, en een eigen telling zou daar binnen een maand naast
+    zitten."""
+    if not settings.stripe_secret_key:
+        return None
+    try:
+        import stripe
+
+        db = get_db()
+        rij = execute_with_retry(
+            db.table("subscriptions").select("stripe_customer_id").eq("user_id", user_id).limit(1)
+        )
+        klant = ((rij.data or [{}])[0] or {}).get("stripe_customer_id")
+        if not klant:
+            return None
+        saldo = stripe.Customer.retrieve(klant).get("balance") or 0
+        # Bij Stripe is een tegoed negatief.
+        return round(-saldo / 100, 2) if saldo < 0 else 0.0
+    except Exception:
+        logger.exception("Kon het Stripe-tegoed niet ophalen voor %s", user_id)
+        return None
+
+
+@router.get("/api/referrals/me")
+def mijn_verwijzingen(compact: bool = False, user=Depends(get_current_user_full)):
+    """Alles wat de verwijspagina in het dashboard laat zien.
+
+    `compact` is voor de kaart op het dashboard, die bij ELKE keer openen van de
+    app wordt opgehaald. Die heeft aan de link en de tellers genoeg. Het lijstje
+    namen en het tegoed kosten een vraag per vriend plus een aanroep naar Stripe;
+    dat hoort alleen te gebeuren als iemand het scherm zelf openslaat.
+    """
+    try:
+        code = zorg_voor_code(user.id, getattr(user, "email", None))
+        mijn_codes = [c["code"] for c in codes_van(user.id)]
+    except Exception as e:
+        # Niet stilletjes nullen tonen: een ontbrekende tabel ziet er anders uit
+        # als "er heeft nog nooit iemand geklikt".
+        raise HTTPException(
+            status_code=503,
+            detail=f"Referrals are not live yet ({e}). Run scripts/sql/referrals_gebruikers.sql in Supabase.",
+        )
+
+    db = get_db()
+    kliks = (execute_with_retry(
+        db.table("referral_clicks").select("code").in_("code", mijn_codes)).data) or []
+    verwijzingen = (execute_with_retry(
+        db.table("referrals").select("user_id, code, created_at, first_paid_at")
+        .in_("code", mijn_codes).order("created_at", desc=True)).data) or []
+    beloningen = (execute_with_retry(
+        db.table("referral_rewards").select("referred_user_id, status, method, granted_at")
+        .eq("referrer_user_id", user.id)).data) or []
+
+    ids = [v["user_id"] for v in verwijzingen]
+    abos = {}
+    if ids:
+        abos = {r["user_id"]: r for r in ((execute_with_retry(
+            db.table("subscriptions").select("user_id, status, stripe_subscription_id")
+            .in_("user_id", ids)).data) or [])}
+    per_vriend = {b["referred_user_id"]: b for b in beloningen}
+
+    vrienden = []
+    for v in ([] if compact else verwijzingen[:_MAX_VRIENDEN]):
+        stand = _stand_van(abos.get(v["user_id"]))
+        beloning = per_vriend.get(v["user_id"]) or {}
+        vrienden.append({
+            "name": maskeer(email_van(v["user_id"])),
+            "joined": (v.get("created_at") or "")[:10],
+            "status": stand,
+            "rewarded": beloning.get("status") == "granted",
+        })
+
+    standen = [_stand_van(abos.get(v["user_id"])) for v in verwijzingen]
+    maanden = sum(1 for b in beloningen if b.get("status") == "granted")
+    return {
+        "ready": True,
+        "compact": compact,
+        "code": code,
+        "link": link_voor(code),
+        "old_links": [link_voor(c) for c in mijn_codes[1:]],
+        "reward_months": 1,
+        "friend_discount_percent": 50,
+        "stats": {
+            "clicks": len(kliks),
+            "signups": len(verwijzingen),
+            "trial": sum(1 for s in standen if s == "trial"),
+            "paying": sum(1 for s in standen if s == "paying"),
+            "months_earned": maanden,
+        },
+        "credit_eur": None if compact else _tegoed_eur(user.id),
+        "friends": vrienden,
+        "more_friends": 0 if compact else max(0, len(verwijzingen) - len(vrienden)),
+    }
+
+
+class EigenCode(BaseModel):
+    code: str
+
+
+@router.post("/api/referrals/me/code")
+def kies_code(body: EigenCode, user=Depends(get_current_user_full)):
+    """Een eigen naam voor de link. De oude link blijft werken, zodat een link
+    die al in een appgroep of een video staat nooit doodloopt."""
+    try:
+        code = kies_eigen_code(user.id, body.code)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Referrals are not live yet ({e}). Run scripts/sql/referrals_gebruikers.sql in Supabase.",
+        )
+    return {"ok": True, "code": code, "link": link_voor(code)}
+
+
+def _klanten_die_aanbrengen(klant_codes: list[dict], verwijzingen: list[dict],
+                            abos: dict, klik_per_code: dict) -> dict:
+    """Wat het aanbrengen door klanten zelf oplevert en kost: aanmeldingen,
+    betalende klanten, en hoeveel gratis maanden daarvoor zijn weggegeven."""
+    eigen = {c["code"] for c in klant_codes}
+    mijn = [v for v in verwijzingen if v.get("code") in eigen]
+    betalend = [v for v in mijn if abos.get(v["user_id"]) in {"active", "payment_processing"}]
+
+    maanden = 0
+    openstaand = 0
+    try:
+        rijen = (execute_with_retry(
+            get_db().table("referral_rewards").select("status")).data) or []
+        maanden = sum(1 for r in rijen if r.get("status") == "granted")
+        openstaand = sum(1 for r in rijen if r.get("status") == "pending")
+    except Exception:
+        # Tabel bestaat nog niet: dan is er ook nog niets weggegeven.
+        logger.info("referral_rewards nog niet beschikbaar voor het overzicht")
+
+    return {
+        "codes": len(klant_codes),
+        "klikken": sum(klik_per_code.get(c, 0) for c in eigen),
+        "aanmeldingen": len(mijn),
+        "betalend": len(betalend),
+        "maanden_weggegeven": maanden,
+        "beloningen_open": openstaand,
     }

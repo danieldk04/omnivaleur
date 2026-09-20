@@ -57,6 +57,7 @@ def start_scheduler():
     from backend.services.shopify_orders import controleer_shopify_verkopen
 
     from backend.services.billing import expire_trials, send_trial_reminders, sync_proefperiode_sheet
+    from backend.services.referral_rewards import verwerk_openstaande_beloningen
     from backend.services.extension_offline import waarschuw_offline_extensies
     from backend.services.verkoop_reconciliatie import reconcileer_verkochte_artikelen
     from backend.services.verkoop_herinnering import herinner_onbevestigde_verkopen
@@ -251,6 +252,20 @@ def start_scheduler():
         timezone="Europe/Amsterdam",
         id="proefperiode_sheet_sync",
         replace_existing=True,
+    )
+    # De gratis maand voor wie een klant aanbracht hangt aan een Stripe-webhook.
+    # Komt die niet aan (uitrol, storing, gemiste poging), dan zou iemand zijn
+    # beloofde maand nooit krijgen en zou niemand het merken. Deze ronde kijkt
+    # elk uur zelf wie er betaalt en maakt het alsnog in orde. Hij stuurt ook de
+    # mail "er is iemand via jouw link binnengekomen".
+    _scheduler.add_job(
+        _off_the_request_loop(verwerk_openstaande_beloningen),
+        "interval",
+        hours=1,
+        id="verwijzingen_herstel",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
     )
     # Staat de computer van een klant uit terwijl er werk klaarstaat, dan weet
     # hij dat niet: hij kijkt niet op het dashboard. Elk uur overdag kijken we of

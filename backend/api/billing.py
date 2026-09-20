@@ -14,6 +14,11 @@ from backend.services.billing import (
     is_owner_email as _is_owner_email,
 )
 from backend.api.referrals import stempel_eerste_betaling
+from backend.services.referral_rewards import (
+    VRIENDENKORTING_PROCENT,
+    heeft_recht_op_vriendenkorting,
+    vriendenkorting_coupon,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -167,6 +172,17 @@ async def billing_status(user=Depends(get_current_user_full)):
             # draad, want de Stripe-client wacht blokkerend op antwoord en zou
             # anders de hele app laten stilstaan zolang die aanroep loopt.
             "promo": await asyncio.to_thread(find_active_promo),
+            # Door een vriend uitgenodigd en nog niet betaald: de eerste maand is
+            # half geld. Hier zodat het scherm dat kan tonen op het moment dat het
+            # telt, namelijk vlak voor het betalen. Het antwoord wordt vijf
+            # minuten onthouden, anders zou elke schermverversing een extra vraag
+            # aan de database zijn.
+            "referral_discount": (
+                {"percent_off": VRIENDENKORTING_PROCENT}
+                if status not in ("active", "payment_processing")
+                and await asyncio.to_thread(heeft_recht_op_vriendenkorting, user_id)
+                else None
+            ),
         }
     except Exception as e:
         import logging
@@ -291,7 +307,15 @@ def create_checkout(user=Depends(get_current_user_full)):
             metadata={"user_id": user_id},
         )
         promo = find_active_promo()
-        if promo:
+        # Is deze klant door een vriend binnengebracht, dan is de eerste maand
+        # half geld. Dat is de afspraak die in de uitnodiging staat, dus hij moet
+        # hier zonder code en zonder handwerk gebeuren.
+        vriendenkorting = vriendenkorting_coupon() if heeft_recht_op_vriendenkorting(user_id) else None
+        if vriendenkorting and ((promo or {}).get("percent_off") or 0) <= VRIENDENKORTING_PROCENT:
+            # Stripe staat maar één korting per afrekening toe. De hoogste wint,
+            # anders zou iemand met een uitnodiging slechter af zijn dan zonder.
+            session_args["discounts"] = [{"coupon": vriendenkorting}]
+        elif promo:
             # Korting meteen toepassen in plaats van hem laten typen: elke letter
             # die iemand moet overtypen is een reden om af te haken. Stripe staat
             # een vast kortingsveld en een invulvakje niet samen toe, dus de keuze
@@ -745,7 +769,10 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
             # Start de commissieklok pas als er echt betaald wordt, niet bij het
             # afronden van de proef.
             if stripe_sub["status"] == "active":
-                stempel_eerste_betaling(user_id)
+                # Buiten de lus: het stempelen kent ook de gratis maand toe en
+                # praat daarvoor met Stripe. Blokkerend werk op de webhooklus
+                # laat de hele server wachten.
+                await asyncio.to_thread(stempel_eerste_betaling, user_id)
 
     elif event["type"] in ("customer.subscription.updated", "customer.subscription.deleted"):
         stripe_sub = event["data"]["object"]
@@ -765,7 +792,7 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
             }).eq("stripe_subscription_id", stripe_sub_id).execute()))
             invalidate_access_cache(result.data[0]["user_id"])
             if nieuwe_status == "active":
-                stempel_eerste_betaling(result.data[0]["user_id"])
+                await asyncio.to_thread(stempel_eerste_betaling, result.data[0]["user_id"])
 
     elif event["type"] in ("invoice.paid", "invoice.payment_succeeded"):
         # De incasso is rond. Zet de rij weer op de echte Stripe-status (active)

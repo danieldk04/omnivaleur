@@ -705,6 +705,15 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       <span id="nav-notif-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;padding:0 5px;border-radius:9px;display:none;align-items:center;justify-content:center"></span>
     </div>
 
+    <!-- Verwijzen staat bewust in Main en niet onder Account: het is geen
+         instelling die je een keer nakijkt maar iets wat elke maand geld waard
+         is, en wat niemand opzoekt als het weggestopt staat. -->
+    <div class="nav-item" data-view="referral" onclick="showView('referral')">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 4.5a2.5 2.5 0 10-2.5 2.5H9V4.5zM11 7h2.5A2.5 2.5 0 1011 4.5V7zM3 8.5A1.5 1.5 0 014.5 7H9v3H3V8.5zM11 10V7h4.5A1.5 1.5 0 0117 8.5V10h-6zM4 11.5h5V17H5.5A1.5 1.5 0 014 15.5v-4zM11 17v-5.5h5v4a1.5 1.5 0 01-1.5 1.5H11z"/></svg>
+      <span>Earn 1 month free</span>
+      <span id="nav-referral-badge" style="display:none;margin-left:auto;background:var(--mint);color:#053b2c;font-size:10px;font-weight:800;min-width:18px;height:18px;padding:0 5px;border-radius:9px;align-items:center;justify-content:center"></span>
+    </div>
+
     <!-- Tools: one-off operations you reach for now and then, as opposed to the
          Main entries you live in. Import and the margin calculator used to be
          buttons hidden in the Items header, so you only found them if you were
@@ -883,6 +892,11 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
 
       <!-- Beginnen: vinkt af op wat er echt gebeurde. Zie frontend/onboarding.js. -->
       <div id="ob-checklist"></div>
+
+      <!-- Verwijzen. Wordt door renderReferralTeaser() gevuld en blijft leeg als
+           de server er niet over kan vertellen: een half kaartje met nullen erin
+           zou beweren dat er nooit iemand heeft geklikt. -->
+      <div id="referral-teaser"></div>
 
       <!-- Stats row -->
       <div class="stats" id="stats">
@@ -1875,6 +1889,12 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
               <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
               Manage your payment method or cancel from the customer portal. Invoices are listed below.
             </div>
+            <!-- De goedkoopste manier om 19,99 te besparen staat hier, naast het
+                 bedrag zelf. Dat is het moment waarop iemand erover nadenkt. -->
+            <div style="margin-top:12px;padding:12px 14px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+              <div style="font-size:12px;color:#065f46;font-weight:600">Want a free month? Invite a seller you know. When they subscribe, your next invoice is on us.</div>
+              <button class="btn btn-sm" style="background:#065f46;color:#fff;flex-shrink:0" onclick="showView('referral')">Get my link &rarr;</button>
+            </div>
           </div>
 
           <!-- Trial / no subscription state -->
@@ -1889,6 +1909,13 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <div style="background:#f8faff;border:1px solid #e0e7ff;border-radius:10px;padding:14px 16px;margin-bottom:16px">
               <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">Price after trial</div>
               <div style="font-weight:700;font-size:14px">€19.99 / month</div>
+            </div>
+            <!-- Uitgenodigd door een vriend: de helft van de eerste maand.
+                 Staat los van het actievak hierboven, want dat vertelt het
+                 verhaal van de betaalstoring en dat hoort hier niet. -->
+            <div id="billing-referral" style="display:none;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:14px 16px;margin-bottom:16px">
+              <div style="font-weight:700;font-size:14px;color:#065f46">50% off your first month</div>
+              <div style="font-size:12px;color:#047857;margin-top:3px">A friend invited you, so your first month is &euro;10.00 instead of &euro;19.99. It is applied automatically at checkout, no code needed. After that it is &euro;19.99 per month, cancel anytime.</div>
             </div>
             <div id="billing-promo" style="display:none;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:14px 16px;margin-bottom:16px">
               <div style="font-weight:700;font-size:14px;color:#065f46" id="billing-promo-title"></div>
@@ -1908,6 +1935,19 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
 
       </div>
     </div><!-- /view-prijs -->
+
+    <!-- ── VERWIJZEN ─────────────────────────────────────────────────── -->
+    <div id="view-referral" class="view">
+      <div style="max-width:760px">
+        <div class="view-header" style="margin-bottom:18px">
+          <h1>Earn 1 month free</h1>
+          <p>Every seller you bring in gives you a month on the house. They start with half off.</p>
+        </div>
+        <div id="referral-body">
+          <div style="color:var(--muted);padding:20px 0">Loading&hellip;</div>
+        </div>
+      </div>
+    </div><!-- /view-referral -->
 
     <!-- ── HELP VIEW ──────────────────────────────────────────────── -->
     <div id="view-help" class="view">
@@ -3332,7 +3372,7 @@ function showView(name) {
   // Nav-highlight via data-view (robuust: onafhankelijk van DOM-volgorde/aantal).
   const navName = NAV_PARENT[name] || name;
   document.querySelector('.nav-item[data-view="' + navName + '"]')?.classList.add('active');
-  const titles = { dashboard: 'Dashboard', items: 'Items', analytics: 'Analytics', berichten: 'Messages', calculator: 'Margin calculator', refresh: 'Refresh', import: 'Import listings', stale: 'Stale stock', help: 'Help', platforms: 'Platforms', preferences: 'Preferences', protections: 'Protections', prijs: 'Account' };
+  const titles = { dashboard: 'Dashboard', items: 'Items', analytics: 'Analytics', berichten: 'Messages', calculator: 'Margin calculator', refresh: 'Refresh', import: 'Import listings', stale: 'Stale stock', help: 'Help', platforms: 'Platforms', preferences: 'Preferences', protections: 'Protections', prijs: 'Account', referral: 'Earn 1 month free' };
   document.getElementById('topbar-title').textContent = titles[name] || name;
   // The view is already on screen at this point, so a failing renderer can only
   // leave that one screen incomplete — never blank the app. Report it plainly
@@ -3349,6 +3389,7 @@ function showView(name) {
     if (name === 'refresh') { renderRefreshView(); loadRelistStatus(); loadRelistDagen(); }
     if (name === 'import') { renderImportScanButtons(); loadImportCandidates(); }
     if (name === 'stale') { clearSelection(); renderStaleStock(); }
+    if (name === 'referral') { loadReferral(!_referral || !!_referral.compact); }
   } catch (e) {
     console.error('showView(' + name + ') render failed:', e);
     showToast('Something went wrong loading this screen — try refreshing the page.');
@@ -3529,6 +3570,12 @@ function renderBilling(data) {
 
   const ownerTools = document.getElementById('owner-tools');
   if (ownerTools) ownerTools.style.display = data.is_owner ? 'block' : 'none';
+
+  // Uitgenodigd door een vriend: de helft van de eerste maand. Alleen tonen
+  // zolang er nog niet betaald is — daarna is het geen aanbod meer maar een
+  // herinnering aan iets wat al gebeurd is.
+  const refBox = document.getElementById('billing-referral');
+  if (refBox) refBox.style.display = data.referral_discount ? 'block' : 'none';
 
   const { status, trial_ends_at, current_period_end } = data;
   // The server decides access; the panel only reflects it. graceLeft > 0 means
@@ -3785,6 +3832,253 @@ async function announcement(btn, dryRun) {
   btn.disabled = false; btn.textContent = label;
 }
 
+// ── Verwijzen: één maand gratis per vriend die klant wordt ───────────────
+//
+// De beloning valt pas als de vriend echt gaat betalen. Dat staat er met zoveel
+// woorden bij: iemand die denkt dat een aanmelding al genoeg is, voelt zich
+// bedrogen op het moment dat de maand uitblijft.
+let _referral = null;
+let _referralBezig = false;
+
+// `compact` haalt alleen wat de dashboardkaart nodig heeft. De volledige vraag
+// zoekt per vriend een naam op en vraagt het tegoed bij Stripe; dat hoort niet
+// bij elke keer dat iemand de app opent.
+async function loadReferral(force = false, compact = false) {
+  if (_referralBezig) return;
+  if (_referral && !force) { renderReferral(); renderReferralTeaser(); return; }
+  _referralBezig = true;
+  try {
+    const res = await apiFetch(`${API}/api/referrals/me${compact ? '?compact=1' : ''}`);
+    if (res.ok) {
+      _referral = await res.json();
+    } else {
+      const body = await parseJsonSafe(res).catch(() => ({}));
+      _referral = { ready: false, detail: body.detail || `server error ${res.status}` };
+    }
+  } catch (e) {
+    _referral = { ready: false, detail: e.message };
+  }
+  _referralBezig = false;
+  renderReferral();
+  renderReferralTeaser();
+}
+
+function referralShareText() {
+  const link = (_referral && _referral.link) || '';
+  return 'I use Omnivaleur to put my items on Marktplaats, 2dehands, Vinted, eBay and Facebook '
+       + 'in one go instead of typing everything five times. Use my link and your first month is '
+       + 'half price: ' + link;
+}
+
+// Kopiëren zonder clipboard-rechten (Safari in een oud tabblad, http op een
+// testadres) faalde stil: de knop zei "Copied" terwijl er niets in het plakbord
+// stond. Daarom altijd een zichtbare terugval.
+function referralCopy(tekst, btn, gelukt) {
+  const klaar = () => { if (btn) { const oud = btn.textContent; btn.textContent = gelukt || 'Copied'; setTimeout(() => { btn.textContent = oud; }, 1800); } };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(tekst).then(klaar).catch(() => window.prompt('Copy your link:', tekst));
+  } else {
+    window.prompt('Copy your link:', tekst);
+  }
+}
+
+function referralWhatsapp() {
+  window.open('https://wa.me/?text=' + encodeURIComponent(referralShareText()), '_blank', 'noopener');
+}
+
+function referralEmail() {
+  const onderwerp = 'This saves me hours every week';
+  window.location.href = 'mailto:?subject=' + encodeURIComponent(onderwerp)
+    + '&body=' + encodeURIComponent(referralShareText());
+}
+
+function renderReferralTeaser() {
+  const doel = document.getElementById('referral-teaser');
+  if (!doel) return;
+  const badgeUit = document.getElementById('nav-referral-badge');
+  if (!_referral || !_referral.ready) {
+    doel.innerHTML = '';
+    // Ook de badge opruimen: een "3" naast een scherm dat niets kan tonen is
+    // een belofte die nergens op slaat.
+    if (badgeUit) badgeUit.style.display = 'none';
+    return;
+  }
+
+  const s = _referral.stats || {};
+  const badge = document.getElementById('nav-referral-badge');
+  if (badge) {
+    // Alleen tellen wat al van jou is. Een badge die "3" zegt terwijl er nog
+    // niets verdiend is, is een loze belofte.
+    if (s.months_earned > 0) { badge.textContent = s.months_earned; badge.style.display = 'inline-flex'; }
+    else { badge.style.display = 'none'; }
+  }
+
+  const gehaald = s.months_earned
+    ? `<span style="color:#6ee7b7;font-weight:700">${s.months_earned} month${s.months_earned !== 1 ? 's' : ''} earned</span>`
+    : `<span style="color:rgba(255,255,255,.6)">No months earned yet</span>`;
+  const onderweg = s.trial
+    ? ` &middot; <span style="color:rgba(255,255,255,.75)">${s.trial} on trial right now</span>` : '';
+
+  doel.innerHTML = `
+    <div style="background:linear-gradient(135deg,#0f172a 0%,#1d4ed8 60%,#10b981 160%);border-radius:14px;padding:20px 22px;margin-bottom:22px;color:#fff;box-shadow:0 6px 24px rgba(29,78,216,.25)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div style="min-width:260px;flex:1">
+          <div style="font-size:17px;font-weight:800;letter-spacing:-.3px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:20px">&#127873;</span> Earn 1 month free
+          </div>
+          <div style="font-size:13px;color:rgba(255,255,255,.8);margin-top:4px;line-height:1.5">
+            Every seller who subscribes through your link gives you a free month. They get 50% off their first month.
+          </div>
+          <div style="font-size:12px;margin-top:8px">${gehaald}${onderweg}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;min-width:280px">
+          <div style="display:flex;gap:8px">
+            <input readonly value="${esc(_referral.link)}" onclick="this.select()"
+                   style="flex:1;min-width:0;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:600">
+            <button onclick="referralCopy(_referral.link, this)"
+                    style="background:#fff;color:#0f172a;border:none;border-radius:8px;padding:9px 16px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">Copy</button>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="referralWhatsapp()" style="flex:1;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">WhatsApp</button>
+            <button onclick="referralEmail()" style="flex:1;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">Email</button>
+            <button onclick="showView('referral')" style="flex:1;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">Details</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+const REFERRAL_STANDEN = {
+  paying:    { label: 'Subscribed', kleur: '#166534', bg: 'var(--green-bg)' },
+  trial:     { label: 'On trial',   kleur: '#1e40af', bg: 'var(--blue-bg)' },
+  signed_up: { label: 'Signed up',  kleur: '#92400e', bg: '#fef3c7' },
+  inactive:  { label: 'Not active', kleur: 'var(--muted)', bg: '#f1f5f9' },
+};
+
+function renderReferral() {
+  const doel = document.getElementById('referral-body');
+  if (!doel) return;
+  // Het korte antwoord van de dashboardkaart heeft geen namen en geen tegoed;
+  // die staan hier op het scherm zelf, dus wachten we op het volledige.
+  if (!_referral || _referral.compact) { doel.innerHTML = '<div style="color:var(--muted);padding:20px 0">Loading&hellip;</div>'; return; }
+
+  if (!_referral.ready) {
+    doel.innerHTML = `
+      <div class="card" style="padding:20px 22px">
+        <div style="font-weight:700;margin-bottom:6px">This page is not live yet</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6">${esc(_referral.detail || 'Unknown reason')}</div>
+        <button class="btn btn-outline btn-sm" style="margin-top:14px" onclick="loadReferral(true)">Try again</button>
+      </div>`;
+    return;
+  }
+
+  const s = _referral.stats || {};
+  const tegoed = _referral.credit_eur;
+  const vrienden = _referral.friends || [];
+
+  const tegoedRegel = (tegoed && tegoed > 0)
+    ? `<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:14px 16px;margin-bottom:18px">
+         <div style="font-weight:700;color:#065f46;font-size:14px">&euro;${tegoed.toFixed(2).replace('.', ',')} credit on your account</div>
+         <div style="font-size:12px;color:#047857;margin-top:3px">It comes off your next invoice automatically. You do not have to do anything.</div>
+       </div>` : '';
+
+  const rijen = vrienden.length ? vrienden.map(v => {
+    const st = REFERRAL_STANDEN[v.status] || REFERRAL_STANDEN.signed_up;
+    return `<tr>
+      <td style="font-weight:600">${esc(v.name)}</td>
+      <td style="color:var(--muted)">${esc(v.joined)}</td>
+      <td><span class="status-pill" style="background:${st.bg};color:${st.kleur}">${st.label}</span></td>
+      <td style="text-align:right">${v.rewarded ? '<span style="color:var(--green);font-weight:700">+1 month</span>' : '<span style="color:var(--muted)">&mdash;</span>'}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="4" style="color:var(--muted);padding:18px 0">Nobody has used your link yet. Send it to one seller you know and see what happens.</td></tr>`;
+
+  doel.innerHTML = `
+    ${tegoedRegel}
+    <div class="card" style="margin-bottom:20px">
+      <div style="padding:20px 22px">
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px">Your personal link</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">
+          Share this with sellers you know. When one of them becomes a paying customer, you get a month free. There is no limit on how many.
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input readonly value="${esc(_referral.link)}" onclick="this.select()"
+                 style="flex:1;min-width:220px;border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-size:13px;font-weight:600;background:#f8faff">
+          <button class="btn btn-primary" onclick="referralCopy(_referral.link, this)">Copy link</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="referralWhatsapp()">Share on WhatsApp</button>
+          <button class="btn btn-outline btn-sm" onclick="referralEmail()">Share by email</button>
+          <button class="btn btn-outline btn-sm" onclick="referralCopy(referralShareText(), this, 'Message copied')">Copy message</button>
+        </div>
+        ${(_referral.old_links || []).length ? `<div style="font-size:11px;color:var(--muted);margin-top:12px">Your older links still work: ${(_referral.old_links).map(l => esc(l)).join(', ')}</div>` : ''}
+        <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
+          <div style="font-size:12px;font-weight:700;margin-bottom:6px">Want your own name in the link?</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span style="font-size:13px;color:var(--muted)">omnivaleur.com/r/</span>
+            <input id="referral-code-input" value="${esc(_referral.code)}" maxlength="40"
+                   style="width:170px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;font-weight:600">
+            <button class="btn btn-outline btn-sm" onclick="saveReferralCode(this)">Save</button>
+            <span id="referral-code-status" style="font-size:12px;color:var(--muted)">Letters, numbers, - and _. Your old link keeps working.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:20px">
+      <div class="stat"><div class="stat-label">Clicks</div><div class="stat-value">${s.clicks || 0}</div></div>
+      <div class="stat"><div class="stat-label">Signed up</div><div class="stat-value">${s.signups || 0}</div></div>
+      <div class="stat"><div class="stat-label">Subscribed</div><div class="stat-value">${s.paying || 0}</div></div>
+      <div class="stat"><div class="stat-label">Months earned</div><div class="stat-value" style="color:var(--green)">${s.months_earned || 0}</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header"><h2>Who used your link</h2></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Who</th><th>Joined</th><th>Status</th><th style="text-align:right">Your reward</th></tr></thead>
+          <tbody>${rijen}</tbody>
+        </table>
+      </div>
+      ${_referral.more_friends ? `<div style="padding:10px 22px 16px;font-size:12px;color:var(--muted)">And ${_referral.more_friends} more.</div>` : ''}
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h2>How it works</h2></div>
+      <div style="padding:18px 22px;font-size:13px;line-height:1.7;color:var(--text)">
+        <div style="display:flex;gap:12px;margin-bottom:12px"><span style="font-weight:800;color:var(--blue)">1.</span>
+          <span>You send your link. We count the click, so you can see whether anyone is actually opening it.</span></div>
+        <div style="display:flex;gap:12px;margin-bottom:12px"><span style="font-weight:800;color:var(--blue)">2.</span>
+          <span>They sign up and start their free trial. Their first month is 50% off, applied automatically. You get an email when someone comes in through your link.</span></div>
+        <div style="display:flex;gap:12px;margin-bottom:12px"><span style="font-weight:800;color:var(--blue)">3.</span>
+          <span>The moment they pay their first invoice, your free month is added. If you are already paying, it lands as credit and your next invoice is zero. If you are still on trial, your trial runs a month longer.</span></div>
+        <div style="color:var(--muted);font-size:12px;border-top:1px solid var(--border);padding-top:12px">
+          The reward is tied to their first payment, not to their signup, so a fake account earns nothing. You will never see their email address in full.
+        </div>
+      </div>
+    </div>`;
+}
+
+async function saveReferralCode(btn) {
+  const veld = document.getElementById('referral-code-input');
+  const uit = document.getElementById('referral-code-status');
+  if (!veld || !uit) return;
+  const gewenst = veld.value.trim();
+  if (!gewenst || (_referral && gewenst === _referral.code)) { uit.textContent = 'That is already your link.'; return; }
+  btn.disabled = true; const oud = btn.textContent; btn.textContent = 'Saving…';
+  try {
+    const res = await apiFetch(`${API}/api/referrals/me/code`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: gewenst }),
+    });
+    const body = await parseJsonSafe(res);
+    if (!res.ok) { uit.textContent = body.detail || 'Could not save that link.'; uit.style.color = '#b91c1c'; }
+    else { uit.textContent = 'Saved. Your old link keeps working.'; uit.style.color = 'var(--green)'; await loadReferral(true); }
+  } catch (e) {
+    uit.textContent = e.message; uit.style.color = '#b91c1c';
+  }
+  btn.disabled = false; btn.textContent = oud;
+}
+
 function renderTrialBanner(data) {
   const banner = document.getElementById('trial-banner');
   if (!banner) return;
@@ -3805,7 +4099,9 @@ function renderTrialBanner(data) {
             ${days > 0 ? `${days} day${days !== 1 ? 's' : ''} left in your free trial` : 'Your free trial expires today'}
           </div>
           <div style="font-size:12px;color:${urgent ? '#b45309' : '#3b82f6'};margin-top:1px">
-            ${promoLine(data.promo) || 'Activate Pro to keep full access · €19.99/month'}
+            ${data.referral_discount
+              ? `A friend invited you: 50% off your first month, €10.00 instead of €19.99`
+              : (promoLine(data.promo) || 'Activate Pro to keep full access · €19.99/month')}
           </div>
         </div>
       </div>
@@ -10151,6 +10447,9 @@ if (_urlParams.get('billing') === 'success' || _urlParams.get('billing') === 'ca
 }
 loadAll().then(() => { if (window.location.hash === '#platforms') renderPlatforms(); });
 loadBillingStatus();
+// De verwijskaart hoort meteen op het dashboard te staan, niet pas nadat
+// iemand toevallig op het verwijsscherm is geweest.
+loadReferral(false, true);
 pollActivity();
 loadNotifications();
 loadExtensionStatus();
