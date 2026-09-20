@@ -4836,23 +4836,10 @@ async function bgDeleteMp2dh(job, serverUrl) {
     // user's account.
     const CONFIRM_STEPS = 3; // MP has added follow-up screens before; handle a short chain
     for (let step = 0; step < CONFIRM_STEPS; step++) {
-      const res = await execInTab(tabId, () => {
-        // .ReactModalPortal is the real dialog root. Never match on <body>.
-        const modal = [...document.querySelectorAll('.ReactModalPortal, [role="dialog"], [aria-modal="true"]')]
-          .find(el => el.getClientRects().length > 0 && (el.innerText || "").trim());
-        if (!modal) return { open: false };
-        const buttons = [...modal.querySelectorAll('button, a[role="button"]')]
-          .filter(b => !b.disabled && (b.textContent || "").trim());
-        const labels = buttons.map(b => b.textContent.trim().replace(/\s+/g, " "));
-        const pick =
-          // Step 1: the "sold via this platform?" question — decline it.
-          buttons.find(b => /niet\s+verkocht/i.test(b.textContent)) ||
-          // Any follow-up screen: a plain confirm. "annuleren"/"terug" excluded.
-          buttons.find(b => /^(ja|verwijder(en)?|bevestig(en)?|doorgaan|ok)\b/i.test(b.textContent.trim()));
-        if (!pick) return { open: true, clicked: false, labels };
-        pick.click();
-        return { open: true, clicked: true, picked: pick.textContent.trim(), labels };
-      });
+      // Dezelfde keuze als de route via de advertentiepagina, uit dezelfde
+      // functie — daar zat het gat: twee lijstjes JA-woorden die uit elkaar
+      // groeiden. Zie _bevestigInVenster.
+      const res = await execInTab(tabId, _bevestigInVenster, [BEVESTIG_JA_BRON, BEVESTIG_NEE_BRON]);
 
       if (!res || !res.open) break; // dialog gone — either answered, or none appeared
       if (!res.clicked) {
