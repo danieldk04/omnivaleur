@@ -55,3 +55,9 @@ create index if not exists referral_rewards_status_idx on referral_rewards (stat
 -- Dichtzetten, net als de andere verwijstabellen: alleen de service_role-sleutel
 -- mag erbij. Hier staat wat er aan gratis maanden is weggegeven.
 alter table referral_rewards enable row level security;
+
+-- Supabase bewaart een kopie van het tabellenschema voor zijn API. Zonder deze
+-- regel blijft die kopie nog even de oude situatie kennen ("Could not find the
+-- table 'public.referral_rewards' in the schema cache"), ook al staat alles er.
+-- Dit duwt die kopie meteen bij.
+notify pgrst, 'reload schema';
