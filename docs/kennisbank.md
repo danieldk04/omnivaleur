@@ -17,6 +17,97 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## facebook-marketplace-beta
+
+*20-09-2026 — "Facebook Marketplace is a beta best-effort extension platform; selectors unverified, account-ban risk"*
+
+Facebook Marketplace was added (2026-07-18) as a **beta, best-effort** extension platform, wired end-to-end like Vinted:
+- extension: `extension/content/facebook.js` (create happy-path + best-effort delete), `background.js` create/delete URLs + `EXTENSION_PLATFORMS`, manifest host-permission + content-script match (shipped in v1.0.102)
+- backend: `crosslist.py` → `EXTENSION_PLATFORMS`, `_PLATFORM_REQUIRED["facebook"] = ["category"]`, `_EXTENSION_DELIST_PLATFORMS`
+- frontend `app.html`: platform lists, labels, `📘` icon, margin calc, filter, mark-active, publish checkboxes, plus `BETA_PLATFORMS` risk warnings
+
+**Verified live (2026-07-18, NL account, read-only inspection):**
+- The create form (`/marketplace/create/item`) is fully localised. Required fields carry Dutch aria-labels: **Titel, Prijs, Categorie, Staat**; flow button is **Volgende** (not "Publish" — final step is "Publiceren"). "Staat" options: **Nieuw / Gebruikt - zo goed als nieuw / Gebruikt - in goede staat / Gebruikt - in redelijke staat**. facebook.js now matches NL+EN for all of these (v1.0.104).
+- FB gates the form behind a one-time **DMA/GDPR consent** (`/privacy/consent?flow=fb_dma_marketplace`) and can show `/checkpoint`. facebook.js loads on those URLs too and reports a clear job error instead of hanging (v1.0.103).
+
+**Selector mechanics (verified live, v1.0.105 — this is the crux):**
+- Titel/Prijs `<input>` and Categorie/Staat comboboxes have **NO aria-label/placeholder**. Their accessible name comes from the **wrapping `<label>`** (`<label><span>Titel</span><input></label>`). So field-finding MUST read `el.closest('label').textContent`, not aria-label. (First symptom of getting this wrong: "only condition fills" — because Staat's own matching happened to work while title/price/category didn't.)
+- Category is a **hierarchical tree of plain clickable `<div>`s (role=null), no free-text search** — not role=option. Match option nodes by exact text across a broad selector (div/span/li/a), innermost-first, then click. The flat clothing leaves **"Herenkleding en -schoenen" / "Dameskleding en -schoenen"** are directly selectable; map by gender. Generic fallback "Kleding en accessoires".
+- `typeInto` via the native value setter + input/change event sticks in FB's React inputs (verified).
+- **Price is INTEGER-ONLY** (verified live, NL). The field rounds whatever you type (29,50→€30, 19,95→€20, 1234,56→€1235) AND reads a "." as a thousands separator ("29.99"→2999 — the original "prijs klopt niet" bug). Fix (v1.0.106): type the rounded whole-euro amount with NO separator (`String(Math.round(price))`) — plain "30"/"1235" render as "€ 30"/"€ 1.235".
+- **Beschrijving is a `<textarea>` that only mounts AFTER a category is picked** (it's a clothing-specific field, alongside Grootte/Merk). A single findField right after the condition combo could miss it → description stayed empty while everything else filled. Fix (v1.0.106): poll (`waitForField`) until it mounts.
+- **Photo upload mechanism works** via DataTransfer: set the image `input[type=file]` (first of 3 — accept `image/*`, the others are video and a generic `file`), `.files`, dispatch change → FB renders a `blob:` preview `<img>`. Confirm success by waiting for a `blob:` img (NOT scontent — FB's own profile/chrome imgs are scontent). If photos were provided but no blob preview appears, throw (likely cross-origin fetch block on the image host) instead of publishing photoless. Whether real Supabase photo_urls fetch cleanly from facebook.com context is still UNconfirmed end-to-end.
+
+**Category mapping — non-clothing gap fixed (v1.0.107, 2026-07-19):**
+- FB has NO numeric category IDs; it's a flat click-list matched by exact visible text. `fbCategoryCandidates()` originally handled ONLY clothing (men/women), so every `games ...` / `electronics ...` item (Daniel's whole non-clothing catalog) fell through to "Kleding en accessoires" — wrong category + wrong (clothing) attribute fields. Fixed: non-clothing prefixes are now mapped BEFORE the gender logic.
+- **VERIFIED live (NL account, read-only DOM inspection of `/marketplace/create/item`):** FB top-level leaves that are directly selectable — **games → "Videogames"**, **electronics → "Elektronica en computers"** (both mount a Beschrijving field just like the clothing leaves; Videogames also mounts optional Platform/Genre/ESRB/Merk which we leave empty). Full top-level list also includes: Huis en tuin, Gereedschap, Meubels, Huishouden, Tuin, Apparaten, Amusement, Videogames, Boeken/films/muziek, Kleding en accessoires, Dameskleding en -schoenen, Herenkleding en -schoenen, Elektronica, Elektronica en computers, Mobiele telefoons, Speelgoed en spellen, Sport en buitenleven, Muziekinstrumenten, Antiek en verzamelobjecten, Voertuigen, Overig.
+- The create form loaded with NO consent gate this session (already granted on this account).
+
+**Publish + delete flow — VERIFIED end-to-end via a real test publish (NL account, 2026-07-19, item deleted right after):**
+- A full publish SUCCEEDED: photo (via canvas→File→DataTransfer, no external fetch) → Titel/Prijs(€5)/Categorie=Videogames/Staat/Beschrijving → **Volgende** advances to `/marketplace/create/item?step=audience` → **Publiceren**. So the two-step Volgende→Publiceren flow is real and works.
+- **Publish redirect (BUG fixed):** after Publiceren FB redirects to **`/marketplace/you/selling`**, NOT `/marketplace/item/{id}`, and the new listing sits "in beoordeling" with NO public item URL. The old `publishAndCapture` waited only for `/item/{id}` → burned the 15s timeout and always returned null. Fixed to treat the `/you/selling` redirect as success and capture an id only if one appears (usually none). Consequence: `platform_listing_id` is normally null, so delete jobs fall back to the `/you/selling` URL (see getDeleteUrl in background.js).
+- **Delete is a THREE-click flow (BUG fixed):** on `/you/selling` the card's "..." menu → **"Advertentie verwijderen"** → confirm **"Verwijderen"** → a SECOND survey **"Heb je dit artikel verkocht?"** (radio: Ja verkocht op FB / Ja ergens anders / Nee, niet verkocht / Ik geef liever geen antwoord) → **Volgende**. Old `deleteListingFb` (a) matched `/^verwijder/` which never hit "Advertentie verwijderen", (b) used the FIRST menu on the page (could delete the WRONG listing since /you/selling lists all items), and (c) skipped the survey step. Rewritten to scope to the card by exact title, match "verwijder" anywhere, and complete the survey. Delete VERIFIED to fully remove the listing (empty state after).
+- Photo upload via DataTransfer CONFIRMED working (blue test image rendered in thumbnail + preview). The blob:-preview check can be too fast; FB may render the thumbnail slightly later.
+
+**Fotobewijs — blob: bestaat NIET meer (v1.0.139, 2026-07-29, live geverifieerd):**
+- De create-pagina bevat **nul `<img>`-elementen** tot er een foto gekozen is. Zodra dat gebeurt uploadt FB direct naar zijn eigen CDN en rendert `scontent-*.fbcdn.net` met `alt="Advertentiefoto"`/`"Productfoto"`. Er is **geen `blob:`-preview** — de eerdere notitie hierboven klopt niet meer.
+- Dit brak alles: de Marktplaats-herschrijving van `uploadPhotos` (shared.js) gooit sinds v1.0.13x een fout als er geen thumbnail verschijnt, en zocht alleen naar `blob:`/MP/Vinted-hosts. Op Facebook wachtte hij dus 45s, gooide, en `fillForm` stierf **vóór het eerste veld** — de melding "er wordt niks ingevuld".
+- Fix: `uploadPhotos(urls, { thumbSelector })` accepteert nu een platform-eigen selector; facebook.js geeft `FB_PHOTO_THUMBS` mee. Matchen op `fbcdn.net` is veilig omdat de baseline nul is en uploadPhotos voor/na vergelijkt. `waitForPhotoPreview` is verwijderd (dubbelop).
+- Live bevestigd na de fix: foto + Titel + Prijs (€ 30) + Categorie (Videogames) + Staat + Beschrijving vullen allemaal. Selectors voor alle velden zijn dus nog steeds goed — het zat puur in de fotocontrole.
+- **Les:** `shared.js` is gedeeld met MP/2dehands/Vinted. Elke verscherping daar (throw i.p.v. return false, hardere verificatie) kan Facebook stilletzwijgend slopen, want FB's DOM lijkt op geen van de andere. Draai na elke shared.js-wijziging de veldcontrole op het live FB-formulier.
+
+**Key caveats / How to apply:**
+- A full **dry-run of field-filling** (title/price/category/condition) passed on the live form, but an actual **publish (Volgende→Publiceren) and the post-publish URL capture + delete flow were NOT executed** — still unproven. Pin any remaining issues from `[Omnivaleur]` console output of a real publish.
+- Facebook obfuscates markup (rotating class names) and detects automation — still best-effort, still account-ban risk.
+- Real **account-ban risk** for the seller — this is surfaced in the UI as an explicit beta warning; keep that warning whenever touching this platform. Advise a separate FB account.
+- Facebook is create-first; auto-delist on sale is wired but best-effort. No translation (uses the item's own NL text). No per-platform `price_facebook` column — falls back to base `price`.
+- See "extension-release-bump-version" and "extension-version-floor" for the build/version rules, and "deploy-pipeline" for going live.
+
+**"Klaar" zonder bevestiging (17-09-2026, Johan Kist, opgelost in 1.0.338).**
+`publishAndCapture` gaf na 15 seconden ALTIJD `{id:null}` terug, ook als Facebook
+op het formulier bleef staan of Publiceren uitgeschakeld was. Johan kreeg acht keer
+"done" en de server zette elke rij op rood ("returned no platform_listing_id"),
+ook de echte: niemand kon geslaagd van mislukt onderscheiden. Sinds 1.0.338:
+uitgeschakelde knop of 45 s op het formulier = JOB_ERROR met wat Facebook zelf
+zegt; alleen weg van het formulier (`/you/selling` of `/item/{id}`) = JOB_DONE met
+`bevestigd`. Op `/you/selling` wordt het nummer uit de kaart met de titel gehaald,
+en alleen uit een blok met precies één advertentielink (anders is het de lijst).
+De server (`_rond_publicatie_af`) zet Facebook met `bevestigd` op active zonder
+nummer; zonder `bevestigd` (oude kopie) rood met een melding die zegt wat te doen.
+Van 15-08 tot 17-09-2026 had verder niemand via ons naar Facebook geplaatst:
+elke Facebook-regel in de database was van Johan. Proef:
+`tests/facebook-bevestiging-test.js`, `tests/test_facebook_bevestiging.py`.
+Nog niet live gezien: of `/you/selling` na publiceren een link per kaart toont.
+
+**MAXIMAAL TIEN FOTO'S (20-09-2026, gemeten op het echte formulier).**
+Facebook neemt er tien. Bood je er meer aan via de DataTransfer-truc, dan
+weigert hij de HELE selectie: het formulier zegt "Foto's · 19 / 10", zet er
+`[role=alert]` "Je kunt maximaal 10 foto's selecteren" bij, en **Volgende blijft
+uitgeschakeld** — er verschijnt dan nooit een knop Publiceren. Wij boden er tot
+twintig aan (`slice(0, 20)`); 19 van de 25 mislukte plaatsingen bij Blackbird
+Guitars hadden 11 tot 20 foto's. Sinds 1.0.344 `slice(0, FB_MAX_FOTOS=10)`, plus
+een directe stop als Facebook alsnog over het aantal klaagt. Proef:
+`tests/facebook-tien-fotos-test.js`.
+
+**DE TWEEDE STAP KOMT TRAAG (zelfde meting).** Na een klik op Volgende duurde
+het 3 tot 5 seconden voor `?step=audience` en de knop Publiceren er waren. De
+oude code keek 1,8 seconde na de klik één keer en gaf daarna op. Sinds 1.0.344
+wachten Volgende én Publiceren tot 30 seconden tot ze aanklikbaar zijn, en
+draagt de fout de stand van elk veld mee (`formulierstand()`).
+
+**"Muziekinstrumenten" is een echte, aanklikbare rubriek** (gemeten in het
+geopende keuzevenster; zit in een `div[role=button]`, en de echte selectCombo-
+logica klikte hem live aan). Tot 1.0.344 viel elke gitaar door naar "Overig".
+
+**Het formulier heeft geen beschrijvingsveld meer** in deze variant: niet op stap
+1, niet op stap 2, ook niet na het uitklappen van "Meer informatie". Het
+voorbeeld zegt letterlijk "Beschrijving wordt hier weergegeven". `fillForm`
+behandelt beschrijving al als optioneel, dus dat gaat goed, maar onze
+Facebook-advertenties gaan zonder tekst de deur uit. Niet opgelost, want het veld
+is er niet.
+
+---
+
 ## twee-lijstjes-knopnamen-groeien-uit-elkaar
 
 *20-09-2026 — "Twee verwijderroutes hadden elk hun eigen lijst JA-woorden; de ene kende 'Ja' wel, de andere niet, en vijf advertenties liepen daardoor een week lang elke nacht stuk"*
@@ -1192,70 +1283,6 @@ en de launch-config `onboarding-preview` (scenario's `?s=nieuw|johan|uitgelogd|k
 Proef: `tests/onboarding-stappen-test.js`, `tests/test_onboarding_status.py`.
 UI-tekst is Engels en zonder gedachtestreepjes. Een Nederlandse versie staat open
 (Johan noemde Engels lezen zijn grootste drempel). Zie "kanaalicoon-aanvinken-is-geen-publiceren".
-
----
-
-## facebook-marketplace-beta
-
-*17-09-2026 — "Facebook Marketplace is a beta best-effort extension platform; selectors unverified, account-ban risk"*
-
-Facebook Marketplace was added (2026-07-18) as a **beta, best-effort** extension platform, wired end-to-end like Vinted:
-- extension: `extension/content/facebook.js` (create happy-path + best-effort delete), `background.js` create/delete URLs + `EXTENSION_PLATFORMS`, manifest host-permission + content-script match (shipped in v1.0.102)
-- backend: `crosslist.py` → `EXTENSION_PLATFORMS`, `_PLATFORM_REQUIRED["facebook"] = ["category"]`, `_EXTENSION_DELIST_PLATFORMS`
-- frontend `app.html`: platform lists, labels, `📘` icon, margin calc, filter, mark-active, publish checkboxes, plus `BETA_PLATFORMS` risk warnings
-
-**Verified live (2026-07-18, NL account, read-only inspection):**
-- The create form (`/marketplace/create/item`) is fully localised. Required fields carry Dutch aria-labels: **Titel, Prijs, Categorie, Staat**; flow button is **Volgende** (not "Publish" — final step is "Publiceren"). "Staat" options: **Nieuw / Gebruikt - zo goed als nieuw / Gebruikt - in goede staat / Gebruikt - in redelijke staat**. facebook.js now matches NL+EN for all of these (v1.0.104).
-- FB gates the form behind a one-time **DMA/GDPR consent** (`/privacy/consent?flow=fb_dma_marketplace`) and can show `/checkpoint`. facebook.js loads on those URLs too and reports a clear job error instead of hanging (v1.0.103).
-
-**Selector mechanics (verified live, v1.0.105 — this is the crux):**
-- Titel/Prijs `<input>` and Categorie/Staat comboboxes have **NO aria-label/placeholder**. Their accessible name comes from the **wrapping `<label>`** (`<label><span>Titel</span><input></label>`). So field-finding MUST read `el.closest('label').textContent`, not aria-label. (First symptom of getting this wrong: "only condition fills" — because Staat's own matching happened to work while title/price/category didn't.)
-- Category is a **hierarchical tree of plain clickable `<div>`s (role=null), no free-text search** — not role=option. Match option nodes by exact text across a broad selector (div/span/li/a), innermost-first, then click. The flat clothing leaves **"Herenkleding en -schoenen" / "Dameskleding en -schoenen"** are directly selectable; map by gender. Generic fallback "Kleding en accessoires".
-- `typeInto` via the native value setter + input/change event sticks in FB's React inputs (verified).
-- **Price is INTEGER-ONLY** (verified live, NL). The field rounds whatever you type (29,50→€30, 19,95→€20, 1234,56→€1235) AND reads a "." as a thousands separator ("29.99"→2999 — the original "prijs klopt niet" bug). Fix (v1.0.106): type the rounded whole-euro amount with NO separator (`String(Math.round(price))`) — plain "30"/"1235" render as "€ 30"/"€ 1.235".
-- **Beschrijving is a `<textarea>` that only mounts AFTER a category is picked** (it's a clothing-specific field, alongside Grootte/Merk). A single findField right after the condition combo could miss it → description stayed empty while everything else filled. Fix (v1.0.106): poll (`waitForField`) until it mounts.
-- **Photo upload mechanism works** via DataTransfer: set the image `input[type=file]` (first of 3 — accept `image/*`, the others are video and a generic `file`), `.files`, dispatch change → FB renders a `blob:` preview `<img>`. Confirm success by waiting for a `blob:` img (NOT scontent — FB's own profile/chrome imgs are scontent). If photos were provided but no blob preview appears, throw (likely cross-origin fetch block on the image host) instead of publishing photoless. Whether real Supabase photo_urls fetch cleanly from facebook.com context is still UNconfirmed end-to-end.
-
-**Category mapping — non-clothing gap fixed (v1.0.107, 2026-07-19):**
-- FB has NO numeric category IDs; it's a flat click-list matched by exact visible text. `fbCategoryCandidates()` originally handled ONLY clothing (men/women), so every `games ...` / `electronics ...` item (Daniel's whole non-clothing catalog) fell through to "Kleding en accessoires" — wrong category + wrong (clothing) attribute fields. Fixed: non-clothing prefixes are now mapped BEFORE the gender logic.
-- **VERIFIED live (NL account, read-only DOM inspection of `/marketplace/create/item`):** FB top-level leaves that are directly selectable — **games → "Videogames"**, **electronics → "Elektronica en computers"** (both mount a Beschrijving field just like the clothing leaves; Videogames also mounts optional Platform/Genre/ESRB/Merk which we leave empty). Full top-level list also includes: Huis en tuin, Gereedschap, Meubels, Huishouden, Tuin, Apparaten, Amusement, Videogames, Boeken/films/muziek, Kleding en accessoires, Dameskleding en -schoenen, Herenkleding en -schoenen, Elektronica, Elektronica en computers, Mobiele telefoons, Speelgoed en spellen, Sport en buitenleven, Muziekinstrumenten, Antiek en verzamelobjecten, Voertuigen, Overig.
-- The create form loaded with NO consent gate this session (already granted on this account).
-
-**Publish + delete flow — VERIFIED end-to-end via a real test publish (NL account, 2026-07-19, item deleted right after):**
-- A full publish SUCCEEDED: photo (via canvas→File→DataTransfer, no external fetch) → Titel/Prijs(€5)/Categorie=Videogames/Staat/Beschrijving → **Volgende** advances to `/marketplace/create/item?step=audience` → **Publiceren**. So the two-step Volgende→Publiceren flow is real and works.
-- **Publish redirect (BUG fixed):** after Publiceren FB redirects to **`/marketplace/you/selling`**, NOT `/marketplace/item/{id}`, and the new listing sits "in beoordeling" with NO public item URL. The old `publishAndCapture` waited only for `/item/{id}` → burned the 15s timeout and always returned null. Fixed to treat the `/you/selling` redirect as success and capture an id only if one appears (usually none). Consequence: `platform_listing_id` is normally null, so delete jobs fall back to the `/you/selling` URL (see getDeleteUrl in background.js).
-- **Delete is a THREE-click flow (BUG fixed):** on `/you/selling` the card's "..." menu → **"Advertentie verwijderen"** → confirm **"Verwijderen"** → a SECOND survey **"Heb je dit artikel verkocht?"** (radio: Ja verkocht op FB / Ja ergens anders / Nee, niet verkocht / Ik geef liever geen antwoord) → **Volgende**. Old `deleteListingFb` (a) matched `/^verwijder/` which never hit "Advertentie verwijderen", (b) used the FIRST menu on the page (could delete the WRONG listing since /you/selling lists all items), and (c) skipped the survey step. Rewritten to scope to the card by exact title, match "verwijder" anywhere, and complete the survey. Delete VERIFIED to fully remove the listing (empty state after).
-- Photo upload via DataTransfer CONFIRMED working (blue test image rendered in thumbnail + preview). The blob:-preview check can be too fast; FB may render the thumbnail slightly later.
-
-**Fotobewijs — blob: bestaat NIET meer (v1.0.139, 2026-07-29, live geverifieerd):**
-- De create-pagina bevat **nul `<img>`-elementen** tot er een foto gekozen is. Zodra dat gebeurt uploadt FB direct naar zijn eigen CDN en rendert `scontent-*.fbcdn.net` met `alt="Advertentiefoto"`/`"Productfoto"`. Er is **geen `blob:`-preview** — de eerdere notitie hierboven klopt niet meer.
-- Dit brak alles: de Marktplaats-herschrijving van `uploadPhotos` (shared.js) gooit sinds v1.0.13x een fout als er geen thumbnail verschijnt, en zocht alleen naar `blob:`/MP/Vinted-hosts. Op Facebook wachtte hij dus 45s, gooide, en `fillForm` stierf **vóór het eerste veld** — de melding "er wordt niks ingevuld".
-- Fix: `uploadPhotos(urls, { thumbSelector })` accepteert nu een platform-eigen selector; facebook.js geeft `FB_PHOTO_THUMBS` mee. Matchen op `fbcdn.net` is veilig omdat de baseline nul is en uploadPhotos voor/na vergelijkt. `waitForPhotoPreview` is verwijderd (dubbelop).
-- Live bevestigd na de fix: foto + Titel + Prijs (€ 30) + Categorie (Videogames) + Staat + Beschrijving vullen allemaal. Selectors voor alle velden zijn dus nog steeds goed — het zat puur in de fotocontrole.
-- **Les:** `shared.js` is gedeeld met MP/2dehands/Vinted. Elke verscherping daar (throw i.p.v. return false, hardere verificatie) kan Facebook stilletzwijgend slopen, want FB's DOM lijkt op geen van de andere. Draai na elke shared.js-wijziging de veldcontrole op het live FB-formulier.
-
-**Key caveats / How to apply:**
-- A full **dry-run of field-filling** (title/price/category/condition) passed on the live form, but an actual **publish (Volgende→Publiceren) and the post-publish URL capture + delete flow were NOT executed** — still unproven. Pin any remaining issues from `[Omnivaleur]` console output of a real publish.
-- Facebook obfuscates markup (rotating class names) and detects automation — still best-effort, still account-ban risk.
-- Real **account-ban risk** for the seller — this is surfaced in the UI as an explicit beta warning; keep that warning whenever touching this platform. Advise a separate FB account.
-- Facebook is create-first; auto-delist on sale is wired but best-effort. No translation (uses the item's own NL text). No per-platform `price_facebook` column — falls back to base `price`.
-- See "extension-release-bump-version" and "extension-version-floor" for the build/version rules, and "deploy-pipeline" for going live.
-
-**"Klaar" zonder bevestiging (17-09-2026, Johan Kist, opgelost in 1.0.338).**
-`publishAndCapture` gaf na 15 seconden ALTIJD `{id:null}` terug, ook als Facebook
-op het formulier bleef staan of Publiceren uitgeschakeld was. Johan kreeg acht keer
-"done" en de server zette elke rij op rood ("returned no platform_listing_id"),
-ook de echte: niemand kon geslaagd van mislukt onderscheiden. Sinds 1.0.338:
-uitgeschakelde knop of 45 s op het formulier = JOB_ERROR met wat Facebook zelf
-zegt; alleen weg van het formulier (`/you/selling` of `/item/{id}`) = JOB_DONE met
-`bevestigd`. Op `/you/selling` wordt het nummer uit de kaart met de titel gehaald,
-en alleen uit een blok met precies één advertentielink (anders is het de lijst).
-De server (`_rond_publicatie_af`) zet Facebook met `bevestigd` op active zonder
-nummer; zonder `bevestigd` (oude kopie) rood met een melding die zegt wat te doen.
-Van 15-08 tot 17-09-2026 had verder niemand via ons naar Facebook geplaatst:
-elke Facebook-regel in de database was van Johan. Proef:
-`tests/facebook-bevestiging-test.js`, `tests/test_facebook_bevestiging.py`.
-Nog niet live gezien: of `/you/selling` na publiceren een link per kaart toont.
 
 ---
 
