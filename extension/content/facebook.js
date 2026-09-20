@@ -315,7 +315,16 @@
       // uploadPhotos already waits for — and throws on the absence of — a real
       // thumbnail, but it defaults to the Marktplaats/Vinted selectors, which match
       // nothing on Facebook. Hand it Facebook's own proof instead.
-      await uploadPhotos(item.photo_urls.slice(0, 20), { thumbSelector: FB_PHOTO_THUMBS });
+      await uploadPhotos(item.photo_urls.slice(0, FB_MAX_FOTOS), { thumbSelector: FB_PHOTO_THUMBS });
+      // Klaagt Facebook alsnog over het aantal foto's, dan heeft doorgaan geen
+      // zin: de knop gaat niet meer aan. Meteen stoppen met de reden die
+      // Facebook zelf geeft, in plaats van dertig seconden wachten op een knop
+      // die nooit komt.
+      const fotoKlacht = klachtenFb();
+      if (/maximaal \d+ foto|maximum of \d+ photo|up to \d+ photo/i.test(fotoKlacht)) {
+        throw new Error("Facebook refuses this photo set" + fotoKlacht
+          + ". Nothing was published — remove photos from this item until 10 are left, then publish again.");
+      }
       // uploadPhotos silently drops any photo whose fetch failed (e.g. a host
       // blocking cross-origin fetches) and only reports "at least one made it".
       // Log the real count so a partial upload is diagnosable instead of only
