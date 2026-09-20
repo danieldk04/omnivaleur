@@ -108,6 +108,25 @@ async function draai(bron, { fotos, klachtNaUpload = "" }) {
     ok("oud: liep gewoon door naar een knop die nooit aan zou gaan", oud.fout === null, oud);
   }
 
+  console.log("\n5. GITAREN HOREN NIET IN 'OVERIG'");
+  {
+    const rubriekUit = (bron) => {
+      const start = bron.indexOf("  function fbCategoryCandidates(item)");
+      const eind = bron.indexOf("  async function fillForm(");
+      return new Function(bron.slice(start, eind) + "\n;return fbCategoryCandidates;")();
+    };
+    const gitaar = { category: "muziek snaarinstrumenten gitaren akoestisch", gender: "muziek", title: "Eastman Parlor" };
+    const versterker = { category: "muziek versterkers bas en gitaar", gender: "muziek", title: "Positive Grid" };
+    const oud = rubriekUit(OUD)(gitaar);
+    const nieuw = rubriekUit(NIEUW)(gitaar);
+    ok("oud: elke gitaar belandde in 'Overig'", oud[0] === "Overig", oud);
+    ok("nieuw: gitaar gaat naar Muziekinstrumenten", nieuw[0] === "Muziekinstrumenten", nieuw);
+    ok("nieuw: versterker ook", rubriekUit(NIEUW)(versterker)[0] === "Muziekinstrumenten", rubriekUit(NIEUW)(versterker));
+    ok("nieuw: 'Overig' blijft als terugval in de lijst", nieuw.includes("Overig"), nieuw);
+    const jurk = { category: "dames jurken", gender: "dames", title: "Zomerjurk" };
+    ok("nieuw: kleding blijft ongemoeid", /Dameskleding/.test(rubriekUit(NIEUW)(jurk)[0]), rubriekUit(NIEUW)(jurk));
+  }
+
   console.log(mislukt ? `\n${mislukt} MISLUKT\n` : "\nalles groen\n");
   process.exit(mislukt ? 1 : 0);
 })();
