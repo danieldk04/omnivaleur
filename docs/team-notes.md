@@ -11754,3 +11754,20 @@ is geen lijst. Vanmiddag stond "exporteer de logs van 15:00" naast "mail Lynn"
 alsof ze even hard waren; het eerste kon gewoon wachten tot de storing zich
 herhaalt, het tweede zat een klant op te wachten. Hij moet kunnen zien wat hij
 zonder schade kan laten liggen.
+
+## 20-09-2026: Uneed, aanmelding en kortingscode
+
+Daniel meldt Omnivaleur aan bij launchplatforms en directories (Reddit valt af
+door een IP-ban). Uneed heeft een velden "Deals": omschrijving "10% OFF THE
+MONTHLY PLAN", code UNEEDOMNIVALEUR. Tagline op Uneed: "Multi-marketplace listing
+& inventory automation tool", prijsmodel Freemium, categorie Business.
+
+Belangrijk voor wie de code aan Stripe koppelt: de checkout in
+backend/api/billing.py laat het invulvakje voor een code alleen zien als er GEEN
+automatische actiecode actief is (nu OMNIVALEUR25). Staat OMNIVALEUR25 actief in
+Stripe, dan kan een Uneed-bezoeker UNEEDOMNIVALEUR nergens typen. De code moet
+dus in Stripe bestaan als promotiecode op een coupon van 10%, en OMNIVALEUR25
+moet dan verlopen of uit zijn. Nog niet aangemaakt, openstaand.
+
+Ook opgeleverd voor andere directories: korte en lange beschrijving, Q&A en
+founderbio (Daniel de Koning). Q&A over "grootste klanten" bewust leeg gelaten.
