@@ -329,9 +329,13 @@
       // blocking cross-origin fetches) and only reports "at least one made it".
       // Log the real count so a partial upload is diagnosable instead of only
       // being noticed as a missing photo after publishing.
+      // Tellen tegen wat we AANBODEN, niet tegen wat het artikel heeft: sinds de
+      // grens van tien zou een artikel met 19 foto's anders elke keer "9 foto's
+      // mislukt" melden terwijl er niets mis is.
+      const aangeboden = Math.min(item.photo_urls.length, FB_MAX_FOTOS);
       const uploaded = document.querySelectorAll(FB_PHOTO_THUMBS).length;
-      if (uploaded < item.photo_urls.length) {
-        console.warn(`[Omnivaleur] Only ${uploaded}/${item.photo_urls.length} photos made it into the Facebook form — see the fetch warning(s) above for which one(s) failed.`);
+      if (uploaded < aangeboden) {
+        console.warn(`[Omnivaleur] Only ${uploaded}/${aangeboden} photos made it into the Facebook form — see the fetch warning(s) above for which one(s) failed.`);
       }
     }
     await sleep(800);
