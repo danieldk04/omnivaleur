@@ -442,8 +442,17 @@
     const volgende = await wachtOpKnop(/^(volgende|next)$/i, 30000);
     if (volgende && !uit(volgende)) { volgende.click(); await sleep(1800); }
     const publiceer = await wachtOpKnop(/^(publiceren|publish)$/i, 30000);
-    if (!publiceer) throw new Error(
-      "Publish/Volgende button not found (Facebook layout changed?)" + formulierstand());
+    if (!publiceer) {
+      // Blijft Volgende uitgeschakeld, dan is DAT het antwoord, en niet "de
+      // knop Publiceren bestaat niet". Gemeten: zolang Facebook iets weigert
+      // (te veel foto's, een leeg verplicht veld) komt de tweede stap — en
+      // daarmee de knop Publiceren — er domweg nooit.
+      if (volgende && uit(volgende)) throw new Error(
+        "Facebook kept its Volgende/Next button disabled for 30 seconds, so the publish step never "
+        + "opened" + klachtenFb() + formulierstand() + ". Nothing was published.");
+      throw new Error(
+        "Publish/Volgende button not found (Facebook layout changed?)" + formulierstand());
+    }
     // EEN UITGESCHAKELDE KNOP IS GEEN PUBLICATIE (17-09-2026, Johan Kist). Facebook
     // houdt Publiceren uitgeschakeld zolang er een verplicht veld leeg is. Klikken
     // doet dan niets, en hieronder werd dat na 15 seconden toch "klaar".
