@@ -34,7 +34,14 @@ function check(naam, voorwaarde, uitleg) {
 function haalFunctie(bron, naam) {
   const start = bron.indexOf(`async function ${naam}(`);
   if (start < 0) throw new Error(`${naam} niet gevonden`);
-  let diep = 0, i = bron.indexOf("{", start);
+  // Eerst de parameterhaakjes uit de weg: een standaardwaarde als `extra = {}`
+  // heeft zelf ook een accolade, en daar liep deze zoeker op vast.
+  let haakjes = 0, p = bron.indexOf("(", start);
+  for (; p < bron.length; p++) {
+    if (bron[p] === "(") haakjes++;
+    else if (bron[p] === ")" && --haakjes === 0) break;
+  }
+  let diep = 0, i = bron.indexOf("{", p);
   for (let j = i; j < bron.length; j++) {
     if (bron[j] === "{") diep++;
     else if (bron[j] === "}" && --diep === 0) return bron.slice(start, j + 1);

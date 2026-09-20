@@ -17,6 +17,35 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## ons-werkvenster-wordt-zijn-venster
+
+*20-09-2026 — Het werkvenster dat wij maakten wordt na een Dock-klik het venster waar de verkoper in werkt; minimaliseren op venster-id klapte zijn dashboard weg*
+
+Staat Chrome zonder vensters (op een Mac doodgewoon: rode kruisje), dan maakt de
+extensie zelf een klein werkvenster met het vaste anker-tabblad (keeper.html).
+Klikt de verkoper daarna op het Chrome-icoon in de Dock, dan zet macOS precies
+dát geminimaliseerde venster terug. Vanaf dat moment werkt hij IN ons
+werkvenster: zijn dashboard en zijn publicaties zitten erin, terwijl het
+venster-id nog steeds als "ons werkvenster" in storage.session staat.
+
+`houdWerkvensterGeminimaliseerd()` draait bij elk nieuw werk-tabblad en klapte
+dat venster dan in. Gemeld door Daniel op 20-09-2026: "iedere keer als ik een
+item publiceer minimaliseert hij het hele tabblad waarin ik bezig ben, zowel het
+dashboard als de twee publicaties." De oude bewaking keek alleen naar focus, en
+die zei juist "veilig" (laatst gefocust == werkvenster), precies andersom.
+
+**Why:** een venster-id is geen eigendomsbewijs. Wat wij ooit openden kan de
+gebruiker overnemen, en dan is elk `windows.update(id, {state:"minimized"})` een
+greep in zijn werk.
+
+**How to apply:** vóór elk minimaliseren aantonen dat er niets anders in het
+venster staat dan ons anker en tabbladen die wij zelf openden
+(`jobtab_<id>` in storage.local plus de verse ids uit `_onzeTabbladen`, want
+registratie komt pas ná het openen). Bij twijfel of een leesfout: afblijven.
+Zie "werkvenster-en-afsluitvraag" en "chrome-ruimt-profiel-op-bij-venster-dicht".
+
+---
+
 ## facebook-marketplace-beta
 
 *20-09-2026 — "Facebook Marketplace is a beta best-effort extension platform; selectors unverified, account-ban risk"*

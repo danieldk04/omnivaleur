@@ -1870,6 +1870,7 @@ function scheduleWorkerWindowMinimise() {
 }
 
 chrome.tabs.onRemoved.addListener((_tabId, info) => {
+  _onzeTabbladen.delete(_tabId);
   getWorkerWindowId().then((id) => {
     if (id != null && id === info.windowId && !info.isWindowClosing) scheduleWorkerWindowMinimise();
   }).catch(() => {});
@@ -1929,6 +1930,7 @@ function openStilWerkTabblad(url, callback) {
 // zodra Marktplaats geladen is weigert Chrome de koppeling (zie koppelVroeg).
 async function maakWerkTabblad(opties, url, extra = {}) {
   const tab = await chrome.tabs.create({ ...opties, url: "about:blank" });
+  _onzeTabbladen.add(tab.id);
   // Chrome mag dit tabblad niet wegbezuinigen (Memory Saver / discard) terwijl
   // de klus nog loopt: dan sterft het content-script halverwege het invullen.
   chrome.tabs.update(tab.id, { autoDiscardable: false }).catch(() => {});
@@ -2102,8 +2104,46 @@ async function ontwapenAfsluitvraag(tabId) {
 // dan laten we ons werkvenster met rust: het is toch al onzichtbaar (het is
 // nooit gefocust) en de kans dat we per ongeluk zíjn scherm wegklappen weegt
 // niet op tegen een venster dat hij toch niet ziet.
+// Tabbladen die wij zelf openden. Een verse opdracht staat nog niet als
+// `jobtab_<id>` in de opslag (dat gebeurt pas als de klus wordt uitgedeeld), en
+// zonder deze lijst zou ons eigen werkvenster in dat gaatje voor "van de
+// verkoper" doorgaan en dus zichtbaar blijven staan.
+const _onzeTabbladen = new Set();
+
+// IS DIT VENSTER NOG VAN ONS? (Daniel, 20-09-2026)
+//
+// Staat Chrome zonder vensters (op een Mac doodgewoon: rode kruisje) dan maakt
+// de extensie zelf een klein werkvenster met een vast anker-tabblad. Klikt de
+// verkoper daarna op het Chrome-icoon in de Dock, dan zet macOS precies dat
+// geminimaliseerde venster terug — en werkt hij vanaf dat moment IN ons
+// werkvenster. Het nummer stond nog in ons geheugen, dus bij elk werk-tabblad
+// dat erbij kwam klapten wij het weer in. Met zijn dashboard erin: "iedere keer
+// als ik een item publiceer minimaliseert hij het hele tabblad waarin ik bezig
+// ben, zowel het dashboard als de twee publicaties."
+//
+// Een venster is dus alleen van ons zolang er niets anders in staat dan ons
+// anker-tabblad en de tabbladen die wij zelf voor een opdracht openden. Zodra de
+// verkoper er één eigen tabblad in heeft, is het zijn venster en blijven we
+// eraf. Bij twijfel (een fout bij het uitlezen) ook: afblijven.
+async function vensterIsAlleenVanOns(winId) {
+  try {
+    const tabs = await chrome.tabs.query({ windowId: winId });
+    if (!tabs.length) return false;
+    const alles = await chrome.storage.local.get(null);
+    const vanOns = new Set(Object.keys(alles)
+      .filter((k) => k.startsWith("jobtab_"))
+      .map((k) => Number(k.slice("jobtab_".length))));
+    return tabs.every((t) =>
+      t.url === KEEPER_URL || t.pendingUrl === KEEPER_URL
+      || vanOns.has(t.id) || _onzeTabbladen.has(t.id));
+  } catch (_) {
+    return false;
+  }
+}
+
 async function veiligOmWerkvensterTeMinimaliseren(werkId) {
   try {
+    if (!(await vensterIsAlleenVanOns(werkId))) return false;
     const laatst = await chrome.windows.getLastFocused().catch(() => null);
     if (!laatst || laatst.id === werkId) return true;
     if (laatst.state === "minimized") return true;
@@ -2533,8 +2573,10 @@ async function openWorkerTabInner(url, opts = {}) {
   if (existing != null) {
     try {
       const win = await chrome.windows.get(existing);
-      if (win.state !== wantState) {
+      if (win.state !== wantState && await vensterIsAlleenVanOns(existing)) {
         // focused:false keeps this from ever pulling the user out of their work.
+        // En alleen als dit venster nog echt van ons is: zit de verkoper erin te
+        // werken, dan gebruiken we het wel, maar klappen we het nooit in.
         await chrome.windows.update(existing, { state: wantState, focused: false }).catch(() => {});
       }
       // active:true is scoped to THAT window, so it never steals focus from the
@@ -8276,7 +8318,10 @@ async function klikEcht(tabId, selector) {
   } finally {
     // Het venster weer wegzetten zoals het stond.
     if (hersteld) {
-      setTimeout(() => {
+      setTimeout(async () => {
+        // In die 25 seconden kan de verkoper dit venster naar zich toe getrokken
+        // hebben. Dan is het zijn venster en blijft het staan.
+        if (!(await veiligOmWerkvensterTeMinimaliseren(hersteld.id))) return;
         chrome.windows.update(hersteld.id, { state: "minimized" }).catch(() => {});
       }, 25000);
     }
