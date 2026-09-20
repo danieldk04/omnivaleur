@@ -4116,25 +4116,12 @@ async function verwijderViaAdvertentiepagina(tabId, adUrl, platform) {
     const CONFIRM_STEPS = 3;
     const diag = [];
     for (let stap = 0; stap < CONFIRM_STEPS; stap++) {
-      const res = await execInTab(tabId, async () => {
-        const zichtbaar = el => el && el.offsetParent !== null && !el.disabled;
-        const tekst = el => (el.textContent || "").replace(/\s+/g, " ").trim();
-        const modal = [...document.querySelectorAll('.ReactModalPortal, [role="dialog"], [aria-modal="true"]')]
-          .find(el => el.getClientRects().length > 0 && (el.innerText || "").trim());
-        const scope = modal || document;
-        const knoppen = [...scope.querySelectorAll('button, a[role="button"], [role="button"]')]
-          .filter(zichtbaar);
-        const knop =
-          knoppen.find(b => /niet\s+verkocht/i.test(tekst(b))) ||
-          knoppen.find(b => /^(verwijder(en)?|ja,? verwijder(en)?|bevestig(en)?|yes,? delete|delete|confirm|doorgaan|ok)\b/i.test(tekst(b)));
-        // Ook zonder klik vastleggen wat er stond: als een verplichte stap (een
-        // reden-keuze bijvoorbeeld) hier ooit wél openstaat maar geen van onze
-        // woorden draagt, is dit de enige plek waar dat ooit zichtbaar wordt.
-        const gezien = knoppen.map(tekst).slice(0, 12);
-        if (!knop) return { open: !!modal, clicked: false, gezien };
-        knop.click();
-        return { open: true, clicked: true, knop: tekst(knop), gezien };
-      }).catch(e => ({ open: null, clicked: false, error: String(e) }));
+      // Dezelfde keuze als de route via het overzicht, uit dezelfde functie.
+      // Wat er stond wordt ook zonder klik vastgelegd (labels + venstertekst):
+      // als een venster ooit geen van onze woorden draagt, is dat de enige plek
+      // waar dat zichtbaar wordt.
+      const res = await execInTab(tabId, _bevestigInVenster, [BEVESTIG_JA_BRON, BEVESTIG_NEE_BRON])
+        .catch(e => ({ open: null, clicked: false, error: String(e) }));
       diag.push({ fase: "bevestigen", stap, ...res });
       if (!res || !res.open) break;
       if (!res.clicked) break; // geen herkenbare knop meer — niets forceren
