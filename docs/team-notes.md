@@ -11771,3 +11771,11 @@ moet dan verlopen of uit zijn. Nog niet aangemaakt, openstaand.
 
 Ook opgeleverd voor andere directories: korte en lange beschrijving, Q&A en
 founderbio (Daniel de Koning). Q&A over "grootste klanten" bewust leeg gelaten.
+
+## 20-09-2026: Omnivaleur staat op Uneed, SaaSHub en AlternativeTo
+
+Daniel heeft Omnivaleur ingediend bij Uneed, SaaSHub en AlternativeTo. Op Uneed
+is de eenmalige kortingscode UNEEDOMNIVALEUR (10%) in Stripe aangemaakt. Nog niet
+gemeten: of de checkout het invulvakje toont (hangt af van of OMNIVALEUR25 nog
+actief is) en of de aanmeldingen zijn goedgekeurd. Volgende stap uit het plan:
+crosslisting-vergelijkers mailen met Marktplaats en 2dehands als voordeel.
