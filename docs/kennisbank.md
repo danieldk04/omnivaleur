@@ -17,6 +17,40 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## twee-lijstjes-knopnamen-groeien-uit-elkaar
+
+*20-09-2026 — "Twee verwijderroutes hadden elk hun eigen lijst JA-woorden; de ene kende 'Ja' wel, de andere niet, en vijf advertenties liepen daardoor een week lang elke nacht stuk"*
+
+Marktplaats/2dehands verwijderen kan via het overzicht én via de advertentie-
+pagina zelf. Allebei de routes hadden hun eigen regex met JA-woorden. Die van het
+overzicht kende het kale `ja`, die van de advertentiepagina alleen
+`ja,? verwijder(en)?`. Marktplaats zet in dat venster precies één woord: **Ja**.
+
+Gemeten 20-09-2026 bij De Juiste Toon, uit de diagnostiek die met de foutmelding
+meereist: `{"fase":"bevestigen","clicked":false,"gezien":["","Annuleren","Ja"],
+"open":true}`. Het venster stond open, de knop stond er, er werd niets geklikt.
+Gevolg: verwijderen mislukt → de herplaatsing plaatst bewust geen nieuwe
+advertentie ("herplaatsen-verliest-advertenties") → vijf tapijten liepen sinds
+14-09 elke nacht opnieuw stuk, 30 mislukte verwijderingen in zeven dagen.
+
+**Why:** dezelfde beslissing ("welke knop bevestigt?") op twee plekken
+onderhouden betekent dat een reparatie op de ene plek de andere niet bereikt. Dat
+is hier aantoonbaar gebeurd: het kale "Ja" werd ooit toegevoegd, maar alleen in
+de bulkroute.
+
+**How to apply:** sinds 1.0.343 doet `_bevestigInVenster` in
+`extension/background.js` die keuze voor allebei de routes, met de woordenlijsten
+als losse constanten ernaast. De regels: de verkoopvraag wordt altijd met "niet
+verkocht" beantwoord, een annuleer- of sluitknop wordt nooit geklikt, en blijft
+er precies één andere knop over in een venster dat niet over verkopen gaat, dan
+is dat de bevestiging. Bewezen met `tests/mp-bevestigvenster-test.js`, die de
+echte functie tegen exact die drie knoppen draait, oude versie ernaast.
+
+Zie ook "herplaatslus-op-verkochte-artikelen" en
+"schakelaar-moet-op-elke-plek-gelden": dezelfde fout, andere vorm.
+
+---
+
 ## rapportage-in-gewone-taal
 
 *19-09-2026 — Rapporteer elke code-/backendwijziging in gewoon Nederlands met vier vaste blokjes plus een zekerheidspercentage*
