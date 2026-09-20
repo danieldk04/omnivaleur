@@ -474,6 +474,45 @@
     return uniek.length ? ` (Facebook says: ${uniek.join(" | ")})` : "";
   }
 
+  // WAT STOND ER DAN OP HET FORMULIER TOEN HET VASTLIEP?
+  //
+  // 20-09-2026. "Er is nog een verplicht veld leeg" was een gok, geen meting:
+  // 25 mislukte pogingen op rij zeiden allemaal exact hetzelfde en Facebook zelf
+  // klaagde nergens ([role="alert"] leverde niets op). Daarmee viel niet vast te
+  // stellen wélk veld, of dat het ergens anders aan lag — de foto's, een
+  // beperking op het account, een gewijzigd formulier. Dit legt de stand van het
+  // formulier vast op het moment van vastlopen, en die reist mee met de fout
+  // naar het dashboard. Mag nooit zelf stukgaan: hij draait in een foutpad.
+  function formulierstand() {
+    try {
+      const kort = (s) => String(s == null ? "" : s).replace(/\s+/g, " ").trim().slice(0, 40);
+      const tekstveld = (naam, re) => {
+        const el = findField(re);
+        if (!el) return `${naam}=veld niet gevonden`;
+        const waarde = kort(el.value ? el.value : el.textContent);
+        return `${naam}=${waarde ? `"${waarde}"` : "LEEG"}`;
+      };
+      const keuzeveld = (naam, re) => {
+        const combos = [...document.querySelectorAll('[role="combobox"], [aria-haspopup="listbox"], [role="button"]')]
+          .filter(isVisible);
+        const trigger = combos.find((el) => fieldNameCandidates(el).some((n) => n && re.test(String(n).trim())));
+        if (!trigger) return `${naam}=veld niet gevonden`;
+        return `${naam}="${kort(trigger.textContent) || "LEEG"}"`;
+      };
+      const fotos = document.querySelectorAll(FB_PHOTO_THUMBS).length;
+      const velden = [
+        tekstveld("titel", /^(titel|title)$/i),
+        tekstveld("prijs", /^(prijs|price)$/i),
+        keuzeveld("categorie", /categorie|category/i),
+        keuzeveld("staat", /staat|conditie|condition/i),
+        tekstveld("beschrijving", /^(beschrijving|description)$/i),
+      ];
+      return ` [formulier: ${velden.join(", ")}, foto's op het formulier: ${fotos}, pagina: ${String(location.href).slice(0, 90)}]`;
+    } catch (e) {
+      return ` [formulierstand niet af te lezen: ${String(e).slice(0, 80)}]`;
+    }
+  }
+
   // Het nummer van de net geplaatste advertentie, als "Jouw advertenties" er een
   // link naar toont. Alleen een kaart waarin de titel staat telt; geen titel of
   // geen link betekent geen nummer, nooit een gok.
