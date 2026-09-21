@@ -39,7 +39,10 @@ class _Uitkomst:
 
 class _NepQuery:
     def __init__(self, rijen):
-        self._rijen = list(rijen)
+        # GEEN kopie: dit moet dezelfde lijst zijn als db._tabellen[naam], anders
+        # verdwijnt een insert() zodra de volgende .table(...)-aanroep een
+        # nieuwe _NepQuery om een kopie van de kopie heen bouwt.
+        self._rijen = rijen
         self._filters = []
 
     def select(self, *_a, **_kw):
