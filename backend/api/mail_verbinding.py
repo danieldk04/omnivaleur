@@ -53,7 +53,7 @@ def admin_test(groep: str, naar: str = "", user=Depends(get_current_user_full)):
     except Exception as e:
         logger.exception("Testmail verbindingscampagne mislukt")
         raise HTTPException(status_code=503, detail=f"{type(e).__name__}: {e}")
-    return {"ok": True, "sent_to": user.email, "groep": groep}
+    return {"ok": True, "sent_to": doel, "groep": groep}
 
 
 @router.post("/admin/verstuur")
