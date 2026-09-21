@@ -349,6 +349,53 @@ def _log(user_id: str, email: str, kind: str, groep: str, resend_id: str | None)
     }).execute()
 
 
+# Regel 8: bounce onder 2%, klachten onder 0,1%. Boven die grens stopt de
+# reeks vanzelf en krijgt Daniel een melding. Pas boven MINIMUM_STEEKPROEF
+# metingen: één bounce op de eerste drie verstuurde mails is 33% en zegt
+# niets, dat zou de hele campagne op de eerste dag al blokkeren.
+BOUNCE_GRENS = 0.02
+KLACHT_GRENS = 0.001
+MINIMUM_STEEKPROEF = 15
+
+
+def _campagne_gezondheid() -> dict:
+    """Bounce- en klachtenpercentage over ALLE eerder verstuurde verbinding-mail
+    tot nu toe (elke groep samen), gemeten via mail_events (de Resend-webhook),
+    gekoppeld op resend_id/email_id. Onbekend als de webhook een event nog niet
+    heeft afgeleverd; dat telt dan simpelweg nog niet mee."""
+    from backend.database import fetch_all_in, get_admin_db
+
+    db = get_admin_db()
+    log = db.table("mail_campaign_log").select("resend_id").execute().data or []
+    verstuurd = len(log)
+    ids = [r["resend_id"] for r in log if r.get("resend_id")]
+    if not ids:
+        return {"verstuurd": verstuurd, "bounced": 0, "geklaagd": 0, "bounce_pct": 0.0, "klacht_pct": 0.0}
+    events = fetch_all_in(lambda: db.table("mail_events").select("email_id,type"),
+                          "email_id", ids, order_by="id")
+    bounced = len({e["email_id"] for e in events if e.get("type") == "email.bounced"})
+    geklaagd = len({e["email_id"] for e in events if e.get("type") == "email.complained"})
+    return {
+        "verstuurd": verstuurd, "bounced": bounced, "geklaagd": geklaagd,
+        "bounce_pct": bounced / verstuurd if verstuurd else 0.0,
+        "klacht_pct": geklaagd / verstuurd if verstuurd else 0.0,
+    }
+
+
+def _meld_gestopt(gezondheid: dict) -> None:
+    from backend.services.email import send_email
+
+    send_email(
+        "Omnivaleur: verbinding-campagne automatisch gestopt",
+        "De bounce- of klachtengrens is overschreden, dus er is niets meer "
+        "verstuurd voor deze aanroep.\n\n"
+        f"Verstuurd tot nu toe: {gezondheid['verstuurd']}\n"
+        f"Bounces: {gezondheid['bounced']} ({gezondheid['bounce_pct']:.1%}, grens {BOUNCE_GRENS:.0%})\n"
+        f"Klachten: {gezondheid['geklaagd']} ({gezondheid['klacht_pct']:.1%}, grens {KLACHT_GRENS:.1%})\n\n"
+        "Kijk in het Resend-dashboard welke adressen het zijn voor je verder gaat.\n",
+    )
+
+
 def verstuur_groep(groep: str, dry_run: bool = True) -> dict:
     """Verstuurt (of toont, bij dry_run) de verbindingsmail aan iedereen in deze
     groep die niet al de laatste drie dagen campagnemail kreeg."""
@@ -368,6 +415,13 @@ def verstuur_groep(groep: str, dry_run: bool = True) -> dict:
             "zou_versturen_aan": len(te_mailen),
             "voorbeeld": [r["email"] for r in te_mailen[:10]],
         }
+
+    gezondheid = _campagne_gezondheid()
+    if gezondheid["verstuurd"] >= MINIMUM_STEEKPROEF and (
+            gezondheid["bounce_pct"] > BOUNCE_GRENS or gezondheid["klacht_pct"] > KLACHT_GRENS):
+        _meld_gestopt(gezondheid)
+        return {"dry_run": False, "groep": groep, "gestopt": True,
+                "reden": "bounce- of klachtengrens overschreden", **gezondheid}
 
     kind = f"verbinding_{groep}"
     subject = render_subject(groep)
