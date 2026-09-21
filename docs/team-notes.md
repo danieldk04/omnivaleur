@@ -11882,3 +11882,12 @@ Klant-eigen, geen actie: 26cf5471 had 64 opdrachten 's nachts wachten (computer
 uit, loopt sinds 08:51 weer); f8c0cce9 extensie stil sinds 20-09 16:51 met 3
 wachtende opdrachten, twee Facebook-tabbladen dichtgeklikt, Vinted-kleur
 "Sunburst" bestaat niet als tegel.
+
+## 21-09-2026: Monaim momenteel niet actief
+
+Daniel geeft aan dat Monaim op dit moment niet actief is op Omnivaleur. Content-
+en growth-taken (contentschema, screenshots/video's bij de wekelijkse
+verbinding-update, klantverhalen) niet meer aan Monaim voorstellen of toewijzen
+totdat dit hier wordt teruggedraaid. Tot nader order zijn er twee mensen op het
+project: Daniel en de andere developer, en alles wat eerder Monaims rol was ligt
+bij Daniel zelf.
