@@ -36,6 +36,14 @@ STAP 3 — de tekst schrijven (alleen als stap 2 iets opleverde)
   live app heeft gegeven voor dit blokje. Nooit zelf een url verzinnen,
   nooit een AI-gegenereerde afbeelding gebruiken, en zonder een echte url
   dit veld gewoon weglaten.)
+  (optioneel "screenshot_nodig": true — zet dit op een blokje dat duidelijk
+  baat zou hebben bij een screenshot of korte demo (een nieuw scherm, een
+  nieuwe knop, iets visueels) maar waar je nog geen "afbeelding_url" voor
+  hebt. Dit veld is geen decoratie: zolang het op true staat en er geen
+  afbeelding_url bij is gezet, weigert het systeem dit blokje mee te sturen
+  naar een echte groep, totdat Daniel of de developer de screenshot heeft
+  toegevoegd. Zet het dus alleen als het echt een meerwaarde zou zijn, niet
+  standaard bij elk blokje.)
 
 STAP 4 — vastleggen en een testmail naar Daniel
   Lees SECRET_KEY uit het project-.env-bestand (nooit printen, alleen gebruiken).
