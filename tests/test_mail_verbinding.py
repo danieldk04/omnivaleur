@@ -359,3 +359,24 @@ def test_render_gebruikt_de_meegegeven_blokjes_niet_de_vaste(mail_verbinding):
     # De vaste, evergreen inhoud hoort er dan NIET ook nog in te staan.
     assert "Earn a free month" not in html
     assert "Earn a free month" not in tekst
+
+
+def test_afbeelding_url_komt_in_de_html_alleen_bij_https(mail_verbinding):
+    mv = mail_verbinding
+    met_https = [{
+        "titel_en": "x", "tekst_en": "y", "titel_nl": "z", "tekst_nl": "w",
+        "afbeelding_url": "https://img.omnivaleur.com/screenshot1.png",
+    }]
+    html = mv.render_html("customer", "https://omnivaleur.com/x", blokjes=met_https)
+    assert 'src="https://img.omnivaleur.com/screenshot1.png"' in html
+
+    met_onveilige_url = [{
+        "titel_en": "x", "tekst_en": "y", "titel_nl": "z", "tekst_nl": "w",
+        "afbeelding_url": "http://onveilig.example/foto.png",
+    }]
+    html = mv.render_html("customer", "https://omnivaleur.com/x", blokjes=met_onveilige_url)
+    assert "onveilig.example" not in html
+
+    zonder_afbeelding = [{"titel_en": "x", "tekst_en": "y", "titel_nl": "z", "tekst_nl": "w"}]
+    html = mv.render_html("customer", "https://omnivaleur.com/x", blokjes=zonder_afbeelding)
+    assert "<img" not in html.split("</tr>", 1)[-1] or "logo.png" in html
