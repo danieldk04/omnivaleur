@@ -36,17 +36,20 @@ def admin_segmenten(user=Depends(get_current_user_full)):
 
 
 @router.post("/admin/test")
-def admin_test(groep: str, user=Depends(get_current_user_full)):
-    """Stuurt de [TEST]-versie naar de ingelogde eigenaar zelf. Raakt geen
-    enkele klantrij aan."""
+def admin_test(groep: str, naar: str = "", user=Depends(get_current_user_full)):
+    """Stuurt de [TEST]-versie naar de ingelogde eigenaar zelf, of naar een
+    ander adres als `naar` is meegegeven (bijvoorbeeld een mail-tester.com-adres
+    of een los Gmail/Outlook/iCloud-adres voor de spamproef uit de opdracht).
+    Raakt geen enkele klantrij aan."""
     if not _is_owner_email(user.email):
         raise HTTPException(status_code=403, detail="Not allowed")
     from backend.services.mail_verbinding import GROEPEN, verstuur_test
 
     if groep not in GROEPEN:
         raise HTTPException(status_code=400, detail=f"Onbekende groep: {groep}")
+    doel = naar.strip() or user.email
     try:
-        verstuur_test(groep, naar=user.email)
+        verstuur_test(groep, naar=doel)
     except Exception as e:
         logger.exception("Testmail verbindingscampagne mislukt")
         raise HTTPException(status_code=503, detail=f"{type(e).__name__}: {e}")
