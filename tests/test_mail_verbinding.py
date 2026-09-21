@@ -380,3 +380,21 @@ def test_afbeelding_url_komt_in_de_html_alleen_bij_https(mail_verbinding):
     zonder_afbeelding = [{"titel_en": "x", "tekst_en": "y", "titel_nl": "z", "tekst_nl": "w"}]
     html = mv.render_html("customer", "https://omnivaleur.com/x", blokjes=zonder_afbeelding)
     assert 'border-radius:8px;border:1px solid #e2e8f0' not in html
+
+
+def test_ontbrekende_screenshots_houdt_verzending_tegen(mail_verbinding):
+    mv = mail_verbinding
+    # screenshot_nodig staat aan, maar er is nog geen afbeelding: moet gemeld worden.
+    blokjes = [{
+        "titel_en": "New Vinted flow", "tekst_en": "y", "titel_nl": "z", "tekst_nl": "w",
+        "screenshot_nodig": True,
+    }]
+    assert mv.ontbrekende_screenshots(blokjes) == ["New Vinted flow"]
+
+    # eenmaal een echte https-afbeelding toegevoegd, is het blokje niet meer "ontbrekend".
+    blokjes[0]["afbeelding_url"] = "https://img.omnivaleur.com/screenshot1.png"
+    assert mv.ontbrekende_screenshots(blokjes) == []
+
+    # screenshot_nodig niet gezet: nooit blokkeren, ook zonder afbeelding.
+    zonder_vlag = [{"titel_en": "x", "tekst_en": "y", "titel_nl": "z", "tekst_nl": "w"}]
+    assert mv.ontbrekende_screenshots(zonder_vlag) == []
