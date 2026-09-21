@@ -32,6 +32,8 @@ import hashlib
 import hmac
 import logging
 
+from backend.config import settings
+
 logger = logging.getLogger(__name__)
 
 CTA_URL = "https://omnivaleur.com/app"
