@@ -1,6 +1,7 @@
 """
 Platform auth endpoints — login endpoints for all platforms.
 """
+import logging
 import re
 from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks
 from backend.database import get_db, naast_de_lus, eerste_rij
@@ -10,6 +11,11 @@ from backend.platforms.shopify import ShopifyPlatform, is_valid_shop_domain, ver
 from backend.models import AIListingRequest
 from backend.services.ai_listing import generate_listing_from_photos
 from backend.api.deps import get_current_user
+
+logger = logging.getLogger(__name__)
+
+# Hoeveel eBay-advertenties we na het opnieuw koppelen in één keer terugzetten.
+_HERPLAATS_GRENS = 50
 
 router = APIRouter(prefix="/platforms", tags=["platforms"])
 
@@ -112,7 +118,8 @@ async def ebay_rubriekenboom(user_id: str = Depends(get_current_user)):
 
 
 @router.get("/ebay/callback")
-async def ebay_callback(code: str, user_id: str = Depends(get_current_user)):
+async def ebay_callback(achtergrond: BackgroundTasks, code: str,
+                        user_id: str = Depends(get_current_user)):
     try:
         tokens = await EbayPlatform().exchange_code(code)
     except Exception as e:
@@ -123,9 +130,60 @@ async def ebay_callback(code: str, user_id: str = Depends(get_current_user)):
     oud = (await naast_de_lus(lambda: db.table("platform_credentials").select("extra_data")
            .eq("user_id", user_id).eq("platform", "ebay").limit(1).execute())).data
     if oud and oud[0].get("extra_data"):
-        tokens = {**tokens, "extra_data": oud[0]["extra_data"]}
+        bewaard = dict(oud[0]["extra_data"])
+        # De markering "eBay weigert deze koppeling" hoort bij de oude sleutel.
+        # Laat je hem staan, dan blijft eBay na het opnieuw koppelen ontkoppeld
+        # ogen en is de knop Connect een knop die niets oplost.
+        was_kapot = bewaard.pop("koppeling_kapot", None)
+        tokens = {**tokens, "extra_data": bewaard}
+    else:
+        was_kapot = None
     _save_credentials(user_id, "ebay", tokens)
-    return {"status": "connected", "platform": "ebay"}
+    # Niet in dit verzoek afwerken: elke eBay-plaatsing mag tot een minuut duren,
+    # en de verkoper staat op deze pagina te wachten tot hij terug is in het
+    # dashboard. Op de achtergrond, met een bovengrens, zodat een account met
+    # honderden mislukte regels de server niet gijzelt.
+    if was_kapot:
+        achtergrond.add_task(_herplaats_na_herstel, user_id)
+    return {"status": "connected", "platform": "ebay",
+            "opnieuw_plaatsen_gestart": bool(was_kapot)}
+
+
+async def _herplaats_na_herstel(user_id: str) -> int:
+    """Zet de advertenties die op de dode koppeling stukliepen zelf weer klaar.
+
+    Zonder dit moet de verkoper na het opnieuw koppelen elk artikel met de hand
+    terugzoeken en opnieuw aanzetten. Bij Blackbird Guitars waren dat er zeven
+    op twee dagen; bij een account dat een week uit staat loopt dat op.
+
+    Alleen eBay-regels die in de fout staan worden geraakt, niets anders, en
+    ten hoogste _HERPLAATS_GRENS stuks per keer.
+    """
+    from backend.services.crosslist import publish_to_platforms
+    db = get_db()
+    items = (await naast_de_lus(lambda: db.table("items").select("id")
+             .eq("user_id", user_id).execute())).data or []
+    ids = [i["id"] for i in items]
+    stuk: list[str] = []
+    for k in range(0, len(ids), 50):
+        brok = ids[k:k + 50]
+        rijen = (await naast_de_lus(lambda b=brok: db.table("listings")
+                 .select("item_id,error_message").in_("item_id", b)
+                 .eq("platform", "ebay").eq("status", "error").execute())).data or []
+        # Alles wat op eBay in de fout staat, niet alleen wat de dode koppeling
+        # raakte. Na het opnieuw koppelen is dit de enige beurt waarop het
+        # vanzelf kan; anders moet de verkoper elk artikel met de hand terug
+        # opzoeken. create_listing hergebruikt de bestaande offer per SKU, dus
+        # een tweede poging levert geen tweede advertentie op.
+        stuk.extend(r["item_id"] for r in rijen)
+    gelukt = 0
+    for item_id in stuk[:_HERPLAATS_GRENS]:
+        try:
+            await publish_to_platforms(item_id, ["ebay"], user_id)
+            gelukt += 1
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Kon eBay-advertentie %s niet opnieuw plaatsen: %s", item_id, e)
+    return gelukt
 
 
 def _ebay_rij(user_id: str) -> dict:
@@ -526,10 +584,28 @@ async def tweedehands_sync_chrome(body: dict, user_id: str = Depends(get_current
 
 @router.get("/status")
 def platform_status(user_id: str = Depends(get_current_user)):
+    """Welke kanalen zijn écht gekoppeld.
+
+    EEN RIJ IN DE DATABASE IS GEEN KOPPELING (21-09-2026, Blackbird Guitars).
+    Hier werd alleen geteld of er een regel bestond. Toen eBay de opgeslagen
+    sleutel van deze verkoper weigerde, bleef eBay twee dagen lang als
+    gekoppeld in beeld terwijl elke plaatsing mislukte, en zag hij nergens
+    een knop om het te herstellen. Weigert het kanaal de koppeling, dan telt
+    hij hier niet meer mee en verschijnt Connect vanzelf weer.
+    """
     db = get_db()
-    result = db.table("platform_credentials").select("platform").eq("user_id", user_id).execute()
-    connected = [r["platform"] for r in result.data]
-    return {"connected": connected}
+    result = (db.table("platform_credentials").select("platform,extra_data")
+              .eq("user_id", user_id).execute())
+    connected, kapot = [], []
+    for r in result.data or []:
+        reden = ((r.get("extra_data") or {}).get("koppeling_kapot") or {})
+        if reden:
+            kapot.append({"platform": r["platform"],
+                          "sinds": reden.get("sinds"),
+                          "reden": reden.get("reden")})
+            continue
+        connected.append(r["platform"])
+    return {"connected": connected, "opnieuw_koppelen": kapot}
 
 
 @router.delete("/{platform}/disconnect")

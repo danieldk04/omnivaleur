@@ -41,6 +41,44 @@ class EbayCategoryRequiredError(Exception):
     """Raised when an item has no eBay category and no default is configured."""
 
 
+class EbayKoppelingVerlopenError(Exception):
+    """eBay weigert de opgeslagen koppeling van deze verkoper.
+
+    EEN DODE KOPPELING MOET ZO HETEN (21-09-2026, Blackbird Guitars). Hier stond
+    niets: `resp.raise_for_status()` gooide httpx' eigen tekst omhoog, en die
+    kwam letterlijk bij de verkoper terecht als
+    "Client error '400 Bad Request' for url 'https://api.ebay.com/identity/v1/
+    oauth2/token'". Ondertussen bleef eBay in het dashboard gewoon als
+    gekoppeld staan, want /platforms/status keek alleen of er een rij bestond.
+    Gemeten op dit account: de toegangssleutel verliep 19-09 om 11:06 en elke
+    eBay-poging daarna mislukte, twee dagen lang, zonder dat iets dat zei.
+    """
+
+    def __init__(self, reden: str = ""):
+        self.reden = reden
+        super().__init__(
+            "The eBay connection has expired: eBay refused it. Open Settings > "
+            "Channels and click Connect at eBay. Everything that failed on this "
+            "is published again by itself right after that."
+            + (f" (eBay: {reden})" if reden else "")
+        )
+
+
+# eBay weigert een voorraadartikel waarvan de omschrijving langer is dan 4000
+# tekens ("Invalid value for description. The length should be between 1 and
+# 4000 characters."). Gemeten 21-09-2026: van 29 artikelen had er precies één
+# een langere tekst (4219 tekens) en dat artikel kwam nooit op eBay.
+_MAX_OMSCHRIJVING = 4000
+
+# WAAROM WIJ "Does not apply" MEESTUREN (21-09-2026). eBay.nl eist in veel
+# rubrieken een productcode en weigert het publiceren anders met "Het veld EAN
+# ontbreekt. Voeg EAN toe aan de aanbieding en probeer het opnieuw." Tweedehands
+# spullen hebben die code vaak niet, en eBay's eigen antwoord daarop is de
+# letterlijke waarde "Does not apply". Zonder dit blijft de advertentie steken
+# nadat voorraad en aanbieding al zijn aangemaakt.
+_GEEN_PRODUCTCODE = "Does not apply"
+
+
 # Every offer must point at a merchant location so eBay can derive Item.Country.
 # One stable key per account is enough; we create it lazily on first publish.
 MERCHANT_LOCATION_KEY = "OMNIVALEUR_MAIN"
@@ -116,9 +154,60 @@ class EbayPlatform(PlatformBase):
                     "scope": " ".join(SCOPES),
                 },
             )
-            resp.raise_for_status()
+            if not resp.is_success:
+                # Niet raise_for_status(): die gooit de URL omhoog en gooit
+                # eBay's eigen uitleg weg, precies het bewijs dat je later nodig
+                # hebt. Zie EbayKoppelingVerlopenError.
+                reden = resp.text[:300]
+                try:
+                    body = resp.json()
+                    reden = (body.get("error_description")
+                             or body.get("error") or reden)
+                except Exception:  # noqa: BLE001
+                    pass
+                logger.error(
+                    "eBay weigert de vernieuwing van de koppeling: %s %s",
+                    resp.status_code, reden,
+                )
+                self._meld_koppeling_kapot(credentials, f"{resp.status_code}: {reden}")
+                raise EbayKoppelingVerlopenError(reden)
             data = resp.json()
+            self._meld_koppeling_heel(credentials)
             return {**credentials, **_with_expiry(data)}
+
+    def _meld_koppeling_kapot(self, credentials: dict, reden: str) -> None:
+        """Zet in de database dat eBay deze koppeling weigert, zodat het
+        dashboard eBay niet langer als gekoppeld toont en de verkoper de knop
+        Connect ziet staan. Niet-blokkerend."""
+        user_id = credentials.get("user_id")
+        if not user_id:
+            return
+        try:
+            from backend.database import get_db
+            extra = dict(credentials.get("extra_data") or {})
+            extra["koppeling_kapot"] = {
+                "sinds": datetime.now(timezone.utc).isoformat(),
+                "reden": reden[:300],
+            }
+            get_db().table("platform_credentials").update({"extra_data": extra}) \
+                .eq("user_id", user_id).eq("platform", self.platform_name).execute()
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Kon de kapotte eBay-koppeling niet vastleggen: {e}")
+
+    def _meld_koppeling_heel(self, credentials: dict) -> None:
+        """Werkt het weer, dan mag de markering weg. Zonder dit blijft eBay
+        ontkoppeld ogen nadat het probleem vanzelf over is."""
+        user_id = credentials.get("user_id")
+        extra = dict(credentials.get("extra_data") or {})
+        if not user_id or "koppeling_kapot" not in extra:
+            return
+        extra.pop("koppeling_kapot", None)
+        try:
+            from backend.database import get_db
+            get_db().table("platform_credentials").update({"extra_data": extra}) \
+                .eq("user_id", user_id).eq("platform", self.platform_name).execute()
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Kon de herstelde eBay-koppeling niet vastleggen: {e}")
 
     def _auth_headers(self, credentials: dict, *, write: bool = False) -> dict:
         headers = {
@@ -293,13 +382,23 @@ class EbayPlatform(PlatformBase):
         except Exception as e:
             logger.warning(f"eBay required-aspect enrichment mislukt (niet-blokkerend): {e}")
 
+        product = {
+            "title": item["title"][:80],
+            "description": _kort_omschrijving(item.get("description", "")),
+            "imageUrls": item.get("photo_urls", [])[:12],
+            "aspects": aspects,
+        }
+        # Productcode: alleen invullen wat we niet al van het artikel weten.
+        if item.get("ean"):
+            product["ean"] = [str(item["ean"])]
+        else:
+            product["ean"] = [_GEEN_PRODUCTCODE]
+        if item.get("mpn"):
+            product["mpn"] = str(item["mpn"])
+        else:
+            product["mpn"] = _GEEN_PRODUCTCODE
         inventory_payload = {
-            "product": {
-                "title": item["title"][:80],
-                "description": item.get("description", ""),
-                "imageUrls": item.get("photo_urls", [])[:12],
-                "aspects": aspects,
-            },
+            "product": product,
             "condition": _map_condition(item.get("condition", "good")),
             "availability": {
                 "shipToLocationAvailability": {"quantity": 1}
@@ -637,6 +736,20 @@ _LIMIET_TEKST = (
     "value right now. New eBay accounts start with a low limit that eBay raises "
     "as you sell. Check your limit in eBay Seller Hub."
 )
+
+
+def _kort_omschrijving(tekst: str) -> str:
+    """eBay weigert een voorraadartikel met meer dan 4000 tekens omschrijving.
+    Liever een tekst die vier regels korter is dan geen advertentie."""
+    tekst = tekst or ""
+    if len(tekst) <= _MAX_OMSCHRIJVING:
+        return tekst
+    # Afknippen op een spatie, zodat er geen half woord overblijft.
+    geknipt = tekst[:_MAX_OMSCHRIJVING]
+    spatie = geknipt.rfind(" ")
+    if spatie > _MAX_OMSCHRIJVING - 200:
+        geknipt = geknipt[:spatie]
+    return geknipt.rstrip()
 
 
 def _raise_with_ebay_error(resp: httpx.Response, action: str) -> None:

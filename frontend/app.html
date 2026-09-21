@@ -4497,6 +4497,7 @@ async function loadAll(opties = {}) {
   // niet, dan blijft staan wat we al hadden.
   if (platformsRes.status === 'fulfilled' && Array.isArray(platformsRes.value?.connected)) {
     state.connected = platformsRes.value.connected;
+    state.opnieuwKoppelen = platformsRes.value.opnieuw_koppelen || [];
   }
   // De eigen voorkeur moet binnen zijn vóór er iets wordt ingedeeld, anders
   // oordeelt het scherm even met een lege instelling en ziet hij artikelen die
@@ -6003,6 +6004,7 @@ function renderPlatforms() {
   ];
   const html = items.map(p => {
     const ok = state.connected.includes(p.id);
+    const kapot = (state.opnieuwKoppelen || []).some(k => k.platform === p.id);
     const count = state.listings.filter(l => l.platform === p.id && l.status === 'active').length;
     const cfg = PLATFORM_CONNECT[p.id];
     let action = '';
@@ -6020,6 +6022,19 @@ function renderPlatforms() {
       </div>`;
     } else if (ok) {
       action = `<span class="badge active">✓ Connected</span>`;
+    } else if (kapot && cfg?.connectable) {
+      // EEN VERLOPEN KOPPELING MAG NIET ALS "GEWOON NIET GEKOPPELD" OGEN
+      // (21-09-2026, Blackbird Guitars). eBay weigerde zijn sleutel op 19-09 en
+      // twee dagen lang mislukte elke plaatsing, terwijl hier "✓ Connected"
+      // stond. Nu staat er waaróm hij opnieuw moet koppelen, en dat wij het
+      // daarna zelf afmaken.
+      action = `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Connection expired</span>
+        <button class="btn btn-sm btn-primary" onclick="${cfg.connect.name}()">Reconnect</button>
+        <span style="font-size:11px;color:var(--muted);flex-basis:100%">
+          ${p.label} stopped accepting this connection. Reconnect and everything that
+          failed on it is published again by itself.</span>
+      </div>`;
     } else if (cfg?.connectable) {
       action = `<button class="btn btn-sm btn-primary" onclick="${cfg.connect.name}()">Connect</button>`;
     } else {

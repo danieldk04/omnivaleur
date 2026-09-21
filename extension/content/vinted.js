@@ -106,7 +106,32 @@
     "gold":         "Gold",
     "multicolour":  "Multi",
     "multicolor":   "Multi",
+    "divers":       "Multi",
+    "diverse":      "Multi",
+    "various":      "Multi",
     "clear":        "Clear",
+  };
+
+  // AFWERKINGEN DIE GEEN KLEUR HETEN (21-09-2026, Blackbird Guitars). Een
+  // gitaarverkoper zet "Sunburst", "Ambertone" of "Natural Sitka-spruce" in het
+  // kleurveld. Vinted heeft daar geen tegel voor, de kleurstap kwam niet rond en
+  // de hele advertentie werd geweigerd met "colour (Sunburst — none of the
+  // colour tiles responded to a click)" — terwijl alles verder klaarstond.
+  // Hetzelfde geldt voor meubels, sieraden en tassen. Dit is geen verzonnen
+  // standaard: elk woord hieronder is de kleur die de afwerking daadwerkelijk
+  // heeft, niet een gok om maar iets in te vullen.
+  const AFWERKING_MAP = {
+    "sunburst": "Brown", "tobacco": "Brown", "walnut": "Brown", "mahogany": "Brown",
+    "mahagony": "Brown", "amber": "Brown", "ambertone": "Brown", "honey": "Brown",
+    "chocolate": "Brown", "cognac": "Brown", "hazel": "Brown", "bruin": "Brown",
+    "natural": "Beige", "natureal": "Beige", "natueral": "Beige", "sitka": "Beige",
+    "spruce": "Beige", "maple": "Beige", "sand": "Beige", "taupe": "Beige",
+    "ebony": "Black", "onyx": "Black", "charcoal": "Dark grey", "graphite": "Dark grey",
+    "ivory": "White", "olympic": "White", "pearl": "White", "snow": "White",
+    "burgundy": "Red", "wine": "Red", "cherry": "Red", "crimson": "Red",
+    "sapphire": "Blue", "navy": "Navy", "cobalt": "Blue", "denim": "Blue",
+    "teal": "Turquoise", "emerald": "Green", "olive": "Khaki", "moss": "Green",
+    "copper": "Bronze", "brass": "Gold", "champagne": "Gold",
   };
 
   // Dutch → Vinted English material names.
@@ -2767,8 +2792,31 @@
         ? opts.find((o) => o.text === base || o.code === base) ||
           opts.find((o) => o.text.includes(base) || o.code.includes(base))
         : null) ||
+      // WOORD VOOR WOORD (21-09-2026). "Olympic White", "Dark Blue" en "Satin
+      // Outfield Blue" hebben geen tegel die zo heet, maar bevatten er wel
+      // eentje. De oude versie zocht alleen op de hele tekst en gaf op.
+      woordTreffer(w, opts) ||
       null
     )?.el || null;
+  }
+
+  // Eerst een echte kleurnaam in de tekst, dan pas een afwerking die een
+  // bekende kleur heeft (sunburst, ambertone). Losse woorden korter dan drie
+  // letters slaan we over: die raken te veel tegels tegelijk.
+  function woordTreffer(want, opts) {
+    const woorden = want.split(/[^a-z]+/i).filter((x) => x.length >= 3);
+    for (const woord of woorden) {
+      const hit = opts.find((o) => o.text === woord || o.code === woord);
+      if (hit) return hit;
+    }
+    for (const woord of woorden) {
+      const vertaald = (AFWERKING_MAP[woord] || "").toLowerCase();
+      if (!vertaald) continue;
+      const hit = opts.find((o) => o.text === vertaald || o.code === vertaald)
+        || opts.find((o) => o.text.includes(vertaald) || o.code.includes(vertaald));
+      if (hit) return hit;
+    }
+    return null;
   }
 
   async function fillColourVinted(item) {
