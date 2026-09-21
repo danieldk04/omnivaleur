@@ -150,8 +150,12 @@ _ACCENT_BORDER = {"blue": None, "mint": "1px solid #a7f3d0"}
 
 
 def _blok_html(b: dict) -> str:
-    achtergrond = _ACCENT_BG[b["accent"]]
-    rand = f'border:{_ACCENT_BORDER[b["accent"]]};' if _ACCENT_BORDER[b["accent"]] else ""
+    # .get() met een veilige terugval: "accent" is optioneel (ook voor de
+    # wekelijkse update, zie scripts/mail_update_prompt.txt), en een onbekende
+    # waarde mag de hele mail nooit laten crashen op een KeyError.
+    accent = b.get("accent") if b.get("accent") in _ACCENT_BG else "blue"
+    achtergrond = _ACCENT_BG[accent]
+    rand = f'border:{_ACCENT_BORDER[accent]};' if _ACCENT_BORDER[accent] else ""
     return f"""
   <tr><td style="padding:10px 28px 6px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{achtergrond};border-radius:10px;{rand}">
