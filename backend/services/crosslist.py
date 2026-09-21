@@ -2682,6 +2682,11 @@ async def extend_expiring_2dehands():
     herkans_grens = (nu - timedelta(days=_EXTEND_HERKANS_NA_DAGEN)).isoformat()
     ingepland = 0
     for listing in rijen:
+        # Zonder echt 2dehands-nummer (m + cijfers) kan de extensie niets
+        # verlengen en krijgt de klant alleen een foutmelding. Zulke rijen zijn
+        # ooit 'actief' gezet zonder bewijs van plaatsing (21-09-2026: zes stuks).
+        if not re.match(r"^m\d{6,}$", str(listing.get("platform_listing_id") or "").strip()):
+            continue
         try:
             item = eerste_rij(await naast_de_lus(lambda: db.table("items").select("id,user_id")
                     .eq("id", listing["item_id"]).limit(1).execute()))
