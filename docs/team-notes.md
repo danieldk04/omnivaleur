@@ -17,6 +17,36 @@ memory can still be written on top for fast recall, but never as the only
 record: anything here has to survive a switch to a different Claude account
 without Daniel repeating himself.
 
+## 2026-09-21 (vervolg) — Verbinding-campagne gebouwd, eerste testmail bevestigd in Postvak IN
+
+Vervolg op de segmenten hieronder. Gebouwd en live (auto-push-hook heeft alles
+gecommit en gepusht, geen los commando nodig):
+
+- `backend/services/mail_verbinding.py` — segmentlogica (trial/inactive/customer
+  op HUIDIGE abonnementsstatus, geen overlap meer), teksten (Engels hoofdtaal,
+  Nederlandse vertaling er telkens onder, geen taalveld per gebruiker
+  betrouwbaar genoeg om apart te sturen), verstuurlogica met 3-dagenregel over
+  alle campagnesoorten heen en een automatische stop bij bounce >2% of
+  klachten >0,1% (mailt Daniel dan).
+- `backend/api/mail_verbinding.py` — eigenaar-only endpoints: segmenten tonen,
+  testmail (naar zichzelf of een los adres, ook bruikbaar voor mail-tester.com),
+  echt versturen (dry-run standaard). Publieke afmeldroute, GET (klik) en POST
+  (RFC 8058 One-Click), bilinguaal net als de mail.
+- `frontend/beheer.html`, blok "Verbinding-mail" — bediening voor dit alles.
+- `scripts/sql/mail_verbinding.sql` — NOG NIET bevestigd gedraaid door Daniel.
+  Zonder deze migratie (tabellen mail_unsubscribed, mail_campaign_log) werkt
+  een testmail wél (die raakt geen tabel aan) maar een ECHTE groepsverzending
+  niet. Niet aannemen dat dit al gebeurd is voor een volgende sessie hiermee
+  verdergaat.
+- Test bewezen, niet aangenomen: eerste [TEST]-mail naar Daniels eigen Gmail
+  op 21-09-2026 16:47 UTC staat in mail_events als 'sent' en 'delivered', geen
+  bounce, geen klacht. Daniel bevestigde zelf: in Postvak IN, niet Promoties.
+  Outlook, iCloud en de mail-tester.com-spamscore uit de opdracht staan nog
+  open, nog niet gedaan.
+- DNS op omnivaleur.com opnieuw live gecontroleerd, ongewijzigd goed: DKIM op
+  resend._domainkey, SPF op send.omnivaleur.com, DMARC op p=none (bestaat,
+  dwingt niets af, bij dit volume geen harde eis).
+
 ## 2026-09-21 — E-mailmarketing naar bestaande gebruikers: segmenten vastgelegd
 
 Daniel heeft opdracht gegeven voor een persoonlijke e-mailcampagne (namens
