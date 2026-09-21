@@ -57,8 +57,12 @@ STAP 5 — teruggeven
   klaargezet (de koppen van de blokjes volstaan), dat de testmail onderweg is
   naar Daniels eigen inbox, en dat hij hem in beheer.html (blok Verbinding-mail,
   Inhoud: "Wekelijkse update") kan bekijken en pas na zijn eigen goedkeuring
-  naar een groep kan versturen. Commit en push die regel, net als elke andere
-  wijziging in dit project.
+  naar een groep kan versturen. Staat er een blokje bij zonder "afbeelding_url"
+  dat wél duidelijk baat zou hebben bij een screenshot (een nieuw scherm, een
+  nieuwe knop, iets visueels), noem dat er dan expliciet bij: "blokje X zou
+  baat hebben bij een screenshot van <welk scherm/welke actie>". Dat is puur
+  een suggestie voor Daniel, nooit zelf een afbeelding verzinnen of toevoegen.
+  Commit en push die regel, net als elke andere wijziging in dit project.
 
 Regels die altijd gelden in dit project (CLAUDE.md): nooit secrets committen,
 nooit een bestand overschrijven zonder het eerst te lezen, niets in de hoofdmap
