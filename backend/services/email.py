@@ -113,7 +113,8 @@ def send_email_checked(subject: str, body: str, to: str | None = None, reply_to:
     if settings.resend_api_key:
         if not (settings.resend_from or settings.smtp_from_email):
             raise RuntimeError("RESEND_FROM ontbreekt op Railway (het afzenderadres)")
-        return _send_via_resend(subject, body, recipient_pre, reply_to, html=html)
+        return _send_via_resend(subject, body, recipient_pre, reply_to, html=html,
+                                unsubscribe_url=unsubscribe_url)
 
     missing = [n for n, v in (
         ("SMTP_HOST", settings.smtp_host),
