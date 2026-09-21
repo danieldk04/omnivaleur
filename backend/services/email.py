@@ -34,7 +34,7 @@ def ontvangers(veld: str | None) -> list[str]:
 
 
 def _send_via_resend(subject: str, body: str, recipient: str, reply_to: str | None,
-                     html: str | None = None) -> None:
+                     html: str | None = None) -> str | None:
     """Versturen over https, de enige poort die Railway wél doorlaat."""
     import httpx
 
