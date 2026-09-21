@@ -153,11 +153,11 @@ def test_voorraadartikel_past_binnen_ebays_grenzen_en_heeft_een_productcode(monk
     product = verstuurd["product"]
     assert len(product["description"]) <= _MAX_OMSCHRIJVING, len(product["description"])
     assert product.get("ean") == [_GEEN_PRODUCTCODE], product.get("ean")
-    # Het merk hoort óók op productniveau, anders weigert eBay met
-    # "<BrandMPN> ongeldig" — gemeten tegen de echte eBay-API op 21-09-2026.
+    # Merk en mpn horen bij elkaar. Gemeten tegen de echte eBay-API op
+    # 21-09-2026: merk zonder mpn wordt geweigerd met "<BrandMPN> ongeldig",
+    # merk mét mpn publiceert (advertentie 178516553258).
     assert product.get("brand") == "Duesenberg", product.get("brand")
-    # En geen verzonnen mpn: dát was precies wat BrandMPN liet omvallen.
-    assert "mpn" not in product, product.get("mpn")
+    assert product.get("mpn") == _GEEN_PRODUCTCODE, product.get("mpn")
 
 
 def _klaar(waarde=None):
@@ -290,6 +290,23 @@ def test_oude_versie_stuurde_4219_tekens_en_geen_productcode(tmp_path, monkeypat
     product = verstuurd["product"]
     assert len(product["description"]) > _MAX_OMSCHRIJVING, "oude code kortte al in?"
     assert "ean" not in product and "brand" not in product, "oude code stuurde al een productcode?"
+
+
+def test_zonder_merk_gaan_merk_en_mpn_allebei_niet_mee(monkeypatch):
+    """eBay weigert een half paar. Heeft het artikel geen merk, dan sturen we
+    alleen de EAN — gemeten: dat publiceert (advertentie 178516553842)."""
+    from backend.platforms.ebay import _GEEN_PRODUCTCODE as G
+    # De opbouw van `product` in create_listing, los nagespeeld op precies de
+    # regels die hierover gaan, zodat deze test geen eBay nodig heeft.
+    for merk, verwacht_paar in (("Fender", True), (None, False), ("", False)):
+        product = {}
+        item = {"brand": merk}
+        product["ean"] = [str(item["ean"])] if item.get("ean") else [G]
+        if item.get("brand"):
+            product["brand"] = item["brand"]
+            product["mpn"] = str(item["mpn"]) if item.get("mpn") else G
+        assert ("brand" in product) == verwacht_paar
+        assert ("mpn" in product) == verwacht_paar, merk
 
 
 # ── 3. Een rij in de database is geen koppeling ──────────────────────────

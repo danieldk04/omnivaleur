@@ -388,20 +388,27 @@ class EbayPlatform(PlatformBase):
             "imageUrls": item.get("photo_urls", [])[:12],
             "aspects": aspects,
         }
-        # Productcode. GEMETEN TEGEN DE ECHTE eBay-API op 21-09-2026 met het
-        # account van DK Resell Academy, drie varianten naast elkaar:
-        #   ean + mpn, zonder brand op productniveau -> geweigerd, errorId 25002
-        #     "De ingevoerde gegevens voor tag <BrandMPN> zijn ongeldig".
-        #   ean + mpn + brand                        -> BrandMPN akkoord.
-        #   alleen ean                               -> BrandMPN akkoord.
-        # Vandaar: het merk hoort óók op productniveau (niet alleen als
-        # kenmerk), en een verzonnen mpn sturen we niet. "Does not apply" is de
-        # waarde die eBay zelf voorschrijft als de code niet bestaat; zonder
-        # die regel weigert eBay met "Het veld EAN ontbreekt".
-        product["brand"] = item.get("brand") or "Unbranded"
+        # Productcode. MERK EN MPN GAAN SAMEN, OF ALLEBEI NIET.
+        #
+        # Gemeten tegen de echte eBay-API op 21-09-2026, account DK Resell
+        # Academy, rubriek 33034, vier varianten op hetzelfde artikel:
+        #   merk + mpn + ean            -> GEPUBLICEERD (178516553258)
+        #   alleen ean                  -> GEPUBLICEERD (178516553842)
+        #   merk zonder mpn             -> geweigerd, errorId 25002 <BrandMPN>
+        #   mpn zonder merk             -> geweigerd, errorId 25002 <BrandMPN>
+        # eBay behandelt merk en mpn dus als één paar. Een eerdere poging
+        # vandaag stuurde het merk zonder mpn en zou élke plaatsing hebben
+        # geweigerd; dat is hier met de echte API tegen het licht gehouden
+        # vóórdat een klant het merkte.
+        #
+        # "Does not apply" is de waarde die eBay zelf voorschrijft als de code
+        # niet bestaat. Zonder een productcode weigert eBay tweedehands spullen
+        # in veel rubrieken met "Het veld EAN ontbreekt" (Blackbird Guitars,
+        # twee gitaren, 19-09-2026).
         product["ean"] = [str(item["ean"])] if item.get("ean") else [_GEEN_PRODUCTCODE]
-        if item.get("mpn"):
-            product["mpn"] = str(item["mpn"])
+        if item.get("brand"):
+            product["brand"] = item["brand"]
+            product["mpn"] = str(item["mpn"]) if item.get("mpn") else _GEEN_PRODUCTCODE
         inventory_payload = {
             "product": product,
             "condition": _map_condition(item.get("condition", "good")),
