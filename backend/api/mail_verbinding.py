@@ -9,14 +9,25 @@ dry_run zodat hij eerst de lijst ziet voor er iets weggaat.
 """
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
 from backend.api.deps import get_current_user_full
+from backend.config import settings
 from backend.services.billing import is_owner_email as _is_owner_email
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/mail-verbinding", tags=["mail-verbinding"])
+
+
+def _vereis_automatiseringsgeheim(x_admin_secret: str | None) -> None:
+    """Voor de lokale, geplande sessie (zie de LaunchAgent-instructies in
+    docs/team-notes.md): die logt niet in als Daniel, dus geen JWT. Zelfde
+    patroon als backend/api/content.py: SECRET_KEY als gedeeld geheim, via de
+    X-Admin-Secret-header. Nooit voor de knoppen die Daniel zelf gebruikt —
+    die blijven op zijn eigen login staan."""
+    if not settings.secret_key or settings.secret_key == "change-me" or x_admin_secret != settings.secret_key:
+        raise HTTPException(status_code=401, detail="unauthorized")
 
 
 @router.get("/admin/segmenten")
