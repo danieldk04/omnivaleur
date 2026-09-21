@@ -156,13 +156,30 @@ def _blok_html(b: dict) -> str:
     accent = b.get("accent") if b.get("accent") in _ACCENT_BG else "blue"
     achtergrond = _ACCENT_BG[accent]
     rand = f'border:{_ACCENT_BORDER[accent]};' if _ACCENT_BORDER[accent] else ""
+    # "afbeelding_url" is optioneel: een echte screenshot van de live app,
+    # nooit AI-gegenereerd. Alleen https, anders negeren we hem stil in
+    # plaats van een kapotte afbeelding te tonen.
+    afbeelding_url = b.get("afbeelding_url") or ""
+    afbeelding_html = ""
+    if afbeelding_url.startswith("https://"):
+        afbeelding_html = (
+            f'<tr><td style="padding:0 0 12px;">'
+            f'<img src="{afbeelding_url}" alt="" width="100%" '
+            f'style="display:block;max-width:100%;border-radius:8px;border:1px solid #e2e8f0;">'
+            f'</td></tr>'
+        )
     return f"""
   <tr><td style="padding:10px 28px 6px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{achtergrond};border-radius:10px;{rand}">
       <tr><td style="padding:16px 20px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        {afbeelding_html}
+        <tr><td>
         <p style="margin:0 0 5px;font-size:14.5px;font-weight:700;color:#0f172a;">{b['titel_en']}</p>
         <p style="margin:0 0 4px;font-size:13.5px;line-height:1.55;color:#334155;">{b['tekst_en']}</p>
         <p style="margin:0;font-size:11.5px;line-height:1.5;color:#64748b;font-style:italic;">{b['titel_nl']}. {b['tekst_nl']}</p>
+        </td></tr>
+        </table>
       </td></tr>
     </table>
   </td></tr>"""
