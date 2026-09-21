@@ -79,6 +79,10 @@ def _send_via_resend(subject: str, body: str, recipient: str, reply_to: str | No
     )
     if r.status_code >= 300:
         raise RuntimeError(f"Resend weigerde de mail ({r.status_code}): {r.text[:300]}")
+    try:
+        return r.json().get("id")
+    except Exception:  # noqa: BLE001 — een ontbrekend id mag het versturen zelf nooit breken
+        return None
 
 
 def _is_configured() -> bool:
