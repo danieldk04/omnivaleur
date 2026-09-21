@@ -1198,7 +1198,11 @@ async function haalWeekupdate() {
     const d = await r.json().catch(() => ({}));
     if (!r.ok) { doel.innerHTML = '<div class="leeg">' + veilig(d.detail || ('server ' + r.status)) + '</div>'; return; }
     if (d.status === 'leeg' || !d.blokjes) { doel.innerHTML = '<div class="uitleg">Nog geen conceptupdate klaargezet.</div>'; return; }
+    const waarschuwing = (d.ontbrekende_screenshots || []).length
+      ? `<div class="leeg">Nog geen screenshot voor: ${d.ontbrekende_screenshots.map(veilig).join(', ')}. `
+        + `Versturen naar een groep wordt tegengehouden totdat dit is toegevoegd.</div>` : '';
     doel.innerHTML = `<div class="uitleg">Week van ${veilig(d.week_van || '?')}, status: ${veilig(d.status)}</div>`
+      + waarschuwing
       + d.blokjes.map(b => `<div style="margin-top:6px"><b>${veilig(b.titel_en)}</b><br>${veilig(b.tekst_en)}<br>`
         + `<span style="color:var(--zacht);font-style:italic">${veilig(b.titel_nl)}. ${veilig(b.tekst_nl)}</span></div>`).join('');
   } catch (e) {
