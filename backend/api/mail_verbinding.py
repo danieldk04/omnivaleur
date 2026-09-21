@@ -122,9 +122,13 @@ def admin_weekupdate(user=Depends(get_current_user_full)):
     """Wat er nu klaarstaat vanuit de lokale geplande sessie, of niets."""
     if not _is_owner_email(user.email):
         raise HTTPException(status_code=403, detail="Not allowed")
-    from backend.services.mail_verbinding import huidige_weekupdate
+    from backend.services.mail_verbinding import huidige_weekupdate, ontbrekende_screenshots
 
-    return huidige_weekupdate() or {"status": "leeg"}
+    update = huidige_weekupdate()
+    if not update:
+        return {"status": "leeg"}
+    update["ontbrekende_screenshots"] = ontbrekende_screenshots(update["blokjes"])
+    return update
 
 
 @router.post("/automation/weekupdate")
