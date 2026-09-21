@@ -401,4 +401,5 @@ def verstuur_test(groep: str, naar: str) -> None:
     subject = f"[TEST] {render_subject(groep)}"
     html = render_html(groep, link)
     text = render_text(groep, link)
-    send_email_checked(subject, text, to=naar, reply_to=settings.reply_to_email, html=html)
+    send_email_checked(subject, text, to=naar, reply_to=settings.reply_to_email, html=html,
+                       unsubscribe_url=link)
