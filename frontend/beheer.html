@@ -1189,10 +1189,27 @@ async function haalVerbindingSegmenten() {
   }
 }
 
+async function haalWeekupdate() {
+  const doel = el('vb-weekupdate');
+  doel.innerHTML = '<div class="uitleg">Bezig met ophalen…</div>';
+  try {
+    const r = await fetch(API + '/api/mail-verbinding/admin/weekupdate',
+      { headers: { Authorization: 'Bearer ' + TOKEN } });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { doel.innerHTML = '<div class="leeg">' + veilig(d.detail || ('server ' + r.status)) + '</div>'; return; }
+    if (d.status === 'leeg' || !d.blokjes) { doel.innerHTML = '<div class="uitleg">Nog geen conceptupdate klaargezet.</div>'; return; }
+    doel.innerHTML = `<div class="uitleg">Week van ${veilig(d.week_van || '?')}, status: ${veilig(d.status)}</div>`
+      + d.blokjes.map(b => `<div style="margin-top:6px"><b>${veilig(b.titel_en)}</b><br>${veilig(b.tekst_en)}<br>`
+        + `<span style="color:var(--zacht);font-style:italic">${veilig(b.titel_nl)}. ${veilig(b.tekst_nl)}</span></div>`).join('');
+  } catch (e) {
+    doel.innerHTML = '<div class="leeg">Mislukt: ' + veilig(e.message) + '</div>';
+  }
+}
+
 async function verbindingTest() {
   const uit = el('vb-uitslag');
   uit.innerHTML = '<div class="uitleg">Bezig…</div>';
-  const q = new URLSearchParams({ groep: el('vb-groep').value, naar: el('vb-testadres').value.trim() });
+  const q = new URLSearchParams({ groep: el('vb-groep').value, bron: el('vb-bron').value, naar: el('vb-testadres').value.trim() });
   try {
     const r = await fetch(API + '/api/mail-verbinding/admin/test?' + q.toString(),
       { method: 'POST', headers: { Authorization: 'Bearer ' + TOKEN } });
