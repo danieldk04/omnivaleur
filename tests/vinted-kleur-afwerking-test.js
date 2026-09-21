@@ -28,12 +28,24 @@ function check(naam, voorwaarde, uitleg) {
   console.log(`  FOUT ${naam}${uitleg ? " — " + uitleg : ""}`);
 }
 
-// Vinteds eigen kleurtegels, zoals ze op het plaatsformulier staan.
+// Vinteds eigen kleurtegels, letterlijk opgehaald bij Vinted zelf op
+// 21-09-2026: GET https://www.vinted.nl/api/v2/item_upload/colors (29 stuks).
+// NIET met de hand overgeschreven. Let op wat daaruit bleek: op vinted.nl staan
+// de tegels in het NEDERLANDS ("Zwart", "Meerkleurig"), en de Engelse naam zit
+// alleen in de code uit data-testid="color_code_…". "Multi" en "Bronze" bestaan
+// daar niet. Elke doelwaarde in COLOUR_MAP en AFWERKING_MAP wordt hieronder
+// tegen deze lijst getoetst, zodat een verzonnen doelwaarde niet stil
+// doorglipt zoals "Multi" dat maandenlang deed.
 const VINTED_TEGELS = [
-  "Black", "Brown", "Grey", "Beige", "Pink", "Purple", "Red", "Yellow",
-  "Blue", "Green", "Orange", "White", "Silver", "Gold", "Cream", "Apricot",
-  "Coral", "Burgundy", "Rose", "Lilac", "Light blue", "Navy", "Dark green",
-  "Turquoise", "Mint", "Khaki", "Mustard", "Multi",
+  ["Zwart","BLACK"],["Grijs","GREY"],["Wit","WHITE"],["Crème","CREAM"],
+  ["Beige","BODY"],["Pasteloranje","APRICOT"],["Oranje","ORANGE"],
+  ["Koraal","CORAL"],["Rood","RED"],["Wijnrood","BURGUNDY"],["Roze","PINK"],
+  ["Lichtroze","ROSE"],["Paars","PURPLE"],["Lila","LILAC"],
+  ["Lichtblauw","LIGHT-BLUE"],["Blauw","BLUE"],["Marineblauw","NAVY"],
+  ["Turquoise","TURQUOISE"],["Mintgroen","MINT"],["Groen","GREEN"],
+  ["Donkergroen","DARK-GREEN"],["Khaki","KHAKI"],["Bruin","BROWN"],
+  ["Mosterdgeel","MUSTARD"],["Geel","YELLOW"],["Zilver","SILVER"],
+  ["Goud","GOLD"],["Meerkleurig","VARIOUS"],["Transparant","CLEAR"],
 ];
 
 // Wat Johan echt in het kleurveld heeft staan.
@@ -46,8 +58,7 @@ const JOHAN_KLEUREN = [
 
 // Een tegel nabootsen: de echte code leest een titel-element en een
 // data-testid="color_code_…". Meer heeft colourOptionLabel niet nodig.
-function maakTegel(naam) {
-  const code = naam.toLowerCase().replace(/\s+/g, "-");
+function maakTegel([naam, code]) {
   const el = {
     _naam: naam,
     textContent: naam,
@@ -117,7 +128,13 @@ console.log("Vinted-kleur op Johans echte waarden\n");
 
 const nieuw = meet(laadZoeker(fs.readFileSync(
   path.join(WORTEL, "extension/content/vinted.js"), "utf8")));
-const oudeBron = execSync("git show HEAD:extension/content/vinted.js",
+// NIET HEAD (kennisbank: "voor-en-na-proef mag geen HEAD gebruiken"). Zodra de
+// reparatie gecommit is, is HEAD de nieuwe code en vergelijkt de test zich met
+// zichzelf — precies wat hier één keer gebeurde: de "oude" versie scoorde toen
+// ineens 18 van de 19. Vandaar een vast punt: 619fbe6a is de laatste versie van
+// vinted.js vóór deze reparatie.
+const VOOR_DE_REPARATIE = "619fbe6a";
+const oudeBron = execSync(`git show ${VOOR_DE_REPARATIE}:extension/content/vinted.js`,
   { cwd: WORTEL, maxBuffer: 20 * 1024 * 1024 }).toString();
 const oud = meet(laadZoeker(oudeBron));
 
@@ -138,6 +155,38 @@ check("de nieuwe versie vindt er strikt meer dan de oude", nieuw.raak > oud.raak
 check("kleuren die het altijd al deden blijven werken",
   oud.missers.every((m) => nieuw.missers.includes(m) || true)
   && !nieuw.missers.includes("Black") && !nieuw.missers.includes("zwart"));
+
+// ── Elke doelwaarde moet een echte tegel raken ───────────────────────────
+// Dit is de controle die "Multi" had moeten tegenhouden. Die stond maandenlang
+// in de tabel, bestond niet bij Vinted, en liet het kleurveld dus leeg bij
+// iedereen die "multicolour", "veelkleurig" of "divers" opschreef.
+function doelenControle(bron, naam) {
+  const tegels = VINTED_TEGELS.map(maakTegel);
+  const zoeker = laadZoeker(bron);
+  const tabellen = ["COLOUR_MAP", "AFWERKING_MAP"];
+  const kapot = [];
+  for (const tabel of tabellen) {
+    const start = bron.indexOf(`  const ${tabel} = {`);
+    if (start === -1) continue;
+    const eind = bron.indexOf("\n  };\n", start);
+    const stuk = bron.slice(start, eind);
+    for (const m of stuk.matchAll(/"([^"]+)":\s*"([^"]+)"/g)) {
+      if (!zoeker.findColourOption(m[2], tegels)) kapot.push(`${tabel}: ${m[1]} -> ${m[2]}`);
+    }
+  }
+  return kapot;
+}
+
+const kapotNu = doelenControle(fs.readFileSync(
+  path.join(WORTEL, "extension/content/vinted.js"), "utf8"));
+const kapotOud = doelenControle(oudeBron);
+console.log(`\n  doelwaarden zonder tegel, voor: ${kapotOud.length}`);
+kapotOud.slice(0, 8).forEach((k) => console.log("      " + k));
+console.log(`  doelwaarden zonder tegel, na:  ${kapotNu.length}`);
+kapotNu.forEach((k) => console.log("      " + k));
+check("de oude tabel wees echt naar tegels die niet bestaan", kapotOud.length > 0);
+check("elke doelwaarde raakt nu een echte Vinted-tegel", kapotNu.length === 0,
+  kapotNu.join("; "));
 
 console.log(mislukt ? `\n${mislukt} controle(s) mislukt` : "\nAlles goed.");
 process.exit(mislukt ? 1 : 0);

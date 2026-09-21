@@ -34,6 +34,16 @@
   };
 
   // Dutch → Vinted English colour names.
+  //
+  // DE DOELWAARDEN ZIJN VINTEDS EIGEN CODES, NIET ONZE WOORDEN (21-09-2026).
+  // Op vinted.nl staan de tegels in het Nederlands ("Zwart", "Meerkleurig");
+  // wat wij herkennen is de code uit data-testid="color_code_…". Opgehaald bij
+  // Vinted zelf (/api/v2/item_upload/colors, 29 kleuren, 21-09-2026) en toen
+  // bleek: "Multi" bestaat daar niet, die tegel heet VARIOUS. Alles wat wij
+  // naar "Multi" vertaalden — multicolour, veelkleurig, divers — raakte dus
+  // nooit een tegel en liet het verplichte veld leeg. Zelfde verhaal voor
+  // "Bronze", dat bestaat niet. Zie tests/vinted-kleur-afwerking-test.js: die
+  // toetst elke doelwaarde hieronder tegen Vinteds echte lijst.
   const COLOUR_MAP = {
     "zwart":        "Black",
     "grijs":        "Grey",
@@ -76,8 +86,8 @@
     "geel":         "Yellow",
     "zilver":       "Silver",
     "goud":         "Gold",
-    "multi":        "Multi",
-    "veelkleurig":  "Multi",
+    "multi":        "Various",
+    "veelkleurig":  "Various",
     "transparant":  "Clear",
     // English passthrough (dashboard sends English for many items) → canonical
     // Vinted label, so casing/normalisation is deterministic.
@@ -104,11 +114,11 @@
     "brown":        "Brown",
     "silver":       "Silver",
     "gold":         "Gold",
-    "multicolour":  "Multi",
-    "multicolor":   "Multi",
-    "divers":       "Multi",
-    "diverse":      "Multi",
-    "various":      "Multi",
+    "multicolour":  "Various",
+    "multicolor":   "Various",
+    "divers":       "Various",
+    "diverse":      "Various",
+    "various":      "Various",
     "clear":        "Clear",
   };
 
@@ -131,7 +141,7 @@
     "burgundy": "Red", "wine": "Red", "cherry": "Red", "crimson": "Red",
     "sapphire": "Blue", "navy": "Navy", "cobalt": "Blue", "denim": "Blue",
     "teal": "Turquoise", "emerald": "Green", "olive": "Khaki", "moss": "Green",
-    "copper": "Bronze", "brass": "Gold", "champagne": "Gold",
+    "copper": "Brown", "brass": "Gold", "champagne": "Gold",
   };
 
   // Dutch → Vinted English material names.
