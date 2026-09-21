@@ -322,6 +322,27 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
     </details>
 
     <details style="margin-top:16px">
+      <summary style="cursor:pointer;font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--zacht);font-weight:700">Verbinding-mail</summary>
+      <div class="kaart" style="margin-top:12px">
+        <div class="uitleg">Eén persoonlijke update-mail aan bestaande gebruikers, drie tonen naar huidige
+          status. Engels als hoofdtaal met de Nederlandse vertaling erbij. Belooft niets, verlengt geen proef.
+          Volgorde: eerst testmail naar jezelf, dan proefronde per groep, dan pas echt versturen.</div>
+        <button class="knop stil" onclick="haalVerbindingSegmenten()">Toon groepen</button>
+        <div id="vb-segmenten"></div>
+        <div class="label" style="margin-top:16px">Versturen</div>
+        <div style="margin:8px 0">
+          Groep <select id="vb-groep"><option value="trial">In proef</option><option value="inactive">Niet actief</option><option value="customer">Klant</option></select>
+        </div>
+        <div style="margin-top:8px">
+          <button class="knop stil" onclick="verbindingTest()">Testmail naar mezelf</button>
+          <button class="knop stil" onclick="verbindingProef()">Proefronde, niets versturen</button>
+          <button class="knop" onclick="verbindingEcht()">Versturen</button>
+        </div>
+        <div id="vb-uitslag"></div>
+      </div>
+    </details>
+
+    <details style="margin-top:16px">
       <summary style="cursor:pointer;font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--zacht);font-weight:700">Klantenservice</summary>
       <div style="margin-top:12px">
         <div class="raster" id="ks-cijfers"></div>
