@@ -269,9 +269,6 @@ def token_geldig(user_id: str, token: str) -> bool:
     return hmac.compare_digest(_token(user_id), token or "")
 
 
-from backend.config import settings  # noqa: E402  (na de functies die het gebruiken, voorkomt een cirkel bij import-tijd)
-
-
 # ── Segmenten bepalen ────────────────────────────────────────────────────────
 def _is_afgemeld(afgemeld_ids: set[str], user_id: str) -> bool:
     return user_id in afgemeld_ids
