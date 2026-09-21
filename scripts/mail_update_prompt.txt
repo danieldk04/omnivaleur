@@ -31,6 +31,11 @@ STAP 3 — de tekst schrijven (alleen als stap 2 iets opleverde)
   Bouw een JSON-lijst van blokjes, elk met de velden:
     titel_en, tekst_en, titel_nl, tekst_nl
   (optioneel "accent": "blue" of "mint"; laat dit veld gewoon weg voor "blue")
+  (optioneel "afbeelding_url": alleen invullen als Daniel of de andere
+  developer je expliciet een al gehoste https-screenshot van de echte,
+  live app heeft gegeven voor dit blokje. Nooit zelf een url verzinnen,
+  nooit een AI-gegenereerde afbeelding gebruiken, en zonder een echte url
+  dit veld gewoon weglaten.)
 
 STAP 4 — vastleggen en een testmail naar Daniel
   Lees SECRET_KEY uit het project-.env-bestand (nooit printen, alleen gebruiken).
