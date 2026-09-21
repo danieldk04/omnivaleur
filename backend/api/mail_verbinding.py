@@ -94,6 +94,16 @@ def admin_verstuur(groep: str, dry_run: bool = True, bron: str = "evergreen",
     if groep not in GROEPEN:
         raise HTTPException(status_code=400, detail=f"Onbekende groep: {groep}")
     blokjes = _blokjes_voor_bron(bron)
+    if bron == "update" and not dry_run and blokjes:
+        from backend.services.mail_verbinding import ontbrekende_screenshots
+
+        ontbrekend = ontbrekende_screenshots(blokjes)
+        if ontbrekend:
+            raise HTTPException(
+                status_code=400,
+                detail="Nog geen screenshot voor: " + ", ".join(ontbrekend)
+                       + ". Voeg de afbeelding_url toe voor je hem echt verstuurt.",
+            )
     try:
         uitslag = verstuur_groep(groep, dry_run=dry_run, blokjes=blokjes,
                                  kind_label="update" if bron == "update" else "verbinding")
