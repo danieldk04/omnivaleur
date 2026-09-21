@@ -169,9 +169,9 @@ def _blok_text(b: dict) -> str:
             f"({b['titel_nl']}. {b['tekst_nl']})\n")
 
 
-def render_html(groep: str, afmeldlink: str) -> str:
+def render_html(groep: str, afmeldlink: str, blokjes: list[dict] | None = None) -> str:
     g = GROEPEN[groep]
-    blokjes_html = "".join(_blok_html(b) for b in BLOKJES)
+    blokjes_html = "".join(_blok_html(b) for b in (blokjes or BLOKJES))
     extra_html = ""
     if g["extra_en"]:
         extra_html = f"""
