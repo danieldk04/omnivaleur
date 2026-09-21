@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Wekelijkse "verbinding-update": stelt op maandagochtend een nieuw
+  conceptmailtje samen (alleen als er echt iets nieuws is, zie
+  scripts/mail_update_prompt.txt) en stuurt een testmail naar Daniel zelf.
+  Verstuurt NOOIT rechtstreeks naar klanten — dat gebeurt pas na Daniels eigen
+  klik op "Versturen" in beheer.html (blok Verbinding-mail).
+
+  Installeren:
+      cp config/com.omnivaleur.mailupdate.plist ~/Library/LaunchAgents/
+      launchctl load ~/Library/LaunchAgents/com.omnivaleur.mailupdate.plist
+
+  Stoppen:
+      launchctl unload ~/Library/LaunchAgents/com.omnivaleur.mailupdate.plist
+
+  Nu meteen een keer proberen (zonder op maandag te wachten):
+      launchctl kickstart -k gui/$(id -u)/com.omnivaleur.mailupdate
+
+  RunAtLoad staat bewust uit: laden mag niet meteen een sessie starten.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.omnivaleur.mailupdate</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>/Users/Danie/Documents/omnivaleur/scripts/mail_update_starter.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>1</integer>
+        <key>Hour</key>
+        <integer>8</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/Danie/Library/Application Support/omnivaleur/mail-update.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/Danie/Library/Application Support/omnivaleur/mail-update.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/Danie/Documents/omnivaleur</string>
+</dict>
+</plist>
