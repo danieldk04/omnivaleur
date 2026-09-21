@@ -396,9 +396,16 @@ def _meld_gestopt(gezondheid: dict) -> None:
     )
 
 
-def verstuur_groep(groep: str, dry_run: bool = True) -> dict:
-    """Verstuurt (of toont, bij dry_run) de verbindingsmail aan iedereen in deze
-    groep die niet al de laatste drie dagen campagnemail kreeg."""
+def verstuur_groep(groep: str, dry_run: bool = True, blokjes: list[dict] | None = None,
+                   kind_label: str = "verbinding") -> dict:
+    """Verstuurt (of toont, bij dry_run) de mail aan iedereen in deze groep die
+    niet al de laatste drie dagen campagnemail kreeg.
+
+    `blokjes` is None voor de vaste (evergreen) inhoud, of een lijst voor de
+    wekelijkse update (zie huidige_weekupdate). `kind_label` scheidt de twee
+    soorten in mail_campaign_log, zodat de 3-dagenregel ze wel samen telt
+    (dezelfde functie, dezelfde tabel) maar de meting uit STAP 4 ze uit elkaar
+    kan houden."""
     from backend.services.email import send_email_checked
 
     if groep not in GROEPEN:
@@ -423,13 +430,13 @@ def verstuur_groep(groep: str, dry_run: bool = True) -> dict:
         return {"dry_run": False, "groep": groep, "gestopt": True,
                 "reden": "bounce- of klachtengrens overschreden", **gezondheid}
 
-    kind = f"verbinding_{groep}"
+    kind = f"{kind_label}_{groep}"
     subject = render_subject(groep)
     verstuurd, mislukt = [], []
     for r in te_mailen:
         link = afmeldlink(r["user_id"])
-        html = render_html(groep, link)
-        text = render_text(groep, link)
+        html = render_html(groep, link, blokjes=blokjes)
+        text = render_text(groep, link, blokjes=blokjes)
         try:
             resend_id = send_email_checked(subject, text, to=r["email"],
                                            reply_to=settings.reply_to_email, html=html,
@@ -437,23 +444,55 @@ def verstuur_groep(groep: str, dry_run: bool = True) -> dict:
             _log(r["user_id"], r["email"], kind, groep, resend_id)
             verstuurd.append(r["email"])
         except Exception as e:
-            logger.exception(f"Verbindingsmail ({groep}) mislukt voor {r['email']}")
+            logger.exception(f"Mail ({kind}) mislukt voor {r['email']}")
             mislukt.append({"email": r["email"], "error": f"{type(e).__name__}: {e}"})
-    logger.info(f"Verbindingsmail {groep}: {len(verstuurd)} verstuurd, {len(mislukt)} mislukt")
+    logger.info(f"Mail {kind}: {len(verstuurd)} verstuurd, {len(mislukt)} mislukt")
     return {"dry_run": False, "groep": groep, "verstuurd": len(verstuurd), "mislukt": mislukt,
             "ontvangers": verstuurd}
 
 
-def verstuur_test(groep: str, naar: str) -> None:
-    """[TEST]-mail naar één adres (Daniel zelf), met een nep-afmeldlink zodat
-    er niets aan de echte tabel verandert. Raakt geen enkele klantrij aan."""
+def verstuur_test(groep: str, naar: str, blokjes: list[dict] | None = None) -> None:
+    """[TEST]-mail naar één adres, met een nep-afmeldlink zodat er niets aan de
+    echte tabel verandert. Raakt geen enkele klantrij aan."""
     from backend.services.email import send_email_checked
 
     if groep not in GROEPEN:
         raise ValueError(f"onbekende groep: {groep}")
     link = f"{UNSUBSCRIBE_BASE}?u=test&t=test"
     subject = f"[TEST] {render_subject(groep)}"
-    html = render_html(groep, link)
-    text = render_text(groep, link)
+    html = render_html(groep, link, blokjes=blokjes)
+    text = render_text(groep, link, blokjes=blokjes)
     send_email_checked(subject, text, to=naar, reply_to=settings.reply_to_email, html=html,
                        unsubscribe_url=link)
+
+
+# ── Wekelijkse update: inhoud die een lokale, geplande sessie klaarzet ──────
+#
+# WAAROM EEN APARTE TABEL EN NIET GEWOON BLOKJES OVERSCHRIJVEN. De evergreen
+# BLOKJES hierboven blijven werken als niemand deze week iets nieuws heeft
+# klaargezet — anders zou een wekelijkse sessie die zelf niets vond de vaste
+# inhoud kunnen laten verlopen. Regel 21-09-2026 (Daniel): "alleen als er echt
+# iets nieuws is". Bewijs voor de inhoud is nagekeken tegen git log en
+# docs/team-notes.md, nooit verzonnen: REGEL 2 verbiedt een AI-aanroep bij het
+# versturen zelf, dus de sessie die dit schrijft doet dat vooraf, niet live.
+def stel_weekupdate_op(blokjes: list[dict], week_van: str) -> None:
+    from backend.database import get_admin_db
+
+    if not blokjes:
+        raise ValueError("geen blokjes meegegeven — een lege update wordt nooit klaargezet")
+    for b in blokjes:
+        for veld in ("titel_en", "tekst_en", "titel_nl", "tekst_nl"):
+            if not b.get(veld):
+                raise ValueError(f"blokje mist '{veld}': {b}")
+        b.setdefault("accent", "blue")
+    get_admin_db().table("mail_update_actueel").upsert({
+        "id": "current", "blokjes": blokjes, "week_van": week_van, "status": "concept",
+    }, on_conflict="id").execute()
+
+
+def huidige_weekupdate() -> dict | None:
+    from backend.database import get_admin_db
+
+    rij = (get_admin_db().table("mail_update_actueel").select("*")
+           .eq("id", "current").limit(1).execute().data or [])
+    return rij[0] if rij else None
