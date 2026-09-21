@@ -98,7 +98,7 @@ def _is_configured() -> bool:
 
 
 def send_email_checked(subject: str, body: str, to: str | None = None, reply_to: str | None = None,
-                       html: str | None = None) -> str | None:
+                       html: str | None = None, unsubscribe_url: str | None = None) -> str | None:
     """Zelfde als send_email, maar laat de fout staan. Gebruikt door de testknop,
     zodat op het scherm komt te staan wát de mailserver precies weigerde in
     plaats van alleen 'het lukte niet'.
