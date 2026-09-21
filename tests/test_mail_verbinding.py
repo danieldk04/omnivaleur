@@ -379,4 +379,4 @@ def test_afbeelding_url_komt_in_de_html_alleen_bij_https(mail_verbinding):
 
     zonder_afbeelding = [{"titel_en": "x", "tekst_en": "y", "titel_nl": "z", "tekst_nl": "w"}]
     html = mv.render_html("customer", "https://omnivaleur.com/x", blokjes=zonder_afbeelding)
-    assert "<img" not in html.split("</tr>", 1)[-1] or "logo.png" in html
+    assert 'border-radius:8px;border:1px solid #e2e8f0' not in html
