@@ -153,7 +153,11 @@ def test_voorraadartikel_past_binnen_ebays_grenzen_en_heeft_een_productcode(monk
     product = verstuurd["product"]
     assert len(product["description"]) <= _MAX_OMSCHRIJVING, len(product["description"])
     assert product.get("ean") == [_GEEN_PRODUCTCODE], product.get("ean")
-    assert product.get("mpn") == _GEEN_PRODUCTCODE, product.get("mpn")
+    # Het merk hoort óók op productniveau, anders weigert eBay met
+    # "<BrandMPN> ongeldig" — gemeten tegen de echte eBay-API op 21-09-2026.
+    assert product.get("brand") == "Duesenberg", product.get("brand")
+    # En geen verzonnen mpn: dát was precies wat BrandMPN liet omvallen.
+    assert "mpn" not in product, product.get("mpn")
 
 
 def _klaar(waarde=None):
@@ -168,11 +172,18 @@ def _klaar(waarde=None):
 # repareert. Hieronder draait de versie van vóór deze reparatie (rechtstreeks
 # uit git) onder exact dezelfde omstandigheden, en die moet falen zoals Johan
 # het zag.
+# NIET HEAD (kennisbank: "voor-en-na-proef mag geen HEAD gebruiken"). Zodra de
+# reparatie gecommit is, IS HEAD de nieuwe code en vergelijkt de test zich met
+# zichzelf. Dat gebeurde hier één keer echt. 0a8576aa is de laatste ebay.py van
+# vóór deze reparatie.
+VOOR_DE_REPARATIE = "0a8576aa"
+
+
 def _oude_module(tmp_path):
     import importlib.util
     import subprocess
     bron = subprocess.run(
-        ["git", "show", "HEAD:backend/platforms/ebay.py"],
+        ["git", "show", f"{VOOR_DE_REPARATIE}:backend/platforms/ebay.py"],
         cwd=str(Path(__file__).resolve().parents[1]),
         capture_output=True, text=True, check=True).stdout
     pad = tmp_path / "ebay_oud.py"
@@ -278,7 +289,7 @@ def test_oude_versie_stuurde_4219_tekens_en_geen_productcode(tmp_path, monkeypat
 
     product = verstuurd["product"]
     assert len(product["description"]) > _MAX_OMSCHRIJVING, "oude code kortte al in?"
-    assert "ean" not in product and "mpn" not in product, "oude code stuurde al een productcode?"
+    assert "ean" not in product and "brand" not in product, "oude code stuurde al een productcode?"
 
 
 # ── 3. Een rij in de database is geen koppeling ──────────────────────────
@@ -319,7 +330,7 @@ def test_status_toont_ebay_niet_als_gekoppeld_zodra_ebay_hem_weigert(monkeypatch
 def test_oude_status_zei_gewoon_gekoppeld(tmp_path, monkeypatch):
     """Voor-en-na: dezelfde twee rijen door de versie van vóór de reparatie."""
     import subprocess
-    bron = subprocess.run(["git", "show", "HEAD:backend/api/platforms.py"],
+    bron = subprocess.run(["git", "show", "0b33d5a6:backend/api/platforms.py"],
                           cwd=str(Path(__file__).resolve().parents[1]),
                           capture_output=True, text=True, check=True).stdout
     # Alleen het endpoint zelf uitsnijden — de rest van dat bestand sleept de

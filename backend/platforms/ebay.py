@@ -388,15 +388,20 @@ class EbayPlatform(PlatformBase):
             "imageUrls": item.get("photo_urls", [])[:12],
             "aspects": aspects,
         }
-        # Productcode: alleen invullen wat we niet al van het artikel weten.
-        if item.get("ean"):
-            product["ean"] = [str(item["ean"])]
-        else:
-            product["ean"] = [_GEEN_PRODUCTCODE]
+        # Productcode. GEMETEN TEGEN DE ECHTE eBay-API op 21-09-2026 met het
+        # account van DK Resell Academy, drie varianten naast elkaar:
+        #   ean + mpn, zonder brand op productniveau -> geweigerd, errorId 25002
+        #     "De ingevoerde gegevens voor tag <BrandMPN> zijn ongeldig".
+        #   ean + mpn + brand                        -> BrandMPN akkoord.
+        #   alleen ean                               -> BrandMPN akkoord.
+        # Vandaar: het merk hoort óók op productniveau (niet alleen als
+        # kenmerk), en een verzonnen mpn sturen we niet. "Does not apply" is de
+        # waarde die eBay zelf voorschrijft als de code niet bestaat; zonder
+        # die regel weigert eBay met "Het veld EAN ontbreekt".
+        product["brand"] = item.get("brand") or "Unbranded"
+        product["ean"] = [str(item["ean"])] if item.get("ean") else [_GEEN_PRODUCTCODE]
         if item.get("mpn"):
             product["mpn"] = str(item["mpn"])
-        else:
-            product["mpn"] = _GEEN_PRODUCTCODE
         inventory_payload = {
             "product": product,
             "condition": _map_condition(item.get("condition", "good")),
