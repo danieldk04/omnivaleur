@@ -377,9 +377,8 @@ def verstuur_groep(groep: str, dry_run: bool = True) -> dict:
         html = render_html(groep, link)
         text = render_text(groep, link)
         try:
-            resp = send_email_checked(subject, text, to=r["email"],
-                                      reply_to=settings.reply_to_email, html=html)
-            resend_id = (resp or {}).get("id") if isinstance(resp, dict) else None
+            resend_id = send_email_checked(subject, text, to=r["email"],
+                                           reply_to=settings.reply_to_email, html=html)
             _log(r["user_id"], r["email"], kind, groep, resend_id)
             verstuurd.append(r["email"])
         except Exception as e:
