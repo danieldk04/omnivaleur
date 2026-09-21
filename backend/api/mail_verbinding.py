@@ -112,15 +112,22 @@ def unsubscribe_get(u: str = "", t: str = ""):
     zou de link zelf onbruikbaar maken voor wie net wil afmelden."""
     if not u or not t or not _verwerk_afmelding(u, t):
         return HTMLResponse(_BEVESTIGING.format(
-            titel="Link klopt niet",
-            tekst="Deze afmeldlink is niet geldig meer. Mail gerust naar "
-                  "info@revaleur.com als je toch niet meer wilt ontvangen."),
+            titel_en="This link isn't valid",
+            tekst_en="This unsubscribe link is no longer valid. Feel free to email "
+                     "info@revaleur.com if you'd still like to stop receiving these.",
+            titel_nl="Link klopt niet",
+            tekst_nl="Deze afmeldlink is niet geldig meer. Mail gerust naar "
+                     "info@revaleur.com als je toch niet meer wilt ontvangen."),
             status_code=400)
     return HTMLResponse(_BEVESTIGING.format(
-        titel="Je bent afgemeld",
-        tekst="Je krijgt geen updates zoals deze meer van Omnivaleur. Mail en "
-              "meldingen over je eigen account (zoals je proefperiode) blijven "
-              "gewoon werken."))
+        titel_en="You're unsubscribed",
+        tekst_en="You won't get updates like this from Omnivaleur anymore. Mail and "
+                 "notifications about your own account (like your trial) keep working "
+                 "as usual.",
+        titel_nl="Je bent afgemeld",
+        tekst_nl="Je krijgt geen updates zoals deze meer van Omnivaleur. Mail en "
+                 "meldingen over je eigen account (zoals je proefperiode) blijven "
+                 "gewoon werken."))
 
 
 @router.post("/unsubscribe")
