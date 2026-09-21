@@ -1440,7 +1440,41 @@ async def resolve_category_id(query: str, brand: str | None = None,
         # Alleen een gok binnen de eigen tak: liever geen rubriek (dan vraagt het
         # scherm erom) dan een kinderlederhose tussen de boeken.
         results = [r for r in results if set(tak) & set(r.get("voorouders") or ())]
+    rubriektak = _tak_voor_rubriek(category)
+    if rubriektak:
+        results = [r for r in results if rubriektak in set(r.get("voorouders") or ())]
     return results[0]["category_id"] if results else None
+
+
+# DE EIGEN RUBRIEK BEPAALT DE TAK (21-09-2026, Blackbird Guitars).
+#
+# eBay's zoeker is op ebay.nl ronduit slecht in merken die hij niet kent.
+# Gemeten via de echte Taxonomy-API op acht gitaartitels van deze verkoper, de
+# EERSTE suggestie (die wij tot nu toe klakkeloos namen):
+#
+#   Nieuw Homestead OMC Dark Blue       -> Muziek, cd's en platen > CD's
+#   Nieuw Reverend Eastsider Bariton    -> Muziek, cd's en platen > Vinyl
+#   Homestead Javatar Parlor            -> Verzamelingen > Verzamelkaarten
+#   Duesenberg Imperial D-Tron 2019     -> Speelgoed > Miniatuurvoertuigen
+#   Positive Grid Reactor 50            -> Auto's > Verkoopbrochures
+#   Martin D35 / Gibson Hummingbird /
+#   Fender Stratocaster                 -> Elektrische gitaren (goed)
+#
+# Een gitaar tussen de cd's is geen advertentie maar een begrafenis: niemand
+# zoekt daar. Dit filter houdt alleen suggesties over die in dezelfde tak
+# hangen als de rubriek die de verkoper zelf koos. Van dezelfde acht titels
+# kwamen er vier daarna in "Gitaren, bassen, accessoires" terecht en vier op
+# niets — en niets betekent dat het scherm om een rubriek vraagt, wat eerlijk
+# is. Extra zoekwoorden ("guitar") helpen niet, dat is apart gemeten.
+_EBAY_RUBRIEKTAK = {
+    "muziek": "619",        # Muziekinstrumenten
+}
+
+
+def _tak_voor_rubriek(category: str | None) -> str | None:
+    """De eBay-hoofdtak waar een dashboardrubriek in thuishoort, of None."""
+    eerste = (category or "").strip().lower().split(" ")[0]
+    return _EBAY_RUBRIEKTAK.get(eerste)
 
 
 # Vaste eBay.nl-rubriek per dashboardrubriek. eBay's eigen zoeker raadt op ebay.nl

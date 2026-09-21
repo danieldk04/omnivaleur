@@ -373,3 +373,67 @@ def test_oude_status_zei_gewoon_gekoppeld(tmp_path, monkeypatch):
     exec(code, ruimte)
     uit = ruimte["platform_status"](user_id="u1")
     assert uit["connected"] == ["ebay"], "de oude versie keek alleen of de rij bestond"
+
+
+# ── 4. Een gitaar hoort niet tussen de cd's ──────────────────────────────
+# De suggesties hieronder zijn de ECHTE antwoorden van eBay's Taxonomy-API,
+# opgehaald op 21-09-2026 via /api/platforms/ebay/category-suggest op productie.
+# Niet verzonnen en niet uit het hoofd overgeschreven.
+_ECHTE_SUGGESTIES = {
+    "Nieuw Homestead OMC Dark Blue": [
+        ("176984", ["11233"]),          # Muziek, cd's en platen > CD's
+        ("176985", ["11233"]),          # Vinyl en platen
+    ],
+    "Nieuw Reverend Eastsider Bariton": [
+        ("176985", ["11233"]),
+        ("219", ["182982", "8662", "1"]),
+    ],
+    "Homestead Javatar Parlor": [
+        ("183050", ["182982", "8662", "1"]),   # Verzamelkaarten
+        ("348", ["222", "220"]),               # Speelgoedfiguurtjes
+        ("33034", ["3858", "619"]),            # Elektrische gitaren
+    ],
+    "Martin D35 1979": [
+        ("2036", ["8830", "1"]),               # Buttons en pins
+        ("180273", ["222", "220"]),            # Miniatuurvoertuigen
+        ("33034", ["3858", "619"]),
+    ],
+    "Positive Grid Reactor 50": [
+        ("183720", ["36085"]),                 # Auto: verkoopbrochures
+    ],
+}
+
+
+def _kies(suggesties, tak):
+    """De keuze zoals resolve_category_id hem maakt, met en zonder takfilter."""
+    rijen = [{"category_id": c, "voorouders": v} for c, v in suggesties]
+    if tak:
+        rijen = [r for r in rijen if tak in set(r["voorouders"])]
+    return rijen[0]["category_id"] if rijen else None
+
+
+def test_de_eigen_rubriek_houdt_de_gok_binnen_de_juiste_tak():
+    from backend.platforms.ebay import _tak_voor_rubriek
+    tak = _tak_voor_rubriek("muziek snaarinstrumenten gitaren")
+    assert tak == "619"
+
+    zonder = {t: _kies(s, None) for t, s in _ECHTE_SUGGESTIES.items()}
+    met = {t: _kies(s, tak) for t, s in _ECHTE_SUGGESTIES.items()}
+
+    # Zo ging het vóór deze reparatie: vier van de vijf gitaren belandden
+    # buiten de muziekinstrumenten.
+    assert zonder["Nieuw Homestead OMC Dark Blue"] == "176984"      # CD's
+    assert zonder["Martin D35 1979"] == "2036"                      # buttons en pins
+    assert zonder["Positive Grid Reactor 50"] == "183720"           # autobrochures
+
+    # En zo nu: of de juiste gitaarrubriek, of niets — en niets betekent dat
+    # het scherm om een rubriek vraagt in plaats van stil te gokken.
+    assert met["Martin D35 1979"] == "33034"
+    assert met["Homestead Javatar Parlor"] == "33034"
+    assert met["Nieuw Homestead OMC Dark Blue"] is None
+    assert met["Positive Grid Reactor 50"] is None
+    assert all(v in (None, "33034") for v in met.values()), met
+
+    # Een rubriek buiten de muziek verandert niets.
+    assert _tak_voor_rubriek("jeans") is None
+    assert _tak_voor_rubriek(None) is None
