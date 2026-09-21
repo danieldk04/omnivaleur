@@ -123,12 +123,14 @@ class NepDb:
     """Eén db-object met vaste tabellen (subscriptions, mail_unsubscribed,
     mail_campaign_log) en een vaste gebruikerslijst voor auth.admin."""
 
-    def __init__(self, gebruikers, subscriptions=None, unsubscribed=None, campaign_log=None):
+    def __init__(self, gebruikers, subscriptions=None, unsubscribed=None, campaign_log=None,
+                 update_actueel=None):
         self.auth = types.SimpleNamespace(admin=_NepAuthAdmin(gebruikers))
         self._tabellen = {
             "subscriptions": list(subscriptions or []),
             "mail_unsubscribed": list(unsubscribed or []),
             "mail_campaign_log": list(campaign_log or []),
+            "mail_update_actueel": list(update_actueel or []),
         }
 
     def table(self, naam):
