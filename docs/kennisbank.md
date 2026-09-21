@@ -17,6 +17,93 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## ebay-25019-zegt-niet-wat-het-is
+
+*21-09-2026 — eBay-fout 25019 praat over onbevestigde identiteit en ongepaste taal, maar verschijnt ook bij een lading die eBay om een heel andere reden weigert*
+
+21-09-2026, account DK Resell Academy. Publiceren via onze server gaf keer op
+keer:
+
+> Cannot revise listing. Object kan niet worden aangeboden of gewijzigd. De
+> titel en/of beschrijving bevat wellicht ongepaste taal … Het lijkt erop dat je
+> niet de vereiste informatie hebt verstrekt om je identiteit of financiële
+> gegevens te bevestigen.
+
+errorId 25019. Die tekst leidt je volledig het verkeerde bos in. Wat gemeten is:
+
+- Dezelfde advertentie waar één verplicht kenmerk ontbrak gaf 25002 met een
+  duidelijke tekst ("De specificatie Stijl ontbreekt"). Zodra dat kenmerk er
+  wél stond, kwam 25019 terug.
+- Losse, met de hand gebouwde ladingen op hetzelfde account publiceerden wél
+  (bewezen: 178516553258, 178516553842, 178516566516, 178516566905, allemaal
+  meteen teruggetrokken). De lading van onze eigen server publiceerde niet,
+  ook niet toen ik hem zelf letterlijk kopieerde.
+- `/sell/account/v1/kyc` meldt op dit account "Accountgegevens bijwerken". Dat
+  stond al in de code sinds 15-09-2026 (zie de opmerking bij `lees_account`).
+
+**Open punt, niet opgelost.** Welke van de twee het is — een beperking op dit
+eBay-account of iets in onze lading dat ik niet heb kunnen isoleren — is niet
+bewezen. Wat wél vaststaat: op het account van Blackbird Guitars publiceerde
+diezelfde servercode op 18 en 19 september dertien gitaren zonder morren.
+
+**How to apply:** neem bij 25019 de tekst niet letterlijk. Haal eerst één
+verplicht kenmerk weg: verandert de fout in 25002, dan is de lading het
+probleem en niet het account. En reken nooit af op één account: dit had ik
+twee uur eerder geweten door het naast Blackbird Guitars te leggen.
+
+---
+
+## ebay-productcode-en-rubriek
+
+*21-09-2026 — eBay ziet merk en mpn als één paar, eist "Does not apply" als productcode, en zijn rubriekzoeker zet gitaren bij de cd's*
+
+Alles hieronder is op 21-09-2026 gemeten tegen de **echte** eBay-API met het
+account DK Resell Academy, niet uit documentatie overgeschreven.
+
+**Productcode: merk en mpn gaan samen, of allebei niet.** Vier varianten op
+hetzelfde artikel in rubriek 33034:
+
+    merk + mpn + ean  -> GEPUBLICEERD (advertentie 178516553258)
+    alleen ean        -> GEPUBLICEERD (advertentie 178516553842)
+    merk zonder mpn   -> geweigerd, errorId 25002 <BrandMPN>
+    mpn zonder merk   -> geweigerd, errorId 25002 <BrandMPN>
+
+Zonder enige productcode weigert eBay tweedehands spullen in veel rubrieken met
+"Het veld EAN ontbreekt" (twee gitaren van Blackbird Guitars, 19-09-2026). De
+waarde die eBay daarvoor zelf voorschrijft is letterlijk `Does not apply`.
+Let op: een tussenversie van vandaag stuurde het merk zonder mpn en zou élke
+plaatsing hebben geweigerd. Alleen omdat het tegen de echte API is gehouden
+kwam dat vóór de klant aan het licht — zie "omnivaleur-altijd-bewijzen".
+
+**Omschrijving: harde grens van 4000 tekens** op het voorraadartikel. Eén gitaar
+met 4219 tekens kwam daardoor nooit online. Wordt nu op een woordgrens ingekort.
+
+**De rubriekzoeker is onbruikbaar zonder tak-filter.** De eerste suggestie van
+eBay's Taxonomy-API op acht gitaartitels:
+
+    Nieuw Homestead OMC Dark Blue    -> Muziek, cd's en platen > CD's
+    Nieuw Reverend Eastsider Bariton -> Muziek, cd's en platen > Vinyl
+    Homestead Javatar Parlor         -> Verzamelingen > Verzamelkaarten
+    Duesenberg Imperial D-Tron 2019  -> Speelgoed > Miniatuurvoertuigen
+    Positive Grid Reactor 50         -> Auto's > Verkoopbrochures
+    Martin / Gibson / Fender         -> Elektrische gitaren (goed)
+
+Vier van de acht dus buiten de muziekinstrumenten, en wij namen tot vandaag
+klakkeloos `results[0]`. Sinds 21-09-2026 houdt de rubriek die de verkoper zelf
+koos de gok binnen dezelfde eBay-tak (`muziek …` -> 619). Zelfde acht titels:
+vier keer goed, vier keer niets, en niets betekent dat het scherm om een
+rubriek vraagt. Extra zoekwoorden ("guitar") helpen aantoonbaar niet. Zie ook
+"geraden-rubriek-is-niet-de-rubriek-van-de-verkoper" en
+"verzonnen-standaard-is-erger-dan-leeg".
+
+**Valkuil bij het meten.** De Taxonomy-API geeft met een gebruikerssleutel een
+lege kenmerkenlijst terug (en 403 op `get_category_suggestions` en
+`get_category_subtree`), terwijl eBay bij het publiceren wél kenmerken eist.
+Meet de rubriekzoeker dus via ons eigen `/api/platforms/ebay/category-suggest`
+op productie, dat gebruikt de app-sleutel. Zie "ebay-local-sandbox-creds".
+
+---
+
 ## afwerking-is-geen-kleur
 
 *21-09-2026 — Sunburst, Ambertone en Olympic White zijn afwerkingen, geen kleuren; Vinted heeft er geen tegel voor en weigert de hele advertentie*

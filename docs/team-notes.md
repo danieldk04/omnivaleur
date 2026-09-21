@@ -11928,3 +11928,38 @@ staat sinds 20-09 16:51 uit en hij draait nog 1.0.341.
 Ook geldig: hij krijgt via Facebook veel verzoeken van Duitsers en Fransen om
 buiten het platform om te handelen, en wil dat niet. Dat kost hem leestijd. Daar
 doen wij niets aan, wel het noemen waard als hij het nog eens aankaart.
+
+## 21-09-2026 (avond): eBay getoetst op het echte account van Daniel
+
+Daniel vroeg om meer zekerheid dan tests op papier en gaf toestemming om op
+DK Resell Academy echt te plaatsen. Wat dat opleverde, allemaal gemeten tegen
+de echte eBay-API en daarna teruggedraaid:
+
+- **Merk en mpn zijn bij eBay één paar.** Een tussenversie van vanmiddag
+  stuurde het merk zonder mpn en zou élke plaatsing hebben geweigerd. Vier
+  varianten naast elkaar: merk+mpn+ean en alleen-ean publiceren, de twee halve
+  paren worden geweigerd (25002 <BrandMPN>). Gerepareerd voordat een klant het
+  merkte, puur omdat het echt gedraaid is.
+- **Het inkorten op 4000 tekens werkt**: eBay accepteerde het voorraadartikel
+  met 3994 tekens waar 4219 eerder werd geweigerd.
+- **Onze rubriekzoeker zet gitaren bij de cd's.** Op acht titels van Blackbird
+  Guitars gaf eBay als eerste suggestie: CD's, Vinyl, Verzamelkaarten,
+  Miniatuurvoertuigen en Autobrochures. Vier van de acht dus faliekant mis, en
+  wij namen die eerste suggestie klakkeloos over. Nu houdt de eigen rubriek de
+  gok binnen dezelfde eBay-tak; vier keer de juiste gitaarrubriek, vier keer
+  niets (dan vraagt het scherm erom).
+- **Vinted heeft geen kleur "Multi".** Opgehaald bij Vinted zelf: 29 kleuren,
+  met Nederlandse titels en een Engelse code. "Multi" en "Bronze" bestonden
+  niet, dus iedereen die "multicolour", "veelkleurig" of "divers" opschreef
+  kreeg een leeg kleurveld en daarmee geen advertentie. Stond er al maanden in.
+
+**Open en niet opgelost.** Publiceren via onze server lukt op Daniels eigen
+eBay-account niet: eBay geeft 25019 met een tekst over onbevestigde identiteit.
+Met de hand gebouwde ladingen publiceren op datzelfde account wél. Of dat een
+beperking van dat account is (de kyc-melding staat er al sinds 15-09) of iets
+in onze lading dat niet geïsoleerd kon worden, is niet bewezen. Op het account
+van Blackbird Guitars deed diezelfde servercode het op 18 en 19 september wel.
+
+**Alles teruggezet:** alle proefadvertenties beëindigd en verwijderd, 423
+artikelen onveranderd, geen enkele advertentieregel in fout, de omschrijving
+van artikel 1323 terug op 498 tekens en zijn eBay-regel weer op 'delisted'.
