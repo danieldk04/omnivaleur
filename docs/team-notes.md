@@ -17,6 +17,49 @@ memory can still be written on top for fast recall, but never as the only
 record: anything here has to survive a switch to a different Claude account
 without Daniel repeating himself.
 
+## 2026-09-21 — E-mailmarketing naar bestaande gebruikers: segmenten vastgelegd
+
+Daniel heeft opdracht gegeven voor een persoonlijke e-mailcampagne (namens
+Daniel, niet "het team") naar de 53 bestaande gebruikers, met als doel
+activeren en naar een betaald abonnement brengen. Niets gaat de deur uit
+zonder zijn goedkeuring per mailsoort (testmail naar hemzelf eerst).
+
+Segmenten A t/m F zijn op 21-09-2026 echt gemeten op de productiedatabase
+(niet geschat). Segment A bleek eerst te overlappen met C (30 versus 41, met
+mensen die in allebei zaten), waardoor iemand in dezelfde ronde twee keer
+mail zou krijgen. Op Daniels aanwijzing is dat opgelost door A en B te
+koppelen aan de HUIDIGE abonnementsstatus in plaats van "ooit iets
+geplaatst": A en B zijn nu alleen wie nu in `trialing` zit (A = nog nooit een
+advertentie, B = wel), C is los `trial_expired`. Zo kunnen A/B en C nooit
+dezelfde gebruiker tegelijk raken, want een abonnement heeft maar één status.
+
+Gemeten op 21-09-2026:
+- A (trialing, nog nooit geplaatst): 2
+- B (trialing, wel geplaatst): 4
+- C (trial_expired, niet betalend): 41
+- D (active/complimentary, betalend): 3, plus 1 payment_processing (SEPA
+  onderweg), plus 1 canceled — deze twee horen NIET automatisch in D's
+  toon (D is "je bent al klant"), en niet in C (ze zijn geen proefgebruiker
+  meer). Nog te beslissen of processing/canceled een eigen, kleine
+  boodschap krijgen of voorlopig worden overgeslagen.
+- E (ooit een advertentie per kanaal): Marktplaats 21, Vinted 19, 2dehands
+  13, eBay 7, Shopify 4, Facebook 2.
+- F (kanaal mogelijk stilgevallen): 7 gebruikers met een verlopen
+  platformtoken (eBay/Shopify), 12 met een actief extensie-kanaal maar de
+  Chrome-extensie al 3+ dagen stil, waarvan 4 nog nooit een heartbeat
+  hadden.
+
+DNS op omnivaleur.com is op 21-09-2026 gecontroleerd en door Daniel bevestigd
+als "Verified" in het Resend-dashboard: DKIM (`resend._domainkey`) en SPF op
+`send.omnivaleur.com` staan goed. DMARC staat op `p=none` (bestaat, dwingt
+niets af) — bij 53 ontvangers geen harde eis, maar nog niet aangescherpt.
+
+Openstaand voordat er ook maar één testmail gaat: er bestaat nog GEEN plek in
+de database om een afmelding vast te leggen (geen unsubscribe/opt-out-kolom
+of -tabel). Die migratie moet Daniel met de hand in Supabase draaien, zoals
+gebruikelijk in dit project (zie "Handmatige migraties in Supabase" in de
+kennisbank).
+
 ## 2026-09-18 — Marktplaats-automatiseringsrisico nu expliciet in de gebruiksvoorwaarden
 
 Aanleiding: klant Peter (JP MiniWheels) las de Marktplaats-voorwaarden zelf en
