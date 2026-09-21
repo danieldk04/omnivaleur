@@ -219,7 +219,7 @@ def render_html(groep: str, afmeldlink: str, blokjes: list[dict] | None = None) 
 </table>"""
 
 
-def render_text(groep: str, afmeldlink: str) -> str:
+def render_text(groep: str, afmeldlink: str, blokjes: list[dict] | None = None) -> str:
     g = GROEPEN[groep]
     delen = [
         "Hi,",
@@ -228,7 +228,7 @@ def render_text(groep: str, afmeldlink: str) -> str:
         f"({g['greeting_nl']})",
         "",
     ]
-    delen += [_blok_text(b) for b in BLOKJES]
+    delen += [_blok_text(b) for b in (blokjes or BLOKJES)]
     if g["extra_en"]:
         delen += [g["extra_en"], f"({g['extra_nl']})", ""]
     delen += [
