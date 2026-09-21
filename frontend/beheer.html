@@ -329,9 +329,13 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
           Volgorde: eerst testmail naar jezelf, dan proefronde per groep, dan pas echt versturen.</div>
         <button class="knop stil" onclick="haalVerbindingSegmenten()">Toon groepen</button>
         <div id="vb-segmenten"></div>
+        <div class="label" style="margin-top:16px">Wekelijkse update (van de geplande sessie op je Mac)</div>
+        <div id="vb-weekupdate" class="uitleg">Nog niet opgehaald.</div>
+        <button class="knop stil" onclick="haalWeekupdate()">Toon huidige conceptupdate</button>
         <div class="label" style="margin-top:16px">Versturen</div>
         <div style="margin:8px 0">
           Groep <select id="vb-groep"><option value="trial">In proef</option><option value="inactive">Niet actief</option><option value="customer">Klant</option></select>
+          &nbsp; Inhoud <select id="vb-bron"><option value="evergreen">Vaste inhoud</option><option value="update">Wekelijkse update (concept)</option></select>
         </div>
         <div style="margin:8px 0">
           Testadres <input id="vb-testadres" type="email" placeholder="leeg = naar jezelf, of plak een mail-tester.com-adres" style="width:320px">
