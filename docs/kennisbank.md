@@ -17,6 +17,58 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-verwijderen-liep-zonder-klok
+
+*21-09-2026 — "Het Vinted-verwijdertabblad was het enige schrijvende werk zonder focus-emulatie; 'Delete control not found' was een bevroren tabblad, en de tweede route strandde op een CSRF-token dat Vinted niet meer in een meta-tag zet"*
+
+21-09-2026, artikel 795 van Daniel. Verkocht op Marktplaats, van 2dehands
+afgehaald, maar op Vinted bleef hij staan. De melding: *"Delete control not
+found ... Zichtbaar op het scherm: skip to content | #header-logo-id |
+#header-conversations-button-fallback | #header-notification-button | sell now |
+‌ | #favourite-button | + 3. Tweede route gaf 403."*
+
+**Dat knoppenlijstje is precies wat een BEZOEKER op een artikelpagina ziet.**
+Nagemeten op de echte pagina: uitgelogd geeft exact dezelfde reeks, alleen met
+de inlogknop in plaats van berichten en meldingen. De pagina was er dus wel, de
+knoppen van de eigenaar niet.
+
+**Aan Vinted lag het niet.** Hun eigen bestanden dragen `item-delete-button`,
+`item-delete-modal`, `item-delete-cancelation-button` en
+`item-delete-confirmation-button` nog gewoon, en onze zoeker matcht op een
+testid dat "delete" bevat. Wat er wél uit is: `item-actions-button`,
+`item-menu-button`, `item-page-actions-*` en alles met "kebab" — die staan
+nergens meer in hun code. Die selectors zijn dode lading.
+
+**Wat het wel was.** `SCHRIJVENDE_ACTIES` (create, delete, content_refresh,
+extend) geeft elke klus `klokVast` mee, en daarmee
+`Emulation.setFocusEmulationEnabled`. Zonder dat valt een achtergrond-tabblad
+terug naar 0,0 tikken per seconde na anderhalve minuut — staat zo gemeten in
+`tests/klok-varianten-echt-test.mjs`. `bgDeleteVinted` opent zijn eigen tabblad
+buiten de gewone uitgifte om en sloeg die vlag als enige over. De kast doorlopen
+kost tot 60 aanvragen, dus tegen de tijd dat er geklikt moet worden ligt de
+pagina stil. Koppelen moet op het lege tabblad gebeuren, vóór Vinted geladen is,
+dus het moet via de optie van `openWorkerTab` en kan niet achteraf.
+
+**De tweede route (403).** Het adres klopt: Vinted roept zelf
+`api.post("/items/{id}/delete")` aan. Maar wij haalden het beveiligingstoken uit
+`<meta name="csrf-token">`, en dat blokje bestaat niet meer sinds hun site op
+Next.js draait (nagemeten: geen enkele meta met csrf op een echte artikelpagina).
+Zonder token weigert Vinted élke POST met 403 terwijl lezen gewoon doorgaat:
+`/api/v2/users/current` antwoordt, `/items/{id}/delete` geeft 403. Nu lopen we
+meta, alle koekjes met csrf/xsrf in de naam, en de Next.js-lading van de pagina
+af, en de foutmelding zegt welke bron het werd en welke koekjes er stonden.
+
+Patroon om te onthouden: **elke klus die zijn eigen tabblad opent buiten de
+gewone uitgifte om, mist stilzwijgend alles wat de uitgifte regelt.** Zoek bij
+"werkt niet zonder dat ik erbij zit" eerst naar zo'n eigen `openWorkerTab`.
+
+Zie `tests/vinted-verwijderklok-test.js` (draait de echte `bgDeleteVinted`,
+met `--oud` tegen commit 2cdf26a4). Hoort bij
+"vinted-tabblad-klok-stilstand", "verborgen-tabblad-worker-timer" en
+"korte-klokmeting-bewijst-niets".
+
+---
+
 ## ebay-koppeling-sterft-stil
 
 *21-09-2026 — eBay weigert de opgeslagen sleutel en het dashboard blijft "Connected" zeggen; een rij in platform_credentials is geen koppeling*

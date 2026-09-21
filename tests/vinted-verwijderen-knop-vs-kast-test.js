@@ -38,6 +38,9 @@ async function ronde({ knopGevonden, wegNa, eerste, kast, anderOrigin = null }) 
   const gemeld = [];
   const omgeving = {
     openWorkerTab: (url, cb) => cb({ id: 7 }),
+    // De klok hoort er sinds 21-09-2026 bij (zie vinted-verwijderklok-test.js);
+    // zonder deze regel valt deze proef om op een naam die ze niet kent.
+    zetDoorlopendeKlok: async () => {},
     stuurWerkTabbladNaar: async () => {},
     vintedIngelogdOrigin: async () => anderOrigin,
     _mwVintedKast: () => {},

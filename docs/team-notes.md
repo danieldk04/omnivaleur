@@ -11970,3 +11970,41 @@ was issued to another client". Zijn sleutel hoort dus bij een ándere app-id, ni
 bij een verlopen koppeling. Opnieuw koppelen is de enige oplossing en werkt
 gegarandeerd. De oude code gooide precies die zin weg met raise_for_status().
 Waard om na te gaan: is EBAY_APP_ID op de server veranderd sinds 13-09?
+
+## 21-09-2026 (avond): verkocht op Marktplaats, bleef op Vinted staan
+
+Daniel meldde artikel 795 (Khaki Ralph Lauren Zip Vest). Verkocht op
+Marktplaats, door hem bevestigd om 20:14. 2dehands ging er meteen af, Vinted
+niet: `Delete control not found ... #favourite-button ... Tweede route gaf 403`.
+Zijn vermoeden ("hij doet niets als ik niet in het tabblad zit") klopt.
+
+- **Het knoppenlijstje in die melding is de bezoekersweergave.** Op de echte
+  pagina nagemeten: uitgelogd geeft exact dezelfde reeks, met alleen de
+  inlogknop in plaats van berichten/meldingen. De pagina was er, de knoppen van
+  de eigenaar niet.
+- **Niet de opmaak van Vinted.** `item-delete-button` en
+  `item-delete-confirmation-button` staan nog gewoon in hun bestanden; onze
+  zoeker matcht daarop. Dood zijn `item-actions-button`, `item-menu-button`,
+  `item-page-actions-*` en kebab.
+- **Wel: het tabblad lag stil.** `bgDeleteVinted` opent zijn eigen werk-tabblad
+  buiten de gewone uitgifte om en was het enige schrijvende werk zonder
+  `klokVast`, dus zonder focus-emulatie. Zonder die vlag: 0,0 tikken per seconde
+  na anderhalve minuut (eigen meting, `tests/klok-varianten-echt-test.mjs`).
+- **De tweede route gaf 403 omdat het beveiligingstoken ontbrak.** Vinted draait
+  op Next.js en heeft geen `<meta name="csrf-token">` meer. Lezen werkt dan nog
+  (`/api/v2/users/current` antwoordt), schrijven niet.
+
+Gerepareerd in 1.0.347: klok aan voor het verwijder-tabblad, token uit meta,
+koekjes én de Next.js-lading, en de melding noemt voortaan wélke bron het werd.
+Voor-en-na-proef: `tests/vinted-verwijderklok-test.js`, met `--oud` tegen
+commit 2cdf26a4 (6 controles falen daar).
+
+**Openstaand.** Dat de klok het écht oplost is niet op een ingelogd Vinted-account
+gedraaid: die sessie zat niet in de browser waar ik bij kon. Bewijs is dus
+"deze klus mist als enige wat alle andere wél hebben", niet "met klok aan is hij
+verwijderd". Ook onbewezen: welk koekje Vinted's token draagt. De nieuwe
+foutmelding schrijft dat vanzelf op zodra het nog eens misgaat.
+
+Twee advertenties van Daniel staan nu verkocht-maar-online op Vinted:
+7798044269 (795) en 9782584258 (1237). Handmatig weghalen; de reparatie zit in
+de extensie en werkt pas na een nieuwe versie in de Web Store.

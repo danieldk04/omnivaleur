@@ -5220,14 +5220,31 @@ async function bgDeleteVinted(job, serverUrl) {
   const url = payload.platform_listing_url
     || (resolvedOrigin ? `${resolvedOrigin}/items/${listingId}` : `https://www.vinted.com/items/${listingId}`);
 
+  // DE KLOK MOET HIER OOK AAN. (Daniel, 21-09-2026, artikel 795)
+  //
+  // Elke andere schrijvende klus krijgt `klokVast` mee (zie SCHRIJVENDE_ACTIES:
+  // create, delete, content_refresh, extend), want zonder focus-emulatie valt
+  // een achtergrond-tabblad terug naar 0,0 tikken per seconde na anderhalve
+  // minuut — dat staat hierboven bij openWorkerTab, negen minuten lang gemeten.
+  // Het verwijderen op Vinted opent zijn eigen tabblad en sloeg die vlag als
+  // enige over. Gevolg: tegen de tijd dat we op de verwijderknop willen klikken
+  // ligt de pagina al stil, en komt de melding "Delete control not found" terug
+  // met precies de knoppen die een bezoeker ziet (kopregel, hartje) en geen
+  // enkele knop van de eigenaar. Het ligt niet aan de opmaak van Vinted: hun
+  // eigen bestanden dragen `item-delete-button` en `item-delete-confirmation-button`
+  // nog gewoon, nagekeken op 21-09-2026, en daar zoeken wij op.
+  //
+  // De koppeling moet op het lege tabblad gebeuren, vóór Vinted geladen is —
+  // daarom via de optie en niet achteraf.
   const tabId = await new Promise((res, rej) =>
     openWorkerTab(url, t =>
-      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true }
+      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true, klokVast: true }
     )
   );
 
   try {
     await waitForTabLoad(tabId);
+    await zetDoorlopendeKlok(tabId, null, true).catch(() => {});
     await sleep(2500);
 
     // 1) Ground truth BEFORE: find member id and confirm the item is live in
@@ -5327,6 +5344,7 @@ async function bgDeleteVinted(job, serverUrl) {
       const itemOrigin = new URL(url).origin;
       await stuurWerkTabbladNaar(tabId, itemOrigin + "/");
       await waitForTabLoad(tabId);
+      await zetDoorlopendeKlok(tabId, null, true).catch(() => {});
       await sleep(2000);
       let kast = await execInTab(tabId, _mwVintedKast, [listingId]);
       // Geen sessie op dít domein hoeft niet te betekenen dat hij uitgelogd is:
@@ -5337,6 +5355,7 @@ async function bgDeleteVinted(job, serverUrl) {
         if (ander && ander !== itemOrigin) {
           await stuurWerkTabbladNaar(tabId, ander + "/");
           await waitForTabLoad(tabId);
+          await zetDoorlopendeKlok(tabId, null, true).catch(() => {});
           await sleep(2000);
           kast = await execInTab(tabId, _mwVintedKast, [listingId]);
         }
@@ -5551,28 +5570,67 @@ async function bgDeleteVinted(job, serverUrl) {
     // er niets aan de melding.
     let apiPoging = null;
     if (!clicked?.clickedConfirm) {
+      // WAAROM DEZE ROUTE OP 403 STRANDDE (gemeten 21-09-2026).
+      //
+      // Het adres klopt: Vinted's eigen pagina roept `deleteItem` aan als
+      // `api.post("/items/{id}/delete")`, letterlijk terug te vinden in hun
+      // bestanden. Alleen haalden wij het beveiligingstoken uit
+      // `<meta name="csrf-token">`, en dat blokje bestaat niet meer sinds hun
+      // site op Next.js draait — op een echte artikelpagina staat het er niet.
+      // Zonder token weigert Vinted elke POST met 403, ook met een geldige
+      // sessie: lezen (`/api/v2/users/current`) gaat gewoon door, schrijven
+      // niet. Daarom nu alles aflopen wat een token kan dragen, en in de
+      // melding zetten waar het vandaan kwam en welke koekjes er stonden.
+      // Anders is een volgende 403 weer niet na te lopen.
       apiPoging = await execInTab(tabId, async (lid) => {
-        const uitCookie = (naam) => {
-          const m = document.cookie.match(new RegExp("(?:^|; )" + naam + "=([^;]*)"));
-          return m ? decodeURIComponent(m[1]) : "";
-        };
+        const koekjes = document.cookie.split("; ").filter(Boolean).map((c) => {
+          const i = c.indexOf("=");
+          return i < 0 ? [c, ""] : [c.slice(0, i), decodeURIComponent(c.slice(i + 1))];
+        });
+        const uitCookie = (naam) => (koekjes.find(([k]) => k === naam) || [])[1] || "";
+        const bronnen = [];
         const meta = document.querySelector('meta[name="csrf-token"]');
-        const token = (meta && meta.getAttribute("content"))
-          || uitCookie("csrf_token") || uitCookie("XSRF-TOKEN") || "";
-        const kop = { Accept: "application/json", "Content-Type": "application/json" };
-        if (token) kop["X-CSRF-Token"] = token;
-        const anon = uitCookie("anon_id");
-        if (anon) kop["X-Anon-Id"] = anon;
+        if (meta && meta.getAttribute("content")) bronnen.push(["meta", meta.getAttribute("content")]);
+        for (const [k, v] of koekjes) if (/csrf|xsrf/i.test(k) && v) bronnen.push(["koekje:" + k, v]);
+        // De lading die Next.js in de pagina zet draagt het token van de
+        // ingelogde gebruiker zodra Vinted er een meegeeft.
         try {
-          const r = await fetch(`/api/v2/items/${lid}/delete`,
-                                { method: "POST", headers: kop, credentials: "include", body: "{}" });
-          return { status: r.status, ok: r.ok, token: !!token };
-        } catch (e) { return { status: 0, ok: false, fout: String(e).slice(0, 120) }; }
+          const brok = (self.__next_f || [])
+            .map((x) => (Array.isArray(x) ? x[1] : x))
+            .filter((x) => typeof x === "string").join("");
+          const m = brok.match(/"(?:csrf_?[tT]oken|csrfToken)"\s*:\s*"([^"]{8,200})"/);
+          if (m) bronnen.push(["pagina", m[1]]);
+        } catch (_) {}
+        const anon = uitCookie("anon_id");
+        const namen = koekjes.map(([k]) => k).filter((k) => /csrf|xsrf|anon|session|sid/i.test(k));
+        const pogingen = bronnen.length ? bronnen : [["geen", ""]];
+        let laatste = null;
+        for (const [bron, token] of pogingen) {
+          const kop = { Accept: "application/json", "Content-Type": "application/json",
+                        "X-Requested-With": "XMLHttpRequest" };
+          if (token) kop["X-CSRF-Token"] = token;
+          if (anon) kop["X-Anon-Id"] = anon;
+          try {
+            const r = await fetch(`/api/v2/items/${lid}/delete`,
+                                  { method: "POST", headers: kop, credentials: "include", body: "{}" });
+            laatste = { status: r.status, ok: r.ok, bron, bronnen: pogingen.map((b) => b[0]), koekjes: namen };
+            if (r.ok) return laatste;
+          } catch (e) {
+            laatste = { status: 0, ok: false, bron, bronnen: pogingen.map((b) => b[0]),
+                        koekjes: namen, fout: String(e).slice(0, 120) };
+          }
+        }
+        return laatste;
       }, [listingId]);
       console.log(`[Omnivaleur] bgDeleteVinted: de knop lukte niet, tweede route via Vinted's eigen verwijder-adres →`, apiPoging);
       await sleep(1500);
     }
-    const tweedeRoute = apiPoging ? ` Tweede route (Vinted's eigen verwijder-adres) gaf ${apiPoging.status}.` : "";
+    const tweedeRoute = apiPoging
+      ? ` Tweede route (Vinted's eigen verwijder-adres) gaf ${apiPoging.status}`
+        + ` met token uit ${apiPoging.bron || "geen"}`
+        + (apiPoging.koekjes && apiPoging.koekjes.length ? ` (koekjes: ${apiPoging.koekjes.join(",")})` : " (geen koekjes met een token)")
+        + "."
+      : "";
 
     const knopMislukt = !clicked?.clickedDelete
       ? `Delete control not found on Vinted item page for ID ${listingId} — Vinted may have changed its layout.${opScherm}${tweedeRoute}`
