@@ -1161,6 +1161,71 @@ async function terughaalPost(dry) {
     uit.innerHTML = '<div class="leeg">Mislukt: ' + veilig(e.message) + '</div>';
   }
 }
+// ---------------------------------------------------------------- verbinding-mail
+async function haalVerbindingSegmenten() {
+  const doel = el('vb-segmenten');
+  doel.innerHTML = '<div class="uitleg">Bezig met ophalen…</div>';
+  try {
+    const r = await fetch(API + '/api/mail-verbinding/admin/segmenten',
+      { headers: { Authorization: 'Bearer ' + TOKEN } });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { doel.innerHTML = '<div class="leeg">Ophalen mislukt: ' + veilig(d.detail || ('server ' + r.status)) + '</div>'; return; }
+    const namen = { trial: 'In proef', inactive: 'Niet actief', customer: 'Klant' };
+    doel.innerHTML = Object.entries(namen).map(([sleutel, titel]) => {
+      const g = d[sleutel] || { aantal: 0, voorbeeld: [] };
+      return `<div class="uitleg" style="margin-top:8px"><b>${veilig(titel)}</b> — ${g.aantal}`
+        + (g.voorbeeld.length ? `: ${g.voorbeeld.map(veilig).join(', ')}${g.aantal > g.voorbeeld.length ? ', …' : ''}` : '')
+        + `</div>`;
+    }).join('');
+  } catch (e) {
+    doel.innerHTML = '<div class="leeg">Ophalen mislukt: ' + veilig(e.message) + '</div>';
+  }
+}
+
+async function verbindingTest() {
+  const uit = el('vb-uitslag');
+  uit.innerHTML = '<div class="uitleg">Bezig…</div>';
+  try {
+    const r = await fetch(API + '/api/mail-verbinding/admin/test?groep=' + el('vb-groep').value,
+      { method: 'POST', headers: { Authorization: 'Bearer ' + TOKEN } });
+    const d = await r.json().catch(() => ({}));
+    uit.innerHTML = r.ok
+      ? `<div class="uitleg">Testmail onderweg naar ${veilig(d.sent_to)}.</div>`
+      : `<div class="leeg">${veilig(d.detail || ('server ' + r.status))}</div>`;
+  } catch (e) {
+    uit.innerHTML = '<div class="leeg">Mislukt: ' + veilig(e.message) + '</div>';
+  }
+}
+
+async function verbindingPost(dry) {
+  const uit = el('vb-uitslag');
+  uit.innerHTML = '<div class="uitleg">Bezig…</div>';
+  const q = new URLSearchParams({ groep: el('vb-groep').value, dry_run: dry ? 'true' : 'false' });
+  try {
+    const r = await fetch(API + '/api/mail-verbinding/admin/verstuur?' + q.toString(),
+      { method: 'POST', headers: { Authorization: 'Bearer ' + TOKEN } });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { uit.innerHTML = '<div class="leeg">' + veilig(d.detail || ('server ' + r.status)) + '</div>'; return; }
+    if (d.dry_run) {
+      uit.innerHTML = `<div class="uitleg" style="margin-top:8px">${d.aantal_in_groep} in de groep, `
+        + `${d.overgeslagen_recent_gemaild} overgeslagen (al binnen 3 dagen campagnemail gehad), `
+        + `${d.zou_versturen_aan} zouden hem nu krijgen.</div>`
+        + (d.voorbeeld.length ? `<div class="uitleg">Voorbeeld: ${d.voorbeeld.map(veilig).join(', ')}</div>` : '');
+    } else {
+      const mislukt = (d.mislukt || []).length
+        ? `<div class="leeg">Mislukt: ${d.mislukt.map(m => veilig(m.email)).join(', ')}</div>` : '';
+      uit.innerHTML = `<div class="uitleg" style="margin-top:8px">Verstuurd naar ${d.verstuurd}.</div>` + mislukt;
+    }
+  } catch (e) {
+    uit.innerHTML = '<div class="leeg">Mislukt: ' + veilig(e.message) + '</div>';
+  }
+}
+function verbindingProef() { verbindingPost(true); }
+function verbindingEcht() {
+  if (!confirm('Groep ' + el('vb-groep').value + ': de update-mail nu echt versturen naar iedereen in deze groep?')) return;
+  verbindingPost(false);
+}
+
 function terughaalProef() { terughaalPost(true); }
 function terughaalEcht() {
   if (!confirm('Groep ' + el('th-groep').value + ': proef verlengen en de mail nu echt versturen?')) return;
