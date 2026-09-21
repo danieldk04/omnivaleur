@@ -1188,8 +1188,9 @@ async function haalVerbindingSegmenten() {
 async function verbindingTest() {
   const uit = el('vb-uitslag');
   uit.innerHTML = '<div class="uitleg">Bezig…</div>';
+  const q = new URLSearchParams({ groep: el('vb-groep').value, naar: el('vb-testadres').value.trim() });
   try {
-    const r = await fetch(API + '/api/mail-verbinding/admin/test?groep=' + el('vb-groep').value,
+    const r = await fetch(API + '/api/mail-verbinding/admin/test?' + q.toString(),
       { method: 'POST', headers: { Authorization: 'Bearer ' + TOKEN } });
     const d = await r.json().catch(() => ({}));
     uit.innerHTML = r.ok
