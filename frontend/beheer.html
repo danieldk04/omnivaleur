@@ -333,8 +333,11 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
         <div style="margin:8px 0">
           Groep <select id="vb-groep"><option value="trial">In proef</option><option value="inactive">Niet actief</option><option value="customer">Klant</option></select>
         </div>
+        <div style="margin:8px 0">
+          Testadres <input id="vb-testadres" type="email" placeholder="leeg = naar jezelf, of plak een mail-tester.com-adres" style="width:320px">
+        </div>
         <div style="margin-top:8px">
-          <button class="knop stil" onclick="verbindingTest()">Testmail naar mezelf</button>
+          <button class="knop stil" onclick="verbindingTest()">Testmail sturen</button>
           <button class="knop stil" onclick="verbindingProef()">Proefronde, niets versturen</button>
           <button class="knop" onclick="verbindingEcht()">Versturen</button>
         </div>
