@@ -46,8 +46,22 @@ def admin_segmenten(user=Depends(get_current_user_full)):
             for groep, leden in s.items()}
 
 
+def _blokjes_voor_bron(bron: str) -> list[dict] | None:
+    """None = vaste (evergreen) inhoud. 'update' = de wekelijkse conceptmail,
+    als die er is — anders een duidelijke fout, nooit stil terugvallen op iets
+    anders dan wat er echt klaarstaat."""
+    if bron != "update":
+        return None
+    from backend.services.mail_verbinding import huidige_weekupdate
+
+    update = huidige_weekupdate()
+    if not update:
+        raise HTTPException(status_code=404, detail="Er staat geen wekelijkse update klaar.")
+    return update["blokjes"]
+
+
 @router.post("/admin/test")
-def admin_test(groep: str, naar: str = "", user=Depends(get_current_user_full)):
+def admin_test(groep: str, naar: str = "", bron: str = "evergreen", user=Depends(get_current_user_full)):
     """Stuurt de [TEST]-versie naar de ingelogde eigenaar zelf, of naar een
     ander adres als `naar` is meegegeven (bijvoorbeeld een mail-tester.com-adres
     of een los Gmail/Outlook/iCloud-adres voor de spamproef uit de opdracht).
@@ -58,9 +72,10 @@ def admin_test(groep: str, naar: str = "", user=Depends(get_current_user_full)):
 
     if groep not in GROEPEN:
         raise HTTPException(status_code=400, detail=f"Onbekende groep: {groep}")
+    blokjes = _blokjes_voor_bron(bron)
     doel = naar.strip() or user.email
     try:
-        verstuur_test(groep, naar=doel)
+        verstuur_test(groep, naar=doel, blokjes=blokjes)
     except Exception as e:
         logger.exception("Testmail verbindingscampagne mislukt")
         raise HTTPException(status_code=503, detail=f"{type(e).__name__}: {e}")
@@ -68,7 +83,8 @@ def admin_test(groep: str, naar: str = "", user=Depends(get_current_user_full)):
 
 
 @router.post("/admin/verstuur")
-def admin_verstuur(groep: str, dry_run: bool = True, user=Depends(get_current_user_full)):
+def admin_verstuur(groep: str, dry_run: bool = True, bron: str = "evergreen",
+                   user=Depends(get_current_user_full)):
     """De echte verzending naar een hele groep. dry_run=true (standaard) laat
     alleen zien wie het zou krijgen en verandert niets."""
     if not _is_owner_email(user.email):
@@ -77,11 +93,69 @@ def admin_verstuur(groep: str, dry_run: bool = True, user=Depends(get_current_us
 
     if groep not in GROEPEN:
         raise HTTPException(status_code=400, detail=f"Onbekende groep: {groep}")
+    blokjes = _blokjes_voor_bron(bron)
     try:
-        return verstuur_groep(groep, dry_run=dry_run)
+        uitslag = verstuur_groep(groep, dry_run=dry_run, blokjes=blokjes,
+                                 kind_label="update" if bron == "update" else "verbinding")
     except Exception as e:
         logger.exception("Verbindingscampagne mislukt")
         raise HTTPException(status_code=503, detail=f"{type(e).__name__}: {e}")
+    if bron == "update" and not dry_run and uitslag.get("verstuurd"):
+        from backend.database import get_admin_db
+        get_admin_db().table("mail_update_actueel").update(
+            {"status": "verstuurd"}).eq("id", "current").execute()
+    return uitslag
+
+
+@router.get("/admin/weekupdate")
+def admin_weekupdate(user=Depends(get_current_user_full)):
+    """Wat er nu klaarstaat vanuit de lokale geplande sessie, of niets."""
+    if not _is_owner_email(user.email):
+        raise HTTPException(status_code=403, detail="Not allowed")
+    from backend.services.mail_verbinding import huidige_weekupdate
+
+    return huidige_weekupdate() or {"status": "leeg"}
+
+
+@router.post("/automation/weekupdate")
+def automation_weekupdate(body: dict, x_admin_secret: str | None = Header(None)):
+    """Voor de lokale, wekelijks geplande sessie: legt de nieuwe conceptinhoud
+    vast. Verstuurt zelf niets — dat blijft aan Daniel via beheer.html, of aan
+    /automation/weekupdate/test voor de review-testmail."""
+    _vereis_automatiseringsgeheim(x_admin_secret)
+    from backend.services.mail_verbinding import stel_weekupdate_op
+
+    blokjes = body.get("blokjes")
+    week_van = body.get("week_van", "")
+    if not isinstance(blokjes, list):
+        raise HTTPException(status_code=400, detail="'blokjes' moet een lijst zijn")
+    try:
+        stel_weekupdate_op(blokjes, week_van)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"ok": True, "aantal_blokjes": len(blokjes), "week_van": week_van}
+
+
+@router.post("/automation/weekupdate/test")
+def automation_weekupdate_test(groep: str = "customer", x_admin_secret: str | None = Header(None)):
+    """Voor dezelfde sessie: stuurt de zojuist vastgelegde update als [TEST]
+    naar de eigenaar, zodat hij hem in zijn eigen inbox ziet staan zonder zelf
+    te hoeven inloggen op het beheerpaneel."""
+    _vereis_automatiseringsgeheim(x_admin_secret)
+    from backend.config import settings as _settings
+    from backend.services.mail_verbinding import GROEPEN, huidige_weekupdate, verstuur_test
+
+    if groep not in GROEPEN:
+        raise HTTPException(status_code=400, detail=f"Onbekende groep: {groep}")
+    update = huidige_weekupdate()
+    if not update:
+        raise HTTPException(status_code=404, detail="Er staat geen wekelijkse update klaar.")
+    try:
+        verstuur_test(groep, naar=_settings.owner_email, blokjes=update["blokjes"])
+    except Exception as e:
+        logger.exception("Testmail wekelijkse update mislukt")
+        raise HTTPException(status_code=503, detail=f"{type(e).__name__}: {e}")
+    return {"ok": True, "sent_to": _settings.owner_email}
 
 
 # Engels eerst, Nederlands er kleiner onder — zelfde opbouw als de mail zelf
