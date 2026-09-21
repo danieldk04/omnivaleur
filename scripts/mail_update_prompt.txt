@@ -1,0 +1,61 @@
+Je bent een wekelijkse, geautomatiseerde sessie in de omnivaleur-repo. Doel: kijk
+of er deze week echt iets is bijgekomen dat de moeite waard is om aan bestaande
+gebruikers te laten weten (STAP 3 van de verbinding-campagne, zie
+docs/team-notes.md 21-09-2026 en 21-09-2026 vervolg). Je verstuurt NOOIT iets
+naar echte klanten — dat blijft Daniels eigen klik in beheer.html. Jouw enige
+taak is: opstellen, en een testmail naar Daniel zelf.
+
+STAP 1 — uitzoeken wat er deze week echt is gebeurd
+  git log --since="8 days ago" --name-only
+  Lees de diff van alles wat een gebruiker zou merken (een reparatie, een nieuw
+  kanaal, iets sneller of betrouwbaarder). Negeer interne refactors, tests,
+  documentatie, en "auto: update ..."-commits die alleen op de titel saai lijken
+  (kijk zelf naar de inhoud, niet naar de titel — die commits bevatten vaak echt
+  werk, zie CLAUDE.md).
+  Lees ook de laatste toevoegingen onderaan docs/team-notes.md voor context.
+
+STAP 2 — bepalen of het genoeg is
+  Is er niets dat een gebruiker echt zou raken? Schrijf dan GEEN nieuwe update.
+  Voeg alleen een korte, gedateerde regel toe onderaan docs/team-notes.md
+  ("wekelijkse update-check <datum>: niets dat de moeite waard was, dus niets
+  klaargezet") en stop hier. Commit en push die ene regel.
+
+STAP 3 — de tekst schrijven (alleen als stap 2 iets opleverde)
+  Lees backend/services/mail_verbinding.py, de lijst BLOKJES, voor de exacte
+  toon en opbouw: een korte, specifieke Engelse kop (geen vage termen, echt wat
+  er is gebouwd — zie het voorbeeld "Facebook Marketplace: up to 10 photos,
+  automatically"), een Engelse zin over wat dit betekent voor de klant, dan
+  dezelfde twee dingen in het Nederlands. Schrijf 1 tot 3 van zulke blokjes,
+  nooit meer — dit moet in een paar seconden te scannen zijn. Alleen feiten die
+  je in de code of in team-notes hebt teruggevonden, nooit verzonnen.
+  Bouw een JSON-lijst van blokjes, elk met de velden:
+    titel_en, tekst_en, titel_nl, tekst_nl
+  (optioneel "accent": "blue" of "mint"; laat dit veld gewoon weg voor "blue")
+
+STAP 4 — vastleggen en een testmail naar Daniel
+  Lees SECRET_KEY uit het project-.env-bestand (nooit printen, alleen gebruiken).
+  curl -s -X POST https://omnivaleur.com/api/mail-verbinding/automation/weekupdate \
+    -H "X-Admin-Secret: $SECRET_KEY" -H "Content-Type: application/json" \
+    -d '{"blokjes": [...], "week_van": "YYYY-MM-DD"}'
+  (week_van = de maandag van deze week)
+  Ging dat goed, stuur dan de testmail:
+  curl -s -X POST "https://omnivaleur.com/api/mail-verbinding/automation/weekupdate/test?groep=customer" \
+    -H "X-Admin-Secret: $SECRET_KEY"
+  Lukt een van beide niet (bijvoorbeeld 401: SECRET_KEY klopt niet, of de server
+  is onbereikbaar), meld dat dan met zoveel woorden in team-notes en stop.
+  Verstuur NOOIT rechtstreeks met send_email of een ander kanaal — alleen via
+  deze twee aanroepen, want alleen dat pad logt de update en houdt hem
+  gescheiden van de vaste inhoud.
+
+STAP 5 — teruggeven
+  Voeg een gedateerde regel toe onderaan docs/team-notes.md: wat er is
+  klaargezet (de koppen van de blokjes volstaan), dat de testmail onderweg is
+  naar Daniels eigen inbox, en dat hij hem in beheer.html (blok Verbinding-mail,
+  Inhoud: "Wekelijkse update") kan bekijken en pas na zijn eigen goedkeuring
+  naar een groep kan versturen. Commit en push die regel, net als elke andere
+  wijziging in dit project.
+
+Regels die altijd gelden in dit project (CLAUDE.md): nooit secrets committen,
+nooit een bestand overschrijven zonder het eerst te lezen, niets in de hoofdmap
+opslaan, en draai geen tests die je niet nodig hebt — dit is een tekst- en
+databasetaak, geen codewijziging.
