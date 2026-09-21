@@ -66,8 +66,16 @@ def _send_via_resend(subject: str, body: str, recipient: str, reply_to: str | No
     # gaat de mail eerder naar spam, ook als hij verder niets fout doet.
     unsubscribe = reply_to or settings.reply_to_email
     if unsubscribe:
+        # Een https-link erbij (naast mailto) is wat Gmail/Yahoo sinds 2024 echt
+        # willen zien voor het "One-Click"-mechanisme: mailto alleen wordt
+        # geaccepteerd maar telt niet mee als one-click, want daar kan een
+        # mailclient niet zomaar een POST naartoe sturen zonder een mailprogramma
+        # te openen.
+        waarden = [f"<mailto:{unsubscribe}?subject=unsubscribe>"]
+        if unsubscribe_url:
+            waarden.insert(0, f"<{unsubscribe_url}>")
         payload["headers"] = {
-            "List-Unsubscribe": f"<mailto:{unsubscribe}?subject=unsubscribe>",
+            "List-Unsubscribe": ", ".join(waarden),
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         }
 
