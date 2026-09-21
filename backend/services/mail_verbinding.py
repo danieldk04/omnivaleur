@@ -517,3 +517,19 @@ def huidige_weekupdate() -> dict | None:
     rij = (get_admin_db().table("mail_update_actueel").select("*")
            .eq("id", "current").limit(1).execute().data or [])
     return rij[0] if rij else None
+
+
+def ontbrekende_screenshots(blokjes: list[dict]) -> list[str]:
+    """Koppen (titel_en) van blokjes die de automatische sessie heeft
+    gemarkeerd met "screenshot_nodig": true, maar die nog geen (geldige
+    https-)afbeelding_url hebben. Wordt gebruikt om de echte verzending van
+    de wekelijkse update tegen te houden totdat Daniel de screenshot heeft
+    toegevoegd — zie docs/team-notes.md 21-09-2026."""
+    ontbrekend = []
+    for b in blokjes:
+        if not b.get("screenshot_nodig"):
+            continue
+        url = (b.get("afbeelding_url") or "").strip()
+        if not url.startswith("https://"):
+            ontbrekend.append(b.get("titel_en", "(zonder titel)"))
+    return ontbrekend
