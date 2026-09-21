@@ -44,6 +44,7 @@ class _NepQuery:
         # nieuwe _NepQuery om een kopie van de kopie heen bouwt.
         self._rijen = rijen
         self._filters = []
+        self._bereik = None
 
     def select(self, *_a, **_kw):
         return self
