@@ -378,7 +378,8 @@ def verstuur_groep(groep: str, dry_run: bool = True) -> dict:
         text = render_text(groep, link)
         try:
             resend_id = send_email_checked(subject, text, to=r["email"],
-                                           reply_to=settings.reply_to_email, html=html)
+                                           reply_to=settings.reply_to_email, html=html,
+                                           unsubscribe_url=link)
             _log(r["user_id"], r["email"], kind, groep, resend_id)
             verstuurd.append(r["email"])
         except Exception as e:
