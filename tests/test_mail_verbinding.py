@@ -64,6 +64,10 @@ class _NepQuery:
     def order(self, *_a, **_kw):
         return self
 
+    def limit(self, n):
+        self._bereik = (0, n - 1)
+        return self
+
     def range(self, start, end):
         # ECHT toepassen: fetch_all() in backend/database.py stopt pas zodra
         # een pagina leeg terugkomt. Een neppe .range() die niets doet geeft
@@ -311,3 +315,47 @@ def test_recent_gemaild_wordt_overgeslagen_over_alle_soorten_heen(monkeypatch, m
     logrijen = db._tabellen["mail_campaign_log"]
     assert any(r.get("email") == "vers@voorbeeld.nl" and r.get("kind") == "verbinding_trial"
               for r in logrijen)
+
+
+# ── Wekelijkse update: eigen inhoud, nooit stil terugvallen op verzonnen tekst ──
+
+def test_weekupdate_wordt_vastgelegd_en_teruggelezen(monkeypatch, mail_verbinding):
+    mv = mail_verbinding
+    db = NepDb([])
+    monkeypatch.setattr("backend.database.get_admin_db", lambda: db)
+
+    blokjes = [{
+        "titel_en": "Faster Vinted publishing", "tekst_en": "Listings go live sooner.",
+        "titel_nl": "Vinted publiceert sneller", "tekst_nl": "Advertenties staan eerder live.",
+    }]
+    mv.stel_weekupdate_op(blokjes, "2026-09-21")
+
+    update = mv.huidige_weekupdate()
+    assert update["week_van"] == "2026-09-21"
+    assert update["status"] == "concept"
+    assert update["blokjes"][0]["titel_en"] == "Faster Vinted publishing"
+
+
+def test_weekupdate_weigert_een_leeg_of_onvolledig_blokje(mail_verbinding):
+    mv = mail_verbinding
+    with pytest.raises(ValueError):
+        mv.stel_weekupdate_op([], "2026-09-21")
+    with pytest.raises(ValueError):
+        # tekst_nl ontbreekt — dit zou een half ingevuld blokje versturen
+        mv.stel_weekupdate_op([{"titel_en": "x", "tekst_en": "y", "titel_nl": "z"}], "2026-09-21")
+
+
+def test_render_gebruikt_de_meegegeven_blokjes_niet_de_vaste(mail_verbinding):
+    mv = mail_verbinding
+    eigen_blokjes = [{
+        "titel_en": "Unique weekly headline", "tekst_en": "Body text.",
+        "titel_nl": "Unieke koptekst", "tekst_nl": "Body tekst.",
+    }]
+    html = mv.render_html("customer", "https://omnivaleur.com/x", blokjes=eigen_blokjes)
+    tekst = mv.render_text("customer", "https://omnivaleur.com/x", blokjes=eigen_blokjes)
+
+    assert "Unique weekly headline" in html
+    assert "Unique weekly headline" in tekst
+    # De vaste, evergreen inhoud hoort er dan NIET ook nog in te staan.
+    assert "Earn a free month" not in html
+    assert "Earn a free month" not in tekst
