@@ -17,6 +17,149 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## afwerking-is-geen-kleur
+
+*21-09-2026 — Sunburst, Ambertone en Olympic White zijn afwerkingen, geen kleuren; Vinted heeft er geen tegel voor en weigert de hele advertentie*
+
+Gemeten 21-09-2026 op Blackbird Guitars. Een gitaarverkoper vult in het
+kleurveld de fabrieksafwerking in: Sunburst, Vintage Sunburst, Ambertone,
+Olympic White, Dark Mahagony, Natural Sitka-spruce, Burgundy Mist, Satin
+Outfield Blue. Vinted biedt daar geen tegel voor en de oude zoeker keek alleen
+of de héle tekst op een tegel leek. Uitkomst in zijn dashboard:
+`colour (Sunburst — none of the colour tiles responded to a click)`, terwijl de
+rest van het formulier klaarstond.
+
+Op zijn negentien echte kleurwaarden: **7 van de 19 gevonden voor, 19 van de 19
+na** (tests/vinted-kleur-afwerking-test.js, met de oude versie uit git ernaast).
+
+Twee dingen repareerden het, in deze volgorde:
+
+1. Woord voor woord zoeken. "Olympic White", "dark blue" en "Satin Outfield
+   Blue" bevatten wél een bestaande tegel, alleen niet als hele tekst.
+2. Een tabel `AFWERKING_MAP` met afwerkingen die een echte kleur hébben:
+   sunburst/ambertone/mahogany → Brown, natural/sitka/maple → Beige, ivory en
+   olympic → White, burgundy en cherry → Red. Dit is geen verzonnen standaard
+   (vgl. "verzonnen-standaard-is-erger-dan-leeg"): elk woord staat voor de
+   kleur die de afwerking werkelijk heeft. Het alternatief was geen advertentie.
+
+Dit geldt breder dan gitaren: meubels, sieraden en tassen dragen dezelfde soort
+woorden. Zie ook "verbogen-kleurnamen-matchen-niet" voor de Marktplaats-kant.
+
+**How to apply:** een verplicht keuzeveld dat geen treffer geeft mag nooit de
+hele advertentie kosten zolang er nog een eerlijke dichtstbijzijnde waarde is.
+
+---
+
+## ebay-koppeling-sterft-stil
+
+*21-09-2026 — eBay weigert de opgeslagen sleutel en het dashboard blijft "Connected" zeggen; een rij in platform_credentials is geen koppeling*
+
+Gemeten 21-09-2026 op Blackbird Guitars (Johan Kist, proefklant). Zijn eBay
+toegangssleutel verliep 19-09 om 11:06. Elke plaatsing daarna mislukte op de
+vernieuwing van die sleutel (eBay antwoordde 400 op
+`identity/v1/oauth2/token`), en wat hij in het dashboard las was letterlijk
+`Client error '400 Bad Request' for url 'https://api.ebay.com/identity/v1/
+oauth2/token'`. Twee dagen lang, en al die tijd stond eBay op **✓ Connected**.
+
+Twee losse fouten, en de tweede is de ergste:
+
+1. `refresh_credentials` deed `resp.raise_for_status()`. Die tekst noemt een URL
+   en gooit eBay's eigen uitleg (`invalid_grant`, `invalid_scope`, …) weg —
+   precies het bewijs dat je later nodig hebt om te weten wát er stuk was.
+2. `/api/platforms/status` telde een kanaal als gekoppeld zodra er een rij in
+   `platform_credentials` stond. Bestaan is niet werken. Dit is dezelfde fout
+   als "aanwezigheid-niet-vragen-maar-stempelen" en
+   "storing-mag-niet-nog-even-laden-heten", nu op een koppeling.
+
+Sinds 21-09-2026: een geweigerde vernieuwing zet `extra_data.koppeling_kapot`
+op de rij, het kanaal valt uit `connected`, het scherm toont "Connection
+expired" met Reconnect, en de callback zet daarna de mislukte eBay-advertenties
+zelf terug in de rij (achtergrondtaak, hoogstens 50).
+
+Let op bij meten: zeven van de acht eBay-koppelingen in de database hadden een
+verlopen sleutel, maar zes daarvan horen bij afgelopen proeven. Alleen 3bfbed2c
+(actief op 21-09) en f8c0cce9 waren echt geraakt. Tel dus nooit alleen
+verlopen sleutels; leg er de hartslag en het abonnement naast.
+
+**Waarom niet 100%:** waaróm eBay die twee refresh-tokens weigert is niet
+bewezen. Beide stopten op 19-09 kort na een geslaagde vernieuwing. De lokale
+`.env` draagt sandbox-sleutels (zie "ebay-local-sandbox-creds"), dus de
+productie-vernieuwing is van deze machine niet na te spelen. Het antwoordlichaam
+wordt nu wél bewaard, dus de volgende keer staat het er gewoon.
+
+**How to apply:** een kanaal dat "gekoppeld" heet moet dat kunnen bewijzen. En
+gooi bij een mislukte API-aanroep nooit het antwoordlichaam weg met
+`raise_for_status()`.
+
+---
+
+## monaim-50-50-partnership
+
+*21-09-2026 — "Monaim is 50/50-partner op Omnivaleur (Growth & Content), aparte deal van zijn eigen merk Somnia; juridische vastlegging bewust uitgesteld"*
+
+Monaim bouwt sinds 2026-08-26 mee aan **Omnivaleur** als 50/50-partner —
+losstaand van zijn eigen merk **Somnia** (paid ads/e-commerce, aparte
+context, niet Omnivaleur-gerelateerd). "omnivaleur-brand-never-a-verb"
+
+**Why:** Daniel wil eerst zien hoe de samenwerking in de praktijk loopt
+voordat er iets juridisch (aandelen/contract) wordt vastgelegd. De 50/50 is
+dus nu een mondelinge afspraak, bewust nog geen contract.
+
+**Herkomst van het merk:** Revaleur is Daniels eigen vintage kledingmerk;
+Omnivaleur is de software die daaruit is ontstaan (gebouwd om Revaleurs
+eigen cross-listing te automatiseren) en later losgetrokken tot een eigen
+SaaS-product.
+
+**Rol & taken:** Growth & Content Partner — wekelijks Nederlandstalig
+contentschema voor TikTok/Instagram (eigen suggestie: 3 posts + 1 video/week
+als eerste test) en een social-DM-outreachsysteem verkennen naast de
+bestaande koude-mail-leadgen "leadgen-vier-bronnen". **Maar de echte
+bedrijfsbrede prioriteit ligt nu (tot 50 gebruikers) bij
+dashboard-verbetering, debuggen en feedback verzamelen** — Monaims
+content/outreach-werk loopt daarnaast, niet in plaats daarvan.
+
+**Paid ads — pas vanaf 50 gebruikers (harde drempel, geen vage voorwaarde):**
+- Eerste fase richt zich **alleen op kleding/schoenen-verkopers** — daar is
+  het dashboard voor gebouwd en presteert het het best. Niet breder targeten
+  in fase 1.
+- Creatives: organische content mag hergebruikt worden als de kwaliteit goed
+  genoeg is; Monaim mag ook aparte landingspagina's bouwen.
+- Geografie: **alleen Europa**, bewust weg van US/UK — daar is de concurrentie
+  voor cross-listing-tools het grootst.
+- Concurrentie: **Channable** is de grote speler die de meeste
+  marktplaatsverkopers nu gebruiken — groot, maar zeer slecht beoordeeld.
+  Focust breed op marketplace-verkopers (incl. bol.com etc). Omnivaleur
+  differentieert door **uitsluitend tweedehands-platforms** te bedienen, voor
+  nu niet breder positioneren.
+
+**Blogs:** volledig geautomatiseerd (backend/content/quality.py + dagelijkse
+auto-publish-job) — geen taak voor Monaim, alleen ter info.
+
+**Toegang:** volledige Notion-workspace-toegang toegekend.
+
+**Gratis account:** `backend/services/billing.py` heeft een
+`complimentary`-subscriptionstatus (onbeperkte toegang, geen
+stripe_subscription_id nodig) — expliciet niet via `status = active` zonder
+stripe-id, want dat pad is bewust geblokkeerd tegen een oude bug. Monaim
+meldt zich zelf normaal aan met eigen e-mail en stuurt dat adres naar
+Daniel; Daniel zet daarna zijn subscriptions-rij op `complimentary` in
+Supabase.
+
+**How to apply:** verwar dit niet met Somnia-gerelateerde vragen (aparte
+klant/merk, geen Omnivaleur-partnerschap). Volledige, meest actuele context
+staat in `docs/team-notes.md` in de repo zelf: dat bestand is leidend bij
+tegenstrijdigheid, deze memory is het lokale snelle geheugen op dit account.
+
+**Status sinds 21-09-2026: Monaim is niet actief.** Draag content of
+growth-taken dus niet aan hem voor in voorstellen of planning; op dit moment
+zijn er twee mensen op het project: Daniel zelf en één andere developer.
+Alles wat hierboven als "Monaims taak" staat (contentschema, screenshots/
+video's, klantverhalen, growth-werk) ligt tot nader order bij Daniel of moet
+hij zelf beleggen. Vraag bij twijfel wie iets oppakt, ga niet zelf uit van
+Monaim.
+
+---
+
 ## verwijzing-maand-gratis-bij-eerste-betaling
 
 *20-09-2026 — "Klanten brengen klanten aan: één gratis maand, en die valt pas bij de eerste betaling van de aangebrachte klant"*
@@ -7226,65 +7369,6 @@ en daar staat Channable al slecht op reviews) — altijd de tweedehands-niche
 en Europa-focus benadrukken. Eerste paid-ads-fase (zie
 "monaim-50-50-partnership") richt zich specifiek op kleding/schoenen-
 verkopers, waar het dashboard het best voor werkt.
-
----
-
-## monaim-50-50-partnership
-
-*26-08-2026 — "Monaim is 50/50-partner op Omnivaleur (Growth & Content), aparte deal van zijn eigen merk Somnia; juridische vastlegging bewust uitgesteld"*
-
-Monaim bouwt sinds 2026-08-26 mee aan **Omnivaleur** als 50/50-partner —
-losstaand van zijn eigen merk **Somnia** (paid ads/e-commerce, aparte
-context, niet Omnivaleur-gerelateerd). "omnivaleur-brand-never-a-verb"
-
-**Why:** Daniel wil eerst zien hoe de samenwerking in de praktijk loopt
-voordat er iets juridisch (aandelen/contract) wordt vastgelegd. De 50/50 is
-dus nu een mondelinge afspraak, bewust nog geen contract.
-
-**Herkomst van het merk:** Revaleur is Daniels eigen vintage kledingmerk;
-Omnivaleur is de software die daaruit is ontstaan (gebouwd om Revaleurs
-eigen cross-listing te automatiseren) en later losgetrokken tot een eigen
-SaaS-product.
-
-**Rol & taken:** Growth & Content Partner — wekelijks Nederlandstalig
-contentschema voor TikTok/Instagram (eigen suggestie: 3 posts + 1 video/week
-als eerste test) en een social-DM-outreachsysteem verkennen naast de
-bestaande koude-mail-leadgen "leadgen-vier-bronnen". **Maar de echte
-bedrijfsbrede prioriteit ligt nu (tot 50 gebruikers) bij
-dashboard-verbetering, debuggen en feedback verzamelen** — Monaims
-content/outreach-werk loopt daarnaast, niet in plaats daarvan.
-
-**Paid ads — pas vanaf 50 gebruikers (harde drempel, geen vage voorwaarde):**
-- Eerste fase richt zich **alleen op kleding/schoenen-verkopers** — daar is
-  het dashboard voor gebouwd en presteert het het best. Niet breder targeten
-  in fase 1.
-- Creatives: organische content mag hergebruikt worden als de kwaliteit goed
-  genoeg is; Monaim mag ook aparte landingspagina's bouwen.
-- Geografie: **alleen Europa**, bewust weg van US/UK — daar is de concurrentie
-  voor cross-listing-tools het grootst.
-- Concurrentie: **Channable** is de grote speler die de meeste
-  marktplaatsverkopers nu gebruiken — groot, maar zeer slecht beoordeeld.
-  Focust breed op marketplace-verkopers (incl. bol.com etc). Omnivaleur
-  differentieert door **uitsluitend tweedehands-platforms** te bedienen, voor
-  nu niet breder positioneren.
-
-**Blogs:** volledig geautomatiseerd (backend/content/quality.py + dagelijkse
-auto-publish-job) — geen taak voor Monaim, alleen ter info.
-
-**Toegang:** volledige Notion-workspace-toegang toegekend.
-
-**Gratis account:** `backend/services/billing.py` heeft een
-`complimentary`-subscriptionstatus (onbeperkte toegang, geen
-stripe_subscription_id nodig) — expliciet niet via `status = active` zonder
-stripe-id, want dat pad is bewust geblokkeerd tegen een oude bug. Monaim
-meldt zich zelf normaal aan met eigen e-mail en stuurt dat adres naar
-Daniel; Daniel zet daarna zijn subscriptions-rij op `complimentary` in
-Supabase.
-
-**How to apply:** verwar dit niet met Somnia-gerelateerde vragen (aparte
-klant/merk, geen Omnivaleur-partnerschap). Volledige, meest actuele context
-staat in `docs/team-notes.md` in de repo zelf: dat bestand is leidend bij
-tegenstrijdigheid, deze memory is het lokale snelle geheugen op dit account.
 
 ---
 

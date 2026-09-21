@@ -11891,3 +11891,40 @@ verbinding-update, klantverhalen) niet meer aan Monaim voorstellen of toewijzen
 totdat dit hier wordt teruggedraaid. Tot nader order zijn er twee mensen op het
 project: Daniel en de andere developer, en alles wat eerder Monaims rol was ligt
 bij Daniel zelf.
+
+## 21-09-2026: Blackbird Guitars (Johan Kist) — wat zijn account echt liet zien
+
+Johan mailde dat hij veel werk had aan Facebook, Vinted en eBay, dat eBay "meer
+dan de helft" niet uploadde, en dat hij bij serieuze verkoop een abonnement
+overweegt. Proef loopt tot 27-09. Gemeten in zijn account (29 gitaren):
+
+- **eBay lag twee dagen plat zonder dat iets dat zei.** Zijn toegangssleutel
+  verliep 19-09 om 11:06; elke poging daarna kreeg 400 op de vernieuwing en hij
+  las de kale httpx-tekst met de URL erin. Het kanaal stond al die tijd op
+  "✓ Connected". Gerepareerd: eBay's eigen uitleg wordt bewaard, het kanaal valt
+  uit `connected`, het scherm toont "Connection expired" met Reconnect, en na
+  het opnieuw koppelen zet de server de mislukte eBay-advertenties zelf terug.
+  Wáárom eBay die refresh-token weigert is niet bewezen; dat staat open.
+- **Zelfde probleem bij klant 3bfbed2c**, sleutel verlopen 19-09 09:37, en die
+  was op 21-09 nog actief. Ook die moet opnieuw koppelen.
+- **Eén gitaar had 4219 tekens omschrijving**, eBay weigert boven 4000. Nu
+  ingekort op een woordgrens.
+- **Twee gitaren liepen vast op "Het veld EAN ontbreekt."** We sturen nu de
+  waarde die eBay daar zelf voor bedoelt: "Does not apply" voor ean en mpn.
+- **Vinted weigerde een advertentie op kleur "Sunburst".** Op zijn negentien
+  echte kleurwaarden: 7 van de 19 herkend voor, 19 van de 19 na.
+
+**Let op voor de volgende mail aan hem.** Van zijn 23 Facebook-pogingen is er
+geen enkele echt geslaagd: de twee rijen die "active" heten hebben geen
+advertentienummer en geen link, dus die heeft hij zelf aangevinkt. De uitleg in
+de mail van 20-09 ("Facebook accepteert maximaal 10 foto's, dat verklaart bijna
+al jouw mislukte pogingen") houdt geen stand: drie mislukte artikelen hadden 9
+foto's en twee hadden er 10. De waarschijnlijker oorzaak is de andere reparatie
+uit dezelfde week (1.0.343): Facebook houdt Volgende en Publiceren uitgeschakeld
+zolang het de foto's verwerkt, en de oude versie keek daar één keer naar en gaf
+toen op. Dat is nog niet bewezen op een echte plaatsing, want zijn computer
+staat sinds 20-09 16:51 uit en hij draait nog 1.0.341.
+
+Ook geldig: hij krijgt via Facebook veel verzoeken van Duitsers en Fransen om
+buiten het platform om te handelen, en wil dat niet. Dat kost hem leestijd. Daar
+doen wij niets aan, wel het noemen waard als hij het nog eens aankaart.
