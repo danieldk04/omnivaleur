@@ -91,7 +91,11 @@ class _NepQuery:
         return True
 
     def execute(self):
-        return _Uitkomst([r for r in self._rijen if self._past(r)])
+        gefilterd = [r for r in self._rijen if self._past(r)]
+        if self._bereik is not None:
+            start, end = self._bereik
+            gefilterd = gefilterd[start:end + 1]
+        return _Uitkomst(gefilterd)
 
 
 class _NepGebruiker:
