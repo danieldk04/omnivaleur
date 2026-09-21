@@ -64,7 +64,11 @@ class _NepQuery:
     def order(self, *_a, **_kw):
         return self
 
-    def range(self, *_a, **_kw):
+    def range(self, start, end):
+        # ECHT toepassen: fetch_all() in backend/database.py stopt pas zodra
+        # een pagina leeg terugkomt. Een neppe .range() die niets doet geeft
+        # altijd dezelfde volle set terug, en dan loopt die paginering nooit af.
+        self._bereik = (start, end)
         return self
 
     def insert(self, lading):
