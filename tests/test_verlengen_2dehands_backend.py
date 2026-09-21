@@ -314,3 +314,28 @@ def test_complete_job_zonder_bewijs_laat_listed_at_staan():
     rij = db.listings[0]
     assert rij["listed_at"] == oud, "zonder bewijs verandert er niets"
     assert rij["status"] == "active"
+
+
+# ── Een advertentierij zonder 2dehands-nummer → geen opdracht (21-09-2026) ──
+# Zes 'actieve' 2dehands-rijen van vóór 18-09 hebben geen platform_listing_id
+# en geen url (aangevinkt, nooit echt geplaatst of nooit teruggemeld). De
+# extensie kan dan niets verlengen en gaf de klant een foutmelding; elke drie
+# dagen kwam er een nieuwe bij.
+
+def test_rij_zonder_2dehands_nummer_krijgt_geen_extend():
+    db = _DB(
+        listings=[
+            {"id": "L_leeg", "item_id": "a", "platform": "2dehands",
+             "status": "active", "listed_at": _oud(26),
+             "platform_listing_id": None, "platform_listing_url": None},
+            {"id": "L_rommel", "item_id": "b", "platform": "2dehands",
+             "status": "active", "listed_at": _oud(26),
+             "platform_listing_id": "12345", "platform_listing_url": None},
+            {"id": "L_goed", "item_id": "c", "platform": "2dehands",
+             "status": "active", "listed_at": _oud(26),
+             "platform_listing_id": "m2431571489", "platform_listing_url": None},
+        ],
+        items=[{"id": x, "user_id": "u1"} for x in "abc"],
+    )
+    _draai_inplan(db)
+    assert [j["item_id"] for j in db.jobs] == ["c"]

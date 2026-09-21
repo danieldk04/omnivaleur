@@ -11779,3 +11779,33 @@ is de eenmalige kortingscode UNEEDOMNIVALEUR (10%) in Stripe aangemaakt. Nog nie
 gemeten: of de checkout het invulvakje toont (hangt af van of OMNIVALEUR25 nog
 actief is) en of de aanmeldingen zijn goedgekeurd. Volgende stap uit het plan:
 crosslisting-vergelijkers mailen met Marktplaats en 2dehands als voordeel.
+
+## 21-09-2026: Dagelijkse klantfouten
+
+Eerste run van de dagelijkse controle (geen vorige run om mee te vergelijken).
+Gemeten: 275 opdrachten van 6 accounts in de laatste 24 uur, /health 200.
+
+Gerepareerd:
+- 2dehands verlengen zonder advertentienummer. Zes 'actieve' 2dehands-rijen
+  (van vóór de regel "aanvinken is geen publiceren") hebben geen nummer en geen
+  url. De server zette er toch een verlengopdracht voor klaar; de extensie kan
+  dan niets en de klant (26cf5471) kreeg een foutmelding, elke drie dagen
+  opnieuw. De planner slaat rijen zonder echt m-nummer nu over. Test
+  test_rij_zonder_2dehands_nummer_krijgt_geen_extend faalde op de oude code.
+
+Open, niet gerepareerd (oorzaak niet bewezen):
+- 96e30080: acht Vinted-verwijderingen van tapijten mislukten op 20-09 rond
+  15:00 (extensie 1.0.341). De pagina toonde de kopersweergave (hartjesknop) en
+  Vintages eigen verwijderadres gaf 403: dat wijst op een ander Vinted-account
+  in die browser, niet bewezen. De advertenties staan nog live op Vinted
+  (gecontroleerd, verkoper 51887752) en in onze database nog 'active', dus niets
+  loopt uit de pas. Wel: dubbele verkoop mogelijk als het artikel elders weg is.
+- 96e30080: vijf Marktplaats-verwijderingen "niet in je overzicht" op 20-09
+  22:00, uitgevoerd door een extensiekopie 1.0.327 terwijl de hartslag 1.0.345
+  meldt. Een tweede, oude kopie (zie "extensiekopie-die-niet-meebeweegt").
+  Vier herplaatsingen daarna terecht overgeslagen.
+
+Klant-eigen, geen actie: 26cf5471 had 64 opdrachten 's nachts wachten (computer
+uit, loopt sinds 08:51 weer); f8c0cce9 extensie stil sinds 20-09 16:51 met 3
+wachtende opdrachten, twee Facebook-tabbladen dichtgeklikt, Vinted-kleur
+"Sunburst" bestaat niet als tegel.
