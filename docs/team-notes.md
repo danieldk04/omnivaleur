@@ -11963,3 +11963,10 @@ van Blackbird Guitars deed diezelfde servercode het op 18 en 19 september wel.
 **Alles teruggezet:** alle proefadvertenties beëindigd en verwijderd, 423
 artikelen onveranderd, geen enkele advertentieregel in fout, de omschrijving
 van artikel 1323 terug op 498 tekens en zijn eBay-regel weer op 'delisted'.
+
+**Nagekomen, en het sluit de zaak.** De nieuwe code legde bij Blackbird Guitars
+eBays eigen uitleg vast: "the provided authorization refresh token is invalid or
+was issued to another client". Zijn sleutel hoort dus bij een ándere app-id, niet
+bij een verlopen koppeling. Opnieuw koppelen is de enige oplossing en werkt
+gegarandeerd. De oude code gooide precies die zin weg met raise_for_status().
+Waard om na te gaan: is EBAY_APP_ID op de server veranderd sinds 13-09?

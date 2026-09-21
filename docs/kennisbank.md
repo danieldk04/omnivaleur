@@ -17,6 +17,55 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## ebay-koppeling-sterft-stil
+
+*21-09-2026 — eBay weigert de opgeslagen sleutel en het dashboard blijft "Connected" zeggen; een rij in platform_credentials is geen koppeling*
+
+Gemeten 21-09-2026 op Blackbird Guitars (Johan Kist, proefklant). Zijn eBay
+toegangssleutel verliep 19-09 om 11:06. Elke plaatsing daarna mislukte op de
+vernieuwing van die sleutel (eBay antwoordde 400 op
+`identity/v1/oauth2/token`), en wat hij in het dashboard las was letterlijk
+`Client error '400 Bad Request' for url 'https://api.ebay.com/identity/v1/
+oauth2/token'`. Twee dagen lang, en al die tijd stond eBay op **✓ Connected**.
+
+Twee losse fouten, en de tweede is de ergste:
+
+1. `refresh_credentials` deed `resp.raise_for_status()`. Die tekst noemt een URL
+   en gooit eBay's eigen uitleg (`invalid_grant`, `invalid_scope`, …) weg —
+   precies het bewijs dat je later nodig hebt om te weten wát er stuk was.
+2. `/api/platforms/status` telde een kanaal als gekoppeld zodra er een rij in
+   `platform_credentials` stond. Bestaan is niet werken. Dit is dezelfde fout
+   als "aanwezigheid-niet-vragen-maar-stempelen" en
+   "storing-mag-niet-nog-even-laden-heten", nu op een koppeling.
+
+Sinds 21-09-2026: een geweigerde vernieuwing zet `extra_data.koppeling_kapot`
+op de rij, het kanaal valt uit `connected`, het scherm toont "Connection
+expired" met Reconnect, en de callback zet daarna de mislukte eBay-advertenties
+zelf terug in de rij (achtergrondtaak, hoogstens 50).
+
+Let op bij meten: zeven van de acht eBay-koppelingen in de database hadden een
+verlopen sleutel, maar zes daarvan horen bij afgelopen proeven. Alleen 3bfbed2c
+(actief op 21-09) en f8c0cce9 waren echt geraakt. Tel dus nooit alleen
+verlopen sleutels; leg er de hartslag en het abonnement naast.
+
+**En meteen betaald.** Binnen het uur legde de nieuwe code eBays eigen uitleg
+vast op het account van Blackbird Guitars:
+
+> 400: the provided authorization refresh token is invalid or was issued to
+> another client
+
+Dus geen verlopen sleutel maar een sleutel die bij een **andere app-id** hoort.
+Precies het soort antwoord dat `raise_for_status()` maandenlang weggooide.
+Opnieuw koppelen lost het op; niets anders kan dat. Zoek bij een volgend geval
+dus eerst uit of `EBAY_APP_ID` op de server is veranderd sinds die klant
+koppelde.
+
+**How to apply:** een kanaal dat "gekoppeld" heet moet dat kunnen bewijzen. En
+gooi bij een mislukte API-aanroep nooit het antwoordlichaam weg met
+`raise_for_status()`.
+
+---
+
 ## ebay-25019-zegt-niet-wat-het-is
 
 *21-09-2026 — eBay-fout 25019 praat over onbevestigde identiteit en ongepaste taal, maar verschijnt ook bij een lading die eBay om een heel andere reden weigert*
@@ -134,49 +183,6 @@ woorden. Zie ook "verbogen-kleurnamen-matchen-niet" voor de Marktplaats-kant.
 
 **How to apply:** een verplicht keuzeveld dat geen treffer geeft mag nooit de
 hele advertentie kosten zolang er nog een eerlijke dichtstbijzijnde waarde is.
-
----
-
-## ebay-koppeling-sterft-stil
-
-*21-09-2026 — eBay weigert de opgeslagen sleutel en het dashboard blijft "Connected" zeggen; een rij in platform_credentials is geen koppeling*
-
-Gemeten 21-09-2026 op Blackbird Guitars (Johan Kist, proefklant). Zijn eBay
-toegangssleutel verliep 19-09 om 11:06. Elke plaatsing daarna mislukte op de
-vernieuwing van die sleutel (eBay antwoordde 400 op
-`identity/v1/oauth2/token`), en wat hij in het dashboard las was letterlijk
-`Client error '400 Bad Request' for url 'https://api.ebay.com/identity/v1/
-oauth2/token'`. Twee dagen lang, en al die tijd stond eBay op **✓ Connected**.
-
-Twee losse fouten, en de tweede is de ergste:
-
-1. `refresh_credentials` deed `resp.raise_for_status()`. Die tekst noemt een URL
-   en gooit eBay's eigen uitleg (`invalid_grant`, `invalid_scope`, …) weg —
-   precies het bewijs dat je later nodig hebt om te weten wát er stuk was.
-2. `/api/platforms/status` telde een kanaal als gekoppeld zodra er een rij in
-   `platform_credentials` stond. Bestaan is niet werken. Dit is dezelfde fout
-   als "aanwezigheid-niet-vragen-maar-stempelen" en
-   "storing-mag-niet-nog-even-laden-heten", nu op een koppeling.
-
-Sinds 21-09-2026: een geweigerde vernieuwing zet `extra_data.koppeling_kapot`
-op de rij, het kanaal valt uit `connected`, het scherm toont "Connection
-expired" met Reconnect, en de callback zet daarna de mislukte eBay-advertenties
-zelf terug in de rij (achtergrondtaak, hoogstens 50).
-
-Let op bij meten: zeven van de acht eBay-koppelingen in de database hadden een
-verlopen sleutel, maar zes daarvan horen bij afgelopen proeven. Alleen 3bfbed2c
-(actief op 21-09) en f8c0cce9 waren echt geraakt. Tel dus nooit alleen
-verlopen sleutels; leg er de hartslag en het abonnement naast.
-
-**Waarom niet 100%:** waaróm eBay die twee refresh-tokens weigert is niet
-bewezen. Beide stopten op 19-09 kort na een geslaagde vernieuwing. De lokale
-`.env` draagt sandbox-sleutels (zie "ebay-local-sandbox-creds"), dus de
-productie-vernieuwing is van deze machine niet na te spelen. Het antwoordlichaam
-wordt nu wél bewaard, dus de volgende keer staat het er gewoon.
-
-**How to apply:** een kanaal dat "gekoppeld" heet moet dat kunnen bewijzen. En
-gooi bij een mislukte API-aanroep nooit het antwoordlichaam weg met
-`raise_for_status()`.
 
 ---
 
