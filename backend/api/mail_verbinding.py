@@ -70,14 +70,19 @@ def admin_verstuur(groep: str, dry_run: bool = True, user=Depends(get_current_us
         raise HTTPException(status_code=503, detail=f"{type(e).__name__}: {e}")
 
 
+# Engels eerst, Nederlands er kleiner onder — zelfde opbouw als de mail zelf
+# (zie backend/services/mail_verbinding.py): er is geen betrouwbaar taalveld
+# per gebruiker, dus deze pagina is voor iedereen hetzelfde.
 _BEVESTIGING = """<!doctype html><html><head><meta charset="utf-8">
-<title>Afgemeld — Omnivaleur</title>
+<title>{titel_en} — Omnivaleur</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 background:#f0f9ff;margin:0;padding:60px 20px;text-align:center;color:#0f172a">
 <div style="max-width:420px;margin:0 auto;background:#fff;border-radius:14px;padding:32px 28px">
-<h1 style="font-size:18px;margin:0 0 10px">{titel}</h1>
-<p style="font-size:14px;color:#334155;line-height:1.6;margin:0">{tekst}</p>
+<h1 style="font-size:18px;margin:0 0 10px">{titel_en}</h1>
+<p style="font-size:14px;color:#334155;line-height:1.6;margin:0 0 14px">{tekst_en}</p>
+<h2 style="font-size:14px;margin:0 0 6px;color:#334155">{titel_nl}</h2>
+<p style="font-size:12.5px;color:#94a3b8;line-height:1.55;margin:0;font-style:italic">{tekst_nl}</p>
 </div></body></html>"""
 
 
