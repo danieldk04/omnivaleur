@@ -9370,10 +9370,44 @@ function fabrikantCompleet() {
          && String(s.fabrikant_email || '').trim());
 }
 
+// Staat er in Preferences iets over waar de verkoper woont? Leeg blok = het
+// formulier gebruikt het contactblok uit zijn account op die site.
+function locatieblokLeeg() {
+  const s = state.settings || {};
+  // Zijn de instellingen niet binnengekomen (haperende verbinding), dan weten we
+  // het niet — en dan zeggen we niets. Dezelfde afspraak als fabrikantCompleet
+  // hierboven: een verzonnen waarschuwing is erger dan een gemiste.
+  if (!s || !Object.keys(s).length) return false;
+  return !String(s.locatie_land || '').trim()
+      && !String(s.locatie_plaats || '').trim()
+      && !String(s.locatie_postcode || '').trim();
+}
+
 function platformOordeel(item, platform) {
   if ((platform === 'marktplaats' || platform === '2dehands') && !fabrikantCompleet()) {
     return { oordeel: 'blokkade',
              reden: 'fill in your responsible party under Preferences first (Marktplaats requires it)' };
+  }
+  // 2dehands ZET OP ELK ZOEKERTJE EEN ADRES (22-09-2026, De Juiste Toon).
+  //
+  // Het haalt dat uit het account op 2dehands.be, en daar past alleen een
+  // Belgische postcode in. Wie niet in België woont heeft daar dus niets
+  // staan, en dan loopt élke plaatsing vast op een leeg adresveld — waarna de
+  // server de hele wachtrij voor dat kanaal terugneemt (_stop_wachtrij).
+  //
+  // Bij Toon strandden zo al zijn 2dehands-opdrachten van 11 tot en met 16
+  // september, en hij hoorde het pas achteraf, per mislukking. De server weet
+  // dit op het moment van klaarzetten al: het locatieblok zit in de payload
+  // (crosslist.py, `payload.update(locatie(user_id))`). Dan hoort het scherm
+  // het ook te zeggen vóórdat hij er veertig in de rij zet.
+  //
+  // Bewust GEEN blokkade. Een Belgische verkoper met een postcode in zijn
+  // eigen 2dehands-account heeft dit blok niet nodig; die tegenhouden zou een
+  // nieuwe doodlopende straat zijn, en die hebben we er vandaag net drie uit
+  // gehaald. Vandaar een waarschuwing die je kunt negeren, met de weg erheen.
+  if (platform === '2dehands' && locatieblokLeeg()) {
+    return { oordeel: 'twijfel',
+             reden: 'live outside Belgium? Set your country and town under Preferences first — 2dehands needs an address on every advert' };
   }
   if (platform !== 'vinted' || !item) return { oordeel: 'ok', reden: '' };
   const tekst = `${item.title || ''} ${item.description || ''}`;
@@ -9498,10 +9532,13 @@ function renderPlatformCheckboxes(containerId, itemId) {
     // platform, en daarover hebben wij het laatste woord niet — dus mag hij
     // eroverheen.
     if (oordeel.oordeel === 'twijfel') {
+      // Wijst de reden naar een instelling van de verkoper, dan hoort er een weg
+      // naartoe bij — zelfde afspraak als bij de blokkade hierboven.
+      const naarPrefs = /Preferences/.test(oordeel.reden);
       return `<label class="platform-checkbox" title="${esc(oordeel.reden)}">
         <input type="checkbox" value="${p}">
         <span>${PLATFORM_ICONS[p]} ${label}</span>
-        <span class="pm-cb-missing" style="color:#92400e">Check first — ${esc(oordeel.reden)}</span>
+        <span class="pm-cb-missing" style="color:#92400e${naarPrefs ? ';cursor:pointer;text-decoration:underline' : ''}"${naarPrefs ? ` onclick="event.preventDefault();event.stopPropagation();closeModal('modal-crosslist');closeModal('modal-bulk-crosslist');showView('preferences')"` : ''}>Check first — ${esc(oordeel.reden)}${naarPrefs ? ' →' : ''}</span>
       </label>`;
     }
     const betaTag = BETA_PLATFORMS.has(p)

@@ -12254,3 +12254,60 @@ hetzelfde als hem repareren. Drie keer achter elkaar dezelfde fout, bij dezelfde
 klant, in drie takken van één `if`. Wie zo'n reparatie doet hoort de andere
 takken van datzelfde besluit meteen mee te nemen — of, beter, het besluit weg te
 nemen zoals hier.
+
+### 22-09-2026 (avond) — Het lege adresblok wordt nu vóóraf gemeld, niet pas na de mislukking
+
+Daniel: "check en fix dit echt voor de volle 10000% dat hij nergens meer
+tegenaan loopt." Dus het hele pad van één lederhose naar Marktplaats en 2dehands
+nagelopen in plaats van alleen de rubriek. Eén echt gat gevonden, en gedicht.
+
+**Het gat.** Van 11 tot en met 16 september strandden ál Toons
+2dehands-opdrachten op een leeg adresblok, en elke keer nam de server daarna de
+hele wachtrij voor dat kanaal terug (`_stop_wachtrij`). Hij hoorde het pas ná
+afloop, per mislukking. Terwijl de server het op het moment van klaarzetten al
+wist: `crosslist.py` zet `payload.update(locatie(user_id))` in de opdracht, dus
+het locatieblok is dáár al bekend. Het scherm zei er niets over.
+
+**Nu wel.** `platformOordeel` kent 2dehands een waarschuwing toe zodra het
+locatieblok in Preferences helemaal leeg is: *"live outside Belgium? Set your
+country and town under Preferences first — 2dehands needs an address on every
+advert"*, aanklikbaar naar Preferences. Dat komt in alle drie de
+publiceervensters (los artikel, kanaalicoon, bulk), want ze delen
+`renderPlatformCheckboxes`.
+
+**Bewust een waarschuwing en geen blokkade.** Een Belgische verkoper mét een
+postcode in zijn eigen 2dehands-account hoort dat blok leeg te mogen laten — dat
+staat ook zo in het scherm ("Leave it empty and nothing changes"). Hem
+tegenhouden zou een nieuwe doodlopende straat zijn, en we hebben er vandaag net
+drie uit gehaald. Zelfde reden als waarom `fabrikantCompleet` niet blokkeert als
+de instellingen niet geladen zijn: `locatieblokLeeg` zwijgt bij een lege state.
+
+**Wat er verder is nagelopen en in orde bleek**, met de echte code:
+- De rubriek landt op 2dehands op exact dezelfde nummers als op Marktplaats.
+  Gemeten door `getMpSyiUrl` uit de extensie zelf te draaien: lederhosen
+  `/plaats/1776/2031?bucketId=169` (Carnavalskleding en Feestkleding), vachten
+  `/plaats/504/536` (Woonaccessoires | Overige), op béide kanalen. Zonder
+  rubriek weigert hij op allebei met dezelfde melding.
+- `_PLATFORM_REQUIRED` is voor 2dehands woordelijk gelijk aan Marktplaats.
+- Ontbrekende kleur en doelgroep worden bij publiceren alsnog uit titel en
+  omschrijving gehaald (`_fill_inferred_gaps`), inclusief één modelvraag voor
+  een lege rubriek. De Nederlandse kleuren staan in `_COLORS` (bruin, wit,
+  zwart, grijs, beige, creme).
+- Het publiceervenster blokkeert niet op ontbrekende velden zonder uitweg: elk
+  grijs vakje draagt een klik die naar het artikel of naar Preferences gaat.
+
+**Proef.** `tests/toon-hele-weg-naar-2dehands-test.js` loopt de keten
+platformOordeel → missingFieldsForPlatform → renderPlatformCheckboxes af met
+zijn eigen artikel en zijn eigen instellingen van 11 september. Vijftien
+controles, groen; tegen `9f67baa` valt hij om op de ontbrekende functie. Alle
+zestien JS-proeven die app.html lezen groen, python-suite 65 rood voor en
+dezelfde 65 na.
+
+**Wat hier NIET mee opgelost is, en ook niet kan.** Dit blijft staan en het is
+eerlijker om het te noemen dan om "10000%" te zeggen:
+- Zijn eigen gegevens zijn niet nagekeken — deze sessie heeft geen
+  databasesleutels. Of zijn locatie er ná 16-09 echt in staat is van hier niet
+  te zien; de waarschuwing wijst hem er hoe dan ook naartoe.
+- Een betalende rubriek op 2dehands is pas bekend na een echte weigering.
+- Zijn tweede browser (Edge, extensie 1.0.327) en een Chromebook die in slaap
+  valt zijn geen code.
