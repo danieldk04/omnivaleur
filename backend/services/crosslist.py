@@ -328,6 +328,17 @@ _STOPWOORDEN_DE = {
 _TAALWOORDEN = {"nl": _STOPWOORDEN_NL, "en": _STOPWOORDEN_EN, "de": _STOPWOORDEN_DE}
 
 
+def _taaltellingen(text: str) -> tuple[dict[str, int], int]:
+    """Hoeveel woorden uit elke taallijst staan er in deze tekst?
+
+    \u00df (ß) hoort in de tekenklasse, anders valt "größe" uiteen in "grö" en
+    "e" en telt het Duitse woord nergens voor mee.
+    """
+    woorden = re.findall(r"[a-z\u00df-\u00ff']+", (text or "").lower())
+    return ({t: sum(1 for w in woorden if w in lijst)
+             for t, lijst in _TAALWOORDEN.items()}, len(woorden))
+
+
 def lijkt_al_in_taal(text: str, taal: str) -> bool:
     """True als de tekst overtuigend al in `taal` staat. Bij twijfel False.
 
@@ -335,15 +346,47 @@ def lijkt_al_in_taal(text: str, taal: str) -> bool:
     van de ene andere. Zie _STOPWOORDEN_DE: zolang dat er maar twee waren, telde
     een Duitse tekst met een Nederlands winkelblok eronder als Nederlands.
     """
-    # \u00df (ß) hoort in de tekenklasse, anders valt "größe" uiteen in "grö" en
-    # "e" en telt het Duitse woord niet mee.
-    woorden = re.findall(r"[a-z\u00df-\u00ff']+", (text or "").lower())
-    if len(woorden) < 6:
+    tellingen, aantal = _taaltellingen(text)
+    if aantal < 6:
         return False
-    tellingen = {t: sum(1 for w in woorden if w in lijst) for t, lijst in _TAALWOORDEN.items()}
     doel = tellingen.get(taal, 0)
     ander = max(n for t, n in tellingen.items() if t != taal)
     return doel >= 3 and doel >= ander * 2
+
+
+# Hoeveel woorden van een andere taal er minstens moeten staan voordat de zeef
+# in backend/api/jobs.py een advertentie terugstuurt naar de vertaling. Gemeten
+# op 1.603 Nederlandse en 339 Engelse teksten uit deze repo: bij 3 worden alle
+# 339 Engelse gevangen en geen enkele van de 1.603 Nederlandse. Bij 4 glippen er
+# 105 Engelse doorheen, bij 2 verandert er niets behalve de ruimte voor toeval.
+_ANDERE_TAAL_VLOER = 3
+
+
+def leest_als_andere_taal(text: str, doeltaal: str) -> bool:
+    """Staat deze tekst overtuigend in een ANDERE taal dan `doeltaal`?
+
+    Niet hetzelfde als `not lijkt_al_in_taal(text, doeltaal)`, en dat verschil is
+    het hele punt. Een korte trefwoordtekst ("Kelim kleedje rood 73/40 cm") staat
+    in geen enkele taal overtuigend; die hoort met rust gelaten te worden, niet
+    telkens opnieuw door het model. Dit grijpt pas in als een andere taal er
+    minstens even sterk in staat als de doeltaal, met een vloer eronder.
+
+    Ook niet hetzelfde als "leest overtuigend als die andere taal": Toons tekst
+    was Duits mét een Nederlands winkelblok eronder, dus won geen van beide. Wat
+    telt is dat het Duits het Nederlands evenaarde (10 om 8) — dan is dit geen
+    Nederlandse advertentie.
+
+    WAAROM DIT ER IS (22-09-2026, De Juiste Toon). De laatste zeef in
+    backend/api/jobs.py vroeg "leest dit als Engels?" — de enige andere taal die
+    we toen kenden. Toons Duitse lederhose las als geen van beide, dus liet die
+    zeef hem door mét het stempel _taal: nl, en de Duitse tekst kwam op
+    marktplaats.nl. De vraag hoort te zijn of de tekst in een andere taal staat
+    dan het kanaal verwacht, welke taal dat ook is.
+    """
+    tellingen, _ = _taaltellingen(text)
+    doel = tellingen.get(doeltaal, 0)
+    ander = max(n for t, n in tellingen.items() if t != doeltaal)
+    return ander >= _ANDERE_TAAL_VLOER and ander >= doel
 
 
 def _vertaal(text: str, target_lang: str, brand: str | None = None) -> str:

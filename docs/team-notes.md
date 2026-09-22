@@ -12391,3 +12391,57 @@ Marktplaats- en 2dehands-advertenties met Duitse woorden in de omschrijving.
 takken het probleem: drie takken in de rubriekenlijst, twee talen in de
 taalherkenning. Wie zo'n functie aanpast hoort zich af te vragen wat er gebeurt
 met het geval dat er níet in staat — en dat geval bestaat vrijwel altijd.
+
+### 22-09-2026 (later) — Dezelfde blinde vlek zat óók in de laatste zeef
+
+Daniel: "check met zekerheid, breng naar 1000%". Bij het nalopen van élk pad dat
+over vertalen beslist, bleek de reparatie van een uur eerder maar de helft te
+dekken.
+
+**Wat er nog openstond.** `_zet_taal_goed` in `backend/api/jobs.py` is de laatste
+zeef: de enige plek waar élke opdracht langskomt vlak voor hij naar de extensie
+gaat. Die vroeg `_leest_als_engels` — de enige andere taal die we kenden. Een
+Duitse opdracht mét het stempel `_taal: nl` leest niet als Engels, dus liet die
+zeef hem er gewoon doorheen, en de reparatie in `lijkt_al_in_taal` kwam er nooit
+aan te pas. Dat gold ook voor de nacontrole ná het vertalen. Concreet: alles wat
+op dit moment in Toons wachtrij staat was met de ochtendreparatie alleen nog
+steeds in het Duits de deur uitgegaan.
+
+**Eerst geprobeerd en verworpen.** "Leest de tekst overtuigend als een andere
+taal?" vangt hem niet: zijn tekst is Duits mét een Nederlands winkelblok eronder,
+dus wint geen van beide overtuigend. Gemeten: nl 8, de 10, en 0. Wat telt is niet
+wie wint maar dat het Duits het Nederlands evenaart.
+
+**De regel, met de drempel gemeten in plaats van gekozen.**
+`leest_als_andere_taal(tekst, doeltaal)` grijpt in zodra een andere taal minstens
+even sterk in de tekst staat als de doeltaal, met een vloer van 3 woorden
+eronder. Getoetst op 1.603 Nederlandse en 339 Engelse teksten uit deze repo:
+
+    vloer 2:  Toon gevangen, 339/339 Engels gevangen,   0/1603 vals alarm
+    vloer 3:  Toon gevangen, 339/339 Engels gevangen,   0/1603 vals alarm
+    vloer 4:  Toon gevangen, 234/339 Engels gevangen,   0/1603 vals alarm
+
+Vloer 3 dus: bij 4 glippen er 105 Engelse doorheen, bij 2 verandert er niets
+behalve de ruimte voor toeval. Een korte trefwoordtekst ("Kelim kleedje rood
+73/40 cm") staat in geen enkele taal en wordt met rust gelaten — precies wat op
+09-09 misging toen zo'n tekst de publicatie tegenhield.
+
+**Waarom een vals alarm hier goedkoop is.** Grijpt de zeef onterecht in, dan gaat
+de opdracht naar `localiseer_sync`, en díe heeft zijn eigen rem
+(`_al_in_doeltaal`): een echt Nederlandse tekst wordt daar gewoon teruggegeven
+zonder dat het model wordt gebeld. Een onterechte ingreep kost dus niets, een
+gemiste kost een advertentie in de verkeerde taal.
+
+**Bewijs.** Vier proeven erbij in
+`tests/test_duitse_tekst_wordt_wel_vertaald.py`, nu 14 in totaal, die
+`_zet_taal_goed` zelf draaien: een Duitse opdracht wordt alsnog vertaald, een
+Nederlandse blijft met rust, een Engelse wordt nog steeds gevangen (de
+bescherming van 04-09 en 12-09), en een opdracht die Duits terugkomt blijft
+wachten in plaats van de deur uit te gaan. Tegen `51170f5` vallen de twee
+zeefproeven om. Hele suite: 65 rood voor, dezelfde 65 na.
+
+**Les, en het is dezelfde als vanmiddag.** Een beslissing met een vast aantal
+takken heeft een gat zodra er een geval bijkomt dat er niet in staat. Vandaag
+drie keer: drie takken in de rubriekenlijst, twee talen in de taalherkenning, en
+twee talen in de zeef erachter. Repareer je er één, loop dan meteen de andere
+plekken na die dezelfde vraag stellen — `grep` op de functienaam kost een minuut.

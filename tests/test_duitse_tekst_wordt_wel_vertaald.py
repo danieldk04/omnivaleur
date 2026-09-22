@@ -148,3 +148,93 @@ def test_een_nederlandse_advertentie_gaat_nog_steeds_niet_langs_het_model(monkey
     assert geroepen == [], "Nederlandse tekst hoort niet naar de vertaaldienst te gaan"
     assert uit["description"] == NEDERLANDS
     assert uit[cl.TAAL_VELD] == "nl"
+
+
+# ── De laatste zeef bij de uitgifte ─────────────────────────────────────────
+# `_zet_taal_goed` in backend/api/jobs.py is de enige plek waar ÉLKE opdracht
+# langskomt vlak voor hij naar de extensie gaat. Hij vroeg "leest dit als
+# Engels?" — de enige andere taal die we kenden. Een Duitse opdracht met het
+# stempel `_taal: nl` erop las niet als Engels, dus liet die zeef hem gewoon
+# door. Dat is precies wat er in de wachtrij van Toon stond.
+import backend.api.jobs as jobs_api  # noqa: E402
+
+
+class _NepDb:
+    def __init__(self):
+        self.geschreven = []
+
+    def table(self, _naam):
+        return self
+
+    def update(self, velden):
+        self.geschreven.append(velden)
+        return self
+
+    def eq(self, *_a):
+        return self
+
+    def execute(self):
+        return type("R", (), {"data": []})()
+
+
+def _duitse_opdracht(stempel="nl"):
+    return {
+        "id": "j-duits", "action": "create", "platform": "marktplaats",
+        "payload": {"title": "Heren originele trachten Lederhosen",
+                    "description": TOONS_ADVERTENTIE,
+                    "_taal": stempel},
+    }
+
+
+def test_de_zeef_stuurt_een_duitse_opdracht_alsnog_door_de_vertaling(monkeypatch):
+    gebeld = []
+
+    def _nep(payload, platform):
+        gebeld.append(platform)
+        return {**payload, "title": "VERTAALD", "description": "VERTAALD", "_taal": "nl"}
+
+    monkeypatch.setattr(cl, "localiseer_sync", _nep)
+    job = _duitse_opdracht()
+    door = jobs_api._zet_taal_goed(_NepDb(), [job])
+
+    assert gebeld == ["marktplaats"], "de Duitse opdracht hoort alsnog vertaald te worden"
+    assert job["payload"]["title"] == "VERTAALD"
+    assert door == [job]
+
+
+def test_de_zeef_laat_een_nederlandse_opdracht_met_rust(monkeypatch):
+    gebeld = []
+    monkeypatch.setattr(cl, "localiseer_sync",
+                        lambda p, pl: gebeld.append(pl) or p)
+    job = _duitse_opdracht()
+    job["payload"]["description"] = NEDERLANDS
+    job["payload"]["title"] = "Handgeknoopt Perzisch Shiraz wollen tapijt 135/80 cm"
+    jobs_api._zet_taal_goed(_NepDb(), [job])
+
+    assert gebeld == [], "een Nederlandse opdracht hoort niet opnieuw vertaald te worden"
+
+
+def test_de_zeef_houdt_hem_tegen_als_de_vertaling_duits_teruggeeft(monkeypatch):
+    """Komt er alsnog een vreemde taal uit, dan gaat de advertentie niet de deur uit."""
+    monkeypatch.setattr(cl, "localiseer_sync", lambda p, pl: p)  # geeft het Duits terug
+    monkeypatch.setattr(jobs_api, "_meld_vertaalstoring_model", lambda _t: None)
+    door = jobs_api._zet_taal_goed(_NepDb(), [_duitse_opdracht()])
+
+    assert door == [], "een advertentie die Duits blijft hoort te blijven wachten"
+
+
+def test_een_engelse_opdracht_wordt_nog_steeds_gevangen(monkeypatch):
+    """De bescherming van 04-09 en 12-09 mag hier niet onder lijden."""
+    gebeld = []
+
+    def _nep(payload, platform):
+        gebeld.append(platform)
+        return {**payload, "title": "NL", "description": NEDERLANDS, "_taal": "nl"}
+
+    monkeypatch.setattr(cl, "localiseer_sync", _nep)
+    job = _duitse_opdracht()
+    job["payload"]["description"] = ENGELS
+    job["payload"]["title"] = "Black MyProtein Shorts - Men XL - New"
+    jobs_api._zet_taal_goed(_NepDb(), [job])
+
+    assert gebeld == ["marktplaats"], "een Engelse opdracht hoort alsnog vertaald te worden"

@@ -993,15 +993,23 @@ def _weiger_bekende_betaalde_rubriek(db, user_id: str, job: dict) -> bool:
     return True
 
 
-def _leest_als_engels(payload: dict, lijkt_al_in_taal) -> bool:
-    """Leest deze advertentie overtuigend als Engels? Titel en omschrijving samen.
+def _staat_in_een_andere_taal(payload: dict, doeltaal: str, leest_als_andere_taal) -> bool:
+    """Staat deze advertentie in een andere taal dan het kanaal verwacht?
 
     Samen wegen en niet los: een titel als "Vintage pijpenstandaard" is te kort
     om een taal aan af te lezen, terwijl de omschrijving eronder glashelder is.
     Bij twijfel False — dit mag alleen ingrijpen als het duidelijk mis is.
+
+    HIER STOND "LEEST DIT ALS ENGELS?" (tot 22-09-2026). Dat was de enige andere
+    taal die we kenden, en daarmee liet deze zeef Toons Duitse lederhose gewoon
+    door: die leest niet als Engels, dus was er in de ogen van deze functie niets
+    aan de hand — en de Duitse tekst kwam op marktplaats.nl. De vraag hoort te
+    zijn of de tekst in een ándere taal staat dan het kanaal verwacht, welke taal
+    dat ook is. Zie leest_als_andere_taal in services/crosslist.py voor de
+    gemeten drempel.
     """
     samen = f"{(payload or {}).get('title') or ''}\n{(payload or {}).get('description') or ''}"
-    return lijkt_al_in_taal(samen, "en")
+    return leest_als_andere_taal(samen, doeltaal)
 
 
 def _zet_taal_goed(db, jobs: list) -> int:
@@ -1033,7 +1041,7 @@ def _zet_taal_goed(db, jobs: list) -> int:
     """
     try:
         from backend.services.crosslist import (TAAL_VELD, VertalingOnbeschikbaar,
-                                                lijkt_al_in_taal, localiseer_sync,
+                                                leest_als_andere_taal, localiseer_sync,
                                                 taal_van_platform)
     except Exception as e:  # noqa: BLE001 — het uitdelen gaat hoe dan ook door
         logger.warning("taalzeef niet beschikbaar: %s", e)
@@ -1046,7 +1054,8 @@ def _zet_taal_goed(db, jobs: list) -> int:
             continue
         try:
             platform = j.get("platform")
-            if taal_van_platform(platform) != "nl":
+            doeltaal = taal_van_platform(platform)
+            if doeltaal != "nl":
                 door.append(j)
                 continue
             payload = j["payload"]
@@ -1063,7 +1072,8 @@ def _zet_taal_goed(db, jobs: list) -> int:
             # Vanaf nu telt alleen wat er in de tekst staat. Ziet de tekst er
             # overtuigend Engels uit, dan gaat hij hoe dan ook nog een keer door
             # de localisatie, wat er ook op het stempel staat.
-            if payload.get(TAAL_VELD) == "nl" and not _leest_als_engels(payload, lijkt_al_in_taal):
+            if payload.get(TAAL_VELD) == "nl" and not _staat_in_een_andere_taal(
+                    payload, doeltaal, leest_als_andere_taal):
                 door.append(j)
                 continue
             nieuw = localiseer_sync(payload, platform)
@@ -1079,8 +1089,8 @@ def _zet_taal_goed(db, jobs: list) -> int:
             # model gaf de Engelse tekst onvertaald terug. Dat liep tot nu toe
             # door dezelfde melding als een lege API-rekening, dus stond er
             # "vul je tegoed aan" in de mail terwijl daar niets mis mee was.
-            if _leest_als_engels(nieuw, lijkt_al_in_taal):
-                logger.error("job %s (%s) blijft wachten: de vertaling gaf de Engelse tekst terug",
+            if _staat_in_een_andere_taal(nieuw, doeltaal, leest_als_andere_taal):
+                logger.error("job %s (%s) blijft wachten: de vertaling gaf de vreemde tekst terug",
                              j.get("id"), j.get("platform"))
                 _meld_vertaalstoring_model(str(payload.get("title") or "")[:80])
                 continue
