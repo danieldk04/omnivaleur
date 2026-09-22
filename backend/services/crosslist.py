@@ -298,16 +298,51 @@ _STOPWOORDEN_EN = {
     "measurements", "available", "authentic", "designer", "very", "without",
     "because", "which", "that", "they", "them", "some", "more", "only", "also",
 }
+# EEN DERDE TAAL BESTOND HIER NIET, EN DAT KOSTTE EEN DUITSE ADVERTENTIE (22-09-2026).
+#
+# Toon (De Juiste Toon) verkoopt Duitse trachten en neemt de Duitse tekst van de
+# leverancier over in zijn Vinted-advertentie, met zijn eigen Nederlandse
+# winkelblok eronder ("Kijk op onze webshop ... Locatie: Mon Plaisir 19,
+# Etten-Leur"). Die twee samen gingen naar Marktplaats.
+#
+# Gemeten op zijn echte tekst: 8 Nederlandse stopwoorden (allemaal uit zijn
+# winkelblok), 0 Engelse, en van het Duits zag deze functie NIETS — die taal
+# bestond hier niet. De regel "nl >= 3 en nl >= en * 2" kwam dus uit op "staat al
+# in het Nederlands", de vertaling werd overgeslagen, en de Duitse tekst stond op
+# marktplaats.nl. Precies de fout die deze functie hoort te voorkomen, alleen met
+# een andere taal dan de twee die we kenden.
+#
+# Alleen woorden die in het Duits gewoon zijn en in het Nederlands én Engels
+# niet. Bewust NIET: "die" (Nederlands), "den" (Nederlands), "leder", "material",
+# "artikel" en "lager" (alle drie ook Nederlands).
+_STOPWOORDEN_DE = {
+    "und", "der", "das", "für", "ist", "sind", "nicht", "auch", "oder", "auf",
+    "aus", "bei", "sehr", "mit", "ein", "eine", "einen", "einem", "einer",
+    "zum", "zur", "dem", "wird", "werden", "wurde", "haben", "hat", "kann",
+    "noch", "schon", "aber", "sowie", "beim", "ihre", "ihren", "unser",
+    "größe", "grösse", "farbe", "herren", "damen", "siehe",
+    "letztes", "letzte", "mehrere", "zentimeter", "zustand", "gebraucht",
+    "neuwertig", "getragen", "versand", "abholung", "schuhe", "jacke",
+    "hose", "breite", "länge", "höhe",
+}
+_TAALWOORDEN = {"nl": _STOPWOORDEN_NL, "en": _STOPWOORDEN_EN, "de": _STOPWOORDEN_DE}
 
 
 def lijkt_al_in_taal(text: str, taal: str) -> bool:
-    """True als de tekst overtuigend al in `taal` staat. Bij twijfel False."""
-    woorden = re.findall(r"[a-z\u00e0-\u00ff']+", (text or "").lower())
+    """True als de tekst overtuigend al in `taal` staat. Bij twijfel False.
+
+    De doeltaal moet het winnen van ELKE andere taal die we kennen, niet alleen
+    van de ene andere. Zie _STOPWOORDEN_DE: zolang dat er maar twee waren, telde
+    een Duitse tekst met een Nederlands winkelblok eronder als Nederlands.
+    """
+    # \u00df (ß) hoort in de tekenklasse, anders valt "größe" uiteen in "grö" en
+    # "e" en telt het Duitse woord niet mee.
+    woorden = re.findall(r"[a-z\u00df-\u00ff']+", (text or "").lower())
     if len(woorden) < 6:
         return False
-    nl = sum(1 for w in woorden if w in _STOPWOORDEN_NL)
-    en = sum(1 for w in woorden if w in _STOPWOORDEN_EN)
-    doel, ander = (nl, en) if taal == "nl" else (en, nl)
+    tellingen = {t: sum(1 for w in woorden if w in lijst) for t, lijst in _TAALWOORDEN.items()}
+    doel = tellingen.get(taal, 0)
+    ander = max(n for t, n in tellingen.items() if t != taal)
     return doel >= 3 and doel >= ander * 2
 
 

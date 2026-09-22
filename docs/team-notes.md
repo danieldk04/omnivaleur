@@ -12335,3 +12335,59 @@ plaatsing.
 Geen codewijziging. Deze notitie staat er omdat drie notities van vandaag met
 "openstaand" eindigen en een volgende sessie anders opnieuw gaat zoeken naar iets
 wat misschien allang werkt.
+
+## 22-09-2026 (19:45) — Toons lederhose stond in het Duits op Marktplaats
+
+Daniel stuurde een schermafdruk van de advertentie plus zijn appje: *"Hij heeft
+tekst in het Duits vanuit Vinted geplaatst naar mp."* Op marktplaats.nl stond
+letterlijk: "Herren Original Trachten Lederhosen / Größe 50 / Farbe Khaki /
+Material Leder/Wildleder". Dat is onze fout, en het is de derde keer dit jaar
+dat een advertentie in de verkeerde taal de deur uit ging.
+
+**De oorzaak, woord voor woord nageteld op zijn echte tekst.**
+`lijkt_al_in_taal` in `backend/services/crosslist.py` kende twee talen:
+Nederlands en Engels. Toon neemt de Duitse tekst van zijn leverancier over in
+zijn Vinted-advertentie en zet er zijn eigen Nederlandse winkelblok onder
+("Kijk op onze webshop ... Locatie: Mon Plaisir 19, Etten-Leur"). Gemeten op die
+tekst: **8 Nederlandse stopwoorden, allemaal uit dat winkelblok, 0 Engelse, en
+van het Duits zag de functie niets** — die taal bestond er niet. De regel
+`nl >= 3 and nl >= en * 2` kwam dus uit op "staat al in het Nederlands", de
+vertaling werd overgeslagen (dat is de reparatie van 12-09, die hier tegen ons
+werkte), en de Duitse tekst ging ongewijzigd naar Marktplaats.
+
+Bijvangst: `ß` zat niet in de tekenklasse van de woordenteller, dus "größe" viel
+uiteen in "grö" en "e" en telde sowieso nergens voor mee.
+
+**Wat er nu staat.**
+- Een derde woordenlijst, `_STOPWOORDEN_DE`, en de regel is veralgemeend: de
+  doeltaal moet het winnen van **élke** andere taal die we kennen, niet van de
+  ene andere. Dat is dezelfde vorm als bij de rubriekenlijst van vanmiddag —
+  zolang er maar twee takken zijn, is de derde een gat.
+- Alleen woorden die in het Duits gewoon zijn en in het Nederlands én Engels
+  niet. Bewust weggelaten: "die", "den", "leder", "material", "artikel",
+  "lager", "gewicht" en "kinder" — die staan ook in Nederlandse advertenties, en
+  een marker die in beide talen bestaat zet juist de vertaling stil die hij hoort
+  aan te zetten. Er is een proef die dat vastlegt.
+- `ß` staat in de tekenklasse.
+
+**Bewijs.** `tests/test_duitse_tekst_wordt_wel_vertaald.py` gebruikt zijn echte
+advertentietekst van de schermafdruk en draait `localiseer_sync` met een
+nagebootste vertaaldienst, zodat te zien is óf er vertaald wordt zonder dat er
+een model aan te pas komt. **5 van de 10 proeven vallen om zonder de reparatie**,
+alle 10 groen erna. De proef van 12-09 (Nederlands mag niet alsnog langs het
+model) staat er als controle in en blijft groen. Hele suite: 65 rood voor,
+dezelfde 65 na.
+
+**Wat NIET is rechtgezet, en dat is belangrijk.** De advertenties die al online
+staan blijven Duits. De reparatie werkt vanaf de volgende plaatsing of
+vervanging; wie zo'n advertentie wil rechtzetten moet hem vervangen (Relist /
+"vervangen" in het publiceervenster), dan gaat de tekst alsnog door de vertaling.
+Deze sessie heeft geen databasesleutels, dus er is niet nagegaan hóeveel van
+zijn advertentien dit raakt — hij verkoopt Duitse trachten, dus vermoedelijk meer
+dan deze ene. Dat is een echte vraag voor wie er wél bij kan: zoek zijn
+Marktplaats- en 2dehands-advertenties met Duitse woorden in de omschrijving.
+
+**Les.** Twee keer op dezelfde dag bleek een beslissing met een vast aantal
+takken het probleem: drie takken in de rubriekenlijst, twee talen in de
+taalherkenning. Wie zo'n functie aanpast hoort zich af te vragen wat er gebeurt
+met het geval dat er níet in staat — en dat geval bestaat vrijwel altijd.
