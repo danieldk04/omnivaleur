@@ -631,6 +631,61 @@ _RUBRIEK_STORING_RUST = timedelta(minutes=3)
 _RUBRIEK_STORING: dict[str, datetime] = {}
 _BETAALDE_RUBRIEK_GEHEUGEN = timedelta(days=28)
 
+# EEN GRATIS BUURRUBRIEK, ALS DE EIGEN RUBRIEK GELD GAAT KOSTEN.
+#
+# WAAROM (22-09-2026, Martijn Bax / Watchero, tweedehands Apple Watches).
+# Marktplaats laat per account maar twee advertenties gratis in "Smartwatches"
+# staan; de derde kost geld. "Sporthorloges", in dezelfde tak, heeft die grens
+# niet. Horlogeverkopers zetten hun derde smartwatch daarom zelf in
+# Sporthorloges, en zo vroeg Martijn het ook van ons. Zonder dit liep elke
+# volgende smartwatch op "Naar betalen" vast, nam de rem de rest van zijn rij in
+# die rubriek terug en ging er vanaf de derde niets meer online.
+#
+# Nummers nagemeten op de openbare zoek-API van Marktplaats (22-09-2026):
+# 1826/3041 heet "Smartwatches", 1826/3045 "Sporthorloges". 2dehands deelt die
+# boom. Alleen paren die zo gemeten zijn horen hier: een geraden buurrubriek
+# kan zelf geld kosten of een verkeerde plek zijn.
+#
+# Er wordt pas uitgeweken als die rubriek bij DEZE verkoper aantoonbaar geld
+# kost. Zolang er een gratis plek is blijft een smartwatch in Smartwatches, waar
+# kopers hem het eerst zoeken.
+_GRATIS_UITWIJK = {
+    "sieraden smartwatch": "sieraden sporthorloge",
+    "mp:1826/3041": "mp:1826/3045",
+}
+_UITWIJK_MP_NAAM = {"mp:1826/3045": "Sporthorloges"}
+
+
+def _uitwijk_payload(payload) -> dict | None:
+    """Dezelfde opdracht in de gratis buurrubriek, of None als die er niet is.
+
+    Een opdracht wijkt hooguit één keer uit. Kost de buurrubriek óók geld, dan
+    geldt daar de gewone rem en niet een volgende sprong.
+    """
+    pl = payload if isinstance(payload, dict) else {}
+    # "in" en niet .get(): ook een lege terugdraai-notitie maakt dit een herplaatsing.
+    if "_refresh_rollback" in pl or pl.get("_uitgeweken_van"):
+        return None
+    sleutel = _rubriek_sleutel(pl)
+    doel = _GRATIS_UITWIJK.get(sleutel)
+    if not doel:
+        return None
+    nieuw = dict(pl)
+    if doel.startswith("mp:"):
+        # De extensie kiest de rubriek op deze twee nummers als ze er staan
+        # (getMpSyiUrl), dus die moeten mee, in hetzelfde type als ze waren.
+        mc = dict(pl["mp_category"])
+        l1, l2 = doel[3:].split("/")
+        mc["l1"] = type(mc["l1"])(l1)
+        mc["l2"] = type(mc["l2"])(l2)
+        mc["l2_naam"] = _UITWIJK_MP_NAAM.get(doel) or mc.get("l2_naam")
+        nieuw["mp_category"] = mc
+    categorie = str(pl.get("category") or "").strip().lower()
+    if categorie in _GRATIS_UITWIJK and not _GRATIS_UITWIJK[categorie].startswith("mp:"):
+        nieuw["category"] = _GRATIS_UITWIJK[categorie]
+    nieuw["_uitgeweken_van"] = sleutel
+    return nieuw
+
 
 def _rubriek_sleutel(payload) -> str:
     """De rubriek die deze opdracht op het formulier kiest, als vergelijkbare sleutel.
@@ -797,7 +852,8 @@ def _betaalde_rubriek_bekend(db, user_id: str, platform: str, sleutel: str) -> b
         return False
     grens = (datetime.now(timezone.utc) - _BETAALDE_RUBRIEK_GEHEUGEN).isoformat()
     rijen = (db.table("jobs")
-             .select("status,created_at,done_at,result,payload->category,payload->mp_category")
+             .select("status,created_at,done_at,result,payload->category,payload->mp_category,"
+                     "payload->_uitgeweken_van")
              .eq("user_id", user_id).eq("platform", platform).eq("action", "create")
              .in_("status", ["done", "error"]).gte("created_at", grens)
              .order("created_at", desc=True).limit(1000).execute().data or [])
@@ -810,6 +866,10 @@ def _betaalde_rubriek_bekend(db, user_id: str, platform: str, sleutel: str) -> b
     # bovenop zet de rubriek weer open terwijl de betaalpagina later kwam.
     rijen.sort(key=lambda r: str(r.get("done_at") or r.get("created_at") or ""), reverse=True)
     for r in rijen:
+        # Uitgeweken naar de buurrubriek (_GRATIS_UITWIJK) omdat deze geld kostte:
+        # dat is het laatste wat we over deze rubriek weten.
+        if r.get("_uitgeweken_van") == sleutel:
+            return True
         if _rubriek_sleutel({"category": r.get("category"),
                              "mp_category": r.get("mp_category")}) != sleutel:
             continue
@@ -819,6 +879,81 @@ def _betaalde_rubriek_bekend(db, user_id: str, platform: str, sleutel: str) -> b
         if _BETAALDE_RUBRIEK.search(f"{res.get('error') or ''} {res.get('error_oorspronkelijk') or ''}"):
             return True
     return False
+
+
+def _wijk_uit_naar_gratis_rubriek(db, user_id: str, job: dict) -> None:
+    """Zet een plaatsing in de gratis buurrubriek als de eigen rubriek al geld kost.
+
+    Zie _GRATIS_UITWIJK. Hier, vlak voor uitgifte, zodat een smartwatch die na
+    de eerste betaalmelding werd klaargezet niet eerst zelf tegen de betaalknop
+    aan hoeft te lopen. Lukt het niet, dan gaat hij in zijn eigen rubriek de
+    deur uit, precies zoals voorheen, en vangt fail_job hem op.
+    """
+    if job.get("action") != "create" or job.get("platform") not in ("marktplaats", "2dehands"):
+        return
+    pl = job.get("payload") if isinstance(job.get("payload"), dict) else {}
+    nieuw = _uitwijk_payload(pl)
+    if not nieuw:
+        return
+    try:
+        if not _betaalde_rubriek_bekend(db, user_id, job["platform"], _rubriek_sleutel(pl)):
+            return
+        db.table("jobs").update({"payload": nieuw}).eq("id", job["id"]).execute()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("job %s: uitwijken naar de gratis rubriek niet gelukt: %s", job.get("id"), e)
+        return
+    job["payload"] = nieuw
+    logger.info("job %s: %s kost geld bij %s, geplaatst in %s", job.get("id"),
+                nieuw["_uitgeweken_van"], user_id, _rubriek_sleutel(nieuw))
+
+
+def _zet_terug_in_gratis_rubriek(db, user_id: str, job_id: str, job: dict | None) -> bool:
+    """Een plaatsing die op een betalende rubriek stuitte: terug in de rij, in de buurrubriek.
+
+    Geeft True als dat gelukt is; dan hoort er geen fout en geen rem meer op.
+    Er is niets geplaatst en niets afgerekend (de extensie klikt nooit op
+    betalen), dus opnieuw proberen maakt geen dubbele advertentie. Wat in
+    dezelfde rubriek nog wacht gaat mee, anders loopt elke smartwatch eerst
+    zelf tegen de betaalknop aan voor hij uitwijkt.
+    """
+    if not job or job.get("action") != "create" or job.get("platform") not in ("marktplaats", "2dehands"):
+        return False
+    pl = job.get("payload") if isinstance(job.get("payload"), dict) else {}
+    nieuw = _uitwijk_payload(pl)
+    if not nieuw:
+        return False
+    sleutel = _rubriek_sleutel(pl)
+    try:
+        # Met een verse aanmaaktijd: een oude opdracht die terug op 'pending'
+        # gaat ruimt de driedagenveger anders nog dezelfde nacht op.
+        execute_with_retry(db.table("jobs").update({
+            "status": "pending", "payload": nieuw, "claimed_at": None, "result": None,
+            "done_at": None, "created_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("id", job_id))
+    except Exception:  # noqa: BLE001 — dan de gewone rem, zoals voorheen
+        logger.warning("Opdracht %s niet kunnen terugzetten in de gratis rubriek", job_id)
+        return False
+    verplaatst = 0
+    try:
+        wachtend = (db.table("jobs").select("id,action,payload").eq("user_id", user_id)
+                    .eq("platform", job["platform"]).eq("status", "pending")
+                    .execute().data or [])
+        for w in wachtend:
+            if w.get("id") == job_id or w.get("action") != "create":
+                continue
+            if _rubriek_sleutel(w.get("payload")) != sleutel:
+                continue
+            ander = _uitwijk_payload(w.get("payload"))
+            if not ander:
+                continue
+            db.table("jobs").update({"payload": ander}).eq("id", w["id"]).eq(
+                "status", "pending").execute()
+            verplaatst += 1
+    except Exception as e:  # noqa: BLE001 — de uitgifte wijkt de rest alsnog uit
+        logger.warning("Wachtrij in %s niet verplaatst voor %s: %s", sleutel, user_id, e)
+    logger.warning("Betalende rubriek %s op %s bij %s: opdracht %s en %d wachtende naar %s",
+                   sleutel, job["platform"], user_id, job_id, verplaatst, _rubriek_sleutel(nieuw))
+    return True
 
 
 def _weiger_bekende_betaalde_rubriek(db, user_id: str, job: dict) -> bool:
@@ -1878,6 +2013,7 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
         # teruggenomen hoeft dat niet. Zie _zet_rubriek_van_marktplaats.
         if not _zet_rubriek_van_marktplaats(db, user_id, kandidaat):
             continue
+        _wijk_uit_naar_gratis_rubriek(db, user_id, kandidaat)
         if _weiger_bekende_betaalde_rubriek(db, user_id, kandidaat):
             continue
         uit = _zet_taal_goed(db, [kandidaat])
@@ -4919,6 +5055,18 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
             logger.warning("kansloze reeks niet vast te stellen voor %s", job_id)
     zakelijk = _is_zakelijk(db, job, body, user_id)
     body = _rechtgezette_foutmelding(job, body, versie, kansloos, zakelijk)
+
+    # EEN SMARTWATCH DIE GELD GAAT KOSTEN GAAT NAAR SPORTHORLOGES.
+    #
+    # Vóór beide remmen hieronder: die nemen de rest van de rubriek terug, en
+    # de betaalmuur kan zelfs het hele kanaal dichtzetten als dit de eerste
+    # plaatsing was. Dat Smartwatches vol is zegt niets over het kanaal en niets
+    # over Sporthorloges. Zie _GRATIS_UITWIJK.
+    if (job and job.get("action") == "create"
+            and (_BETAALMUUR.search(str((body or {}).get("error") or ""))
+                 or _BETAALDE_RUBRIEK.search(str((body or {}).get("error") or "")))
+            and _zet_terug_in_gratis_rubriek(db, user_id, job_id, job)):
+        return {"ok": True, "requeued": True, "reason": "free_neighbour_category"}
 
     # DE BETAALMUUR STOPT DE RIJ METEEN, EN VANAF DE SERVER.
     #

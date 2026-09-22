@@ -12174,3 +12174,31 @@ Watchero voor later: zakelijk Marktplaats-account (alle 13 advertenties via
 Admarkt), Shopify-winkel watchero.eu met 154 producten, gebruikte Apple Watches,
 elk exemplaar een eigen product. Automatisch plaatsen in Admarkt-campagnes niet
 beloven (alleen via erkende partner).
+
+## 22-09-2026: call met Martijn Bax (Watchero), smartwatches wijken uit naar Sporthorloges
+
+Call van 14:30. Martijn verkoopt tweedehands Apple Watches met garantie via
+Marktplaats Pro (klikadvertenties met dagbudget) en een eigen Shopify-winkel.
+Tweedehands.be sloeg bij hem niet aan. Wat hij vroeg en wat eruit kwam:
+
+- Zijn hoofdvraag: Marktplaats laat maar twee smartwatches gratis in de rubriek
+  Smartwatches staan, de derde kost geld. Hij zet de rest zelf in Sporthorloges,
+  waar die grens niet is. Kan Omnivaleur dat ook? Daniel beloofde uiterlijk
+  morgenochtend antwoord. Gebouwd dezelfde middag: vanaf de derde smartwatch zet
+  Omnivaleur hem zelf in Sporthorloges (`_GRATIS_UITWIJK` in backend/api/jobs.py,
+  proef tests/test_smartwatch_wijkt_uit_naar_sporthorloges.py). Daarvoor nam de
+  rubriekrem de rest van zijn smartwatches terug en ging er vanaf de derde niets
+  meer online.
+- Rechtgezet voor de mail: in de call klonk het alsof de Admarkt-schakelaar
+  nieuwe Pro-advertenties plaatst. Dat doet hij niet; hij importeert de
+  bestaande. Nieuwe advertenties in Pro aanmaken mag alleen via een erkende
+  API-partner van Marktplaats, en dat beloven we niet.
+- Meerdere Marktplaats-accounts tegelijk (bedrijf en privé): kan niet, één
+  account per kanaal. Daniel zei dat ook zo.
+- Importeren vanuit Shopify bestaat nog niet ("Coming soon" op het
+  importscherm). Zijn route is de Admarkt-import; een geïmporteerde
+  Pro-advertentie staat bij ons als live op Marktplaats, dus er komt geen
+  tweede op Marktplaats bij.
+- Tip van Martijn: Tradera, het Zweedse Marktplaats. Hogere prijzen, verzending
+  met een label van hen. Hij verkocht er zelf. Genoteerd als kanaalidee, niet
+  gepland. Voor Noorwegen en Finland heb je een lokaal persoonsnummer nodig.

@@ -17,6 +17,40 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## smartwatch-wijkt-uit-naar-sporthorloges
+
+*22-09-2026 — Marktplaats geeft maar 2 gratis plekken in Smartwatches; sinds 22-09-2026 wijkt Omnivaleur dan zelf uit naar Sporthorloges in plaats van de rij terug te nemen*
+
+Marktplaats laat per account maar **twee** advertenties gratis in "Smartwatches"
+(1826/3041) staan; de derde kost geld. "Sporthorloges" (1826/3045, zelfde tak)
+heeft die grens niet. Horlogeverkopers zetten hun derde smartwatch daarom zelf
+in Sporthorloges. Nummers nagemeten op de openbare zoek-API
+(`/lrp/api/search?l1CategoryId=1826&l2CategoryId=199`, facets).
+
+**Waarom:** Martijn Bax (Watchero, tweedehands Apple Watches, zakelijk
+MP-account), call 22-09-2026. Zijn vraag was precies dit. Tot die dag liep de
+derde smartwatch op "Naar betalen" vast, en de rubriekrem uit
+"betalende-rubriek-is-geen-formulierfout" nam de rest van zijn rij in
+Smartwatches terug: vanaf de derde ging er niets meer online.
+
+**How to apply:** `_GRATIS_UITWIJK` in backend/api/jobs.py. Twee plekken:
+`fail_job` zet de opdracht bij een betaalmelding (formulier óf /payments/)
+terug in de rij met de buurrubriek, en de wachtende in dezelfde rubriek gaan
+mee; bij uitgifte wijkt `_wijk_uit_naar_gratis_rubriek` uit zodra
+`_betaalde_rubriek_bekend` zegt dat de rubriek geld kost. Een uitgeweken
+opdracht draagt `_uitgeweken_van` en telt zelf als bewijs. Hooguit één sprong:
+kost de buurrubriek ook geld, dan de gewone rem. Voeg alleen paren toe die je
+zelf gemeten hebt; een geraden buurrubriek kan ook geld kosten.
+Proef: tests/test_smartwatch_wijkt_uit_naar_sporthorloges.py.
+
+**Ook geleerd in die call:** importeren vanuit Shopify bestaat niet (het
+importscherm toont "Coming soon"); een horlogehandelaar met een Shopify-winkel
+komt binnen via de Admarkt-import ("admarkt-zakelijke-marktplaats"). Een
+geïmporteerde Pro-advertentie staat bij ons als live op Marktplaats, dus
+Omnivaleur plaatst hem daar niet nog een keer.
+
+---
+
 ## meten-op-de-productiedatabase
 
 *22-09-2026 — Een meetquery over duizenden rijen draait op dezelfde kleine Supabase-instantie als de live site; meet in brokken met een tijdvenster en een limiet*
