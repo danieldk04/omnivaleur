@@ -2006,19 +2006,6 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     <div class="modal-body">
       <input type="hidden" id="edit-id">
 
-      <div class="form-group">
-        <label>Item type</label>
-        <select id="f-item-type" onchange="onItemTypeChange()">
-          <option value="clothing">Clothing &amp; Shoes</option>
-          <option value="games">Games &amp; Consoles</option>
-          <option value="electronics">Electronics &amp; Gadgets</option>
-          <option value="audio">Audio, TV, Photo &amp; Video</option>
-          <option value="sieraden">Jewellery, Watches &amp; Bags</option>
-          <option value="muziek">Music &amp; Instruments</option>
-          <option value="antiek">Antiques, Art &amp; Collectables</option>
-          <option value="wonen">Home, Garden &amp; Christmas</option>
-        </select>
-      </div>
 
       <div class="form-row" style="grid-template-columns:2fr 1fr">
         <div class="form-group">
@@ -2145,11 +2132,31 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           </select>
         </div>
       </div>
+      <!-- ITEM TYPE HOORT NAAST CATEGORY, NIET BOVENAAN HET FORMULIER.
+           Hij stond als eerste veld, dertien velden boven de rubriek die hij
+           ordent. Toon (22-09-2026) zocht daarom in dít lijstje naar een
+           schapenvacht: "Verder kan ik niet naar onderen scrollen, zie geen
+           rugscof scheep skin etc." Die staan in Category, en nu staat dat
+           veld er direct naast. Het lijstje sluit ook niets meer af — zie
+           updateCategoryOptions. -->
+      <div class="form-group">
+        <label>Item type <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">— only sorts the Category list below; every category stays available there</span></label>
+        <select id="f-item-type" onchange="onItemTypeChange()">
+          <option value="clothing">Clothing &amp; Shoes</option>
+          <option value="games">Games &amp; Consoles</option>
+          <option value="electronics">Electronics &amp; Gadgets</option>
+          <option value="audio">Audio, TV, Photo &amp; Video</option>
+          <option value="sieraden">Jewellery, Watches &amp; Bags</option>
+          <option value="muziek">Music &amp; Instruments</option>
+          <option value="antiek">Antiques, Art &amp; Collectables</option>
+          <option value="wonen">Home, Garden &amp; Christmas</option>
+        </select>
+      </div>
       <div class="form-row">
         <div class="form-group" id="fg-gender">
           <label>Gender / Audience</label>
           <select id="f-gender" onchange="updateCategoryOptions(); onContextInputForEbay()">
-            <option value="">— choose first —</option>
+            <option value="">— not set —</option>
             <option value="dames">Women</option>
             <option value="heren">Men</option>
             <option value="kinderen">Kids</option>
@@ -9905,67 +9912,30 @@ function _bewaarOnbekendeCategorie(sel, selectedCategory) {
 
 function updateCategoryOptions(selectedCategory) {
   const sel = document.getElementById('f-category');
-  // Non-clothing types (games, electronics, audio, …) don't branch on gender —
-  // the type select alone names a CATEGORIES list to populate from.
+
+  // DEZE LIJST LOOPT NOOIT DOOD. DRIE KEER GELEERD, BIJ DEZELFDE VERKOPER.
+  //
+  // Hij stond hier als drie aparte takken, en elke tak is apart een val
+  // gebleken voor De Juiste Toon, die vachten, kleden en lederhosen verkoopt:
+  //
+  //   07-09  geen doelgroep → alleen kledingrubrieken. Gerepareerd.
+  //   22-09  wél een doelgroep → alleen die doelgroep. Gerepareerd.
+  //   22-09  een niet-kledingsoort → alleen dat soort. Zijn scherm stond op
+  //          "Audio, TV, Photo & Video" en hij zocht een schapenvacht: "Verder
+  //          kan ik niet naar onderen scrollen, zie geen rugscof scheep skin
+  //          etc. Zo kan ik ze niet plaatsen?"
+  //
+  // Daarom nu één weg in plaats van drie. Wat bovenaan staat hangt af van het
+  // scherm — bij kleding de doelgroep, anders het soort — maar ÓNDER die kop
+  // staat altijd de hele lijst, met de tak ervoor. "Item type" en "Gender"
+  // ordenen dus alleen nog; ze sluiten niets meer af. Kiest de verkoper iets
+  // uit een andere tak, dan zet onCategoryPicked het soort en de doelgroep
+  // vanzelf goed.
   const type = currentItemType();
-  if (type !== 'clothing' && CATEGORIES[type]) {
-    sel.innerHTML = '<option value="">— choose category —</option>';
-    for (const [val, label] of CATEGORIES[type]) {
-      const opt = document.createElement('option');
-      opt.value = val; opt.textContent = label;
-      if (selectedCategory && val === selectedCategory) opt.selected = true;
-      sel.appendChild(opt);
-    }
-    _bewaarOnbekendeCategorie(sel, selectedCategory);
-    return;
-  }
   const gender = document.getElementById('f-gender').value;
-  if (!gender || !CATEGORIES[gender]) {
-    // GEEN DOODLOPENDE STRAAT (07-09-2026, De Juiste Toon).
-    //
-    // Hier stond alleen "— choose gender first —". Wie een vloerkleed, een
-    // schapenvacht of een kussen wilde invoeren zag dus een keuzelijst die
-    // helemaal over kleding ging en niets anders aanbood — terwijl die rubrieken
-    // wel bestaan, één keuzelijst hoger onder "Item type". Bij een artikel
-    // zonder rubriek (een import waarvan de indeling niet lukte) opent het
-    // scherm bovendien altijd op Clothing & Shoes, dus dit was precies het
-    // scherm waar hij op uitkwam.
-    //
-    // Nu staat elke rubriek er, met zijn tak ervoor. Kiest hij er een uit een
-    // andere tak, dan zet onCategoryPicked het soort en de doelgroep goed.
-    sel.innerHTML = '<option value="">— choose category —</option>';
-    const takken = [...CATEGORIE_TAK_VOLGORDE,
-                    ...Object.keys(CATEGORIES).filter(k => !CATEGORIE_TAK_VOLGORDE.includes(k))];
-    for (const tak of takken) {
-      for (const [val, label] of (CATEGORIES[tak] || [])) {
-        const opt = document.createElement('option');
-        opt.value = val;
-        opt.textContent = `${CATEGORIE_TAK_LABEL[tak] || tak} · ${label}`;
-        if (selectedCategory && val === selectedCategory) opt.selected = true;
-        sel.appendChild(opt);
-      }
-    }
-    _bewaarOnbekendeCategorie(sel, selectedCategory);
-    return;
-  }
-  // OOK MÉT DOELGROEP GEEN DOODLOPENDE STRAAT (22-09-2026, De Juiste Toon).
-  //
-  // Hierboven staat sinds 07-09 de volledige lijst voor een artikel zonder
-  // doelgroep. Maar staat er wél een doelgroep in het artikel — en die zet de
-  // import er zelf in — dan kreeg de verkoper uitsluitend de kledingrubrieken
-  // van die doelgroep te zien: 29 stuks voor heren, 34 voor dames, en geen
-  // enkele manier om er een schapenvacht of een kleed in te vinden.
-  //
-  // Toon verkoopt vachten, kleden en lederhosen. Hij meldde het zo: "Paar keer
-  // geprobeerd de categorie te wijzigen en op te slaan, maar lukt niet. Alles
-  // staat in categorie clothing en shoes." Dat klopte: de uitweg lag één
-  // keuzelijst hoger (Item type), hij vond hem niet, koos dus niets, en
-  // opslaan meldde "Item saved" terwijl er niets veranderd was.
-  //
-  // Zijn eigen doelgroep staat vooraan, want dat is verreweg het vaakst wat hij
-  // zoekt. Daaronder de rest van de takken, met hun tak ervoor, precies zoals
-  // in de lijst zonder doelgroep. Kiest hij er een uit een andere tak, dan zet
-  // onCategoryPicked het soort en de doelgroep alsnog goed.
+  const eigenTak = (type !== 'clothing' && CATEGORIES[type]) ? type
+                 : (gender && CATEGORIES[gender] ? gender : '');
+
   sel.innerHTML = '<option value="">— choose category —</option>';
   const zetRubriekNeer = (val, label) => {
     const opt = document.createElement('option');
@@ -9973,11 +9943,11 @@ function updateCategoryOptions(selectedCategory) {
     if (selectedCategory && val === selectedCategory) opt.selected = true;
     sel.appendChild(opt);
   };
-  for (const [val, label] of CATEGORIES[gender]) zetRubriekNeer(val, label);
-  const andereTakken = [...CATEGORIE_TAK_VOLGORDE,
-                        ...Object.keys(CATEGORIES).filter(k => !CATEGORIE_TAK_VOLGORDE.includes(k))];
-  for (const tak of andereTakken) {
-    if (tak === gender) continue;
+  if (eigenTak) for (const [val, label] of CATEGORIES[eigenTak]) zetRubriekNeer(val, label);
+  const takken = [...CATEGORIE_TAK_VOLGORDE,
+                  ...Object.keys(CATEGORIES).filter(k => !CATEGORIE_TAK_VOLGORDE.includes(k))];
+  for (const tak of takken) {
+    if (tak === eigenTak) continue;
     for (const [val, label] of (CATEGORIES[tak] || []))
       zetRubriekNeer(val, `${CATEGORIE_TAK_LABEL[tak] || tak} · ${label}`);
   }

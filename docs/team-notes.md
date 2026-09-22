@@ -12202,3 +12202,55 @@ Tweedehands.be sloeg bij hem niet aan. Wat hij vroeg en wat eruit kwam:
 - Tip van Martijn: Tradera, het Zweedse Marktplaats. Hogere prijzen, verzending
   met een label van hen. Hij verkocht er zelf. Genoteerd als kanaalidee, niet
   gepland. Voor Noorwegen en Finland heb je een lokaal persoonsnummer nodig.
+
+### 22-09-2026 (15:30) — Toon, vervolg: hij zocht de schapenvacht in het vérkeerde lijstje
+
+Na de reparatie van vanochtend stuurde hij een foto van zijn bewerkscherm met de
+**Item type**-lijst opengeklapt (waarde: "Audio, TV, Photo & Video"), en daarbij:
+
+> *"Verder kan ik niet naar onderen scrollen, zie geen rugscof scheep skin etc.
+> Zo kan ik ze niet plaatsen?"*
+
+Twee dingen tegelijk, allebei van ons.
+
+**1. De derde tak van diezelfde `if` was nog open.** `updateCategoryOptions` had
+drie wegen, en alle drie zijn nu apart een val gebleken bij dezelfde verkoper:
+07-09 de tak "geen doelgroep", vanochtend de tak "wél een doelgroep", en nu de
+tak "een niet-kledingsoort". Met Item type op audio bood de rubriekenlijst
+precies de 68 audio-rubrieken en geen enkele woonrubriek — gemeten: 69 opties
+inclusief de kopregel, exact wat hij zag.
+
+Er staat nu één weg in plaats van drie. Wat bovenaan komt hangt nog steeds van
+het scherm af (bij kleding de doelgroep, anders het soort), maar daaronder staat
+altijd de hele lijst met de tak ervoor. **Item type en Gender ordenen alleen nog;
+ze sluiten niets meer af.** Dat is de enige vorm waarin deze fout niet een vierde
+keer kan terugkomen.
+
+**2. Item type stond dertien velden boven de rubriek die het ordende.** Eerste
+veld van het formulier, terwijl Category pas na titel, SKU, omschrijving,
+Shopify-titel, prijs, vergelijkprijs, advertentievorm, bieden, kanaalprijzen,
+inkoopprijs, merk en maat komt. Dat hij in dát lijstje naar "scheep skin" zocht
+is precies wat een verkoper doet als de twee niet bij elkaar staan. Item type
+staat nu direct boven Gender en Category, met erachter in grijs: *"only sorts the
+Category list below; every category stays available there"*. De lege keuze bij
+Gender heet niet meer "— choose first —" (dat klopte niet meer) maar "— not set —".
+
+**Bewijs.** `tests/rubriek-doodlopende-straat-test.js` uitgebreid met Toons eigen
+scherm: 12 nieuwe controles over zes soorten (audio, games, electronics, muziek,
+antiek, sieraden). **Tegen `0714b41` — de reparatie van vanochtend — vallen die 12
+allemaal om**; met deze wijziging zijn alle 38 groen. Er zit ook een controle bij
+dat de rubrieken van het gekozen soort nog wél vooraan staan zonder tak ervoor,
+anders wordt kiezen binnen je eigen tak juist lastiger. Hele python-suite: 71 rood
+voor, dezelfde 71 na. Alle JS-proeven die app.html lezen: dezelfde zes rood als
+voor de wijziging (missende pakketten in deze container).
+
+**Openstaand, onveranderd.** Zijn artikelen zijn nog steeds niet aangeraakt (geen
+databasesleutels), en de drie 2dehands-blokkades van 16-09 staan los hiervan:
+locatie nog nooit bewezen met één geslaagde opdracht, de Edge-kopie 1.0.327, en
+de betalende rubriek (bij hem Tapijten en Kleden, niet deze artikelen).
+
+**Les.** Een storing repareren in de tak waar de klacht vandaan komt is niet
+hetzelfde als hem repareren. Drie keer achter elkaar dezelfde fout, bij dezelfde
+klant, in drie takken van één `if`. Wie zo'n reparatie doet hoort de andere
+takken van datzelfde besluit meteen mee te nemen — of, beter, het besluit weg te
+nemen zoals hier.

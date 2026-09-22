@@ -191,7 +191,7 @@ function bouwWereld() {
     functieUit("gewijzigdeVelden"),
     functieUit("editItem"),
     functieUit("saveItem"),
-    "return { editItem, saveItem, updateCategoryOptions, onCategoryPicked };",
+    "return { editItem, saveItem, updateCategoryOptions, onCategoryPicked, onItemTypeChange };",
   ].join("\n");
   const namen = Object.keys(hulp);
   const api = new Function(...namen, bron)(...namen.map((n) => hulp[n]));
@@ -212,12 +212,17 @@ function artikel(extra) {
   };
 }
 
-// Scherm openen, een rubriek kiezen zoals een verkoper dat doet, opslaan.
-async function kies(rij, rubriek) {
+// Scherm openen, eventueel eerst het soort omzetten zoals de verkoper dat doet,
+// dan een rubriek kiezen, dan opslaan.
+async function kies(rij, rubriek, soort) {
   const w = bouwWereld();
   w.server.rij = JSON.parse(JSON.stringify(rij));
   w.state.items = [JSON.parse(JSON.stringify(rij))];
   w.editItem(ID);
+  if (soort) {
+    w.document.getElementById("f-item-type").value = soort;
+    w.onItemTypeChange();
+  }
   const sel = w.document.getElementById("f-category");
   const stondErin = sel.options.some((o) => o.value === rubriek);
   sel.value = rubriek;
@@ -316,6 +321,32 @@ async function kies(rij, rubriek) {
     check("het scherm meldt niet dat er iets is opgeslagen",
           !w.toasts.some((t) => /Item saved/i.test(t)), w.toasts.join(" | "));
     check("het scherm zegt wél wat er gebeurde", w.toasts.length === 1, w.toasts.join(" | "));
+  }
+
+  // ── 6. Het soort mag de lijst ook niet afsluiten ─────────────────────────
+  // Toons tweede appje van 22-09, met een foto van het opengeklapte lijstje:
+  // "Verder kan ik niet naar onderen scrollen, zie geen rugscof scheep skin
+  // etc. Zo kan ik ze niet plaatsen?" Zijn Item type stond op "Audio, TV, Photo
+  // & Video". De rubriekenlijst bood dan alleen de 68 audio-rubrieken.
+  console.log("\nItem type op een ander soort (Toons schermafdruk van 15:30):");
+  for (const soort of ["audio", "games", "electronics", "muziek", "antiek", "sieraden"]) {
+    const { w, stondErin, opties } = await kies(artikel({ gender: "heren" }), "wonen vachten", soort);
+    check(`met Item type "${soort}" staat de woonrubriek er nog steeds in`, stondErin,
+          `de lijst had ${opties} opties`);
+    check(`en opslaan legt hem vast (Item type "${soort}")`,
+          w.server.rij.category === "wonen vachten",
+          `staat op ${JSON.stringify(w.server.rij.category)}`);
+  }
+  {
+    // Het eigen soort hoort nog wél vooraan te staan — anders wordt kiezen
+    // binnen je eigen tak juist lastiger.
+    const { w } = await kies(artikel({ gender: "" }), "audio luidsprekers", "audio");
+    const eerste = w.document.getElementById("f-category").options[1];
+    check("de rubrieken van het gekozen soort staan vooraan, zonder tak ervoor",
+          eerste.value.startsWith("audio ") && !eerste.textContent.includes(" · "),
+          `${eerste.value} / ${eerste.textContent}`);
+    check("en een rubriek uit het eigen soort wordt gewoon opgeslagen",
+          w.server.rij.category === "audio luidsprekers", w.server.rij.category);
   }
 
   console.log(mislukt ? `\n${mislukt} controle(s) mislukt\n` : "\nAlles groen\n");
