@@ -289,6 +289,85 @@ async def bulk_condition(body: dict, user_id: str = Depends(get_current_user)):
     return {"updated": aantal, "condition": conditie}
 
 
+# De doelgroeptakken van de taxonomie. Een rubriek uit een andere tak (wonen,
+# antiek, muziek, sieraden, games, electronics, audio) hoort géén doelgroep te
+# hebben — precies wat het bewerkscherm ook doet zodra het soort geen kleding
+# meer is. Een schapenvacht met "heren" erop is op Marktplaats geen schapenvacht.
+_KLEDINGTAKKEN = {"dames", "heren", "kinderen", "unisex"}
+
+
+def _rubriek_is_bekend(rubriek: str) -> bool:
+    """Bestaat deze rubriek echt?
+
+    De volledige lijst staat in `_EBAY_CATEGORY_HINTS`: die heeft als enige in
+    Python een regel voor élke rubriek uit het dashboard, inclusief games,
+    electronics en audio (bewaakt door tests/test_category_taxonomy.py). De
+    import-taxonomie kent die drie takken niet en is hier dus te smal.
+    """
+    from backend.platforms.ebay import _EBAY_CATEGORY_HINTS
+    return rubriek in _EBAY_CATEGORY_HINTS
+
+
+def _doelgroep_bij_rubriek(rubriek: str) -> str:
+    from backend.api.imports import _TAK_VAN_RUBRIEK
+    tak = _TAK_VAN_RUBRIEK.get(rubriek, "")
+    return tak if tak in _KLEDINGTAKKEN else ""
+
+
+@router.post("/bulk-category")
+async def bulk_category(body: dict, user_id: str = Depends(get_current_user)):
+    """De rubriek van veel items in één keer zetten.
+
+    WAAROM DIT BESTAAT (22-09-2026, De Juiste Toon). Zonder rubriek weigeren
+    Marktplaats en 2dehands een artikel, en een import levert er lang niet altijd
+    een mee. Wie een voorraad van één soort heeft — vachten, kleden, tafelkleden —
+    moest dat artikel voor artikel in het bewerkscherm doen. Zijn vraag was
+    letterlijk: "Kan je bij mijn account een vaste rubriek maken voor alleen home."
+
+    De doelgroep gaat mee, afgeleid uit de rubriek zelf: een kledingrubriek zonder
+    doelgroep blijft op Marktplaats even onpubliceerbaar als een lege rubriek, en
+    een woonrubriek mét doelgroep is gewoon fout. Verder wordt er niets
+    aangeraakt — maat, materiaal en kleur blijven van de verkoper.
+    """
+    rubriek = str((body or {}).get("category") or "").strip()
+    if not rubriek:
+        raise HTTPException(status_code=400, detail="No category given")
+    if not _rubriek_is_bekend(rubriek):
+        raise HTTPException(status_code=400, detail=f"Unknown category: {rubriek}")
+
+    db = get_db()
+    ids = [str(i) for i in ((body or {}).get("ids") or []) if i]
+    alles = bool((body or {}).get("all_items"))
+    if not ids and not alles:
+        raise HTTPException(status_code=400, detail="No items selected")
+
+    velden = {"category": rubriek, "gender": _doelgroep_bij_rubriek(rubriek)}
+
+    def _doe() -> int:
+        doel = ids
+        if alles:
+            doel = [r["id"] for r in fetch_all(
+                lambda: db.table("items").select("id").eq("user_id", user_id))]
+        # Altijd op user_id blijven filteren: id's komen uit de browser en mogen
+        # nooit als bewijs van eigenaarschap gelden.
+        gedaan = 0
+        for i in range(0, len(doel), IN_BROK):
+            stuk = doel[i:i + IN_BROK]
+            rijen = execute_with_retry(
+                db.table("items").update(velden)
+                .eq("user_id", user_id).in_("id", stuk)
+            )
+            gedaan += len(getattr(rijen, "data", None) or [])
+        return gedaan
+
+    try:
+        aantal = await asyncio.to_thread(_doe)
+    except Exception as e:  # noqa: BLE001
+        logger.exception("bulk-category mislukt voor %s", user_id)
+        raise HTTPException(status_code=500, detail=f"Could not update the category: {e}")
+    return {"updated": aantal, "category": rubriek, "gender": velden["gender"]}
+
+
 @router.post("/fill-from-marktplaats")
 async def fill_from_marktplaats(limit: int = 150,
                                 user_id: str = Depends(get_current_user)):

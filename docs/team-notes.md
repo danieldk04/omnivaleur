@@ -12008,3 +12008,119 @@ foutmelding schrijft dat vanzelf op zodra het nog eens misgaat.
 Twee advertenties van Daniel staan nu verkocht-maar-online op Vinted:
 7798044269 (795) en 9782584258 (1237). Handmatig weghalen; de reparatie zit in
 de extensie en werkt pas na een nieuwe versie in de Web Store.
+
+## 22-09-2026 — De Juiste Toon: "de categorie wijzigen lukt niet, alles staat in clothing en shoes"
+
+Toons appjes van vanochtend, via Daniel, met een schermafdruk van zijn
+artikellijst (vier artikelen onder JUST HANDLED, alle vier met de gele melding
+"⚠ Add category for Marktplaats & 2dehands"):
+
+> *"Paar keer geprobeerd de categorie te wijzigen en op te slaan, maar lukt niet?"*
+> *"Alles staat in categorie clothing en shoes. Kan je bij mijn account een vaste
+> rubriek maken voor alleen home bv."*
+> *"Wel graag de Lederhosen aanpassen zodat ik ze spoedig kan plaatsen op mp en
+> Belg nu voor de oktoberfeesten."*
+
+Hij heeft gelijk, en het is één storing met twee gezichten.
+
+### Wat er stuk was
+
+**1. De rubriekenlijst liep dood zodra er een doelgroep op het artikel stond.**
+`updateCategoryOptions` in `frontend/app.html` bouwt de lijst op drie manieren.
+Op 07-09 is de doodlopende straat gerepareerd voor een artikel **zonder**
+doelgroep: dat kreeg sindsdien alle rubrieken te zien, met hun tak ervoor. Maar
+staat er wél een doelgroep in — en die zet de import er zelf in — dan bleef de
+laatste tak staan zoals hij was: uitsluitend de kledingrubrieken van díe
+doelgroep. Gemeten met de echte functies: **29 opties bij "heren", 34 bij
+"dames", en geen enkele woonrubriek**. Dat is letterlijk wat Toon beschrijft.
+
+Erger dan onzichtbaar: een `<select>` neemt een waarde die niet in zijn lijst
+staat niet over. `f-category` bleef dus gewoon leeg, wát hij ook probeerde.
+
+De uitweg lag één keuzelijst hoger ("Item type" → Home, Garden & Christmas). Die
+heeft hij niet gevonden, en dat is geen verwijt: er staat nergens dat de
+rubriekenlijst van die eerste keuze afhangt.
+
+**2. Opslaan zonder wijziging meldde "Item saved — figures updated".** Sinds
+17-09 stuurt `saveItem` alleen nog de velden die echt veranderd zijn (terecht —
+zie de notitie over Johan Kist). Is er niets veranderd, dan gaat er geen enkel
+verzoek uit, maar de melding erna bleef onvoorwaardelijk "Item saved". Toon zag
+dus een paar keer achter elkaar dat het gelukt was, terwijl er niets gebeurde en
+de gele waarschuwing bleef staan. Dat is precies hoe "lukt niet" ontstaat.
+
+### Wat er nu staat
+
+- **`updateCategoryOptions` toont ook mét doelgroep elke rubriek.** Zijn eigen
+  doelgroep staat vooraan met de gewone labels, daaronder de rest van de takken
+  met hun tak ervoor ("Home & garden · Sheepskins & Hides"), net als in de lijst
+  zonder doelgroep. `onCategoryPicked` zette het soort en de doelgroep al goed
+  bij een keuze uit een andere tak; dat hoefde niet te veranderen.
+- **Opslaan is eerlijk.** Niets veranderd = "Nothing was changed, so there was
+  nothing to save."
+- **Nieuw: "Change category…" op een selectie**, naast Change price en Change
+  condition. Dat is Toons "vaste rubriek voor alleen home": aanvinken, rubriek
+  kiezen, klaar. Eén verzoek voor de hele lading (`POST /api/items/bulk-category`),
+  zoals bulk-condition, niet één PATCH per artikel.
+  - De **doelgroep gaat mee**, afgeleid uit de rubriek zelf: een kledingrubriek
+    zonder doelgroep is op Marktplaats even onpubliceerbaar als een lege
+    rubriek, en een schapenvacht met "heren" erop is gewoon fout. Scherm en
+    server beslissen dat op dezelfde manier (`bulkCategoryDoelgroep` ↔
+    `_doelgroep_bij_rubriek`).
+  - Maat, kleur en materiaal blijven onaangeroerd.
+  - Het venster zegt **vooraf én achteraf wat er daarna nog ontbreekt**. Een
+    rubriek invullen haalt één blokkade weg en zet er bij kleding vier terug
+    (doelgroep, merk, maat, kleur). Zonder die regel leest "2 items set to …" als
+    "ze staan er nu op", en dat is dan de volgende melding.
+  - De server weigert een rubriek die niet bestaat. De lijst waar hij op
+    controleert is `_EBAY_CATEGORY_HINTS` in `backend/platforms/ebay.py`: dat is
+    de enige plek in Python met een regel voor élke rubriek van het dashboard,
+    inclusief games, electronics en audio. `_TAXONOMY` uit imports.py kent die
+    drie takken niet en is hier dus te smal. Gemeten: 375 rubrieken aan beide
+    kanten, exact dezelfde verzameling.
+
+### Bewijs
+
+- `tests/rubriek-doodlopende-straat-test.js` draait de échte functies uit
+  app.html tegen een nagebouwde `<select>` die zich gedraagt als een echte: een
+  waarde die niet in de lijst staat wordt NIET overgenomen. Zonder die
+  eigenschap bewijst zo'n proef niets — een gewoon invoerveld slikt alles, en
+  dan lijkt de oude code gewoon te werken. **Tegen HEAD (9ade1e8): 11 van de 24
+  controles vallen om. Met de reparatie: alle 24 groen.**
+- `tests/rubriek-voor-een-hele-selectie-test.js` doet hetzelfde voor de nieuwe
+  knop, met Toons vier artikelen als proefmateriaal.
+- `tests/test_rubriek_voor_een_hele_selectie.py`: 14 proeven op de server, met
+  een nagebootste database. 13 van de 14 rood zonder de wijziging. Inclusief de
+  controle dat de rubriekenlijst van het dashboard en die van de server exact
+  gelijk blijven — anders werkt de knop op een dag voor precies één rubriek niet.
+- Hele python-suite: **71 rode proeven vóór, dezelfde 71 ná** (deze container
+  mist een paar optionele pakketten en netwerk; geen enkele nieuwe). De zes
+  JS-proeven die hier omvallen, vielen vóór de wijziging al om.
+
+### Wat NIET gerepareerd is, met zoveel woorden
+
+- **Toons artikelen zijn niet aangeraakt.** Deze sessie heeft geen sleutels voor
+  de database, dus er is niets aan zijn voorraad gemeten en niets voor hem
+  ingevuld. De reparatie geeft hém de knop; wij hebben zijn lederhosen niet zelf
+  ingedeeld.
+- **Welke velden zijn lederhosen precies missen is niet nagemeten.** De gele
+  melding in zijn schermafdruk noemt alleen de rubriek, want zonder rubriek
+  vraagt het dashboard bewust naar niets anders. Zodra de rubriek er staat komen
+  doelgroep, merk, maat en kleur erbij. Merk (DJT, Karl Klüber) en maat (XXXL)
+  staan op zijn rij; kleur is van hier niet te zien. Daarom meldt de nieuwe knop
+  zelf wat er per selectie nog ontbreekt.
+- **Dit gaat pas live na een merge naar `main`** (Railway serveert
+  `frontend/app.html` vanuit dezelfde backend). Het is géén extensiewijziging,
+  dus er hoeft niet op de Web Store gewacht te worden en Toon heeft genoeg aan
+  één keer verversen — de service worker haalt een navigatie altijd eerst van
+  het netwerk.
+- **De kennisbank is niet bijgewerkt.** `scripts/export_kennisbank.py` bouwt
+  `docs/kennisbank.md` op uit de lokale geheugenmap, en die bestaat in deze
+  omgeving niet; draaien zou het bestand leegmaken. De les staat hierboven en
+  hoort bij een volgende sessie op Daniels machine in het geheugen + export.
+
+**Les voor de kennisbank:** een storing repareren voor één tak van een `if`
+repareert hem niet. Op 07-09 is exact deze doodlopende straat al een keer
+weggehaald, maar alleen in de tak "geen doelgroep". De tak ernaast bleef vijftien
+dagen staan, bij dezelfde klant, met dezelfde klacht. En: een nagebouwd
+invoerveld dat elke waarde bewaart bewijst niets over een `<select>`, net zoals
+een nagebootste database zonder triggers niets bewijst over de echte (19-09).

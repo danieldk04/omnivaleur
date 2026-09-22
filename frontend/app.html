@@ -1167,6 +1167,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <button class="btn btn-sm btn-success" onclick="openBulkCrosslist()">Publish to…</button>
           <button class="btn btn-sm btn-outline" onclick="openBulkPrice()">Change price…</button>
           <button class="btn btn-sm btn-outline" onclick="doBulkCondition()">Change condition…</button>
+          <button class="btn btn-sm btn-outline" onclick="openBulkCategory()">Change category…</button>
           <button class="btn btn-sm btn-warning" onclick="bulkDelist()">Delist all</button>
           <button class="btn btn-sm btn-danger" onclick="bulkDelete()">Delete</button>
           <button class="btn btn-sm btn-ghost" onclick="clearSelection()">Deselect</button>
@@ -2269,6 +2270,31 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-bulk-price')">Cancel</button>
       <button class="btn btn-primary" id="bulk-price-apply" onclick="doBulkPrice()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- BULK CATEGORY MODAL -->
+<!-- Zonder rubriek weigeren Marktplaats en 2dehands een artikel. Wie een hele
+     voorraad van één soort heeft (vachten, kleden, tafelkleden) hoefde dat niet
+     artikel voor artikel te doen — dat was de vraag van De Juiste Toon. -->
+<div id="modal-bulk-category" class="modal-overlay" style="display:none" onclick="closeOnOverlay(event,'modal-bulk-category')">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Change category</h3>
+      <button class="close-btn" onclick="closeModal('modal-bulk-category')">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="bulk-category-count" style="color:var(--muted);margin-bottom:16px;font-size:13px"></p>
+      <label>Category</label>
+      <select id="bulk-category-pick" onchange="renderBulkCategoryHint()">
+        <option value="">— choose category —</option>
+      </select>
+      <div id="bulk-category-hint" style="margin-top:14px;font-size:12.5px;line-height:1.6;color:var(--muted)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-bulk-category')">Cancel</button>
+      <button class="btn btn-primary" id="bulk-category-apply" onclick="doBulkCategory()">Apply</button>
     </div>
   </div>
 </div>
@@ -7017,9 +7043,16 @@ async function saveItem() {
   setBusy(true, 'Saving item…');
   try {
     let itemId = id;
+    // Of er echt iets naar de server ging. Zonder dit meldde het scherm "Item
+    // saved — figures updated" ook als er niets te sturen viel, en dat is
+    // precies wat een verkoper leest als "het is gelukt". Toon (22-09-2026)
+    // kwam niet bij de rubriek die hij zocht, drukte een paar keer op Save,
+    // kreeg elke keer "saved", en de waarschuwing bleef staan.
+    let ietsGewijzigd = true;
     if (id) {
       const wijzigingen = gewijzigdeVelden(data, _bewerkBeginstand);
-      if (Object.keys(wijzigingen).length) {
+      ietsGewijzigd = Object.keys(wijzigingen).length > 0;
+      if (ietsGewijzigd) {
         const res = await apiFetchRetry(`${API}/api/items/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(wijzigingen) });
         await requireOk(res, 'Saving failed');
       }
@@ -7087,7 +7120,9 @@ async function saveItem() {
     await loadAll();
     // Confirm the save landed. Without this an edit that changed only a number
     // (a purchase price, say) gave no visible sign anything had happened.
-    showToast(id ? 'Item saved — figures updated.' : 'Item created.');
+    showToast(id ? (ietsGewijzigd ? 'Item saved — figures updated.'
+                                 : 'Nothing was changed, so there was nothing to save.')
+                 : 'Item created.');
     if (alLiveNaOpslaan.length) {
       await meldAlLive(itemId, alLiveNaOpslaan, '');
     }
@@ -9913,12 +9948,38 @@ function updateCategoryOptions(selectedCategory) {
     _bewaarOnbekendeCategorie(sel, selectedCategory);
     return;
   }
+  // OOK MÉT DOELGROEP GEEN DOODLOPENDE STRAAT (22-09-2026, De Juiste Toon).
+  //
+  // Hierboven staat sinds 07-09 de volledige lijst voor een artikel zonder
+  // doelgroep. Maar staat er wél een doelgroep in het artikel — en die zet de
+  // import er zelf in — dan kreeg de verkoper uitsluitend de kledingrubrieken
+  // van die doelgroep te zien: 29 stuks voor heren, 34 voor dames, en geen
+  // enkele manier om er een schapenvacht of een kleed in te vinden.
+  //
+  // Toon verkoopt vachten, kleden en lederhosen. Hij meldde het zo: "Paar keer
+  // geprobeerd de categorie te wijzigen en op te slaan, maar lukt niet. Alles
+  // staat in categorie clothing en shoes." Dat klopte: de uitweg lag één
+  // keuzelijst hoger (Item type), hij vond hem niet, koos dus niets, en
+  // opslaan meldde "Item saved" terwijl er niets veranderd was.
+  //
+  // Zijn eigen doelgroep staat vooraan, want dat is verreweg het vaakst wat hij
+  // zoekt. Daaronder de rest van de takken, met hun tak ervoor, precies zoals
+  // in de lijst zonder doelgroep. Kiest hij er een uit een andere tak, dan zet
+  // onCategoryPicked het soort en de doelgroep alsnog goed.
   sel.innerHTML = '<option value="">— choose category —</option>';
-  for (const [val, label] of CATEGORIES[gender]) {
+  const zetRubriekNeer = (val, label) => {
     const opt = document.createElement('option');
     opt.value = val; opt.textContent = label;
     if (selectedCategory && val === selectedCategory) opt.selected = true;
     sel.appendChild(opt);
+  };
+  for (const [val, label] of CATEGORIES[gender]) zetRubriekNeer(val, label);
+  const andereTakken = [...CATEGORIE_TAK_VOLGORDE,
+                        ...Object.keys(CATEGORIES).filter(k => !CATEGORIE_TAK_VOLGORDE.includes(k))];
+  for (const tak of andereTakken) {
+    if (tak === gender) continue;
+    for (const [val, label] of (CATEGORIES[tak] || []))
+      zetRubriekNeer(val, `${CATEGORIE_TAK_LABEL[tak] || tak} · ${label}`);
   }
   _bewaarOnbekendeCategorie(sel, selectedCategory);
 }
@@ -11371,6 +11432,122 @@ async function doBulkCondition() {
   } catch (e) {
     setBusy(false);
     alert(`Could not update the condition: ${e.message}`);
+  }
+}
+
+// ── Rubriek voor een hele selectie ───────────────────────────────────────────
+// WAAROM (22-09-2026, De Juiste Toon). Zonder rubriek weigeren Marktplaats en
+// 2dehands een artikel, en een import levert er lang niet altijd een mee. Toon
+// vroeg om "een vaste rubriek voor alleen home": hij verkoopt vachten, kleden en
+// tafelkleden, en zette die tot nu toe artikel voor artikel goed. Dit is dezelfde
+// keuzelijst als in het bewerkscherm, maar dan voor alles wat hij aanvinkt.
+function bulkCategoryOpties() {
+  const takken = [...CATEGORIE_TAK_VOLGORDE,
+                  ...Object.keys(CATEGORIES).filter(k => !CATEGORIE_TAK_VOLGORDE.includes(k))];
+  const uit = [];
+  for (const tak of takken) {
+    for (const [val, label] of (CATEGORIES[tak] || []))
+      uit.push([val, `${CATEGORIE_TAK_LABEL[tak] || tak} · ${label}`]);
+  }
+  return uit;
+}
+
+function openBulkCategory() {
+  const n = selectedIds.size;
+  if (!n) return;
+  document.getElementById('bulk-category-count').textContent = `${n} item${n !== 1 ? 's' : ''} selected`;
+  const sel = document.getElementById('bulk-category-pick');
+  sel.innerHTML = '<option value="">— choose category —</option>';
+  for (const [val, label] of bulkCategoryOpties()) {
+    const opt = document.createElement('option');
+    opt.value = val; opt.textContent = label;
+    sel.appendChild(opt);
+  }
+  renderBulkCategoryHint();
+  document.getElementById('modal-bulk-category').style.display = 'flex';
+}
+
+// Wat er ná deze wijziging nog ontbreekt. Een rubriek invullen haalt maar één
+// blokkade weg; bij kleding komen er dan juist eisen bij (doelgroep, merk, maat,
+// kleur). Dat hoort hier te staan en niet pas in de lijst, anders denkt de
+// verkoper dat hij klaar is en staat het artikel er morgen nog niet op.
+function bulkCategoryRestwerk(rubriek) {
+  if (!rubriek) return [];
+  const proef = { category: rubriek, gender: bulkCategoryDoelgroep(rubriek) };
+  const tekort = new Map();
+  for (const id of selectedIds) {
+    const item = state.items.find(i => i.id === id);
+    if (!item) continue;
+    for (const veld of missingFieldsForPlatform({ ...item, ...proef }, 'marktplaats')) {
+      if (veld === 'category') continue;
+      tekort.set(veld, (tekort.get(veld) || 0) + 1);
+    }
+  }
+  return [...tekort.entries()].sort((a, b) => b[1] - a[1]);
+}
+
+// Spiegelt _doelgroep_bij_rubriek in backend/api/items.py: alleen een
+// kledingrubriek houdt een doelgroep over.
+function bulkCategoryDoelgroep(rubriek) {
+  const tak = CATEGORIE_TAK_VOLGORDE.find(
+    k => (CATEGORIES[k] || []).some(([v]) => v === rubriek));
+  return tak || '';
+}
+
+function renderBulkCategoryHint() {
+  const rubriek = document.getElementById('bulk-category-pick').value;
+  const el = document.getElementById('bulk-category-hint');
+  const knop = document.getElementById('bulk-category-apply');
+  knop.disabled = !rubriek;
+  if (!rubriek) { el.textContent = 'Pick a category to see what it changes.'; return; }
+  const doelgroep = bulkCategoryDoelgroep(rubriek);
+  const regels = [doelgroep
+    ? `This is a clothing category, so the audience is set to <b>${esc(doelgroep)}</b> as well.`
+    : `This is not a clothing category, so the audience is cleared — Marktplaats does not ask for one here.`];
+  const rest = bulkCategoryRestwerk(rubriek);
+  if (rest.length) {
+    regels.push('Still missing afterwards, before Marktplaats and 2dehands accept them: ' +
+      rest.map(([veld, n]) => `<b>${esc(veld)}</b> (${n})`).join(', ') + '.');
+  } else {
+    regels.push('After this they have everything Marktplaats and 2dehands ask for.');
+  }
+  el.innerHTML = regels.join('<br>');
+}
+
+async function doBulkCategory() {
+  const rubriek = document.getElementById('bulk-category-pick').value;
+  if (!rubriek) return;
+  const ids = [...selectedIds];
+  if (!ids.length) return;
+  const label = (bulkCategoryOpties().find(([v]) => v === rubriek) || [rubriek, rubriek])[1];
+  if (!confirm(`Set the category of ${ids.length} item${ids.length === 1 ? '' : 's'} to "${label}"?`)) return;
+  closeModal('modal-bulk-category');
+
+  const doelgroep = bulkCategoryDoelgroep(rubriek);
+  setBusy(true, `Setting the category of ${ids.length} item${ids.length === 1 ? '' : 's'}…`);
+  try {
+    const res = await apiFetchRetry(`${API}/api/items/bulk-category`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: rubriek, ids }),
+    });
+    const data = await parseJsonSafe(res);
+    if (!res.ok) throw new Error((data && data.detail) || `HTTP ${res.status}`);
+    for (const item of (state.items || [])) {
+      if (selectedIds.has(item.id)) { item.category = rubriek; item.gender = doelgroep; }
+    }
+    const rest = bulkCategoryRestwerk(rubriek);
+    setBusy(false);
+    clearSelection();
+    applyFilters(false);
+    const n = data.updated ?? ids.length;
+    alert(`✅ ${n} item${n === 1 ? '' : 's'} set to "${label}".` +
+      (rest.length
+        ? `\n\nStill needed before Marktplaats and 2dehands accept them: ` +
+          rest.map(([veld, aantal]) => `${veld} (${aantal})`).join(', ') + '.'
+        : ''));
+  } catch (e) {
+    setBusy(false);
+    alert(`Could not set the category: ${e.message}`);
   }
 }
 
