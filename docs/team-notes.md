@@ -12397,9 +12397,22 @@ model) staat er als controle in en blijft groen. Hele suite: 65 rood voor,
 dezelfde 65 na.
 
 **Wat NIET is rechtgezet, en dat is belangrijk.** De advertenties die al online
-staan blijven Duits. De reparatie werkt vanaf de volgende plaatsing of
-vervanging; wie zo'n advertentie wil rechtzetten moet hem vervangen (Relist /
-"vervangen" in het publiceervenster), dan gaat de tekst alsnog door de vertaling.
+staan blijven Duits tot ze opnieuw geplaatst worden.
+
+**Maar dat gebeurt vanzelf, en dat is het antwoord op Toons vraag** ("Dus dan
+moet ik alles nakijken? En gaan omzetten. Kunnen jullie vast sneller dan ik").
+Nee: de nachtelijke herplaatsronde (`herplaats_ronde` in relist.py, regel 1055)
+roept `refresh_listing` aan, en die gaat via `localize_item_for_platform` — dus
+door de vertaling. Elke advertentie die aan de beurt komt, komt er voortaan in
+het Nederlands uit, zonder dat iemand iets doet. Gemeten grenzen:
+`MAX_REFRESHES_PER_USER_PER_DAY = 8` per verkoper per dag, `auto_relist` staat
+standaard aan, en de cyclus is standaard 27 dagen. De strengere sublimiet van 3
+per dag voor Marktplaats/2dehands telt alléén de handmatige knop
+(`_handmatige_verversing`), niet deze ronde.
+
+Wil hij er één meteen goed hebben — de lederhosen voor de oktoberfeesten —, dan
+is "vervangen" in het publiceervenster de weg, en dat kan 3 keer per dag per
+kanaal.
 Deze sessie heeft geen databasesleutels, dus er is niet nagegaan hóeveel van
 zijn advertentien dit raakt — hij verkoopt Duitse trachten, dus vermoedelijk meer
 dan deze ene. Dat is een echte vraag voor wie er wél bij kan: zoek zijn
