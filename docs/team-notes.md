@@ -12358,6 +12358,24 @@ werkte), en de Duitse tekst ging ongewijzigd naar Marktplaats.
 Bijvangst: `ß` zat niet in de tekenklasse van de woordenteller, dus "größe" viel
 uiteen in "grö" en "e" en telde sowieso nergens voor mee.
 
+**Vertaald of overgenomen? Overgenomen — nagemeten op de oude code.** Daniel
+vroeg dat terecht, want de titel op Marktplaats is Nederlands ("Heren originele
+trachten Lederhosen") terwijl de omschrijving Duits is; dat ziet eruit alsof er
+half vertaald is. Dat is het niet. De oude `lijkt_al_in_taal` is los uitgevoerd
+op zijn echte titel en omschrijving samen: `_al_in_doeltaal` gaf **True**, dus
+`localiseer_sync` stopte bij de eerste regel en er ging **geen enkel veld** naar
+het model — ook de titel niet. Getoetst met zowel een Nederlandse als een Duitse
+titel: allebei True, dus de uitkomst hing niet eens van de titel af.
+
+Die Nederlandse titel komt dus uit zijn eigen gegevens: hij tikt zelf een
+Nederlandse titel en plakt de Duitse leverancierstekst eronder. Wij hebben er
+niets aan gedaan — niet vertaald, niet gedeeltelijk vertaald, gewoon
+doorgegeven. Belangrijk voor een volgende sessie: leid uit een Nederlandse titel
+naast een Duitse tekst niet af dat de vertaling gedeeltelijk gelopen heeft.
+
+Met de huidige code op diezelfde twee velden: `_al_in_doeltaal` False, en zowel
+titel als omschrijving gaan naar de vertaling.
+
 **Wat er nu staat.**
 - Een derde woordenlijst, `_STOPWOORDEN_DE`, en de regel is veralgemeend: de
   doeltaal moet het winnen van **élke** andere taal die we kennen, niet van de
