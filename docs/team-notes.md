@@ -12124,3 +12124,37 @@ weggehaald, maar alleen in de tak "geen doelgroep". De tak ernaast bleef vijftie
 dagen staan, bij dezelfde klant, met dezelfde klacht. En: een nagebouwd
 invoerveld dat elke waarde bewaart bewijst niets over een `<select>`, net zoals
 een nagebootste database zonder triggers niets bewijst over de echte (19-09).
+
+## 22-09-2026: Dagelijkse klantfouten
+
+Gemeten: 52 opdrachten van 8 accounts in de laatste 24 uur (gisteren 275), 18
+fout, niets hangt op 'claimed'. /health 200 op commit 0714b412.
+
+Vergeleken met gisteren:
+- Opgelost: Vinted-verwijderen. Na 1.0.347 twee keer gelukt (3bfbed2c 07:06,
+  c2371efe 10:23); artikel 795 is op 21-09 20:33 alsnog weggehaald. 1.0.347
+  draait bij zeven van de acht actieve klanten.
+- 96e30080: geen nieuwe fouten; de tapijten en de oude extensiekopie 1.0.327
+  kwamen vandaag niet meer voor.
+- 2dehands verlengen zonder nummer: geen nieuwe gevallen.
+
+Gerepareerd (1.0.348): negen Vinted-prijswijzigingen van d25f18a2 (21-09
+15:40-16:29) stonden als "timed out after 3 minutes" in het dashboard, terwijl
+alle negen nieuwe prijzen op Vinted staan (openbare pagina nagekeken; de scan van
+15:30 had nog de oude). De opslagklik stuurt het tabblad weg en het invulscript
+sterft voor het "klaar" kan melden. De achtergrond meldt de opdracht nu af zodra
+het tabblad na de klik op Opslaan op dezelfde advertentie landt. Proef:
+tests/vinted-bewerking-opgeslagen-test.js, `--oud` tegen 0714b412 faalt.
+Werkt pas na upload van 1.0.348 in de Web Store.
+
+Open, niet gerepareerd:
+- 4c30200f (nieuwe proefklant sinds vanochtend 07:02): drie Admarkt-scans
+  "returned no live adverts, page=?" en een testadvertentie "Test kleding" die na
+  het verwijderen als mislukt staat. Het verwijdervenster is wel beantwoord en
+  gesloten, daarna ging het tabblad dicht voordat de controle kon lopen. Of hij
+  echt weg is, is van buitenaf niet vast te stellen (seller/view geeft 401). In
+  onze database staat hij nog op 'active'.
+- d25f18a2 heeft sinds 21-09 18:00 geen extensie meer aan, met een scan in de wacht.
+
+Klant-eigen: f8c0cce9 Facebook-tabblad dichtgeklikt; 0b28c1ce Marktplaats-rubriek
+"Wonen tafellampen" is betaald; 1f0fb938 proef verlopen met een scan in de wacht.

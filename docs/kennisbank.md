@@ -17,6 +17,37 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-opslaan-doodt-het-script
+
+*22-09-2026 — Vinted-bewerking (content_refresh) die wél opsloeg werd "timed out after 3 minutes": de opslagklik stuurt het tabblad weg en het script sterft voor JOB_DONE*
+
+22-09-2026, klant d25f18a2 (extensie 1.0.345): negen prijswijzigingen op Vinted
+eindigden als "Extension timed out ... no response after 3 minutes", laatste stap
+"prijs gezet via de pagina zelf". Op de openbare Vinted-pagina stonden alle negen
+nieuwe prijzen wél (scan van 15:30 had nog de oude). Sinds juli was geen enkele
+Vinted-content_refresh als geslaagd gemeld (5 done in juli, daarna alleen fouten).
+
+Mechanisme: de klik op Opslaan laat het tabblad /items/{id}/edit verlaten; het
+invulscript sterft in zijn controlelus voor het JOB_DONE stuurt. De achtergrond
+negeerde elke adreswissel van een content_refresh, dus de bewaker liep 3 minuten
+leeg. Telt bovendien mee in de kansloze-kanaalrem (alleen create/content_refresh).
+
+Reparatie 1.0.348: invulscript stuurt SUBMIT_CLICKED vlak vóór de klik; de
+onUpdated-luisteraar meldt de opdracht af als het tabblad daarna op dezelfde
+/items/{id} landt (niet /edit). Proef: tests/vinted-bewerking-opgeslagen-test.js
+(--oud tegen 0714b412 faalt 3 controles).
+
+**Why:** een geslaagde wijziging als storing melden laat de klant het nog eens
+doen en zet het kanaal richting de rem.
+**How to apply:** elke schrijvende klus waarvan de laatste klik de pagina
+wegstuurt heeft een tweede afmeldroute in de achtergrond nodig; het invulscript
+kan het zelf niet betrouwbaar melden. Zie "vinted-verwijderen-liep-zonder-klok"
+en "kansloze-kanaal-rem-telt-alleen-plaatsingen". Nog niet gemeten: op welk
+adres Vinted precies landt na opslaan; landt hij elders, dan blijft het de oude
+time-out (geen valse succesmelding).
+
+---
+
 ## vinted-verwijderen-liep-zonder-klok
 
 *21-09-2026 — "Het Vinted-verwijdertabblad was het enige schrijvende werk zonder focus-emulatie; 'Delete control not found' was een bevroren tabblad, en de tweede route strandde op een CSRF-token dat Vinted niet meer in een meta-tag zet"*
