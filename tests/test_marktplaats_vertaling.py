@@ -311,12 +311,31 @@ def test_de_async_en_de_synchrone_kant_doen_hetzelfde(monkeypatch):
 
 
 def test_publiceren_stempelt_zijn_payload_ook():
-    """_pick() bouwt zijn eigen vertaling en moet hetzelfde stempel zetten."""
+    """_pick() bouwt zijn eigen vertaling en moet hetzelfde stempel zetten.
+
+    ELKE uitgang telt, niet een vast aantal. Deze proef telde eerst hoe vaak het
+    stempel in de twee bouwers stond (één keer per bouwer). Toen er op
+    18-09-2026 een afslag bij kwam voor een artikel dat al in de doeltaal staat
+    — mét stempel, dus goed — viel de proef om op zijn eigen telling. Nu kijkt
+    hij naar wat het moet doen: geen enkele `return` mag zonder stempel de deur
+    uit, hoeveel afslagen er ook bij komen.
+    """
     bron = (ROOT / "backend/services/crosslist.py").read_text(encoding="utf-8")
     tak = bron.split("async def _build_english():")[1].split("translations = await")[0]
     assert tak.count(f"{crosslist.TAAL_VELD}") == 0, "gebruik de constante, niet de tekst"
-    assert tak.count("TAAL_VELD: \"en\"") == 1
-    assert tak.count("TAAL_VELD: \"nl\"") == 1
+
+    engels, nederlands = tak.split("async def _build_dutch():")
+    for stuk, taal in ((engels, "en"), (nederlands, "nl")):
+        uitgangen = [r.strip() for r in stuk.split("\n")
+                     if r.strip().startswith("return ")]
+        assert uitgangen, f"geen enkele return gevonden in de {taal}-bouwer"
+        for uitgang in uitgangen:
+            # Of het stempel staat er zelf, of hij gaat via _zonder_vertaling,
+            # en die zet hem ook (en gooit anders, dus er gaat niets ongestempeld
+            # de deur uit).
+            assert (f'TAAL_VELD: "{taal}"' in uitgang
+                    or f'_zonder_vertaling(item, "{taal}")' in uitgang), (
+                f"deze uitgang van de {taal}-bouwer zet geen taalstempel: {uitgang}")
 
 
 # ── 3. Een vertaalstoring mag de wachtrij niet dichtzetten ───────────────────

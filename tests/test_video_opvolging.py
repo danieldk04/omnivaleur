@@ -12,6 +12,7 @@ per regel zien wie er wel en wie er juist niet een mail krijgt. Daarnaast: kan d
 machine de teksten of de stopvinkjes niet lezen, dan gaat er geen koude mail uit.
 """
 import contextlib
+import inspect
 import sys
 import time
 from pathlib import Path
@@ -34,10 +35,17 @@ VIDEOMAIL = ("Hi Anna,\n\nHier is het filmpje: https://omnivaleur.com/mp\n\n"
 
 class NepBoek:
     def __init__(self, gestopt=()):
-        self._gestopt, self.gebeurd = set(gestopt), []
+        self._gestopt, self.gebeurd, self.gestart = set(gestopt), [], []
 
     def gestopt(self):
         return self._gestopt
+
+    def video_gestart(self, lead, video_op):
+        # Sinds 15-09-2026 schrijft het echte logboek meteen weg dat de video de
+        # deur uit is, niet pas als opvolging 1 drie dagen later gaat. Dit
+        # nagebouwde logboek liep daarop achter, en dan valt niet de opvolging om
+        # maar de proef — zie test_het_nagebouwde_logboek_kan_alles_wat_gevraagd_wordt.
+        self.gestart.append((lead["email"], video_op))
 
     def video_opvolging(self, lead, beurt, video_op):
         self.gebeurd.append((lead["email"], beurt))
@@ -112,6 +120,8 @@ def test_vier_dagen_stil_na_de_video_geeft_opvolging_1_in_hetzelfde_gesprek(post
     assert tekst.rstrip().endswith("Groetjes,\nDaniel")
     assert state[ADRES]["video_opvolg"] == 1 and state[ADRES]["video_op"] == postbus.verzonden_op
     assert postbus.opgeslagen >= 1 and boek.gebeurd == [(ADRES, 0)]
+    # En de sheet weet meteen dat de video verstuurd is, niet pas hierna.
+    assert boek.gestart == [(ADRES, postbus.verzonden_op)]
 
 
 def test_de_machine_draait_twee_keer_maar_mailt_maar_een_keer(postbus):
@@ -282,3 +292,24 @@ def test_na_een_stille_periode_komen_beide_opvolgingen_niet_vlak_na_elkaar(postb
 def test_opvolging_2_zonder_bekend_moment_van_opvolging_1_gaat_niet_blind_weg(postbus):
     postbus.verzonden_op = time.time() - 9 * DAG
     assert _draai({ADRES: {"video_opvolg": 1, "video_op": postbus.verzonden_op}}) == 0
+
+
+def test_het_nagebouwde_logboek_kan_alles_wat_gevraagd_wordt():
+    """Het nagebouwde logboek moet elke stap kennen die de echte code zet.
+
+    22-09-2026. Negen proeven in dit bestand stonden rood, en niet omdat de
+    video-opvolging stuk was: `video_gestart` kwam er op 15-09-2026 bij, het
+    echte Leadboek kende hem, en NepBoek niet. Een nagebouwd onderdeel dat
+    achterloopt op het echte laat de proef omvallen op zichzelf, en dan lijkt
+    werkende code kapot. Deze proef leest uit de echte functie welke stappen er
+    gevraagd worden en houdt beide kanten bij de les.
+    """
+    import re
+    bron = inspect.getsource(lm._video_opvolging)
+    gevraagd = sorted(set(re.findall(r"\bboek\.(\w+)", bron)))
+    assert gevraagd, "geen enkele aanroep op het logboek gevonden"
+    for naam in gevraagd:
+        assert hasattr(NepBoek, naam), (
+            f"het nagebouwde logboek kent '{naam}' niet, de echte code roept hem wel aan")
+        assert hasattr(lm.Leadboek, naam), (
+            f"'{naam}' wordt aangeroepen maar bestaat niet op het echte Leadboek")

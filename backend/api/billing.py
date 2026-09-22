@@ -10,6 +10,7 @@ from backend.api.deps import get_current_user, get_current_user_full
 from backend.config import settings
 from backend.services.billing import (
     evaluate_access,
+    incasso_loopt_nog,
     invalidate_access_cache,
     is_owner_email as _is_owner_email,
 )
@@ -828,30 +829,17 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
 
 
 def _incasso_loopt_nog(stripe_sub) -> bool:
-    """True als de laatste factuur van dit abonnement wacht op een betaling met
-    status 'processing' (een SEPA-incasso duurt werkdagen). Dan is 'past_due' de
-    verkeerde conclusie: er is niets mis, het geld is onderweg."""
-    inv = stripe_sub.get("latest_invoice") if hasattr(stripe_sub, "get") else None
-    if not inv:
-        return False
+    """Wacht de laatste factuur van dit abonnement nog op een lopende incasso?
+
+    De vraag zelf staat in backend/services/billing.py, want het slot van de
+    klant stelt hem ook. Twee kopieen zijn hier al een keer uit elkaar gelopen:
+    op 18-09-2026 ging alleen deze webhook mee met Stripes versiewissel.
+
+    Kan Stripe de vraag niet beantwoorden, dan is dit de webhook: die krijgt zijn
+    antwoord later alsnog via invoice.paid of invoice.payment_failed.
+    """
     try:
-        # `payment_intent` staat niet meer op de factuur en is ook niet meer
-        # uitbreidbaar: hij hangt nu onder `payments`. Zonder deze weg gaf deze
-        # functie altijd False, en dan werd een lopende SEPA-incasso alsnog als
-        # mislukte betaling behandeld — precies waar de status
-        # 'payment_processing' voor bestaat.
-        inv_id = inv if not hasattr(inv, "get") else inv.get("id")
-        inv = stripe.Invoice.retrieve(inv_id, expand=["payments"])
-        pi = None
-        for betaling in ((inv.get("payments") or {}).get("data") or []):
-            pi = (betaling.get("payment") or {}).get("payment_intent")
-            if pi:
-                break
-        if not pi:
-            pi = inv.get("payment_intent")
-        if isinstance(pi, str):
-            pi = stripe.PaymentIntent.retrieve(pi)
-        return bool(hasattr(pi, "get") and pi.get("status") == "processing")
+        return incasso_loopt_nog(stripe_sub)
     except Exception:
         logger.exception("Kon de lopende incasso niet inschatten")
         return False

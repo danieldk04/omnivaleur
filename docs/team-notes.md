@@ -12650,3 +12650,68 @@ dan door de nieuwe zeef.
 
 **Nog open.** Of de vijf plaatsingen echt Nederlands online komen: dat is een
 rij met status `done` en een blik op de openbare lijst, na 12:00 vandaag.
+
+## 22-09-2026: veertien rode proeven uitgezocht, één echte storing eronder
+
+Op main (6765d602) stonden veertien proeven rood, ook al op f2219d4d. Per stuk
+nagegaan of de code stuk was of de proef achterliep. Uitkomst: dertien keer de
+proef, één keer een echte storing, en die zat niet in de functie waar de proef
+naar keek.
+
+**De echte storing: een lopende SEPA-incasso gaf tóch het slot.**
+De vraag "wacht deze factuur nog op een incasso?" werd op twee plekken los van
+elkaar beantwoord: `_incasso_loopt_nog` in backend/api/billing.py (de webhook) en
+`_subscription_awaiting_incasso` in backend/services/billing.py (het slot van de
+klant, op het weiger-pad van `check_access` en van `/api/billing/status`). Op
+18-09 is bij Stripes versiewissel alleen de webhook meegegaan. De tweede las nog
+`expand=["latest_invoice.payment_intent"]`, een veld dat sinds 2026-06-24.dahlia
+niet meer bestaat, en dat geeft geen fout maar een leeg antwoord. Uitkomst:
+altijd `False`, dus wie een eerste SEPA-incasso had lopen (werkdagen onderweg)
+kreeg het slot in plaats van de rustige melding, zonder één foutregel in het
+logboek. Vier dagen zo gestaan. Beide plekken hangen nu aan één functie,
+`incasso_loopt_nog` in backend/services/billing.py.
+
+Voor-en-na-proef tegen commit 6765d602 (uitgepakt met `git archive`, niet HEAD):
+`test_het_slot_vraagt_het_op_de_nieuwe_plek` geeft daar `False` terwijl de
+nagebootste factuur exact de vorm heeft die de echte API teruggeeft (gemeten
+18-09). Met de reparatie: 10 van de 10 groen. De proeven op de webhook zijn vóór
+én ná groen — die kant was al goed.
+
+Wat NIET veranderd is: kan Stripe de vraag niet beantwoorden (storing), dan blijft
+het antwoord "nee". Anders zou een Stripe-storing iedereen gratis toegang geven.
+Dat is bewust zo gelaten, niet vergeten.
+
+**De permissie `power`: gemeten, geen probleem.**
+De extensie draagt sinds 13-09 (1.0.325) de permissie `power`, en de bewakingstest
+uit 30-08 kende hem niet. Chrome zelf gevraagd, dezelfde meting als destijds voor
+`background`: het manifest mét en zónder `power` levert exact dezelfde drie
+waarschuwingen op (Chrome 152, extensie 1.0.348). Geen nieuwe waarschuwing is geen
+nieuwe goedkeuringsvraag, dus er is geen klant door stil komen te liggen. Die
+meting staat nu als proef in de repo:
+`node tests/permissie-waarschuwing-echt-test.mjs power`.
+
+**De overige elf: proeven die achterliepen op werkende code.**
+- `tests/wachtrijbalk-eerlijk-test.js` knipt `renderActivityBar` uit app.html en
+  zette `extState` niet in de sandbox; die leest de balk sinds 1.0.330. De balk
+  zelf doet het gewoon. De sandbox leest nu ook de echte kanaallijst uit
+  app.html, en de proef dekt meteen de tak "geen sessie op dit kanaal" af.
+- `NepBoek` in `tests/test_video_opvolging.py` miste `video_gestart`, dat er op
+  15-09 bij kwam op het echte `Leadboek` (negen rode proeven). Er staat nu een
+  proef bij die uit de echte functie afleest welke stappen er gevraagd worden, in
+  beide richtingen.
+- `test_publiceren_stempelt_zijn_payload_ook` telde hoe vaak het taalstempel in
+  de brontekst stond; er kwam een goede afslag bij (artikel staat al in de
+  doeltaal). Toetst nu de bedoeling: geen enkele `return` zonder stempel.
+- `test_marktplaats_krijgt_hem_ook` eiste het woord "Buitenland" ook in de
+  Marktplaats-melding. Dat advies is op 10-09 bewust weggehaald: op Marktplaats
+  leidt het nergens heen, daar is het gewoon je postcode in je profiel.
+
+**Openstaand, niet gemeten:** of er op dit moment een klant met een lopende
+incasso buiten de deur staat. Daarvoor moet iemand in Stripe kijken welke
+abonnementen op `past_due`/`incomplete` staan met een betaling op `processing`;
+vanuit deze sessie is er geen sleutel voor en het is niet uit de productiedatabase
+te halen zonder over meerdere klanten te lezen.
+
+**Verder:** twaalf andere proeven vallen om in een worktree zonder `.env`
+(Supabase- en vertaalsleutels ontbreken daar). In de hoofdmap draaien ze gewoon;
+dat verklaart het verschil met de veertien die Daniel zag.

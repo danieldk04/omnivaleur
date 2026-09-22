@@ -73,6 +73,19 @@ GOEDGEKEURDE_PERMISSIES = {
     # 155 seconden, zonder de permissie 0 tikken en met de permissie 5. Zie
     # docs/team-notes.md, 03-09-2026.
     "background",
+    # "power" is er op 13-09-2026 bij gekomen (1.0.325): zonder die permissie
+    # stopt een publicatieronde zodra de computer in slaap valt, en meldt de
+    # opdracht zich uren later alsnog af. Ook hier is Chrome zelf gevraagd in
+    # plaats van het op goed vertrouwen aan te nemen: het manifest mét en zonder
+    # "power" leveren exact dezelfde drie waarschuwingen op (gemeten 22-09-2026,
+    # Chrome 152, extensie 1.0.348). Geen nieuwe waarschuwing betekent geen
+    # nieuwe goedkeuringsvraag, en dus geen stille uitschakeling.
+    #
+    # Die meting is te herhalen met:
+    #     node tests/permissie-waarschuwing-echt-test.mjs power
+    # Doe dat voordat je hier iets bij zet. Deze lijst vergelijkt namen; alleen
+    # Chrome weet of een naam een waarschuwing draagt.
+    "power",
 }
 
 HULP = (

@@ -600,6 +600,45 @@ _processing_cache: dict[str, tuple[float, bool]] = {}
 _PROCESSING_TTL = 120
 
 
+def incasso_loopt_nog(stripe_sub) -> bool:
+    """True als de laatste factuur van dit abonnement wacht op een betaling met
+    status 'processing' (een SEPA-incasso duurt werkdagen). Dan is 'past_due' de
+    verkeerde conclusie: er is niets mis, het geld is onderweg.
+
+    DE ENIGE PLEK WAAR DIT STAAT. Deze vraag werd op twee plekken los van elkaar
+    beantwoord: hier (het slot van de klant) en in backend/api/billing.py (de
+    webhook). Op 18-09-2026 is alleen de webhook meegegaan met Stripes
+    versiewissel, en deze kant bleef achter. Vandaar één functie waar ze allebei
+    aan hangen; zie de les "twee-lijstjes-knopnamen-groeien-uit-elkaar".
+
+    `payment_intent` staat sinds API-versie 2026-06-24.dahlia niet meer op de
+    factuur en is ook niet meer uit te breiden: hij hangt onder `payments`. Een
+    `expand[]` van een veld dat niet meer bestaat geeft GEEN fout, het veld
+    ontbreekt gewoon — dus dit is niet met een try/except te vangen.
+
+    Gooit door bij een Stripe-storing: de aanroeper beslist wat een onbeantwoorde
+    vraag waard is.
+    """
+    import stripe
+    inv = stripe_sub.get("latest_invoice") if hasattr(stripe_sub, "get") else None
+    if not inv:
+        return False
+    inv_id = inv if not hasattr(inv, "get") else inv.get("id")
+    if not inv_id:
+        return False
+    inv = stripe.Invoice.retrieve(inv_id, expand=["payments"])
+    pi = None
+    for betaling in ((inv.get("payments") or {}).get("data") or []):
+        pi = (betaling.get("payment") or {}).get("payment_intent")
+        if pi:
+            break
+    if not pi:
+        pi = inv.get("payment_intent")   # oudere API-versie op een ander account
+    if isinstance(pi, str):
+        pi = stripe.PaymentIntent.retrieve(pi)
+    return bool(hasattr(pi, "get") and pi.get("status") == "processing")
+
+
 def _subscription_awaiting_incasso(stripe_subscription_id: str | None) -> bool:
     """True als de laatste factuur van dit abonnement wacht op een betaling die
     bij Stripe op 'processing' staat (een SEPA-incasso is werkdagen onderweg).
@@ -616,12 +655,7 @@ def _subscription_awaiting_incasso(stripe_subscription_id: str | None) -> bool:
     result = False
     try:
         import stripe
-        sub = stripe.Subscription.retrieve(
-            stripe_subscription_id, expand=["latest_invoice.payment_intent"]
-        )
-        invoice = sub.get("latest_invoice") if hasattr(sub, "get") else None
-        pi = invoice.get("payment_intent") if hasattr(invoice, "get") else None
-        result = bool(hasattr(pi, "get") and pi.get("status") == "processing")
+        result = incasso_loopt_nog(stripe.Subscription.retrieve(stripe_subscription_id))
     except Exception:
         logger.exception("Kon niet nagaan of er een incasso loopt voor %s", stripe_subscription_id)
     _processing_cache[stripe_subscription_id] = (time.monotonic() + _PROCESSING_TTL, result)

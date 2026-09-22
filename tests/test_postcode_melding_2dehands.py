@@ -44,8 +44,24 @@ def test_de_oorspronkelijke_melding_blijft_bewaard():
     assert uit["error_oorspronkelijk"] == LEEG_FORMULIER
 
 
-def test_marktplaats_krijgt_hem_ook():
-    assert "Buitenland" in _zeg(LEEG_NL, platform="marktplaats")
+def test_marktplaats_krijgt_zijn_eigen_uitleg():
+    """Marktplaats krijgt dezelfde hulp, maar niet dezelfde tekst.
+
+    Deze proef eiste eerst het woord "Buitenland" ook in de Marktplaats-melding.
+    Op 10-09-2026 is op een ingelogd account nagemeten dat dat advies daar
+    nergens heen leidt: voor een Nederlandse verkoper op Marktplaats is het
+    gewoon zijn postcode, en die staat in zijn profiel op marktplaats.nl.
+    "Buitenland" is het antwoord op een Belgische site voor wie niet in België
+    woont, en dat is precies het doodlopende advies dat toen is weggehaald.
+    Daarom staat het er hier met zoveel woorden NIET.
+    """
+    for fout in (LEEG_NL, LEEG_FORMULIER):
+        uit = _zeg(fout, platform="marktplaats")
+        assert "Profiel > Contactgegevens > Postcode" in uit
+        assert "marktplaats.nl" in uit
+        # Wij verzinnen nog steeds nooit een adres, en dat staat er ook.
+        assert "verzonnen postcode" in uit
+        assert "Buitenland" not in uit, "dat advies leidt op Marktplaats nergens heen"
 
 
 def test_een_andere_fout_wordt_niet_aangeraakt():

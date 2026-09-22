@@ -35,6 +35,16 @@ function functieUit(naam) {
   return APP.slice(start, eind + 2);
 }
 
+// De balk leest ook de echte kanaallijst uit app.html. Die hier overtypen zou
+// betekenen dat de proef blijft slagen als de echte lijst verandert.
+function constanteUit(naam) {
+  const start = APP.indexOf(`const ${naam} = {`);
+  if (start < 0) throw new Error(`${naam} niet gevonden in app.html`);
+  const eind = APP.indexOf("\n};\n", start);
+  if (eind < 0) throw new Error(`einde van ${naam} niet gevonden`);
+  return APP.slice(start, eind + 3);
+}
+
 // Een piepklein scherm: alleen de elementen die de balk aanraakt.
 function nepScherm() {
   const el = () => ({ style: {}, textContent: "", innerHTML: "", className: "",
@@ -44,9 +54,10 @@ function nepScherm() {
   return { knopen, getElementById: (id) => knopen[id] || null };
 }
 
-function draai({ queued, pace, online }) {
+function draai({ queued, pace, online, kanalen }) {
   const scherm = nepScherm();
   const bron = [
+    constanteUit("KANAAL_SITE"),
     functieUit("fmtQueueEta"),
     functieUit("fmtSeenAgo"),
     functieUit("renderActivityBar"),
@@ -54,11 +65,17 @@ function draai({ queued, pace, online }) {
     "return { titel: document.getElementById('ext-activity-title').textContent,",
     "         tekst: document.getElementById('ext-activity-text').innerHTML };",
   ].join("\n");
-  const fn = new Function("document", "_activityState", "state", "describeJobs", bron);
+  // extState is de stand van de extensie zoals de pagina die kent; sinds
+  // 1.0.330 leest de balk daaruit op welk kanaal je niet ingelogd bent. Hij
+  // stond hier niet, en dan valt de hele proef om op een ReferenceError in
+  // plaats van op de tekst die hij zou moeten beoordelen.
+  const fn = new Function("document", "_activityState", "state", "describeJobs", "extState", bron);
   return fn(scherm,
             { working: [], queued, pace },
             { extStatus: online === null ? null : { online, seconds_ago: online ? 3 : 9000 } },
-            () => "50 listings");
+            () => "50 listings",
+            { status: "ready", version: "1.0.348", email: "klant@example.nl",
+              kanalen: kanalen || {} });
 }
 
 const VIJFTIG = Array.from({ length: 50 }, (_, i) => ({ id: `j${i}`, action: "create" }));
@@ -113,6 +130,25 @@ const kalmEcht = draai({ queued: VIJFTIG,
                          pace: { calm: true, seconds_between: 345, seconds_per_job: 375, samples: 10 },
                          online: true });
 check("Calm mode rekent met seconds_per_job", /about 5 hours/.test(kalmEcht.tekst), kalmEcht.tekst.slice(0, 200));
+
+// 15-09-2026, Egbert Brouwer. De balk beloofde een start op een kanaal waar zijn
+// browser sinds twee dagen geen sessie meer had, en wees zijn slapende computer
+// aan als reden. Er kón niets beginnen.
+console.log("Geen sessie op het kanaal: de balk belooft geen start");
+const uitgelogd = draai({ queued: VIJFTIG.map(j => ({ ...j, platform: "2dehands" })),
+                          pace: { calm: false, seconds_between: 11, samples: 10 },
+                          online: true, kanalen: { "2dehands": { ingelogd: false } } });
+check("zegt dat er niets kan beginnen", /nothing can start yet/.test(uitgelogd.titel),
+      uitgelogd.titel);
+check("noemt het kanaal bij naam", /2dehands/.test(uitgelogd.tekst), uitgelogd.tekst.slice(0, 140));
+check("belooft geen 15 seconden", !/15 seconds/.test(uitgelogd.tekst));
+check("stelt gerust dat er niets verloren gaat", /Nothing is lost/.test(uitgelogd.tekst));
+
+console.log("Wel ingelogd: dan gewoon de normale tekst");
+const ingelogd = draai({ queued: VIJFTIG.map(j => ({ ...j, platform: "2dehands" })),
+                         pace: { calm: false, seconds_between: 11, samples: 10 },
+                         online: true, kanalen: { "2dehands": { ingelogd: true } } });
+check("belooft weer een start", !/nothing can start yet/.test(ingelogd.titel), ingelogd.titel);
 
 console.log(mislukt === 0 ? "\nAlles goed." : `\n${mislukt} controle(s) mislukt.`);
 process.exit(mislukt === 0 ? 0 : 1);
