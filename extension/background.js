@@ -7169,9 +7169,31 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     return;
   }
 
+  // VINTED-BEWERKING OPGESLAGEN, MAAR HET SCRIPT KON HET NIET MEER ZEGGEN
+  // (22-09-2026, klant d25f18a2). Negen prijswijzigingen stonden als "timed out
+  // after 3 minutes" in het dashboard, met als laatste stap "prijs gezet". Op
+  // Vinted zelf stonden alle negen nieuwe prijzen gewoon online (20 → 17,99
+  // enz., om 15:30 nog de oude). De opslagklik stuurt het tabblad weg van
+  // /items/{id}/edit en daarmee sterft het invulscript voordat het JOB_DONE
+  // stuurt; precies wat de create hieronder al beschrijft. Dus: is er op
+  // Opslaan geklikt en landt het tabblad op dezelfde advertentie (niet /edit),
+  // dan ging het opslaan door. Vinted verlaat het bewerkformulier alleen na
+  // een geslaagde opslag.
+  if (meta.platform === "vinted" && meta.action === "content_refresh") {
+    const lid = String(meta.payload?.platform_listing_id || "");
+    const m2 = changeInfo.url.match(/\/items\/(\d+)(?:-[^/?#]*)?(?:[?#]|$)/);
+    if (meta.submitClicked && lid && m2 && m2[1] === lid) {
+      console.log(`[Omnivaleur] Vinted-bewerking ${lid} opgeslagen (tabblad verliet het formulier) — afgemeld.`);
+      clearJobWatchdog(tabId);
+      await chrome.storage.local.remove([key, `job_${meta.platform}`]);
+      await finaliseJob(meta.serverUrl, meta.jobId, "complete", { note: "saved_navigated" });
+      sluitWerkTabblad(tabId, 2000);
+    }
+    return;
+  }
+
   // This auto-detect is a safety net for a manual publish — only meaningful for
-  // a create. A content_refresh (which now also has a jobtab entry) is completed
-  // by its own content script, so never auto-complete it here.
+  // a create. Other actions are completed by their own content script.
   if (meta.action && meta.action !== "create") return;
 
   const url = changeInfo.url;
