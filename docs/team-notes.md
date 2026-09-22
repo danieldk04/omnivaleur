@@ -12476,3 +12476,47 @@ takken heeft een gat zodra er een geval bijkomt dat er niet in staat. Vandaag
 drie keer: drie takken in de rubriekenlijst, twee talen in de taalherkenning, en
 twee talen in de zeef erachter. Repareer je er één, loop dan meteen de andere
 plekken na die dezelfde vraag stellen — `grep` op de functienaam kost een minuut.
+
+### 22-09-2026 (afsluiting) — Script om zijn Duitse advertenties op te zoeken en voor te laten kruipen
+
+Daniel: "Kan je het niet gewoon helemaal voor hem regelen nu? Er is haast bij
+(oktoberfeesten) en hij wil er geen tijd aan kwijt zijn."
+
+**Waarom deze sessie het niet zelf kon.** Nagemeten, niet aangenomen: er staan
+geen Supabase-sleutels in deze omgeving (`env` leeg op SUPABASE, alleen
+`.env.example`), en het netwerkbeleid van de container weigert alles buiten de
+allowlist — `curl https://supabase.co` geeft 403 op de CONNECT. Er is van hier
+dus geen enkele weg naar zijn account.
+
+**Wat er wél is gebouwd:** `scripts/vreemde_taal_advertenties.py`. Draait op de
+server of op Daniels machine, waar de sleutels wel staan.
+
+- Standaard schrijft het niets: het meldt welke live advertenties op Marktplaats
+  en 2dehands in een andere taal staan dan het kanaal verwacht, met de telling
+  per taal, zodat meteen duidelijk is of het om drie of om driehonderd gaat.
+- `--bevat lederhos` beperkt het tot waar haast bij is.
+- `--doen --max 3` zet ze opnieuw klaar via `refresh_listing(..., "relist")` —
+  hetzelfde pad als de nachtronde, dus alle bestaande remmen blijven staan.
+- De keuze zit in `kies_verdachte`, losgetrokken van de database zodat hij te
+  beproeven is zonder Supabase en zonder Marktplaats. Zeven proeven in
+  `tests/test_vreemde_taal_advertenties.py` met zijn echte tekst: de Duitse
+  advertentie wordt op beide kanalen gevonden, de Nederlandse en de korte
+  trefwoordtekst blijven erbuiten, en `--bevat` doet wat het belooft.
+
+**Twee dingen die met opzet NIET in dit script zitten.**
+
+1. **Geen manier om het dagquotum te omzeilen.**
+   `MAX_REFRESHES_PER_USER_PER_DAY = 8` is geen technische grens maar een
+   bescherming: honderden advertenties op één dag opnieuw plaatsen is op
+   Marktplaats geen winkelonderhoud meer maar een patroon. Dat omzeilen
+   verplaatst zijn probleem naar zijn account.
+2. **Geen knop om alles in één keer om te zetten.** Op Marktplaats en 2dehands
+   bestaat alleen de strategie `relist` (`PLATFORM_STRATEGIES`): weghalen en
+   opnieuw plaatsen. Dat kost het advertentienummer en de opgebouwde positie.
+   Voor advertenties die tóch aan de beurt komen in de nachtronde is dat geen
+   extra prijs — die worden sowieso herplaatst en komen er voortaan Nederlands
+   uit. Alleen waar haast bij is, is voorkruipen de moeite waard.
+
+**Het advies dat daaruit volgt:** alleen de lederhosen nu voor laten kruipen, de
+rest aan de nachtronde overlaten. Dat kost Toon nul tijd en zijn overige
+advertenties hun positie niet.
