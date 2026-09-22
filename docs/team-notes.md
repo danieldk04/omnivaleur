@@ -12311,3 +12311,27 @@ eerlijker om het te noemen dan om "10000%" te zeggen:
 - Een betalende rubriek op 2dehands is pas bekend na een echte weigering.
 - Zijn tweede browser (Edge, extensie 1.0.327) en een Chromebook die in slaap
   valt zijn geen code.
+
+### 22-09-2026 (afronding) — Toon meldt dat het gelukt is
+
+Via Daniel, kort na de laatste uitrol: *"Het is gelukt zegt ie."*
+
+**Wat dat aantoonbaar sluit.** De reparaties van vandaag zijn daarmee in het echt
+gebruikt en niet alleen in een proef: de rubriekenlijst die driemaal doodliep
+(07-09 geen doelgroep, 22-09 wél een doelgroep, 22-09 een niet-kledingsoort) en
+het "Item saved" dat niets opsloeg. Hij kwam er vanochtend niet uit en nu wel,
+zonder dat er iemand voor hem heeft ingevuld — wij hebben zijn artikelen op geen
+enkel moment aangeraakt.
+
+**Wat dit NIET sluit, want het is niet nagevraagd.** "Het is gelukt" zegt niet
+wélk kanaal. Het openstaande punt van 16-09 is heel precies: *één geslaagde
+2dehands-opdracht ná het invullen van zijn locatie*. Dat is een rij in de
+database, geen appje. Zolang niemand die heeft gezien blijft dat punt open, ook
+nu. Wie het natrekt: 2dehands-opdrachten van user 96e30080 met `location_country`
+gevuld en status `done`. Datzelfde geldt voor de betalende rubriek: of
+Carnavalskleding en Feestkleding bij hem gratis is, blijkt pas uit een echte
+plaatsing.
+
+Geen codewijziging. Deze notitie staat er omdat drie notities van vandaag met
+"openstaand" eindigen en een volgende sessie anders opnieuw gaat zoeken naar iets
+wat misschien allang werkt.
