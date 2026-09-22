@@ -12158,3 +12158,19 @@ Open, niet gerepareerd:
 
 Klant-eigen: f8c0cce9 Facebook-tabblad dichtgeklikt; 0b28c1ce Marktplaats-rubriek
 "Wonen tafellampen" is betaald; 1f0fb938 proef verlopen met een scan in de wacht.
+
+## 22-09-2026: Storing 14:15 tot 14:45, veroorzaakt door een meting van Claude
+
+Bij de voorbereiding van het gesprek met Martijn Bax (Watchero, info@watchero.eu,
+nog geen account) vroeg Claude op de productiedatabase op wanneer de
+Admarkt-import voor het laatst gelukt was, over de jobs-tabel van alle klanten.
+Dat legde de database plat: site en dashboard gaven ongeveer een half uur geen
+antwoord. Daniel herstartte het project in Supabase; om 14:48 was alles weer
+normaal (/health 200, extensies melden zich, wachtrij loopt). Tweede keer na
+19-09. De regel staat nu scherper in de kennisbank: nooit iets uit `jobs.result`
+over meerdere klanten opvragen, alleen per klant.
+
+Watchero voor later: zakelijk Marktplaats-account (alle 13 advertenties via
+Admarkt), Shopify-winkel watchero.eu met 154 producten, gebruikte Apple Watches,
+elk exemplaar een eigen product. Automatisch plaatsen in Admarkt-campagnes niet
+beloven (alleen via erkende partner).

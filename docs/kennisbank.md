@@ -17,6 +17,52 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## meten-op-de-productiedatabase
+
+*22-09-2026 — Een meetquery over duizenden rijen draait op dezelfde kleine Supabase-instantie als de live site; meet in brokken met een tijdvenster en een limiet*
+
+Metingen lezen uit de PRODUCTIEdatabase. Op 19-09-2026 draaide ik twee keer een
+telling over de jobs-tabel (veertien dagen, alle klanten, duizenden rijen); beide
+liepen in een read timeout, en kort daarna gaf heel Supabase PGRST002 ("Could not
+query the database for the schema cache") en de storage-laag DatabaseTimeout. De
+site bleef overeind op alles zonder database (/health 200) en gaf 500 op alles
+mét (/blog, /sitemap.xml): dashboard leeg, publiceren stil.
+
+**Why:** dit is een gratis plan met één kleine instantie, en de live site deelt
+die met de meting. "Ik lees alleen" is geen vrijbrief: een scan over een grote
+tabel kost precies het geheugen en de verbindingen die de klanten nodig hebben.
+Oorzaak-en-gevolg is hier niet bewezen (daarvoor zijn de dashboardlogs nodig),
+maar het was de enige ongewone belasting op dat moment.
+
+**How to apply:** meet per gebruiker of per kanaal, met een tijdvenster en een
+`limit`, in brokken van hooguit een paar honderd rijen, en met pauzes ertussen —
+dezelfde regel als "gekoppelde-vraag-ipv-brokken" en
+"pagineren-zonder-order-mist-rijen". Loopt een meetquery in een timeout, ga hem
+dan niet opnieuw draaien met dezelfde omvang: dat is het moment om hem op te
+delen. En check na een zware meting of de site nog antwoordt.
+
+**Herhaald op 22-09-2026, en toen was het wél bewezen.** Voor de voorbereiding
+van een klantgesprek zocht ik wanneer de Admarkt-import voor het laatst gelukt
+was. Eerst `jobs` met de volledige `result` over vijf weken (read timeout), daarna
+"licht": alleen `result->meta->>bron` en `result->>error`, per week, limit 2000.
+Ook dat is niet licht: om één veld uit `result` te halen leest Postgres toch
+elke scanuitslag van schijf, en die zijn groot. Binnen twee minuten gaf /health
+geen antwoord meer, de homepage ook niet, en een vraag van één rij op
+referral_codes liep na 15 seconden af. Het proces lokaal afbreken hielp niets:
+de vraag draait op de server door. Zes minuten wachten ook niet. Pas na
+"Restart project" in het Supabase-dashboard (door Daniel) kwam alles terug, na
+ongeveer een half uur storing (14:15 tot 14:45). De eerste kleine vraag na de
+herstart duurde 17 seconden, daarna 0,26.
+
+**How to apply, scherper:** nooit iets uit `jobs.result` (of een andere grote
+jsonb-kolom) over meerdere klanten opvragen, ook niet één veld eruit. Eerst
+filteren op één `user_id`, dan pas `result`. Wil je weten of een route bij
+iemand ooit gelukt is, zoek eerst de paar klanten die hem gebruiken en vraag per
+klant. Er is geen manier om een vastgelopen vraag van hieruit te stoppen, dus
+de enige veilige meting is er een die niet vastloopt.
+
+---
+
 ## vinted-opslaan-doodt-het-script
 
 *22-09-2026 — Vinted-bewerking (content_refresh) die wél opsloeg werd "timed out after 3 minutes": de opslagklik stuurt het tabblad weg en het script sterft voor JOB_DONE*
@@ -634,32 +680,6 @@ programmeerfout afgaat wordt genegeerd. Wat het niet dekt: de hele server plat �
 dan draait er ook geen code die kan mailen, en daarvoor is een bewaker van buiten
 nodig. Zie "meten-op-de-productiedatabase" en
 "supabase-gratis-plan-egress".
-
----
-
-## meten-op-de-productiedatabase
-
-*19-09-2026 — Een meetquery over duizenden rijen draait op dezelfde kleine Supabase-instantie als de live site; meet in brokken met een tijdvenster en een limiet*
-
-Metingen lezen uit de PRODUCTIEdatabase. Op 19-09-2026 draaide ik twee keer een
-telling over de jobs-tabel (veertien dagen, alle klanten, duizenden rijen); beide
-liepen in een read timeout, en kort daarna gaf heel Supabase PGRST002 ("Could not
-query the database for the schema cache") en de storage-laag DatabaseTimeout. De
-site bleef overeind op alles zonder database (/health 200) en gaf 500 op alles
-mét (/blog, /sitemap.xml): dashboard leeg, publiceren stil.
-
-**Why:** dit is een gratis plan met één kleine instantie, en de live site deelt
-die met de meting. "Ik lees alleen" is geen vrijbrief: een scan over een grote
-tabel kost precies het geheugen en de verbindingen die de klanten nodig hebben.
-Oorzaak-en-gevolg is hier niet bewezen (daarvoor zijn de dashboardlogs nodig),
-maar het was de enige ongewone belasting op dat moment.
-
-**How to apply:** meet per gebruiker of per kanaal, met een tijdvenster en een
-`limit`, in brokken van hooguit een paar honderd rijen, en met pauzes ertussen —
-dezelfde regel als "gekoppelde-vraag-ipv-brokken" en
-"pagineren-zonder-order-mist-rijen". Loopt een meetquery in een timeout, ga hem
-dan niet opnieuw draaien met dezelfde omvang: dat is het moment om hem op te
-delen. En check na een zware meting of de site nog antwoordt.
 
 ---
 
