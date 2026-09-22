@@ -1046,6 +1046,11 @@
       .find(b => b.offsetParent !== null && /^(save|update|opslaan|bijwerken)$/i.test(b.textContent.trim()));
     if (!saveBtn) throw new Error("Vinted edit: save/update button not found");
     await sleep(300);
+    // De opslagklik stuurt het tabblad weg en dan sterft dit script vaak voor
+    // het JOB_DONE kan sturen. Met deze vlag herkent de achtergrond de landing
+    // op de advertentie zelf als geslaagd opslaan (zie background.js).
+    try { chrome.runtime.sendMessage({ type: "SUBMIT_CLICKED" }, () => chrome.runtime.lastError); } catch (_) {}
+    await sleep(150);
     saveBtn.click();
 
     // Verify the save actually went through instead of blindly reporting success.
