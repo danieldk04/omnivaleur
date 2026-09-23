@@ -159,6 +159,19 @@ def start_scheduler():
         coalesce=True,
         next_run_time=_dt.now() + _td(minutes=10),
     )
+    # Gereserveerd op Marktplaats of 2dehands = de verkoopvraag (23-09-2026,
+    # Toon). Elk uur, op de verkopers die de fotoronde hierboven al bewees.
+    # Zie backend/services/gereserveerd.py.
+    from backend.services.gereserveerd import controleer_gereserveerd
+    _scheduler.add_job(
+        _off_the_request_loop(controleer_gereserveerd),
+        "interval",
+        hours=1,
+        id="gereserveerd_controle",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
     # VERLOPEN IS GEEN VERKOOP (19-09-2026, Lynn van De Juiste Toon).
     # Een verlopen zoekertje staat er voor de verkoper gewoon nog, met VERLOPEN
     # erop, en kreeg tot nu toe "is dit verkocht?" mee. Deze ronde kijkt de

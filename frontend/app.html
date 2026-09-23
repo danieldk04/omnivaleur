@@ -5248,7 +5248,9 @@ function renderSoldConfirmBar() {
     // dat leest als een storing. Lynn van De Juiste Toon (19-09-2026) ging ze
     // nakijken, vond ze terug op 2dehands en meldde het als bug. Terecht: de
     // zin die het had kunnen uitleggen werd weggegooid.
-    const label = reden.includes('toont zelf')
+    const label = reden.includes("zelf op 'gereserveerd'")
+      ? `<span style="color:#b45309;font-weight:600">${PLATFORM_LABELS[p] || p} put this advert on "reserved"</span>`
+      : reden.includes('toont zelf')
       ? `<span style="color:#b45309;font-weight:600">The advert itself says sold</span>`
       : reden.includes('Verkocht!')
         ? `<span style="color:#b45309;font-weight:600">Marktplaats flagged your chat "Sold!"</span>`
@@ -5311,7 +5313,14 @@ async function answerPossiblySold(itemId, platform, verkocht, suggested) {
       if (isNaN(v) || v < 0) { alert('Please enter a valid amount (e.g. 22.50).'); return; }
       sold_price = v;
     }
-  } else if (!confirm(`Not sold on ${label}?\n\nThe advert isn't on the platform any more, so it moves to Archived. Nothing is removed from your other platforms.`)) {
+  }
+  // Een reservering staat nog gewoon op het platform: "nee" houdt hem live in
+  // plaats van hem te archiveren. Zie backend/services/gereserveerd.py.
+  const gereserveerd = ((state.listings || []).find(x => x.item_id === itemId && x.platform === platform
+    && x.status === 'sold_unconfirmed')?.error_message || '').includes("zelf op 'gereserveerd'");
+  if (!verkocht && !confirm(gereserveerd
+      ? `Not sold on ${label}?\n\nThe advert stays live as it is, and we won't ask about this reservation again. Nothing is removed from your other platforms.`
+      : `Not sold on ${label}?\n\nThe advert isn't on the platform any more, so it moves to Archived. Nothing is removed from your other platforms.`)) {
     return;
   }
   try {
@@ -5334,7 +5343,7 @@ async function answerPossiblySold(itemId, platform, verkocht, suggested) {
     }
     showToast(verkocht
       ? `Marked sold on ${PLATFORM_LABELS[platform_verkocht] || platform_verkocht} \u2014 removing it from your other platforms.`
-      : 'Moved to Archived.');
+      : (data.status === 'active' ? 'Kept live.' : 'Moved to Archived.'));
     renderSoldConfirmBar();
     applyFilters();
   } catch (e) {

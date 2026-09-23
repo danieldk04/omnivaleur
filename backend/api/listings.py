@@ -561,6 +561,14 @@ async def relist_ended_ebay(body: dict, user_id: str = Depends(require_active_su
 # mislukte herplaatsing tonen.
 VERDENKING_REDENEN = {
     "label": "Mogelijk verkocht: de advertentiepagina toont zelf 'verkocht' of 'gereserveerd'.",
+    # Het platform zet een verkochte advertentie zelf op gereserveerd (Toon,
+    # 23-09-2026). Zie backend/services/gereserveerd.py. De vraag verdwijnt
+    # vanzelf als de reservering vervalt, dus deze tekst moet precies zo blijven:
+    # die ronde herkent haar eigen vragen eraan.
+    "gereserveerd": "Mogelijk verkocht: het platform zette deze advertentie zelf op "
+                    "'gereserveerd', en dat gebeurt als iemand hem koopt. Bevestig het "
+                    "hier, dan gaat het artikel ook van je andere kanalen af. Gaat de "
+                    "koop niet door, kies dan nee: de advertentie blijft gewoon staan.",
     "badge": "Mogelijk verkocht: Marktplaats zette een 'Verkocht!'-melding op je gesprek "
              "met de koper. Bevestig het hier, dan gaat het artikel ook van je andere "
              "kanalen af.",
@@ -601,6 +609,10 @@ VERDENKING_REDENEN = {
         "dan gaat het artikel ook van je andere kanalen af.",
 }
 VERDENKING_STANDAARD = VERDENKING_REDENEN["weg"]
+# Na "nee" op een reservering blijft de advertentie live, met deze melding erop,
+# zodat het uurlijkse nakijken dezelfde reservering niet opnieuw vraagt.
+GERESERVEERD_NEE = ("Je gaf aan dat dit niet verkocht is, dus de reservering op het "
+                    "platform vragen we niet opnieuw.")
 
 
 @router.post("/possibly-sold")
@@ -823,7 +835,7 @@ def answer_possibly_sold(body: dict, background_tasks: BackgroundTasks,
     if not owned.data:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    rij = (db.table("listings").select("id,status")
+    rij = (db.table("listings").select("id,status,error_message")
            .eq("item_id", item_id).eq("platform", platform)
            .eq("status", "sold_unconfirmed").limit(1).execute().data or [])
     if not rij:
@@ -851,6 +863,16 @@ def answer_possibly_sold(body: dict, background_tasks: BackgroundTasks,
         background_tasks.add_task(handle_item_sold, item_id, verkoopkanaal, prijs,
                                   bewijs=BEWIJS_VERKOPER)
         return {"ok": True, "status": "sold", "platform_verkocht": verkoopkanaal}
+
+    # Een gereserveerde advertentie staat nog op het platform. "Niet verkocht"
+    # betekent dan: hij blijft live, en niet het archief in zoals bij een
+    # verdwenen advertentie.
+    if rij[0].get("error_message") == VERDENKING_REDENEN["gereserveerd"]:
+        db.table("listings").update({"status": "active", "error_message": GERESERVEERD_NEE}) \
+          .eq("id", rij[0]["id"]).execute()
+        logger.info("[sold] reservering is geen verkoop volgens de verkoper: item=%s platform=%s "
+                    "→ blijft live", item_id, platform)
+        return {"ok": True, "status": "active"}
 
     db.table("listings").update({"status": "delisted", "error_message": None})         .eq("id", rij[0]["id"]).execute()
     logger.info("[sold] niet verkocht volgens de verkoper: item=%s platform=%s → archief", item_id, platform)

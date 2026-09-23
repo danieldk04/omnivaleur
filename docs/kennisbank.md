@@ -17,6 +17,21 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## gereserveerd-is-de-verkoopvraag
+
+*23-09-2026 — MP/2dehands zet een verkochte advertentie op gereserveerd; zoek-API heeft reserved:true; sinds 23-09-2026 elk uur de verkoopvraag via gereserveerd.py*
+
+Marktplaats zet een verkochte advertentie zelf op "gereserveerd". Geen enkel pad zag dat: polling.py zoekt alleen "verkocht" en slaat verkopers zonder koppeling over, de berichten-badge koppelt alleen op "(1308)" vooraan de titel, en de extensie ving het bij De Juiste Toon nooit. Zes verkochte lederhosen stonden daardoor nog op 2dehands en Vinted (23-09-2026).
+
+De openbare zoek-API (`sellerIds[]`) geeft per advertentie `reserved: true`, zonder login. backend/services/gereserveerd.py leest dat elk uur op de verkopers die de fotocontrole bewees, en maakt er de vraag "verkocht?" van (reden "gereserveerd"). Klaargezette herplaatsingen van dat artikel worden teruggenomen. Reservering vervallen = vraag vanzelf ingetrokken. "Nee" = blijft live, met GERESERVEERD_NEE zodat het niet opnieuw gevraagd wordt.
+
+De verkoperslijst van Toon komt WEL compleet binnen (1096 van 1096); de eerdere "stopt bij 1000" was een meetfout van het script.
+
+**Why:** een verkoop die niet doorloopt naar de andere kanalen = dubbel verkopen.
+**How to apply:** nieuwe verkoopsignalen eerst in de zoek-API zoeken (velden als reserved), die werkt voor iedereen zonder koppeling. Zie "verkoop-signaal-hard-vs-zacht", "openbare-verkoperslijst-toont-de-fotos".
+
+---
+
 ## stripe-twee-api-versies-tegelijk
 
 *23-09-2026 — "Webhooks komen binnen in de API-versie van het Stripe-account, eigen aanroepen in de versie die de gepinde SDK meestuurt; dat zijn twee verschillende vormen in één codebase"*

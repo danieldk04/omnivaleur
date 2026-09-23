@@ -362,6 +362,16 @@ async def controleer_fotos_op_advertenties():
                     continue
 
                 op_nummer = {a.get("itemId"): a for a in lijst}
+                # Gereserveerd op het platform = de verkoopvraag, ook voor wie een
+                # koppeling heeft: polling.py kent het woord niet. Daarna elk uur
+                # opnieuw vanuit gereserveerd.py, met dit bewezen nummer.
+                from backend.services import gereserveerd
+                gereserveerd.onthoud_verkoper(user_id, platform, verkoper_id)
+                try:
+                    await gereserveerd.verwerk_lijst(db, user_id, platform, op_nummer)
+                except Exception as e:  # noqa: BLE001 — de fotoreparatie gaat altijd door
+                    logger.error("gereserveerd: controle voor %s op %s mislukte: %s",
+                                 user_id, platform, e)
                 if volledig and user_id not in gekoppeld:
                     try:
                         await _verdwenen_als_vraag(db, user_id, platform, onze, op_nummer)

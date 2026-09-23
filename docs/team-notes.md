@@ -12774,3 +12774,9 @@ pin verhoogt moet eerst elk `.get(` op een Stripe-object langs.
 
 Kortom: de betalingen lopen op dit moment goed en er staat niemand onterecht
 buiten de deur.
+
+## 23-09-2026 — Gereserveerd op Marktplaats wordt de verkoopvraag (Toon)
+
+Toon: een lederhose die op Marktplaats verkoopt komt daar op "gereserveerd", maar op 2dehands gebeurt niets. Klopt: geen van onze drie verkoopcontroles kende gereserveerd of zag Toons verkopen (geen koppeling, geen "(1308)" in de titels, extensie ving het nooit). Zes lederhosen stonden daardoor nog op 2dehands en Vinted.
+
+Daniel gaf akkoord om het te repareren. Nieuw: backend/services/gereserveerd.py leest elk uur de openbare verkoperslijst (veld `reserved`) en maakt van een gereserveerde advertentie de vraag "verkocht?" in het dashboard, voor elke verkoper met de vraag aan. Een klaargezette herplaatsing van zo'n artikel wordt teruggenomen. Vervalt de reservering, dan verdwijnt de vraag vanzelf; "nee" houdt de advertentie live. Bewust een vraag en geen automatische afmelding (zacht signaal, zie kennisbank). Automatisch overal af is een aparte beslissing van Daniel.
