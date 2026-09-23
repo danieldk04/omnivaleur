@@ -635,6 +635,16 @@ _RUBRIEK_ZOEK_GEDULD = timedelta(hours=6)
 # wachtende opdracht gewoon wachten, zonder één verzoek naar buiten.
 _RUBRIEK_STORING_RUST = timedelta(minutes=3)
 _RUBRIEK_STORING: dict[str, datetime] = {}
+
+
+def _wacht_op_rubriek(job: dict, nu: datetime) -> bool:
+    """Wordt deze 2dehands-plaatsing nu teruggehouden tot zijn rubriek bekend is?"""
+    pl = job.get("payload")
+    if (job.get("action") != "create" or job.get("platform") != "2dehands"
+            or not isinstance(pl, dict)):
+        return False
+    sinds = _parse_ts(pl.get("_rubriek_zoeken_sinds"))
+    return bool(sinds and nu - sinds < _RUBRIEK_ZOEK_GEDULD)
 _BETAALDE_RUBRIEK_GEHEUGEN = timedelta(days=28)
 
 # EEN GRATIS BUURRUBRIEK, ALS DE EIGEN RUBRIEK GELD GAAT KOSTEN.
