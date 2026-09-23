@@ -169,7 +169,7 @@ def _opruimen(signalen: dict, staat: dict) -> bool:
     for sleutel in list(staat):
         # Afgeronde klantfoutenrondes na een week weg; klantfouten.py heeft ze
         # hooguit een dag nodig, en anders groeit de staat eindeloos.
-        if (sleutel.startswith(("klantfouten-", "dagronde-"))
+        if (sleutel.startswith("klantfouten-")
                 and staat[sleutel].get("status") != "gestart"
                 and _minuten_bezig(staat[sleutel]) > 7 * 24 * 60):
             staat.pop(sleutel)
@@ -242,6 +242,9 @@ NIETS_GEWORDEN = {
                        "Open een keer `claude` in een venster en log in.",
     "Please run /login": "Claude Code is niet ingelogd op deze Mac. "
                         "Open een keer `claude` in een venster en log in.",
+    # 23-09-2026: zo meldt hij het als de inlog na een paar weken verlopen is.
+    "Failed to authenticate": "Claude Code is op deze Mac uitgelogd. Open een "
+                              "keer `claude` in een venster en typ /login.",
 }
 # Een sessie die het werk echt doet schrijft tientallen regels. Blijft het hierbij,
 # dan is er niets gebeurd, ook als de reden niet in het lijstje hierboven staat.
@@ -332,7 +335,7 @@ def _iemand_aan_het_werk(staat: dict) -> str:
 
 # ---------------------------------------------------------------- opdracht
 def opdracht(sleutel: str, signaal: dict) -> str:
-    if signaal.get("soort") in ("klantfouten", "dagronde"):
+    if signaal.get("soort") == "klantfouten":
         return K.opdracht(sleutel, signaal)
     melders = ", ".join(signaal.get("melders") or []) or "onbekend"
     waarom = "; ".join(signaal.get("waarom_zeker") or []) or "gemarkeerd als MOET ZEKER"

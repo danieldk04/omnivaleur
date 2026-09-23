@@ -51,7 +51,6 @@ STIL_SINDS_MIN = 30
 HARTSLAG_VERS_MIN = 15
 STILTE = {"gerepareerd": timedelta(hours=3), "klant": timedelta(days=7),
           "onbekend": timedelta(days=1)}
-DAGRONDE_UUR = 8        # lokale tijd, zoals de oude routine om 08:00
 
 
 def _nu() -> datetime:
@@ -182,7 +181,10 @@ def open_soorten(gemeten: dict, oordeel: dict, staat: dict) -> dict:
 
 
 def signalen(staat: dict, db=None, nu: datetime | None = None) -> dict:
-    """In de vorm die dev_starter kent: hooguit één klantfoutenronde en één dagronde.
+    """In de vorm die dev_starter kent: hooguit één klantfoutenronde.
+
+    De dagelijkse ronde blijft de geplande taak in de app (08:00); die vangt
+    wat hier niet te zien is, zoals betaalsloten en verlopen proeven.
 
     Alles wat openstaat gaat in één sessie. Vaak zijn drie foutteksten één
     oorzaak, en elke sessie die opstart kost abonnement.
@@ -206,12 +208,6 @@ def signalen(staat: dict, db=None, nu: datetime | None = None) -> dict:
                      "melders": klanten, "sleutels": sleutels, "soorten": open_,
                      "omschrijving": f"{len(sleutels)} foutsoort(en) bij {len(klanten)} klant(en)",
                      "eerst": momenten[0], "laatst": momenten[-1]}
-    lokaal = nu.astimezone()
-    if lokaal.hour >= DAGRONDE_UUR:
-        dag = lokaal.strftime("%Y-%m-%d")
-        uit[f"dagronde-{dag}"] = {"status": "open", "moet_zeker": True, "soort": "dagronde",
-                                  "melders": [], "omschrijving": "dagelijkse ronde",
-                                  "eerst": nu.isoformat(), "laatst": nu.isoformat()}
     return uit
 
 
@@ -246,17 +242,6 @@ deze sessie: overleg niet, beslis zelf de meest logische oplossing.
 
 
 def opdracht(sleutel: str, signaal: dict) -> str:
-    if signaal.get("soort") == "dagronde":
-        return f"""Je bent de developer van Omnivaleur (map {REPO}). Dit is de dagelijkse
-ronde: zoek uit waar klanten de afgelopen 24 uur tegenaan liepen, ook wat de
-tienminutenronde niet ziet (betaalslot 402, verlopen proef, extensie die stil
-staat terwijl er werk wacht, een reparatie van gisteren die niet werkt), en
-repareer het.
-
-Kijk eerst met `python3 scripts/klantfouten.py` wat er nu openstaat; die soorten
-meld je in stap 6 terug.
-
-{WERKWIJZE}"""
     regels = []
     for s_sleutel, s in signaal.get("soorten", {}).items():
         klanten = ", ".join(k[:8] for k in s["klanten"])

@@ -99,7 +99,7 @@ def kast(monkeypatch):
 
 
 def _klantfouten(sig):
-    return {k: v for k, v in sig.items() if v["soort"] == "klantfouten"}
+    return sig
 
 
 # ── zien ───────────────────────────────────────────────────────────────────
@@ -186,7 +186,7 @@ def test_terugmelden_legt_het_oordeel_vast(kast):
     assert not K.oordeel_vastleggen("fout-x", "misschien", "")
 
 
-def test_de_dagronde_start_pas_vanaf_acht_uur(kast):
-    vroeg = datetime(2026, 9, 23, 3, 0, tzinfo=timezone.utc)
-    assert not [k for k in K.signalen({}, NepDb(), vroeg) if k.startswith("dagronde")]
-    assert [k for k in K.signalen({}, NepDb(), NU) if k.startswith("dagronde")]
+def test_een_verlopen_inlog_wordt_herkend(tmp_path):
+    log = tmp_path / "s.log"
+    log.write_text("Failed to authenticate: OAuth session expired and could not be refreshed\n")
+    assert "/login" in S._waarom_niets_geworden(str(log))

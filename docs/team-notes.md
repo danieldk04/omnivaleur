@@ -12950,3 +12950,25 @@ rijen: 13 van zijn 23 rijen zonder nummer voldoen (allemaal teruggenomen
 betaalrubrieken), de rest blijft gewoon verwijderd worden. Zijn schapenvachten-rij
 op 2dehands met de hand op 'delisted' gezet. Proef:
 tests/test_nooit_online_hoeft_niet_weg.py, oude code op 1bcf8092 faalt.
+
+## 23-09-2026 (23:15): Klantfouten worden vanzelf opgepakt
+
+Daniel wil niet meer zelf de routine starten: een fout bij een klant moet direct
+gerepareerd worden, en het mag alleen van zijn abonnement gaan, niets daarbuiten.
+
+De LaunchAgent com.omnivaleur.devstarter tikte al elke tien minuten maar had
+sinds 06-09 geen bron meer (de mail-buglijst). Nu leest hij de echte fouten uit de
+jobs-tabel (scripts/klantfouten.py): foutsoorten van de laatste zes uur, en werk
+dat vastzit terwijl Chrome aanstaat. Het tellen gebruikt geen AI. Staat er iets
+open, dan start hij één Claude-sessie op het abonnement (de API-sleutel wordt
+weggehaald) met de werkwijze van de dagelijkse routine. Die sessie meldt per soort
+terug: gerepareerd (drie uur stil), klant (een week stil), onbekend (een dag).
+
+Remmen: één sessie tegelijk, hooguit acht per dag, niet ertussen als er de laatste
+twintig minuten door iemand anders gecommit is. Losse zips en .DS_Store hielden de
+starter voorheen altijd tegen; die tellen niet meer mee. Voor en na op de echte
+database: de oude starter zag niets, de nieuwe zes foutsoorten bij twee klanten.
+
+Open: Claude Code is op deze Mac buiten de app uitgelogd ("OAuth session expired").
+Tot Daniel een keer `claude` opent en /login doet, start er geen sessie; het
+beheerdashboard toont dat. De dagelijkse routine in de app (08:00) blijft als vangnet.

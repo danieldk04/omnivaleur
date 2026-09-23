@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## klantfouten-wachter
+
+*23-09-2026 — Sinds 23-09-2026 start de devstarter zelf een sessie op klantfouten uit jobs; abonnement, geen API; login kan stil verlopen*
+
+De LaunchAgent com.omnivaleur.devstarter (elke 10 min) leest via scripts/klantfouten.py de foutsoorten van de laatste 6 uur en vastzittend werk, en start bij iets open één `claude -p`-sessie op Daniels abonnement (ANTHROPIC_API_KEY wordt weggehaald). De sessie meldt per soort terug met `python3 scripts/klantfouten.py oordeel <soort> gerepareerd|klant|onbekend "zin"`.
+
+**Why:** Daniel wil dat klanten direct verder kunnen zonder dat hij een routine start, en het mag niets buiten zijn abonnement kosten.
+
+**How to apply:** start een automatische sessie niet, kijk dan eerst in ~/Library/Application Support/omnivaleur/dev-starter.log. Bekende stille stoppers: (1) de CLI-inlog verloopt ("OAuth session expired"), alleen Daniel kan /login doen; `claude auth status` in een sessie binnen de app zegt niets, test met `env -i HOME=$HOME ... claude -p`. (2) werkmap niet schoon. (3) er is <20 min geleden gecommit door iemand anders. Zie ook "mailagent-op-de-server" en "meten-op-de-productiedatabase".
+
+---
+
 ## beurt-aan-wachtend-werk-legt-alles-stil
 
 *23-09-2026 — "De beurtverdeling in /jobs/pending gaf de beurt aan 2dehands-zoekertjes die op hun MP-rubriek wachtten; dan ging er voor geen enkel kanaal iets uit (23-09-2026, f8c0cce9)"*
