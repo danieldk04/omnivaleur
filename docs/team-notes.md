@@ -12888,3 +12888,12 @@ Nu gaat elke taalvraag via `backend/services/taalmodel.py`: eerst Gemini (Daniel
 Valkuil gevonden: Gemini's denkstap telt mee in maxOutputTokens. Met 200 tokens kwam er '{"gender' terug. Daarom 8192 denkruimte bovenop elke vraag, en thinkingBudget 0 waar snelheid telt (Flash-Lite weigert die instelling met 400). Ook: drie proeven in tests/test_wachtrij_gebruikt_de_huidige_staat.py riepen stil het echte taalmodel aan; conftest zet nu standaard geen Google-sleutel in tests.
 
 Open: de tweelingzoeker kijkt naar hooguit 250 artikelen (`_TWIN_MAX_ITEMS`), bij Revaleur stond daardoor maar 20 van de 60 tweelingen in beeld. Dat was al zo onder Claude. `/api/platforms/ai-listing` (foto's naar tekst) gebruikt nog Claude, maar geen scherm roept het aan.
+
+### 23-09-2026 (avond): Gemini tegen Claude op dezelfde echte gegevens
+
+Daniel zette tegoed op voor een eerlijke vergelijking. Zelfde opdrachten, zelfde gegevens:
+- Rubriekkeuze, 199 artikelen, blind beoordeeld: 81 verschillen, 31 gelijkwaardig, Gemini 43 keer beter, Claude 7 keer. Claude zette motorbanden, spelcontrollers en band-pins bij muziekinstrumenten en een moderne vaas bij antiek. Claude wel sneller: 40 s tegen 65 s.
+- Tweelingzoeker, 120 NL/EN-paren, drie keer: Claude koppelde 7 tot 12 keer een ander stuk (coltrui aan half zip, cardigan aan henley, heren aan dames), Gemini 0 tot 1 keer.
+- Vertalen, 20 advertenties: beide 20/20, maar Claude maakte drie keer van "Zeer goed" "Excellent condition" en liet een keer "Men S" onvertaald. Claude 17 s totaal, Gemini 47 s.
+- Blog, zelfde onderwerp: beide compleet en met dezelfde bronnen; Claude 1327 woorden in 77 s, Gemini 2096 woorden in 29 s. Claude leest iets natuurlijker, Gemini iets algemener. Geen harde winnaar.
+Besluit: alles blijft op Gemini, Claude blijft reserve.
