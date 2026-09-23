@@ -1059,6 +1059,12 @@ def _match_candidate(cand: dict, items: list[dict], listings_by_id: dict,
     title_match = _best_match(cand.get("title"), items)
     if title_match:
         return title_match, "same_title"
+    # Shopify: het artikelnummer staat op de variant, niet in de titel. De scan
+    # heeft er al op gekoppeld (jobs._store_scan_results, row["sku"]) en die
+    # keuze als suggested_item_id bewaard; hier is het nummer zelf niet meer.
+    if cand.get("platform") == "shopify" and cand.get("suggested_item_id") \
+            and any(it["id"] == cand["suggested_item_id"] for it in items):
+        return cand["suggested_item_id"], "same_code"
     return None, None
 
 
