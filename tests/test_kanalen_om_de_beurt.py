@@ -271,3 +271,73 @@ def test_een_scan_houdt_geen_enkel_kanaal_tegen(monkeypatch):
     db = _bouw_db(wachtrij, laatst_bediend=None, bezig=[])
     uit = _uitgifte(monkeypatch, db, "marktplaats")
     assert uit and uit[0]["id"] == "mp0"
+
+
+# ── 23-09-2026: geen beurt aan werk dat op zijn rubriek wacht ────────────────
+#
+# Gemeten bij f8c0cce9 (muziekwinkel): 14 zoekertjes voor 2dehands wachtten op
+# hun Marktplaats-rubriek (de opzoeking gaf geen antwoord), 13 Vinted-plaatsingen
+# erachter. Vinted deed de vorige publicatie, dus gaf de server de beurt aan
+# 2dehands; die werden verderop allemaal teruggehouden en er ging niets uit. Een
+# uur lang bewoog er alleen iets als er toevallig een ander soort opdracht tussen
+# kwam. Chrome stond de hele tijd aan.
+VOOR_RUBRIEKWACHT = "2ea80204"
+
+
+def _wacht_wachtrij():
+    rij = []
+    for i in range(5):
+        j = _job(f"td{i}", "2dehands", 60 - i)
+        j["payload"]["_rubriek_zoeken_sinds"] = (NU - timedelta(minutes=20)).isoformat()
+        rij.append(j)
+    rij.append(_job("vi0", "vinted", 50))
+    return rij
+
+
+def _rubriek_onbekend(module, monkeypatch):
+    # De Marktplaats-opzoeking die geen antwoord geeft: wat staat te wachten,
+    # blijft staan (zoals _zet_rubriek_van_marktplaats dan doet).
+    monkeypatch.setattr(module, "_zet_rubriek_van_marktplaats",
+                        lambda db, u, j: not (j.get("payload") or {}).get("_rubriek_zoeken_sinds"))
+
+
+def test_wachtende_2dehands_rij_legt_vinted_niet_stil(monkeypatch):
+    _rubriek_onbekend(J, monkeypatch)
+    db = _bouw_db(_wacht_wachtrij(), laatst_bediend="vinted")
+    uit = _uitgifte(monkeypatch, db, "vinted")
+    assert uit and uit[0]["id"] == "vi0", (
+        f"2dehands wacht op zijn rubriek, dus Vinted doet zijn eigen werk: {uit}")
+
+    oud = _oude_uitgifte_op(VOOR_RUBRIEKWACHT)
+    _rubriek_onbekend(oud, monkeypatch)
+    oud_db = _bouw_db(_wacht_wachtrij(), laatst_bediend="vinted")
+    assert _uitgifte_op(oud, monkeypatch, oud_db, "vinted") == [], (
+        "de oude uitgifte gaf de beurt aan de wachtende 2dehands-rij en deelde niets uit")
+
+
+def test_wachten_voorbij_het_geduld_krijgt_wel_de_beurt(monkeypatch):
+    """Na het geduld gaat 2dehands alsnog; dan hoort het ook weer aan de beurt."""
+    rij = _wacht_wachtrij()
+    for j in rij[:5]:
+        j["payload"]["_rubriek_zoeken_sinds"] = (
+            NU - J._RUBRIEK_ZOEK_GEDULD - timedelta(minutes=1)).isoformat()
+    monkeypatch.setattr(J, "_zet_rubriek_van_marktplaats", lambda db, u, j: True)
+    db = _bouw_db(rij, laatst_bediend="vinted")
+    uit = _uitgifte(monkeypatch, db, "vinted")
+    assert uit and uit[0]["platform"] == "2dehands", f"geduld is op, 2dehands mag: {uit}"
+
+
+def _oude_uitgifte_op(commit):
+    import importlib.util
+    import subprocess
+    import tempfile
+    bron = subprocess.run(["git", "show", f"{commit}:backend/api/jobs.py"],
+                          cwd=ROOT, capture_output=True, text=True, check=True).stdout
+    assert "_wacht_op_rubriek" not in bron, "verkeerd commitnummer gepind"
+    with tempfile.TemporaryDirectory() as map_:
+        pad = Path(map_) / f"oude_jobs_{commit}.py"
+        pad.write_text(bron)
+        spec = importlib.util.spec_from_file_location(f"oude_jobs_{commit}", pad)
+        oud = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(oud)
+    return oud

@@ -17,6 +17,20 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## beurt-aan-wachtend-werk-legt-alles-stil
+
+*23-09-2026 — "De beurtverdeling in /jobs/pending gaf de beurt aan 2dehands-zoekertjes die op hun MP-rubriek wachtten; dan ging er voor geen enkel kanaal iets uit (23-09-2026, f8c0cce9)"*
+
+In `get_pending_jobs` (backend/api/jobs.py) geeft de beurtverdeling het werk van een ANDER kanaal terug als het vragende kanaal de vorige publicatie deed. Wat daarna in de eindlus wordt teruggehouden (`_zet_rubriek_van_marktplaats` geeft False tot `_RUBRIEK_ZOEK_GEDULD`, 6 uur) levert dan `[]` op, en dat voor elk kanaal: bij f8c0cce9 stonden 13 Vinted-plaatsingen uren stil achter 14 wachtende 2dehands-zoekertjes, Chrome aan. Vinted bewoog alleen als er toevallig een ander soort opdracht (verwijderen, Facebook) tussen kwam.
+
+Sinds 23-09-2026 filtert `_wacht_op_rubriek` die wachtende opdrachten uit de beurtverdeling.
+
+**Why:** de eindlus bekijkt maar vijf kandidaten; alles wat de beurt krijgt en toch niet uit mag, legt de hele rij stil. Het commentaar "bewust teruggeven, niet even niets" gold alleen zolang niets verderop werd teruggehouden.
+
+**How to apply:** komt er een nieuwe reden bij om een opdracht in de eindlus terug te houden, laat die dan ook in de beurtverdeling meetellen. Meet een "wachtrij staat stil terwijl Chrome aan staat" door `get_pending_jobs` met de echte user_id per kanaal aan te roepen en de terughoud-functies te omwikkelen (vertalen stubben). Zie "kanalen-om-de-beurt", "kanalen-publiceren-naast-elkaar", "geraden-rubriek-is-niet-de-rubriek-van-de-verkoper".
+
+---
+
 ## gemini-denkstap-en-taalmodel
 
 *23-09-2026 — Sinds 23-09-2026 gaat alle AI via taalmodel.py, Gemini eerst; Gemini's denkstap vreet maxOutputTokens op en Flash-Lite weigert thinkingBudget 0*

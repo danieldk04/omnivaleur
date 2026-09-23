@@ -12897,3 +12897,44 @@ Daniel zette tegoed op voor een eerlijke vergelijking. Zelfde opdrachten, zelfde
 - Vertalen, 20 advertenties: beide 20/20, maar Claude maakte drie keer van "Zeer goed" "Excellent condition" en liet een keer "Men S" onvertaald. Claude 17 s totaal, Gemini 47 s.
 - Blog, zelfde onderwerp: beide compleet en met dezelfde bronnen; Claude 1327 woorden in 77 s, Gemini 2096 woorden in 29 s. Claude leest iets natuurlijker, Gemini iets algemener. Geen harde winnaar.
 Besluit: alles blijft op Gemini, Claude blijft reserve.
+
+## 23-09-2026 (vierde ronde, 22:15): Dagelijkse klantfouten
+
+Gemeten om 22:12: 107 opdrachten van 6 accounts in de laatste 24 uur, 7 fout.
+/health 200.
+
+**Gerepareerd: een wachtende 2dehands-rij legde alle kanalen stil.** Bij
+f8c0cce9 (muziekwinkel, Chrome stond aan) stonden 28 plaatsingen 1,3 uur te
+wachten: 14 voor 2dehands, 13 voor Vinted. Mechanisme, gemeten met de echte
+uitgifte op zijn echte wachtrij: de 2dehands-zoekertjes wachten op hun
+Marktplaats-rubriek (opzoeking geeft geen antwoord: "verkopersnummer 6250337
+kreeg maar 1 stem na 2 titels"), en de beurtverdeling gaf na elke
+Vinted-publicatie de beurt aan precies die wachtende rij. Uitkomst: voor geen
+enkel kanaal ging er iets uit. Vinted bewoog alleen als er toevallig een ander
+soort opdracht tussen kwam (18:52 en 19:55 UTC). Nu krijgt werk dat bewust op
+zijn rubriek wacht geen beurt meer. Voor en na op dezelfde echte wachtrij: oud
+[] voor Vinted, nieuw de eerste Vinted-plaatsing. Proef in
+tests/test_kanalen_om_de_beurt.py, oude code op 2ea80204 faalt.
+
+Klant-eigen of eenmalig:
+- Toon (96e30080): 2dehands-verwijdering van de schapenvachten 3x mislukt. Die
+  advertentie heeft nooit bestaan: de plaatsing werd op 20-09 geannuleerd
+  (betaalrubriek tapijten). Zie open punt.
+- Toon: twee Vinted-verwijderingen van de khaki lederhose om 22:13 en 22:14
+  ("could not read your Vinted wardrobe", extensie 1.0.345). Een derde van
+  hetzelfde soort (14a4aeb0) lukte twee minuten na zijn fout wel. Hij is nu
+  bezig; niet te bewijzen dat het aan ons ligt.
+- f8c0cce9: Facebook-tabblad dichtgedaan; 2dehands-overzicht "no ads rendered"
+  (uitgelogd of trage pagina, één keer).
+- 3bfbed2c: Shopify-scan onderbroken om 15:40, tijdens de drie mislukte deploys.
+- 0b28c1ce (Marktplaats, 18 uur) en d25f18a2 (Vinted-scan): Chrome uit.
+
+Open:
+- Een 2dehands-rij zonder advertentienummer die op 'error' stond (plaatsing
+  geannuleerd) krijgt bij een verkoop elders toch een verwijderopdracht, en de
+  mislukte verwijdering zet hem daarna op 'active' (jobs.py, bij "Delist failed").
+  Zo lijkt er een live advertentie te zijn die nooit bestond. Bewust niet
+  aangepast: een rij zonder nummer kán live zijn (plaatsing gelukt maar niet
+  gemeld), dus dit vraagt een keuze.
+- De Marktplaats-rubriekopzoeking vindt bij f8c0cce9 het verkopersnummer niet
+  met twee titels; zijn 14 zoekertjes gaan na zes uur met de geraden rubriek.
