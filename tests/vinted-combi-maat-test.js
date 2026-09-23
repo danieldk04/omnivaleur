@@ -41,7 +41,7 @@ function check(naam, voorwaarde, uitleg) {
 
 // Het exacte stuk uit vinted.js dat de maat kiest, tussen deze twee regels.
 const START = "      const opts = sizeOptEls();";
-const EIND = "      match.scrollIntoView";
+const EIND = "      if (!match) {";
 const start = BRON.indexOf(START);
 const eind = BRON.indexOf(EIND);
 if (start === -1 || eind === -1) {
