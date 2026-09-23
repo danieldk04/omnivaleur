@@ -7390,7 +7390,8 @@ async function markSoldItem(itemId, title) {
 }
 
 // ── Import existing listings (scan platform → review → link/create) ──────
-const IMPORT_SCANNABLE = { vinted: true, marktplaats: true, '2dehands': true, ebay: false, etsy: false, shopify: false };
+// Shopify leest de server zelf uit met de gekoppelde winkel (services/shopify_scan.py).
+const IMPORT_SCANNABLE = { vinted: true, marktplaats: true, '2dehands': true, shopify: true, ebay: false, etsy: false };
 const scanningPlatforms = {}; // platform -> true while a scan is queued/running in the background
 let importCandidatesById = {}; // id -> candidate, so the item modal can prefill from a scan
 let importCreateCandidateId = null; // set while the item modal is creating an item from an import
@@ -7492,7 +7493,8 @@ async function scanPlatform(platform) {
     if (!r.ok) throw new Error((data && data.detail) || `The server could not start the scan (HTTP ${r.status}). Try again in a moment.`);
     scanningPlatforms[platform] = true;
     renderImportScanButtons();
-    renderImportProgress(platform, { stage: 'queued' });
+    // Shopify wacht niet op de extensie; 'queued' zou dat wel beweren.
+    renderImportProgress(platform, { stage: platform === 'shopify' ? 'opening' : 'queued', message: platform === 'shopify' ? 'Connecting to your Shopify store…' : undefined });
     if (data.job_id) pollScanProgress(platform, data.job_id);
     else { // no job id (shouldn't happen) — fall back to timed reloads
       setTimeout(() => loadImportCandidates(platform), 15000);

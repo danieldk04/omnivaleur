@@ -103,7 +103,7 @@ def naar_scanregel(product: dict, shop: str, winkelnaam: str | None = None) -> d
         "brand": merk,
         "size": basis.get("size"),
         "color": basis.get("color"),
-        "material": basis.get("material"),
+        "material": materiaal,
         "is_closed": uitverkocht(product),
     }
 

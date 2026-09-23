@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends
 from backend.database import (get_db, fetch_all, fetch_all_in, naast_de_lus,
                                execute_with_retry)
 from backend.api.deps import get_current_user, require_active_subscription
@@ -1476,6 +1476,7 @@ def _start_shopify_scan(user_id: str, background_tasks: BackgroundTasks) -> dict
         execute_with_retry(db.table("jobs").insert({
             "id": job_id, "user_id": user_id, "item_id": None, "platform": "shopify",
             "action": "scan", "status": "claimed", "payload": {},
+            "claimed_at": datetime.now(timezone.utc).isoformat(),
             "result": {"_progress": {"stage": "opening",
                                      "message": "Connecting to your Shopify store…"}},
         }), dubbel_is_ok=True)
