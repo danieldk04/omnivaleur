@@ -12938,3 +12938,15 @@ Open:
   gemeld), dus dit vraagt een keuze.
 - De Marktplaats-rubriekopzoeking vindt bij f8c0cce9 het verkopersnummer niet
   met twee titels; zijn 14 zoekertjes gaan na zes uur met de geraden rubriek.
+
+### 23-09-2026 (22:45): nooit-online advertentie vervalt stil bij een verkoop
+
+Daniel: "ja" op het open punt van de vierde ronde. Een advertentierij zonder
+nummer krijgt bij een verkoop elders geen verwijderopdracht meer als ELKE
+plaatsingspoging zelf zei dat er niets online ging ("Nothing was published" of
+"Nothing went online", niet "or it wasn't confirmed"). De rij gaat stil naar
+'delisted'. Een ontbrekend nummer alleen is geen bewijs. Gemeten op Toons echte
+rijen: 13 van zijn 23 rijen zonder nummer voldoen (allemaal teruggenomen
+betaalrubrieken), de rest blijft gewoon verwijderd worden. Zijn schapenvachten-rij
+op 2dehands met de hand op 'delisted' gezet. Proef:
+tests/test_nooit_online_hoeft_niet_weg.py, oude code op 1bcf8092 faalt.
