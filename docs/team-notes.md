@@ -12811,3 +12811,19 @@ Nog open, ongewijzigd: de andere `execInTab(async ...)`-plekken in background.js
 die een fout stil inslikken, en of account 3bfbed2c (proef verlopen 05-08, draait
 extensie 1.0.349 dus vrijwel zeker Daniels eigen Mac) van Daniel is. Niet te meten:
 fouten die alleen in de browser van de klant blijven.
+
+## 23-09-2026 (derde ronde, 14:58): Dagelijkse klantfouten
+
+Gemeten om 14:57: 46 opdrachten van 6 accounts in de laatste 24 uur, **nul fout**.
+/health 200. Niets te repareren.
+
+Wachtend, klant-eigen: twee Vinted-scans (0b28c1ce 22 uur, c2371efe 17 uur) en
+één Marktplaats-plaatsing (0b28c1ce, 10 uur). Bij beide ligt de laatste hartslag
+vóór het klaarzetten (0b28c1ce 22-09 13:05, c2371efe 22-09 17:30): Chrome staat
+uit. 0b28c1ce kreeg om 11:02 de offline-mail. De andere drie scans van vanochtend
+(f8c0cce9, 26cf5471, en de oude van 0b28c1ce buiten het venster) zijn gedaan of
+vielen uit het venster.
+
+Geannuleerd, geen fout: drie 2dehands-tapijten van Toon (betaalrubriek) en vier
+opdrachten van Toon van 06:37 (de khaki lederhose die gereserveerd.py terugnam,
+zie de tweede ronde). Open punten ongewijzigd ten opzichte van de tweede ronde.
