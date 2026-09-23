@@ -27,9 +27,10 @@ const vm = require("vm");
 const { execSync } = require("child_process");
 
 const WORTEL = path.join(__dirname, "..");
+const VOOR_DE_REPARATIE = "d6debad0";
 const oud = process.argv.includes("--oud");
 const BRON = oud
-  ? execSync("git show HEAD:extension/content/vinted.js", { cwd: WORTEL, maxBuffer: 1 << 24 }).toString()
+  ? execSync(`git show ${VOOR_DE_REPARATIE}:extension/content/vinted.js`, { cwd: WORTEL, maxBuffer: 1 << 24 }).toString()
   : fs.readFileSync(path.join(WORTEL, "extension/content/vinted.js"), "utf8");
 
 let mislukt = 0;
