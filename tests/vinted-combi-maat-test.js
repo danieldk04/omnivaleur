@@ -40,7 +40,7 @@ function check(naam, voorwaarde, uitleg) {
 }
 
 // Het exacte stuk uit vinted.js dat de maat kiest, tussen deze twee regels.
-const START = "      const opts = sizeOptEls();";
+const START = "      // Everything this size could reasonably be called on Vinted:";
 const EIND = "      if (!match && /^\\d+$/.test(norm)) {";
 const start = BRON.indexOf(START);
 const eind = BRON.indexOf(EIND);
