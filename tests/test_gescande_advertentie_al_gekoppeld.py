@@ -201,3 +201,24 @@ def test_scan_sluit_nooit_een_geplande_herplaatsopdracht_af():
         "een geplande herplaatsing mag de scan nooit afsluiten"
     assert jobs["direct"]["status"] == "done", \
         "een blijven-hangen directe publicatie mag de scan wel afsluiten"
+
+
+def test_wat_eerst_wachtte_en_nu_gekoppeld_is_hoeft_niet_meer_te_wachten():
+    """23-09-2026, Daniel (Shopify). De eerste scan zette een product op 'wachten'.
+    Daarna koppelde de scan het via het artikelnummer aan een bestaand artikel,
+    maar de volgende scan nam de oude 'wachten' over. Zo stonden 12 producten
+    met "Same listing" nog op een beslissing te wachten die er niet meer was.
+    Een eerdere 'pending' is geen beslissing van de verkoper; alleen 'ignored'
+    of 'imported' wint van het nummer."""
+    db = _DB(
+        items=[ITEM],
+        listings=[{"id": "l1", "item_id": "it1", "platform": "marktplaats",
+                   "status": "active", "platform_listing_id": "m1"}],
+    )
+    db.import_candidates.append({"user_id": "u1", "platform": "marktplaats",
+                                 "platform_listing_id": "m1", "status": "pending"})
+    api._store_scan_results(db, JOB, [
+        {"platform_listing_id": "m1", "title": "iets", "price": 1},
+    ])
+    assert [c["status"] for c in db.import_candidates
+            if c["platform_listing_id"] == "m1"][-1] == "linked"
