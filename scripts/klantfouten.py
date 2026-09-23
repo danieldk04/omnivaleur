@@ -152,20 +152,23 @@ def oordelen() -> dict:
 
 def _stil_tot(sleutel: str, oordeel: dict, staat: dict) -> datetime | None:
     """Tot wanneer deze soort geen nieuwe sessie waard is."""
-    tot = None
-    o = oordeel.get(sleutel)
-    if o and _tijd(o.get("wanneer")):
-        tot = _tijd(o["wanneer"]) + STILTE.get(o.get("oordeel"), STILTE["onbekend"])
-    # Een sessie die hem meekreeg maar niet terugmeldde: telt als onbekend.
+    kandidaten = []
+    o = oordeel.get(sleutel) or {}
+    gemeld = _tijd(o.get("wanneer"))
+    if gemeld:
+        kandidaten.append(gemeld + STILTE.get(o.get("oordeel"), STILTE["onbekend"]))
+    # Een sessie die hem meekreeg en klaar is zonder terug te melden: onbekend.
+    # Een sessie die nog loopt houdt hem ook stil (die zit er al op).
     for sessie in staat.values():
-        if (sleutel in (sessie.get("sleutels") or []) and not sessie.get("mislukt")
-                and sessie.get("status") in ("afgerond", "afgebroken")):
-            klaar = _tijd(sessie.get("afgerond_op") or sessie.get("gestart"))
-            if klaar and (tot is None or klaar + STILTE["onbekend"] > tot):
-                if not (o and _tijd(o.get("wanneer")) and _tijd(o["wanneer"]) >= klaar
-                        - timedelta(hours=2)):
-                    tot = klaar + STILTE["onbekend"]
-    return tot
+        if sleutel not in (sessie.get("sleutels") or []) or sessie.get("mislukt"):
+            continue
+        begon = _tijd(sessie.get("gestart"))
+        if sessie.get("status") == "gestart":
+            kandidaten.append(_nu() + timedelta(days=1))
+        elif begon and not (gemeld and gemeld >= begon):
+            klaar = _tijd(sessie.get("afgerond_op")) or begon
+            kandidaten.append(klaar + STILTE["onbekend"])
+    return max(kandidaten) if kandidaten else None
 
 
 def open_soorten(gemeten: dict, oordeel: dict, staat: dict) -> dict:
