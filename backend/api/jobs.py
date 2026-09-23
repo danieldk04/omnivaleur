@@ -379,6 +379,12 @@ def _recover_stale_claims(db, user_id: str, platform: str, now_dt: datetime) -> 
         # 'extend' opnieuw draaien kan geen kwaad: is het zoekertje al verlengd,
         # dan is de verlengknop weg en meldt de extensie "niets te doen" terug.
         retry_safe = j["action"] in ("delete", "scan", "content_refresh", "extend")
+        # Een Shopify-scan draait op de server (services/shopify_scan.py), niet in
+        # de extensie. Terug op 'pending' zou de extensie hem oppakken en niet
+        # kunnen uitvoeren; blijft hij hangen (bijvoorbeeld door een deploy
+        # middenin), dan is afsluiten met een fout het enige eerlijke.
+        if j["action"] == "scan" and j.get("platform") == "shopify":
+            retry_safe = False
 
         if retry_safe and reclaims < MAX_RECLAIMS:
             db.table("jobs").update({
