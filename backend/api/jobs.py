@@ -3844,6 +3844,10 @@ def _store_scan_results(db, job, scraped: list[dict]):
             # weggehaald worden. Dubbel voorkomende sleutels tellen niet mee, dus
             # liever geen koppeling dan de verkeerde.
             best_id = _sku_index.get(_scan_sku(title)) or _norm_title_index.get(_scan_norm_title(title))
+        if not best_id and row.get("sku"):
+            # Shopify geeft het artikelnummer los mee (services/shopify_scan.py);
+            # daar staat het niet vooraan de titel.
+            best_id = _sku_index.get(str(row["sku"]).strip().lower())
 
         # Dit item staat aantoonbaar live op dit platform (we hebben zijn kaartje
         # net gezien). Zet dat vast in `listings`, zodat een handmatig geplaatste
