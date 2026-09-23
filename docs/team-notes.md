@@ -12727,3 +12727,50 @@ Echte droge run bij De Juiste Toon: precies dezelfde 10 als de handmatige
 meting van vanochtend (5 Duits, alle vijf lederhosen al klaargezet; 5 Engels,
 woonartikelen op MP). De oude versie gaf op hetzelfde geval nul. `--doen` is
 niet gedraaid: de vijf Engelse blijven bewust voor de nachtronde.
+
+## 23-09-2026: rechtzetting, en wat de echte meting op Stripe liet zien
+
+Live gecontroleerd met de Stripe-sleutel van het account en met stripe==10.12.0,
+de versie die op de server staat. Twee dingen kwamen eruit.
+
+**Rechtzetting van gisteren.** Ik schreef bij 22-09 dat het klantslot vier dagen
+kapot stond en dat klanten met een lopende SEPA-incasso werden buitengesloten.
+Dat klopt niet. Ik toetste met een nagebootste factuur in de vorm van het
+account (2026-06-24), maar het klantslot doet zijn eigen aanroep en krijgt de
+vorm die de SDK meestuurt. Nagemeten op het echte account:
+`expand=["latest_invoice.payment_intent"]` geeft daar gewoon een echte
+PaymentIntent met status terug. Er is dus geen enkele klant door buitengesloten.
+De reparatie zelf blijft goed, want de webhook krijgt de andere vorm binnen en
+beide plekken hangen nu aan één functie, maar de aanleiding die ik erbij
+schreef was verkeerd.
+
+**Wat er wel nieuw is: één account, twee API-versies tegelijk.**
+
+| waar | versie | vorm van de factuur |
+|---|---|---|
+| webhook-payload | die van het account, 2026-06-24.dahlia | geen `payment_intent`, alleen `payments` |
+| onze eigen aanroepen | die de gepinde SDK stuurt, 2024-06-20 | `payment_intent` staat er gewoon op |
+
+Daarom werkte dezelfde regel code op de ene plek wél en op de andere niet. De
+proef dekt nu allebei de vormen af, plus een mutatieproef die aantoont dat ze
+echt iets bewaken.
+
+En let op bij een toekomstige upgrade van de SDK: op mijn Mac stond 15.3.0, en
+**vanaf stripe 12 is een StripeObject geen dict meer en bestaat `.get()` niet**.
+De hele codebase gebruikt `hasattr(x, "get")` en `x.get(...)` op Stripe-objecten.
+Met 15.3.0 gemeten lijkt alles kapot; met de gepinde 10.12.0 werkt het. Wie de
+pin verhoogt moet eerst elk `.get(` op een Stripe-object langs.
+
+**Stand van de betalingen op 23-09-2026, gemeten en niet geschat:**
+- 7 abonnementen bij Stripe: 4 actief, 1 in proef, 2 opgezegd. Niets op
+  `past_due`, `incomplete` of `unpaid`; geen enkele betaling op `processing`.
+- 54 rijen in onze subscriptions-tabel: 4 actief, 7 in proef, 42 proef verlopen,
+  1 opgezegd. **Nul rijen die niet overeenkomen met Stripe.**
+- De enige klant die nu op slot staat heeft zelf opgezegd, en dat klopt met
+  Stripe.
+- De nieuwe functie draaide tegen alle zeven echte abonnementen zonder één fout,
+  en vond bij zes van de zeven de echte betaling via de `payments`-weg (de
+  zevende zit nog in de proef en heeft een factuur van nul).
+
+Kortom: de betalingen lopen op dit moment goed en er staat niemand onterecht
+buiten de deur.

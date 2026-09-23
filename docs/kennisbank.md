@@ -17,6 +17,100 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## stripe-twee-api-versies-tegelijk
+
+*23-09-2026 — "Webhooks komen binnen in de API-versie van het Stripe-account, eigen aanroepen in de versie die de gepinde SDK meestuurt; dat zijn twee verschillende vormen in één codebase"*
+
+Eén Stripe-account, twee API-versies tegelijk in dezelfde code. Gemeten
+23-09-2026 op het echte account:
+
+| waar | welke versie | vorm van de factuur |
+|---|---|---|
+| webhook-payload (`stripe.Webhook.construct_event`) | die van het ACCOUNT, 2026-06-24.dahlia | geen `payment_intent`, alleen `payments` |
+| onze eigen aanroep (`stripe.Invoice.retrieve`) | die de SDK meestuurt; requirements.txt pint stripe==10.12.0 en dat is 2024-06-20 | `payment_intent` staat er gewoon op, `payments` komt erbij met `expand` |
+
+Daarom kan dezelfde regel code op de ene plek wél werken en op de andere niet,
+zonder dat iemand iets verandert. Wie alleen de webhook-vorm nabootst in een
+proef, "bewijst" een storing die er niet is; wie alleen de SDK-vorm nabootst,
+mist de storing die er wél is.
+
+**Hoe toe te passen:**
+- Schrijf functies die tegen BEIDE vormen kunnen (eerst `payments`, dan terugvallen
+  op `payment_intent`), en dek in de proeven allebei de vormen af. Zie
+  tests/test_betaling_in_behandeling.py.
+- Meet nooit met de SDK die toevallig op je Mac staat. Op 23-09 stond daar 15.3.0
+  en op de server 10.12.0, en dat scheelt meer dan een nummer: **in 15.x is een
+  StripeObject geen dict meer en bestaat `.get()` niet**, terwijl de hele codebase
+  `hasattr(x, "get")` en `x.get(...)` gebruikt. Met de Mac-versie lijkt alles
+  kapot, met de serverversie werkt het. Maak een venv met de gepinde versie:
+  `python3 -m venv /tmp/v && /tmp/v/bin/pip install stripe==10.12.0`.
+- Verander je de pin in requirements.txt, ga dan eerst elk `.get(` op een
+  Stripe-object langs. Een upgrade naar 12 of hoger breekt die allemaal stil.
+
+Dezelfde valkuil als "anthropic-sdk-pin-valstrik": de gepinde SDK op de server
+is niet de SDK waarmee je meet. Zie ook "stripe-api-versie-verplaatst-velden".
+
+---
+
+## stripe-api-versie-verplaatst-velden
+
+*23-09-2026 — "Stripe verplaatste current_period_end, subscription, paid en payment_intent stil naar andere plekken; de webhook crashte of deed stil niets en klantstatussen liepen weken scheef"*
+
+Op 18-09-2026 stonden vier van de zes betalende accounts verkeerd in de database:
+twee betalende klanten op `payment_processing` (en dus op weg naar uitsluiting),
+twee opgezegde klanten op `active` (en dus gratis aan het werk). Oorzaak: het
+Stripe-account draait op API-versie **2026-06-24.dahlia**, en die versie heeft
+velden verplaatst waar de code nog op rekende.
+
+**Wat waar naartoe ging (gemeten op echte webhook-payloads, niet uit documentatie):**
+
+| oud | nieuw | gedrag van de oude code |
+|---|---|---|
+| `subscription["current_period_end"]` | `subscription["items"]["data"][0]["current_period_end"]` | KeyError, 21x in het foutenlogboek |
+| `invoice["subscription"]` | `invoice["parent"]["subscription_details"]["subscription"]` | stil `None`, handler sloeg over |
+| `invoice["paid"]` | `invoice["status"] == "paid"` | stil `None`, handler sloeg over |
+| `invoice["payment_intent"]` | `invoice["payments"]["data"][0]["payment"]["payment_intent"]` | stil `None`, `expand=["payment_intent"]` geeft geen fout maar levert het veld niet |
+
+**Waarom:** de crash was zichtbaar (foutenlogboek), maar drie van de vier waren
+stil. De `invoice`-handlers gaven geen enkel signaal: geen fout, geen logregel,
+alleen een `if` die nooit waar werd. Een lopende SEPA-incasso werd daardoor niet
+meer herkend, en een geslaagde betaling zette niemand meer op `active`. Dat is
+weken doorgelopen zonder dat iemand iets merkte, tot een klant eruit zou vliegen.
+
+**Hoe toe te passen:** ga er bij Stripe nooit van uit dat een veld staat waar het
+stond. Meet het met een echte aanroep (`curl https://api.stripe.com/v1/...`) en
+lees `stripe-version` uit de antwoordkop. En let op: `expand[]=<veld>` van een
+veld dat niet meer bestaat geeft **geen** foutmelding, het veld ontbreekt gewoon
+in het antwoord. Een `try/except` vangt dat dus niet af.
+
+**NAGEKOMEN OP 22-09-2026, EN OP 23-09 RECHTGEZET.** Dezelfde vraag ("wacht deze
+factuur nog op een lopende incasso?") werd op twee plekken los van elkaar
+beantwoord: `_incasso_loopt_nog` in backend/api/billing.py (de webhook) en
+`_subscription_awaiting_incasso` in backend/services/billing.py (het slot van de
+klant). Op 18-09 is alleen de webhook meegegaan.
+
+Op 22-09 heb ik daaruit geconcludeerd dat het klantslot dus vier dagen kapot
+stond. **Dat klopte niet, en de fout zat in hoe ik het mat.** Ik toetste met een
+nagebootste factuur in de vorm van het ACCOUNT (2026-06-24), terwijl het klantslot
+zijn eigen aanroep doet en daarbij de versie krijgt die de SDK meestuurt. Op
+23-09-2026 nagemeten op het echte account met stripe==10.12.0, de versie uit
+requirements.txt: `expand=["latest_invoice.payment_intent"]` geeft daar gewoon een
+echte PaymentIntent met een status terug. Er is dus geen klant door buitengesloten.
+Zie "stripe-twee-api-versies-tegelijk".
+
+Beide plekken hangen nu wél aan één functie (`incasso_loopt_nog` in
+backend/services/billing.py) die tegen allebei de vormen kan. Dat blijft de goede
+reparatie, alleen niet om de reden die ik er eerst bij schreef.
+
+**De regel die wél overeind blijft:** repareer nooit één plek waar een externe
+dienst van vorm veranderde. Zoek álle plekken die dat veld lezen
+(`grep -rn payment_intent backend/`) en zet ze op één functie, zodat ze niet
+opnieuw uit elkaar lopen. Zie "twee-lijstjes-knopnamen-groeien-uit-elkaar".
+
+Zie ook "stripe-webhook-mist-invoice-events" en "sepa-incasso-bedenktijd-te-kort".
+
+---
+
 ## vertaling-draait-de-richting-om
 
 *23-09-2026 — Een tekst die al in de doeltaal staat opnieuw laten vertalen levert in de helft van de gevallen de ANDERE taal op; sla het model over*
@@ -194,57 +288,6 @@ uitgang zet een stempel") in plaats van een aantal.
 is. In dezelfde ronde wees één van de veertien wél een echte storing aan, alleen
 niet in de functie waar de proef naar keek: zie
 "stripe-api-versie-verplaatst-velden".
-
----
-
-## stripe-api-versie-verplaatst-velden
-
-*22-09-2026 — "Stripe verplaatste current_period_end, subscription, paid en payment_intent stil naar andere plekken; de webhook crashte of deed stil niets en klantstatussen liepen weken scheef"*
-
-Op 18-09-2026 stonden vier van de zes betalende accounts verkeerd in de database:
-twee betalende klanten op `payment_processing` (en dus op weg naar uitsluiting),
-twee opgezegde klanten op `active` (en dus gratis aan het werk). Oorzaak: het
-Stripe-account draait op API-versie **2026-06-24.dahlia**, en die versie heeft
-velden verplaatst waar de code nog op rekende.
-
-**Wat waar naartoe ging (gemeten op echte webhook-payloads, niet uit documentatie):**
-
-| oud | nieuw | gedrag van de oude code |
-|---|---|---|
-| `subscription["current_period_end"]` | `subscription["items"]["data"][0]["current_period_end"]` | KeyError, 21x in het foutenlogboek |
-| `invoice["subscription"]` | `invoice["parent"]["subscription_details"]["subscription"]` | stil `None`, handler sloeg over |
-| `invoice["paid"]` | `invoice["status"] == "paid"` | stil `None`, handler sloeg over |
-| `invoice["payment_intent"]` | `invoice["payments"]["data"][0]["payment"]["payment_intent"]` | stil `None`, `expand=["payment_intent"]` geeft geen fout maar levert het veld niet |
-
-**Waarom:** de crash was zichtbaar (foutenlogboek), maar drie van de vier waren
-stil. De `invoice`-handlers gaven geen enkel signaal: geen fout, geen logregel,
-alleen een `if` die nooit waar werd. Een lopende SEPA-incasso werd daardoor niet
-meer herkend, en een geslaagde betaling zette niemand meer op `active`. Dat is
-weken doorgelopen zonder dat iemand iets merkte, tot een klant eruit zou vliegen.
-
-**Hoe toe te passen:** ga er bij Stripe nooit van uit dat een veld staat waar het
-stond. Meet het met een echte aanroep (`curl https://api.stripe.com/v1/...`) en
-lees `stripe-version` uit de antwoordkop. En let op: `expand[]=<veld>` van een
-veld dat niet meer bestaat geeft **geen** foutmelding, het veld ontbreekt gewoon
-in het antwoord. Een `try/except` vangt dat dus niet af.
-
-**NAGEKOMEN OP 22-09-2026: één reparatie was niet genoeg.** Dezelfde vraag
-("wacht deze factuur nog op een lopende incasso?") werd op twee plekken los van
-elkaar beantwoord: `_incasso_loopt_nog` in backend/api/billing.py (de webhook) en
-`_subscription_awaiting_incasso` in backend/services/billing.py (het slot van de
-klant). Op 18-09 is alleen de webhook meegegaan. De tweede las vier dagen langer
-`expand=["latest_invoice.payment_intent"]` en dus altijd `None`: wie een SEPA-
-incasso had lopen kreeg het slot terwijl het geld onderweg was, zonder één
-foutregel. Beide hangen nu aan één functie (`incasso_loopt_nog` in
-backend/services/billing.py).
-
-**De regel die daaruit volgt:** repareer nooit één plek waar een externe dienst
-van vorm veranderde. Zoek eerst álle plekken die datzelfde veld lezen
-(`grep -rn payment_intent backend/`) en repareer ze in dezelfde beurt, of zet ze
-op één functie zodat ze niet opnieuw uit elkaar lopen. Zie
-"twee-lijstjes-knopnamen-groeien-uit-elkaar".
-
-Zie ook "stripe-webhook-mist-invoice-events" en "sepa-incasso-bedenktijd-te-kort".
 
 ---
 

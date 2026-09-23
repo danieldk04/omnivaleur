@@ -164,6 +164,65 @@ def test_webhook_zet_lopende_incasso_niet_op_wanbetaling(monkeypatch):
     assert bapi._incasso_loopt_nog(stripe_sub) is False
 
 
+# ── TWEE API-VERSIES TEGELIJK (gemeten 23-09-2026 op het echte Stripe-account) ─
+#
+# De webhook en onze eigen aanroepen krijgen NIET dezelfde vorm terug:
+#
+#   webhook-payload  -> de versie van het ACCOUNT (2026-06-24.dahlia):
+#                       geen `payment_intent` op de factuur, alleen `payments`
+#   onze aanroepen   -> de versie die de SDK meestuurt. requirements.txt pint
+#                       stripe==10.12.0 en die stuurt 2024-06-20, en dáár staat
+#                       `payment_intent` er gewoon op (en `payments` erbij zodra
+#                       je erom vraagt).
+#
+# Eén functie moet dus tegen allebei kunnen. Deze twee proeven zetten beide
+# vormen neer zoals ze op 23-09-2026 echt gemeten zijn.
+
+
+def _stripe_met_factuur(monkeypatch, factuur, pi_status):
+    class Subscription:
+        @staticmethod
+        def retrieve(sid, **kw):
+            return {"id": sid, "status": "past_due", "latest_invoice": "in_1"}
+
+    class Invoice:
+        @staticmethod
+        def retrieve(iid, **kw):
+            return factuur
+
+    class PaymentIntent:
+        @staticmethod
+        def retrieve(pid, **kw):
+            return {"id": pid, "status": pi_status}
+
+    _zet_nep_stripe(monkeypatch, types.SimpleNamespace(
+        Subscription=Subscription, Invoice=Invoice, PaymentIntent=PaymentIntent))
+
+
+def test_de_vorm_die_de_sdk_van_de_server_teruggeeft(monkeypatch):
+    """API 2024-06-20: `payment_intent` staat gewoon op de factuur.
+
+    Dit is de vorm die de server ECHT terugkrijgt bij zijn eigen aanroepen, want
+    requirements.txt pint stripe==10.12.0. Een functie die alleen de nieuwe vorm
+    kent zou hier niets vinden en de klant buitensluiten.
+    """
+    _stripe_met_factuur(monkeypatch, {"id": "in_1", "status": "open",
+                                      "payment_intent": "pi_1"}, "processing")
+    assert sb._subscription_awaiting_incasso("sub_1") is True
+
+
+def test_beide_vormen_tegelijk_zoals_live_gemeten(monkeypatch):
+    """Op 2024-06-20 met expand=['payments'] komen ze allebei mee. Dan moet hij
+    dezelfde betaling vinden, langs welke weg dan ook."""
+    factuur = {"id": "in_1", "status": "open", "payment_intent": "pi_1",
+               "payments": {"data": [{"payment": {"payment_intent": "pi_1"}}]}}
+    _stripe_met_factuur(monkeypatch, factuur, "processing")
+    assert sb._subscription_awaiting_incasso("sub_1") is True
+
+    _stripe_met_factuur(monkeypatch, factuur, "succeeded")
+    assert sb._subscription_awaiting_incasso("sub_1") is False
+
+
 def test_een_storing_bij_stripe_blijft_een_nee(monkeypatch):
     """Kan de vraag niet gesteld worden, dan mag hij niet stil 'ja' worden: een
     Stripe-storing zou anders iedereen gratis toegang geven. Hij mag ook niet
