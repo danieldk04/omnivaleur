@@ -81,6 +81,16 @@ def naar_scanregel(product: dict, shop: str, winkelnaam: str | None = None) -> d
     vendor = (product.get("vendor") or "").strip()
     merk = basis.get("brand") or (vendor if vendor and vendor != winkelnaam else None)
     handle = product.get("handle") or ""
+    # Materiaal opnieuw zoeken in de platte tekst, die zijn regels nog heeft.
+    # _convert zoekt in html waarvan elke <br> een spatie werd, en pakte daardoor
+    # de rest van de omschrijving mee: "Merino Wool Fit: Slim Fit Questions
+    # welcome…" (gemeten op een echte winkel, 23-09-2026).
+    materiaal = basis.get("material")
+    m = re.search(r"Material:\s*([^\n]+)", basis.get("description") or "", re.IGNORECASE)
+    if m:
+        materiaal = m.group(1).strip().rstrip(".")
+    elif materiaal and len(materiaal) > 40:
+        materiaal = None     # liever leeg dan een halve zin als materiaal
     return {
         "platform_listing_id": str(product["id"]),
         "platform_listing_url": f"https://{shop}/products/{handle}" if handle else None,
@@ -138,6 +148,11 @@ async def scan_winkel(user_id: str, job_id: str) -> None:
     db = get_db()
 
     async def zet(velden: dict) -> None:
+        # Een tijdstip bij elke voortgangsmelding: zonder "at" ziet de
+        # opruimregel in jobs._recover_stale_claims de scan als vastgelopen.
+        prog = (velden.get("result") or {}).get("_progress")
+        if isinstance(prog, dict):
+            prog["at"] = datetime.now(timezone.utc).isoformat()
         await naast_de_lus(lambda: db.table("jobs").update(velden).eq("id", job_id).execute(),
                            herkans=True)
 
