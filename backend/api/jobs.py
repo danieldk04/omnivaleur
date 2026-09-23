@@ -3910,9 +3910,14 @@ def _store_scan_results(db, job, scraped: list[dict]):
             # Hangt dit advertentienummer al aan een artikel, dan valt er niets te
             # beslissen: het is gekoppeld. Alleen het nummer telt hier; een
             # gelijkende titel is een vermoeden en geen bewijs.
-            "status": prior_status.get(
-                str(platform_listing_id),
-                "linked" if listings_by_id.get((job["platform"], str(platform_listing_id)))
+            #
+            # Een eerdere 'pending' is geen beslissing: die rij kan inmiddels
+            # gekoppeld zijn (Shopify, 23-09-2026: 12 "Same listing"-rijen bleven
+            # wachten). Alleen een echte keuze ('ignored', 'imported') wint.
+            "status": (
+                prior_status[str(platform_listing_id)]
+                if prior_status.get(str(platform_listing_id), "pending") != "pending"
+                else "linked" if listings_by_id.get((job["platform"], str(platform_listing_id)))
                 else "pending"),
         }
         # Full snapshot columns — only present once the schema migration has run.
