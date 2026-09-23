@@ -12715,3 +12715,15 @@ te halen zonder over meerdere klanten te lezen.
 **Verder:** twaalf andere proeven vallen om in een worktree zonder `.env`
 (Supabase- en vertaalsleutels ontbreken daar). In de hoofdmap draaien ze gewoon;
 dat verklaart het verschil met de veertien die Daniel zag.
+## 23-09-2026 — vreemde_taal_advertenties.py leest nu wat er live staat
+
+Het script leest de tekst niet meer uit `items`, maar uit de openbare zoek-API
+van Marktplaats en 2dehands (verkopersnummer bewezen met een eigen
+advertentienummer, gekoppeld via platform_listing_id). `--doen` gebruikt
+`negeer_afkoeling=True`; dagquotum en betaalrubriek-rem blijven. Advertenties
+met status `relisting` tellen mee als "al klaargezet" en worden overgeslagen.
+
+Echte droge run bij De Juiste Toon: precies dezelfde 10 als de handmatige
+meting van vanochtend (5 Duits, alle vijf lederhosen al klaargezet; 5 Engels,
+woonartikelen op MP). De oude versie gaf op hetzelfde geval nul. `--doen` is
+niet gedraaid: de vijf Engelse blijven bewust voor de nachtronde.
