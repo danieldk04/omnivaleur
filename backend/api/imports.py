@@ -1523,9 +1523,20 @@ async def list_import_candidates(platform: str = None, status: str = "pending", 
 
     candidates, items, listings_by_id, platforms_by_item = await asyncio.to_thread(_lees)
     if candidates:
+        # Welk artikel hangt al aan welk Shopify-product. Hangt het voorgestelde
+        # artikel al aan een ÁNDER product, dan staat hetzelfde stuk twee keer in
+        # de winkel en kan het daar twee keer verkocht worden. Dat moet de
+        # verkoper zien, niet een stille koppeling (Revaleur: 16 stuks).
+        shopify_van_item: dict = {}
+        for (pf, pid), iid in listings_by_id.items():
+            if pf == "shopify":
+                shopify_van_item.setdefault(iid, set()).add(pid)
         unmatched = []
         for c in candidates:
             item_id, reason = _match_candidate(c, items, listings_by_id)
+            if (reason == "same_code" and c.get("platform") == "shopify"
+                    and shopify_van_item.get(item_id, set()) - {str(c.get("platform_listing_id"))}):
+                reason = "shopify_duplicate"
             c["suggested_item_id"] = item_id
             c["match_reason"] = reason
             if not item_id:
