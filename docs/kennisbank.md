@@ -26,6 +26,8 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 **Why:** een gemiste afmelding is de duurste fout; een warme lead als afmelding wegzetten kost een klant.
 **How to apply:** bij elke wijziging aan de indeling de oude en nieuwe versie over alle mail_reacties draaien en elke omslag lezen. Zie ook "concurrent-met-ja-signaal-is-warm".
 
+Zelfde dag, Yeti Acoustics: "Nu ga je de spamlijst in en blokkeer ik je mail" werd warm. Boosheid (spamlijst, blokkeer, irritant) telt nu als afmelding; kaal "spam" bewust niet. Oorzaak van de boosheid: mail 2 zegt "mijn mailtje van vorige week" maar ging na 2 dagen. FOLLOWUP_DAGEN staat sinds 23-09-2026 op (7, 4); pas die niet aan zonder de tekst van mail 2 mee te veranderen.
+
 ---
 
 ## concurrent-met-ja-signaal-is-warm

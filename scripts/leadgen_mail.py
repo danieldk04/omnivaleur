@@ -138,7 +138,9 @@ OPBOUW_STAP = 10
 # nieuw aangeschreven. Zonder deze reservering staat het aanboren van nieuwe
 # leads stil zodra er een golf loopt.
 NIEUW_AANDEEL = 0.6
-FOLLOWUP_DAGEN = (2, 4)       # opvolgmail 1 en 2, in dagen na de vorige mail
+# Mail 2 zegt "mijn mailtje van vorige week", maar ging na twee dagen de deur
+# uit. Dat leest als opdringerig, en Yeti Acoustics blokkeerde ons erom.
+FOLLOWUP_DAGEN = (7, 4)       # opvolgmail 1 en 2, in dagen na de vorige mail
 # Hoeveel dagen na de laatste opvolgmail een lead als doodgelopen geldt. Daarna
 # schuift hij in Notion naar de eindfase, zodat de lijst laat zien wie er nog
 # leeft in plaats van alleen wie ooit gemaild is.
@@ -247,6 +249,10 @@ AFMELD_WOORDEN = re.compile(
     # "Zou je kunnen stoppen met mailtjes sturen" (Allesvrij, 23-09-2026) viel
     # erdoor omdat alleen het kale "stop" telde, en werd als warm ingedeeld.
     r"|geen (mails?|mailtjes|berichten) meer"
+    # Boosheid is ook een afmelding: "Nu ga je de spamlijst in en blokkeer ik je
+    # mail" (Yeti Acoustics, 23-09-2026) werd als warm ingedeeld. Kaal "spam"
+    # telt bewust niet, want "je mail zat in mijn spam" is juist geen nee.
+    r"|spamlijst|blokkeer\w*|irritant\w*"
     # "niet meer mailen" ving "niet meer TE mailen" niet, en zo schreef iemand het
     # nu juist. Een gemiste afmelding is de duurste fout die hier bestaat.
     r"|niet meer (te )?(mail|benader|schrijf|contacteer|lastigval)\w*"
