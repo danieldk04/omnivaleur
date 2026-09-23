@@ -292,6 +292,17 @@ async def main() -> int:
             print(f"  (gestopt bij --max {args.max})")
             break
         titel = (adv.get("title") or "")[:50]
+        # refresh_listing kiest zelf "de" actieve advertentie van dit artikel op
+        # dit kanaal. Staan er twee, dan kan hij de verkeerde weghalen; zie
+        # memory klant-kan-twee-abonnementen-hebben voor hetzelfde soort gat.
+        actief = [r["platform_listing_id"] for r in (db.table("listings")
+                  .select("platform_listing_id").eq("item_id", rij["item_id"])
+                  .eq("platform", rij["platform"]).eq("status", "active")
+                  .execute().data or [])]
+        if actief != [rij["platform_listing_id"]]:
+            print(f"  over {rij['platform']:11} {titel} → meer dan één actieve "
+                  f"advertentie ({', '.join(map(str, actief))}), met de hand nakijken")
+            continue
         try:
             # negeer_afkoeling: dit is een reparatie, geen verversing. Deze
             # advertenties zijn vaak net geplaatst; de afkoeling van 21 dagen
@@ -302,10 +313,11 @@ async def main() -> int:
             gedaan += 1
             print(f"  ok   {rij['platform']:11} {titel} → {uit.get('status')}")
         except RefreshError as e:
-            # Het dagquotum of een rubriek die geld kost. Allebei bewust, en
-            # allebei een reden om te stoppen in plaats van door te drukken.
+            # Het dagquotum geldt voor alles wat nog komt: dan stoppen. Een
+            # fout bij één artikel (ontbrekende prijs, betaalde rubriek) niet.
             print(f"  stop {rij['platform']:11} {titel} → {e}")
-            break
+            if "limit reached" in str(e):
+                break
         except Exception as e:  # noqa: BLE001 — één advertentie mag de rest niet meenemen
             print(f"  FOUT {rij['platform']:11} {titel} → {e}")
     print(f"\n{gedaan} advertentie(s) opnieuw klaargezet. De extensie plaatst ze "
