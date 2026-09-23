@@ -10360,9 +10360,22 @@ function renderActivityBar() {
     bar.className = 'activity-bar working';
     icon.textContent = '⚠️';
     title.textContent = `Extension is working right now — leave it alone (${describeJobs(working)})`;
+    // EEN VINTED-VERWIJDERING DUURT ECHT MINUTEN, NIET SECONDEN.
+    //
+    // GEMETEN 23-09-2026 (Daniel, artikel 269): een echte verwijdering duurde
+    // 6 minuten, omdat die stap eerst de hele kledingkast doorloopt om zeker
+    // te weten dat het juiste artikel weggaat (zie "vinted-verwijderen-liep-
+    // zonder-klok" en de kastcontrole in bgDeleteVinted). Zonder uitleg lijkt
+    // een lang stilstaande balk een storing, en dat is precies waar klanten op
+    // afgaan. Geen vaste minuten beloven — dat is nooit gemeten voor élk
+    // account — wel zeggen wélke stap het is en dat het normaal is.
+    const vintedDelete = working.some(j => j.platform === 'vinted' && j.action === 'delete');
     text.innerHTML = 'It just opened a Chrome tab and is doing this automatically. '
       + '<b>Don\'t click, type in, or close that tab</b>, and don\'t start new actions here — '
-      + 'the tab closes by itself when it\'s done. Interrupting it makes the listing fail.';
+      + 'the tab closes by itself when it\'s done. Interrupting it makes the listing fail.'
+      + (vintedDelete
+        ? ' <b>Removing a Vinted listing can take several minutes</b> — it checks your whole wardrobe first to make sure the right item goes. That is normal, not stuck.'
+        : '');
   } else {
     bar.className = 'activity-bar queued';
     icon.textContent = '⏳';
