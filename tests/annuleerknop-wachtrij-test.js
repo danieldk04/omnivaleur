@@ -61,19 +61,30 @@ function annuleer({ working, queued, antwoorden }) {
 
   const fn = new Function(
     "document", "_activityState", "confirm", "apiFetch", "API",
-    "renderActivityBar", "loadAll", "showToast", "alert", bron);
+    "renderActivityBar", "loadAll", "showToast", "alert", "renderKanaalSessie", "requireOk", bron);
 
   const klaar = fn(
     { getElementById: (id) => knopen[id] || null },
     stand,
     (tekst) => { gevraagd.push(tekst); return antwoorden.length ? antwoorden.shift() : true; },
-    (url) => { geannuleerd.push(String(url).match(/jobs\/([^/]+)\/cancel/)[1]);
-               return Promise.resolve({ ok: true, json: () => ({}) }); },
+    (url) => {
+      // De hele rij gaat sinds de teller-reparatie in één verzoek naar de
+      // server (/jobs/cancel-queued); die leegt alles wat er wacht.
+      if (/jobs\/cancel-queued/.test(String(url))) {
+        const alle = stand.queued.map(j => j.id);
+        geannuleerd.push(...alle);
+        return Promise.resolve({ ok: true, json: () => ({ cancelled: alle.length }) });
+      }
+      geannuleerd.push(String(url).match(/jobs\/([^/]+)\/cancel/)[1]);
+      return Promise.resolve({ ok: true, json: () => ({}) });
+    },
     "",
     () => {},
     () => Promise.resolve(),
     () => {},
     () => {},
+    () => {},
+    async (r) => r.json(),
   );
   return Promise.resolve(klaar).then(() => ({ gevraagd, geannuleerd, stand }));
 }
@@ -90,11 +101,12 @@ function knoptekst({ working, queued, pace, online }) {
     "renderActivityBar();",
     "return document.getElementById('ext-activity-cancel').textContent;",
   ].join("\n");
-  const fn = new Function("document", "_activityState", "state", "describeJobs", bron);
+  const fn = new Function("document", "_activityState", "state", "describeJobs", "extState", bron);
   return fn({ getElementById: (id) => knopen[id] || null },
             { working, queued, pace },
             { extStatus: online === null ? null : { online, seconds_ago: online ? 3 : 12000 } },
-            (jobs) => `${jobs.length} things`);
+            (jobs) => `${jobs.length} things`,
+            { kanalen: {} });
 }
 
 const rij = (n, prefix) =>

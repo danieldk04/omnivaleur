@@ -12780,3 +12780,34 @@ buiten de deur.
 Toon: een lederhose die op Marktplaats verkoopt komt daar op "gereserveerd", maar op 2dehands gebeurt niets. Klopt: geen van onze drie verkoopcontroles kende gereserveerd of zag Toons verkopen (geen koppeling, geen "(1308)" in de titels, extensie ving het nooit). Zes lederhosen stonden daardoor nog op 2dehands en Vinted.
 
 Daniel gaf akkoord om het te repareren. Nieuw: backend/services/gereserveerd.py leest elk uur de openbare verkoperslijst (veld `reserved`) en maakt van een gereserveerde advertentie de vraag "verkocht?" in het dashboard, voor elke verkoper met de vraag aan. Een klaargezette herplaatsing van zo'n artikel wordt teruggenomen. Vervalt de reservering, dan verdwijnt de vraag vanzelf; "nee" houdt de advertentie live. Bewust een vraag en geen automatische afmelding (zacht signaal, zie kennisbank). Automatisch overal af is een aparte beslissing van Daniel.
+
+## 23-09-2026 (tweede ronde, 12:45): Dagelijkse klantfouten
+
+Gemeten om 12:42: 46 opdrachten van 7 accounts in de laatste 24 uur, **nul fout**.
+/health 200 op 29046fa0. Sinds 22-09 12:00 is er geen opdracht meer misgelopen.
+
+Wachtend, klant-eigen: vier Vinted-scans (f8c0cce9, 0b28c1ce, c2371efe, 26cf5471)
+en één Marktplaats-plaatsing (0b28c1ce, 8 uur). Bij alle vijf ligt de laatste
+hartslag van de extensie vóór het moment dat de opdracht werd klaargezet: Chrome
+staat daar uit. d25f18a2 nog steeds zonder extensie sinds 21-09 18:00.
+
+Toons lederhosen (open punt van vanochtend): drie van de vijf staan nu live en in
+het Nederlands (MP m2445695656, 2dehands m2445714938 en m2445693813), gecontroleerd
+met `vreemde_taal_advertenties.py --bevat lederhos` tegen de openbare lijst. De
+khaki lederhose (item e722c370) is niet opnieuw geplaatst en dat klopt: Marktplaats
+zette hem op gereserveerd, en gereserveerd.py nam de klaargezette herplaatsing
+terug. Zijn Duitse 2dehands-advertentie m2443963620 blijft staan tot Toon de
+verkoopvraag beantwoordt; zegt hij ja, dan gaat die vanzelf weg.
+
+Geannuleerd, geen fout: drie 2dehands-plaatsingen van Toon in "Tapijten en
+Kleden" (betaalrubriek, rem deed zijn werk).
+
+Gerepareerd, alleen de proef: `tests/annuleerknop-wachtrij-test.js` liep achter op
+app.html (renderKanaalSessie, extState, en de hele rij gaat sinds de
+tellerreparatie in één verzoek naar /jobs/cancel-queued). De knop zelf was goed;
+nu 10 van 10 groen.
+
+Nog open, ongewijzigd: de andere `execInTab(async ...)`-plekken in background.js
+die een fout stil inslikken, en of account 3bfbed2c (proef verlopen 05-08, draait
+extensie 1.0.349 dus vrijwel zeker Daniels eigen Mac) van Daniel is. Niet te meten:
+fouten die alleen in de browser van de klant blijven.
