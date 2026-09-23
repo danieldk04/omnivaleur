@@ -143,6 +143,38 @@ async def lees_producten(shop: str, token: str) -> list[dict]:
     return producten
 
 
+def fotos_aanvullen(db, user_id: str, regels: list[dict]) -> int:
+    """Artikelen met hooguit één foto krijgen de fotoreeks van hun Shopify-product.
+
+    De gewone scan vult alleen LEGE velden aan, dus een artikel met één foto
+    kreeg er nooit meer bij. Bij Revaleur stonden 35 gekoppelde artikelen op één
+    foto terwijl hun Shopify-product er 5 tot 9 had (23-09-2026). Alleen op het
+    productnummer (zeker dezelfde advertentie), nooit op titel of artikelnummer,
+    en nooit minder foto's dan er stonden. Shopify's CDN is openbaar
+    (access-control-allow-origin: *), dus de extensie kan ze gewoon ophalen."""
+    from backend.database import fetch_all, fetch_all_in
+
+    per_product = {r["platform_listing_id"]: r["photo_urls"] for r in regels
+                   if len(r.get("photo_urls") or []) > 1}
+    if not per_product:
+        return 0
+    items = fetch_all(lambda: db.table("items").select("id,photo_urls").eq("user_id", user_id))
+    arm = {i["id"] for i in items if len(i.get("photo_urls") or []) <= 1}
+    if not arm:
+        return 0
+    rijen = fetch_all_in(lambda: db.table("listings").select("item_id,platform,platform_listing_id"),
+                         "item_id", list(arm))
+    bijgewerkt = 0
+    for l in rijen:
+        fotos = per_product.get(str(l.get("platform_listing_id")))
+        if l.get("platform") != "shopify" or not fotos or l["item_id"] not in arm:
+            continue
+        db.table("items").update({"photo_urls": fotos}).eq("id", l["item_id"]).execute()
+        arm.discard(l["item_id"])
+        bijgewerkt += 1
+    return bijgewerkt
+
+
 async def scan_winkel(user_id: str, job_id: str) -> None:
     """Draait als achtergrondtaak na /imports/scan/shopify. Sluit de opdracht
     altijd af, met 'done' of met een 'error' die de verkoper kan lezen: een
