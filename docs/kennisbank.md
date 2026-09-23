@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## gemini-denkstap-en-taalmodel
+
+*23-09-2026 — Sinds 23-09-2026 gaat alle AI via taalmodel.py, Gemini eerst; Gemini's denkstap vreet maxOutputTokens op en Flash-Lite weigert thinkingBudget 0*
+
+Alle taalvragen (rubriek, tweelingen, Shopify-collecties, eBay-rubrieken, blog, vertalen) gaan sinds 23-09-2026 eerst naar Gemini via `backend/services/taalmodel.py`; Claude is reserve. Aanleiding: leeg Anthropic-tegoed, Daniel koos Gemini op voorwaarde van betrouwbaar, precies en snel.
+
+**Why:** gemeten valkuilen: gemini-3.8-flash denkt standaard, en die gedachten tellen in maxOutputTokens (200 tokens gaf '{"gender' + MAX_TOKENS). Flash accepteert thinkingBudget 0, Flash-Lite geeft daarop 400 en accepteert thinkingLevel "minimal"; Flash weigert "minimal". Flash-Lite gokt bij rubrieken, Flash laat bij twijfel leeg.
+
+**How to apply:** geef altijd denkruimte (`_DENKRUIMTE`) of `denken=False`; kies Flash voor oordelen, Lite alleen als snelheid alles is. Tests: conftest zet google_api_key leeg, anders roepen tests stil Google aan. Zie "anthropic-sdk-pin-valstrik" en "modellenlijst-van-de-dienst-is-geen-bewijs".
+
+---
+
 ## auto-push-zet-tussenstand-live
 
 *23-09-2026 — De auto-push-hook commit en pusht elke Edit/Write los; een wijziging die over twee stappen verdeeld is (of een stap via Bash) gaat half live en Railway start niet op*

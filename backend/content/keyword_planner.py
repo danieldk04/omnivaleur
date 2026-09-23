@@ -104,16 +104,13 @@ Return ONLY a JSON array, no prose, no markdown fences, in this exact shape:
 
 
 def suggest_keywords(existing_keywords: list[str], existing_slugs: list[str] | None = None) -> list[dict]:
-    if not settings.anthropic_api_key:
-        logger.error("ANTHROPIC_API_KEY ontbreekt — kan geen keywords voorstellen")
-        return []
-
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
     prompt = _build_prompt(existing_keywords)
 
     try:
-        message = client.messages.create(model=MODEL, max_tokens=2000, messages=[{"role": "user", "content": prompt}])
-        raw = "".join(getattr(b, "text", "") or "" for b in (message.content or []))
+        # Sinds 23-09-2026 eerst Gemini, dan Claude (backend/services/taalmodel.py).
+        from backend.services import taalmodel
+        raw = taalmodel.vraag(prompt, max_tokens=2000, claude_model=MODEL,
+                              tijdslimiet=120.0, wat="trefwoordplanner")
         raw = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         ideas = json.loads(raw)
     except Exception as e:

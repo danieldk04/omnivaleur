@@ -39,3 +39,20 @@ def _geen_webstore_vraag_in_tests():
     finally:
         jobs._WEBSTORE_CACHE.clear()
         jobs._WEBSTORE_CACHE.update(vorig)
+
+
+@pytest.fixture(autouse=True)
+def _geen_echte_taalmodellen_in_tests(monkeypatch):
+    """Sinds 23-09-2026 gaat elke taalvraag eerst naar Gemini (backend/services/
+    taalmodel.py). Staat de echte Google-sleutel in .env, dan zou elke test die
+    Claude nabootst stilletjes echt bij Google aankloppen. Standaard dus geen
+    Google-sleutel; een test die Gemini zelf beproeft zet er een neer. En een
+    nep-Anthropic-sleutel, zodat de tests die Claude nabootsen die route blijven
+    nemen, ook op een machine zonder .env."""
+    try:
+        from backend.config import settings
+    except Exception:  # noqa: BLE001
+        return
+    monkeypatch.setattr(settings, "google_api_key", "")
+    if not settings.anthropic_api_key:
+        monkeypatch.setattr(settings, "anthropic_api_key", "test-sleutel")

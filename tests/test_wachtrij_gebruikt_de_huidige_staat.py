@@ -76,6 +76,11 @@ def _uitgifte(monkeypatch, db):
     monkeypatch.setattr(J, "execute_with_retry", lambda q, *a, **k: q.execute())
     monkeypatch.setattr(J, "_zet_kleur_goed", lambda rijen: None)
     monkeypatch.setattr(J, "_kopie_staat_stil", lambda *_a, **_kw: None)
+    # Deze proef gaat over de staat van het artikel, niet over vertalen. Zonder
+    # dit riep hij het echte taalmodel aan via internet, en viel hij om zodra
+    # dat er even niet was (23-09-2026: Anthropic-tegoed op, Gemini afgeschermd).
+    import backend.services.crosslist as _cl
+    monkeypatch.setattr(_cl, "_vertaal", lambda text, taal, brand=None: text)
     return J.get_pending_jobs(
         request=type("R", (), {"headers": {"x-omnivaleur-ext": "1.0.317"}})(),
         platform="2dehands", user_id="u1")
@@ -139,6 +144,8 @@ def test_de_vorige_versie_stuurde_de_oude_staat_mee(monkeypatch):
     monkeypatch.setattr(oud, "execute_with_retry", lambda q, *a, **k: q.execute())
     monkeypatch.setattr(oud, "_zet_kleur_goed", lambda rijen: None)
     monkeypatch.setattr(oud, "_kopie_staat_stil", lambda *_a, **_kw: None)
+    import backend.services.crosslist as _cl
+    monkeypatch.setattr(_cl, "_vertaal", lambda text, taal, brand=None: text)
     uit = oud.get_pending_jobs(
         request=type("R", (), {"headers": {"x-omnivaleur-ext": "1.0.317"}})(),
         platform="2dehands", user_id="u1")

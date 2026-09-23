@@ -12874,3 +12874,17 @@ Beperking: een product met meerdere varianten komt binnen als één artikel.
 Deploy: de auto-push-hook zette een tussenstand live (gebruik van BackgroundTasks
 zonder de import). Drie deploys faalden om 15:37 tot 15:43 op de healthcheck; de
 site bleef op de vorige versie draaien. Om 15:56 geslaagd (e1e11b4c).
+
+## 23-09-2026: alle AI op Gemini, Claude alleen als reserve
+
+Daniel: "zet alles op Gemini", op voorwaarde dat het betrouwbaar, precies en snel is. Aanleiding: het Anthropic-tegoed was op (gemeten met de serversleutel: "credit balance is too low"). Daardoor stonden rubriekkeuze bij import, de tweelingzoeker tussen talen, Shopify-collecties, eBay-rubrieknamen en de blog stil; alleen vertalen had al een Gemini-vangnet.
+
+Nu gaat elke taalvraag via `backend/services/taalmodel.py`: eerst Gemini (Daniels Google-sleutel), dan Claude als er tegoed is. Vertalen in crosslist.py volgt dezelfde volgorde. Gemeten op echte gegevens vóór livegang:
+- Rubriekkeuze, 199 artikelen uit acht takken: Flash kiest waar de woordenlijst 23 van 199 raakte; bij twijfel laat hij leeg in plaats van te gokken. Zonder denkstap 182 van 199 gelijk aan mét, drie keer zo snel (65 s tegen 177 s). Flash-Lite was sneller maar gokte vaker (motorbanden bij wonen), dus niet gekozen.
+- Tweelingzoeker, 120 NL/EN-paren van Revaleur, drie keer: nul koppelingen naar een ander soort stuk. Wat misging was steeds een tweede exemplaar met exact dezelfde titel; een tweeling wordt nooit vanzelf samengevoegd. Zonder denkstap 2 s in plaats van 16 s.
+- Vertalen 20 van 20, Shopify-collecties 3 van 3, eBay-rubrieknamen 3 van 3, blogvertaling compleet (links, koppen, FAQ, "je"), nieuw artikel compleet.
+- Voor-en-na op a33ee48b: oud 0 van 5 rubrieken, nieuw 5 van 5.
+
+Valkuil gevonden: Gemini's denkstap telt mee in maxOutputTokens. Met 200 tokens kwam er '{"gender' terug. Daarom 8192 denkruimte bovenop elke vraag, en thinkingBudget 0 waar snelheid telt (Flash-Lite weigert die instelling met 400). Ook: drie proeven in tests/test_wachtrij_gebruikt_de_huidige_staat.py riepen stil het echte taalmodel aan; conftest zet nu standaard geen Google-sleutel in tests.
+
+Open: de tweelingzoeker kijkt naar hooguit 250 artikelen (`_TWIN_MAX_ITEMS`), bij Revaleur stond daardoor maar 20 van de 60 tweelingen in beeld. Dat was al zo onder Claude. `/api/platforms/ai-listing` (foto's naar tekst) gebruikt nog Claude, maar geen scherm roept het aan.

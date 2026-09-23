@@ -422,26 +422,29 @@ _CLASSIFY_WACHT_S = (1.0, 3.0)
 
 
 async def _haiku_classificatie(client, prompt: str):
-    """Eén classificatievraag, met rem en herkansingen.
+    """Eén classificatievraag, met rem en herkansingen. Geeft de antwoordtekst.
+
+    Sinds 23-09-2026 gaat de vraag eerst naar Gemini en pas daarna naar Claude
+    (backend/services/taalmodel.py). `client` is er alleen nog voor oude
+    aanroepers en wordt niet gebruikt.
 
     Gooit de laatste fout door als het na alle pogingen niet lukt, zodat de
     aanroeper het kan loggen in plaats van het stil als "geen rubriek" te
     verwerken.
     """
+    from backend.services import taalmodel
     laatste = None
     for poging in range(_CLASSIFY_POGINGEN):
         try:
             async with _CLASSIFY_GELIJKTIJDIG:
-                # client.messages.create is a *blocking* sync call. Run it in a worker
-                # thread so the surrounding asyncio.gather in bulk-import actually runs the
-                # classifications concurrently instead of one-at-a-time on the event loop
-                # (which stalled large imports and made them look frozen).
-                return await asyncio.to_thread(
-                    client.messages.create,
-                    model="claude-haiku-4-5-20251001",
-                    max_tokens=200,
-                    messages=[{"role": "user", "content": prompt}],
-                )
+                # Beide clients zijn synchroon; vraag_async zet de vraag in een
+                # werkdraad zodat asyncio.gather in bulk-import echt naast elkaar
+                # indeelt in plaats van een voor een op de lus.
+                return await taalmodel.vraag_async(
+                    prompt, max_tokens=200, tijdslimiet=20.0, wat="rubriekkeuze",
+                    # Zonder denkstap: 182 van 199 gelijk aan mét, 3x zo snel
+                    # (gemeten 23-09-2026 op echte artikelen van acht takken).
+                    denken=False)
         except Exception as e:
             laatste = e
             if poging == _CLASSIFY_POGINGEN - 1:
@@ -473,11 +476,9 @@ async def _classify_with_claude(title: str | None, description: str | None,
     if not (title or description):
         return {}
     try:
-        import anthropic as _anthropic
-        from backend.config import settings as _settings
-        # A per-call timeout so one slow/hanging Haiku response can never freeze a
-        # bulk import indefinitely — on timeout we fall back to the keyword rules.
-        client = _anthropic.Anthropic(api_key=_settings.anthropic_api_key, timeout=20.0)
+        # Een tijdslimiet per vraag (20 s, in _haiku_classificatie) zodat één
+        # trage vraag een bulk-import nooit laat bevriezen; daarna de woordenlijst.
+        client = None
 
         taxonomy_lines = "\n".join(
             f"  {g}: {', '.join(cats)}" for g, cats in _TAXONOMY.items()
@@ -547,8 +548,7 @@ async def _classify_with_claude(title: str | None, description: str | None,
             '  When you pick a "sieraden" category, gender must be "sieraden" too.\n\n'
             'Respond with ONLY JSON: {"gender":"...","category":"...","confidence":"high|medium|low"}'
         )
-        resp = await _haiku_classificatie(client, prompt)
-        raw = resp.content[0].text.strip()
+        raw = (await _haiku_classificatie(client, prompt)).strip()
         m = re.search(r"\{.*\}", raw, re.S)
         if not m:
             return {}
@@ -1219,14 +1219,8 @@ async def _find_twins(cands: list[dict], items: list[dict], platforms_by_item: d
     pool = _twin_pool(cands[0].get("platform"), items, platforms_by_item)
     if not pool:
         return {}
-    try:
-        import anthropic as _anthropic
-        import asyncio as _asyncio
-        from backend.config import settings as _settings
-        client = _anthropic.Anthropic(api_key=_settings.anthropic_api_key, timeout=30.0)
-    except Exception as e:
-        logger.warning(f"Twin detection unavailable: {e}")
-        return {}
+    # Sinds 23-09-2026 eerst Gemini, dan Claude (backend/services/taalmodel.py).
+    from backend.services import taalmodel
 
     # The seller's own brand vocabulary, so a brand can be spotted in a title even
     # when the scan didn't record one for that row.
@@ -1267,13 +1261,15 @@ async def _find_twins(cands: list[dict], items: list[dict], platforms_by_item: d
             'Respond with ONLY a JSON array, e.g. [{"listing":0,"item":3}] — [] if none match.'
         )
         try:
-            resp = await _asyncio.to_thread(
-                client.messages.create,
-                model="claude-haiku-4-5-20251001",
-                max_tokens=1000,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            raw = resp.content[0].text.strip()
+            raw = (await taalmodel.vraag_async(
+                prompt, max_tokens=1000, tijdslimiet=60.0, wat="tweelingzoeker",
+                # Zonder denkstap 2 in plaats van 16 seconden, en deze vraag draait
+                # bij elke keer dat de importlijst laadt. Gemeten 23-09-2026 op 120
+                # echte NL/EN-paren van Revaleur, drie keer: nul koppelingen naar
+                # een ander soort stuk. Wat misging was altijd een tweede exemplaar
+                # met precies dezelfde titel, en een tweeling wordt nooit vanzelf
+                # samengevoegd (zie de regels boven _find_twins).
+                denken=False)).strip()
             m = re.search(r"\[.*\]", raw, re.S)
             if not m:
                 return {}

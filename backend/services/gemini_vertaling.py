@@ -136,17 +136,42 @@ def _opvolger_uit_de_klacht(tekst: str) -> str | None:
     return gevonden.group(1) if gevonden else None
 
 
-def _vraag(model: str, opdracht: str) -> httpx.Response:
-    return httpx.post(
+# DENKRUIMTE BOVENOP HET ANTWOORD (gemeten 23-09-2026 op gemini-3.8-flash).
+# Flash denkt eerst na, en die gedachten tellen mee in maxOutputTokens. Met een
+# grens van 200, genoeg voor een rubriekantwoord, gingen er 194 op aan denken en
+# kwam er '{"gender' terug met finishReason MAX_TOKENS. Het denken uitzetten kan
+# niet op elk model hetzelfde: Flash accepteert thinkingBudget 0, Flash-Lite
+# weigert precies die instelling met een 400. Daarom geven we ruimte in plaats van
+# het denken uit te zetten. Een gratis laag rekent daar niets voor.
+_DENKRUIMTE = 8192
+
+
+def _vraag(model: str, opdracht: str, max_tokens: int = 4096,
+           tijdslimiet: float = _TIJDSLIMIET, denken: bool = True) -> httpx.Response:
+    config = {"temperature": 0,   # vertalen en indelen hoeven niet creatief te zijn
+              "maxOutputTokens": max_tokens + _DENKRUIMTE}
+    # ZONDER DENKSTAP (gemeten 23-09-2026 op 199 echte artikelen): Flash deelde
+    # zonder denken 182 van de 199 in dezelfde rubriek in als met, in 65 in plaats
+    # van 177 seconden. Flash-Lite denkt uit zichzelf niet en weigert
+    # thinkingBudget 0 met een 400, dus die krijgt de instelling niet.
+    if not denken and "lite" not in model:
+        config["thinkingConfig"] = {"thinkingBudget": 0}
+    antwoord = httpx.post(
         f"{_BASIS}/models/{model}:generateContent",
         params={"key": settings.google_api_key},
-        json={
-            "contents": [{"parts": [{"text": opdracht}]}],
-            # Temperatuur 0: een vertaling hoeft niet creatief te zijn.
-            "generationConfig": {"temperature": 0, "maxOutputTokens": 4096},
-        },
-        timeout=_TIJDSLIMIET,
+        json={"contents": [{"parts": [{"text": opdracht}]}], "generationConfig": config},
+        timeout=tijdslimiet,
     )
+    if antwoord.status_code == 400 and "thinkingConfig" in config:
+        # Een model dat de instelling niet kent: dan maar mét denkstap.
+        del config["thinkingConfig"]
+        antwoord = httpx.post(
+            f"{_BASIS}/models/{model}:generateContent",
+            params={"key": settings.google_api_key},
+            json={"contents": [{"parts": [{"text": opdracht}]}], "generationConfig": config},
+            timeout=tijdslimiet,
+        )
+    return antwoord
 
 
 def _lees_antwoord(antwoord: httpx.Response) -> str | None:
@@ -171,6 +196,15 @@ def _lees_antwoord(antwoord: httpx.Response) -> str | None:
 
 def vertaal(opdracht: str) -> str | None:
     """Stel dezelfde vertaalopdracht aan Gemini. None betekent: het lukte niet."""
+    return vraag(opdracht)
+
+
+def vraag(opdracht: str, max_tokens: int = 4096,
+          tijdslimiet: float = _TIJDSLIMIET, denken: bool = True) -> str | None:
+    """Elke tekstvraag aan Gemini, met dezelfde modelkeuze als het vertalen.
+
+    None betekent: het lukte niet (geen sleutel, alle modellen plat, afgekapt).
+    backend/services/taalmodel.py is de ingang die de rest van de code gebruikt."""
     if not beschikbaar():
         return None
     try:
@@ -181,7 +215,14 @@ def vertaal(opdracht: str) -> str | None:
             if model in geprobeerd or model in _OPGEHEVEN:
                 continue
             geprobeerd.add(model)
-            antwoord = _vraag(model, opdracht)
+            try:
+                antwoord = _vraag(model, opdracht, max_tokens, tijdslimiet, denken)
+            except httpx.TransportError as e:
+                # Een tijdslimiet of weggevallen verbinding bij één model is geen
+                # reden om de volgende over te slaan.
+                logger.warning("Gemini: %s antwoordde niet (%s), volgende", model,
+                               type(e).__name__)
+                continue
 
             if antwoord.status_code == 200:
                 if len(geprobeerd) > 1:

@@ -447,37 +447,42 @@ def _vertaal(text: str, target_lang: str, brand: str | None = None) -> str:
             if has_breaks else ""
         )
 
-        # HET VANGNET (19-09-2026). Doet Claude het niet — leeg tegoed, storing,
-        # tijdslimiet — dan krijgt Gemini letterlijk dezelfde opdracht. Het
-        # antwoord gaat daarna door dezelfde controles (`_deugt`), dus een slechte
-        # vertaling van het vangnet komt net zo min op een advertentie terecht als
-        # een slechte van Claude. Lukt ook dat niet, dan gooien we de oorspronkelijke
-        # fout van Claude door en wacht de advertentie, precies zoals hiervoor.
+        # GEMINI EERST, CLAUDE ALS RESERVE (23-09-2026, Daniel: "zet alles op
+        # Gemini"). Tot die dag was het andersom: Claude vertaalde en Gemini was
+        # het vangnet (19-09-2026). Het antwoord gaat hoe dan ook door dezelfde
+        # controles (`_deugt`), dus een slechte vertaling komt niet op een
+        # advertentie, van welk model ook. Lukt geen van beide, dan wacht de
+        # advertentie, precies zoals hiervoor.
         #
-        # Zolang Claude gewoon antwoordt wordt Gemini niet aangeroepen. Eén mislukte
-        # poging per vertaling is genoeg om te weten dat hij plat ligt; de tweede,
-        # strengere poging gaat dan meteen naar het vangnet.
-        claude_deed_het_niet: list[Exception] = []
+        # Eén mislukte poging per model per vertaling is genoeg om te weten dat
+        # het plat ligt; de tweede, strengere poging slaat dat model dan over.
+        plat: dict[str, Exception] = {}
+        laatste = {"model": None}   # wie gaf het laatste antwoord
 
-        def _vraag_het_model(opdracht: str) -> str:
-            if not claude_deed_het_niet:
+        def _vraag_het_model(opdracht: str, zonder_gemini: bool = False) -> str:
+            from backend.services import gemini_vertaling
+            if not zonder_gemini and "gemini" not in plat and gemini_vertaling.beschikbaar():
+                antwoord = gemini_vertaling.vertaal(opdracht)
+                if antwoord:
+                    laatste["model"] = "gemini"
+                    return _strip_text_tags(antwoord)
+                plat["gemini"] = RuntimeError("Gemini gaf geen bruikbare vertaling")
+                logger.warning("Vertalen via Gemini lukte niet — Claude als reserve")
+            if "claude" not in plat:
                 try:
                     response = _claude_client().messages.create(
                         model="claude-haiku-4-5-20251001",
                         max_tokens=1024,
                         messages=[{"role": "user", "content": opdracht}],
                     )
+                    logger.info("Vertaling naar %s kwam van de reserve (Claude)", target_lang)
+                    laatste["model"] = "claude"
                     return _strip_text_tags(response.content[0].text)
                 except Exception as e:  # noqa: BLE001
-                    claude_deed_het_niet.append(e)
-                    logger.warning("Vertalen via Claude lukte niet (%s: %s) — "
-                                   "vangnet Gemini wordt geprobeerd", type(e).__name__, e)
-            from backend.services import gemini_vertaling
-            antwoord = gemini_vertaling.vertaal(opdracht)
-            if antwoord is None:
-                raise claude_deed_het_niet[0]
-            logger.info("Vertaling naar %s kwam van het vangnet (Gemini)", target_lang)
-            return _strip_text_tags(antwoord)
+                    plat["claude"] = e
+                    logger.warning("Vertalen via Claude lukte ook niet (%s: %s)",
+                                   type(e).__name__, e)
+            raise plat.get("claude") or plat.get("gemini") or RuntimeError("geen vertaalmodel")
 
         def _deugt(antwoord: str):
             """Het antwoord terug, of None als het niet te vertrouwen is."""
@@ -564,13 +569,18 @@ def _vertaal(text: str, target_lang: str, brand: str | None = None) -> str:
                 f"<text>{marked_text}</text>"
             )
             result = _deugt(_vraag_het_model(strenger))
+            if result is None and laatste["model"] == "gemini" and "claude" not in plat:
+                # Gemini antwoordde twee keer, maar onbruikbaar (bijvoorbeeld de
+                # brontekst terug). Dan krijgt de reserve nog één kans. Ligt
+                # Claude plat, dan gooit dit en wacht de advertentie.
+                result = _deugt(_vraag_het_model(strenger, zonder_gemini=True))
         if result is None:
-            if claude_deed_het_niet:
-                # Claude deed het niet én het vangnet leverde niets bruikbaars op.
+            if plat:
+                # Een model deed het niet en wat er wél terugkwam was onbruikbaar.
                 # Er is dus geen vertaling, en dan hoort de advertentie te wachten.
                 # De brontekst teruggeven zou hier de fout van 08-09-2026 terugzetten:
                 # een Engelse tekst die als "vertaald" de deur uit gaat.
-                raise claude_deed_het_niet[0]
+                raise plat.get("claude") or plat.get("gemini")
             logger.warning("Vertaling naar %s lukte twee keer niet — brontekst behouden", target_lang)
             return text
         logger.info("translate→%s out: repr=%r", target_lang, result[:200])

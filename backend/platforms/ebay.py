@@ -1660,23 +1660,18 @@ async def _translate_category_names(results: list[dict]) -> list[dict]:
     if not results:
         return results
     unknown = _unknown_segments(results)
-    if unknown and settings.anthropic_api_key:
+    if unknown:
         try:
-            import anthropic
-            client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+            # Sinds 23-09-2026 eerst Gemini, dan Claude (backend/services/taalmodel.py).
+            from backend.services import taalmodel
             numbered = "\n".join(f"{i}: {s}" for i, s in enumerate(unknown))
-            response = client.messages.create(
-                model="claude-haiku-4-5-20251001",
-                max_tokens=1024,
-                messages=[{"role": "user", "content": (
-                    "These are single segments of Dutch eBay category names. "
-                    "Give the English name for each one. Keep the same numbering, "
-                    "one line per segment, format 'number: English name'. "
-                    "If a segment is already English or is a brand name, repeat it unchanged. "
-                    "Return only those lines, nothing else.\n\n" + numbered
-                )}],
-            )
-            text = response.content[0].text.strip()
+            text = (await taalmodel.vraag_async(
+                "These are single segments of Dutch eBay category names. "
+                "Give the English name for each one. Keep the same numbering, "
+                "one line per segment, format 'number: English name'. "
+                "If a segment is already English or is a brand name, repeat it unchanged. "
+                "Return only those lines, nothing else.\n\n" + numbered,
+                max_tokens=1024, wat="eBay-rubrieknamen")).strip()
             for line in text.splitlines():
                 if ":" not in line:
                     continue

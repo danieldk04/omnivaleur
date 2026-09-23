@@ -252,10 +252,6 @@ async def _match_collection_ids_with_claude(item: dict, collections: list[dict],
     collection title (case-insensitively) are used.
     """
     try:
-        import anthropic as _anthropic
-        from backend.config import settings as _settings
-        if not _settings.anthropic_api_key:
-            return []
         titles = [str(c.get("title") or "").strip() for c in collections if c.get("title")]
         if not titles:
             return []
@@ -280,17 +276,11 @@ async def _match_collection_ids_with_claude(item: dict, collections: list[dict],
             "catch-all collection is not a fit. If none fit, return exactly NONE. "
             "Return only the titles or NONE, no commentary."
         )
-        import asyncio
-        client = _anthropic.Anthropic(api_key=_settings.anthropic_api_key)
-        response = await asyncio.to_thread(
-            lambda: client.messages.create(
-                model="claude-haiku-4-5-20251001",
-                max_tokens=200,
-                messages=[{"role": "user", "content": prompt}],
-            )
-        )
-        raw = response.content[0].text.strip()
-        logger.info("Shopify: collection matcher (Claude) returned: %r", raw[:300])
+        # Sinds 23-09-2026 eerst Gemini, dan Claude (backend/services/taalmodel.py).
+        from backend.services import taalmodel
+        raw = (await taalmodel.vraag_async(
+            prompt, max_tokens=200, wat="Shopify-collecties")).strip()
+        logger.info("Shopify: collection matcher returned: %r", raw[:300])
         if not raw or raw.strip().upper().startswith("NONE"):
             return []
         by_title = {str(c.get("title") or "").strip().lower(): c for c in collections}
@@ -301,7 +291,7 @@ async def _match_collection_ids_with_claude(item: dict, collections: list[dict],
                 chosen.append(c)
         return chosen[:limit]
     except Exception as e:
-        logger.warning(f"Shopify: Claude collection matching failed: {e}")
+        logger.warning(f"Shopify: collection matching failed: {e}")
         return []
 
 

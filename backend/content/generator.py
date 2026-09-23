@@ -40,14 +40,41 @@ MAX_TOKENS = 24000
 
 
 def _vraag(client, model: str, prompt: str, max_tokens: int = None):
-    """Eén vraag aan Claude, altijd streamend. Zonder streamen weigert de SDK
-    aanvragen die lang kunnen duren, en dat zijn precies de lange artikelen."""
+    """Eén vraag: eerst Gemini, dan Claude (sinds 23-09-2026, Daniel: "zet alles
+    op Gemini"). Het antwoord heeft altijd de vorm van een Claude-bericht, zodat
+    _afgekapt en _extract_text er hetzelfde mee omgaan. Een afgekapt Gemini-
+    antwoord komt hier nooit terug: gemini_vertaling verwerpt alles wat niet met
+    STOP eindigt, en dan valt de vraag door naar Claude.
+
+    Claude gaat altijd streamend: zonder streamen weigert de SDK aanvragen die
+    lang kunnen duren, en dat zijn precies de lange artikelen."""
+    from types import SimpleNamespace
+    from backend.services import gemini_vertaling
+    if gemini_vertaling.beschikbaar():
+        tekst = gemini_vertaling.vraag(prompt, max_tokens=max_tokens or MAX_TOKENS,
+                                       tijdslimiet=600.0)
+        if tekst:
+            return SimpleNamespace(stop_reason="end_turn",
+                                   content=[SimpleNamespace(text=tekst)])
+        logger.warning("Blog: Gemini gaf niets bruikbaars, Claude als reserve")
+    if client is None:
+        raise RuntimeError("Gemini gaf niets en er is geen Anthropic-sleutel")
     with client.messages.stream(
         model=model,
         max_tokens=max_tokens or MAX_TOKENS,
         messages=[{"role": "user", "content": prompt}],
     ) as stroom:
         return stroom.get_final_message()
+
+
+def _client():
+    """De Claude-client als reserve, of None zonder sleutel."""
+    return anthropic.Anthropic(api_key=settings.anthropic_api_key) \
+        if settings.anthropic_api_key else None
+
+
+def _geen_model() -> bool:
+    return not (settings.anthropic_api_key or settings.google_api_key)
 
 
 def _afgekapt(message, wat: str) -> bool:
@@ -551,11 +578,11 @@ def generate_page_content(
     existing_pages: list[dict],
     refresh_context: dict | None = None,
 ) -> dict | None:
-    if not settings.anthropic_api_key:
-        logger.error("ANTHROPIC_API_KEY ontbreekt — kan geen content genereren")
+    if _geen_model():
+        logger.error("Geen Google- en geen Anthropic-sleutel — kan geen content genereren")
         return None
 
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    client = _client()
     prompt = _build_prompt(keyword, region, pillar, slug, research, existing_pages, refresh_context)
 
     try:
@@ -614,11 +641,11 @@ SOURCE FAQ:
 
 def translate_to_dutch(generated: dict) -> dict | None:
     """Translates an already-generated English article into Dutch, preserving HTML structure and links."""
-    if not settings.anthropic_api_key:
-        logger.error("ANTHROPIC_API_KEY ontbreekt — kan niet vertalen")
+    if _geen_model():
+        logger.error("Geen Google- en geen Anthropic-sleutel — kan niet vertalen")
         return None
 
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    client = _client()
     prompt = _build_translation_prompt(generated)
 
     try:

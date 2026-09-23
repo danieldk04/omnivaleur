@@ -69,19 +69,38 @@ def vangnet(monkeypatch):
             aanroepen.append(opdracht)
             return antwoord
         monkeypatch.setattr(gv, "vertaal", nep)
+        monkeypatch.setattr(gv.settings, "google_api_key", "test-sleutel")
         return aanroepen
 
     return zet
 
 
-# ── 1. gewone dag: het vangnet blijft onaangeroerd ───────────────────────────
+# ── 1. gewone dag: Gemini vertaalt, Claude blijft onaangeroerd ─────────────
+#
+# Sinds 23-09-2026 (Daniel: "zet alles op Gemini") is Gemini de eerste keus en
+# Claude de reserve. Tot die dag was het andersom.
 
-def test_werkt_claude_dan_wordt_gemini_niet_aangeroepen(monkeypatch, vangnet):
-    monkeypatch.setattr(cl, "_claude_client", lambda: claude_die_werkt(NEDERLANDS))
-    aanroepen = vangnet("DIT MAG NOOIT GEBRUIKT WORDEN")
+def test_werkt_gemini_dan_wordt_claude_niet_aangeroepen(monkeypatch, vangnet):
+    pogingen = []
+    monkeypatch.setattr(cl, "_claude_client", lambda: claude_die_plat_ligt(pogingen))
+    aanroepen = vangnet(NEDERLANDS)
 
     assert _vertaal(ENGELS, "nl") == NEDERLANDS
-    assert aanroepen == [], "Gemini werd aangeroepen terwijl Claude gewoon antwoordde"
+    assert len(aanroepen) == 1
+    assert pogingen == [], "Claude werd aangeroepen terwijl Gemini gewoon antwoordde"
+
+
+def test_ligt_gemini_plat_dan_vertaalt_claude(monkeypatch, vangnet):
+    monkeypatch.setattr(cl, "_claude_client", lambda: claude_die_werkt(NEDERLANDS))
+    aanroepen = vangnet(None)
+
+    assert _vertaal(ENGELS, "nl") == NEDERLANDS
+    assert len(aanroepen) == 1, "Gemini werd na één mislukking nog eens geprobeerd"
+
+
+def test_zonder_google_sleutel_vertaalt_claude_gewoon(monkeypatch):
+    monkeypatch.setattr(cl, "_claude_client", lambda: claude_die_werkt(NEDERLANDS))
+    assert _vertaal(ENGELS, "nl") == NEDERLANDS
 
 
 # ── 2. lege rekening: het vangnet neemt het over ─────────────────────────────
@@ -93,8 +112,8 @@ def test_lege_rekening_gemini_vertaalt_en_publiceren_gaat_door(monkeypatch, vang
 
     assert _vertaal(ENGELS, "nl") == NEDERLANDS
     assert len(aanroepen) == 1, "het vangnet kreeg de opdracht niet precies één keer"
-    assert "<text>" in aanroepen[0], "het vangnet kreeg niet dezelfde opdracht als Claude"
-    assert len(pogingen) == 1, "Claude werd nog een keer geprobeerd terwijl hij plat lag"
+    assert "<text>" in aanroepen[0], "Gemini kreeg niet de volledige vertaalopdracht"
+    assert pogingen == [], "Claude werd geprobeerd terwijl Gemini al vertaalde"
 
 
 def test_alineas_overleven_het_vangnet(monkeypatch, vangnet):
