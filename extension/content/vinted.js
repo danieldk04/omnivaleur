@@ -3104,6 +3104,17 @@
       };
       const norm = lv.replace(/^eu\s*/i, "").replace(/\s+/g, " ").trim();
       const wants = new Set([lv, norm]);
+      // Onze eigen maat kan zelf al samengesteld zijn ("s / 36 / 8", uit een
+      // combi-maat bij import). Zonder dit uit elkaar te trekken bleef alleen
+      // de hele string in `wants` staan, die nooit gelijk is aan een los
+      // Vinted-label als "s" of "36" — elke combi-maat faalde daardoor altijd.
+      if (norm.includes("/")) {
+        for (const deel of norm.split("/").map(d => d.trim()).filter(Boolean)) {
+          wants.add(deel);
+          if (SIZE_WORDS[deel]) wants.add(SIZE_WORDS[deel]);
+          if (/^\d+$/.test(deel)) wants.add("w" + deel);
+        }
+      }
       if (SIZE_WORDS[norm]) wants.add(SIZE_WORDS[norm]);
       for (const [word, abbr] of Object.entries(SIZE_WORDS)) if (abbr === norm) wants.add(word);
       if (/^\d+$/.test(norm)) { wants.add("w" + norm); wants.add(norm + " "); }
