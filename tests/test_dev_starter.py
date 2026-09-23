@@ -25,6 +25,8 @@ def kast(monkeypatch):
     monkeypatch.setattr(S.A.L, "_db_schrijf",
                         lambda naam, waarde: inhoud.__setitem__(naam, waarde) or True)
     monkeypatch.setattr(S, "_werkmap_schoon", lambda: (True, ""))
+    monkeypatch.setattr(S.K, "signalen", lambda staat, *a, **k: {})
+    monkeypatch.setattr(S, "_iemand_aan_het_werk", lambda staat: "")
     return inhoud
 
 
@@ -169,6 +171,28 @@ def test_de_eigen_boekhouding_telt_niet_als_werk_van_iemand_anders(monkeypatch):
         stdout = " M .claude-flow/data/graph-state.json\n?? .claude-flow/sessions/x.json\n"
     monkeypatch.setattr(S.subprocess, "run", lambda *a, **k: Uit())
     assert S._werkmap_schoon() == (True, "")
+
+
+def test_losse_rommel_in_de_map_houdt_de_starter_niet_tegen(monkeypatch):
+    """Zips, logboeken en .DS_Store stonden er altijd; de starter startte nooit."""
+    class Uit:
+        stdout = ' M .DS_Store\n M backend/.DS_Store\n?? "backend 2.log"\n?? oud.zip\n'
+    monkeypatch.setattr(S.subprocess, "run", lambda *a, **k: Uit())
+    assert S._werkmap_schoon() == (True, "")
+
+
+def test_echt_werk_van_iemand_anders_houdt_hem_wel_tegen(monkeypatch):
+    class Uit:
+        stdout = " M scripts/dev_starter.py\n?? oud.zip\n"
+    monkeypatch.setattr(S.subprocess, "run", lambda *a, **k: Uit())
+    assert S._werkmap_schoon()[0] is False
+
+
+def test_niet_ertussen_als_er_net_iemand_anders_committe(kast, gestart, monkeypatch):
+    kast["bug_signalen"] = {"eentje": _signaal()}
+    monkeypatch.setattr(S, "_iemand_aan_het_werk", lambda staat: "net gecommit")
+    S.ronde()
+    assert gestart == []
 
 
 # ── de opdracht die de sessie meekrijgt ────────────────────────────────────

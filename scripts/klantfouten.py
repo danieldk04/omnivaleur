@@ -196,9 +196,12 @@ def signalen(staat: dict, db=None, nu: datetime | None = None) -> dict:
         open_ = {}
     if open_:
         sleutels = sorted(open_)
-        naam = "klantfouten-" + hashlib.sha1("|".join(sleutels).encode()).hexdigest()[:8]
         klanten = sorted({k for s in open_.values() for k in s["klanten"]})
         momenten = sorted(m for s in open_.values() for m in s["momenten"])
+        # Het eerste moment hoort in de naam: komt dezelfde soort na een
+        # reparatie terug, dan is dat een nieuwe ronde en geen afgesloten oude.
+        naam = "klantfouten-" + hashlib.sha1(
+            ("|".join(sleutels) + momenten[0][:16]).encode()).hexdigest()[:8]
         uit[naam] = {"status": "open", "moet_zeker": True, "soort": "klantfouten",
                      "melders": klanten, "sleutels": sleutels, "soorten": open_,
                      "omschrijving": f"{len(sleutels)} foutsoort(en) bij {len(klanten)} klant(en)",

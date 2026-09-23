@@ -39,12 +39,13 @@ import os
 import shutil
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "scripts"))
 import mail_analyse as A  # noqa: E402
+import klantfouten as K  # noqa: E402
 
 STAAT_SLEUTEL = "dev_sessies"
 
@@ -54,7 +55,10 @@ STAAT_SLEUTEL = "dev_sessies"
 THUIS = Path.home() / "Library" / "Application Support" / "omnivaleur"
 LOGMAP = THUIS / "dev-sessies"
 
-MAX_PER_DAG = 3
+# Sinds 23-09-2026 ook de klantfouten uit de jobs-tabel (klantfouten.py): een
+# fout bij een klant hoort binnen het kwartier opgepakt te worden, niet morgen.
+# Elke sessie loopt op het abonnement; bij een volle limiet wacht hij vanzelf.
+MAX_PER_DAG = 8
 
 # Wat de sessie mee mag maken voor hij zichzelf afkapt. Ruim, want repareren,
 # testen en pushen kost tijd; niet oneindig, want een vastgelopen sessie mag de
@@ -163,6 +167,14 @@ def _opruimen(signalen: dict, staat: dict) -> bool:
     """
     veranderd = False
     for sleutel in list(staat):
+        # Afgeronde klantfoutenrondes na een week weg; klantfouten.py heeft ze
+        # hooguit een dag nodig, en anders groeit de staat eindeloos.
+        if (sleutel.startswith(("klantfouten-", "dagronde-"))
+                and staat[sleutel].get("status") != "gestart"
+                and _minuten_bezig(staat[sleutel]) > 7 * 24 * 60):
+            staat.pop(sleutel)
+            veranderd = True
+            continue
         stand = (signalen.get(sleutel) or {}).get("status")
         if stand in ("opgelost", "afgewezen", "verlopen"):
             staat.pop(sleutel)
@@ -274,16 +286,54 @@ def _werkmap_schoon() -> tuple[bool, str]:
                              capture_output=True, text=True, timeout=60)
     except Exception as e:  # noqa: BLE001
         return False, f"git antwoordde niet ({e})"
+    # Losse bestanden die git niet kent (zips, logboeken, .DS_Store van Finder)
+    # zijn geen werk van iemand: een sessie commit alleen wat hij zelf aanraakt.
+    # Ze stonden er altijd, en daardoor startte de starter nooit (23-09-2026).
     regels = [r for r in uit.stdout.splitlines()
-              if r.strip() and ".claude-flow/" not in r]
+              if r.strip() and ".claude-flow/" not in r
+              and not r.startswith("??") and not r.rstrip().endswith(".DS_Store")]
     if regels:
         return False, f"{len(regels)} bestand(en) met wijzigingen: " + \
                       ", ".join(r[3:] for r in regels[:4])
     return True, ""
 
 
+RECENT_WERK_MIN = 20
+
+
+def _iemand_aan_het_werk(staat: dict) -> str:
+    """Werkt er net iemand anders in deze map? Dan niet ertussen komen.
+
+    De auto-push-hook commit elke wijziging binnen een minuut, dus een schone
+    werkmap zegt niet dat er niemand bezig is. Een verse commit die niet van
+    een eigen sessie komt, zegt dat wel: Daniel of een andere Claude-sessie.
+    """
+    try:
+        uit = subprocess.run(["git", "log", "-1", "--format=%ct"], cwd=REPO,
+                             capture_output=True, text=True, timeout=60)
+        laatste = datetime.fromtimestamp(int(uit.stdout.strip()), timezone.utc)
+    except Exception:  # noqa: BLE001
+        return ""
+    minuten = (datetime.now(timezone.utc) - laatste).total_seconds() / 60
+    if minuten > RECENT_WERK_MIN:
+        return ""
+    for s in staat.values():
+        eind = s.get("afgerond_op") or s.get("gestart")
+        try:
+            eind = datetime.fromisoformat(str(eind))
+        except (TypeError, ValueError):
+            continue
+        if eind.tzinfo is None:
+            eind = eind.replace(tzinfo=timezone.utc)
+        if s.get("gestart") and eind + timedelta(minutes=5) >= laatste:
+            return ""       # die commit kwam van onze eigen sessie
+    return f"er is {int(minuten)} min geleden nog gecommit door iemand anders"
+
+
 # ---------------------------------------------------------------- opdracht
 def opdracht(sleutel: str, signaal: dict) -> str:
+    if signaal.get("soort") in ("klantfouten", "dagronde"):
+        return K.opdracht(sleutel, signaal)
     melders = ", ".join(signaal.get("melders") or []) or "onbekend"
     waarom = "; ".join(signaal.get("waarom_zeker") or []) or "gemarkeerd als MOET ZEKER"
     return f"""Je bent de developer van Omnivaleur. De klantenservice heeft één storing
@@ -348,7 +398,8 @@ def _start(sleutel: str, signaal: dict, staat: dict) -> bool:
         return False
 
     staat[sleutel] = {"status": "gestart", "pid": proc.pid, "log": str(log),
-                      "gestart": datetime.now(timezone.utc).isoformat()}
+                      "gestart": datetime.now(timezone.utc).isoformat(),
+                      "sleutels": signaal.get("sleutels") or []}
     if not _bewaar(staat):
         # Kunnen we niet onthouden dat hij loopt, dan start de volgende ronde
         # hem opnieuw. Liever afbreken dan twee sessies in dezelfde map.
@@ -375,9 +426,14 @@ def _hartslag() -> None:
     A._schrijf(HARTSLAG_SLEUTEL, {"wanneer": datetime.now(timezone.utc).isoformat()})
 
 
+def _signalen(staat: dict) -> dict:
+    """De oude mail-buglijst plus de klantfouten die de wachter nu ziet."""
+    return {**A.bugs(), **K.signalen(staat)}
+
+
 def ronde(droog: bool = False) -> None:
-    signalen = A.bugs()
     staat = _staat()
+    signalen = _signalen(staat)
     if not droog:
         _hartslag()
     if _opruimen(signalen, staat):
@@ -401,6 +457,10 @@ def ronde(droog: bool = False) -> None:
     schoon, waarom = _werkmap_schoon()
     if not schoon:
         print(f"Werkmap is niet schoon ({waarom}) — niets gestart.")
+        return
+    bezig = _iemand_aan_het_werk(staat)
+    if bezig:
+        print(f"Niet ertussen gekomen: {bezig}. Volgende ronde weer.")
         return
 
     # Sloeg de vorige sessie meteen af, dan gaat de volgende dat binnen een paar
@@ -429,8 +489,8 @@ def ronde(droog: bool = False) -> None:
 
 
 def status() -> None:
-    signalen = A.bugs()
     staat = _staat()
+    signalen = _signalen(staat)
     if staat:
         print("Sessies:")
         for sleutel, s in sorted(staat.items(), key=lambda kv: kv[1].get("gestart", "")):
