@@ -8577,7 +8577,10 @@ function renderRefreshView() {
       const msLeft = new Date(relist.recreate_at).getTime() - now;
       const publishing = relist.recreate_status === 'claimed';
       if (!deleteDone) {
-        statusCell = `<span class="rf-pill rf-pill-relisting"><span class="rf-spin">↻</span> Removing old listing…</span>`;
+        // Zelfde reden als bij het detailscherm: verwijderen loopt eerst de hele
+        // kledingkast door, dus dit kan een paar minuten duren zonder dat er iets
+        // stuk is (gemeten 23-09-2026, 6 minuten voor een echte verwijdering).
+        statusCell = `<span class="rf-pill rf-pill-relisting" title="Checking your whole Vinted wardrobe first, so this can take a few minutes — that's normal"><span class="rf-spin">↻</span> Removing old listing…</span>`;
       } else if (publishing || msLeft <= 0) {
         statusCell = `<span class="rf-pill rf-pill-relisting"><span class="rf-spin">↻</span> Publishing new listing…</span>`;
       } else {
