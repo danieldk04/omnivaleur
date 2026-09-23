@@ -12859,3 +12859,18 @@ leeg: er is nooit een echte verzending geweest. De wekelijkse klaarzet-sessie
 nu leeg is en alleen de vier vaste blokjes verstuurbaar zijn. Outlook/iCloud en
 mail-tester staan nog open; Frank (FOTZ, Hotmail) meldde vandaag dat onze koude
 mail in zijn ongewenste mail belandde.
+
+## 23-09-2026 (middag): Shopify-producten inlezen gebouwd, en een deploy die drie keer faalde
+
+Aanleiding: Goudlief wil vanuit Shopify op Marktplaats; Daniel gaf opdracht het te
+bouwen. Import > Shopify > Scan leest nu de actieve producten van de gekoppelde
+winkel via de server (backend/services/shopify_scan.py), zonder extensie, en zet ze
+in dezelfde importlijst als de andere kanalen. Echt gedraaid op Revaleur's winkel
+(ywqad3-xb): 304 producten over twee pagina's, 2 uitverkocht overgeslagen, 248
+meteen gekoppeld aan bestaande artikelen, 54 klaar om te importeren. Een verkoop in
+de winkel koppelt op het productnummer, dat de import op de advertentierij zet.
+Beperking: een product met meerdere varianten komt binnen als één artikel.
+
+Deploy: de auto-push-hook zette een tussenstand live (gebruik van BackgroundTasks
+zonder de import). Drie deploys faalden om 15:37 tot 15:43 op de healthcheck; de
+site bleef op de vorige versie draaien. Om 15:56 geslaagd (e1e11b4c).

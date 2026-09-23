@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## auto-push-zet-tussenstand-live
+
+*23-09-2026 — De auto-push-hook commit en pusht elke Edit/Write los; een wijziging die over twee stappen verdeeld is (of een stap via Bash) gaat half live en Railway start niet op*
+
+23-09-2026: bij het bouwen van Shopify-inlezen gebruikte ik `BackgroundTasks` in een Edit en zette de bijbehorende import pas daarna met `sed` via Bash. De hook pushte de Edit meteen; de sed-stap werd niet gecommit. Drie Railway-deploys faalden op `NameError` (healthcheck), Daniel kreeg "build failed"-mails. De site bleef op de vorige versie draaien, dus geen klant merkte het.
+
+**Why:** elke Edit/Write is voor de hook een losse release naar productie; Bash-wijzigingen gaan er niet mee.
+
+**How to apply:** een wijziging die meerdere plekken raakt (import + gebruik, nieuwe functie + aanroep) in één Edit/Write zetten, of eerst het deel dat niets breekt (import, nieuwe module) en pas daarna het gebruik. Nooit een tijdelijke terugzetting (voor-en-na-proef) met de Edit-tool doen: via Bash naar een kopie, en daarna controleren dat `git diff` schoon is. Na afloop altijd `railway deployment list` bekijken. Zie ook "deploy-pipeline" en "voor-en-na-proef-mag-geen-head-gebruiken".
+
+---
+
 ## leadspreadsheet-zelf-bijwerken
 
 *23-09-2026 — Daniel wil dat Claude de leadspreadsheet zelf bijwerkt, nooit als actiepunt; zo kom je lokaal aan de sheetsleutel*
