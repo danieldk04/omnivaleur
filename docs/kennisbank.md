@@ -17,6 +17,24 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## leadspreadsheet-zelf-bijwerken
+
+*23-09-2026 — Daniel wil dat Claude de leadspreadsheet zelf bijwerkt, nooit als actiepunt; zo kom je lokaal aan de sheetsleutel*
+
+Daniel, 23-09-2026: correcties in de leadspreadsheet (fase, status, reden) doe ik zelf, in dezelfde beurt als de reparatie. Nooit meer "zet dit in de sheet" als actiepunt voor hem.
+
+**Why:** hij kreeg twee keer achter elkaar een sheet-klusje terug omdat de sleutel "alleen op de server" stond. Dat was een uitvlucht: de sleutel is op te halen.
+
+**How to apply:**
+- Sleutel staat buiten de repo in `~/.omnivaleur/sheets-sleutel.json` (chmod 600). Ontbreekt hij (andere machine/account): `npx -y @railway/cli variables --json`, alleen GOOGLE_SHEETS_SLEUTEL eruit naar dat bestand, de rest weggooien. Railway-CLI is ingelogd als danieldekoning66@gmail.com. Nooit in .env of in git.
+- Draaien: `export GOOGLE_SHEETS_SLEUTEL="$(cat ~/.omnivaleur/sheets-sleutel.json)"`, dan `m.Leadboek()` uit scripts/leadgen_mail.py (afgemeld, wacht_op_daniel, ...) of `boek.blad.noteer(lead, regel, {"Kolom": waarde})`; None wist een cel. Altijd `boek.afsluiten()`, anders blijft het in de buffer.
+- Een lead die niet in `_leads()` staat: `{"email": adres}` volstaat voor noteer.
+- Nalezen met `leadgen_sheets.Leadblad(Sheets())._lees()` op kolommen E-mail, Fase, Status, Afgesloten reden.
+- Bij een afmelding ook Status van "Interesse" af halen; afgemeld() laat die staan.
+Zie ook "leadlist-in-google-sheets" en "afmelding-mist-stoppen-en-outlook-citaat".
+
+---
+
 ## afmelding-mist-stoppen-en-outlook-citaat
 
 *23-09-2026 — Afmeldwoorden vingen "stoppen" niet, en Outlook-citaten (streep van lage streepjes) werden als eigen tekst gelezen*
