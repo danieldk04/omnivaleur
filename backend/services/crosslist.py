@@ -2324,6 +2324,13 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
             continue
         seen_plat.add(sleutel)
         plat = listing["platform"]
+        if plat in _EXTENSION_DELIST_PLATFORMS and _nooit_online(db, listing):
+            (await naast_de_lus(lambda listing=listing: db.table("listings").update({
+                "status": "delisted", "error_message": None,
+            }).eq("id", listing["id"]).execute()))
+            logger.info("[sold] %s op %s kwam nooit online, vervalt zonder verwijderopdracht",
+                        listing["item_id"], plat)
+            continue
         if plat in _EXTENSION_DELIST_PLATFORMS and user_id:
             # item_id van de listing zelf: bij een tweeling hoort de advertentie
             # bij de ándere rij, en een verwijderopdracht op het verkeerde item
