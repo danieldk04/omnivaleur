@@ -17,6 +17,203 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## injectie-die-faalt-wordt-stil-undefined
+
+*23-09-2026 — Een async functie die via chrome.scripting.executeScript in de pagina draait en een afgewezen belofte teruggeeft, komt terug als undefined zonder foutmelding; elke vangnettekst erna is een verzinsel*
+
+`execInTab` in `extension/background.js` doet `resolve(results?.[0]?.result)`.
+Geeft de geïnjecteerde **async** functie een afgewezen belofte terug, dan zet
+Chrome daar `undefined` neer en zegt verder niets: `chrome.runtime.lastError`
+blijft leeg. De aanroeper ziet dus niet "het ging mis", maar "er kwam niets
+terug", en wat hij dáárover zegt is per definitie geraden.
+
+**Gemeten, 23-09-2026 (klant 4c30200f, extensie 1.0.347).** Drie Admarkt-imports
+binnen één minuut gaven alle drie exact:
+`Admarkt returned no live adverts. page="?" steps=[none]`. Die tekst is
+aantoonbaar onjuist. `stappen` krijgt zijn eerste regel ("campagnes: N") direct
+ná de eerste tRPC-aanroep, dus `steps=[none]` bewijst dat die aanroep afbrak, en
+`page="?"` bewijst dat er helemaal geen meta terugkwam. Er is dus nooit
+vastgesteld dat er geen advertenties zijn. De echte reden (HTTP 401 zonder
+Admarkt-sessie, html in plaats van json, een procedurenaam die op de Belgische
+tenant anders heet) verdween in het niets. De klant klikte drie keer opnieuw,
+want de tekst gaf hem niets om op te handelen.
+
+De proef `tests/admarkt-zegt-wat-er-misging-test.js` reproduceert die zin
+lettergrijp voor lettergrijp op de oude code: 9 controles rood vóór, alle 14
+groen ná.
+
+**Why:** een vangnettekst die een oorzaak noemt in plaats van een symptoom is
+erger dan geen tekst. "Geen advertenties gevonden" stuurt de klant zijn Admarkt
+in, terwijl het antwoord "log in" is. Zie ook "storing-mag-nooit-als-antwoord-tellen"
+en "succes-nooit-uit-uitsluitingslijst".
+
+**How to apply:** laat een geïnjecteerde functie nooit gooien. Zet het hele
+lichaam in een `try/catch` en geef de reden terug als WAARDE
+(`return { fout: e.message, meta: {...} }`), want een waarde overleeft de sprong
+naar de achtergrond wel. Onderscheid daarna drie dingen die er hetzelfde
+uitzien: (1) de injectie meldde een fout, (2) er kwam niets terug want het
+tabblad was weg, (3) de injectie werkte en vond echt niets. Alleen bij (3) mag
+je "niets gevonden" zeggen. Dezelfde vorm (`await execInTab(... async () => ...)`)
+staat nog op meer plekken in background.js.
+
+---
+
+## chrome-ruimt-profiel-op-bij-venster-dicht
+
+*22-09-2026 — Zonder de background-permissie stopt de extensie zodra het laatste Chrome-venster dicht gaat; Chrome ruimt dan het profiel op*
+
+Chrome sluit niet alleen het venster als de klant zijn laatste venster sluit: het
+ruimt het hele profiel op (DestroyProfileOnBrowserClose), en daarmee stopt de
+extensie onmiddellijk. Geen alarms, geen poll, niets. De permissie `background`
+in het manifest houdt het profiel in leven en lost dat op. Sinds 1.0.288 staat
+hij erin.
+
+Gemeten 03-09-2026 op Chrome 152 (Mac), twee identieke testextensies naast elkaar
+in eigen profielen, pingend via chrome.alarms: venster open allebei 2 tikken in
+75 sec; alle vensters dicht 155 sec lang 0 tikken zonder de permissie en 5 met.
+Controleproef die het mechanisme aanwijst: dezelfde extensie zonder de permissie
+maar gestart met `--disable-features=DestroyProfileOnBrowserClose` tikte met alle
+vensters dicht wél door.
+
+Toevoegen was veilig omdat Chrome zelf zegt dat er geen nieuwe waarschuwing bij
+komt: `chrome.management.getPermissionWarningsByManifest` geeft voor het oude en
+het nieuwe manifest exact dezelfde lijst. Dat is de meting die je bij elke nieuwe
+permissie moet doen voordat je hem toevoegt, want een permissie die wél een
+waarschuwing oplevert zet de extensie bij iedereen stil. Zie
+"extension-release-bump-version" en de bewakingstest
+tests/test_extensie_permissies.py.
+
+**Die meting staat sinds 22-09-2026 als proef in de repo:**
+`node tests/permissie-waarschuwing-echt-test.mjs <permissie>` start een echte
+Chrome, laadt de echte extensie en legt de waarschuwingenlijst van het huidige
+manifest naast die van hetzelfde manifest zonder die permissie. Draai hem
+voordat je iets aan `permissions` toevoegt, en zet het antwoord erbij in de
+lijst in tests/test_extensie_permissies.py. Die pythonproef vergelijkt alleen
+namen; of een naam een waarschuwing draagt weet alleen Chrome.
+
+Zo is ook `power` afgedekt (1.0.325, de permissie die de computer wakker houdt
+zolang er werk klaarstaat, zie "plaatsen-stopt-als-de-computer-slaapt").
+Gemeten 22-09-2026 op Chrome 152 met extensie 1.0.348: mét en zónder `power`
+exact dezelfde drie waarschuwingen. Hij stond er sinds 13-09 in zonder dat de
+lijst in de bewakingstest was bijgewerkt, dus die proef stond negen dagen rood
+terwijl er niets aan de hand was.
+
+Let op: een uitgezette of slapende computer blijft onoplosbaar. Daarvoor is er
+"offline-waarschuwing-per-mail".
+
+Testtruc die je nodig hebt: sinds Chrome 137 wordt `--load-extension` genegeerd.
+Laden gaat via CDP `Extensions.loadUnpacked` met de vlag
+`--enable-unsafe-extension-debugging`. Zo geladen extensies zijn wel vluchtig:
+ze staan niet in het profiel en komen na een profielopruiming niet terug.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "chrome-sitetoegang-op-klik" — elke opdracht loopt stil dood in een lege pagina; permissions.contains verraadt het
+
+---
+
+## extensie-stempel-test-loopt-achter-op-het-scherm
+
+*22-09-2026 — "Tests die functies op naam uit app.html knippen breken stil zodra dat scherm een functie erbij aanroept; eerst een vraag, dan pas een storing"*
+
+Er is geen bouwstap voor de frontend, dus `tests/extensie-stempel-test.js` knipt
+de échte functies op naam uit `frontend/app.html` en draait ze in een sandbox. Dat
+is bewust: het bewijst iets over de code die de klant draait, niet over een kopie.
+
+De prijs daarvan: de test noemt de functies met de hand op in een lijst. Roept
+`renderExtSetup` er morgen één bij aan die niet in die lijst staat, dan valt de
+test om met `ReferenceError: <naam> is not defined` terwijl het scherm gewoon
+werkt.
+
+Zo gebeurde het op 09-09-2026: `renderExtSetup` ging `extVersionStaatStil()`
+aanroepen, en die riep op zijn beurt `versieAchterstand()` aan en las
+`_blokkeerAchterstand`. Eén naam bijzetten was niet genoeg; de fout schuift dan
+gewoon een regel op.
+
+**Hoe hiermee om te gaan:** loopt zo'n test om, volg de aanroepketen helemaal uit
+voor je iets aan de code verandert. Zet alle functies in de lijst en alle losse
+variabelen (`_gepubliceerdeVersie`, `_blokkeerAchterstand`) in de sandbox. Een
+rode test is hier eerst een vraag: is het scherm veranderd, of is er echt iets
+kapot? Zie ook "voor-en-na-proef-mag-geen-head-gebruiken".
+
+**HETZELFDE, BREDER, OP 22-09-2026.** Veertien rode proeven op main; dertien
+daarvan waren de proef die achterliep, niet de code. Drie vormen, alle drie
+dezelfde valkuil:
+
+- `tests/wachtrijbalk-eerlijk-test.js` knipt `renderActivityBar` uit app.html,
+  en die ging sinds 1.0.330 `extState` lezen. Die stond niet in de sandbox:
+  `ReferenceError`, terwijl de balk het bij klanten gewoon doet. Precies het
+  geval hierboven, een halve maand later.
+- `NepBoek` in `tests/test_video_opvolging.py` (een nagebouwd leadlogboek) miste
+  `video_gestart`, dat er op 15-09 bij kwam op het échte `Leadboek`. Negen
+  proeven rood.
+- `test_publiceren_stempelt_zijn_payload_ook` telde hoe vaak het taalstempel in
+  de brontekst stond. Er kwam een goede afslag bij, de telling klopte niet meer.
+
+**De regel:** een nagebouwd onderdeel in een proef (sandbox, nep-object,
+brontekst-telling) loopt vanzelf achter op de echte code, en dan lijkt werkende
+code kapot. Laat de proef zélf uit de echte code aflezen wat er gevraagd wordt
+(welke methodes op het object worden aangeroepen, welke constante erbij hoort) in
+plaats van een lijst met de hand bij te houden, en toets een bedoeling ("elke
+uitgang zet een stempel") in plaats van een aantal.
+
+**En het omgekeerde:** ga er ook niet van uit dat een rode proef altijd de proef
+is. In dezelfde ronde wees één van de veertien wél een echte storing aan, alleen
+niet in de functie waar de proef naar keek: zie
+"stripe-api-versie-verplaatst-velden".
+
+---
+
+## stripe-api-versie-verplaatst-velden
+
+*22-09-2026 — "Stripe verplaatste current_period_end, subscription, paid en payment_intent stil naar andere plekken; de webhook crashte of deed stil niets en klantstatussen liepen weken scheef"*
+
+Op 18-09-2026 stonden vier van de zes betalende accounts verkeerd in de database:
+twee betalende klanten op `payment_processing` (en dus op weg naar uitsluiting),
+twee opgezegde klanten op `active` (en dus gratis aan het werk). Oorzaak: het
+Stripe-account draait op API-versie **2026-06-24.dahlia**, en die versie heeft
+velden verplaatst waar de code nog op rekende.
+
+**Wat waar naartoe ging (gemeten op echte webhook-payloads, niet uit documentatie):**
+
+| oud | nieuw | gedrag van de oude code |
+|---|---|---|
+| `subscription["current_period_end"]` | `subscription["items"]["data"][0]["current_period_end"]` | KeyError, 21x in het foutenlogboek |
+| `invoice["subscription"]` | `invoice["parent"]["subscription_details"]["subscription"]` | stil `None`, handler sloeg over |
+| `invoice["paid"]` | `invoice["status"] == "paid"` | stil `None`, handler sloeg over |
+| `invoice["payment_intent"]` | `invoice["payments"]["data"][0]["payment"]["payment_intent"]` | stil `None`, `expand=["payment_intent"]` geeft geen fout maar levert het veld niet |
+
+**Waarom:** de crash was zichtbaar (foutenlogboek), maar drie van de vier waren
+stil. De `invoice`-handlers gaven geen enkel signaal: geen fout, geen logregel,
+alleen een `if` die nooit waar werd. Een lopende SEPA-incasso werd daardoor niet
+meer herkend, en een geslaagde betaling zette niemand meer op `active`. Dat is
+weken doorgelopen zonder dat iemand iets merkte, tot een klant eruit zou vliegen.
+
+**Hoe toe te passen:** ga er bij Stripe nooit van uit dat een veld staat waar het
+stond. Meet het met een echte aanroep (`curl https://api.stripe.com/v1/...`) en
+lees `stripe-version` uit de antwoordkop. En let op: `expand[]=<veld>` van een
+veld dat niet meer bestaat geeft **geen** foutmelding, het veld ontbreekt gewoon
+in het antwoord. Een `try/except` vangt dat dus niet af.
+
+**NAGEKOMEN OP 22-09-2026: één reparatie was niet genoeg.** Dezelfde vraag
+("wacht deze factuur nog op een lopende incasso?") werd op twee plekken los van
+elkaar beantwoord: `_incasso_loopt_nog` in backend/api/billing.py (de webhook) en
+`_subscription_awaiting_incasso` in backend/services/billing.py (het slot van de
+klant). Op 18-09 is alleen de webhook meegegaan. De tweede las vier dagen langer
+`expand=["latest_invoice.payment_intent"]` en dus altijd `None`: wie een SEPA-
+incasso had lopen kreeg het slot terwijl het geld onderweg was, zonder één
+foutregel. Beide hangen nu aan één functie (`incasso_loopt_nog` in
+backend/services/billing.py).
+
+**De regel die daaruit volgt:** repareer nooit één plek waar een externe dienst
+van vorm veranderde. Zoek eerst álle plekken die datzelfde veld lezen
+(`grep -rn payment_intent backend/`) en repareer ze in dezelfde beurt, of zet ze
+op één functie zodat ze niet opnieuw uit elkaar lopen. Zie
+"twee-lijstjes-knopnamen-groeien-uit-elkaar".
+
+Zie ook "stripe-webhook-mist-invoice-events" en "sepa-incasso-bedenktijd-te-kort".
+
+---
+
 ## smartwatch-wijkt-uit-naar-sporthorloges
 
 *22-09-2026 — Marktplaats geeft maar 2 gratis plekken in Smartwatches; sinds 22-09-2026 wijkt Omnivaleur dan zelf uit naar Sporthorloges in plaats van de rij terug te nemen*
@@ -1659,41 +1856,6 @@ eerst wélke gebeurtenissen het endpoint binnenkrijgt
 gebeurtenis aankan. Een handler in de code bewijst niet dat het bericht aankomt.
 
 Zie ook "stripe-api-versie-verplaatst-velden" en "sepa-incasso-bedenktijd-te-kort".
-
----
-
-## stripe-api-versie-verplaatst-velden
-
-*18-09-2026 — "Stripe verplaatste current_period_end, subscription, paid en payment_intent stil naar andere plekken; de webhook crashte of deed stil niets en klantstatussen liepen weken scheef"*
-
-Op 18-09-2026 stonden vier van de zes betalende accounts verkeerd in de database:
-twee betalende klanten op `payment_processing` (en dus op weg naar uitsluiting),
-twee opgezegde klanten op `active` (en dus gratis aan het werk). Oorzaak: het
-Stripe-account draait op API-versie **2026-06-24.dahlia**, en die versie heeft
-velden verplaatst waar de code nog op rekende.
-
-**Wat waar naartoe ging (gemeten op echte webhook-payloads, niet uit documentatie):**
-
-| oud | nieuw | gedrag van de oude code |
-|---|---|---|
-| `subscription["current_period_end"]` | `subscription["items"]["data"][0]["current_period_end"]` | KeyError, 21x in het foutenlogboek |
-| `invoice["subscription"]` | `invoice["parent"]["subscription_details"]["subscription"]` | stil `None`, handler sloeg over |
-| `invoice["paid"]` | `invoice["status"] == "paid"` | stil `None`, handler sloeg over |
-| `invoice["payment_intent"]` | `invoice["payments"]["data"][0]["payment"]["payment_intent"]` | stil `None`, `expand=["payment_intent"]` geeft geen fout maar levert het veld niet |
-
-**Waarom:** de crash was zichtbaar (foutenlogboek), maar drie van de vier waren
-stil. De `invoice`-handlers gaven geen enkel signaal: geen fout, geen logregel,
-alleen een `if` die nooit waar werd. Een lopende SEPA-incasso werd daardoor niet
-meer herkend, en een geslaagde betaling zette niemand meer op `active`. Dat is
-weken doorgelopen zonder dat iemand iets merkte, tot een klant eruit zou vliegen.
-
-**Hoe toe te passen:** ga er bij Stripe nooit van uit dat een veld staat waar het
-stond. Meet het met een echte aanroep (`curl https://api.stripe.com/v1/...`) en
-lees `stripe-version` uit de antwoordkop. En let op: `expand[]=<veld>` van een
-veld dat niet meer bestaat geeft **geen** foutmelding, het veld ontbreekt gewoon
-in het antwoord. Een `try/except` vangt dat dus niet af.
-
-Zie ook "stripe-webhook-mist-invoice-events" en "sepa-incasso-bedenktijd-te-kort".
 
 ---
 
@@ -4034,32 +4196,6 @@ Zie ook "marktplaats-2dehands-link-kost-negen-euro".
 
 ---
 
-## extensie-stempel-test-loopt-achter-op-het-scherm
-
-*09-09-2026 — "Tests die functies op naam uit app.html knippen breken stil zodra dat scherm een functie erbij aanroept; eerst een vraag, dan pas een storing"*
-
-Er is geen bouwstap voor de frontend, dus `tests/extensie-stempel-test.js` knipt
-de échte functies op naam uit `frontend/app.html` en draait ze in een sandbox. Dat
-is bewust: het bewijst iets over de code die de klant draait, niet over een kopie.
-
-De prijs daarvan: de test noemt de functies met de hand op in een lijst. Roept
-`renderExtSetup` er morgen één bij aan die niet in die lijst staat, dan valt de
-test om met `ReferenceError: <naam> is not defined` terwijl het scherm gewoon
-werkt.
-
-Zo gebeurde het op 09-09-2026: `renderExtSetup` ging `extVersionStaatStil()`
-aanroepen, en die riep op zijn beurt `versieAchterstand()` aan en las
-`_blokkeerAchterstand`. Eén naam bijzetten was niet genoeg; de fout schuift dan
-gewoon een regel op.
-
-**Hoe hiermee om te gaan:** loopt zo'n test om, volg de aanroepketen helemaal uit
-voor je iets aan de code verandert. Zet alle functies in de lijst en alle losse
-variabelen (`_gepubliceerdeVersie`, `_blokkeerAchterstand`) in de sandbox. Een
-rode test is hier eerst een vraag: is het scherm veranderd, of is er echt iets
-kapot? Zie ook "voor-en-na-proef-mag-geen-head-gebruiken".
-
----
-
 ## marktplaats-2dehands-link-kost-negen-euro
 
 *09-09-2026 — Een webadres in de advertentietekst maakt van een gratis 2dehands-zoekertje een bestelregel van EUR 9; het tabblad landt op /payments/orderOverview en de plaatsing lijkt "vastgelopen"*
@@ -6111,44 +6247,6 @@ klantwachtwoorden te draaien is bewust afgewezen. Zie docs/team-notes.md,
 
 **Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
 - "klantcalls-incentive-idee" — call boeken = 5-7 dagen extra toegang, om feedback te verzamelen; geen prio
-
----
-
-## chrome-ruimt-profiel-op-bij-venster-dicht
-
-*03-09-2026 — Zonder de background-permissie stopt de extensie zodra het laatste Chrome-venster dicht gaat; Chrome ruimt dan het profiel op*
-
-Chrome sluit niet alleen het venster als de klant zijn laatste venster sluit: het
-ruimt het hele profiel op (DestroyProfileOnBrowserClose), en daarmee stopt de
-extensie onmiddellijk. Geen alarms, geen poll, niets. De permissie `background`
-in het manifest houdt het profiel in leven en lost dat op. Sinds 1.0.288 staat
-hij erin.
-
-Gemeten 03-09-2026 op Chrome 152 (Mac), twee identieke testextensies naast elkaar
-in eigen profielen, pingend via chrome.alarms: venster open allebei 2 tikken in
-75 sec; alle vensters dicht 155 sec lang 0 tikken zonder de permissie en 5 met.
-Controleproef die het mechanisme aanwijst: dezelfde extensie zonder de permissie
-maar gestart met `--disable-features=DestroyProfileOnBrowserClose` tikte met alle
-vensters dicht wél door.
-
-Toevoegen was veilig omdat Chrome zelf zegt dat er geen nieuwe waarschuwing bij
-komt: `chrome.management.getPermissionWarningsByManifest` geeft voor het oude en
-het nieuwe manifest exact dezelfde lijst. Dat is de meting die je bij elke nieuwe
-permissie moet doen voordat je hem toevoegt, want een permissie die wél een
-waarschuwing oplevert zet de extensie bij iedereen stil. Zie
-"extension-release-bump-version" en de bewakingstest
-tests/test_extensie_permissies.py.
-
-Let op: een uitgezette of slapende computer blijft onoplosbaar. Daarvoor is er
-"offline-waarschuwing-per-mail".
-
-Testtruc die je nodig hebt: sinds Chrome 137 wordt `--load-extension` genegeerd.
-Laden gaat via CDP `Extensions.loadUnpacked` met de vlag
-`--enable-unsafe-extension-debugging`. Zo geladen extensies zijn wel vluchtig:
-ze staan niet in het profiel en komen na een profielopruiming niet terug.
-
-**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
-- "chrome-sitetoegang-op-klik" — elke opdracht loopt stil dood in een lege pagina; permissions.contains verraadt het
 
 ---
 

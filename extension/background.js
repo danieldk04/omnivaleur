@@ -6505,95 +6505,158 @@ async function bgScanAdmarkt(job, serverUrl) {
       let totaal = 0;
       let gezien = 0;   // hoeveel live advertenties we al voorbij hebben laten gaan
 
-      // Advertenties hangen altijd onder een campagne; er is er minstens één,
-      // ook bij wie er nooit een heeft aangemaakt ("Campagne zonder titel").
-      const campagnes = (await roep("campaign.getAllCampaigns", {})).campaigns || [];
-      stappen.push(`campagnes: ${campagnes.length}`);
-
-      for (const c of campagnes) {
-        let token = null;
-        for (let pagina = 0; pagina < 250; pagina++) {
-          const invoer = { campaignId: c.id };
-          if (token) invoer.pageToken = token;
-          const data = await roep("ad.getAds", invoer);
-          const ads = data.ads || [];
-          // Alleen op de EERSTE pagina meetellen. data.count is het totaal van
-          // de hele campagne, niet van deze pagina — bij elke volgende pagina
-          // er nog eens bij optellen maakte van 5.534 advertenties er 16.602.
-          if (pagina === 0 && typeof data.count === "number") totaal += data.count;
-
-          for (const ad of ads) {
-            // Alleen wat live staat; gepauzeerd of verwijderd hoort niet als
-            // bestaande advertentie geïmporteerd te worden.
-            if (ad.status && ad.status !== "ACTIVE") continue;
-            // Alles wat een eerdere scan al heeft opgehaald overslaan, zodat deze
-            // ronde echt de vólgende lading oplevert.
-            gezien++;
-            // Kennen we hem al? Dan overslaan, waar hij ook in de rij stond.
-            // Alleen als de server geen lijst meestuurde vallen we terug op de
-            // oude telling (oudere server, of de lijst kon niet opgehaald worden).
-            if (alBekend.size) {
-              if (alBekend.has(String(ad.id))) continue;
-            } else if (gezien <= OVERSLAAN) {
-              continue;
-            }
-            const fotos = (ad.images || [])
-              .filter(i => i && i.status !== "ERROR")
-              .map(i => {
-                const l = i.links || {};
-                const beste = l["1024x1024"] || l["726x726"] || l["498x498"] || i.src;
-                return !beste ? null
-                  : beste.startsWith("//") ? `https:${beste}` : beste;
-              })
-              .filter(Boolean);
-
-            items.push({
-              platform_listing_id: String(ad.id),
-              title: ad.title || "",
-              // Admarkt kent GEEN prijs en GEEN omschrijving: het zijn advertenties
-              // die naar de eigen webwinkel van de verkoper wijzen, niet naar een
-              // Marktplaats-advertentie. Hier iets verzinnen zou erger zijn dan
-              // leeg laten — de verkoper vult dit zelf aan bij het bevestigen.
-              price: null,
-              photo_url: fotos[0] || null,
-              photo_urls: fotos,
-              category_name: "",
-              category_id: ad.categoryId != null ? String(ad.categoryId) : "",
-              status: ad.status || "",
-              // Bewust GEEN platform_listing_url: het enige adres dat Admarkt
-              // geeft is de webwinkel van de verkoper. Dat als advertentielink
-              // opslaan zou later een verkeerde pagina openen of verwijderen.
-            });
-            if (items.length >= MAX) break;
-          }
-
-          stappen.push(`campagne ${c.id} pagina ${pagina + 1}: ${ads.length} adv`);
-          token = data.nextPageToken || null;
-          if (!token || !ads.length || items.length >= MAX) break;
-          await new Promise(r => setTimeout(r, 200));
+      // ALLES HIERONDER MOET ALS WAARDE TERUGKOMEN, NOOIT ALS EXCEPTION.
+      // Chrome laat een injectie die een afgewezen belofte teruggeeft stil op
+      // `undefined` uitkomen: de échte reden (HTTP 401, html in plaats van
+      // json, een procedurenaam die op de Belgische tenant anders heet)
+      // verdween dan spoorloos en de klant las "Admarkt returned no live
+      // adverts" terwijl er nooit iets gevraagd wás. Gemeten bij klant
+      // 4c30200f op 22-09-2026: drie keer die tekst met steps=[none] en
+      // page="?" — en `stappen` krijgt zijn eerste regel dírect na de eerste
+      // aanroep, dus een lege `stappen` bewijst dat die aanroep afbrak. Hij
+      // klikte daarna nog twee keer opnieuw, want de tekst gaf hem niets.
+      try {
+        // Advertenties hangen altijd onder een campagne; er is er minstens één,
+        // ook bij wie er nooit een heeft aangemaakt ("Campagne zonder titel").
+        const campagnes = (await roep("campaign.getAllCampaigns", {})).campaigns || [];
+        stappen.push(`campagnes: ${campagnes.length}`);
+        if (!campagnes.length) {
+          // Nul campagnes bestaat niet op een echt zakelijk account. Dit is dus
+          // geen lege voorraad maar de verkeerde sessie, en dat hoort er ook te
+          // staan in plaats van "geen advertenties".
+          return { fout: "no campaigns on this account", meta: {
+            stappen, pagina_titel: (document.title || "").slice(0, 120),
+            adres: (location.href || "").slice(0, 200),
+          } };
         }
-        if (items.length >= MAX) break;
-      }
 
-      return {
-        items,
-        meta: {
-          bron: "trpc ad.getAds",
-          totaal,
-          gevonden: items.length,
-          overgeslagen: alBekend.size || OVERSLAAN,
-          rest: Math.max(0, totaal - (alBekend.size || 0) - items.length),
-          stappen: stappen.slice(0, 25),
-          zonder_prijs: items.length,
-          pagina_titel: (document.title || "").slice(0, 120),
-        },
-      };
+        for (const c of campagnes) {
+          let token = null;
+          for (let pagina = 0; pagina < 250; pagina++) {
+            const invoer = { campaignId: c.id };
+            if (token) invoer.pageToken = token;
+            const data = await roep("ad.getAds", invoer);
+            const ads = data.ads || [];
+            // Alleen op de EERSTE pagina meetellen. data.count is het totaal van
+            // de hele campagne, niet van deze pagina — bij elke volgende pagina
+            // er nog eens bij optellen maakte van 5.534 advertenties er 16.602.
+            if (pagina === 0 && typeof data.count === "number") totaal += data.count;
+
+            for (const ad of ads) {
+              // Alleen wat live staat; gepauzeerd of verwijderd hoort niet als
+              // bestaande advertentie geïmporteerd te worden.
+              if (ad.status && ad.status !== "ACTIVE") continue;
+              // Alles wat een eerdere scan al heeft opgehaald overslaan, zodat deze
+              // ronde echt de vólgende lading oplevert.
+              gezien++;
+              // Kennen we hem al? Dan overslaan, waar hij ook in de rij stond.
+              // Alleen als de server geen lijst meestuurde vallen we terug op de
+              // oude telling (oudere server, of de lijst kon niet opgehaald worden).
+              if (alBekend.size) {
+                if (alBekend.has(String(ad.id))) continue;
+              } else if (gezien <= OVERSLAAN) {
+                continue;
+              }
+              const fotos = (ad.images || [])
+                .filter(i => i && i.status !== "ERROR")
+                .map(i => {
+                  const l = i.links || {};
+                  const beste = l["1024x1024"] || l["726x726"] || l["498x498"] || i.src;
+                  return !beste ? null
+                    : beste.startsWith("//") ? `https:${beste}` : beste;
+                })
+                .filter(Boolean);
+
+              items.push({
+                platform_listing_id: String(ad.id),
+                title: ad.title || "",
+                // Admarkt kent GEEN prijs en GEEN omschrijving: het zijn advertenties
+                // die naar de eigen webwinkel van de verkoper wijzen, niet naar een
+                // Marktplaats-advertentie. Hier iets verzinnen zou erger zijn dan
+                // leeg laten — de verkoper vult dit zelf aan bij het bevestigen.
+                price: null,
+                photo_url: fotos[0] || null,
+                photo_urls: fotos,
+                category_name: "",
+                category_id: ad.categoryId != null ? String(ad.categoryId) : "",
+                status: ad.status || "",
+                // Bewust GEEN platform_listing_url: het enige adres dat Admarkt
+                // geeft is de webwinkel van de verkoper. Dat als advertentielink
+                // opslaan zou later een verkeerde pagina openen of verwijderen.
+              });
+              if (items.length >= MAX) break;
+            }
+
+            stappen.push(`campagne ${c.id} pagina ${pagina + 1}: ${ads.length} adv`);
+            token = data.nextPageToken || null;
+            if (!token || !ads.length || items.length >= MAX) break;
+            await new Promise(r => setTimeout(r, 200));
+          }
+          if (items.length >= MAX) break;
+        }
+
+        return {
+          items,
+          meta: {
+            bron: "trpc ad.getAds",
+            totaal,
+            gevonden: items.length,
+            overgeslagen: alBekend.size || OVERSLAAN,
+            rest: Math.max(0, totaal - (alBekend.size || 0) - items.length),
+            stappen: stappen.slice(0, 25),
+            zonder_prijs: items.length,
+            pagina_titel: (document.title || "").slice(0, 120),
+          },
+        };
+      } catch (e) {
+        // De reden komt als WAARDE terug; zie het blok hierboven.
+        return { fout: String((e && e.message) || e).slice(0, 300), meta: {
+          stappen, pagina_titel: (document.title || "").slice(0, 120),
+          adres: (location.href || "").slice(0, 200),
+        } };
+      }
     }, [ADMARKT_MAX, OVERSLAAN, BEKEND]);
 
     console.log("[Omnivaleur] Admarkt:", JSON.stringify(result?.meta || {}));
 
-    if (!result || !result.items || !result.items.length) {
-      const m = (result && result.meta) || {};
+    const site = platform === "2dehands" ? "2dehands.be" : "marktplaats.nl";
+
+    // De scan kwam ergens op vast te zitten en heeft dat zelf verteld. Die
+    // reden hoort bij de klant te komen, want "geen advertenties gevonden"
+    // stuurt hem de verkeerde kant op: hij gaat zijn Admarkt nakijken terwijl
+    // het antwoord is dat hij niet ingelogd is of dat de site iets veranderde.
+    if (result && result.fout) {
+      const m = result.meta || {};
+      const sporen =
+        ` page="${m.pagina_titel || "?"}" url=${m.adres || "?"} ` +
+        `steps=[${(m.stappen || []).join(" | ") || "none"}]`;
+      if (result.fout === "no campaigns on this account") {
+        throw new Error(
+          `Admarkt (${site}) shows no campaigns at all for this session, and every ` +
+          `business account has at least one. This almost always means the browser ` +
+          `is signed in to a different ${site} account than the business one, or the ` +
+          `Admarkt session expired. Sign in to Admarkt in this browser and try again.` +
+          sporen
+        );
+      }
+      throw new Error(
+        `Admarkt (${site}) could not be read: ${result.fout}. Nothing was imported. ` +
+        `If this says HTTP 401 or 403 you are not signed in to Admarkt in this browser.` +
+        sporen
+      );
+    }
+
+    // Geen enkel antwoord: het werktabblad was weg voor de scan klaar was.
+    if (!result) {
+      throw new Error(
+        `Admarkt (${site}) gave no answer at all: the work tab closed before the ` +
+        `scan could finish. Nothing was imported. This usually means the browser ` +
+        `window was closed or the computer went to sleep during the import.`
+      );
+    }
+
+    if (!result.items || !result.items.length) {
+      const m = result.meta || {};
       // Niets nieuws terwijl we al een deel binnen hadden: dan zijn we gewoon
       // aan het eind. Dat is klaar, geen fout.
       if ((OVERSLAAN > 0 || BEKEND.length) && m.totaal) return { items: [], meta: { ...m, klaar: true } };

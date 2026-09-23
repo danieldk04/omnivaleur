@@ -12520,3 +12520,80 @@ server of op Daniels machine, waar de sleutels wel staan.
 **Het advies dat daaruit volgt:** alleen de lederhosen nu voor laten kruipen, de
 rest aan de nachtronde overlaten. Dat kost Toon nul tijd en zijn overige
 advertenties hun positie niet.
+
+## 23-09-2026: Dagelijkse klantfouten
+
+Gemeten om 08:30: 47 opdrachten van 8 accounts in de laatste 24 uur (gisteren
+52), 5 fout, alle vijf van vóór 22-09 08:31 en alle vijf al in het verslag van
+gisteren. Sinds gisteren 12:00 is er geen enkele opdracht meer misgelopen.
+/health 200 op commit 2643ec08.
+
+Zes Vinted-scans staan te wachten (9,5 tot 17,9 uur), bij zes verschillende
+klanten. Dat is geen storing: geen enkele extensie is nog online, de laatste
+hartslagen liggen tussen 17:20 en 22:30 gisteravond. Vijf van de zes scans zijn
+ná de laatste hartslag ingepland. Eén (3bfbed2c, 15:50) viel een halfuur vóór
+het uitzetten; dat is te kort om er iets uit te concluderen.
+
+Vergeleken met gisteren:
+- Opgelost: geen nieuwe Vinted-tijdslimieten, geen nieuwe 2dehands-gevallen.
+- Nog aanwezig, nu gerepareerd: de Admarkt-fouten van 4c30200f (zie hieronder).
+- Nog aanwezig, klant-eigen: d25f18a2 heeft sinds 21-09 18:00 geen extensie aan
+  (nu 36,5 uur), met een scan in de wacht.
+
+**Gerepareerd (1.0.349): een mislukte Admarkt-import zei het verkeerde.**
+Klant 4c30200f (nieuwe proefklant sinds 22-09 07:02) klikte op 22-09 om 07:07 en
+07:08 drie keer op importeren en kreeg drie keer exact:
+`Admarkt returned no live adverts. page="?" steps=[none]`.
+
+Die tekst kan niet kloppen. `stappen` krijgt zijn eerste regel ("campagnes: N")
+direct ná de eerste tRPC-aanroep, dus `steps=[none]` bewijst dat die aanroep
+afbrak; `page="?"` bewijst dat er helemaal geen meta terugkwam. Er is dus nooit
+vastgesteld dat hij geen advertenties heeft. Het mechanisme: de scan draait via
+`chrome.scripting.executeScript` als **async** functie, en geeft die een
+afgewezen belofte terug, dan zet Chrome daar stil `undefined` neer zonder
+`lastError`. `execInTab` doet `resolve(results?.[0]?.result)`, dus de echte
+reden (HTTP 401 zonder Admarkt-sessie, html in plaats van json, een
+procedurenaam die op de Belgische tenant anders heet) verdween spoorloos.
+
+Nu: het hele lichaam van de injectie zit in een try/catch en geeft de reden als
+waarde terug. De klant leest voortaan of hij moet inloggen, of dat de site iets
+veranderde, en de melding onderscheidt drie dingen die er eerst hetzelfde
+uitzagen: de scan meldde een fout, het werktabblad was weg, of de scan werkte en
+vond echt niets. Nul campagnes is een eigen geval geworden: dat bestaat niet op
+een echt zakelijk account, dus dat is de verkeerde sessie en geen lege voorraad.
+
+Proef: `tests/admarkt-zegt-wat-er-misging-test.js`. Tegen 6765d602 (`--oud`)
+vallen 9 van de 14 controles om, en de oude code produceert daarbij lettergrijp
+voor lettergrijp dezelfde zin die de klant zag. Met de reparatie alle 14 groen,
+inclusief drie controles dat een werkend account nog steeds gewoon importeert.
+Werkt pas na upload van 1.0.349 in de Web Store.
+
+Dit raakt Watchero (Martijn Bax) direct: al zijn 13 advertenties lopen via
+Admarkt. Ging de import bij hem mis, dan had hij dezelfde nietszeggende tekst
+gekregen.
+
+Open, niet gerepareerd:
+- **Dezelfde vorm staat op meer plekken in background.js**: overal waar
+  `await execInTab(tabId, async () => ...)` staat verdwijnt een fout binnenin
+  stil. Alleen de Admarkt-scan is nu dichtgezet.
+- **Account 3bfbed2c werkt door op een proef die op 05-08-2026 afliep.** Status
+  `trial_expired`, respijt van 2 dagen dus verlopen sinds 07-08, en toch op
+  22-09 geslaagde plaatsingen op Marktplaats, 2dehands en Vinted. Bijna zeker
+  Daniels eigen account: `check_access` laat een eigenaarsmail altijd door. Van
+  hieruit niet vast te stellen, want het e-mailadres staat in auth.users en daar
+  geeft de service-sleutel "User not allowed" op. Daniel moet dit bevestigen;
+  is het níét zijn account, dan draait er iemand zeven weken gratis mee.
+- **`tests/annuleerknop-wachtrij-test.js` valt om**, met
+  `ReferenceError: renderKanaalSessie is not defined`. Die proef leest
+  `frontend/app.html`; de annuleerroute daarin roept inmiddels
+  `renderKanaalSessie()` aan en de nagebouwde omgeving in de proef kent die niet.
+  Het is de proef die achterloopt, niet de knop. Staat los van deze reparatie.
+- **Wat niet te meten was:** fouten die alleen in de browser van de klant
+  blijven en nooit naar de server gaan. Alles hierboven komt uit `jobs`,
+  `extension_heartbeat` en `subscriptions`; een klant die vastloopt zonder dat
+  er een opdracht mislukt is hier onzichtbaar.
+
+Klant-eigen, niet gerepareerd: 0b28c1ce kreeg opnieuw de betaalmuur op
+"Wonen tafellampen" (22-09 08:31, de rubriek kost geld), en 4c30200f kreeg een
+mislukte verwijdering van zijn testadvertentie "Test kleding" omdat het tabblad
+dichtging voordat de controle kon lopen.
