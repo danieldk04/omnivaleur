@@ -243,7 +243,10 @@ succes ondertussen!""",
 
 
 AFMELD_WOORDEN = re.compile(
-    r"\b(stop|afmelden|uitschrijven|unsubscribe|opt.?out"
+    r"\b(stop(pen|t)?|afmelden|uitschrijven|unsubscribe|opt.?out"
+    # "Zou je kunnen stoppen met mailtjes sturen" (Allesvrij, 23-09-2026) viel
+    # erdoor omdat alleen het kale "stop" telde, en werd als warm ingedeeld.
+    r"|geen (mails?|mailtjes|berichten) meer"
     # "niet meer mailen" ving "niet meer TE mailen" niet, en zo schreef iemand het
     # nu juist. Een gemiste afmelding is de duurste fout die hier bestaat.
     r"|niet meer (te )?(mail|benader|schrijf|contacteer|lastigval)\w*"
@@ -2444,6 +2447,12 @@ def _eigen_tekst(body: str) -> str:
     regels = []
     for r in (body or "").splitlines():
         kaal = r.strip()
+        # Outlook citeert niet met ">" maar zet een streep van lage streepjes
+        # boven onze mail, en antwoordt altijd erboven. Budgetheld schreef "Dit
+        # mag zeker!", maar ons eigen "stoppen jullie gewoon weer" eronder las
+        # als afmelding.
+        if re.match(r"^_{10,}$", kaal):
+            break
         if kaal.startswith(">"):
             continue
         # De inleidende regel van een citaat ("X schreef op ...:", "Van: ...").

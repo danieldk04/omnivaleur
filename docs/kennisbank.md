@@ -17,6 +17,17 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## afmelding-mist-stoppen-en-outlook-citaat
+
+*23-09-2026 — Afmeldwoorden vingen "stoppen" niet, en Outlook-citaten (streep van lage streepjes) werden als eigen tekst gelezen*
+
+23-09-2026: "Zou je kunnen stoppen met mailtjes sturen" (Allesvrij) werd als warm ingedeeld, want AFMELD_WOORDEN kende alleen het kale "stop". Ook "geen mailtjes meer" miste. Tegelijk las _eigen_tekst Outlook-citaten mee: Outlook citeert zonder ">" onder een regel van lage streepjes, dus onze eigen zin "stoppen jullie gewoon weer" en andere sjabloontekst telde als hun antwoord. Zo werd "Kom maar eens langs in de winkel" (billiebongrt34, 27-08) een afmelding.
+
+**Why:** een gemiste afmelding is de duurste fout; een warme lead als afmelding wegzetten kost een klant.
+**How to apply:** bij elke wijziging aan de indeling de oude en nieuwe versie over alle mail_reacties draaien en elke omslag lezen. Zie ook "concurrent-met-ja-signaal-is-warm".
+
+---
+
 ## concurrent-met-ja-signaal-is-warm
 
 *23-09-2026 — Koude-mailreactie die "gaat al automatisch" zegt maar óók om het filmpje vraagt of een kanaal wil, werd als concurrent weggezet en kwam nooit bij Daniel*
