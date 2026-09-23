@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## concurrent-met-ja-signaal-is-warm
+
+*23-09-2026 — Koude-mailreactie die "gaat al automatisch" zegt maar óók om het filmpje vraagt of een kanaal wil, werd als concurrent weggezet en kwam nooit bij Daniel*
+
+23-09-2026, Frank (FOTZ vintage): "worden automatisch doorgelinkt naar Reliving" maakte hem concurrent, terwijl hij schreef dat hij Etsy en 2dehands wil. Gemeten op het reactielogboek: 4 van de 10 concurrent-reacties waren eigenlijk warm (filmpje gevraagd, Vinted interessant, Lightspeed-koppeling gevraagd).
+
+**Why:** concurrent haalt een lead uit "jij bent aan zet"; een onterecht warme kost Daniel één blik, een onterecht bezette kost de lead.
+
+**How to apply:** INTERESSE in scripts/leadgen_mail.py maakt van concurrent + ja-signaal een warme reactie. Nooit kaal "interesse" toevoegen: dan telt "geen interesse" als ja. Toets een wijziging aan de indeling altijd tegen mail_reacties (91 echte reacties) met de oude versie ernaast. Zie "koude-mail-autonoom".
+
+---
+
 ## vinted-combi-maat-mist-eigen-split
 
 *23-09-2026 — "Vinted-maatkeuze faalde altijd bij een combi-maat als 'S / 36 / 8'; opgelost 23-09-2026"*

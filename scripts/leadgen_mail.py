@@ -289,6 +289,20 @@ CONCURRENT = re.compile(
     r"|\b(heb|hebben|via|met) (een|mijn|onze|ons) (eigen )?(programma|feed|koppeling|script|systeem)"
     r"|\beigen (feed|koppeling|systeem|programma)\b"
     r"|\bfeed\b.{0,30}\b(naar|richting)\b", re.I)
+# "Gebruikt al iets" plus een duidelijk ja-signaal is geen bezet, maar warm.
+# Gemeten op 23-09-2026: van de tien reacties die als concurrent in de lijst
+# stonden vroegen er vier gewoon om het filmpje of noemden een kanaal dat ze
+# wél willen ("Vinted zou interessant zijn", "mijn voorkeur zou Etsy en evt
+# 2dehands zijn"). Door CONCURRENT verdwenen ze uit "jij bent aan zet" en zag
+# Daniel ze nooit terug. Een onterecht warme reactie kost hem één blik; een
+# onterecht bezette kost een lead. Bewust geen kaal "interesse": dan telt
+# "geen interesse" als ja.
+INTERESSE = re.compile(
+    r"\bkan (geen|nooit) kwaad\b"
+    r"|\binteressant\b"
+    r"|\bhoor ik (dat |het )?graag\b"
+    r"|\b(mijn|onze) voorkeur\b"
+    r"|\bstuur (maar|gerust)\b", re.I)
 BOUNCE_AFZENDERS = re.compile(r"mailer-daemon|postmaster|no-?reply", re.I)
 # Een automatisch antwoord is geen antwoord. Zou je het wel zo tellen, dan valt
 # iemand die "ik ben op vakantie" terugstuurt uit de opvolging en hoor je nooit
@@ -1704,7 +1718,7 @@ def _check_inbox(state: dict, boek: "Leadboek", dagen: int) -> tuple[int, int, i
             if AFMELD_WOORDEN.search(kort):
                 soort = "afmelding"
             elif CONCURRENT.search(kort):
-                soort = "concurrent"
+                soort = "warm" if INTERESSE.search(kort) else "concurrent"
             elif AFWIJZING.search(kort):
                 soort = "afwijzing"
             else:
