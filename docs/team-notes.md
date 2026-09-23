@@ -12597,3 +12597,56 @@ Klant-eigen, niet gerepareerd: 0b28c1ce kreeg opnieuw de betaalmuur op
 "Wonen tafellampen" (22-09 08:31, de rubriek kost geld), en 4c30200f kreeg een
 mislukte verwijdering van zijn testadvertentie "Test kleding" omdat het tabblad
 dichtging voordat de controle kon lopen.
+
+## 23-09-2026 — Correctie: Toons Duitse advertenties kwamen uit ónze vertaling, niet uit zijn tekst
+
+Daniel vroeg deze sessie om het werk van gisteravond voor Toon af te maken. Eerst
+`vreemde_taal_advertenties.py` gedraaid, met de sleutels die op Daniels machine
+staan: **"1351 artikelen, 1694 live advertenties, geen enkele in een andere taal"**.
+Die nul was fout, en daaruit bleek dat de oorzaak van 22-09 ook niet klopte.
+
+**Wat er echt live staat.** De openbare zoek-API van Marktplaats (verkoper
+17981431, 1096 advertenties) en 2dehands (verkoper 44572806, 606) gelezen en elke
+advertentie door `leest_als_andere_taal` gehaald: **10 fout**. Vijf Duits, alle
+vijf lederhosen (MP m2443801898, m2441997006; 2dehands m2443963620, m2443752753,
+m2443714498). Vijf Engels, woonartikelen op MP (m2441473056 Shiraz-tapijt,
+m2441457214 tribaal tapijt, m2441306128 rood kleedje, m2441289655 tafelkleed,
+m2439629809 woondeken).
+
+**De oorzaak, uit de opdrachten zelf.** Voor de khaki lederhose
+(item e722c370): de items-rij is sinds 02-09 Nederlands ("Heren originele
+trachten Lederhosen Maat 50 Kleur khaki Stof leer/suede"). De opdracht van 05-09
+droeg die Nederlandse tekst. Die van 12-09 en 17-09 droegen "Herren Original
+Trachten Lederhosen Größe 50 Farbe Khaki", mét stempel `_taal: nl`. De titel
+bleef Nederlands, alleen de omschrijving werd Duits. Hetzelfde bij het tafelkleed
+(item 772fdecf): Nederlands in de rij, Engels in de opdracht van 10-09. Het is
+dus de fout van 12-09 ("vertaling draait de richting om"), nu ook richting Duits:
+een korte Nederlandse tekst met te weinig stopwoorden gaat door de vertaling en
+komt er in een andere taal uit. **Toon heeft geen Duitse tekst geplakt**; de
+notitie van 22-09 (19:45) die dat zegt, is op dat punt fout. Zijn vraag
+"moet ik alles nakijken?" had dus ook geen zin: bij hem stond alles goed.
+
+**Houdt de reparatie van gisteravond dit tegen? Ja, gemeten.** `_zet_taal_goed`
+gedraaid op de echte opdracht van 17-09 (met nep-database, zonder mail):
+op 6765d602 gaat hij Duits de deur uit, op 2643ec08 komt hij er Nederlands uit.
+De Nederlandse opdracht van 05-09 zonder stempel drie keer door de nieuwe zeef:
+drie keer Nederlands. De Duitse vertaling van 12-09 zelf is vandaag niet
+nagebootst (Gemini gaf drie keer netjes Nederlands terug; het lokale
+Anthropic-tegoed is leeg). /health draait 2643ec08.
+
+**Waarom het script nul zei.** Het leest `items.title/description`, en die zijn
+Nederlands. De fout zit alleen in wat er naar het kanaal ging. Bovendien liep het
+anders vast op de afkoeling van 21 dagen (deze advertenties zijn van 06-09 tot
+18-09). Niet meer gebruiken om te bepalen wat er live staat.
+
+**Gedaan, met akkoord van Daniel.** De vijf lederhosen-advertenties opnieuw
+klaargezet via `refresh_listing(..., "relist", negeer_afkoeling=True)`: een
+reparatie, geen verversing. Dagquotum en de MP-sublimiet van 3 golden gewoon (2
+op MP, 3 op 2dehands). De vijf nieuwe create-opdrachten nagelezen: allemaal
+Nederlands, gepland 23-09 tussen 08:26 en 09:53 UTC. Ze lopen zodra Chrome bij
+Toon openstaat. De vijf Engelse woonartikelen zijn bewust niet aangeraakt: die
+komen in de nachtronde terug (cyclus 27 dagen, dus rond 06-10 tot 11-10) en gaan
+dan door de nieuwe zeef.
+
+**Nog open.** Of de vijf plaatsingen echt Nederlands online komen: dat is een
+rij met status `done` en een blik op de openbare lijst, na 12:00 vandaag.

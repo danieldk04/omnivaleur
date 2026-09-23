@@ -17,6 +17,40 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vertaling-draait-de-richting-om
+
+*23-09-2026 — Een tekst die al in de doeltaal staat opnieuw laten vertalen levert in de helft van de gevallen de ANDERE taal op; sla het model over*
+
+Nederlandse advertentietekst die opnieuw door "vertaal naar het Nederlands" gaat
+komt er in 3 van de 6 pogingen in het ENGELS uit (gemeten 12-09-2026 op Toons
+tapijt, `_vertaal` met haiku-4-5). Het model draait de richting om omdat de
+opdracht zelf in het Engels staat en er niets te vertalen valt. Het resultaat
+kreeg gewoon `_taal: nl` mee, dus geen enkele rode regel: 93 advertenties bij 7
+verkopers gingen zo in het Engels de deur uit sinds 01-08-2026.
+
+**Waarom:** de hele vertaalketen ging ervan uit dat een vertaling naar taal X
+nooit taal Y kan opleveren. Elke andere zeef (§BR§-markers, lengte, storing)
+controleerde alles behálve de taal van het antwoord.
+
+**How to apply:** vertaal nooit een tekst die al in de doeltaal staat, en weeg
+titel en omschrijving daarvoor SAMEN (`_al_in_doeltaal` in
+backend/services/crosslist.py) want een titel alleen is te kort om een taal aan
+af te lezen. Controleer daarnaast altijd de taal van het ANTWOORD: leest het als
+de andere taal, dan wint de brontekst.
+
+**Het kan ook Duits worden (23-09-2026, Toons lederhosen).** Zijn korte
+Nederlandse tekst ("Heren originele trachten Lederhosen Maat 50 Kleur khaki")
+telt maar 2 Nederlandse stopwoorden, ging dus door de vertaling, en kwam er in
+het DUITS uit met stempel `_taal: nl` (opdrachten 12-09 en 17-09; die van 05-09
+droeg nog de Nederlandse tekst). Op 22-09 werd dit aangezien voor "Toon plakte
+Duitse leverancierstekst": de items-rij bewijst het tegendeel, die is sinds 02-09
+Nederlands. Wil je weten wat er live staat, lees dan de openbare zoek-API
+(`lrp/api/search?sellerIds[]=`), niet onze eigen kopie: een script dat de
+items-tabel leest meldde 0 verkeerde advertenties terwijl er 10 online stonden. Zie ook "zekerheid-is-geen-stopplek" en
+"bewijs-moet-onderscheiden".
+
+---
+
 ## injectie-die-faalt-wordt-stil-undefined
 
 *23-09-2026 — Een async functie die via chrome.scripting.executeScript in de pagina draait en een afgewezen belofte teruggeeft, komt terug als undefined zonder foutmelding; elke vangnettekst erna is een verzinsel*
@@ -3648,30 +3682,6 @@ advertentietekst) is één alinea één doorlopende regel, hoe lang ook. Enters
 alleen tussen alinea's. Geldt voor codeblokken, want daar wordt niets
 teruggevouwen. Zie ook "antwoorden-kort-houden" en
 "klantmail-kort-en-menselijk".
-
----
-
-## vertaling-draait-de-richting-om
-
-*12-09-2026 — Een tekst die al in de doeltaal staat opnieuw laten vertalen levert in de helft van de gevallen de ANDERE taal op; sla het model over*
-
-Nederlandse advertentietekst die opnieuw door "vertaal naar het Nederlands" gaat
-komt er in 3 van de 6 pogingen in het ENGELS uit (gemeten 12-09-2026 op Toons
-tapijt, `_vertaal` met haiku-4-5). Het model draait de richting om omdat de
-opdracht zelf in het Engels staat en er niets te vertalen valt. Het resultaat
-kreeg gewoon `_taal: nl` mee, dus geen enkele rode regel: 93 advertenties bij 7
-verkopers gingen zo in het Engels de deur uit sinds 01-08-2026.
-
-**Waarom:** de hele vertaalketen ging ervan uit dat een vertaling naar taal X
-nooit taal Y kan opleveren. Elke andere zeef (§BR§-markers, lengte, storing)
-controleerde alles behálve de taal van het antwoord.
-
-**How to apply:** vertaal nooit een tekst die al in de doeltaal staat, en weeg
-titel en omschrijving daarvoor SAMEN (`_al_in_doeltaal` in
-backend/services/crosslist.py) want een titel alleen is te kort om een taal aan
-af te lezen. Controleer daarnaast altijd de taal van het ANTWOORD: leest het als
-de andere taal, dan wint de brontekst. Zie ook "zekerheid-is-geen-stopplek" en
-"bewijs-moet-onderscheiden".
 
 ---
 
