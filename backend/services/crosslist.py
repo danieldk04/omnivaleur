@@ -2023,6 +2023,46 @@ async def delist_all_platforms(item_id: str, user_id: str,
 _EXTENSION_DELIST_PLATFORMS = {"marktplaats", "2dehands", "vinted", "facebook"}
 
 
+# ── EEN ADVERTENTIE DIE NOOIT ONLINE KWAM HOEFT NIET WEG (23-09-2026) ────────
+#
+# Toon, schapenvachten: verkocht op Vinted, en daarna drie keer een mislukte
+# 2dehands-verwijdering met "check it by hand". Die advertentie heeft nooit
+# bestaan: de plaatsing was op 20-09 teruggenomen omdat de rubriek geld kostte.
+# De mislukte verwijdering zette de rij daarna zelfs op 'active'. Daniel: zo'n
+# rij mag stil vervallen.
+#
+# Alleen op een UITSPRAAK, nooit op een ontbrekend nummer alleen: een plaatsing
+# kan gelukt zijn zonder dat het nummer terugkwam (Vinted-opslaan doodt het
+# script). Daarom telt het alleen als elke plaatsingspoging zelf zei dat er niets
+# online ging. "Nothing was published (or it wasn't confirmed)" is twijfel, en
+# twijfel telt niet.
+_NIETS_ONLINE = ("nothing was published", "nothing went online")
+
+
+def _zegt_niets_online(result) -> bool:
+    if not isinstance(result, dict):
+        return False
+    tekst = " ".join(str(result.get(k) or "") for k in ("error", "eerdere_fout")).lower()
+    return (any(z in tekst for z in _NIETS_ONLINE)
+            and "wasn't confirmed" not in tekst and "was not confirmed" not in tekst)
+
+
+def _nooit_online(db, listing: dict) -> bool:
+    """Is bewezen dat deze advertentie nooit op het kanaal heeft gestaan?"""
+    if listing.get("platform_listing_id") or listing.get("listed_at"):
+        return False
+    try:
+        pogingen = (db.table("jobs").select("status,result")
+                    .eq("item_id", listing["item_id"]).eq("platform", listing["platform"])
+                    .eq("action", "create").execute().data or [])
+    except Exception as e:  # noqa: BLE001 — bij twijfel gewoon verwijderen
+        logger.warning("[sold] plaatsingen van %s niet te lezen: %s", listing.get("id"), e)
+        return False
+    return bool(pogingen) and all(
+        p.get("status") in ("cancelled", "error") and _zegt_niets_online(p.get("result"))
+        for p in pogingen)
+
+
 # ── WELK BEWIJS TELT ALS "HIER VERKOCHT" ────────────────────────────────────
 #
 # WAAROM DIT ER IS (17-09-2026, Daniel). Artikel 1313 was op Shopify verkocht
