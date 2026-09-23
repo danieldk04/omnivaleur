@@ -1684,6 +1684,13 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                 # lopen kan dat echt gebeuren, want een ander kanaal is nu
                 # gewoon aan het werk terwijl dit kanaal polt.
                 anderen = [j for j in anderen if j.get("platform") not in bezette_kanalen]
+                # EN GEEN BEURT AAN WERK DAT BEWUST STAAT TE WACHTEN (23-09-2026).
+                # Een 2dehands-plaatsing die op zijn Marktplaats-rubriek wacht
+                # wordt verderop teruggehouden (tot _RUBRIEK_ZOEK_GEDULD). Kreeg
+                # die de beurt, dan ging er dus niets uit, voor GEEN enkel kanaal:
+                # bij f8c0cce9 stonden 14 zulke zoekertjes vooraan en lagen zijn
+                # 13 Vinted-plaatsingen er uren achter stil, terwijl Chrome aan stond.
+                anderen = [j for j in anderen if not _wacht_op_rubriek(j, now_dt)]
                 if anderen:
                     logger.info("Beurt doorgegeven aan %s: %s had de vorige "
                                 "publicatie (gebruiker %s)",
