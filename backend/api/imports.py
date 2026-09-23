@@ -1339,7 +1339,10 @@ async def _asyncio_gather_safe(chunks, fn, rem=None):
 
 
 @router.post("/scan/{platform}")
-def start_scan(platform: str, user_id: str = Depends(require_active_subscription)):
+def start_scan(platform: str, background_tasks: BackgroundTasks,
+               user_id: str = Depends(require_active_subscription)):
+    if platform == "shopify":
+        return _start_shopify_scan(user_id, background_tasks)
     if platform not in SCANNABLE_PLATFORMS:
         raise HTTPException(status_code=400, detail=f"Scanning isn't available for {platform}")
     db = get_db()
