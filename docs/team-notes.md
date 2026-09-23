@@ -12827,3 +12827,35 @@ vielen uit het venster.
 Geannuleerd, geen fout: drie 2dehands-tapijten van Toon (betaalrubriek) en vier
 opdrachten van Toon van 06:37 (de khaki lederhose die gereserveerd.py terugnam,
 zie de tweede ronde). Open punten ongewijzigd ten opzichte van de tweede ronde.
+
+## 23-09-2026 (avond): "Jij bent aan zet" klopte bij 28 van de 30, en de nieuwsbrief is nooit verstuurd
+
+Daniel twijfelde aan de 30 leads op "⚡ Jij bent aan zet". Terecht. Per lead de
+postbus (Zoho, alle mappen) naast de sheet gelegd, op volledig adres:
+- 15 had Daniel al beantwoord na hun laatste mail → "⏳ Bal bij hen".
+- 7 waren een nee of een automatisch antwoord (Bovenka, Re-enactmentshop, Albert
+  Slotema, New Buy, Road2Re-use en JustinGames al geautomatiseerd, DTG wil
+  Tweakers) → Geen interesse / Gebruikt concurrent / Kan (nog) niet.
+- 1 afmelding (Tech Plus, "meld mij af aub", 31-08) stond als warm → Niet meer mailen.
+- 3 hadden nooit geantwoord op het filmpje-aanbod → Doodgelopen.
+- 2 zijn al klant (Zilverwebsite, De Juiste Toon) → Klant.
+- Echt nog open: 2. tonidiecastcars ("kom maar eens langs in de winkel",
+  Loosduinse Hoofdstraat 316, 22-08) en Zilverjuwelier (p.vanderzee@oude-aandelen.nl,
+  geen enkele mail van hen gevonden, dus niet te bewijzen).
+
+Oorzaak, deels bewezen: 22 van de 30 staan niet in de eigen administratie van de
+machine (mail_state), dus `_jouw_antwoorden_verwerken` slaat ze over en ziet
+Daniels antwoord nooit. Tien kregen hun "warm" in één klap op 10-09 rond 01:03
+("concept klaargezet"), nog uit de tijd van de AI-mailagent, inclusief een nee en
+een afmelding. De code zelf is niet aangepast.
+
+Meetval: zoeken op domein in plaats van volledig adres gaf bij gmail.com vier
+valse "afmeldingen". Altijd op het volledige adres zoeken.
+
+**Nieuwsbrief (verbinding-campagne):** tabellen staan, maar mail_campaign_log is
+leeg: er is nooit een echte verzending geweest. De wekelijkse klaarzet-sessie
+(com.omnivaleur.mailupdate) is niet geladen. In mail_update_actueel stond nog het
+[TEST]-demoblokje met het logo als concept; verwijderd, zodat "update" in beheer
+nu leeg is en alleen de vier vaste blokjes verstuurbaar zijn. Outlook/iCloud en
+mail-tester staan nog open; Frank (FOTZ, Hotmail) meldde vandaag dat onze koude
+mail in zijn ongewenste mail belandde.
