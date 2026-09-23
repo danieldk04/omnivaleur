@@ -227,6 +227,12 @@ async def scan_winkel(user_id: str, job_id: str) -> None:
                                             "message": f"Saving {len(regels)} products to your dashboard…"}}})
         job = {"id": job_id, "user_id": user_id, "platform": "shopify"}
         await naast_de_lus(lambda: _store_scan_results(db, job, regels))
+        try:
+            n = await naast_de_lus(lambda: fotos_aanvullen(db, user_id, regels))
+            if n:
+                logger.info("shopify-scan %s: %d artikelen kregen hun Shopify-foto's", user_id, n)
+        except Exception:  # noqa: BLE001 — foto's aanvullen mag de scan niet laten falen
+            logger.exception("shopify-scan: foto's aanvullen mislukt voor %s", user_id)
 
         te_koop = [r for r in regels if not r["is_closed"]]
         logger.info("shopify-scan %s (%s): %d producten, %d te koop, %d uitverkocht",
