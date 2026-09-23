@@ -8257,7 +8257,12 @@ function renderRelistInProgress() {
       headline = `<span class="rl-eta" style="color:var(--green,#16a34a)">✓ New listing is live${liveLink}</span>`;
     } else if (!deleteDone) {
       phase = 'removing'; pct = 30;
-      headline = `<span class="rl-eta" style="color:#b45309">Removing old listing… <small>step 1 of 2</small></span>`;
+      // GEMETEN 23-09-2026: een echte Vinted-verwijdering duurde 6 minuten,
+      // want die stap loopt eerst de hele kledingkast door om zeker te weten
+      // dat het juiste artikel weggaat. Zonder uitleg leest 6 minuten stilstand
+      // als een storing. Geen vaste tijd beloven (zie "beloofd tempo moet
+      // gemeten tempo zijn"), wel zeggen waarom het geen seconden werk is.
+      headline = `<span class="rl-eta" style="color:#b45309">Removing old listing… <small>step 1 of 2 — can take a few minutes, this is normal</small></span>`;
     } else if (publishing) {
       phase = 'publishing'; pct = 90;
       headline = `<span class="rl-eta">Publishing now… <small>going live any second</small></span>`;
