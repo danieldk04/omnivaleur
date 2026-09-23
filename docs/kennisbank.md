@@ -17,6 +17,43 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-combi-maat-mist-eigen-split
+
+*23-09-2026 — "Vinted-maatkeuze faalde altijd bij een combi-maat als 'S / 36 / 8'; opgelost 23-09-2026"*
+
+Gemeten 23-09-2026 bij item ((269) Blue Ralph Lauren Cardigan: het Vinted-formulier
+bleef op "Select a size" staan met "Fill in size to continue" eronder, ondanks dat
+`items.size` gewoon gevuld was ("S / 36 / 8").
+
+**Oorzaak, aangetoond met de echte code.** De maatzoeker in
+`extension/content/vinted.js` (rond regel 3095) bouwt een `wants`-set van "hoe deze
+maat op Vinted zou kunnen heten". Bij een simpele maat als "S" werkte dat. Bij een
+combi-maat bleef de HELE string ("s / 36 / 8") in `wants` staan: die is nooit gelijk
+aan een losse Vinted-tegel als "S". De code splitste wél het Vinted-LABEL zelf op "/"
+(voor het geval Vinted een combi-label toont), maar nooit onze EIGEN waarde. Dus zelfs
+een simpele losse "S"-tegel op Vinted werd nooit gevonden.
+
+`extension/content/shared.js` (Marktplaats/2dehands, zie "maat-buiten-de-ladder")
+deed deze eigen-waarde-split al sinds eerder — de vinted.js-maatzoeker is een losse
+implementatie die deze stap gewoon miste. Geen architectuurfout, alleen deze ene plek.
+
+**Blast radius.** Bij deze ene klant staan 61 items met een combi-maat in dit exacte
+"LETTER / EU / UK"-formaat (query op `items.size like '%/%'`, gescopet op zijn
+`user_id`). Elke Vinted-publicatie van zo'n item strandde op de maat.
+
+**Bewijs.** `tests/vinted-combi-maat-test.js` knipt het echte matchblok uit
+vinted.js en draait het tegen Vinted's eigen dames-cardiganmaten (losse letters,
+géén combi-label). Tegen commit d6debad0 (vóór de reparatie) faalt de combi-maat
+zoals live gezien; tegen de huidige code slaagt hij. `node tests/vinted-combi-maat-test.js --oud` moet FALEN, zonder `--oud` moet hij slagen.
+
+**Fix.** `norm.split("/")` toegevoegd aan de `wants`-opbouw in vinted.js, exact
+zoals shared.js het al deed.
+
+**Openstaand.** Items die al eerder op deze maat-fout strandden, herkansen niet
+vanzelf; die moeten opnieuw de wachtrij in.
+
+---
+
 ## gereserveerd-is-de-verkoopvraag
 
 *23-09-2026 — MP/2dehands zet een verkochte advertentie op gereserveerd; zoek-API heeft reserved:true; sinds 23-09-2026 elk uur de verkoopvraag via gereserveerd.py*
