@@ -1456,6 +1456,38 @@ def start_scan(platform: str, background_tasks: BackgroundTasks,
     return {"job_id": job_id}
 
 
+def _start_shopify_scan(user_id: str, background_tasks: BackgroundTasks) -> dict:
+    """Shopify leest de server zelf uit (services/shopify_scan.py).
+
+    Bewust NIET in SCANNABLE_PLATFORMS: die lijst betekent "de extensie doet de
+    scan". Een wachtende opdracht voor Shopify zou de extensie oppakken en niet
+    kunnen uitvoeren. Daarom begint deze opdracht meteen op 'claimed'."""
+    from backend.services.shopify_scan import scan_winkel
+
+    db = get_db()
+    lopend = execute_with_retry(
+        db.table("jobs").select("id").eq("user_id", user_id).eq("platform", "shopify")
+        .eq("action", "scan").in_("status", ["pending", "claimed"]).limit(1)
+    ).data
+    if lopend:
+        return {"job_id": lopend[0]["id"]}
+    job_id = str(uuid.uuid4())
+    try:
+        execute_with_retry(db.table("jobs").insert({
+            "id": job_id, "user_id": user_id, "item_id": None, "platform": "shopify",
+            "action": "scan", "status": "claimed", "payload": {},
+            "result": {"_progress": {"stage": "opening",
+                                     "message": "Connecting to your Shopify store…"}},
+        }), dubbel_is_ok=True)
+    except Exception:  # noqa: BLE001
+        logger.exception("Kon Shopify-scan niet aanmaken voor %s", user_id)
+        raise HTTPException(
+            status_code=503,
+            detail="Could not start the scan just now — the database did not respond. Try again in a moment.")
+    background_tasks.add_task(scan_winkel, user_id, job_id)
+    return {"job_id": job_id}
+
+
 @router.get("/")
 async def list_import_candidates(platform: str = None, status: str = "pending", user_id: str = Depends(get_current_user)):
     import asyncio
