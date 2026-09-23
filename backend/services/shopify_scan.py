@@ -105,6 +105,12 @@ def naar_scanregel(product: dict, shop: str, winkelnaam: str | None = None) -> d
         "color": basis.get("color"),
         "material": materiaal,
         "is_closed": uitverkocht(product),
+        # Het artikelnummer van de winkelier. Bij Shopify staat dat niet in de
+        # titel ("(694) Grey…") maar op de variant, dus zonder dit veld zag de
+        # scan een product dat al in Omnivaleur stond als nieuw. Gemeten bij
+        # Revaleur: 16 producten stonden twee keer in de winkel, met hetzelfde
+        # nummer, en werden als "New item" aangeboden (23-09-2026).
+        "sku": ((product.get("variants") or [{}])[0].get("sku") or "").strip() or None,
     }
 
 
