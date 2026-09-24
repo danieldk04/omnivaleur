@@ -449,3 +449,11 @@ def test_een_escalatie_zonder_storing_blijft_gewoon_staan(monkeypatch):
         {}, [{"escalatie": "geld", "adres": "a@x.nl", "samenvatting": "dubbel afgeschreven",
               "afgehandeld": False}])
     assert any(a["wie"] == "a@x.nl" for a in beheer.werkplaats(user=None)["voor_jou"])
+
+
+def test_een_hergebruikt_procesnummer_is_niet_onze_sessie():
+    """Na een herstart kreeg een ander programma het nummer van onze sessie."""
+    import os
+    assert S._leeft(os.getpid()) is False       # pytest is geen claude-sessie
+    assert S._leeft(999999) is False
+

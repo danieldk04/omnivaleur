@@ -81,12 +81,20 @@ def _bewaar(staat: dict) -> bool:
 
 
 def _leeft(pid) -> bool:
-    """Draait dit procesnummer nog?"""
+    """Draait onze Claude-sessie met dit procesnummer nog?
+
+    Alleen "bestaat dit nummer" is niet genoeg: na een herstart van de Mac krijgt
+    een willekeurig ander programma hetzelfde nummer. Dan wachtte de starter op
+    een sessie die al lang dood was, en na anderhalf uur stuurde hij dat andere
+    programma een stopsignaal (24-09-2026).
+    """
     try:
         os.kill(int(pid), 0)
-    except (OSError, TypeError, ValueError):
+        uit = subprocess.run(["ps", "-p", str(int(pid)), "-o", "command="],
+                             capture_output=True, text=True, timeout=10)
+    except (OSError, TypeError, ValueError, subprocess.SubprocessError):
         return False
-    return True
+    return "claude" in uit.stdout
 
 
 def _loopt_er_een(staat: dict) -> str | None:

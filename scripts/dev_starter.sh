@@ -28,7 +28,9 @@ mkdir -p ~/Library/Application\ Support/omnivaleur
 
 # Logboek kort houden: hooguit de laatste duizend regels.
 if [[ -f $LOG && $(wc -l < $LOG) -gt 1000 ]]; then
-  tail -400 $LOG > $LOG.tmp && mv $LOG.tmp $LOG
+  # In hetzelfde bestand terugschrijven, niet vervangen: launchd schrijft deze
+  # ronde nog naar het oude bestand, en na een mv verdween die uitvoer (23-09-2026).
+  tail -400 $LOG > $LOG.tmp && cat $LOG.tmp > $LOG && rm -f $LOG.tmp
 fi
 
 if [[ ! -r $REPO/scripts/dev_starter.py ]]; then

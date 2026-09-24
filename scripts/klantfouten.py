@@ -42,7 +42,10 @@ sys.path.insert(0, str(REPO / "scripts"))
 import mail_analyse as A  # noqa: E402
 
 OORDEEL_SLEUTEL = "klantfouten_oordelen"
-VENSTER_UUR = 6
+# Een dag terug: staat de Mac 's nachts uit, dan moeten de fouten van gisteravond
+# er 's ochtends nog zijn. Met zes uur vielen ze weg (24-09-2026). Dit leest geen
+# result, dus een dag is licht.
+VENSTER_UUR = 24
 # Het oudste wachtende werk van een klant van wie Chrome aanstaat, terwijl er
 # het afgelopen half uur niets van hem klaar kwam. Zo zag de vastloper van
 # 23-09-2026 eruit: 28 plaatsingen, 1,3 uur, voor geen enkel kanaal iets uit.
