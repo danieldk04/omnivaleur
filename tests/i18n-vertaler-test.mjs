@@ -77,7 +77,7 @@ const browser = await chromium.launch(existsSync("/opt/pw-browsers/chromium")
   await page.waitForTimeout(300);
   check("zonder keuze blijft het Engels", await page.textContent("#kop") === "Welcome back");
   check("zonder keuze wordt het woordenboek niet opgehaald", !gevraagd.some((u) => u.includes("nl.json")), gevraagd);
-  check("taalknop staat er ook in het Engels", (await page.textContent("#data")).includes("NL"));
+  check("taalknop is verborgen zolang niemand hem aanzette", await page.isHidden("#data"));
   await page.close();
 }
 
@@ -146,7 +146,17 @@ check("alert vertaald", dialogen[0] === "Kon niet opslaan", dialogen[0]);
 const datum = await page.evaluate(() => new Date(2026, 8, 24).toLocaleDateString("en-GB", { day: "numeric", month: "long" }));
 check("datum in het Nederlands", datum === "24 september", datum);
 
-// Taalknop
+// Taalknop: wie ?taal=nl gebruikte ziet hem, ook na terugschakelen naar Engels
+check("taalknop zichtbaar na ?taal=nl", await page.isVisible("#data"));
+{
+  const p2 = await browser.newPage();
+  await p2.goto(`${BASIS}/proef.html`);
+  await p2.evaluate(() => localStorage.setItem("omni_taal", "en"));
+  await p2.reload();
+  await p2.waitForTimeout(200);
+  check("taalknop blijft zichtbaar in het Engels voor wie hem ooit gebruikte", await p2.isVisible("#data") && (await p2.textContent("#data")).includes("NL"));
+  await p2.close();
+}
 check("taalknop toont NL als gekozen", await page.getAttribute('#data button[aria-pressed="true"]', "title") === "Nederlands");
 
 await browser.close();

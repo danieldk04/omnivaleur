@@ -32,6 +32,10 @@
 
   var OPSLAG = 'omni_taal';
   var TALEN = ['en', 'nl'];
+  // LIVEGANG: zolang dit false is, ziet een klant de knop EN · NL niet. Alleen
+  // wie één keer /app?taal=nl opent (Daniel, om te testen met echte gegevens)
+  // krijgt hem, en houdt hem daarna ook in het Engels. Op true = voor iedereen.
+  var KNOP_VOOR_IEDEREEN = false;
 
   function kiesTaal() {
     try {
@@ -60,8 +64,17 @@
 
   // Taalknop: elk element met data-taalkeuze krijgt "EN · NL". Staat bewust
   // buiten de vertaling (translate="no"), zodat hij in beide talen gelijk is.
+  function knopZichtbaar() {
+    if (KNOP_VOOR_IEDEREEN) return true;
+    try { return localStorage.getItem(OPSLAG) !== null; } catch (e) { return taal !== 'en'; }
+  }
+
   function tekenKeuze() {
     var plekken = document.querySelectorAll('[data-taalkeuze]');
+    if (!knopZichtbaar()) {
+      for (var k = 0; k < plekken.length; k++) plekken[k].style.display = 'none';
+      return;
+    }
     for (var i = 0; i < plekken.length; i++) {
       var el = plekken[i];
       el.setAttribute('translate', 'no');

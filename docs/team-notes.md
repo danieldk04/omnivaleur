@@ -13326,8 +13326,11 @@ wordt hij dat niet meer.
   rubrieknamen). Een MutationObserver vertaalt ook wat later verschijnt; alert/
   confirm/prompt, datums ('en-GB' wordt 'nl-NL'), bedragen (€22,00) en de labels
   van de grafieken gaan mee.
-- **Opt-in.** Standaard Engels; alleen wie linksonder op NL klikt (of `?taal=nl`)
-  krijgt Nederlands. Bewust niet op browsertaal, tot het in het echt bewezen is.
+- **Opt-in en nog verborgen.** Standaard Engels, ook na de merge. De knop EN · NL
+  (linksonder, boven Log out) zien klanten pas als `KNOP_VOOR_IEDEREEN` in
+  `frontend/i18n.js` op true staat. Tot dan krijgt alleen wie één keer
+  `/app?taal=nl` opent de knop te zien: zo test Daniel het in productie met zijn
+  echte voorraad zonder dat een klant iets merkt. Bewust niet op browsertaal.
 - **Nooit vertaald:** de inhoud van invulvelden en textarea's (alleen de grijze
   placeholder), alles binnen `translate="no"`, de eigen tekst van `.item-title`,
   `.an-sales-title` en `.imp-kant-t`, en een titel tussen aanhalingstekens in een
@@ -13355,11 +13358,34 @@ klant ziet? Dan in dezelfde commit:
 blijft gelden: de bron is en blijft Engels.
 
 **Proeven.** tests/test_i18n_compleet.py (8), tests/test_i18n_meldpunt.py (4),
-tests/i18n-vertaler-test.mjs (33 controles in echte Chromium),
+tests/i18n-vertaler-test.mjs (35 controles in echte Chromium),
 tests/i18n-dashboard-rondgang.mjs (het echte dashboard met nepdata, elk scherm en
 de vier belangrijkste vensters: 0 plekken Engels). Volledige serverset: dezelfde
 41 falen als op main in deze omgeving (verkorte git-geschiedenis), geen nieuwe;
 extensieproeven idem.
+
+**Livegang (als Daniel het in productie heeft nagelopen).**
+1. `KNOP_VOOR_IEDEREEN = true` in `frontend/i18n.js`, daarna
+   `python3 scripts/i18n_extract.py --versie`, committen.
+2. Dit blok in docs/klantenservice-brein.md onder "Vaste feiten" zetten (vóór
+   "Ondersteunde kanalen"), de datum bovenaan bijwerken, en de Drive-kopie ook:
+
+    Taal van het dashboard:
+
+    - Het dashboard kan in het Nederlands. Linksonder in het menu, boven
+      "Log out", staat EN · NL; een klik op NL zet alles om, ook meldingen,
+      foutteksten en de inlogpagina's. De keuze blijft bewaard in die browser; op
+      een andere computer of telefoon klik je het één keer opnieuw aan.
+    - Standaard staat het in het Engels. Vraagt iemand om Nederlands, wijs hem op
+      die knop.
+    - Het menu van de Chrome-extensie zelf (het pop-upje als je op het
+      puzzelstukje klikt) blijft Engels; in het Nederlandse dashboard staan de
+      namen van die knoppen daarom ook in het Engels ("Calm mode", "Business account
+      (Admarkt)").
+    - De advertenties zelf veranderen hier niet door: de taal per kanaal blijft
+      zoals hij was (Nederlands op Marktplaats, 2dehands en eBay, Engels op Vinted
+      en Shopify).
+
 
 **Open.** Niet gezien bij een echte klant met echte data; zeldzame schermen
 (Stripe-portal, eigenaarstools, sommige foutpaden) zijn alleen via de broncode
