@@ -190,3 +190,23 @@ def test_een_verlopen_inlog_wordt_herkend(tmp_path):
     log = tmp_path / "s.log"
     log.write_text("Failed to authenticate: OAuth session expired and could not be refreshed\n")
     assert "/login" in S._waarom_niets_geworden(str(log))
+
+
+def test_een_dode_sessie_geeft_zijn_fouten_in_dezelfde_ronde_vrij(kast, monkeypatch, tmp_path):
+    """Na de herstart van 24-09 bleef het een ronde stil: eerst gekeken, toen opgeruimd."""
+    db = NepDb([_fout(1, min_geleden=30)])
+    sleutel = next(iter(K.meet(db, NU)))
+    log = tmp_path / "s.log"
+    log.write_text("# sessie\n")
+    kast[S.STAAT_SLEUTEL] = {"klantfouten-oud": {"status": "gestart", "pid": 1, "log": str(log),
+                                                  "sleutels": [sleutel], "gestart": _t(600)}}
+    monkeypatch.setattr(S, "_leeft", lambda pid: False)
+    monkeypatch.setattr(S, "_werkmap_schoon", lambda: (True, ""))
+    monkeypatch.setattr(S, "_iemand_aan_het_werk", lambda staat: "")
+    echte = K.signalen
+    monkeypatch.setattr(S.K, "signalen", lambda staat: echte(staat, db, NU))
+    gestart = []
+    monkeypatch.setattr(S, "_start", lambda k, s, st: gestart.append(k) or True)
+    S.ronde()
+    assert gestart and gestart[0].startswith("klantfouten-")
+

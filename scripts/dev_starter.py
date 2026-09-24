@@ -444,11 +444,13 @@ def _signalen(staat: dict) -> dict:
 
 def ronde(droog: bool = False) -> None:
     staat = _staat()
-    signalen = _signalen(staat)
     if not droog:
         _hartslag()
-    if _opruimen(signalen, staat):
+    # Eerst opruimen, dan pas kijken wat openstaat. Andersom hield een sessie die
+    # net dood bleek zijn fouten nog een ronde vast (24-09-2026).
+    if _opruimen(A.bugs(), staat):
         _bewaar(staat)
+    signalen = _signalen(staat)
 
     loopt = _loopt_er_een(staat)
     if loopt:
