@@ -83,6 +83,19 @@ def test_clothing_categories_match_the_import_taxonomy(categories):
         assert sorted(_TAXONOMY[group]) == sorted(categories[group]), group
 
 
+def test_elke_dashboardtak_kan_door_de_import_gekozen_worden(categories):
+    """Een tak die het dashboard kent maar de import niet, krijgt bij importeren
+    nooit een rubriek. Zo stonden games, telefoons en audio er tot 24-09-2026
+    buiten: een PS5 of camera kwam leeg of in een verkeerde tak binnen."""
+    from backend.api.imports import _TAXONOMY
+
+    for group, keys in categories.items():
+        assert group in _TAXONOMY, f"tak {group} ontbreekt in de import"
+        assert sorted(_TAXONOMY[group]) == sorted(keys), group
+    for group in _TAXONOMY:
+        assert group in categories, f"import kent tak {group}, dashboard niet"
+
+
 def test_every_category_gets_an_english_shopify_type(all_keys):
     from backend.platforms.shopify_importer import _english_type_from_category
 

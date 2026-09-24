@@ -358,12 +358,17 @@ def test_zonder_de_kolommen_verandert_er_niets(monkeypatch):
                for patch, _ in db.schrijfacties), "er werd naar een kolom geschreven die niet bestaat"
 
 
-def test_de_taxonomie_kent_geen_rubriek_voor_spellen():
+def test_de_taxonomie_kent_geen_rubriek_voor_auto_onderdelen():
     """De aanname onder deze hele wijziging, vastgelegd zodat hij niet wegdrijft.
 
-    Komt er ooit wél een rubriek voor games of media bij, dan valt deze proef om
-    en hoort iemand opnieuw te kijken of die artikelen nog moeten worden
+    Komt er ooit wél een rubriek voor auto-onderdelen of films bij, dan valt deze
+    proef om en hoort iemand opnieuw te kijken of die artikelen nog moeten worden
     afgeschreven.
+
+    24-09-2026: games, telefoons en audio/tv/foto zitten nu wél in de import.
+    Nagekeken: op dat moment stond geen enkel artikel op 3 pogingen (0 van 370
+    zonder rubriek), dus niemand was al afgeschreven; de 162 met 1 of 2 pogingen
+    krijgen vanzelf de nieuwe takken voorgelegd.
     """
     from backend.api.imports import _TAXONOMY
 
@@ -371,7 +376,6 @@ def test_de_taxonomie_kent_geen_rubriek_voor_spellen():
     # Let op: "band" staat er niet bij, want "sieraden armbanden" en "muziek
     # orkestbanden" bevatten dat woord terwijl ze niets met autobanden te maken
     # hebben. Alleen woorden die eenduidig zijn.
-    for woord in ("game", "spel", "console", "playstation", "psp", "xbox",
-                  "dvd", "autoband", "elektronica"):
+    for woord in ("autoband", "sneeuwketting", "velgen", "dvd film", "blu-ray film"):
         assert not any(woord in c for c in alle), (
             f'er bestaat nu wél een rubriek met "{woord}" erin')

@@ -399,6 +399,145 @@ _TAXONOMY = {
         "antiek tv s en audio",
         "antiek meubels bedden",
     ],
+    # Spelcomputers en games, telefoons, en audio, tv en foto. Stonden al in
+    # het dashboard, de extensie, Vinted en eBay, maar niet hier, waardoor de
+    # import een PS5, iPhone of camera nooit kon indelen (24-09-2026).
+    # Woordelijk gelijk aan CATEGORIES in frontend/app.html; bewaakt door
+    # tests/test_category_taxonomy.py.
+    "games": [
+        "games playstation 5",
+        "games playstation 4",
+        "games playstation 3",
+        "games playstation 2",
+        "games playstation 1",
+        "games psp",
+        "games ps vita",
+        "games nintendo switch",
+        "games nintendo wii u",
+        "games nintendo wii",
+        "games nintendo 3ds",
+        "games nintendo ds",
+        "games gamecube",
+        "games nintendo 64",
+        "games snes",
+        "games nes",
+        "games gameboy",
+        "games xbox series",
+        "games xbox one",
+        "games xbox 360",
+        "games xbox original",
+        "games pc",
+        "games sega",
+        "games atari",
+        "games overige",
+        "games console playstation 5",
+        "games console playstation 4",
+        "games console playstation 3",
+        "games console playstation 2",
+        "games console playstation 1",
+        "games console ps vita",
+        "games console psp",
+        "games console nintendo switch",
+        "games console nintendo switch lite",
+        "games console nintendo wii u",
+        "games console nintendo wii",
+        "games console nintendo 3ds",
+        "games console nintendo ds",
+        "games console gamecube",
+        "games console nintendo 64",
+        "games console snes",
+        "games console nes",
+        "games console gameboy",
+        "games console xbox series",
+        "games console xbox one",
+        "games console xbox 360",
+        "games console xbox original",
+        "games console sega",
+        "games console atari",
+        "games console overige",
+    ],
+    "electronics": [
+        "electronics telefoon apple iphone",
+        "electronics telefoon samsung",
+        "electronics telefoon huawei",
+        "electronics telefoon sony",
+        "electronics telefoon nokia",
+        "electronics telefoon lg",
+        "electronics telefoon motorola",
+        "electronics telefoon htc",
+        "electronics telefoon blackberry",
+        "electronics telefoon overige",
+    ],
+    "audio": [
+        "audio luidsprekers",
+        "audio soundbars",
+        "audio koptelefoons",
+        "audio versterkers en receivers",
+        "audio buizenversterkers",
+        "audio tuners",
+        "audio stereo sets",
+        "audio home cinema sets",
+        "audio platenspelers",
+        "audio cd spelers",
+        "audio blu ray spelers",
+        "audio dvd spelers",
+        "audio videospelers",
+        "audio cassettedecks",
+        "audio bandrecorders",
+        "audio radio s",
+        "audio walkmans en discmans",
+        "audio mp3 spelers ipod",
+        "audio mp3 spelers overige",
+        "audio mp4 spelers",
+        "audio mp3 accessoires ipod",
+        "audio mp3 accessoires overige",
+        "audio mediaspelers",
+        "audio karaoke apparatuur",
+        "audio professionele audio en video",
+        "audio televisies",
+        "audio vintage televisies",
+        "audio televisiebeugels",
+        "audio televisie accessoires",
+        "audio afstandsbedieningen",
+        "audio decoders en harddiskrecorders",
+        "audio schotelantennes",
+        "audio audio en tv kabels",
+        "audio converters",
+        "audio opladers",
+        "audio accu s en batterijen",
+        "audio beamers",
+        "audio beamer accessoires",
+        "audio projectieschermen",
+        "audio diaprojectors",
+        "audio videobewaking",
+        "audio drones",
+        "audio actiecamera s",
+        "audio fotocamera s digitaal",
+        "audio fotocamera s analoog",
+        "audio onderwatercamera s",
+        "audio videocamera s digitaal",
+        "audio videocamera s analoog",
+        "audio lenzen en objectieven",
+        "audio filters",
+        "audio flitsers",
+        "audio statieven en balhoofden",
+        "audio fototassen",
+        "audio geheugenkaarten",
+        "audio fotografie accu s",
+        "audio fotostudio en toebehoren",
+        "audio professionele fotoapparatuur",
+        "audio doka toebehoren",
+        "audio filmrollen",
+        "audio fotopapier",
+        "audio fotolijsten",
+        "audio digitale fotolijsten",
+        "audio fotoalbums en accessoires",
+        "audio verrekijkers",
+        "audio telescopen",
+        "audio microscopen",
+        "audio weerstations en barometers",
+        "audio overige audio tv en foto",
+    ],
     "muziek": [
         "muziek accordeons", "muziek behuizingen en koffers",
         "muziek blaasinstrumenten blokfluiten", "muziek blaasinstrumenten didgeridoos",
@@ -519,8 +658,9 @@ async def _classify_with_claude(title: str | None, description: str | None,
         )
         prompt = (
             "You categorise second-hand listings for a Dutch marketplace. Most are"
-            " clothing; a minority are musical instruments and their accessories, or"
-            " antiques, art and collectables.\n\n"
+            " clothing; a minority are musical instruments and their accessories,"
+            " antiques, art and collectables, home goods, jewellery, video games,"
+            " phones, or audio, TV and photo equipment.\n\n"
             f"Brand: {brand or 'unknown'}\n"
             f"Title: {title or ''}\n"
             f"Description: {(description or '')[:1500]}\n\n"
@@ -580,9 +720,22 @@ async def _classify_with_claude(title: str | None, description: str | None,
             '- The "sieraden" branch covers jewellery, watches, bags, suitcases, wallets\n'
             "  and sunglasses. Pick it for anything worn or carried as an accessory.\n"
             '  When you pick a "sieraden" category, gender must be "sieraden" too.\n'
+            '- The "games" branch is video games and game consoles, per platform: a\n'
+            '  game disc or cartridge goes in "games <platform>", the machine itself in\n'
+            '  "games console <platform>". Controllers and other accessories have no\n'
+            '  category here (answer none). Board games are NOT "games".\n'
+            '  When you pick a "games" category, gender must be "games" too.\n'
+            '- The "electronics" branch is ONLY mobile phones, by brand. Tablets,\n'
+            "  laptops, computers, smartwatches-as-phones and phone cases are not in it.\n"
+            '  When you pick an "electronics" category, gender must be "electronics" too.\n'
+            '- The "audio" branch is audio, TV and photo: speakers, headphones,\n'
+            "  amplifiers and receivers, turntables, radios, televisions, projectors,\n"
+            "  cameras, lenses, drones, binoculars. A guitar amplifier or effects pedal\n"
+            '  is "muziek", not audio. When you pick an "audio" category, gender must be\n'
+            '  "audio" too.\n'
             "- MANY ITEMS FIT NONE OF THESE BRANCHES, and then the answer is none.\n"
-            "  Electronics (phones, laptops, consoles, cameras, audio, TVs), toys and\n"
-            "  games (LEGO, Playmobil, board games, dolls), books, comics, films and\n"
+            "  Computers, laptops, tablets and phone accessories, toys and\n"
+            "  board games (LEGO, Playmobil, Monopoly, dolls), books, comics, films and\n"
             "  records, bicycles and sports equipment, kitchen and household appliances\n"
             "  (coffee machines, vacuum cleaners, blenders), tools, car and bike parts,\n"
             "  baby gear (prams, car seats) and pet supplies have no category here.\n"

@@ -13124,7 +13124,13 @@ rubriekkiezer via Claude): rubrieken, dubbelen en koppelingen klopten. Twee fout
   nieuw" werd New). Gerepareerd in _map_condition; proef
   tests/test_staat_bij_import.py (oude code: 31 van 42 fout). Gemeten in de
   database: 1025 artikelen bij 10 klanten staan nog op de oude gok, 925 daarvan
-  bij klant 96e30080. Nog NIET rechtgezet, wacht op Daniels ja.
+  bij klant 96e30080. Rechtgezet om 12:35 na Daniels ja, maar alleen de 922
+  die de import zelf aanmaakte en die nog precies op de oude gok stonden
+  (868 naar Used, 54 naar New with tags). Steekproef van 25 op de echte
+  Vinted-pagina: 23 van de 23 die nog online stonden zeggen live hetzelfde als
+  de scan, 2 zijn offline. Nagemeten: 922 van 922 staan goed. De ~100 die aan
+  een al bestaand artikel gekoppeld werden zijn niet aangeraakt: daar kwam de
+  staat niet van de import. Terugzetlijst: 922 regels (id, nieuw, oud).
 - Spullen buiten onze niches (Lego, boeken, stofzuiger, bordspel) kregen antiek of
   "wonen overige". De rubriekkiezer mag nu "none" zeggen, dan blijft de rubriek
   leeg en vraagt het dashboard erom. Oude code 7 van 17 fout, nieuwe 0 (twee keer
@@ -13133,3 +13139,19 @@ rubriekkiezer via Claude): rubrieken, dubbelen en koppelingen klopten. Twee fout
 Open: op de server kiest Gemini eerst; de proef liep op Claude omdat er lokaal geen
 Google-sleutel is. Een eigen tak voor elektronica, speelgoed, boeken en fietsen
 bestaat nog niet.
+
+## 24-09-2026 (12:50): Games, telefoons en audio/tv/foto nu ook bij import
+
+Het dashboard, de extensie, Vinted en eBay kenden deze drie takken al sinds
+augustus, maar de rubriekkiezer bij import niet: een PS5, iPhone of camera kwam
+leeg binnen. Nu staan ze in _TAXONOMY en in de uitleg aan het model;
+tests/test_category_taxonomy.py eist voortaan dat import en dashboard precies
+dezelfde takken kennen. Nicheproef 80 van 80, twee keer (op Claude, lokaal geen
+Google-sleutel). Controllers, tablets en laptops blijven leeg: daar is nog geen
+rubriek voor. De struikeldraad in test_rubriekronde_geeft_het_op.py is
+nagekeken: 0 artikelen stonden al op 3 pogingen, 162 op 1 of 2 krijgen vanzelf
+de nieuwe takken voorgelegd.
+Open: Facebook zet audio/tv/foto nog onder "Overig" (facebook.js kent alleen
+games en electronics). Nieuwe takken (speelgoed, boeken, fietsen, sport, witgoed,
+gereedschap, computers) wachten op Daniels keuze en op zijn ingelogde
+Marktplaats om de rubrieknummers af te lezen.
