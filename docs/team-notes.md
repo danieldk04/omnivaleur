@@ -13294,3 +13294,16 @@ maakte de keuze slechter (zie notitie 16:40); dat vraagt een eigen meting.
 
 ## 24-09-2026 (17:40): rubriekvraag niet verkleind
 Voorstel was de rubriekenlijst per artikel te verkleinen. Gemeten bij Google: ~8.100 tokens per vraag, niet 15.000. Verkleinen scheelt hooguit een kwart, zo'n 0,2 cent per artikel als Claude het overneemt, en helpt niet tegen de "te druk"-meldingen van Google. De enige grote besparing (eerst de tak vragen, dan de rubriek) kost twee verzoeken per artikel, precies wat de gratis sleutel krap maakt. De vorige wijziging aan deze vraag maakte de indeling slechter (40 van 58). Besluit: niet doen. De herkansing bij drukte (commit 0784cbba) staat al live sinds 17:00.
+
+## 24-09-2026 (17:20, automatisch): Klantfouten
+
+vast-f8c0cce9 (1 opdracht 2dehands, 15:15 UTC): vals alarm van de wachter zelf,
+geen vastloper bij de klant. De ene wachtende opdracht is de herplaatsing van
+Johans Gibson Les Paul, aangemaakt om 13:03 UTC maar bewust gepland voor 17:03
+UTC (scheduled_for). De uitdeler geeft hem daarvoor niet uit; de wachter telde
+vanaf het aanmaken en zag dus "langer dan 60 min". Johans Chrome draaide en had
+gewoon niets anders te doen. Gerepareerd in scripts/klantfouten.py: wachten telt
+vanaf het geplande moment. Proef test_een_geplande_herplaatsing_zit_niet_vast
+faalt op de oude code, slaagt nu; echte meting geeft geen vastloper meer.
+Open: niets. Om 17:03 UTC slaat de uitdeler die herplaatsing vanzelf over, want
+de bijbehorende verwijdering mislukte (zie 15:40).

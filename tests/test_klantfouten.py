@@ -210,3 +210,16 @@ def test_een_dode_sessie_geeft_zijn_fouten_in_dezelfde_ronde_vrij(kast, monkeypa
     S.ronde()
     assert gestart and gestart[0].startswith("klantfouten-")
 
+
+
+def test_een_geplande_herplaatsing_zit_niet_vast(kast):
+    # 24-09-2026, f8c0cce9: een herplaatsing aangemaakt om 13:03 maar gepland
+    # voor 17:03 UTC. De uitdeler geeft hem pas dan uit; toch meldde de wachter
+    # om 15:15 "werk zit vast". Wachten telt pas vanaf het geplande moment.
+    hartslag = [{"user_id": "f8c0cce9-x", "last_seen": _t(2)}]
+    gepland = {"id": 1, "user_id": "f8c0cce9-x", "platform": "2dehands",
+               "status": "pending", "created_at": _t(130), "scheduled_for": _t(-110)}
+    assert "vast-f8c0cce9" not in K.meet(NepDb([gepland], hartslag), NU)
+    # Al 80 minuten aan de beurt en nog niet opgepakt: dat zit wel vast.
+    te_laat = dict(gepland, scheduled_for=_t(80))
+    assert "vast-f8c0cce9" in K.meet(NepDb([te_laat], hartslag), NU)
