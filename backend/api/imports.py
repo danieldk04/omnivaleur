@@ -41,20 +41,54 @@ _BULK_IMPORT_CACHE: dict[str, dict] = {}
 # zeker omdat het resultaat een half uur bewaard blijft (_BULK_IMPORT_CACHE).
 
 
-def _map_condition(raw: str | None) -> str:
-    """Map a platform's free-text condition onto our new/good/fair/poor scale."""
-    s = (raw or "").strip().lower()
+# DE STAAT VAN HET PLATFORM, IN ONZE VIJF TREDEN (24-09-2026).
+#
+# Onze treden en wat ze op de kanalen betekenen staan in CONDITION_HINTS
+# (frontend/app.html) en CONDITION_MAP (extension/content/vinted.js):
+#   new_with_tags  Nieuw met prijskaartje   / Vinted New with tags
+#   new            Nieuw (zonder kaartje)   / Vinted New without tags
+#   good           Zo goed als nieuw        / Vinted Very good ("Heel goed")
+#   fair           Gebruikt                 / Vinted Good ("Goed")
+#   poor           Beschadigd, niet werkend / Vinted Satisfactory ("Veelgebruikt")
+#
+# Hier stond een lijstje dat op losse lettergrepen zocht, in de verkeerde
+# volgorde. Gemeten op 1000 echte Vinted-kandidaten: 414 zeiden "Goed"/"Good"
+# en werden "good" (Like new), een trede te hoog; "New with tags" verloor zijn
+# kaartje. Voor Marktplaats werd "Zo goed als nieuw" zelfs "new" (het woord
+# nieuw zit erin), "Gebruikt" werd "poor" (Damaged) en "Niet werkend" "good".
+#
+# De volgorde hieronder is de beveiliging: eerst wat ondubbelzinnig slecht is,
+# dan "zo goed als nieuw" (dat het woord nieuw bevat), dan de nieuwe treden, en
+# pas als laatste het kale "goed"/"gebruikt". Een woord dat we niet kennen geeft
+# None: dan beslist de standaard van de import, nooit een gok van deze lijst.
+_STAAT_WOORDEN = (
+    ("poor", (r"niet werkend", r"werkt niet", r"defect", r"kapot", r"beschadigd",
+              r"voor onderdelen", r"veelgebruikt", r"redelijk", r"matig", r"slecht",
+              r"satisf\w*", r"damaged", r"for parts", r"not working", r"poor",
+              r"zufriedenstellend", r"besch[äa]digt", r"endommag\w*",
+              r"d[ée]fectueux", r"ne fonctionne pas", r"satisfaisant")),
+    ("good", (r"zo goed als nieuw", r"als nieuw", r"zeer goed", r"heel goed",
+              r"like new", r"very good", r"comme neuf", r"tr[èe]s bon", r"wie neu",
+              r"sehr gut")),
+    ("new_with_tags", (r"nieuw met", r"with tags?", r"avec [ée]tiquettes?",
+                       r"mit etikett", r"new with")),
+    ("new", (r"nieuw", r"ongebruikt", r"new", r"brand new", r"neuf", r"neu",
+             r"unused")),
+    ("fair", (r"gebruikt", r"gedragen", r"lichte gebruikssporen", r"goed", r"good",
+              r"used", r"fair", r"utilis[ée]", r"usag[ée]", r"bon [ée]tat", r"bon",
+              r"gebraucht", r"gut")),
+)
+
+
+def _map_condition(raw: str | None) -> str | None:
+    """De staat zoals het platform hem noemt, als onze trede. None = onbekend."""
+    s = " ".join((raw or "").lower().split())
     if not s:
-        return "good"
-    if "new" in s or "nieuw" in s or "tags" in s or "prijskaartje" in s:
-        return "new"
-    if "very good" in s or "zo goed als nieuw" in s or "good" in s or "goed" in s:
-        return "good"
-    if "satisf" in s or "redelijk" in s or "fair" in s:
-        return "fair"
-    if "poor" in s or "slecht" in s or "gebruikt" in s:
-        return "poor"
-    return "good"
+        return None
+    for trede, patronen in _STAAT_WOORDEN:
+        if any(re.search(r"\b" + p + r"\b", s) for p in patronen):
+            return trede
+    return None
 
 
 # Closed colour vocabulary, English + Dutch (incl. common inflected forms like
