@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## verkopersnummer-bij-weinig-eigen-plaatsingen
+
+*24-09-2026 — Terugval die alleen bij "nul" invalt mist "te weinig"; 2 eigen MP-plaatsingen gaf geen verkopersnummer, 15 zoekertjes 2dehands stonden stil (24-09-2026, f8c0cce9)*
+
+`_verkopersnummer` (backend/services/mp_enrich.py) eist twee titels die hetzelfde verkopersnummer aanwijzen. Het nam alleen titels van eigen plaatsingen en viel pas terug op geïmporteerde advertenties bij `if not titels`. Een klant met 2 eigen en 54 geïmporteerde advertenties kreeg zo één stem, geen nummer, en dat telt als storing: al zijn 2dehands-zoekertjes wachtten zes uur op hun Marktplaats-rubriek (`_RUBRIEK_ZOEK_GEDULD`). Sinds 24-09-2026 vult hij aan tot MAX_TITELPOGINGEN.
+
+**Why:** een terugval die alleen bij een lege lijst invalt, laat de "bijna lege" lijst in de steek, en die is bij nieuwe klanten de regel.
+
+**How to apply:** bij een wachtrij 2dehands die stilstaat met `_rubriek_zoeken_sinds` in de payload: roep `rubriek_van_eigen_advertentie` met de echte user_id aan; komt er None uit, kijk dan eerst of het verkopersnummer wel gevonden wordt. Zie "beurt-aan-wachtend-werk-legt-alles-stil", "geraden-rubriek-is-niet-de-rubriek-van-de-verkoper", "voor-en-na-proef-mag-geen-head-gebruiken".
+
+---
+
 ## gemini-tegoed-op
 
 *24-09-2026 — 24-09-2026 gaf Google 402 "prepayment credits are depleted"; alles wat naar Gemini is omgezet liep toen stil via Claude*

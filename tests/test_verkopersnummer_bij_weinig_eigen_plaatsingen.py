@@ -31,6 +31,10 @@ class NepDb:
         self._tabel = naam
         return self
 
+    @property
+    def not_(self):
+        return self
+
     def __getattr__(self, _naam):
         return lambda *a, **k: self
 

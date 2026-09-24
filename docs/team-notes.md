@@ -13207,3 +13207,22 @@ bij import is door de 844 rubrieken ~8.800 tokens per artikel.
 Open: extensie 1.0.351 moet de Web Store in; Facebook-rubrieknamen niet in het
 echte formulier nagelopen; niet op Gemini gemeten (tegoed op); leadgen zoekt de
 nieuwe rubrieken nog niet af (Daniels keuze).
+
+## 24-09-2026 (14:20, automatisch): Klantfouten
+
+vast-f8c0cce9 (15 zoekertjes voor 2dehands wachtten tot ruim 2 uur, Chrome aan):
+fout in onze code. Een 2dehands-plaatsing wacht op de rubriek van dezelfde
+advertentie op Marktplaats, en daarvoor zoeken we eerst het verkopersnummer op
+twee titels die hetzelfde nummer aanwijzen. Als bron golden alleen de titels die
+hij via ons op Marktplaats plaatste; de geïmporteerde advertenties telden pas mee
+als dat er nul waren. Hij had er twee eigen (en 54 geïmporteerd): één stem, geen
+nummer, dat leest als een storing, dus alles bleef staan tot het geduld van zes
+uur op was, en ging dan met de geraden rubriek. Nu vullen de geïmporteerde titels
+aan tot er genoeg zijn. Gemeten op zijn echte advertenties: oude code geen
+nummer, nieuwe code vindt 6250337 en voor alle 15 de rubriek Muziek en
+Instrumenten > Instrumenten | Toebehoren. Proef:
+tests/test_verkopersnummer_bij_weinig_eigen_plaatsingen.py (faalt op b3c31f1b,
+slaagt nu); 1798 serverproeven groen. De code-wijziging ging mee in auto-commit
+5a6981c5.
+Open: niets aan onze kant. Zijn Vinted-sessie was om 10:18 weg maar werkt sinds
+11:12 weer (drie Vinted-plaatsingen gelukt).
