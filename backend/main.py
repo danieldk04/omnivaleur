@@ -118,6 +118,12 @@ app.include_router(referrals.router)
 app.include_router(mail_verbinding.router)
 
 
+def _taalmodel_teller() -> dict:
+    from backend.services import gemini_vertaling, taalmodel
+    return {"antwoord_door": dict(taalmodel.TELLER),
+            "google_codes": dict(gemini_vertaling.TELLER)}
+
+
 def _supabase_key_role() -> str:
     """De rol uit de Supabase-sleutel ('anon' of 'service_role'), of 'onbekend'.
 
@@ -185,6 +191,10 @@ async def health():
                 hashlib.sha256(_s.google_api_key.encode()).hexdigest()[:8]
                 if _s.google_api_key else None
             ),
+            # Sinds de laatste herstart: wie beantwoordde de taalvragen (gemini /
+            # claude / geen_antwoord), en wat zei Google per poging (http_200,
+            # http_503 = te druk, gered_door_tweede_ronde). Zie gemini_vertaling.
+            "taalmodel_sinds_start": _taalmodel_teller(),
             # Staat dit op false, dan schrijft de server nieuwe foto's nog steeds
             # naar Supabase Storage en loopt die bucket dus gewoon weer vol. Dat
             # is van buitenaf verder niet te zien, vandaar hier.

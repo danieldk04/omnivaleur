@@ -44,6 +44,7 @@ storing, dus het prijsverschil valt in het niet bij een verkeerd gespelde titel.
 """
 from __future__ import annotations
 
+import collections
 import logging
 import re
 import time
@@ -81,6 +82,10 @@ _MAX_KANDIDATEN = 4
 # proberen. De lijst van Google verandert ook niet per minuut, dus die bewaren we.
 _OPGEHEVEN: set[str] = set()
 _LIJST: list[str] | None = None
+
+# Wat Google antwoordde sinds de laatste herstart, per HTTP-code (op /health).
+# Railway-logs en AI Studio zijn van buitenaf niet te lezen; dit wel.
+TELLER: collections.Counter = collections.Counter()
 
 
 def beschikbaar() -> bool:
@@ -218,6 +223,8 @@ def vraag(opdracht: str, max_tokens: int = 4096,
                 logger.info("Gemini: alle modellen te druk, over %ss nog een ronde", pauze)
                 time.sleep(pauze)
             antwoord, te_druk = _een_ronde(opdracht, max_tokens, tijdslimiet, denken)
+            if antwoord is not None and ronde:
+                TELLER["gered_door_tweede_ronde"] += 1
             if antwoord is not None or not te_druk:
                 return antwoord
         logger.warning("Vertaalvangnet: geen enkel Gemini-model wilde vertalen")
@@ -250,9 +257,11 @@ def _een_ronde(opdracht: str, max_tokens: int, tijdslimiet: float,
             # reden om de volgende over te slaan.
             logger.warning("Gemini: %s antwoordde niet (%s), volgende", model,
                            type(e).__name__)
+            TELLER["geen_verbinding"] += 1
             te_druk = True
             continue
 
+        TELLER[f"http_{antwoord.status_code}"] += 1
         if antwoord.status_code == 200:
             if len(geprobeerd) > 1:
                 logger.info("Vertaalvangnet week uit naar Gemini-model %s", model)
