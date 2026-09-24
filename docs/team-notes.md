@@ -13422,3 +13422,13 @@ verwijdert. 1820 serverproeven groen. Advertentie 9618700667 staat nog live
 Open: 1.0.352 moet naar de Web Store; tot de klant hem heeft kan het opnieuw
 gebeuren. Niet bewezen dat dít geval de hydratie was (geen toegang tot zijn
 scherm), wel dat het mechanisme precies deze melding geeft.
+
+## 24-09-2026: /ai-info en /llms.txt voor AI-assistenten
+Daniel zag crosslist.com/ai-info en vroeg of dat voor ons ook waarde heeft; daarna
+"bouw maar en zet in footer". Nieuw: `frontend/ai-info.html` (route /ai-info, in
+de sitemap) en `frontend/llms.txt`. Link "For AI assistants" / "Voor
+AI-assistenten" in de Company-kolom van de footer op /, /nl, /marketplaces en de
+blog. Kern van de pagina: Crosslist neemt geen EU-klanten aan en Vendoo kent
+Marktplaats/2dehands niet (beide op 24-09 op hun eigen site gecontroleerd); wij
+zijn de tool voor NL/BE. Verandert prijs, proef of kanalenlijst, dan deze twee
+bestanden meenemen, net als het klantenservice-brein.
