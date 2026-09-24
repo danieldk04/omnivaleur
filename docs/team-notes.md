@@ -13012,3 +13012,21 @@ verkeerde stuk overal weghalen. Nu gaat het variantnummer voor de titel, en een
 titel bij een artikel met een ander nummer telt niet. Proef:
 tests/test_shopify_nummer_gaat_voor_titel.py, oude code op 326996a2 faalt.
 Daniels importlijst opnieuw weggeschreven; product 1014 hangt nu aan artikel 1014.
+
+### 24-09-2026 (10:15): dubbele Shopify-producten gekoppeld, en de koppelknop werkte niet
+
+Daniel: "koppel ze in Omnivaleur". Twee reparaties eerst. (1) De knoppen Link en
+Create item in de importlijst gaven sinds 10-09 een storing: `eerste_rij` werd
+gebruikt maar niet ingeladen in backend/api/imports.py. (2) Koppelen overschreef
+het Shopify-productnummer van de bestaande rij, dus na koppelen hing het eerste
+product aan niets en haalde een verkoop daarvan het stuk nergens weg. Nu komt een
+tweede product als eigen rij ernaast. Proef in
+tests/test_shopify_nummer_gaat_voor_titel.py, oude code faalt.
+
+Van de zeven "twee keer in de winkel" op foto's vergeleken: 1187, 1208, 1275 zelfde
+stuk, gekoppeld (beide producten leiden nu bij een verkoop naar het artikel);
+1288 oud product was al weg, vervangen; 1014 afgerond. 1071 zijn twee verschillende
+truien (col tegen ronde hals), voorstel weggehaald. 694 en 1038 niet zeker, aan
+Daniel. Een verkoopproef op een testartikel (Shopify-bestelling, verwijderopdrachten
+voor MP, 2dehands en Vinted) werkte; testartikel en opdrachten daarna verwijderd.
+Open: het dubbele product blijft in de winkel te koop; alleen Daniel kan het verwijderen.
