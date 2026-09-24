@@ -117,11 +117,15 @@ def meet(db=None, nu: datetime | None = None) -> dict:
             s["momenten"].append(r["done_at"])
 
     oud = (nu - timedelta(minutes=VAST_NA_MIN)).isoformat()
-    wachtend = (db.table("jobs").select("user_id,platform,created_at")
+    wachtend = (db.table("jobs").select("user_id,platform,created_at,scheduled_for")
                 .eq("status", "pending").lte("created_at", oud)
                 .order("created_at").limit(400).execute().data or [])
     wachters = {}
     for w in wachtend:
+        # Een herplaatsing is gepland (scheduled_for) en wordt pas dan uitgedeeld;
+        # wachten telt vanaf dat moment, niet vanaf het aanmaken.
+        if w.get("scheduled_for") and w["scheduled_for"] > oud:
+            continue
         wachters.setdefault(w["user_id"], []).append(w)
     if wachters:
         vers = (nu - timedelta(minutes=HARTSLAG_VERS_MIN)).isoformat()
