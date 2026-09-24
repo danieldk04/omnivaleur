@@ -17,11 +17,16 @@ antwoord telt nooit als antwoord.
 from __future__ import annotations
 
 import asyncio
+import collections
 import logging
 
 from backend.config import settings
 
 logger = logging.getLogger(__name__)
+
+# Wie elke vraag beantwoordde sinds de laatste herstart (op /health): zo is van
+# buitenaf te zien hoeveel werk er naar het betaalde Claude gaat.
+TELLER: collections.Counter = collections.Counter()
 
 HAIKU = "claude-haiku-4-5-20251001"
 
@@ -39,6 +44,7 @@ def vraag(opdracht: str, *, max_tokens: int = 1024, claude_model: str = HAIKU,
         antwoord = gemini_vertaling.vraag(opdracht, max_tokens=max_tokens,
                                           tijdslimiet=tijdslimiet, denken=denken)
         if antwoord:
+            TELLER["gemini"] += 1
             return antwoord
         logger.warning("%s: Gemini gaf niets bruikbaars, Claude als reserve", wat)
 
@@ -56,12 +62,15 @@ def vraag(opdracht: str, *, max_tokens: int = 1024, claude_model: str = HAIKU,
             tekst = "".join(getattr(b, "text", "") or ""
                             for b in (bericht.content or [])).strip()
             if tekst:
+                TELLER["claude"] += 1
                 return tekst
             reden = "leeg Claude-antwoord"
         except TaalmodelOnbeschikbaar:
+            TELLER["geen_antwoord"] += 1
             raise
         except Exception as e:  # noqa: BLE001
             reden = e
+    TELLER["geen_antwoord"] += 1
     raise TaalmodelOnbeschikbaar(f"{wat}: geen model beschikbaar ({reden})")
 
 

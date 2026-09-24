@@ -45,14 +45,23 @@ advertentietekst, niet over het dashboard).
 ---
 
 ## verkopersnummer-bij-weinig-eigen-plaatsingen
+## rubriekvraag-volgorde-niet-omgooien
 
-*24-09-2026 — Terugval die alleen bij "nul" invalt mist "te weinig"; 2 eigen MP-plaatsingen gaf geen verkopersnummer, 15 zoekertjes 2dehands stonden stil (24-09-2026, f8c0cce9)*
+*24-09-2026 — Artikel achteraan de rubriekvraag zetten (voor cache) veranderde 18 van 58 antwoorden en maakte het slechter; teruggedraaid 24-09-2026*
 
-`_verkopersnummer` (backend/services/mp_enrich.py) eist twee titels die hetzelfde verkopersnummer aanwijzen. Het nam alleen titels van eigen plaatsingen en viel pas terug op geïmporteerde advertenties bij `if not titels`. Een klant met 2 eigen en 54 geïmporteerde advertenties kreeg zo één stem, geen nummer, en dat telt als storing: al zijn 2dehands-zoekertjes wachtten zes uur op hun Marktplaats-rubriek (`_RUBRIEK_ZOEK_GEDULD`). Sinds 24-09-2026 vult hij aan tot MAX_TITELPOGINGEN.
+De rubriekvraag bij import (imports._classify_with_claude) is ~8.950 tokens, waarvan
+~8.850 vast (rubriekenlijst + regels). Idee op 24-09-2026: het artikel naar achteren,
+zodat Gemini/Claude het vaste deel uit de cache halen. Gemeten op 58 echte artikelen
+uit alle takken (Claude Haiku): oud tegen oud 57/58 gelijk, nieuw tegen oud maar 40/58;
+gelijk aan de opgeslagen rubriek 30 (oud) tegen 23 (nieuw). Muziekpatches werden
+"geen tak", zilveren lepels "antiek bestek", een miniatuur-drumstel speelgoed.
+Teruggedraaid, niets live gegaan.
 
-**Why:** een terugval die alleen bij een lege lijst invalt, laat de "bijna lege" lijst in de steek, en die is bij nieuwe klanten de regel.
+**Why:** dezelfde tekst in een andere volgorde is voor het model een andere vraag.
+**How to apply:** wil je deze vraag goedkoper maken, meet dan altijd oud-tegen-oud als
+ruisgrens naast nieuw-tegen-oud op echte artikelen van elke tak. Zie "gemini-tegoed-op".
 
-**How to apply:** bij een wachtrij 2dehands die stilstaat met `_rubriek_zoeken_sinds` in de payload: roep `rubriek_van_eigen_advertentie` met de echte user_id aan; komt er None uit, kijk dan eerst of het verkopersnummer wel gevonden wordt. Zie "beurt-aan-wachtend-werk-legt-alles-stil", "geraden-rubriek-is-niet-de-rubriek-van-de-verkoper", "voor-en-na-proef-mag-geen-head-gebruiken".
+Verkleinen gemeten 24-09-2026 (17:40): de vraag is 7.883 tokens plus beschrijving (~8.100, Google countTokens), niet 15.000. Takvoorvoegsels weghalen scheelt ~24% (~$0,002 per artikel bij terugval op Claude) en verandert niets aan 503's: die zijn Google-drukte, los van de lengte. Twee stappen (eerst tak, dan rubriek) verdubbelt het aantal verzoeken, en dat is juist wat op de gratis sleutel knelt. Niet gedaan; pas heroverwegen als /health laat zien dat Claude het meeste werk krijgt.
 
 ---
 
@@ -72,6 +81,45 @@ onzichtbaar ongedaan. Lokaal staat dezelfde sleutel in de instellingen
 **How to apply:** meet bij twijfel eerst met gemini_vertaling.vraag() en kijk of er
 402 in de log staat. Een alarm op 402 bestaat nog niet. Zie
 "modellenlijst-van-de-dienst-is-geen-bewijs".
+
+Sinds 24-09-2026 ~16:30 draait de server op een nieuwe, gratis Google-sleutel
+(vingerafdruk ddf59aed in /health) uit een project zonder betaling. Boven het
+gratis dagmaximum antwoordt Google 429 en gaat de vraag vanzelf naar Claude.
+
+---
+
+## nooit-opgepakte-opdracht-is-geen-spoor
+
+*24-09-2026 — Oranje icoon "mark as listed" op een plaatsopdracht die de extensie nooit oppakte zette nep-actief; sinds 24-09-2026 telt alleen een poging die echt liep*
+
+Johan Kist (f8c0cce9) klikte op 23-09-2026 op het oranje 2dehands-icoon terwijl de
+plaatsopdracht nog wachtte (claimed_at leeg). `mark_listing_active` telde "open
+plaatsopdracht" als spoor, dus Les Paul en gitaarband stonden op actief zonder
+advertentie. Gevolg daags erna: verversen faalde op "cannot be found in your
+2dehands listings overview, and we could not verify", herplaatsen overgeslagen.
+
+**Why:** dezelfde val als "kanaalicoon-aanvinken-is-geen-publiceren", maar via het
+oranje icoon: klanten klikken iconen om te plaatsen. Een opdracht die nooit liep
+kan niets online hebben gezet.
+
+**How to apply:** spoor = advertentienummer, rij 'error'/'relisting', of een
+create-opdracht met claimed_at of `_progress`. Een kale 'pending'-rij is geen
+spoor. Herkennen: listing active zonder nummer + create-opdracht done met
+result `{"manual": "marked active by user"}` en claimed_at leeg. Check de echte
+verkoperslijst (lrp/api/search sellerIds[]) voor je zo'n rij rechtzet; zet op
+'error' met uitleg, nooit verwijderen.
+
+---
+
+## verkopersnummer-bij-weinig-eigen-plaatsingen
+
+*24-09-2026 — Terugval die alleen bij "nul" invalt mist "te weinig"; 2 eigen MP-plaatsingen gaf geen verkopersnummer, 15 zoekertjes 2dehands stonden stil (24-09-2026, f8c0cce9)*
+
+`_verkopersnummer` (backend/services/mp_enrich.py) eist twee titels die hetzelfde verkopersnummer aanwijzen. Het nam alleen titels van eigen plaatsingen en viel pas terug op geïmporteerde advertenties bij `if not titels`. Een klant met 2 eigen en 54 geïmporteerde advertenties kreeg zo één stem, geen nummer, en dat telt als storing: al zijn 2dehands-zoekertjes wachtten zes uur op hun Marktplaats-rubriek (`_RUBRIEK_ZOEK_GEDULD`). Sinds 24-09-2026 vult hij aan tot MAX_TITELPOGINGEN.
+
+**Why:** een terugval die alleen bij een lege lijst invalt, laat de "bijna lege" lijst in de steek, en die is bij nieuwe klanten de regel.
+
+**How to apply:** bij een wachtrij 2dehands die stilstaat met `_rubriek_zoeken_sinds` in de payload: roep `rubriek_van_eigen_advertentie` met de echte user_id aan; komt er None uit, kijk dan eerst of het verkopersnummer wel gevonden wordt. Zie "beurt-aan-wachtend-werk-legt-alles-stil", "geraden-rubriek-is-niet-de-rubriek-van-de-verkoper", "voor-en-na-proef-mag-geen-head-gebruiken".
 
 ---
 

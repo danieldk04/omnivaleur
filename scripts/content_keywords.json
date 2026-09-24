@@ -513,6 +513,22 @@
       "slug": "used-office-furniture-reselling-automation",
       "status": "published",
       "priority": 63
+    },
+    {
+      "keyword": "action figures reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "action-figures-reselling-automation",
+      "status": "published",
+      "priority": 64
+    },
+    {
+      "keyword": "antique furniture reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "antique-furniture-reselling-automation",
+      "status": "pending",
+      "priority": 65
     }
   ],
   "published": [
@@ -1082,6 +1098,15 @@
       "action": "created",
       "url_path": "/reseller-tools/used-office-furniture-reselling-automation",
       "published_at": "2026-09-18T12:33:29.281518+00:00"
+    },
+    {
+      "keyword": "action figures reselling automation",
+      "slug": "action-figures-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/action-figures-reselling-automation",
+      "published_at": "2026-09-24T13:05:18.534079+00:00"
     }
   ]
 }

@@ -13227,6 +13227,87 @@ slaagt nu); 1798 serverproeven groen. De code-wijziging ging mee in auto-commit
 Open: niets aan onze kant. Zijn Vinted-sessie was om 10:18 weg maar werkt sinds
 11:12 weer (drie Vinted-plaatsingen gelukt).
 
+## 24-09-2026 (15:05, automatisch): Klantfouten
+
+fout-2dehands-create-d5eaeba4 (f8c0cce9, 2 keer, 12:49 en 12:55 UTC): klant-eigen,
+de betaalmuur van 2dehands per rubriek. Gemeten op zijn opdrachten: in Gitaren |
+Akoestisch gingen om 12:44 en 12:46 UTC twee gitaren gratis online (Eastman E20D,
+Martin 0-10E), de derde (Gibson G200) kwam op de betaalpagina. In Gitaren |
+Elektrisch hetzelfde: Reverend en Fender Telecaster gratis om 12:48 en 12:53, de
+tweede Telecaster om 12:55 betaald. Dat is 2dehands' vaste grens van twee gratis
+advertenties per gitaarrubriek (zie kennisbank betalende-rubriek-is-geen-formulierfout),
+hetzelfde als bij deze klant op 18-09. Onze rem werkte goed: niets betaald, alleen
+die twee rubrieken stilgezet, zijn toebehoren (gitaarbanden, Bluebird) gingen er
+tussendoor gewoon online. De rubriekkeuze uit de fix van 14:14 klopt: de rubriek
+is die van zijn eigen Marktplaats-advertentie.
+Niets gerepareerd. Open: niets aan onze kant; meer gitaren op 2dehands kan alleen
+betaald of als er een van zijn gratis gitaren verkocht/weggehaald is.
+
+## 24-09-2026 (15:40, automatisch): Klantfouten
+
+fout-2dehands-delete-ddbd9e2e (f8c0cce9, Johan Kist, 13:03 UTC): fout in onze
+code. Johan klikte op 23-09 om 19:16 en 21:10 op het oranje 2dehands-icoon van
+een Gibson Les Paul Junior Pro en een Magrabo-gitaarband, terwijl hun
+plaatsopdracht nog op de rubriek wachtte (die wachttijd is om 14:14 gerepareerd).
+De server telde een open plaatsopdracht als spoor van een plaatsing en zette
+beide op actief, maar de extensie had ze nooit opgepakt (claimed_at leeg).
+Gemeten: zijn 2dehands-account (verkoper 57708291) heeft 28 advertenties, geen
+van beide erbij. Zijn verversing van de Les Paul verwijderde daarom eerst iets
+wat er niet was, faalde, en de herplaatsing werd overgeslagen.
+Gerepareerd (efe88d05, via de auto-push-hook): mark-active telt alleen nog een
+poging die echt liep (opgepakt, voortgang gemeld, mislukt of herplaatst); een
+nooit opgepakte opdracht geeft 422 met "hasn't started publishing yet".
+Proef tests/test_nooit_opgepakte_opdracht_is_geen_spoor.py faalt op efabbbbd,
+slaagt nu; 1804 serverproeven groen. De twee rijen van Johan staan nu op
+'error' met uitleg in plaats van nep-actief (niets verwijderd), zodat het icoon
+rood is en hij kan publiceren.
+Open: de Les Paul valt in 2dehands Gitaren | Elektrisch, waar zijn twee gratis
+plekken vandaag op zijn (zie 15:05); publiceren daar stuit op de betaalmuur. De
+herplaatsing van 17:03 UTC wordt vanzelf overgeslagen.
+
+## 24-09-2026 (16:40): Gratis Google-sleutel, rubriekvraag niet goedkoper
+
+Het Gemini-tegoed was op (402). Daniel zette een nieuwe sleutel uit een Google-
+project zonder betaling in Railway; /health toont sinds ~16:30 vingerafdruk
+ddf59aed. Boven het gratis dagmaximum valt elke vraag vanzelf terug op Claude.
+Niet gemeten: of de gratis sleutel op de server echt antwoordt (geen toegang tot
+de Railway-logs vanaf hier).
+Geprobeerd en teruggedraaid: de rubriekvraag goedkoper maken door het artikel
+achteraan te zetten (cache). Op 58 echte artikelen 40/58 gelijk aan de oude
+vraag (ruis 57/58) en minder vaak de goede rubriek. Niets live gegaan. Zie
+kennisbank rubriekvraag-volgorde-niet-omgooien.
+
+## 24-09-2026 (17:00): Gemini krijgt een tweede ronde bij drukte
+
+Op de gratis sleutel gaf Google tussen 16:24 en 16:28 zeven van de acht keer
+503 "high demand" (Daniels meting in de Railway-logs en AI Studio: 2 van 10
+geslaagd, geen 429). Elke keer dat alle modellen 503 zeiden, ging de vraag naar
+Claude. Nu: zegt minstens één model te druk en niemand nee, dan wacht de server
+4 seconden en doet nog één ronde langs alle modellen, pas daarna Claude. 402
+(tegoed op) en andere weigeringen krijgen geen tweede ronde. Proef: drie nieuwe
+in tests/test_vertaalvangnet_gemini.py, twee falen op de oude code; 1807
+serverproeven groen. Aanroepers zijn allemaal gewone functies in een werkdraad,
+dus de pauze zet de site niet stil.
+Open: niet gemeten of de tweede ronde op de echte gratis sleutel vaker slaagt.
+De rubriekenlijst per artikel kleiner maken is NIET gedaan: de eerste poging
+maakte de keuze slechter (zie notitie 16:40); dat vraagt een eigen meting.
+
+## 24-09-2026 (17:40): rubriekvraag niet verkleind
+Voorstel was de rubriekenlijst per artikel te verkleinen. Gemeten bij Google: ~8.100 tokens per vraag, niet 15.000. Verkleinen scheelt hooguit een kwart, zo'n 0,2 cent per artikel als Claude het overneemt, en helpt niet tegen de "te druk"-meldingen van Google. De enige grote besparing (eerst de tak vragen, dan de rubriek) kost twee verzoeken per artikel, precies wat de gratis sleutel krap maakt. De vorige wijziging aan deze vraag maakte de indeling slechter (40 van 58). Besluit: niet doen. De herkansing bij drukte (commit 0784cbba) staat al live sinds 17:00.
+
+## 24-09-2026 (17:20, automatisch): Klantfouten
+
+vast-f8c0cce9 (1 opdracht 2dehands, 15:15 UTC): vals alarm van de wachter zelf,
+geen vastloper bij de klant. De ene wachtende opdracht is de herplaatsing van
+Johans Gibson Les Paul, aangemaakt om 13:03 UTC maar bewust gepland voor 17:03
+UTC (scheduled_for). De uitdeler geeft hem daarvoor niet uit; de wachter telde
+vanaf het aanmaken en zag dus "langer dan 60 min". Johans Chrome draaide en had
+gewoon niets anders te doen. Gerepareerd in scripts/klantfouten.py: wachten telt
+vanaf het geplande moment. Proef test_een_geplande_herplaatsing_zit_niet_vast
+faalt op de oude code, slaagt nu; echte meting geeft geen vastloper meer.
+Open: niets. Om 17:03 UTC slaat de uitdeler die herplaatsing vanzelf over, want
+de bijbehorende verwijdering mislukte (zie 15:40).
+
 ## 24-09-2026 — Dashboard in het Nederlands via een vertaallaag (klaar, nog niet live)
 
 **Wat Daniel wilde.** "Net zoals Shopify Translate & Adapt: alles in één keer
