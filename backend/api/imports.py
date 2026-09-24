@@ -1625,8 +1625,20 @@ async def link_candidate(candidate_id: str, body: dict, user_id: str = Depends(g
     _backfill_item_from_candidate(db, item_id, cand, inferred=await _infer_attributes_smart(
         cand.get("title"), cand.get("description"), cand.get("brand")))
 
-    existing = (await naast_de_lus(lambda: db.table("listings").select("id").eq("item_id", item_id).eq("platform", cand["platform"]).execute()))
+    existing = (await naast_de_lus(lambda: db.table("listings").select("id,status,platform_listing_id").eq("item_id", item_id).eq("platform", cand["platform"]).execute()))
     listed_at = cand.get("platform_listed_at") or datetime.now(timezone.utc).isoformat()
+    if cand["platform"] == "shopify" and existing.data:
+        # Een Shopify-productnummer verandert nooit, dus een ánder nummer is een
+        # ánder product: hetzelfde stuk staat twee keer in de winkel. Overschrijven
+        # maakte het eerste product onvindbaar, en een verkoop daarvan haalde het
+        # stuk dan nergens meer weg (Revaleur, 24-09-2026, zeven stuks). Alleen
+        # de rij van dit product, of een rij zonder levend ander product, mag
+        # worden bijgewerkt; anders komt er een tweede rij naast.
+        eigen = str(cand["platform_listing_id"])
+        bruikbaar = ([r for r in existing.data if str(r.get("platform_listing_id") or "") == eigen]
+                     or [r for r in existing.data if not r.get("platform_listing_id")
+                         or r.get("status") not in ("active", "pending", "relisting", "hidden", "sold")])
+        existing.data = bruikbaar
     if existing.data:
         (await naast_de_lus(lambda: db.table("listings").update({
             "platform_listing_id": cand["platform_listing_id"],
