@@ -13155,3 +13155,15 @@ Open: Facebook zet audio/tv/foto nog onder "Overig" (facebook.js kent alleen
 games en electronics). Nieuwe takken (speelgoed, boeken, fietsen, sport, witgoed,
 gereedschap, computers) wachten op Daniels keuze en op zijn ingelogde
 Marktplaats om de rubrieknummers af te lezen.
+
+## 24-09-2026 (13:15, automatisch): Klantfouten
+
+Twee Vinted-foutsoorten bij f8c0cce9 (drie plaatsingen en drie scans tussen 10:18 en
+10:20 UTC), beide klant-eigen: de Vinted-sessie in zijn Chrome is weg. Bewijs: zijn
+eigen Vinted-scan slaagde nog om 08:25 UTC, en 26cf5471 op dezelfde extensie 1.0.349
+deed om 09:27 UTC een geslaagde Vinted-scan, dus de accountherkenning werkt op de
+huidige Vinted-pagina. De plaatsing controleerde vijf domeinen, zowel op de
+achtergrond als in een Vinted-tabblad. Niets gerepareerd, niets gepubliceerd en
+niets kwijt: de artikelen staan klaar voor een nieuwe poging zodra hij weer
+ingelogd is.
+Open: niets aan onze kant. Zijn drie 2dehands-plaatsingen van 10:18 tot 10:19 UTC staan nog in de wachtrij.
