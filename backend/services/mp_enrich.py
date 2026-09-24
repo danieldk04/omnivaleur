@@ -597,7 +597,13 @@ async def _verkopersnummer(db, user_id: str, platform: str,
     # staan (Egbert: 5.533 geïmporteerde Marktplaats-advertenties, nul eigen
     # plaatsingen), heeft hier geen opdrachten. Dan de titels van die
     # geïmporteerde advertenties: die zijn letterlijk van het kanaal overgenomen.
-    if not titels:
+    #
+    # OOK BIJ EEN HANDVOL EIGEN PLAATSINGEN (24-09-2026, f8c0cce9). Hier stond
+    # `if not titels`. Hij had er twee via ons geplaatst en 54 geïmporteerd: één
+    # van de twee titels vond hem, de ander niet, dus één stem en geen nummer.
+    # Dat leest als een storing, en vijftien 2dehands-zoekertjes bleven staan
+    # tot het geduld van zes uur op was. Aanvullen tot er genoeg titels zijn.
+    if len(titels) < MAX_TITELPOGINGEN:
         try:
             rijen = (await naast_de_lus(lambda: db.table("listings")
                      .select("items!inner(title,user_id)")
