@@ -32,10 +32,9 @@
 
   var OPSLAG = 'omni_taal';
   var TALEN = ['en', 'nl'];
-  // LIVEGANG: zolang dit false is, ziet een klant de knop EN · NL niet. Alleen
-  // wie één keer /app?taal=nl opent (Daniel, om te testen met echte gegevens)
-  // krijgt hem, en houdt hem daarna ook in het Engels. Op true = voor iedereen.
-  var KNOP_VOOR_IEDEREEN = false;
+  // Sinds 24-09-2026 (Daniel: "knop voor iedereen") ziet elke klant EN · NL.
+  // Op false zetten verbergt hem weer voor wie nooit zelf een taal koos.
+  var KNOP_VOOR_IEDEREEN = true;
 
   function kiesTaal() {
     try {

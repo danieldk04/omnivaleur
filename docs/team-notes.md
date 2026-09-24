@@ -13391,3 +13391,15 @@ extensieproeven idem.
 (Stripe-portal, eigenaarstools, sommige foutpaden) zijn alleen via de broncode
 gedekt, niet in de rondgang bekeken. De Drive-kopie van het klantenservice-brein
 pas bijwerken als dit live staat. beheer.html en de extensiepopup blijven Engels.
+
+## 24-09-2026: Nederlandse dashboard live voor iedereen
+Daniel liep de Nederlandse versie zelf na via /app?taal=nl en zei "knop voor
+iedereen, volgens mij klopt het". `KNOP_VOOR_IEDEREEN = true` in
+`frontend/i18n.js`, `?v=` opnieuw gezet, blok "Taal van het dashboard" in het
+klantenservice-brein onder Vaste feiten.
+
+Standaard blijft Engels; geen automatische keuze op browsertaal of IP. Daniel
+vroeg meteen of NL-bezoekers vanzelf Nederlands krijgen: nee, dat was zijn
+eigen keuze van eerder vandaag ("alleen voor wie zelf op NL klikt, tot het
+bewezen is"). Aanzetten op browsertaal (`navigator.language`, geen IP nodig) is
+één regel in `kiesTaal()`, als hij dat later wil.
