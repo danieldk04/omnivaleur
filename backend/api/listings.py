@@ -24,6 +24,10 @@ _KANAALNAAM = {"marktplaats": "Marktplaats", "2dehands": "2dehands", "vinted": "
                "facebook": "Facebook Marketplace", "ebay": "eBay", "shopify": "Shopify"}
 # Statussen die bewijzen dat er een plaatsing is geprobeerd of loopt; zie mark_listing_active.
 _PLAATSING_BEZIG = {"pending", "queued", "error", "relisting"}
+# Een rijstatus die alleen ontstaat nadat een poging echt liep: mislukt, of een
+# bestaande advertentie die herplaatst wordt. 'pending'/'queued' kan ook een
+# opdracht zijn die de extensie nog nooit oppakte.
+_POGING_GELOPEN = {"error", "relisting"}
 
 
 def _parse_listing_id(platform: str, url: str) -> str | None:
