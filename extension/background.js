@@ -8980,6 +8980,7 @@ async function _mwFillDescription(selector, descText) {
   // beschrijvingstap "kon niet in de editor worden gezet" terwijl het veld gewoon
   // te vullen is. Vandaar: form-velden krijgen hun eigen, korte route.
   if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+    await sleep(150);
     const want = descText;
     const proto = el instanceof HTMLTextAreaElement
       ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
