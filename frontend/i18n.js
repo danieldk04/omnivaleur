@@ -87,10 +87,77 @@
         b.setAttribute('aria-pressed', String(taal === t[0]));
         b.style.cssText = 'background:none;border:none;padding:2px 3px;cursor:pointer;font:inherit;color:inherit;'
           + (taal === t[0] ? 'font-weight:700;text-decoration:underline' : 'opacity:.7');
-        b.onclick = function () { if (taal !== t[0]) api.zetTaal(t[0]); };
+        b.onclick = function () {
+          if (taal !== t[0]) api.zetTaal(t[0]);
+          else { try { localStorage.setItem(OPSLAG, t[0]); } catch (e) { /* niets */ } weg(); }
+        };
         el.appendChild(b);
       });
     }
+    tip();
+  }
+
+  // Eenmalige wijzer naar EN · NL in het dashboard (Daniel, 24-09-2026), voor
+  // wie nog nooit zelf een taal koos. Weg na een klik op EN, NL of het kruisje,
+  // en komt daarna niet terug. Tweetalig en buiten de vertaling, want wie hem
+  // ziet staat per definitie nog in het Engels.
+  // z-index 150: boven de zijbalk (100), onder elk venster van het dashboard
+  // (200 en hoger), zodat hij nooit over het betaalslot of een melding ligt.
+  var TIP = 'omni_taal_tip';
+  var PIJL = 'position:absolute;width:14px;height:14px;background:#2563eb;transform:rotate(45deg);';
+  var tipEl = null;
+  function weg() {
+    try { localStorage.setItem(TIP, '1'); } catch (e) { /* niets */ }
+    if (tipEl) { tipEl.remove(); tipEl = null; }
+    window.removeEventListener('resize', plaats);
+  }
+  function plaats() {
+    var doel = document.querySelector('.sidebar-bottom [data-taalkeuze]');
+    if (!tipEl || !doel) return;
+    var r = doel.getBoundingClientRect();
+    // Zijbalk dicht (telefoon): wachten tot hij in beeld is, niets wegzetten.
+    tipEl.style.display = r.right > 40 && r.height ? 'block' : 'none';
+    var pijl = tipEl.firstChild;
+    if (window.innerWidth - r.right >= 300) {
+      // Rechts naast de knop. De knop staat onderaan: de wijzer mag niet onder
+      // de rand wegvallen, en het pijltje blijft naar het midden van de knop wijzen.
+      var midden = r.top + r.height / 2;
+      var boven = Math.max(8, Math.min(midden - 24, window.innerHeight - tipEl.offsetHeight - 12));
+      tipEl.style.left = (r.right + 14) + 'px';
+      tipEl.style.top = boven + 'px';
+      pijl.style.cssText = PIJL + 'left:-7px;top:' + (midden - boven - 7) + 'px';
+    } else {
+      // Te smal (telefoon, zijbalk open): boven de knop, pijltje omlaag.
+      var links = Math.max(8, r.left);
+      tipEl.style.left = links + 'px';
+      tipEl.style.top = Math.max(8, r.top - tipEl.offsetHeight - 12) + 'px';
+      pijl.style.cssText = PIJL + 'bottom:-7px;left:' + Math.max(12, Math.min(r.left + 30 - links, 230)) + 'px';
+    }
+  }
+  function tip() {
+    if (!knopZichtbaar() || tipEl) return;
+    try {
+      if (localStorage.getItem(OPSLAG) !== null || localStorage.getItem(TIP)) return;
+    } catch (e) { return; }
+    if (!document.querySelector('.sidebar-bottom [data-taalkeuze]')) return;
+    tipEl = document.createElement('div');
+    tipEl.setAttribute('translate', 'no');
+    tipEl.setAttribute('role', 'status');
+    tipEl.style.cssText = 'position:fixed;z-index:150;width:264px;max-width:calc(100vw - 16px);box-sizing:border-box;background:#2563eb;color:#fff;'
+      + 'border-radius:10px;padding:11px 32px 11px 14px;font:13px/1.4 system-ui,-apple-system,sans-serif;'
+      + 'box-shadow:0 8px 24px rgba(15,23,42,.25)';
+    tipEl.innerHTML = '<div></div>'
+      + '<b>Nieuw: Omnivaleur in het Nederlands.</b> Klik op NL.'
+      + '<div style="opacity:.75;font-size:11.5px;margin-top:4px">Prefer English? Click EN and we won’t ask again.</div>'
+      + '<button type="button" aria-label="Sluiten" style="position:absolute;top:6px;right:8px;background:none;'
+      + 'border:none;color:#fff;font-size:17px;line-height:1;cursor:pointer;opacity:.8">×</button>';
+    tipEl.querySelector('button').onclick = weg;
+    document.body.appendChild(tipEl);
+    plaats();
+    window.addEventListener('resize', plaats);
+    // Op een telefoon schuift de zijbalk open en dicht; de wijzer gaat mee.
+    var zijbalk = document.querySelector('.sidebar');
+    if (zijbalk) zijbalk.addEventListener('transitionend', plaats);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tekenKeuze);
   else tekenKeuze();
