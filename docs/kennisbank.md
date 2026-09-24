@@ -17,6 +17,26 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## rubriekvraag-volgorde-niet-omgooien
+
+*24-09-2026 — Artikel achteraan de rubriekvraag zetten (voor cache) veranderde 18 van 58 antwoorden en maakte het slechter; teruggedraaid 24-09-2026*
+
+De rubriekvraag bij import (imports._classify_with_claude) is ~8.950 tokens, waarvan
+~8.850 vast (rubriekenlijst + regels). Idee op 24-09-2026: het artikel naar achteren,
+zodat Gemini/Claude het vaste deel uit de cache halen. Gemeten op 58 echte artikelen
+uit alle takken (Claude Haiku): oud tegen oud 57/58 gelijk, nieuw tegen oud maar 40/58;
+gelijk aan de opgeslagen rubriek 30 (oud) tegen 23 (nieuw). Muziekpatches werden
+"geen tak", zilveren lepels "antiek bestek", een miniatuur-drumstel speelgoed.
+Teruggedraaid, niets live gegaan.
+
+**Why:** dezelfde tekst in een andere volgorde is voor het model een andere vraag.
+**How to apply:** wil je deze vraag goedkoper maken, meet dan altijd oud-tegen-oud als
+ruisgrens naast nieuw-tegen-oud op echte artikelen van elke tak. Zie "gemini-tegoed-op".
+
+Verkleinen gemeten 24-09-2026 (17:40): de vraag is 7.883 tokens plus beschrijving (~8.100, Google countTokens), niet 15.000. Takvoorvoegsels weghalen scheelt ~24% (~$0,002 per artikel bij terugval op Claude) en verandert niets aan 503's: die zijn Google-drukte, los van de lengte. Twee stappen (eerst tak, dan rubriek) verdubbelt het aantal verzoeken, en dat is juist wat op de gratis sleutel knelt. Niet gedaan; pas heroverwegen als /health laat zien dat Claude het meeste werk krijgt.
+
+---
+
 ## gemini-tegoed-op
 
 *24-09-2026 — 24-09-2026 gaf Google 402 "prepayment credits are depleted"; alles wat naar Gemini is omgezet liep toen stil via Claude*
@@ -37,24 +57,6 @@ onzichtbaar ongedaan. Lokaal staat dezelfde sleutel in de instellingen
 Sinds 24-09-2026 ~16:30 draait de server op een nieuwe, gratis Google-sleutel
 (vingerafdruk ddf59aed in /health) uit een project zonder betaling. Boven het
 gratis dagmaximum antwoordt Google 429 en gaat de vraag vanzelf naar Claude.
-
----
-
-## rubriekvraag-volgorde-niet-omgooien
-
-*24-09-2026 — Artikel achteraan de rubriekvraag zetten (voor cache) veranderde 18 van 58 antwoorden en maakte het slechter; teruggedraaid 24-09-2026*
-
-De rubriekvraag bij import (imports._classify_with_claude) is ~8.950 tokens, waarvan
-~8.850 vast (rubriekenlijst + regels). Idee op 24-09-2026: het artikel naar achteren,
-zodat Gemini/Claude het vaste deel uit de cache halen. Gemeten op 58 echte artikelen
-uit alle takken (Claude Haiku): oud tegen oud 57/58 gelijk, nieuw tegen oud maar 40/58;
-gelijk aan de opgeslagen rubriek 30 (oud) tegen 23 (nieuw). Muziekpatches werden
-"geen tak", zilveren lepels "antiek bestek", een miniatuur-drumstel speelgoed.
-Teruggedraaid, niets live gegaan.
-
-**Why:** dezelfde tekst in een andere volgorde is voor het model een andere vraag.
-**How to apply:** wil je deze vraag goedkoper maken, meet dan altijd oud-tegen-oud als
-ruisgrens naast nieuw-tegen-oud op echte artikelen van elke tak. Zie "gemini-tegoed-op".
 
 ---
 

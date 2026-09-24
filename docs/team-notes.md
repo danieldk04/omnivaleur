@@ -13291,3 +13291,6 @@ dus de pauze zet de site niet stil.
 Open: niet gemeten of de tweede ronde op de echte gratis sleutel vaker slaagt.
 De rubriekenlijst per artikel kleiner maken is NIET gedaan: de eerste poging
 maakte de keuze slechter (zie notitie 16:40); dat vraagt een eigen meting.
+
+## 24-09-2026 (17:40): rubriekvraag niet verkleind
+Voorstel was de rubriekenlijst per artikel te verkleinen. Gemeten bij Google: ~8.100 tokens per vraag, niet 15.000. Verkleinen scheelt hooguit een kwart, zo'n 0,2 cent per artikel als Claude het overneemt, en helpt niet tegen de "te druk"-meldingen van Google. De enige grote besparing (eerst de tak vragen, dan de rubriek) kost twee verzoeken per artikel, precies wat de gratis sleutel krap maakt. De vorige wijziging aan deze vraag maakte de indeling slechter (40 van 58). Besluit: niet doen. De herkansing bij drukte (commit 0784cbba) staat al live sinds 17:00.
