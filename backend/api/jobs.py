@@ -264,6 +264,22 @@ def _scan_norm_title(t: str) -> str:
     return " ".join(re.sub(r"[^a-z0-9]+", " ", t).split())
 
 
+def _ander_nummer(item: dict | None, nummer: str) -> bool:
+    """Draagt dit artikel aantoonbaar een ánder artikelnummer dan `nummer`?
+
+    Telt het nummer vooraan de titel en het sku-veld, behalve de nummers die
+    Omnivaleur zelf uitdeelt bij importeren (imp-…, rev-…): die zeggen niets over
+    het nummer van de verkoper. Zonder enig nummer weten we het niet: False."""
+    if not item:
+        return False
+    nummers = {_scan_sku(item.get("title"))}
+    sku = str(item.get("sku") or "").strip().lower()
+    if sku and not re.match(r"^(imp|rev)-", sku):
+        nummers.add(sku)
+    nummers.discard("")
+    return bool(nummers) and nummer not in nummers
+
+
 def _unique_index(pairs, tweelingen: dict | None = None) -> dict:
     """key → id, maar alleen als die sleutel bij precies één id hoort.
 
