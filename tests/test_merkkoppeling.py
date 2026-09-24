@@ -26,7 +26,10 @@ from backend.api.content import (  # noqa: E402
     KANAAL_LINKS, MERK_LINKS, WEBSTORE_URL, merk_json_ld, merk_profielen,
 )
 
-INDEX = (REPO / "frontend" / "index.html").read_text(encoding="utf-8")
+# De homepage krijgt zijn voettekst sinds 24-09-2026 pas bij het uitserveren
+# (backend/site_chrome.py); het bestand zelf draagt alleen een plekhouder.
+from backend.site_chrome import met_site_chrome  # noqa: E402
+INDEX = met_site_chrome("index.html", "en", "/").body.decode("utf-8")
 FOOTER = (REPO / "frontend" / "templates" / "_footer.html").read_text(encoding="utf-8")
 CONTENT_PY = (REPO / "backend" / "api" / "content.py").read_text(encoding="utf-8")
 

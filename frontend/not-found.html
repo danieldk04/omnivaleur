@@ -10,7 +10,8 @@
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   :root{--blue:#2563eb;--mint:#34d399;--blue-dark:#1d4ed8;--border:#e2e8f0;--text:#0f172a;--muted:#64748b}
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text);background:#fff;
-       min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center}
+       min-height:100vh;display:flex;flex-direction:column}
+  main{flex:1 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 20px;text-align:center}
   a{text-decoration:none}
   .logo{display:flex;align-items:center;gap:10px;margin-bottom:34px;font-weight:800;font-size:20px}
   .logo img{width:32px;height:32px}
@@ -26,7 +27,8 @@
 </style>
 </head>
 <body>
-  <a class="logo" href="/"><img src="/logo.png" alt=""><span class="grad-text">Omnivaleur</span></a>
+<!--site-nav-->
+<main>
   <div class="code grad-text">404</div>
   <h1>This page doesn't exist</h1>
   <p>The link may be outdated or mistyped. Everything else is still here — start from the homepage, or browse the cross-listing guides.</p>
@@ -35,5 +37,7 @@
     <a class="btn" href="/blog">Read the guides</a>
     <a class="btn" href="/marketplaces">Supported marketplaces</a>
   </div>
+</main>
+<!--site-footer-->
 </body>
 </html>

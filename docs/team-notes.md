@@ -13444,3 +13444,13 @@ op elk account) en afgedwongen met `.github/workflows/vertaaltest.yml`, die
 `tests/test_i18n_compleet.py` draait bij elke PR en push naar main. Bewust geen
 losse skill: een skill laadt alleen als hij getriggerd wordt, CLAUDE.md altijd,
 en de GitHub-proef vangt ook de tweede ontwikkelaar.
+
+## 24-09-2026: één kopregel en voettekst op de hele openbare site
+Daniel: "zorg ervoor dat OVERAL dezelfde header en footer staan (behalve in
+dashboard)". /ai-info had geen menu, en elke pagina had een eigen kopie. Nu:
+`frontend/templates/_nav.html` en `_footer.html` (EN en NL) zijn de enige bron,
+voor de blog via Jinja en voor home, /nl, marketplaces, privacy, terms, ai-info,
+mp-video en de 404 via `backend/site_chrome.py` (plekhouders `<!--site-nav-->` en
+`<!--site-footer-->`). `tests/test_site_chrome.py` faalt als een pagina weer een
+eigen nav of footer krijgt. Inloggen, registreren en het dashboard zelf bewust
+niet. eBay staat nu ook in de footer.

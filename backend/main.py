@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse
+from backend.site_chrome import met_site_chrome
 from fastapi.exception_handlers import http_exception_handler
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.responses import JSONResponse
@@ -246,14 +247,34 @@ def health_resend():
         return {"resend": f"niet bereikbaar: {e}"}
 
 
+@app.get("/")
+async def landing_en():
+    return met_site_chrome("index.html", "en", "/")
+
+
+def _vaste_omleiding(doel: str):
+    async def omleiding():
+        return RedirectResponse(doel, status_code=301)
+    return omleiding
+
+
+# De losse bestanden dragen alleen nog een plekhouder voor kopregel en
+# voettekst; wie ze rechtstreeks als .html opvraagt, gaat naar het nette adres.
+for _bestand, _pad in {"index": "/", "nl": "/nl", "privacy": "/privacy",
+                       "terms": "/terms", "marketplaces": "/marketplaces",
+                       "mp-video": "/mp-video", "ai-info": "/ai-info",
+                       "not-found": "/"}.items():
+    app.get(f"/{_bestand}.html", include_in_schema=False)(_vaste_omleiding(_pad))
+
+
 @app.get("/privacy")
 async def privacy():
-    return FileResponse(FRONTEND / "privacy.html")
+    return met_site_chrome("privacy.html", "en", "/privacy")
 
 
 @app.get("/terms")
 async def terms():
-    return FileResponse(FRONTEND / "terms.html")
+    return met_site_chrome("terms.html", "en", "/terms")
 
 
 @app.get("/login")
@@ -291,7 +312,7 @@ async def beheer_page():
 
 @app.get("/marketplaces")
 async def marketplaces_page():
-    return FileResponse(FRONTEND / "marketplaces.html")
+    return met_site_chrome("marketplaces.html", "en", "/marketplaces")
 
 
 @app.get("/ai-info")
@@ -300,14 +321,14 @@ async def ai_info_page():
     platte-tekstversie (/llms.txt, via de statische map). Crosslist en Vendoo
     nemen geen EU-klanten aan of kennen Marktplaats niet; deze pagina moet ervoor
     zorgen dat een AI-antwoord op die vraag bij ons uitkomt."""
-    return FileResponse(FRONTEND / "ai-info.html")
+    return met_site_chrome("ai-info.html", "en", "/ai-info")
 
 
 @app.get("/mp-video")
 async def mp_video_page():
     """Losse leadpagina voor de video in de koude-mail-sequence. Bewust niet
     in het menu en niet geïndexeerd: alleen bereikbaar via de maillink."""
-    return FileResponse(FRONTEND / "mp-video.html")
+    return met_site_chrome("mp-video.html", "nl", "/mp-video")
 
 
 @app.get("/nl")
@@ -317,7 +338,7 @@ async def landing_nl():
     tweede vaste kopie is nu goedkoper te onderhouden dan een i18n-laag.
     De taalwissel EN <-> NL staat in de nav van beide pagina's; hreflang koppelt
     ze voor Google."""
-    return FileResponse(FRONTEND / "nl.html")
+    return met_site_chrome("nl.html", "nl", "/nl")
 
 
 # ── Korte links met vaste UTM-tags ────────────────────────────────────────
@@ -371,7 +392,7 @@ async def not_found_page(request: Request, exc: StarletteHTTPException):
         # Bewust niet "404.html": StaticFiles(html=True) serveert een bestand met
         # díe naam automatisch bij élke misser, ook op /api — dan kregen de app en
         # de extensie HTML terug waar ze JSON verwachten.
-        return FileResponse(FRONTEND / "not-found.html", status_code=404)
+        return met_site_chrome("not-found.html", "en", "", status_code=404)
     return await http_exception_handler(request, exc)
 
 
