@@ -13085,3 +13085,17 @@ Proef: tests/test_import_zeker_of_twijfel.py (oude code: 6 fouten). Gemeten op
 Daniels 45 wachtende regels: 5 zeker gekoppeld, 3 twijfel (694, 1038, 1071, precies
 de drie die al op hem wachtten), 37 nieuw.
 Open: de echte ronde over vier kanalen met de extensie is nog niet gedraaid.
+
+## 24-09-2026 (10:55, automatisch): Klantfouten
+
+Zes foutsoorten gemeten per klant, geen nieuwe code nodig.
+- Gerepareerd eerder: schapenvachten-verwijdering bij Toon (127e5ea1, gisteravond;
+  daarna vier geslaagde 2dehands-verwijderingen) en Marktplaats "description could
+  not be placed" bij 3bfbed2c (Daniel, 1206 en 1119 om 09:39/09:43; 1.0.350,
+  3441e814; alle plaatsingen daarna gelukt).
+- Klant-eigen bij f8c0cce9: Facebook-tabblad dicht (gisteren 18:52 UTC); de Vinted-
+  plaatsing en de overgeslagen 2dehands-plaatsing van 08:25 UTC zijn opdrachten van
+  gisteravond die pas afgesloten werden toen Chrome weer aanging.
+- Onbekend: 2dehands-overzicht leeg om 19:55 UTC, eenmalig; 2dehands werkte daarna.
+  Oude advertentie staat nog live, niets kwijt.
+Open: f8c0cce9 draait nog 1.0.349, dus nog zonder de Marktplaats-reparatie van 1.0.350.
