@@ -167,36 +167,47 @@ def test_van_een_ander_account_komt_niets_mee(monkeypatch):
 
 # ── 2. updated_at beweegt echt mee ───────────────────────────────────────────
 
-def test_elke_wijziging_aan_een_item_krijgt_een_tijdstempel():
+def _lading(verzoek):
+    """Wat er naar de database gaat. De gepinde postgrest (0.16, op de server)
+    heeft het op `.json`, nieuwere versies op `.request.json`."""
+    return getattr(verzoek, "request", verzoek).json
+
+
+@pytest.fixture(autouse=False)
+def get_db(monkeypatch):
+    """Een echte client met nepadres, ook zonder .env: er gaat niets de deur uit."""
+    from supabase import create_client
+    from backend import database
+    monkeypatch.setattr(database, "_client", create_client(
+        "https://x.supabase.co", "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiJ9.nep"))
+    return database.get_db
+
+
+def test_elke_wijziging_aan_een_item_krijgt_een_tijdstempel(get_db):
     """Zonder dit stempel is het bijwerken-op-wijziging blind: de kolom stond bij
     vrijwel elke rij nog op het tijdstip van aanmaken, want er staat geen trigger
     op de tabel."""
-    from backend.database import get_db
     db = get_db()
-    verzoek = db.table("items").update({"title": "x"}).eq("id", "0").request
-    assert "updated_at" in verzoek.json
-    datetime.fromisoformat(verzoek.json["updated_at"])  # een echt tijdstip
+    lading = _lading(db.table("items").update({"title": "x"}).eq("id", "0"))
+    assert "updated_at" in lading
+    datetime.fromisoformat(lading["updated_at"])  # een echt tijdstip
 
 
-def test_andere_tabellen_krijgen_geen_stempel():
+def test_andere_tabellen_krijgen_geen_stempel(get_db):
     """`jobs` en `listings` hebben die kolom niet — een stempel daar zou elke
     schrijfactie laten mislukken."""
-    from backend.database import get_db
     db = get_db()
-    assert "updated_at" not in get_db().table("jobs").update({"status": "done"}).eq("id", "0").request.json
-    assert "updated_at" not in db.table("listings").update({"status": "sold"}).eq("id", "0").request.json
+    assert "updated_at" not in _lading(get_db().table("jobs").update({"status": "done"}).eq("id", "0"))
+    assert "updated_at" not in _lading(db.table("listings").update({"status": "sold"}).eq("id", "0"))
 
 
-def test_een_eigen_tijdstempel_blijft_staan():
-    from backend.database import get_db
+def test_een_eigen_tijdstempel_blijft_staan(get_db):
     eigen = "2020-01-01T00:00:00+00:00"
-    verzoek = get_db().table("items").update({"updated_at": eigen}).eq("id", "0").request
-    assert verzoek.json["updated_at"] == eigen
+    assert _lading(get_db().table("items").update({"updated_at": eigen}).eq("id", "0"))["updated_at"] == eigen
 
 
-def test_ook_een_upsert_van_meerdere_rijen_wordt_gestempeld():
-    from backend.database import get_db
-    lading = get_db().table("items").upsert([{"id": "1"}, {"id": "2"}]).request.json
+def test_ook_een_upsert_van_meerdere_rijen_wordt_gestempeld(get_db):
+    lading = _lading(get_db().table("items").upsert([{"id": "1"}, {"id": "2"}]))
     assert all("updated_at" in rij for rij in lading)
 
 

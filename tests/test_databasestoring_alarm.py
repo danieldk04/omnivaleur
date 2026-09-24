@@ -198,7 +198,7 @@ def test_een_echte_mislukte_leesactie_komt_bij_het_alarm_terecht(opstelling):
     from supabase import create_client
 
     klok, postbus = opstelling
-    db = create_client("http://127.0.0.1:1", "nep-sleutel-voor-deze-proef")
+    db = create_client("http://127.0.0.1:1", "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiJ9.nep")
 
     for ronde in range(2):
         with pytest.raises(Exception):

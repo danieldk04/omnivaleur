@@ -49,8 +49,9 @@ def test_de_wachtrijvraag_komt_ongeschonden_bij_de_database_aan():
         gezien["url"] = str(request.url)
         return httpx.Response(200, json=[])
 
-    c = create_client("https://x.supabase.co", "x")
+    c = create_client("https://x.supabase.co", "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiJ9.nep")
     c.postgrest.session._transport = httpx.MockTransport(vang)
+    c.postgrest.session._mounts = {}  # een proxy uit de omgeving zou de nep omzeilen
     grens = (datetime.now(timezone.utc) - timedelta(seconds=3600)).isoformat()
     (c.table("listings").select("id").eq("status", "active")
       .or_(f"last_checked.is.null,last_checked.lt.{grens}")
@@ -59,7 +60,8 @@ def test_de_wachtrijvraag_komt_ongeschonden_bij_de_database_aan():
     url = gezien["url"]
     assert "%2B" in url, "de + in het tijdstempel is niet gecodeerd — dit wordt een spatie"
     assert "+00%3A00" not in url
-    assert "order=last_checked.asc.nullsfirst" in url
+    # De gepinde postgrest (0.16) laat ".asc" weg; oplopend is de standaard.
+    assert re.search(r"order=last_checked(\.asc)?\.nullsfirst", url), url
 
 
 def test_de_koppelingen_worden_niet_meer_allemaal_opgehaald():
