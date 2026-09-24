@@ -124,6 +124,35 @@ a { color: inherit; text-decoration: none; }
 .items-tab-count { font-size: 11px; font-weight: 700; background: #f1f5f9; color: var(--muted); border-radius: 999px; padding: 1px 7px; min-width: 20px; text-align: center; }
 .items-tab.active .items-tab-count { background: var(--blue); color: #fff; }
 .items-tab-hint { padding: 9px 22px; font-size: 12px; color: var(--muted); background: #fafbfc; border-bottom: 1px solid var(--border); }
+/* Importpagina (24-09-2026): een kaart met kanalen en knop, daaronder twee tabbladen. */
+.imp-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px; }
+.imp-chip { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px 7px 9px; border: 1.5px solid var(--border); border-radius: 999px; background: var(--surface); font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; transition: border-color .15s, background .15s; }
+.imp-chip:hover:not(:disabled) { border-color: var(--blue); }
+.imp-chip.on { border-color: var(--blue); background: #eff6ff; }
+.imp-chip:disabled { cursor: default; opacity: .75; }
+.imp-tick { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #cbd5e1; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; line-height: 1; color: #fff; }
+.imp-chip.on .imp-tick { background: var(--blue); border-color: var(--blue); }
+.imp-soon { font-size: 12px; color: var(--muted); margin-left: 4px; }
+.imp-status { font-size: 12.5px; color: var(--muted); flex: 1; min-width: 200px; line-height: 1.55; }
+.imp-cond { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+.imp-cond label { text-transform: none; letter-spacing: normal; font-weight: 500; margin: 0; font-size: 12.5px; color: var(--muted); }
+.imp-cond select { width: auto; max-width: 200px; padding: 4px 8px; font-size: 12.5px; }
+.imp-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.imp-reden { font-size: 12.5px; color: #92400e; margin-bottom: 10px; }
+.imp-vergelijk { display: grid; grid-template-columns: 1fr 20px 1fr; gap: 10px; align-items: center; }
+.imp-kant { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.imp-kant img, .imp-geenfoto { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: var(--border); }
+.imp-kant-t { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imp-kant-m { font-size: 11.5px; color: var(--muted); }
+.imp-vs { color: var(--muted); text-align: center; }
+.imp-acties { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 11px; }
+.imp-link { background: none; border: none; color: var(--muted); font-size: 12.5px; cursor: pointer; text-decoration: underline; padding: 4px 6px; }
+.imp-link:hover { color: var(--text); }
+.imp-uitleg { margin-top: 12px; font-size: 12.5px; color: var(--muted); }
+.imp-uitleg summary { cursor: pointer; width: fit-content; }
+.imp-uitleg ul { margin: 8px 0 0; padding-left: 18px; line-height: 1.7; }
+.imp-voet { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+@media (max-width: 640px) { .imp-vergelijk { grid-template-columns: 1fr; } .imp-vs { display: none; } }
 .filter-bar { padding: 12px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #fafbfc; }
 .filter-bar select, .filter-bar input[type="text"] { padding: 7px 11px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 12px; color: var(--text); background: var(--surface); outline: none; transition: border-color .15s; }
 /* Keep the three filters on ONE row — a global `select{width:100%}` otherwise
@@ -1772,68 +1801,76 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     </div>
 
     <!-- ── IMPORT EXISTING LISTINGS VIEW ───────────────────────────── -->
+    <!-- Opnieuw ingedeeld op 24-09-2026 (Daniel: "het is nu echt een beetje een
+         chaos"). Eén kaart met kanalen en knop, daaronder twee tabbladen: wat hij
+         moet nakijken en wat klaarstaat. Uitleg staat achter een klein linkje. -->
     <div id="view-import" class="view">
       <div class="view-header">
-        <h1>Import existing listings → Items</h1>
-        <p>Already selling somewhere directly (not via Omnivaleur)? A scan reads your own "my listings" page and lists what it finds below. Tick every channel you sell on and press one button: we read them all, link each listing to the item it belongs to, and add what is new. Only certain matches are linked by themselves (the same advert, or the same item number). Anything we are not sure about is put in front of you with both photos side by side, and nothing happens to it until you choose. You can run it as often as you like: a listing that is already in your dashboard never becomes a second item. Vinted, Marktplaats, 2dehands and Shopify can be read; eBay and Etsy are still in progress.</p>
+        <h1>Import your listings</h1>
+        <p>Tick where you sell and press Import. We link what we are certain of and add what is new. Anything we are not sure about waits for you. Safe to run again: nothing is ever added twice.</p>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:24px" id="import-scan-grid"></div>
+      <div class="card" style="padding:18px 20px;margin-bottom:20px">
+        <div id="import-scan-grid" class="imp-chips"></div>
+        <div id="import-alles"></div>
+        <!-- Eén staat voor de hele lading. Marktplaats/Admarkt levert geen staat
+             mee, waardoor alles op "Like new" belandde; wie uitsluitend nieuwe
+             spullen verkoopt moest dat honderden keren corrigeren. -->
+        <div class="imp-cond">
+          <label for="import-condition">Listings without a condition become</label>
+          <select id="import-condition" onchange="importCondition()">
+            <option value="new_with_tags">New with tags</option>
+            <option value="new">New (without tags)</option>
+            <option value="good" selected>Like new</option>
+            <option value="fair">Used</option>
+            <option value="poor">Damaged</option>
+          </select>
+        </div>
+      </div>
 
-      <!-- Eén knop voor alle aangevinkte kanalen, en daaronder wat de laatste
-           ronde opleverde (Daniel, 24-09-2026). -->
-      <div id="import-alles" style="margin:-8px 0 24px"></div>
+      <div id="import-progress" style="display:none;margin-bottom:20px"></div>
 
-      <div id="import-progress" style="display:none;margin-bottom:24px"></div>
-
-      <!-- Where everything a scan found actually ended up. The review table only
-           shows what still needs a decision, so without this a scan of listings
-           you already imported ends on an empty screen that looks broken. -->
-      <div id="import-summary" style="display:none;margin-bottom:20px"></div>
-
-      <div id="import-review-section" style="display:none;margin-bottom:28px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <div>
-            <h3 style="font-size:15px;margin:0">Review imports</h3>
-            <div style="font-size:12px;color:var(--muted);margin-top:3px">
-              Optional — only if you want to handle a listing differently than the rest.
+      <div id="import-review-section" style="display:none;margin-bottom:12px">
+        <div class="card" style="padding:0;overflow:hidden">
+          <div class="items-tabs" style="padding:0 14px;align-items:center;overflow-y:hidden">
+            <button class="items-tab" data-imptab="check" onclick="zetImportTab('check')">To check <span class="items-tab-count" id="imp-count-check">0</span></button>
+            <button class="items-tab" data-imptab="ready" onclick="zetImportTab('ready')">Ready to import <span class="items-tab-count" id="imp-count-ready">0</span></button>
+            <button id="imp-bulk-btn" class="btn btn-sm btn-primary" style="margin-left:auto;display:none" onclick="bulkImportAllCandidates()">Import all</button>
+          </div>
+          <div id="imp-pane-check" style="padding:14px 16px">
+            <div id="import-twijfel"></div>
+          </div>
+          <div id="imp-pane-ready">
+            <!-- Hidden listings are legitimate candidates, but importing one means
+                 something different, so say how many there are and let them be put
+                 aside instead of silently mixed in. -->
+            <div id="import-hidden-bar" style="display:none;align-items:center;gap:10px;background:#fffbeb;border-bottom:1px solid #fde68a;padding:9px 16px;font-size:12.5px;color:#92400e">
+              <span id="import-hidden-note"></span>
+              <label style="display:flex;align-items:center;gap:6px;margin-left:auto;font-weight:600;white-space:nowrap;cursor:pointer;text-transform:none;letter-spacing:normal;font-size:12.5px;color:#92400e">
+                <input type="checkbox" id="import-hide-hidden" onchange="loadImportCandidates()" style="width:auto">
+                Leave hidden ones out
+              </label>
+            </div>
+            <div class="table-wrap" style="border:none;border-radius:0">
+            <table class="data-table">
+              <tbody id="import-review-body"></tbody>
+            </table>
             </div>
           </div>
-          <button class="btn btn-sm btn-primary" onclick="bulkImportAllCandidates()">Import all → Items</button>
         </div>
-        <!-- Wat we niet zeker weten, los van de rest en bovenaan. -->
-        <div id="import-twijfel"></div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6">
-          <b>How matching works:</b> we only auto-link when we're certain, so nothing gets mislinked:
-          <span style="white-space:nowrap">🔗 <b>Same listing</b></span> = we recognise the exact same platform listing (same ID) on an item you already have.
-          <span style="white-space:nowrap">🔢 <b>Same number</b></span> = your own item number, like (694), is on an existing item, in any language.
-          <span style="white-space:nowrap">≈ <b>Same title</b></span> = one existing item has an identical title.
-          Not sure (a second Shopify product, an item that is already sold, a second advert with only the same title, or the same piece in another language) = shown above with both photos, and left alone until you choose.
-          Everything else stays <span style="white-space:nowrap">✨ <b>New item</b></span> — near-matches that differ only by size, colour or number are deliberately <i>not</i> linked. You can always override the match per row before applying.
-        </div>
-        <!-- Hidden listings are legitimate candidates, but importing one means
-             something different, so say how many there are and let them be put
-             aside instead of silently mixed in. -->
-        <div id="import-hidden-bar" style="display:none;align-items:center;gap:10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 13px;margin-bottom:10px;font-size:12.5px;color:#92400e">
-          <span id="import-hidden-note"></span>
-          <label style="display:flex;align-items:center;gap:6px;margin-left:auto;font-weight:600;white-space:nowrap;cursor:pointer">
-            <input type="checkbox" id="import-hide-hidden" onchange="loadImportCandidates()" style="width:auto">
-            Leave hidden ones out
-          </label>
-        </div>
-        <div class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Found on platform</th>
-              <th>Match</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="import-review-body"></tbody>
-        </table>
-        </div>
+        <details class="imp-uitleg">
+          <summary>How we match</summary>
+          <ul>
+            <li>Linked by itself: the exact same advert, or your own item number like (694).</li>
+            <li>Waits for you: a second Shopify product, a sold item, a second advert with only the same title, or the same piece in another language.</li>
+            <li>Everything else becomes a new item. Near matches in size, colour or number are never linked.</li>
+          </ul>
+        </details>
       </div>
+
+      <!-- Wat de laatste scan vond en waar het bleef, in één regel. Zonder dit
+           eindigt een herhaalde scan op een leeg scherm dat kapot oogt. -->
+      <div id="import-summary" style="display:none"></div>
     </div>
 
     <!-- ── ACCOUNT / SUBSCRIPTION VIEW ─────────────────────────────── -->
@@ -7428,27 +7465,22 @@ function zetImportKanaal(p, aan) {
 function renderImportScanButtons() {
   const gekozen = new Set(importKanalen());
   const bezig = importAllesBezig || Object.values(scanningPlatforms).some(Boolean);
-  const html = Object.keys(IMPORT_SCANNABLE).map(p => {
-    const available = IMPORT_SCANNABLE[p];
-    let action;
-    if (scanningPlatforms[p]) {
-      action = `<span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)"><span class="spinner" style="width:12px;height:12px;border-width:2px"></span>Reading…</span>`;
-    } else if (available) {
-      action = `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;white-space:nowrap;text-transform:none;letter-spacing:normal;font-weight:500;margin:0;color:var(--text)">
-        <input type="checkbox" style="width:auto" ${gekozen.has(p) ? 'checked' : ''} ${bezig ? 'disabled' : ''}
-          onchange="zetImportKanaal('${p}', this.checked)">I sell here</label>`;
-    } else {
-      action = `<span class="badge delisted">Coming soon</span>`;
-    }
-    return `<div class="card" style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:18px">${platIcon(p, 20)}</span>
-        <div style="font-weight:600;font-size:13px">${PLATFORM_LABELS[p] || p}</div>
-      </div>
-      ${action}
-    </div>`;
+  const kan = Object.keys(IMPORT_SCANNABLE).filter(p => IMPORT_SCANNABLE[p]);
+  const straks = Object.keys(IMPORT_SCANNABLE).filter(p => !IMPORT_SCANNABLE[p]);
+  const chips = kan.map(p => {
+    const aan = gekozen.has(p);
+    return `<button type="button" class="imp-chip${aan ? ' on' : ''}" aria-pressed="${aan}" ${bezig ? 'disabled' : ''}
+      onclick="zetImportKanaal('${p}', ${!aan})"><span class="imp-tick">${aan ? '✓' : ''}</span>${platIcon(p, 18)}${esc(PLATFORM_LABELS[p] || p)}</button>`;
   }).join('');
-  document.getElementById('import-scan-grid').innerHTML = html;
+  const soon = straks.length
+    ? `<span class="imp-soon">${straks.map(p => esc(PLATFORM_LABELS[p] || p)).join(' and ')} coming soon</span>` : '';
+  document.getElementById('import-scan-grid').innerHTML = chips + soon;
+  // De eerder gekozen staat terugzetten, één keer per pagina.
+  const sel = document.getElementById('import-condition');
+  if (sel && !sel.dataset.gezet) {
+    sel.dataset.gezet = '1';
+    try { const b = localStorage.getItem('importCondition'); if (b) sel.value = b; } catch (_) {}
+  }
   renderImportAlles();
 }
 
@@ -7533,53 +7565,53 @@ function renderImportAlles() {
   const box = document.getElementById('import-alles');
   if (!box) return;
   const gekozen = importKanalen();
-  const namen = gekozen.map(p => PLATFORM_LABELS[p] || p).join(', ');
+  const naam = p => PLATFORM_LABELS[p] || p;
   const knop = importAllesBezig
-    ? `<button class="btn btn-primary" disabled style="display:inline-flex;align-items:center;gap:8px"><span class="spinner" style="width:13px;height:13px;border-width:2px"></span>Working…</button>`
-    : `<button class="btn btn-primary" ${gekozen.length ? '' : 'disabled'} onclick="importeerAlleKanalen()">Import from ${gekozen.length > 1 ? `all ${gekozen.length} ticked channels` : gekozen.length ? namen : 'ticked channels'}</button>`;
-  const uitleg = gekozen.length
-    ? `Reads ${esc(namen)}, links what is certain, adds what is new, then checks your whole inventory for duplicates. Safe to run again.`
-    : 'Tick the channels you sell on above.';
+    ? `<button class="btn btn-primary" disabled style="display:inline-flex;align-items:center;gap:8px"><span class="spinner" style="width:13px;height:13px;border-width:2px"></span>Importing…</button>`
+    : `<button class="btn btn-primary" ${gekozen.length ? '' : 'disabled'} onclick="importeerAlleKanalen()">${
+        !gekozen.length ? 'Pick a channel first' : gekozen.length === 1 ? `Import from ${esc(naam(gekozen[0]))}` : `Import from ${gekozen.length} channels`}</button>`;
 
+  // Tijdens een ronde: per kanaal één regel.
   let voortgang = '';
   if (importAllesBezig && Object.keys(importAllesStand).length) {
-    voortgang = `<div style="margin-top:12px;display:grid;gap:6px">` + Object.entries(importAllesStand).map(([p, st]) => {
+    voortgang = `<div style="margin-top:12px;display:grid;gap:5px">` + Object.entries(importAllesStand)
+      .filter(([p]) => p !== '_import').map(([p, st]) => {
       const icoon = st.fout ? '⚠️' : st.klaar ? '✅' : '<span class="spinner" style="width:11px;height:11px;border-width:2px;display:inline-block"></span>';
-      const tekst = st.fout ? st.fout : st.klaar ? (st.gevonden != null ? `read, ${st.gevonden} new listing${st.gevonden === 1 ? '' : 's'} found` : 'read')
+      const tekst = st.fout ? st.fout : st.klaar ? (st.gevonden != null ? `${st.gevonden} new listing${st.gevonden === 1 ? '' : 's'} found` : 'read')
         : (st.message || SCAN_STAGE_LABELS[st.stage || 'queued'] || 'Reading…')
           + (st.total ? ` (${st.current || 0} / ${st.total})` : '');
       return `<div style="display:flex;gap:8px;align-items:center;font-size:12.5px">
         <span style="width:16px;text-align:center">${icoon}</span>
-        <b style="min-width:90px">${esc(PLATFORM_LABELS[p] || p)}</b>
+        <b style="min-width:90px">${esc(naam(p))}</b>
         <span style="color:${st.fout ? '#b45309' : 'var(--muted)'}">${esc(tekst)}</span></div>`;
-    }).join('') + (importAllesStand._import ? `<div style="font-size:12.5px;color:var(--muted);margin-top:4px">${esc(importAllesStand._import)}</div>` : '') + `</div>`;
+    }).join('') + (importAllesStand._import ? `<div style="font-size:12.5px;color:var(--muted);margin-top:2px">${esc(importAllesStand._import)}</div>` : '') + `</div>`;
   }
 
+  // Na een ronde: één regel uitkomst, en alleen wat aandacht vraagt eronder.
   const r = !importAllesBezig && laatsteImportRonde();
-  let resultaat = '';
-  if (r) {
+  let status = 'Takes a few minutes. Duplicates are checked across your whole inventory afterwards.';
+  let extra = '';
+  if (importAllesBezig) status = 'Reading your channels…';
+  else if (r) {
     const wanneer = new Date(r.tijd).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-    const kanalen = Object.entries(r.kanalen || {}).map(([p, k]) =>
-      `<span style="white-space:nowrap">${k.fout ? '⚠️' : '✅'} ${esc(PLATFORM_LABELS[p] || p)}${k.fout ? `: ${esc(k.fout)}` : ''}</span>`).join(' &nbsp; ');
-    const schoon = !r.dubbel && !r.twijfel && !r.fouten;
-    resultaat = `<div style="margin-top:14px;padding:13px 15px;border-radius:10px;border:1px solid ${schoon ? '#bbf7d0' : '#fde68a'};background:${schoon ? '#f0fdf4' : '#fffbeb'}">
-      <div style="font-weight:700;font-size:14px;margin-bottom:6px">${r.dubbel
-        ? `${r.dubbel} duplicate row${r.dubbel === 1 ? '' : 's'} in your inventory`
-        : `Your inventory: ${r.items} item${r.items === 1 ? '' : 's'}, no duplicates`}</div>
-      <div style="font-size:12.5px;line-height:1.7">
-        ${r.linked} linked to an item you already had · ${r.created} new item${r.created === 1 ? '' : 's'} added
-        ${r.twijfel ? ` · <b>${r.twijfel} for you to check below</b>` : ''}${r.fouten ? ` · ${r.fouten} could not be imported` : ''}
-      </div>
-      <div style="font-size:12px;color:var(--muted);margin-top:4px">${kanalen} &nbsp;·&nbsp; ${esc(wanneer)}</div>
-      ${r.dubbel ? `<div style="margin-top:8px"><button class="btn btn-sm btn-outline" onclick="showView('items')">Show the duplicates</button></div>` : ''}
-      ${r.aanvul ? `<div style="font-size:12px;color:var(--muted);margin-top:6px">${esc(r.aanvul)}</div>` : ''}
-    </div>`;
+    const delen = [];
+    if (r.linked) delen.push(`${r.linked} linked`);
+    if (r.created) delen.push(`${r.created} added`);
+    if (!r.linked && !r.created) delen.push('nothing new');
+    status = `<span style="color:${r.dubbel ? '#b45309' : '#16a34a'};font-weight:600">${r.dubbel ? '⚠️' : '✓'} ${r.dubbel
+        ? `${r.dubbel} duplicate${r.dubbel === 1 ? '' : 's'} in your inventory`
+        : `${r.items} item${r.items === 1 ? '' : 's'}, no duplicates`}</span>
+      · ${delen.join(', ')}${r.twijfel ? ` · <b style="color:#92400e">${r.twijfel} to check</b>` : ''}${r.fouten ? ` · ${r.fouten} failed` : ''}
+      <span style="white-space:nowrap">· last run ${esc(wanneer)}</span>`;
+    const fouten = Object.entries(r.kanalen || {}).filter(([, k]) => k.fout);
+    if (fouten.length) extra += fouten.map(([p, k]) =>
+      `<div style="font-size:12.5px;color:#b45309;margin-top:8px">⚠️ ${esc(naam(p))}: ${esc(k.fout)}</div>`).join('');
+    if (r.dubbel) extra += `<div style="margin-top:8px"><button class="btn btn-sm btn-outline" onclick="showView('items')">Show the duplicates</button></div>`;
+    if (r.aanvul) extra += `<div style="font-size:12px;color:var(--muted);margin-top:8px">${esc(r.aanvul)}</div>`;
   }
 
-  box.innerHTML = `<div class="card" style="padding:16px 18px">
-    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">${knop}
-      <div style="font-size:12.5px;color:var(--muted);flex:1;min-width:200px">${uitleg}</div></div>
-    ${voortgang}${resultaat}</div>`;
+  box.innerHTML = `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">${knop}
+      <div class="imp-status">${status}</div></div>${voortgang}${extra}`;
 }
 
 // Wacht tot één scanopdracht klaar is, zonder vaste eindtijd zolang er beweging
@@ -7683,44 +7715,39 @@ async function importeerAlleKanalen() {
 
 // ── Twijfelgevallen: rustig voorleggen, met beide foto's ──────────────────
 const TWIJFEL_UITLEG = {
-  shopify_duplicate: 'This item is already linked to another product in your Shopify store with the same number. Either the piece is in your store twice, or these are two different pieces.',
-  sold_match: 'This advert is still for sale, but the item it matches is already sold. Did you buy it again, or is this an old advert that was never taken down?',
-  second_advert: 'Only the title is the same, and that item already has another advert on this channel. It could be a second piece, or the same piece advertised twice.',
-  likely_same: 'This looks like the same piece as an item you imported from another channel, written in another language.',
+  shopify_duplicate: 'Same number as a product already in your Shopify store. In the store twice, or two different pieces?',
+  sold_match: 'Still for sale, but the matching item is already sold. Bought again, or an old advert?',
+  second_advert: 'Only the title matches, and that item already has an advert on this channel.',
+  likely_same: 'Looks like the same piece, written in another language.',
 };
 
 function renderImportTwijfel(twijfel) {
   const box = document.getElementById('import-twijfel');
   if (!box) return;
   if (!twijfel.length) { box.innerHTML = ''; return; }
-  const foto = (url) => url
-    ? `<img src="${esc(url)}" loading="lazy" decoding="async" style="width:64px;height:64px;border-radius:8px;object-fit:cover;flex-shrink:0">`
-    : `<div style="width:64px;height:64px;border-radius:8px;background:var(--border,#e5e7eb);flex-shrink:0"></div>`;
-  box.innerHTML = `<div style="margin-bottom:16px">
-    <h3 style="font-size:15px;margin:0 0 4px">${twijfel.length} to check</h3>
-    <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">We could not be sure about these, so nothing happened to them yet. Look at both photos and choose.</div>
+  const kant = (url, kop, titel, prijs) => `<div class="imp-kant">
+      ${url ? `<img src="${esc(url)}" loading="lazy" decoding="async" alt="">` : '<div class="imp-geenfoto"></div>'}
+      <div style="min-width:0"><div class="imp-kant-m">${kop}</div>
+        <div class="imp-kant-t" title="${esc(titel)}">${esc(titel)}</div>
+        <div class="imp-kant-m">${prijs != null ? '€' + esc(String(prijs)) : ''}</div></div></div>`;
+  box.innerHTML = `<div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Nothing happens to these until you choose.</div>
     <div style="display:grid;gap:10px">${twijfel.map(c => {
       const item = (state.items || []).find(i => i.id === c.suggested_item_id) || {};
       const itemFoto = Array.isArray(item.photo_urls) ? item.photo_urls[0] : null;
       const eigen = c.photo_url || (Array.isArray(c.photo_urls) ? c.photo_urls[0] : null);
-      return `<div class="card" style="padding:13px 15px">
-        <div style="font-size:12.5px;color:#92400e;margin-bottom:10px">${esc(TWIJFEL_UITLEG[c.match_reason] || 'We are not sure where this belongs.')}</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
-          <div style="display:flex;gap:10px;align-items:center">${foto(eigen)}<div style="min-width:0">
-            <div style="font-size:11px;color:var(--muted)">Found on ${esc(PLATFORM_LABELS[c.platform] || c.platform)}</div>
-            <div style="font-size:13px;font-weight:600">${esc(c.title || 'Untitled')}</div>
-            <div style="font-size:12px;color:var(--muted)">${c.price != null ? '€' + esc(String(c.price)) : ''}</div></div></div>
-          <div style="display:flex;gap:10px;align-items:center">${foto(itemFoto)}<div style="min-width:0">
-            <div style="font-size:11px;color:var(--muted)">Already in your items</div>
-            <div style="font-size:13px;font-weight:600">${esc(item.title || 'Item')}</div>
-            <div style="font-size:12px;color:var(--muted)">${item.price != null ? '€' + esc(String(item.price)) : ''}</div></div></div>
+      return `<div class="imp-card">
+        <div class="imp-reden">${esc(TWIJFEL_UITLEG[c.match_reason] || 'We are not sure where this belongs.')}</div>
+        <div class="imp-vergelijk">
+          ${kant(eigen, `On ${esc(PLATFORM_LABELS[c.platform] || c.platform)}`, c.title || 'Untitled', c.price)}
+          <div class="imp-vs">⇄</div>
+          ${kant(itemFoto, 'In your items', item.title || 'Item', item.price)}
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:11px">
-          <button class="btn btn-sm btn-primary" onclick="twijfelZelfde('${c.id}')">Same piece, link it</button>
-          <button class="btn btn-sm btn-outline" onclick="twijfelApart('${c.id}')">Different piece, add it</button>
-          <button class="btn btn-sm btn-outline" onclick="ignoreImportCandidate('${c.id}')">Ignore</button>
+        <div class="imp-acties">
+          <button class="btn btn-sm btn-primary" onclick="twijfelZelfde('${c.id}')">Same piece, link</button>
+          <button class="btn btn-sm btn-outline" onclick="twijfelApart('${c.id}')">Different piece, add</button>
+          <button class="imp-link" onclick="ignoreImportCandidate('${c.id}')">Ignore</button>
         </div></div>`;
-    }).join('')}</div></div>`;
+    }).join('')}</div>`;
 }
 
 async function twijfelZelfde(candidateId) {
@@ -7913,66 +7940,16 @@ async function loadImportSummary() {
   const pending = s.by_status?.pending || 0;
   const done = (s.by_status?.imported || 0) + (s.by_status?.linked || 0);
   const reopenable = (s.by_status?.ignored || 0) + (s.by_status?.failed || 0);
-
-  const lines = Object.entries(s.by_status)
-    .sort((a, b) => b[1] - a[1])
-    .map(([st, n]) => {
-      const meta = IMPORT_STATUS_LABELS[st] || { label: st, color: '#6b7280' };
-      return `<li style="margin-bottom:3px"><b style="color:${meta.color}">${n}</b> ${meta.label}</li>`;
-    }).join('');
-
   const platforms = Object.entries(s.by_platform || {})
-    .map(([p, counts]) => `${PLATFORM_LABELS[p] || p} (${Object.values(counts).reduce((a, b) => a + b, 0)})`)
-    .join(' · ');
+    .map(([p, counts]) => `${PLATFORM_LABELS[p] || p} ${Object.values(counts).reduce((a, b) => a + b, 0)}`)
+    .join(', ');
 
-  // The whole point: when nothing is pending, say WHY the table is empty.
-  const headline = pending
-    ? `<b>${pending}</b> listing${pending === 1 ? '' : 's'} below still need${pending === 1 ? 's' : ''} a decision.`
-    : `<b>Nothing left to review.</b> Every listing the scan found has already been handled — the scan worked, there is just nothing new in it.`;
-
+  // Staat er niets meer open, zeg dan WAAROM de lijst leeg is: de scan werkte.
   box.style.display = '';
-  box.innerHTML = `
-    <div style="background:var(--card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:10px;padding:14px 16px">
-      <div style="font-weight:700;margin-bottom:4px">Last scan found ${s.total} listing${s.total === 1 ? '' : 's'}</div>
-      <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">${platforms}</div>
-      <div style="font-size:13px;margin-bottom:8px">${headline}</div>
-      <ul style="margin:0;padding-left:18px;font-size:12.5px;color:var(--muted);line-height:1.6">${lines}</ul>
-      ${pending ? `
-      <!-- De volgende stap moet HIER staan, niet alleen als knopje boven de tabel.
-           Een verkoper met 149 regels die allemaal "Apply" en "Ignore" tonen,
-           concludeert dat hij 149 keer moet klikken — dat gebeurde ook echt
-           (Egbert Brouwer, 16-08-2026: "het is me niet duidelijk hoe verder te
-           gaan vanaf hier"). Eén knop, met het aantal erin, op de plek waar hij
-           toch al kijkt. -->
-      <div style="margin-top:14px;padding-top:13px;border-top:1px solid var(--border,#e5e7eb)">
-        <div style="font-size:13px;font-weight:700;margin-bottom:6px">Next step</div>
-        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:10px">
-          One click brings all ${pending} in at once — you do <b>not</b> have to go
-          through them row by row. Anything we are not sure about is left alone
-          and shown below with both photos, for you to decide. Use the Apply /
-          Ignore buttons only for the odd listing you want to treat differently.
-        </div>
-        <!-- Eén staat voor de hele lading. Marktplaats/Admarkt levert geen staat
-             mee, waardoor alles op "Like new" belandde; wie uitsluitend nieuwe
-             spullen verkoopt moest dat honderden keren corrigeren. -->
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
-          <label style="font-size:12.5px;color:var(--muted)" for="import-condition">
-            Condition for listings that don't carry one:
-          </label>
-          <select id="import-condition" style="max-width:200px">
-            <option value="new_with_tags">New with tags</option>
-            <option value="new">New (without tags)</option>
-            <option value="good" selected>Like new</option>
-            <option value="fair">Used</option>
-            <option value="poor">Damaged</option>
-          </select>
-        </div>
-        <button class="btn btn-primary" onclick="bulkImportAllCandidates()">Import all ${pending} → Items</button>
-      </div>` : ''}
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-        ${done ? `<button class="btn btn-sm btn-outline" onclick="showView('items');setItemsTab('live')">See them in Items</button>` : ''}
-        ${reopenable ? `<button class="btn btn-sm btn-outline" onclick="reopenImportCandidates()">Show the ${reopenable} ignored/failed one${reopenable === 1 ? '' : 's'} again</button>` : ''}
-      </div>
+  box.innerHTML = `<div class="imp-voet">
+      ${pending ? '' : '<b style="color:var(--text)">Nothing left to review.</b> '}Scans found ${s.total} listing${s.total === 1 ? '' : 's'} (${esc(platforms)}), ${done} of them are in your items.
+      ${done ? `<button class="imp-link" onclick="showView('items');setItemsTab('live')">See them in Items</button>` : ''}
+      ${reopenable ? `<button class="imp-link" onclick="reopenImportCandidates()">Show the ${reopenable} ignored or failed again</button>` : ''}
     </div>`;
 }
 
@@ -8022,16 +7999,42 @@ function matchBadge(reason) {
   return `<span class="badge" style="background:#f0fdf4;color:#16a34a" title="No confident match — this becomes a new item.">✨ New item</span>`;
 }
 
+// Welk tabblad open staat. Leeg = vanzelf: eerst wat nagekeken moet worden.
+let importTab = null;
+function zetImportTab(t) { importTab = t; toonImportTab(); }
+function toonImportTab() {
+  const nCheck = Number(document.getElementById('imp-count-check')?.textContent) || 0;
+  const nReady = Number(document.getElementById('imp-count-ready')?.textContent) || 0;
+  let t = importTab || (nCheck ? 'check' : 'ready');
+  if (t === 'check' && !nCheck) t = 'ready';
+  if (t === 'ready' && !nReady && nCheck) t = 'check';
+  document.querySelectorAll('[data-imptab]').forEach(b => {
+    b.classList.toggle('active', b.dataset.imptab === t);
+    // Een leeg tabblad is ruis; alleen tonen wat iets bevat.
+    b.style.display = (b.dataset.imptab === 'check' ? nCheck : nReady) ? '' : 'none';
+  });
+  document.getElementById('imp-pane-check').style.display = t === 'check' ? '' : 'none';
+  document.getElementById('imp-pane-ready').style.display = t === 'ready' ? '' : 'none';
+  const bulk = document.getElementById('imp-bulk-btn');
+  bulk.style.display = t === 'ready' && nReady ? '' : 'none';
+  bulk.textContent = `Import all ${nReady}`;
+}
+
+const IMPORT_MATCH_PREFIX = { same_listing: 'Already linked: ', same_code: 'Same number: ', same_title: 'Same title: ' };
+
 function renderImportReview(candidates) {
   const section = document.getElementById('import-review-section');
   importCandidatesById = {};
   (candidates || []).forEach(c => { importCandidatesById[c.id] = c; });
   if (!candidates.length) { section.style.display = 'none'; renderImportTwijfel([]); return; }
   section.style.display = '';
-  // Twijfel bovenaan, met beide foto's; de tabel eronder houdt de rest.
-  renderImportTwijfel(candidates.filter(c => c.twijfel && c.suggested_item_id));
-  const allesTwijfel = candidates.every(c => c.twijfel && c.suggested_item_id);
+  // Twijfel in zijn eigen tabblad, met beide foto's; de tabel houdt de rest.
+  const twijfel = candidates.filter(c => c.twijfel && c.suggested_item_id);
+  renderImportTwijfel(twijfel);
   candidates = candidates.filter(c => !(c.twijfel && c.suggested_item_id));
+  document.getElementById('imp-count-check').textContent = twijfel.length;
+  document.getElementById('imp-count-ready').textContent = candidates.length;
+  toonImportTab();
 
   // Hidden-on-platform summary + optional filter.
   const nHidden = candidates.filter(c => c.is_hidden).length;
@@ -8040,16 +8043,14 @@ function renderImportReview(candidates) {
   if (nHidden) {
     bar.style.display = 'flex';
     document.getElementById('import-hidden-note').innerHTML =
-      `<b>${nHidden}</b> of these ${candidates.length} ${nHidden === 1 ? 'is' : 'are'} <b>hidden</b> on the platform — buyers can't see them. ` +
-      `Importing them is fine: they land under the <b>Hidden</b> tab in Items, not between your live stock.`;
+      `<b>${nHidden}</b> ${nHidden === 1 ? 'is' : 'are'} hidden on the platform. They land under the <b>Hidden</b> tab in Items.`;
   } else {
     bar.style.display = 'none';
   }
   if (skipHidden) candidates = candidates.filter(c => !c.is_hidden);
   if (!candidates.length) {
-    document.getElementById('import-review-body').innerHTML = allesTwijfel
-      ? '<tr><td colspan="3" style="padding:16px;color:var(--muted)">Nothing else is waiting. Only the listings to check above are left.</td></tr>'
-      : '<tr><td colspan="3" style="padding:16px;color:var(--muted)">Every remaining listing is hidden on the platform. Untick the box above to see them.</td></tr>';
+    document.getElementById('import-review-body').innerHTML =
+      '<tr><td colspan="3" style="padding:16px;color:var(--muted)">Every remaining listing is hidden on the platform. Untick the box above to see them.</td></tr>';
     return;
   }
 
@@ -8057,42 +8058,29 @@ function renderImportReview(candidates) {
   // and ~100 items that is ~39,000 <option> nodes built on every render — enough
   // to lock the tab up, especially when a runaway poller re-rendered it every
   // 1.5s. Options are now filled in on first focus, per row.
+  // Het soort overeenkomst staat nu in de keuzelijst zelf ("Same number: …")
+  // in plaats van als los label met een regel kenmerken eronder.
   document.getElementById('import-review-body').innerHTML = candidates.map(c => {
-    // Show what the scan actually captured, so it's obvious per row whether the
-    // rich details (description, extra photos, colour, …) came through.
-    const nPhotos = Array.isArray(c.photo_urls) ? c.photo_urls.length : (c.photo_url ? 1 : 0);
-    const descLen = (c.description || '').trim().length;
-    const chips = [
-      // Hidden first: it changes what importing this row means, so it must be the
-      // thing you notice, not a detail buried after the photo count.
-      c.is_hidden ? `<span style="background:#fef3c7;color:#92400e;font-weight:700;padding:1px 6px;border-radius:4px" title="This listing is hidden on the platform — buyers can't see it. Importing it is fine: it lands under the Hidden tab in Items, not between your live stock.">🙈 hidden</span>` : null,
-      descLen ? `📝 desc` : `<span style="color:#dc2626">no desc</span>`,
-      `🖼️ ${nPhotos} photo${nPhotos === 1 ? '' : 's'}`,
-      c.brand ? `🏷️ ${esc(c.brand)}` : null,
-      c.size ? `📏 ${esc(c.size)}` : null,
-      c.color ? `🎨 ${esc(c.color)}` : null,
-      c.condition ? `⭐ ${esc(c.condition)}` : null,
-    ].filter(Boolean).join(' · ');
+    const voorgesteld = c.suggested_item_id && c.match_reason !== 'likely_same'
+      ? (state.items.find(i => i.id === c.suggested_item_id) || {}).title || 'suggested match' : null;
     return `
     <tr>
       <td><div class="item-info">
-        <div class="item-photo">${c.photo_url ? `<img src="${c.photo_url}" loading="lazy" decoding="async" style="width:40px;height:40px;border-radius:6px;object-fit:cover">` : '👗'}</div>
-        <div>
+        <div class="item-photo">${c.photo_url ? `<img src="${esc(c.photo_url)}" loading="lazy" decoding="async" style="width:40px;height:40px;border-radius:6px;object-fit:cover">` : '👗'}</div>
+        <div style="min-width:0">
           <div class="item-title">${esc(c.title || 'Untitled')}</div>
-          <div class="item-meta">${PLATFORM_LABELS[c.platform] || c.platform}${c.price ? ' · €' + c.price : ''}</div>
-          <div class="item-meta" style="margin-top:2px;font-size:11px">${chips}</div>
+          <div class="item-meta">${esc(PLATFORM_LABELS[c.platform] || c.platform)}${c.price ? ' · €' + esc(String(c.price)) : ''}${c.is_hidden ? ' · <span style="color:#92400e;font-weight:600">hidden</span>' : ''}</div>
         </div>
       </div></td>
       <td style="min-width:200px">
-        <div style="margin-bottom:4px">${matchBadge(c.match_reason)}</div>
-        <select id="import-match-${c.id}" data-suggested="${c.match_reason === 'likely_same' ? c.suggested_item_id : ''}" onfocus="fillImportOptions(this)" onmousedown="fillImportOptions(this)">
-          <option value="">— create new item —</option>
-          ${c.suggested_item_id ? `<option value="${c.suggested_item_id}"${c.match_reason === 'likely_same' ? '' : ' selected'}>${c.match_reason === 'likely_same' ? '⚠️ same as: ' : ''}${esc((state.items.find(i => i.id === c.suggested_item_id) || {}).title || 'suggested match')}</option>` : ''}
+        <select id="import-match-${c.id}" style="padding:5px 8px;font-size:12.5px" data-suggested="${c.match_reason === 'likely_same' ? c.suggested_item_id : ''}" onfocus="fillImportOptions(this)" onmousedown="fillImportOptions(this)">
+          <option value="">New item</option>
+          ${voorgesteld ? `<option value="${c.suggested_item_id}" selected>${esc((IMPORT_MATCH_PREFIX[c.match_reason] || '') + voorgesteld)}</option>` : ''}
         </select>
       </td>
-      <td style="white-space:nowrap">
+      <td style="white-space:nowrap;text-align:right">
         <button class="btn btn-sm btn-outline" onclick="applyImportCandidate('${c.id}')">Apply</button>
-        <button class="btn btn-sm btn-outline" onclick="ignoreImportCandidate('${c.id}')" style="margin-left:6px">Ignore</button>
+        <button class="imp-link" onclick="ignoreImportCandidate('${c.id}')">Ignore</button>
       </td>
     </tr>
   `;
@@ -8111,7 +8099,7 @@ function fillImportOptions(sel) {
   // in a list of hundreds of items.
   const sug = sel.dataset.suggested;
   const sugItem = sug ? state.items.find(i => i.id === sug) : null;
-  sel.innerHTML = '<option value="">— create new item —</option>' +
+  sel.innerHTML = '<option value="">New item</option>' +
     (sugItem ? `<option value="${sugItem.id}">⚠️ same as: ${esc(sugItem.title)}</option>` : '') +
     state.items.map(i => `<option value="${i.id}">${esc(i.title)}</option>`).join('');
   if (keep) sel.value = keep;
@@ -8344,8 +8332,7 @@ async function bulkImportAllCandidates(opties = {}) {
     const imported = totalLinked + totalCreated;
     const parkedNote = totalParked
       ? `\n\n⚠️ ${totalParked} listing(s) look like something you already imported from another channel — ` +
-        `they are still waiting in the list below, marked "Possibly a duplicate". Link them to the existing item, ` +
-        `or set the dropdown to "create new item" if they really are separate.`
+        `they are waiting under "To check", with both photos. Choose same piece or different piece there.`
       : '';
     const detail = `${totalLinked} linked, ${totalCreated} created${totalFailed ? `, ${totalFailed} failed` : ''}.`;
     if (imported === 0 && totalParked > 0 && totalFailed === 0) {

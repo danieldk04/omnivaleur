@@ -13099,3 +13099,16 @@ Zes foutsoorten gemeten per klant, geen nieuwe code nodig.
 - Onbekend: 2dehands-overzicht leeg om 19:55 UTC, eenmalig; 2dehands werkte daarna.
   Oude advertentie staat nog live, niets kwijt.
 Open: f8c0cce9 draait nog 1.0.349, dus nog zonder de Marktplaats-reparatie van 1.0.350.
+
+## 24-09-2026 (11:30): Importpagina opnieuw ingedeeld
+
+Daniel: "het is nu echt een beetje een chaos, less is more". De pagina had drie
+knoppen voor hetzelfde (Import all stond er twee keer), een lange uitleg bovenaan,
+een blok "Last scan found" met een lijstje en een "Next step", en 45 regels met
+elk een rij kenmerken. Nu: een kaart met de kanalen als aanvinkbare knopjes, één
+importknop met de uitkomst van de laatste ronde op één regel, en daaronder twee
+tabbladen: "To check" (twijfel, beide foto's naast elkaar) en "Ready to import"
+(met de enige Import all-knop). Hoe er gekoppeld wordt staat achter "How we
+match". De staat voor advertenties zonder staat staat vast in de kaart. Getest
+met nagebootste gegevens op breed scherm en telefoon; aan de koppelregels zelf is
+niets veranderd.
