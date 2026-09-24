@@ -13051,3 +13051,7 @@ belasting 9 tot 15 op 8 kernen. De werktabbladen stonden op de achtergrond in
 Daniels eigen venster. Geen 2dehands-opdracht vandaag: de server kreeg er geen
 aanvraag voor, 2dehands staat niet op slot (gisteren nog geplaatst).
 Open: 1.0.350 moet naar de Web Store; 1206 en 1119 opnieuw plaatsen na bijwerken.
+Nameting 09:57: Daniel plaatste 1206 opnieuw met 1.0.350. Klok in het tabblad
+0.1 tot 0.4/s, beschrijving toch gelukt ("formulier houdt nu 552 tekens vast"),
+zelf op plaatsen geklikt, advertentie m2446137267 live met 10 van 10 foto's (de
+voortgangsregel "1 van 10" was een tussenstand van het veld images.ids).
