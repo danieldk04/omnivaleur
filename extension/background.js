@@ -8966,7 +8966,12 @@ async function _mwFillDescription(selector, descText) {
 
   el.scrollIntoView({ block: "center" });
   el.focus();
-  await sleep(150);
+  // GEEN KLOKJE VOOR DE LEXICAL-ROUTE (24-09-2026, Daniel). In een tabblad dat
+  // Chrome op de achtergrond afknijpt tikt de klok eens per minuut, en in die
+  // ene tik gaat ook de wachttijd van runInMainWorld af. Elk klokje hier kostte
+  // dus de hele stap, terwijl Lexical's eigen update de tekst meteen neerzet.
+  // Alleen de routes die echt tijd nodig hebben wachten nog.
+  // Zie tests/beschrijving-in-stilgezet-tabblad-test.js.
 
   // Een écht <textarea>/<input> (Vinted) is geen rich-text editor. Alle routes
   // hieronder meten of het gelukt is via innerText/textContent — en dat geeft bij
