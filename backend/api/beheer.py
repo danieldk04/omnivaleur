@@ -238,8 +238,19 @@ def _categoriegroep(categorie: str | None) -> str:
         return "Sieraden"
     if c.startswith("wonen"):
         return "Wonen"
-    if c.startswith("games") or c.startswith("elektronica"):
+    if (c.startswith("games") or c.startswith("elektronica") or c.startswith("electronics")
+            or c.startswith("audio") or c.startswith("computers")):
         return "Elektronica"
+    if c.startswith("speelgoed"):
+        return "Speelgoed"
+    if c.startswith("fietsen"):
+        return "Fietsen"
+    if c.startswith("witgoed"):
+        return "Witgoed"
+    if c.startswith("klussen"):
+        return "Klussen"
+    if c.startswith("sportartikelen"):
+        return "Sport & vrije tijd"
     if "schoen" in c or "laarzen" in c or "sneakers" in c:
         return "Schoenen"
     if "tassen" in c or "accessoires" in c:

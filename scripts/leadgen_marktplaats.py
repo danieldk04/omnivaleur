@@ -618,12 +618,19 @@ GROEP_NAMEN = {
     "unisex": "unisex kleding",
     "sieraden": "sieraden, horloges en tassen",
     "games": "games en consoles",
-    "electronics": "telefoons",
+    "electronics": "telefoons en telefoonaccessoires",
     "audio": "audio, tv, foto en optiek",
     "antiek": "antiek en curiosa",
     "kunst": "kunst",
     "muziek": "muziekinstrumenten en apparatuur",
     "wonen": "wonen, tuin en interieur",
+    "boeken": "boeken, strips en tijdschriften",
+    "speelgoed": "speelgoed, spellen, verzamelkaarten en modelbouw",
+    "fietsen": "fietsen en fietsaccessoires",
+    "sportartikelen": "sportartikelen (geen kleding)",
+    "witgoed": "witgoed en huishoudelijke apparaten",
+    "klussen": "gereedschap, doe-het-zelf en bouwmateriaal",
+    "computers": "computers, laptops, tablets en onderdelen",
 }
 
 
@@ -693,15 +700,15 @@ Een goede lead moet aan ALLE DRIE voldoen:
     lijst hieronder; alles daarbuiten loopt vast en die verkoper kunnen we niet
     helpen. Lees de lijst letterlijk en vul niet aan uit je eigen kennis. Drie
     plekken waar het steeds misgaat:
-      - de tak "electronics" bestaat UITSLUITEND uit telefoons; een hoesje of
-        oplader hoort daar niet in. Speakers, koptelefoons, tv's, camera's,
-        lenzen, verrekijkers en telescopen horen wel in de tak "audio".
-      - boeken, gereedschap, speelgoed, servies en tv/audio staan er alléén in de
-        tak "antiek", en dus alleen als het echt antiek of vintage is. Dezelfde
-        spullen modern en nieuw passen niet.
-      - helemaal afwezig: computers en laptops, persoonlijke verzorging,
-        witgoed en huishoudelijke apparaten, auto- en fietsonderdelen,
-        bouwmateriaal en dierbenodigdheden.
+      - de tak "electronics" is telefonie: telefoons, hoesjes, opladers,
+        oordopjes en vaste telefoons. Speakers, koptelefoons, tv's, camera's,
+        lenzen, verrekijkers en telescopen horen in de tak "audio"; laptops,
+        tablets en computeronderdelen in "computers".
+      - boeken, speelgoed, fietsen, sportartikelen, witgoed en gereedschap
+        hebben sinds 24-09-2026 elk een eigen tak. Alleen wat echt antiek of
+        vintage is hoort in "antiek".
+      - helemaal afwezig: auto- en motoronderdelen, brommers en scooters,
+        dierbenodigdheden, kinderwagens en babyspullen, films, cd's en dvd's.
 
 {groepen}
 
@@ -742,7 +749,7 @@ Antwoord met UITSLUITEND JSON:
   "verzendbaar": true/false,
   "commercieel": true/false,
   "reden": "één zin, Nederlands",
-  "categorie_fit": "één groepsnaam uit de lijst bij punt 1 waar zijn handel echt in valt: dames, heren, kinderen, unisex, sieraden, games, electronics, audio, antiek, muziek of wonen. Past niets, antwoord dan met het woord geen",
+  "categorie_fit": "één groepsnaam uit de lijst bij punt 1 waar zijn handel echt in valt: dames, heren, kinderen, unisex, sieraden, games, electronics, audio, antiek, muziek, wonen, boeken, speelgoed, fietsen, sportartikelen, witgoed, klussen of computers. Past niets, antwoord dan met het woord geen",
   "categorie_fit_reden": "welke van zijn artikelen je in die groep plaatst, of waarom niets past — één korte zin",
   "retail_varianten": true/false,
   "verkoopt_vooral": "Kleding|Meubilair|Alles|Antieke vintage|Hoogwaardige vintage|Vintage interieur|Sieraden|Knutselmaterialen",
@@ -756,7 +763,9 @@ Antwoord met UITSLUITEND JSON:
 # de stapel waar het misging. Verhoog dit dus bij elke inhoudelijke promptwijziging.
 #   2  categoriefilter + variantenfilter (27-08-2026)
 #   3  de tak "audio" erbij, dus opnieuw beoordelen (27-08-2026)
-PROMPT_VERSIE = 3
+#   4  boeken, speelgoed, fietsen, sportartikelen, witgoed, klussen en
+#      computers erbij; telefonie met accessoires (24-09-2026)
+PROMPT_VERSIE = 4
 
 
 # "veilinghuis" staat niet in de lijst die de prompt aanbiedt, maar het model

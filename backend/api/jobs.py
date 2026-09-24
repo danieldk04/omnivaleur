@@ -70,6 +70,65 @@ MINIMALE_EXTEND_VERSIE = (1, 0, 318)
 # uitgelogd (kopbalk van de site in plaats van het persoonlijke overzicht). Zie
 # _oude_kopie_leest_zakelijk_als_uitgelogd.
 MINIMALE_ZAKELIJK_VERSIE = (1, 0, 332)
+# Boeken, speelgoed, fietsen, sportartikelen, witgoed, klussen en computers, plus
+# accessoires/controllers/VR bij games en de rest van telefonie, bestaan in de
+# extensie pas vanaf 1.0.351 (24-09-2026). Een oudere kopie kent die rubrieken
+# niet: op Marktplaats stopt ze, maar op Vinted gaat ze zoeken en pakt ze het
+# dichtstbijzijnde blad. Zulk werk blijft dus 'pending' tot een bijgewerkte kopie
+# polt, precies zoals 'extend' hierboven.
+MINIMALE_NIEUWE_TAKKEN_VERSIE = (1, 0, 351)
+_NIEUWE_TAK_VOORVOEGSELS = ("boeken ", "speelgoed ", "fietsen ", "sportartikelen ",
+                            "witgoed ", "klussen ", "computers ")
+_NIEUW_IN_BESTAANDE_TAK = frozenset([
+    "electronics antennes en masten",
+    "electronics antwoordapparaten",
+    "electronics autoladers",
+    "electronics batterijen en accu s",
+    "electronics carkits",
+    "electronics datacommunicatie",
+    "electronics draadloze handsets",
+    "electronics faxen",
+    "electronics hoesjes apple iphone",
+    "electronics hoesjes blackberry",
+    "electronics hoesjes htc",
+    "electronics hoesjes nokia",
+    "electronics hoesjes overige merken",
+    "electronics hoesjes samsung",
+    "electronics niet-draadloze handsets",
+    "electronics oordopjes",
+    "electronics overige telecommunicatie",
+    "electronics pda-toebehoren",
+    "electronics portofoons en walkie-talkies",
+    "electronics powerbanks",
+    "electronics prepaidkaarten en simkaarten",
+    "electronics radioscanners",
+    "electronics telefoon pda s",
+    "electronics telefoon sagem",
+    "electronics telefoon siemens",
+    "electronics telefoon-opladers",
+    "electronics telefooncentrales",
+    "electronics telefoonhouders",
+    "electronics telefoonsoftware",
+    "electronics toebehoren en onderdelen",
+    "electronics wearable-accessoires",
+    "electronics zenders en ontvangers",
+    "games accessoires nintendo console",
+    "games accessoires nintendo portable",
+    "games accessoires overige",
+    "games accessoires playstation console",
+    "games accessoires playstation portable",
+    "games accessoires xbox",
+    "games controllers nintendo",
+    "games controllers playstation",
+    "games controllers xbox",
+    "games virtual reality",
+])
+
+
+def _vraagt_nieuwe_takken(job: dict) -> bool:
+    """Gaat deze opdracht over een rubriek die pas in 1.0.351 bestaat?"""
+    cat = str(((job.get("payload") or {}).get("category")) or "").strip().lower()
+    return cat.startswith(_NIEUWE_TAK_VOORVOEGSELS) or cat in _NIEUW_IN_BESTAANDE_TAK
 # Hoe vaak een scan die door een te oude kopie is opgepakt terug in de wachtrij
 # mag. Twee: genoeg om de bijgewerkte kopie een kans te geven, te weinig om te
 # blijven rondzingen bij iemand die alleen die oude kopie heeft.
@@ -1807,6 +1866,15 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                 logger.info("Extend %s niet uitgedeeld: kopie %s kent 'extend' nog niet",
                             j["id"], versie_van_de_kopie)
                 continue
+        # Alleen plaatsen kiest een rubriek; verwijderen (na een verkoop) of
+        # verlengen mag nooit wachten op een update.
+        if (platform is not None and j.get("action") == "create" and _vraagt_nieuwe_takken(j)
+                and (versie_van_de_kopie is None
+                     or versie_van_de_kopie < MINIMALE_NIEUWE_TAKKEN_VERSIE)):
+            logger.info("%s %s niet uitgedeeld: kopie %s kent de rubriek %r nog niet",
+                        j["action"], j["id"], versie_van_de_kopie,
+                        (j.get("payload") or {}).get("category"))
+            continue
         if platform is not None and _oude_kopie_leest_zakelijk_als_uitgelogd(
                 db, user_id, j, versie_van_de_kopie):
             logger.info("%s %s niet uitgedeeld: kopie %s leest een zakelijk account als uitgelogd",

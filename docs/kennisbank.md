@@ -17,6 +17,61 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## gemini-tegoed-op
+
+*24-09-2026 — 24-09-2026 gaf Google 402 "prepayment credits are depleted"; alles wat naar Gemini is omgezet liep toen stil via Claude*
+
+Op 24-09-2026 antwoordde Gemini met HTTP 402 "Your prepayment credits are
+depleted" (sleutel f7c8c67f, de Omnivaleur-sleutel). taalmodel.py valt dan stil
+terug op Claude, dus rubriekkeuze, vertalen, tweelingzoeker en blog liepen op de
+dure route zonder dat iets rood werd. De tweelingzoeker is op Claude aantoonbaar
+slechter (zie team-notes 23-09).
+
+**Why:** de omzetting naar Gemini was om kosten; een leeg tegoed maakt dat
+onzichtbaar ongedaan. Lokaal staat dezelfde sleutel in de instellingen
+(settings.google_api_key, niet gemini_api_key).
+**How to apply:** meet bij twijfel eerst met gemini_vertaling.vraag() en kijk of er
+402 in de log staat. Een alarm op 402 bestaat nog niet. Zie
+"modellenlijst-van-de-dienst-is-geen-bewijs".
+
+---
+
+## nieuwe-takken-24-09
+
+*24-09-2026 — Boeken, speelgoed, fietsen, sportartikelen, witgoed, klussen, computers (469 rubrieken) sinds 24-09-2026; zo lees je Marktplaats- en Vinted-rubrieken betrouwbaar uit*
+
+Sinds 24-09-2026 (extensie 1.0.351) kent Omnivaleur zeven extra takken plus
+accessoires/controllers/VR bij games en de rest van Telecommunicatie bij
+electronics. Koppeltabel: tests/fixtures/marktplaats_nieuwe_takken_24-09-2026.json
+en V_PAD in extension/content/vinted.js. tests/test_nieuwe_takken.py bewaakt dat
+alle tien plekken gelijk blijven.
+
+**Rubrieknummers van Marktplaats lezen (ingelogd, in een browser):**
+GET /plaats/api/v1/category-aggregate/{l1}/buckets en
+.../buckets/{bucket}/categories geeft de hele boom van het plaatsformulier. Daarna
+elk adres /plaats/{l1}/{cat3}?bucketId={b} ophalen: de HTML bevat
+"c":{"l1":{...},"l2":{"id":..,"n":..}} (de rubriek die Marktplaats er echt van
+maakt), "isPaidAd", "maxFreeLiveListingsForCategory" en per veld "mandatory".
+Gemeten: 21 rubrieken landen bij een andere hoofdrubriek (watersport bij Watersport
+en Boten), 6 klusrubrieken zijn altijd betaald (weggelaten), 187 hebben maar 1 of 2
+gratis plekken, en het enige verplichte veld is de GPSR-fabrikant (669 van 807).
+Audio (31) werkt zonder bucketId, maar heeft er wel een.
+
+**Vinted-boom:** GET vinted.nl/api/v2/item_upload/catalogs (ook anoniem, 3047
+knopen). Vinted kent geen bouwmaterialen, software, simkaarten, zonnebanken,
+luisterboeken: die staan als null in V_PAD en in NIET_OP_VINTED (server en dashboard).
+
+**Valkuil:** een takvoorvoegsel mag niet botsen met een kledingsleutel. "sport" zou
+"sport bh" en "sport tops" (dames) tot sportartikel maken; de tak heet daarom
+"sportartikelen".
+
+**Why:** Daniel wilde de takken "volledig en juist, niet half". Een oude extensie
+kent de rubrieken niet: jobs.py deelt plaatswerk voor deze rubrieken pas uit vanaf
+1.0.351 (MINIMALE_NIEUWE_TAKKEN_VERSIE). Facebook-namen zijn nog niet in het echte
+formulier nagelopen. Zie ook "marktplaats-category-ids" en "staat-bij-import".
+
+---
+
 ## staat-bij-import
 
 *24-09-2026 — _map_condition in imports.py zette Vinted "Goed" op Like new en "Zo goed als nieuw" op New; 1025 artikelen bij 10 klanten, gerepareerd 24-09-2026*

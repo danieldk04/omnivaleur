@@ -154,3 +154,43 @@ def test_ebay_blijft_binnen_de_eigen_tak():
     assert _tak_voor_rubriek("boeken kookboeken") == ("267",)
     assert _tak_voor_rubriek("klussen boormachines") == ("3187", "118570", "29518")
     assert _tak_voor_rubriek("heren jeans") is None
+
+
+# ── Een oude extensie krijgt geen plaatswerk voor een rubriek die ze niet kent ──
+import pytest  # noqa: E402
+
+from backend.api import jobs as jobsapi  # noqa: E402
+
+
+def _uitgedeeld(monkeypatch, versie, actie, categorie, platform="vinted"):
+    import sys
+    sys.path.insert(0, str(ROOT / "tests"))
+    from test_verlengen_2dehands_backend import _pending_db, _oud
+    job = {"id": "j1", "user_id": "u1", "item_id": "it1", "platform": platform,
+           "action": actie, "status": "pending",
+           "payload": {"category": categorie, "platform_listing_id": "v1", "title": "t"},
+           "created_at": _oud(0), "claimed_at": None, "done_at": None, "scheduled_for": None}
+    db = _pending_db(job)
+    monkeypatch.setattr(jobsapi, "get_db", lambda: db)
+    monkeypatch.setattr(jobsapi, "_record_extension_heartbeat", lambda *a, **k: None)
+    monkeypatch.setattr(jobsapi, "_recover_stale_claims", lambda *a, **k: None)
+    monkeypatch.setattr(jobsapi, "execute_with_retry", lambda q, *a, **k: q.execute())
+    monkeypatch.setattr(jobsapi, "_zet_kleur_goed", lambda r: None)
+    monkeypatch.setattr(jobsapi, "_zet_taal_goed", lambda db, js: list(js))
+    monkeypatch.setattr(jobsapi, "_haal_links_eruit", lambda db, js: 0)
+    uit = jobsapi.get_pending_jobs(
+        request=type("R", (), {"headers": {"x-omnivaleur-ext": versie}})(),
+        platform=platform, user_id="u1")
+    return bool(uit)
+
+
+@pytest.mark.parametrize("versie,actie,categorie,verwacht", [
+    ("1.0.350", "create", "boeken stripboeken", False),
+    ("1.0.351", "create", "boeken stripboeken", True),
+    ("1.0.350", "create", "games controllers playstation", False),
+    ("1.0.350", "create", "games playstation 5", True),     # bestond al
+    ("1.0.350", "create", "heren jeans", True),
+    ("1.0.350", "delete", "boeken stripboeken", True),      # verwijderen wacht nooit
+])
+def test_oude_kopie_krijgt_geen_plaatswerk_voor_nieuwe_rubriek(monkeypatch, versie, actie, categorie, verwacht):
+    assert _uitgedeeld(monkeypatch, versie, actie, categorie) == verwacht

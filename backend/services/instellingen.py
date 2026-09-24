@@ -45,7 +45,8 @@ RELIST_DAGEN_MAX = 85
 # toegevoegd. test_vinted_voorkeur bewaakt het nu.
 VINTED_GROEPEN_GELDIG = ("dames", "heren", "kinderen", "unisex", "sieraden",
                          "antiek", "kunst", "muziek", "games", "electronics",
-                         "wonen", "audio")
+                         "wonen", "audio", "boeken", "speelgoed", "fietsen",
+                         "sportartikelen", "witgoed", "klussen", "computers")
 
 # De EU verplicht sinds de GPSR bij vrijwel elke advertentie een
 # "verantwoordelijke partij": naam, postadres en e-mailadres van de fabrikant of

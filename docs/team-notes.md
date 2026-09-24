@@ -13167,3 +13167,43 @@ achtergrond als in een Vinted-tabblad. Niets gerepareerd, niets gepubliceerd en
 niets kwijt: de artikelen staan klaar voor een nieuwe poging zodra hij weer
 ingelogd is.
 Open: niets aan onze kant. Zijn drie 2dehands-plaatsingen van 10:18 tot 10:19 UTC staan nog in de wachtrij.
+
+## 24-09-2026 (13:30): Zeven nieuwe takken, volledig op elk kanaal
+
+Daniel: "die eigen indeling heel graag, maar volledig en juist, niet half". Erbij:
+boeken (78), speelgoed incl. spellen, verzamelkaarten en modelbouw (69), fietsen
+(41), sportartikelen (59), witgoed (47), klussen (63), computers (70), plus bij
+games accessoires, controllers en VR (10) en bij electronics de rest van
+telefonie (32). 469 rubrieken.
+
+Hoe nagelopen, in Daniels ingelogde Marktplaats (ingebouwde browser, hij logde zelf
+in; er is niets ingevuld of geplaatst):
+- De boom uit het plaatsformulier zelf (/plaats/api/v1/category-aggregate).
+- Elk adres /plaats/{l1}/{cat3}?bucketId opgevraagd: alle 472 geven 200 en precies
+  de gevraagde rubriek. 21 landen bij hun echte hoofdrubriek (bijv. watersport bij
+  Watersport en Boten), zoals Marktplaats' eigen keuzelijst dat ook doet.
+- 6 klusrubrieken zijn altijd betaald (bouwliften, zonnepanelen, palletwagens,
+  aggregaten, bouwketen, containers): weggelaten. 187 hebben 1 of 2 gratis plekken
+  per verkoper, zoals consoles en iPhones al hadden.
+- Enige verplichte veld: de GPSR-fabrikant (669 van 807), dat vult de extensie al.
+- Vinted: elk pad in Vinteds eigen boom (/api/v2/item_upload/catalogs) gevonden;
+  78 rubrieken bestaan op Vinted niet en worden daar vooraf tegengehouden in plaats
+  van gegokt (NIET_OP_VINTED).
+- eBay: hoofdrubrieken van ebay.nl zelf; suggesties moeten daaronder vallen.
+
+Plekken: dashboard (lijst, Item type, labels, Vinted-voorkeuren, eBay-filter),
+import (taxonomie + uitleg aan het model), extensie (MP_CATEGORIES, V_PAD en boom-
+wandeling op Vinted, Facebook), eBay, Shopify-type, crosslist, platformregels,
+instellingen, beheer, leadgen-prompt (versie 4). De tak heet "sportartikelen" omdat
+"sport" botste met "sport bh"/"sport tops". Een extensie onder 1.0.351 krijgt geen
+plaatswerk voor deze rubrieken (MINIMALE_NIEUWE_TAKKEN_VERSIE); verwijderen gaat door.
+Proeven: tests/test_nieuwe_takken.py (17), tests/vinted-nieuwe-takken-test.js (14,
+oude code valt om), nicheproef 93 van 93 twee keer. Alle 1797 serverproeven groen;
+extensieproeven: dezelfde 10 als vóór vandaag falen, geen nieuwe.
+
+Ontdekt: het Gemini-tegoed is op (HTTP 402 "prepayment credits are depleted"), dus
+alles wat 23-09 naar Gemini ging draait nu stil op Claude. De uitleg aan het model
+bij import is door de 844 rubrieken ~8.800 tokens per artikel.
+Open: extensie 1.0.351 moet de Web Store in; Facebook-rubrieknamen niet in het
+echte formulier nagelopen; niet op Gemini gemeten (tegoed op); leadgen zoekt de
+nieuwe rubrieken nog niet af (Daniels keuze).

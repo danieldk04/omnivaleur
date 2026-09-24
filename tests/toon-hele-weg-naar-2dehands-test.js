@@ -89,6 +89,7 @@ function bouwWereld(settings, items) {
     constUit("TREFWOORDSTAART_RE"),
     constUit("VINTED_VERBODEN_RE"),
     constUit("VINTED_TWIJFEL"),
+    constUit("NIET_OP_VINTED"),
     constUit("VINTED_GROEP_LABELS"),
     functieUit("itemGroep"),
     functieUit("isNonClothingItem"),

@@ -102,6 +102,7 @@ async function draai(item, voorstellen) {
     BLAD_VOORKEUR: [[/ripped|kapot|gaten/i, /ripped/i]],
     enkelvoud: (w) => (w.length > 4 && /s$/.test(w) && !/ss$/.test(w) ? w.slice(0, -1) : w),
     V_KLEDING: { dames: { truien: ["Jumpers & sweaters"] }, heren: {} },
+    V_PAD: {},   // takken buiten kleding (24-09-2026); hier alleen kleding
   };
   zand.__item = item;
   vm.createContext(zand);

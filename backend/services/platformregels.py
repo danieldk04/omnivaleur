@@ -65,7 +65,98 @@ _TWIJFEL_PATRONEN = [
 # De categoriegroepen uit onze eigen boom, zoals ze in het scherm heten.
 GROEPEN = ("dames", "heren", "kinderen", "unisex", "sieraden",
            "antiek", "kunst", "muziek", "games", "electronics", "wonen",
-           "audio")
+           "audio", "boeken", "speelgoed", "fietsen", "sportartikelen",
+           "witgoed", "klussen", "computers")
+
+# RUBRIEKEN WAAR VINTED GEEN PLEK VOOR HEEFT (24-09-2026).
+#
+# Geen verbod maar een gat in Vinteds eigen boom (/api/v2/item_upload/catalogs):
+# bouwmaterialen, software, simkaarten, zonnebanken, luisterboeken. Zonder deze
+# lijst zocht de extensie op trefwoorden en koos ze het dichtstbijzijnde blad,
+# dus kwamen tegels tussen het gereedschap. Gelijk aan de null-waarden in V_PAD
+# (extension/content/vinted.js) en NIET_OP_VINTED in frontend/app.html.
+NIET_OP_VINTED = frozenset([
+    "boeken e-books",
+    "boeken luisterboeken",
+    "computers antivirus- en beveiligingssoftware",
+    "computers audio software",
+    "computers besturingssoftware",
+    "computers educatie- en cursussoftware",
+    "computers navigatiesoftware",
+    "computers office-software",
+    "computers ontwerp- en bewerkingssoftware",
+    "computers overige computers en software",
+    "electronics antennes en masten",
+    "electronics carkits",
+    "electronics datacommunicatie",
+    "electronics overige telecommunicatie",
+    "electronics prepaidkaarten en simkaarten",
+    "electronics radioscanners",
+    "electronics telefooncentrales",
+    "electronics telefoonsoftware",
+    "electronics zenders en ontvangers",
+    "klussen adembescherming",
+    "klussen betonmolens",
+    "klussen buizen en afvoer",
+    "klussen dakbedekking",
+    "klussen deuren en horren",
+    "klussen elektra en kabels",
+    "klussen geisers en boilers",
+    "klussen glas en ramen",
+    "klussen hout en planken",
+    "klussen ijzerwaren en bevestigingsmiddelen",
+    "klussen isolatie en afdichting",
+    "klussen kozijnen en schuifpuien",
+    "klussen kratten en dozen",
+    "klussen kruiwagens",
+    "klussen lasapparaten",
+    "klussen metalen",
+    "klussen metselstenen",
+    "klussen motoren",
+    "klussen overige doe-het-zelf en verbouw",
+    "klussen overige machines",
+    "klussen platen en panelen",
+    "klussen plinten en afwerking",
+    "klussen reinigingsmachines",
+    "klussen rolluiken",
+    "klussen steigers",
+    "klussen tegels",
+    "klussen tekentafels",
+    "klussen thermostaten",
+    "klussen transportwagens",
+    "klussen veiligheidskleding",
+    "klussen ventilatie en afzuiging",
+    "klussen verf beits en lak",
+    "klussen vloerdelen en plavuizen",
+    "klussen weegschalen",
+    "klussen werkkleding",
+    "klussen zwenkwielen",
+    "speelgoed accuvoertuigen",
+    "speelgoed hobbelfiguren",
+    "speelgoed modelbouw auto s en voertuigen",
+    "speelgoed modelbouw boten en schepen",
+    "speelgoed modelbouw figuren en diorama s",
+    "speelgoed modelbouw overige",
+    "speelgoed modelbouw vliegtuigen en helikopters",
+    "speelgoed rolschaatsen",
+    "speelgoed skelters",
+    "speelgoed speelhuisjes",
+    "speelgoed speeltoestellen",
+    "speelgoed springkussens",
+    "sportartikelen ballet",
+    "sportartikelen dansen",
+    "sportartikelen gezondheidsproducten en wellness",
+    "sportartikelen karting",
+    "sportartikelen overige sport en fitness",
+    "sportartikelen schaatsen",
+    "sportartikelen schietsport-accessoires",
+    "sportartikelen skeelers",
+    "sportartikelen zweefvliegen en paragliding",
+    "witgoed overige witgoed en apparatuur",
+    "witgoed zonnebanken en gezichtsbruiners",
+])
+_NIET_OP_VINTED_REDEN = ("Vinted heeft geen rubriek voor dit soort artikel, dus het "
+                         "kan daar niet geplaatst worden.")
 
 
 def _groep(item: dict) -> str:
@@ -123,6 +214,9 @@ def beoordeel(item: dict, platform: str, voorkeur: list[str] | None = None) -> t
     # op de beschrijving alleen nadat de trefwoordenstaart eruit is.
     if _VERBODEN_RE.search(titel) or _VERBODEN_RE.search(_zonder_trefwoorden(tekst)):
         return BLOKKADE, _VERBODEN_REDEN
+
+    if str(item.get("category") or "").strip().lower() in NIET_OP_VINTED:
+        return BLOKKADE, _NIET_OP_VINTED_REDEN
 
     if voorkeur:
         groep = _groep(item)

@@ -1,0 +1,2350 @@
+{
+ "bron": "Marktplaats-plaatsformulier, /plaats/api/v1/category-aggregate, elk adres opgevraagd en teruggekregen als deze rubriek, 24-09-2026",
+ "rubrieken": {
+  "boeken advies hulp en training": {
+   "cat1": 201,
+   "bucketId": 38,
+   "cat3": 2835
+  },
+  "boeken antieke boeken en bijbels": {
+   "cat1": 201,
+   "bucketId": 42,
+   "cat3": 3
+  },
+  "boeken architectuur": {
+   "cat1": 201,
+   "bucketId": 36,
+   "cat3": 1886
+  },
+  "boeken atlassen en landkaarten": {
+   "cat1": 201,
+   "bucketId": 42,
+   "cat3": 202
+  },
+  "boeken auto s boeken": {
+   "cat1": 201,
+   "bucketId": 39,
+   "cat3": 203
+  },
+  "boeken auto s folders": {
+   "cat1": 201,
+   "bucketId": 39,
+   "cat3": 2692
+  },
+  "boeken auto s handleidingen": {
+   "cat1": 201,
+   "bucketId": 39,
+   "cat3": 61
+  },
+  "boeken avontuur en actie": {
+   "cat1": 201,
+   "bucketId": 37,
+   "cat3": 204
+  },
+  "boeken baby s en peuters": {
+   "cat1": 201,
+   "bucketId": 35,
+   "cat3": 1464
+  },
+  "boeken beeldend": {
+   "cat1": 201,
+   "bucketId": 36,
+   "cat3": 1887
+  },
+  "boeken biografieen": {
+   "cat1": 201,
+   "bucketId": 42,
+   "cat3": 205
+  },
+  "boeken boekenweekgeschenken": {
+   "cat1": 201,
+   "bucketId": 42,
+   "cat3": 1877
+  },
+  "boeken catalogussen en folders": {
+   "cat1": 201,
+   "bucketId": 42,
+   "cat3": 206
+  },
+  "boeken chicklit": {
+   "cat1": 201,
+   "bucketId": 37,
+   "cat3": 1878
+  },
+  "boeken comics": {
+   "cat1": 201,
+   "bucketId": 40,
+   "cat3": 1459
+  },
+  "boeken dans en theater": {
+   "cat1": 201,
+   "bucketId": 36,
+   "cat3": 1888
+  },
+  "boeken detectives": {
+   "cat1": 201,
+   "bucketId": 37,
+   "cat3": 207
+  },
+  "boeken dieren en huisdieren": {
+   "cat1": 201,
+   "bucketId": 39,
+   "cat3": 1879
+  },
+  "boeken e-books": {
+   "cat1": 201,
+   "bucketId": 42,
+   "cat3": 2690
+  },
+  "boeken economie en marketing": {
+   "cat1": 201,
+   "bucketId": 38,
+   "cat3": 1460
+  },
+  "boeken encyclopedieen": {
+   "cat1": 201,
+   "bucketId": 38,
+   "cat3": 209
+  },
+  "boeken esoterie en spiritualiteit": {
+   "cat1": 201,
+   "bucketId": 38,
+   "cat3": 210
+  },
+  "boeken essays en columns": {
+   "cat1": 201,
+   "bucketId": 42,
+   "cat3": 1880
+  },
+  "boeken fantasy": {
+   "cat1": 201,
+   "bucketId": 37,
+   "cat3": 225
+  },
+  "boeken film tv en media": {
+   "cat1": 201,
+   "bucketId": 36,
+   "cat3": 1461
+  },
+  "boeken filosofie": {
+   "cat1": 201,
+   "bucketId": 38,
+   "cat3": 1462
+  },
+  "boeken fotografie en design": {
+   "cat1": 201,
+   "bucketId": 36,
+   "cat3": 217
+  },
+  "boeken gedichten en poezie": {
+   "cat1": 201,
+   "bucketId": 42,
+   "cat3": 1463
+  },
+  "boeken geschiedenis regio": {
+   "cat1": 201,
+   "bucketId": 34,
+   "cat3": 1881
+  },
+  "boeken geschiedenis vaderland": {
+   "cat1": 201,
+   "bucketId": 34,
+   "cat3": 211
+  },
+  "boeken geschiedenis wereld": {
+   "cat1": 201,
+   "bucketId": 34,
+   "cat3": 1882
+  },
+  "boeken gezondheid en voeding": {
+   "cat1": 201,
+   "bucketId": 33,
+   "cat3": 219
+  },
+  "boeken godsdienst en theologie": {
+   "cat1": 201,
+   "bucketId": 38,
+   "cat3": 212
+  },
+  "boeken historische romans": {
+   "cat1": 201,
+   "bucketId": 34,
+   "cat3": 1883
+  },
+  "boeken hobby en vrije tijd": {
+   "cat1": 201,
+   "bucketId": 39,
+   "cat3": 213
+  },
+  "boeken humor": {
+   "cat1": 201,
+   "bucketId": 42,
+   "cat3": 1620
+  },
+  "boeken informatica en computer": {
+   "cat1": 201,
+   "bucketId": 38,
+   "cat3": 214
+  },
+  "boeken jeugd 10 tot 12 jaar": {
+   "cat1": 201,
+   "bucketId": 35,
+   "cat3": 1884
+  },
+  "boeken jeugd 13 jaar en ouder": {
+   "cat1": 201,
+   "bucketId": 35,
+   "cat3": 1885
+  },
+  "boeken jeugd onder 10 jaar": {
+   "cat1": 201,
+   "bucketId": 35,
+   "cat3": 215
+  },
+  "boeken kleuters": {
+   "cat1": 201,
+   "bucketId": 35,
+   "cat3": 1465
+  },
+  "boeken kookboeken": {
+   "cat1": 201,
+   "bucketId": 33,
+   "cat3": 216
+  },
+  "boeken literatuur": {
+   "cat1": 201,
+   "bucketId": 37,
+   "cat3": 218
+  },
+  "boeken luisterboeken": {
+   "cat1": 201,
+   "bucketId": 42,
+   "cat3": 1889
+  },
+  "boeken mode": {
+   "cat1": 201,
+   "bucketId": 39,
+   "cat3": 2618
+  },
+  "boeken motoren": {
+   "cat1": 201,
+   "bucketId": 39,
+   "cat3": 2691
+  },
+  "boeken motoren handleidingen": {
+   "cat1": 201,
+   "bucketId": 39,
+   "cat3": 688
+  },
+  "boeken muziek": {
+   "cat1": 201,
+   "bucketId": 36,
+   "cat3": 220
+  },
+  "boeken natuur": {
+   "cat1": 201,
+   "bucketId": 39,
+   "cat3": 208
+  },
+  "boeken oorlog en militair": {
+   "cat1": 201,
+   "bucketId": 34,
+   "cat3": 2119
+  },
+  "boeken overige boeken": {
+   "cat1": 201,
+   "bucketId": 42,
+   "cat3": 221
+  },
+  "boeken partijen": {
+   "cat1": 201,
+   "bucketId": 42,
+   "cat3": 2694
+  },
+  "boeken politiek en maatschappij": {
+   "cat1": 201,
+   "bucketId": 34,
+   "cat3": 1466
+  },
+  "boeken prentenboeken en plaatjesalbums": {
+   "cat1": 201,
+   "bucketId": 42,
+   "cat3": 2693
+  },
+  "boeken psychologie": {
+   "cat1": 201,
+   "bucketId": 38,
+   "cat3": 222
+  },
+  "boeken reisgidsen": {
+   "cat1": 201,
+   "bucketId": 41,
+   "cat3": 223
+  },
+  "boeken reisverhalen": {
+   "cat1": 201,
+   "bucketId": 41,
+   "cat3": 1890
+  },
+  "boeken romans": {
+   "cat1": 201,
+   "bucketId": 37,
+   "cat3": 224
+  },
+  "boeken schoolboeken": {
+   "cat1": 201,
+   "bucketId": 38,
+   "cat3": 1652
+  },
+  "boeken science fiction": {
+   "cat1": 201,
+   "bucketId": 37,
+   "cat3": 2688
+  },
+  "boeken sportboeken": {
+   "cat1": 201,
+   "bucketId": 39,
+   "cat3": 226
+  },
+  "boeken sprookjes en fabels": {
+   "cat1": 201,
+   "bucketId": 37,
+   "cat3": 2687
+  },
+  "boeken streekboeken en streekromans": {
+   "cat1": 201,
+   "bucketId": 41,
+   "cat3": 1467
+  },
+  "boeken stripboeken": {
+   "cat1": 201,
+   "bucketId": 40,
+   "cat3": 227
+  },
+  "boeken studie en cursus": {
+   "cat1": 201,
+   "bucketId": 38,
+   "cat3": 228
+  },
+  "boeken taal duits": {
+   "cat1": 201,
+   "bucketId": 41,
+   "cat3": 229
+  },
+  "boeken taal engels": {
+   "cat1": 201,
+   "bucketId": 41,
+   "cat3": 230
+  },
+  "boeken taal frans": {
+   "cat1": 201,
+   "bucketId": 41,
+   "cat3": 231
+  },
+  "boeken taal overige talen": {
+   "cat1": 201,
+   "bucketId": 41,
+   "cat3": 232
+  },
+  "boeken taal spaans": {
+   "cat1": 201,
+   "bucketId": 41,
+   "cat3": 233
+  },
+  "boeken techniek": {
+   "cat1": 201,
+   "bucketId": 38,
+   "cat3": 235
+  },
+  "boeken thrillers": {
+   "cat1": 201,
+   "bucketId": 37,
+   "cat3": 236
+  },
+  "boeken tijdschriften en kranten": {
+   "cat1": 201,
+   "bucketId": 42,
+   "cat3": 237
+  },
+  "boeken vervoer en transport": {
+   "cat1": 201,
+   "bucketId": 39,
+   "cat3": 2689
+  },
+  "boeken wetenschap": {
+   "cat1": 201,
+   "bucketId": 38,
+   "cat3": 1468
+  },
+  "boeken wonen en tuinieren": {
+   "cat1": 201,
+   "bucketId": 39,
+   "cat3": 1891
+  },
+  "boeken woordenboeken": {
+   "cat1": 201,
+   "bucketId": 41,
+   "cat3": 238
+  },
+  "boeken zwangerschap en opvoeding": {
+   "cat1": 201,
+   "bucketId": 38,
+   "cat3": 1892
+  },
+  "computers 3d printers": {
+   "cat1": 322,
+   "bucketId": 425,
+   "cat3": 2842
+  },
+  "computers 3d-printerbenodigheden": {
+   "cat1": 322,
+   "bucketId": 425,
+   "cat3": 3034
+  },
+  "computers accesspoints": {
+   "cat1": 322,
+   "bucketId": 424,
+   "cat3": 3022
+  },
+  "computers android tablets": {
+   "cat1": 322,
+   "bucketId": 65,
+   "cat3": 2844
+  },
+  "computers antivirus- en beveiligingssoftware": {
+   "cat1": 322,
+   "bucketId": 64,
+   "cat3": 371
+  },
+  "computers apple desktops": {
+   "cat1": 322,
+   "bucketId": 59,
+   "cat3": 324
+  },
+  "computers apple ipads": {
+   "cat1": 322,
+   "bucketId": 65,
+   "cat3": 2722
+  },
+  "computers apple macbooks": {
+   "cat1": 322,
+   "bucketId": 61,
+   "cat3": 325
+  },
+  "computers audio software": {
+   "cat1": 322,
+   "bucketId": 64,
+   "cat3": 373
+  },
+  "computers barebones": {
+   "cat1": 322,
+   "bucketId": 58,
+   "cat3": 3016
+  },
+  "computers beschrijfbare discs": {
+   "cat1": 322,
+   "bucketId": 62,
+   "cat3": 1415
+  },
+  "computers besturingssoftware": {
+   "cat1": 322,
+   "bucketId": 64,
+   "cat3": 359
+  },
+  "computers capture cards": {
+   "cat1": 322,
+   "bucketId": 63,
+   "cat3": 3086
+  },
+  "computers chromebooks": {
+   "cat1": 322,
+   "bucketId": 61,
+   "cat3": 3020
+  },
+  "computers computerbehuizingen": {
+   "cat1": 322,
+   "bucketId": 58,
+   "cat3": 326
+  },
+  "computers computerkoelers": {
+   "cat1": 322,
+   "bucketId": 58,
+   "cat3": 3018
+  },
+  "computers desktop pc s": {
+   "cat1": 322,
+   "bucketId": 59,
+   "cat3": 328
+  },
+  "computers dockingstations": {
+   "cat1": 322,
+   "bucketId": 63,
+   "cat3": 3038
+  },
+  "computers e-readers": {
+   "cat1": 322,
+   "bucketId": 65,
+   "cat3": 2620
+  },
+  "computers educatie- en cursussoftware": {
+   "cat1": 322,
+   "bucketId": 64,
+   "cat3": 1475
+  },
+  "computers geheugenkaartlezers": {
+   "cat1": 322,
+   "bucketId": 58,
+   "cat3": 3014
+  },
+  "computers geluidskaarten": {
+   "cat1": 322,
+   "bucketId": 58,
+   "cat3": 3013
+  },
+  "computers harde schijven": {
+   "cat1": 322,
+   "bucketId": 58,
+   "cat3": 333
+  },
+  "computers headsets": {
+   "cat1": 322,
+   "bucketId": 63,
+   "cat3": 3037
+  },
+  "computers interne voedingen": {
+   "cat1": 322,
+   "bucketId": 58,
+   "cat3": 3019
+  },
+  "computers isdn en adsl": {
+   "cat1": 322,
+   "bucketId": 424,
+   "cat3": 827
+  },
+  "computers joysticks": {
+   "cat1": 322,
+   "bucketId": 63,
+   "cat3": 3036
+  },
+  "computers labelprinters": {
+   "cat1": 322,
+   "bucketId": 425,
+   "cat3": 3032
+  },
+  "computers laptop accu s": {
+   "cat1": 322,
+   "bucketId": 61,
+   "cat3": 2724
+  },
+  "computers laptop-opladers": {
+   "cat1": 322,
+   "bucketId": 61,
+   "cat3": 1653
+  },
+  "computers laptophoezen": {
+   "cat1": 322,
+   "bucketId": 61,
+   "cat3": 3030
+  },
+  "computers laptopstandaarden": {
+   "cat1": 322,
+   "bucketId": 61,
+   "cat3": 3029
+  },
+  "computers laptoptafels": {
+   "cat1": 322,
+   "bucketId": 61,
+   "cat3": 3028
+  },
+  "computers laptoptassen": {
+   "cat1": 322,
+   "bucketId": 61,
+   "cat3": 1654
+  },
+  "computers moederborden": {
+   "cat1": 322,
+   "bucketId": 58,
+   "cat3": 335
+  },
+  "computers monitoren": {
+   "cat1": 322,
+   "bucketId": 63,
+   "cat3": 336
+  },
+  "computers muismatten": {
+   "cat1": 322,
+   "bucketId": 63,
+   "cat3": 3035
+  },
+  "computers muizen": {
+   "cat1": 322,
+   "bucketId": 63,
+   "cat3": 1727
+  },
+  "computers nas": {
+   "cat1": 322,
+   "bucketId": 58,
+   "cat3": 3017
+  },
+  "computers navigatiesoftware": {
+   "cat1": 322,
+   "bucketId": 64,
+   "cat3": 1477
+  },
+  "computers netwerk switches": {
+   "cat1": 322,
+   "bucketId": 424,
+   "cat3": 338
+  },
+  "computers netwerkkaarten": {
+   "cat1": 322,
+   "bucketId": 58,
+   "cat3": 3015
+  },
+  "computers noodvoedingen ups": {
+   "cat1": 322,
+   "bucketId": 63,
+   "cat3": 2841
+  },
+  "computers office-software": {
+   "cat1": 322,
+   "bucketId": 64,
+   "cat3": 3039
+  },
+  "computers ontwerp- en bewerkingssoftware": {
+   "cat1": 322,
+   "bucketId": 64,
+   "cat3": 369
+  },
+  "computers optische drives": {
+   "cat1": 322,
+   "bucketId": 63,
+   "cat3": 350
+  },
+  "computers overige computers en software": {
+   "cat1": 322,
+   "bucketId": 66,
+   "cat3": 341
+  },
+  "computers pc speakers": {
+   "cat1": 322,
+   "bucketId": 63,
+   "cat3": 332
+  },
+  "computers pc- en netwerkkabels": {
+   "cat1": 322,
+   "bucketId": 424,
+   "cat3": 1658
+  },
+  "computers pocketprinters": {
+   "cat1": 322,
+   "bucketId": 425,
+   "cat3": 3033
+  },
+  "computers powerlines": {
+   "cat1": 322,
+   "bucketId": 424,
+   "cat3": 3023
+  },
+  "computers presenters": {
+   "cat1": 322,
+   "bucketId": 63,
+   "cat3": 3027
+  },
+  "computers printerbenodigdheden": {
+   "cat1": 322,
+   "bucketId": 425,
+   "cat3": 1416
+  },
+  "computers printers": {
+   "cat1": 322,
+   "bucketId": 425,
+   "cat3": 342
+  },
+  "computers processors": {
+   "cat1": 322,
+   "bucketId": 58,
+   "cat3": 343
+  },
+  "computers ram geheugen": {
+   "cat1": 322,
+   "bucketId": 58,
+   "cat3": 331
+  },
+  "computers routers en modems": {
+   "cat1": 322,
+   "bucketId": 63,
+   "cat3": 334
+  },
+  "computers scanners": {
+   "cat1": 322,
+   "bucketId": 425,
+   "cat3": 344
+  },
+  "computers serverkasten": {
+   "cat1": 322,
+   "bucketId": 58,
+   "cat3": 3012
+  },
+  "computers servers": {
+   "cat1": 322,
+   "bucketId": 59,
+   "cat3": 1417
+  },
+  "computers tablet-hoezen": {
+   "cat1": 322,
+   "bucketId": 65,
+   "cat3": 2847
+  },
+  "computers tekentablets": {
+   "cat1": 322,
+   "bucketId": 65,
+   "cat3": 3031
+  },
+  "computers toetsenborden": {
+   "cat1": 322,
+   "bucketId": 63,
+   "cat3": 352
+  },
+  "computers usb sticks": {
+   "cat1": 322,
+   "bucketId": 62,
+   "cat3": 1418
+  },
+  "computers videokaarten": {
+   "cat1": 322,
+   "bucketId": 58,
+   "cat3": 353
+  },
+  "computers vintage computers": {
+   "cat1": 322,
+   "bucketId": 59,
+   "cat3": 327
+  },
+  "computers webcams": {
+   "cat1": 322,
+   "bucketId": 63,
+   "cat3": 354
+  },
+  "computers wifi-versterkers": {
+   "cat1": 322,
+   "bucketId": 424,
+   "cat3": 3024
+  },
+  "computers windows laptops": {
+   "cat1": 322,
+   "bucketId": 61,
+   "cat3": 339
+  },
+  "computers windows tablets": {
+   "cat1": 322,
+   "bucketId": 65,
+   "cat3": 2723
+  },
+  "electronics antennes en masten": {
+   "cat1": 820,
+   "bucketId": 229,
+   "cat3": 821
+  },
+  "electronics antwoordapparaten": {
+   "cat1": 820,
+   "bucketId": 228,
+   "cat3": 822
+  },
+  "electronics autoladers": {
+   "cat1": 820,
+   "bucketId": 227,
+   "cat3": 3047
+  },
+  "electronics batterijen en accu s": {
+   "cat1": 820,
+   "bucketId": 227,
+   "cat3": 1683
+  },
+  "electronics carkits": {
+   "cat1": 820,
+   "bucketId": 230,
+   "cat3": 825
+  },
+  "electronics datacommunicatie": {
+   "cat1": 820,
+   "bucketId": 223,
+   "cat3": 1454
+  },
+  "electronics draadloze handsets": {
+   "cat1": 820,
+   "bucketId": 228,
+   "cat3": 851
+  },
+  "electronics faxen": {
+   "cat1": 820,
+   "bucketId": 223,
+   "cat3": 826
+  },
+  "electronics hoesjes apple iphone": {
+   "cat1": 820,
+   "bucketId": 226,
+   "cat3": 829
+  },
+  "electronics hoesjes blackberry": {
+   "cat1": 820,
+   "bucketId": 226,
+   "cat3": 2804
+  },
+  "electronics hoesjes htc": {
+   "cat1": 820,
+   "bucketId": 226,
+   "cat3": 2805
+  },
+  "electronics hoesjes nokia": {
+   "cat1": 820,
+   "bucketId": 226,
+   "cat3": 2806
+  },
+  "electronics hoesjes overige merken": {
+   "cat1": 820,
+   "bucketId": 226,
+   "cat3": 2808
+  },
+  "electronics hoesjes samsung": {
+   "cat1": 820,
+   "bucketId": 226,
+   "cat3": 2807
+  },
+  "electronics niet-draadloze handsets": {
+   "cat1": 820,
+   "bucketId": 228,
+   "cat3": 852
+  },
+  "electronics oordopjes": {
+   "cat1": 820,
+   "bucketId": 227,
+   "cat3": 1956
+  },
+  "electronics overige telecommunicatie": {
+   "cat1": 820,
+   "bucketId": 230,
+   "cat3": 844
+  },
+  "electronics pda-toebehoren": {
+   "cat1": 820,
+   "bucketId": 227,
+   "cat3": 1684
+  },
+  "electronics portofoons en walkie-talkies": {
+   "cat1": 820,
+   "bucketId": 229,
+   "cat3": 845
+  },
+  "electronics powerbanks": {
+   "cat1": 820,
+   "bucketId": 226,
+   "cat3": 3040
+  },
+  "electronics prepaidkaarten en simkaarten": {
+   "cat1": 820,
+   "bucketId": 227,
+   "cat3": 846
+  },
+  "electronics radioscanners": {
+   "cat1": 820,
+   "bucketId": 229,
+   "cat3": 848
+  },
+  "electronics telefoon pda s": {
+   "cat1": 820,
+   "bucketId": 225,
+   "cat3": 340
+  },
+  "electronics telefoon sagem": {
+   "cat1": 820,
+   "bucketId": 225,
+   "cat3": 840
+  },
+  "electronics telefoon siemens": {
+   "cat1": 820,
+   "bucketId": 225,
+   "cat3": 842
+  },
+  "electronics telefoon-opladers": {
+   "cat1": 820,
+   "bucketId": 227,
+   "cat3": 1957
+  },
+  "electronics telefooncentrales": {
+   "cat1": 820,
+   "bucketId": 228,
+   "cat3": 850
+  },
+  "electronics telefoonhouders": {
+   "cat1": 820,
+   "bucketId": 227,
+   "cat3": 3046
+  },
+  "electronics telefoonsoftware": {
+   "cat1": 820,
+   "bucketId": 227,
+   "cat3": 1958
+  },
+  "electronics toebehoren en onderdelen": {
+   "cat1": 820,
+   "bucketId": 227,
+   "cat3": 1959
+  },
+  "electronics wearable-accessoires": {
+   "cat1": 820,
+   "bucketId": 426,
+   "cat3": 3043
+  },
+  "electronics zenders en ontvangers": {
+   "cat1": 820,
+   "bucketId": 229,
+   "cat3": 855
+  },
+  "fietsen aanhangers en karren": {
+   "cat1": 445,
+   "bucketId": 112,
+   "cat3": 450
+  },
+  "fietsen bagagedragers": {
+   "cat1": 445,
+   "bucketId": 112,
+   "cat3": 3108
+  },
+  "fietsen bakfietsen": {
+   "cat1": 445,
+   "bucketId": 113,
+   "cat3": 446
+  },
+  "fietsen buggydragers": {
+   "cat1": 445,
+   "bucketId": 112,
+   "cat3": 3110
+  },
+  "fietsen crossfietsen en bmx": {
+   "cat1": 445,
+   "bucketId": 113,
+   "cat3": 1621
+  },
+  "fietsen cruisers en lowriders": {
+   "cat1": 445,
+   "bucketId": 113,
+   "cat3": 1667
+  },
+  "fietsen damesfietsen": {
+   "cat1": 445,
+   "bucketId": 114,
+   "cat3": 447
+  },
+  "fietsen driewielers": {
+   "cat1": 445,
+   "bucketId": 116,
+   "cat3": 456
+  },
+  "fietsen driewielfietsen": {
+   "cat1": 445,
+   "bucketId": 113,
+   "cat3": 449
+  },
+  "fietsen eenwielers": {
+   "cat1": 445,
+   "bucketId": 113,
+   "cat3": 3106
+  },
+  "fietsen elektrische fietsen": {
+   "cat1": 445,
+   "bucketId": 113,
+   "cat3": 451
+  },
+  "fietsen fietsaccu s": {
+   "cat1": 445,
+   "bucketId": 112,
+   "cat3": 3107
+  },
+  "fietsen fietsbellen": {
+   "cat1": 445,
+   "bucketId": 112,
+   "cat3": 3116
+  },
+  "fietsen fietscomputers": {
+   "cat1": 445,
+   "bucketId": 112,
+   "cat3": 3112
+  },
+  "fietsen fietsendragers": {
+   "cat1": 445,
+   "bucketId": 112,
+   "cat3": 3065
+  },
+  "fietsen fietsenrekken": {
+   "cat1": 445,
+   "bucketId": 112,
+   "cat3": 3115
+  },
+  "fietsen fietsgereedschap": {
+   "cat1": 445,
+   "bucketId": 112,
+   "cat3": 3109
+  },
+  "fietsen fietshelmen": {
+   "cat1": 445,
+   "bucketId": 112,
+   "cat3": 2736
+  },
+  "fietsen fietsmanden": {
+   "cat1": 445,
+   "bucketId": 112,
+   "cat3": 1918
+  },
+  "fietsen fietsonderdelen": {
+   "cat1": 445,
+   "bucketId": 112,
+   "cat3": 462
+  },
+  "fietsen fietspompen": {
+   "cat1": 445,
+   "bucketId": 112,
+   "cat3": 3113
+  },
+  "fietsen fietssloten": {
+   "cat1": 445,
+   "bucketId": 112,
+   "cat3": 3114
+  },
+  "fietsen fietsstoeltjes": {
+   "cat1": 445,
+   "bucketId": 112,
+   "cat3": 457
+  },
+  "fietsen fietstassen": {
+   "cat1": 445,
+   "bucketId": 112,
+   "cat3": 1666
+  },
+  "fietsen fietsverlichting": {
+   "cat1": 445,
+   "bucketId": 112,
+   "cat3": 3111
+  },
+  "fietsen herenfietsen": {
+   "cat1": 445,
+   "bucketId": 115,
+   "cat3": 453
+  },
+  "fietsen jongensfietsen": {
+   "cat1": 445,
+   "bucketId": 116,
+   "cat3": 455
+  },
+  "fietsen kinderfietsjes": {
+   "cat1": 445,
+   "bucketId": 116,
+   "cat3": 1917
+  },
+  "fietsen ligfietsen": {
+   "cat1": 445,
+   "bucketId": 113,
+   "cat3": 458
+  },
+  "fietsen meisjesfietsen": {
+   "cat1": 445,
+   "bucketId": 116,
+   "cat3": 459
+  },
+  "fietsen moederfietsen": {
+   "cat1": 445,
+   "bucketId": 114,
+   "cat3": 1916
+  },
+  "fietsen mountainbikes en atb": {
+   "cat1": 445,
+   "bucketId": 113,
+   "cat3": 460
+  },
+  "fietsen oldtimers": {
+   "cat1": 445,
+   "bucketId": 113,
+   "cat3": 2026
+  },
+  "fietsen omafietsen": {
+   "cat1": 445,
+   "bucketId": 114,
+   "cat3": 461
+  },
+  "fietsen overige fietsaccessoires": {
+   "cat1": 445,
+   "bucketId": 112,
+   "cat3": 1919
+  },
+  "fietsen overige fietsen": {
+   "cat1": 445,
+   "bucketId": 119,
+   "cat3": 463
+  },
+  "fietsen racefietsen": {
+   "cat1": 445,
+   "bucketId": 113,
+   "cat3": 464
+  },
+  "fietsen sportfietsen dames": {
+   "cat1": 445,
+   "bucketId": 114,
+   "cat3": 448
+  },
+  "fietsen sportfietsen heren": {
+   "cat1": 445,
+   "bucketId": 115,
+   "cat3": 454
+  },
+  "fietsen tandems": {
+   "cat1": 445,
+   "bucketId": 113,
+   "cat3": 466
+  },
+  "fietsen vouwfietsen": {
+   "cat1": 445,
+   "bucketId": 113,
+   "cat3": 467
+  },
+  "games accessoires nintendo console": {
+   "cat1": 356,
+   "bucketId": 300,
+   "cat3": 2800
+  },
+  "games accessoires nintendo portable": {
+   "cat1": 356,
+   "bucketId": 300,
+   "cat3": 2799
+  },
+  "games accessoires overige": {
+   "cat1": 356,
+   "bucketId": 303,
+   "cat3": 1657
+  },
+  "games accessoires playstation console": {
+   "cat1": 356,
+   "bucketId": 301,
+   "cat3": 2801
+  },
+  "games accessoires playstation portable": {
+   "cat1": 356,
+   "bucketId": 301,
+   "cat3": 2802
+  },
+  "games accessoires xbox": {
+   "cat1": 356,
+   "bucketId": 302,
+   "cat3": 2803
+  },
+  "games controllers nintendo": {
+   "cat1": 356,
+   "bucketId": 300,
+   "cat3": 2800
+  },
+  "games controllers playstation": {
+   "cat1": 356,
+   "bucketId": 301,
+   "cat3": 2801
+  },
+  "games controllers xbox": {
+   "cat1": 356,
+   "bucketId": 302,
+   "cat3": 2803
+  },
+  "games virtual reality": {
+   "cat1": 356,
+   "bucketId": 415,
+   "cat3": 2945
+  },
+  "klussen adembescherming": {
+   "cat1": 239,
+   "bucketId": 433,
+   "cat3": 3199
+  },
+  "klussen alarmsystemen": {
+   "cat1": 239,
+   "bucketId": 103,
+   "cat3": 1866
+  },
+  "klussen betonmolens": {
+   "cat1": 239,
+   "bucketId": 101,
+   "cat3": 3102
+  },
+  "klussen boormachines": {
+   "cat1": 239,
+   "bucketId": 101,
+   "cat3": 242
+  },
+  "klussen bouwverlichting": {
+   "cat1": 239,
+   "bucketId": 106,
+   "cat3": 1185
+  },
+  "klussen buizen en afvoer": {
+   "cat1": 239,
+   "bucketId": 102,
+   "cat3": 1395
+  },
+  "klussen compressors": {
+   "cat1": 239,
+   "bucketId": 101,
+   "cat3": 243
+  },
+  "klussen dakbedekking": {
+   "cat1": 239,
+   "bucketId": 98,
+   "cat3": 270
+  },
+  "klussen deuren en horren": {
+   "cat1": 239,
+   "bucketId": 103,
+   "cat3": 244
+  },
+  "klussen draaibanken": {
+   "cat1": 239,
+   "bucketId": 101,
+   "cat3": 245
+  },
+  "klussen elektra en kabels": {
+   "cat1": 239,
+   "bucketId": 106,
+   "cat3": 1867
+  },
+  "klussen freesmachines": {
+   "cat1": 239,
+   "bucketId": 101,
+   "cat3": 2990
+  },
+  "klussen gehoorbeschermers": {
+   "cat1": 239,
+   "bucketId": 433,
+   "cat3": 3198
+  },
+  "klussen geisers en boilers": {
+   "cat1": 239,
+   "bucketId": 107,
+   "cat3": 246
+  },
+  "klussen gereedschapskisten": {
+   "cat1": 239,
+   "bucketId": 100,
+   "cat3": 3103
+  },
+  "klussen glas en ramen": {
+   "cat1": 239,
+   "bucketId": 103,
+   "cat3": 249
+  },
+  "klussen handgereedschap": {
+   "cat1": 239,
+   "bucketId": 100,
+   "cat3": 247
+  },
+  "klussen hang- en sluitwerk": {
+   "cat1": 239,
+   "bucketId": 102,
+   "cat3": 1869
+  },
+  "klussen hogedrukreinigers": {
+   "cat1": 239,
+   "bucketId": 101,
+   "cat3": 2988
+  },
+  "klussen hout en planken": {
+   "cat1": 239,
+   "bucketId": 102,
+   "cat3": 252
+  },
+  "klussen ijzerwaren en bevestigingsmiddelen": {
+   "cat1": 239,
+   "bucketId": 102,
+   "cat3": 2621
+  },
+  "klussen isolatie en afdichting": {
+   "cat1": 239,
+   "bucketId": 102,
+   "cat3": 1870
+  },
+  "klussen kozijnen en schuifpuien": {
+   "cat1": 239,
+   "bucketId": 103,
+   "cat3": 254
+  },
+  "klussen kratten en dozen": {
+   "cat1": 239,
+   "bucketId": 102,
+   "cat3": 256
+  },
+  "klussen kruiwagens": {
+   "cat1": 239,
+   "bucketId": 100,
+   "cat3": 2998
+  },
+  "klussen ladders en trappen": {
+   "cat1": 239,
+   "bucketId": 100,
+   "cat3": 257
+  },
+  "klussen lasapparaten": {
+   "cat1": 239,
+   "bucketId": 101,
+   "cat3": 258
+  },
+  "klussen laskappen": {
+   "cat1": 239,
+   "bucketId": 433,
+   "cat3": 3197
+  },
+  "klussen lieren en takels": {
+   "cat1": 239,
+   "bucketId": 101,
+   "cat3": 3049
+  },
+  "klussen meetapparatuur": {
+   "cat1": 239,
+   "bucketId": 100,
+   "cat3": 1399
+  },
+  "klussen metalen": {
+   "cat1": 239,
+   "bucketId": 102,
+   "cat3": 260
+  },
+  "klussen metselstenen": {
+   "cat1": 239,
+   "bucketId": 102,
+   "cat3": 2624
+  },
+  "klussen motoren": {
+   "cat1": 239,
+   "bucketId": 101,
+   "cat3": 1350
+  },
+  "klussen onderdelen machines": {
+   "cat1": 239,
+   "bucketId": 101,
+   "cat3": 1710
+  },
+  "klussen overige doe-het-zelf en verbouw": {
+   "cat1": 239,
+   "bucketId": 108,
+   "cat3": 262
+  },
+  "klussen overige machines": {
+   "cat1": 239,
+   "bucketId": 101,
+   "cat3": 259
+  },
+  "klussen platen en panelen": {
+   "cat1": 239,
+   "bucketId": 102,
+   "cat3": 263
+  },
+  "klussen plinten en afwerking": {
+   "cat1": 239,
+   "bucketId": 102,
+   "cat3": 1872
+  },
+  "klussen reinigingsmachines": {
+   "cat1": 239,
+   "bucketId": 101,
+   "cat3": 264
+  },
+  "klussen rolluiken": {
+   "cat1": 239,
+   "bucketId": 103,
+   "cat3": 265
+  },
+  "klussen sanitair": {
+   "cat1": 239,
+   "bucketId": 104,
+   "cat3": 266
+  },
+  "klussen schaafmachines": {
+   "cat1": 239,
+   "bucketId": 101,
+   "cat3": 3104
+  },
+  "klussen schildersmaterialen": {
+   "cat1": 239,
+   "bucketId": 105,
+   "cat3": 267
+  },
+  "klussen schuurmachines": {
+   "cat1": 239,
+   "bucketId": 101,
+   "cat3": 268
+  },
+  "klussen slijpmachines": {
+   "cat1": 239,
+   "bucketId": 101,
+   "cat3": 2733
+  },
+  "klussen steigers": {
+   "cat1": 239,
+   "bucketId": 98,
+   "cat3": 269
+  },
+  "klussen tegels": {
+   "cat1": 239,
+   "bucketId": 104,
+   "cat3": 1873
+  },
+  "klussen tekentafels": {
+   "cat1": 239,
+   "bucketId": 100,
+   "cat3": 271
+  },
+  "klussen thermostaten": {
+   "cat1": 239,
+   "bucketId": 107,
+   "cat3": 3105
+  },
+  "klussen transportwagens": {
+   "cat1": 239,
+   "bucketId": 100,
+   "cat3": 2623
+  },
+  "klussen veiligheidsbrillen": {
+   "cat1": 239,
+   "bucketId": 433,
+   "cat3": 3101
+  },
+  "klussen veiligheidshelmen": {
+   "cat1": 239,
+   "bucketId": 433,
+   "cat3": 3201
+  },
+  "klussen veiligheidskleding": {
+   "cat1": 239,
+   "bucketId": 433,
+   "cat3": 3200
+  },
+  "klussen ventilatie en afzuiging": {
+   "cat1": 239,
+   "bucketId": 107,
+   "cat3": 1874
+  },
+  "klussen verf beits en lak": {
+   "cat1": 239,
+   "bucketId": 105,
+   "cat3": 1875
+  },
+  "klussen verwarming en radiatoren": {
+   "cat1": 239,
+   "bucketId": 107,
+   "cat3": 282
+  },
+  "klussen vloerdelen en plavuizen": {
+   "cat1": 239,
+   "bucketId": 102,
+   "cat3": 284
+  },
+  "klussen weegschalen": {
+   "cat1": 239,
+   "bucketId": 101,
+   "cat3": 285
+  },
+  "klussen werkbanken": {
+   "cat1": 239,
+   "bucketId": 100,
+   "cat3": 261
+  },
+  "klussen werkkleding": {
+   "cat1": 239,
+   "bucketId": 433,
+   "cat3": 1856
+  },
+  "klussen zaagmachines": {
+   "cat1": 239,
+   "bucketId": 101,
+   "cat3": 287
+  },
+  "klussen zeil en folie": {
+   "cat1": 239,
+   "bucketId": 102,
+   "cat3": 1876
+  },
+  "klussen zwenkwielen": {
+   "cat1": 239,
+   "bucketId": 102,
+   "cat3": 2852
+  },
+  "speelgoed accuvoertuigen": {
+   "cat1": 565,
+   "bucketId": 157,
+   "cat3": 3131
+  },
+  "speelgoed actiefiguren": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 1490
+  },
+  "speelgoed actiespeelgoed": {
+   "cat1": 565,
+   "bucketId": 157,
+   "cat3": 2878
+  },
+  "speelgoed babyspeelgoed": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 1491
+  },
+  "speelgoed badspeelgoed": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 3144
+  },
+  "speelgoed bordspellen": {
+   "cat1": 1099,
+   "bucketId": 129,
+   "cat3": 1233
+  },
+  "speelgoed bouwstenen": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 2157
+  },
+  "speelgoed denksport en puzzels": {
+   "cat1": 1099,
+   "bucketId": 129,
+   "cat3": 1969
+  },
+  "speelgoed duplo en lego": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 611
+  },
+  "speelgoed educatief en creatief": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 1492
+  },
+  "speelgoed fisher-price": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 608
+  },
+  "speelgoed hobbelfiguren": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 3143
+  },
+  "speelgoed houten speelgoed": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 1674
+  },
+  "speelgoed kaartspellen": {
+   "cat1": 1099,
+   "bucketId": 129,
+   "cat3": 2743
+  },
+  "speelgoed kinderpuzzels": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 615
+  },
+  "speelgoed knuffels en pluche": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 610
+  },
+  "speelgoed los buitenspeelgoed": {
+   "cat1": 565,
+   "bucketId": 157,
+   "cat3": 2779
+  },
+  "speelgoed magic the gathering": {
+   "cat1": 1099,
+   "bucketId": 130,
+   "cat3": 919
+  },
+  "speelgoed modelauto s overige schalen": {
+   "cat1": 1099,
+   "bucketId": 126,
+   "cat3": 2749
+  },
+  "speelgoed modelauto s schaal 1 18": {
+   "cat1": 1099,
+   "bucketId": 126,
+   "cat3": 921
+  },
+  "speelgoed modelauto s schaal 1 24": {
+   "cat1": 1099,
+   "bucketId": 126,
+   "cat3": 2746
+  },
+  "speelgoed modelauto s schaal 1 32": {
+   "cat1": 1099,
+   "bucketId": 126,
+   "cat3": 2747
+  },
+  "speelgoed modelauto s schaal 1 43": {
+   "cat1": 1099,
+   "bucketId": 126,
+   "cat3": 1972
+  },
+  "speelgoed modelauto s schaal 1 5 tot 1 12": {
+   "cat1": 1099,
+   "bucketId": 126,
+   "cat3": 2127
+  },
+  "speelgoed modelauto s schaal 1 50": {
+   "cat1": 1099,
+   "bucketId": 126,
+   "cat3": 2033
+  },
+  "speelgoed modelauto s schaal 1 87": {
+   "cat1": 1099,
+   "bucketId": 126,
+   "cat3": 2748
+  },
+  "speelgoed modelbouw auto s en voertuigen": {
+   "cat1": 1099,
+   "bucketId": 125,
+   "cat3": 1237
+  },
+  "speelgoed modelbouw boten en schepen": {
+   "cat1": 1099,
+   "bucketId": 125,
+   "cat3": 2750
+  },
+  "speelgoed modelbouw figuren en diorama s": {
+   "cat1": 1099,
+   "bucketId": 125,
+   "cat3": 2751
+  },
+  "speelgoed modelbouw overige": {
+   "cat1": 1099,
+   "bucketId": 125,
+   "cat3": 2753
+  },
+  "speelgoed modelbouw vliegtuigen en helikopters": {
+   "cat1": 1099,
+   "bucketId": 125,
+   "cat3": 2752
+  },
+  "speelgoed modeltreinen h0": {
+   "cat1": 1099,
+   "bucketId": 127,
+   "cat3": 1238
+  },
+  "speelgoed modeltreinen n-spoor": {
+   "cat1": 1099,
+   "bucketId": 127,
+   "cat3": 2627
+  },
+  "speelgoed modeltreinen overige schalen": {
+   "cat1": 1099,
+   "bucketId": 127,
+   "cat3": 2756
+  },
+  "speelgoed my little pony": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 2879
+  },
+  "speelgoed opblaasfiguren": {
+   "cat1": 565,
+   "bucketId": 157,
+   "cat3": 3130
+  },
+  "speelgoed overig binnenspeelgoed": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 612
+  },
+  "speelgoed overige gezelschapsspellen": {
+   "cat1": 1099,
+   "bucketId": 129,
+   "cat3": 2744
+  },
+  "speelgoed overige verzamelkaartspellen": {
+   "cat1": 1099,
+   "bucketId": 130,
+   "cat3": 1976
+  },
+  "speelgoed playmobil": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 613
+  },
+  "speelgoed pokemon": {
+   "cat1": 1099,
+   "bucketId": 130,
+   "cat3": 930
+  },
+  "speelgoed poppen": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 614
+  },
+  "speelgoed poppenhuizen": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 2783
+  },
+  "speelgoed racebanen": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 616
+  },
+  "speelgoed radiografisch auto s": {
+   "cat1": 1099,
+   "bucketId": 125,
+   "cat3": 2034
+  },
+  "speelgoed radiografisch helikopters en quadcopters": {
+   "cat1": 1099,
+   "bucketId": 125,
+   "cat3": 2754
+  },
+  "speelgoed radiografisch overige": {
+   "cat1": 1099,
+   "bucketId": 125,
+   "cat3": 2755
+  },
+  "speelgoed radiografisch vliegtuigen": {
+   "cat1": 1099,
+   "bucketId": 125,
+   "cat3": 2856
+  },
+  "speelgoed rolschaatsen": {
+   "cat1": 565,
+   "bucketId": 157,
+   "cat3": 617
+  },
+  "speelgoed skelters": {
+   "cat1": 565,
+   "bucketId": 157,
+   "cat3": 618
+  },
+  "speelgoed sleeen": {
+   "cat1": 565,
+   "bucketId": 157,
+   "cat3": 3133
+  },
+  "speelgoed speelgoedvoertuigen": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 2131
+  },
+  "speelgoed speelhuisjes": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 3011
+  },
+  "speelgoed speelkeukens": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 3139
+  },
+  "speelgoed speelkleden": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 3142
+  },
+  "speelgoed speeltafels": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 3145
+  },
+  "speelgoed speeltenten": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 3141
+  },
+  "speelgoed speeltoestellen": {
+   "cat1": 565,
+   "bucketId": 157,
+   "cat3": 607
+  },
+  "speelgoed springkussens": {
+   "cat1": 565,
+   "bucketId": 157,
+   "cat3": 3132
+  },
+  "speelgoed steps": {
+   "cat1": 565,
+   "bucketId": 157,
+   "cat3": 465
+  },
+  "speelgoed thomas de trein": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 2880
+  },
+  "speelgoed trampolines": {
+   "cat1": 565,
+   "bucketId": 157,
+   "cat3": 2780
+  },
+  "speelgoed voertuigen en loopfietsen": {
+   "cat1": 565,
+   "bucketId": 157,
+   "cat3": 2781
+  },
+  "speelgoed voetbaltafels": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 3140
+  },
+  "speelgoed vtech": {
+   "cat1": 565,
+   "bucketId": 156,
+   "cat3": 2778
+  },
+  "speelgoed wargaming": {
+   "cat1": 1099,
+   "bucketId": 129,
+   "cat3": 1449
+  },
+  "speelgoed yu-gi-oh": {
+   "cat1": 1099,
+   "bucketId": 130,
+   "cat3": 949
+  },
+  "speelgoed zandbakken": {
+   "cat1": 565,
+   "bucketId": 157,
+   "cat3": 2782
+  },
+  "speelgoed zwembaden": {
+   "cat1": 565,
+   "bucketId": 157,
+   "cat3": 819
+  },
+  "sportartikelen badminton": {
+   "cat1": 784,
+   "bucketId": 212,
+   "cat3": 785
+  },
+  "sportartikelen ballet": {
+   "cat1": 784,
+   "bucketId": 215,
+   "cat3": 1780
+  },
+  "sportartikelen basketbal": {
+   "cat1": 784,
+   "bucketId": 212,
+   "cat3": 786
+  },
+  "sportartikelen bergsport en wandelen": {
+   "cat1": 784,
+   "bucketId": 217,
+   "cat3": 787
+  },
+  "sportartikelen bidons": {
+   "cat1": 784,
+   "bucketId": 222,
+   "cat3": 3158
+  },
+  "sportartikelen biljarten en poolen": {
+   "cat1": 784,
+   "bucketId": 213,
+   "cat3": 789
+  },
+  "sportartikelen boksen": {
+   "cat1": 784,
+   "bucketId": 219,
+   "cat3": 3157
+  },
+  "sportartikelen bowlen": {
+   "cat1": 784,
+   "bucketId": 212,
+   "cat3": 790
+  },
+  "sportartikelen dansen": {
+   "cat1": 784,
+   "bucketId": 215,
+   "cat3": 3154
+  },
+  "sportartikelen darts": {
+   "cat1": 784,
+   "bucketId": 213,
+   "cat3": 791
+  },
+  "sportartikelen duiken": {
+   "cat1": 784,
+   "bucketId": 428,
+   "cat3": 982
+  },
+  "sportartikelen fitnessapparatuur": {
+   "cat1": 784,
+   "bucketId": 215,
+   "cat3": 803
+  },
+  "sportartikelen fitnessmaterialen": {
+   "cat1": 784,
+   "bucketId": 215,
+   "cat3": 793
+  },
+  "sportartikelen gezondheidsproducten en wellness": {
+   "cat1": 784,
+   "bucketId": 220,
+   "cat3": 1386
+  },
+  "sportartikelen golf": {
+   "cat1": 784,
+   "bucketId": 212,
+   "cat3": 794
+  },
+  "sportartikelen golfsurfen": {
+   "cat1": 784,
+   "bucketId": 428,
+   "cat3": 1961
+  },
+  "sportartikelen handbal": {
+   "cat1": 784,
+   "bucketId": 212,
+   "cat3": 1781
+  },
+  "sportartikelen handboogschieten": {
+   "cat1": 784,
+   "bucketId": 213,
+   "cat3": 2139
+  },
+  "sportartikelen hartslagmeters": {
+   "cat1": 784,
+   "bucketId": 222,
+   "cat3": 795
+  },
+  "sportartikelen hockey": {
+   "cat1": 784,
+   "bucketId": 212,
+   "cat3": 796
+  },
+  "sportartikelen hoelahoeps": {
+   "cat1": 784,
+   "bucketId": 222,
+   "cat3": 3159
+  },
+  "sportartikelen honkbal en softbal": {
+   "cat1": 784,
+   "bucketId": 212,
+   "cat3": 1782
+  },
+  "sportartikelen ijshockey": {
+   "cat1": 784,
+   "bucketId": 221,
+   "cat3": 2140
+  },
+  "sportartikelen karting": {
+   "cat1": 784,
+   "bucketId": 218,
+   "cat3": 797
+  },
+  "sportartikelen kitesurfen": {
+   "cat1": 784,
+   "bucketId": 428,
+   "cat3": 1404
+  },
+  "sportartikelen klimsport": {
+   "cat1": 784,
+   "bucketId": 217,
+   "cat3": 3156
+  },
+  "sportartikelen korfbal": {
+   "cat1": 784,
+   "bucketId": 212,
+   "cat3": 1385
+  },
+  "sportartikelen loopsport en atletiek": {
+   "cat1": 784,
+   "bucketId": 217,
+   "cat3": 799
+  },
+  "sportartikelen massageproducten": {
+   "cat1": 784,
+   "bucketId": 220,
+   "cat3": 800
+  },
+  "sportartikelen overige sport en fitness": {
+   "cat1": 784,
+   "bucketId": 434,
+   "cat3": 801
+  },
+  "sportartikelen paardrijkleding": {
+   "cat1": 784,
+   "bucketId": 218,
+   "cat3": 1486
+  },
+  "sportartikelen padel": {
+   "cat1": 784,
+   "bucketId": 212,
+   "cat3": 3152
+  },
+  "sportartikelen rugby": {
+   "cat1": 784,
+   "bucketId": 212,
+   "cat3": 804
+  },
+  "sportartikelen sauna": {
+   "cat1": 784,
+   "bucketId": 220,
+   "cat3": 805
+  },
+  "sportartikelen schaatsen": {
+   "cat1": 784,
+   "bucketId": 221,
+   "cat3": 806
+  },
+  "sportartikelen schietsport-accessoires": {
+   "cat1": 784,
+   "bucketId": 213,
+   "cat3": 3153
+  },
+  "sportartikelen skateboarden": {
+   "cat1": 784,
+   "bucketId": 217,
+   "cat3": 1444
+  },
+  "sportartikelen skeelers": {
+   "cat1": 784,
+   "bucketId": 217,
+   "cat3": 807
+  },
+  "sportartikelen skien en langlaufen": {
+   "cat1": 784,
+   "bucketId": 221,
+   "cat3": 808
+  },
+  "sportartikelen snorkelen": {
+   "cat1": 784,
+   "bucketId": 428,
+   "cat3": 3162
+  },
+  "sportartikelen snowboarden": {
+   "cat1": 784,
+   "bucketId": 221,
+   "cat3": 809
+  },
+  "sportartikelen springtouwen": {
+   "cat1": 784,
+   "bucketId": 222,
+   "cat3": 3160
+  },
+  "sportartikelen squash": {
+   "cat1": 784,
+   "bucketId": 212,
+   "cat3": 811
+  },
+  "sportartikelen suppen": {
+   "cat1": 784,
+   "bucketId": 428,
+   "cat3": 3163
+  },
+  "sportartikelen tafeltennis": {
+   "cat1": 784,
+   "bucketId": 212,
+   "cat3": 812
+  },
+  "sportartikelen tennis": {
+   "cat1": 784,
+   "bucketId": 212,
+   "cat3": 813
+  },
+  "sportartikelen turnen": {
+   "cat1": 784,
+   "bucketId": 215,
+   "cat3": 1445
+  },
+  "sportartikelen vechtsporten en zelfverdediging": {
+   "cat1": 784,
+   "bucketId": 219,
+   "cat3": 814
+  },
+  "sportartikelen vliegeren": {
+   "cat1": 784,
+   "bucketId": 218,
+   "cat3": 815
+  },
+  "sportartikelen voetbal": {
+   "cat1": 784,
+   "bucketId": 212,
+   "cat3": 816
+  },
+  "sportartikelen volleybal": {
+   "cat1": 784,
+   "bucketId": 212,
+   "cat3": 1783
+  },
+  "sportartikelen wakeboarden": {
+   "cat1": 784,
+   "bucketId": 428,
+   "cat3": 2636
+  },
+  "sportartikelen waterpolo": {
+   "cat1": 784,
+   "bucketId": 428,
+   "cat3": 3161
+  },
+  "sportartikelen waterski s": {
+   "cat1": 784,
+   "bucketId": 428,
+   "cat3": 1455
+  },
+  "sportartikelen wielrennen": {
+   "cat1": 784,
+   "bucketId": 217,
+   "cat3": 792
+  },
+  "sportartikelen windsurfen": {
+   "cat1": 784,
+   "bucketId": 428,
+   "cat3": 995
+  },
+  "sportartikelen wingsurfen": {
+   "cat1": 784,
+   "bucketId": 428,
+   "cat3": 3195
+  },
+  "sportartikelen yoga en pilates": {
+   "cat1": 784,
+   "bucketId": 215,
+   "cat3": 3155
+  },
+  "sportartikelen zweefvliegen en paragliding": {
+   "cat1": 784,
+   "bucketId": 218,
+   "cat3": 818
+  },
+  "witgoed afzuigkappen": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 538
+  },
+  "witgoed airco s": {
+   "cat1": 537,
+   "bucketId": 282,
+   "cat3": 561
+  },
+  "witgoed airfryers": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 3177
+  },
+  "witgoed blenders": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 3181
+  },
+  "witgoed broodbakmachines": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 1979
+  },
+  "witgoed broodroosters": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 1980
+  },
+  "witgoed bruiswatermachines": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 3185
+  },
+  "witgoed contactgrills": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 3184
+  },
+  "witgoed eierkokers": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 3179
+  },
+  "witgoed fonduesets": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 3171
+  },
+  "witgoed fornuizen": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 542
+  },
+  "witgoed frituurpannen": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 541
+  },
+  "witgoed gourmetstellen": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 1981
+  },
+  "witgoed grillplaten": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 3173
+  },
+  "witgoed ijsmachines": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 3175
+  },
+  "witgoed juicers": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 3183
+  },
+  "witgoed keukenmixers": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 543
+  },
+  "witgoed koelkasten en ijskasten": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 544
+  },
+  "witgoed koffiemachine-accessoires": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 3182
+  },
+  "witgoed koffiezetapparaten": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 545
+  },
+  "witgoed kookplaten": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 546
+  },
+  "witgoed luchtbehandelingsapparatuur": {
+   "cat1": 537,
+   "bucketId": 282,
+   "cat3": 3166
+  },
+  "witgoed magnetrons": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 548
+  },
+  "witgoed melkopschuimers": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 3180
+  },
+  "witgoed onderdelen en toebehoren": {
+   "cat1": 537,
+   "bucketId": 284,
+   "cat3": 1982
+  },
+  "witgoed ovens": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 552
+  },
+  "witgoed overige witgoed en apparatuur": {
+   "cat1": 537,
+   "bucketId": 286,
+   "cat3": 553
+  },
+  "witgoed persoonlijke verzorgingsapparatuur": {
+   "cat1": 537,
+   "bucketId": 285,
+   "cat3": 554
+  },
+  "witgoed rijstkokers": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 3178
+  },
+  "witgoed slowcookers": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 3174
+  },
+  "witgoed stofzuigers": {
+   "cat1": 537,
+   "bucketId": 282,
+   "cat3": 556
+  },
+  "witgoed stoomapparaten": {
+   "cat1": 537,
+   "bucketId": 282,
+   "cat3": 3168
+  },
+  "witgoed strijkijzers en strijkplanken": {
+   "cat1": 537,
+   "bucketId": 282,
+   "cat3": 557
+  },
+  "witgoed thuistaps": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 1457
+  },
+  "witgoed vaatwasmachines": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 560
+  },
+  "witgoed ventilatoren": {
+   "cat1": 537,
+   "bucketId": 282,
+   "cat3": 3167
+  },
+  "witgoed vriezers en diepvrieskisten": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 540
+  },
+  "witgoed wafelijzers": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 3172
+  },
+  "witgoed was-droogcombinaties": {
+   "cat1": 537,
+   "bucketId": 282,
+   "cat3": 3170
+  },
+  "witgoed wasdrogers": {
+   "cat1": 537,
+   "bucketId": 282,
+   "cat3": 562
+  },
+  "witgoed wasmachines": {
+   "cat1": 537,
+   "bucketId": 282,
+   "cat3": 563
+  },
+  "witgoed waterkoelers": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 3176
+  },
+  "witgoed waterkokers": {
+   "cat1": 537,
+   "bucketId": 283,
+   "cat3": 1983
+  },
+  "witgoed waterontharders": {
+   "cat1": 537,
+   "bucketId": 282,
+   "cat3": 3169
+  },
+  "witgoed weegschalen": {
+   "cat1": 537,
+   "bucketId": 285,
+   "cat3": 564
+  },
+  "witgoed wekkers": {
+   "cat1": 537,
+   "bucketId": 285,
+   "cat3": 1458
+  },
+  "witgoed zonnebanken en gezichtsbruiners": {
+   "cat1": 537,
+   "bucketId": 285,
+   "cat3": 1359
+  }
+ }
+}

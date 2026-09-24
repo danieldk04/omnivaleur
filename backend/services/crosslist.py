@@ -830,7 +830,10 @@ _PLATFORM_REQUIRED = {
 # extension's MP_CATEGORIES and the frontend CATEGORIES.games group). For them
 # only the category itself is platform-required.
 _NON_CLOTHING_PREFIXES = ("games ", "electronics ", "sieraden ", "muziek ",
-                          "antiek ", "kunst ", "wonen ", "audio ")
+                          "antiek ", "kunst ", "wonen ", "audio ",
+                          # 24-09-2026
+                          "boeken ", "speelgoed ", "fietsen ", "sportartikelen ",
+                          "witgoed ", "klussen ", "computers ")
 # Accessoires staan in de kledingboom, maar een bandana, een patch, een speld of
 # een sleutelhanger heeft geen maat en geen merk.
 #

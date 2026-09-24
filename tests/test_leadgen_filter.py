@@ -32,13 +32,13 @@ def test_de_groepen_komen_uit_het_echte_dashboard(groepen):
     assert all(sleutels for sleutels in groepen.values())
 
 
-def test_electronics_is_alleen_telefoons(groepen):
-    """De val waar Vianen Telecom in liep: 'elektronica' klinkt breed, maar de hele
-    tak bestaat uit telefoonmerken. Accessoires, computers en audio horen er niet
-    in en mogen er ook niet stilletjes bij komen zonder dat iemand dit ziet."""
+def test_electronics_is_telefonie(groepen):
+    """De val waar Vianen Telecom in liep: 'elektronica' klinkt breed. Sinds
+    24-09-2026 horen telefoonaccessoires er wél in (hoesjes, opladers), maar
+    laptops, computers en tv's nog steeds niet: die hebben hun eigen tak."""
     tak = " ".join(groepen["electronics"]).lower()
-    assert "telefoon" in tak
-    for verboden in ("hoesje", "oplader", "oordopjes", "laptop", "computer", "tv"):
+    assert "telefoon" in tak and "hoesjes" in tak and "opladers" in tak
+    for verboden in ("laptop", "computer", "televisie"):
         assert verboden not in tak, f"{verboden} zit nu in electronics — pas het filter aan"
 
 
@@ -46,13 +46,19 @@ def test_hele_productgebieden_ontbreken_nog_steeds(groepen):
     """Zolang dit klopt, moet het filter zulke leads afwijzen. Komt er ooit wél een
     tak bij, dan valt deze test om en is dat het sein om het filter te verruimen.
 
-    Alleen woorden die in GEEN ENKELE tak voorkomen. Boeken, gereedschap en
-    speelgoed staan bewust niet in deze lijst: die bestaan wél, maar uitsluitend
-    onder 'antiek'. Dat onderscheid staat in de prompt zelf."""
+    Sinds 24-09-2026 bestaan boeken, speelgoed, fietsen, sportartikelen, witgoed,
+    klussen en computers. Wat nog steeds nergens past staat hieronder."""
     alles = " ".join(s for sleutels in groepen.values() for s in sleutels).lower()
-    for ontbreekt in ("tandenborstel", "verzorging", "witgoed", "wasmachine",
-                      "koelkast", "laptop", "toetsenbord", "fiets", "huisdier"):
+    for ontbreekt in ("dierbenodigdheden", "kinderwagen", "autostoel", "brommer", "autoband"):
         assert ontbreekt not in alles, f"'{ontbreekt}' bestaat nu wel — verruim het filter"
+
+
+def test_de_nieuwe_takken_zijn_er(groepen):
+    for tak, voorbeeld in (("boeken", "stripboeken"), ("speelgoed", "duplo en lego"),
+                           ("fietsen", "racefietsen"), ("sportartikelen", "tennis"),
+                           ("witgoed", "wasmachines"), ("klussen", "boormachines"),
+                           ("computers", "apple macbooks")):
+        assert voorbeeld in groepen[tak], (tak, voorbeeld)
 
 
 def test_de_audiotak_bestaat_en_is_compleet(groepen):
@@ -68,13 +74,10 @@ def test_de_audiotak_bestaat_en_is_compleet(groepen):
         assert verwacht in tekst
 
 
-def test_boeken_en_gereedschap_bestaan_alleen_als_antiek(groepen):
-    """De nuance die de prompt moet maken. Een antiquaar is een prima lead, een
-    boekhandel met nieuwe romans niet."""
+def test_antiek_houdt_zijn_eigen_boeken_en_gereedschap(groepen):
+    """Een antiquaar blijft een antieklead; de nieuwe takken nemen dat niet over."""
     antiek = " ".join(groepen["antiek"]).lower()
     assert "boeken" in antiek and "gereedschap" in antiek
-    anders = " ".join(s for g, v in groepen.items() if g != "antiek" for s in v).lower()
-    assert "boeken" not in anders
 
 
 def test_de_prompt_bevat_de_hele_lijst():
@@ -99,7 +102,7 @@ def test_een_gewone_kledinghandelaar_blijft_erdoor():
     assert mp._afwijsreden(_oordeel(), 70) == ""
 
 
-@pytest.mark.parametrize("fit", ["geen", "", "persoonlijke verzorging", "boeken"])
+@pytest.mark.parametrize("fit", ["geen", "", "persoonlijke verzorging", "dierbenodigdheden"])
 def test_zonder_passende_categorie_valt_hij_af(fit):
     """Borstelbeer. Ook een verzonnen groepsnaam telt als 'past niet' — het model
     mag zich er niet uitkletsen met een categorie die niet bestaat."""

@@ -283,6 +283,25 @@
       return ["Sieraden en accessoires", "Jewelry & accessories", "Jewellery & accessories"];
     }
 
+    // Takken buiten kleding (24-09-2026): boeken, speelgoed, fietsen, witgoed,
+    // klussen, computers, sportartikelen, plus audio/tv/foto die hier tot nu toe
+    // naar de kledinglogica doorviel en op "Overig" eindigde. De Nederlandse en
+    // Engelse naam van Marketplace, en "Overig" als laatste terugval voor een
+    // account waar Facebook de rubriek niet toont. Deze namen zijn nog niet in
+    // het echte formulier nagelopen; de keuzelogica pakt de eerste die bestaat.
+    const FB_TAK = {
+      boeken:         ["Boeken, films en muziek", "Books, films & music", "Books, movies & music"],
+      speelgoed:      ["Speelgoed en spellen", "Toys & games"],
+      fietsen:        ["Fietsen", "Bicycles", "Bikes"],
+      witgoed:        ["Huishoudelijke apparaten", "Appliances"],
+      klussen:        ["Gereedschap", "Tools"],
+      computers:      ["Elektronica en computers", "Electronics & computers"],
+      sportartikelen: ["Sport en buitenactiviteiten", "Sporting goods", "Sports & outdoors"],
+      audio:          ["Elektronica en computers", "Electronics & computers"],
+    };
+    const takNaam = cat.split(" ")[0];
+    if (FB_TAK[takNaam]) return [...FB_TAK[takNaam], "Overig", "Other"];
+
     // Accessories are NOT clothing on Facebook. A watch, belt, scarf or piece of
     // jewellery belongs under "Sieraden en accessoires"; bags have their own leaf.
     // The dashboard only offers one flat "Accessories" option per gender, so the
