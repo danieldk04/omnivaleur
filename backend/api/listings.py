@@ -285,13 +285,31 @@ def mark_listing_active(body: dict, user_id: str = Depends(get_current_user)):
     existing = (db.table("listings").select("id,status,platform_listing_id")
                 .eq("item_id", item_id).eq("platform", platform).execute())
     if not listing_id:
-        spoor = any(r.get("platform_listing_id") or r.get("status") in _PLAATSING_BEZIG
-                    for r in (existing.data or []))
-        if not spoor:
-            spoor = bool(db.table("jobs").select("id")
-                         .eq("user_id", user_id).eq("item_id", item_id).eq("platform", platform)
-                         .eq("action", "create").in_("status", ["pending", "claimed"])
-                         .limit(1).execute().data)
+        # EEN OPDRACHT DIE NOG NOOIT LIEP IS GEEN SPOOR (24-09-2026, Johan Kist).
+        #
+        # Johan klikte op 23-09 op het oranje 2dehands-icoon van een Gibson Les
+        # Paul en een gitaarband terwijl hun plaatsopdracht nog op de rubriek
+        # wachtte. De extensie had ze nooit opgepakt (claimed_at leeg), er kon dus
+        # niets online staan, en toch telde "er staat een opdracht klaar" als
+        # spoor. Beide rijen stonden op actief zonder advertentie; zijn verversing
+        # daarna faalde op "cannot be found in your 2dehands listings overview" en
+        # het opnieuw plaatsen werd overgeslagen. Alleen een poging die echt liep
+        # (opgepakt, voortgang gemeld, mislukt of herplaatst) kan iets online
+        # hebben gezet.
+        gelopen = [j for j in (db.table("jobs").select("status,claimed_at,result")
+                               .eq("user_id", user_id).eq("item_id", item_id)
+                               .eq("platform", platform).eq("action", "create")
+                               .execute().data or [])
+                   if j.get("claimed_at") or j.get("status") == "claimed"
+                   or (isinstance(j.get("result"), dict) and j["result"].get("_progress"))]
+        spoor = bool(gelopen) or any(
+            r.get("platform_listing_id") or r.get("status") in _POGING_GELOPEN
+            for r in (existing.data or []))
+        if not spoor and any(r.get("status") in _PLAATSING_BEZIG for r in (existing.data or [])):
+            raise HTTPException(status_code=422, detail=(
+                f"Omnivaleur hasn't started publishing this on {naam} yet, so it can't be online there. "
+                f"Keep Chrome open and it goes out by itself. Placed it on {naam} yourself? "
+                f"Paste the link to your advert."))
         if not spoor:
             raise HTTPException(status_code=422, detail=(
                 f"That isn't a link to a {naam} advert. Paste the link to your advert on {naam}, "
