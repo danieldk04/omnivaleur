@@ -12972,3 +12972,28 @@ database: de oude starter zag niets, de nieuwe zes foutsoorten bij twee klanten.
 Open: Claude Code is op deze Mac buiten de app uitgelogd ("OAuth session expired").
 Tot Daniel een keer `claude` opent en /login doet, start er geen sessie; het
 beheerdashboard toont dat. De dagelijkse routine in de app (08:00) blijft als vangnet.
+
+## 24-09-2026: Dagelijkse klantfouten
+
+Gemeten om 09:10: 106 opdrachten van 5 accounts in de laatste 24 uur, 10 fout,
+allemaal van gisteren voor 21:00 UTC. Sinds de reparaties van gisteravond geen
+nieuwe fout. /health 200. Niets gerepareerd, geen code veranderd.
+
+Vergelijking met de vierde ronde van gisteren:
+- Opgelost: de wachtende 2dehands-rij die alles stillegde (1bcf8092). Om 23:00 UTC
+  pakte f8c0cce9 meteen een Vinted-plaatsing op. Zijn 13 geannuleerde
+  2dehands-plaatsingen annuleerde hij zelf om 21:44 UTC, tijdens de vastloper.
+- Opgelost: schapenvachten-verwijdering bij Toon, geen nieuwe poging meer.
+- Rechtgezet: de twee Vinted-verwijderingen van Toons lederhose (8152304997)
+  stonden gisteren als "niet te bewijzen". Het is de fout die 1.0.347 op 21-09
+  repareerde ("Delete control not found ... #favourite-button ... 403"), en Toons
+  Edge draait nog 1.0.345. Het artikel staat nog live en koopbaar op Vinted,
+  terwijl het op Marktplaats en 2dehands als verkocht is afgemeld.
+
+Klant-eigen: f8c0cce9 Chrome ging om 23:00 UTC uit midden in een Vinted-plaatsing
+(wordt bij de volgende melding als fout afgesloten, niet dubbel geplaatst); de
+wachtende scans van 0b28c1ce, c2371efe, d25f18a2 en anderen: Chrome uit.
+Eenmalig: Daniels eigen Shopify-scan tijdens de mislukte deploys, en een Vinted-
+tekstbijwerking bij f8c0cce9 tijdens de vastloper.
+
+Open: Toons lederhose moet met de hand van Vinted, en zijn Edge moet bijwerken.
