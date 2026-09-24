@@ -17,34 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
-## vertaallaag-nooit-half
+## knop-op-de-pagina-is-nog-niet-levend
 
-*24-09-2026 — Het Nederlandse dashboard vertaalt op het scherm; een patroon met {0} mag nooit een stuk van een andere zin vertalen*
+*24-09-2026 — Vinted (Next.js) zet knoppen 3-5 s als dode HTML neer voor React ze klikbaar maakt; klik in dat gat verdwijnt stil*
 
-Het dashboard is Engels geschreven en wordt in het Nederlands vertaald door
-`frontend/i18n.js` met `frontend/i18n/nl.json` (zie team-notes 24-09-2026).
-Sleutels met `{0}` zijn patronen. Een kort patroon als `"{0} removed{1}."` past op
-élke zin die "removed" bevat en een punt heeft: zonder rem vertaalde het in de
-rondgang "…the old one cannot be removed and a relist would…" tot "…cannot be
-verwijderd…". Half Nederlands leest als een storing (team-notes 03-09-2026).
+Vinted's artikelpagina komt als kant-en-klare HTML binnen; React maakt de knoppen pas 3 tot 5 seconden later klikbaar (gemeten 24-09-2026 in headless Chrome op vinted.nl: twee klikken ervoor deden niets, een erna wel). Een levende knop draagt een eigenschap `__reactProps$…`. Op 24-09-2026 gaf dit bij klant 3bfbed2c "Confirm-delete button not found": knop aangeklikt, geen venster.
 
-**Waarom het nu veilig is:** een invulling ({0}) die lang is, Engels oogt en zelf
-niet te vertalen is, laat het patroon afvallen; een meervoudsplek ({1|dag|dagen})
-past alleen op "" of "s"; tekst tussen aanhalingstekens ("{0}") blijft letterlijk
-(dat is een titel van de klant); het specifiekste patroon gaat voor.
-scripts/i18n_extract.py volgt dezelfde regels, zodat de proef het ziet.
+**Why:** "de knop staat er" is geen bewijs dat hij werkt; wachten op aanwezigheid is te vroeg, net als "wacht-op-de-knop-niet-op-de-pagina".
 
-**How to apply:** nieuwe UI-tekst? `python3 scripts/i18n_extract.py`, vertaling in
-nl.json, dan `--versie`. Schrijf geen algemeen patroon ("{0} on {1}", "In {0}"):
-zet de vormen er los in ("{0} on Vinted") of de volledige zin. Draai
-`node tests/i18n-dashboard-rondgang.mjs` na een grote schermwijziging; die kijkt
-naar wat er echt op het scherm komt. Knoppen uit de extensiepopup blijven in de
-vertaling Engels. Zie ook "vertaling-draait-de-richting-om" (dat gaat over de
-advertentietekst, niet over het dashboard).
+**How to apply:** bij klikken op Vinted (of elke Next.js/React-pagina) eerst wachten tot het element `__reactProps$` draagt; komt er na de klik niets, één keer opnieuw zodra hij leeft. Proef: tests/vinted-verwijderen-voor-hydratie-echt-test.mjs (extensie 1.0.352).
 
 ---
 
-## verkopersnummer-bij-weinig-eigen-plaatsingen
 ## rubriekvraag-volgorde-niet-omgooien
 
 *24-09-2026 — Artikel achteraan de rubriekvraag zetten (voor cache) veranderde 18 van 58 antwoorden en maakte het slechter; teruggedraaid 24-09-2026*

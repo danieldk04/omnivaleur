@@ -4409,27 +4409,11 @@ async function _mwVintedVerwijderen() {
   // echte vinted.nl-pagina: de knoppen stonden er 3 tot 5 seconden voordat ze
   // leefden; twee klikken in dat gat deden niets, een klik erna wel. Een
   // levende knop draagt React's eigen kenmerk (__reactProps$…), dus daarop
-  // wachten. Hydratie verandert de pagina niet altijd zichtbaar, daarom kijkt
-  // dit wachten ook elke kwart seconde zelf (het tabblad draait op een vaste
-  // klok). Komt het kenmerk nooit, dan klikken we na de grens gewoon, zoals
-  // vroeger.
+  // wachten, op dezelfde manier als hierboven: de pagina meldt elke wijziging,
+  // en na de grens wordt nog één keer gekeken. Komt het kenmerk nooit, dan
+  // klikken we na de grens gewoon, zoals vroeger.
   const leeft = e => !!e && Object.keys(e).some(k => k.startsWith("__reactProps$"));
-  const wachtTotLevend = (vind, limietMs = 20000) => new Promise((klaar) => {
-    if (leeft(vind())) return klaar(true);
-    let af = false;
-    const stop = (v) => {
-      if (af) return;
-      af = true;
-      try { obs.disconnect(); } catch (_) {}
-      clearInterval(tik); clearTimeout(limiet);
-      klaar(v);
-    };
-    const check = () => { try { if (leeft(vind())) stop(true); } catch (_) {} };
-    const obs = new MutationObserver(check);
-    try { obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true }); } catch (_) {}
-    const tik = setInterval(check, 250);
-    const limiet = setTimeout(() => stop(false), limietMs);
-  });
+  const wachtTotLevend = (vind, limietMs = 20000) => wachtOp(() => leeft(vind()), limietMs);
 
   // 1) De knop op de pagina zelf, eventueel achter het menu met de drie puntjes.
   await wachtOp(() => !!zoekWeg() || !!zoekMenu(), 15000);
