@@ -13276,3 +13276,18 @@ Geprobeerd en teruggedraaid: de rubriekvraag goedkoper maken door het artikel
 achteraan te zetten (cache). Op 58 echte artikelen 40/58 gelijk aan de oude
 vraag (ruis 57/58) en minder vaak de goede rubriek. Niets live gegaan. Zie
 kennisbank rubriekvraag-volgorde-niet-omgooien.
+
+## 24-09-2026 (17:00): Gemini krijgt een tweede ronde bij drukte
+
+Op de gratis sleutel gaf Google tussen 16:24 en 16:28 zeven van de acht keer
+503 "high demand" (Daniels meting in de Railway-logs en AI Studio: 2 van 10
+geslaagd, geen 429). Elke keer dat alle modellen 503 zeiden, ging de vraag naar
+Claude. Nu: zegt minstens één model te druk en niemand nee, dan wacht de server
+4 seconden en doet nog één ronde langs alle modellen, pas daarna Claude. 402
+(tegoed op) en andere weigeringen krijgen geen tweede ronde. Proef: drie nieuwe
+in tests/test_vertaalvangnet_gemini.py, twee falen op de oude code; 1807
+serverproeven groen. Aanroepers zijn allemaal gewone functies in een werkdraad,
+dus de pauze zet de site niet stil.
+Open: niet gemeten of de tweede ronde op de echte gratis sleutel vaker slaagt.
+De rubriekenlijst per artikel kleiner maken is NIET gedaan: de eerste poging
+maakte de keuze slechter (zie notitie 16:40); dat vraagt een eigen meting.

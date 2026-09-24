@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 
 import httpx
 
@@ -208,48 +209,73 @@ def vraag(opdracht: str, max_tokens: int = 4096,
     if not beschikbaar():
         return None
     try:
-        rij = _kandidaten()
-        geprobeerd: set[str] = set()
-        while rij:
-            model = rij.pop(0)
-            if model in geprobeerd or model in _OPGEHEVEN:
-                continue
-            geprobeerd.add(model)
-            try:
-                antwoord = _vraag(model, opdracht, max_tokens, tijdslimiet, denken)
-            except httpx.TransportError as e:
-                # Een tijdslimiet of weggevallen verbinding bij één model is geen
-                # reden om de volgende over te slaan.
-                logger.warning("Gemini: %s antwoordde niet (%s), volgende", model,
-                               type(e).__name__)
-                continue
-
-            if antwoord.status_code == 200:
-                if len(geprobeerd) > 1:
-                    logger.info("Vertaalvangnet week uit naar Gemini-model %s", model)
-                return _lees_antwoord(antwoord)
-
-            klacht = antwoord.text[:300]
-            if antwoord.status_code in (404, 429, 500, 502, 503, 504):
-                # Opgeheven, niet beschikbaar op deze rekening, of te druk
-                # (gemeten: Flash gaf 3 van de 6 keer 503). De volgende kandidaat
-                # krijgt hem, en noemt de klacht zelf een opvolger, dan gaat die
-                # vooraan.
-                logger.warning("Vertaalvangnet: %s doet het niet (HTTP %s), volgende",
-                               model, antwoord.status_code)
-                if antwoord.status_code == 404:
-                    _OPGEHEVEN.add(model)
-                    opvolger = _opvolger_uit_de_klacht(klacht)
-                    if opvolger and opvolger not in geprobeerd:
-                        rij.insert(0, opvolger)
-                continue
-
-            logger.warning("Vertaalvangnet: Gemini gaf HTTP %s (%s)",
-                           antwoord.status_code, klacht)
-            return None
-
+        # TE DRUK IS GEEN NEE (24-09-2026). Op de gratis sleutel gaf Google
+        # tussen 16:24 en 16:28 zeven van de acht keer 503 "high demand"; alle
+        # modellen tegelijk, en dan ging de vraag naar het dure Claude. Zegt
+        # iedereen alleen "te druk", dan na een korte pauze nog één ronde.
+        for ronde, pauze in enumerate(_DRUKTE_PAUZES_S):
+            if pauze:
+                logger.info("Gemini: alle modellen te druk, over %ss nog een ronde", pauze)
+                time.sleep(pauze)
+            antwoord, te_druk = _een_ronde(opdracht, max_tokens, tijdslimiet, denken)
+            if antwoord is not None or not te_druk:
+                return antwoord
         logger.warning("Vertaalvangnet: geen enkel Gemini-model wilde vertalen")
         return None
     except Exception as e:  # noqa: BLE001
         logger.warning("Vertaalvangnet: Gemini deed het niet (%s: %s)", type(e).__name__, e)
         return None
+
+
+# Eerste ronde meteen, bij alleen drukte nog één na een paar seconden.
+_DRUKTE_PAUZES_S = (0, 4)
+
+
+def _een_ronde(opdracht: str, max_tokens: int, tijdslimiet: float,
+               denken: bool) -> tuple[str | None, bool]:
+    """Alle kandidaten één keer. Geeft (antwoord, te_druk): het tweede is True
+    als minstens één model te druk of onbereikbaar was en niemand nee zei."""
+    te_druk = False
+    rij = _kandidaten()
+    geprobeerd: set[str] = set()
+    while rij:
+        model = rij.pop(0)
+        if model in geprobeerd or model in _OPGEHEVEN:
+            continue
+        geprobeerd.add(model)
+        try:
+            antwoord = _vraag(model, opdracht, max_tokens, tijdslimiet, denken)
+        except httpx.TransportError as e:
+            # Een tijdslimiet of weggevallen verbinding bij één model is geen
+            # reden om de volgende over te slaan.
+            logger.warning("Gemini: %s antwoordde niet (%s), volgende", model,
+                           type(e).__name__)
+            te_druk = True
+            continue
+
+        if antwoord.status_code == 200:
+            if len(geprobeerd) > 1:
+                logger.info("Vertaalvangnet week uit naar Gemini-model %s", model)
+            return _lees_antwoord(antwoord), False
+
+        klacht = antwoord.text[:300]
+        if antwoord.status_code in (404, 429, 500, 502, 503, 504):
+            # Opgeheven, niet beschikbaar op deze rekening, of te druk
+            # (gemeten: Flash gaf 3 van de 6 keer 503). De volgende kandidaat
+            # krijgt hem, en noemt de klacht zelf een opvolger, dan gaat die
+            # vooraan.
+            logger.warning("Vertaalvangnet: %s doet het niet (HTTP %s), volgende",
+                           model, antwoord.status_code)
+            if antwoord.status_code != 404:
+                te_druk = True
+            else:
+                _OPGEHEVEN.add(model)
+                opvolger = _opvolger_uit_de_klacht(klacht)
+                if opvolger and opvolger not in geprobeerd:
+                    rij.insert(0, opvolger)
+            continue
+
+        logger.warning("Vertaalvangnet: Gemini gaf HTTP %s (%s)",
+                       antwoord.status_code, klacht)
+        return None, False
+    return None, te_druk

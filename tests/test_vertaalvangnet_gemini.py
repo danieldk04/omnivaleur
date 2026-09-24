@@ -206,6 +206,7 @@ def gemini(monkeypatch):
     monkeypatch.setattr(gv.settings, "google_api_key", "test-sleutel")
     monkeypatch.setattr(gv, "_OPGEHEVEN", set())
     monkeypatch.setattr(gv, "_LIJST", None)
+    monkeypatch.setattr(__import__("time"), "sleep", lambda s: None)
     gevraagd = []
 
     def zet(*antwoorden):
@@ -306,3 +307,28 @@ def test_zonder_sleutel_gaat_er_geen_enkel_gesprek_uit(monkeypatch):
     monkeypatch.setattr(gv.httpx, "get", nooit)
     monkeypatch.setattr(gv.httpx, "post", nooit)
     assert gv.vertaal("vertaal dit") is None
+
+
+def test_zijn_alle_modellen_te_druk_dan_nog_een_ronde(gemini):
+    """24-09-2026, gratis sleutel: 7 van 8 verzoeken 503, en elke vraag ging naar
+    het dure Claude. Na een korte pauze antwoordt Google vaak wel."""
+    druk = _klacht(503, "high demand")
+    gevraagd = gemini(druk, druk, druk, druk, NepAntwoord(200, _antwoord(NEDERLANDS)))
+
+    assert gv.vertaal("vertaal dit") == NEDERLANDS
+    assert len(gevraagd) == 5
+
+
+def test_blijft_het_te_druk_dan_hooguit_twee_rondes(gemini):
+    gevraagd = gemini(_klacht(503, "high demand"))
+
+    assert gv.vertaal("vertaal dit") is None
+    assert len(gevraagd) == 2 * len(gv._kandidaten())
+
+
+def test_een_leeg_tegoed_krijgt_geen_tweede_ronde(gemini):
+    """402 is een nee, geen drukte: meteen door naar de reserve."""
+    gevraagd = gemini(_klacht(402, "Your prepayment credits are depleted."))
+
+    assert gv.vertaal("vertaal dit") is None
+    assert len(gevraagd) == 1
