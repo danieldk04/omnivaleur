@@ -13226,3 +13226,19 @@ slaagt nu); 1798 serverproeven groen. De code-wijziging ging mee in auto-commit
 5a6981c5.
 Open: niets aan onze kant. Zijn Vinted-sessie was om 10:18 weg maar werkt sinds
 11:12 weer (drie Vinted-plaatsingen gelukt).
+
+## 24-09-2026 (15:05, automatisch): Klantfouten
+
+fout-2dehands-create-d5eaeba4 (f8c0cce9, 2 keer, 12:49 en 12:55 UTC): klant-eigen,
+de betaalmuur van 2dehands per rubriek. Gemeten op zijn opdrachten: in Gitaren |
+Akoestisch gingen om 12:44 en 12:46 UTC twee gitaren gratis online (Eastman E20D,
+Martin 0-10E), de derde (Gibson G200) kwam op de betaalpagina. In Gitaren |
+Elektrisch hetzelfde: Reverend en Fender Telecaster gratis om 12:48 en 12:53, de
+tweede Telecaster om 12:55 betaald. Dat is 2dehands' vaste grens van twee gratis
+advertenties per gitaarrubriek (zie kennisbank betalende-rubriek-is-geen-formulierfout),
+hetzelfde als bij deze klant op 18-09. Onze rem werkte goed: niets betaald, alleen
+die twee rubrieken stilgezet, zijn toebehoren (gitaarbanden, Bluebird) gingen er
+tussendoor gewoon online. De rubriekkeuze uit de fix van 14:14 klopt: de rubriek
+is die van zijn eigen Marktplaats-advertentie.
+Niets gerepareerd. Open: niets aan onze kant; meer gitaren op 2dehands kan alleen
+betaald of als er een van zijn gratis gitaren verkocht/weggehaald is.
