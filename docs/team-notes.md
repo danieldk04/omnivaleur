@@ -13030,3 +13030,24 @@ truien (col tegen ronde hals), voorstel weggehaald. 694 en 1038 niet zeker, aan
 Daniel. Een verkoopproef op een testartikel (Shopify-bestelling, verwijderopdrachten
 voor MP, 2dehands en Vinted) werkte; testartikel en opdrachten daarna verwijderd.
 Open: het dubbele product blijft in de winkel te koop; alleen Daniel kan het verwijderen.
+
+### 24-09-2026 (10:00): Marktplaats-beschrijving strandde in een stilgezet werktabblad (1.0.350)
+
+Daniel: "ik moet constant handmatig bij Marktplaats op publiceren drukken". Vier van
+de zeven plaatsingen van 09:20 tot 09:44 strandden op "The description could not be
+placed into the editor" (1212, 1137, 1206, 1119); het tabblad bleef half ingevuld
+staan en Daniel drukte zelf op plaatsen. Live meegelezen in de voortgang: de klok
+in het werktabblad stond tot 64 seconden stil ("klokstand: 0.0/s +64097ms"). Het
+tekstvak zelf is onveranderd en neemt de tekst via Lexical in 6 tot 9 ms aan, ook
+op de achtergrond (nagemeten in Daniels Chrome). Maar _mwFillDescription wachtte
+daarna op twee klokjes (150 en 250 ms); in een stilgezet tabblad komen die pas bij
+de volgende tik, en in diezelfde tik verloopt de wachttijd van 8 s van
+runInMainWorld. Nu wacht de Lexical-route op geen enkel klokje. Proef:
+tests/beschrijving-in-stilgezet-tabblad-test.js (oude code 97312f31 faalt). Negen
+andere node-tests faalden al op 1.0.349, los hiervan.
+
+Omgeving op dat moment: Mac een uur eerder herstart, Google Drive op 82% cpu,
+belasting 9 tot 15 op 8 kernen. De werktabbladen stonden op de achtergrond in
+Daniels eigen venster. Geen 2dehands-opdracht vandaag: de server kreeg er geen
+aanvraag voor, 2dehands staat niet op slot (gisteren nog geplaatst).
+Open: 1.0.350 moet naar de Web Store; 1206 en 1119 opnieuw plaatsen na bijwerken.

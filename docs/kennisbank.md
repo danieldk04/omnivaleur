@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## geen-klokje-in-de-hoofdwereld
+
+*24-09-2026 — Een setTimeout-pauze in een main-world-functie verliest van de 8s-wachttijd van runInMainWorld zodra Chrome het tabblad stilzet (24-09-2026, 1.0.350)*
+
+In een werktabblad op de achtergrond tikt de klok soms maar eens per minuut. Een pauze via setTimeout in een functie die met executeScript in de MAIN world draait (bijv. _mwFillDescription) komt dan pas bij de volgende tik, en in diezelfde tik verloopt de wachttijd van runInMainWorld (8 s, content script). Uitkomst "niet gelukt" terwijl de tekst er al stond; formulier blijft half ingevuld en de verkoper drukt zelf op plaatsen.
+
+**Why:** 24-09-2026 strandden 4 van 7 Marktplaats-plaatsingen van Daniel zo; voortgang toonde "klokstand: 0.0/s +64097ms".
+
+**How to apply:** op het succespad van een main-world-functie geen setTimeout; controleer meteen na Lexical's update (onUpdate is geen klok). Meet vastlopers in de voortgang (klokstand), niet in een zichtbaar tabblad. Zie "verborgen-tabblad-worker-timer" en "korte-klokmeting-bewijst-niets". Proef: tests/beschrijving-in-stilgezet-tabblad-test.js. Let op: `timeout` bestaat niet op macOS; een testlus met `timeout` meldt alles als fout.
+
+---
+
 ## shopify-nummer-gaat-voor-titel
 
 *24-09-2026 — Shopify-scan koppelde op titel aan een artikel met een ander artikelnummer; 5 van 12 dubbel-meldingen waren vals (24-09-2026)*
