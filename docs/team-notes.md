@@ -13404,6 +13404,35 @@ eigen keuze van eerder vandaag ("alleen voor wie zelf op NL klikt, tot het
 bewezen is"). Aanzetten op browsertaal (`navigator.language`, geen IP nodig) is
 één regel in `kiesTaal()`, als hij dat later wil.
 
+## 24-09-2026 (18:30, automatisch): Klantfouten
+
+fout-vinted-delete-c4846543 (3bfbed2c, revaleurnl, 17:57 UTC): fout in onze
+code. Verversing van "(1342) Witte Puma Schoenen": de verwijderknop op Vinted
+werd aangeklikt, maar er kwam geen bevestigvenster, dus niets verwijderd en de
+herplaatsing wacht. Mechanisme nagemeten op de echte vinted.nl-pagina (headless
+Chrome): de knoppen staan als kant-en-klare HTML 3 tot 5 seconden op de pagina
+voordat React ze klikbaar maakt; twee klikken in dat gat deden niets, een klik
+erna wel. Onze routine wachtte alleen tot de knop er stond.
+Gerepareerd (extensie 1.0.352): eerst wachten tot de knop React's kenmerk
+draagt, en komt er geen venster, één keer opnieuw klikken zodra hij leeft.
+Proef tests/vinted-verwijderen-voor-hydratie-echt-test.mjs draait de echte
+routine in Chrome: oude code (9b39f008) geeft exact de klantfout, nieuwe code
+verwijdert. 1820 serverproeven groen. Advertentie 9618700667 staat nog live
+(200), niets weggehaald, de Vinted-rij staat nog op actief.
+Open: 1.0.352 moet naar de Web Store; tot de klant hem heeft kan het opnieuw
+gebeuren. Niet bewezen dat dít geval de hydratie was (geen toegang tot zijn
+scherm), wel dat het mechanisme precies deze melding geeft.
+
+## 24-09-2026: /ai-info en /llms.txt voor AI-assistenten
+Daniel zag crosslist.com/ai-info en vroeg of dat voor ons ook waarde heeft; daarna
+"bouw maar en zet in footer". Nieuw: `frontend/ai-info.html` (route /ai-info, in
+de sitemap) en `frontend/llms.txt`. Link "For AI assistants" / "Voor
+AI-assistenten" in de Company-kolom van de footer op /, /nl, /marketplaces en de
+blog. Kern van de pagina: Crosslist neemt geen EU-klanten aan en Vendoo kent
+Marktplaats/2dehands niet (beide op 24-09 op hun eigen site gecontroleerd); wij
+zijn de tool voor NL/BE. Verandert prijs, proef of kanalenlijst, dan deze twee
+bestanden meenemen, net als het klantenservice-brein.
+
 **Aanvulling 24-09, wijzer.** Op Daniels vraag toont het dashboard één keer een
 blauw ballonnetje naar EN · NL ("Nieuw: Omnivaleur in het Nederlands. Klik op
 NL."), alleen voor wie nog nooit een taal koos; weg na NL, EN of kruisje

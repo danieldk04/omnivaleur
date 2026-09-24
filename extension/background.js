@@ -4399,8 +4399,25 @@ async function _mwVintedVerwijderen() {
   const zoekWeg = () => knoppen(document).find(e => zichtbaar(e) && isWeg(e));
   const zoekMenu = () => document.querySelector(menuKeus);
 
+  // 0b) EEN KNOP DIE ER STAAT IS NOG GEEN KNOP DIE WERKT.
+  //
+  // Vinted stuurt de artikelpagina als kant-en-klare HTML mee; React maakt de
+  // knoppen pas een paar seconden later klikbaar ("hydratie"). Een klik in dat
+  // gat verdwijnt zonder spoor. Op 24-09-2026 (klant 3bfbed2c, advertentie
+  // 9618700667) werd de verwijderknop zo aangeklikt, verscheen er geen venster
+  // en luidde de melding "Confirm-delete button not found". Nagemeten op de
+  // echte vinted.nl-pagina: de knoppen stonden er 3 tot 5 seconden voordat ze
+  // leefden; twee klikken in dat gat deden niets, een klik erna wel. Een
+  // levende knop draagt React's eigen kenmerk (__reactProps$…), dus daarop
+  // wachten, op dezelfde manier als hierboven: de pagina meldt elke wijziging,
+  // en na de grens wordt nog één keer gekeken. Komt het kenmerk nooit, dan
+  // klikken we na de grens gewoon, zoals vroeger.
+  const leeft = e => !!e && Object.keys(e).some(k => k.startsWith("__reactProps$"));
+  const wachtTotLevend = (vind, limietMs = 20000) => wachtOp(() => leeft(vind()), limietMs);
+
   // 1) De knop op de pagina zelf, eventueel achter het menu met de drie puntjes.
   await wachtOp(() => !!zoekWeg() || !!zoekMenu(), 15000);
+  await wachtTotLevend(() => zoekWeg() || zoekMenu());
   let del = zoekWeg();
   if (!del) {
     const menuknop = zoekMenu();
@@ -4419,6 +4436,13 @@ async function _mwVintedVerwijderen() {
   //    pagina zelf, niet van een klokje, dus dit gaat in een verborgen tabblad
   //    even snel als op het scherm.
   await wachtOp(() => !!zoekBevestig(del), 8000);
+  // Geen venster: de klik viel waarschijnlijk toch in het gat hierboven. Staat
+  // de knop er nog, dan één keer opnieuw zodra hij leeft.
+  if (!zoekBevestig(del) && del.isConnected) {
+    await wachtTotLevend(() => del, 10000);
+    del.click();
+    await wachtOp(() => !!zoekBevestig(del), 8000);
+  }
   const bevestig = zoekBevestig(del);
   const venster = echteVensters().find(v => zichtbaar(v)
     || knoppen(v).some(zichtbaar)

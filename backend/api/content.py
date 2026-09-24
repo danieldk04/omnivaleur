@@ -445,6 +445,7 @@ STATIC_SITEMAP_URLS = [
     ("/blog", "daily", "0.9"),
     ("/nl/blog", "daily", "0.8"),
     ("/marketplaces", "monthly", "0.8"),
+    ("/ai-info", "monthly", "0.6"),
     ("/register", "monthly", "0.9"),
     ("/privacy", "yearly", "0.3"),
     ("/terms", "yearly", "0.3"),

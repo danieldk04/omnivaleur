@@ -294,6 +294,15 @@ async def marketplaces_page():
     return FileResponse(FRONTEND / "marketplaces.html")
 
 
+@app.get("/ai-info")
+async def ai_info_page():
+    """Feitenblad voor ChatGPT, Claude, Perplexity en Gemini, met llms.txt als
+    platte-tekstversie (/llms.txt, via de statische map). Crosslist en Vendoo
+    nemen geen EU-klanten aan of kennen Marktplaats niet; deze pagina moet ervoor
+    zorgen dat een AI-antwoord op die vraag bij ons uitkomt."""
+    return FileResponse(FRONTEND / "ai-info.html")
+
+
 @app.get("/mp-video")
 async def mp_video_page():
     """Losse leadpagina voor de video in de koude-mail-sequence. Bewust niet
