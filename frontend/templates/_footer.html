@@ -1,50 +1,69 @@
+{#- De enige voettekst van de openbare site; zie _nav.html. -#}
+{%- set nl = (taal or language or (page.language if page is defined and page else '')) == 'nl' -%}
+{%- set home = '/nl' if nl else '/' -%}
 <footer class="site-footer">
   <div class="footer-main">
     <div class="footer-brand">
-      <a href="/" style="display:inline-flex;align-items:center;gap:10px;font-size:17px;font-weight:800;color:#fff;text-decoration:none">
-        <img src="/logo.png" alt="Omnivaleur" style="height:32px;width:auto">
-        <span style="background:linear-gradient(135deg,#60a5fa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Omnivaleur</span>
+      <a href="{{ home }}" class="footer-logo">
+        <img src="/logo.png" alt="Omnivaleur">
+        <span>Omnivaleur</span>
       </a>
-      <p>Cross-list your second-hand items on all European marketplaces in seconds. Built for Marktplaats, 2dehands, Vinted and Shopify.</p>
+      {% if nl %}
+      <p>Zet je tweedehands items in seconden op Marktplaats, 2dehands, Vinted, eBay en Shopify, elk in de juiste taal.</p>
+      <p>Zakelijke vragen: <a href="mailto:info@revaleur.com">info@revaleur.com</a></p>
+      {% else %}
+      <p>Cross-list your second-hand items on Marktplaats, 2dehands, Vinted, eBay and Shopify in seconds, each in the right language.</p>
+      <p>Business inquiries: <a href="mailto:info@revaleur.com">info@revaleur.com</a></p>
+      {% endif %}
     </div>
+
     <div class="footer-col">
       <h4>Platform</h4>
       <ul>
-        <li><a href="/marketplaces">Marketplaces</a></li>
-        <li><a href="{{ blog_index_path | default('/blog') }}">Blog</a></li>
-        <li><a href="/login">Login</a></li>
-        <li><a href="/register">Start free trial</a></li>
+        <li><a href="{{ home }}#inside-the-app">{{ 'In de app' if nl else 'Inside the app' }}</a></li>
+        <li><a href="{{ home }}#how-it-works">{{ 'Hoe het werkt' if nl else 'How it works' }}</a></li>
+        <li><a href="{{ home }}#pricing">{{ 'Prijs' if nl else 'Pricing' }}</a></li>
+        <li><a href="{{ '/nl/blog' if nl else '/blog' }}">Blog</a></li>
+        {% if nl %}<li><a href="/mp-video">Video</a></li>{% endif %}
+        <li><a href="/login">{{ 'Inloggen' if nl else 'Login' }}</a></li>
+        <li><a href="/register">{{ 'Start gratis' if nl else 'Start free trial' }}</a></li>
       </ul>
     </div>
+
     <div class="footer-col">
-      <h4>Company</h4>
+      <h4>{{ 'Bedrijf' if nl else 'Company' }}</h4>
       <ul>
-        <li><a href="/terms">Terms of Service</a></li>
-        <li><a href="/privacy">Privacy Policy</a></li>
-        <li><a href="/ai-info">For AI assistants</a></li>
+        <li><a href="/terms">{{ 'Algemene voorwaarden' if nl else 'Terms of Service' }}</a></li>
+        <li><a href="/privacy">{{ 'Privacybeleid' if nl else 'Privacy Policy' }}</a></li>
+        <li><a href="mailto:info@revaleur.com">Contact</a></li>
+        <li><a href="/ai-info"{% if nl %} hreflang="en"{% endif %}>{{ 'Voor AI-assistenten' if nl else 'For AI assistants' }}</a></li>
       </ul>
     </div>
+
     <div class="footer-col">
-      <h4>Marketplaces</h4>
+      <h4>{{ 'Marktplaatsen' if nl else 'Marketplaces' }}</h4>
       <ul>
         <li><a href="/marketplaces">Marktplaats</a></li>
         <li><a href="/marketplaces">2dehands</a></li>
         <li><a href="/marketplaces">Vinted</a></li>
+        <li><a href="/marketplaces">eBay</a></li>
         <li><a href="/marketplaces">Shopify</a></li>
       </ul>
     </div>
   </div>
+
   {% if merk_links %}
   <div class="footer-social">
-    <span>Omnivaleur elsewhere:</span>
+    <span>{{ 'Omnivaleur elders:' if nl else 'Omnivaleur elsewhere:' }}</span>
     {% for l in merk_links %}<a href="{{ l.url }}" rel="me noopener" target="_blank">{{ l.label }}</a>{% endfor %}
   </div>
   {% endif %}
+
   <div class="footer-bottom">
-    <span>© 2026 Omnivaleur</span>
+    <span>© 2026 Revaleur · KVK 86792423 · VAT NL004117227B97 · Kleine Melanen 5, 4614RG Bergen op Zoom</span>
     <div class="footer-bottom-links">
-      <a href="/privacy">Privacy Policy</a>
-      <a href="/terms">Terms of Service</a>
+      <a href="/privacy">{{ 'Privacybeleid' if nl else 'Privacy Policy' }}</a>
+      <a href="/terms">{{ 'Algemene voorwaarden' if nl else 'Terms of Service' }}</a>
     </div>
   </div>
 </footer>
