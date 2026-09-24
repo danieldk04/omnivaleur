@@ -17,6 +17,36 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## staat-bij-import
+
+*24-09-2026 — _map_condition in imports.py zette Vinted "Goed" op Like new en "Zo goed als nieuw" op New; 1025 artikelen bij 10 klanten, gerepareerd 24-09-2026*
+
+De import vertaalt het staatwoord van het kanaal naar onze vijf treden. Die treden
+en hun betekenis per kanaal staan in CONDITION_HINTS (frontend/app.html) en
+CONDITION_MAP (extension/content/vinted.js): good = Zo goed als nieuw / Vinted
+"Heel goed", fair = Gebruikt / Vinted "Goed", poor = Beschadigd / Vinted
+"Veelgebruikt". Vinted "Goed" is dus NIET good.
+
+Tot 24-09-2026 zocht _map_condition op losse lettergrepen in de verkeerde volgorde:
+"Goed" werd good, "New with tags" werd new, en voor Marktplaats-woorden werd "Zo goed
+als nieuw" new (het woord nieuw zit erin) en "Gebruikt" poor. Gemeten: 1025
+geïmporteerde Vinted-artikelen bij 10 klanten stonden nog op die gok (963 Like new
+die Used hadden moeten zijn, 62 New zonder kaartje), één klant (96e30080) had er 925.
+Klanten hadden er zelf al tientallen met de hand rechtgezet.
+
+**Why:** Marktplaats en 2dehands leveren bij de scan GEEN staat mee (0 van 15.055
+kandidaten), dus daar sluimerde het; bij Vinted liep het elke import.
+**How to apply:** nieuwe staatwoorden toevoegen in _STAAT_WOORDEN en in
+tests/test_staat_bij_import.py; volgorde blijft slecht, zo goed als nieuw, nieuw met
+kaartje, nieuw, en pas dan het kale goed/gebruikt. Onbekend woord = None, dan de
+standaard van de lading. Zie "verzonnen-standaard-is-erger-dan-leeg".
+
+Zelfde dag: de rubriekkiezer mag "none" antwoorden. Lego, boeken, apparaten,
+fietsen, elektronica bleven anders in antiek of "wonen overige" belanden (7 van 17
+in de proef). Er is (nog) geen tak voor die spullen; leeg is beter dan antiek.
+
+---
+
 ## lijst-en-knop-delen-een-beslissing
 
 *24-09-2026 — "Importlijst toonde \"Twice in your Shopify store\" als waarschuwing, maar \"Import all\" koppelde die rij toch stil; scherm en bulkknop moeten één beslisfunctie delen"*

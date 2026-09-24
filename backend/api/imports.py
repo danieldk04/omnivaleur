@@ -60,7 +60,7 @@ _BULK_IMPORT_CACHE: dict[str, dict] = {}
 # De volgorde hieronder is de beveiliging: eerst wat ondubbelzinnig slecht is,
 # dan "zo goed als nieuw" (dat het woord nieuw bevat), dan de nieuwe treden, en
 # pas als laatste het kale "goed"/"gebruikt". Een woord dat we niet kennen geeft
-# None: dan beslist de standaard van de import, nooit een gok van deze lijst.
+# None: dan beslist de standaard van de lading, nooit een gok van deze lijst.
 _STAAT_WOORDEN = (
     ("poor", (r"niet werkend", r"werkt niet", r"defect", r"kapot", r"beschadigd",
               r"voor onderdelen", r"veelgebruikt", r"redelijk", r"matig", r"slecht",

@@ -13112,3 +13112,24 @@ tabbladen: "To check" (twijfel, beide foto's naast elkaar) en "Ready to import"
 match". De staat voor advertenties zonder staat staat vast in de kaart. Getest
 met nagebootste gegevens op breed scherm en telefoon; aan de koppelregels zelf is
 niets veranderd.
+
+## 24-09-2026 (12:30): Staat bij import, en geen antiek voor Lego
+
+Daniel vroeg een volledige importproef over alle niches. 71 nagemaakte advertenties
+over vier kanalen door de echte importcode (nagebootste database, echte
+rubriekkiezer via Claude): rubrieken, dubbelen en koppelingen klopten. Twee fouten:
+
+- De staat. Vinted "Goed" werd "Like new" in plaats van "Used", "New with tags"
+  verloor zijn kaartje, en Marktplaats-woorden gingen nog erger mis ("Zo goed als
+  nieuw" werd New). Gerepareerd in _map_condition; proef
+  tests/test_staat_bij_import.py (oude code: 31 van 42 fout). Gemeten in de
+  database: 1025 artikelen bij 10 klanten staan nog op de oude gok, 925 daarvan
+  bij klant 96e30080. Nog NIET rechtgezet, wacht op Daniels ja.
+- Spullen buiten onze niches (Lego, boeken, stofzuiger, bordspel) kregen antiek of
+  "wonen overige". De rubriekkiezer mag nu "none" zeggen, dan blijft de rubriek
+  leeg en vraagt het dashboard erom. Oude code 7 van 17 fout, nieuwe 0 (twee keer
+  gedraaid). Echt oude stukken (blikken speelgoed jaren 50, bijbel 1850) blijven
+  antiek.
+Open: op de server kiest Gemini eerst; de proef liep op Claude omdat er lokaal geen
+Google-sleutel is. Een eigen tak voor elektronica, speelgoed, boeken en fietsen
+bestaat nog niet.
