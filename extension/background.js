@@ -9113,6 +9113,7 @@ async function _mwFillDescription(selector, descText) {
           }, { discrete: true, onUpdate: resolve });
           setTimeout(resolve, 800);
         });
+        if (structureOk()) return true;
         await sleep(250);
         if (structureOk()) return true;
       } catch (_) {}
