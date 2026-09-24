@@ -13432,3 +13432,15 @@ blog. Kern van de pagina: Crosslist neemt geen EU-klanten aan en Vendoo kent
 Marktplaats/2dehands niet (beide op 24-09 op hun eigen site gecontroleerd); wij
 zijn de tool voor NL/BE. Verandert prijs, proef of kanalenlijst, dan deze twee
 bestanden meenemen, net als het klantenservice-brein.
+
+**Aanvulling 24-09, wijzer.** Op Daniels vraag toont het dashboard één keer een
+blauw ballonnetje naar EN · NL ("Nieuw: Omnivaleur in het Nederlands. Klik op
+NL."), alleen voor wie nog nooit een taal koos; weg na NL, EN of kruisje
+(localStorage `omni_taal_tip`). Live via PR #10.
+
+**Aanvulling 24-09, altijd tweetalig.** Daniel: elke wijziging aan klanttekst
+ALTIJD in Nederlands en Engels. Vastgelegd in CLAUDE.md (laadt in elke sessie,
+op elk account) en afgedwongen met `.github/workflows/vertaaltest.yml`, die
+`tests/test_i18n_compleet.py` draait bij elke PR en push naar main. Bewust geen
+losse skill: een skill laadt alleen als hij getriggerd wordt, CLAUDE.md altijd,
+en de GitHub-proef vangt ook de tweede ontwikkelaar.
