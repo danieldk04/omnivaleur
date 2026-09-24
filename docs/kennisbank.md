@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## lijst-en-knop-delen-een-beslissing
+
+*24-09-2026 — "Importlijst toonde \"Twice in your Shopify store\" als waarschuwing, maar \"Import all\" koppelde die rij toch stil; scherm en bulkknop moeten één beslisfunctie delen"*
+
+De importlijst (GET /api/imports/) en "Import all" (bulk_import_candidates) beslisten elk met hun eigen code. De lijst zette een tweede Shopify-product op "Twice in your Shopify store", de bulkknop zag alleen `same_code` en koppelde hem stil. Zo ook een levende advertentie op een verkocht item: de oudste (verkochte) rij met dat nummer won. Gevonden op 24-09-2026 bij Daniel, bij 694, 1038 en 1071.
+
+**Why:** een waarschuwing op het scherm die de knop negeert is erger dan geen waarschuwing. De verkoper denkt dat de twijfel blijft staan, en ondertussen is hij al verwerkt.
+
+**How to apply:** Ga je iets wat het scherm als twijfel toont automatisch verwerken, laat beide paden dan dezelfde functie aanroepen (nu `_match_candidate` + `_twijfelreden` in backend/api/imports.py, met TWIJFEL_REDENEN). Test het op de bulkroute zelf, niet alleen op de lijst (tests/test_import_zeker_of_twijfel.py). Zie ook "shopify-nummer-gaat-voor-titel" en "samenvoegen-slokte-nieuwe-voorraad-op".
+
+---
+
 ## geen-klokje-in-de-hoofdwereld
 
 *24-09-2026 — Een setTimeout-pauze in een main-world-functie verliest van de 8s-wachttijd van runInMainWorld zodra Chrome het tabblad stilzet (24-09-2026, 1.0.350)*

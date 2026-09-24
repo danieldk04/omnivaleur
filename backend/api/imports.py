@@ -1023,7 +1023,8 @@ def _best_match(title: str, items: list[dict]) -> str | None:
 
 
 def _match_candidate(cand: dict, items: list[dict], listings_by_id: dict,
-                     bekende_merken: set | None = None) -> tuple[str | None, str | None]:
+                     bekende_merken: set | None = None,
+                     verkocht: set | None = None) -> tuple[str | None, str | None]:
     """
     Decide which existing item (if any) a scraped listing belongs to, and why.
     Three confident signals, strongest first:
@@ -1053,7 +1054,13 @@ def _match_candidate(cand: dict, items: list[dict], listings_by_id: dict,
                   if advertentiecode(it.get("title"), it.get("sku")) == code
                   and plausibel(cand, it, bekende_merken or set()) is None]
         if gelijk:
-            gelijk.sort(key=lambda i: (i.get("created_at") or "", i.get("id") or ""))
+            # Een onverkochte rij gaat voor een verkochte. Hetzelfde nummer op een
+            # verkocht en een onverkocht item betekent: opnieuw ingekocht, twee
+            # voorwerpen (zie list_duplicates in items.py). Een levende advertentie
+            # hoort dan bij de voorraad die er nog is, niet bij het verkochte stuk.
+            verkocht = verkocht or set()
+            gelijk.sort(key=lambda i: (i["id"] in verkocht,
+                                       i.get("created_at") or "", i.get("id") or ""))
             return gelijk[0]["id"], "same_code"
 
     title_match = _best_match(cand.get("title"), items)
@@ -1068,33 +1075,90 @@ def _match_candidate(cand: dict, items: list[dict], listings_by_id: dict,
     return None, None
 
 
-def _listing_index(db, items: list[dict]) -> tuple[dict, dict]:
+def _listing_index(db, items: list[dict]) -> tuple[dict, dict, set]:
     """
-    Read the user's listings once and return two views of them:
+    Read the user's listings once and return three views of them:
       * (platform, platform_listing_id) → item_id  — for the certain re-import match
       * item_id → {platforms}                      — which channels an item is already on
+      * {item_id}                                  — items with a sold listing
     Scoped via the user's item ids (the listings table has no user_id column).
     """
     item_ids = [it["id"] for it in items]
     if not item_ids:
-        return {}, {}
+        return {}, {}, set()
     # Na elkaar, niet tegelijk — zie de uitleg bovenaan dit bestand. Gemeten bij
     # 2.135 items: 3,7 seconden voor alle brokken samen, tegen een foutkans van
     # ruim tachtig procent zodra dit gelijktijdig gebeurt.
     rows = fetch_all_in(lambda: db.table("listings")
-                        .select("item_id,platform,platform_listing_id"),
+                        .select("item_id,platform,platform_listing_id,status"),
                         "item_id", item_ids)
-    by_listing_id, platforms = {}, {}
+    by_listing_id, platforms, verkocht = {}, {}, set()
     for l in rows:
         item_id, plat = l.get("item_id"), l.get("platform")
         if not item_id:
             continue
+        if l.get("status") == "sold":
+            verkocht.add(item_id)
         if plat:
             platforms.setdefault(item_id, set()).add(plat)
         pid = l.get("platform_listing_id")
         if pid is not None:
             by_listing_id[(plat, str(pid))] = item_id
-    return by_listing_id, platforms
+    return by_listing_id, platforms, verkocht
+
+
+# ── Zeker of twijfel ──────────────────────────────────────────────────────
+#
+# Daniel, 24-09-2026: "het systeem mag zelf koppelen, dingen die het 100% zeker
+# weet; de rest is twijfel en leg je rustig voor aan de gebruiker." Hij importeert
+# van vier kanalen, meerdere keren, en wil daarna zonder na te lopen weten dat er
+# niets dubbel in zijn voorraad staat.
+#
+# Zeker is: dezelfde advertentie die we al kennen, hetzelfde artikelnummer zonder
+# tegenspraak in kleur, maat, merk en prijs, of één bestaand item met exact
+# dezelfde titel. Nergens een overeenkomst is ook zeker: dan is het nieuw.
+# Twijfel is alles waar een automatische keuze een van twee kanten op fout kan
+# gaan. Die rijen blijven staan tot de verkoper kiest; "Import all" slaat ze over.
+TWIJFEL_REDENEN = ("shopify_duplicate", "likely_same", "sold_match", "second_advert")
+
+
+def _shopify_van_item(listings_by_id: dict) -> dict:
+    """item_id → de Shopify-productnummers die er al aan hangen."""
+    uit: dict = {}
+    for (pf, pid), iid in listings_by_id.items():
+        if pf == "shopify":
+            uit.setdefault(iid, set()).add(pid)
+    return uit
+
+
+def _twijfelreden(cand: dict, item_id: str | None, reden: str | None,
+                  verkocht: set, shopify_van_item: dict,
+                  listings_by_id: dict | None = None) -> str | None:
+    """Waarom deze zekere-ogende koppeling tóch een vraag aan de verkoper is.
+
+    * shopify_duplicate: het item hangt al aan een ánder Shopify-product. Dan
+      staat het stuk twee keer in de winkel, of het zijn twee stukken met een
+      verkeerd nummer (1071 bij Revaleur: col tegen ronde hals).
+    * sold_match: de advertentie staat nog te koop, het item is al verkocht.
+      Opnieuw ingekocht of een advertentie die bleef hangen; dat weet alleen hij.
+    * second_advert: alleen de titel is gelijk, en dat item staat op dit kanaal
+      al met een ándere advertentie. Tien blikjes plectrums zijn tien stuks, een
+      dubbel geplaatste advertentie is één stuk; aan de titel zie je het niet.
+    Dezelfde advertentie die we al kennen is nooit twijfel: die hoort er al bij.
+    """
+    if not item_id or reden == "same_listing":
+        return None
+    if (cand.get("platform") == "shopify"
+            and shopify_van_item.get(item_id, set()) - {str(cand.get("platform_listing_id"))}):
+        return "shopify_duplicate"
+    if item_id in verkocht:
+        return "sold_match"
+    if reden == "same_title" and listings_by_id:
+        eigen = str(cand.get("platform_listing_id"))
+        if any(pf == cand.get("platform") and iid == item_id and pid != eigen
+               for (pf, pid), iid in listings_by_id.items()):
+            return "second_advert"
+    return None
 
 
 def _tweede_advertentie(db, item_id: str, platform: str, listing_id) -> bool:
@@ -1513,26 +1577,23 @@ async def list_import_candidates(platform: str = None, status: str = "pending", 
         cands = q.order("created_at", desc=True).limit(500).execute().data or []
         if not cands:
             return cands, [], {}, {}
-        its = fetch_all(lambda: db.table("items").select("id,title,price,brand").eq("user_id", user_id))
-        by_id, by_item = _listing_index(db, its)
-        return cands, its, by_id, by_item
+        # sku en created_at horen erbij: zonder die twee koos deze lijst bij een
+        # nummer soms een ander item dan "Import all" daarna echt koppelde.
+        its = fetch_all(lambda: db.table("items")
+                        .select("id,title,price,brand,sku,created_at").eq("user_id", user_id))
+        by_id, by_item, verkocht = _listing_index(db, its)
+        return cands, its, by_id, by_item, verkocht
 
-    candidates, items, listings_by_id, platforms_by_item = await asyncio.to_thread(_lees)
+    candidates, items, listings_by_id, platforms_by_item, verkocht = await asyncio.to_thread(_lees)
     if candidates:
-        # Welk artikel hangt al aan welk Shopify-product. Hangt het voorgestelde
-        # artikel al aan een ÁNDER product, dan staat hetzelfde stuk twee keer in
-        # de winkel en kan het daar twee keer verkocht worden. Dat moet de
-        # verkoper zien, niet een stille koppeling (Revaleur: 16 stuks).
-        shopify_van_item: dict = {}
-        for (pf, pid), iid in listings_by_id.items():
-            if pf == "shopify":
-                shopify_van_item.setdefault(iid, set()).add(pid)
+        # Precies dezelfde beslissing als bulk_import_candidates, zodat wat het
+        # scherm "zeker" noemt ook is wat "Import all" zelf koppelt.
+        merken = bekende_merken_van(items) | bekende_merken_van(candidates)
+        shopify_van_item = _shopify_van_item(listings_by_id)
         unmatched = []
         for c in candidates:
-            item_id, reason = _match_candidate(c, items, listings_by_id)
-            if (reason == "same_code" and c.get("platform") == "shopify"
-                    and shopify_van_item.get(item_id, set()) - {str(c.get("platform_listing_id"))}):
-                reason = "shopify_duplicate"
+            item_id, reason = _match_candidate(c, items, listings_by_id, merken, verkocht)
+            reason = _twijfelreden(c, item_id, reason, verkocht, shopify_van_item, listings_by_id) or reason
             c["suggested_item_id"] = item_id
             c["match_reason"] = reason
             if not item_id:
@@ -1544,6 +1605,8 @@ async def list_import_candidates(platform: str = None, status: str = "pending", 
                 if c["id"] == cand_id:
                     c["suggested_item_id"] = item_id
                     c["match_reason"] = "likely_same"
+        for c in candidates:
+            c["twijfel"] = c.get("match_reason") in TWIJFEL_REDENEN
     return candidates
 
 
@@ -1786,31 +1849,41 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
         # seller's entire inventory on every single request.
         if cache_vers:
             entry["ts"] = _time_mod.monotonic()  # sessie loopt door, klok niet laten aflopen
-            return cands, entry["items"], entry["by_id"], entry["by_platform"]
+            return cands, entry["items"], entry["by_id"], entry["by_platform"], entry["verkocht"]
         # created_at en sku horen erbij: het advertentienummer kan uit de sku
         # komen, en bij meerdere rijen met hetzelfde nummer wint de oudste.
         its = fetch_all(lambda: db.table("items")
                         .select("id,title,price,brand,sku,created_at").eq("user_id", user_id))
-        by_id, by_platform = _listing_index(db, its)
+        by_id, by_platform, verkocht = _listing_index(db, its)
         _BULK_IMPORT_CACHE[user_id] = {
-            "items": its, "by_id": by_id, "by_platform": by_platform, "ts": _time_mod.monotonic(),
+            "items": its, "by_id": by_id, "by_platform": by_platform,
+            "verkocht": verkocht, "ts": _time_mod.monotonic(),
         }
-        return cands, its, by_id, by_platform
+        return cands, its, by_id, by_platform, verkocht
 
-    candidates, items, listings_by_id, platforms_by_item = await asyncio.to_thread(_read)
+    candidates, items, listings_by_id, platforms_by_item, verkocht = await asyncio.to_thread(_read)
 
     # De eigen merkenwoordenschat van deze verkoper: nodig om te beslissen of
     # twee advertenties met hetzelfde nummer echt hetzelfde artikel zijn.
     merken_van_verkoper = bekende_merken_van(items) | bekende_merken_van(candidates)
 
     # Work out up front which rows must NOT be processed automatically, and drop
-    # them from this pass entirely.
-    unmatched = [c for c in candidates
-                 if not _match_candidate(c, items, listings_by_id, merken_van_verkoper)[0]]
-    twins = await _find_twins(unmatched, items, platforms_by_item)
-    parked = len(twins)
-    if twins:
-        candidates = [c for c in candidates if c["id"] not in twins]
+    # them from this pass entirely: everything that is not certain (see
+    # _twijfelreden). Before 24-09-2026 only translated twins were held back; a
+    # second Shopify product and a live advert on a sold item were linked
+    # silently.
+    shopify_van_item = _shopify_van_item(listings_by_id)
+    unmatched, twijfel = [], set()
+    for c in candidates:
+        mid, rd = _match_candidate(c, items, listings_by_id, merken_van_verkoper, verkocht)
+        if not mid:
+            unmatched.append(c)
+        elif _twijfelreden(c, mid, rd, verkocht, shopify_van_item, listings_by_id):
+            twijfel.add(c["id"])
+    twijfel |= set(await _find_twins(unmatched, items, platforms_by_item))
+    parked = len(twijfel)
+    if twijfel:
+        candidates = [c for c in candidates if c["id"] not in twijfel]
 
     linked, created, failed = 0, 0, 0
     now = datetime.now(timezone.utc).isoformat()
@@ -1856,7 +1929,7 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
             try:
                 listed_at = cand.get("platform_listed_at") or now
                 match_id, reden = _match_candidate(
-                    cand, items, listings_by_id, merken_van_verkoper)
+                    cand, items, listings_by_id, merken_van_verkoper, verkocht)
                 # Een TITELmatch zegt niets over aantallen: tien identieke
                 # blikjes plectrums heten alle tien hetzelfde en zijn tien
                 # voorwerpen. Staat er al een ándere advertentie op dat kanaal,

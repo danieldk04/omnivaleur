@@ -13055,3 +13055,33 @@ Nameting 09:57: Daniel plaatste 1206 opnieuw met 1.0.350. Klok in het tabblad
 0.1 tot 0.4/s, beschrijving toch gelukt ("formulier houdt nu 552 tekens vast"),
 zelf op plaatsen geklikt, advertentie m2446137267 live met 10 van 10 foto's (de
 voortgangsregel "1 van 10" was een tussenstand van het veld images.ids).
+
+### 24-09-2026 (10:30): Import van alle kanalen met één knop; alleen zeker koppelt vanzelf
+
+Daniel: "vink aan op welke marketplaces je verkoopt, een druk op de knop, en met
+100% zekerheid geen dubbele items in het dashboard, ook als je het vaker doet."
+Zijn beslissingen: het systeem koppelt zelf wat zeker is, de rest is twijfel en
+wordt rustig voorgelegd; een artikel dat nergens meer terug te vinden is alleen
+tonen, nooit vanzelf archiveren; het overzicht "staat op Vinted, niet op
+Marktplaats" hoort NIET op het importscherm maar bij Items, via de kanaalvinkjes.
+
+Gebouwd: op Import een vinkje per kanaal ("I sell here", onthouden per browser,
+standaard de kanalen waar al advertenties staan) en een knop die alle scans
+tegelijk start, daarna per gelukt kanaal importeert, daarna de dubbelcontrole over
+de hele voorraad draait. Bovenaan komt de uitkomst: aantal artikelen, dubbel ja of
+nee, gekoppeld, nieuw, te controleren, en per kanaal gelukt of waarom niet.
+Twijfelgevallen staan bovenaan met beide foto's en drie knoppen (zelfde stuk,
+ander stuk, negeren).
+
+Zeker is: dezelfde advertentie die we al kennen, hetzelfde artikelnummer zonder
+tegenspraak, of één item met exact dezelfde titel. Twijfel is nu ook wat "Import
+all" eerder stil koppelde: een tweede Shopify-product op een item dat al aan een
+ander product hangt, een levende advertentie op een verkocht item, en een gelijke
+titel terwijl dat item op dat kanaal al een andere advertentie heeft. Bij een
+nummer dat op een verkochte en een onverkochte rij staat gaat de advertentie naar
+de onverkochte. De lijst en "Import all" gebruiken nu dezelfde beslissing; eerder
+toonde de lijst "Twice in your Shopify store" en koppelde de knop hem toch.
+Proef: tests/test_import_zeker_of_twijfel.py (oude code: 6 fouten). Gemeten op
+Daniels 45 wachtende regels: 5 zeker gekoppeld, 3 twijfel (694, 1038, 1071, precies
+de drie die al op hem wachtten), 37 nieuw.
+Open: de echte ronde over vier kanalen met de extensie is nog niet gedraaid.

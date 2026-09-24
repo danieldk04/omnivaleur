@@ -100,8 +100,19 @@ def _draai(items, listings, cands):
     async def spiegel(lijsten, _uid): return [None for _ in lijsten]
     pm.mirror_photos_bulk = spiegel
     imp._BULK_IMPORT_CACHE.clear()
-    uit = asyncio.run(imp.bulk_import_candidates({"limit": 50}, user_id="u"))
-    return db, uit
+    return db, _importeer_alles(imp)
+
+
+def _importeer_alles(imp):
+    """Zoals de knop: een kanaal per ronde, tot er niets meer wacht."""
+    offset, parked = 0, 0
+    for _ in range(20):
+        uit = asyncio.run(imp.bulk_import_candidates({"limit": 50, "offset": offset}, user_id="u"))
+        parked += uit["parked"]
+        offset = uit["next_offset"]
+        if uit["remaining"] - parked <= 0 or not (uit["linked"] + uit["created"] + uit["parked"]):
+            break
+    return {"parked": parked}
 
 
 def _cand(cid, platform, pid, titel, **extra):
@@ -186,12 +197,7 @@ def test_zeker_koppelen_twijfel_laten_staan():
           f"{len(db.t['items']) - n_items_voor} nieuw")
     check("de vragen worden gemeld", uit["parked"] == 3, f"parked {uit['parked']}")
 
-    # Nog een keer draaien op dezelfde stand mag niets toevoegen.
-    imp_items = len(db.t["items"])
-    imp = _laad()
-    check("tweede ronde voegt niets toe", True)  # zie hieronder
     assert not FOUT, FOUT
-    assert imp_items == n_items_voor + 1
 
 
 def test_tweede_ronde_voegt_niets_toe():
@@ -212,7 +218,7 @@ def test_tweede_ronde_voegt_niets_toe():
     imp._find_twins = geen
     imp._infer_attributes_smart = geen
     imp._BULK_IMPORT_CACHE.clear()
-    asyncio.run(imp.bulk_import_candidates({"limit": 50}, user_id="u"))
+    _importeer_alles(imp)
     check("tweede ronde: geen enkel nieuw item", len(db.t["items"]) == voor,
           f"{len(db.t['items']) - voor} erbij")
     assert len(db.t["items"]) == voor
