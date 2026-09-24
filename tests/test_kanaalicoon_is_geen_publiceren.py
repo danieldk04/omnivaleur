@@ -226,8 +226,14 @@ def test_vastgelopen_publicatie_afsluiten_mag(monkeypatch, scans):
 
 @pytest.mark.parametrize("status", ["error", "relisting", "pending"])
 def test_een_eerdere_plaatsing_is_genoeg_spoor(monkeypatch, scans, status):
-    """Mislukt-venster ("It is online"), zelf herplaatst, of nog in de rij."""
+    """Mislukt-venster ("It is online"), zelf herplaatst, of in de rij met een
+    opdracht die de extensie al oppakte (een nooit opgepakte telt niet meer:
+    tests/test_nooit_opgepakte_opdracht_is_geen_spoor.py)."""
     db = _johan()
+    if status == "pending":
+        db.tabellen["jobs"].append({"id": "j", "user_id": "johan", "item_id": "g2",
+                                    "platform": "vinted", "action": "create", "status": "pending",
+                                    "claimed_at": "2026-09-14T20:00:00+00:00", "result": None})
     db.tabellen["listings"].append({"id": "x", "item_id": "g2", "platform": "vinted",
                                     "status": status, "platform_listing_id": None})
     uit = _nieuw(monkeypatch, db, {"item_id": "g2", "platform": "vinted"})

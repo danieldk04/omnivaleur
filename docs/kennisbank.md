@@ -17,6 +17,29 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## nooit-opgepakte-opdracht-is-geen-spoor
+
+*24-09-2026 — Oranje icoon "mark as listed" op een plaatsopdracht die de extensie nooit oppakte zette nep-actief; sinds 24-09-2026 telt alleen een poging die echt liep*
+
+Johan Kist (f8c0cce9) klikte op 23-09-2026 op het oranje 2dehands-icoon terwijl de
+plaatsopdracht nog wachtte (claimed_at leeg). `mark_listing_active` telde "open
+plaatsopdracht" als spoor, dus Les Paul en gitaarband stonden op actief zonder
+advertentie. Gevolg daags erna: verversen faalde op "cannot be found in your
+2dehands listings overview, and we could not verify", herplaatsen overgeslagen.
+
+**Why:** dezelfde val als "kanaalicoon-aanvinken-is-geen-publiceren", maar via het
+oranje icoon: klanten klikken iconen om te plaatsen. Een opdracht die nooit liep
+kan niets online hebben gezet.
+
+**How to apply:** spoor = advertentienummer, rij 'error'/'relisting', of een
+create-opdracht met claimed_at of `_progress`. Een kale 'pending'-rij is geen
+spoor. Herkennen: listing active zonder nummer + create-opdracht done met
+result `{"manual": "marked active by user"}` en claimed_at leeg. Check de echte
+verkoperslijst (lrp/api/search sellerIds[]) voor je zo'n rij rechtzet; zet op
+'error' met uitleg, nooit verwijderen.
+
+---
+
 ## verkopersnummer-bij-weinig-eigen-plaatsingen
 
 *24-09-2026 — Terugval die alleen bij "nul" invalt mist "te weinig"; 2 eigen MP-plaatsingen gaf geen verkopersnummer, 15 zoekertjes 2dehands stonden stil (24-09-2026, f8c0cce9)*

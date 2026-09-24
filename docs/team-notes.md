@@ -13242,3 +13242,25 @@ tussendoor gewoon online. De rubriekkeuze uit de fix van 14:14 klopt: de rubriek
 is die van zijn eigen Marktplaats-advertentie.
 Niets gerepareerd. Open: niets aan onze kant; meer gitaren op 2dehands kan alleen
 betaald of als er een van zijn gratis gitaren verkocht/weggehaald is.
+
+## 24-09-2026 (15:40, automatisch): Klantfouten
+
+fout-2dehands-delete-ddbd9e2e (f8c0cce9, Johan Kist, 13:03 UTC): fout in onze
+code. Johan klikte op 23-09 om 19:16 en 21:10 op het oranje 2dehands-icoon van
+een Gibson Les Paul Junior Pro en een Magrabo-gitaarband, terwijl hun
+plaatsopdracht nog op de rubriek wachtte (die wachttijd is om 14:14 gerepareerd).
+De server telde een open plaatsopdracht als spoor van een plaatsing en zette
+beide op actief, maar de extensie had ze nooit opgepakt (claimed_at leeg).
+Gemeten: zijn 2dehands-account (verkoper 57708291) heeft 28 advertenties, geen
+van beide erbij. Zijn verversing van de Les Paul verwijderde daarom eerst iets
+wat er niet was, faalde, en de herplaatsing werd overgeslagen.
+Gerepareerd (efe88d05, via de auto-push-hook): mark-active telt alleen nog een
+poging die echt liep (opgepakt, voortgang gemeld, mislukt of herplaatst); een
+nooit opgepakte opdracht geeft 422 met "hasn't started publishing yet".
+Proef tests/test_nooit_opgepakte_opdracht_is_geen_spoor.py faalt op efabbbbd,
+slaagt nu; 1804 serverproeven groen. De twee rijen van Johan staan nu op
+'error' met uitleg in plaats van nep-actief (niets verwijderd), zodat het icoon
+rood is en hij kan publiceren.
+Open: de Les Paul valt in 2dehands Gitaren | Elektrisch, waar zijn twee gratis
+plekken vandaag op zijn (zie 15:05); publiceren daar stuit op de betaalmuur. De
+herplaatsing van 17:03 UTC wordt vanzelf overgeslagen.
