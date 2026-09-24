@@ -13403,3 +13403,8 @@ vroeg meteen of NL-bezoekers vanzelf Nederlands krijgen: nee, dat was zijn
 eigen keuze van eerder vandaag ("alleen voor wie zelf op NL klikt, tot het
 bewezen is"). Aanzetten op browsertaal (`navigator.language`, geen IP nodig) is
 één regel in `kiesTaal()`, als hij dat later wil.
+
+**Aanvulling 24-09, wijzer.** Op Daniels vraag toont het dashboard één keer een
+blauw ballonnetje naar EN · NL ("Nieuw: Omnivaleur in het Nederlands. Klik op
+NL."), alleen voor wie nog nooit een taal koos; weg na NL, EN of kruisje
+(localStorage `omni_taal_tip`). Live via PR #10.
