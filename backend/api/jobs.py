@@ -3861,10 +3861,19 @@ def _store_scan_results(db, job, scraped: list[dict]):
             # weggehaald worden. Dubbel voorkomende sleutels tellen niet mee, dus
             # liever geen koppeling dan de verkeerde.
             best_id = _sku_index.get(_scan_sku(title)) or _norm_title_index.get(_scan_norm_title(title))
-        if not best_id and row.get("sku"):
+        eigen_nummer = str(row.get("sku") or "").strip().lower()
+        if eigen_nummer and not listings_by_id.get((job["platform"], str(platform_listing_id))):
             # Shopify geeft het artikelnummer los mee (services/shopify_scan.py);
-            # daar staat het niet vooraan de titel.
-            best_id = _sku_index.get(str(row["sku"]).strip().lower())
+            # daar staat het niet vooraan de titel. Dat nummer gaat VOOR de
+            # titel, en een titel die bij een artikel met een ánder nummer hoort
+            # is geen koppeling. Revaleur, 24-09-2026: drie grijze Ralph Lauren
+            # vesten "Men XXL" met dezelfde titel werden samengevoegd tot één
+            # tweeling, dus product 1014 werd voorgesteld als artikel 945 terwijl
+            # artikel 1014 gewoon op Marktplaats en 2dehands stond. Na koppelen
+            # had een verkoop in de winkel 945 overal weggehaald en 1014 laten
+            # staan. 5 van de 12 "Twice in your Shopify store"-meldingen.
+            best_id = _sku_index.get(eigen_nummer) or (
+                None if _ander_nummer(items_by_id.get(best_id), eigen_nummer) else best_id)
 
         # Dit item staat aantoonbaar live op dit platform (we hebben zijn kaartje
         # net gezien). Zet dat vast in `listings`, zodat een handmatig geplaatste
