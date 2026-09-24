@@ -1,5 +1,17 @@
-<nav>
-  <a href="/" class="nav-logo">
+{#- De enige kopregel van de openbare site. Blog (Jinja) en de losse pagina's
+    (backend/site_chrome.py) halen hem allebei hier vandaan, zodat ze niet meer
+    uit elkaar kunnen groeien. taal: 'nl' of 'en'; pad: huidige URL voor 'active'. -#}
+{%- set nl = (taal or language or (page.language if page is defined and page else '')) == 'nl' -%}
+{%- set home = '/nl' if nl else '/' -%}
+{%- set links = [
+  ('/marketplaces', 'Marktplaatsen' if nl else 'Marketplaces'),
+  ('/nl/blog' if nl else '/blog', 'Blog'),
+  (home ~ '#inside-the-app', 'In de app' if nl else 'Inside the app'),
+  (home ~ '#how-it-works', 'Hoe het werkt' if nl else 'How it works'),
+  (home ~ '#pricing', 'Prijs' if nl else 'Pricing'),
+] -%}
+<nav class="site-nav">
+  <a href="{{ home }}" class="nav-logo">
     <img src="/logo.png" alt="Omnivaleur">
     <span class="grad-text">Omnivaleur</span>
   </a>
@@ -7,14 +19,14 @@
   <label for="nav-toggle" class="nav-hamburger" aria-label="Menu"><span></span><span></span><span></span></label>
   <div class="nav-panel">
     <div class="nav-links">
-      <a href="/marketplaces">Marketplaces</a>
-      <a href="{{ blog_index_path | default('/blog') }}">Blog</a>
-      <a href="/#how-it-works">How it works</a>
-      <a href="/#pricing">Pricing</a>
+      {%- for href, label in links %}
+      <a href="{{ href }}"{% if pad and href == pad %} class="active"{% endif %}>{{ label }}</a>
+      {%- endfor %}
     </div>
     <div class="nav-actions">
-      <a href="/login" class="btn btn-outline">Log in</a>
-      <a href="/register" class="btn btn-primary">7 days free</a>
+      <div class="site-lang">{% if nl %}<a href="/" hreflang="en">EN</a><span class="on">NL</span>{% else %}<span class="on">EN</span><a href="/nl" hreflang="nl">NL</a>{% endif %}</div>
+      <a href="/login" class="btn btn-outline">{{ 'Inloggen' if nl else 'Log in' }}</a>
+      <a href="/register" class="btn btn-primary">{{ '7 dagen gratis' if nl else '7 days free' }} →</a>
     </div>
   </div>
 </nav>
