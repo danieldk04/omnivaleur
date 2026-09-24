@@ -13307,3 +13307,87 @@ vanaf het geplande moment. Proef test_een_geplande_herplaatsing_zit_niet_vast
 faalt op de oude code, slaagt nu; echte meting geeft geen vastloper meer.
 Open: niets. Om 17:03 UTC slaat de uitdeler die herplaatsing vanzelf over, want
 de bijbehorende verwijdering mislukte (zie 15:40).
+
+## 24-09-2026 — Dashboard in het Nederlands via een vertaallaag (klaar, nog niet live)
+
+**Wat Daniel wilde.** "Net zoals Shopify Translate & Adapt: alles in één keer
+Nederlands, ook het dashboard, 1000% juist." Daarna: "enkel en alleen live zetten
+als je echt 1000% zeker weet dat het goed gaat. Invulvelden etc. dus niet vertalen."
+Daniel koos uit drie routes (vertaallaag op het scherm / sleutels in alle code /
+betaalde dienst zoals Weglot) voor de vertaallaag. Dit vervangt de afspraak van
+03-09 en 07-09 om "in één ronde te vertalen zodra het rustig is": dat wachten was
+nodig omdat een vertaalslag steeds ingehaald zou worden, en met deze aanpak
+wordt hij dat niet meer.
+
+**Hoe het werkt.**
+- Alles blijft in het Engels geschreven. `frontend/i18n.js` (eerste script in de
+  kop van app, login, register, wachtwoordpagina's, eBay/Shopify-callback)
+  vertaalt op het scherm met `frontend/i18n/nl.json` (~3.100 zinnen, ~800 daarvan
+  rubrieknamen). Een MutationObserver vertaalt ook wat later verschijnt; alert/
+  confirm/prompt, datums ('en-GB' wordt 'nl-NL'), bedragen (€22,00) en de labels
+  van de grafieken gaan mee.
+- **Opt-in en nog verborgen.** Standaard Engels, ook na de merge. De knop EN · NL
+  (linksonder, boven Log out) zien klanten pas als `KNOP_VOOR_IEDEREEN` in
+  `frontend/i18n.js` op true staat. Tot dan krijgt alleen wie één keer
+  `/app?taal=nl` opent de knop te zien: zo test Daniel het in productie met zijn
+  echte voorraad zonder dat een klant iets merkt. Bewust niet op browsertaal.
+- **Nooit vertaald:** de inhoud van invulvelden en textarea's (alleen de grijze
+  placeholder), alles binnen `translate="no"`, de eigen tekst van `.item-title`,
+  `.an-sales-title` en `.imp-kant-t`, en een titel tussen aanhalingstekens in een
+  melding ("{0}" blijft letterlijk). Knopnamen uit het extensiemenu blijven
+  Engels (Calm mode, Business account (Admarkt), Let Omnivaleur type like a
+  keyboard), want die popup gaat via de Web Store en is Engels.
+- **Nooit half.** Een zin wordt heel vertaald of blijft heel Engels. Patronen met
+  {0} mogen geen lang onvertaald Engels stuk als invulling opslokken, en een
+  meervoudsplek ({1|dag|dagen}) accepteert alleen "" of "s". Dat vond echte
+  fouten: "{0} removed{1}." vertaalde anders midden in een andere zin één woord
+  ("cannot be verwijderd").
+- **Meldpunt.** Wat de browser in het Nederlands Engels ziet en niet kent, gaat
+  naar `/api/i18n/ontbrekend` (leadgen_opslag, sleutel `i18n_ontbrekend`, max 500).
+  Bekijken: `python3 scripts/i18n_extract.py --live`.
+
+**Vaste werkregel voor iedereen die UI-tekst schrijft.** Nieuwe of gewijzigde
+Engelse tekst in het dashboard, de extensiemeldingen of een serverfout die de
+klant ziet? Dan in dezelfde commit:
+1. `python3 scripts/i18n_extract.py` toont wat nog geen vertaling heeft;
+2. zet de vertaling in `frontend/i18n/nl.json` (geen tekst voor de klant? dan in
+   `frontend/i18n/negeer.txt`);
+3. `python3 scripts/i18n_extract.py --versie` (anders serveert de service worker
+   het oude woordenboek).
+`tests/test_i18n_compleet.py` faalt zolang dat niet klopt. `test_meldingen_engels.py`
+blijft gelden: de bron is en blijft Engels.
+
+**Proeven.** tests/test_i18n_compleet.py (8), tests/test_i18n_meldpunt.py (4),
+tests/i18n-vertaler-test.mjs (35 controles in echte Chromium),
+tests/i18n-dashboard-rondgang.mjs (het echte dashboard met nepdata, elk scherm en
+de vier belangrijkste vensters: 0 plekken Engels). Volledige serverset: dezelfde
+41 falen als op main in deze omgeving (verkorte git-geschiedenis), geen nieuwe;
+extensieproeven idem.
+
+**Livegang (als Daniel het in productie heeft nagelopen).**
+1. `KNOP_VOOR_IEDEREEN = true` in `frontend/i18n.js`, daarna
+   `python3 scripts/i18n_extract.py --versie`, committen.
+2. Dit blok in docs/klantenservice-brein.md onder "Vaste feiten" zetten (vóór
+   "Ondersteunde kanalen"), de datum bovenaan bijwerken, en de Drive-kopie ook:
+
+    Taal van het dashboard:
+
+    - Het dashboard kan in het Nederlands. Linksonder in het menu, boven
+      "Log out", staat EN · NL; een klik op NL zet alles om, ook meldingen,
+      foutteksten en de inlogpagina's. De keuze blijft bewaard in die browser; op
+      een andere computer of telefoon klik je het één keer opnieuw aan.
+    - Standaard staat het in het Engels. Vraagt iemand om Nederlands, wijs hem op
+      die knop.
+    - Het menu van de Chrome-extensie zelf (het pop-upje als je op het
+      puzzelstukje klikt) blijft Engels; in het Nederlandse dashboard staan de
+      namen van die knoppen daarom ook in het Engels ("Calm mode", "Business account
+      (Admarkt)").
+    - De advertenties zelf veranderen hier niet door: de taal per kanaal blijft
+      zoals hij was (Nederlands op Marktplaats, 2dehands en eBay, Engels op Vinted
+      en Shopify).
+
+
+**Open.** Niet gezien bij een echte klant met echte data; zeldzame schermen
+(Stripe-portal, eigenaarstools, sommige foutpaden) zijn alleen via de broncode
+gedekt, niet in de rondgang bekeken. De Drive-kopie van het klantenservice-brein
+pas bijwerken als dit live staat. beheer.html en de extensiepopup blijven Engels.

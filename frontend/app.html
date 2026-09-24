@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script src="/i18n.js?v=c69b6779b4"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -815,6 +816,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       <div class="ext-dot" id="ext-dot"></div>
       <span id="ext-label">Loading...</span>
     </div>
+    <div data-taalkeuze style="color:rgba(255,255,255,.55);font-size:11px;margin-top:8px"></div>
     <button id="logout-btn" onclick="SESSIE.wisAlles(); window.location.href='/'" style="background:transparent;border:none;color:rgba(255,255,255,.3);font-size:11px;cursor:pointer;padding:4px 0;margin-top:6px;text-align:left;width:100%;">← Log out</button>
   </div>
 </div>
@@ -3278,7 +3280,9 @@ function publishErrorBadge(item) {
   const failed = state.listings.filter(l => l.item_id === item.id && l.status === 'error');
   if (!failed.length) return '';
   const namen = failed.map(l => PLATFORM_LABELS[l.platform] || l.platform).join(', ');
-  const eerste = failed.find(l => l.error_message)?.error_message || 'No reason recorded.';
+  // Eerst vertalen, dan inkorten: een afgekapte zin herkent de vertaallaag niet.
+  const reden = failed.find(l => l.error_message)?.error_message || 'No reason recorded.';
+  const eerste = window.OmniI18n ? OmniI18n.t(reden) : reden;
   const kort = eerste.length > 70 ? eerste.slice(0, 70) + '…' : eerste;
   return `<div class="missing-data-badge" style="background:rgba(220,38,38,.1);color:#b91c1c;border-color:#dc262633;cursor:pointer"
     onclick="event.stopPropagation();showPublishError('${item.id}')"
@@ -3344,7 +3348,7 @@ function showPublishError(itemId) {
           <button class="close-btn" onclick="document.getElementById('modal-publish-error').remove()">×</button>
         </div>
         <div class="modal-body">
-          <p style="margin-bottom:12px;color:var(--muted);font-size:13px">${esc(item?.title || '')}</p>
+          <p style="margin-bottom:12px;color:var(--muted);font-size:13px" translate="no">${esc(item?.title || '')}</p>
           ${blokken}
         </div>
         <div class="modal-footer">
@@ -4857,7 +4861,7 @@ function kanaalKeuze(itemId, platform) {
           <button class="close-btn" onclick="document.getElementById('modal-kanaal-keuze').remove()">×</button>
         </div>
         <div class="modal-body">
-          <p style="margin-bottom:14px;color:var(--muted);font-size:13px">${esc(item?.title || '')}</p>
+          <p style="margin-bottom:14px;color:var(--muted);font-size:13px" translate="no">${esc(item?.title || '')}</p>
           ${inhoud}
         </div>
       </div>
@@ -5316,7 +5320,7 @@ function renderSoldConfirmBar() {
     const prijs = item.price != null ? Number(item.price).toFixed(2) : '';
     return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border)">
       <div style="flex:1;min-width:0">
-        <div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${PLATFORM_ICONS[p] || '🏪'} ${esc(item.title || 'Untitled')}</div>
+        <div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${PLATFORM_ICONS[p] || '🏪'} ${item.title ? `<span translate="no">${esc(item.title)}</span>` : 'Untitled'}</div>
         <div style="font-size:11.5px;color:var(--muted)">${PLATFORM_LABELS[p] || p} &middot; ${label}${ouderdom}</div>
         ${uitleg ? `<div style="font-size:11px;color:var(--muted);opacity:.85;margin-top:2px">${esc(uitleg)}</div>` : ''}
       </div>
@@ -5425,7 +5429,7 @@ function renderDuplicateBar() {
     const eerste = g.items[0];
     return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #ede9fe">
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(eerste.title || '')}</div>
+        <div style="font-size:13px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" translate="no">${esc(eerste.title || '')}</div>
         <div style="font-size:11px;color:#64748b">${g.items.length} copies of one article${kanalen.length ? ' · live on ' + esc(kanalen.join(', ')) : ''}</div>
       </div>
       <button class="btn btn-primary btn-sm" onclick="mergeDuplicateGroup('${esc(eerste.id)}')">Merge into one</button>
@@ -8116,7 +8120,7 @@ function fillImportOptions(sel) {
   const sugItem = sug ? state.items.find(i => i.id === sug) : null;
   sel.innerHTML = '<option value="">New item</option>' +
     (sugItem ? `<option value="${sugItem.id}">⚠️ same as: ${esc(sugItem.title)}</option>` : '') +
-    state.items.map(i => `<option value="${i.id}">${esc(i.title)}</option>`).join('');
+    state.items.map(i => `<option value="${i.id}" translate="no">${esc(i.title)}</option>`).join('');
   if (keep) sel.value = keep;
 }
 
@@ -8430,7 +8434,8 @@ async function loadRelistStatus() {
 
 // Small badge on the Refresh nav item when relists are in progress.
 function updateRelistNavBadge() {
-  const navRefresh = [...document.querySelectorAll('.nav-item')].find(n => /refresh/i.test(n.textContent));
+  // Op data-view zoeken, niet op de tekst: die is in het Nederlands "Verversen".
+  const navRefresh = document.querySelector('.nav-item[data-view="refresh"]');
   const n = (state.relistStatus || []).length;
   if (navRefresh) {
     let badge = navRefresh.querySelector('.relist-badge');
@@ -8638,7 +8643,7 @@ function renderRelistInProgress() {
       <div style="display:flex;align-items:center;gap:11px;margin-bottom:10px">
         <div style="width:40px;height:40px;border-radius:9px;overflow:hidden;flex-shrink:0;background:#f1f5f9;display:flex;align-items:center;justify-content:center">${photo ? `<img src="${photo}" style="width:100%;height:100%;object-fit:cover">` : '👗'}</div>
         <div style="min-width:0;flex:1">
-          <div style="font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div>
+          <div style="font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" translate="no">${title}</div>
           <div style="font-size:11.5px;color:var(--muted)">${label} · <span class="rf-mode rf-mode-relist" style="padding:1px 6px">🔄 Mode 2 · relist</span></div>
         </div>
       </div>
