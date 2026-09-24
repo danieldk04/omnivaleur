@@ -115,6 +115,14 @@ inlogpagina's, foutmeldingen van extensie of server), draai dan
 anders. Nooit half vertalen; waarom staat in de kennisbank bij
 "vertaallaag-nooit-half".
 
+Dit geldt ALTIJD, ook bij een kleine wijziging en ook als niemand erom vraagt
+(Daniel, 24-09-2026: "als je iets wijzigt, altijd in Nederlands en Engels"). Een
+wijziging aan klanttekst is pas klaar als beide talen kloppen. De GitHub-proef
+`.github/workflows/vertaaltest.yml` draait dezelfde test bij elke pull request en
+push naar main en kleurt rood als je het vergeet; merge nooit met die proef rood.
+Tekst die bewust in beide talen gelijk is of buiten de vertaling valt (zoals de
+tweetalige wijzer bij EN · NL in `frontend/i18n.js`) krijgt `translate="no"`.
+
 ## Before touching anything people/business/decision-related
 
 Read [docs/team-notes.md](docs/team-notes.md) first. It's an append-only log
