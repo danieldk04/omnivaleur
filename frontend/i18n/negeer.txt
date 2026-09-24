@@ -1,0 +1,162 @@
+# Teksten die scripts/i18n_extract.py vindt maar die GEEN tekst voor de gebruiker
+# zijn: selectors, API-velden, kanaal- en landnamen, meldingen die alleen de
+# ontwikkelaar ziet, en teksten die al Nederlands zijn. Eén per regel, letterlijk
+# zoals het script ze toont. Een echte zin hoort hier niet: vertaal hem in nl.json
+# (tests/test_i18n_compleet.py bewaakt dat).
+Omnivaleur
+G-VJ5BVD3GCH
+Marktplaats
+Vinted
+Facebook Marketplace
+Shopify
+Nederland
+België
+Duitsland
+Frankrijk
+Luxemburg
+Verenigd Koninkrijk
+Spanje
+Italië
+Portugal
+Oostenrijk
+Polen
+Denemarken
+Zweden
+Noorwegen
+Finland
+Ierland
+Tsjechië
+Zwitserland
+Griekenland
+Hongarije
+Roemenië
+Bulgarije
+Kroatië
+Slovenië
+Slowakije
+Estland
+Letland
+Litouwen
+Malta
+Cyprus
+IJsland
+Etten-Leur
+4871 AB
+Is het verwijssysteem klaar?
+Omnivaleur Pro
+Marktplaats (€)
+2dehands (€)
+Vinted (€)
+eBay (€)
+Shopify (€)
+Create app
+Scopes
+Release
+Install app
+read_products,write_products,write_inventory,read_locations,read_publications,write_publications,read_orders
+Client ID
+Client secret
+Content-Type
+Authorization
+login.html?verlopen=1
+Etsy
+showView: no view called "
+) render failed:
+#vinted-groepen input:checked
+?compact=1
+&body=
+Kijken…
+#btn-checkout, .pricing-cta
+Bancontact
+title="{0}"
+Verkocht!
+[onclick^="mergeAllDuplicates"], [onclick^="mergeDuplicateGroup"]
+IMP-
+#items-body tr[id^="row-"]
+#items-body .row-check, #stale-body .row-check
+#items-body tr.selected, #stale-body tr.selected
+#bulk-crosslist-checkboxes input:checked
+en {0} meer
+Amsterdam
+eBay Seller Hub
+optgroup[label="Other"]
+#platform-checkboxes input:checked
+{0}&dry_run=true
+{0}/api/imports/?status=pending
+input[name="refresh-strategy"]
+input[name="refresh-strategy"]:checked
+rgba(34,197,94,.1)
+rgba(34,197,94,.3)
+#crosslist-platform-checkboxes input[value="{0}"]
+#modal-crosslist .btn-primary
+#crosslist-platform-checkboxes input:checked
+translateX(-50%) translateY(10px)
+translateX(-50%) translateY(0)
+;cursor:pointer;text-decoration:underline
+#stale-tabs .an-period-tab
+#stale-body tr[id^="strow-"]
+{0}/api/items/fill-from-marktplaats?limit=150
+[id$="checkboxes"]
+rgba(129,140,248,.12)
+rgba(52,211,153,.08)
+Daniel
+muziek versterkers keyboard, monitor en pa
+Ongeldige webhook handtekening
+keyword, region, pillar and slug are required
+region, pillar, slug and image_url are required
+keep and merge[] are required
+No cookies provided
+Ongeldige code: alleen letters, cijfers, - en _
+EBAY_VERIFICATION_TOKEN not configured
+credentials ontbreken (gsc_refresh_token / client)
+, type, chrome.runtime.lastError.message)
+What the f
+Facebook
+width="22" height="22"
+width="14" height="14"
+{0} eBay
+{0} Shopify
+{0} Marktplaats
+{0} 2dehands
+{0} Vinted
+#ob-checklist .ob-stap
+Chrome
+Business account (Admarkt)
+style="background:#fef3c7;color:#92400e"
+Martin D-28 Custom Ambertone
+Revaleur · KVK 86792423 · Kleine Melanen 5, 4614RG Bergen op Zoom
+s are
+speelgoed magic the gathering
+witgoed was-droogcombinaties
+activity-bar queued
+invalid region or pillar
+item_id and platform are required
+platform is required
+item_id and platform required
+new_price must be a number
+platform must be marktplaats or 2dehands
+sold_price must be a number
+sold_price can't be negative
+orders must be a list
+Bearer {0}
+&sold_price={0}
+Versturen mislukt via {0} — {1}: {2}
+Onbekende groep: {0}
+| Diag: {0}
+{0} → HTTP {1} {2}
+Admarkt: {0}
+| Fields marked invalid: {0}
+| Real click: {0} | Still on {1}, {2}
+| Attribute fields: {0} | Form's own description length: {1}
+# "In {0}" krijgt een tijdsduur van fmtEta(); die vormen staan in nl.json ("In ~{0}m {1}s").
+In {0}
+# "On {0}" is een kanaalnaam; de losse vormen ("On Vinted") staan in nl.json, een
+# algemeen patroon zou ook een titel als "On the road" raken.
+On {0}
+2dehands
+eBay
+SKU
+WhatsApp
+omnivaleur.com/r/
+# "{0} on {1}" (aantal op kanaal): de vormen per kanaal staan in nl.json.
+{0} on {1}

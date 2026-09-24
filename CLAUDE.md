@@ -104,6 +104,17 @@ demolink, of ontstaat er een nieuwe veelvoorkomende klantvraag of bug, werk dan
 in dezelfde beurt de betreffende regel in dat bestand bij en zet de datum
 bovenaan opnieuw. Zo blijft het actueel zonder dat het Daniel iets kost.
 
+## Tekst in het dashboard: ook in het Nederlands
+
+Het dashboard is Engels geschreven en wordt op het scherm vertaald door
+`frontend/i18n.js` met `frontend/i18n/nl.json` (sinds 24-09-2026, zie
+team-notes). Schrijf of wijzig je tekst die een klant ziet (dashboard,
+inlogpagina's, foutmeldingen van extensie of server), draai dan
+`python3 scripts/i18n_extract.py`, zet de vertaling in `nl.json` en draai
+`python3 scripts/i18n_extract.py --versie`. `tests/test_i18n_compleet.py` faalt
+anders. Nooit half vertalen; waarom staat in de kennisbank bij
+"vertaallaag-nooit-half".
+
 ## Before touching anything people/business/decision-related
 
 Read [docs/team-notes.md](docs/team-notes.md) first. It's an append-only log

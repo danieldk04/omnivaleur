@@ -17,6 +17,33 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vertaallaag-nooit-half
+
+*24-09-2026 — Het Nederlandse dashboard vertaalt op het scherm; een patroon met {0} mag nooit een stuk van een andere zin vertalen*
+
+Het dashboard is Engels geschreven en wordt in het Nederlands vertaald door
+`frontend/i18n.js` met `frontend/i18n/nl.json` (zie team-notes 24-09-2026).
+Sleutels met `{0}` zijn patronen. Een kort patroon als `"{0} removed{1}."` past op
+élke zin die "removed" bevat en een punt heeft: zonder rem vertaalde het in de
+rondgang "…the old one cannot be removed and a relist would…" tot "…cannot be
+verwijderd…". Half Nederlands leest als een storing (team-notes 03-09-2026).
+
+**Waarom het nu veilig is:** een invulling ({0}) die lang is, Engels oogt en zelf
+niet te vertalen is, laat het patroon afvallen; een meervoudsplek ({1|dag|dagen})
+past alleen op "" of "s"; tekst tussen aanhalingstekens ("{0}") blijft letterlijk
+(dat is een titel van de klant); het specifiekste patroon gaat voor.
+scripts/i18n_extract.py volgt dezelfde regels, zodat de proef het ziet.
+
+**How to apply:** nieuwe UI-tekst? `python3 scripts/i18n_extract.py`, vertaling in
+nl.json, dan `--versie`. Schrijf geen algemeen patroon ("{0} on {1}", "In {0}"):
+zet de vormen er los in ("{0} on Vinted") of de volledige zin. Draai
+`node tests/i18n-dashboard-rondgang.mjs` na een grote schermwijziging; die kijkt
+naar wat er echt op het scherm komt. Knoppen uit de extensiepopup blijven in de
+vertaling Engels. Zie ook "vertaling-draait-de-richting-om" (dat gaat over de
+advertentietekst, niet over het dashboard).
+
+---
+
 ## verkopersnummer-bij-weinig-eigen-plaatsingen
 
 *24-09-2026 — Terugval die alleen bij "nul" invalt mist "te weinig"; 2 eigen MP-plaatsingen gaf geen verkopersnummer, 15 zoekertjes 2dehands stonden stil (24-09-2026, f8c0cce9)*
