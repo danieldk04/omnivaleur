@@ -118,3 +118,40 @@ def test_artikel_zonder_eigen_nummer_mag_nog_op_titel():
 def test_bekend_productnummer_blijft_altijd_winnen():
     db = _db()
     assert _scan(db, "1014", pid="9001")["suggested_item_id"] == "a945"
+
+
+# ── Koppelen: een tweede Shopify-product mag het eerste niet overschrijven ──
+# Revaleur, 24-09-2026: zeven stukken stonden twee keer in de winkel. Koppelen
+# overschreef het productnummer van de bestaande rij, waarna een verkoop van dát
+# product aan geen enkel artikel meer hing en het stuk overal bleef staan.
+
+def _koppel(db, monkeypatch, pid):
+    import asyncio
+    from backend.api import imports as imp
+
+    async def _naast(f, **_k):
+        return f()
+
+    async def _geen(*_a, **_k):
+        return None
+
+    monkeypatch.setattr(imp, "get_db", lambda: db)
+    monkeypatch.setattr(imp, "naast_de_lus", _naast)
+    monkeypatch.setattr(imp, "_backfill_item_from_candidate", lambda *a, **k: None)
+    monkeypatch.setattr(imp, "_infer_attributes_smart", _geen)
+    import backend.services.photo_mirror as pm
+    monkeypatch.setattr(pm, "mirror_photos", _geen)
+    db.import_candidates.append({"id": "k1", "user_id": "u1", "platform": "shopify",
+                                 "platform_listing_id": pid, "status": "pending",
+                                 "platform_listing_url": "https://x/products/y", "title": TITEL})
+    asyncio.run(imp.link_candidate("k1", {"item_id": "a945"}, user_id="u1"))
+    return sorted(str(l["platform_listing_id"]) for l in db.listings
+                  if l["item_id"] == "a945" and l["platform"] == "shopify")
+
+
+def test_tweede_shopify_product_komt_naast_het_eerste(monkeypatch):
+    assert _koppel(_db(), monkeypatch, "9555") == ["9001", "9555"]
+
+
+def test_hetzelfde_product_opnieuw_koppelen_maakt_geen_tweede_rij(monkeypatch):
+    assert _koppel(_db(), monkeypatch, "9001") == ["9001"]

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends
 from backend.database import (get_db, fetch_all, fetch_all_in, naast_de_lus,
-                               execute_with_retry)
+                               execute_with_retry, eerste_rij)
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.models import ItemCreate
 from datetime import datetime, timezone
