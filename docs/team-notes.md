@@ -12997,3 +12997,18 @@ Eenmalig: Daniels eigen Shopify-scan tijdens de mislukte deploys, en een Vinted-
 tekstbijwerking bij f8c0cce9 tijdens de vastloper.
 
 Open: Toons lederhose moet met de hand van Vinted, en zijn Edge moet bijwerken.
+
+## 24-09-2026 (09:15): Shopify-import koppelde op titel waar het nummer iets anders zei
+
+Daniel vroeg of de Shopify-import helemaal klopt, ook waar een stuk al op andere
+kanalen staat. Nagemeten op Revaleur (ywqad3-xb, 302 producten te koop), droog en
+daarna echt. 260 gekoppeld op productnummer: goed. 30 nieuw: geen enkel bestaand
+artikel draagt hun nummer. Fout: 5 van de 12 "Twice in your Shopify store"-
+voorstellen wezen naar een artikel met een ánder nummer, omdat de titelsleutel
+stukken met dezelfde titel als tweelingen samenvoegde. Product 1014 werd artikel
+945, terwijl artikel 1014 op Marktplaats en 2dehands stond. Wie het voorstel
+volgde, zou een echt product uit de winkel verwijderen en bij een verkoop het
+verkeerde stuk overal weghalen. Nu gaat het variantnummer voor de titel, en een
+titel bij een artikel met een ander nummer telt niet. Proef:
+tests/test_shopify_nummer_gaat_voor_titel.py, oude code op 326996a2 faalt.
+Daniels importlijst opnieuw weggeschreven; product 1014 hangt nu aan artikel 1014.

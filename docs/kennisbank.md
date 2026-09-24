@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## shopify-nummer-gaat-voor-titel
+
+*24-09-2026 — Shopify-scan koppelde op titel aan een artikel met een ander artikelnummer; 5 van 12 dubbel-meldingen waren vals (24-09-2026)*
+
+Bij Revaleur hebben veel stukken exact dezelfde titel, alleen het nummer verschilt. De titelsleutel in jobs._store_scan_results voegt die samen als "tweelingen" (alleen het merk wordt vergeleken) en koos er één. Shopify-product 1014 werd zo artikel 945 ("Twice in your Shopify store"), terwijl artikel 1014 op Marktplaats en 2dehands stond.
+
+**Why:** een fout voorstel wordt bij bulk-import gewoon overgenomen; dan haalt een verkoop in de winkel het verkeerde stuk overal weg en blijft het echte stuk staan.
+
+**How to apply:** draagt de scanregel een eigen nummer (Shopify: variant-sku), dan gaat dat voor de titel, en een titelkoppeling naar een artikel met een ánder nummer (titelprefix of sku, niet imp-/rev-) telt niet (jobs._ander_nummer). Meet een voorstel altijd op nummer, niet op titel. Zie "pagineren-zonder-order-mist-rijen" voor de andere meetval.
+
+---
+
 ## vinted-verwijderen-liep-zonder-klok
 
 *24-09-2026 — "Het Vinted-verwijdertabblad was het enige schrijvende werk zonder focus-emulatie; 'Delete control not found' was een bevroren tabblad, en de tweede route strandde op een CSRF-token dat Vinted niet meer in een meta-tag zet"*
