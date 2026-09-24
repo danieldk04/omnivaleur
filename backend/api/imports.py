@@ -72,7 +72,7 @@ _STAAT_WOORDEN = (
               r"sehr gut")),
     ("new_with_tags", (r"nieuw met", r"with tags?", r"avec [ée]tiquettes?",
                        r"mit etikett", r"new with")),
-    ("new", (r"nieuw", r"ongebruikt", r"new", r"brand new", r"neuf", r"neu",
+    ("new", (r"nieuw", r"ongebruikt", r"niet gebruikt", r"new", r"brand new", r"neuf", r"neu",
              r"unused")),
     ("fair", (r"gebruikt", r"gedragen", r"lichte gebruikssporen", r"goed", r"good",
               r"used", r"fair", r"utilis[ée]", r"usag[ée]", r"bon [ée]tat", r"bon",
@@ -579,7 +579,19 @@ async def _classify_with_claude(title: str | None, description: str | None,
             '  A plain "foulard" without "grand" IS a scarf and stays an accessory.\n'
             '- The "sieraden" branch covers jewellery, watches, bags, suitcases, wallets\n'
             "  and sunglasses. Pick it for anything worn or carried as an accessory.\n"
-            '  When you pick a "sieraden" category, gender must be "sieraden" too.\n\n'
+            '  When you pick a "sieraden" category, gender must be "sieraden" too.\n'
+            "- MANY ITEMS FIT NONE OF THESE BRANCHES, and then the answer is none.\n"
+            "  Electronics (phones, laptops, consoles, cameras, audio, TVs), toys and\n"
+            "  games (LEGO, Playmobil, board games, dolls), books, comics, films and\n"
+            "  records, bicycles and sports equipment, kitchen and household appliances\n"
+            "  (coffee machines, vacuum cleaners, blenders), tools, car and bike parts,\n"
+            "  baby gear (prams, car seats) and pet supplies have no category here.\n"
+            '  For those respond {"gender":"none","category":"none","confidence":"high"}.\n'
+            '  Never put them in "antiek" or "wonen" because nothing else fits: a LEGO\n'
+            "  set is not antique toys, a Harry Potter book set is not antique books, a\n"
+            "  coffee machine is not home decoration. Only when the text itself says the\n"
+            "  piece is old or antique (antiek, antique, a year or century before about\n"
+            "  1970, brocante) may a toy, book or tool go in \"antiek\".\n\n"
             'Respond with ONLY JSON: {"gender":"...","category":"...","confidence":"high|medium|low"}'
         )
         raw = (await _haiku_classificatie(client, prompt)).strip()
@@ -593,6 +605,12 @@ async def _classify_with_claude(title: str | None, description: str | None,
         # mapped to MP_DEFAULT downstream, recreating the exact bug this fixes.
         if data.get("confidence") == "low":
             return {}
+        # Past in geen enkele tak (Lego, boeken, apparaten): leeg laten. Het
+        # dashboard vraagt de verkoper dan om een rubriek, in plaats van dat
+        # het stuk als antiek de deur uitgaat. {"geen_tak": True} laat de
+        # aanroeper ook de woordenlijst overslaan.
+        if str(category or "").strip().lower() in ("none", "null", ""):
+            return {"geen_tak": True}
         if category not in _ALL_CATEGORIES:
             logger.warning(f"Claude returned category outside taxonomy: {gender}/{category}")
             return {}
@@ -779,6 +797,10 @@ async def _infer_attributes_smart(title: str | None, description: str | None,
     """
     keyword_out = _infer_attributes(title, description)
     smart = await _classify_with_claude(title, description, brand)
+    if smart.get("geen_tak"):
+        # Het model zegt: dit is geen kleding, sieraad, antiek, muziek of wonen.
+        # Dan ook geen doelgroep of rubriek uit de woordenlijst; alleen de kleur.
+        return {k: v for k, v in keyword_out.items() if k == "color"}
     if not smart:
         return keyword_out
     # Claude wins on gender/category; keep the keyword colour.
@@ -897,10 +919,11 @@ def _item_data_from_candidate(cand: dict, body: dict | None = None,
         # deze hele lading. Die laatste bestaat omdat Admarkt geen staat meelevert
         # en alles dan op "Like new" belandde — een handelaar die uitsluitend
         # nieuwe spullen verkoopt moest dat 240 keer met de hand corrigeren.
+        # Een staatwoord dat _map_condition niet kent valt ook terug op die
+        # standaard, in plaats van op een gok.
         "condition": (body.get("condition")
                       or _map_condition(cand.get("condition"))
-                      if cand.get("condition") else
-                      (body.get("condition") or body.get("_default_condition") or "good")),
+                      or body.get("_default_condition") or "good"),
         "category": pick("category") or inferred.get("category"),
         "gender": pick("gender") or inferred.get("gender"),
         "color": pick("color") or inferred.get("color"),
@@ -1016,7 +1039,7 @@ def _backfill_patch(current: dict, cand: dict, inferred: dict | None = None) -> 
     for field in ("description", "brand", "size", "color", "material"):
         if _is_empty(current.get(field)) and not _is_empty(cand.get(field)):
             patch[field] = cand[field]
-    if _is_empty(current.get("condition")) and cand.get("condition"):
+    if _is_empty(current.get("condition")) and _map_condition(cand.get("condition")):
         patch["condition"] = _map_condition(cand.get("condition"))
     if _is_empty(current.get("photo_urls")):
         photos = _photos_from_candidate(cand)
