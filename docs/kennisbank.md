@@ -17,6 +17,47 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## gemini-tegoed-op
+
+*24-09-2026 — 24-09-2026 gaf Google 402 "prepayment credits are depleted"; alles wat naar Gemini is omgezet liep toen stil via Claude*
+
+Op 24-09-2026 antwoordde Gemini met HTTP 402 "Your prepayment credits are
+depleted" (sleutel f7c8c67f, de Omnivaleur-sleutel). taalmodel.py valt dan stil
+terug op Claude, dus rubriekkeuze, vertalen, tweelingzoeker en blog liepen op de
+dure route zonder dat iets rood werd. De tweelingzoeker is op Claude aantoonbaar
+slechter (zie team-notes 23-09).
+
+**Why:** de omzetting naar Gemini was om kosten; een leeg tegoed maakt dat
+onzichtbaar ongedaan. Lokaal staat dezelfde sleutel in de instellingen
+(settings.google_api_key, niet gemini_api_key).
+**How to apply:** meet bij twijfel eerst met gemini_vertaling.vraag() en kijk of er
+402 in de log staat. Een alarm op 402 bestaat nog niet. Zie
+"modellenlijst-van-de-dienst-is-geen-bewijs".
+
+Sinds 24-09-2026 ~16:30 draait de server op een nieuwe, gratis Google-sleutel
+(vingerafdruk ddf59aed in /health) uit een project zonder betaling. Boven het
+gratis dagmaximum antwoordt Google 429 en gaat de vraag vanzelf naar Claude.
+
+---
+
+## rubriekvraag-volgorde-niet-omgooien
+
+*24-09-2026 — Artikel achteraan de rubriekvraag zetten (voor cache) veranderde 18 van 58 antwoorden en maakte het slechter; teruggedraaid 24-09-2026*
+
+De rubriekvraag bij import (imports._classify_with_claude) is ~8.950 tokens, waarvan
+~8.850 vast (rubriekenlijst + regels). Idee op 24-09-2026: het artikel naar achteren,
+zodat Gemini/Claude het vaste deel uit de cache halen. Gemeten op 58 echte artikelen
+uit alle takken (Claude Haiku): oud tegen oud 57/58 gelijk, nieuw tegen oud maar 40/58;
+gelijk aan de opgeslagen rubriek 30 (oud) tegen 23 (nieuw). Muziekpatches werden
+"geen tak", zilveren lepels "antiek bestek", een miniatuur-drumstel speelgoed.
+Teruggedraaid, niets live gegaan.
+
+**Why:** dezelfde tekst in een andere volgorde is voor het model een andere vraag.
+**How to apply:** wil je deze vraag goedkoper maken, meet dan altijd oud-tegen-oud als
+ruisgrens naast nieuw-tegen-oud op echte artikelen van elke tak. Zie "gemini-tegoed-op".
+
+---
+
 ## nooit-opgepakte-opdracht-is-geen-spoor
 
 *24-09-2026 — Oranje icoon "mark as listed" op een plaatsopdracht die de extensie nooit oppakte zette nep-actief; sinds 24-09-2026 telt alleen een poging die echt liep*
@@ -49,25 +90,6 @@ verkoperslijst (lrp/api/search sellerIds[]) voor je zo'n rij rechtzet; zet op
 **Why:** een terugval die alleen bij een lege lijst invalt, laat de "bijna lege" lijst in de steek, en die is bij nieuwe klanten de regel.
 
 **How to apply:** bij een wachtrij 2dehands die stilstaat met `_rubriek_zoeken_sinds` in de payload: roep `rubriek_van_eigen_advertentie` met de echte user_id aan; komt er None uit, kijk dan eerst of het verkopersnummer wel gevonden wordt. Zie "beurt-aan-wachtend-werk-legt-alles-stil", "geraden-rubriek-is-niet-de-rubriek-van-de-verkoper", "voor-en-na-proef-mag-geen-head-gebruiken".
-
----
-
-## gemini-tegoed-op
-
-*24-09-2026 — 24-09-2026 gaf Google 402 "prepayment credits are depleted"; alles wat naar Gemini is omgezet liep toen stil via Claude*
-
-Op 24-09-2026 antwoordde Gemini met HTTP 402 "Your prepayment credits are
-depleted" (sleutel f7c8c67f, de Omnivaleur-sleutel). taalmodel.py valt dan stil
-terug op Claude, dus rubriekkeuze, vertalen, tweelingzoeker en blog liepen op de
-dure route zonder dat iets rood werd. De tweelingzoeker is op Claude aantoonbaar
-slechter (zie team-notes 23-09).
-
-**Why:** de omzetting naar Gemini was om kosten; een leeg tegoed maakt dat
-onzichtbaar ongedaan. Lokaal staat dezelfde sleutel in de instellingen
-(settings.google_api_key, niet gemini_api_key).
-**How to apply:** meet bij twijfel eerst met gemini_vertaling.vraag() en kijk of er
-402 in de log staat. Een alarm op 402 bestaat nog niet. Zie
-"modellenlijst-van-de-dienst-is-geen-bewijs".
 
 ---
 

@@ -13264,3 +13264,15 @@ rood is en hij kan publiceren.
 Open: de Les Paul valt in 2dehands Gitaren | Elektrisch, waar zijn twee gratis
 plekken vandaag op zijn (zie 15:05); publiceren daar stuit op de betaalmuur. De
 herplaatsing van 17:03 UTC wordt vanzelf overgeslagen.
+
+## 24-09-2026 (16:40): Gratis Google-sleutel, rubriekvraag niet goedkoper
+
+Het Gemini-tegoed was op (402). Daniel zette een nieuwe sleutel uit een Google-
+project zonder betaling in Railway; /health toont sinds ~16:30 vingerafdruk
+ddf59aed. Boven het gratis dagmaximum valt elke vraag vanzelf terug op Claude.
+Niet gemeten: of de gratis sleutel op de server echt antwoordt (geen toegang tot
+de Railway-logs vanaf hier).
+Geprobeerd en teruggedraaid: de rubriekvraag goedkoper maken door het artikel
+achteraan te zetten (cache). Op 58 echte artikelen 40/58 gelijk aan de oude
+vraag (ruis 57/58) en minder vaak de goede rubriek. Niets live gegaan. Zie
+kennisbank rubriekvraag-volgorde-niet-omgooien.
