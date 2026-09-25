@@ -75,3 +75,13 @@ def test_terugverwijzing_kiest_verwante_pagina_en_is_herhaalbaar():
     assert rijen[0]["body_html"].endswith(f'<a href="{doel}">Office furniture</a></p>')
     assert link_back(None, language="en", url_path=doel, title="Office furniture",
                      keyword="office furniture reselling", dry_run=True, rijen=rijen) == []
+
+
+def test_samengevoegde_blog_verwijst_permanent_door():
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    klant = TestClient(app)
+    for pad, doel in [("/reseller-tools/used-book-reselling-automation", "/reseller-tools/book-reselling-automation"),
+                      ("/nl/reseller-tools/used-book-reselling-automation", "/nl/reseller-tools/book-reselling-automation")]:
+        r = klant.get(pad, follow_redirects=False)
+        assert r.status_code == 301 and r.headers["location"] == doel

@@ -194,7 +194,24 @@ def _related_pages(page: dict, limit: int = 3) -> list[dict]:
 # per pijler, voor elke taal. De dagelijkse planner schreef hetzelfde onderwerp
 # meerdere keren (used/vintage/second-hand books) en die pagina's vochten om
 # dezelfde zoekopdracht. De verliezer staat in de database op 'redirected'.
-SAMENGEVOEGD: dict[str, dict[str, str]] = {"A": {}, "B": {}, "C": {}}
+# Winnaar is de oudste, algemeenste pagina: die had de meeste inkomende links en
+# staat het langst in Google.
+SAMENGEVOEGD: dict[str, dict[str, str]] = {
+    "A": {},
+    "B": {
+        "vintage-book-reselling-automation": "book-reselling-automation",
+        "vintage-books-reselling-automation": "book-reselling-automation",
+        "used-book-reselling-automation": "book-reselling-automation",
+        "second-hand-book-reselling-automation": "book-reselling-automation",
+        "used-clothing-reselling-automation": "clothing-reselling-automation-tools",
+        "used-furniture-reselling-automation": "vintage-furniture-reselling-automation",
+        "vintage-jewelry-reselling-automation": "jewelry-reselling-automation",
+        "used-phone-reselling-automation": "mobile-phone-reselling-automation",
+        "vintage-records-reselling-automation-platforms": "vinyl-record-reselling-automation",
+        "vintage-decor-reselling-automation": "home-decor-reselling-automation",
+    },
+    "C": {},
+}
 
 
 def _render_page(request: Request, language: str, pillar: str, slug: str) -> HTMLResponse:
