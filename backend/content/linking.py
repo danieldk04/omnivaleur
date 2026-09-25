@@ -103,3 +103,72 @@ def apply_internal_links(body_html: str, candidates: list[dict], self_intent_key
                 break
 
     return body, linked
+
+
+# ── Links in de taal van de pagina ─────────────────────────────────────────
+# Tot 25-09-2026 linkten 93 van de 110 blogs naar een pagina in de andere taal
+# (344 links): de generator kreeg EN- en NL-pagina's door elkaar als linkdoel, en
+# de NL-vertaling nam de Engelse links ongewijzigd over, soms zelfs naar een
+# pad dat niet bestaat (/crosslisting/marktplaats-naar-vinted).
+_BLOG_HREF = re.compile(
+    r'<a\b([^>]*?)\shref="(?:https?://(?:www\.)?omnivaleur\.com)?'
+    r'(/(?:nl/)?(?:crosslisting|crosslisten|vs|vergelijking|reseller-tools)/[^"#?]+)"([^>]*)>(.*?)</a>',
+    re.S,
+)
+_MAP_NAAR_NL = {"crosslisting": "crosslisten", "vs": "vergelijking", "reseller-tools": "reseller-tools"}
+_MAP_NAAR_EN = {v: k for k, v in _MAP_NAAR_NL.items()}
+
+
+def _zelfde_pad_andere_taal(pad: str, language: str) -> str:
+    delen = pad.strip("/").split("/")
+    if delen[0] == "nl":
+        delen = delen[1:]
+    map_, slug = delen[0], "/".join(delen[1:])
+    if language == "nl":
+        return f"/nl/{_MAP_NAAR_NL.get(map_, _MAP_NAAR_NL.get(_MAP_NAAR_EN.get(map_, map_), map_))}/{slug}"
+    return f"/{_MAP_NAAR_EN.get(map_, map_)}/{slug}"
+
+
+def herschrijf_taallinks(body_html: str, language: str, index: dict[str, dict]) -> tuple[str, int, int]:
+    """
+    Laat elke bloglink wijzen naar de pagina in de taal van dít artikel.
+    `index`: {pad: {"lang": "en"|"nl", "tegenhanger": pad-in-andere-taal of None,
+    "titel": paginatitel (optioneel)}}
+    voor alle gepubliceerde pagina's. Een link naar de andere taal gaat naar de
+    tegenhanger; bestaat die niet, dan blijft alleen de linktekst over (een link
+    naar een Engels artikel midden in Nederlandse tekst is erger dan geen link).
+    Was de linktekst letterlijk de titel van de pagina in de andere taal ("Omnivaleur
+    vs OneShop: Eerlijke vergelijking 2026" in een Engels artikel), dan wordt
+    hij de titel van de pagina waar de link nu naartoe gaat.
+    Retourneert (body, omgezet, weggehaald).
+    """
+    omgezet = weggehaald = 0
+
+    def _tekst_voor(doel: str, tekst: str) -> str:
+        doel_info = index.get(doel) or {}
+        ander = index.get(doel_info.get("tegenhanger") or "") or {}
+        if ander.get("titel") and doel_info.get("titel") and tekst.strip() == ander["titel"].strip():
+            return doel_info["titel"]
+        return tekst
+
+    def vervang(m: re.Match) -> str:
+        nonlocal omgezet, weggehaald
+        voor, pad, na, tekst = m.group(1), m.group(2).rstrip("/"), m.group(3), m.group(4)
+        info = index.get(pad)
+        if info and info["lang"] == language:
+            nieuwe_tekst = _tekst_voor(pad, tekst)
+            if nieuwe_tekst == tekst:
+                return m.group(0)
+            omgezet += 1
+            return f'<a{voor} href="{m.group(2)}"{na}>{nieuwe_tekst}</a>'
+        doel = info.get("tegenhanger") if info else None
+        if not doel:
+            gok = _zelfde_pad_andere_taal(pad, language)
+            doel = gok if index.get(gok, {}).get("lang") == language else None
+        if doel:
+            omgezet += 1
+            return f'<a{voor} href="{doel}"{na}>{_tekst_voor(doel, tekst)}</a>'
+        weggehaald += 1
+        return tekst
+
+    return _BLOG_HREF.sub(vervang, body_html), omgezet, weggehaald

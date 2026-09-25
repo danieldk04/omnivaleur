@@ -57,7 +57,7 @@ SHOTS = [
     },
     {
         "src": "/assets/dashboard/platforms-connected.webp",
-        "topics": ["connect", "account", "api", "integration", "platform", "setup", "sync", "link"],
+        "topics": ["connect", "account", "api", "integration", "platform", "setup", "sync", "link", "twice", "oversell", "double", "sold"],
         "alt_en": "Omnivaleur platform connection screen for Marktplaats, 2dehands, Vinted, eBay, Etsy and Shopify",
         "alt_nl": "Omnivaleur-koppelscherm voor Marktplaats, 2dehands, Vinted, eBay, Etsy en Shopify",
         "cap_en": "Each marketplace is connected once from this screen; after that, publishing and stock sync run against all of them together.",
@@ -131,7 +131,29 @@ def dimensions(src: str) -> tuple[int, int] | None:
         return None
 
 
-def relevant_shots(keyword: str, title: str, slug: str, body_html: str = "") -> list[dict]:
+def gebruik_tellen() -> dict[str, int]:
+    """
+    Op hoeveel gepubliceerde pagina's elke screenshot al staat. Op 25-09-2026
+    stond de itemlijst op 72 pagina's en de bulk-import op 11: de rotatie per slug
+    koos binnen een kleine groep, maar keek niet naar wat de site al liet zien.
+    Telt in de database (alleen aantallen komen terug). Faalt zacht: leeg.
+    """
+    try:
+        from backend.database import get_db
+        db = get_db()
+        uit = {}
+        for shot in SHOTS:
+            r = (db.table("content_pages").select("id", count="exact").eq("status", "published")
+                 .ilike("body_html", f"%{shot['src']}%").limit(1).execute())
+            uit[shot["src"]] = r.count or 0
+        return uit
+    except Exception as e:
+        logger.warning("Gebruik van screenshots niet geteld: %s", e)
+        return {}
+
+
+def relevant_shots(keyword: str, title: str, slug: str, body_html: str = "",
+                   gebruik: dict[str, int] | None = None) -> list[dict]:
     """
     De screenshots die bij dít artikel horen, in een volgorde die per slug
     verschilt. Matcht op keyword + titel + koppen — bewust NIET op de volledige
@@ -165,6 +187,12 @@ def relevant_shots(keyword: str, title: str, slug: str, body_html: str = "") -> 
     if pool:
         offset = int(hashlib.sha256(slug.encode()).hexdigest()[:8], 16) % len(pool)
         pool = pool[offset:] + pool[:offset]
+    if gebruik:
+        # Minst gebruikte eerst; de slug-rotatie beslist alleen nog bij gelijke stand.
+        # Het algemene dashboardbeeld alleen als er te weinig passende zijn.
+        pool.sort(key=lambda s: gebruik.get(s["src"], 0))
+        if len(matched) >= 2:
+            pool = [s for s in pool if s in matched]
 
     return pool[:MAX_PER_ARTICLE]
 

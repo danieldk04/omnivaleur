@@ -92,3 +92,40 @@ def test_samengevoegde_blog_verwijst_permanent_door():
                       ("/nl/reseller-tools/used-book-reselling-automation", "/nl/reseller-tools/book-reselling-automation")]:
         r = klant.get(pad, follow_redirects=False)
         assert r.status_code == 301 and r.headers["location"] == doel
+
+
+def test_links_wijzen_naar_de_taal_van_de_pagina():
+    from backend.content.linking import herschrijf_taallinks
+    index = {
+        "/vs/omnivaleur-vs-oneshop": {"lang": "en", "tegenhanger": "/nl/vergelijking/omnivaleur-vs-oneshop"},
+        "/nl/vergelijking/omnivaleur-vs-oneshop": {"lang": "nl", "tegenhanger": "/vs/omnivaleur-vs-oneshop"},
+        "/nl/crosslisten/marktplaats-naar-vinted": {"lang": "nl", "tegenhanger": "/crosslisting/marktplaats-to-vinted"},
+        "/crosslisting/marktplaats-to-vinted": {"lang": "en", "tegenhanger": "/nl/crosslisten/marktplaats-naar-vinted"},
+        "/reseller-tools/alleen-engels": {"lang": "en", "tegenhanger": None},
+    }
+    # Het geval uit de schermafbeelding van 25-09-2026: Engelse tekst, Nederlandse link.
+    en = '<p>review the <a href="/nl/vergelijking/omnivaleur-vs-oneshop">Omnivaleur vs OneShop</a> analysis <img src="x.webp"></p>'
+    uit, omgezet, weg = herschrijf_taallinks(en, "en", index)
+    assert 'href="/vs/omnivaleur-vs-oneshop"' in uit and (omgezet, weg) == (1, 0) and '<img src="x.webp">' in uit
+    # Nederlandse tekst met een verzonnen Engels pad en een link zonder NL-versie.
+    nl = ('<p><a href="/crosslisting/marktplaats-naar-vinted">hier</a> en '
+          '<a href="https://omnivaleur.com/reseller-tools/alleen-engels">daar</a></p>')
+    uit, omgezet, weg = herschrijf_taallinks(nl, "nl", index)
+    assert uit == '<p><a href="/nl/crosslisten/marktplaats-naar-vinted">hier</a> en daar</p>'
+    # Goede links blijven byte voor byte gelijk.
+    goed = '<a class="x" href="/vs/omnivaleur-vs-oneshop">ok</a>'
+    assert herschrijf_taallinks(goed, "en", index)[0] == goed
+    # Linktekst die de titel van de andere taal is, wordt de titel van het doel.
+    index["/vs/omnivaleur-vs-oneshop"]["titel"] = "Omnivaleur vs OneShop: Honest Comparison"
+    index["/nl/vergelijking/omnivaleur-vs-oneshop"]["titel"] = "Omnivaleur vs OneShop: Eerlijke vergelijking 2026"
+    fout = '<a href="/vs/omnivaleur-vs-oneshop">Omnivaleur vs OneShop: Eerlijke vergelijking 2026</a>'
+    assert herschrijf_taallinks(fout, "en", index)[0] == '<a href="/vs/omnivaleur-vs-oneshop">Omnivaleur vs OneShop: Honest Comparison</a>'
+
+
+def test_minst_gebruikte_screenshot_gaat_voor():
+    from backend.content import dashboard_images as di
+    gebruik = {s["src"]: 50 for s in di.SHOTS}
+    gebruik["/assets/dashboard/bulk-import.webp"] = 1
+    gekozen = di.relevant_shots("bulk import inventory listing", "Bulk listing guide", "x", "", gebruik)
+    assert gekozen[0]["src"] == "/assets/dashboard/bulk-import.webp"
+    assert "/assets/dashboard/dashboard-overview.webp" not in [s["src"] for s in gekozen]

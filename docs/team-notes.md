@@ -13509,3 +13509,10 @@ het herschreven met de lite-versie als reserve. De NL-vertaling van de
 herschreven versie werd twee keer afgekapt; de eerdere NL-versie bleef staan.
 Nieuwe blogs staan een paar minuten live voordat hun plaatje met de deploy
 meekomt; het overzicht toont dan het kleurvlak in plaats van een kapot icoon.
+
+**Aanvulling 25-09, taal van links en plaatjes.** Daniel zag een Nederlandse
+link ("Eerlijke vergelijking 2026") in een Engelse blog. Meting: 93 van de 110
+blogs hadden links naar de andere taal (344). Hersteld naar 0 fout en 0 dood
+(scripts/repair_taallinks.py) en nieuwe artikelen krijgen het vanzelf.
+Screenshots: de minst gebruikte gaat nu voor (de itemlijst stond op 72 pagina's,
+de bulk-import op 11). Echte variatie vraagt nieuwe screenshots: er zijn er acht.

@@ -16,7 +16,7 @@ from backend.content.generator import generate_page_content, needs_dutch_transla
 from backend.content.hero import generate_hero
 from backend.content.web_images import inject_platform_images
 from backend.content.infographics import inject_infographics
-from backend.content.linking import apply_internal_links
+from backend.content.linking import apply_internal_links, herschrijf_taallinks
 from backend.content.research import research_competitors
 from backend.content.schema_validate import validate_page
 from backend.database import get_db, naast_de_lus
@@ -113,6 +113,20 @@ def _software_json_ld() -> dict:
     }
 
 
+def link_index(db) -> dict[str, dict]:
+    """Alle gepubliceerde blogpaden met hun taal en de pagina in de andere taal."""
+    rijen = (db.table("content_pages").select("language,pillar,slug,intent_key,translation_of,title")
+             .eq("status", "published").execute().data) or []
+    pad = {r["intent_key"]: _url_path(r.get("language", "en"), r["pillar"], r["slug"]) for r in rijen}
+    nl_van = {r["translation_of"]: r["intent_key"] for r in rijen if r.get("translation_of")}
+    index = {}
+    for r in rijen:
+        tegen = r.get("translation_of") or nl_van.get(r["intent_key"])
+        index[pad[r["intent_key"]]] = {"lang": r.get("language", "en"), "tegenhanger": pad.get(tegen),
+                                       "titel": r.get("title")}
+    return index
+
+
 def _save_page_row(
     db,
     *,
@@ -128,7 +142,10 @@ def _save_page_row(
     """Shared save logic for both the primary (English) row and its Dutch translation."""
     intent_key = f"{region}:{pillar}:{slug}"
 
-    existing = db.table("content_pages").select("*").eq("status", "published").neq("intent_key", intent_key).limit(50).execute().data or []
+    # Alleen pagina's in de eigen taal als linkdoel (zie linking.herschrijf_taallinks).
+    existing = (db.table("content_pages").select("region,pillar,slug,language,title,primary_keyword")
+                .eq("status", "published").eq("language", language).neq("intent_key", intent_key)
+                .limit(200).execute().data) or []
     candidates = [
         {
             "intent_key": f'{p["region"]}:{p["pillar"]}:{p["slug"]}',
@@ -144,6 +161,13 @@ def _save_page_row(
     candidates.sort(key=lambda c: clicks_by_url.get(f"https://omnivaleur.com{c['url_path']}", 0), reverse=True)
     candidates += STATIC_LINK_CANDIDATES
     body_with_links, linked_intents = apply_internal_links(generated["body_html"], candidates, intent_key)
+    index = link_index(db)
+    # De eigen pagina staat er bij een nieuw artikel nog niet in; een link naar
+    # zichzelf is geen taalfout.
+    index.setdefault(_url_path(language, pillar, slug), {"lang": language, "tegenhanger": None})
+    body_with_links, omgezet, weg = herschrijf_taallinks(body_with_links, language, index)
+    if omgezet or weg:
+        logger.info(f"Taallinks in {intent_key}: {omgezet} omgezet, {weg} weggehaald")
 
     existing_row = db.table("content_pages").select("id,featured_image_url,published_at").eq("intent_key", intent_key).execute().data
     featured_image_url = existing_row[0].get("featured_image_url") if existing_row else None
@@ -323,7 +347,9 @@ async def run_pipeline(
     research = research_competitors(keyword, region)
 
     logger.info(f"Content genereren (Engels) voor '{keyword}'")
-    existing_for_prompt_rows = (await naast_de_lus(lambda: db.table("content_pages").select("title,language,pillar,slug").eq("status", "published").limit(50).execute())).data or []
+    # Alleen Engelse pagina's: dit artikel is Engels. Met beide talen door elkaar
+    # linkte de generator naar Nederlandse pagina's midden in Engelse tekst.
+    existing_for_prompt_rows = (await naast_de_lus(lambda: db.table("content_pages").select("title,language,pillar,slug").eq("status", "published").eq("language", "en").limit(80).execute())).data or []
     existing_for_prompt = [{"title": p["title"], "url_path": _url_path(p.get("language", "en"), p["pillar"], p["slug"])} for p in existing_for_prompt_rows]
 
     generated = generate_page_content(keyword, region, pillar, slug, research, existing_for_prompt, refresh_context, fmt)

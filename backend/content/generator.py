@@ -15,7 +15,7 @@ import anthropic
 
 from backend.config import settings
 from backend.content.dashboard_images import figure_html as dashboard_figure_html
-from backend.content.dashboard_images import relevant_shots
+from backend.content.dashboard_images import gebruik_tellen, relevant_shots
 from backend.content.figures import contains_figures, spread_figures
 
 logger = logging.getLogger(__name__)
@@ -191,7 +191,7 @@ def inject_article_screenshots(
 
     our_figures = [
         dashboard_figure_html(shot, language)
-        for shot in relevant_shots(keyword, title, slug, body_html)
+        for shot in relevant_shots(keyword, title, slug, body_html, gebruik_tellen())
     ]
 
     competitor_figures: list[str] = []

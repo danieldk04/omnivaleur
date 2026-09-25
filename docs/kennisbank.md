@@ -50,6 +50,16 @@ gaf 96 valse AFGEKAPT-meldingen, en `blog_repair_afgekapt.py --repareer` had die
 pagina's dan "gerepareerd". Zie "blog-publicatienorm" en
 "blog-evaluator-and-infographics".
 
+**Links in de verkeerde taal (25-09-2026).** 93 van de 110 blogs linkten naar de
+andere taal (344 links, soms naar een pad dat niet bestaat): de generator kreeg EN
+en NL door elkaar als linkdoel en de NL-vertaling nam Engelse links over. Nu
+filtert `_save_page_row` op taal en zet `linking.herschrijf_taallinks` elke
+bloglink bij het opslaan om naar de tegenhanger (linktekst die de titel van de
+andere taal is, wordt de titel van het doel); zonder tegenhanger blijft alleen de
+tekst. `scripts/repair_taallinks.py` herstelde de achterstand naar 0.
+Screenshots: `dashboard_images.gebruik_tellen` laat de minst gebruikte voorgaan,
+maar met 8 app-screenshots is de pool zelf de grens.
+
 ---
 
 ## knop-op-de-pagina-is-nog-niet-levend
