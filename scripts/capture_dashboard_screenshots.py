@@ -29,8 +29,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "frontend" / "assets" / "dashboard"
 
-EMAIL = "danieldekoning66+demo@gmail.com"
-PASSWORD = "CrossListDemo2026!"
+# Inloggegevens nooit meer in dit bestand: de repo is openbaar (25-09-2026).
+# DEMO_EMAIL / DEMO_PASSWORD uit de omgeving, anders vraagt het script erom.
+DEFAULT_EMAIL = "danieldekoning66+demo@gmail.com"
 BASE = "https://omnivaleur.com"
 
 # Retina vastleggen en daarna terugschalen naar 1200px — dat geeft scherpe tekst
@@ -51,6 +52,12 @@ SHOTS = [
     {"key": "bulk-import", "view": "import", "height": 620, "wait": 700},
     {"key": "refresh-tool", "view": "refresh", "height": 760, "wait": 700},
     {"key": "stale-listings", "view": "stale", "height": 760, "wait": 700},
+    # Toegevoegd 25-09-2026: de blogs hadden maar acht beelden en dezelfde vier
+    # stonden op 52 tot 72 pagina's.
+    {"key": "preferences", "view": "preferences", "height": 820, "wait": 700},
+    {"key": "protections", "view": "protections", "height": 760, "wait": 700},
+    {"key": "messages", "view": "berichten", "height": 760, "wait": 900},
+    {"key": "help", "view": "help", "height": 760, "wait": 600},
     # 'prijs' staat er bewust NIET bij: showView('prijs') valt in de huidige app
     # terug op het Account-scherm, en dat leverde een screenshot op met het
     # bijschrift "prijsadvies" onder een abonnementenpagina. Zet 'm pas terug als
@@ -58,7 +65,16 @@ SHOTS = [
 ]
 
 
-def _login(page, base: str) -> None:
+def _inloggegevens() -> tuple[str, str]:
+    import getpass
+    import os
+
+    email = os.environ.get("DEMO_EMAIL") or input(f"E-mail [{DEFAULT_EMAIL}]: ").strip() or DEFAULT_EMAIL
+    wachtwoord = os.environ.get("DEMO_PASSWORD") or getpass.getpass("Wachtwoord (je ziet niets tijdens het typen): ")
+    return email, wachtwoord
+
+
+def _login(page, base: str, email: str, wachtwoord: str) -> None:
     # De extensie-installatie-overlay dekt de hele app af. app.html declareert
     # showExtOverlay zelf, dus een JS-override wordt overschreven — een
     # !important CSS-regel overleeft ongeacht scriptvolgorde.
@@ -70,8 +86,8 @@ def _login(page, base: str) -> None:
         "});"
     )
     page.goto(f"{base}/login")
-    page.fill("#email", EMAIL)
-    page.fill("#password", PASSWORD)
+    page.fill("#email", email)
+    page.fill("#password", wachtwoord)
     page.click("form button")
     page.wait_for_url(f"{base}/app", timeout=20000)
     page.wait_for_function(
@@ -166,12 +182,13 @@ def capture(keys: list[str], base: str) -> int:
         print(f"Geen shots die matchen op {keys}. Beschikbaar: {[s['key'] for s in SHOTS]}")
         return 2
 
+    email, wachtwoord = _inloggegevens()
     failures = 0
     with sync_playwright() as p:
         browser = p.chromium.launch()
         ctx = browser.new_context(viewport=VIEWPORT, device_scale_factor=SCALE)
         page = ctx.new_page()
-        _login(page, base)
+        _login(page, base, email, wachtwoord)
 
         for shot in wanted:
             try:

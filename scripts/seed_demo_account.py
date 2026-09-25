@@ -17,7 +17,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from backend.database import get_db
 
 DEMO_EMAIL = "danieldekoning66+demo@gmail.com"
-DEMO_PASSWORD = "CrossListDemo2026!"
 
 PLATFORMS = ["marktplaats", "2dehands", "vinted", "ebay", "shopify"]
 
@@ -221,4 +220,4 @@ if __name__ == "__main__":
     print("Demo account ready:")
     print(f"  URL:      https://omnivaleur.com/login.html")
     print(f"  Email:    {DEMO_EMAIL}")
-    print(f"  Password: {DEMO_PASSWORD}")
+    print("  Password: (zie je wachtwoordbeheerder; staat sinds 25-09-2026 niet meer in de openbare repo)")
