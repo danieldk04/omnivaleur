@@ -530,6 +530,56 @@
       "status": "skipped",
       "priority": 65,
       "reden": "zelfde onderwerp als used-furniture-reselling-automation (25-09-2026)"
+    },
+    {
+      "keyword": "how to ship a parcel via 2dehands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "how-to-ship-a-parcel-via-2dehands",
+      "status": "published",
+      "nl_slug": "hoe-verstuur-je-een-pakket-via-2dehands",
+      "priority": 66
+    },
+    {
+      "keyword": "Omnivaleur vs Crosslist",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "slug": "omnivaleur-vs-crosslist",
+      "status": "pending",
+      "nl_slug": "omnivaleur-vs-crosslist-vergelijking",
+      "priority": 67
+    },
+    {
+      "keyword": "best time to post on Vinted",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "best-time-to-post-on-vinted",
+      "status": "pending",
+      "nl_slug": "beste-tijd-om-te-plaatsen-op-vinted",
+      "priority": 68
+    },
+    {
+      "keyword": "DAC7 Vinted reporting rules Netherlands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "slug": "dac7-vinted-reporting-rules-netherlands",
+      "status": "pending",
+      "nl_slug": "dac7-vinted-belastingdienst-regels",
+      "priority": 69
+    },
+    {
+      "keyword": "how to avoid selling the same item twice",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "slug": "how-to-avoid-selling-the-same-item-twice",
+      "status": "pending",
+      "nl_slug": "hoe-voorkom-je-dat-je-hetzelfde-item-twee-keer-verkoopt",
+      "priority": 70
     }
   ],
   "published": [
@@ -1108,6 +1158,16 @@
       "action": "created",
       "url_path": "/reseller-tools/action-figures-reselling-automation",
       "published_at": "2026-09-24T13:05:18.534079+00:00"
+    },
+    {
+      "keyword": "how to ship a parcel via 2dehands",
+      "slug": "how-to-ship-a-parcel-via-2dehands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-ship-a-parcel-via-2dehands",
+      "published_at": "2026-09-25T07:13:55.127261+00:00"
     }
   ]
 }
