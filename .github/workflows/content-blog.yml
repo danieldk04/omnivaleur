@@ -44,6 +44,9 @@ jobs:
           # (/api/content/zoekdata), met dit token; de GSC-sleutels blijven op
           # Railway. Tot 25-09-2026 koos de planner hier blind.
           ANALYTICS_DASHBOARD_TOKEN: ${{ secrets.ANALYTICS_DASHBOARD_TOKEN }}
+          # Gemini-vangnet: zonder deze sleutel verscheen er van 19 t/m 23
+          # september geen artikel toen het Anthropic-tegoed op was.
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: python3 scripts/generate_content.py ${{ github.event.inputs.all == 'true' && '--all' || '' }}
 
       # De publicatienorm staat in backend/content/quality.py en wordt bij elke
