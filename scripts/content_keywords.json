@@ -548,7 +548,7 @@
       "pillar": "C",
       "format": "competitor",
       "slug": "omnivaleur-vs-crosslist",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "omnivaleur-vs-crosslist-vergelijking",
       "priority": 67
     },
@@ -1169,6 +1169,16 @@
       "action": "updated",
       "url_path": "/reseller-tools/how-to-ship-a-parcel-via-2dehands",
       "published_at": "2026-09-25T07:19:58.445517+00:00"
+    },
+    {
+      "keyword": "Omnivaleur vs Crosslist",
+      "slug": "omnivaleur-vs-crosslist",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "action": "created",
+      "url_path": "/vs/omnivaleur-vs-crosslist",
+      "published_at": "2026-09-25T13:07:46.795440+00:00"
     }
   ]
 }
