@@ -13500,3 +13500,12 @@ zijn bewust níet samengevoegd: dat zijn andere zoekvragen. De GSC-sleutels hoev
 niet naar GitHub: de blogtaak haalt de cijfers op via /api/content/zoekdata met
 het ANALYTICS_DASHBOARD_TOKEN dat GitHub al had. Let op: de repo is openbaar,
 dus zet nooit cijfers per pagina in een Actions-logboek.
+
+**Aanvulling 25-09, eerste blog nieuwe stijl.** GOOGLE_API_KEY staat in GitHub;
+de proefrun toont zoekdata (127 pagina's, 147 zoekvragen), een werkend
+Gemini-vangnet en 3 van 3 concurrenten gelezen. Eerste artikel: "How to ship a
+parcel via 2dehands". Vanaf GitHub gaf DuckDuckGo de eerste keer niets, dus is
+het herschreven met de lite-versie als reserve. De NL-vertaling van de
+herschreven versie werd twee keer afgekapt; de eerdere NL-versie bleef staan.
+Nieuwe blogs staan een paar minuten live voordat hun plaatje met de deploy
+meekomt; het overzicht toont dan het kleurvlak in plaats van een kapot icoon.
