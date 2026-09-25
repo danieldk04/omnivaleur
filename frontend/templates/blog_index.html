@@ -108,7 +108,8 @@
     <article class="post-row" data-pillar="{{ p.pillar }}">
       {% if p.featured_image_url %}
       <a class="post-thumb" href="{{ p.url_path }}" aria-hidden="true" tabindex="-1">
-        <img src="{{ p.featured_image_url }}" alt="" width="1200" height="630" loading="lazy" decoding="async">
+        {# Een nieuwe blog staat live voordat zijn plaatje met de volgende deploy meekomt (paar minuten); dan het kleurvlak tonen, geen kapot icoon. #}
+        <img src="{{ p.featured_image_url }}" alt="" width="1200" height="630" loading="lazy" decoding="async" onerror="this.style.display='none'">
       </a>
       {% else %}
       <div class="post-thumb">

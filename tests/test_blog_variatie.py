@@ -51,13 +51,20 @@ def test_eigen_site_en_winkels_tellen_niet_als_concurrent():
             "https://crosslist.com/blog/a", "https://vendoo.co/b", "https://nifty.ai/c", "https://d.nl/d"])
 
     class Antwoord:
-        text = html
+        def __init__(self, text):
+            self.text = text
         def raise_for_status(self):
             pass
 
-    with patch.object(research.httpx, "get", return_value=Antwoord()):
+    with patch.object(research.httpx, "get", return_value=Antwoord(html)):
         urls = research._ddg_search("x", "nl", max_results=3)
     assert urls == ["https://crosslist.com/blog/a", "https://vendoo.co/b", "https://nifty.ai/c"]
+
+    # HTML-versie leeg (zoals vanaf GitHub op 25-09-2026): dan de lite-versie.
+    lite = '<a class="result-link" href="https://crosslist.com/blog/a">x</a>'
+    with patch.object(research.httpx, "get", return_value=Antwoord("<html></html>")), \
+         patch.object(research.httpx, "post", return_value=Antwoord(lite)):
+        assert research._ddg_search("x", "nl") == ["https://crosslist.com/blog/a"]
 
 
 def test_terugverwijzing_kiest_verwante_pagina_en_is_herhaalbaar():

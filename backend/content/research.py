@@ -65,20 +65,33 @@ COMPETITOR_BLOGS = [
 
 
 def _ddg_search(query: str, region: str, max_results: int = 3) -> list[str]:
-    """Haalt de top-N organische resultaat-URLs op via DuckDuckGo's HTML-only endpoint."""
+    """
+    Haalt de top-N organische resultaat-URLs op via DuckDuckGo. Eerst de
+    HTML-versie, en levert die niets op dan de lite-versie: op 25-09-2026 gaf de
+    HTML-versie vanaf GitHub nul resultaten terwijl dezelfde vraag vanaf een Mac
+    er acht gaf, en schreef de generator stil zonder concurrentiedata.
+    """
     kl = REGION_DDG.get(region, "nl-nl")
-    resp = httpx.get(
-        "https://html.duckduckgo.com/html/",
-        params={"q": query, "kl": kl},
-        headers={"User-Agent": UA},
-        timeout=20,
-        follow_redirects=True,
-    )
+    urls = _ddg_links(httpx.get(
+        "https://html.duckduckgo.com/html/", params={"q": query, "kl": kl},
+        headers={"User-Agent": UA}, timeout=20, follow_redirects=True,
+    ), "a.result__a", max_results)
+    if not urls:
+        urls = _ddg_links(httpx.post(
+            "https://lite.duckduckgo.com/lite/", data={"q": query, "kl": kl},
+            headers={"User-Agent": UA}, timeout=20, follow_redirects=True,
+        ), "a.result-link", max_results)
+    if not urls:
+        logger.warning(f"DuckDuckGo gaf geen enkel resultaat voor '{query}': artikel zonder concurrentiedata")
+    return urls
+
+
+def _ddg_links(resp: httpx.Response, selector: str, max_results: int) -> list[str]:
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
 
     urls = []
-    for a in soup.select("a.result__a"):
+    for a in soup.select(selector):
         href = a.get("href", "")
         # DDG's HTML endpoint wrapt externe links soms in /l/?uddg=<encoded>
         m = re.search(r"uddg=([^&]+)", href)

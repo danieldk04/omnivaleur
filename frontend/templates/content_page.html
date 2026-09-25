@@ -145,7 +145,7 @@
     </p>
 
     {% if page.featured_image_url %}
-    <img class="featured-hero-img" src="{{ page.featured_image_url }}" alt="{{ page.h1 }}" width="1200" height="630" fetchpriority="high" decoding="async">
+    <img class="featured-hero-img" src="{{ page.featured_image_url }}" alt="{{ page.h1 }}" width="1200" height="630" fetchpriority="high" decoding="async" onerror="this.style.display='none'">
     {% endif %}
 
     <blockquote>{{ page.quick_answer }}</blockquote>
@@ -211,7 +211,7 @@
       <div class="related-grid">
         {% for r in related_pages %}
         <a class="related-card" href="{{ r.url_path }}">
-          {% if r.featured_image_url %}<img src="{{ r.featured_image_url }}" alt="" width="1200" height="630" loading="lazy" decoding="async">{% endif %}
+          {% if r.featured_image_url %}<img src="{{ r.featured_image_url }}" alt="" width="1200" height="630" loading="lazy" decoding="async" onerror="this.style.display='none'">{% endif %}
           <span>{{ r.h1 }}</span>
         </a>
         {% endfor %}

@@ -81,6 +81,10 @@ async def main():
             ok = False
             print(f"[DRY RUN] Gemini-fout: {type(e).__name__}")
         print(f"[DRY RUN] Gemini-vangnet werkt: {'ja' if ok else 'nee'}")
+        # Vindt het concurrentieonderzoek vanaf deze machine iets?
+        from backend.content.research import research_competitors
+        rc = research_competitors("how to sell faster on vinted", "nl")
+        print(f"[DRY RUN] concurrentieonderzoek: {len(rc['competitors'])} van 3 concurrenten gelezen")
 
     items = [i for i in data["queue"] if i["status"] == "pending"]
     if not items and not dry_run:
