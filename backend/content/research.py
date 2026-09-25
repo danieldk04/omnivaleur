@@ -72,10 +72,14 @@ def _ddg_search(query: str, region: str, max_results: int = 3) -> list[str]:
     er acht gaf, en schreef de generator stil zonder concurrentiedata.
     """
     kl = REGION_DDG.get(region, "nl-nl")
-    urls = _ddg_links(httpx.get(
-        "https://html.duckduckgo.com/html/", params={"q": query, "kl": kl},
-        headers={"User-Agent": UA}, timeout=20, follow_redirects=True,
-    ), "a.result__a", max_results)
+    try:
+        urls = _ddg_links(httpx.get(
+            "https://html.duckduckgo.com/html/", params={"q": query, "kl": kl},
+            headers={"User-Agent": UA}, timeout=20, follow_redirects=True,
+        ), "a.result__a", max_results)
+    except Exception as e:
+        logger.warning(f"DuckDuckGo HTML-versie faalde voor '{query}': {e}; lite-versie proberen")
+        urls = []
     if not urls:
         urls = _ddg_links(httpx.post(
             "https://lite.duckduckgo.com/lite/", data={"q": query, "kl": kl},
