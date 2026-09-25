@@ -13516,3 +13516,5 @@ blogs hadden links naar de andere taal (344). Hersteld naar 0 fout en 0 dood
 (scripts/repair_taallinks.py) en nieuwe artikelen krijgen het vanzelf.
 Screenshots: de minst gebruikte gaat nu voor (de itemlijst stond op 72 pagina's,
 de bulk-import op 11). Echte variatie vraagt nieuwe screenshots: er zijn er acht.
+
+25-09-2026, Gemini-check (gepland): sinds deploy dc2b81e0 (09:26 tot 14:44) beantwoordde Gemini 20 van 20 taalvragen, Claude 0, geen_antwoord 0; sleutel ddf59aed klopt. Google-pogingen: 42x 200, 78x 429, 1x 503. De 429 is het dagmaximum van het eerste model (Flash), daarna antwoordt de volgende kandidaat (waarschijnlijk Flash-Lite, zwakker Nederlands). Oordeel: gratis sleutel werkt, geen tegoed nodig.
