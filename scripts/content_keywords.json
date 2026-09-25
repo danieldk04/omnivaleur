@@ -537,7 +537,7 @@
       "pillar": "B",
       "format": "howto",
       "slug": "how-to-ship-a-parcel-via-2dehands",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "hoe-verstuur-je-een-pakket-via-2dehands",
       "priority": 66,
       "herschreven": "25-09-2026: eerste versie had geen concurrentiedata"
@@ -1159,6 +1159,16 @@
       "action": "created",
       "url_path": "/reseller-tools/action-figures-reselling-automation",
       "published_at": "2026-09-24T13:05:18.534079+00:00"
+    },
+    {
+      "keyword": "how to ship a parcel via 2dehands",
+      "slug": "how-to-ship-a-parcel-via-2dehands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "updated",
+      "url_path": "/reseller-tools/how-to-ship-a-parcel-via-2dehands",
+      "published_at": "2026-09-25T07:19:58.445517+00:00"
     }
   ]
 }
