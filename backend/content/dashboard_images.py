@@ -153,7 +153,7 @@ def gebruik_tellen() -> dict[str, int]:
 
 
 def relevant_shots(keyword: str, title: str, slug: str, body_html: str = "",
-                   gebruik: dict[str, int] | None = None) -> list[dict]:
+                   gebruik: dict[str, int] | None = None, alleen_passend: bool = False) -> list[dict]:
     """
     De screenshots die bij dít artikel horen, in een volgorde die per slug
     verschilt. Matcht op keyword + titel + koppen — bewust NIET op de volledige
@@ -183,7 +183,10 @@ def relevant_shots(keyword: str, title: str, slug: str, body_html: str = "",
     # vooraan te staan. Stonden ze vast op plek één, dan opende de helft van de
     # artikelen alsnog op precies hetzelfde dashboardbeeld — hetzelfde probleem
     # in het klein als waar deze module voor gebouwd is.
-    pool = matched + generic
+    # Verkopersgidsen krijgen alleen een screenshot als het onderwerp over de app
+    # gaat; het algemene dashboardbeeld stond anders boven een verzendgids
+    # (Daniel, 25-09-2026). Vergelijkingen en platformcombinaties houden het wel.
+    pool = matched if alleen_passend else matched + generic
     if pool:
         offset = int(hashlib.sha256(slug.encode()).hexdigest()[:8], 16) % len(pool)
         pool = pool[offset:] + pool[:offset]

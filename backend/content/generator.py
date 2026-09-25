@@ -191,7 +191,7 @@ def inject_article_screenshots(
 
     our_figures = [
         dashboard_figure_html(shot, language)
-        for shot in relevant_shots(keyword, title, slug, body_html, gebruik_tellen())
+        for shot in relevant_shots(keyword, title, slug, body_html, gebruik_tellen(), alleen_passend=pillar == "B")
     ]
 
     competitor_figures: list[str] = []

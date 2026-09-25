@@ -234,6 +234,15 @@ def build_cards(title: str, body_html: str, language: str = "en", data: dict | N
     return [k for k in kaarten if k]
 
 
+_KAART = re.compile(r'\n?<figure class="info-kaart.*?</figure>', re.S)
+
+
+def strip_cards(body_html: str) -> str:
+    """Kaarten eruit, bv. vóór het vertalen: de Nederlandse versie krijgt eigen
+    kaarten uit de Nederlandse tekst, niet een vertaalde kopie van de Engelse."""
+    return _KAART.sub("", body_html or "")
+
+
 def inject_cards(body_html: str, title: str, language: str = "en") -> str:
     """Idempotent: een artikel dat al kaarten heeft, blijft ongemoeid."""
     if MARKER in (body_html or ""):

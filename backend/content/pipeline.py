@@ -16,6 +16,7 @@ from backend.content.generator import generate_page_content, needs_dutch_transla
 from backend.content.hero import generate_hero
 from backend.content.web_images import inject_platform_images
 from backend.content.infographics import inject_infographics
+from backend.content.visuals import inject_cards, strip_cards
 from backend.content.linking import apply_internal_links, herschrijf_taallinks
 from backend.content.research import research_competitors
 from backend.content.schema_validate import validate_page
@@ -366,6 +367,7 @@ async def run_pipeline(
         generated["body_html"], keyword, language="en", title=generated["h1"]
     )
     generated["body_html"] = inject_infographics(generated["body_html"], language="en")
+    generated["body_html"] = inject_cards(generated["body_html"], generated["title"], language="en")
 
     result = _save_page_row(
         db, region=region, pillar=pillar, slug=slug, keyword=keyword,
@@ -436,6 +438,7 @@ def publish_dutch_companion(
     injecteren ze dubbel zetten.
     """
     translated = None
+    source = {**source, "body_html": strip_cards(source.get("body_html") or "")}
     for poging in (1, 2):
         kandidaat = translate_to_dutch(source)
         if kandidaat and _afgekapt(kandidaat):
@@ -457,6 +460,7 @@ def publish_dutch_companion(
             translated["body_html"], keyword, language="nl", title=translated["h1"]
         )
         translated["body_html"] = inject_infographics(translated["body_html"], language="nl")
+    translated["body_html"] = inject_cards(translated["body_html"], translated.get("title") or "", language="nl")
 
     nl_result = _save_page_row(
         db, region=region, pillar=pillar, slug=db_nl_slug, keyword=keyword,
