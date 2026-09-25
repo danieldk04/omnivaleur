@@ -13454,3 +13454,19 @@ mp-video en de 404 via `backend/site_chrome.py` (plekhouders `<!--site-nav-->` e
 `<!--site-footer-->`). `tests/test_site_chrome.py` faalt als een pagina weer een
 eigen nav of footer krijgt. Inloggen, registreren en het dashboard zelf bewust
 niet. eBay staat nu ook in de footer.
+
+## 25-09-2026: Dagelijkse klantfouten
+
+Gemeten om 06:36 UTC over 24 uur: 117 opdrachten bij 4 klanten, 19 fouten, alle
+zeven foutsoorten al beoordeeld in de runs van gisteren (klantfouten.py: 0 open).
+Nieuw sinds 18:30 alleen de overgeslagen herplaatsing van Johans Gibson Les Paul
+(f8c0cce9, 21:13 UTC): precies de afloop die om 15:40 en 17:20 voorspeld was,
+omdat de bijbehorende verwijdering terecht mislukte. Geen nieuwe fout in onze
+code, niets gerepareerd. Geen opdracht hangt op 'claimed'. Acht wachtende
+Vinted-scans en een Marktplaats-plaatsing wachten op computers die uit staan
+(laatste hartslag uiterlijk 00:07 UTC). Geen abonnement op slot gegaan.
+Extensieversies: alleen 3bfbed2c draait 1.0.352 (de Vinted-verwijderreparatie);
+klanten zitten op 1.0.349 tot 1.0.351.
+Open: 1.0.352 in de Web Store. /health toont 610 keer 429 van de gratis
+Google-sleutel tegen 173 goede antwoorden; de tweede ronde en Claude vangen het
+op, geen klantfout, wel Anthropic-tegoed.
