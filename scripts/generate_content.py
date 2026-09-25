@@ -73,6 +73,14 @@ async def main():
         from backend.content.keyword_planner import _zoekdata
         zd = _zoekdata()
         print(f"[DRY RUN] zoekdata: {len(zd.get('pages') or [])} pagina's, {len(zd.get('queries') or [])} zoekvragen")
+        # Werkt het Gemini-vangnet? Eén korte vraag, alleen ja/nee in het logboek.
+        from backend.services import gemini_vertaling
+        try:
+            ok = gemini_vertaling.beschikbaar() and bool(gemini_vertaling.vraag("Reply with the single word: ok", max_tokens=20))
+        except Exception as e:
+            ok = False
+            print(f"[DRY RUN] Gemini-fout: {type(e).__name__}")
+        print(f"[DRY RUN] Gemini-vangnet werkt: {'ja' if ok else 'nee'}")
 
     items = [i for i in data["queue"] if i["status"] == "pending"]
     if not items and not dry_run:
