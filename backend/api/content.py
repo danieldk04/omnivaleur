@@ -21,7 +21,7 @@ from backend.content.branding import (  # noqa: F401  (her-geëxporteerd voor de
     merk_profielen,
 )
 from backend.content.pipeline import run_pipeline
-from backend.database import get_db
+from backend.database import get_db, naast_de_lus
 
 router = APIRouter(tags=["content"])
 
@@ -190,7 +190,17 @@ def _related_pages(page: dict, limit: int = 3) -> list[dict]:
     return picked
 
 
+# Samengevoegde dubbele blogs (25-09-2026): oude publieke slug -> slug die bleef,
+# per pijler, voor elke taal. De dagelijkse planner schreef hetzelfde onderwerp
+# meerdere keren (used/vintage/second-hand books) en die pagina's vochten om
+# dezelfde zoekopdracht. De verliezer staat in de database op 'redirected'.
+SAMENGEVOEGD: dict[str, dict[str, str]] = {"A": {}, "B": {}, "C": {}}
+
+
 def _render_page(request: Request, language: str, pillar: str, slug: str) -> HTMLResponse:
+    doel = SAMENGEVOEGD.get(pillar, {}).get(slug)
+    if doel:
+        return RedirectResponse(url=_url_path(language, pillar, doel), status_code=301)
     page = _get_page(language, pillar, slug)
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
@@ -642,6 +652,25 @@ async def trends_dashboard(token: str | None = None):
         )
     import gzip
     return HTMLResponse(gzip.open(TRENDS_DASHBOARD, "rt", encoding="utf-8").read())
+
+
+@router.get("/api/content/zoekdata")
+async def zoekdata(token: str | None = None, days: int = 90):
+    """Search Console-cijfers voor de dagelijkse blogtaak in GitHub. De
+    GSC-sleutels staan alleen op Railway; zo hoeven ze niet gekopieerd te
+    worden en gebruikt GitHub het token dat het al had (25-09-2026)."""
+    _require_dashboard_token(token)
+    from datetime import date, timedelta
+    from backend.services import search_console as gsc
+    if not gsc.is_configured():
+        return {"configured": False, "pages": [], "queries": []}
+    eind = date.today() - timedelta(days=3)
+    begin = eind - timedelta(days=max(7, min(days, 480)))
+    return {
+        "configured": True,
+        "pages": await naast_de_lus(lambda: gsc.get_top_pages(days=days, row_limit=300)),
+        "queries": await naast_de_lus(lambda: gsc.query_window(["query"], begin.isoformat(), eind.isoformat(), row_limit=500)),
+    }
 
 
 @router.get("/api/analytics/diag")

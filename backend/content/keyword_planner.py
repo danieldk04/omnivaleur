@@ -26,7 +26,9 @@ import anthropic
 
 from backend.config import settings
 from backend.services.google_ads import meets_volume_threshold
-from backend.services.search_console import get_top_pages, query_window
+from backend.services import search_console
+
+ZOEKDATA_URL = "https://omnivaleur.com/api/content/zoekdata"
 
 logger = logging.getLogger(__name__)
 
@@ -112,10 +114,35 @@ def _is_duplicate_intent(slug: str, existing_slugs: list[str]) -> bool:
     return any(fingerprint == _intent_fingerprint(s) for s in existing_slugs)
 
 
-def _performance_block() -> str:
+def _zoekdata() -> dict:
+    """
+    Search Console-cijfers: rechtstreeks als de sleutels hier staan (Railway),
+    anders via de server met het dashboardtoken (de dagelijkse GitHub-taak).
+    Tot 25-09-2026 had die taak geen van beide en kreeg de prompt elke dag
+    "no Search Console data". Faalt zacht: lege lijsten.
+    """
+    if search_console.is_configured():
+        eind = date.today() - timedelta(days=3)
+        return {
+            "pages": search_console.get_top_pages(days=90, row_limit=300),
+            "queries": search_console.query_window(
+                ["query"], (eind - timedelta(days=90)).isoformat(), eind.isoformat(), row_limit=500),
+        }
+    if settings.analytics_dashboard_token:
+        try:
+            import httpx
+            r = httpx.get(ZOEKDATA_URL, params={"token": settings.analytics_dashboard_token}, timeout=60)
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:
+            logger.error(f"Zoekdata van de server niet opgehaald: {e}")
+    return {"pages": [], "queries": []}
+
+
+def _performance_block(data: dict) -> str:
     """Real GSC performance data on already-published pages, if configured — biases new
     suggestions toward topics that are actually getting impressions/clicks."""
-    top_pages = get_top_pages(days=90, row_limit=10)
+    top_pages = sorted(data.get("pages") or [], key=lambda p: -p.get("clicks", 0))[:10]
     if not top_pages:
         return "(no Search Console data available)"
     return "\n".join(
@@ -124,12 +151,11 @@ def _performance_block() -> str:
     )
 
 
-def _query_block() -> str:
+def _query_block(data: dict) -> str:
     """Zoekvragen waarop Google ons al toont maar niet bovenaan: bewezen vraag
     waar we nog geen goed antwoord op hebben. Dit is het sterkste signaal voor
     een nieuw onderwerp, sterker dan wat al klikken krijgt."""
-    eind = date.today() - timedelta(days=3)
-    rijen = query_window(["query"], (eind - timedelta(days=90)).isoformat(), eind.isoformat(), row_limit=250)
+    rijen = data.get("queries") or []
     kansen = [r for r in rijen if r.get("impressions", 0) >= 5 and r.get("position", 0) > 8]
     kansen.sort(key=lambda r: -r["impressions"])
     if not kansen:
@@ -159,7 +185,9 @@ def plan_mix(published: list[dict]) -> list[str]:
     return ["howto", "competitor", "money_rules", "howto", "strategy", zesde]
 
 
-def _build_prompt(existing_keywords: list[str], mix: list[str], competitor_titles: list[str]) -> str:
+def _build_prompt(existing_keywords: list[str], mix: list[str], competitor_titles: list[str],
+                  data: dict | None = None) -> str:
+    data = data or {}
     existing_block = "\n".join(f"- {k}" for k in existing_keywords) or "(none yet)"
     formats_block = "\n".join(f"- {f}: {FORMATS[f][1]}" for f in dict.fromkeys(mix))
     mix_block = ", ".join(f"{mix.count(f)}x {f}" for f in dict.fromkeys(mix))
@@ -175,10 +203,10 @@ WHAT COMPETING CROSSLISTING TOOLS PUBLISH ON THEIR BLOGS (recent titles). These 
 {titles_block}
 
 SEARCH QUERIES WHERE GOOGLE ALREADY SHOWS US BUT NOT AT THE TOP (last 90 days). Proven demand: prefer topics that answer these directly:
-{_query_block()}
+{_query_block(data)}
 
 OUR BEST-PERFORMING PAGES (last 90 days):
-{_performance_block()}
+{_performance_block(data)}
 
 ALREADY COVERED (do not repeat these or close variants; "used", "vintage" and "second-hand" versions of the same niche count as the same topic):
 {existing_block}
@@ -201,7 +229,9 @@ def suggest_keywords(
     from backend.content.research import competitor_blog_topics
 
     mix = plan_mix(published or [])
-    prompt = _build_prompt(existing_keywords, mix, competitor_blog_topics())
+    data = _zoekdata()
+    logger.info(f"Zoekdata: {len(data.get('pages') or [])} pagina's, {len(data.get('queries') or [])} zoekvragen")
+    prompt = _build_prompt(existing_keywords, mix, competitor_blog_topics(), data)
 
     try:
         # Sinds 23-09-2026 eerst Gemini, dan Claude (backend/services/taalmodel.py).

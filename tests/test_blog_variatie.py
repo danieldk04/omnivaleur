@@ -29,8 +29,7 @@ def test_model_mag_de_mix_niet_oprekken():
     with patch("backend.services.taalmodel.vraag", return_value=antwoord), \
          patch.object(kp, "meets_volume_threshold", return_value=True), \
          patch.object(research, "competitor_blog_topics", return_value=[]), \
-         patch.object(kp, "query_window", return_value=[]), \
-         patch.object(kp, "get_top_pages", return_value=[]):
+         patch.object(kp, "_zoekdata", return_value={"pages": [], "queries": []}):
         items = kp.suggest_keywords([], [], [{"pillar": "A"}] * 12)
     soorten = [i["format"] for i in items]
     assert soorten.count("niche") == 1
