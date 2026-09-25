@@ -68,13 +68,11 @@ async def main():
     dry_run = bool(os.environ.get("DRY_RUN"))
 
     if dry_run:
-        # Bewijs dat de planner Search Console-cijfers krijgt, plus de cijfers per
-        # blogpagina (nodig om bij dubbele onderwerpen de sterkste te kiezen).
+        # Bewijs dat de planner Search Console-cijfers krijgt. Alleen aantallen:
+        # de repo is openbaar, en daarmee ook dit logboek.
         from backend.content.keyword_planner import _zoekdata
         zd = _zoekdata()
         print(f"[DRY RUN] zoekdata: {len(zd.get('pages') or [])} pagina's, {len(zd.get('queries') or [])} zoekvragen")
-        for p in sorted(zd.get("pages") or [], key=lambda p: -p.get("impressions", 0)):
-            print(f"  GSC {p.get('clicks', 0):>4} klikken {p.get('impressions', 0):>6} vertoningen  pos {p.get('position', 0):5.1f}  {p.get('url')}")
 
     items = [i for i in data["queue"] if i["status"] == "pending"]
     if not items and not dry_run:
