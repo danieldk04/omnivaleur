@@ -43,13 +43,22 @@ _SKIP_DOMAINS = (
     "tiktok.com", "pinterest.", "linkedin.com", "x.com", "twitter.com",
 )
 
-# Blogoverzichten van echte concurrenten, gecontroleerd op 25-09-2026: deze
-# gaven kopjes terug. fluf.io en oneshop.com renderen hun lijst met JavaScript
-# en leveren niets op.
+# Blogoverzichten van echte concurrenten (Daniels lijst "Crosslisting
+# Concurrenten", 25-09-2026), gecontroleerd op die datum: deze gaven titels
+# terug. Flyp, Zeedrop en Listelf hebben geen /blog (404); fluf.io en
+# oneshop.com renderen hun lijst met JavaScript en leveren niets op.
 COMPETITOR_BLOGS = [
     "https://crosslist.com/blog/",
     "https://vendoo.co/blog",
     "https://www.listperfectly.com/blog",
+    "https://nifty.ai/blog",
+    "https://www.sellraze.com/blog",
+    "https://www.resylr.com/blog",
+    "https://selleraider.com/blog",
+    "https://www.zipsale.co.uk/blog",
+    "https://www.exportyourstore.com/blog",
+    "https://ruit.es/nl/blog",
+    "https://www.evriwhere.co.uk/blog",
     "https://closo.co/blogs/news",
     "https://www.vintieplus.com/blog",
 ]
