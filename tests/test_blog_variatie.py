@@ -129,3 +129,24 @@ def test_minst_gebruikte_screenshot_gaat_voor():
     gekozen = di.relevant_shots("bulk import inventory listing", "Bulk listing guide", "x", "", gebruik)
     assert gekozen[0]["src"] == "/assets/dashboard/bulk-import.webp"
     assert "/assets/dashboard/dashboard-overview.webp" not in [s["src"] for s in gekozen]
+
+
+def test_infokaarten_verzinnen_geen_cijfers_en_passen_taal_aan():
+    from backend.content import visuals
+    body = "<p>Label kost €6,95 en je hebt 14 dagen. DAC7 geldt vanaf €2.000 omzet.</p>"
+    data = {
+        "cijfers": [{"waarde": "€6,95", "label": "bpost-label"}, {"waarde": "14 dagen", "label": "om te versturen"},
+                    {"waarde": "€9,99", "label": "verzonnen"}, {"waarde": "€2.000", "label": "DAC7-grens"}],
+        "checklist": {"titel": "Voor je verstuurt:", "punten": ["Weeg de doos voor je het label koopt"] * 4},
+        "voorbeeld": {"artikel": "Omega Seamaster", "categorie": "watch", "prijs": 1250,
+                      "kanalen": {"Vinted": "live", "eBay": "sold", "Wallapop": "live"}},
+    }
+    kaarten = visuals.build_cards("Pakket versturen via 2dehands", body, "nl", data)
+    alles = "".join(kaarten)
+    assert "€9,99" not in alles and "€2.000" not in alles and "€6,95" in alles
+    assert "€1.250" in alles and "Wallapop" not in alles and "Verkocht" in alles
+    assert "Voor je verstuurt</div>" in alles
+    en = "".join(visuals.build_cards("Ship a parcel", body, "en", data))
+    assert "€1,250" in en
+    assert not visuals._staat_in_tekst("0", "we have 0 templates")
+    assert not visuals._staat_in_tekst("14 dag", "je hebt 14 dagen")
