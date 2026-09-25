@@ -13518,3 +13518,13 @@ Screenshots: de minst gebruikte gaat nu voor (de itemlijst stond op 72 pagina's,
 de bulk-import op 11). Echte variatie vraagt nieuwe screenshots: er zijn er acht.
 
 25-09-2026, Gemini-check (gepland): sinds deploy dc2b81e0 (09:26 tot 14:44) beantwoordde Gemini 20 van 20 taalvragen, Claude 0, geen_antwoord 0; sleutel ddf59aed klopt. Google-pogingen: 42x 200, 78x 429, 1x 503. De 429 is het dagmaximum van het eerste model (Flash), daarna antwoordt de volgende kandidaat (waarschijnlijk Flash-Lite, zwakker Nederlands). Oordeel: gratis sleutel werkt, geen tegoed nodig.
+
+**Aanvulling 25-09, infokaarten live.** Op Daniels "live": elke blog krijgt
+kaarten in huisstijl, gemaakt in HTML (backend/content/visuals.py): kerncijfers
+(alleen letterlijk uit de tekst, geen DAC7 buiten belastingstukken, geen kale
+getallen), een checklist en een nagebouwd Omnivaleur-scherm met een passend
+artikel, gelabeld als illustratie. NL krijgt eigen kaarten uit de NL-tekst. Het
+algemene dashboardbeeld staat alleen nog bij vergelijkingen en
+platformcombinaties (43 gidsen opgeschoond). Stand: 112 pagina's, 104 met 2 of 3
+kaarten, 8 met 1. Bewust in HTML en niet via beeldgeneratie: gratis, tekst altijd
+scherp en leesbaar voor Google.

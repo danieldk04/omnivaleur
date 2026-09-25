@@ -60,6 +60,14 @@ tekst. `scripts/repair_taallinks.py` herstelde de achterstand naar 0.
 Screenshots: `dashboard_images.gebruik_tellen` laat de minst gebruikte voorgaan,
 maar met 8 app-screenshots is de pool zelf de grens.
 
+**Beelden: infokaarten in HTML (25-09-2026).** Daniel wil geen betaalde
+beeldgeneratie en geen irrelevante app-screenshots, en niets wat als AI oogt.
+`visuals.py` tekent kerncijfers, checklist en een nagebouwd appscherm; het model
+kiest de inhoud, code toetst (getal letterlijk en als los woord in de tekst, geen
+kaal cijfer, DAC7 alleen in belastingstukken). Wat het als AI liet ogen:
+telegramzinnen, Title Case, een letter in een kleurvlak. NL-kaarten komen uit de
+NL-tekst; vóór het vertalen gaan de kaarten eruit (`strip_cards`).
+
 ---
 
 ## knop-op-de-pagina-is-nog-niet-levend
