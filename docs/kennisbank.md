@@ -17,6 +17,41 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## blog-onderwerpen-variatie
+
+*25-09-2026 — "Dagelijkse blog schreef 34 van 36 keer \"X reselling automation\"; variatie staat sinds 25-09-2026 in code (FORMATS + plan_mix), niet in de prompt; oude pagina's linken nu terug naar nieuwe"*
+
+Van augustus tot 25-09-2026 waren 34 van de 36 dagelijkse artikelen "X reselling
+automation" (drie keer boeken, drie keer meubels). Oorzaken: de planner-prompt gaf
+"{niche} selling automation" als voorbeeld, de dubbelcheck kende geen synoniemen
+(used/vintage/second hand, meervoud), en de GitHub-taak had geen Search
+Console-sleutels, dus "puur datagedreven" was blind ("no Search Console data").
+
+Nu: `keyword_planner.FORMATS` (howto, money_rules, strategy, combo, competitor,
+niche) en `plan_mix` dwingen per aanvulling een vaste mix af, hooguit één niche,
+nooit twee dezelfde soorten na elkaar. Titels van concurrentenblogs
+(`research.COMPETITOR_BLOGS`, uit Daniels lijst "Crosslisting Concurrenten") en
+GSC-zoekvragen op positie >8 gaan mee in de prompt. `research_competitors` slaat
+omnivaleur.com, Amazon en sociale media over en meet per top-3-pagina titel,
+meta, woorden, vragen en schema; de generator schrijft 15% langer dan de langste
+(1400 tot 2600).
+
+Interne links liepen alleen van nieuw naar oud: 66 van 128 pagina's kregen van
+geen enkel ander artikel een link. `pipeline.link_back` zet bij elk nieuw artikel
+een regel `<p class="related-read">` onderaan drie verwante oudere pagina's;
+`scripts/backfill_terugkoppelingen.py` bracht het naar 6.
+
+**Why:** een variatie-afspraak in een prompt zakt weg; in code is hij toetsbaar
+(tests/test_blog_variatie.py).
+
+**How to apply:** meer variatie of een nieuwe soort artikel: voeg toe aan FORMATS
+en plan_mix. Let op: `quality.py` telde alleen kale `<p>`; een `<p class=...>`
+gaf 96 valse AFGEKAPT-meldingen, en `blog_repair_afgekapt.py --repareer` had die
+pagina's dan "gerepareerd". Zie "blog-publicatienorm" en
+"blog-evaluator-and-infographics".
+
+---
+
 ## knop-op-de-pagina-is-nog-niet-levend
 
 *24-09-2026 — Vinted (Next.js) zet knoppen 3-5 s als dode HTML neer voor React ze klikbaar maakt; klik in dat gat verdwijnt stil*

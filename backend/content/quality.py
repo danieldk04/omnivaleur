@@ -130,9 +130,12 @@ def check_article(page: dict) -> list[str]:
     # model tegen zijn tokenlimiet aanliep. Deze drie signalen vingen ze alle vijf.
     if body.strip() and not _SLUIT_NETJES.search(body.strip()):
         problems.append("AFGEKAPT: de tekst eindigt niet op een afgesloten alinea of kop")
-    if body.count("<p>") != body.count("</p>"):
+    # Ook <p class="..."> telt als opening: de terugverwijzing onderaan
+    # (pipeline.link_back, 25-09-2026) gaf anders 96 valse meldingen.
+    open_p = len(re.findall(r"<p[\s>]", body))
+    if open_p != body.count("</p>"):
         problems.append(
-            f"AFGEKAPT: {body.count('<p>')} keer <p> tegen {body.count('</p>')} keer </p>")
+            f"AFGEKAPT: {open_p} keer <p> tegen {body.count('</p>')} keer </p>")
     for f in page.get("faq") or []:
         if len((f.get("answer") or "").strip()) < MIN_FAQ_ANTWOORD:
             problems.append(

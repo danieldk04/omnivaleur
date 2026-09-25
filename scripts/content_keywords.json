@@ -527,8 +527,9 @@
       "region": "nl",
       "pillar": "B",
       "slug": "antique-furniture-reselling-automation",
-      "status": "pending",
-      "priority": 65
+      "status": "skipped",
+      "priority": 65,
+      "reden": "zelfde onderwerp als used-furniture-reselling-automation (25-09-2026)"
     }
   ],
   "published": [

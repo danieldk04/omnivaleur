@@ -40,6 +40,14 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
+          # Zonder deze vier kiest de planner blind: tot 25-09-2026 stonden ze
+          # alleen op Railway en kreeg de prompt elke dag "no Search Console data".
+          # GOOGLE_API_KEY is het Gemini-vangnet; zonder werd het van 19 t/m 23
+          # september geen enkel artikel toen het Anthropic-tegoed op was.
+          GSC_CLIENT_ID: ${{ secrets.GSC_CLIENT_ID }}
+          GSC_CLIENT_SECRET: ${{ secrets.GSC_CLIENT_SECRET }}
+          GSC_REFRESH_TOKEN: ${{ secrets.GSC_REFRESH_TOKEN }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: python3 scripts/generate_content.py ${{ github.event.inputs.all == 'true' && '--all' || '' }}
 
       # De publicatienorm staat in backend/content/quality.py en wordt bij elke

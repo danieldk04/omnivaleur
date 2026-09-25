@@ -13470,3 +13470,22 @@ klanten zitten op 1.0.349 tot 1.0.351.
 Open: 1.0.352 in de Web Store. /health toont 610 keer 429 van de gratis
 Google-sleutel tegen 173 goede antwoorden; de tweede ronde en Claude vangen het
 op, geen klantfout, wel Anthropic-tegoed.
+
+## 25-09-2026: dagelijkse blog gevarieerder, beter onderzocht en beter gekoppeld
+Daniel had het gevoel dat de blog steeds hetzelfde soort stuk schreef. Klopte:
+34 van de 36 artikelen sinds augustus waren "X reselling automation", 11 van de 64
+onderwerpen overlapten (drie keer boeken, drie keer meubels). Van 19 t/m 23
+september verscheen niets: Anthropic-tegoed op en geen Gemini-sleutel in GitHub.
+De "datagedreven" onderwerpkeuze was blind: de Search Console-sleutels staan
+alleen op Railway, niet in de GitHub-taak.
+
+Nu: elke aanvulling is een vaste mix (twee praktische platformgidsen, een over
+geld en regels in NL/BE, een strategiestuk, een eerlijke vergelijking met een
+concurrent uit Daniels lijst "Crosslisting Concurrenten", en een
+platformcombinatie of niche). Titels van dertien concurrentenblogs gaan als
+inspiratie mee. Per artikel worden de top 3 van DuckDuckGo gemeten (titel, meta,
+lengte, vragen, schema; eigen site en Amazon tellen niet mee) en schrijft het
+model 15% langer dan de langste. Oudere artikelen linken nu terug naar nieuwe:
+wezen van 66 naar 6. Technische SEO (schema, FAQ, broodkruimels, hreflang, OG)
+stond al goed. Open: GSC_CLIENT_ID, GSC_CLIENT_SECRET, GSC_REFRESH_TOKEN en
+GOOGLE_API_KEY als GitHub-geheim zetten (de workflow leest ze al).

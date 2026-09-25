@@ -7,6 +7,7 @@ database. Als de intent al bestaat, wordt de bestaande rij overschreven met
 de nieuwe concurrentie-inzichten in plaats van een duplicaat aan te maken —
 dit is de enige plek waar dat besluit wordt genomen.
 """
+import html
 import logging
 import re
 from datetime import datetime, timezone
@@ -241,6 +242,63 @@ def _save_page_row(
     return {"success": True, "action": action, "url_path": url_path, "linked": linked_intents, "intent_key": intent_key, "row": row}
 
 
+_TERUG_STOPWOORDEN = {
+    "to", "on", "the", "a", "an", "and", "for", "how", "in", "of", "vs", "with", "your",
+    "reselling", "automation", "crosslisting", "selling", "sell", "guide", "2026", "best",
+    "naar", "op", "de", "het", "een", "en", "voor", "hoe", "je", "van", "met", "verkopen",
+    # Te algemeen om een verwant artikel aan te herkennen.
+    "vintage", "used", "second", "hand", "tools", "platforms", "crosslisten", "tweedehands",
+}
+_TERUG_ANKER = {"en": "Related guide", "nl": "Lees ook"}
+
+
+def _kernwoorden(tekst: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z0-9à-ÿ]+", (tekst or "").lower())
+            if w not in _TERUG_STOPWOORDEN and len(w) > 2}
+
+
+def link_back(db, *, language: str, url_path: str, title: str, keyword: str,
+              max_sources: int = 3, dry_run: bool = False, rijen: list[dict] | None = None) -> list[str]:
+    """
+    Zet een link NAAR een nieuwe pagina in hooguit drie oudere pagina's in
+    dezelfde taal die het meest op haar lijken. Tot 25-09-2026 linkten nieuwe
+    artikelen alleen naar oude, nooit andersom: 88 van de 131 pagina's kregen
+    van geen enkel ander artikel een link, en de links stapelden zich op bij de
+    eerste artikelen (106 naar één vergelijking).
+
+    De link komt als los slotregeltje achteraan de body, met string-splicing
+    (nooit via BeautifulSoup opnieuw opschrijven, zie kennisbank). Idempotent:
+    een pagina die al naar `url_path` linkt, wordt overgeslagen.
+    """
+    kern = _kernwoorden(keyword + " " + title)
+    if rijen is None:
+        rijen = (db.table("content_pages").select("id,slug,pillar,language,primary_keyword,title,body_html")
+                 .eq("status", "published").eq("language", language).execute().data) or []
+    else:
+        # Meegegeven door het inhaalscript: één keer lezen in plaats van per pagina.
+        rijen = [r for r in rijen if r.get("language", "en") == language]
+    scores = []
+    for r in rijen:
+        pad = _url_path(r.get("language", "en"), r["pillar"], r["slug"])
+        body = r.get("body_html") or ""
+        if pad == url_path or f'href="{url_path}"' in body or f'{SITE_URL}{url_path}"' in body:
+            continue
+        overlap = len(kern & _kernwoorden((r.get("primary_keyword") or "") + " " + (r.get("title") or "")))
+        if overlap:
+            scores.append((overlap, body.count('class="related-read"') == 0, r))
+    # Meeste overlap eerst; bij gelijke stand een pagina die nog geen slotlink heeft.
+    scores.sort(key=lambda t: (t[0], t[1]), reverse=True)
+    gelinkt = []
+    for _, _, r in scores[:max_sources]:
+        regel = (f'\n<p class="related-read"><strong>{_TERUG_ANKER.get(language, "Related guide")}:</strong> '
+                 f'<a href="{url_path}">{html.escape(title)}</a></p>')
+        if not dry_run:
+            db.table("content_pages").update({"body_html": (r["body_html"] or "") + regel}).eq("id", r["id"]).execute()
+        r["body_html"] = (r["body_html"] or "") + regel
+        gelinkt.append(r["slug"])
+    return gelinkt
+
+
 async def run_pipeline(
     keyword: str,
     region: str,
@@ -248,8 +306,12 @@ async def run_pipeline(
     slug: str,
     nl_slug: str | None = None,
     refresh_context: dict | None = None,
+    fmt: str | None = None,
 ) -> dict:
     """
+    `fmt` is de soort artikel uit keyword_planner.FORMATS (howto, money_rules, …);
+    leeg voor oudere wachtrij-items en herschrijvingen.
+
     `refresh_context` is alleen gezet wanneer de evaluator een bestaande, slecht
     presterende pagina laat herschrijven (backend/content/evaluator.py). De slug
     blijft dan gelijk, dus `_save_page_row` werkt de bestaande rij bij en de URL
@@ -264,7 +326,7 @@ async def run_pipeline(
     existing_for_prompt_rows = (await naast_de_lus(lambda: db.table("content_pages").select("title,language,pillar,slug").eq("status", "published").limit(50).execute())).data or []
     existing_for_prompt = [{"title": p["title"], "url_path": _url_path(p.get("language", "en"), p["pillar"], p["slug"])} for p in existing_for_prompt_rows]
 
-    generated = generate_page_content(keyword, region, pillar, slug, research, existing_for_prompt, refresh_context)
+    generated = generate_page_content(keyword, region, pillar, slug, research, existing_for_prompt, refresh_context, fmt)
     if not generated:
         return {"success": False, "error": "content generation failed"}
     kapot = _afgekapt(generated)
@@ -299,6 +361,23 @@ async def run_pipeline(
             # No reverse pointer needed on the English row — content.py looks up the
             # NL companion by querying translation_of = <this row's intent_key>.
             result["nl_translation"] = nl_path
+
+    # Oudere pagina's laten terugverwijzen, alleen bij een nieuw artikel (bij een
+    # herschrijving bestaan die links al).
+    if result.get("action") == "created":
+        try:
+            terug = link_back(db, language="en", url_path=result["url_path"],
+                              title=generated["title"], keyword=keyword)
+            nl = result.get("nl_translation")
+            if nl:
+                nl_rij = (db.table("content_pages").select("title,primary_keyword")
+                          .eq("translation_of", result["intent_key"]).limit(1).execute().data) or []
+                if nl_rij:
+                    terug += link_back(db, language="nl", url_path=nl, title=nl_rij[0]["title"],
+                                       keyword=keyword + " " + (nl_rij[0].get("primary_keyword") or ""))
+            logger.info(f"Terugverwijzingen naar '{keyword}': {terug}")
+        except Exception as e:
+            logger.error(f"Terugverwijzen mislukt (niet-blokkerend): {e}")
 
     try:
         notify_published(keyword, result["url_path"], result["action"], schema_warnings)

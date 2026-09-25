@@ -368,13 +368,24 @@ def _build_prompt(
     research: dict,
     existing_pages: list[dict],
     refresh_context: dict | None = None,
+    fmt: str | None = None,
 ) -> str:
     language = "English"
 
     competitors_summary = "\n".join(
-        f"- {c['url']}\n  H1: {c['h1']}\n  H2's: {c['h2']}"
+        f"- {c['url']}\n  Title: {c.get('title', '')}\n  Meta: {c.get('meta_description', '')}\n"
+        f"  Length: ~{c.get('word_count', 0)} words, {c.get('tables', 0)} tables, {c.get('images', 0)} images, schema: {', '.join(c.get('schema') or []) or 'none'}\n"
+        f"  H1: {c['h1']}\n  H2's: {c['h2']}\n  H3's: {c.get('h3', [])}"
         for c in research.get("competitors", [])
     ) or "(no competitor data available — write from platform expertise)"
+    questions_block = "\n".join(f"- {q}" for q in research.get("questions") or []) or "(none found)"
+
+    # Lengte volgt de top 3: 15% langer dan de langste, binnen 1400-2600. Een vaste
+    # 1400 verloor van concurrenten met 3000 woorden en was overdreven tegen 600.
+    min_words = min(2600, max(1400, int((research.get("max_words") or 0) * 1.15)))
+
+    from backend.content.keyword_planner import FORMATS
+    format_line = f"\nArticle type: {fmt}: {FORMATS[fmt][1]} Write the article this type calls for; do not turn it into a generic automation pitch. Mention Omnivaleur only where it genuinely solves part of the reader's problem." if fmt in FORMATS and fmt not in ("combo", "competitor") else ""
 
     internal_links_block = "\n".join(
         f'- "{p["title"]}" → https://omnivaleur.com{p["url_path"]}'
@@ -398,7 +409,8 @@ CRITICAL LANGUAGE RULE: the target keyword and competitor research below may be 
 CRITICAL BRAND RULE: "Omnivaleur" is a brand/product name ONLY — it is a noun, never a verb. NEVER use it as an action. The action of listing an item on multiple marketplaces is "cross-list" / "cross-listing" (the Dutch keyword "crosslisten" translates to the verb "cross-list", NOT to "Omnivaleur"). Wrong: "How to Omnivaleur from Marktplaats to Vinted". Right: "How to cross-list from Marktplaats to Vinted". Use the brand name "Omnivaleur" only to refer to the product itself (e.g. "with Omnivaleur you can…").
 
 Write a COMPLETE programmatic SEO article in {language} for the concept behind this search keyword: "{keyword}"
-Content pillar: {"A (platform-to-platform comparison/combo page)" if pillar == "A" else "C (honest Omnivaleur vs. named competitor comparison)" if pillar == "C" else "B (niche/audience automation page)"}
+Content pillar: {"A (platform-to-platform comparison/combo page)" if pillar == "A" else "C (honest Omnivaleur vs. named competitor comparison)" if pillar == "C" else "B (seller guide)"}
+{format_line}
 URL will be: /{region}/{"crosslisten" if pillar == "A" else "vergelijking" if pillar == "C" else "reseller-tools"}/{slug}
 {"""
 PILLAR C SPECIAL RULES (competitor comparison page): Be scrupulously honest and fair — this is a comparison, not an ad. Include a real Markdown comparison table (pricing, supported platforms, sync behavior, ease of use). Acknowledge at least one genuine strength of the competitor. Never fabricate a competitor feature, price or limitation you don't actually know — if unsure, describe it in general/neutral terms instead of inventing specifics. End with an honest verdict on who each tool is actually best for, not a blanket "Omnivaleur wins". Structure the body as AT LEAST 7 distinct <h2> sections (not counting the comparison table's own heading) so screenshots can be spread naturally through the article — e.g. platforms supported, pricing, ease of use/setup, sync & relist behavior, EU-specific handling (Marktplaats/2dehands/Vinted/euro pricing), support/reliability, and the final verdict. Aim for 2200-2800 words of visible text for this pillar specifically (longer than other pillars) — there is a real screenshot of Omnivaleur's own dashboard being inserted into this article, and the text needs enough depth to carry it.""" if pillar == "C" else ""}
@@ -409,6 +421,11 @@ COMPETITOR RESEARCH (top 3 organic results for this keyword, their heading struc
 
 Already-covered subtopics across those top 3 (do not just repeat these — find the content gap, i.e. what {CURRENT_YEAR} platform rules, limits, updates or reseller pain points they are missing):
 {research.get('covered_subtopics') or '(none found)'}
+
+Questions the top 3 answer (your article must answer EVERY one of these better, plus the questions they miss):
+{questions_block}
+
+BEAT THE TOP 3: your article must be the most complete and most useful result for this search. Cover every subtopic they cover, answer every question above, and add what they lack (NL/BE specifics, {CURRENT_YEAR} rules, worked examples with euro amounts, a comparison table if none of them has one). Your TITLE and META_DESCRIPTION must be more specific and more clickable than their titles and metas above, without copying their wording.
 
 EXISTING Omnivaleur PAGES (weave in 4-6 contextual internal links where genuinely relevant, using these exact URLs, natural descriptive anchor text — never "click here" or a bare URL). Spread them across different sections rather than clustering them in one paragraph:
 {internal_links_block}
@@ -426,7 +443,7 @@ HARD STYLE RULES:
 - Concrete data: use real numbers, comparison tables in Markdown where useful, bold **key terms**.
 - Mention the year {CURRENT_YEAR} naturally at least once (platform rules/limits change yearly).
 - Never write a generic intro paragraph before answering the core question — the core answer must be fully delivered within the first 100 words (quick answer + opening line combined).
-- LENGTH IS A HARD REQUIREMENT, not a suggestion. The body must contain AT LEAST 1400 words of visible text (excluding the quick answer, takeaways and FAQ). Articles below that consistently lose to competitors on this keyword. Reach it with substance, never with padding: more concrete platform rules, more worked examples with real numbers, more edge cases resellers actually hit. Count as you go, and if a section feels thin, add the specific detail a beginner would ask about next.
+- LENGTH IS A HARD REQUIREMENT, not a suggestion. The body must contain AT LEAST {min_words} words of visible text (excluding the quick answer, takeaways and FAQ). Articles below that consistently lose to competitors on this keyword. Reach it with substance, never with padding: more concrete platform rules, more worked examples with real numbers, more edge cases resellers actually hit. Count as you go, and if a section feels thin, add the specific detail a beginner would ask about next.
 - Reminder: every single field below (including TITLE and H1) must be written in {language}, never Dutch, even though the keyword you were given is Dutch.
 
 OUTPUT FORMAT — return EXACTLY this structure, nothing else, no markdown code fences:
@@ -437,7 +454,7 @@ H1: [primary long-tail keyword as a full heading, includes {CURRENT_YEAR}]
 QUICK_ANSWER: [exactly 40-60 words. Answers the core question directly, factually, with zero preamble. This becomes a <blockquote> right under the H1 — AI search engines (ChatGPT, Perplexity, Google AI Overviews) must be able to lift this verbatim as a citable answer.]
 TAKEAWAYS: [3 to 5 short one-line key takeaways, most important facts from the article, each starting with a capital letter, no bullet symbol — just one takeaway per line]
 ===BODY===
-[Full HTML body. Write PURE HTML — never markdown: bold is <strong>, italics are <em>, and asterisks must never appear as literal characters. Use at least 6 <h2> headings phrased as complete, grammatically correct questions (integrate the missing subtopics from the content gap analysis). Use <h3> for sub-sections, <p>, <ul>/<ol>, <strong>, <a href="..."> for the internal links AND the authority-source links listed above, and tables as real <table> HTML where comparing platforms. Do NOT include an <h1> (already set separately) and do NOT repeat the quick answer. MINIMUM 1400 words of visible text, target 1500-1900.]
+[Full HTML body. Write PURE HTML — never markdown: bold is <strong>, italics are <em>, and asterisks must never appear as literal characters. Use at least 6 <h2> headings phrased as complete, grammatically correct questions (integrate the missing subtopics from the content gap analysis). Use <h3> for sub-sections, <p>, <ul>/<ol>, <strong>, <a href="..."> for the internal links AND the authority-source links listed above, and tables as real <table> HTML where comparing platforms. Do NOT include an <h1> (already set separately) and do NOT repeat the quick answer. MINIMUM {min_words} words of visible text, target {min_words + 100}-{min_words + 500}.]
 ===FAQ===
 [4 to 6 H3-level follow-up questions NOT already covered by the competitors above, each with a short (2-4 sentence) answer. Format each pair EXACTLY as:
 Q: [question]
@@ -577,13 +594,14 @@ def generate_page_content(
     research: dict,
     existing_pages: list[dict],
     refresh_context: dict | None = None,
+    fmt: str | None = None,
 ) -> dict | None:
     if _geen_model():
         logger.error("Geen Google- en geen Anthropic-sleutel — kan geen content genereren")
         return None
 
     client = _client()
-    prompt = _build_prompt(keyword, region, pillar, slug, research, existing_pages, refresh_context)
+    prompt = _build_prompt(keyword, region, pillar, slug, research, existing_pages, refresh_context, fmt)
 
     try:
         message = _vraag(client, GEN_MODEL, prompt)

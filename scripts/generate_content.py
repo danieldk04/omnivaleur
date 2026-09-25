@@ -40,7 +40,8 @@ async def process_item(item: dict) -> dict:
     from backend.content.pipeline import run_pipeline
 
     print(f"→ {item['keyword']} ({item['region']}, pillar {item['pillar']})")
-    result = await run_pipeline(item["keyword"], item["region"], item["pillar"], item["slug"], nl_slug=item.get("nl_slug"))
+    result = await run_pipeline(item["keyword"], item["region"], item["pillar"], item["slug"],
+                                nl_slug=item.get("nl_slug"), fmt=item.get("format"))
     return result
 
 
@@ -54,7 +55,7 @@ def replenish_queue(data: dict) -> None:
     next_priority = max([i.get("priority", 0) for i in data["queue"]], default=0) + 1
 
     print("  Wachtrij leeg — nieuwe keywords laten voorstellen...")
-    new_items = suggest_keywords(all_keywords, all_slugs)
+    new_items = suggest_keywords(all_keywords, all_slugs, data["published"])
     for i, item in enumerate(new_items):
         item["priority"] = next_priority + i
         data["queue"].append(item)
@@ -97,6 +98,7 @@ async def main():
                 "slug": item["slug"],
                 "region": item["region"],
                 "pillar": item["pillar"],
+                "format": item.get("format"),
                 "action": result["action"],
                 "url_path": result["url_path"],
                 "published_at": datetime.now(timezone.utc).isoformat(),
