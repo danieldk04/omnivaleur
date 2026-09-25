@@ -13489,3 +13489,14 @@ model 15% langer dan de langste. Oudere artikelen linken nu terug naar nieuwe:
 wezen van 66 naar 6. Technische SEO (schema, FAQ, broodkruimels, hreflang, OG)
 stond al goed. Open: GSC_CLIENT_ID, GSC_CLIENT_SECRET, GSC_REFRESH_TOKEN en
 GOOGLE_API_KEY als GitHub-geheim zetten (de workflow leest ze al).
+
+**Aanvulling 25-09, samengevoegd en zoekcijfers.** Op Daniels "ja": tien dubbele
+blogs (vier keer boeken, en telkens één extra bij kleding, meubels, sieraden,
+telefoons, platen en decor), in EN en NL, verwijzen nu met een 301 naar de
+oudste pagina van hun onderwerp (`SAMENGEVOEGD` in backend/api/content.py; status
+'redirected'). 44 interne links wijzen direct naar de winnaar. Omgekeerde
+platformcombinaties (Vinted naar Marktplaats tegenover Marktplaats naar Vinted)
+zijn bewust níet samengevoegd: dat zijn andere zoekvragen. De GSC-sleutels hoeven
+niet naar GitHub: de blogtaak haalt de cijfers op via /api/content/zoekdata met
+het ANALYTICS_DASHBOARD_TOKEN dat GitHub al had. Let op: de repo is openbaar,
+dus zet nooit cijfers per pagina in een Actions-logboek.
