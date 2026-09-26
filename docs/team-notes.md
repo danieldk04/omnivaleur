@@ -13628,3 +13628,13 @@ af) wachten er nu 178 bijwerkingen op 1.0.354: 151 patches (123 naar EUR 4,95, 1
 naar 2,95, 17 naar 2,25) en 27 andere artikelen naar 6,95. Eén patch verstuurt hij
 op Marktplaats via PostNL/DHL; die houdt Bpost. Miniaturen die al online stonden
 zijn niet aangeraakt (hij noemde 7,20 daar "prima").
+
+**Echte proef met 1.0.354, 26-09 09:39.** Daniel laadde 1.0.354 in developer
+mode. Opdracht 46cc15ac (content_refresh, "Zelf versturen" EUR 6,95) op zijn
+zoekertje m2446468449: opgepakt 09:39:46, klaar 09:39:54, afgemeld door de
+achtergrond ("saved_navigated"). Openbare pagina daarna: Zelf Verzenden EUR 6,95;
+prijs, titel, beschrijving en foto's byte-gelijk aan ervoor. Dezelfde opdracht
+nog eens (ba7d3ed3): klaar in 4 seconden met al_goed, niets opgeslagen. Daarna
+met de hand teruggezet naar Bpost 0-2 kg EUR 7,10 (gecontroleerd). Niet echt
+gedraaid: een nieuwe plaatsing met eigen bedrag (dat zou een echte advertentie
+op 2dehands zetten); wel met de echte functie op het formulier en in de proeven.
