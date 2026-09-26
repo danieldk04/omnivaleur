@@ -15,10 +15,21 @@ import asyncio
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 
 import backend.api.jobs as J  # noqa: E402
 import backend.services.mp_enrich as M  # noqa: E402
+import backend.services.instellingen as I  # noqa: E402
+
+ECHT_LEZEN = I.verzending_2dh_woorden   # vóór de fixture hieronder hem vervangt
+
+
+@pytest.fixture(autouse=True)
+def _egberts_instelling(monkeypatch):
+    """Sinds 26-09 alleen voor wie het wil; Egbert wil het voor zijn patches."""
+    monkeypatch.setattr(I, "verzending_2dh_woorden", lambda user_id, db=None: ["patch"])
 
 VOOR_DE_REPARATIE = "241c4f78"   # vast nummer: HEAD vergelijkt zichzelf na de commit
 NUMMER = "1475716652"            # zijn Marktplaats-advertentie van de patch
@@ -245,3 +256,77 @@ def test_de_uitgifte_geeft_de_extensie_zijn_bedrag_mee_en_vroeger_niet(monkeypat
     assert len(uit_oud) == 1
     assert "verzending" not in uit_oud[0]["payload"], \
         "de oude uitgifte gaf niets mee, dus koos de extensie altijd Bpost 0-2 kg"
+
+
+# ── alleen waar de verkoper het wil (26-09-2026, Egbert's tweede mail) ────────
+# "4,95 voor een pakket naar Belgie is te weinig, De daadwerkelijke kosten zijn
+# €9.50. Met €7.10 kom ik nog wel weg. (...) Met patches is het verschil tussen
+# NL en BE maar €1,00." Zijn mokken staan op Marktplaats voor EUR 6,95.
+def _mok():
+    return _patch_opdracht(title="Pink Floyd - Dark Side of the Moon - Mok off. merchandise")
+
+
+def test_een_mok_houdt_bpost_en_marktplaats_wordt_niet_eens_gevraagd(monkeypatch):
+    J._VERZENDING_STORING.clear()
+    vragen = _nep_verzending(monkeypatch, {"soort": "zelf", "cents": 695})
+    job = _mok()
+    db = R._DB([job], op_marktplaats={job["item_id"]: NUMMER})
+    J._zet_verzending_van_marktplaats(db, R.USER, job)
+    assert job["payload"]["verzending"] == {"soort": "standaard"}
+    assert vragen == []
+    assert [u[2]["payload"]["verzending"] for u in db.updates] == [{"soort": "standaard"}], \
+        "vastgelegd, zodat de volgende ronde het niet opnieuw uitzoekt"
+    # Vanochtend (faefb348) kreeg dezelfde mok EUR 6,95: te weinig voor een pakje naar België.
+    oud = R._oude_module("backend/api/jobs.py", "faefb348", "oude_jobs_mok",
+                         moet_bevatten=("_zet_verzending_van_marktplaats",),
+                         moet_missen=("verzending_2dh_woorden",))
+    job = _mok()
+    oud._zet_verzending_van_marktplaats(R._DB([job], op_marktplaats={job["item_id"]: NUMMER}), R.USER, job)
+    assert job["payload"]["verzending"] == {"soort": "zelf", "cents": 695}
+
+
+def test_zonder_instelling_overal_bpost(monkeypatch):
+    monkeypatch.setattr(I, "verzending_2dh_woorden", lambda user_id, db=None: [])
+    vragen = _nep_verzending(monkeypatch, {"soort": "zelf", "cents": 495})
+    job = _patch_opdracht()
+    J._zet_verzending_van_marktplaats(R._DB([job], op_marktplaats={job["item_id"]: NUMMER}), R.USER, job)
+    assert job["payload"]["verzending"] == {"soort": "standaard"}
+    assert vragen == []
+
+
+def test_instelling_niet_te_lezen_is_geen_antwoord(monkeypatch):
+    monkeypatch.setattr(I, "verzending_2dh_woorden", lambda user_id, db=None: None)
+    _nep_verzending(monkeypatch, {"soort": "zelf", "cents": 495})
+    job = _patch_opdracht()
+    db = R._DB([job], op_marktplaats={job["item_id"]: NUMMER})
+    J._zet_verzending_van_marktplaats(db, R.USER, job)
+    assert "verzending" not in job["payload"] and db.updates == []
+
+
+def test_de_instelling_zelf():
+    schoon = I._schoon({I.VERZENDING_2DH_WOORDEN: [" Patch ", "patch", "ab", "x" * 41, 7, "Mok"]})
+    assert schoon[I.VERZENDING_2DH_WOORDEN] == ["patch", "mok"]
+    assert I._schoon(None)[I.VERZENDING_2DH_WOORDEN] == []
+    # Een andere instelling opslaan gooit de woorden niet weg.
+    assert I._schoon({**schoon, "relist_dagen": 30})[I.VERZENDING_2DH_WOORDEN] == ["patch", "mok"]
+
+
+def test_lezen_uit_de_rij_van_de_verkoper():
+    class _V:
+        def __init__(self, data=None, fout=False):
+            self.data, self.fout = data, fout
+
+        def __getattr__(self, _n):
+            return lambda *a, **k: self
+
+        def execute(self):
+            if self.fout:
+                raise RuntimeError("database weg")
+            return type("R", (), {"data": self.data})()
+
+    def db(v):
+        return type("Db", (), {"table": lambda self, n: v})()
+    lees = ECHT_LEZEN
+    assert lees("u", db(_V([{"extra_data": {I.VERZENDING_2DH_WOORDEN: ["patch"]}}]))) == ["patch"]
+    assert lees("u", db(_V([]))) == []
+    assert lees("u", db(_V(fout=True))) is None

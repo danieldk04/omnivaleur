@@ -180,6 +180,9 @@ def test_een_nieuwe_plaatsing_gaat_langs_de_wachtende_bijwerkingen(monkeypatch, 
     oud = _uitgifte(monkeypatch, _db(_dertig_wachtend_en_daarna_een_plaatsing(), afgerond), versie[:7],
                     module=_oude_jobs())
     assert oud == [], "zo stond het vanochtend live: de plaatsing kwam nooit aan de beurt"
+    # En niet omdat de oude uitgifte in deze proef niets kan: zonder de rij ervoor gaat hij wel.
+    alleen = _uitgifte(monkeypatch, _db([_plaatsing_in_de_rij()], afgerond), versie[:7], module=_oude_jobs())
+    assert [j["id"] for j in alleen] == ["p1"]
 
 
 def test_de_beurt_gaat_niet_naar_een_kanaal_dat_alleen_wachtend_werk_heeft(monkeypatch):
@@ -191,6 +194,9 @@ def test_de_beurt_gaat_niet_naar_een_kanaal_dat_alleen_wachtend_werk_heeft(monke
     oud = _uitgifte(monkeypatch, _db(rij, laatst_geplaatst_op="marktplaats"), "1.0.352",
                     platform="marktplaats", module=_oude_jobs())
     assert oud == [], "vroeger: beurt naar 25 bijwerkingen die daarna allemaal werden overgeslagen"
+    alleen = _uitgifte(monkeypatch, _db(rij[-1:], laatst_geplaatst_op="marktplaats"), "1.0.352",
+                       platform="marktplaats", module=_oude_jobs())
+    assert [j["id"] for j in alleen] == ["p1"]
 
 
 def test_het_dashboard_toont_ze_niet_als_wachtrij(monkeypatch):
