@@ -561,25 +561,41 @@ def verzending_uit_html(ruwe: str) -> dict | None:
     return {"soort": "platform"} if labels else {"soort": "geen"}
 
 
-async def verzending_van_advertentie(nummer) -> dict | None:
+# Welke letter bij de advertenties van een verkoper hoort. Een verkoper is óf
+# zakelijk (Admarkt, /a) óf niet (/m), dus na één treffer weten we het voor al
+# zijn advertenties en kost elke volgende opzoeking één verzoek in plaats van twee.
+_LETTER_PER_VERKOPER: dict[str, str] = {}
+
+
+async def verzending_van_advertentie(nummer, verkoper: str | None = None) -> dict | None:
     """`verzending_uit_html` voor Marktplaats-advertentie `nummer`.
 
     Het nummer staat bij ons zonder letter, maar de pagina heeft er een nodig:
     een gewone advertentie is /m123, een Admarkt-advertentie (zakelijk) /a123.
-    De verkeerde letter geeft 404, dus we proberen allebei.
+    De verkeerde letter geeft 404, dus we proberen allebei, de letter die bij
+    deze `verkoper` al eens werkte eerst.
 
     Een leeg blok als beide 404 geven: de advertentie staat er niet meer, dat is
     een antwoord. None bij een storing (time-out, 5xx, blokkade): dat is er geen.
+
+    Een 403 of 429 is Marktplaats die ons afremt (gemeten 26-09-2026: zestig
+    pagina's in een kwartier minuut gaf 403, en dat bleef minstens twintig
+    seconden zo). Eén herkansing na een korte pauze, daarna is het een storing.
     """
     cijfers = re.sub(r"\D", "", str(nummer or ""))
     if not cijfers:
         return {}
+    eerst = _LETTER_PER_VERKOPER.get(verkoper or "", "m")
+    letters = (eerst, "a" if eerst == "m" else "m")
     try:
         async with httpx.AsyncClient(timeout=8, follow_redirects=True,
                                      headers={"User-Agent": UA}) as client:
-            for letter in ("m", "a"):
-                r = await client.get(f"https://www.marktplaats.nl/{letter}{cijfers}",
-                                     headers={"Accept": "text/html"})
+            for letter in letters:
+                url = f"https://www.marktplaats.nl/{letter}{cijfers}"
+                r = await client.get(url, headers={"Accept": "text/html"})
+                if r.status_code in (403, 429):
+                    await asyncio.sleep(1.5)
+                    r = await client.get(url, headers={"Accept": "text/html"})
                 if r.status_code == 404:
                     continue
                 if r.status_code != 200:
@@ -587,6 +603,8 @@ async def verzending_van_advertentie(nummer) -> dict | None:
                                    letter, cijfers, r.status_code)
                     return None
                 gevonden = verzending_uit_html(r.text)
+                if gevonden is not None and verkoper:
+                    _LETTER_PER_VERKOPER[verkoper] = letter
                 # 200 zonder het blok is een andere pagina dan we verwachten
                 # (toestemmingsscherm, onderhoud): geen antwoord.
                 return gevonden
