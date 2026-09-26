@@ -13638,3 +13638,31 @@ nog eens (ba7d3ed3): klaar in 4 seconden met al_goed, niets opgeslagen. Daarna
 met de hand teruggezet naar Bpost 0-2 kg EUR 7,10 (gecontroleerd). Niet echt
 gedraaid: een nieuwe plaatsing met eigen bedrag (dat zou een echte advertentie
 op 2dehands zetten); wel met de echte functie op het formulier en in de proeven.
+
+**Aanvulling 26-09 middag: Egbert, "hij loopt vast" en de mokken.** Egbert mailde
+09:52 dat EUR 4,95 voor een pakje naar België te weinig is (echt EUR 9,50, met
+7,10 komt hij weg) en dat patches maar een euro verschillen NL/BE. Daarna 09:59
+"hij lijkt vastgelopen", 12:50 "gaat iedere keer weer vastlopen".
+
+Gemeten op zijn rij: vanaf 09:42 stonden er alleen nog onze 178 bijwerkingen in,
+die op 1.0.354 wachten terwijl hij 1.0.352 heeft. Het dashboard toonde "178
+queued" die niet bewogen. Om 12:01 leegde hij de rij (193 geannuleerd), om 12:03
+liep het plaatsen meteen weer; de 11 nieuwe plaatsingen zetten er elk een
+bijwerking achter en om 12:50 leegde hij opnieuw (11). Ook in de code zat een
+echte blokkade: de bijwerkingen namen de kop van de rij (25) en een plaatsing die
+erachter kwam ging nooit meer uit. Onze fout, niet de zijne.
+
+Gerepareerd (server, meteen live): zulke bijwerkingen tellen niet meer als
+wachtrij op het dashboard, "Clear queue" laat ze staan, en ze gaan een plaatsing
+nooit meer voor (ook niet via de beurt tussen kanalen). Het Marktplaats-bedrag
+op 2dehands is nu per klant aan te zetten met woorden uit de titel
+(instelling `verzending_2dh_woorden`), standaard uit. Reden: het bedrag is een
+Nederlandse prijs; bij Egbert kosten een rugpatch (brief) en een pakje allebei
+4,95 op Marktplaats, en zijn 51 mokken zouden 6,95 krijgen. Egbert: ["patch"].
+
+Ook: 25 artikelen van hem (textielposters, pins, patches, een nummerplaat) waren
+bij het inlezen als kleding geraden ("unisex verkleedkleding", "meisjes kleding",
+"unisex truien", "heren accessoires") en vroegen daarom om merk en maat. Op
+"unisex accessoires" gezet, zoals zijn andere 1.726 patches; publiceren eist nu
+niets meer. De 151 weggeklikte patch-bijwerkingen opnieuw klaargezet (123 naar
+4,95, 17 naar 2,25, 11 naar 2,95); de mokken niet.

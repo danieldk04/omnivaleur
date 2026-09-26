@@ -19,7 +19,7 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ## 2dehands-verzendkosten-volgen-marktplaats
 
-*26-09-2026 — "2dehands kreeg altijd Bpost 0-2 kg (EUR 7,10); sinds 1.0.353 geldt het eigen \"Zelf verzenden\"-bedrag van de Marktplaats-advertentie. Formulier: shippingMethod=diy + othersPrice"*
+*26-09-2026 — "2dehands standaard Bpost 0-2 kg (EUR 7,10); het eigen Marktplaats-bedrag alleen per klant via titelwoorden (verzending_2dh_woorden), want het is een NL-prijs. Formulier: shippingMethod=diy + othersPrice"*
 
 Op 2dehands koos de extensie altijd Transporteur Bpost, pakket 0-2 kg (EUR 7,10), voor elk zoekertje. Egbert Brouwer (Papa's Plectrums, 25-09-2026) wilde voor patches geen dure verzending; op Marktplaats verstuurt hij ze zelf voor EUR 2,25 tot 4,95 (buttons 2,95, miniaturen 4,95), per advertentie ingesteld.
 
@@ -27,9 +27,23 @@ Sinds 26-09-2026 (extensie 1.0.353) zet `_zet_verzending_van_marktplaats` in job
 
 Het 2dehands-formulier (create én `/plaats/m{id}/edit`, live afgelezen): `input[name="shippingMethod"]` waarde `bpost` of `diy`; na `diy` verschijnt `input[name="othersPrice"]` ("0,00", komma) en verdwijnen de pakketmaten en `shippingDetails.price`. fillInput werkt, het bedrag overleeft hertekenen.
 
+**Bijgesteld 26-09-2026 middag:** niet meer voor iedereen. Het Marktplaats-bedrag is een NEDERLANDSE prijs; Egbert: pakje naar België kost EUR 9,50 tegen 4,95 in NL, brief maar een euro verschil. Aan het bedrag is brief of pakje niet te zien (rugpatch en miniatuur allebei 4,95). Daarom alleen voor titels met een woord uit de instelling `verzending_2dh_woorden` (instellingen.py, standaard leeg = overal Bpost); anders stempelt de server `{"soort": "standaard"}`. Egbert: ["patch"].
+
 **Why:** een eigen bedrag van de verkoper is de enige juiste bron; wij kunnen aan een foto niet zien of iets door de brievenbus past.
 
 **How to apply:** een leeg of onleesbaar bedrag is nooit "gratis verzenden" (dan betaalt de verkoper het porto): terugval is altijd Bpost 0-2 kg. Een storing bij Marktplaats houdt de opdracht niet tegen. Bestaande zoekertjes: sinds 1.0.354 een wijzigroute (content_refresh met `_verzending_bijwerken`, formulier `/plaats/m{id}/edit`, knop `update-listing-submit-button`). Live gemeten: button.click() doet NIETS, alleen een echte muisklik (KLIK_ECHT) slaat op; daarna landt het tabblad op `/seller/view/m{id}` met "Je zoekertje is aangepast". Server: alleen naar kopie >= 1.0.354 (1.0.353 zou het plaatsformulier opnieuw invullen), noodrem `_bijwerken_2dh_staat_stil` (laatste mislukt = rest wacht), en `_verzending_alsnog_bijwerken` zet na een plaatsing zonder `verzending_gezet: true` vanzelf een bijwerking klaar. Oude zoekertjes: `scripts/verzendkosten_2dehands_bijwerken.py`. Zie ook "geraden-rubriek-is-niet-de-rubriek-van-de-verkoper" (zelfde patroon voor de rubriek) en "extension-release-bump-version".
+
+---
+
+## wachtend-werk-hoort-niet-in-de-wachtrij
+
+*26-09-2026 — Opdrachten die bewust op een nieuwere extensie wachten leken een vastgelopen rij (178 "queued", niets bewoog) en bezetten de kop; klant leegde twee keer zijn rij (Egbert, 26-09-2026)*
+
+Op 26-09-2026 zette ik voor Egbert 178 verzendbijwerkingen (2dehands content_refresh) klaar die pas vanaf extensie 1.0.354 mogen lopen; hij had 1.0.352. Het dashboard (/api/jobs/active) telde ze als wachtrij: "178 queued", niets bewoog, twee uur lang. Hij meldde "hij lijkt vastgelopen", logde uit en in, en leegde de rij twee keer met Clear queue, waarmee alle bijwerkingen weg waren. In get_pending_jobs namen ze bovendien de kop van de rij (WACHTRIJ_KOP 25, op aanmaakvolgorde) en werden ze daarna overgeslagen; een nieuwe plaatsing erachter ging nooit meer uit.
+
+**Why:** een wachtrij die niet beweegt leest als storing, ook als er "niets mis" is. Werk dat bewust wacht (versie, noodrem) is voor de klant onzichtbaar onderhoud.
+
+**How to apply:** wie een nieuw soort opdracht maakt dat op iets wacht: filter het uit `licht` vóór de kop wordt gekozen, uit de beurt tussen kanalen (`anderen`), uit /active (queued en queued_total), uit /pending zonder platform en uit /cancel-queued. Zie `_is_2dh_bijwerking` en `bijwerking_moet_wachten` in jobs.py. Zelfde familie als "beurt-aan-wachtend-werk-legt-alles-stil". Meet bij "loopt vast" eerst de rij van de klant (status per actie, claimed_at/done_at, result.cancelled "by user") voordat je zijn eigen verklaring volgt: Egbert dacht aan de artikelen die om merk en maat vroegen. Zie ook "2dehands-verzendkosten-volgen-marktplaats".
 
 ---
 
