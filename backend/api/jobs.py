@@ -3366,6 +3366,7 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
 
     if job["action"] == "create":
         await _rond_publicatie_af(db, job, body)
+        await naast_de_lus(lambda: _verzending_alsnog_bijwerken(db, job, body))
 
     elif job["action"] == "delete":  # noqa: SIM114
         # De extensie kan tijdens het verwijderen ontdekken dat de advertentie op
