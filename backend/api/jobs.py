@@ -951,6 +951,17 @@ def _zet_verzending_van_marktplaats(db, user_id: str, job: dict) -> None:
     pl = job.get("payload")
     if not isinstance(pl, dict) or "verzending" in pl:
         return
+    # ALLEEN WAAR DE VERKOPER DAT WIL. Het Marktplaats-bedrag is een Nederlandse
+    # prijs; voor een pakje naar België is het veel te laag (Egbert: EUR 4,95
+    # tegen 9,50 echt). Zie VERZENDING_2DH_WOORDEN in instellingen.py.
+    from backend.services.instellingen import verzending_2dh_woorden
+    woorden = verzending_2dh_woorden(user_id, db)
+    if woorden is None:
+        return   # instelling niet te lezen: niets vastleggen, deze keer Bpost
+    titel = str(pl.get("title") or "").lower()
+    if not any(w in titel for w in woorden):
+        _bewaar_verzending(db, job, {"soort": "standaard"})
+        return
     try:
         rij = eerste_rij(db.table("listings").select("platform_listing_id")
                          .eq("item_id", job.get("item_id")).eq("platform", "marktplaats")
