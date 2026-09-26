@@ -215,6 +215,12 @@ def _schoon(rauw: dict | None) -> dict:
                                              PAKKET_GRENS_MAX))
         except (TypeError, ValueError):
             uit["pakket_grens"] = 0
+    woorden = rauw.get(VERZENDING_2DH_WOORDEN)
+    if isinstance(woorden, list):
+        # Kortere woorden dan drie letters zouden in bijna elke titel staan.
+        uit[VERZENDING_2DH_WOORDEN] = [w for w in dict.fromkeys(
+            str(x).strip().lower() for x in woorden) if 3 <= len(w) <= 40
+        ][:VERZENDING_2DH_WOORDEN_MAX]
     groepen = rauw.get("vinted_groepen")
     if isinstance(groepen, list):
         uit["vinted_groepen"] = [g for g in
