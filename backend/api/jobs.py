@@ -2191,6 +2191,9 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
         # teruggenomen hoeft dat niet. Zie _zet_rubriek_van_marktplaats.
         if not _zet_rubriek_van_marktplaats(db, user_id, kandidaat):
             continue
+        # De verzendkosten die hij zelf op Marktplaats koos, in plaats van ons
+        # vaste Bpost-pakket. Houdt nooit iets tegen.
+        _zet_verzending_van_marktplaats(db, user_id, kandidaat)
         _wijk_uit_naar_gratis_rubriek(db, user_id, kandidaat)
         if _weiger_bekende_betaalde_rubriek(db, user_id, kandidaat):
             continue
