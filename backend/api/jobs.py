@@ -6258,7 +6258,10 @@ def cancel_queued_jobs(user_id: str = Depends(get_current_user)):
     # 2. De rest in blokken afsluiten. `status=pending` blijft als voorwaarde
     #    staan: wat hierboven al is teruggenomen, en wat de extensie in deze
     #    seconde nog oppakte, laten we met rust.
-    ids = [j["id"] for j in rijen]
+    # Wat het scherm niet als wachtrij toont, gooit deze knop ook niet weg: zie
+    # _is_2dh_bijwerking. Egbert leegde op 26-09 twee keer zijn rij en haalde
+    # daarmee ongezien 204 verlagingen van zijn verzendkosten weg.
+    ids = [j["id"] for j in rijen if not _is_2dh_bijwerking(j)]
     afgesloten = 0
     for i in range(0, len(ids), 100):
         brok = ids[i:i + 100]
