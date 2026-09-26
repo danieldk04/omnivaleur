@@ -992,6 +992,46 @@ def _zet_verzending_van_marktplaats(db, user_id: str, job: dict) -> None:
         logger.warning("job %s: verzending niet kunnen opslaan: %s", job.get("id"), e)
 
 
+def _verzending_alsnog_bijwerken(db, job: dict, body) -> None:
+    """Een 2dehands-zoekertje dat zijn eigen verzendbedrag niet meekreeg: alsnog.
+
+    Vanaf 1.0.354 meldt de extensie bij een geslaagde plaatsing of het eigen
+    bedrag echt op het formulier stond (`verzending_gezet`). Een oudere kopie
+    kent item.verzending niet en meldt niets, en ook 1.0.354 valt terug op Bpost
+    als het bedrag niet te zetten was. In beide gevallen staat het zoekertje met
+    Bpost EUR 7,10 online. Dan zetten we hier een bijwerking klaar; die gaat pas
+    naar een kopie die het kan (MINIMALE_2DH_BIJWERK_VERSIE). Stond het bedrag er
+    tóch al goed, dan ziet de bijwerking dat en slaat ze niets op.
+    """
+    pl = job.get("payload") or {}
+    v = pl.get("verzending") or {}
+    antwoord = body if isinstance(body, dict) else {}
+    lid = antwoord.get("platform_listing_id")
+    if (job.get("platform") != "2dehands" or v.get("soort") != "zelf"
+            or not isinstance(v.get("cents"), int) or not lid
+            or antwoord.get("verzending_gezet") is True):
+        return
+    try:
+        al = (db.table("jobs").select("id").eq("user_id", job["user_id"])
+              .eq("item_id", job.get("item_id")).eq("platform", "2dehands")
+              .eq("action", "content_refresh").in_("status", ["pending", "claimed"])
+              .limit(1).execute().data or [])
+        if al:
+            return
+        db.table("jobs").insert({
+            "user_id": job["user_id"], "item_id": job.get("item_id"),
+            "platform": "2dehands", "action": "content_refresh", "status": "pending",
+            "payload": {"platform_listing_id": lid,
+                        "platform_listing_url": antwoord.get("platform_listing_url"),
+                        "title": pl.get("title"), "_verzending_bijwerken": True,
+                        "verzending": {"soort": "zelf", "cents": v["cents"]}},
+        }).execute()
+        logger.info("job %s: 2dehands %s kreeg Bpost in plaats van %s cent; bijwerking klaargezet",
+                    job.get("id"), lid, v["cents"])
+    except Exception as e:  # noqa: BLE001 — het zoekertje staat online, dat telt
+        logger.warning("job %s: bijwerking verzendkosten niet klaar te zetten: %s", job.get("id"), e)
+
+
 def _bijwerken_2dh_staat_stil(db, user_id: str) -> bool:
     """Mislukte de laatst afgeronde 2dehands-bijwerking van deze verkoper?
 
