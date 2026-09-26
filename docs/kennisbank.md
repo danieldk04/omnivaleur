@@ -17,6 +17,65 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## leadbronnen-gemeten-26-09
+
+*26-09-2026 — "Leadvoorraad op (laatste mail 1 op 21-09); wat Vinted Pro, eBay zakelijk en OpenStreetMap echt tonen aan contactgegevens, gemeten 26-09-2026"*
+
+**Voorraad op.** Sheet: 546 echte leads (plus 1000 lege spookrijen), 469 met
+e-mail, 457 gemaild. Machine: 293 unieke adressen, wachtrij 0. Laatste mail 1 op
+21-09; daarna alleen mail 2/3. De motor is goed, de brandstof is op: septembergroep
+10% antwoord (113 benaderd), versie A 17% antwoord / 5% aanmelding / 3% betaald,
+B 12 / 2 / 0 (kleine aantallen). Markt: gemiddeld 3,4% antwoord, 10% is top.
+
+**Vinted Pro** (1 profiel gecontroleerd, uitgelogd): bedrijfsnaam, bedrijfsnummer
+en plaats zichtbaar; e-mail en telefoon staan erop maar afgeschermd
+(`******@gmail.com`, data-testid `profile-business-email`), klikken toont niets.
+Catalogus-API geeft 404 zonder sessie. Pro bestaat in NL en BE. Of ingelogd het
+adres zichtbaar wordt: niet gemeten.
+
+**eBay.nl zakelijk** (12 advertenties met locatie NL, "vintage jas"): 6 zakelijk.
+Knop "Contactgegevens van de koper" (sic) toont bedrijfsnaam, naam, adres en
+telefoon; e-mail niet (1 van 1). Browse API `sellerLegalInfo` kent een e-mailveld,
+maar lokaal staan alleen sandbox-sleutels (SBX), dus niet gemeten.
+
+**OpenStreetMap** (Overpass, gratis): NL+BE 2401 winkels; tweedehands kleding 465
+(64 e-mail, 254 website), antiek 416 (43 / 130), second_hand 1211 (veel kringloop),
+charity 309. overpass-api.de gaf een lege reactie, overpass.kumi.systems werkte.
+
+**Facebookgroepen**: geen e-mailbron; scrapen riskeert het account (zie
+"instagram-leadgen-bronnen"). Zie "leadgen-op-conversie-niet-volume".
+
+---
+
+## koude-mail-via-resend-zonder-pixel
+
+*26-09-2026 — "Sinds 06-09-2026 gaat de koude reeks vanaf Railway via Resend; _resend_stuur stuurt alleen platte tekst, dus de openpixel valt weg en \"0% geopend\" is een meetfout"*
+
+Gemeten 26-09-2026. Op Railway staat `RESEND_API_KEY`, dus `_postbode` in
+`scripts/leadgen_mail.py` kiest `_resend_stuur`. Die stuurt alleen `text` naar
+Resend; het HTML-deel met de pixel (`_open_pixel_html`, vanaf mail 2) gaat niet
+mee. Bewezen door de echte `_bericht` + `_resend_stuur` te draaien met een
+nagebootste httpx.post: pixel zit in het bericht, niet in wat Resend krijgt.
+
+Gevolg: vóór de overstap ~200 geregistreerde opens op mail 2/3, sinds 14-09 nog 4
+op ~150 verstuurde. `abtest` toont 0% geopend voor A en B. Dat is blind meten,
+geen bewijs van spam. De pixelroute zelf werkt (GET op omnivaleur.nl/t/o/ geeft
+200 image/gif, ook met Gmail- en Outlook-user-agent).
+
+Tweede probleem op dezelfde plek: koude mail via Resend botst met de afspraak in
+"railway-blokkeert-smtp" (Resend verbiedt koude mail; hetzelfde account stuurt
+wachtwoord- en factuurmail van de app). Railway kan geen SMTP, dus de oplossing
+is een andere verzendplek (Zoho SMTP vanaf GitHub Actions, zoals tot 06-09), niet
+een SMTP-instelling.
+
+**Why:** een open-percentage van nul leest als "alles in de spam" en stuurt je de
+verkeerde kant op.
+**How to apply:** open-cijfers van de koude reeks pas vertrouwen als de
+verzendroute het HTML-deel meestuurt. Zie "koude-mail-autonoom",
+"wekelijkse-marketingmeting".
+
+---
+
 ## blog-onderwerpen-variatie
 
 *25-09-2026 — "Dagelijkse blog schreef 34 van 36 keer \"X reselling automation\"; variatie staat sinds 25-09-2026 in code (FORMATS + plan_mix), niet in de prompt; oude pagina's linken nu terug naar nieuwe"*

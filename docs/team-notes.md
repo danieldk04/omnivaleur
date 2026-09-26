@@ -13528,3 +13528,22 @@ algemene dashboardbeeld staat alleen nog bij vergelijkingen en
 platformcombinaties (43 gidsen opgeschoond). Stand: 112 pagina's, 104 met 2 of 3
 kaarten, 8 met 1. Bewust in HTML en niet via beeldgeneratie: gratis, tekst altijd
 scherp en leesbaar voor Google.
+
+## 26-09-2026: koude mail zonder brandstof, openmeting blind, onderzoek nieuwe leadbronnen
+
+Daniel vroeg of mail 1/2/3 stilliggen. Gemeten in de administratie van de machine
+en de sheet: alle 457 leads met e-mail zijn aangeschreven, de laatste mail 1 ging
+op 21-09 weg, de wachtrij is 0. Mail 2 en 3 lopen nog uit tot ongeveer 01-10.
+Antwoord septembergroep 10% (markt gemiddeld 3,4%), dus het ligt aan de voorraad
+adressen, niet aan de mails.
+
+"0% geopend" is een meetfout: vanaf Railway gaat de reeks via Resend en
+`_resend_stuur` stuurt alleen de platte tekst, zonder pixel. Bewezen met de echte
+code. Tegelijk botst dit met de afspraak "nooit koude mail via Resend" (zelfde
+account als wachtwoord- en factuurmail). Niets aangepast; voorstel aan Daniel:
+verzending terug naar Zoho via GitHub Actions.
+
+Bronnenonderzoek (gratis): Vinted Pro toont bedrijfsnaam en KvK-nummer, e-mail
+afgeschermd voor uitgelogde bezoekers; eBay zakelijk toont naam, adres, telefoon,
+geen e-mail; OpenStreetMap telt in NL+BE 465 tweedehands kledingwinkels en 416
+antiekzaken. Facebookgroepen zijn geen e-mailbron. Details in de kennisbank.
