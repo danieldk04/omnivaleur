@@ -579,7 +579,7 @@ async def verzending_van_advertentie(nummer, verkoper: str | None = None) -> dic
     een antwoord. None bij een storing (time-out, 5xx, blokkade): dat is er geen.
 
     Een 403 of 429 is Marktplaats die ons afremt (gemeten 26-09-2026: zestig
-    pagina's in een kwartier minuut gaf 403, en dat bleef minstens twintig
+    pagina's in vijftien seconden gaf 403, en dat bleef minstens twintig
     seconden zo). Eén herkansing na een korte pauze, daarna is het een storing.
     """
     cijfers = re.sub(r"\D", "", str(nummer or ""))

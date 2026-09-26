@@ -116,6 +116,33 @@ def test_admarkt_advertentie_wordt_gevonden_onder_de_a(monkeypatch):
     assert [u.rsplit("/", 1)[-1] for u in client.gevraagd] == [f"m{NUMMER}", f"a{NUMMER}"]
 
 
+def test_na_een_treffer_eerst_de_letter_van_deze_verkoper(monkeypatch):
+    """Egbert is zakelijk: al zijn advertenties zijn /a. Eén verzoek per opzoeking."""
+    M._LETTER_PER_VERKOPER.clear()
+    client = _Client({f"a{NUMMER}": _Antwoord(200, _pagina(ZELF_495)),
+                      "a1470475401": _Antwoord(200, _pagina(ZELF_495))})
+    monkeypatch.setattr(M.httpx, "AsyncClient", lambda *a, **kw: client)
+    asyncio.run(M.verzending_van_advertentie(NUMMER, "egbert"))
+    asyncio.run(M.verzending_van_advertentie("1470475401", "egbert"))
+    assert [u.rsplit("/", 1)[-1] for u in client.gevraagd] == [f"m{NUMMER}", f"a{NUMMER}", "a1470475401"]
+    M._LETTER_PER_VERKOPER.clear()
+
+
+def test_afremmen_krijgt_een_herkansing(monkeypatch):
+    class _EersteKeerNee(_Client):
+        async def get(self, url, headers=None):
+            self.gevraagd.append(url)
+            return _Antwoord(403) if len(self.gevraagd) == 1 else _Antwoord(200, _pagina(ZELF_495))
+
+    async def geen_pauze(_s):
+        return None
+    monkeypatch.setattr(M.asyncio, "sleep", geen_pauze)
+    client = _EersteKeerNee({})
+    monkeypatch.setattr(M.httpx, "AsyncClient", lambda *a, **kw: client)
+    assert asyncio.run(M.verzending_van_advertentie(NUMMER)) == {"soort": "zelf", "cents": 495}
+    assert len(client.gevraagd) == 2
+
+
 def test_weg_is_een_antwoord_een_storing_niet(monkeypatch):
     assert _haal(monkeypatch, {})[0] == {}, "twee keer 404: de advertentie bestaat niet meer"
     assert _haal(monkeypatch, {f"m{NUMMER}": _Antwoord(503)})[0] is None
@@ -146,7 +173,8 @@ def _patch_opdracht(**extra):
 def _nep_verzending(monkeypatch, uitkomst):
     vragen = []
 
-    async def verzending(nummer):
+    async def verzending(nummer, verkoper=None):
+        assert verkoper == R.USER, "de letter wordt per verkoper onthouden"
         vragen.append(nummer)
         return uitkomst
     monkeypatch.setattr(M, "verzending_van_advertentie", verzending)
