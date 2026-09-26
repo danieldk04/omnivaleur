@@ -10,6 +10,11 @@
 #
 # Elke beurt kijkt het script zelf of er iemand aan de beurt is; meestal doet hij
 # niets en is de beurt binnen twintig seconden klaar.
+#
+# 26-09-2026 weer aangezet. Van 06-09 tot 26-09 draaide de reeks op Railway via
+# Resend; daar antwoordden gmail-ontvangers nog 1 van 29 keer tegen 14 van 38 via
+# Zoho. Een beurt met RESEND_API_KEY in de omgeving doet sindsdien niets meer
+# (zie tick in leadgen_mail.py), dus dit is weer de enige plek die verstuurt.
 
 name: Leadmachine
 
@@ -50,6 +55,9 @@ jobs:
       # viel daardoor altijd stil terug op het vaste sjabloon, ook al leek de code
       # zelf in orde. Ontdekt 26-08-2026 bij het bouwen van de stille-opvolging.
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      # Sinds 14-09-2026 staan de mailteksten en de vinkjes "Niet meer mailen" in
+      # Google Sheets. Zonder deze sleutel gaat er bewust niets uit (fail closed).
+      GOOGLE_SHEETS_SLEUTEL: ${{ secrets.GOOGLE_SHEETS_SLEUTEL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -60,7 +68,8 @@ jobs:
       # ImportError en valt alles terug op het kale vaste sjabloon — ontdekt
       # 26-08-2026 toen een "stille opvolging" niets van het eerdere gesprek
       # bleek te bevatten, ook al stond ANTHROPIC_API_KEY inmiddels wel goed.
-      - run: pip install --quiet httpx anthropic
+      # google-auth: leadgen_sheets tekent daarmee zijn toegang tot Google Sheets.
+      - run: pip install --quiet httpx anthropic google-auth
       # Drie controles per beurt, zeven minuten uit elkaar.
       #
       # GitHub belooft geen stipte kloktijden: normaal draait dit 25 keer per dag,
