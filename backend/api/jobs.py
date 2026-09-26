@@ -2741,8 +2741,12 @@ def active_jobs(user_id: str = Depends(get_current_user)):
                        .eq("user_id", user_id).eq("status", "pending")
                        .or_(f"scheduled_for.is.null,scheduled_for.lte.{now}")
                        .limit(1).execute())
+            onderhoud = (db.table("jobs").select("id", count="exact")
+                         .eq("user_id", user_id).eq("status", "pending")
+                         .eq("action", "content_refresh").eq("platform", "2dehands")
+                         .limit(1).execute())
             if telling.count is not None:
-                queued_total = telling.count
+                queued_total = telling.count - (onderhoud.count or 0)
         except Exception as e:  # noqa: BLE001 — een teller mag de balk nooit slopen
             logger.warning("active_jobs: wachtrij niet te tellen: %s", e)
     # Het gemeten tempo mee terug: het dashboard beloofde "within ~15 seconds"
