@@ -374,6 +374,26 @@ async def herstel_vastgelopen_werk() -> dict:
                 continue
             if baan.get("action") == "create" and sleutel in teruggenomen_paren:
                 continue          # al meegenomen met zijn verwijdering
+            # VERZENDKOSTEN BIJWERKEN OP 2DEHANDS WACHT MET OPZET (26-09-2026).
+            # Die opdracht gaat alleen naar extensie 1.0.354 of nieuwer (zie
+            # MINIMALE_2DH_BIJWERK_VERSIE in jobs.py), en een versie in de Chrome
+            # Web Store kan dagen op goedkeuring wachten. Het zoekertje staat
+            # ondertussen gewoon online, dus er gaat niets verloren. Na drie dagen
+            # "mislukt" zou Egbert 96 rode meldingen krijgen, en de noodrem in
+            # _bijwerken_2dh_staat_stil zou daarna alles vasthouden. Dus: drie
+            # weken laten wachten, en daarna stil intrekken in plaats van als fout.
+            pl_baan = baan.get("payload") or {}
+            if baan.get("action") == "content_refresh" and pl_baan.get("_verzending_bijwerken"):
+                gemaakt = baan.get("created_at") or ""
+                if gemaakt > (datetime.now(timezone.utc) - timedelta(days=21)).isoformat():
+                    continue
+                (await naast_de_lus(lambda: db.table("jobs").update({
+                    "status": "cancelled",
+                    "done_at": datetime.now(timezone.utc).isoformat(),
+                    "result": {"note": "De extensie werd in drie weken niet bijgewerkt; "
+                                       "verzendkosten op 2dehands niet omgezet."},
+                }).eq("id", baan["id"]).execute()))
+                continue
             # De reden hoort in 'result'. De tabel heeft geen 'error'-kolom, en
             # daarop schrijven laat deze hele opruimronde stilletjes mislukken.
             nu = datetime.now(timezone.utc)

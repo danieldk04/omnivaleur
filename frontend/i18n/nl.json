@@ -3132,5 +3132,10 @@
  "🔗 Shared advert": "🔗 Gedeelde advertentie",
  "🔗 Still listed (couldn't link): {0}": "🔗 Staat nog online (kon niet koppelen): {0}",
  "🔢 Same number": "🔢 Zelfde nummer",
- "🕒 On cooldown · {0}d left": "🕒 Moet even wachten · nog {0} d"
+ "🕒 On cooldown · {0}d left": "🕒 Moet even wachten · nog {0} d",
+ "This 2dehands update carries no shipping cost to set, so nothing was changed.": "Deze wijziging voor 2dehands bevat geen verzendkosten om in te stellen, dus er is niets veranderd.",
+ "The 2dehands edit form did not show a shipping choice, so nothing was changed.": "Het wijzigformulier van 2dehands toonde geen verzendkeuze, dus er is niets veranderd.",
+ "Check that the listing is still online and offers shipping.": "Controleer of het zoekertje nog online staat en verzenden aanbiedt.",
+ "The shipping cost could not be set on 2dehands ({0}), so nothing was saved.": "De verzendkosten konden op 2dehands niet worden ingesteld ({0}), dus er is niets opgeslagen.",
+ "2dehands did not save the new shipping cost (click: {0}). Nothing was changed.": "2dehands heeft de nieuwe verzendkosten niet opgeslagen (klik: {0}). Er is niets veranderd."
 }

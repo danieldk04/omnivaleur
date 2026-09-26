@@ -2,13 +2,14 @@
 (async () => {
   const PLATFORM = "2dehands";
   const { step, clog, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
-          fillBrand, fillBrandField, fillManufacturer, vulLocatie, selectBundleFree, selectDelivery, selectPackageSize, zetVerzendkosten, typBeschrijvingEcht,
+          fillBrand, fillBrandField, fillManufacturer, vulLocatie, selectBundleFree, selectDelivery, selectPackageSize, zetVerzendkosten, centenUitTekst, waitUntil, typBeschrijvingEcht,
           uploadPhotos, submitListing, clickRadioByValue, smartTrunc, fillBidding, zetBieden,
           dutchColor, ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs,
           mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG, zetPrijs } = window.CL;
 
   const job = await getJob();
   if (!job) return;
+  let verzendingGezet = false;   // zie de stap "verzendkosten" in fillForm
   const { id: jobId, serverUrl, payload: item } = job;
   // EERSTE LEVENSTEKEN, VÓÓR HET EERSTE WACHTEN.
   // Zonder dit was "de opdracht is opgehaald" en "het formulier stond er niet"
@@ -20,6 +21,11 @@
     if (job.action === "delete") {
       await deleteListing2dh(item.platform_listing_id);
       send("JOB_DONE", {});
+    } else if (job.action === "content_refresh") {
+      // Een bestaand zoekertje bijwerken. NOOIT doorvallen naar het
+      // plaatsformulier hieronder: dat zou titel, tekst en foto's opnieuw
+      // invullen op een advertentie die al online staat.
+      send("JOB_DONE", await verzendingBijwerken(item));
     } else {
       await fillForm(item);
       const id = await submitListing(/2dehands\.be\/v\/[^/]+\/(m\d+)/);
@@ -30,10 +36,69 @@
       // concludeerde "al weg" terwijl de advertentie er nog stond. Neem daarom de
       // echte pagina waar we na het plaatsen op belanden.
       const echteUrl = /\/v\//.test(location.href) ? location.href.split("?")[0] : `https://www.2dehands.be/seller/view/${id}`;
-      send("JOB_DONE", { platform_listing_id: id, platform_listing_url: echteUrl });
+      // verzending_gezet: kreeg dit zoekertje het eigen verzendbedrag? Zo niet,
+      // dan zet de server vanzelf een bijwerking klaar (zie jobs.py).
+      send("JOB_DONE", { platform_listing_id: id, platform_listing_url: echteUrl,
+                         verzending_gezet: verzendingGezet });
     }
   } catch (e) {
     send("JOB_ERROR", null, String(e)); // tab stays open
+  }
+
+  // DE VERZENDKOSTEN VAN EEN ZOEKERTJE DAT AL ONLINE STAAT (26-09-2026).
+  //
+  // Egbert Brouwer had 116 patches op 2dehands met Bpost EUR 7,10, terwijl hij ze
+  // op Marktplaats zelf verstuurt voor zijn eigen bedrag. Het wijzigformulier
+  // (/plaats/m{id}/edit) is hetzelfde formulier als het plaatsformulier, al
+  // ingevuld. Live nagemeten op een eigen zoekertje: "Zelf versturen" plus bedrag
+  // zetten en op Opslaan klikken landt op /seller/view/m{id} met "Je zoekertje is
+  // aangepast", en de openbare pagina toont het nieuwe bedrag. Een klik vanuit het
+  // script (button.click()) doet op Opslaan NIETS; alleen een echte muisklik telt.
+  //
+  // Alleen de verzendkosten: niets anders op het formulier wordt aangeraakt. Lukt
+  // het niet om het bedrag te zetten, dan wordt er niet opgeslagen.
+  async function verzendingBijwerken(item) {
+    const v = (item && item.verzending) || {};
+    if (!item || !item._verzending_bijwerken || v.soort !== "zelf" || !Number.isInteger(v.cents)) {
+      throw new Error("This 2dehands update carries no shipping cost to set, so nothing was changed.");
+    }
+    const formulier = await waitUntil(() => qs('input[name="shippingMethod"]'), 20000);
+    if (!formulier) {
+      throw new Error("The 2dehands edit form did not show a shipping choice, so nothing was changed. "
+        + "Check that the listing is still online and offers shipping.");
+    }
+    const bedragGoed = () => {
+      const gekozen = qs('input[name="shippingMethod"]:checked');
+      const veld = qs('input[name="othersPrice"]');
+      return !!(gekozen && gekozen.value === "diy" && veld && centenUitTekst(veld.value) === v.cents);
+    };
+    if (bedragGoed()) {
+      clog("verzendkosten: stonden al goed, niets opgeslagen");
+      return { verzending_bijgewerkt: false, al_goed: true };
+    }
+    const detail = await zetVerzendkosten(item);
+    clog(`verzendkosten: ${detail}`);
+    if (!bedragGoed()) {
+      throw new Error(`The shipping cost could not be set on 2dehands (${detail}), so nothing was saved.`);
+    }
+    const achtergrond = (bericht) => new Promise((res) => {
+      try { chrome.runtime.sendMessage(bericht, (r) => { void chrome.runtime.lastError; res(r); }); }
+      catch (_) { res(null); }
+    });
+    // Zelfde volgorde als bij plaatsen (submitListing): de vraag "Site verlaten?"
+    // uitzetten, laten weten dat er geklikt wordt, en dan een echte klik.
+    await achtergrond({ type: "ONTWAPEN_AFSLUITVRAAG" });
+    await achtergrond({ type: "SUBMIT_CLICKED" });
+    const clickResult = await achtergrond({ type: "KLIK_ECHT", selector: '[data-testid="update-listing-submit-button"]' });
+    clog(`opslaan: echte klik — ${typeof clickResult === "string" ? clickResult : JSON.stringify(clickResult)}`);
+    // Na het opslaan verlaat 2dehands het wijzigformulier. Gebeurt dat met een
+    // volledige paginawissel, dan sterft dit script hier en meldt de achtergrond
+    // het af (zie bewerkingOpgeslagen2dh in background.js).
+    const weg = await waitUntil(() => !/\/edit\b/.test(location.pathname), 20000);
+    if (!weg) {
+      throw new Error(`2dehands did not save the new shipping cost (click: ${clickResult}). Nothing was changed.`);
+    }
+    return { verzending_bijgewerkt: true };
   }
 
   async function deleteListing2dh(listingId) {
@@ -140,7 +205,11 @@
     await step("delivery",     async () => { await selectDelivery(item); selectBundleFree(); });
     // Na de verzendwijze, want pas dan staat de keuze Bpost / Zelf versturen er.
     // Zijn eigen bedrag van Marktplaats in plaats van Bpost 0-2 kg (zie shared.js).
-    await step("verzendkosten", async () => clog(`verzendkosten: ${await zetVerzendkosten(item)}`));
+    await step("verzendkosten", async () => {
+      const melding = await zetVerzendkosten(item);
+      verzendingGezet = /^zelf versturen voor/.test(melding);
+      clog(`verzendkosten: ${melding}`);
+    });
     // "Bieden vanaf" hoort bij een vraagprijs; zonder prijs is het minimumbod 0.
     // Altijd zetten, ook als de verkoper GEEN bieden wil: de schakelaar
     // "Bieden toestaan" staat op het formulier standaard aan. Zie zetBieden.

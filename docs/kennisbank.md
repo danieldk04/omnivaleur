@@ -29,7 +29,7 @@ Het 2dehands-formulier (create én `/plaats/m{id}/edit`, live afgelezen): `input
 
 **Why:** een eigen bedrag van de verkoper is de enige juiste bron; wij kunnen aan een foto niet zien of iets door de brievenbus past.
 
-**How to apply:** een leeg of onleesbaar bedrag is nooit "gratis verzenden" (dan betaalt de verkoper het porto): terugval is altijd Bpost 0-2 kg. Een storing bij Marktplaats houdt de opdracht niet tegen. Zoekertjes die al op 2dehands stonden veranderen niet vanzelf: er is (nog) geen wijzigroute voor 2dehands in de extensie. Zie ook "geraden-rubriek-is-niet-de-rubriek-van-de-verkoper" (zelfde patroon voor de rubriek) en "extension-release-bump-version".
+**How to apply:** een leeg of onleesbaar bedrag is nooit "gratis verzenden" (dan betaalt de verkoper het porto): terugval is altijd Bpost 0-2 kg. Een storing bij Marktplaats houdt de opdracht niet tegen. Bestaande zoekertjes: sinds 1.0.354 een wijzigroute (content_refresh met `_verzending_bijwerken`, formulier `/plaats/m{id}/edit`, knop `update-listing-submit-button`). Live gemeten: button.click() doet NIETS, alleen een echte muisklik (KLIK_ECHT) slaat op; daarna landt het tabblad op `/seller/view/m{id}` met "Je zoekertje is aangepast". Server: alleen naar kopie >= 1.0.354 (1.0.353 zou het plaatsformulier opnieuw invullen), noodrem `_bijwerken_2dh_staat_stil` (laatste mislukt = rest wacht), en `_verzending_alsnog_bijwerken` zet na een plaatsing zonder `verzending_gezet: true` vanzelf een bijwerking klaar. Oude zoekertjes: `scripts/verzendkosten_2dehands_bijwerken.py`. Zie ook "geraden-rubriek-is-niet-de-rubriek-van-de-verkoper" (zelfde patroon voor de rubriek) en "extension-release-bump-version".
 
 ---
 

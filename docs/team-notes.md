@@ -13596,3 +13596,26 @@ Gisteren niets open; alle zeven nieuwe foutsoorten van vandaag beoordeeld.
   minuut na het oppakken, computer of browser ging uit. Achter bcdf9aa4 wachten
   28 plaatsingen. Vinted-scans bij vijf klanten wachten op een computer die aan gaat.
 - Geen abonnement op slot gegaan in 24 uur.
+
+**Aanvulling 26-09, bestaande zoekertjes omzetten (op Daniels "ja").** Daniel gaf
+toestemming om op een eigen 2dehands-zoekertje te testen. Gemeten op m2446468449
+(Profuomo half zip): wijzigformulier /plaats/m{id}/edit, "Zelf versturen" EUR 6,95
+gezet en met een echte muisklik opgeslagen: landt op /seller/view/m{id}, "Je
+zoekertje is aangepast", openbare pagina "Zelf Verzenden € 6,95". Daarna
+teruggezet naar Bpost 0-2 kg EUR 7,10 (gecontroleerd). Een klik vanuit een script
+(button.click()) doet op Opslaan niets.
+
+Gebouwd, extensie 1.0.354 (vervangt 1.0.353, die nooit geüpload is en ook de
+robijn-kleurfix van de andere sessie bevat): wijzigroute alleen voor de
+verzendkosten; de server geeft dit werk alleen aan 1.0.354+ (1.0.353 zou het
+hele plaatsformulier opnieuw invullen op een zoekertje dat al online staat) en
+houdt de rest vast zodra er één mislukt. Een plaatsing meldt voortaan of het
+eigen bedrag erop stond (`verzending_gezet`); zo niet (oude extensie, of het
+lukte niet), dan zet de server vanzelf een bijwerking klaar. Zo komen ook de 28
+patches goed die nog met 1.0.352 de deur uit gaan. Voor de patches die al online
+stonden: `scripts/verzendkosten_2dehands_bijwerken.py --titel patch`.
+
+Beoordeling "voldoet dit aan zijn vraag": voor patches ja (zijn eigen bedrag van
+Marktplaats, EUR 2,25 tot 4,95, geen handwerk). Miniaturen krijgen ook zijn eigen
+EUR 4,95 in plaats van 7,10; dat vroeg hij niet, hij noemde 7,20 "prima". Of 4,95
+genoeg is voor verzending naar België weet alleen hij; staat in de mail.

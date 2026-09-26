@@ -1117,7 +1117,31 @@ function getEditUrl(platform, payload) {
     }
     return `${origin}/items/${payload.platform_listing_id}/edit`;
   }
+  // 2dehands (26-09-2026): alleen de verzendkosten van een zoekertje dat al
+  // online staat, zie verzendingBijwerken in content/tweedehands.js. Het
+  // wijzigformulier staat op /plaats/m{id}/edit (live afgelezen).
+  if (platform === "2dehands") {
+    const m = String(payload?.platform_listing_id || "").match(/^m?(\d+)$/i);
+    return m ? `https://www.2dehands.be/plaats/m${m[1]}/edit` : null;
+  }
   return null;
+}
+
+// Is de wijziging aan dit 2dehands-zoekertje opgeslagen? Na een geslaagde opslag
+// verlaat 2dehands het wijzigformulier en landt op /seller/view/m{id} met "Je
+// zoekertje is aangepast" (live gemeten 26-09-2026). Alleen na onze klik op
+// Opslaan, en alleen op DEZELFDE advertentie: het formulier zelf
+// (/plaats/m{id}/edit) draagt hetzelfde nummer en telt dus nooit.
+function bewerkingOpgeslagen2dh(url, meta) {
+  if (!meta || meta.platform !== "2dehands" || meta.action !== "content_refresh"
+      || !meta.submitClicked) return false;
+  const lid = String(meta.payload?.platform_listing_id || "").replace(/^m/i, "");
+  if (!/^\d+$/.test(lid)) return false;
+  let pad;
+  try { pad = new URL(url).pathname; } catch (_) { return false; }
+  if (/\/plaats\//.test(pad)) return false;
+  const m = pad.match(/\/m(\d+)(?:[-/]|$)/);
+  return !!m && m[1] === lid;
 }
 
 // Thrown when an item's category can't be mapped to a real platform category.
@@ -7759,6 +7783,21 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
       clearJobWatchdog(tabId);
       await chrome.storage.local.remove([key, `job_${meta.platform}`]);
       await finaliseJob(meta.serverUrl, meta.jobId, "complete", { note: "saved_navigated" });
+      sluitWerkTabblad(tabId, 2000);
+    }
+    return;
+  }
+
+  // 2DEHANDS-BIJWERKING OPGESLAGEN (26-09-2026). Zelfde reden als bij Vinted
+  // hierboven: de opslagklik kan het tabblad wegsturen voordat het script
+  // JOB_DONE stuurt. Zie bewerkingOpgeslagen2dh.
+  if (meta.platform === "2dehands" && meta.action === "content_refresh") {
+    if (bewerkingOpgeslagen2dh(changeInfo.url, meta)) {
+      console.log(`[Omnivaleur] 2dehands-bijwerking ${meta.payload?.platform_listing_id} opgeslagen (tabblad verliet het formulier) — afgemeld.`);
+      clearJobWatchdog(tabId);
+      await chrome.storage.local.remove([key, `job_${meta.platform}`]);
+      await finaliseJob(meta.serverUrl, meta.jobId, "complete",
+        { note: "saved_navigated", verzending_bijgewerkt: true });
       sluitWerkTabblad(tabId, 2000);
     }
     return;

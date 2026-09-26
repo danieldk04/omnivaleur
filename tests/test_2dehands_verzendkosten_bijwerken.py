@@ -135,3 +135,61 @@ def test_de_extensie_zelf():
     r = subprocess.run([node, str(ROOT / "tests" / "2dehands-verzendkosten-bijwerken-test.js")],
                        capture_output=True, text=True, timeout=120, cwd=ROOT)
     assert r.returncode == 0, r.stdout + r.stderr
+
+
+# ── na een plaatsing zonder eigen bedrag: alsnog bijwerken ───────────────────
+class _Opname:
+    """Onthoudt wat er in de jobs-tabel gezet wordt; 'al' = er wacht er al een."""
+
+    def __init__(self, al=False):
+        self.al, self.ingevoegd = al, []
+
+    def table(self, _naam):
+        opname = self
+
+        class _V:
+            def insert(self, rij):
+                opname.ingevoegd.append(rij)
+                return self
+
+            def __getattr__(self, _n):
+                return lambda *a, **k: self
+
+            def execute(self):
+                return type("R", (), {"data": [{"id": "x"}] if opname.al else []})()
+        return _V()
+
+
+def _plaatsing(verzending):
+    return {"id": "p1", "user_id": USER, "item_id": "it1", "platform": "2dehands", "action": "create",
+            "payload": {"title": "Metallica - Skulls - Rugpatch", "verzending": verzending}}
+
+
+ANTWOORD = {"platform_listing_id": "m2446754373",
+            "platform_listing_url": "https://www.2dehands.be/seller/view/m2446754373"}
+
+
+def test_oude_kopie_plaatste_met_bpost_dan_komt_er_een_bijwerking():
+    db = _Opname()
+    J._verzending_alsnog_bijwerken(db, _plaatsing({"soort": "zelf", "cents": 495}), ANTWOORD)
+    assert len(db.ingevoegd) == 1
+    rij = db.ingevoegd[0]
+    assert (rij["action"], rij["platform"], rij["status"]) == ("content_refresh", "2dehands", "pending")
+    assert rij["payload"]["_verzending_bijwerken"] is True
+    assert rij["payload"]["verzending"] == {"soort": "zelf", "cents": 495}
+    assert rij["payload"]["platform_listing_id"] == "m2446754373"
+
+
+def test_geen_bijwerking_als_het_bedrag_er_al_stond_of_niet_hoorde():
+    for verzending, antwoord in (
+        ({"soort": "zelf", "cents": 495}, {**ANTWOORD, "verzending_gezet": True}),
+        ({"soort": "platform"}, ANTWOORD),
+        ({"soort": "onbekend"}, ANTWOORD),
+        ({"soort": "zelf", "cents": 495}, {}),              # geen zoekertje, niets bij te werken
+    ):
+        db = _Opname()
+        J._verzending_alsnog_bijwerken(db, _plaatsing(verzending), antwoord)
+        assert db.ingevoegd == [], (verzending, antwoord)
+    db = _Opname(al=True)
+    J._verzending_alsnog_bijwerken(db, _plaatsing({"soort": "zelf", "cents": 495}), ANTWOORD)
+    assert db.ingevoegd == [], "er wacht er al een: geen tweede"

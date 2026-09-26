@@ -54,7 +54,7 @@ function functie(bron, naam) {
 // ── background.js ───────────────────────────────────────────────────────────
 function achtergrond(commit) {
   const bron = lees("extension/background.js", commit);
-  const ctx = {};
+  const ctx = { URL };
   vm.createContext(ctx);
   for (const naam of ["getEditUrl", "bewerkingOpgeslagen2dh"]) {
     const f = functie(bron, naam);
@@ -114,6 +114,7 @@ async function draai(commit, { job, formulier, klikSlaatOp = true, zetLukt = tru
   const nep = (naam) => async () => { aanroepen.push(naam); return true; };
   const CL = new Proxy({
     clog: () => {}, qs, sleep: async () => {},
+    zetPrijs: async () => null,   // echte zetPrijs: null = gelukt, anders de fout
     step: async (_n, fn) => { try { await fn(); } catch (_) {} },
     waitUntil: async (voorwaarde) => { try { return !!voorwaarde(); } catch (_) { return false; } },
     centenUitTekst: (t) => {
@@ -123,7 +124,7 @@ async function draai(commit, { job, formulier, klikSlaatOp = true, zetLukt = tru
     zetVerzendkosten: async (item) => {
       aanroepen.push("zetVerzendkosten");
       if (zetLukt) { f.methode = "diy"; f.bedrag = (item.verzending.cents / 100).toFixed(2).replace(".", ","); }
-      return zetLukt ? "zelf versturen" : "mislukt";
+      return zetLukt ? `zelf versturen voor € ${f.bedrag}` : "zelf versturen lukte niet (test), terug naar de standaardverzending";
     },
   }, { get: (doel, naam) => (naam in doel ? doel[naam] : nep(String(naam))) });
   const chrome = { runtime: {
@@ -181,6 +182,18 @@ const bijwerken = {
   check("een bijwerking zonder bedrag verandert niets",
     r.berichten.some((b) => b.type === "JOB_ERROR") && !r.berichten.some((b) => b.type === "KLIK_ECHT")
       && !r.aanroepen.some((a) => /fill|upload/.test(a)));
+
+  // Een PLAATSING meldt of het eigen bedrag er echt op stond; zo niet, dan zet de
+  // server vanzelf een bijwerking klaar (_verzending_alsnog_bijwerken).
+  const plaatsing = { ...bijwerken, action: "create",
+                      payload: { title: "Patch", price: 11.95, verzending: { soort: "zelf", cents: 495 } } };
+  r = await draai(null, { job: plaatsing });
+  check("plaatsing met eigen bedrag meldt verzending_gezet",
+    r.berichten.find((b) => b.type === "JOB_DONE")?.result?.verzending_gezet === true,
+    JSON.stringify(r.berichten.find((b) => b.type === "JOB_DONE")));
+  r = await draai(null, { job: plaatsing, zetLukt: false });
+  check("lukte het niet, dan meldt de plaatsing dat ook",
+    r.berichten.find((b) => b.type === "JOB_DONE")?.result?.verzending_gezet === false);
 
   // Voor de reparatie viel een bijwerking door naar het plaatsformulier. Daarom
   // krijgt een kopie onder 1.0.354 dit werk nooit (MINIMALE_2DH_BIJWERK_VERSIE).
