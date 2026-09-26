@@ -13666,3 +13666,18 @@ bij het inlezen als kleding geraden ("unisex verkleedkleding", "meisjes kleding"
 "unisex accessoires" gezet, zoals zijn andere 1.726 patches; publiceren eist nu
 niets meer. De 151 weggeklikte patch-bijwerkingen opnieuw klaargezet (123 naar
 4,95, 17 naar 2,25, 11 naar 2,95); de mokken niet.
+
+**Aanvulling 26-09 avond: nagemeten op echte gegevens, en een alarm.** De echte
+uitgifte en het echte dashboard gedraaid op Egberts echte rij (151 bijwerkingen,
+38 plaatsingen), met elke schrijfactie naar de database geblokkeerd: aan 1.0.352
+en aan 1.0.354 gaat eerst een plaatsing uit, het dashboard telt 38. Echte
+verzendstempel met een verzonnen opdracht-id: een rugpatch kreeg EUR 2,25 van
+zijn Marktplaats-pagina, een mok bleef standaard. Web Store staat op 1.0.354.
+
+Nieuw verschil gevonden: op 2dehands is Egbert zakelijk ("@type":"Organization"
+op de openbare pagina), Daniel particulier. De wijzigroute is alleen op een
+particulier account nagemeten. Zijn plaatsingen landen wel op dezelfde pagina
+(/seller/view/m{id}) als bij Daniel, en daar kijkt de wijzigroute ook naar.
+Omdat de bijwerkingen niet meer op het dashboard staan zou een mislukking stil
+blijven. Daarom mailt de server de eigenaar zodra de noodrem voor een klant
+dichtgaat, hooguit een keer per dag per klant (_meld_bijwerking_staat_stil).

@@ -19,6 +19,14 @@ ROOT = Path(__file__).resolve().parents[1]
 USER = "bcdf9aa4-314d-49a2-9573-8818ad61073d"
 
 
+@pytest.fixture(autouse=True)
+def _geen_echte_mail(monkeypatch):
+    gemeld = []
+    monkeypatch.setattr(J, "_stuur_naar_eigenaar", lambda onderwerp, tekst: gemeld.append((onderwerp, tekst)))
+    monkeypatch.setattr(J, "_bijwerking_stil_gemeld", {})
+    return gemeld
+
+
 def _tijd(minuten_geleden: int) -> str:
     return (datetime.now(timezone.utc) - timedelta(minutes=minuten_geleden)).isoformat()
 
@@ -351,3 +359,24 @@ def test_de_driedagenveger_laat_een_wachtende_bijwerking_staan(monkeypatch):
     assert "wacht" not in gewijzigd, "vijf dagen wachten op de extensie is geen fout"
     assert gewijzigd["te_oud"]["status"] == "cancelled", "na drie weken stil ingetrokken, niet rood"
     assert gewijzigd["gewoon"]["status"] == "error", "de gewone opdrachten blijven zoals ze waren"
+
+
+# ── een stilstaande reeks meldt zichzelf (de klant ziet hem niet meer) ────────
+def test_stilstand_komt_een_keer_per_dag_in_de_mail(_geen_echte_mail):
+    fout = [{"id": "job-fout", "status": "error", "created_at": _tijd(9), "claimed_at": _tijd(9), "done_at": _tijd(8)}]
+    assert J._bijwerken_2dh_staat_stil(_db([], fout), USER) is True
+    assert J._bijwerken_2dh_staat_stil(_db([], fout), USER) is True
+    assert len(_geen_echte_mail) == 1, "niet elke poll een mail"
+    onderwerp, tekst = _geen_echte_mail[0]
+    assert "job-fout" in tekst and USER in tekst
+
+
+def test_geen_mail_als_het_goed_ging_of_niet_te_lezen_was(_geen_echte_mail):
+    goed = [{"id": "j", "status": "done", "created_at": _tijd(9), "claimed_at": _tijd(9), "done_at": _tijd(8)}]
+    assert J._bijwerken_2dh_staat_stil(_db([], goed), USER) is False
+
+    class _Kapot:
+        def table(self, _n):
+            raise RuntimeError("database weg")
+    assert J._bijwerken_2dh_staat_stil(_Kapot(), USER) is True, "bij twijfel niets uitdelen"
+    assert _geen_echte_mail == [], "een leesfout is geen mislukte bijwerking"
