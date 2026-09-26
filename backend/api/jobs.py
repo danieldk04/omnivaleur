@@ -2027,22 +2027,14 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             due = [j for j in due if j["action"] != "create"]
 
     ready = []
-    bijwerken_staat_stil = None  # pas opgevraagd als er zo'n opdracht in de rij staat
     for j in due:
         # Verzendkosten van een bestaand 2dehands-zoekertje: alleen naar een kopie
         # die het kan, en niet meer zodra de vorige keer mislukte. Zie
         # _bijwerken_2dh_staat_stil.
-        if (platform is not None and j.get("action") == "content_refresh"
-                and j.get("platform") == "2dehands"):
-            if versie_van_de_kopie is None or versie_van_de_kopie < MINIMALE_2DH_BIJWERK_VERSIE:
-                logger.info("2dehands-bijwerking %s niet uitgedeeld: kopie %s kan het nog niet",
-                            j["id"], versie_van_de_kopie)
-                continue
-            if bijwerken_staat_stil is None:
-                bijwerken_staat_stil = _bijwerken_2dh_staat_stil(db, user_id)
-            if bijwerken_staat_stil:
-                logger.info("2dehands-bijwerking %s wacht: de vorige mislukte", j["id"])
-                continue
+        if platform is not None and bijwerking_moet_wachten(j):
+            logger.info("2dehands-bijwerking %s wacht (kopie %s, vorige mislukt: %s)",
+                        j["id"], versie_van_de_kopie, bijwerken_staat_stil)
+            continue
         # Een 'extend'-opdracht gaat alleen naar een kopie die hem kent (1.0.318+).
         # Een oudere kopie zou er een tweede advertentie van maken. De opdracht
         # blijft 'pending' tot een bijgewerkte kopie polt.
