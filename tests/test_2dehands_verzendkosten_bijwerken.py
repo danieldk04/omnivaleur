@@ -193,3 +193,56 @@ def test_geen_bijwerking_als_het_bedrag_er_al_stond_of_niet_hoorde():
     db = _Opname(al=True)
     J._verzending_alsnog_bijwerken(db, _plaatsing({"soort": "zelf", "cents": 495}), ANTWOORD)
     assert db.ingevoegd == [], "er wacht er al een: geen tweede"
+
+
+# ── de driedagenveger laat deze opdrachten wachten ───────────────────────────
+def test_de_driedagenveger_laat_een_wachtende_bijwerking_staan(monkeypatch):
+    """Een Web Store-goedkeuring kan dagen duren; het zoekertje staat ondertussen online."""
+    import asyncio
+    import backend.services.relist as rl
+
+    def _dagen(n):
+        return (datetime.now(timezone.utc) - timedelta(days=n)).isoformat()
+
+    banen = [
+        {**_bijwerking("wacht"), "created_at": _dagen(5)},
+        {**_bijwerking("te_oud"), "created_at": _dagen(22)},
+        {"id": "gewoon", "user_id": USER, "item_id": "it2", "platform": "2dehands",
+         "action": "create", "status": "pending", "created_at": _dagen(5), "payload": {}},
+    ]
+    gewijzigd = {}
+
+    class _V:
+        def __init__(self, t):
+            self.t, self.velden, self.id = t, None, None
+
+        def update(self, v):
+            self.velden = v
+            return self
+
+        def eq(self, k, v):
+            if k == "id":
+                self.id = v
+            return self
+
+        def __getattr__(self, _n):
+            return lambda *a, **k: self
+
+        def execute(self):
+            if self.velden is not None:
+                gewijzigd[self.id] = self.velden
+                return type("R", (), {"data": []})()
+            return type("R", (), {"data": list(banen) if self.t == "jobs" else []})()
+
+    db = type("Db", (), {"table": lambda self, n: _V(n)})()
+    monkeypatch.setattr(rl, "get_db", lambda: db)
+
+    async def direct(fn, *_a, **_k):
+        return fn()
+    monkeypatch.setattr(rl, "naast_de_lus", direct)
+    monkeypatch.setattr(rl, "_waarom_bleef_het_staan", lambda *_a: "reden")
+    asyncio.run(rl.herstel_vastgelopen_werk())
+
+    assert "wacht" not in gewijzigd, "vijf dagen wachten op de extensie is geen fout"
+    assert gewijzigd["te_oud"]["status"] == "cancelled", "na drie weken stil ingetrokken, niet rood"
+    assert gewijzigd["gewoon"]["status"] == "error", "de gewone opdrachten blijven zoals ze waren"
