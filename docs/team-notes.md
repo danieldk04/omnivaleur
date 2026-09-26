@@ -13547,3 +13547,52 @@ Bronnenonderzoek (gratis): Vinted Pro toont bedrijfsnaam en KvK-nummer, e-mail
 afgeschermd voor uitgelogde bezoekers; eBay zakelijk toont naam, adres, telefoon,
 geen e-mail; OpenStreetMap telt in NL+BE 465 tweedehands kledingwinkels en 416
 antiekzaken. Facebookgroepen zijn geen e-mailbron. Details in de kennisbank.
+
+## 26-09-2026: Egbert, verzendkosten op 2dehands volgen nu zijn Marktplaats-bedrag
+
+Egbert Brouwer (Papa's Plectrums) mailde 25-09 22:00: op 2dehands kwam er
+"automatisch iets van €7.20 verzendkosten" bij, prima voor miniaturen, te duur
+voor patches. Gemeten: wij kozen op 2dehands altijd Bpost 0-2 kg (EUR 7,10), terwijl
+hij op Marktplaats per advertentie "Zelf verzenden" met een eigen bedrag gebruikt:
+patches EUR 2,25 tot 4,95, buttons 2,95, miniaturen meestal 4,95.
+
+Nu: bij uitgifte van een 2dehands-plaatsing leest de server de Marktplaats-
+advertentie van hetzelfde artikel (`_zet_verzending_van_marktplaats`, jobs.py) en
+kiest de extensie op 2dehands "Zelf versturen" met datzelfde bedrag (extensie
+1.0.353, `zetVerzendkosten` in shared.js). Verzendt hij op Marktplaats via PostNL of
+DHL, of staat het artikel niet op Marktplaats, dan blijft het Bpost 0-2 kg. Een
+storing bij Marktplaats houdt niets tegen. Voor-en-na-proef op het echte
+2dehands-formulier (niets geplaatst): oud Bpost 0-2 kg 710 cent, nieuw diy 4,95.
+
+**Open.** (1) Werkt pas als 1.0.353 in de Web Store staat en bij hem binnen is.
+(2) Stand bij het schrijven: 116 patches en 436 miniaturen stonden al op 2dehands
+met Bpost EUR 7,10, en 28 patches wachtten nog; die gaan bij een oude extensie
+ook nog met Bpost. Bestaande zoekertjes veranderen niet vanzelf: er is geen
+wijzigroute voor 2dehands in de extensie (de wijzigpagina is /plaats/m{id}/edit,
+zelfde formulier, knop "Opslaan", data-testid update-listing-submit-button; nooit
+live opgeslagen, dus niet bewezen). (3) Een echte plaatsing met "Zelf versturen"
+is nog niet gezien; de eerste bij Egbert na de update is het bewijs. (4) De
+Drive-kopie van het klantenservice-brein is niet bijgewerkt: de Google-koppeling
+die bestanden kan schrijven verbond niet.
+
+## 26-09-2026: Dagelijkse klantfouten
+
+Gemeten om 06:12 UTC over 24 uur: 386 opdrachten bij 6 klanten, 27 fouten.
+Gisteren niets open; alle zeven nieuwe foutsoorten van vandaag beoordeeld.
+- Gerepareerd: Vinted kende "robijn"/"ruby" niet als kleur (shared.js en kleur.py
+  wel), dus "New Ruby Necklace" (1ba42900) ging drie keer terug met een lege
+  kleur. Nu rood (9f1ed84f, proef tests/vinted-kleur-uit-titel-test.js, oude code
+  faalt). Het enige geval in drie weken. Gaat mee met extensie 1.0.353, die een
+  andere sessie nu klaarzet (verzendkosten 2dehands); geen eigen versieverhoging.
+- Klant: rode wollen jas van De Juiste Toon heeft maat "Overige" (5x MP/2dehands);
+  maat verzinnen doen we niet. De witte jas zette ze zelf op M en ging daarna wel.
+- Open, onbekend: 2dehands-verwijdering Lederhosen m2443708088 meldde twee keer
+  "niets verwijderd", maar de advertentie is weg (openbaar 410). De controle na
+  het klikken leest /seller/view en kreeg 403. In 14 dagen 4 keer, allemaal De
+  Juiste Toon (Chromebook). Niet bewezen dat 403 daar altijd "weg" betekent, dus
+  niet aangepast. Haar Lederhosen staat nu op sold_unconfirmed.
+- Wachten op de klant: twee 2dehands-plaatsingen staan op 'claimed' (bcdf9aa4
+  sinds 22:22, 1ba42900 sinds 17:25 UTC); de hartslag van beide stopte binnen een
+  minuut na het oppakken, computer of browser ging uit. Achter bcdf9aa4 wachten
+  28 plaatsingen. Vinted-scans bij vijf klanten wachten op een computer die aan gaat.
+- Geen abonnement op slot gegaan in 24 uur.

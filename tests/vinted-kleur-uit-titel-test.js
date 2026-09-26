@@ -44,8 +44,7 @@ for (const [titel, verwacht] of GEVALLEN) {
   check(`oud faalde: "${titel}"`, oud({ title: titel, color: null }).length === 0);
 }
 // Een kleur die wél bij het item staat blijft winnen.
-check("eigen kleur gaat voor", JSON.stringify(nieuw({ title: "Ruby Necklace", color: "zilver" })) === JSON.stringify(["zilver"]) ||
-  nieuw({ title: "Ruby Necklace", color: "zilver" })[0] !== "Red");
+check("eigen kleur gaat voor", !nieuw({ title: "Ruby Necklace", color: "zilver" }).includes("Red"));
 // "Natural" alleen levert niets op: geen verzonnen kleur.
 check("natural alleen blijft leeg", nieuw({ title: "Natural Stone Bracelet", color: null }).length === 0);
 
