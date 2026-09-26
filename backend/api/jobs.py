@@ -992,11 +992,16 @@ def _zet_verzending_van_marktplaats(db, user_id: str, job: dict) -> None:
             return
         _VERZENDING_STORING.pop(user_id, None)
         verzending = verzending or {"soort": "onbekend"}
-    nieuw = {**pl, "verzending": verzending}
-    job["payload"] = nieuw
     if verzending.get("soort") == "zelf":
         logger.info("job %s: 2dehands zelf versturen voor %s cent, zoals op Marktplaats %s",
                     job.get("id"), verzending.get("cents"), nummer)
+    _bewaar_verzending(db, job, verzending)
+
+
+def _bewaar_verzending(db, job: dict, verzending: dict) -> None:
+    """Vastleggen, zodat de volgende ronde niet opnieuw hoeft te zoeken."""
+    nieuw = {**job["payload"], "verzending": verzending}
+    job["payload"] = nieuw
     try:
         db.table("jobs").update({"payload": nieuw}).eq("id", job["id"]).execute()
     except Exception as e:  # noqa: BLE001
