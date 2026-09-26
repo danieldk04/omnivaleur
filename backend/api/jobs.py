@@ -1048,6 +1048,21 @@ def _verzending_alsnog_bijwerken(db, job: dict, body) -> None:
         logger.warning("job %s: bijwerking verzendkosten niet klaar te zetten: %s", job.get("id"), e)
 
 
+def _is_2dh_bijwerking(job: dict) -> bool:
+    """Verzendkosten van een 2dehands-zoekertje dat al online staat bijwerken.
+
+    Onderhoud op de achtergrond, geen werk waar de verkoper op wacht. Het telt dus
+    niet mee in de wachtrij op het dashboard. WAAROM (26-09-2026, Egbert): 178 van
+    deze opdrachten wachtten op extensie 1.0.354 terwijl hij 1.0.352 had. De balk
+    zei twee uur lang "178 queued" en er gebeurde niets. Hij meldde "hij lijkt
+    vastgelopen", logde uit en in, en leegde uiteindelijk de hele rij."""
+    return job.get("action") == "content_refresh" and job.get("platform") == "2dehands"
+
+
+# Hetzelfde als filter voor de database (niet: content_refresh EN 2dehands).
+_NIET_2DH_BIJWERKING = "action.neq.content_refresh,platform.neq.2dehands"
+
+
 def _bijwerken_2dh_staat_stil(db, user_id: str) -> bool:
     """Mislukte de laatst afgeronde 2dehands-bijwerking van deze verkoper?
 
