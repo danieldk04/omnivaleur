@@ -1075,7 +1075,7 @@ def _bijwerken_2dh_staat_stil(db, user_id: str) -> bool:
     uitdelen: dit werk heeft geen haast.
     """
     try:
-        rijen = (db.table("jobs").select("status,created_at,claimed_at,done_at")
+        rijen = (db.table("jobs").select("id,status,created_at,claimed_at,done_at")
                  .eq("user_id", user_id).eq("platform", "2dehands")
                  .eq("action", "content_refresh").in_("status", ["done", "error"])
                  .order("created_at", desc=True).limit(50).execute().data or [])
