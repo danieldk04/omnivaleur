@@ -2717,6 +2717,8 @@ def active_jobs(user_id: str = Depends(get_current_user)):
                 # Don't leak the raw progress/result blob to the client.
                 j.pop("result", None)
                 working.append(j)
+        elif _is_2dh_bijwerking(j):
+            continue
         elif not j.get("scheduled_for") or j["scheduled_for"] <= now:
             j.pop("result", None)
             queued.append(j)
