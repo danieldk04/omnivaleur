@@ -31,12 +31,13 @@ def _bijwerking(jid="j1"):
                         "verzending": {"soort": "zelf", "cents": 495}}}
 
 
-def _db(wachtend, afgerond=()):
+def _db(wachtend, afgerond=(), laatst_geplaatst_op=None):
     class _Vraag:
         def __init__(self, t):
-            self.t, self.soort, self.f = t, "select", {}
+            self.t, self.soort, self.f, self.kolommen = t, "select", {}, ""
 
         def select(self, *a, **k):
+            self.kolommen = a[0] if a else ""
             return self
 
         def update(self, v):
@@ -45,6 +46,10 @@ def _db(wachtend, afgerond=()):
 
         def eq(self, k, v):
             self.f[k] = v
+            return self
+
+        def neq(self, k, v):
+            self.f["!" + k] = v
             return self
 
         def in_(self, k, v):
@@ -62,21 +67,65 @@ def _db(wachtend, afgerond=()):
             data = []
             if self.t == "jobs" and self.soort == "select":
                 status = self.f.get("status")
-                if status == "pending":
-                    data = list(wachtend)
+                if status == "pending" or (isinstance(status, list) and "pending" in status):
+                    data = [j for j in wachtend
+                            if j["platform"] == self.f.get("platform", j["platform"])
+                            and j["platform"] != self.f.get("!platform")
+                            and (not isinstance(self.f.get("action"), list)
+                                 or j["action"] in self.f["action"])]
+                    if "id" in self.f:
+                        data = [j for j in data if j["id"] in self.f["id"]]
                 elif isinstance(status, list) and "error" in status:
                     data = list(afgerond)
+                elif self.kolommen == "platform,claimed_at,action" and laatst_geplaatst_op:
+                    data = [{"platform": laatst_geplaatst_op, "claimed_at": _tijd(1), "action": "create"}]
                 elif "id" in self.f:
                     ids = self.f["id"] if isinstance(self.f["id"], list) else [self.f["id"]]
                     data = [j for j in wachtend if j["id"] in ids]
             elif self.t == "items":
                 data = [{"id": "it1", "user_id": USER, "title": "t", "sku": None, "brand": None}]
-            return type("R", (), {"data": data})()
+            return type("R", (), {"data": data, "count": None})()
 
     return type("Db", (), {"table": lambda self, n: _Vraag(n)})()
 
 
-def _uitgifte(monkeypatch, db, versie):
+def _plaatsing_in_de_rij(jid="p1", platform="2dehands", minuten=1):
+    return {**_bijwerking(jid), "action": "create", "platform": platform, "created_at": _tijd(minuten),
+            "payload": {"title": "Metallica - Skulls - Rugpatch", "price": 11.95,
+                        "verzending": {"soort": "standaard"}}}
+
+
+def _oude_jobs():
+    """backend/api/jobs.py zoals hij om 09:40 op 26-09 live stond (vóór deze reparatie)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "rubriekproef", ROOT / "tests" / "test_2dehands_volgt_de_marktplaats_rubriek.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod._oude_module("backend/api/jobs.py", VOOR_HET_VASTLOPEN, "oude_jobs_vastlopen",
+                            moet_bevatten=("MINIMALE_2DH_BIJWERK_VERSIE",),
+                            moet_missen=("_is_2dh_bijwerking",))
+
+
+VOOR_HET_VASTLOPEN = "faefb348"   # vast nummer: HEAD vergelijkt zichzelf na de commit
+
+
+def _uitgifte(monkeypatch, db, versie, platform="2dehands", module=J):
+    J_ = module
+    monkeypatch.setattr(J_, "get_db", lambda: db)
+    for naam in ("_record_extension_heartbeat", "_recover_stale_claims"):
+        monkeypatch.setattr(J_, naam, lambda *a, **k: None)
+    monkeypatch.setattr(J_, "_gepubliceerde_extensieversie", lambda: None)
+    monkeypatch.setattr(J_, "execute_with_retry", lambda q, *a, **k: q.execute())
+    monkeypatch.setattr(J_, "_zet_kleur_goed", lambda r: None)
+    monkeypatch.setattr(J_, "_zet_taal_goed", lambda db, js: list(js))
+    monkeypatch.setattr(J_, "_haal_links_eruit", lambda db, js: 0)
+    return J_.get_pending_jobs(
+        request=type("R", (), {"headers": {"x-omnivaleur-ext": versie}})(),
+        platform=platform, user_id=USER)
+
+
+def _uitgifte_oud_stijl(monkeypatch, db, versie):
     monkeypatch.setattr(J, "get_db", lambda: db)
     for naam in ("_record_extension_heartbeat", "_recover_stale_claims"):
         monkeypatch.setattr(J, naam, lambda *a, **k: None)
