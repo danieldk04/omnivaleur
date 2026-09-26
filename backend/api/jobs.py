@@ -1821,8 +1821,11 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             rijen.sort(key=lambda j: op_plek.get(j["id"], len(kop)))
         result = SimpleNamespace(data=rijen)
     else:
+        # Het dashboard telt hier. Verzendkosten bijwerken is onderhoud op de
+        # achtergrond, geen werk van de verkoper: zie _is_2dh_bijwerking.
         result = (db.table("jobs").select("*").eq("user_id", user_id)
-                  .eq("status", "pending").order("created_at").limit(20).execute())
+                  .eq("status", "pending").or_(_NIET_2DH_BIJWERKING)
+                  .order("created_at").limit(20).execute())
 
     # ÉÉN PER KANAAL, EN HOOGUIT DRIE KANALEN TEGELIJK (extension dispatch only).
     #
