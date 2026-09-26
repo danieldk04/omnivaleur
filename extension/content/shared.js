@@ -2966,7 +2966,7 @@ window.CL = (() => {
     klokRapport, klokOpnieuw,
     sleep, waitUntil, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, vulLocatie, selectBundleFree,
-    selectDelivery, gekozenLevering, selectPakketWaarde, vulHalswijdte, keuzeveldenKort, typBeschrijvingEcht,
+    selectDelivery, gekozenLevering, selectPakketWaarde, zetVerzendkosten, centenUitTekst, vulHalswijdte, keuzeveldenKort, typBeschrijvingEcht,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding, zetBieden,
     clog, plaatsBlokkade, dutchColor, kleurKandidaten, kiesMetTerugval, lijstOpties, valueVariants, platteTekst, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
     mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG, zetPrijs, betaalrubriekBezwaar,

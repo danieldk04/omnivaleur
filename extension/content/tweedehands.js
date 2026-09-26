@@ -2,7 +2,7 @@
 (async () => {
   const PLATFORM = "2dehands";
   const { step, clog, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
-          fillBrand, fillBrandField, fillManufacturer, vulLocatie, selectBundleFree, selectDelivery, selectPackageSize, typBeschrijvingEcht,
+          fillBrand, fillBrandField, fillManufacturer, vulLocatie, selectBundleFree, selectDelivery, selectPackageSize, zetVerzendkosten, typBeschrijvingEcht,
           uploadPhotos, submitListing, clickRadioByValue, smartTrunc, fillBidding, zetBieden,
           dutchColor, ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs,
           mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG, zetPrijs } = window.CL;
@@ -138,6 +138,9 @@
     // verkoper op 2dehands.be niet goed zetten. Zie vulLocatie in shared.js.
     await step("locatie", async () => clog(`locatie: ${await vulLocatie(item)}`));
     await step("delivery",     async () => { await selectDelivery(item); selectBundleFree(); });
+    // Na de verzendwijze, want pas dan staat de keuze Bpost / Zelf versturen er.
+    // Zijn eigen bedrag van Marktplaats in plaats van Bpost 0-2 kg (zie shared.js).
+    await step("verzendkosten", async () => clog(`verzendkosten: ${await zetVerzendkosten(item)}`));
     // "Bieden vanaf" hoort bij een vraagprijs; zonder prijs is het minimumbod 0.
     // Altijd zetten, ook als de verkoper GEEN bieden wil: de schakelaar
     // "Bieden toestaan" staat op het formulier standaard aan. Zie zetBieden.

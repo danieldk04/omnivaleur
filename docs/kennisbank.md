@@ -17,6 +17,22 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## 2dehands-verzendkosten-volgen-marktplaats
+
+*26-09-2026 — "2dehands kreeg altijd Bpost 0-2 kg (EUR 7,10); sinds 1.0.353 geldt het eigen \"Zelf verzenden\"-bedrag van de Marktplaats-advertentie. Formulier: shippingMethod=diy + othersPrice"*
+
+Op 2dehands koos de extensie altijd Transporteur Bpost, pakket 0-2 kg (EUR 7,10), voor elk zoekertje. Egbert Brouwer (Papa's Plectrums, 25-09-2026) wilde voor patches geen dure verzending; op Marktplaats verstuurt hij ze zelf voor EUR 2,25 tot 4,95 (buttons 2,95, miniaturen 4,95), per advertentie ingesteld.
+
+Sinds 26-09-2026 (extensie 1.0.353) zet `_zet_verzending_van_marktplaats` in jobs.py bij uitgifte `payload.verzending` voor elke 2dehands-create van een artikel dat actief op Marktplaats staat. Bron: de openbare advertentiepagina `https://www.marktplaats.nl/m{nummer}` (gewoon) of `/a{nummer}` (Admarkt); de verkeerde letter geeft 404. Blok `"shippingInformation"` → `augmentedLabels[].labels[]` met `deliveryMethod: "UNKNOWN_BECAUSE_DIY"` en `price: "€ 4,95"` is zelf verzenden. PostNL/DHL-labels zijn het tarief van Marktplaats en gaan NIET mee.
+
+Het 2dehands-formulier (create én `/plaats/m{id}/edit`, live afgelezen): `input[name="shippingMethod"]` waarde `bpost` of `diy`; na `diy` verschijnt `input[name="othersPrice"]` ("0,00", komma) en verdwijnen de pakketmaten en `shippingDetails.price`. fillInput werkt, het bedrag overleeft hertekenen.
+
+**Why:** een eigen bedrag van de verkoper is de enige juiste bron; wij kunnen aan een foto niet zien of iets door de brievenbus past.
+
+**How to apply:** een leeg of onleesbaar bedrag is nooit "gratis verzenden" (dan betaalt de verkoper het porto): terugval is altijd Bpost 0-2 kg. Een storing bij Marktplaats houdt de opdracht niet tegen. Zoekertjes die al op 2dehands stonden veranderen niet vanzelf: er is (nog) geen wijzigroute voor 2dehands in de extensie. Zie ook "geraden-rubriek-is-niet-de-rubriek-van-de-verkoper" (zelfde patroon voor de rubriek) en "extension-release-bump-version".
+
+---
+
 ## leadbronnen-gemeten-26-09
 
 *26-09-2026 — "Leadvoorraad op (laatste mail 1 op 21-09); wat Vinted Pro, eBay zakelijk en OpenStreetMap echt tonen aan contactgegevens, gemeten 26-09-2026"*
