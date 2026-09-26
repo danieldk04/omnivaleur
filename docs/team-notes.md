@@ -13596,3 +13596,25 @@ Gisteren niets open; alle zeven nieuwe foutsoorten van vandaag beoordeeld.
   minuut na het oppakken, computer of browser ging uit. Achter bcdf9aa4 wachten
   28 plaatsingen. Vinted-scans bij vijf klanten wachten op een computer die aan gaat.
 - Geen abonnement op slot gegaan in 24 uur.
+
+## 26-09-2026: Dagelijkse klantfouten
+
+Gemeten om 06:12 UTC over 24 uur: 386 opdrachten bij 6 klanten, 27 fouten.
+Gisteren niets open; alle zeven nieuwe foutsoorten van vandaag beoordeeld.
+- Gerepareerd: Vinted kende "robijn"/"ruby" niet als kleur (shared.js en kleur.py
+  wel), dus "New Ruby Necklace" (1ba42900) ging drie keer terug met een lege
+  kleur. Nu rood (9f1ed84f, proef tests/vinted-kleur-uit-titel-test.js, oude code
+  faalt). Het enige geval in drie weken. Gaat mee met extensie 1.0.353, die een
+  andere sessie nu klaarzet (verzendkosten 2dehands); geen eigen versieverhoging.
+- Klant: rode wollen jas van De Juiste Toon heeft maat "Overige" (5x MP/2dehands);
+  maat verzinnen doen we niet. De witte jas zette ze zelf op M en ging daarna wel.
+- Open, onbekend: 2dehands-verwijdering Lederhosen m2443708088 meldde twee keer
+  "niets verwijderd", maar de advertentie is weg (openbaar 410). De controle na
+  het klikken leest /seller/view en kreeg 403. In 14 dagen 4 keer, allemaal De
+  Juiste Toon (Chromebook). Niet bewezen dat 403 daar altijd "weg" betekent, dus
+  niet aangepast. Haar Lederhosen staat nu op sold_unconfirmed.
+- Wachten op de klant: twee 2dehands-plaatsingen staan op 'claimed' (bcdf9aa4
+  sinds 22:22, 1ba42900 sinds 17:25 UTC); de hartslag van beide stopte binnen een
+  minuut na het oppakken, computer of browser ging uit. Achter bcdf9aa4 wachten
+  28 plaatsingen. Vinted-scans bij vijf klanten wachten op een computer die aan gaat.
+- Geen abonnement op slot gegaan in 24 uur.
