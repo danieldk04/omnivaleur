@@ -17,6 +17,186 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## leadbronnen-gemeten-26-09
+
+*26-09-2026 — "Leadvoorraad op sinds 21-09; elke gratis bron met 50+ verkopers gemeten op 26-09: alleen OpenStreetMap-winkels hebben volume (206 NL/BE), Marktplaats groeit ~3 per week, 2dehands en ondergrens 10 leveren 0"*
+
+**Voorraad op.** Sheet: 546 echte leads (plus 1000 lege spookrijen), 469 met
+e-mail, 457 gemaild. Machine: 293 unieke adressen, wachtrij 0. Laatste mail 1 op
+21-09; daarna alleen mail 2/3. De motor is goed, de brandstof is op: septembergroep
+10% antwoord (113 benaderd), versie A 17% antwoord / 5% aanmelding / 3% betaald,
+B 12 / 2 / 0 (kleine aantallen). Markt: gemiddeld 3,4% antwoord, 10% is top.
+
+**Vinted Pro** (1 profiel gecontroleerd, uitgelogd): bedrijfsnaam, bedrijfsnummer
+en plaats zichtbaar; e-mail en telefoon staan erop maar afgeschermd
+(`******@gmail.com`, data-testid `profile-business-email`), klikken toont niets.
+Catalogus-API geeft 404 zonder sessie. Pro bestaat in NL en BE. Of ingelogd het
+adres zichtbaar wordt: niet gemeten.
+
+**eBay.nl zakelijk** (12 advertenties met locatie NL, "vintage jas"): 6 zakelijk.
+Knop "Contactgegevens van de koper" (sic) toont bedrijfsnaam, naam, adres en
+telefoon; e-mail niet (1 van 1). Browse API `sellerLegalInfo` kent een e-mailveld,
+maar lokaal staan alleen sandbox-sleutels (SBX), dus niet gemeten.
+
+**OpenStreetMap** (Overpass, gratis): NL+BE 2401 winkels; tweedehands kleding 465
+(64 e-mail, 254 website), antiek 416 (43 / 130), second_hand 1211 (veel kringloop),
+charity 309. overpass-api.de gaf een lege reactie, overpass.kumi.systems werkte.
+
+**Facebookgroepen**: geen e-mailbron; scrapen riskeert het account (zie
+"instagram-leadgen-bronnen"). Zie "leadgen-op-conversie-niet-volume".
+
+**Proef 26-09 (avond), elke bron met 50+ verkopers.** Nieuw = niet in sheet of
+leadgen_opslag; passend = kleding/sieraden/antiek/muziek, 20+ advertenties, geen
+kringloop of nieuwe waar.
+- Marktplaats pijnzinnen ("staat ook op vinted" enz.): 406 zakelijk, 255 e-mail, 3
+  nieuw passend. Zakelijke gebruikers van die zinnen zitten in doe-het-zelf,
+  huis, audio.
+- 2dehands pijnzinnen: 103 zakelijk (Catawiki, boekenhandels), 1 e-mail, 0.
+- 2dehands volledig (659.475 advertenties, 9 min): 61 zakelijk, 26 e-mail, 0 echt
+  passend na nakijken. 2dehands heeft gewoon weinig zakelijke verkopers.
+- Marktplaats ondergrens 10: 162 met e-mail in de cache, 43 nieuw op rubriek, 0
+  volgens de classificatie (allemaal webshops in nieuwe waar; klopt bij nakijken).
+  De 131 afgewezen verkopers boven 20 zijn ook terecht afgewezen.
+- Marktplaats aanwas 18-09 tot 26-09 (660.000 advertenties, 10 min): 9 nieuwe
+  zakelijk, 3 bruikbaar. Bijvultempo ~3 per week.
+- OpenStreetMap (884 winkels, deel van Midden-NL ontbrak door overbelaste
+  servers): 238 e-mail, 218 nieuw passend, 206 NL/BE; 75 eigen webshop, 3 linken
+  naar een marktplaats, 118 naar Instagram. Werkend: overpass-api.de (NL-noord) en
+  maps.mail.ru (BE); kumi gaf 504 of time-out. User-Agent meesturen, per regio.
+- Kleinanzeigen zakelijk (DE): 82, e-mail in "Rechtliche Angaben" bij 3 (4%).
+- WebwinkelKeur: 699 leden, 5 tweedehands-achtig, 0 in onze rubrieken; ?q= wordt genegeerd.
+- Shopify-appreviews (marktplaats, marktplaats-admarkt, vinted-reviews,
+  exportyourstore): 58 reviews, 11 NL/BE, openlijk klagend over sync. Te weinig.
+- Geblokkeerd voor scripts (403/captcha, niet omzeilen): Vinted-API, Etsy, Catawiki,
+  eBay, Trustpilot, Reddit, Depop, Vestiaire. JavaScript-fetch in de ingebouwde
+  browser op Vinted wordt door de veiligheidscheck geweigerd.
+Kandidatenlijst lokaal: scripts/output/leads/kandidaten_2026-09-26.json (212).
+Zie "pijn-luid-is-particulier", "koude-mail-wat-mag".
+
+---
+
+## koude-mail-via-resend-zonder-pixel
+
+*26-09-2026 — "Sinds 06-09-2026 gaat de koude reeks via Resend: openpixel valt weg (0% geopend is meetfout) en gmail-ontvangers antwoorden nog 3% tegen 37% via Zoho (p=0,001)"*
+
+Gemeten 26-09-2026. Op Railway staat `RESEND_API_KEY`, dus `_postbode` in
+`scripts/leadgen_mail.py` kiest `_resend_stuur`. Die stuurt alleen `text` naar
+Resend; het HTML-deel met de pixel (`_open_pixel_html`, vanaf mail 2) gaat niet
+mee. Bewezen door de echte `_bericht` + `_resend_stuur` te draaien met een
+nagebootste httpx.post: pixel zit in het bericht, niet in wat Resend krijgt.
+
+Gevolg: vóór de overstap ~200 geregistreerde opens op mail 2/3, sinds 14-09 nog 4
+op ~150 verstuurde. `abtest` toont 0% geopend voor A en B. Dat is blind meten,
+geen bewijs van spam. De pixelroute zelf werkt (GET op omnivaleur.nl/t/o/ geeft
+200 image/gif, ook met Gmail- en Outlook-user-agent).
+
+Tweede probleem op dezelfde plek: koude mail via Resend botst met de afspraak in
+"railway-blokkeert-smtp" (Resend verbiedt koude mail; hetzelfde account stuurt
+wachtwoord- en factuurmail van de app). Railway kan geen SMTP, dus de oplossing
+is een andere verzendplek (Zoho SMTP vanaf GitHub Actions, zoals tot 06-09), niet
+een SMTP-instelling.
+
+**Gmail-ontvangers vallen weg via Resend (gemeten 26-09, per lead, eerste mail).**
+Daniel zelf via Zoho (11-08 t/m 13-09): gmail 14 van 38 antwoordden (37%). Machine
+via Resend (vanaf 06-09): gmail 1 van 29 (3%). Fisher p=0,001. Adressen op een
+eigen domein: 23% tegen 19% (p=0,7, geen verschil). Hotmail/Outlook/Live: 1 van 20
+en 2 van 20, via beide routes slecht (past bij Franks melding "in ongewenste
+mail"). Cohorten verschillen ook in lijst en maand, maar dan zou het verschil op
+elk domein zichtbaar zijn en dat is het niet.
+Wat wel klopt (26-09): omnivaleur.nl op 0 van 68 zwarte lijsten (MXToolbox,
+incl. Spamhaus DBL); SPF op send.omnivaleur.nl (amazonses), DKIM resend._domainkey,
+DMARC p=none. Zwarte lijsten via dig vanaf de Mac meten kan niet: ook de
+testregels (dbltest.com) geven leeg of time-out.
+
+**Why:** een open-percentage van nul leest als "alles in de spam" en stuurt je de
+verkeerde kant op. En een kwart van de lijst is gmail: die krijgt via Resend
+nauwelijks nog antwoord.
+**How to apply:** open-cijfers van de koude reeks pas vertrouwen als de
+verzendroute het HTML-deel meestuurt. Zie "koude-mail-autonoom",
+"wekelijkse-marketingmeting".
+
+---
+
+## pijn-luid-is-particulier
+
+*26-09-2026 — "Wie de crosslist-pijn openlijk uitspreekt ('staat ook op Vinted') is op MP/2dehands vrijwel altijd particulier zonder e-mail; bij zakelijke leads is 'al op een tweede kanaal' het meetbare pijnsignaal (warm 17% tegen 10%)"*
+
+Daniel, 26-09-2026: "uitgangspunt moet altijd zijn om de mensen te benaderen van
+wie de pain het grootste is en die zich er het liefst openlijk over uitspreken."
+
+Gemeten dezelfde dag:
+
+- **Wie het openlijk zegt.** Marktplaats-zoek-API met zinnen als "staat ook op
+  vinted", "ook elders te koop", "kan elders al verkocht" (searchInTitleAndDescription).
+  1.759 verkopers; bij 283 staat de zin aantoonbaar in het fragment, daarvan 5
+  zakelijk. 2dehands: 140 met bewijs, 0 zakelijk. De luidste pijn zit bij
+  particuliere semi-profs, en die hebben geen vindbaar adres (en Marktplaats
+  verbiedt ze te benaderen, zie "koude-mail-wat-mag"). Cold mail is voor hen het
+  verkeerde kanaal.
+- **Meetbaar pijnsignaal bij zakelijke leads**, op onze eigen 292 gemailde leads:
+  al op een tweede kanaal (eigen webshop of bol) 17,1% warm antwoord tegen 10,3%
+  bij alleen Marktplaats; verkopertype webshop 34,6% warm (n=26), handelaar 11,1%.
+- **Zoekzinnen zijn onbetrouwbaar.** Aanhalingstekens worden soms genegeerd ("ook op
+  catawiki" gaf 127.566 treffers). Precisie per zin gemeten op de advertentie zelf:
+  "ook op vinted" 11/12, "ook elders te koop" 1/12, "ook via andere kanalen" 0/12.
+  Het fragment in de API is 200 tekens.
+- **Losse advertentiepagina's (/v/...) openen triggert de CloudFront-blokkade** van
+  Marktplaats na ~80 verzoeken vanaf Daniels IP (403 "Request blocked"). Zoek-API,
+  smb-profile en /u/ bleven werken. Niet doen: het is dezelfde verbinding waarmee
+  Daniel zelf verkoopt.
+
+**Why:** "pijn" en "bereikbaar per mail" overlappen bijna niet; wie dat niet weet
+zoekt eindeloos naar adressen van mensen die er geen publiceren.
+**How to apply:** voor koude mail sorteren op meerdere kanalen en webshop; de luide
+particulieren bereik je via content en advertenties. Zie "leadbronnen-gemeten-26-09",
+"leadgen-op-conversie-niet-volume".
+
+---
+
+## koude-mail-wat-mag
+
+*26-09-2026 — "Wat mag bij koude mail: Tw 11.7 lid 3 geldt voor bv én eenmanszaak, maar alleen op een adres dat bekend is gemaakt om zulke mail te ontvangen; Marktplaats verbiedt in art. 7.2 precies onze leadgen"*
+
+Nagezocht 26-09-2026 in de letterlijke teksten, geen juridisch advies.
+
+**Telecommunicatiewet 11.7 (tekst wetten.overheid.nl, versie 2026).** Lid 1: e-mail
+met ongevraagde commerciële communicatie is verboden zonder voorafgaande
+toestemming. Lid 3: geen toestemming nodig bij een rechtspersoon **of een natuurlijke
+persoon die handelt in de uitoefening van zijn beroep of bedrijf** (dus ook de
+eenmanszaak), mits je contactgegevens gebruikt "die door de desbetreffende
+eindgebruiker voor het ontvangen van ongevraagde communicatie voor commerciële ...
+doeleinden zijn bestemd en bekendgemaakt", en in lijn met het doel waarvoor ze
+openbaar staan. Lid 6: elke mail noemt de werkelijke identiteit van de afzender en
+een geldig postadres of nummer waar de ontvanger zich kan afmelden. Het verschil
+bv tegenover eenmanszaak zit in Nederland dus niet in de wet maar in de AVG: het
+adres van een eenmanszaak is een persoonsgegeven (AVG art. 14: binnen een maand
+melden waar je het adres vandaan hebt).
+België (KB 4 april 2003) is strenger: de uitzondering geldt alleen voor
+onpersoonlijke adressen (info@, sales@) van rechtspersonen; een eenmanszaak is een
+natuurlijk persoon en valt er niet onder.
+
+**Onze mails (sheet Mailteksten, 26-09).** Geen postadres, geen afmeldzin in de
+tekst, geen bronvermelding. Alleen de List-Unsubscribe-kop. KvK-nummer hoeft niet:
+Handelsregisterwet art. 27 zondert reclame uit.
+
+**Marktplaats-gebruiksvoorwaarden (versie 22 juli 2026, art. 7.2):** "Het is de
+Gebruiker niet toegestaan om persoonsgegevens van Adverteerders (waaronder
+e-mailadressen en telefoonnummers) te verzamelen en/of Adverteerders te benaderen
+voor het aanbieden van eigen producten en/of diensten." Plus databankrecht (7.3).
+Dat is precies wat de leadgen doet; sanctie kan uitsluiting zijn, en Daniel verkoopt
+zelf op Marktplaats. 2dehands hoort bij hetzelfde bedrijf.
+
+**eBay productiesleutels:** de licentie staat gebruik alleen toe om het gebruik van
+eBay te ondersteunen, eBay kan sleutels intrekken. Die sleutels drijven de
+eBay-koppeling van betalende klanten, dus nooit voor leadgen gebruiken.
+
+**Why:** "B2B mag altijd" is niet wat de wet zegt, en de hoofdbron verbiedt het zelf.
+**How to apply:** voorkeur voor adressen die een bedrijf op zijn eigen website zet;
+in elke koude mail identiteit, postadres, afmeldzin en een bronzin. Zie
+"leadbronnen-gemeten-26-09", "railway-blokkeert-smtp".
+
+---
+
 ## 2dehands-verzendkosten-volgen-marktplaats
 
 *26-09-2026 — "2dehands standaard Bpost 0-2 kg (EUR 7,10); het eigen Marktplaats-bedrag alleen per klant via titelwoorden (verzending_2dh_woorden), want het is een NL-prijs. Formulier: shippingMethod=diy + othersPrice"*
@@ -44,65 +224,6 @@ Op 26-09-2026 zette ik voor Egbert 178 verzendbijwerkingen (2dehands content_ref
 **Why:** een wachtrij die niet beweegt leest als storing, ook als er "niets mis" is. Werk dat bewust wacht (versie, noodrem) is voor de klant onzichtbaar onderhoud.
 
 **How to apply:** wie een nieuw soort opdracht maakt dat op iets wacht: filter het uit `licht` vóór de kop wordt gekozen, uit de beurt tussen kanalen (`anderen`), uit /active (queued en queued_total), uit /pending zonder platform en uit /cancel-queued. Zie `_is_2dh_bijwerking` en `bijwerking_moet_wachten` in jobs.py. Zelfde familie als "beurt-aan-wachtend-werk-legt-alles-stil". Meet bij "loopt vast" eerst de rij van de klant (status per actie, claimed_at/done_at, result.cancelled "by user") voordat je zijn eigen verklaring volgt: Egbert dacht aan de artikelen die om merk en maat vroegen. Zie ook "2dehands-verzendkosten-volgen-marktplaats".
-
----
-
-## leadbronnen-gemeten-26-09
-
-*26-09-2026 — "Leadvoorraad op (laatste mail 1 op 21-09); wat Vinted Pro, eBay zakelijk en OpenStreetMap echt tonen aan contactgegevens, gemeten 26-09-2026"*
-
-**Voorraad op.** Sheet: 546 echte leads (plus 1000 lege spookrijen), 469 met
-e-mail, 457 gemaild. Machine: 293 unieke adressen, wachtrij 0. Laatste mail 1 op
-21-09; daarna alleen mail 2/3. De motor is goed, de brandstof is op: septembergroep
-10% antwoord (113 benaderd), versie A 17% antwoord / 5% aanmelding / 3% betaald,
-B 12 / 2 / 0 (kleine aantallen). Markt: gemiddeld 3,4% antwoord, 10% is top.
-
-**Vinted Pro** (1 profiel gecontroleerd, uitgelogd): bedrijfsnaam, bedrijfsnummer
-en plaats zichtbaar; e-mail en telefoon staan erop maar afgeschermd
-(`******@gmail.com`, data-testid `profile-business-email`), klikken toont niets.
-Catalogus-API geeft 404 zonder sessie. Pro bestaat in NL en BE. Of ingelogd het
-adres zichtbaar wordt: niet gemeten.
-
-**eBay.nl zakelijk** (12 advertenties met locatie NL, "vintage jas"): 6 zakelijk.
-Knop "Contactgegevens van de koper" (sic) toont bedrijfsnaam, naam, adres en
-telefoon; e-mail niet (1 van 1). Browse API `sellerLegalInfo` kent een e-mailveld,
-maar lokaal staan alleen sandbox-sleutels (SBX), dus niet gemeten.
-
-**OpenStreetMap** (Overpass, gratis): NL+BE 2401 winkels; tweedehands kleding 465
-(64 e-mail, 254 website), antiek 416 (43 / 130), second_hand 1211 (veel kringloop),
-charity 309. overpass-api.de gaf een lege reactie, overpass.kumi.systems werkte.
-
-**Facebookgroepen**: geen e-mailbron; scrapen riskeert het account (zie
-"instagram-leadgen-bronnen"). Zie "leadgen-op-conversie-niet-volume".
-
----
-
-## koude-mail-via-resend-zonder-pixel
-
-*26-09-2026 — "Sinds 06-09-2026 gaat de koude reeks vanaf Railway via Resend; _resend_stuur stuurt alleen platte tekst, dus de openpixel valt weg en \"0% geopend\" is een meetfout"*
-
-Gemeten 26-09-2026. Op Railway staat `RESEND_API_KEY`, dus `_postbode` in
-`scripts/leadgen_mail.py` kiest `_resend_stuur`. Die stuurt alleen `text` naar
-Resend; het HTML-deel met de pixel (`_open_pixel_html`, vanaf mail 2) gaat niet
-mee. Bewezen door de echte `_bericht` + `_resend_stuur` te draaien met een
-nagebootste httpx.post: pixel zit in het bericht, niet in wat Resend krijgt.
-
-Gevolg: vóór de overstap ~200 geregistreerde opens op mail 2/3, sinds 14-09 nog 4
-op ~150 verstuurde. `abtest` toont 0% geopend voor A en B. Dat is blind meten,
-geen bewijs van spam. De pixelroute zelf werkt (GET op omnivaleur.nl/t/o/ geeft
-200 image/gif, ook met Gmail- en Outlook-user-agent).
-
-Tweede probleem op dezelfde plek: koude mail via Resend botst met de afspraak in
-"railway-blokkeert-smtp" (Resend verbiedt koude mail; hetzelfde account stuurt
-wachtwoord- en factuurmail van de app). Railway kan geen SMTP, dus de oplossing
-is een andere verzendplek (Zoho SMTP vanaf GitHub Actions, zoals tot 06-09), niet
-een SMTP-instelling.
-
-**Why:** een open-percentage van nul leest als "alles in de spam" en stuurt je de
-verkeerde kant op.
-**How to apply:** open-cijfers van de koude reeks pas vertrouwen als de
-verzendroute het HTML-deel meestuurt. Zie "koude-mail-autonoom",
-"wekelijkse-marketingmeting".
 
 ---
 

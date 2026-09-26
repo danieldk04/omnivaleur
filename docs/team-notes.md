@@ -13681,3 +13681,70 @@ particulier account nagemeten. Zijn plaatsingen landen wel op dezelfde pagina
 Omdat de bijwerkingen niet meer op het dashboard staan zou een mislukking stil
 blijven. Daarom mailt de server de eigenaar zodra de noodrem voor een klant
 dichtgaat, hooguit een keer per dag per klant (_meld_bijwerking_staat_stil).
+
+## 26-09-2026 (avond): leadbronnen echt gemeten, pijn als uitgangspunt, gmail valt weg via Resend
+
+Opdracht van Daniel: de beste gratis bron van nieuwe, passende adressen vinden.
+Zijn uitgangspunt erbij: "benader de mensen van wie de pain het grootste is en die
+zich er het liefst openlijk over uitspreken." Niets verstuurd, niets aan de
+verzendroute veranderd, geen leads toegevoegd aan sheet of Supabase.
+
+**Gemeten per bron** (nieuw = niet in sheet of leadgen_opslag; passend = kleding,
+sieraden, antiek of muziek, minstens 20 advertenties, geen kringloop of nieuwe waar):
+
+| Bron | bekeken | met e-mail | nieuw en passend | tijd |
+|---|---|---|---|---|
+| Marktplaats, zinnen als "staat ook op Vinted" | 406 zakelijk (1.759 verkopers) | 255 | 3 | 4,5 min |
+| 2dehands, dezelfde zinnen | 103 zakelijk (1.167) | 1 | 0 | 0,6 min |
+| 2dehands helemaal afgezocht | 659.475 advertenties, 61 zakelijk | 26 | 2 op papier, 0 na nakijken | 9,5 min |
+| Marktplaats ondergrens 10 i.p.v. 20 | 162 met e-mail | 162 | 0 (alle 43 kandidaten nieuwe waar) | cache |
+| Marktplaats aanwas 18-09 tot 26-09 | 660.000 advertenties, 9 nieuwe zakelijk | 5 | 3 bruikbaar (1 adres kapot) | 10,1 min |
+| OpenStreetMap vintage- en antiekwinkels | 884 winkels | 238 | 218 (206 NL/BE) | 9,3 min |
+| Kleinanzeigen zakelijk (DE) | 82 | 3 | 3, platform niet ondersteund | 0,9 min |
+| WebwinkelKeur-leden | 699 webshops | n.v.t. | 0 tweedehands kleding/sieraden/antiek | 0,2 min |
+| Shopify-appreviews (Marktplaats-, Vinted-, crosslist-apps) | 58 reviews | n.v.t. | 11 winkels uit NL/BE | n.v.t. |
+
+Niet gemeten, bewust: Vinted Pro, Etsy, Catawiki, eBay, Trustpilot, Reddit, Depop
+en Vestiaire weigeren scriptverkeer (403 of captcha); daar niet omheen gewerkt. eBay
+Browse API met productiesleutels niet gebruikt: die sleutels drijven de
+eBay-koppeling van betalende klanten en de licentie beperkt gebruik tot het
+ondersteunen van eBay-gebruik.
+
+**Pijn.** De luidste pijn ("staat ook op Vinted", "kan elders al verkocht zijn")
+schrijven vrijwel alleen particulieren: 283 verkopers met de zin aantoonbaar in hun
+advertentie, 5 zakelijk. Geen adres, en Marktplaats verbiedt benaderen. Bij onze
+eigen 292 gemailde zakelijke leads is "al op een tweede kanaal" het meetbare
+pijnsignaal: 17,1% warm antwoord tegen 10,3% bij alleen Marktplaats; webshops
+34,6% warm (n=26).
+
+**Bezorging.** omnivaleur.nl staat op 0 van 68 zwarte lijsten; SPF, DKIM en DMARC
+kloppen. Maar per lead: gmail-ontvangers antwoordden 14 van 38 via Zoho (Daniel zelf)
+en 1 van 29 via de machine op Resend (p=0,001); eigen domeinen 23% tegen 19% (geen
+verschil); Hotmail/Outlook 1 van 20 en 2 van 20 via beide routes (Frank).
+Verstuurd tussen 12 en 15 uur: 29% antwoord, na 18 uur 10% (kleine aantallen).
+
+**Wat mag.** Telecommunicatiewet 11.7 lid 3: zonder toestemming mag naar bv én
+eenmanszaak, alleen op een adres dat bekend is gemaakt om zulke mail te ontvangen;
+lid 6: identiteit en postadres of nummer voor afmelden in elke mail. Onze teksten
+missen postadres, afmeldzin en bronzin. België: uitzondering alleen voor
+onpersoonlijke adressen van rechtspersonen. Marktplaats-voorwaarden art. 7.2
+(22-07-2026) verbieden adressen van adverteerders verzamelen en ze benaderen.
+
+Kandidaten (212: 206 OpenStreetMap, 3 Marktplaats-pijnzin, 3 Marktplaats-aanwas) staan lokaal in
+scripts/output/leads/kandidaten_2026-09-26.json, buiten de repo. Pas toevoegen
+na Daniels besluit over de verzendroute. Lessen: kennisbank "koude-mail-wat-mag",
+"pijn-luid-is-particulier", "koude-mail-via-resend-zonder-pixel",
+"leadbronnen-gemeten-26-09".
+
+**Volgorde op verwachte betalende klanten per uur werk.** 1) Verzendroute terug
+naar Zoho: geen nieuwe bron, maar ongeveer een kwart van de lijst is gmail en die
+antwoordt via Resend nauwelijks. 2) OpenStreetMap-winkels: de enige bron met
+volume (206 NL/BE in 9 minuten), maar zwak pijnsignaal (75 met eigen webshop, 3 met
+een link naar een marktplaats) en conversie onbekend; winkels uit de Marktplaats-lijst
+gaven 17% warm antwoord en 0 aanmeldingen (n=23). 3) Marktplaats-aanwas: ongeveer
+3 bruikbare per week. 4) Shopify-appreviews: 11 winkels met uitgesproken pijn,
+handwerk. De rest leverde niets op.
+
+Meetval: losse Marktplaats-advertentiepagina's (/v/...) openen gaf na ongeveer 80
+verzoeken een CloudFront-blokkade (403) op Daniels verbinding; zoek-API, bedrijfsprofiel
+en verkoperspagina bleven werken. Niet herhalen.
