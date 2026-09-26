@@ -15,6 +15,9 @@
 # Resend; daar antwoordden gmail-ontvangers nog 1 van 29 keer tegen 14 van 38 via
 # Zoho. Een beurt met RESEND_API_KEY in de omgeving doet sindsdien niets meer
 # (zie tick in leadgen_mail.py), dus dit is weer de enige plek die verstuurt.
+# Let op: na `gh workflow enable` startte GitHub geen geplande rondes (26-09,
+# 20:30 t/m 21:30 overgeslagen). Pas een nieuwe commit op dit bestand terwijl de
+# workflow aan staat registreert de planning opnieuw.
 
 name: Leadmachine
 
