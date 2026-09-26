@@ -558,7 +558,7 @@
       "pillar": "B",
       "format": "howto",
       "slug": "best-time-to-post-on-vinted",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "beste-tijd-om-te-plaatsen-op-vinted",
       "priority": 68
     },
@@ -1179,6 +1179,16 @@
       "action": "created",
       "url_path": "/vs/omnivaleur-vs-crosslist",
       "published_at": "2026-09-25T13:07:46.795440+00:00"
+    },
+    {
+      "keyword": "best time to post on Vinted",
+      "slug": "best-time-to-post-on-vinted",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "created",
+      "url_path": "/reseller-tools/best-time-to-post-on-vinted",
+      "published_at": "2026-09-26T12:35:17.541655+00:00"
     }
   ]
 }
