@@ -992,6 +992,34 @@ def _zet_verzending_van_marktplaats(db, user_id: str, job: dict) -> None:
         logger.warning("job %s: verzending niet kunnen opslaan: %s", job.get("id"), e)
 
 
+def _bijwerken_2dh_staat_stil(db, user_id: str) -> bool:
+    """Mislukte de laatst afgeronde 2dehands-bijwerking van deze verkoper?
+
+    Een noodrem voor een reeks. Bij Egbert stonden 116 zoekertjes klaar om hun
+    verzendkosten te laten bijwerken. Gaat er iets mis dat voor allemaal geldt,
+    dan wil je één mislukking zien en niet 116, en honderd mislukte opdrachten
+    tellen bovendien mee in de rem die zijn hele 2dehands-rij stilzet (zie
+    _stop_wachtrij). Dus: mislukte de laatste, dan wacht de rest tot iemand die
+    ene opnieuw klaarzet en hij slaagt. Bij twijfel (niet te lezen) niets
+    uitdelen: dit werk heeft geen haast.
+    """
+    try:
+        rijen = (db.table("jobs").select("status,created_at,claimed_at,done_at")
+                 .eq("user_id", user_id).eq("platform", "2dehands")
+                 .eq("action", "content_refresh").in_("status", ["done", "error"])
+                 .order("created_at", desc=True).limit(50).execute().data or [])
+    except Exception as e:  # noqa: BLE001
+        logger.warning("2dehands-bijwerkingen van %s niet te lezen: %s", user_id, e)
+        return True
+    if not rijen:
+        return False
+    # Wat het laatst AFLIEP telt, niet wat het laatst werd klaargezet: een reeks
+    # wordt in dezelfde seconde aangemaakt en loopt daarna een voor een af.
+    laatste = max(rijen, key=lambda r: str(r.get("done_at") or r.get("claimed_at")
+                                            or r.get("created_at") or ""))
+    return laatste.get("status") == "error"
+
+
 def _betaalde_rubriek_bekend(db, user_id: str, platform: str, sleutel: str) -> bool:
     """Weten we al dat deze rubriek bij deze verkoper geld kost?
 
