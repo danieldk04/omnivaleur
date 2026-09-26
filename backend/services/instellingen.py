@@ -264,6 +264,17 @@ def verkoopvraag_aan(user_id: str) -> bool:
         logger.warning("verkoopvraag-instelling niet gelezen voor %s: %s", user_id, e)
         return True
 
+def verzending_2dh_woorden(user_id: str, db=None) -> list[str] | None:
+    """Zie VERZENDING_2DH_WOORDEN. None = niet te lezen: een storing is geen
+    antwoord, dus dan legt de aanroeper niets vast."""
+    try:
+        rij = ((db or get_db()).table("platform_credentials").select("extra_data")
+               .eq("user_id", user_id).eq("platform", RIJ).limit(1).execute().data or [])
+    except Exception as e:  # noqa: BLE001
+        logger.warning("verzendwoorden niet gelezen voor %s: %s", user_id, e)
+        return None
+    return _schoon(rij[0].get("extra_data") if rij else None)[VERZENDING_2DH_WOORDEN]
+
 def alle_relist_dagen() -> dict[str, int]:
     """Per verkoper het ingestelde aantal dagen, voor de dagelijkse ronde.
 
