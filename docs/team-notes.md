@@ -13619,3 +13619,12 @@ Beoordeling "voldoet dit aan zijn vraag": voor patches ja (zijn eigen bedrag van
 Marktplaats, EUR 2,25 tot 4,95, geen handwerk). Miniaturen krijgen ook zijn eigen
 EUR 4,95 in plaats van 7,10; dat vroeg hij niet, hij noemde 7,20 "prima". Of 4,95
 genoeg is voor verzending naar België weet alleen hij; staat in de mail.
+
+**Stand 26-09 ±10:30.** Egbert's computer ging om 09:00 aan (Windows, extensie
+1.0.352) en hij plaatste weer. Die plaatsingen kregen het Marktplaats-bedrag mee
+maar zijn oude extensie vulde het niet in; de server zette er daarom vanzelf een
+bijwerking achter. Samen met het script (drie rondes, Marktplaats remde mijn Mac
+af) wachten er nu 178 bijwerkingen op 1.0.354: 151 patches (123 naar EUR 4,95, 11
+naar 2,95, 17 naar 2,25) en 27 andere artikelen naar 6,95. Eén patch verstuurt hij
+op Marktplaats via PostNL/DHL; die houdt Bpost. Miniaturen die al online stonden
+zijn niet aangeraakt (hij noemde 7,20 daar "prima").
