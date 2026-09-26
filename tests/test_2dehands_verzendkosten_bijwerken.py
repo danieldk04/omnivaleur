@@ -125,19 +125,6 @@ def _uitgifte(monkeypatch, db, versie, platform="2dehands", module=J):
         platform=platform, user_id=USER)
 
 
-def _uitgifte_oud_stijl(monkeypatch, db, versie):
-    monkeypatch.setattr(J, "get_db", lambda: db)
-    for naam in ("_record_extension_heartbeat", "_recover_stale_claims"):
-        monkeypatch.setattr(J, naam, lambda *a, **k: None)
-    monkeypatch.setattr(J, "_gepubliceerde_extensieversie", lambda: None)
-    monkeypatch.setattr(J, "execute_with_retry", lambda q, *a, **k: q.execute())
-    monkeypatch.setattr(J, "_zet_kleur_goed", lambda r: None)
-    monkeypatch.setattr(J, "_zet_taal_goed", lambda db, js: list(js))
-    monkeypatch.setattr(J, "_haal_links_eruit", lambda db, js: 0)
-    return J.get_pending_jobs(
-        request=type("R", (), {"headers": {"x-omnivaleur-ext": versie}})(),
-        platform="2dehands", user_id=USER)
-
 
 @pytest.mark.parametrize("versie,uitgedeeld", [
     ("1.0.352", False),   # kent geen wijzigadres voor 2dehands
@@ -175,6 +162,69 @@ def test_de_noodrem_raakt_geen_plaatsingen(monkeypatch):
     afgerond = [{"status": "error", "created_at": _tijd(9), "claimed_at": _tijd(9), "done_at": _tijd(8)}]
     uit = _uitgifte(monkeypatch, _db([plaatsing], afgerond), "1.0.354")
     assert [j["id"] for j in uit] == ["p1"]
+
+
+# ── wachtende bijwerkingen mogen niets stilleggen (Egbert, 26-09-2026) ────────
+def _dertig_wachtend_en_daarna_een_plaatsing(platform_van_de_plaatsing="2dehands"):
+    rij = [{**_bijwerking(f"b{i}"), "created_at": _tijd(90 - i)} for i in range(30)]
+    return rij + [_plaatsing_in_de_rij(platform=platform_van_de_plaatsing)]
+
+
+@pytest.mark.parametrize("versie", ["1.0.352", "1.0.354-na-een-mislukking"])
+def test_een_nieuwe_plaatsing_gaat_langs_de_wachtende_bijwerkingen(monkeypatch, versie):
+    """Bij hem stonden er 178 vooraan; de kop van de rij is er 25."""
+    afgerond = ([{"status": "error", "created_at": _tijd(99), "claimed_at": _tijd(95), "done_at": _tijd(94)}]
+                if "mislukking" in versie else [])
+    nu = _uitgifte(monkeypatch, _db(_dertig_wachtend_en_daarna_een_plaatsing(), afgerond), versie[:7])
+    assert [j["id"] for j in nu] == ["p1"]
+    oud = _uitgifte(monkeypatch, _db(_dertig_wachtend_en_daarna_een_plaatsing(), afgerond), versie[:7],
+                    module=_oude_jobs())
+    assert oud == [], "zo stond het vanochtend live: de plaatsing kwam nooit aan de beurt"
+
+
+def test_de_beurt_gaat_niet_naar_een_kanaal_dat_alleen_wachtend_werk_heeft(monkeypatch):
+    """Marktplaats plaatste als laatste, dus 2dehands zou de beurt krijgen."""
+    rij = _dertig_wachtend_en_daarna_een_plaatsing(platform_van_de_plaatsing="marktplaats")
+    nu = _uitgifte(monkeypatch, _db(rij, laatst_geplaatst_op="marktplaats"), "1.0.352",
+                   platform="marktplaats")
+    assert [j["id"] for j in nu] == ["p1"]
+    oud = _uitgifte(monkeypatch, _db(rij, laatst_geplaatst_op="marktplaats"), "1.0.352",
+                    platform="marktplaats", module=_oude_jobs())
+    assert oud == [], "vroeger: beurt naar 25 bijwerkingen die daarna allemaal werden overgeslagen"
+
+
+def test_het_dashboard_toont_ze_niet_als_wachtrij(monkeypatch):
+    rij = [_bijwerking(f"b{i}") for i in range(3)] + [_plaatsing_in_de_rij()]
+    for module, verwacht in ((J, ["p1"]), (_oude_jobs(), ["b0", "b1", "b2", "p1"])):
+        monkeypatch.setattr(module, "get_db", lambda: _db(rij))
+        monkeypatch.setattr(module, "_gemeten_tempo", lambda *a: {})
+        uit = module.active_jobs(user_id=USER)
+        assert sorted(j["id"] for j in uit["queued"]) == verwacht, module.__name__
+        assert uit["queued_total"] == len(verwacht)
+
+
+def test_de_rij_legen_laat_ze_staan(monkeypatch):
+    rij = [_bijwerking("b0"), _plaatsing_in_de_rij()]
+    geannuleerd = []
+
+    class _V:
+        def update(self, _v):
+            return self
+
+        def in_(self, k, v):
+            geannuleerd.extend(v)
+            return self
+
+        def __getattr__(self, _n):
+            return lambda *a, **k: self
+
+        def execute(self):
+            return type("R", (), {"data": []})()
+
+    monkeypatch.setattr(J, "get_db", lambda: type("Db", (), {"table": lambda self, n: _V()})())
+    monkeypatch.setattr(J, "fetch_all", lambda *a, **k: [dict(j) for j in rij])
+    J.cancel_queued_jobs(user_id=USER)
+    assert "b0" not in geannuleerd and "p1" in geannuleerd
 
 
 def test_de_extensie_zelf():
