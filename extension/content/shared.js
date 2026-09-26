@@ -1906,6 +1906,50 @@ window.CL = (() => {
     clickRadioByValue("FREE");
   }
 
+  // DE VERZENDKOSTEN VAN DE VERKOPER ZELF (26-09-2026, Egbert Brouwer).
+  //
+  // Op 2dehands kozen we altijd Bpost 0-2 kg (EUR 7,10), ook voor een patch die
+  // hij op Marktplaats voor EUR 2,95 zelf verstuurt. De server zet nu in
+  // item.verzending wat hij op Marktplaats zelf koos (zie verzending_uit_html in
+  // mp_enrich.py). Alleen {soort: "zelf", cents} doet hier iets.
+  //
+  // Het formulier, live afgelezen op 26-09-2026: onder Transporteur de rondjes
+  // input[name="shippingMethod"] met waarde "bpost" en "diy" (Zelf versturen);
+  // na "diy" verschijnt input[name="othersPrice"] (Verzendkosten, "0,00") en
+  // verdwijnen de pakketmaten. Het bedrag blijft staan na hertekenen.
+  //
+  // Lukt het niet om het bedrag terug te lezen, dan terug naar Bpost met het
+  // kleinste pakket, precies het oude gedrag. "Zelf versturen" met een leeg of
+  // verkeerd bedrag is erger: dan betaalt de verkoper het porto zelf.
+  function centenUitTekst(tekst) {
+    const m = String(tekst || "").replace(/[^\d,.]/g, "").match(/^(\d{1,4})(?:[.,](\d{1,2}))?$/);
+    if (!m) return null;
+    return Number(m[1]) * 100 + Number((m[2] || "0").padEnd(2, "0"));
+  }
+
+  async function zetVerzendkosten(item) {
+    const v = item && item.verzending;
+    if (!v || v.soort !== "zelf" || !Number.isInteger(v.cents) || v.cents < 0) {
+      return `niets te doen (${v ? v.soort : "geen gegevens"})`;
+    }
+    const zelf = await wachtOpElement('input[name="shippingMethod"][value="diy"]', 3000);
+    if (!zelf) return "dit formulier heeft geen keuze voor zelf versturen";
+    if (!zelf.checked) { zelf.click(); await sleep(400); }
+    const bedrag = (v.cents / 100).toFixed(2).replace(".", ",");
+    const veld = await wachtOpElement('input[name="othersPrice"]', 3000);
+    if (veld) { fillInput(veld, bedrag); await sleep(400); }
+
+    const nu = qs('input[name="othersPrice"]');
+    const gekozen = qs('input[name="shippingMethod"]:checked');
+    if (nu && gekozen && gekozen.value === "diy" && centenUitTekst(nu.value) === v.cents) {
+      return `zelf versturen voor € ${bedrag}`;
+    }
+    const waarom = !veld ? "geen veld voor het bedrag" : `bedrag bleef "${nu ? nu.value : "weg"}"`;
+    const bpost = qs('input[name="shippingMethod"]:not([value="diy"])');
+    if (bpost) { bpost.click(); await sleep(400); await selectPackageSize(); }
+    return `zelf versturen lukte niet (${waarom}), terug naar de standaardverzending`;
+  }
+
   // Pakketgrootte (2dehands): pick the row containing the wanted weight band.
   async function selectPackageSize(bandRegex = /0\s*-\s*2\s*kg/i) {
     for (let i = 0; i < 20; i++) {
