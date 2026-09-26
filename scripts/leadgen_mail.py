@@ -4868,6 +4868,16 @@ def tick(args) -> None:
     if MAILFLOW_GEPAUZEERD:
         print("De mailflow staat op pauze (MAILFLOW_GEPAUZEERD). Er gaat niets uit.")
         return
+    # KOUDE MAIL NOOIT VIA RESEND (26-09-2026). Gemeten per lead: gmail antwoordde
+    # via Zoho 14 van 38 keer, via Resend 1 van 29. Resend verbiedt koude mail en
+    # hetzelfde account draagt de wachtwoord- en factuurmails van de app. De reeks
+    # draait daarom bij GitHub Actions via Zoho. Staat RESEND_API_KEY in de
+    # omgeving, dan zijn we op de server: dan helemaal niets doen, ook de
+    # administratie niet aanraken, want twee plekken tegelijk mailen dubbel.
+    if _resend_actief():
+        print("Koude mail gaat nooit via Resend; de reeks draait bij GitHub Actions "
+              "via Zoho. Deze beurt doet niets.")
+        return
 
     host = _controleer_afzender()
     gebruiker = _need("MAIL_USER")
