@@ -10,7 +10,7 @@ scrapen 263.000 advertenties, 88.000 verkopers, 978 zakelijke verkopers en ruim
 
 DE DRIE DINGEN DIE DIT MOGELIJK MAKEN (alle drie live getest, 2026-08-10)
   1. De interne zoek-API van Marktplaats geeft 100 advertenties per verzoek als JSON:
-     /lrp/api/search?l1CategoryId=..&l2CategoryId=..&limit=100&offset=..
+     /lrp/api/search?l1CategoryId=..&l2CategoryIds=..&limit=100&offset=..
      Dat is drie keer zoveel als een HTML-pagina en er is geen sleutel voor nodig.
   2. Elke advertentie draagt al een ZAKELIJK-SIGNAAL mee (showWebsiteUrl / isVerified).
      Met dat vlaggetje is 72% van de verkopers echt zakelijk, zonder is dat 3%.
@@ -194,7 +194,9 @@ def _save(path: Path, rows: list) -> None:
 def _search(client: httpx.Client, l1: int, l2: int | None, offset: int) -> list[dict]:
     params = {"l1CategoryId": l1, "limit": PAGE, "offset": offset}
     if l2:
-        params["l2CategoryId"] = l2
+        # MEERVOUD. Met "l2CategoryId" negeert de API het filter stil en krijg je de
+        # hele hoofdrubriek terug (26-09-2026, zie test_leadgen_subrubriek_filter).
+        params["l2CategoryIds"] = l2
     try:
         r = client.get(API, params=params)
         if r.status_code != 200:
