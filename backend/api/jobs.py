@@ -1778,6 +1778,24 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # First, rescue anything stuck 'claimed' from an interrupted run.
     _recover_stale_claims(db, user_id, platform, now_dt)
 
+    # WERK DAT BEWUST WACHT MAG NOOIT VOORAAN IN DE RIJ STAAN (26-09-2026, Egbert).
+    # Verzendkosten van een 2dehands-zoekertje bijwerken kan pas vanaf 1.0.354, en
+    # niet meer zodra de vorige keer mislukte (_bijwerken_2dh_staat_stil). Er
+    # stonden er 178 klaar bij een kopie van 1.0.352. Die kregen de kop van de rij
+    # (WACHTRIJ_KOP, op volgorde van aanmaken), werden daarna allemaal
+    # overgeslagen, en een plaatsing die er achter kwam zou nooit meer uitgaan.
+    bijwerken_staat_stil = None  # pas opgevraagd als er zo'n opdracht in de rij staat
+
+    def bijwerking_moet_wachten(j: dict) -> bool:
+        nonlocal bijwerken_staat_stil
+        if j.get("action") != "content_refresh" or j.get("platform") != "2dehands":
+            return False
+        if versie_van_de_kopie is None or versie_van_de_kopie < MINIMALE_2DH_BIJWERK_VERSIE:
+            return True
+        if bijwerken_staat_stil is None:
+            bijwerken_staat_stil = _bijwerken_2dh_staat_stil(db, user_id)
+        return bijwerken_staat_stil
+
     now = now_dt.isoformat()
     if platform:
         # ALLEEN de lichte velden over de HELE wachtrij: daarmee bepalen we de
