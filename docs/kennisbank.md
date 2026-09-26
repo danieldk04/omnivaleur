@@ -17,9 +17,58 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## koude-mail-via-resend-zonder-pixel
+
+*26-09-2026 — "Van 18-09 tot 26-09 ging de koude reeks via Resend (pixel weg, gmail 3% antwoord tegen 37% via Zoho); sinds 26-09 avond weer Zoho via GitHub Actions, server doet niets meer"*
+
+Gemeten 26-09-2026. Op Railway staat `RESEND_API_KEY`, dus `_postbode` in
+`scripts/leadgen_mail.py` kiest `_resend_stuur`. Die stuurt alleen `text` naar
+Resend; het HTML-deel met de pixel (`_open_pixel_html`, vanaf mail 2) gaat niet
+mee. Bewezen door de echte `_bericht` + `_resend_stuur` te draaien met een
+nagebootste httpx.post: pixel zit in het bericht, niet in wat Resend krijgt.
+
+Gevolg: vóór de overstap ~200 geregistreerde opens op mail 2/3, sinds 14-09 nog 4
+op ~150 verstuurde. `abtest` toont 0% geopend voor A en B. Dat is blind meten,
+geen bewijs van spam. De pixelroute zelf werkt (GET op omnivaleur.nl/t/o/ geeft
+200 image/gif, ook met Gmail- en Outlook-user-agent).
+
+Tweede probleem op dezelfde plek: koude mail via Resend botst met de afspraak in
+"railway-blokkeert-smtp" (Resend verbiedt koude mail; hetzelfde account stuurt
+wachtwoord- en factuurmail van de app). Railway kan geen SMTP, dus de oplossing
+is een andere verzendplek (Zoho SMTP vanaf GitHub Actions, zoals tot 06-09), niet
+een SMTP-instelling.
+
+**Gmail-ontvangers vallen weg via Resend (gemeten 26-09, per lead, eerste mail).**
+Daniel zelf via Zoho (11-08 t/m 13-09): gmail 14 van 38 antwoordden (37%). Machine
+via Resend (vanaf 06-09): gmail 1 van 29 (3%). Fisher p=0,001. Adressen op een
+eigen domein: 23% tegen 19% (p=0,7, geen verschil). Hotmail/Outlook/Live: 1 van 20
+en 2 van 20, via beide routes slecht (past bij Franks melding "in ongewenste
+mail"). Cohorten verschillen ook in lijst en maand, maar dan zou het verschil op
+elk domein zichtbaar zijn en dat is het niet.
+Wat wel klopt (26-09): omnivaleur.nl op 0 van 68 zwarte lijsten (MXToolbox,
+incl. Spamhaus DBL); SPF op send.omnivaleur.nl (amazonses), DKIM resend._domainkey,
+DMARC p=none. Zwarte lijsten via dig vanaf de Mac meten kan niet: ook de
+testregels (dbltest.com) geven leeg of time-out.
+
+**Why:** een open-percentage van nul leest als "alles in de spam" en stuurt je de
+verkeerde kant op. En een kwart van de lijst is gmail: die krijgt via Resend
+nauwelijks nog antwoord.
+**How to apply:** open-cijfers van de koude reeks pas vertrouwen als de
+verzendroute het HTML-deel meestuurt. Zie "koude-mail-autonoom",
+"wekelijkse-marketingmeting".
+
+**26-09-2026 avond: terug naar Zoho.** `tick` in leadgen_mail.py doet niets meer als
+RESEND_API_KEY in de omgeving staat (test_koude_mail_nooit_via_resend). De workflow
+leadgen-mail.yml staat weer aan, met GOOGLE_SHEETS_SLEUTEL (repo-secret) en
+google-auth erbij; die ontbraken omdat de workflow uit de Notion-tijd stamde.
+Eerste ronde 20:01: 8 x mail 3, alle 8 in Zoho Verzonden, ieder precies 1 keer in
+de administratie. Geplande rondes starten hier 30-60 min te laat.
+
+---
+
 ## leadbronnen-gemeten-26-09
 
-*26-09-2026 — "Leadvoorraad op sinds 21-09; elke gratis bron met 50+ verkopers gemeten op 26-09: alleen OpenStreetMap-winkels hebben volume (206 NL/BE), Marktplaats groeit ~3 per week, 2dehands en ondergrens 10 leveren 0"*
+*26-09-2026 — "Alle gratis bronnen NL/BE gemeten 26-09: bedrijven op MP/2dh op, particulieren 4.145 (MP) + 3.029 (2dh) met 20+ advertenties maar onbenaderbaar; webshops via zoekwoorden en OSM leveren nog; 342 kandidaten lokaal"*
 
 **Voorraad op.** Sheet: 546 echte leads (plus 1000 lege spookrijen), 469 met
 e-mail, 457 gemaild. Machine: 293 unieke adressen, wachtrij 0. Laatste mail 1 op
@@ -73,83 +122,102 @@ kringloop of nieuwe waar.
 Kandidatenlijst lokaal: scripts/output/leads/kandidaten_2026-09-26.json (212).
 Zie "pijn-luid-is-particulier", "koude-mail-wat-mag".
 
----
-
-## koude-mail-via-resend-zonder-pixel
-
-*26-09-2026 — "Sinds 06-09-2026 gaat de koude reeks via Resend: openpixel valt weg (0% geopend is meetfout) en gmail-ontvangers antwoorden nog 3% tegen 37% via Zoho (p=0,001)"*
-
-Gemeten 26-09-2026. Op Railway staat `RESEND_API_KEY`, dus `_postbode` in
-`scripts/leadgen_mail.py` kiest `_resend_stuur`. Die stuurt alleen `text` naar
-Resend; het HTML-deel met de pixel (`_open_pixel_html`, vanaf mail 2) gaat niet
-mee. Bewezen door de echte `_bericht` + `_resend_stuur` te draaien met een
-nagebootste httpx.post: pixel zit in het bericht, niet in wat Resend krijgt.
-
-Gevolg: vóór de overstap ~200 geregistreerde opens op mail 2/3, sinds 14-09 nog 4
-op ~150 verstuurde. `abtest` toont 0% geopend voor A en B. Dat is blind meten,
-geen bewijs van spam. De pixelroute zelf werkt (GET op omnivaleur.nl/t/o/ geeft
-200 image/gif, ook met Gmail- en Outlook-user-agent).
-
-Tweede probleem op dezelfde plek: koude mail via Resend botst met de afspraak in
-"railway-blokkeert-smtp" (Resend verbiedt koude mail; hetzelfde account stuurt
-wachtwoord- en factuurmail van de app). Railway kan geen SMTP, dus de oplossing
-is een andere verzendplek (Zoho SMTP vanaf GitHub Actions, zoals tot 06-09), niet
-een SMTP-instelling.
-
-**Gmail-ontvangers vallen weg via Resend (gemeten 26-09, per lead, eerste mail).**
-Daniel zelf via Zoho (11-08 t/m 13-09): gmail 14 van 38 antwoordden (37%). Machine
-via Resend (vanaf 06-09): gmail 1 van 29 (3%). Fisher p=0,001. Adressen op een
-eigen domein: 23% tegen 19% (p=0,7, geen verschil). Hotmail/Outlook/Live: 1 van 20
-en 2 van 20, via beide routes slecht (past bij Franks melding "in ongewenste
-mail"). Cohorten verschillen ook in lijst en maand, maar dan zou het verschil op
-elk domein zichtbaar zijn en dat is het niet.
-Wat wel klopt (26-09): omnivaleur.nl op 0 van 68 zwarte lijsten (MXToolbox,
-incl. Spamhaus DBL); SPF op send.omnivaleur.nl (amazonses), DKIM resend._domainkey,
-DMARC p=none. Zwarte lijsten via dig vanaf de Mac meten kan niet: ook de
-testregels (dbltest.com) geven leeg of time-out.
-
-**Why:** een open-percentage van nul leest als "alles in de spam" en stuurt je de
-verkeerde kant op. En een kwart van de lijst is gmail: die krijgt via Resend
-nauwelijks nog antwoord.
-**How to apply:** open-cijfers van de koude reeks pas vertrouwen als de
-verzendroute het HTML-deel meestuurt. Zie "koude-mail-autonoom",
-"wekelijkse-marketingmeting".
+**Avondronde 26-09 (Daniel: "iedereen in NL en BE", alle kanalen).**
+- Particuliere semi-profs, met gerepareerd subrubriekfilter, unieke advertenties
+  (ondergrens: per subrubriek alleen de nieuwste 5.000): Marktplaats 764.176
+  advertenties, 195.249 verkopers; particulier met 20+ gezien 4.145, 10+ 9.871,
+  50+ 1.234. 2dehands 528.844 / 88.295; particulier 20+ 3.029, 10+ 6.371.
+  Bedrijven 20+: MP 249, 2dh 53. Geen legale 1-op-1-route naar particulieren.
+- Bedrijven met gerepareerd filter: MP 44 nieuw op 544.755 advertenties (4 a 5
+  passend), 2dehands 7 nieuw op 436.073 (0 passend). Bedrijven zijn echt op.
+- Webshops via zoekwoorden (eigen WebSearch-tool, 20 zoekopdrachten zoals
+  "ralph lauren vintage webshop", "preloved designer tassen", "brocante webshop"):
+  84 domeinen, 41 nieuw met e-mail, ronde 2 gaf evenveel nieuwe als ronde 1 (10
+  van 48 overlap). Deels gemengde winkels (nieuw en tweedehands).
+- Alle zoekmachines blokkeren scripts: DuckDuckGo html werkte ~eerste zoekopdrachten
+  en gaf daarna 202 "anomaly"; Mojeek, Brave, Startpage, Ecosia, Qwant, Yahoo meteen.
+  Een script dat bij blokkade 20 s wacht zonder voortgang te loggen liep 56 min
+  vast en verloor alles. Opschalen kan alleen met een zoek-API-sleutel.
+- OpenStreetMap Midden-NL (51.5-52.0) aangevuld: 39 nieuw; OSM totaal 245 NL/BE.
+- Gidsen: antiekwinkel.nl ~170 winkels, 61 nieuw met e-mail; allevintagewinkels.nl
+  198 winkelpagina's zonder websitelink, daarna lege pagina's; vintagewinkelsgids
+  en deantieksite 0 bruikbaar.
+- TikTok: 422 verkoper-profielen gelezen (bio open zonder login), 35 NL-talig rond
+  Vinted met e-mail in bio; meeste zijn lifestyle/UGC-makers = kanaal, geen gebruiker.
+- CBS via FirmFocus Q3 2026: 750 winkels tweedehands kleding, 685 antiek (NL).
+- Instagram-bio's en Facebookgroepen: niet leesbaar zonder login. Etsy: geen e-mail
+  zichtbaar (1 winkel), alleen Etsy-berichten.
+Kandidatenlijst lokaal: 342 (scripts/output/leads/kandidaten_2026-09-26.json).
 
 ---
 
-## pijn-luid-is-particulier
+## marktplaats-rubrieken-uitgeput
 
-*26-09-2026 — "Wie de crosslist-pijn openlijk uitspreekt ('staat ook op Vinted') is op MP/2dehands vrijwel altijd particulier zonder e-mail; bij zakelijke leads is 'al op een tweede kanaal' het meetbare pijnsignaal (warm 17% tegen 10%)"*
+*26-09-2026 — "Voor bedrijven nog steeds waar: met het gerepareerde subrubriekfilter (26-09) 44 nieuwe op 544.755 advertenties, 4 a 5 passend"*
 
-Daniel, 26-09-2026: "uitgangspunt moet altijd zijn om de mensen te benaderen van
-wie de pain het grootste is en die zich er het liefst openlijk over uitspreken."
+**26-09-2026: meetfout gevonden, conclusie blijft grotendeels staan.** De sweep stuurde `l2CategoryId`
+(enkelvoud) mee; de API negeert dat en geeft de hele hoofdrubriek terug. "3
+subcategorieën per rubriek" waren dus drie keer dezelfde lijst. Met het goede filter nagemeten: 44 nieuwe zakelijke verkopers op 544.755
+advertenties, 4 a 5 passend. Zie "marktplaats-subrubriek-filter-meervoud".
 
-Gemeten dezelfde dag:
+De leadgen-skill zegt: wil je meer volume, verhoog dan eerst `--depth` naar 5000.
+Op 06-09-2026 gemeten klopt dat niet meer. Steekproef in precies de diepte die nu
+wordt overgeslagen (offset 2000-4000, 3 subcategorieën per rubriek, alle elf
+rubrieken): **4.647 advertenties, 900 zakelijke verkopers, 3 nieuwe.** De elf
+rubrieken zijn uitgeput.
 
-- **Wie het openlijk zegt.** Marktplaats-zoek-API met zinnen als "staat ook op
-  vinted", "ook elders te koop", "kan elders al verkocht" (searchInTitleAndDescription).
-  1.759 verkopers; bij 283 staat de zin aantoonbaar in het fragment, daarvan 5
-  zakelijk. 2dehands: 140 met bewijs, 0 zakelijk. De luidste pijn zit bij
-  particuliere semi-profs, en die hebben geen vindbaar adres (en Marktplaats
-  verbiedt ze te benaderen, zie "koude-mail-wat-mag"). Cold mail is voor hen het
-  verkeerde kanaal.
-- **Meetbaar pijnsignaal bij zakelijke leads**, op onze eigen 292 gemailde leads:
-  al op een tweede kanaal (eigen webshop of bol) 17,1% warm antwoord tegen 10,3%
-  bij alleen Marktplaats; verkopertype webshop 34,6% warm (n=26), handelaar 11,1%.
-- **Zoekzinnen zijn onbetrouwbaar.** Aanhalingstekens worden soms genegeerd ("ook op
-  catawiki" gaf 127.566 treffers). Precisie per zin gemeten op de advertentie zelf:
-  "ook op vinted" 11/12, "ook elders te koop" 1/12, "ook via andere kanalen" 0/12.
-  Het fragment in de API is 200 tekens.
-- **Losse advertentiepagina's (/v/...) openen triggert de CloudFront-blokkade** van
-  Marktplaats na ~80 verzoeken vanaf Daniels IP (403 "Request blocked"). Zoek-API,
-  smb-profile en /u/ bleven werken. Niet doen: het is dezelfde verbinding waarmee
-  Daniel zelf verkoopt.
+Nieuwe rubrieken wél. Zelfde soort steekproef, ~1.200 advertenties elk:
 
-**Why:** "pijn" en "bereikbaar per mail" overlappen bijna niet; wie dat niet weet
-zoekt eindeloos naar adressen van mensen die er geen publiceren.
-**How to apply:** voor koude mail sorteren op meerdere kanalen en webshop; de luide
-particulieren bereik je via content en advertenties. Zie "leadbronnen-gemeten-26-09",
-"leadgen-op-conversie-niet-volume".
+| rubriek | id | nieuwe verkopers |
+|---|---|---|
+| huis-en-inrichting | 504 | 47 |
+| tuin-en-terras | 1847 | 32 |
+| dieren-en-toebehoren | 395 | 26 |
+| hobby-en-vrije-tijd | 1099 | 16 |
+| postzegels-en-munten | 1784 | 10 |
+| antiek-en-kunst | 1 | 8 |
+| kinderen-en-baby-s | 565 | 5 |
+| cd-s-en-dvd-s | 1744 | 5 |
+
+Let op de spanning: huis-en-inrichting en tuin staan er bewust NIET in omdat banken
+en kasten niet verzendbaar zijn, en de classificatieprompt wijst meubel- en
+interieurhandel expliciet af. Ze toevoegen levert dus veel nieuwe verkopers op die
+daarna alsnog worden afgewezen. Dat is geld noch tijd waard tenzij het dashboard
+zijn tak "wonen, tuin en interieur" echt kan bedienen. Dat is een keuze voor Daniel,
+geen technische.
+
+De id's zijn geoogst uit `searchCategory` in de HTML van `/l/{slug}/`, nooit
+gegokt: de bekende 621 (kleding-dames) en 565 (kinderen) kwamen er als controle
+goed uit. Zie "marktplaats-category-ids".
+
+---
+
+## marktplaats-subrubriek-filter-meervoud
+
+*26-09-2026 — "Zoek-API filtert alleen met l2CategoryIds (meervoud); enkelvoud wordt stil genegeerd. Voor bedrijven maakte het weinig uit (44 nieuw op 544.755 advertenties), voor tellingen alles"*
+
+Gevonden 26-09-2026. `/lrp/api/search?l1CategoryId=621&l2CategoryId=631` geeft
+782.575 advertenties uit alle dames-subrubrieken door elkaar; met
+`l2CategoryIds=631` 98.413, allemaal Jurken. De website zelf gebruikt het meervoud
+(`__NEXT_DATA__` op /l/kleding-dames/jurken/). Ook kindermaten werken zo
+(Maat 104: 8.284).
+
+Gevolg: elke leadgen-sweep, de aanwasmeting en de "volledige" 2dehands-sweep zagen
+per hoofdrubriek alleen de nieuwste 5.000 advertenties, hoe veel subrubrieken ze
+ook afliepen. **Maar voor bedrijven maakte het weinig uit (nagemeten 26-09 avond):** met het
+goede filter, 544.755 advertenties over dezelfde rubrieken, kwamen er 44 nieuwe
+zakelijke verkopers bij op 2.037 bekende, waarvan 4 a 5 echt passend. Bedrijven
+plaatsen zo vaak dat ze toch in de nieuwste 5.000 opdoken. "Uitgeput" klopt voor
+bedrijven dus grotendeels, zie "marktplaats-rubrieken-uitgeput". Voor
+particulieren en tellingen per subrubriek maakt het filter wel alles uit. Gerepareerd in
+`_search` van `scripts/leadgen_marktplaats.py`, test
+`tests/test_leadgen_subrubriek_filter.py`.
+
+**Why:** een genegeerde parameter geeft gewoon 200 met data terug; het ziet eruit
+als een werkende sweep die niets nieuws meer vindt.
+**How to apply:** tel bij elke sweep unieke itemId's per verzoek en vergelijk
+`totalResultCount` van een subrubriek met die van de hoofdrubriek. Gelijk = het
+filter werkt niet. Zie "pijn-luid-is-particulier", "leadbronnen-gemeten-26-09".
 
 ---
 
@@ -190,10 +258,60 @@ zelf op Marktplaats. 2dehands hoort bij hetzelfde bedrijf.
 eBay te ondersteunen, eBay kan sleutels intrekken. Die sleutels drijven de
 eBay-koppeling van betalende klanten, dus nooit voor leadgen gebruiken.
 
+**Andere kanalen (26-09 avond).** ACM: "Voorkom spam als u reclame maakt via
+e-mail, whatsappjes of andere elektronische berichten": sms, WhatsApp en DM's op
+social media vallen onder dezelfde regel als e-mail. Bellen (ACM telemarketing):
+"U mag consumenten en andere natuurlijke personen, zoals eenmanszak, vof en
+maatschap alleen bellen: met hun toestemming of als u onder een uitzondering valt";
+een bv of nv bellen valt daar niet onder. Brief per post: geen opt-in, wel AVG.
+Particulieren (Vinted, Marktplaats-semi-profs) dus nooit 1-op-1 elektronisch of
+telefonisch zonder toestemming; wel via advertenties, groepsposts, makers,
+markten, pakketkaartjes, of een opt-in (aanmelding) waarna mailen mag.
+Vinted-, Etsy- en Marktplaatsberichten voor reclame verbieden de platforms zelf.
+België: bellen mag tenzij het nummer op de Bel-me-niet-meer-lijst staat (ook
+bedrijven kunnen zich inschrijven); e-mail/sms zonder toestemming alleen naar
+onpersoonlijke adressen van rechtspersonen.
+
 **Why:** "B2B mag altijd" is niet wat de wet zegt, en de hoofdbron verbiedt het zelf.
 **How to apply:** voorkeur voor adressen die een bedrijf op zijn eigen website zet;
 in elke koude mail identiteit, postadres, afmeldzin en een bronzin. Zie
 "leadbronnen-gemeten-26-09", "railway-blokkeert-smtp".
+
+---
+
+## pijn-luid-is-particulier
+
+*26-09-2026 — "Wie de crosslist-pijn openlijk uitspreekt ('staat ook op Vinted') is op MP/2dehands vrijwel altijd particulier zonder e-mail; bij zakelijke leads is 'al op een tweede kanaal' het meetbare pijnsignaal (warm 17% tegen 10%)"*
+
+Daniel, 26-09-2026: "uitgangspunt moet altijd zijn om de mensen te benaderen van
+wie de pain het grootste is en die zich er het liefst openlijk over uitspreken."
+
+Gemeten dezelfde dag:
+
+- **Wie het openlijk zegt.** Marktplaats-zoek-API met zinnen als "staat ook op
+  vinted", "ook elders te koop", "kan elders al verkocht" (searchInTitleAndDescription).
+  1.759 verkopers; bij 283 staat de zin aantoonbaar in het fragment, daarvan 5
+  zakelijk. 2dehands: 140 met bewijs, 0 zakelijk. De luidste pijn zit bij
+  particuliere semi-profs, en die hebben geen vindbaar adres (en Marktplaats
+  verbiedt ze te benaderen, zie "koude-mail-wat-mag"). Cold mail is voor hen het
+  verkeerde kanaal.
+- **Meetbaar pijnsignaal bij zakelijke leads**, op onze eigen 292 gemailde leads:
+  al op een tweede kanaal (eigen webshop of bol) 17,1% warm antwoord tegen 10,3%
+  bij alleen Marktplaats; verkopertype webshop 34,6% warm (n=26), handelaar 11,1%.
+- **Zoekzinnen zijn onbetrouwbaar.** Aanhalingstekens worden soms genegeerd ("ook op
+  catawiki" gaf 127.566 treffers). Precisie per zin gemeten op de advertentie zelf:
+  "ook op vinted" 11/12, "ook elders te koop" 1/12, "ook via andere kanalen" 0/12.
+  Het fragment in de API is 200 tekens.
+- **Losse advertentiepagina's (/v/...) openen triggert de CloudFront-blokkade** van
+  Marktplaats na ~80 verzoeken vanaf Daniels IP (403 "Request blocked"). Zoek-API,
+  smb-profile en /u/ bleven werken. Niet doen: het is dezelfde verbinding waarmee
+  Daniel zelf verkoopt.
+
+**Why:** "pijn" en "bereikbaar per mail" overlappen bijna niet; wie dat niet weet
+zoekt eindeloos naar adressen van mensen die er geen publiceren.
+**How to apply:** voor koude mail sorteren op meerdere kanalen en webshop; de luide
+particulieren bereik je via content en advertenties. Zie "leadbronnen-gemeten-26-09",
+"leadgen-op-conversie-niet-volume".
 
 ---
 
@@ -6010,42 +6128,6 @@ opdracht met een `scheduled_for` (bewuste toekomstige actie) afsluiten — allee
 een blijven-hangen directe publicatie. Zie ook
 "achtergrondronde-mag-de-lijst-niet-herbouwen", "scan-mag-nooit-leeghalen",
 "eigen-klik-gaat-voor-de-nachtronde", "herplaatslus-op-verkochte-artikelen".
-
----
-
-## marktplaats-rubrieken-uitgeput
-
-*06-09-2026 — Dieper sweepen in de bestaande rubrieken levert vrijwel niets meer op; alleen nieuwe rubrieken geven nog nieuwe verkopers*
-
-De leadgen-skill zegt: wil je meer volume, verhoog dan eerst `--depth` naar 5000.
-Op 06-09-2026 gemeten klopt dat niet meer. Steekproef in precies de diepte die nu
-wordt overgeslagen (offset 2000-4000, 3 subcategorieën per rubriek, alle elf
-rubrieken): **4.647 advertenties, 900 zakelijke verkopers, 3 nieuwe.** De elf
-rubrieken zijn uitgeput.
-
-Nieuwe rubrieken wél. Zelfde soort steekproef, ~1.200 advertenties elk:
-
-| rubriek | id | nieuwe verkopers |
-|---|---|---|
-| huis-en-inrichting | 504 | 47 |
-| tuin-en-terras | 1847 | 32 |
-| dieren-en-toebehoren | 395 | 26 |
-| hobby-en-vrije-tijd | 1099 | 16 |
-| postzegels-en-munten | 1784 | 10 |
-| antiek-en-kunst | 1 | 8 |
-| kinderen-en-baby-s | 565 | 5 |
-| cd-s-en-dvd-s | 1744 | 5 |
-
-Let op de spanning: huis-en-inrichting en tuin staan er bewust NIET in omdat banken
-en kasten niet verzendbaar zijn, en de classificatieprompt wijst meubel- en
-interieurhandel expliciet af. Ze toevoegen levert dus veel nieuwe verkopers op die
-daarna alsnog worden afgewezen. Dat is geld noch tijd waard tenzij het dashboard
-zijn tak "wonen, tuin en interieur" echt kan bedienen. Dat is een keuze voor Daniel,
-geen technische.
-
-De id's zijn geoogst uit `searchCategory` in de HTML van `/l/{slug}/`, nooit
-gegokt: de bekende 621 (kleding-dames) en 565 (kinderen) kwamen er als controle
-goed uit. Zie "marktplaats-category-ids".
 
 ---
 

@@ -13748,3 +13748,40 @@ handwerk. De rest leverde niets op.
 Meetval: losse Marktplaats-advertentiepagina's (/v/...) openen gaf na ongeveer 80
 verzoeken een CloudFront-blokkade (403) op Daniels verbinding; zoek-API, bedrijfsprofiel
 en verkoperspagina bleven werken. Niet herhalen.
+
+## 26-09-2026 (late avond): koude mail terug naar Zoho, subrubriekfilter kapot, alle bronnen NL/BE gemeten
+
+**Verzendroute.** Daniel: "doe wat je denkt dat het beste is". De koude reeks gaat weer
+via Zoho vanaf GitHub Actions. `tick` doet niets meer als RESEND_API_KEY in de omgeving
+staat (de server), met test; de workflow kreeg GOOGLE_SHEETS_SLEUTEL (repo-secret) en
+google-auth, want hij stamde nog uit de Notion-tijd. Eerste ronde 20:01: 8 x mail 3,
+alle 8 in Zoho Verzonden, ieder 1 keer in de administratie. Nagekeken in de mailbox:
+tot en met 08-09 ging alles via Zoho (602 koude mails in Verzonden), vanaf 18-09 via
+Resend. Geplande rondes starten hier 30 tot 60 minuten te laat.
+
+**Filterfout gevonden.** De zoek-API van Marktplaats/2dehands filtert alleen met
+`l2CategoryIds` (meervoud); met `l2CategoryId` gaf elke subrubriek de hele
+hoofdrubriek terug en zag elke sweep 5.000 advertenties per hoofdrubriek. Gerepareerd
+in leadgen_marktplaats.py met test. Nagemeten met het goede filter: Marktplaats 44
+nieuwe zakelijke verkopers op 544.755 advertenties (4 a 5 passend), 2dehands 7 op
+436.073 (0 passend). Bedrijven zijn dus echt op; de fout veranderde dat niet.
+
+**Particulieren (Daniel wil iedereen in NL en BE bereiken).** Met het goede filter,
+unieke advertenties, ondergrens: Marktplaats 4.145 particulieren met 20+ advertenties
+in onze rubrieken (9.871 met 10+), 2dehands 3.029 (6.371). Wet: e-mail, sms, WhatsApp
+en DM (ACM) en bellen van particulieren en eenmanszaken alleen met toestemming;
+Marktplaats (art. 7.2), Vinted en Etsy verbieden reclame via hun berichten. Deze groep
+bereik je dus via advertenties, makers, groepsposts, markten (IJ-Hallen 600-750 kramen),
+pakketkaartjes en een aanmelding (opt-in), niet 1-op-1.
+
+**Nieuwe bedrijfsbronnen, gemeten.** Webshops via zoekwoorden (20 zoekopdrachten met de
+eigen zoekfunctie): 41 nieuw met e-mail, tweede tien gaven evenveel als de eerste.
+Alle zoekmachines blokkeren scripts (DuckDuckGo na een tijd 202, de rest meteen);
+opschalen vraagt een zoek-API-sleutel. OpenStreetMap aangevuld met Midden-NL (+39).
+antiekwinkel.nl 61 nieuw. TikTok: 35 Nederlandstalige makers rond Vinted met e-mail in
+de bio (samenwerkingskanaal). CBS Q3 2026: 750 winkels tweedehands kleding, 685 antiek.
+
+**Kandidaten: 342, lokaal** in scripts/output/leads/kandidaten_2026-09-26.json. Daniel
+zei ja op toevoegen zodra de route staat, maar ze gaan er nog niet in: de mailteksten
+noemen altijd "Marktplaats" (`[platform]` wordt Marktplaats voor alles behalve
+2dehands) en missen postadres en afmeldzin. Eerst een tekst voor winkels en webshops.
