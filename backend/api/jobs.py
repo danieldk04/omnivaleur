@@ -1807,7 +1807,8 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                  .eq("user_id", user_id).eq("status", "pending").eq("platform", platform)
                  .order("created_at").limit(WACHTRIJ_MAX).execute().data or [])
         licht = _ruim_dubbele_scans_op(db, licht, now)
-        kop = [j["id"] for j in _wachtrij_volgorde(licht, now_dt)[:WACHTRIJ_KOP]]
+        licht = [j for j in licht if not bijwerking_moet_wachten(j)]
+        kop =[j["id"] for j in _wachtrij_volgorde(licht, now_dt)[:WACHTRIJ_KOP]]
         rijen = []
         if kop:
             # Dezelfde afbakening als hierboven, plus de gekozen kop. Nooit een
