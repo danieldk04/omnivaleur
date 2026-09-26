@@ -77,6 +77,11 @@ MINIMALE_ZAKELIJK_VERSIE = (1, 0, 332)
 # dichtstbijzijnde blad. Zulk werk blijft dus 'pending' tot een bijgewerkte kopie
 # polt, precies zoals 'extend' hierboven.
 MINIMALE_NIEUWE_TAKKEN_VERSIE = (1, 0, 351)
+# De verzendkosten van een BESTAAND 2dehands-zoekertje bijwerken (content_refresh
+# op 2dehands) kan pas vanaf 1.0.354 (26-09-2026, Egbert Brouwer). Een oudere
+# kopie kent geen wijzigadres voor 2dehands en zou de opdracht als mislukt
+# melden. Het werk blijft 'pending' tot een bijgewerkte kopie polt.
+MINIMALE_2DH_BIJWERK_VERSIE = (1, 0, 354)
 _NIEUWE_TAK_VOORVOEGSELS = ("boeken ", "speelgoed ", "fietsen ", "sportartikelen ",
                             "witgoed ", "klussen ", "computers ")
 _NIEUW_IN_BESTAANDE_TAK = frozenset([
