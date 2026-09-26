@@ -963,7 +963,7 @@ def _zet_verzending_van_marktplaats(db, user_id: str, job: dict) -> None:
             return
         from backend.services.mp_enrich import verzending_van_advertentie
         try:
-            verzending = _draai_los(verzending_van_advertentie(nummer))
+            verzending = _draai_los(verzending_van_advertentie(nummer, user_id))
         except Exception as e:  # noqa: BLE001
             logger.warning("job %s: verzending opvragen mislukt: %s", job.get("id"), e)
             verzending = None
