@@ -146,8 +146,25 @@ SLOTTEKST_MAX = 4000
 # een ander kanaal af, er komt geen vraag op het dashboard en geen mail.
 VERKOOPVRAAG = "verkoopvraag"
 
+# WELKE ARTIKELEN OP 2DEHANDS ZIJN EIGEN MARKTPLAATS-VERZENDBEDRAG KRIJGEN
+# (26-09-2026, Egbert van papas-plectrums.nl).
+#
+# Standaard krijgt een zoekertje op 2dehands Bpost 0-2 kg (EUR 7,10). Het bedrag
+# dat de verkoper op Marktplaats bij "Zelf verzenden" zet is een NEDERLANDSE
+# prijs, en een koper op 2dehands woont meestal in België. Voor een brief scheelt
+# dat een euro; voor een pakje is het verschil groot. Egbert: "4,95 voor een
+# pakket naar Belgie is te weinig, de daadwerkelijke kosten zijn €9.50. Met €7.10
+# kom ik nog wel weg. Met patches is het verschil tussen NL en BE maar €1,00."
+# Aan het bedrag zelf is dat niet te zien: bij hem kosten een rugpatch (brief) en
+# een miniatuur (pakje) op Marktplaats allebei EUR 4,95.
+#
+# Daarom alleen voor artikelen waarvan de titel een van deze woorden bevat. Leeg
+# (de standaard) = overal Bpost, zoals het altijd was.
+VERZENDING_2DH_WOORDEN = "verzending_2dh_woorden"
+VERZENDING_2DH_WOORDEN_MAX = 20
+
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
-             "auto_relist": True, VERKOOPVRAAG: True,
+             "auto_relist": True, VERKOOPVRAAG: True, VERZENDING_2DH_WOORDEN: [],
              "fabrikant_naam": "", "fabrikant_adres": "", "fabrikant_email": "",
              FABRIKANT_MEESTUREN: True,
              "locatie_land": "", "locatie_plaats": "", "locatie_postcode": "",
