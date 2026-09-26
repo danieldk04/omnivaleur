@@ -50,7 +50,10 @@ async def main() -> None:
     p.add_argument("--user", required=True)
     p.add_argument("--titel", default="", help="alleen titels met dit woord (hoofdletters maken niet uit)")
     p.add_argument("--uitvoeren", action="store_true")
+    p.add_argument("--pauze", type=float, default=TUSSENPOZE,
+                   help="seconden tussen twee zoekertjes; hoger als Marktplaats niet antwoordt")
     a = p.parse_args()
+    globals()["TUSSENPOZE"] = a.pauze
     load_dotenv()
     from backend.database import get_db, fetch_all, fetch_all_in
     from backend.services.mp_enrich import UA, verzending_van_advertentie
