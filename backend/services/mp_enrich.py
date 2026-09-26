@@ -502,6 +502,99 @@ def categorie_uit_html(ruwe: str) -> dict:
     return uit if uit.get("l1") and uit.get("l2") else {}
 
 
+# DE VERZENDKOSTEN DIE DE VERKOPER ZELF OP MARKTPLAATS ZETTE.
+#
+# WAAROM DIT ER IS (26-09-2026, Egbert Brouwer / Papa's Plectrums). "Er wordt
+# hier automatisch iets van €7.20 verzendkosten bij gezet (...) ik wil nu ook
+# patches gaan uploaden, daar wil ik eigenlijk niet zulke dure verzendkosten bij
+# hebben staan." Gemeten op zijn eigen advertenties: op Marktplaats kiest hij per
+# advertentie "Zelf verzenden" met een eigen bedrag (patches EUR 2,25 tot 4,95,
+# buttons 2,95, miniaturen meestal 4,95). Op 2dehands kozen wij altijd Bpost
+# 0-2 kg, EUR 7,10, voor alles.
+#
+# Marktplaats zet het op de openbare advertentiepagina, in hetzelfde JSON-blok als
+# de rest (nagemeten 26-09-2026 op a1475716652 en vier miniaturen):
+#   "shippingInformation":{"mappedShippingOptions":{},"augmentedLabels":[{
+#     "carrierId":null,"labels":[{"label":"Verzenden voor","price":"€ 4,95",
+#     "deliveryMethod":"UNKNOWN_BECAUSE_DIY","carrierName":"Zelf Verzenden"}]}],...}
+# Verzendt hij via Marktplaats zelf, dan staan daar PostNL en DHL met hún tarief;
+# dat is geen bedrag van de verkoper en hoort dus niet mee naar 2dehands.
+_VERZEND_BLOK = '"shippingInformation"'
+_ZELF_VERZENDEN = "UNKNOWN_BECAUSE_DIY"
+
+
+def _bedrag_in_centen(tekst) -> int | None:
+    """"€ 4,95" -> 495. None als er geen bedrag in staat — nooit 0 verzinnen:
+    een lege prijs als gratis verzenden lezen kost de verkoper het porto."""
+    s = re.sub(r"[^\d,.]", "", str(tekst or ""))
+    m = re.fullmatch(r"(\d{1,4})(?:[.,](\d{2}))?", s)
+    if not m:
+        return None
+    return int(m.group(1)) * 100 + int(m.group(2) or 0)
+
+
+def verzending_uit_html(ruwe: str) -> dict | None:
+    """Hoe deze advertentie verzonden wordt, gelezen van de advertentiepagina.
+
+    {"soort": "zelf", "cents": 495}  de verkoper verzendt zelf, voor dit bedrag
+    {"soort": "platform"}            via Marktplaats (PostNL/DHL), hun tarief
+    {"soort": "geen"}                niets te verzenden (alleen ophalen)
+    None                             het blok staat er niet: we weten het niet
+    """
+    i = (ruwe or "").find(_VERZEND_BLOK)
+    if i < 0:
+        return None
+    try:
+        start = ruwe.index("{", i + len(_VERZEND_BLOK))
+        blok, _ = json.JSONDecoder().raw_decode(ruwe, start)
+    except (ValueError, json.JSONDecodeError):
+        return None
+    labels = [lab for groep in (blok.get("augmentedLabels") or []) if isinstance(groep, dict)
+              for lab in (groep.get("labels") or []) if isinstance(lab, dict)]
+    for lab in labels:
+        if lab.get("deliveryMethod") == _ZELF_VERZENDEN:
+            cents = _bedrag_in_centen(lab.get("price"))
+            # Zelf verzenden zonder leesbaar bedrag: niet raden, dan blijft
+            # alles zoals het was.
+            return {"soort": "zelf", "cents": cents} if cents is not None else None
+    return {"soort": "platform"} if labels else {"soort": "geen"}
+
+
+async def verzending_van_advertentie(nummer) -> dict | None:
+    """`verzending_uit_html` voor Marktplaats-advertentie `nummer`.
+
+    Het nummer staat bij ons zonder letter, maar de pagina heeft er een nodig:
+    een gewone advertentie is /m123, een Admarkt-advertentie (zakelijk) /a123.
+    De verkeerde letter geeft 404, dus we proberen allebei.
+
+    Een leeg blok als beide 404 geven: de advertentie staat er niet meer, dat is
+    een antwoord. None bij een storing (time-out, 5xx, blokkade): dat is er geen.
+    """
+    cijfers = re.sub(r"\D", "", str(nummer or ""))
+    if not cijfers:
+        return {}
+    try:
+        async with httpx.AsyncClient(timeout=8, follow_redirects=True,
+                                     headers={"User-Agent": UA}) as client:
+            for letter in ("m", "a"):
+                r = await client.get(f"https://www.marktplaats.nl/{letter}{cijfers}",
+                                     headers={"Accept": "text/html"})
+                if r.status_code == 404:
+                    continue
+                if r.status_code != 200:
+                    logger.warning("mp_enrich: verzending van %s%s gaf HTTP %s",
+                                   letter, cijfers, r.status_code)
+                    return None
+                gevonden = verzending_uit_html(r.text)
+                # 200 zonder het blok is een andere pagina dan we verwachten
+                # (toestemmingsscherm, onderhoud): geen antwoord.
+                return gevonden
+    except Exception as e:  # noqa: BLE001 — een gemist bedrag mag niets breken
+        logger.warning("mp_enrich: verzending van advertentie %s niet opgehaald: %s", cijfers, e)
+        return None
+    return {}
+
+
 # De PRIJSVORM van een advertentie: "Vraagprijs", "Bieden", "Gratis"…
 #
 # WAAROM DIT ER IS (03-09-2026, Amanda Haas). 161 van haar advertenties staan op
