@@ -1088,7 +1088,36 @@ def _bijwerken_2dh_staat_stil(db, user_id: str) -> bool:
     # wordt in dezelfde seconde aangemaakt en loopt daarna een voor een af.
     laatste = max(rijen, key=lambda r: str(r.get("done_at") or r.get("claimed_at")
                                             or r.get("created_at") or ""))
-    return laatste.get("status") == "error"
+    if laatste.get("status") != "error":
+        return False
+    _meld_bijwerking_staat_stil(user_id, laatste.get("id"))
+    return True
+
+
+# Hooguit één mail per verkoper per dag. Deze rem wordt bij elke poll opnieuw
+# bekeken zolang er bijwerkingen wachten, dus zonder klok komt er elke 15 sec één.
+_bijwerking_stil_gemeld: dict[str, float] = {}
+
+
+def _meld_bijwerking_staat_stil(user_id: str, job_id) -> None:
+    """Een stilstaande reeks mag niet onopgemerkt blijven (26-09-2026).
+
+    Deze bijwerkingen staan sinds vandaag niet meer in de wachtrij op het
+    dashboard (zie _is_2dh_bijwerking), dus de klant ziet niet dat ze wachten, en
+    er is geen fout die hij ziet. Zonder deze mail zou een mislukking bij Egbert
+    (zijn 2dehands-account is zakelijk, de wijzigroute is alleen op een
+    particulier account nagemeten) er dagen onopgemerkt staan."""
+    import time
+    if time.time() - _bijwerking_stil_gemeld.get(user_id, 0.0) < 86400:
+        return
+    _bijwerking_stil_gemeld[user_id] = time.time()
+    _stuur_naar_eigenaar(
+        "Omnivaleur: verzendkosten bijwerken op 2dehands staat stil bij een klant",
+        f"Bij gebruiker {user_id} mislukte de laatste bijwerking van de verzendkosten "
+        f"op 2dehands (opdracht {job_id}). De rest wacht daarom. Op 2dehands gaat er "
+        "niets mis: die zoekertjes houden gewoon Bpost EUR 7,10. Laat Claude deze "
+        "opdracht bekijken; staat de oorzaak vast, dan kan de rij weer verder.\n\n"
+        "Deze mail komt hooguit een keer per dag per klant.")
 
 
 def _betaalde_rubriek_bekend(db, user_id: str, platform: str, sleutel: str) -> bool:
