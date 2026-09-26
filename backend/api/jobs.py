@@ -926,6 +926,62 @@ def _zet_rubriek_van_marktplaats(db, user_id: str, job: dict) -> bool:
     return uitdelen
 
 
+def _zet_verzending_van_marktplaats(db, user_id: str, job: dict) -> None:
+    """Zet de verzendkosten die de verkoper zelf op Marktplaats koos in een
+    2dehands-plaatsing. Zie verzending_uit_html in mp_enrich.py voor het waarom.
+
+    Alleen "zelf verzenden met een bedrag" gaat mee: de extensie kiest dan op
+    2dehands "Zelf versturen" met datzelfde bedrag. Al het andere (verzenden via
+    Marktplaats, alleen ophalen, niet op Marktplaats) laat het formulier zoals het
+    altijd was. Houdt nooit iets tegen: lukt het opzoeken niet, dan gaat de
+    opdracht met de standaardverzending, want die vond de verkoper "prima".
+    """
+    if job.get("action") != "create" or job.get("platform") != "2dehands":
+        return
+    pl = job.get("payload")
+    if not isinstance(pl, dict) or "verzending" in pl:
+        return
+    try:
+        rij = eerste_rij(db.table("listings").select("platform_listing_id")
+                         .eq("item_id", job.get("item_id")).eq("platform", "marktplaats")
+                         .eq("status", "active").not_.is_("platform_listing_id", "null")
+                         .limit(1).execute())
+    except Exception as e:  # noqa: BLE001 — uitdelen gaat voor
+        logger.warning("job %s: Marktplaats-advertentie niet te lezen: %s", job.get("id"), e)
+        return
+    nummer = (rij or {}).get("platform_listing_id")
+    if not nummer:
+        verzending = {"soort": "onbekend"}
+    else:
+        rust = _VERZENDING_STORING.get(user_id)
+        if rust and datetime.now(timezone.utc) - rust < _VERZENDING_STORING_RUST:
+            return
+        from backend.services.mp_enrich import verzending_van_advertentie
+        try:
+            verzending = _draai_los(verzending_van_advertentie(nummer))
+        except Exception as e:  # noqa: BLE001
+            logger.warning("job %s: verzending opvragen mislukt: %s", job.get("id"), e)
+            verzending = None
+        if verzending is None:
+            # Een storing is geen antwoord: niets vastleggen, de volgende
+            # opdracht mag het opnieuw proberen (na een korte rust).
+            _VERZENDING_STORING[user_id] = datetime.now(timezone.utc)
+            logger.warning("job %s: verzending van Marktplaats %s niet te lezen, "
+                           "standaardverzending", job.get("id"), nummer)
+            return
+        _VERZENDING_STORING.pop(user_id, None)
+        verzending = verzending or {"soort": "onbekend"}
+    nieuw = {**pl, "verzending": verzending}
+    job["payload"] = nieuw
+    if verzending.get("soort") == "zelf":
+        logger.info("job %s: 2dehands zelf versturen voor %s cent, zoals op Marktplaats %s",
+                    job.get("id"), verzending.get("cents"), nummer)
+    try:
+        db.table("jobs").update({"payload": nieuw}).eq("id", job["id"]).execute()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("job %s: verzending niet kunnen opslaan: %s", job.get("id"), e)
+
+
 def _betaalde_rubriek_bekend(db, user_id: str, platform: str, sleutel: str) -> bool:
     """Weten we al dat deze rubriek bij deze verkoper geld kost?
 
