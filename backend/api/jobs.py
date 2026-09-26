@@ -710,6 +710,11 @@ _RUBRIEK_ZOEK_GEDULD = timedelta(hours=6)
 # wachtende opdracht gewoon wachten, zonder één verzoek naar buiten.
 _RUBRIEK_STORING_RUST = timedelta(minutes=3)
 _RUBRIEK_STORING: dict[str, datetime] = {}
+# Hetzelfde voor de verzendkosten (_zet_verzending_van_marktplaats), met één
+# verschil: daar wacht een opdracht niet. De standaardverzending kost geen geld
+# en vond de verkoper "prima", een stilstaande wachtrij kost wel iets.
+_VERZENDING_STORING_RUST = timedelta(minutes=3)
+_VERZENDING_STORING: dict[str, datetime] = {}
 
 
 def _wacht_op_rubriek(job: dict, nu: datetime) -> bool:
