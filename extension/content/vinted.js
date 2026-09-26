@@ -63,6 +63,12 @@
     "koraal":       "Coral",
     "koraalrood":   "Coral",
     "rood":         "Red",
+    // Een robijn is per definitie rood; shared.js en kleur.py wisten dat al,
+    // deze lijst niet. "New Ruby Necklace" ging 25-09-2026 drie keer terug met
+    // een lege kleur. Alleen de steen, niet "natural": die zegt niets.
+    "robijn":       "Red",
+    "robijnrood":   "Red",
+    "ruby":         "Red",
     "bordeaux":     "Burgundy",
     "wijnrood":     "Burgundy",
     "roze":         "Pink",
