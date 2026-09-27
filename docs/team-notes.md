@@ -13897,3 +13897,13 @@ verbiedt. Het risico (uitsluiting door Marktplaats, ook van zijn eigen account) 
 hem voorgelegd op 26-09. Verder: de Zoho-route via GitHub werkt (22 mails sinds
 26-09 19:10, alle 22 in Zoho Verzonden, geen dubbele), maar GitHub start maar een
 paar geplande rondes per dag, dus mails gaan in groepjes van 4.
+
+## 27-09-2026: geen postadres of afmeldzin in de koude mail, zoeksleutel via Serper
+
+Daniel laat het voorstel gaan om postadres, afmeldzin en een bronzin aan de
+handtekening toe te voegen (Tw 11.7 lid 6 vraagt identiteit plus postadres of nummer
+voor afmelden); hij kent het. Ook geen aparte tekst voor winkels en webshops: de
+kandidaten uit OpenStreetMap, gidsen en zoekwoorden blijven daarom lokaal geparkeerd,
+want de huidige teksten noemen altijd "Marktplaats". Brave Search vraagt een
+betaalkaart; Serper.dev (Google-resultaten) geeft 2.500 gratis zoekopdrachten zonder
+betaalkaart en is het alternatief voor de zoekwoordenbron.
