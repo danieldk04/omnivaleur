@@ -14031,3 +14031,32 @@ zoekertjes waar Marktplaats niet op antwoordde (403) houden dus Bpost tot iemand
 het script opnieuw draait. De 197 opdrachten van de eerste ronde staan klaar
 (pending), geen dubbele per zoekertje; ze wachten op Egberts extensie (1.0.354,
 laatst gezien 18:23). De rest van deze notitie klopt met de code.
+
+## 27-09-2026: Dagelijkse klantfouten (ochtendronde, 20:10)
+
+Gemeten over 24 uur: 618 opdrachten, 11 fouten bij 5 klanten.
+
+- 3bfbed2c: vier verwijderingen (Marktplaats en 2dehands) na twee Vinted-verkopen
+  binnen een minuut. Twee faalden op "No tab with id" (werktabblad verdween, oorzaak
+  onbekend), drie kregen bij het nakijken drie keer 403 en werden geboekt als
+  "Nothing was removed". Nagemeten in de openbare verkoperslijst (controle: 20 van
+  20 bekende actieve advertenties wel gevonden): m2445736389 en m2438895939
+  (Marktplaats) en m2438896220 (2dehands) zijn weg, dus de verwijdering lukte.
+  m2445736390 (vest 1013 op 2dehands, de "No tab"-fout) staat nog echt online.
+  In 30 dagen gaf dezelfde controle na een verwijdering 16 keer 410 en nooit 403:
+  een blokkade, geen antwoord. Gerepareerd in extensie 1.0.355 (97f8004d, 0ba4699d):
+  bij 403/429 wacht de controle 10 tot 25 s en kijkt tot zes keer; bewijs blijft eis.
+  Voor-en-na-proef tests/verwijderen-blokkade-403-test.mjs tegen 9a4a0a5c. De oude
+  proef marktplaats-verlopen-herkennen-test.mjs stond al rood (zandbak miste
+  _bevestigInVenster), rechtgezet.
+- 96e30080: vloerkleed 271/73 op 2dehands, vierde mislukte verwijdering sinds 26-09.
+  De 2dehands-plaatsing is op 02-09 door de klant zelf geannuleerd en nooit uitgegaan;
+  de rij staat toch op 'active' zonder advertentienummer. Is het bekende open punt
+  van eerder (jobs.py zet bij "Delist failed" een rij zonder nummer op active). Niet
+  aangepast, vraagt nog steeds een keuze.
+- Klant-eigen: 26cf5471 Vinted uitgelogd, 0b28c1ce betaalde rubriek en een lege
+  staat op Vinted, bcdf9aa4 (Egbert) sinds 16:23 UTC uit met 197 wachtende
+  bijwerkingen, 1ba42900 sinds 25-09 uit.
+
+Open: vest 1013 staat nog op 2dehands bij 3bfbed2c (verkocht op Vinted); oorzaak van
+"No tab with id"; 1.0.355 moet nog naar de Web Store.
