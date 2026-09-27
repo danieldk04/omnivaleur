@@ -64,6 +64,11 @@ REPO = Path(__file__).resolve().parent.parent   # de broncode zelf, als bewijsma
 OUT = Path(__file__).parent / "output" / "leads"
 MP_LEADS = OUT / "mp_leads.json"
 TWEEDEHANDS_LEADS = OUT / "2dh_leads.json"   # 2dehands.be, zelfde trechter, BE-markt
+# Winkels en webshops uit Google, OpenStreetMap en winkelgidsen (27-09-2026). Een
+# eigen lijst, zodat `overzetten` (die mp_leads en 2dh_leads overschrijft) ze nooit
+# kan wissen. platform is "webshop" of "winkel"; zie _platformnaam en _haakje.
+EXTRA_LEADS = OUT / "extra_leads.json"
+WINKEL_PLATFORMS = {"webshop", "winkel"}
 IG_LEADS = OUT / "leads.json"
 STATE = OUT / "mail_state.json"
 PLAN = OUT / "mail_plan.json"
