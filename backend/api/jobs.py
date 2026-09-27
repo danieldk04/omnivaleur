@@ -1120,6 +1120,43 @@ def _meld_bijwerking_staat_stil(user_id: str, job_id) -> None:
         "Deze mail komt hooguit een keer per dag per klant.")
 
 
+def _bijwerking_staat_al_online(job: dict) -> bool:
+    """Toont de openbare 2dehands-pagina al het bedrag dat deze bijwerking moest zetten?
+
+    WAAROM (27-09-2026, Egbert). Van zijn eerste 59 bijwerkingen meldde er één een
+    tijdsoverschrijding: de echte klik op Opslaan was gedaan, daarna was het
+    tabblad weg voordat de achtergrond de landing zag. Op 2dehands stond het
+    zoekertje wel goed (Zelf verzenden EUR 2,95). Die ene valse mislukking zette
+    de noodrem (_bijwerken_2dh_staat_stil) dicht, en 93 bijwerkingen wachtten
+    ruim vier uur op iemand die hem met de hand opende. Het doel van de opdracht is
+    wat de openbare pagina toont; toont die het bedrag, dan is het werk gedaan.
+
+    Alleen een positief bewijs telt: precies dit bedrag als "zelf verzenden". Een
+    storing, een blokkade, een verlopen zoekertje of een ander bedrag is geen
+    bewijs, en dan blijft het een mislukking zoals voorheen.
+    """
+    pl = job.get("payload") or {}
+    v = pl.get("verzending") or {}
+    if (not _is_2dh_bijwerking(job) or not pl.get("_verzending_bijwerken")
+            or v.get("soort") != "zelf" or not isinstance(v.get("cents"), int)):
+        return False
+    m = re.fullmatch(r"([am]?)(\d+)", str(pl.get("platform_listing_id") or "").strip().lower())
+    if not m:
+        return False
+    try:
+        import httpx
+        from backend.services.mp_enrich import UA, verzending_uit_html
+        r = httpx.get(f"https://www.2dehands.be/{m.group(1) or 'm'}{m.group(2)}",
+                      headers={"User-Agent": UA, "Accept": "text/html"},
+                      timeout=8, follow_redirects=True)
+        if r.status_code != 200:
+            return False
+        return verzending_uit_html(r.text) == {"soort": "zelf", "cents": v["cents"]}
+    except Exception as e:  # noqa: BLE001 — geen bewijs, dus gewoon een mislukking
+        logger.warning("2dehands %s niet na te kijken: %s", m.group(0), e)
+        return False
+
+
 def _betaalde_rubriek_bekend(db, user_id: str, platform: str, sleutel: str) -> bool:
     """Weten we al dat deze rubriek bij deze verkoper geld kost?
 
