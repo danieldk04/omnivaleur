@@ -348,9 +348,12 @@ async def bekijk(db, user_id: str, st: dict, item_id: str,
         buiten = True
         if mp is None:
             st["blokkades"] = st.get("blokkades", 0) + 1
-            _MP_RUST_TOT[0] = time.monotonic() + MP_RUST_NA_BLOKKADE
+            _MP_OP_RIJ[0] += 1
+            _MP_RUST_TOT[0] = time.monotonic() + min(
+                MP_RUST_NA_BLOKKADE * 2 ** (_MP_OP_RIJ[0] - 1), MP_RUST_MAX)
             _later(st, item_id)
             return buiten
+        _MP_OP_RIJ[0] = 0
         if not mp:
             _tel(st, "niet_op_mp")
             return buiten
