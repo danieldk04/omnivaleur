@@ -17,6 +17,42 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## trechter-aanmelding-tot-betalend-27-09
+
+*27-09-2026 — "Gemeten 27-09-2026: koude-mail-aanmeldingen betalen 3 van 6, de rest 2 van ~43; niemand onder 100 ingelezen artikelen betaalt; creatorcodes 17 klikken 0 aanmeldingen"*
+
+Gemeten 27-09-2026 op de echte database (56 accounts, subscriptions, items per
+user_id, koppeling op e-mail met leadgen_opslag mp_leads/2dh_leads/extra_leads).
+
+- ~50 echte aanmeldingen sinds 29-06 (zonder eigen testaccounts, crosslisteu.com
+  en Daniels demo). 5 betalen of hebben een kaart: c2371efe, 26cf5471, 96e30080,
+  0b28c1ce actief, bcdf9aa4 in proef met Stripe.
+- Uit de koude-mail-lijst: 7 aanmeldingen, 3 betalen, 1 nog in proef (1ba42900).
+  Alle andere aanmeldingen samen (~43): 2 betalen. Mail levert dus de juiste klant.
+- Alle vijf betalers lazen 118+ artikelen in. Wie 0 tot 29 inlas (~38 accounts):
+  nul betalend. 13 accounts met 30+ artikelen: 5 betalen.
+- 7 afhakers lazen wel voorraad in (10 tot 116 artikelen) en vertrokken, vaak na
+  een publicatiefout die inmiddels gerepareerd is (Blackbird, Pleun, dealbeter,
+  steentjesmeester, vivid-green, tamboer, buiss). Dat is de warmste groep.
+- Creatorprogramma: 10 TikTok-codes aangemaakt 09-09, bounty EUR 25, nooit een
+  fee betaald, 17 klikken, 0 aanmeldingen. Klantcodes: 13, 0 verwijzingen. De
+  influencerroute is dus nooit echt getest, niet mislukt.
+- GA4 is lokaal niet ingesteld, dus de bron van de ~43 niet-mail-aanmeldingen is
+  niet gemeten.
+
+Onderzoek: self-service proef converteert in de markt 3 tot 5%, met persoonlijke
+begeleiding 15 tot 30%. VintiePlus (NL, Vinted/MP/2dehands, EUR 30 tot 110 per
+maand) groeit via een Discord van 6.000 leden en een affiliateprogramma.
+
+**Why:** de vraag "hoe meer klanten" leidt steeds naar meer adressen zoeken,
+terwijl de grootste lek na de aanmelding zit: wie niets inleest betaalt nooit.
+**How to apply:** meet eerst hoeveel aanmelders op 0 artikelen blijven en wie al
+voorraad inlas maar afhaakte, voor je een nieuwe leadbron gaat bouwen. Zie
+"leadbronnen-gemeten-26-09", "koude-mail-winkels-en-webshops",
+"leadgen-op-conversie-niet-volume".
+
+---
+
 ## 403-na-verwijderen-is-blokkade
 
 *27-09-2026 — "Een 403 bij het nakijken van een verwijdering is een blokkade van Marktplaats/2dehands, geen bewijs dat de advertentie er nog staat; na een echte verwijdering geeft /seller/view 410"*
