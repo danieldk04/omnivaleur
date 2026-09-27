@@ -744,15 +744,17 @@ BEURTEN_B = [
 ]
 
 
-def _variant(email: str, st: dict | None = None) -> str:
+def _variant(email: str, st: dict | None = None, lead: dict | None = None) -> str:
     """Vaste A/B-keuze per lead. Eenmaal genoteerd verandert hij nooit meer, zodat
     de hele reeks één versie is en de meting zuiver blijft.
 
+      * winkel of webshop (27-09-2026)          -> altijd A: B zegt letterlijk
+                                                  "Alles staat nu alleen op Marktplaats"
       * al genoteerd (`st["variant"]`)         -> die
       * al eens gemaild vóór de A/B-test bestond -> A (B bestond toen nog niet)
       * anders                                  -> hash van het adres, 50/50
     """
-    if not AB_ACTIEF:
+    if not AB_ACTIEF or (lead and lead.get("platform") in WINKEL_PLATFORMS):
         return "A"
     if st:
         if st.get("variant"):
