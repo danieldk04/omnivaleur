@@ -17,6 +17,100 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## leadbronnen-gemeten-26-09
+
+*27-09-2026 — "Alle gratis bronnen NL/BE gemeten 26-09: bedrijven op MP/2dh op, particulieren 4.145 (MP) + 3.029 (2dh) met 20+ advertenties maar onbenaderbaar; webshops via zoekwoorden en OSM leveren nog; 342 kandidaten lokaal"*
+
+**Voorraad op.** Sheet: 546 echte leads (plus 1000 lege spookrijen), 469 met
+e-mail, 457 gemaild. Machine: 293 unieke adressen, wachtrij 0. Laatste mail 1 op
+21-09; daarna alleen mail 2/3. De motor is goed, de brandstof is op: septembergroep
+10% antwoord (113 benaderd), versie A 17% antwoord / 5% aanmelding / 3% betaald,
+B 12 / 2 / 0 (kleine aantallen). Markt: gemiddeld 3,4% antwoord, 10% is top.
+
+**Vinted Pro** (1 profiel gecontroleerd, uitgelogd): bedrijfsnaam, bedrijfsnummer
+en plaats zichtbaar; e-mail en telefoon staan erop maar afgeschermd
+(`******@gmail.com`, data-testid `profile-business-email`), klikken toont niets.
+Catalogus-API geeft 404 zonder sessie. Pro bestaat in NL en BE. Of ingelogd het
+adres zichtbaar wordt: niet gemeten.
+
+**eBay.nl zakelijk** (12 advertenties met locatie NL, "vintage jas"): 6 zakelijk.
+Knop "Contactgegevens van de koper" (sic) toont bedrijfsnaam, naam, adres en
+telefoon; e-mail niet (1 van 1). Browse API `sellerLegalInfo` kent een e-mailveld,
+maar lokaal staan alleen sandbox-sleutels (SBX), dus niet gemeten.
+
+**OpenStreetMap** (Overpass, gratis): NL+BE 2401 winkels; tweedehands kleding 465
+(64 e-mail, 254 website), antiek 416 (43 / 130), second_hand 1211 (veel kringloop),
+charity 309. overpass-api.de gaf een lege reactie, overpass.kumi.systems werkte.
+
+**Facebookgroepen**: geen e-mailbron; scrapen riskeert het account (zie
+"instagram-leadgen-bronnen"). Zie "leadgen-op-conversie-niet-volume".
+
+**Proef 26-09 (avond), elke bron met 50+ verkopers.** Nieuw = niet in sheet of
+leadgen_opslag; passend = kleding/sieraden/antiek/muziek, 20+ advertenties, geen
+kringloop of nieuwe waar.
+- Marktplaats pijnzinnen ("staat ook op vinted" enz.): 406 zakelijk, 255 e-mail, 3
+  nieuw passend. Zakelijke gebruikers van die zinnen zitten in doe-het-zelf,
+  huis, audio.
+- 2dehands pijnzinnen: 103 zakelijk (Catawiki, boekenhandels), 1 e-mail, 0.
+- 2dehands volledig (659.475 advertenties, 9 min): 61 zakelijk, 26 e-mail, 0 echt
+  passend na nakijken. 2dehands heeft gewoon weinig zakelijke verkopers.
+- Marktplaats ondergrens 10: 162 met e-mail in de cache, 43 nieuw op rubriek, 0
+  volgens de classificatie (allemaal webshops in nieuwe waar; klopt bij nakijken).
+  De 131 afgewezen verkopers boven 20 zijn ook terecht afgewezen.
+- Marktplaats aanwas 18-09 tot 26-09 (660.000 advertenties, 10 min): 9 nieuwe
+  zakelijk, 3 bruikbaar. Bijvultempo ~3 per week.
+- OpenStreetMap (884 winkels, deel van Midden-NL ontbrak door overbelaste
+  servers): 238 e-mail, 218 nieuw passend, 206 NL/BE; 75 eigen webshop, 3 linken
+  naar een marktplaats, 118 naar Instagram. Werkend: overpass-api.de (NL-noord) en
+  maps.mail.ru (BE); kumi gaf 504 of time-out. User-Agent meesturen, per regio.
+- Kleinanzeigen zakelijk (DE): 82, e-mail in "Rechtliche Angaben" bij 3 (4%).
+- WebwinkelKeur: 699 leden, 5 tweedehands-achtig, 0 in onze rubrieken; ?q= wordt genegeerd.
+- Shopify-appreviews (marktplaats, marktplaats-admarkt, vinted-reviews,
+  exportyourstore): 58 reviews, 11 NL/BE, openlijk klagend over sync. Te weinig.
+- Geblokkeerd voor scripts (403/captcha, niet omzeilen): Vinted-API, Etsy, Catawiki,
+  eBay, Trustpilot, Reddit, Depop, Vestiaire. JavaScript-fetch in de ingebouwde
+  browser op Vinted wordt door de veiligheidscheck geweigerd.
+Kandidatenlijst lokaal: scripts/output/leads/kandidaten_2026-09-26.json (212).
+Zie "pijn-luid-is-particulier", "koude-mail-wat-mag".
+
+**Avondronde 26-09 (Daniel: "iedereen in NL en BE", alle kanalen).**
+- Particuliere semi-profs, met gerepareerd subrubriekfilter, unieke advertenties
+  (ondergrens: per subrubriek alleen de nieuwste 5.000): Marktplaats 764.176
+  advertenties, 195.249 verkopers; particulier met 20+ gezien 4.145, 10+ 9.871,
+  50+ 1.234. 2dehands 528.844 / 88.295; particulier 20+ 3.029, 10+ 6.371.
+  Bedrijven 20+: MP 249, 2dh 53. Geen legale 1-op-1-route naar particulieren.
+- Bedrijven met gerepareerd filter: MP 44 nieuw op 544.755 advertenties (4 a 5
+  passend), 2dehands 7 nieuw op 436.073 (0 passend). Bedrijven zijn echt op.
+- Webshops via zoekwoorden (eigen WebSearch-tool, 20 zoekopdrachten zoals
+  "ralph lauren vintage webshop", "preloved designer tassen", "brocante webshop"):
+  84 domeinen, 41 nieuw met e-mail, ronde 2 gaf evenveel nieuwe als ronde 1 (10
+  van 48 overlap). Deels gemengde winkels (nieuw en tweedehands).
+- Alle zoekmachines blokkeren scripts: DuckDuckGo html werkte ~eerste zoekopdrachten
+  en gaf daarna 202 "anomaly"; Mojeek, Brave, Startpage, Ecosia, Qwant, Yahoo meteen.
+  Een script dat bij blokkade 20 s wacht zonder voortgang te loggen liep 56 min
+  vast en verloor alles. Opschalen kan alleen met een zoek-API-sleutel.
+- OpenStreetMap Midden-NL (51.5-52.0) aangevuld: 39 nieuw; OSM totaal 245 NL/BE.
+- Gidsen: antiekwinkel.nl ~170 winkels, 61 nieuw met e-mail; allevintagewinkels.nl
+  198 winkelpagina's zonder websitelink, daarna lege pagina's; vintagewinkelsgids
+  en deantieksite 0 bruikbaar.
+- TikTok: 422 verkoper-profielen gelezen (bio open zonder login), 35 NL-talig rond
+  Vinted met e-mail in bio; meeste zijn lifestyle/UGC-makers = kanaal, geen gebruiker.
+- CBS via FirmFocus Q3 2026: 750 winkels tweedehands kleding, 685 antiek (NL).
+- Instagram-bio's en Facebookgroepen: niet leesbaar zonder login. Etsy: geen e-mail
+  zichtbaar (1 winkel), alleen Etsy-berichten.
+Kandidatenlijst lokaal: 342 (scripts/output/leads/kandidaten_2026-09-26.json).
+
+**27-09: Serper.dev (Google), sleutel in sleutelhanger `omnivaleur-serper`.** 2.500
+gratis zoekopdrachten zonder betaalkaart, 1 per zoekopdracht (num=100 geeft toch ~10).
+Ronde van 435 (150 web, 285 Maps): web 441 domeinen, 183 met e-mail, 145 nieuw en
+passend (119 ook nieuw t.o.v. de rest van deze week); systeem: WooCommerce 47,
+Shopify 15, geen herkend 67. Maps (`/places`) geeft GEEN website, alleen naam,
+adres, categorie en telefoon: 1.629 winkels, 1.419 zonder kringloop, 1.148 met
+telefoon. E-mail erbij kost 1 zoekopdracht per winkel. Saldo na afloop 2.064.
+Kandidatenlijst lokaal nu 464.
+
+---
+
 ## geraden-rubriek-is-niet-de-rubriek-van-de-verkoper
 
 *27-09-2026 — Onze importcategorie is uit de titel geraden; bij Egbert klopte 947 van 5.533. 2dehands-plaatsingen volgen nu de echte Marktplaats-rubriek (zelfde nummers)*
@@ -242,91 +336,6 @@ leadgen-mail.yml staat weer aan, met GOOGLE_SHEETS_SLEUTEL (repo-secret) en
 google-auth erbij; die ontbraken omdat de workflow uit de Notion-tijd stamde.
 Eerste ronde 20:01: 8 x mail 3, alle 8 in Zoho Verzonden, ieder precies 1 keer in
 de administratie. Geplande rondes starten hier 30-60 min te laat.
-
----
-
-## leadbronnen-gemeten-26-09
-
-*26-09-2026 — "Alle gratis bronnen NL/BE gemeten 26-09: bedrijven op MP/2dh op, particulieren 4.145 (MP) + 3.029 (2dh) met 20+ advertenties maar onbenaderbaar; webshops via zoekwoorden en OSM leveren nog; 342 kandidaten lokaal"*
-
-**Voorraad op.** Sheet: 546 echte leads (plus 1000 lege spookrijen), 469 met
-e-mail, 457 gemaild. Machine: 293 unieke adressen, wachtrij 0. Laatste mail 1 op
-21-09; daarna alleen mail 2/3. De motor is goed, de brandstof is op: septembergroep
-10% antwoord (113 benaderd), versie A 17% antwoord / 5% aanmelding / 3% betaald,
-B 12 / 2 / 0 (kleine aantallen). Markt: gemiddeld 3,4% antwoord, 10% is top.
-
-**Vinted Pro** (1 profiel gecontroleerd, uitgelogd): bedrijfsnaam, bedrijfsnummer
-en plaats zichtbaar; e-mail en telefoon staan erop maar afgeschermd
-(`******@gmail.com`, data-testid `profile-business-email`), klikken toont niets.
-Catalogus-API geeft 404 zonder sessie. Pro bestaat in NL en BE. Of ingelogd het
-adres zichtbaar wordt: niet gemeten.
-
-**eBay.nl zakelijk** (12 advertenties met locatie NL, "vintage jas"): 6 zakelijk.
-Knop "Contactgegevens van de koper" (sic) toont bedrijfsnaam, naam, adres en
-telefoon; e-mail niet (1 van 1). Browse API `sellerLegalInfo` kent een e-mailveld,
-maar lokaal staan alleen sandbox-sleutels (SBX), dus niet gemeten.
-
-**OpenStreetMap** (Overpass, gratis): NL+BE 2401 winkels; tweedehands kleding 465
-(64 e-mail, 254 website), antiek 416 (43 / 130), second_hand 1211 (veel kringloop),
-charity 309. overpass-api.de gaf een lege reactie, overpass.kumi.systems werkte.
-
-**Facebookgroepen**: geen e-mailbron; scrapen riskeert het account (zie
-"instagram-leadgen-bronnen"). Zie "leadgen-op-conversie-niet-volume".
-
-**Proef 26-09 (avond), elke bron met 50+ verkopers.** Nieuw = niet in sheet of
-leadgen_opslag; passend = kleding/sieraden/antiek/muziek, 20+ advertenties, geen
-kringloop of nieuwe waar.
-- Marktplaats pijnzinnen ("staat ook op vinted" enz.): 406 zakelijk, 255 e-mail, 3
-  nieuw passend. Zakelijke gebruikers van die zinnen zitten in doe-het-zelf,
-  huis, audio.
-- 2dehands pijnzinnen: 103 zakelijk (Catawiki, boekenhandels), 1 e-mail, 0.
-- 2dehands volledig (659.475 advertenties, 9 min): 61 zakelijk, 26 e-mail, 0 echt
-  passend na nakijken. 2dehands heeft gewoon weinig zakelijke verkopers.
-- Marktplaats ondergrens 10: 162 met e-mail in de cache, 43 nieuw op rubriek, 0
-  volgens de classificatie (allemaal webshops in nieuwe waar; klopt bij nakijken).
-  De 131 afgewezen verkopers boven 20 zijn ook terecht afgewezen.
-- Marktplaats aanwas 18-09 tot 26-09 (660.000 advertenties, 10 min): 9 nieuwe
-  zakelijk, 3 bruikbaar. Bijvultempo ~3 per week.
-- OpenStreetMap (884 winkels, deel van Midden-NL ontbrak door overbelaste
-  servers): 238 e-mail, 218 nieuw passend, 206 NL/BE; 75 eigen webshop, 3 linken
-  naar een marktplaats, 118 naar Instagram. Werkend: overpass-api.de (NL-noord) en
-  maps.mail.ru (BE); kumi gaf 504 of time-out. User-Agent meesturen, per regio.
-- Kleinanzeigen zakelijk (DE): 82, e-mail in "Rechtliche Angaben" bij 3 (4%).
-- WebwinkelKeur: 699 leden, 5 tweedehands-achtig, 0 in onze rubrieken; ?q= wordt genegeerd.
-- Shopify-appreviews (marktplaats, marktplaats-admarkt, vinted-reviews,
-  exportyourstore): 58 reviews, 11 NL/BE, openlijk klagend over sync. Te weinig.
-- Geblokkeerd voor scripts (403/captcha, niet omzeilen): Vinted-API, Etsy, Catawiki,
-  eBay, Trustpilot, Reddit, Depop, Vestiaire. JavaScript-fetch in de ingebouwde
-  browser op Vinted wordt door de veiligheidscheck geweigerd.
-Kandidatenlijst lokaal: scripts/output/leads/kandidaten_2026-09-26.json (212).
-Zie "pijn-luid-is-particulier", "koude-mail-wat-mag".
-
-**Avondronde 26-09 (Daniel: "iedereen in NL en BE", alle kanalen).**
-- Particuliere semi-profs, met gerepareerd subrubriekfilter, unieke advertenties
-  (ondergrens: per subrubriek alleen de nieuwste 5.000): Marktplaats 764.176
-  advertenties, 195.249 verkopers; particulier met 20+ gezien 4.145, 10+ 9.871,
-  50+ 1.234. 2dehands 528.844 / 88.295; particulier 20+ 3.029, 10+ 6.371.
-  Bedrijven 20+: MP 249, 2dh 53. Geen legale 1-op-1-route naar particulieren.
-- Bedrijven met gerepareerd filter: MP 44 nieuw op 544.755 advertenties (4 a 5
-  passend), 2dehands 7 nieuw op 436.073 (0 passend). Bedrijven zijn echt op.
-- Webshops via zoekwoorden (eigen WebSearch-tool, 20 zoekopdrachten zoals
-  "ralph lauren vintage webshop", "preloved designer tassen", "brocante webshop"):
-  84 domeinen, 41 nieuw met e-mail, ronde 2 gaf evenveel nieuwe als ronde 1 (10
-  van 48 overlap). Deels gemengde winkels (nieuw en tweedehands).
-- Alle zoekmachines blokkeren scripts: DuckDuckGo html werkte ~eerste zoekopdrachten
-  en gaf daarna 202 "anomaly"; Mojeek, Brave, Startpage, Ecosia, Qwant, Yahoo meteen.
-  Een script dat bij blokkade 20 s wacht zonder voortgang te loggen liep 56 min
-  vast en verloor alles. Opschalen kan alleen met een zoek-API-sleutel.
-- OpenStreetMap Midden-NL (51.5-52.0) aangevuld: 39 nieuw; OSM totaal 245 NL/BE.
-- Gidsen: antiekwinkel.nl ~170 winkels, 61 nieuw met e-mail; allevintagewinkels.nl
-  198 winkelpagina's zonder websitelink, daarna lege pagina's; vintagewinkelsgids
-  en deantieksite 0 bruikbaar.
-- TikTok: 422 verkoper-profielen gelezen (bio open zonder login), 35 NL-talig rond
-  Vinted met e-mail in bio; meeste zijn lifestyle/UGC-makers = kanaal, geen gebruiker.
-- CBS via FirmFocus Q3 2026: 750 winkels tweedehands kleding, 685 antiek (NL).
-- Instagram-bio's en Facebookgroepen: niet leesbaar zonder login. Etsy: geen e-mail
-  zichtbaar (1 winkel), alleen Etsy-berichten.
-Kandidatenlijst lokaal: 342 (scripts/output/leads/kandidaten_2026-09-26.json).
 
 ---
 

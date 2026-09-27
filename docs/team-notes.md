@@ -13924,3 +13924,12 @@ opzoeking, en minstens drie. Proef: oude code (b376e1ec) liet hem in de rust
 gaan, nieuwe houdt hem vast. De 98 bestaande: rubriek is niet te wijzigen op een
 bestaand zoekertje, dus alleen verwijderen en opnieuw plaatsen, en dat pas na
 zijn ja. Ook: 10 artikelen hebben op Marktplaats een andere prijs dan bij ons.
+
+## 27-09-2026: Google-zoekronde via Serper
+
+Serper.dev-sleutel door Daniel in de sleutelhanger gezet (`omnivaleur-serper`, 2.500
+gratis zoekopdrachten). Ronde van 435 zoekopdrachten: Google-web leverde 145 nieuwe,
+passende tweedehands-webshops met e-mail (WooCommerce 47, Shopify 15). Google Maps via
+Serper geeft geen website, alleen naam, adres en telefoon: 1.419 winkels zonder
+kringloop, 1.148 met telefoon. Kandidatenlijst lokaal nu 464, nog steeds geparkeerd
+(tekst noemt altijd Marktplaats). Saldo 2.064.
