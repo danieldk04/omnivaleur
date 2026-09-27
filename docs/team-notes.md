@@ -13818,3 +13818,41 @@ foutsoorten (7 open). Site gezond (/health 200). Geen abonnement op slot gegaan.
   nog (hartslag 46 uur oud, computer uit).
 - Proef loopt af vandaag: f449e58b (nooit een extensie geïnstalleerd); d25f18a2
   en f8c0cce9 staan in de respijt met elk één wachtende opdracht.
+
+## 27-09-2026 (avond): Egbert, verzendkosten ook voor wat geen patch is, en zoeken op het losse woord
+
+Egbert mailde 14:58 en 16:04. (1) Zoeken op "patch" in het dashboard gaf ook zijn
+rugpatches, die al allemaal online staan. (2) Hij zette magneten, plectrums en
+sleutelhangers op 2dehands; op Marktplaats verstuurt hij die zelf voor EUR 2,25 of
+2,95, op 2dehands kregen ze Bpost EUR 7,10: "Ik ging er vanuit dat er vanaf nu
+gekeken zou worden naar de verzendkosten zoals ze staan op Marktplaats?"
+
+Gemeten. Sinds 26-09 12:00 UTC gingen 387 plaatsingen zonder "patch" in de titel
+met Bpost naar 2dehands (magneten, plectrums, textielposters, bandana's,
+nummerplaten, slipmats); alle 416 staan ook actief op Marktplaats. Steekproef van
+zijn Marktplaats-bedragen: magneet 2,25, plectrum en sleutelhanger 2,95,
+textielposter 3,95, bandana 2,25 tot 4,95, nummerplaat 4,95, slipmat 6,95. Op
+26-09 zei hij zelf: 4,95 voor een pakje naar België is te weinig (9,50 echt, 7,10
+kan), voor patches scheelt het een euro.
+
+Gebouwd (server, live via push): tweede instelling per klant naast de
+titelwoorden, `verzending_2dh_brief_onder` (centen, standaard 0 = uit). Elk
+Marktplaats-bedrag daaronder gaat mee naar 2dehands, welke titel ook. Egbert: 495,
+dus alles onder EUR 4,95; vanaf 4,95 blijft het Bpost (kan een pakje zijn),
+behalve patches. Een regel in `neemt_bedrag_over` (instellingen.py), gebruikt door
+de uitgifte en door scripts/verzendkosten_2dehands_bijwerken.py. Proef: oude
+uitgifte (b12dccf8) gaf de magneet Bpost, nieuwe 2,25.
+
+Zoeken: een woord tussen aanhalingstekens, "patch", vindt alleen titels met
+precies dat losse woord. Op zijn 5.533 artikelen: 1.526, geen rugpatch of
+backpatch. Alleen de titel, want heel-woord zoeken in de omschrijving liet nog 302
+van de 365 rugpatches zien ("mooi afgewerkte patch"). Zonder aanhalingstekens
+zoekt het veld zoals altijd. Tip als tooltip op het veld, ook in het Nederlands.
+
+De vastgelopen reeks van vanochtend (93 patches achter één valse time-out) had
+de klantfouten-sessie van 17:36 al opgelost (_bijwerking_staat_al_online).
+
+**Open.** Hoe hij bandana's, nummerplaten en andere 4,95-artikelen verstuurt weet
+alleen hij; die houden Bpost tot hij iets anders zegt (dan een woord erbij, zoals
+"bandana"). Het zoeken is getest met de echte functie op zijn echte titels, niet
+in een ingelogd dashboard.

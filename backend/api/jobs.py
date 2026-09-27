@@ -953,13 +953,15 @@ def _zet_verzending_van_marktplaats(db, user_id: str, job: dict) -> None:
         return
     # ALLEEN WAAR DE VERKOPER DAT WIL. Het Marktplaats-bedrag is een Nederlandse
     # prijs; voor een pakje naar België is het veel te laag (Egbert: EUR 4,95
-    # tegen 9,50 echt). Zie VERZENDING_2DH_WOORDEN in instellingen.py.
-    from backend.services.instellingen import verzending_2dh_woorden
-    woorden = verzending_2dh_woorden(user_id, db)
-    if woorden is None:
+    # tegen 9,50 echt). Zie VERZENDING_2DH_WOORDEN en VERZENDING_2DH_BRIEF_ONDER
+    # in instellingen.py.
+    from backend.services.instellingen import (neemt_bedrag_over, titel_neemt_over,
+                                               verzending_2dh_regel)
+    regel = verzending_2dh_regel(user_id, db)
+    if regel is None:
         return   # instelling niet te lezen: niets vastleggen, deze keer Bpost
-    titel = str(pl.get("title") or "").lower()
-    if not any(w in titel for w in woorden):
+    if not titel_neemt_over(regel, pl.get("title")) and not regel["brief_onder"]:
+        # Niets waar het bedrag toe doet: Marktplaats hoeft niet eens gevraagd.
         _bewaar_verzending(db, job, {"soort": "standaard"})
         return
     try:
@@ -993,6 +995,10 @@ def _zet_verzending_van_marktplaats(db, user_id: str, job: dict) -> None:
         _VERZENDING_STORING.pop(user_id, None)
         verzending = verzending or {"soort": "onbekend"}
     if verzending.get("soort") == "zelf":
+        if not neemt_bedrag_over(regel, pl.get("title"), verzending.get("cents")):
+            # Een pakje-bedrag zonder woord uit de regel: Bpost, zoals altijd.
+            _bewaar_verzending(db, job, {"soort": "standaard"})
+            return
         logger.info("job %s: 2dehands zelf versturen voor %s cent, zoals op Marktplaats %s",
                     job.get("id"), verzending.get("cents"), nummer)
     _bewaar_verzending(db, job, verzending)

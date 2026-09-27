@@ -6,8 +6,10 @@ hetzelfde artikel op Marktplaats zelf verstuurt voor een eigen bedrag. Nieuwe
 zoekertjes krijgen nu dat eigen bedrag; dit script doet het voor de bestaande.
 
 Per zoekertje: staat het artikel op Marktplaats met "Zelf verzenden" en een
-bedrag, en toont de openbare 2dehands-pagina iets anders, dan komt er een
-opdracht (content_refresh met _verzending_bijwerken) in de wachtrij. De server
+bedrag, geldt voor dat artikel de regel van de verkoper (woord in de titel of een
+briefbedrag, zie verzending_2dh_regel in instellingen.py), en toont de openbare
+2dehands-pagina iets anders, dan komt er een opdracht (content_refresh met
+_verzending_bijwerken) in de wachtrij. De server
 geeft die alleen aan extensie 1.0.354 of nieuwer, en houdt de rest vast zodra er
 één mislukt (_bijwerken_2dh_staat_stil in jobs.py).
 
@@ -57,8 +59,13 @@ async def main() -> None:
     load_dotenv()
     from backend.database import get_db, fetch_all, fetch_all_in
     from backend.services.mp_enrich import UA, verzending_van_advertentie
+    from backend.services.instellingen import neemt_bedrag_over, verzending_2dh_regel
 
     db = get_db()
+    regel = verzending_2dh_regel(a.user, db)
+    if regel is None:
+        sys.exit("instellingen van deze verkoper niet te lezen; niets gedaan")
+    print(f"regel: woorden {regel['woorden']}, briefbedrag onder {regel['brief_onder']} cent")
     items = {i["id"]: i["title"] or "" for i in fetch_all(
         lambda: db.table("items").select("id,title").eq("user_id", a.user))}
     if a.titel:
@@ -94,6 +101,10 @@ async def main() -> None:
                 continue
             if v.get("soort") != "zelf":
                 telling[f"op Marktplaats: {v.get('soort') or 'weg'}"] += 1
+                await asyncio.sleep(TUSSENPOZE)
+                continue
+            if not neemt_bedrag_over(regel, items.get(item_id), v.get("cents")):
+                telling[f"houdt Bpost (Marktplaats {v['cents'] / 100:.2f}, buiten de regel)".replace(".", ",")] += 1
                 await asyncio.sleep(TUSSENPOZE)
                 continue
             nu = await _op_2dehands(client, dh["platform_listing_id"])

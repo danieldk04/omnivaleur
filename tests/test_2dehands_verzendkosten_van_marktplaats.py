@@ -23,13 +23,20 @@ import backend.api.jobs as J  # noqa: E402
 import backend.services.mp_enrich as M  # noqa: E402
 import backend.services.instellingen as I  # noqa: E402
 
-ECHT_LEZEN = I.verzending_2dh_woorden   # vóór de fixture hieronder hem vervangt
+ECHT_LEZEN = I.verzending_2dh_regel   # vóór de fixture hieronder hem vervangt
+EGBERT = {"woorden": ["patch"], "brief_onder": 495}
+ALLEEN_WOORDEN = {"woorden": ["patch"], "brief_onder": 0}
+
+
+def _regel(monkeypatch, regel):
+    monkeypatch.setattr(I, "verzending_2dh_regel", lambda user_id, db=None: regel)
 
 
 @pytest.fixture(autouse=True)
 def _egberts_instelling(monkeypatch):
-    """Sinds 26-09 alleen voor wie het wil; Egbert wil het voor zijn patches."""
-    monkeypatch.setattr(I, "verzending_2dh_woorden", lambda user_id, db=None: ["patch"])
+    """Sinds 26-09 alleen voor wie het wil. Egbert: zijn patches (26-09) en
+    alles met een briefbedrag onder EUR 4,95 (27-09)."""
+    _regel(monkeypatch, EGBERT)
 
 VOOR_DE_REPARATIE = "241c4f78"   # vast nummer: HEAD vergelijkt zichzelf na de commit
 NUMMER = "1475716652"            # zijn Marktplaats-advertentie van de patch
@@ -266,8 +273,10 @@ def _mok():
     return _patch_opdracht(title="Pink Floyd - Dark Side of the Moon - Mok off. merchandise")
 
 
-def test_een_mok_houdt_bpost_en_marktplaats_wordt_niet_eens_gevraagd(monkeypatch):
+def test_een_mok_houdt_bpost(monkeypatch):
     J._VERZENDING_STORING.clear()
+    # Alleen woorden ingesteld: Marktplaats wordt niet eens gevraagd.
+    _regel(monkeypatch, ALLEEN_WOORDEN)
     vragen = _nep_verzending(monkeypatch, {"soort": "zelf", "cents": 695})
     job = _mok()
     db = R._DB([job], op_marktplaats={job["item_id"]: NUMMER})
@@ -276,6 +285,13 @@ def test_een_mok_houdt_bpost_en_marktplaats_wordt_niet_eens_gevraagd(monkeypatch
     assert vragen == []
     assert [u[2]["payload"]["verzending"] for u in db.updates] == [{"soort": "standaard"}], \
         "vastgelegd, zodat de volgende ronde het niet opnieuw uitzoekt"
+    # Met Egberts briefgrens wordt het bedrag opgevraagd, en 6,95 is een pakje.
+    _regel(monkeypatch, EGBERT)
+    job = _mok()
+    db = R._DB([job], op_marktplaats={job["item_id"]: NUMMER})
+    J._zet_verzending_van_marktplaats(db, R.USER, job)
+    assert job["payload"]["verzending"] == {"soort": "standaard"}
+    assert vragen == [NUMMER]
     # Vanochtend (faefb348) kreeg dezelfde mok EUR 6,95: te weinig voor een pakje naar België.
     oud = R._oude_module("backend/api/jobs.py", "faefb348", "oude_jobs_mok",
                          moet_bevatten=("_zet_verzending_van_marktplaats",),
@@ -286,7 +302,7 @@ def test_een_mok_houdt_bpost_en_marktplaats_wordt_niet_eens_gevraagd(monkeypatch
 
 
 def test_zonder_instelling_overal_bpost(monkeypatch):
-    monkeypatch.setattr(I, "verzending_2dh_woorden", lambda user_id, db=None: [])
+    _regel(monkeypatch, {"woorden": [], "brief_onder": 0})
     vragen = _nep_verzending(monkeypatch, {"soort": "zelf", "cents": 495})
     job = _patch_opdracht()
     J._zet_verzending_van_marktplaats(R._DB([job], op_marktplaats={job["item_id"]: NUMMER}), R.USER, job)
@@ -295,7 +311,7 @@ def test_zonder_instelling_overal_bpost(monkeypatch):
 
 
 def test_instelling_niet_te_lezen_is_geen_antwoord(monkeypatch):
-    monkeypatch.setattr(I, "verzending_2dh_woorden", lambda user_id, db=None: None)
+    _regel(monkeypatch, None)
     _nep_verzending(monkeypatch, {"soort": "zelf", "cents": 495})
     job = _patch_opdracht()
     db = R._DB([job], op_marktplaats={job["item_id"]: NUMMER})
@@ -309,6 +325,18 @@ def test_de_instelling_zelf():
     assert I._schoon(None)[I.VERZENDING_2DH_WOORDEN] == []
     # Een andere instelling opslaan gooit de woorden niet weg.
     assert I._schoon({**schoon, "relist_dagen": 30})[I.VERZENDING_2DH_WOORDEN] == ["patch", "mok"]
+
+
+def test_de_briefgrens_zelf():
+    B = I.VERZENDING_2DH_BRIEF_ONDER
+    assert I._schoon(None)[B] == 0, "standaard uit"
+    assert I._schoon({B: 495})[B] == 495
+    assert I._schoon({B: "495"})[B] == 495
+    assert I._schoon({B: 5000})[B] == 710, "nooit boven Bpost 0-2 kg zelf"
+    assert I._schoon({B: -3})[B] == 0
+    assert I._schoon({B: "veel"})[B] == 0
+    assert I._schoon({**I._schoon({B: 495}), "relist_dagen": 30})[B] == 495, \
+        "een andere instelling opslaan gooit de grens niet weg"
 
 
 def test_lezen_uit_de_rij_van_de_verkoper():
@@ -327,6 +355,69 @@ def test_lezen_uit_de_rij_van_de_verkoper():
     def db(v):
         return type("Db", (), {"table": lambda self, n: v})()
     lees = ECHT_LEZEN
-    assert lees("u", db(_V([{"extra_data": {I.VERZENDING_2DH_WOORDEN: ["patch"]}}]))) == ["patch"]
-    assert lees("u", db(_V([]))) == []
+    assert lees("u", db(_V([{"extra_data": {I.VERZENDING_2DH_WOORDEN: ["patch"],
+                                            I.VERZENDING_2DH_BRIEF_ONDER: 495}}]))) == EGBERT
+    assert lees("u", db(_V([{"extra_data": {I.VERZENDING_2DH_WOORDEN: ["patch"]}}]))) == ALLEEN_WOORDEN
+    assert lees("u", db(_V([]))) == {"woorden": [], "brief_onder": 0}
     assert lees("u", db(_V(fout=True))) is None
+
+
+# ── ook wat geen patch is, als het een brief is (27-09-2026, Egbert's derde mail) ─
+# "IK heb artikelen, anders dan patches op 2eHands gezet, hiervan zijn de
+# verzendkosten op Marktplaats 2,95 maar ik zie nu dat ze op 2eHands gewoon als
+# pakketpost van €7.10 gezet zijn." Gemeten op zijn Marktplaats-pagina's:
+# magneet 2,25, plectrum en sleutelhanger 2,95, textielposter 3,95 (brieven);
+# miniatuur en nummerplaat 4,95, slipmat en mok 6,95 (pakjes).
+VOOR_DE_BRIEFGRENS = "b12dccf8"   # vast nummer: HEAD vergelijkt zichzelf na de commit
+
+
+def _opdracht(titel):
+    return _patch_opdracht(title=titel)
+
+
+def _uitkomst(monkeypatch, titel, cents, module=J):
+    J._VERZENDING_STORING.clear()
+    _nep_verzending(monkeypatch, {"soort": "zelf", "cents": cents})
+    job = _opdracht(titel)
+    module._zet_verzending_van_marktplaats(R._DB([job], op_marktplaats={job["item_id"]: NUMMER}),
+                                           R.USER, job)
+    return job["payload"].get("verzending")
+
+
+@pytest.mark.parametrize("titel,cents", [
+    ("Korn - Logo - Koelkast magneet - officiële merchandise", 225),
+    ("Golden Gate MP-32 Semi rond plectrum Stiff 1.00 mm 12-pack", 295),
+    ("Helloween - Logo - Sleutelhanger officiële merchandise", 295),
+    ("Deep Purple - In Rock - Textiel Poster officiële merchandise", 395),
+    ("Iron Maiden - Wicker Man - Koelkast Magneet off. merchandise", 494),
+])
+def test_een_brief_krijgt_zijn_eigen_bedrag(monkeypatch, titel, cents):
+    assert _uitkomst(monkeypatch, titel, cents) == {"soort": "zelf", "cents": cents}
+
+
+@pytest.mark.parametrize("titel,cents", [
+    ("Twisted Sister Logo - USA Nummerplaat officiële merchandise", 495),
+    ("AC/DC Angus Young Gibson SG miniatuur gitaar", 495),
+    ("David Bowie - Aladdin Sane - Slipmat officiële merchandise", 695),
+])
+def test_een_pakje_houdt_bpost(monkeypatch, titel, cents):
+    assert _uitkomst(monkeypatch, titel, cents) == {"soort": "standaard"}
+
+
+def test_een_rugpatch_van_495_blijft_zijn_eigen_bedrag_houden(monkeypatch):
+    """4,95 is bij hem ook een brief, als het een patch is: het woord gaat voor."""
+    titel = "Disturbed - Evolution - Rugpatch officiële merchandise"
+    assert _uitkomst(monkeypatch, titel, 495) == {"soort": "zelf", "cents": 495}
+
+
+def test_de_magneet_kreeg_eerst_bpost(monkeypatch):
+    """Voor-en-na-proef: de uitgifte van vóór deze wijziging, zelfde magneet."""
+    titel = "Korn - Logo - Koelkast magneet - officiële merchandise"
+    oud = R._oude_module("backend/api/jobs.py", VOOR_DE_BRIEFGRENS, "oude_jobs_briefgrens",
+                         moet_bevatten=("verzending_2dh_woorden",),
+                         moet_missen=("verzending_2dh_regel",))
+    monkeypatch.setattr(I, "verzending_2dh_woorden", lambda user_id, db=None: ["patch"],
+                        raising=False)
+    assert _uitkomst(monkeypatch, titel, 225, module=oud) == {"soort": "standaard"}, \
+        "zo kwamen zijn magneten vandaag voor EUR 7,10 op 2dehands"
+    assert _uitkomst(monkeypatch, titel, 225) == {"soort": "zelf", "cents": 225}

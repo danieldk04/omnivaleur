@@ -162,9 +162,22 @@ VERKOOPVRAAG = "verkoopvraag"
 # (de standaard) = overal Bpost, zoals het altijd was.
 VERZENDING_2DH_WOORDEN = "verzending_2dh_woorden"
 VERZENDING_2DH_WOORDEN_MAX = 20
+# En voor elk artikel waarvan het Marktplaats-bedrag ONDER dit bedrag (centen)
+# ligt, welke titel het ook heeft. 0 (de standaard) = uit.
+#
+# WAAROM (27-09-2026, Egbert): hij zette magneten, plectrums en sleutelhangers op
+# 2dehands; op Marktplaats verstuurt hij die zelf voor EUR 2,25 of 2,95, op
+# 2dehands kregen ze Bpost EUR 7,10. "Ik ging er vanuit dat er vanaf nu gekeken
+# zou worden naar de verzendkosten zoals ze staan op Marktplaats." Onder de 4,95
+# is het bij hem altijd een brief (gemeten: magneet 2,25, plectrum en sleutelhanger
+# 2,95, textielposter 3,95); vanaf 4,95 kan het een pakje zijn (miniatuur 4,95,
+# slipmat 6,95, mok 6,95), en daar is zijn eigen bedrag te laag voor België.
+VERZENDING_2DH_BRIEF_ONDER = "verzending_2dh_brief_onder"
+VERZENDING_2DH_BRIEF_ONDER_MAX = 710   # nooit boven Bpost 0-2 kg zelf
 
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "auto_relist": True, VERKOOPVRAAG: True, VERZENDING_2DH_WOORDEN: [],
+             VERZENDING_2DH_BRIEF_ONDER: 0,
              "fabrikant_naam": "", "fabrikant_adres": "", "fabrikant_email": "",
              FABRIKANT_MEESTUREN: True,
              "locatie_land": "", "locatie_plaats": "", "locatie_postcode": "",
@@ -221,6 +234,12 @@ def _schoon(rauw: dict | None) -> dict:
         uit[VERZENDING_2DH_WOORDEN] = [w for w in dict.fromkeys(
             str(x).strip().lower() for x in woorden) if 3 <= len(w) <= 40
         ][:VERZENDING_2DH_WOORDEN_MAX]
+    if VERZENDING_2DH_BRIEF_ONDER in rauw:
+        try:
+            uit[VERZENDING_2DH_BRIEF_ONDER] = max(0, min(int(rauw.get(VERZENDING_2DH_BRIEF_ONDER) or 0),
+                                                         VERZENDING_2DH_BRIEF_ONDER_MAX))
+        except (TypeError, ValueError):
+            uit[VERZENDING_2DH_BRIEF_ONDER] = 0
     groepen = rauw.get("vinted_groepen")
     if isinstance(groepen, list):
         uit["vinted_groepen"] = [g for g in
@@ -264,16 +283,34 @@ def verkoopvraag_aan(user_id: str) -> bool:
         logger.warning("verkoopvraag-instelling niet gelezen voor %s: %s", user_id, e)
         return True
 
-def verzending_2dh_woorden(user_id: str, db=None) -> list[str] | None:
-    """Zie VERZENDING_2DH_WOORDEN. None = niet te lezen: een storing is geen
+def verzending_2dh_regel(user_id: str, db=None) -> dict | None:
+    """Wanneer 2dehands het Marktplaats-bedrag van deze verkoper overneemt:
+    {"woorden": [...], "brief_onder": centen}. Zie VERZENDING_2DH_WOORDEN en
+    VERZENDING_2DH_BRIEF_ONDER. None = niet te lezen: een storing is geen
     antwoord, dus dan legt de aanroeper niets vast."""
     try:
         rij = ((db or get_db()).table("platform_credentials").select("extra_data")
                .eq("user_id", user_id).eq("platform", RIJ).limit(1).execute().data or [])
     except Exception as e:  # noqa: BLE001
-        logger.warning("verzendwoorden niet gelezen voor %s: %s", user_id, e)
+        logger.warning("verzendregel niet gelezen voor %s: %s", user_id, e)
         return None
-    return _schoon(rij[0].get("extra_data") if rij else None)[VERZENDING_2DH_WOORDEN]
+    schoon = _schoon(rij[0].get("extra_data") if rij else None)
+    return {"woorden": schoon[VERZENDING_2DH_WOORDEN],
+            "brief_onder": schoon[VERZENDING_2DH_BRIEF_ONDER]}
+
+
+def titel_neemt_over(regel: dict, titel: str) -> bool:
+    """Staat er een woord uit de regel in de titel? Dan geldt het eigen bedrag,
+    wat het ook is (bij Egbert: een rugpatch van EUR 4,95 is een brief)."""
+    t = str(titel or "").lower()
+    return any(w in t for w in regel.get("woorden") or [])
+
+
+def neemt_bedrag_over(regel: dict, titel: str, cents) -> bool:
+    """Krijgt dit artikel op 2dehands het eigen Marktplaats-bedrag `cents`?"""
+    if titel_neemt_over(regel, titel):
+        return True
+    return isinstance(cents, int) and 0 < cents < int(regel.get("brief_onder") or 0)
 
 def alle_relist_dagen() -> dict[str, int]:
     """Per verkoper het ingestelde aantal dagen, voor de dagelijkse ronde.

@@ -17,6 +17,40 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## zoeken-heel-woord-alleen-in-de-titel
+
+*27-09-2026 — Dashboard-zoekveld: "woord" tussen aanhalingstekens = precies dat losse woord, alleen in de titel; heel-woord in de omschrijving hielp niet (302 van 365 rugpatches bleven)*
+
+Het zoekveld op Items (`filter-search`, `leesZoekterm` in frontend/app.html) zoekt standaard als deelwoord in titel, merk en omschrijving. Egbert (27-09-2026) zocht "patch" en kreeg ook zijn 365 rugpatches en backpatches, die al online stonden.
+
+Sinds 27-09-2026: een woord of woordgroep tussen aanhalingstekens (ook “ ” en „) vindt alleen titels met precies dat losse woord. Gemeten op zijn 5.533 artikelen: `"patch"` geeft 1.526, nul rug/backpatches. Zonder aanhalingstekens verandert er niets (deelwoord blijft nodig: "plec" moet plectrum vinden, en Nederlandse samenstellingen).
+
+**Why:** heel-woord zoeken over titel+omschrijving liet nog 302 van de 365 rugpatches zien, want hun omschrijving zegt "mooi afgewerkte patch". Een generiek woord staat vaak los in de omschrijving van het samengestelde artikel.
+
+**How to apply:** bij een zoekklacht eerst meten op de echte voorraad van die klant welke velden de ruis geven, niet aannemen dat heel-woord genoeg is. De tip staat als title-tooltip op het zoekveld (NL in nl.json).
+
+---
+
+## 2dehands-verzendkosten-volgen-marktplaats
+
+*27-09-2026 — "2dehands standaard Bpost 0-2 kg (EUR 7,10); het eigen Marktplaats-bedrag alleen per klant via titelwoorden (verzending_2dh_woorden) en/of briefgrens (verzending_2dh_brief_onder), want het is een NL-prijs. Formulier: shippingMethod=diy + othersPrice"*
+
+Op 2dehands koos de extensie altijd Transporteur Bpost, pakket 0-2 kg (EUR 7,10), voor elk zoekertje. Egbert Brouwer (Papa's Plectrums, 25-09-2026) wilde voor patches geen dure verzending; op Marktplaats verstuurt hij ze zelf voor EUR 2,25 tot 4,95 (buttons 2,95, miniaturen 4,95), per advertentie ingesteld.
+
+Sinds 26-09-2026 (extensie 1.0.353) zet `_zet_verzending_van_marktplaats` in jobs.py bij uitgifte `payload.verzending` voor elke 2dehands-create van een artikel dat actief op Marktplaats staat. Bron: de openbare advertentiepagina `https://www.marktplaats.nl/m{nummer}` (gewoon) of `/a{nummer}` (Admarkt); de verkeerde letter geeft 404. Blok `"shippingInformation"` → `augmentedLabels[].labels[]` met `deliveryMethod: "UNKNOWN_BECAUSE_DIY"` en `price: "€ 4,95"` is zelf verzenden. PostNL/DHL-labels zijn het tarief van Marktplaats en gaan NIET mee.
+
+Het 2dehands-formulier (create én `/plaats/m{id}/edit`, live afgelezen): `input[name="shippingMethod"]` waarde `bpost` of `diy`; na `diy` verschijnt `input[name="othersPrice"]` ("0,00", komma) en verdwijnen de pakketmaten en `shippingDetails.price`. fillInput werkt, het bedrag overleeft hertekenen.
+
+**Bijgesteld 26-09-2026 middag:** niet meer voor iedereen. Het Marktplaats-bedrag is een NEDERLANDSE prijs; Egbert: pakje naar België kost EUR 9,50 tegen 4,95 in NL, brief maar een euro verschil. Aan het bedrag is brief of pakje niet te zien (rugpatch en miniatuur allebei 4,95). Daarom alleen voor titels met een woord uit de instelling `verzending_2dh_woorden` (instellingen.py, standaard leeg = overal Bpost); anders stempelt de server `{"soort": "standaard"}`. Egbert: ["patch"].
+
+**Why:** een eigen bedrag van de verkoper is de enige juiste bron; wij kunnen aan een foto niet zien of iets door de brievenbus past.
+
+**How to apply:** een leeg of onleesbaar bedrag is nooit "gratis verzenden" (dan betaalt de verkoper het porto): terugval is altijd Bpost 0-2 kg. Een storing bij Marktplaats houdt de opdracht niet tegen. Bestaande zoekertjes: sinds 1.0.354 een wijzigroute (content_refresh met `_verzending_bijwerken`, formulier `/plaats/m{id}/edit`, knop `update-listing-submit-button`). Live gemeten: button.click() doet NIETS, alleen een echte muisklik (KLIK_ECHT) slaat op; daarna landt het tabblad op `/seller/view/m{id}` met "Je zoekertje is aangepast". Server: alleen naar kopie >= 1.0.354 (1.0.353 zou het plaatsformulier opnieuw invullen), noodrem `_bijwerken_2dh_staat_stil` (laatste mislukt = rest wacht), en `_verzending_alsnog_bijwerken` zet na een plaatsing zonder `verzending_gezet: true` vanzelf een bijwerking klaar. Oude zoekertjes: `scripts/verzendkosten_2dehands_bijwerken.py`. Zie ook "geraden-rubriek-is-niet-de-rubriek-van-de-verkoper" (zelfde patroon voor de rubriek) en "extension-release-bump-version".
+
+**Bijgesteld 27-09-2026:** Egbert zette magneten (MP 2,25), plectrums en sleutelhangers (2,95) op 2dehands en kreeg Bpost 7,10: "Ik ging er vanuit dat er vanaf nu gekeken zou worden naar de verzendkosten zoals ze staan op Marktplaats". Tweede sleutel `verzending_2dh_brief_onder` (centen, standaard 0 = uit, max 710): elk MP-bedrag daaronder gaat mee, welke titel ook. Egbert: 495. Gemeten op zijn MP-pagina's: onder 4,95 altijd een brief (textielposter 3,95), vanaf 4,95 kan het een pakje zijn (miniatuur/nummerplaat 4,95, slipmat/mok 6,95) en dan blijft het Bpost, behalve als een titelwoord (patch) het zegt. Beslissing in `neemt_bedrag_over` (instellingen.py), gedeeld door de uitgifte en `scripts/verzendkosten_2dehands_bijwerken.py`. Met een briefgrens vraagt de uitgifte Marktplaats voor elke 2dehands-plaatsing van die klant, niet alleen voor titelwoorden.
+
+---
+
 ## noodrem-valse-mislukking
 
 *27-09-2026 — Eén valse time-out zette de 2dehands-bijwerkingsreeks van Egbert ruim 4 uur stil (93 wachtend); een noodrem moet het doel natrekken voor hij dichtgaat*
@@ -338,24 +372,6 @@ zoekt eindeloos naar adressen van mensen die er geen publiceren.
 **How to apply:** voor koude mail sorteren op meerdere kanalen en webshop; de luide
 particulieren bereik je via content en advertenties. Zie "leadbronnen-gemeten-26-09",
 "leadgen-op-conversie-niet-volume".
-
----
-
-## 2dehands-verzendkosten-volgen-marktplaats
-
-*26-09-2026 — "2dehands standaard Bpost 0-2 kg (EUR 7,10); het eigen Marktplaats-bedrag alleen per klant via titelwoorden (verzending_2dh_woorden), want het is een NL-prijs. Formulier: shippingMethod=diy + othersPrice"*
-
-Op 2dehands koos de extensie altijd Transporteur Bpost, pakket 0-2 kg (EUR 7,10), voor elk zoekertje. Egbert Brouwer (Papa's Plectrums, 25-09-2026) wilde voor patches geen dure verzending; op Marktplaats verstuurt hij ze zelf voor EUR 2,25 tot 4,95 (buttons 2,95, miniaturen 4,95), per advertentie ingesteld.
-
-Sinds 26-09-2026 (extensie 1.0.353) zet `_zet_verzending_van_marktplaats` in jobs.py bij uitgifte `payload.verzending` voor elke 2dehands-create van een artikel dat actief op Marktplaats staat. Bron: de openbare advertentiepagina `https://www.marktplaats.nl/m{nummer}` (gewoon) of `/a{nummer}` (Admarkt); de verkeerde letter geeft 404. Blok `"shippingInformation"` → `augmentedLabels[].labels[]` met `deliveryMethod: "UNKNOWN_BECAUSE_DIY"` en `price: "€ 4,95"` is zelf verzenden. PostNL/DHL-labels zijn het tarief van Marktplaats en gaan NIET mee.
-
-Het 2dehands-formulier (create én `/plaats/m{id}/edit`, live afgelezen): `input[name="shippingMethod"]` waarde `bpost` of `diy`; na `diy` verschijnt `input[name="othersPrice"]` ("0,00", komma) en verdwijnen de pakketmaten en `shippingDetails.price`. fillInput werkt, het bedrag overleeft hertekenen.
-
-**Bijgesteld 26-09-2026 middag:** niet meer voor iedereen. Het Marktplaats-bedrag is een NEDERLANDSE prijs; Egbert: pakje naar België kost EUR 9,50 tegen 4,95 in NL, brief maar een euro verschil. Aan het bedrag is brief of pakje niet te zien (rugpatch en miniatuur allebei 4,95). Daarom alleen voor titels met een woord uit de instelling `verzending_2dh_woorden` (instellingen.py, standaard leeg = overal Bpost); anders stempelt de server `{"soort": "standaard"}`. Egbert: ["patch"].
-
-**Why:** een eigen bedrag van de verkoper is de enige juiste bron; wij kunnen aan een foto niet zien of iets door de brievenbus past.
-
-**How to apply:** een leeg of onleesbaar bedrag is nooit "gratis verzenden" (dan betaalt de verkoper het porto): terugval is altijd Bpost 0-2 kg. Een storing bij Marktplaats houdt de opdracht niet tegen. Bestaande zoekertjes: sinds 1.0.354 een wijzigroute (content_refresh met `_verzending_bijwerken`, formulier `/plaats/m{id}/edit`, knop `update-listing-submit-button`). Live gemeten: button.click() doet NIETS, alleen een echte muisklik (KLIK_ECHT) slaat op; daarna landt het tabblad op `/seller/view/m{id}` met "Je zoekertje is aangepast". Server: alleen naar kopie >= 1.0.354 (1.0.353 zou het plaatsformulier opnieuw invullen), noodrem `_bijwerken_2dh_staat_stil` (laatste mislukt = rest wacht), en `_verzending_alsnog_bijwerken` zet na een plaatsing zonder `verzending_gezet: true` vanzelf een bijwerking klaar. Oude zoekertjes: `scripts/verzendkosten_2dehands_bijwerken.py`. Zie ook "geraden-rubriek-is-niet-de-rubriek-van-de-verkoper" (zelfde patroon voor de rubriek) en "extension-release-bump-version".
 
 ---
 

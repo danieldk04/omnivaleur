@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=ca62de95cf"></script>
+<script src="/i18n.js?v=baf144ab71"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1188,7 +1188,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <option value="price-desc">Price: high to low</option>
             <option value="price-asc">Price: low to high</option>
           </select>
-          <input type="text" id="filter-search" placeholder="Search title, brand or description…" oninput="applyFilters()" style="min-width:200px">
+          <input type="text" id="filter-search" placeholder="Search title, brand or description…" title='Tip: put a word in quotes, like "bag", to only find titles with exactly that word (so not handbag or bags).' oninput="applyFilters()" style="min-width:200px">
         </div>
         <div class="bulk-bar" id="bulk-bar">
           <strong id="bulk-count">0</strong> selected
@@ -4983,6 +4983,27 @@ function setFilter(type, value) {
 const ITEMS_PAGE_SIZE = 50;
 let itemsCurrentPage = 1;
 
+// Een woord tussen aanhalingstekens ("patch") vindt alleen titels waarin precies
+// dat losse woord staat. WAAROM (27-09-2026, Egbert): zoeken op patch gaf ook
+// zijn 365 rugpatches en backpatches, die al online stonden. Alleen de titel:
+// in 302 daarvan staat "patch" ook als los woord in de omschrijving ("mooi
+// afgewerkte patch"), dus heel-woord zoeken in de omschrijving hielp niet.
+// Zonder aanhalingstekens zoekt het veld zoals altijd, ook midden in een woord.
+function leesZoekterm(ruw) {
+  const exact = [];
+  const los = String(ruw || '').toLowerCase()
+    .replace(/["\u201c\u201d\u201e]([^"\u201c\u201d\u201e]*)(["\u201c\u201d\u201e]|$)/g, (_, woord) => {
+      const w = woord.trim().replace(/\s+/g, ' ');
+      if (w) {
+        const veilig = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '\\s+');
+        exact.push(new RegExp(`(?<![\\p{L}\\p{N}])${veilig}(?![\\p{L}\\p{N}])`, 'iu'));
+      }
+      return ' ';
+    })
+    .replace(/\s+/g, ' ').trim();
+  return { los, exact };
+}
+
 function applyFilters(resetPage) {
   if (resetPage !== false) itemsCurrentPage = 1;
   const platformFilter = document.getElementById('filter-platform').value;
@@ -4990,7 +5011,7 @@ function applyFilters(resetPage) {
   // waarvan het merendeel antiek is, is dit het verschil tussen "de sieraden
   // eruit vissen" en "de sieraden eruit vissen met de hand".
   const vintedFilter = (document.getElementById('filter-vinted') || {}).value || 'all';
-  const search = document.getElementById('filter-search').value.toLowerCase().trim();
+  const { los: search, exact: exacteWoorden } = leesZoekterm(document.getElementById('filter-search').value);
   // Met duizenden artikelen is een lijst geen lijst meer. Deze vier keuzes zijn
   // waar verkopers echt op zoeken: waar hoort het bij, van wie is het, wat is er
   // nog niet af, en in welke volgorde wil ik het zien.
@@ -5016,6 +5037,7 @@ function applyFilters(resetPage) {
       const hooi = `${item.title || ''} ${item.brand || ''} ${item.description || ''}`.toLowerCase();
       if (!hooi.includes(search)) return false;
     }
+    if (exacteWoorden.length && !exacteWoorden.every(w => w.test(item.title || ''))) return false;
     if (catFilter !== 'all' && String(item.category || '') !== catFilter) return false;
     if (brandFilter !== 'all' && String(item.brand || '').trim() !== brandFilter) return false;
     if (todoFilter !== 'all') {
@@ -5089,7 +5111,7 @@ function applyFilters(resetPage) {
     vintedKnop.textContent = `Fill ${vintedTeVullen} from Vinted`;
   }
   const actief = [platformFilter, vintedFilter, catFilter, brandFilter, todoFilter]
-    .some(v => v && v !== 'all') || !!search || sortBy !== 'recent';
+    .some(v => v && v !== 'all') || !!search || exacteWoorden.length > 0 || sortBy !== 'recent';
   const resetKnop = document.getElementById('filter-reset');
   if (resetKnop) resetKnop.style.display = actief ? '' : 'none';
   const heading = { live: 'Live items', todo: 'To list', hidden: 'Hidden on platform', sold: 'Sold items', archived: 'Archived items' }[itemsTab];
