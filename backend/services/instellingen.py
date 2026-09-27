@@ -174,6 +174,19 @@ VERZENDING_2DH_WOORDEN_MAX = 20
 # slipmat 6,95, mok 6,95), en daar is zijn eigen bedrag te laag voor België.
 VERZENDING_2DH_BRIEF_ONDER = "verzending_2dh_brief_onder"
 VERZENDING_2DH_BRIEF_ONDER_MAX = 710   # nooit boven Bpost 0-2 kg zelf
+# Welke van de drie keuzes de verkoper maakte (27-09-2026, Daniel: "zodat ik niet
+# constant iedereen individueel zit te berichten"):
+#   "standaard"  altijd Bpost EUR 7,10
+#   "regel"      het Marktplaats-bedrag voor brieven: onder de briefgrens en/of
+#                titels met een woord (de twee velden hierboven, Egbert: 495 en
+#                "patch")
+#   "alles"      het Marktplaats-bedrag voor elk artikel, ook boven EUR 7,10.
+#                Voor wie vanuit België verstuurt of alleen brieven heeft; de
+#                briefgrens kon dat niet, die stopt bij Bpost zelf.
+# Ontbreekt de sleutel (iedereen van vóór 27-09), dan volgt hij uit de velden: wie
+# een grens of woord had, had "regel". Zo verandert er voor Egbert niets.
+VERZENDING_2DH_MODUS = "verzending_2dh_modus"
+VERZENDING_2DH_MODI = ("standaard", "regel", "alles")
 
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "auto_relist": True, VERKOOPVRAAG: True, VERZENDING_2DH_WOORDEN: [],
