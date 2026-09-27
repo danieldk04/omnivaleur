@@ -4775,7 +4775,9 @@ async function verwijderViaAdvertentiepagina(tabId, adUrl, platform) {
         }
         console.log("[Omnivaleur] fetch zei 'weg', echte pagina sprak tegen — genegeerd:", JSON.stringify(diag));
       }
-      await sleep(2000);
+      const geblokkeerd = !!fetchRes && (fetchRes.status === 403 || fetchRes.status === 429);
+      if (poging >= (geblokkeerd ? BLOKKADE_WACHT_MS.length : 2)) break;
+      await sleep(geblokkeerd ? BLOKKADE_WACHT_MS[Math.min(poging, BLOKKADE_WACHT_MS.length - 1)] : 2000);
     }
     console.log("[Omnivaleur] verwijderen niet aantoonbaar gelukt:", JSON.stringify(diag));
     _laatsteVerwijderDiag = diag;
