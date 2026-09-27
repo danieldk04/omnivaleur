@@ -200,6 +200,13 @@ def signalen(staat: dict, db=None, nu: datetime | None = None) -> dict:
     """
     nu = nu or _nu()
     uit = {}
+    # Een dagronde zit er al op (zie ronde_begin): geen losse sessie ernaast op
+    # dezelfde fouten. Wat de ronde niet beoordeelt, komt daarna vanzelf weer open.
+    ronde = A._lees(RONDE_SLEUTEL, {}) or {}
+    begon = _tijd(ronde.get("begon"))
+    if ronde.get("status") == "bezig" and begon and nu - begon < RONDE_GESTRAND_NA:
+        print(f"  dagronde '{ronde.get('wie')}' is bezig; geen losse klantfoutensessie")
+        return uit
     try:
         open_ = open_soorten(meet(db, nu), oordelen(), staat)
     except Exception as e:  # noqa: BLE001
