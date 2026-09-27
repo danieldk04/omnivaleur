@@ -14024,3 +14024,10 @@ aan. Zelfde signaal zou kunnen (brief betekent klein pakket), maar eerst meten h
 het Vinted-formulier nu kiest. En: past de verkoper later zijn bedrag op
 Marktplaats aan, dan volgt 2dehands niet; een nachtelijke vergelijking zou dat
 oplossen.
+
+**Nagekeken 27-09 20:15.** Er draait geen tweede ronde: geen proces, geen uitvoer,
+en in de database staan na 19:52 geen nieuwe verzendopdrachten voor Egbert. De 198
+zoekertjes waar Marktplaats niet op antwoordde (403) houden dus Bpost tot iemand
+het script opnieuw draait. De 197 opdrachten van de eerste ronde staan klaar
+(pending), geen dubbele per zoekertje; ze wachten op Egberts extensie (1.0.354,
+laatst gezien 18:23). De rest van deze notitie klopt met de code.
