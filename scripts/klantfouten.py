@@ -28,6 +28,8 @@ hij elke tien minuten opnieuw aan hetzelfde werk.
 GEBRUIK
     python3 scripts/klantfouten.py                     # wat staat er open
     python3 scripts/klantfouten.py oordeel <soort> gerepareerd|klant|onbekend "zin"
+    python3 scripts/klantfouten.py ronde begin <naam>       # exit 3: andere ronde bezig
+    python3 scripts/klantfouten.py ronde klaar <naam> "samenvatting"
 """
 from __future__ import annotations
 
