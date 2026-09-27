@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=baf144ab71"></script>
+<script src="/i18n.js?v=bc3a6754da"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1595,6 +1595,36 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <label for="pakket-grens" style="font-size:13px">Letterbox parcel below</label>
           <span style="font-size:13px">€</span>
           <input type="number" id="pakket-grens" min="0" max="5000" step="1" style="max-width:90px">
+        </div>
+      </div>
+      <!-- Verzendkosten op 2dehands. Tot 27-09-2026 zette Daniel dit per klant met
+           de hand (Egbert: patches en alles onder EUR 4,95); nu zet de verkoper
+           het zelf. Zie VERZENDING_2DH_BRIEF_ONDER en VERZENDING_2DH_WOORDEN in
+           backend/services/instellingen.py. -->
+      <div style="background:var(--card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:4px">Shipping cost on 2dehands</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          By default every 2dehands listing gets Bpost up to 2 kg (€7.10), because most buyers there live in Belgium.
+          If you ship an item yourself on Marktplaats for your own amount, 2dehands can use that amount too.
+          That is a Dutch price: fine for a letter, too low for a parcel to Belgium. So set up to which amount it is a letter.
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+          <label for="verzending-2dh-onder" style="font-size:13px">Use my own Marktplaats amount below</label>
+          <span style="font-size:13px">€</span>
+          <input type="number" id="verzending-2dh-onder" min="0" max="7.10" step="0.01" style="max-width:90px">
+          <span style="font-size:12px;color:var(--muted)">0 means always Bpost €7.10</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <label for="verzending-2dh-woorden" style="font-size:13px">And always for titles with</label>
+          <input type="text" id="verzending-2dh-woorden" maxlength="400" placeholder="patch, button" style="max-width:260px;flex:1">
+        </div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:6px">
+          Words separated by a comma, for letters that cost more, like a patch at €4.95.
+          Only for items you ship yourself on Marktplaats with an amount, and for listings placed on 2dehands from now on.
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
+          <button class="btn btn-sm btn-primary" onclick="saveVerzending2dh()">Save</button>
+          <span id="verzending-2dh-status" style="font-size:12px;color:var(--muted)"></span>
         </div>
       </div>
       <!-- Vaste tekst onder elke advertentie.
@@ -11812,6 +11842,7 @@ async function loadRelistDagen() {
     state.settings = { ...state.settings, ...data };
     toonFabrikant(data);
     toonLocatie(data);
+    toonVerzending2dh(data);
     const lev = document.getElementById('levering-keuze');
     if (lev) lev.value = data.levering || 'beide';
     const grens = document.getElementById('pakket-grens');
@@ -11847,6 +11878,42 @@ async function saveVerzenden() {
     melding.textContent = data.pakket_grens
       ? `Saved — below €${data.pakket_grens} a letterbox parcel, above it a large parcel.`
       : 'Saved.';
+  } catch (e) {
+    melding.textContent = `Could not save: ${e.message}`;
+  }
+}
+
+function toonVerzending2dh(data) {
+  const grens = document.getElementById('verzending-2dh-onder');
+  if (grens) grens.value = ((data.verzending_2dh_brief_onder || 0) / 100).toFixed(2);
+  const woorden = document.getElementById('verzending-2dh-woorden');
+  if (woorden) woorden.value = (data.verzending_2dh_woorden || []).join(', ');
+}
+
+async function saveVerzending2dh() {
+  const melding = document.getElementById('verzending-2dh-status');
+  melding.textContent = 'Saving…';
+  const euro = parseFloat(String(document.getElementById('verzending-2dh-onder').value || '0').replace(',', '.'));
+  const woorden = String(document.getElementById('verzending-2dh-woorden').value || '')
+    .split(',').map(w => w.trim()).filter(Boolean);
+  try {
+    const r = await apiFetchRetry(`${API}/api/items/settings`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        verzending_2dh_brief_onder: Number.isFinite(euro) && euro > 0 ? Math.round(euro * 100) : 0,
+        verzending_2dh_woorden: woorden,
+      }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+    state.settings = { ...state.settings, ...data };
+    toonVerzending2dh(data);
+    const onder = data.verzending_2dh_brief_onder || 0;
+    melding.textContent = onder
+      ? `Saved. Below €${(onder / 100).toFixed(2)} your own Marktplaats amount is used on 2dehands.`
+      : (data.verzending_2dh_woorden || []).length
+        ? 'Saved. Titles with these words get your own Marktplaats amount on 2dehands.'
+        : 'Saved. Every 2dehands listing gets Bpost €7.10.';
   } catch (e) {
     melding.textContent = `Could not save: ${e.message}`;
   }

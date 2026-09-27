@@ -13945,3 +13945,13 @@ in Supabase, in de sheet (Platform webshop/winkel/MP) en in de wachtrij. Rond 11
 per bron vergelijken op antwoord, warm en aanmelding; daarna de winnaar opschalen uit
 de geparkeerde kandidaten (~109 webshops, ~216 winkels, plus 1.419 Maps-winkels
 zonder website).
+
+**Aanvulling 27-09 avond: verzendkosten op 2dehands stelt de klant zelf in.**
+Daniel: dit hoort in het scherm, niet per klant met de hand. Niet per artikel
+(Egbert zou dan 5.533 keer iets invullen), maar een blok bij Preferences, onder
+How you deliver: "Use my own Marktplaats amount below €..." en "And always for
+titles with ...". Zelfde instellingen als die van Egbert (verzending_2dh_brief_onder,
+verzending_2dh_woorden), zelfde opslagroute (/api/items/settings), standaard uit.
+Getest: wat het scherm verstuurt door de echte _schoon en terug. Nog niet
+automatisch: zoekertjes die al online staan omzetten na het wijzigen; dat blijft
+het script verzendkosten_2dehands_bijwerken.py.
