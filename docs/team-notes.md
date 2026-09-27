@@ -13856,3 +13856,20 @@ de klantfouten-sessie van 17:36 al opgelost (_bijwerking_staat_al_online).
 alleen hij; die houden Bpost tot hij iets anders zegt (dan een woord erbij, zoals
 "bandana"). Het zoeken is getest met de echte functie op zijn echte titels, niet
 in een ingelogd dashboard.
+
+## 27-09-2026 (avond): tweede dagelijkse klantfoutenronde, zonder dubbel werk
+
+Op verzoek komt er naast Daniels ochtendronde (±08:00, zijn account) een middagronde
+(14:00, geplande taak omnivaleur-klantfouten-middagronde op het tweede account). Zelfde
+routine, strenger op zekerheid: pas "gerepareerd" na een voor-en-na-proef op een vast
+commitnummer, de hele testreeks, /health op de nieuwe commit en een meting bij de echte
+klant ná de uitrol. Anders "onbekend" met een open punt.
+
+Dubbel repareren is afgesloten met een slot in de gedeelde opslag
+(`scripts/klantfouten.py ronde begin|klaar <naam>`): een tweede ronde stopt zolang de
+eerste bezig is, ziet daarna wat die deed, en de automatische wachter start in die tijd
+geen losse sessie op dezelfde fouten. Na vier uur geldt een ronde als gestrand. Daniels
+ochtendronde kreeg dezelfde twee regels (begin en klaar). Proeven in
+tests/test_klantfouten.py; de oude wachter startte er aantoonbaar een sessie naast.
+Echt gedraaid op de gedeelde opslag: tweede ronde geweigerd (exit 3), daarna vrij met
+de samenvatting van de vorige.

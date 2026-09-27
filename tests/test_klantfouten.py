@@ -223,3 +223,65 @@ def test_een_geplande_herplaatsing_zit_niet_vast(kast):
     # Al 80 minuten aan de beurt en nog niet opgepakt: dat zit wel vast.
     te_laat = dict(gepland, scheduled_for=_t(80))
     assert "vast-f8c0cce9" in K.meet(NepDb([te_laat], hartslag), NU)
+
+
+# ── één ronde tegelijk (27-09-2026: tweede dagelijkse ronde op een ander account) ──
+def test_een_tweede_ronde_begint_niet_terwijl_de_eerste_bezig_is(kast):
+    assert K.ronde_begin("ochtendronde")[0]
+    mag, uitleg = K.ronde_begin("middagronde")
+    assert not mag and "ochtendronde" in uitleg
+    assert kast[K.RONDE_SLEUTEL]["wie"] == "ochtendronde", "het slot van de ander blijft staan"
+    assert not K.ronde_klaar("middagronde", "x"), "een ander slot vrijgeven mag niet"
+
+
+def test_na_klaar_mag_de_volgende_en_ziet_hij_wat_er_gedaan_is(kast):
+    K.ronde_begin("ochtendronde")
+    assert K.ronde_klaar("ochtendronde", "noodrem Egbert gerepareerd (b12dccf8)")
+    mag, uitleg = K.ronde_begin("middagronde")
+    assert mag and "noodrem Egbert gerepareerd" in uitleg
+
+
+def test_een_gestrande_ronde_houdt_niet_eeuwig_tegen(kast, monkeypatch):
+    K.ronde_begin("ochtendronde")
+    monkeypatch.setattr(K, "_nu", lambda: NU + K.RONDE_GESTRAND_NA + timedelta(minutes=1))
+    assert K.ronde_begin("middagronde")[0]
+
+
+def test_niet_te_lezen_opslag_is_niet_vrij(monkeypatch):
+    def kapot(*_a):
+        raise RuntimeError("database weg")
+    monkeypatch.setattr(K.A.L, "_db_lees", kapot)
+    mag, uitleg = K.ronde_begin("middagronde")
+    assert not mag and "niet te lezen" in uitleg
+
+
+VOOR_HET_SLOT = "b12dccf8"   # vast nummer: HEAD vergelijkt zichzelf na de commit
+
+
+def _oude_klantfouten():
+    import importlib.util
+    import subprocess
+    import tempfile
+    bron = subprocess.run(["git", "show", f"{VOOR_HET_SLOT}:scripts/klantfouten.py"], cwd=WORTEL,
+                          capture_output=True, text=True, check=True).stdout
+    assert "RONDE_SLEUTEL" not in bron, "verkeerd commitnummer gepind"
+    with tempfile.TemporaryDirectory() as map_:
+        pad = Path(map_) / "oude_klantfouten.py"
+        pad.write_text(bron)
+        spec = importlib.util.spec_from_file_location("oude_klantfouten", pad)
+        oud = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(oud)
+    return oud
+
+
+def test_geen_losse_sessie_naast_een_dagronde_die_bezig_is(kast, monkeypatch):
+    db = NepDb([_fout(1)])
+    assert K.ronde_begin("ochtendronde")[0]
+    assert K.signalen({}, db, NU) == {}, "de dagronde zit er al op"
+
+    oud = _oude_klantfouten()
+    monkeypatch.setattr(oud, "_nu", lambda: NU)
+    assert len(oud.signalen({}, db, NU)) == 1, "de oude wachter startte er gewoon een sessie naast"
+
+    K.ronde_klaar("ochtendronde", "niets gerepareerd")
+    assert len(K.signalen({}, db, NU)) == 1, "na de ronde komt wat open staat weer terug"

@@ -17,6 +17,28 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## klantfouten-wachter
+
+*27-09-2026 — Sinds 23-09-2026 start de devstarter zelf een sessie op klantfouten uit jobs; abonnement, geen API; login kan stil verlopen*
+
+De LaunchAgent com.omnivaleur.devstarter (elke 10 min) leest via scripts/klantfouten.py de foutsoorten van de laatste 6 uur en vastzittend werk, en start bij iets open één `claude -p`-sessie op Daniels abonnement (ANTHROPIC_API_KEY wordt weggehaald). De sessie meldt per soort terug met `python3 scripts/klantfouten.py oordeel <soort> gerepareerd|klant|onbekend "zin"`.
+
+**Why:** Daniel wil dat klanten direct verder kunnen zonder dat hij een routine start, en het mag niets buiten zijn abonnement kosten.
+
+**How to apply:** start een automatische sessie niet, kijk dan eerst in ~/Library/Application Support/omnivaleur/dev-starter.log. Bekende stille stoppers: (1) de CLI-inlog verloopt ("OAuth session expired"), alleen Daniel kan /login doen; `claude auth status` in een sessie binnen de app zegt niets, test met `env -i HOME=$HOME ... claude -p`. (2) werkmap niet schoon. (3) er is <20 min geleden gecommit door iemand anders. Zie ook "mailagent-op-de-server" en "meten-op-de-productiedatabase".
+
+**Twee dagrondes, één slot (27-09-2026).** Naast Daniels ochtendronde (geplande taak
+omnivaleur-dagelijkse-klantfouten, ±08:00) draait op een tweede account de middagronde
+(omnivaleur-klantfouten-middagronde, 14:00). Beide beginnen met
+`klantfouten.py ronde begin <naam>` (exit 3 = andere ronde bezig, stoppen) en eindigen met
+`ronde klaar <naam> "samenvatting"`. Het slot staat in de gedeelde opslag (sleutel
+klantfouten_ronde), dus elk account ziet het; na 4 uur geldt een ronde als gestrand.
+Zolang een ronde bezig is start de wachter geen losse sessie (signalen geeft niets).
+Let op: beide taakbestanden staan in dezelfde map ~/.claude/scheduled-tasks; een nieuwe
+taak met een bestaande taskId overschrijft die van de ander.
+
+---
+
 ## zoeken-heel-woord-alleen-in-de-titel
 
 *27-09-2026 — Dashboard-zoekveld: "woord" tussen aanhalingstekens = precies dat losse woord, alleen in de titel; heel-woord in de omschrijving hielp niet (302 van 365 rugpatches bleven)*
@@ -687,18 +709,6 @@ met `--oud` tegen commit 2cdf26a4). Hoort bij
 staat daar een versie onder 1.0.347, dan is het deze bekende fout op een kopie die
 nog niet bijwerkte, en blijft de advertentie live staan tot iemand hem met de hand
 weghaalt.
-
----
-
-## klantfouten-wachter
-
-*23-09-2026 — Sinds 23-09-2026 start de devstarter zelf een sessie op klantfouten uit jobs; abonnement, geen API; login kan stil verlopen*
-
-De LaunchAgent com.omnivaleur.devstarter (elke 10 min) leest via scripts/klantfouten.py de foutsoorten van de laatste 6 uur en vastzittend werk, en start bij iets open één `claude -p`-sessie op Daniels abonnement (ANTHROPIC_API_KEY wordt weggehaald). De sessie meldt per soort terug met `python3 scripts/klantfouten.py oordeel <soort> gerepareerd|klant|onbekend "zin"`.
-
-**Why:** Daniel wil dat klanten direct verder kunnen zonder dat hij een routine start, en het mag niets buiten zijn abonnement kosten.
-
-**How to apply:** start een automatische sessie niet, kijk dan eerst in ~/Library/Application Support/omnivaleur/dev-starter.log. Bekende stille stoppers: (1) de CLI-inlog verloopt ("OAuth session expired"), alleen Daniel kan /login doen; `claude auth status` in een sessie binnen de app zegt niets, test met `env -i HOME=$HOME ... claude -p`. (2) werkmap niet schoon. (3) er is <20 min geleden gecommit door iemand anders. Zie ook "mailagent-op-de-server" en "meten-op-de-productiedatabase".
 
 ---
 
