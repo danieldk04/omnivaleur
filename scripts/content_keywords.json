@@ -568,7 +568,7 @@
       "pillar": "B",
       "format": "money_rules",
       "slug": "dac7-vinted-reporting-rules-netherlands",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "dac7-vinted-belastingdienst-regels",
       "priority": 69
     },
@@ -1189,6 +1189,16 @@
       "action": "created",
       "url_path": "/reseller-tools/best-time-to-post-on-vinted",
       "published_at": "2026-09-26T12:35:17.541655+00:00"
+    },
+    {
+      "keyword": "DAC7 Vinted reporting rules Netherlands",
+      "slug": "dac7-vinted-reporting-rules-netherlands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "action": "created",
+      "url_path": "/reseller-tools/dac7-vinted-reporting-rules-netherlands",
+      "published_at": "2026-09-27T13:28:10.881373+00:00"
     }
   ]
 }
