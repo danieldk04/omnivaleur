@@ -13933,3 +13933,15 @@ passende tweedehands-webshops met e-mail (WooCommerce 47, Shopify 15). Google Ma
 Serper geeft geen website, alleen naam, adres en telefoon: 1.419 winkels zonder
 kringloop, 1.148 met telefoon. Kandidatenlijst lokaal nu 464, nog steeds geparkeerd
 (tekst noemt altijd Marktplaats). Saldo 2.064.
+
+## 27-09-2026: winkels en webshops in de koude reeks, eerste 111 erin
+
+Daniel: "doe wat je aanraadt om zoveel mogelijk nieuwe signups te maken". De reeks
+mailt nu ook winkels en webshops. Zij krijgen altijd versie A, `[platform]` wordt
+"webshop" of "winkel" en de openingszin gaat over hun eigen shop; ze staan in een
+eigen lijst `extra_leads` (overzetten raakt die niet). Eerste groep: 50 webshops
+(27 Shopify, 23 WooCommerce), 50 winkels, 11 nieuwe Marktplaats-verkopers; alle 111
+in Supabase, in de sheet (Platform webshop/winkel/MP) en in de wachtrij. Rond 11-10
+per bron vergelijken op antwoord, warm en aanmelding; daarna de winnaar opschalen uit
+de geparkeerde kandidaten (~109 webshops, ~216 winkels, plus 1.419 Maps-winkels
+zonder website).

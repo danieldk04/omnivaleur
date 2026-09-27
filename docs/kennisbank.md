@@ -17,6 +17,33 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## koude-mail-winkels-en-webshops
+
+*27-09-2026 — "Sinds 27-09-2026 mailt de koude reeks ook winkels en webshops: platform webshop/winkel, altijd versie A, eigen lijst extra_leads; 111 erin (50/50/11), evaluatie per bron rond 11-10"*
+
+Daniel 27-09-2026: "doe wat je aanraadt om zoveel mogelijk nieuwe signups te maken".
+Gebouwd in `scripts/leadgen_mail.py` (test `tests/test_koude_mail_winkels_en_webshops.py`):
+- `platform` "webshop" of "winkel" vult `[platform]` met dat woord in plaats van
+  "Marktplaats"; de openingszin wordt "Kwam jullie webshop <site> tegen, op Shopify.
+  Mooie collectie." (`_haakje`).
+- Zulke leads krijgen altijd versie A (`_variant(..., lead)`): versie B zegt letterlijk
+  "Alles staat nu alleen op Marktplaats".
+- Ze staan in Supabase `leadgen_opslag` naam `extra_leads`, niet in mp_leads, zodat
+  `overzetten` ze nooit wist. Elke lead draagt `bron` en `toegevoegd`.
+
+Eerste groep 27-09: 50 webshops (27 Shopify, 23 WooCommerce, uit Google/Serper en
+webzoeken), 50 winkels (OpenStreetMap en antiekwinkel.nl, eerst die met webshop),
+11 nieuwe Marktplaats-verkopers. Rest geparkeerd in
+scripts/output/leads/kandidaten_2026-09-26.json (nog ~109 webshops, ~216 winkels).
+
+**Why:** per bron klein beginnen; de bron die het meest antwoordt en aanmeldt wordt
+opgeschaald. Verwachting (geen meting): Shopify-webshops beste, winkels zwakst.
+**How to apply:** rond 11-10-2026 per `bron` antwoord/warm/aanmelding tellen uit
+mail_state + mail_reacties + Supabase-accounts; pas dan de rest toevoegen. Zie
+"leadbronnen-gemeten-26-09", "pijn-luid-is-particulier".
+
+---
+
 ## leadbronnen-gemeten-26-09
 
 *27-09-2026 — "Alle gratis bronnen NL/BE gemeten 26-09: bedrijven op MP/2dh op, particulieren 4.145 (MP) + 3.029 (2dh) met 20+ advertenties maar onbenaderbaar; webshops via zoekwoorden en OSM leveren nog; 342 kandidaten lokaal"*
