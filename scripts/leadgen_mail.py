@@ -1354,7 +1354,7 @@ def _verstuur(rij: list, gebruiker: str, host: str, state: dict,
                 continue
             st = state.setdefault(sleutel, {"verstuurd": [],
                                             "bedrijf": _bedrijfsnaam(lead)})
-            st.setdefault("variant", _variant(sleutel, st))   # bevriest op mail 1
+            st.setdefault("variant", _variant(sleutel, st, lead))   # bevriest op mail 1
             st["verstuurd"].append({"beurt": BEURTEN[n][0],
                                     "op": datetime.now().isoformat(timespec="seconds")})
             st["laatste"] = datetime.now().isoformat(timespec="seconds")
