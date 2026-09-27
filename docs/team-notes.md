@@ -13873,3 +13873,17 @@ ochtendronde kreeg dezelfde twee regels (begin en klaar). Proeven in
 tests/test_klantfouten.py; de oude wachter startte er aantoonbaar een sessie naast.
 Echt gedraaid op de gedeelde opslag: tweede ronde geweigerd (exit 3), daarna vrij met
 de samenvatting van de vorige.
+
+## 27-09-2026 (middag): Dagelijkse klantfouten
+
+Gemeten 17:10 UTC over 24 uur: 414 opdrachten bij 6 klanten, 5 fouten, 4 foutsoorten,
+alle al beoordeeld door de ronde van vanmiddag; geen nieuwe. /health 200 op aa9d0d63.
+- Egbert (bcdf9aa4) loopt: 155 opdrachten klaar in de laatste twee uur, rem open. De
+  reparatie van vanmiddag (b12dccf8) houdt dus stand.
+- 96e30080: twee verwijderingen (Marktplaats, 2dehands) wachten sinds 14:09; zijn
+  extensie viel om 13:58 stil. Computer uit, klant; ze lopen zodra Chrome weer aan is.
+- 1ba42900: de plaatsing van 25-09 staat nog op claimed, hartslag sinds 25-09 17:25
+  stil. Ongewijzigd, klant.
+- Geen nieuw betaalslot. In de respijt: d25f18a2, f8c0cce9, f449e58b (elk nog 2 dagen).
+- Open van eerder, niets nieuws gebeurd: Vinted-shirt 0b28c1ce, MP-tapijt De Juiste Toon.
+Niets gerepareerd, niets aangeraakt.
