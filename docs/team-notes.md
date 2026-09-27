@@ -13785,3 +13785,36 @@ de bio (samenwerkingskanaal). CBS Q3 2026: 750 winkels tweedehands kleding, 685 
 zei ja op toevoegen zodra de route staat, maar ze gaan er nog niet in: de mailteksten
 noemen altijd "Marktplaats" (`[platform]` wordt Marktplaats voor alles behalve
 2dehands) en missen postadres en afmeldzin. Eerst een tekst voor winkels en webshops.
+
+## 27-09-2026: Dagelijkse klantfouten
+
+Gemeten om 15:27 UTC over 24 uur: 428 opdrachten bij 6 klanten, 11 fouten, 10
+foutsoorten (7 open). Site gezond (/health 200). Geen abonnement op slot gegaan.
+- Gerepareerd: Egbert (bcdf9aa4). Zijn verzendbijwerkingen op 2dehands liepen
+  (58 goed), tot er om 11:23 één "timed out" meldde: klik op Opslaan gedaan,
+  daarna was het tabblad weg. Op 2dehands stond dat zoekertje wel goed (Zelf
+  verzenden EUR 2,95, openbare pagina nagekeken). Die ene valse mislukking zette
+  de noodrem dicht: 93 bijwerkingen stonden ruim vier uur stil terwijl hij online
+  was. Nu kijkt de server bij een mislukte bijwerking eerst de openbare pagina na;
+  toont die precies het doelbedrag, dan telt hij als gelukt (jobs.py
+  _bijwerking_staat_al_online, live via de auto-push; proef in
+  tests/test_2dehands_verzendkosten_bijwerken.py, oude code faalt). De ene
+  opdracht met bewijs op done gezet, rem weer open. Wie het tabblad sloot is niet
+  bewezen. Let op: een nieuwe bijwerking klaarzetten opent de rem niet, alleen de
+  laatst afgelopen opdracht rechtzetten doet dat.
+- Klant: hoed van De Juiste Toon met "Universele maat" (MP en 2dehands) past niet
+  in de maatlijst XS tot XL; onze rubriek "unisex accessoires" is op Marktplaats
+  Dames Blouses en Tunieken, dus zomaar zonder maat plaatsen zou een hoed als
+  blouse zetten. Tafellamp 0b28c1ce: Marktplaats rekent geld in Wonen tafellampen.
+  Eerdere poging stond drie dagen te wachten (computer uit sinds 22-09).
+- Open, onbekend: Vinted-shirt Jupiler (0b28c1ce), eerste voetbalshirt ooit op
+  Vinted: formulier bleef hangen op "vul je staat in", prijs en foto's leeg. Staat
+  "good" stond wel in het artikel. Niet na te bootsen zonder een live
+  Vinted-formulier. Marktplaats-verwijdering tapijt De Juiste Toon: niet in het
+  overzicht gevonden, maar de advertentie is al verlopen (410), er staat niets
+  online.
+- Gisteren open: Lederhosen 2dehands kwam niet terug; twee 'claimed'
+  plaatsingen van gisteren: bcdf9aa4 loopt weer (15:27 nog klaar), 1ba42900 hangt
+  nog (hartslag 46 uur oud, computer uit).
+- Proef loopt af vandaag: f449e58b (nooit een extensie geïnstalleerd); d25f18a2
+  en f8c0cce9 staan in de respijt met elk één wachtende opdracht.

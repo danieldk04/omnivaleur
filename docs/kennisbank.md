@@ -17,6 +17,32 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## noodrem-valse-mislukking
+
+*27-09-2026 — Eén valse time-out zette de 2dehands-bijwerkingsreeks van Egbert ruim 4 uur stil (93 wachtend); een noodrem moet het doel natrekken voor hij dichtgaat*
+
+27-09-2026, Egbert (bcdf9aa4). De noodrem `_bijwerken_2dh_staat_stil` (jobs.py) houdt
+alle 2dehands-verzendbijwerkingen van een klant vast zodra de laatst afgelopen mislukte.
+Van 59 bijwerkingen meldde er één "timed out ... het tabblad was al weg" na de echte klik
+op Opslaan, terwijl de openbare pagina wél "Zelf verzenden EUR 2,95" toonde. 93
+bijwerkingen stonden daardoor van 11:23 tot na 15:30 stil, terwijl hij online was.
+
+**Why:** een time-out na de opslagklik zegt niet dat het opslaan mislukte (zelfde patroon
+als bij Vinted, "vinted-opslaan-doodt-het-script"). Wie het tabblad sloot is niet
+bewezen (klant of Chrome); dat het zoekertje goed stond wel.
+
+**How to apply:**
+- Sinds 27-09-2026 kijkt `fail_job` bij een 2dehands-bijwerking eerst de openbare pagina
+  na (`_bijwerking_staat_al_online`): exact het doelbedrag als zelf verzenden = gelukt.
+  Storing, 403, 410 of ander bedrag = gewoon mislukt.
+- Staat de rem toch dicht: een NIEUWE bijwerking klaarzetten helpt niet, de rem houdt
+  álle bijwerkingen vast. Vrijgeven kan alleen door de laatst afgelopen opdracht zelf
+  recht te zetten (terug op pending, of op done als de openbare pagina het bewijst).
+- Meet de klant met `python3 scripts/klantfouten.py` plus de pending-telling per actie;
+  93 pending content_refresh terwijl creates doorlopen = de rem.
+
+---
+
 ## koude-mail-via-resend-zonder-pixel
 
 *26-09-2026 — "Van 18-09 tot 26-09 ging de koude reeks via Resend (pixel weg, gmail 3% antwoord tegen 37% via Zoho); sinds 26-09 avond weer Zoho via GitHub Actions, server doet niets meer"*

@@ -380,3 +380,90 @@ def test_geen_mail_als_het_goed_ging_of_niet_te_lezen_was(_geen_echte_mail):
             raise RuntimeError("database weg")
     assert J._bijwerken_2dh_staat_stil(_Kapot(), USER) is True, "bij twijfel niets uitdelen"
     assert _geen_echte_mail == [], "een leesfout is geen mislukte bijwerking"
+
+
+# ── een valse mislukking zet de reeks niet meer stil (27-09-2026) ─────────────
+# Egbert: van 59 bijwerkingen meldde er één een tijdsoverschrijding (klik op
+# Opslaan gedaan, tabblad weg), terwijl 2dehands het nieuwe bedrag wel toonde.
+# De noodrem ging dicht en 93 bijwerkingen wachtten ruim vier uur.
+VOOR_HET_VANGNET = "28c6560b"   # vast nummer: HEAD vergelijkt zichzelf na de commit
+TIJDSOVERSCHRIJDING = ("Extension timed out waiting for this 2dehands job to finish (no response after "
+                       "3 minutes). [het tabblad was al weg voordat we konden kijken] [extensie 1.0.354]")
+
+
+def _pagina(prijs):
+    return ('<html>"shippingInformation":{"mappedShippingOptions":{},"augmentedLabels":[{"shouldShowMoreInfo":false,'
+            '"carrierId":null,"labels":[{"label":"Verzenden voor","price":"€\xa0' + prijs + '",'
+            '"deliveryMethod":"UNKNOWN_BECAUSE_DIY","carrierName":"Zelf Verzenden"}]}]}</html>')
+
+
+def _vangnet_oud():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "rubriekproef", ROOT / "tests" / "test_2dehands_volgt_de_marktplaats_rubriek.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod._oude_module("backend/api/jobs.py", VOOR_HET_VANGNET, "oude_jobs_vangnet",
+                            moet_bevatten=("_bijwerken_2dh_staat_stil",),
+                            moet_missen=("_bijwerking_staat_al_online",))
+
+
+def _meld_fout(monkeypatch, pagina, module=J, status_code=200):
+    """fail_job op een bijwerking van EUR 2,95; geeft terug wat er in jobs werd gezet."""
+    import httpx
+    job = {**_bijwerking("d10256ad"), "status": "claimed",
+           "payload": {"platform_listing_id": "m2446742224", "_verzending_bijwerken": True,
+                       "verzending": {"soort": "zelf", "cents": 295}}}
+    geschreven, bezocht = [], []
+
+    class _V:
+        def __init__(self, t):
+            self.t, self.w = t, None
+
+        def update(self, v):
+            self.w = v
+            return self
+
+        def __getattr__(self, _n):
+            return lambda *a, **k: self
+
+        def execute(self):
+            if self.w is not None:
+                geschreven.append((self.t, self.w))
+                return type("R", (), {"data": [], "count": None})()
+            data = [job] if self.t == "jobs" else []
+            return type("R", (), {"data": data, "count": None})()
+
+    db = type("Db", (), {"table": lambda self, n: _V(n)})()
+    monkeypatch.setattr(module, "get_db", lambda: db)
+    monkeypatch.setattr(module, "_record_extension_heartbeat", lambda *a, **k: None)
+    monkeypatch.setattr(module, "execute_with_retry", lambda q, *a, **k: q.execute())
+    monkeypatch.setattr(httpx, "get", lambda url, **k: bezocht.append(url) or type(
+        "R", (), {"status_code": status_code, "text": pagina})())
+    module.fail_job("d10256ad", {"error": TIJDSOVERSCHRIJDING}, user_id=USER)
+    status = [w["status"] for t, w in geschreven if t == "jobs" and "status" in w]
+    return status, bezocht
+
+
+def test_toont_de_pagina_het_bedrag_dan_is_de_bijwerking_gelukt(monkeypatch):
+    nu, bezocht = _meld_fout(monkeypatch, _pagina("2,95"))
+    assert nu == ["done"], "het zoekertje toont het nieuwe bedrag: gelukt, geen fout"
+    assert bezocht == ["https://www.2dehands.be/m2446742224"]
+    # en dus blijft de noodrem open voor de volgende
+    afgerond = [{"id": "d10256ad", "status": nu[0], "created_at": _tijd(9), "claimed_at": _tijd(9),
+                 "done_at": _tijd(1)}]
+    assert J._bijwerken_2dh_staat_stil(_db([], afgerond), USER) is False
+
+    oud, _ = _meld_fout(monkeypatch, _pagina("2,95"), module=_vangnet_oud())
+    assert oud == ["error"], "de oude code telde dit als mislukt (en zette de reeks stil)"
+
+
+@pytest.mark.parametrize("pagina,code", [
+    (_pagina("7,10"), 200),       # ander bedrag: echt niet gelukt
+    (_pagina("2,95"), 410),       # verlopen zoekertje
+    ("<html>geen blok</html>", 200),  # toestemmingsscherm, onderhoud
+    (_pagina("2,95"), 403),       # afgeremd
+])
+def test_zonder_bewijs_blijft_het_een_mislukking(monkeypatch, pagina, code):
+    nu, _ = _meld_fout(monkeypatch, pagina, status_code=code)
+    assert nu == ["error"]
