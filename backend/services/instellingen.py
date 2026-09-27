@@ -311,19 +311,49 @@ def verzending_2dh_regel(user_id: str, db=None) -> dict | None:
         logger.warning("verzendregel niet gelezen voor %s: %s", user_id, e)
         return None
     schoon = _schoon(rij[0].get("extra_data") if rij else None)
-    return {"woorden": schoon[VERZENDING_2DH_WOORDEN],
+    return {"modus": schoon[VERZENDING_2DH_MODUS],
+            "woorden": schoon[VERZENDING_2DH_WOORDEN],
             "brief_onder": schoon[VERZENDING_2DH_BRIEF_ONDER]}
+
+
+def afgeleide_modus(regel: dict) -> str:
+    """De keuze bij wie er nog geen maakte: "regel" als er een grens of woord
+    staat, anders "standaard". Werkt op de instellingen én op een regel."""
+    woorden = regel.get(VERZENDING_2DH_WOORDEN, regel.get("woorden"))
+    grens = regel.get(VERZENDING_2DH_BRIEF_ONDER, regel.get("brief_onder"))
+    return "regel" if (woorden or grens) else "standaard"
+
+
+def modus_van(regel: dict) -> str:
+    modus = regel.get("modus")
+    return modus if modus in VERZENDING_2DH_MODI else afgeleide_modus(regel)
 
 
 def titel_neemt_over(regel: dict, titel: str) -> bool:
     """Staat er een woord uit de regel in de titel? Dan geldt het eigen bedrag,
     wat het ook is (bij Egbert: een rugpatch van EUR 4,95 is een brief)."""
+    if modus_van(regel) != "regel":
+        return False
     t = str(titel or "").lower()
     return any(w in t for w in regel.get("woorden") or [])
 
 
+def heeft_marktplaats_nodig(regel: dict, titel: str) -> bool:
+    """Doet het Marktplaats-bedrag voor dit artikel ertoe? Zo niet, dan hoeft
+    Marktplaats niet eens gevraagd: het wordt Bpost."""
+    modus = modus_van(regel)
+    if modus == "alles":
+        return True
+    return modus == "regel" and (bool(regel.get("brief_onder")) or titel_neemt_over(regel, titel))
+
+
 def neemt_bedrag_over(regel: dict, titel: str, cents) -> bool:
     """Krijgt dit artikel op 2dehands het eigen Marktplaats-bedrag `cents`?"""
+    modus = modus_van(regel)
+    if modus == "alles":
+        return isinstance(cents, int) and cents > 0
+    if modus != "regel":
+        return False
     if titel_neemt_over(regel, titel):
         return True
     return isinstance(cents, int) and 0 < cents < int(regel.get("brief_onder") or 0)
