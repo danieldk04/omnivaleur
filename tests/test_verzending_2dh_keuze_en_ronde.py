@@ -381,6 +381,28 @@ def test_een_blokkade_is_geen_antwoord_en_krijgt_drie_kansen(wereld):
     assert [j["item_id"] for j in w.jobs] == ["a", "b"]
 
 
+def test_blokkades_achter_elkaar_wachten_steeds_langer(wereld, monkeypatch):
+    """Gemeten 27-09-2026: eerst 1 op de 18 geweigerd, een kwartier later bijna
+    de helft. Een vaste halve minuut verbrandde elke keer een kans."""
+    w, u = wereld, "egbert"
+    monkeypatch.setattr(RO, "MP_RUST_NA_BLOKKADE", 30)
+    monkeypatch.setattr(RO, "_MP_OP_RIJ", [0])
+    monkeypatch.setattr(RO.time, "monotonic", lambda: 1000.0)
+    for i in range(7):
+        w.artikel(u, f"b{i}", "Magneet", None)
+    w.artikel(u, "goed", "Magneet", {"soort": "zelf", "cents": 225})
+    st = RO._nieuwe_stand(dict(EGBERT), False, [])
+    rust = []
+    for i in range(6):
+        asyncio.run(RO.bekijk(w, u, st, f"b{i}", w.lees_mp, w.lees_dh))
+        rust.append(RO._MP_RUST_TOT[0] - 1000.0)
+    assert rust == [30, 60, 120, 240, 300, 300]
+    asyncio.run(RO.bekijk(w, u, st, "goed", w.lees_mp, w.lees_dh))
+    asyncio.run(RO.bekijk(w, u, st, "b6", w.lees_mp, w.lees_dh))
+    assert RO._MP_RUST_TOT[0] - 1000.0 == 30, "na een geslaagde pagina weer een halve minuut"
+    assert st["opnieuw"] == [f"b{i}" for i in range(7)] and st["blokkades"] == 7
+
+
 def test_afbreken_en_hervatten_geeft_geen_dubbele_bijwerkingen(wereld, monkeypatch):
     w, u = wereld, "egbert"
     for i in range(30):
