@@ -13955,3 +13955,72 @@ verzending_2dh_woorden), zelfde opslagroute (/api/items/settings), standaard uit
 Getest: wat het scherm verstuurt door de echte _schoon en terug. Nog niet
 automatisch: zoekertjes die al online staan omzetten na het wijzigen; dat blijft
 het script verzendkosten_2dehands_bijwerken.py.
+
+## 27-09-2026: overdracht, verzendkosten 2dehands ook toepassen op wat al online staat
+
+Voor de andere developer; deze sessie zat aan haar limiet. Daniel wil dat een
+verkoper die bij Preferences "Shipping cost on 2dehands" wijzigt, meteen de keuze
+krijgt om het ook op zijn zoekertjes die al online staan toe te passen, netjes en
+overzichtelijk, en aantoonbaar goed getest. Nu verandert zo'n wijziging alleen
+nieuwe plaatsingen; bestaande omzetten kan alleen met
+`scripts/verzendkosten_2dehands_bijwerken.py --user <id> --uitvoeren --pauze 5`
+(liep voor Egbert: 197 omgezet, 507 houden Bpost, 94 stonden al goed, 198 geen
+antwoord van Marktplaats door 403; tweede ronde draaide nog bij de overdracht).
+
+**Advies over de opzet (besproken, Daniel liet de keuze aan ons):**
+- Niet per rubriek. Een rubriek zegt niets over brief of pakket; het bedrag dat de
+  verkoper op Marktplaats per advertentie koos wel. Dat blijft het signaal.
+- Niet altijd blind kopiëren als standaard. Het Marktplaats-bedrag is een
+  binnenlands tarief; een pakket naar België kost meer. Daarom drie keuzes in het
+  blok, als keuzerondjes:
+  1. Altijd Bpost EUR 7,10 (standaard, zoals nu bij brief_onder 0 en geen woorden)
+  2. Mijn Marktplaats-bedrag voor alles (met een zin dat naar België verzenden
+     vaak duurder is). Nieuw: de huidige velden kunnen dit niet, brief_onder is
+     begrensd op 710. Voeg `verzending_2dh_modus` toe ("standaard" | "alles" |
+     "regel") in `backend/services/instellingen.py` en laat `neemt_bedrag_over`
+     bij "alles" altijd ja geven, ook boven EUR 7,10.
+  3. Mijn Marktplaats-bedrag onder EUR X, plus titels met deze woorden (de velden
+     die er nu staan, Egbert: 4,95 en "patch").
+- Na Opslaan verschijnt onder het blok: "Ook toepassen op je N zoekertjes die al
+  op 2dehands staan?" met twee knoppen: "Ja, pas toe op alle N" en "Nee, alleen
+  nieuwe". Daarna een voortgangsregel ("312 van 1.064 bekeken, 97 aangepast") en
+  een eindregel ("Klaar: 197 aangepast, 850 bleven gelijk, 17 konden we niet
+  lezen, die proberen we later opnieuw"). Ook zichtbaar: hoeveel er wachten op een
+  nieuwere extensie (bijwerken vraagt 1.0.354+).
+
+**Bouwstenen:**
+- De ronde draait op de server, niet in een HTTP-verzoek: Railway doodt lopende
+  verzoeken bij elke deploy (kennisbank railway-doodt-lopend-verzoek-bij-deploy).
+  Maak het script tot een hervatbare ronde per verkoper: stand in de _settings-rij
+  (`verzending_2dh_ronde`: status, instelling waarmee hij startte, laatste
+  item_id, tellingen) en een bestaande tik van de server die hem voortzet. Eén
+  ronde per verkoper tegelijk; een tweede klik toont de lopende ronde. Wijzigt de
+  instelling halverwege, dan opnieuw beginnen met de nieuwe.
+- Tempo: 1 advertentie per 5 s, bij 403 een minuut wachten en maximaal 3 keer
+  opnieuw. Meet de looptijd op Egbert (1.064 zoekertjes) in plaats van hem uit te
+  rekenen, en zet die gemeten tijd in de tekst die de verkoper ziet.
+- Bewaar het gelezen Marktplaats-bedrag per artikel (soort, centen, gelezen_op).
+  Dan kan het aantal "wordt aangepast" bij een tweede wijziging direct getoond
+  worden en hoeft Marktplaats niet opnieuw bevraagd te worden (verversen na 7
+  dagen). Nu leeft het alleen op de opdracht (`_bewaar_verzending` in jobs.py).
+- Alleen een opdracht klaarzetten als het bedrag op 2dehands echt anders wordt;
+  nooit twee opdrachten voor hetzelfde zoekertje (kennisbank
+  herkansen-mag-geen-dubbele-opdracht). Het script doet dat al, hergebruik het.
+
+**Proeven die er moeten zijn (voor en na, tegen een vastgepinde oude commit):**
+1. Modus opslaan en teruglezen door de echte `_schoon`; de oude code gooit de
+   onbekende sleutel weg.
+2. Modus "alles": Marktplaats 13,95 geeft 13,95 op 2dehands; oude code gaf Bpost.
+3. Een 403 of time-out telt als "niet gelezen", nooit als "standaard" (kennisbank
+   storing-mag-nooit-als-antwoord-tellen).
+4. Ronde halverwege afbreken en hervatten: geen dubbele opdrachten, telling klopt.
+5. Echte meting: de ronde droog op Egberts account naast het script; de aantallen
+   moeten gelijk zijn.
+6. Alle nieuwe tekst ook in `frontend/i18n/nl.json`.
+
+**Later, niet nu:** Vinted. Daar kiest de verkoper geen bedrag maar een
+pakketgrootte en betaalt de koper; onze extensie raakt die keuze op Vinted nu niet
+aan. Zelfde signaal zou kunnen (brief betekent klein pakket), maar eerst meten hoe
+het Vinted-formulier nu kiest. En: past de verkoper later zijn bedrag op
+Marktplaats aan, dan volgt 2dehands niet; een nachtelijke vergelijking zou dat
+oplossen.
