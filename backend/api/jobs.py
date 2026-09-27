@@ -973,12 +973,23 @@ def _zet_verzending_van_marktplaats(db, user_id: str, job: dict) -> None:
     # prijs; voor een pakje naar België is het veel te laag (Egbert: EUR 4,95
     # tegen 9,50 echt). Zie VERZENDING_2DH_WOORDEN en VERZENDING_2DH_BRIEF_ONDER
     # in instellingen.py.
-    from backend.services.instellingen import (neemt_bedrag_over, titel_neemt_over,
+    from backend.services.instellingen import (heeft_marktplaats_nodig, neemt_bedrag_over,
                                                verzending_2dh_regel)
+    from backend.services.verzending_2dh import BPOST, eigen_keuzes
     regel = verzending_2dh_regel(user_id, db)
     if regel is None:
         return   # instelling niet te lezen: niets vastleggen, deze keer Bpost
-    if not titel_neemt_over(regel, pl.get("title")) and not regel["brief_onder"]:
+    # EEN EIGEN KEUZE VOOR DIT ARTIKEL GAAT VOOR (27-09-2026): Bpost of een vast
+    # bedrag, gezet vanuit de voorraad. Zie verzending_2dh.py.
+    eigen = eigen_keuzes(user_id, db)
+    if eigen is None:
+        return   # niet te lezen: niets vastleggen, deze keer Bpost
+    keuze = eigen.get(str(job.get("item_id")))
+    if keuze is not None:
+        _bewaar_verzending(db, job, {"soort": "standaard"} if keuze == BPOST
+                           else {"soort": "zelf", "cents": keuze})
+        return
+    if not heeft_marktplaats_nodig(regel, pl.get("title")):
         # Niets waar het bedrag toe doet: Marktplaats hoeft niet eens gevraagd.
         _bewaar_verzending(db, job, {"soort": "standaard"})
         return
