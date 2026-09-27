@@ -17,6 +17,67 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## koude-mail-wat-mag
+
+*27-09-2026 — "Wat mag bij koude mail: Tw 11.7 lid 3 geldt voor bv én eenmanszaak, maar alleen op een adres dat bekend is gemaakt om zulke mail te ontvangen; Marktplaats verbiedt in art. 7.2 precies onze leadgen"*
+
+Nagezocht 26-09-2026 in de letterlijke teksten, geen juridisch advies.
+
+**Telecommunicatiewet 11.7 (tekst wetten.overheid.nl, versie 2026).** Lid 1: e-mail
+met ongevraagde commerciële communicatie is verboden zonder voorafgaande
+toestemming. Lid 3: geen toestemming nodig bij een rechtspersoon **of een natuurlijke
+persoon die handelt in de uitoefening van zijn beroep of bedrijf** (dus ook de
+eenmanszaak), mits je contactgegevens gebruikt "die door de desbetreffende
+eindgebruiker voor het ontvangen van ongevraagde communicatie voor commerciële ...
+doeleinden zijn bestemd en bekendgemaakt", en in lijn met het doel waarvoor ze
+openbaar staan. Lid 6: elke mail noemt de werkelijke identiteit van de afzender en
+een geldig postadres of nummer waar de ontvanger zich kan afmelden. Het verschil
+bv tegenover eenmanszaak zit in Nederland dus niet in de wet maar in de AVG: het
+adres van een eenmanszaak is een persoonsgegeven (AVG art. 14: binnen een maand
+melden waar je het adres vandaan hebt).
+België (KB 4 april 2003) is strenger: de uitzondering geldt alleen voor
+onpersoonlijke adressen (info@, sales@) van rechtspersonen; een eenmanszaak is een
+natuurlijk persoon en valt er niet onder.
+
+**Onze mails (sheet Mailteksten, 26-09).** Geen postadres, geen afmeldzin in de
+tekst, geen bronvermelding. Alleen de List-Unsubscribe-kop. KvK-nummer hoeft niet:
+Handelsregisterwet art. 27 zondert reclame uit.
+
+**Marktplaats-gebruiksvoorwaarden (versie 22 juli 2026, art. 7.2):** "Het is de
+Gebruiker niet toegestaan om persoonsgegevens van Adverteerders (waaronder
+e-mailadressen en telefoonnummers) te verzamelen en/of Adverteerders te benaderen
+voor het aanbieden van eigen producten en/of diensten." Plus databankrecht (7.3).
+Dat is precies wat de leadgen doet; sanctie kan uitsluiting zijn, en Daniel verkoopt
+zelf op Marktplaats. 2dehands hoort bij hetzelfde bedrijf.
+
+**Besluit 27-09-2026:** Daniel blijft Marktplaats- en 2dehands-adressen mailen, het
+risico van art. 7.2 kent hij. Niet opnieuw als actiepunt voorleggen.
+
+**eBay productiesleutels:** de licentie staat gebruik alleen toe om het gebruik van
+eBay te ondersteunen, eBay kan sleutels intrekken. Die sleutels drijven de
+eBay-koppeling van betalende klanten, dus nooit voor leadgen gebruiken.
+
+**Andere kanalen (26-09 avond).** ACM: "Voorkom spam als u reclame maakt via
+e-mail, whatsappjes of andere elektronische berichten": sms, WhatsApp en DM's op
+social media vallen onder dezelfde regel als e-mail. Bellen (ACM telemarketing):
+"U mag consumenten en andere natuurlijke personen, zoals eenmanszak, vof en
+maatschap alleen bellen: met hun toestemming of als u onder een uitzondering valt";
+een bv of nv bellen valt daar niet onder. Brief per post: geen opt-in, wel AVG.
+Particulieren (Vinted, Marktplaats-semi-profs) dus nooit 1-op-1 elektronisch of
+telefonisch zonder toestemming; wel via advertenties, groepsposts, makers,
+markten, pakketkaartjes, of een opt-in (aanmelding) waarna mailen mag.
+Vinted-, Etsy- en Marktplaatsberichten voor reclame verbieden de platforms zelf.
+België: bellen mag tenzij het nummer op de Bel-me-niet-meer-lijst staat (ook
+bedrijven kunnen zich inschrijven); e-mail/sms zonder toestemming alleen naar
+onpersoonlijke adressen van rechtspersonen.
+
+**Why:** "B2B mag altijd" is niet wat de wet zegt, en de hoofdbron verbiedt het zelf.
+**How to apply:** voorkeur voor adressen die een bedrijf op zijn eigen website zet;
+in elke koude mail identiteit, postadres, afmeldzin en een bronzin. Zie
+"leadbronnen-gemeten-26-09", "railway-blokkeert-smtp".
+
+---
+
 ## klantfouten-wachter
 
 *27-09-2026 — Sinds 23-09-2026 start de devstarter zelf een sessie op klantfouten uit jobs; abonnement, geen API; login kan stil verlopen*
@@ -300,64 +361,6 @@ als een werkende sweep die niets nieuws meer vindt.
 **How to apply:** tel bij elke sweep unieke itemId's per verzoek en vergelijk
 `totalResultCount` van een subrubriek met die van de hoofdrubriek. Gelijk = het
 filter werkt niet. Zie "pijn-luid-is-particulier", "leadbronnen-gemeten-26-09".
-
----
-
-## koude-mail-wat-mag
-
-*26-09-2026 — "Wat mag bij koude mail: Tw 11.7 lid 3 geldt voor bv én eenmanszaak, maar alleen op een adres dat bekend is gemaakt om zulke mail te ontvangen; Marktplaats verbiedt in art. 7.2 precies onze leadgen"*
-
-Nagezocht 26-09-2026 in de letterlijke teksten, geen juridisch advies.
-
-**Telecommunicatiewet 11.7 (tekst wetten.overheid.nl, versie 2026).** Lid 1: e-mail
-met ongevraagde commerciële communicatie is verboden zonder voorafgaande
-toestemming. Lid 3: geen toestemming nodig bij een rechtspersoon **of een natuurlijke
-persoon die handelt in de uitoefening van zijn beroep of bedrijf** (dus ook de
-eenmanszaak), mits je contactgegevens gebruikt "die door de desbetreffende
-eindgebruiker voor het ontvangen van ongevraagde communicatie voor commerciële ...
-doeleinden zijn bestemd en bekendgemaakt", en in lijn met het doel waarvoor ze
-openbaar staan. Lid 6: elke mail noemt de werkelijke identiteit van de afzender en
-een geldig postadres of nummer waar de ontvanger zich kan afmelden. Het verschil
-bv tegenover eenmanszaak zit in Nederland dus niet in de wet maar in de AVG: het
-adres van een eenmanszaak is een persoonsgegeven (AVG art. 14: binnen een maand
-melden waar je het adres vandaan hebt).
-België (KB 4 april 2003) is strenger: de uitzondering geldt alleen voor
-onpersoonlijke adressen (info@, sales@) van rechtspersonen; een eenmanszaak is een
-natuurlijk persoon en valt er niet onder.
-
-**Onze mails (sheet Mailteksten, 26-09).** Geen postadres, geen afmeldzin in de
-tekst, geen bronvermelding. Alleen de List-Unsubscribe-kop. KvK-nummer hoeft niet:
-Handelsregisterwet art. 27 zondert reclame uit.
-
-**Marktplaats-gebruiksvoorwaarden (versie 22 juli 2026, art. 7.2):** "Het is de
-Gebruiker niet toegestaan om persoonsgegevens van Adverteerders (waaronder
-e-mailadressen en telefoonnummers) te verzamelen en/of Adverteerders te benaderen
-voor het aanbieden van eigen producten en/of diensten." Plus databankrecht (7.3).
-Dat is precies wat de leadgen doet; sanctie kan uitsluiting zijn, en Daniel verkoopt
-zelf op Marktplaats. 2dehands hoort bij hetzelfde bedrijf.
-
-**eBay productiesleutels:** de licentie staat gebruik alleen toe om het gebruik van
-eBay te ondersteunen, eBay kan sleutels intrekken. Die sleutels drijven de
-eBay-koppeling van betalende klanten, dus nooit voor leadgen gebruiken.
-
-**Andere kanalen (26-09 avond).** ACM: "Voorkom spam als u reclame maakt via
-e-mail, whatsappjes of andere elektronische berichten": sms, WhatsApp en DM's op
-social media vallen onder dezelfde regel als e-mail. Bellen (ACM telemarketing):
-"U mag consumenten en andere natuurlijke personen, zoals eenmanszak, vof en
-maatschap alleen bellen: met hun toestemming of als u onder een uitzondering valt";
-een bv of nv bellen valt daar niet onder. Brief per post: geen opt-in, wel AVG.
-Particulieren (Vinted, Marktplaats-semi-profs) dus nooit 1-op-1 elektronisch of
-telefonisch zonder toestemming; wel via advertenties, groepsposts, makers,
-markten, pakketkaartjes, of een opt-in (aanmelding) waarna mailen mag.
-Vinted-, Etsy- en Marktplaatsberichten voor reclame verbieden de platforms zelf.
-België: bellen mag tenzij het nummer op de Bel-me-niet-meer-lijst staat (ook
-bedrijven kunnen zich inschrijven); e-mail/sms zonder toestemming alleen naar
-onpersoonlijke adressen van rechtspersonen.
-
-**Why:** "B2B mag altijd" is niet wat de wet zegt, en de hoofdbron verbiedt het zelf.
-**How to apply:** voorkeur voor adressen die een bedrijf op zijn eigen website zet;
-in elke koude mail identiteit, postadres, afmeldzin en een bronzin. Zie
-"leadbronnen-gemeten-26-09", "railway-blokkeert-smtp".
 
 ---
 
