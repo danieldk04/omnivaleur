@@ -5431,6 +5431,20 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
     _record_extension_heartbeat(db, user_id)  # only the extension reports job errors
     job = eerste_rij(db.table("jobs").select("item_id,platform,action,payload").eq("id", job_id).eq("user_id", user_id).limit(1).execute())
 
+    # Een verzendbijwerking op 2dehands die "mislukte" terwijl het zoekertje het
+    # nieuwe bedrag al toont, is gelukt. Anders zet één valse mislukking de hele
+    # reeks stil. Zie _bijwerking_staat_al_online.
+    if job and _is_2dh_bijwerking(job) and _bijwerking_staat_al_online(job):
+        execute_with_retry(db.table("jobs").update({
+            "status": "done",
+            "result": {"note": "openbare_pagina_klopt", "verzending_bijgewerkt": True,
+                       "melding_extensie": (body or {}).get("error")},
+            "done_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("id", job_id).eq("user_id", user_id))
+        logger.info("job %s: 2dehands-bijwerking meldde een fout, maar de openbare pagina "
+                    "toont het nieuwe bedrag al; afgerond als gelukt", job_id)
+        return {"ok": True, "completed": True, "reason": "public_page_already_shows_it"}
+
     # Een scan die door een verouderde kopie van de extensie is opgepakt telt
     # niet als mislukt: die kopie kán het werk gewoon niet. Terug in de wachtrij,
     # zodat de bijgewerkte kopie hem alsnog oppakt. Zie MINIMALE_SCANVERSIE.
