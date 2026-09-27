@@ -31,6 +31,13 @@ RIJ_RONDE = "_verzending_2dh_ronde"
 MAX_POGINGEN = 3                  # wat Marktplaats of 2dehands niet beantwoordde
 WACHT_VOOR_HERKANSING = timedelta(seconds=60)
 MP_RUST_NA_BLOKKADE = 30          # seconden: na een 403 niet meteen opnieuw kloppen
+# Weigert Marktplaats een paar keer achter elkaar, dan telkens twee keer zo lang
+# wachten, tot hooguit vijf minuten. Gemeten 27-09-2026 bij Egbert op de server:
+# eerst 1 op de 18 pagina's geweigerd, een kwartier later bijna de helft. Met een
+# vaste halve minuut verbrandde elke blokkade een van de drie kansen van een
+# artikel; na een geslaagde pagina is het weer een halve minuut.
+MP_RUST_MAX = 300
+_MP_OP_RIJ = [0]
 GOEDKOOP_PER_TIK = 25             # beslissingen zonder verzoek naar buiten per tik
 SCHRIJF_ELKE = 20                 # seconden tussen twee keer de stand bewaren
 LEASE = timedelta(seconds=90)
