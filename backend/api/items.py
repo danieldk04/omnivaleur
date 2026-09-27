@@ -205,6 +205,14 @@ def write_settings(body: dict, user_id: str = Depends(get_current_user)):
     except Exception as e:  # noqa: BLE001
         logger.exception("instellingen opslaan mislukt voor %s", user_id)
         raise HTTPException(status_code=500, detail=f"Could not save settings: {e}")
+    # Koos hij een andere verzendkeuze voor 2dehands, dan stopt een ronde die nog
+    # met de oude bezig is. Anders zet die nog uren bedragen die hij net afzegde.
+    if any(k.startswith("verzending_2dh_") for k in (body or {})):
+        from backend.services.instellingen import verzending_2dh_regel
+        from backend.services.verzending_2dh_ronde import stop_als_verouderd
+        regel = verzending_2dh_regel(user_id)
+        if regel is not None:
+            stop_als_verouderd(user_id, regel)
     # Zet hij de verkoopvraag uit, dan moeten de vragen die er al staan ook weg.
     # Anders zet hij de knop om en blijven er zeven "is dit verkocht?" op zijn
     # dashboard staan die nooit meer verdwijnen. Archiveren is hetzelfde antwoord
