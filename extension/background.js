@@ -4717,7 +4717,20 @@ async function verwijderViaAdvertentiepagina(tabId, adUrl, platform) {
     //
     // Dus: statuscode = bewijs, meteen klaar. Een tekstmatch in de ruwe HTML
     // blijft wat hij was: een aanwijzing die de gerenderde pagina moet bevestigen.
-    for (let poging = 0; poging < 3; poging++) {
+    //
+    // Een 403 of 429 is geen antwoord maar een blokkade: het kanaal knijpt ons
+    // af omdat er net veel verzoeken waren. Gemeten 27-09-2026 bij een
+    // verkoper die twee artikelen op Vinted verkocht: vier verwijderingen
+    // binnen een minuut, het venster werd netjes beantwoord, en daarna gaven
+    // marktplaats.nl en 2dehands.be allebei drie keer 403 met twee seconden
+    // ertussen. Geboekt als "Nothing was removed", terwijl drie van de vier
+    // advertenties aantoonbaar uit de openbare verkoperslijst waren (in de 30
+    // dagen daarvoor gaf dezelfde controle na een verwijdering 16 keer 410).
+    // Bij een blokkade wachten we dus langer en kijken we vaker; bewijs blijft
+    // eis. Elke wachttijd blijft onder de 30 seconden waarna Chrome een stille
+    // achtergrond stillegt.
+    const BLOKKADE_WACHT_MS = [10000, 20000, 25000, 25000, 25000];
+    for (let poging = 0; ; poging++) {
       const fetchRes = await execInTab(tabId, async (u, wegBron, markerBron) => {
         const WEG = new RegExp(wegBron);
         const MARKER = new RegExp(markerBron);
