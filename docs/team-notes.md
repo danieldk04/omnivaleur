@@ -13887,3 +13887,13 @@ alle al beoordeeld door de ronde van vanmiddag; geen nieuwe. /health 200 op aa9d
 - Geen nieuw betaalslot. In de respijt: d25f18a2, f8c0cce9, f449e58b (elk nog 2 dagen).
 - Open van eerder, niets nieuws gebeurd: Vinted-shirt 0b28c1ce, MP-tapijt De Juiste Toon.
 Niets gerepareerd, niets aangeraakt.
+
+## 27-09-2026: Daniel blijft Marktplaats-adressen gebruiken
+
+Besluit Daniel: de koude reeks blijft ook Marktplaats- en 2dehands-verkopers mailen,
+ondanks artikel 7.2 van de Marktplaats-gebruiksvoorwaarden (versie 22-07-2026), dat
+het verzamelen van adressen van adverteerders en ze benaderen voor eigen producten
+verbiedt. Het risico (uitsluiting door Marktplaats, ook van zijn eigen account) is
+hem voorgelegd op 26-09. Verder: de Zoho-route via GitHub werkt (22 mails sinds
+26-09 19:10, alle 22 in Zoho Verzonden, geen dubbele), maar GitHub start maar een
+paar geplande rondes per dag, dus mails gaan in groepjes van 4.
