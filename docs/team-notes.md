@@ -14060,3 +14060,52 @@ Gemeten over 24 uur: 618 opdrachten, 11 fouten bij 5 klanten.
 
 Open: vest 1013 staat nog op 2dehands bij 3bfbed2c (verkocht op Vinted); oorzaak van
 "No tab with id"; 1.0.355 moet nog naar de Web Store.
+
+## 27-09-2026 (avond): verzendkosten 2dehands, de verkoper regelt het nu zelf
+
+Daniel: "ervoor zorgen dat ik niet constant iedereen individueel zit te berichten",
+en: voldoe aan alles wat Egbert vroeg. De overdracht hierboven ("voor de andere
+developer") is in deze sessie gebouwd; zij hoeft er niets meer aan te doen.
+
+**Live (968cc522, 3d6481e6, 2e61dd64):**
+- Preferences, blok "Shipping cost on 2dehands": drie keuzes. Bpost EUR 7,10 voor
+  alles; het Marktplaats-bedrag voor brieven (briefgrens plus titelwoorden, zoals
+  Egbert: 4,95 en "patch"); het Marktplaats-bedrag voor alles (nieuw, ook boven
+  7,10, voor wie vanuit België verstuurt). Sleutel `verzending_2dh_modus`; wie nog
+  niet koos houdt wat hij had (Egbert: regel).
+- Na Opslaan: "Dit ook toepassen op N zoekertjes die al op 2dehands staan?" Ja
+  start een ronde op de server (`backend/services/verzending_2dh_ronde.py`): stand
+  per verkoper in platform_credentials, een deploy draagt hem over (lease 90 s),
+  hooguit één pagina bij Marktplaats of 2dehands per 5 s voor alle verkopers
+  samen, langer wachten bij blokkades achter elkaar, drie kansen voor wat niet te
+  lezen is, en alleen een bijwerking als 2dehands echt iets anders toont (nooit
+  twee per zoekertje, nooit bij "alleen ophalen"). Voortgang onder het blok, met
+  "Probeer die opnieuw" voor wat niet te lezen was. Een andere keuze opslaan stopt
+  een lopende ronde.
+- Per artikel: bij Items de knop "2dehands shipping…": eigen bedrag, Bpost, of weer
+  volgens Voorkeuren. Gaat voor de regel en vraagt Marktplaats niets, dus werkt ook
+  voor artikelen die daar niet staan (Vinted-import).
+- Afgewogen en niet gedaan: per rubriek (zegt niets over brief of pakje), en het
+  Marktplaats-bedrag per artikel bewaren (een ronde leest opnieuw; zelden nodig).
+- Kan nog niet: een zoekertje dat al online staat terugzetten naar Bpost; de
+  extensie zet op het wijzigformulier alleen "Zelf versturen" met een bedrag. Het
+  scherm zegt het erbij. Voor Egbert niet nodig: zijn 55 pakjes (mokken, nummerplaten)
+  die op 26-09 met een eigen bedrag de deur uit gingen, tonen op 2dehands allemaal
+  Bpost (alle 55 openbare pagina's nagekeken).
+
+**Proeven:** `tests/test_verzending_2dh_keuze_en_ronde.py` (34), voor-en-na tegen
+a602e666 (keuze "alles": 13,95 werd Bpost; eigen bedrag zonder Marktplaats werd
+Bpost; eigen Bpost ging niet voor de regel). Het scherm doorgeklikt in EN en NL met
+de echte code en het echte woordenboek tegen een nagebootste server. Echte ronde
+voor Egbert op productie gestart 20:45; hij overleefde een deploy midden in de
+ronde (nieuw proces nam het over, tellingen sluiten). Gemeten tempo: ongeveer 10
+zoekertjes per minuut zolang Marktplaats meewerkt; de server kreeg eerst 1 op de 18
+pagina's geweigerd, een kwartier later bijna de helft.
+
+**Onderweg misgegaan:** de auto-push zette tussenstanden live; productie hing ruim
+een kwartier op 08e97fec en de deploys daarna startten niet (ontbrekende module).
+Niemand geraakt, nagemeten. Kennisbank auto-push-zet-tussenstand-live aangescherpt
+en in de geheugenindex naar boven gehaald: hij stond voorbij het afkappunt.
+
+**Los gevonden:** drie JS-proeven van het dashboard falen al op main
+("extState is not defined"), ook zonder deze wijziging. Als losse taak voorgesteld.
