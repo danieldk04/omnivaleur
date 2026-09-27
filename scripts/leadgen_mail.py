@@ -766,7 +766,7 @@ def _variant(email: str, st: dict | None = None, lead: dict | None = None) -> st
 
 
 def _beurten(lead: dict, st: dict | None = None) -> list:
-    return BEURTEN_B if _variant(lead.get("email", ""), st) == "B" else BEURTEN
+    return BEURTEN_B if _variant(lead.get("email", ""), st, lead) == "B" else BEURTEN
 
 
 def _tekst(lead: dict, sjabloon: str) -> str:
