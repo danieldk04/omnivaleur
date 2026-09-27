@@ -253,6 +253,9 @@ def _schoon(rauw: dict | None) -> dict:
                                                          VERZENDING_2DH_BRIEF_ONDER_MAX))
         except (TypeError, ValueError):
             uit[VERZENDING_2DH_BRIEF_ONDER] = 0
+    modus = str(rauw.get(VERZENDING_2DH_MODUS) or "").strip().lower()
+    uit[VERZENDING_2DH_MODUS] = (modus if modus in VERZENDING_2DH_MODI
+                                 else afgeleide_modus(uit))
     groepen = rauw.get("vinted_groepen")
     if isinstance(groepen, list):
         uit["vinted_groepen"] = [g for g in
