@@ -597,6 +597,14 @@ def _haakje(lead: dict) -> str:
         "http://", "").replace("www.", "").rstrip("/")
     shop = lead.get("shopsysteem")
 
+    # Winkels en webshops (27-09-2026) staan niet op Marktplaats; "zag je
+    # advertenties op Marktplaats" klopt daar niet. Hun eigen shop is het haakje.
+    if lead.get("platform") in WINKEL_PLATFORMS:
+        soort = "webshop" if lead["platform"] == "webshop" else "winkel"
+        zin = f"Kwam {v['jouw']} {soort}{' ' + site if site else ''} tegen"
+        zin += f", op {shop}. Mooie collectie." if shop else ". Mooie collectie."
+        return zin
+
     # De classificatie zet hier soms "Alles" of "Antieke vintage" neer. Alleen een
     # rubriek die als los zelfstandig naamwoord in een zin past mag erin; de rest
     # wordt weggelaten, want een rare zin valt meer op dan een vage zin.
