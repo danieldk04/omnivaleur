@@ -208,6 +208,21 @@ def start_scheduler():
         id="herstel_vastgelopen_werk",
         replace_existing=True,
     )
+    # VERZENDKOSTEN OP 2DEHANDS BIJWERKEN VOOR WAT AL ONLINE STAAT (27-09-2026).
+    # Een verkoper kiest bij Preferences of in zijn voorraad een andere
+    # verzendkeuze; deze klok loopt zijn zoekertjes een voor een langs. Elke vijf
+    # seconden hooguit één pagina bij Marktplaats of 2dehands, voor iedereen
+    # samen. Zie backend/services/verzending_2dh_ronde.py.
+    from backend.services.verzending_2dh_ronde import werk_verzendrondes_bij
+    _scheduler.add_job(
+        _off_the_request_loop(werk_verzendrondes_bij),
+        "interval",
+        seconds=5,
+        id="verzendrondes_2dehands",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
     # PUBLICATIES DIE HALVERWEGE WERDEN AFGEKAPT (18-09-2026).
     #
     # Shopify en eBay worden rechtstreeks vanuit het verzoek gepubliceerd. Valt
