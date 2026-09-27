@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=bc3a6754da"></script>
+<script src="/i18n.js?v=647d81fb80"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -251,6 +251,9 @@ textarea { resize: vertical; min-height: 80px; }
 .vg-chip:hover { border-color: var(--blue); }
 .vg-chip input { width: 16px; height: 16px; flex: 0 0 16px; margin: 0; padding: 0; accent-color: var(--blue); cursor: pointer; }
 .vg-chip.on { border-color: var(--blue); background: rgba(37,99,235,.06); }
+.vz-keuze { align-items: flex-start; }
+.vz-keuze input { margin-top: 2px; }
+.vz-uitleg { display: block; font-weight: 400; font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
 .vg-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .platform-checkboxes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
@@ -1199,6 +1202,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <button class="btn btn-sm btn-outline" onclick="openBulkPrice()">Change price…</button>
           <button class="btn btn-sm btn-outline" onclick="doBulkCondition()">Change condition…</button>
           <button class="btn btn-sm btn-outline" onclick="openBulkCategory()">Change category…</button>
+          <button class="btn btn-sm btn-outline" onclick="openBulkVerzending2dh()">2dehands shipping…</button>
           <button class="btn btn-sm btn-warning" onclick="bulkDelist()">Delist all</button>
           <button class="btn btn-sm btn-danger" onclick="bulkDelete()">Delete</button>
           <button class="btn btn-sm btn-ghost" onclick="clearSelection()">Deselect</button>
@@ -1598,34 +1602,57 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
       </div>
       <!-- Verzendkosten op 2dehands. Tot 27-09-2026 zette Daniel dit per klant met
-           de hand (Egbert: patches en alles onder EUR 4,95); nu zet de verkoper
-           het zelf. Zie VERZENDING_2DH_BRIEF_ONDER en VERZENDING_2DH_WOORDEN in
-           backend/services/instellingen.py. -->
+           de hand (Egbert: patches en alles onder EUR 4,95), en zette hij daarna met
+           een script om wat al online stond. Nu kiest de verkoper zelf uit drie
+           keuzes, en na Opslaan kan hij het ook toepassen op wat al op 2dehands
+           staat: de server loopt die zoekertjes dan een voor een langs. Zie
+           backend/services/verzending_2dh.py en verzending_2dh_ronde.py. -->
       <div style="background:var(--card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:16px">
         <div style="font-weight:700;margin-bottom:4px">Shipping cost on 2dehands</div>
         <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
-          By default every 2dehands listing gets Bpost up to 2 kg (€7.10), because most buyers there live in Belgium.
-          If you ship an item yourself on Marktplaats for your own amount, 2dehands can use that amount too.
-          That is a Dutch price: fine for a letter, too low for a parcel to Belgium. So set up to which amount it is a letter.
+          Most buyers on 2dehands live in Belgium. Choose what your listings there charge for shipping.
         </div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
-          <label for="verzending-2dh-onder" style="font-size:13px">Use my own Marktplaats amount below</label>
-          <span style="font-size:13px">€</span>
-          <input type="number" id="verzending-2dh-onder" min="0" max="7.10" step="0.01" style="max-width:90px">
-          <span style="font-size:12px;color:var(--muted)">0 means always Bpost €7.10</span>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <label class="vg-chip vz-keuze"><input type="radio" name="verzending-2dh-modus" value="standaard" onchange="toonVerzending2dhKeuze()">
+            <span>Bpost €7.10 for everything<span class="vz-uitleg">The standard. Fits a parcel up to 2 kg.</span></span></label>
+          <label class="vg-chip vz-keuze"><input type="radio" name="verzending-2dh-modus" value="regel" onchange="toonVerzending2dhKeuze()">
+            <span>My Marktplaats amount for letters<span class="vz-uitleg">Below the amount you set here, and for titles with your words. Everything else gets Bpost €7.10.</span></span></label>
+          <div id="verzending-2dh-regel-velden" style="margin:2px 0 4px 28px">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+              <label for="verzending-2dh-onder" style="font-size:13px">A letter is everything below</label>
+              <span style="font-size:13px">€</span>
+              <input type="number" id="verzending-2dh-onder" min="0" max="7.10" step="0.01" style="max-width:90px">
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <label for="verzending-2dh-woorden" style="font-size:13px">And always for titles with</label>
+              <input type="text" id="verzending-2dh-woorden" maxlength="400" placeholder="patch, button" style="max-width:260px;flex:1">
+            </div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:6px">
+              Words separated by a comma, for letters that cost more, like a patch at €4.95.
+            </div>
+          </div>
+          <label class="vg-chip vz-keuze"><input type="radio" name="verzending-2dh-modus" value="alles" onchange="toonVerzending2dhKeuze()">
+            <span>My Marktplaats amount for everything<span class="vz-uitleg">Good if you ship from Belgium. From the Netherlands a parcel to Belgium usually costs more than your Marktplaats amount.</span></span></label>
         </div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <label for="verzending-2dh-woorden" style="font-size:13px">And always for titles with</label>
-          <input type="text" id="verzending-2dh-woorden" maxlength="400" placeholder="patch, button" style="max-width:260px;flex:1">
-        </div>
-        <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:6px">
-          Words separated by a comma, for letters that cost more, like a patch at €4.95.
-          Only for items you ship yourself on Marktplaats with an amount, and for listings placed on 2dehands from now on.
+        <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:10px">
+          Your Marktplaats amount is what you set per item with "Zelf verzenden". Items you send through Marktplaats (PostNL or DHL), or that are not on Marktplaats, get Bpost €7.10.
+          For single items: select them under Items and choose "2dehands shipping…".
         </div>
         <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
           <button class="btn btn-sm btn-primary" onclick="saveVerzending2dh()">Save</button>
           <span id="verzending-2dh-status" style="font-size:12px;color:var(--muted)"></span>
         </div>
+        <div id="verzending-2dh-toepassen" style="display:none;margin-top:12px;padding:12px 14px;border-radius:10px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.25)">
+          <div id="verzending-2dh-vraag" style="font-size:13px;font-weight:600;margin-bottom:10px"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm btn-primary" id="verzending-2dh-ja" onclick="startVerzending2dhRonde()"></button>
+            <button class="btn btn-sm btn-outline" onclick="document.getElementById('verzending-2dh-toepassen').style.display='none'">No, only new listings</button>
+          </div>
+          <div id="verzending-2dh-extensie" style="display:none;font-size:12px;color:#b45309;margin-top:8px">
+            Your extension is too old to change listings that are already online. Chrome updates it by itself within a few hours while the browser is open; the changes start after that.
+          </div>
+        </div>
+        <div id="verzending-2dh-voortgang" style="display:none;margin-top:12px;font-size:12.5px;line-height:1.6"></div>
       </div>
       <!-- Vaste tekst onder elke advertentie.
            Jaap (zilverwebsite.nl) miste onderaan elke advertentie zijn
@@ -2361,6 +2388,43 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-bulk-price')">Cancel</button>
       <button class="btn btn-primary" id="bulk-price-apply" onclick="doBulkPrice()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- BULK 2DEHANDS SHIPPING MODAL (27-09-2026) -->
+<!-- Een eigen verzendkeuze per artikel, voor wat de regel bij Preferences niet
+     vangt. Zie backend/services/verzending_2dh.py. -->
+<div id="modal-bulk-verzending" class="modal-overlay" style="display:none" onclick="closeOnOverlay(event,'modal-bulk-verzending')">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Shipping cost on 2dehands</h3>
+      <button class="close-btn" onclick="closeModal('modal-bulk-verzending')">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="bulk-verzending-count" style="color:var(--muted);margin-bottom:16px;font-size:13px"></p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <label class="vg-chip vz-keuze"><input type="radio" name="bulk-verzending" value="eigen" checked>
+          <span>My own amount<span class="vz-uitleg">For example what a letter to Belgium costs you.</span></span></label>
+        <div style="margin:0 0 4px 28px;display:flex;gap:8px;align-items:center">
+          <span style="font-size:13px">€</span>
+          <input type="number" id="bulk-verzending-bedrag" min="0" max="99.99" step="0.01" placeholder="2.95" style="max-width:110px"
+            oninput="document.querySelector('input[name=bulk-verzending][value=eigen]').checked = true">
+        </div>
+        <label class="vg-chip vz-keuze"><input type="radio" name="bulk-verzending" value="bpost">
+          <span>Bpost €7.10<span class="vz-uitleg">Also when your Preferences would use your Marktplaats amount.</span></span></label>
+        <label class="vg-chip vz-keuze"><input type="radio" name="bulk-verzending" value="volg">
+          <span>Follow my Preferences<span class="vz-uitleg">Removes the own choice for these items.</span></span></label>
+      </div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:12px">
+        This applies to new 2dehands listings of these items, and to the ones already on 2dehands: your extension updates those in the background.
+        A listing that is already online cannot be switched back to Bpost yet; Bpost applies to new listings.
+      </p>
+      <div id="bulk-verzending-melding" style="font-size:12.5px;margin-top:8px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-bulk-verzending')">Cancel</button>
+      <button class="btn btn-primary" id="bulk-verzending-apply" onclick="doBulkVerzending2dh()">Apply</button>
     </div>
   </div>
 </div>
@@ -11884,15 +11948,42 @@ async function saveVerzenden() {
 }
 
 function toonVerzending2dh(data) {
+  const modus = data.verzending_2dh_modus || 'standaard';
+  document.querySelectorAll('input[name="verzending-2dh-modus"]').forEach(r => { r.checked = r.value === modus; });
   const grens = document.getElementById('verzending-2dh-onder');
   if (grens) grens.value = ((data.verzending_2dh_brief_onder || 0) / 100).toFixed(2);
   const woorden = document.getElementById('verzending-2dh-woorden');
   if (woorden) woorden.value = (data.verzending_2dh_woorden || []).join(', ');
+  toonVerzending2dhKeuze();
+  laadVerzending2dhRonde();
+}
+
+function gekozenVerzending2dh() {
+  const r = document.querySelector('input[name="verzending-2dh-modus"]:checked');
+  return r ? r.value : 'standaard';
+}
+
+// De velden van de briefregel horen alleen bij die keuze. Ze blijven bewaard,
+// zodat wie even naar Bpost gaat en terugkomt zijn grens en woorden terugvindt.
+function toonVerzending2dhKeuze() {
+  const regel = gekozenVerzending2dh() === 'regel';
+  document.querySelectorAll('.vz-keuze').forEach(l => l.classList.toggle('on', !!l.querySelector('input:checked')));
+  const velden = document.getElementById('verzending-2dh-regel-velden');
+  if (velden) {
+    velden.style.opacity = regel ? '1' : '.5';
+    velden.querySelectorAll('input').forEach(i => { i.disabled = !regel; });
+  }
+}
+
+function itemsOp2dehands() {
+  return new Set((state.listings || []).filter(l => l.platform === '2dehands' && l.status === 'active')
+    .map(l => l.item_id));
 }
 
 async function saveVerzending2dh() {
   const melding = document.getElementById('verzending-2dh-status');
   melding.textContent = 'Saving…';
+  document.getElementById('verzending-2dh-toepassen').style.display = 'none';
   const euro = parseFloat(String(document.getElementById('verzending-2dh-onder').value || '0').replace(',', '.'));
   const woorden = String(document.getElementById('verzending-2dh-woorden').value || '')
     .split(',').map(w => w.trim()).filter(Boolean);
@@ -11900,6 +11991,7 @@ async function saveVerzending2dh() {
     const r = await apiFetchRetry(`${API}/api/items/settings`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        verzending_2dh_modus: gekozenVerzending2dh(),
         verzending_2dh_brief_onder: Number.isFinite(euro) && euro > 0 ? Math.round(euro * 100) : 0,
         verzending_2dh_woorden: woorden,
       }),
@@ -11908,14 +12000,170 @@ async function saveVerzending2dh() {
     if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
     state.settings = { ...state.settings, ...data };
     toonVerzending2dh(data);
+    const modus = data.verzending_2dh_modus;
     const onder = data.verzending_2dh_brief_onder || 0;
-    melding.textContent = onder
-      ? `Saved. Below €${(onder / 100).toFixed(2)} your own Marktplaats amount is used on 2dehands.`
-      : (data.verzending_2dh_woorden || []).length
-        ? 'Saved. Titles with these words get your own Marktplaats amount on 2dehands.'
-        : 'Saved. Every 2dehands listing gets Bpost €7.10.';
+    const heeftWoorden = (data.verzending_2dh_woorden || []).length > 0;
+    if (modus === 'standaard' || (modus === 'regel' && !onder && !heeftWoorden)) {
+      melding.textContent = 'Saved. New 2dehands listings get Bpost €7.10. Listings already online keep their current shipping cost.';
+      return;
+    }
+    melding.textContent = modus === 'alles'
+      ? 'Saved. New 2dehands listings get your own Marktplaats amount.'
+      : onder
+        ? `Saved. Below €${(onder / 100).toFixed(2)} your own Marktplaats amount is used on 2dehands.`
+        : 'Saved. Titles with these words get your own Marktplaats amount on 2dehands.';
+    vraagVerzending2dhToepassen();
   } catch (e) {
     melding.textContent = `Could not save: ${e.message}`;
+  }
+}
+
+// Na Opslaan: ook voor wat al online staat? Nee is een gewone keuze; dan geldt
+// het alleen voor nieuwe zoekertjes, zoals vroeger.
+function vraagVerzending2dhToepassen() {
+  const n = itemsOp2dehands().size;
+  if (!n) return;
+  document.getElementById('verzending-2dh-vraag').textContent =
+    `Also apply this to the ${n} listing${n === 1 ? '' : 's'} already on 2dehands?`;
+  document.getElementById('verzending-2dh-ja').textContent = `Yes, apply to all ${n}`;
+  document.getElementById('verzending-2dh-extensie').style.display =
+    state.verzending2dhExtensieOud ? 'block' : 'none';
+  document.getElementById('verzending-2dh-toepassen').style.display = 'block';
+}
+
+async function startVerzending2dhRonde(opnieuw = false) {
+  document.getElementById('verzending-2dh-toepassen').style.display = 'none';
+  const vak = document.getElementById('verzending-2dh-voortgang');
+  vak.style.display = 'block';
+  vak.textContent = 'Starting…';
+  try {
+    const r = await apiFetchRetry(`${API}/api/verzending-2dh/ronde`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ opnieuw: !!opnieuw }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+    toonVerzending2dhRonde(data.ronde);
+    volgVerzending2dhRonde();
+  } catch (e) {
+    vak.textContent = `Could not start: ${e.message}`;
+  }
+}
+
+async function laadVerzending2dhRonde() {
+  try {
+    const r = await apiFetchRetry(`${API}/api/verzending-2dh`);
+    const data = await parseJsonSafe(r);
+    if (!r.ok) return;
+    state.verzending2dhExtensieOud = data.extensie_kan_bijwerken === false;
+    toonVerzending2dhRonde(data.ronde);
+    if (data.ronde && data.ronde.status === 'loopt') volgVerzending2dhRonde();
+  } catch (e) {
+    // De stand van de ronde is een extraatje; zonder blijft de pagina werken.
+  }
+}
+
+// Elke regel een eigen zin in een eigen blok: de vertaallaag vertaalt per
+// tekstknoop, en twee zinnen aan elkaar geplakt staan niet in het woordenboek.
+function toonVerzending2dhRonde(r) {
+  const vak = document.getElementById('verzending-2dh-voortgang');
+  if (!vak) return;
+  const oud = r && r.status !== 'loopt' && r.klaar_op && Date.now() - Date.parse(r.klaar_op) > 86400000;
+  if (!r || !r.status || oud) { vak.style.display = 'none'; return; }
+  const t = r.tel || {};
+  const wordt = (t.aangepast || 0) + (t.onderweg || 0);
+  const blijft = (t.al_goed || 0) + (t.bpost || 0) + (t.niet_op_mp || 0) + (t.ophalen || 0);
+  const regels = [];
+  if (r.status === 'loopt') {
+    regels.push(r.aantal == null
+      ? 'Counting your listings on 2dehands…'
+      : `Checking your listings on 2dehands: ${r.bekeken} of ${r.aantal} done, ${wordt} to update so far.`);
+    if (r.wacht_op_herkansing) regels.push('Some could not be read yet. We try those again in a minute.');
+    regels.push('You can close this page, this continues on our server.');
+  } else if (r.status === 'gestopt') {
+    regels.push('Stopped, because you changed your choice.');
+  } else {
+    regels.push(`Done. New shipping cost for ${wordt} listing${wordt === 1 ? '' : 's'}; unchanged: ${blijft}.`);
+    if (wordt) regels.push('Your extension changes them on 2dehands in the background, while your computer is on.');
+    if (wordt && state.verzending2dhExtensieOud) regels.push('Your extension is too old to change listings that are already online. Chrome updates it by itself within a few hours while the browser is open; the changes start after that.');
+    if (t.niet_op_mp) regels.push(`${t.niet_op_mp} item${t.niet_op_mp === 1 ? '' : 's'} had no Marktplaats amount to copy. Give those their own amount under Items with "2dehands shipping…".`);
+    if (r.niet_gelezen) regels.push(`We could not read ${r.niet_gelezen} listing${r.niet_gelezen === 1 ? '' : 's'}.`);
+  }
+  vak.innerHTML = regels.map(z => `<div>${esc(z)}</div>`).join('')
+    + (r.status === 'klaar' && r.niet_gelezen
+      ? '<div><a href="#" onclick="startVerzending2dhRonde(true);return false;">Try those again</a></div>' : '');
+  vak.style.display = 'block';
+}
+
+let verzending2dhKlok = null;
+function volgVerzending2dhRonde() {
+  clearTimeout(verzending2dhKlok);
+  verzending2dhKlok = setTimeout(async () => {
+    const vak = document.getElementById('verzending-2dh-voortgang');
+    if (!vak || vak.offsetParent === null) return;   // pagina dicht: niet blijven vragen
+    try {
+      const r = await apiFetchRetry(`${API}/api/verzending-2dh`);
+      const data = await parseJsonSafe(r);
+      if (r.ok) {
+        toonVerzending2dhRonde(data.ronde);
+        if (!data.ronde || data.ronde.status !== 'loopt') return;
+      }
+    } catch (e) {
+      // Even geen antwoord: gewoon later nog eens.
+    }
+    volgVerzending2dhRonde();
+  }, 8000);
+}
+
+// EEN EIGEN VERZENDKEUZE PER ARTIKEL (27-09-2026). Voor wat de regel bij
+// Preferences niet vangt: een bandana die toch een brief is, of een artikel dat
+// niet op Marktplaats staat en dus geen bedrag heeft om over te nemen.
+function openBulkVerzending2dh() {
+  const n = selectedIds.size;
+  if (!n) return;
+  const op = itemsOp2dehands();
+  const online = [...selectedIds].filter(id => op.has(id)).length;
+  document.getElementById('bulk-verzending-count').textContent =
+    `${n} item${n !== 1 ? 's' : ''} selected, ${online} already on 2dehands`;
+  document.getElementById('bulk-verzending-melding').textContent = '';
+  document.getElementById('bulk-verzending-apply').disabled = false;
+  document.getElementById('modal-bulk-verzending').style.display = 'flex';
+}
+
+async function doBulkVerzending2dh() {
+  const melding = document.getElementById('bulk-verzending-melding');
+  const knop = document.getElementById('bulk-verzending-apply');
+  const gekozen = document.querySelector('input[name="bulk-verzending"]:checked');
+  let keuze = gekozen ? gekozen.value : 'eigen';
+  if (keuze === 'eigen') {
+    const euro = parseFloat(String(document.getElementById('bulk-verzending-bedrag').value || '').replace(',', '.'));
+    if (!Number.isFinite(euro) || euro < 0 || euro > 99.99) {
+      melding.textContent = 'Enter an amount between €0.00 and €99.99.';
+      return;
+    }
+    keuze = Math.round(euro * 100);
+  }
+  knop.disabled = true;
+  melding.textContent = 'Saving…';
+  try {
+    const r = await apiFetchRetry(`${API}/api/verzending-2dh/artikelen`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_ids: [...selectedIds], keuze }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+    const n = data.gezet || 0, online = data.op_2dehands || 0;
+    closeModal('modal-bulk-verzending');
+    if (keuze === 'bpost') {
+      showToast(`Saved for ${n} item${n === 1 ? '' : 's'}. New 2dehands listings get Bpost €7.10; listings already online keep their current shipping cost.`);
+    } else if (online) {
+      showToast(`Saved for ${n} item${n === 1 ? '' : 's'}. ${online} already on 2dehands will be updated in the background; see the progress under Preferences.`);
+    } else {
+      showToast(`Saved for ${n} item${n === 1 ? '' : 's'}. Their next 2dehands listing gets this shipping cost.`);
+    }
+  } catch (e) {
+    melding.textContent = `Could not save: ${e.message}`;
+    knop.disabled = false;
   }
 }
 

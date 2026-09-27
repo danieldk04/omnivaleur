@@ -160,3 +160,6 @@ WhatsApp
 omnivaleur.com/r/
 # "{0} on {1}" (aantal op kanaal): de vormen per kanaal staan in nl.json.
 {0} on {1}
+input[name="verzending-2dh-modus"]
+input[name="verzending-2dh-modus"]:checked
+input[name="bulk-verzending"]:checked
