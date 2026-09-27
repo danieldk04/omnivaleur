@@ -317,7 +317,8 @@ class Leadblad:
 
     def leadvelden(self, lead: dict) -> dict:
         return {"Bedrijf": self._naam(lead), "E-mail": (lead.get("email") or "").lower(),
-                "Platform": "2dehands" if lead.get("platform") == "2dehands" else "MP",
+                # "webshop"/"winkel" sinds 27-09-2026 (winkels en webshops uit Google en OSM).
+                "Platform": lead["platform"] if lead.get("platform") in ("2dehands", "webshop", "winkel") else "MP",
                 "Link": lead.get("ig_url") or "", "Je/Jullie": lead.get("je_jullie") or "Je",
                 "Verkoopt": lead.get("verkoopt_vooral") or "", "Advertenties": lead.get("ads") or "",
                 "Website": lead.get("site") or lead.get("website") or "",

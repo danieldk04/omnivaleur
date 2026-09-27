@@ -1178,13 +1178,13 @@ def send(args) -> None:
     if args.dry_run:
         lead, n, _ = rij[0]
         stt = state.get(lead["email"].lower())
-        print(f"Voorbeeld — [{_variant(lead['email'], stt)}] {_onderwerp(lead, n, stt)}\n"
+        print(f"Voorbeeld — [{_variant(lead['email'], stt, lead)}] {_onderwerp(lead, n, stt)}\n"
               f"aan: {lead['email']}\n")
         print(_mailtekst(lead, n, stt)[1])
         print("\n" + "-" * 60)
         for lead, n, waarom in rij:
             stt = state.get(lead["email"].lower())
-            print(f"  [{_variant(lead['email'], stt)}] {BEURTEN[n][0]}  "
+            print(f"  [{_variant(lead['email'], stt, lead)}] {BEURTEN[n][0]}  "
                   f"{lead['email']:38s} {waarom}")
         return
 
@@ -2438,7 +2438,7 @@ def toon_teksten(args) -> None:
         st = state.get(lead["email"].lower())
         for n in range(3):
             onderwerp, tekst = _mailtekst(lead, n, st)
-            print(f"{'=' * 70}\n[{_variant(lead['email'], st)}] mail {n + 1} aan {lead['email']}\n"
+            print(f"{'=' * 70}\n[{_variant(lead['email'], st, lead)}] mail {n + 1} aan {lead['email']}\n"
                   f"Onderwerp: {onderwerp}\n\n{tekst}")
 
 
