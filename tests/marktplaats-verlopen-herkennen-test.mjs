@@ -43,7 +43,14 @@ function sliceFunctie(bron, naam) {
 }
 
 function laadVerwijderaar(bron) {
-  const consts = [...bron.matchAll(/^const WEG_(?:TEKST|MARKER)_BRON =[\s\S]*?;$/gm)].map(m => m[0]).join("\n");
+  // Sinds de bevestiging in een eigen functie staat (_bevestigInVenster, met
+  // haar twee woordenlijsten) moet die mee de zandbak in; zonder gaf de proef
+  // een ReferenceError die als "verwijderen mislukt" las.
+  const bevestig = bron.includes("function _bevestigInVenster(")
+    ? [...bron.matchAll(/^const BEVESTIG_(?:JA|NEE)_BRON =[\s\S]*?;$/gm)].map(m => m[0]).join("\n")
+      + "\n" + sliceFunctie(bron.replace("function _bevestigInVenster(", "async function _bevestigInVenster("), "_bevestigInVenster")
+    : "";
+  const consts = [...bron.matchAll(/^const WEG_(?:TEKST|MARKER)_BRON =[\s\S]*?;$/gm)].map(m => m[0]).join("\n") + "\n" + bevestig;
   const code = `
     let _laatsteVerwijderpagina = "niet gekeken";
     let _laatsteVerwijderDiag = [];
