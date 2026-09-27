@@ -190,7 +190,7 @@ VERZENDING_2DH_MODI = ("standaard", "regel", "alles")
 
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "auto_relist": True, VERKOOPVRAAG: True, VERZENDING_2DH_WOORDEN: [],
-             VERZENDING_2DH_BRIEF_ONDER: 0,
+             VERZENDING_2DH_BRIEF_ONDER: 0, VERZENDING_2DH_MODUS: "standaard",
              "fabrikant_naam": "", "fabrikant_adres": "", "fabrikant_email": "",
              FABRIKANT_MEESTUREN: True,
              "locatie_land": "", "locatie_plaats": "", "locatie_postcode": "",

@@ -356,9 +356,11 @@ def test_lezen_uit_de_rij_van_de_verkoper():
         return type("Db", (), {"table": lambda self, n: v})()
     lees = ECHT_LEZEN
     assert lees("u", db(_V([{"extra_data": {I.VERZENDING_2DH_WOORDEN: ["patch"],
-                                            I.VERZENDING_2DH_BRIEF_ONDER: 495}}]))) == EGBERT
-    assert lees("u", db(_V([{"extra_data": {I.VERZENDING_2DH_WOORDEN: ["patch"]}}]))) == ALLEEN_WOORDEN
-    assert lees("u", db(_V([]))) == {"woorden": [], "brief_onder": 0}
+                                            I.VERZENDING_2DH_BRIEF_ONDER: 495}}]))) == \
+        {**EGBERT, "modus": "regel"}, "wie nog niet koos, houdt zijn regel (27-09-2026)"
+    assert lees("u", db(_V([{"extra_data": {I.VERZENDING_2DH_WOORDEN: ["patch"]}}]))) == \
+        {**ALLEEN_WOORDEN, "modus": "regel"}
+    assert lees("u", db(_V([]))) == {"modus": "standaard", "woorden": [], "brief_onder": 0}
     assert lees("u", db(_V(fout=True))) is None
 
 

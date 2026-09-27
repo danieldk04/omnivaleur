@@ -19,7 +19,7 @@ from pathlib import Path
 import asyncio
 import traceback
 import uuid
-from backend.api import items, listings, platforms, webhooks, jobs, uploads, shopify, auth, billing, imports, content, notifications, beheer, tracking, referrals, mail_verbinding, i18n
+from backend.api import items, listings, platforms, webhooks, jobs, uploads, shopify, auth, billing, imports, content, notifications, beheer, tracking, referrals, mail_verbinding, i18n, verzending
 from backend.scheduler import start_scheduler, stop_scheduler
 
 FRONTEND = Path(__file__).parent.parent / "frontend"
@@ -110,6 +110,7 @@ app.include_router(uploads.router, prefix="/api")
 app.include_router(shopify.router, prefix="/api")
 app.include_router(imports.router, prefix="/api")
 app.include_router(notifications.router, prefix="/api")
+app.include_router(verzending.router, prefix="/api")
 app.include_router(auth.router)
 app.include_router(billing.router)
 app.include_router(content.router)
