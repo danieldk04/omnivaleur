@@ -1111,6 +1111,8 @@ def _teksten() -> dict:
 
 
 def _platformnaam(lead: dict) -> str:
+    if lead.get("platform") in WINKEL_PLATFORMS:
+        return lead["platform"]            # "webshop" of "winkel"
     return "2dehands" if lead.get("platform") == "2dehands" else "Marktplaats"
 
 
