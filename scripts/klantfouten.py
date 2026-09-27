@@ -281,8 +281,59 @@ def oordeel_vastleggen(sleutel: str, uitkomst: str, zin: str) -> bool:
     return False
 
 
+# ---------------------------------------------------------------- één ronde tegelijk
+# WAAROM (27-09-2026). Naast Daniels ochtendronde draait er een tweede dagelijkse
+# ronde op een ander account. Twee rondes die tegelijk dezelfde fout repareren
+# maken twee reparaties die elkaar in de weg zitten. De oordelen hierboven houden
+# een foutsoort stil zodra hij beoordeeld is, maar niet terwijl een ronde er nog
+# middenin zit. Dit slot staat in dezelfde gedeelde opslag, dus elk account ziet het.
+RONDE_SLEUTEL = "klantfouten_ronde"
+RONDE_GESTRAND_NA = timedelta(hours=4)
+
+
+def ronde_begin(wie: str) -> tuple[bool, str]:
+    """Mag deze ronde beginnen? Zo ja, dan staat hij vanaf nu op 'bezig'.
+
+    Niet te lezen is niet vrij: dan weten we niet of er een ronde bezig is.
+    """
+    fout = A._bereikbaar()
+    if fout:
+        return False, f"Gedeelde opslag niet te lezen ({fout}); niet begonnen."
+    nu = _nu()
+    vorige = A._lees(RONDE_SLEUTEL, {}) or {}
+    begon = _tijd(vorige.get("begon"))
+    if (vorige.get("status") == "bezig" and vorige.get("wie") != wie
+            and begon and nu - begon < RONDE_GESTRAND_NA):
+        return False, (f"Ronde '{vorige.get('wie')}' is bezig sinds {vorige['begon'][:16]} UTC; "
+                       "niet begonnen, anders repareren we hetzelfde twee keer.")
+    if not A._schrijf(RONDE_SLEUTEL, {"status": "bezig", "wie": wie, "begon": nu.isoformat(),
+                                      "vorige": {k: vorige.get(k) for k in
+                                                 ("wie", "status", "begon", "klaar", "samenvatting")}}):
+        return False, "Kon het slot niet zetten; niet begonnen."
+    if not vorige:
+        return True, "Begonnen. Geen eerdere ronde bekend."
+    return True, (f"Begonnen. Vorige ronde: '{vorige.get('wie')}', {vorige.get('status')}, "
+                  f"begon {str(vorige.get('begon'))[:16]} UTC, klaar {str(vorige.get('klaar'))[:16]} UTC: "
+                  f"{vorige.get('samenvatting') or '(geen samenvatting)'}")
+
+
+def ronde_klaar(wie: str, samenvatting: str) -> bool:
+    nu_ = A._lees(RONDE_SLEUTEL, {}) or {}
+    if nu_.get("wie") not in (None, wie) and nu_.get("status") == "bezig":
+        print(f"Het slot is van '{nu_.get('wie')}', niet van '{wie}'; niet aangeraakt.")
+        return False
+    return A._schrijf(RONDE_SLEUTEL, {**nu_, "status": "klaar", "wie": wie,
+                                      "klaar": _nu().isoformat(), "samenvatting": samenvatting})
+
+
 def main() -> None:
     A._omgeving_uit_env_bestand()
+    if len(sys.argv) >= 4 and sys.argv[1] == "ronde" and sys.argv[2] == "begin":
+        mag, uitleg = ronde_begin(sys.argv[3])
+        print(uitleg)
+        sys.exit(0 if mag else 3)
+    if len(sys.argv) >= 4 and sys.argv[1] == "ronde" and sys.argv[2] == "klaar":
+        sys.exit(0 if ronde_klaar(sys.argv[3], " ".join(sys.argv[4:])) else 1)
     if len(sys.argv) >= 4 and sys.argv[1] == "oordeel":
         ok = oordeel_vastleggen(sys.argv[2], sys.argv[3], " ".join(sys.argv[4:]))
         sys.exit(0 if ok else 1)
