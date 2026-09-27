@@ -290,11 +290,44 @@ def test_een_storing_bij_marktplaats_houdt_de_opdracht_vast_maar_niet_voor_altij
     assert J._zet_rubriek_van_marktplaats(db, USER, job) is False, (
         "elf minuten is geen reden om alsnog met de geraden, betalende rubriek te gaan")
 
-    J._RUBRIEK_STORING.clear()
     job["payload"]["_rubriek_zoeken_sinds"] = (
         datetime.now(timezone.utc) - timedelta(hours=7)).isoformat()
-    assert J._zet_rubriek_van_marktplaats(db, USER, job) is True, (
-        "na zes uur moet hij alsnog de deur uit, anders staat de rij stil")
+    job["payload"].pop("_rubriek_pogingen", None)
+    uitkomsten = []
+    for _ in range(J._RUBRIEK_MIN_POGINGEN):
+        J._RUBRIEK_STORING.clear()   # de rust is voorbij: een echte nieuwe opzoeking
+        uitkomsten.append(J._zet_rubriek_van_marktplaats(db, USER, job))
+    assert uitkomsten == [False] * (J._RUBRIEK_MIN_POGINGEN - 1) + [True], (
+        "na zes uur en een paar echte pogingen moet hij alsnog de deur uit, anders staat de rij stil")
+
+
+VOOR_DE_POGINGEN = "b376e1ec"   # vast nummer: HEAD vergelijkt zichzelf na de commit
+
+
+def test_in_de_rust_gaat_niets_zonder_eigen_poging_met_de_gok_de_deur_uit(monkeypatch):
+    """27-09-2026, Egbert: 24 nummerplaten wachtten al 19 uur (computer 's nachts
+    uit). Eén mislukte opzoeking om 10:00 zette de rust aan, en in die rust gingen
+    ze alle 24 zonder zelf te zoeken met de geraden rubriek de deur uit."""
+    oud_geleden = (datetime.now(timezone.utc) - timedelta(hours=19)).isoformat()
+
+    def _wachtende():
+        job = _echte_opdracht()
+        job["payload"]["_rubriek_zoeken_sinds"] = oud_geleden
+        return job
+
+    for module, verwacht in ((J, False), (R_oud := _oude_module(
+            "backend/api/jobs.py", VOOR_DE_POGINGEN, "oude_jobs_pogingen",
+            moet_bevatten=("_rubriek_zoeken_sinds",), moet_missen=("_RUBRIEK_MIN_POGINGEN",)), True)):
+        stil = _Client(fout=True)
+        _zet_marktplaats_nep(monkeypatch, stil)
+        module._RUBRIEK_STORING.clear()
+        module._RUBRIEK_STORING[USER] = datetime.now(timezone.utc)   # een ander liep net stuk
+        job = _wachtende()
+        uit = module._zet_rubriek_van_marktplaats(_DB([job], op_marktplaats={job["item_id"]: NUMMER}), USER, job)
+        assert stil.vragen == [], "in de rust wordt niet gebeld"
+        assert uit is verwacht, ("nu: blijft wachten" if module is J
+                                 else "vroeger: ging met de gok de deur uit")
+    J._RUBRIEK_STORING.clear()
 
 
 def test_de_vijftig_van_14_september_blijven_staan_in_plaats_van_geannuleerd(monkeypatch):

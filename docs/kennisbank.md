@@ -17,6 +17,42 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## geraden-rubriek-is-niet-de-rubriek-van-de-verkoper
+
+*27-09-2026 — Onze importcategorie is uit de titel geraden; bij Egbert klopte 947 van 5.533. 2dehands-plaatsingen volgen nu de echte Marktplaats-rubriek (zelfde nummers)*
+
+De `category` van een geïmporteerd artikel is door ons uit de titel geraden, niet
+overgenomen. Gemeten 13-09-2026 bij Egbert Brouwer (Papa's Plectrums): van 5.533
+artikelen stond er 947 bij ons in dezelfde rubriek als op Marktplaats. Zijn
+miniatuurgitaartjes waren "gitaren elektrisch" (op 2dehands betalend na twee
+gratis, 34 van 35 mislukt op 12-09), zijn 2.377 buttons en patches waren "unisex
+accessoires" = Dames | Blouses en Tunieken (621/628). Op Marktplaats staan ze in
+Verzamelen | Muziek, Artiesten en Beroemdheden (895/926).
+
+**Why:** Marktplaats en 2dehands delen dezelfde rubriekenboom met dezelfde
+nummers (nagemeten op tien rubrieken), en de extensie plaatst sinds 1.0.273 op
+`payload.mp_category` {l1,l2} (getMpSyiUrl, sindsdien byte-gelijk). Dat werd
+alleen bij MP-herplaatsen gevuld.
+
+**How to apply:** vlak voor uitgifte zet `_zet_rubriek_van_marktplaats` (jobs.py)
+de echte rubriek in elke 2dehands-plaatsing van een artikel dat live op
+Marktplaats staat. Opzoeken via de openbare zoek-API binnen `sellerIds[]`, match
+op het advertentienummer (niet de titel), L1 uit facet `RelevantCategories`
+(`parentId`); zie `rubriek_op_advertentienummer` in mp_enrich.py. Rubriek-remmen
+vergelijken op `_rubriek_sleutel` (mp:l1/l2 gaat voor de geraden naam), en
+`_weiger_bekende_betaalde_rubriek` onthoudt 28 dagen dat een rubriek geld kost,
+zodat een nieuwe klik niet opnieuw faalt. Zie "betalende-rubriek-is-geen-formulierfout"
+en "rubriek-valt-stil-bij-massa-import". Meet een seller-lijst nooit op "lege
+pagina = einde": de zoek-API geeft soms een lege pagina middenin.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "rubriek-valt-stil-bij-massa-import" — geweigerde modelvraag werd stil 'geen rubriek' bij massa-import
+- "rubriekkeuze-vroeg-eerst-om-kleding" — 'choose gender first' was doodlopend voor woontextiel
+
+**Bijgesteld 27-09-2026 (Egbert, 24 nummerplaten):** het zes-uur-geduld telde alleen kloktijd, ook de uren dat zijn computer uit stond en er dus niets gezocht werd. En in de storingsrust (3 min na één mislukte opzoeking) ging elke opdracht met een oude `_rubriek_zoeken_sinds` zonder eigen poging met de gok de deur uit: één mislukking om 10:00 stuurde er 24 tegelijk weg (628 damestassen, 2875 wanddecoraties, 1845 schilderijen, 15 antiek), terwijl ze op Marktplaats in 926 staan. Nu: met de gok alleen na een eigen, zojuist mislukte opzoeking en minstens `_RUBRIEK_MIN_POGINGEN` (3) daarvan (`_rubriek_pogingen` in de payload). Gemeten over zijn hele 2dehands-aanbod: 98 van 1.064 in een andere rubriek dan op Marktplaats (48 van 10-09, van vóór deze route; 24 door dit gat; de rest miniaturen in 1717/730/742/746-748). Een rubriek wijzigen kan niet op een bestaand zoekertje; die 98 vragen verwijderen en opnieuw plaatsen, alleen met zijn toestemming.
+
+---
+
 ## koude-mail-wat-mag
 
 *27-09-2026 — "Wat mag bij koude mail: Tw 11.7 lid 3 geldt voor bv én eenmanszaak, maar alleen op een adres dat bekend is gemaakt om zulke mail te ontvangen; Marktplaats verbiedt in art. 7.2 precies onze leadgen"*
@@ -4342,40 +4378,6 @@ niet online". Eerst: is de hartslag van de extensie na de time-out doorgelopen
 zonder gat, en zijn er na die opdracht andere opdrachten normaal afgerond? Pas dan
 is het oude tabblad echt weg. Een "tab closed"-fout na enkele seconden is wel
 veilig. Zie "herkansen-mag-geen-dubbele-opdracht" en "een-bron-is-geen-bewijs-bij-weg".
-
----
-
-## geraden-rubriek-is-niet-de-rubriek-van-de-verkoper
-
-*13-09-2026 — Onze importcategorie is uit de titel geraden; bij Egbert klopte 947 van 5.533. 2dehands-plaatsingen volgen nu de echte Marktplaats-rubriek (zelfde nummers)*
-
-De `category` van een geïmporteerd artikel is door ons uit de titel geraden, niet
-overgenomen. Gemeten 13-09-2026 bij Egbert Brouwer (Papa's Plectrums): van 5.533
-artikelen stond er 947 bij ons in dezelfde rubriek als op Marktplaats. Zijn
-miniatuurgitaartjes waren "gitaren elektrisch" (op 2dehands betalend na twee
-gratis, 34 van 35 mislukt op 12-09), zijn 2.377 buttons en patches waren "unisex
-accessoires" = Dames | Blouses en Tunieken (621/628). Op Marktplaats staan ze in
-Verzamelen | Muziek, Artiesten en Beroemdheden (895/926).
-
-**Why:** Marktplaats en 2dehands delen dezelfde rubriekenboom met dezelfde
-nummers (nagemeten op tien rubrieken), en de extensie plaatst sinds 1.0.273 op
-`payload.mp_category` {l1,l2} (getMpSyiUrl, sindsdien byte-gelijk). Dat werd
-alleen bij MP-herplaatsen gevuld.
-
-**How to apply:** vlak voor uitgifte zet `_zet_rubriek_van_marktplaats` (jobs.py)
-de echte rubriek in elke 2dehands-plaatsing van een artikel dat live op
-Marktplaats staat. Opzoeken via de openbare zoek-API binnen `sellerIds[]`, match
-op het advertentienummer (niet de titel), L1 uit facet `RelevantCategories`
-(`parentId`); zie `rubriek_op_advertentienummer` in mp_enrich.py. Rubriek-remmen
-vergelijken op `_rubriek_sleutel` (mp:l1/l2 gaat voor de geraden naam), en
-`_weiger_bekende_betaalde_rubriek` onthoudt 28 dagen dat een rubriek geld kost,
-zodat een nieuwe klik niet opnieuw faalt. Zie "betalende-rubriek-is-geen-formulierfout"
-en "rubriek-valt-stil-bij-massa-import". Meet een seller-lijst nooit op "lege
-pagina = einde": de zoek-API geeft soms een lege pagina middenin.
-
-**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
-- "rubriek-valt-stil-bij-massa-import" — geweigerde modelvraag werd stil 'geen rubriek' bij massa-import
-- "rubriekkeuze-vroeg-eerst-om-kleding" — 'choose gender first' was doodlopend voor woontextiel
 
 ---
 

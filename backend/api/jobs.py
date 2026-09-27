@@ -715,6 +715,14 @@ _RUBRIEK_ZOEK_GEDULD = timedelta(hours=6)
 # wachtende opdracht gewoon wachten, zonder één verzoek naar buiten.
 _RUBRIEK_STORING_RUST = timedelta(minutes=3)
 _RUBRIEK_STORING: dict[str, datetime] = {}
+# En pas na zoveel ECHTE mislukte opzoekingen voor deze opdracht zelf, elk na de
+# rust hierboven. WAAROM (27-09-2026, Egbert): het geduld telde alleen kloktijd.
+# 24 nummerplaten wachtten sinds 26-09 14:40 op hun rubriek terwijl zijn computer
+# 's nachts uit stond; om 10:00 was de klok ruim voorbij de zes uur. Eén mislukte
+# opzoeking zette de rust aan, en in die rust gingen alle 24 zonder zelf te zoeken
+# met de geraden rubriek de deur uit: nummerplaten tussen damestassen,
+# schilderijen en antiek, terwijl ze op Marktplaats in Verzamelen staan.
+_RUBRIEK_MIN_POGINGEN = 3
 # Hetzelfde voor de verzendkosten (_zet_verzending_van_marktplaats), met één
 # verschil: daar wacht een opdracht niet. De standaardverzending kost geen geld
 # en vond de verkoper "prima", een stilstaande wachtrij kost wel iets.
@@ -875,12 +883,14 @@ def _zet_rubriek_van_marktplaats(db, user_id: str, job: dict) -> bool:
     nu = datetime.now(timezone.utc)
     rubriek = _rubriek_uit_eerdere_opdracht(db, user_id, job.get("item_id"))
     rust = _RUBRIEK_STORING.get(user_id)
+    geprobeerd = False
     if rubriek:
         pass
     elif rust and nu - rust < _RUBRIEK_STORING_RUST:
         # De vorige opzoeking liep stuk. Wachten zonder te bellen.
         rubriek = None
     else:
+        geprobeerd = True
         from backend.services.mp_enrich import rubriek_van_eigen_advertentie
         # BEIDE TITELS, DE GEPLAATSTE EERST (19-09-2026).
         #
@@ -908,6 +918,7 @@ def _zet_rubriek_van_marktplaats(db, user_id: str, job: dict) -> bool:
     if rubriek:
         nieuw["mp_category"] = rubriek
         nieuw.pop("_rubriek_zoeken_sinds", None)
+        nieuw.pop("_rubriek_pogingen", None)
         logger.info("job %s: 2dehands in de eigen Marktplaats-rubriek %s (was %r)",
                     job.get("id"), _rubriek_leesbaar(nieuw), pl.get("category"))
     elif rubriek == {}:
@@ -924,7 +935,14 @@ def _zet_rubriek_van_marktplaats(db, user_id: str, job: dict) -> bool:
         if not sinds:
             nieuw["_rubriek_zoeken_sinds"] = nu.isoformat()
             sinds = nu
-        uitdelen = nu - sinds >= _RUBRIEK_ZOEK_GEDULD
+        pogingen = int(pl.get("_rubriek_pogingen") or 0)
+        if geprobeerd:
+            pogingen += 1
+            nieuw["_rubriek_pogingen"] = pogingen
+        # Alleen na een eigen, zojuist mislukte opzoeking, en pas na genoeg
+        # daarvan: zie _RUBRIEK_MIN_POGINGEN.
+        uitdelen = (geprobeerd and pogingen >= _RUBRIEK_MIN_POGINGEN
+                    and nu - sinds >= _RUBRIEK_ZOEK_GEDULD)
         if not uitdelen:
             logger.info("job %s: rubriek nog niet op te vragen, blijft wachten", job.get("id"))
     if nieuw != pl:

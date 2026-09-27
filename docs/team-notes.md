@@ -13907,3 +13907,20 @@ kandidaten uit OpenStreetMap, gidsen en zoekwoorden blijven daarom lokaal gepark
 want de huidige teksten noemen altijd "Marktplaats". Brave Search vraagt een
 betaalkaart; Serper.dev (Google-resultaten) geeft 2.500 gratis zoekopdrachten zonder
 betaalkaart en is het alternatief voor de zoekwoordenbron.
+
+**Aanvulling 27-09 avond: rubrieken op 2dehands nagemeten.** Zijn hele openbare
+aanbod opgehaald (2dehands 1.064, Marktplaats 5.147 van 5.533) en per artikel
+vergeleken. Geen dubbele plaatsingen (36 dubbele titels zijn 36 losse
+Marktplaats-advertenties), geen spookzoekertjes, prijzen op 2dehands gelijk aan
+de onze. Wel: 98 zoekertjes (9%) staan op 2dehands in een andere rubriek dan hij
+op Marktplaats koos (daar Verzamelen > Muziek, Artiesten en Beroemdheden): 48 van
+10-09, van voor de rubriekroute; 24 nummerplaten van 26/27-09 tussen damestassen,
+schilderijen, antiek en wanddecoraties; de rest miniaturen tussen echte gitaren,
+koffers, drumstellen en toebehoren. Oorzaak van de 24: het zes-uur-geduld telde
+kloktijd terwijl zijn computer 's nachts uit stond, en één mislukte opzoeking om
+10:00 stuurde ze in de rust alle 24 zonder eigen poging met de gok weg.
+Gerepareerd (jobs.py, `_RUBRIEK_MIN_POGINGEN`): alleen na een eigen mislukte
+opzoeking, en minstens drie. Proef: oude code (b376e1ec) liet hem in de rust
+gaan, nieuwe houdt hem vast. De 98 bestaande: rubriek is niet te wijzigen op een
+bestaand zoekertje, dus alleen verwijderen en opnieuw plaatsen, en dat pas na
+zijn ja. Ook: 10 artikelen hebben op Marktplaats een andere prijs dan bij ons.
