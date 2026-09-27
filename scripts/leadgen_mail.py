@@ -1127,7 +1127,7 @@ def _mailtekst(lead: dict, n: int, st: dict | None = None) -> tuple[str, str]:
     """Onderwerp en tekst van mail n+1 voor deze lead, uit de tab Mailteksten.
     De tekst is al door _netjes gehaald en klaar om te versturen."""
     m, t = _sheets_module(), _teksten()
-    rij = t[f"{_variant(lead.get('email', ''), st)}{n + 1}"]
+    rij = t[f"{_variant(lead.get('email', ''), st, lead)}{n + 1}"]
     vorm, waarden = _vorm(lead), _invulling(lead)
     onderwerp = m.vul_in(rij[f"onderwerp_{vorm}"], waarden)
     kern = m.vul_in(rij[f"tekst_{vorm}"], waarden)
