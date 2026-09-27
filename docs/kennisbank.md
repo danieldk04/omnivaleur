@@ -17,6 +17,46 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## 2dehands-verzendkosten-volgen-marktplaats
+
+*27-09-2026 — "2dehands standaard Bpost 0-2 kg (EUR 7,10); sinds 27-09 kiest de verkoper zelf (standaard/regel/alles), per artikel een eigen keuze, en een serverronde past het toe op wat al online staat. Formulier: shippingMethod=diy + othersPrice"*
+
+Op 2dehands koos de extensie altijd Transporteur Bpost, pakket 0-2 kg (EUR 7,10), voor elk zoekertje. Egbert Brouwer (Papa's Plectrums, 25-09-2026) wilde voor patches geen dure verzending; op Marktplaats verstuurt hij ze zelf voor EUR 2,25 tot 4,95 (buttons 2,95, miniaturen 4,95), per advertentie ingesteld.
+
+Sinds 26-09-2026 (extensie 1.0.353) zet `_zet_verzending_van_marktplaats` in jobs.py bij uitgifte `payload.verzending` voor elke 2dehands-create van een artikel dat actief op Marktplaats staat. Bron: de openbare advertentiepagina `https://www.marktplaats.nl/m{nummer}` (gewoon) of `/a{nummer}` (Admarkt); de verkeerde letter geeft 404. Blok `"shippingInformation"` → `augmentedLabels[].labels[]` met `deliveryMethod: "UNKNOWN_BECAUSE_DIY"` en `price: "€ 4,95"` is zelf verzenden. PostNL/DHL-labels zijn het tarief van Marktplaats en gaan NIET mee.
+
+Het 2dehands-formulier (create én `/plaats/m{id}/edit`, live afgelezen): `input[name="shippingMethod"]` waarde `bpost` of `diy`; na `diy` verschijnt `input[name="othersPrice"]` ("0,00", komma) en verdwijnen de pakketmaten en `shippingDetails.price`. fillInput werkt, het bedrag overleeft hertekenen.
+
+**Bijgesteld 26-09-2026 middag:** niet meer voor iedereen. Het Marktplaats-bedrag is een NEDERLANDSE prijs; Egbert: pakje naar België kost EUR 9,50 tegen 4,95 in NL, brief maar een euro verschil. Aan het bedrag is brief of pakje niet te zien (rugpatch en miniatuur allebei 4,95). Daarom alleen voor titels met een woord uit de instelling `verzending_2dh_woorden` (instellingen.py, standaard leeg = overal Bpost); anders stempelt de server `{"soort": "standaard"}`. Egbert: ["patch"].
+
+**Why:** een eigen bedrag van de verkoper is de enige juiste bron; wij kunnen aan een foto niet zien of iets door de brievenbus past.
+
+**How to apply:** een leeg of onleesbaar bedrag is nooit "gratis verzenden" (dan betaalt de verkoper het porto): terugval is altijd Bpost 0-2 kg. Een storing bij Marktplaats houdt de opdracht niet tegen. Bestaande zoekertjes: sinds 1.0.354 een wijzigroute (content_refresh met `_verzending_bijwerken`, formulier `/plaats/m{id}/edit`, knop `update-listing-submit-button`). Live gemeten: button.click() doet NIETS, alleen een echte muisklik (KLIK_ECHT) slaat op; daarna landt het tabblad op `/seller/view/m{id}` met "Je zoekertje is aangepast". Server: alleen naar kopie >= 1.0.354 (1.0.353 zou het plaatsformulier opnieuw invullen), noodrem `_bijwerken_2dh_staat_stil` (laatste mislukt = rest wacht), en `_verzending_alsnog_bijwerken` zet na een plaatsing zonder `verzending_gezet: true` vanzelf een bijwerking klaar. Oude zoekertjes: `scripts/verzendkosten_2dehands_bijwerken.py`. Zie ook "geraden-rubriek-is-niet-de-rubriek-van-de-verkoper" (zelfde patroon voor de rubriek) en "extension-release-bump-version".
+
+**Bijgesteld 27-09-2026:** Egbert zette magneten (MP 2,25), plectrums en sleutelhangers (2,95) op 2dehands en kreeg Bpost 7,10: "Ik ging er vanuit dat er vanaf nu gekeken zou worden naar de verzendkosten zoals ze staan op Marktplaats". Tweede sleutel `verzending_2dh_brief_onder` (centen, standaard 0 = uit, max 710): elk MP-bedrag daaronder gaat mee, welke titel ook. Egbert: 495. Gemeten op zijn MP-pagina's: onder 4,95 altijd een brief (textielposter 3,95), vanaf 4,95 kan het een pakje zijn (miniatuur/nummerplaat 4,95, slipmat/mok 6,95) en dan blijft het Bpost, behalve als een titelwoord (patch) het zegt. Beslissing in `neemt_bedrag_over` (instellingen.py), gedeeld door de uitgifte en `scripts/verzendkosten_2dehands_bijwerken.py`. Met een briefgrens vraagt de uitgifte Marktplaats voor elke 2dehands-plaatsing van die klant, niet alleen voor titelwoorden.
+
+**Bijgesteld 27-09-2026 avond: de verkoper regelt het zelf (Daniel: "niet constant iedereen individueel berichten").** Drie keuzes in `verzending_2dh_modus` (instellingen.py): `standaard` (Bpost), `regel` (grens + woorden, zoals hierboven), `alles` (elk Marktplaats-bedrag, ook boven 7,10). Ontbreekt de sleutel, dan volgt hij uit grens/woorden (Egbert: regel). Eigen keuze per artikel in `platform_credentials` rij `_verzending_2dh_artikelen` ({item_id: centen | "bpost"}), gezet via Items > "2dehands shipping…"; gaat voor de regel en vraagt Marktplaats niets (`eigen_keuzes`, `doel` in verzending_2dh.py; de uitgifte `_zet_verzending_van_marktplaats` kijkt eerst daar). Toepassen op wat al online staat: `verzending_2dh_ronde.py`, stand in rij `_verzending_2dh_ronde`, planner elke 5 s, één verzoek naar buiten per tik voor alle verkopers samen, lease 90 s zodat een deploy hem overdraagt, drie kansen voor wat niet te lezen is, alleen een bijwerking als de openbare 2dehands-pagina iets anders toont, geen bijwerking voor een zoekertje dat "alleen ophalen" is (het wijzigformulier heeft dan geen verzendkeuze en de mislukking zou de noodrem dichtzetten). Een andere keuze opslaan stopt een lopende ronde (`stop_als_verouderd`).
+
+Gemeten op productie (Railway) bij Egbert: ongeveer 10 zoekertjes per minuut, Marktplaats gaf 403 op ongeveer 1 op de 18 pagina's (vanaf de Mac was het 1 op de 5 bij 5 s pauze). Terugzetten naar Bpost van wat al online staat kan de extensie niet (verzendingBijwerken zet alleen diy + bedrag). Afgewogen en bewust niet: per rubriek (zegt niets over brief of pakje) en het Marktplaats-bedrag per artikel bewaren (een ronde leest opnieuw; zelden nodig). Zie ook "auto-push-zet-tussenstand-live" (bij het bouwen hiervan ging productie op een tussenstand).
+
+---
+
+## auto-push-zet-tussenstand-live
+
+*27-09-2026 — De auto-push-hook commit en pusht elke Edit/Write los; een wijziging die over twee stappen verdeeld is (of een stap via Bash) gaat half live en Railway start niet op. Twee keer gebeurd (23-09, 27-09)*
+
+23-09-2026: bij het bouwen van Shopify-inlezen gebruikte ik `BackgroundTasks` in een Edit en zette de bijbehorende import pas daarna met `sed` via Bash. De hook pushte de Edit meteen; de sed-stap werd niet gecommit. Drie Railway-deploys faalden op `NameError` (healthcheck), Daniel kreeg "build failed"-mails. De site bleef op de vorige versie draaien, dus geen klant merkte het.
+
+**Why:** elke Edit/Write is voor de hook een losse release naar productie; Bash-wijzigingen gaan er niet mee.
+
+**How to apply:** een wijziging die meerdere plekken raakt (import + gebruik, nieuwe functie + aanroep) in één Edit/Write zetten, of eerst het deel dat niets breekt (import, nieuwe module) en pas daarna het gebruik. Nooit een tijdelijke terugzetting (voor-en-na-proef) met de Edit-tool doen: via Bash naar een kopie, en daarna controleren dat `git diff` schoon is. Na afloop altijd `railway deployment list` bekijken. Zie ook "deploy-pipeline" en "voor-en-na-proef-mag-geen-head-gebruiken".
+
+**Opnieuw gebeurd 27-09-2026 (verzendkeuzes 2dehands), ondanks deze les.** Een nieuwe module schreef ik met Write, splitste ik daarna met een Python-script in twee (Bash, dus niet gepusht), en scheduler.py importeerde met Edit het nieuwe tweede bestand. Productie zat daardoor op een tussenstand (commit 08e97fec) waarin `_schoon(None)` de nieuwe sleutel miste, en alle deploys daarna faalden op de ontbrekende module. Gemerkt via `/health` (toont `commit`), niet via mails. Hersteld door alles in één commit te pushen; niemand geraakt (nagemeten: de enige verkoper met wachtende 2dehands-plaatsingen had een instellingenrij).
+
+**Aanvulling op How to apply:** kijk bij een wijziging over meerdere bestanden vóór de eerste Edit hoe hij in stukken live mag gaan: eerst nieuwe bestanden compleet met Write, dan pas de plekken die ze aanroepen. Splits of verplaats je iets met Bash, commit en push dan zelf meteen. Controleer na afloop `curl -s https://omnivaleur.com/health` op het commitnummer, niet alleen de statuscode: een mislukte deploy laat de oude versie gewoon 200 geven.
+
+---
+
 ## trechter-aanmelding-tot-betalend-27-09
 
 *27-09-2026 — "Gemeten 27-09-2026: koude-mail-aanmeldingen betalen 3 van 6, de rest 2 van ~43; niemand onder 100 ingelezen artikelen betaalt; creatorcodes 17 klikken 0 aanmeldingen"*
@@ -386,26 +426,6 @@ Sinds 27-09-2026: een woord of woordgroep tussen aanhalingstekens (ook “ ” e
 **Why:** heel-woord zoeken over titel+omschrijving liet nog 302 van de 365 rugpatches zien, want hun omschrijving zegt "mooi afgewerkte patch". Een generiek woord staat vaak los in de omschrijving van het samengestelde artikel.
 
 **How to apply:** bij een zoekklacht eerst meten op de echte voorraad van die klant welke velden de ruis geven, niet aannemen dat heel-woord genoeg is. De tip staat als title-tooltip op het zoekveld (NL in nl.json).
-
----
-
-## 2dehands-verzendkosten-volgen-marktplaats
-
-*27-09-2026 — "2dehands standaard Bpost 0-2 kg (EUR 7,10); het eigen Marktplaats-bedrag alleen per klant via titelwoorden (verzending_2dh_woorden) en/of briefgrens (verzending_2dh_brief_onder), want het is een NL-prijs. Formulier: shippingMethod=diy + othersPrice"*
-
-Op 2dehands koos de extensie altijd Transporteur Bpost, pakket 0-2 kg (EUR 7,10), voor elk zoekertje. Egbert Brouwer (Papa's Plectrums, 25-09-2026) wilde voor patches geen dure verzending; op Marktplaats verstuurt hij ze zelf voor EUR 2,25 tot 4,95 (buttons 2,95, miniaturen 4,95), per advertentie ingesteld.
-
-Sinds 26-09-2026 (extensie 1.0.353) zet `_zet_verzending_van_marktplaats` in jobs.py bij uitgifte `payload.verzending` voor elke 2dehands-create van een artikel dat actief op Marktplaats staat. Bron: de openbare advertentiepagina `https://www.marktplaats.nl/m{nummer}` (gewoon) of `/a{nummer}` (Admarkt); de verkeerde letter geeft 404. Blok `"shippingInformation"` → `augmentedLabels[].labels[]` met `deliveryMethod: "UNKNOWN_BECAUSE_DIY"` en `price: "€ 4,95"` is zelf verzenden. PostNL/DHL-labels zijn het tarief van Marktplaats en gaan NIET mee.
-
-Het 2dehands-formulier (create én `/plaats/m{id}/edit`, live afgelezen): `input[name="shippingMethod"]` waarde `bpost` of `diy`; na `diy` verschijnt `input[name="othersPrice"]` ("0,00", komma) en verdwijnen de pakketmaten en `shippingDetails.price`. fillInput werkt, het bedrag overleeft hertekenen.
-
-**Bijgesteld 26-09-2026 middag:** niet meer voor iedereen. Het Marktplaats-bedrag is een NEDERLANDSE prijs; Egbert: pakje naar België kost EUR 9,50 tegen 4,95 in NL, brief maar een euro verschil. Aan het bedrag is brief of pakje niet te zien (rugpatch en miniatuur allebei 4,95). Daarom alleen voor titels met een woord uit de instelling `verzending_2dh_woorden` (instellingen.py, standaard leeg = overal Bpost); anders stempelt de server `{"soort": "standaard"}`. Egbert: ["patch"].
-
-**Why:** een eigen bedrag van de verkoper is de enige juiste bron; wij kunnen aan een foto niet zien of iets door de brievenbus past.
-
-**How to apply:** een leeg of onleesbaar bedrag is nooit "gratis verzenden" (dan betaalt de verkoper het porto): terugval is altijd Bpost 0-2 kg. Een storing bij Marktplaats houdt de opdracht niet tegen. Bestaande zoekertjes: sinds 1.0.354 een wijzigroute (content_refresh met `_verzending_bijwerken`, formulier `/plaats/m{id}/edit`, knop `update-listing-submit-button`). Live gemeten: button.click() doet NIETS, alleen een echte muisklik (KLIK_ECHT) slaat op; daarna landt het tabblad op `/seller/view/m{id}` met "Je zoekertje is aangepast". Server: alleen naar kopie >= 1.0.354 (1.0.353 zou het plaatsformulier opnieuw invullen), noodrem `_bijwerken_2dh_staat_stil` (laatste mislukt = rest wacht), en `_verzending_alsnog_bijwerken` zet na een plaatsing zonder `verzending_gezet: true` vanzelf een bijwerking klaar. Oude zoekertjes: `scripts/verzendkosten_2dehands_bijwerken.py`. Zie ook "geraden-rubriek-is-niet-de-rubriek-van-de-verkoper" (zelfde patroon voor de rubriek) en "extension-release-bump-version".
-
-**Bijgesteld 27-09-2026:** Egbert zette magneten (MP 2,25), plectrums en sleutelhangers (2,95) op 2dehands en kreeg Bpost 7,10: "Ik ging er vanuit dat er vanaf nu gekeken zou worden naar de verzendkosten zoals ze staan op Marktplaats". Tweede sleutel `verzending_2dh_brief_onder` (centen, standaard 0 = uit, max 710): elk MP-bedrag daaronder gaat mee, welke titel ook. Egbert: 495. Gemeten op zijn MP-pagina's: onder 4,95 altijd een brief (textielposter 3,95), vanaf 4,95 kan het een pakje zijn (miniatuur/nummerplaat 4,95, slipmat/mok 6,95) en dan blijft het Bpost, behalve als een titelwoord (patch) het zegt. Beslissing in `neemt_bedrag_over` (instellingen.py), gedeeld door de uitgifte en `scripts/verzendkosten_2dehands_bijwerken.py`. Met een briefgrens vraagt de uitgifte Marktplaats voor elke 2dehands-plaatsing van die klant, niet alleen voor titelwoorden.
 
 ---
 
@@ -928,18 +948,6 @@ Alle taalvragen (rubriek, tweelingen, Shopify-collecties, eBay-rubrieken, blog, 
 **Why:** gemeten valkuilen: gemini-3.8-flash denkt standaard, en die gedachten tellen in maxOutputTokens (200 tokens gaf '{"gender' + MAX_TOKENS). Flash accepteert thinkingBudget 0, Flash-Lite geeft daarop 400 en accepteert thinkingLevel "minimal"; Flash weigert "minimal". Flash-Lite gokt bij rubrieken, Flash laat bij twijfel leeg.
 
 **How to apply:** geef altijd denkruimte (`_DENKRUIMTE`) of `denken=False`; kies Flash voor oordelen, Lite alleen als snelheid alles is. Tests: conftest zet google_api_key leeg, anders roepen tests stil Google aan. Zie "anthropic-sdk-pin-valstrik" en "modellenlijst-van-de-dienst-is-geen-bewijs".
-
----
-
-## auto-push-zet-tussenstand-live
-
-*23-09-2026 — De auto-push-hook commit en pusht elke Edit/Write los; een wijziging die over twee stappen verdeeld is (of een stap via Bash) gaat half live en Railway start niet op*
-
-23-09-2026: bij het bouwen van Shopify-inlezen gebruikte ik `BackgroundTasks` in een Edit en zette de bijbehorende import pas daarna met `sed` via Bash. De hook pushte de Edit meteen; de sed-stap werd niet gecommit. Drie Railway-deploys faalden op `NameError` (healthcheck), Daniel kreeg "build failed"-mails. De site bleef op de vorige versie draaien, dus geen klant merkte het.
-
-**Why:** elke Edit/Write is voor de hook een losse release naar productie; Bash-wijzigingen gaan er niet mee.
-
-**How to apply:** een wijziging die meerdere plekken raakt (import + gebruik, nieuwe functie + aanroep) in één Edit/Write zetten, of eerst het deel dat niets breekt (import, nieuwe module) en pas daarna het gebruik. Nooit een tijdelijke terugzetting (voor-en-na-proef) met de Edit-tool doen: via Bash naar een kopie, en daarna controleren dat `git diff` schoon is. Na afloop altijd `railway deployment list` bekijken. Zie ook "deploy-pipeline" en "voor-en-na-proef-mag-geen-head-gebruiken".
 
 ---
 
