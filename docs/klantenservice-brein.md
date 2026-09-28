@@ -342,7 +342,9 @@ Contact:
   op Marktplaats staan. Wat nog niet kan: een zoekertje dat al online staat met een
   eigen bedrag terugzetten naar Bpost; dat geldt alleen voor nieuwe zoekertjes. Die
   aanpassingen staan niet in de wachtrij op het dashboard en "Clear queue" haalt ze
-  niet weg.
+  niet weg. Het aanpassen opent per zoekertje een 2dehands-tabblad met een
+  advertentie die al online staat; dat is dit werk, niets dubbels. Sinds 28-09-2026
+  gaan nieuwe plaatsingen die de klant zelf klaarzet altijd voor deze aanpassingen.
 - Zoeken in de voorraad (27-09-2026): het zoekveld vindt een woord ook midden in
   een ander woord ("patch" vindt ook "rugpatch") en zoekt ook in merk en
   omschrijving. Zet de klant het woord tussen aanhalingstekens, "patch", dan
