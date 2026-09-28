@@ -1587,6 +1587,11 @@ def _wachtrij_volgorde(licht: list[dict], now_dt: datetime) -> list[dict]:
         actie = j.get("action")
         if actie not in SCHRIJVEND:
             return 4
+        # Verzendkosten bijwerken is onderhoud, net als de nachtronde (28-09-2026,
+        # Egbert): 235 bijwerkingen van gisteren stonden voor zijn 98 patches van
+        # vandaag, en een uur lang ging er niets nieuws online.
+        if _is_2dh_bijwerking(j):
+            return 3
         sleutel = (j.get("item_id"), j.get("platform"))
         if actie == "create" and j.get("scheduled_for"):
             return 3 if sleutel in open_verwijderingen else 0
