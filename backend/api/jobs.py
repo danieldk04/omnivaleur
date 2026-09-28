@@ -1927,6 +1927,15 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                  .select("id,action,platform,item_id,created_at,scheduled_for")
                  .eq("user_id", user_id).eq("status", "pending").eq("platform", platform)
                  .order("created_at").limit(WACHTRIJ_MAX).execute().data or [])
+        if len(licht) >= WACHTRIJ_MAX and any(_is_2dh_bijwerking(j) for j in licht):
+            # Een volle lezing kan uit alleen oude bijwerkingen bestaan, en dan
+            # valt de verse klik er buiten. Lees het eigen werk dan apart.
+            eigen = (db.table("jobs")
+                     .select("id,action,platform,item_id,created_at,scheduled_for")
+                     .eq("user_id", user_id).eq("status", "pending").eq("platform", platform)
+                     .or_(_NIET_2DH_BIJWERKING)
+                     .order("created_at").limit(WACHTRIJ_MAX).execute().data or [])
+            licht = eigen + [j for j in licht if _is_2dh_bijwerking(j)][:WACHTRIJ_KOP]
         licht = _ruim_dubbele_scans_op(db, licht, now)
         licht = [j for j in licht if not bijwerking_moet_wachten(j)]
         kop =[j["id"] for j in _wachtrij_volgorde(licht, now_dt)[:WACHTRIJ_KOP]]
