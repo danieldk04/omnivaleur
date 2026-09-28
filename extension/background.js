@@ -5338,9 +5338,15 @@ async function bgDeleteMp2dh(job, serverUrl) {
           // De diagnostiek reist mee, ook bij succes: een gemeld succes dat
           // later toch niet klopte, liet tot nu toe geen spoor na — elke
           // mislukking zag er identiek uit ("deleted_via_ad_page").
+          // De vastgelegde advertentie reist ook hier mee, net als onderaan bij
+          // de route via het overzicht: bij een herplaatsing zet de server die
+          // fotoreeks in de plaatsing die hierna volgt.
+          const vastgelegd = snapshot && ((snapshot.photo_urls || []).length || snapshot.brand ||
+                                          snapshot.size || snapshot.description);
           await finaliseJob(serverUrl, job.id, "complete", {
             note: "deleted_via_ad_page",
             verify_diag: _laatsteVerwijderDiag,
+            ...(vastgelegd ? { captured_listing: snapshot } : {}),
           });
           return;
         }
