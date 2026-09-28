@@ -7096,6 +7096,7 @@ function gewijzigdeVelden(nu, begin) {
 function openAddItem() {
   importCreateCandidateId = null;
   _bewerkBeginstand = null;
+  _bedragBegin = null;
   document.getElementById('modal-title').textContent = 'New item';
   document.getElementById('edit-id').value = '';
   ['f-title','f-sku','f-desc','f-price','f-compare','f-purchase','f-brand','f-color','f-material','f-shopify-title','f-price-mp','f-price-2dh','f-price-vinted'].forEach(id => document.getElementById(id).value = '');
