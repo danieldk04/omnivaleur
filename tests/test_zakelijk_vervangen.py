@@ -61,12 +61,31 @@ def db(monkeypatch):
     return d
 
 
-def test_zakelijk_account_krijgt_geen_vervanging(db, monkeypatch):
+@pytest.mark.parametrize("versie", [None, (1, 0, 355)])
+def test_zakelijk_account_met_oude_extensie_krijgt_geen_vervanging(db, monkeypatch, versie):
     monkeypatch.setattr(J, "_verkoper_soort", lambda _db, _u, p: "TRADER")
+    monkeypatch.setattr(J, "_draaiende_extensieversie", lambda _db, _u: versie)
     with pytest.raises(R.RefreshError) as fout:
         asyncio.run(R.refresh_listing("i1", "marktplaats", "u", "relist"))
     assert "business account" in str(fout.value) and "Nothing was changed" in str(fout.value)
     assert set(db.gevraagd) <= {"items", "listings"}     # geen opdracht, geen oogst, geen quotum
+
+
+# 28-09-2026: vanaf 1.0.356 verwijdert de extensie bij een leeg overzicht via de
+# advertentiepagina, en die route werkt bij zakelijke accounts (zes verkopers,
+# honderden keren "deleted_via_ad_page"). Dan mag vervangen weer.
+@pytest.mark.parametrize("versie,kan_niet", [((1, 0, 356), False), ((1, 0, 400), False),
+                                             ((1, 1, 0), False), ((1, 0, 355), True), (None, True)])
+def test_zakelijk_vervangen_hangt_af_van_de_extensie(db, monkeypatch, versie, kan_niet):
+    monkeypatch.setattr(J, "_verkoper_soort", lambda _db, _u, p: "TRADER")
+    monkeypatch.setattr(J, "_draaiende_extensieversie", lambda _db, _u: versie)
+    assert asyncio.run(R.zakelijk_vervangen_kan_niet(db, "u", "marktplaats")) is kan_niet
+
+
+def test_particulier_merkt_niets_van_de_versie(db, monkeypatch):
+    monkeypatch.setattr(J, "_verkoper_soort", lambda _db, _u, p: "CONSUMER")
+    monkeypatch.setattr(J, "_draaiende_extensieversie", lambda _db, _u: None)
+    assert asyncio.run(R.zakelijk_vervangen_kan_niet(db, "u", "marktplaats")) is False
 
 
 @pytest.mark.parametrize("soort", ["CONSUMER", None])

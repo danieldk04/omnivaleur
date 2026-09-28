@@ -440,7 +440,7 @@
   const KANALEN = [
     ["marktplaats", "Marktplaats", "Chrome", [
       "<b>You need:</b> a Marktplaats account, signed in to in the Chrome with the extension.",
-      "<b>Business account (Pro/Admarkt)?</b> Turn on <b>Business account (Admarkt)</b> in the extension popup to import. Omnivaleur can't take adverts offline or replace them on a business account: do that on Marktplaats itself.",
+      "<b>Business account (Pro/Admarkt)?</b> Turn on <b>Business account (Admarkt)</b> in the extension popup to import. Normal adverts on a business account can be taken offline and replaced as usual. Adverts in a Pro (Admarkt) campaign you remove on Marktplaats itself.",
       "<b>Costs:</b> Marktplaats' own rules. A web address in the text turns an advert into a paid one, so Omnivaleur leaves links out.",
     ]],
     ["2dehands", "2dehands", "Chrome", [
@@ -498,7 +498,7 @@
     ["Selling", "What happens when an item sells?",
       "Press <b>Sold</b> on the item and pick where it sold: Omnivaleur takes it off your other marketplaces. A sale on Vinted, or a paid order on eBay or Shopify, is picked up automatically. When an advert simply disappears from Vinted, Marktplaats or 2dehands you get a <b>Did this item sell?</b> question first, so nothing is taken down on a guess."],
     ["Selling", "I sold something, but it's still on my business account",
-      "On a business (Pro/Admarkt) account on Marktplaats or 2dehands, Omnivaleur can't take adverts offline. Remove the advert there yourself."],
+      "Normal adverts on a business account are taken offline as usual. Adverts in a Pro (Admarkt) campaign Omnivaleur can't take offline: remove those on Marktplaats or 2dehands yourself."],
     ["Selling", "Sold on Vinted, but still on Marktplaats",
       "Vinted doesn't tell anyone about a sale; Omnivaleur notices it by reading your Vinted wardrobe. If you remove a sold item from Vinted yourself, you'll see a <b>Did this item sell?</b> question on your dashboard. Answer it and the item comes off your other marketplaces."],
     ["Account", "Are my marketplace passwords stored?",

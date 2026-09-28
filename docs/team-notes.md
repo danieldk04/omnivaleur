@@ -14126,3 +14126,35 @@ niets in onze code aangetoond.
 
 Open: iedereen draait nog 1.0.354, dus 1.0.355 staat nog niet in de Web Store;
 vest 1013 bij 3bfbed2c en vloerkleed 96e30080 zoals gisteren.
+
+## 28-09-2026: Herplaatsen bij een zakelijk account kan weer (extensie 1.0.356)
+
+Daniel (zelf zakelijk op Marktplaats) kreeg bij herplaatsen de Engelse melding dat
+Omnivaleur bij een zakelijk account niets offline kan halen, en vond dat niet
+aanbieden geen optie: veel verkopers zijn zakelijk.
+
+**Gemeten, per klant in de jobs-tabel:** de blokkade van 17-09 klopte niet. Zes
+zakelijke accounts (sellerType TRADER) hadden samen honderden geslaagde
+verwijderingen via de eigen advertentiepagina. De echte fout: bij een leeg
+persoonlijk overzicht (zo ziet een zakelijk account er altijd uit) hield de
+extensie meteen op met "Couldn't read your listings overview", nog voor de route
+op advertentienummer die wél werkt. Bij 0b28c1ce 14 keer.
+
+**Veranderd:**
+- Extensie 1.0.356: leeg overzicht met een advertentienummer gaat door naar de
+  advertentiepagina. Nog steeds alleen succes op bewijs; uitgelogd blijft een fout.
+  Bij succes gaat nu ook de vastgelegde advertentie (fotoreeks) mee voor de
+  herplaatsing.
+- Server: vervangen bij zakelijk wordt alleen nog geweigerd als de extensie ouder
+  is dan 1.0.356, met een melding die dat zegt, in het Engels en Nederlands.
+- Helpteksten en klantenservice-brein: gewone advertenties op een zakelijk account
+  kunnen offline en vervangen worden; Pro-campagne-advertenties (Admarkt) niet.
+
+**Proeven:** `tests/zakelijk-verwijderen-leeg-overzicht-test.mjs` draait de echte
+bgDeleteMp2dh, oud (2394639c) faalt, nieuw verwijdert; `tests/test_zakelijk_vervangen.py`;
+hele pytest-suite 1960 groen.
+
+**Open:** 1.0.356 moet naar de Chrome Web Store (Daniel). Niet op een echt zakelijk
+account doorgeklikt: Claude in Chrome was niet verbonden. Het bewijs dat de
+advertentiepagina-route bij zakelijk werkt komt uit de productiedata, niet uit een
+eigen proef op Daniels account.
