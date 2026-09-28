@@ -470,11 +470,34 @@ async def zakelijk_account(db, user_id: str, platform: str) -> bool:
         return False
 
 
+# Vanaf deze extensie kan vervangen ook bij een zakelijk account (28-09-2026).
+#
+# Het weghalen liep daar altijd vast op het lege persoonlijke overzicht: de
+# extensie stopte zodra dat overzicht niets toonde, en kwam nooit toe aan de
+# route via de eigen advertentiepagina. Die route werkt bij zakelijke accounts
+# wel; gemeten 28-09-2026 bij zes zakelijke verkopers, allemaal met geslaagde
+# "deleted_via_ad_page"-verwijderingen. 1.0.356 gaat bij een leeg overzicht
+# rechtstreeks naar die route. Oudere extensies houden de weigering van
+# 17-09-2026 (Johan Kist klikte drie keer "vervangen" voor niets).
+ZAKELIJK_VERVANGEN_VANAF = (1, 0, 356)
+
+
+async def zakelijk_vervangen_kan_niet(db, user_id: str, platform: str) -> bool:
+    """Alleen waar bij een zakelijk account met een extensie die het nog niet kan.
+    Onbekende versie telt als te oud: dan blijft het zoals het was."""
+    if not await zakelijk_account(db, user_id, platform):
+        return False
+    from backend.api.jobs import _draaiende_extensieversie
+    versie = await naast_de_lus(lambda: _draaiende_extensieversie(db, user_id))
+    return versie is None or versie < ZAKELIJK_VERVANGEN_VANAF
+
+
 def melding_zakelijk_vervangen(platform: str) -> str:
     site = {"marktplaats": "Marktplaats", "2dehands": "2dehands"}.get(platform, platform)
-    return (f"Your {site} account is a business account. Omnivaleur can't take adverts "
-            f"offline on a business account, so it can't replace this one either. Nothing "
-            f"was changed: the advert stays live as it is. To change it, edit it on {site} itself.")
+    return (f"Your {site} account is a business account. Replacing an advert there needs the "
+            f"newest Omnivaleur extension, and this computer still runs an older one. Nothing "
+            f"was changed: the advert stays live as it is. Chrome updates the extension by "
+            f"itself within a few hours; try again after that.")
 
 
 # Wat een advertentie MOET hebben voordat we hem durven weg te halen.
