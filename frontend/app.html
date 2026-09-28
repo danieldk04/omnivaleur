@@ -7272,7 +7272,7 @@ async function saveItem() {
   if (_uploadsInFlight > 0) return alert('Photos are still uploading — please wait for them to finish before saving.');
   const id = document.getElementById('edit-id').value;
   const data = leesItemFormulier();
-  const puntVeld = bedragMetDuizendtalpunt(id ? gewijzigdeVelden(data, _bewerkBeginstand) : data);
+  const puntVeld = bedragMetDuizendtalpunt();
   if (puntVeld) {
     alert(`An amount reads as €${Number(puntVeld.value).toFixed(2)}. Did you use a dot for thousands? Here a dot is a decimal point, so 1.360 becomes 1.36. Type the amount without it, for example 1360 or 1360,50.`);
     puntVeld.focus();
