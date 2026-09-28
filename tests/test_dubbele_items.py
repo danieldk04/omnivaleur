@@ -311,6 +311,6 @@ def test_dubbelen_worden_niet_elke_ronde_opnieuw_opgehaald():
     # Een volledige voorraaduitlezing elke 15 seconden legde de server plat bij
     # de grote accounts; de groepen veranderen alleen bij import of samenvoegen.
     app = (WORTEL / "frontend/app.html").read_text()
-    blok = app[app.index("async function loadDuplicates"):app.index("async function loadAll")]
+    blok = app[app.index("async function loadDuplicates"):app.index("function loadAll(")]
     assert "Date.now() - _dupTs < 600000" in blok
     assert "loadDuplicates(true)" in app
