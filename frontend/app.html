@@ -11556,7 +11556,10 @@ async function pollActivity() {
     renderKanaalSessie();
     // When the extension finishes an active job, pull fresh data promptly so
     // statuses/badges update without waiting for the next 15s reload.
-    if (prevWorking > 0 && _activityState.working.length === 0) loadAll();
+    // Alleen wat er veranderde plus de advertenties, niet de hele voorraad: bij
+    // Egbert liep er om de 45 seconden een klaar, en elke keer 5.533 artikelen
+    // opnieuw ophalen legde op 28-09-2026 de database plat.
+    if (prevWorking > 0 && _activityState.working.length === 0) loadAll({ snel: true, listings: true });
   } catch (e) { /* transient — try again next tick */ }
 }
 
