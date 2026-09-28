@@ -25,7 +25,8 @@ const FRONTEND = new URL("../frontend", import.meta.url).pathname;
 const APP_BESTAND = process.argv[2] || join(FRONTEND, "app.html");
 
 let chromium;
-for (const bron of ["playwright", "/opt/node22/lib/node_modules/playwright/index.mjs"]) {
+// PLAYWRIGHT=/pad/naar/node_modules/playwright/index.mjs als het nergens standaard staat.
+for (const bron of [process.env.PLAYWRIGHT, "playwright", "/opt/node22/lib/node_modules/playwright/index.mjs"].filter(Boolean)) {
   try { ({ chromium } = await import(bron)); break; } catch (_) { /* volgende */ }
 }
 if (!chromium) { console.log("OVERGESLAGEN: Playwright niet gevonden"); process.exit(0); }
@@ -73,7 +74,8 @@ const antwoorden = {
 const verzonden = [];          // elke PATCH op het item: [pad, body]
 let serverWeigert = false;
 
-const browser = await chromium.launch();
+// Zonder gedownloade Playwright-browser: de gewone Chrome van deze computer.
+const browser = await chromium.launch().catch(() => chromium.launch({ channel: "chrome" }));
 const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 } });
 await ctx.addInitScript(() => {
   try {
@@ -126,7 +128,7 @@ await page.evaluate(() => showView("analytics"));
 await page.waitForTimeout(800);
 
 const rij = () => page.evaluate(() => {
-  const tr = [...document.querySelectorAll("tr")].find((t) => t.textContent.includes("Gibson J-45"));
+  const tr = [...document.querySelectorAll("#an-sales-tbody tr")].find((t) => t.textContent.includes("Gibson J-45"));
   if (!tr) return null;
   const td = [...tr.querySelectorAll("td")].map((c) => c.textContent.replace(/\s+/g, " ").trim());
   return { verkoop: td[3], inkoop: td[4], winst: td[5], marge: td[6],
@@ -134,7 +136,7 @@ const rij = () => page.evaluate(() => {
 });
 const klikPotlood = async () => {
   await page.evaluate(() => {
-    const tr = [...document.querySelectorAll("tr")].find((t) => t.textContent.includes("Gibson J-45"));
+    const tr = [...document.querySelectorAll("#an-sales-tbody tr")].find((t) => t.textContent.includes("Gibson J-45"));
     tr.querySelector('[title="Edit purchase price"]').click();
   });
   await page.waitForTimeout(600);
