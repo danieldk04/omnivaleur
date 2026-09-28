@@ -14307,4 +14307,6 @@ Calendly onbereikbaar). tests/test_i18n_compleet.py groen.
 keer verversen. De kennisbank is niet via `scripts/export_kennisbank.py`
 bijgewerkt: deze cloudsessie heeft geen lokale geheugenmap, draaien zou het
 bestand leegmaken. De les (vaste knoppen onderaan liggen over de laatste rij van
-een lijst) staat hier.
+een lijst) staat hier. De Drive-kopie van het klantenservice-brein is ook
+niet bijgewerkt: de Drive-koppeling in deze sessie kan alleen titel en map
+wijzigen, geen inhoud. Het verschil is één zin (waar de belknop staat).
