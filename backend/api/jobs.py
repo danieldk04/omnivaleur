@@ -2829,6 +2829,14 @@ def active_jobs(user_id: str = Depends(get_current_user)):
     working, queued = [], []
     for j in rows:
         if j["status"] == "claimed":
+            # OOK EEN LOPENDE BIJWERKING IS GEEN WERK VAN DE VERKOPER (28-09-2026,
+            # Egbert). Het dashboard haalt de hele voorraad en alle advertenties
+            # opnieuw op zodra "working" leegloopt (pollActivity). Zijn 235
+            # verzendkost-bijwerkingen liepen er een per 9 seconden door: bij
+            # 5.533 artikelen zo'n 5 MB per keer, 33 MB per tien minuten, en om
+            # 13:05 lag de database eruit, voor iedereen.
+            if _is_2dh_bijwerking(j):
+                continue
             if _is_working(j):
                 # Don't leak the raw progress/result blob to the client.
                 j.pop("result", None)
