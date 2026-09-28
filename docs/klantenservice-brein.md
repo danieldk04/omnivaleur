@@ -888,6 +888,25 @@ Vinted de opdracht die al klaarstaat, dus daar komt niets dubbel van.
 Groetjes,
 Daniel
 
+### Ik heb een verkeerde inkoopprijs ingevuld en kan hem niet aanpassen
+
+Sinds 28-09-2026 kan dat vanaf dezelfde plek als de verkoopprijs. Voor die datum
+had alleen de verkoopprijs een potloodje in de verkooptabel; een ingevulde
+inkoopprijs was daar niet meer te wijzigen (wel via Items, tabblad Sold, Edit).
+Een inkoopprijs van 0 geeft 100% marge.
+
+Hoi <voornaam>,
+
+Terecht punt: de verkoopprijs kon je daar aanpassen, de inkoopprijs niet. Dat
+hebben we nu gelijkgetrokken. Ververs de pagina een keer, ga naar Analytics en
+klik in de verkooptabel op het potloodje naast de inkoopprijs. Vul het juiste
+bedrag in en de winst en marge rekenen meteen opnieuw. Weet je het bedrag niet,
+maak het veld dan leeg: de verkoop telt dan nog wel mee voor je omzet, alleen
+niet voor je winst.
+
+Groetjes,
+Daniel
+
 ---
 
 ## Onderhoud
