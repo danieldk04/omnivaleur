@@ -7179,6 +7179,54 @@ function numOrNull(raw) {
   return isNaN(n) ? null : n;
 }
 
+// ── BEDRAGEN MET EEN DUIZENDTALPUNT (28-09-2026) ──────────────────────────────
+//
+// Johan Kist verkocht een gitaar voor 1675 en zag 100% winst: de inkoopprijs
+// stond op 1,36. Gemeten in Chrome (nl-NL en en-US): typ je "1.360" of
+// "1.360,00" in een bedragveld, dan leest het veld 1,36. Een Nederlander schrijft
+// duizend driehonderdzestig zo, en niets waarschuwde.
+//
+// leesBedrag is voor vensters waar we de getypte tekst zelf zien: "1.360",
+// "1.360,00", "1,360.00" en "12.500" worden duizendtallen; "22,50", "22.50" en
+// "1,36" blijven gewoon. Leeg geeft null, onleesbaar geeft NaN.
+function leesBedrag(raw) {
+  let s = String(raw ?? '').replace(/[€\s]/g, '');
+  if (s === '') return null;
+  const punt = s.includes('.'), komma = s.includes(',');
+  if (punt && komma) {
+    // Het laatste teken is de komma van de centen, het andere zijn duizendtallen.
+    const dec = s.lastIndexOf('.') > s.lastIndexOf(',') ? '.' : ',';
+    s = s.split(dec === '.' ? ',' : '.').join('').replace(dec, '.');
+  } else if (punt || komma) {
+    const sep = punt ? '.' : ',';
+    const delen = s.split(sep);
+    // Groepjes van drie na een voorloper van 1 tot 3 cijfers: duizendtallen.
+    // Een eurobedrag met drie cijfers achter de komma bestaat niet.
+    if (/^[1-9]\d{0,2}$/.test(delen[0]) && delen.slice(1).every(d => /^\d{3}$/.test(d))) s = delen.join('');
+    else if (delen.length === 2) s = delen.join('.');
+    else return NaN;
+  }
+  return /^\d+(\.\d+)?$/.test(s) ? parseFloat(s) : NaN;
+}
+
+// Het bewerkscherm heeft gewone bedragvelden en krijgt de getypte tekst niet te
+// zien, alleen wat Chrome ervan maakte: "1.360" en "1.36000". Meer dan twee
+// cijfers achter de punt is nooit een bedrag in euro's, dus dan niet opslaan
+// maar vragen het zonder punt te typen. Alleen voor velden die de verkoper nu
+// invulde: een oud getal uit de database blokkeert het opslaan nooit.
+const BEDRAGVELDEN = {
+  price: 'f-price', compare_at_price: 'f-compare', purchase_price: 'f-purchase',
+  price_marktplaats: 'f-price-mp', price_2dehands: 'f-price-2dh', price_vinted: 'f-price-vinted',
+  price_ebay: 'f-price-ebay', price_shopify: 'f-price-shopify',
+};
+function bedragMetDuizendtalpunt(velden) {
+  for (const veld of Object.keys(velden)) {
+    const el = BEDRAGVELDEN[veld] && document.getElementById(BEDRAGVELDEN[veld]);
+    if (el && /\.\d{3,}$/.test(String(el.value || '').trim())) return el;
+  }
+  return null;
+}
+
 // ── DE ADVERTENTIEVORM (Marktplaats en 2dehands) ─────────────────────────────
 //
 // Niet elke advertentie heeft een vraagprijs. "Zie omschrijving" en "Bieden"
