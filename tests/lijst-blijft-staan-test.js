@@ -40,7 +40,9 @@ function functieUit(naam) {
 
 // ── 1. De bladzijde blijft staan bij een achtergrondronde ────────────────
 console.log("De achtergrondronde laat de bladzijde met rust");
-const loadAll = APP.slice(APP.indexOf("async function loadAll("));
+// Sinds 28-09-2026 doet _loadAllNu het werk en regelt loadAll alleen de beurt.
+const loadAll = APP.slice(APP.indexOf(APP.includes("async function _loadAllNu(")
+  ? "async function _loadAllNu(" : "async function loadAll("));
 const staart = loadAll.slice(0, loadAll.indexOf("\n}\n") + 2);
 check("loadAll roept applyFilters(false) aan",
   /view-items'\)\.classList\.contains\('active'\)\)\s*applyFilters\(false\)/.test(staart),

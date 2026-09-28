@@ -78,7 +78,8 @@ function dashboard() {
     },
     async parseJsonSafe(r) { return r.json(); },
     _toonLaadVoortgang() {}, _onthoudItemsStempel() {},
-    async loadDuplicates() {}, renderDashboard() { t.rondesKlaar++; }, renderExtStatus() {},
+    async loadDuplicates() {},
+    renderDashboard() { if (t.gooi) { t.gooi = false; throw new Error("kapot"); } t.rondesKlaar++; }, renderExtStatus() {},
     renderActivityBar() {}, renderKanaalSessie() {}, applyFilters() {}, renderAnalytics() {},
     renderStaleStock() {}, renderStaleBadge() {}, loadRelistStatus() {},
     document: { getElementById: () => ({ classList: { contains: () => false } }) },
@@ -86,7 +87,6 @@ function dashboard() {
   const namen = Object.keys(stubs);
   const maak = new Function(...namen, `${code}\nreturn { loadAll, pollActivity };`);
   const fns = maak(...namen.map((n) => stubs[n]));
-  // _activityState wordt in pollActivity overschreven; geef het een eigen plek.
   return { t, stubs, ...fns };
 }
 
@@ -144,16 +144,12 @@ async function eenKlusjeKlaar(d) {
   console.log("\n4. Een fout in een ronde houdt de volgende niet tegen");
   {
     const d = dashboard();
-    let eerste = true;
-    d.stubs.state.items = [{ id: "a", updated_at: "x" }];
-    const echt = d.t;
-    const origineel = Promise.resolve();
-    // eerste ronde faalt hard (bijvoorbeeld renderDashboard gooit)
-    const fout = d.loadAll().catch(() => "fout");
-    await fout;
-    const r = await d.loadAll().then(() => "klaar", () => "fout");
-    ok(r === "klaar", "na een ronde loopt de volgende gewoon");
-    void eerste; void echt; void origineel;
+    d.t.gooi = true;                      // de lopende ronde gaat stuk
+    const eerste = d.loadAll().then(() => "klaar", () => "fout");
+    const tweede = d.loadAll().then(() => "klaar", () => "fout");
+    ok(await eerste === "fout", "voorwaarde: de eerste ronde faalde");
+    ok(await tweede === "klaar", "de ronde die erachter wachtte liep toch");
+    ok(await d.loadAll().then(() => "klaar", () => "fout") === "klaar", "en daarna loopt alles gewoon door");
   }
 
   console.log(mislukt ? `\n${mislukt} mislukt\n` : "\nAlles groen\n");

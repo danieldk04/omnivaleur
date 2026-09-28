@@ -155,7 +155,10 @@ function draaiLoadAll(bron) {
   const code = [
     functieUit(bron, "parseJsonSafe", "async function parseJsonSafe("),
     functieUit(bron, "fetchAllItems", "async function fetchAllItems("),
-    functieUit(bron, "loadAll", "async function loadAll("),
+    // Sinds 28-09-2026 doet _loadAllNu het werk en regelt loadAll alleen de beurt.
+    bron.includes("async function _loadAllNu(")
+      ? functieUit(bron, "_loadAllNu", "async function _loadAllNu(") + "\nconst loadAll = _loadAllNu;"
+      : functieUit(bron, "loadAll", "async function loadAll("),
     "return loadAll;",
   ].join("\n");
   // eslint-disable-next-line no-new-func
