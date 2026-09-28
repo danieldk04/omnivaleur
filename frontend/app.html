@@ -13197,7 +13197,7 @@ function renderAnalytics(force) {
         ? `<span style="color:${margin >= 0 ? '#15803d' : '#dc2626'};font-weight:600">${margin.toFixed(0)}%</span>`
         : '<span style="color:var(--muted)">—</span>';
       const costCell = hasCost
-        ? `€${cost.toFixed(2)}`
+        ? `€${cost.toFixed(2)} <span style="cursor:pointer;color:var(--muted)" title="Edit purchase price" onclick="setPurchasePrice('${item.id}',${cost})">✎</span>`
         : `<button class="an-cost-btn" onclick="addPurchasePrice('${item.id}')">＋ Add cost</button>`;
       // Sale-price cell: confirmed amount is plain + editable; an estimate is
       // shown greyed with the asking price and a clear "confirm" affordance.
