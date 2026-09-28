@@ -1556,11 +1556,12 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
                     "platform_listing_url": row.get("platform_listing_url"),
                     "message": ALREADY_LIVE_MESSAGE,
                 }
-                # Bij een zakelijk account kan vervangen niet (zie refresh_listing in
-                # services/relist.py). Dan bieden we het ook niet aan: Johan Kist
-                # kreeg de vraag en klikte drie keer op OK voor niets.
-                from backend.services.relist import zakelijk_account, melding_zakelijk_vervangen
-                if await zakelijk_account(db, user_id, platform):
+                # Bij een zakelijk account met een extensie van vóór 1.0.356 kan
+                # vervangen niet (zie refresh_listing in services/relist.py). Dan
+                # bieden we het ook niet aan: Johan Kist kreeg de vraag en klikte
+                # drie keer op OK voor niets.
+                from backend.services.relist import zakelijk_vervangen_kan_niet, melding_zakelijk_vervangen
+                if await zakelijk_vervangen_kan_niet(db, user_id, platform):
                     al_live["vervangbaar"] = False
                     al_live["message"] = melding_zakelijk_vervangen(platform)
                 results.append(al_live)
