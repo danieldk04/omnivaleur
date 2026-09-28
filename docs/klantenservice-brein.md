@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 28-09-2026 (automatisch herplaatsen stond 20-09 tot 28-09 stil door een fout bij ons, loopt weer; eerder: verzendkost-aanpassingen op 2dehands gaan achter nieuwe plaatsingen)_
+_Laatst bijgewerkt: 28-09-2026 (de vaste belknop rechtsonder in het dashboard is weg, hij lag over de onderste Plaatsen-knop; bellen kan via het Help-tabblad. Eerder vandaag: automatisch herplaatsen stond 20-09 tot 28-09 stil door een fout bij ons, loopt weer)_
 
 ---
 
@@ -250,9 +250,10 @@ Contact:
 - Klanten kunnen ook een gratis videogesprek met Daniel boeken voor vragen, hulp
   bij de setup of feedback: https://calendly.com/omivaleur/supportcall-omnivaleur
   (30 minuten, bevestiging volgt zodra Daniel de afspraak goedkeurt). In het
-  dashboard staat daar rechtsonder een vaste knop voor en er staat er een in het
-  Help-tabblad. Noem deze link als iemand vastloopt in de setup of er per mail
-  niet uitkomt.
+  dashboard staat de knop "Praat met de oprichter" onderaan het Help-tabblad.
+  De vaste knop rechtsonder is sinds 28-09-2026 weg: hij lag over de onderste
+  Plaatsen-knop. Vraagt een klant waar die knop is gebleven, dan is dat de reden.
+  Noem deze link als iemand vastloopt in de setup of er per mail niet uitkomt.
 
 ---
 

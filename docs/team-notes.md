@@ -14283,3 +14283,28 @@ geteld vanaf de herstart); niet zelf gezien. Een vast aantal per dag instellen
 ~60, minus hun eigen nieuwe plaatsingen van die dag. De bovenbalk op Verversen
 toont "0 / 8" terwijl Marktplaats bij de knop op 3 per dag stopt.
 
+
+## 28-09-2026 (avond): vaste belknop rechtsonder weg, lag over de laatste Plaatsen-knop
+
+Aanleiding: foto van het scherm bij De Juiste Toon (Chromebook, 17:01). De vaste
+knop "Vragen of feedback? / Praat met de oprichter" rechtsonder lag precies over
+de Plaatsen-knop van de onderste rij in Items. Omdat de lijst daar eindigt, kon
+Toon die rij ook niet onder de knop vandaan scrollen. Daniels keuze: de knop weg.
+
+**Veranderd (frontend/app.html).** De vaste knop en de eenmalige intro-ballon
+erboven zijn weg, met hun stijlen en script. `openFounderCall()` en Calendly's
+widget blijven, want de knop "Talk to the founder" onder in het Help-tabblad
+(onboarding.js, en de reserve in app.html) gebruikt ze nog. Dit draait de keuze
+van 09-09-2026 (klanten actief naar een videogesprek sturen) voor de vaste knop
+terug; het belmoment zelf blijft. Klantenservice-brein bijgewerkt.
+
+**Gecontroleerd.** i18n-rondgang met schermafbeeldingen, oud tegen nieuw: oud
+bedekken ballon en knop de actieknoppen van de onderste rijen, nieuw is de hoek
+leeg. De Help-knop opent nog steeds de Calendly-link (los getest, ook met
+Calendly onbereikbaar). tests/test_i18n_compleet.py groen.
+
+**Open.** Gaat pas live na een merge naar `main`; daarna moet Toon de pagina een
+keer verversen. De kennisbank is niet via `scripts/export_kennisbank.py`
+bijgewerkt: deze cloudsessie heeft geen lokale geheugenmap, draaien zou het
+bestand leegmaken. De les (vaste knoppen onderaan liggen over de laatste rij van
+een lijst) staat hier.
