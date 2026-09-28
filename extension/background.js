@@ -4995,14 +4995,31 @@ async function bgExtend2dh(job, serverUrl) {
 
     const uit = await execInTab(tabId, async (wantId) => {
       const nap = ms => new Promise(r => setTimeout(r, ms));
+      // Bladeren tot het zoekertje er is. Alleen de eerste 200 lezen gaf op
+      // 28-09-2026 bij een klant met 625 zoekertjes 40 keer "not in your
+      // overview" voor advertenties die gewoon live stonden. batchNumber is
+      // 1-based (zie de import hieronder, die hetzelfde overzicht leest).
       const readOne = async () => {
         try {
-          const r = await fetch("/my-account/sell/api/listings?batchNumber=1&batchSize=200",
-            { headers: { Accept: "application/json" }, credentials: "include" });
-          if (!r.ok) return { httpError: r.status };
-          const d = await r.json();
-          const ads = d.ads || [];
-          return { total: ads.length, ad: ads.find(a => String(a.itemId) === wantId) || null };
+          const gezien = new Set();
+          for (let batch = 1; batch <= 50; batch++) {
+            const r = await fetch(`/my-account/sell/api/listings?batchNumber=${batch}&batchSize=100`,
+              { headers: { Accept: "application/json" }, credentials: "include" });
+            // Ook een haperende latere bladzijde is "niet gelezen", nooit "niet gevonden".
+            if (!r.ok) return { httpError: r.status };
+            const d = await r.json();
+            const ads = d.ads || [];
+            let nieuw = 0;
+            for (const a of ads) {
+              const id = String(a.itemId);
+              if (id === wantId) return { total: gezien.size + 1, ad: a };
+              if (!gezien.has(id)) { gezien.add(id); nieuw++; }
+            }
+            if (!ads.length || !nieuw) break;
+            if (d.totalNumberOfResults != null && gezien.size >= d.totalNumberOfResults) break;
+            await nap(250);
+          }
+          return { total: gezien.size, ad: null };
         } catch (e) { return { fetchError: String(e && e.message || e) }; }
       };
 
