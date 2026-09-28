@@ -14198,3 +14198,20 @@ Gemeten over 24 uur: 54 fouten bij 3 klanten.
 Open: 1.0.355, 1.0.356 en 1.0.357 moeten naar de Chrome Web Store (Daniel);
 iedereen draait nog 1.0.354. Pas daarna is bij 96e30080 te meten of verlengen
 loopt.
+
+## 28-09-2026: Johan Kist kon een verkeerde inkoopprijs niet terugdraaien
+
+Mail van Johan Kist (Blackbird Guitars, 12:21): per ongeluk een verkeerde
+inkoopprijs bij een verkoop, nu 100% winst, en alleen de verkoopprijs was aan te
+passen. Klopt: in de verkooptabel onder Analytics had de verkoopprijs een
+potloodje, de inkoopprijs niet. Leeg stond er "Add cost", ingevuld alleen het
+bedrag als platte tekst. 100% marge betekent dat er 0 staat.
+
+Gerepareerd (dac5798c, 3f9c50a4, 277aac0e): potloodje naast de inkoopprijs, stuurt
+alleen purchase_price naar PATCH /api/items/{id} (geen prijssync naar kanalen),
+leeg = onbekend. Teksten in EN en NL. Proef `tests/aankoopprijs-aanpassen-test.mjs`
+draait het echte dashboard: cdebb9e3 faalt op het ontbrekende potloodje, nieuw
+17 van 17 groen, ook in het Nederlands nagekeken.
+
+Niet gemeten: welk artikel en welk bedrag bij Johan, want de database lag stil.
+Johans eigen aanpassing hebben we niet gedaan; dat doet hij zelf.
