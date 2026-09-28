@@ -482,14 +482,51 @@ async def zakelijk_account(db, user_id: str, platform: str) -> bool:
 ZAKELIJK_VERVANGEN_VANAF = (1, 0, 356)
 
 
+# Per (verkoper, kanaal): lukte verwijderen daar al eens via de advertentiepagina?
+# Een ja blijft ja; een nee wordt na een uur opnieuw nagekeken.
+_VERWIJDEREN_BEWEZEN: dict[tuple[str, str], tuple[bool, float]] = {}
+_NEE_OPNIEUW_NA_SEC = 3600
+
+
+def _verwijderen_lukte_al(db, user_id: str, platform: str) -> bool:
+    """Heeft de extensie op dit account al eens echt iets weggehaald via de
+    advertentiepagina? Dat is de route die bij zakelijke accounts werkt."""
+    import time
+    sleutel = (user_id, platform)
+    bewaard = _VERWIJDEREN_BEWEZEN.get(sleutel)
+    if bewaard and (bewaard[0] or time.monotonic() - bewaard[1] < _NEE_OPNIEUW_NA_SEC):
+        return bewaard[0]
+    try:
+        rij = (db.table("jobs").select("id").eq("user_id", user_id)
+               .eq("platform", platform).eq("action", "delete").eq("status", "done")
+               .eq("result->>note", "deleted_via_ad_page").limit(1).execute().data or [])
+    except Exception as e:  # noqa: BLE001 — weet niet is geen bewijs
+        logger.warning("kon eerdere verwijderingen niet nakijken voor %s/%s: %s",
+                       user_id, platform, e)
+        return False
+    _VERWIJDEREN_BEWEZEN[sleutel] = (bool(rij), time.monotonic())
+    return bool(rij)
+
+
 async def zakelijk_vervangen_kan_niet(db, user_id: str, platform: str) -> bool:
     """Alleen waar bij een zakelijk account met een extensie die het nog niet kan.
-    Onbekende versie telt als te oud: dan blijft het zoals het was."""
+    Onbekende versie telt als te oud: dan blijft het zoals het was.
+
+    BEWEZEN IS BEWEZEN (28-09-2026, Zilverwebsite). De weigering is er voor een
+    zakelijk account waar de oude extensie NIET kan verwijderen, omdat het
+    persoonlijke overzicht leeg is (Johan Kist). Zilverwebsite is zakelijk en
+    draait 1.0.355, maar hun overzicht is niet leeg: op 20-09 lukten 60 van de
+    60 verwijderingen via de advertentiepagina. De weigering hield hen tegen op
+    iets wat bij hen aantoonbaar werkt, ook de verversknop. Is er op dit account
+    al eens echt verwijderd via de advertentiepagina, dan weigeren we niet.
+    """
     if not await zakelijk_account(db, user_id, platform):
         return False
     from backend.api.jobs import _draaiende_extensieversie
     versie = await naast_de_lus(lambda: _draaiende_extensieversie(db, user_id))
-    return versie is None or versie < ZAKELIJK_VERVANGEN_VANAF
+    if versie is not None and versie >= ZAKELIJK_VERVANGEN_VANAF:
+        return False
+    return not await naast_de_lus(lambda: _verwijderen_lukte_al(db, user_id, platform))
 
 
 def melding_zakelijk_vervangen(platform: str) -> str:

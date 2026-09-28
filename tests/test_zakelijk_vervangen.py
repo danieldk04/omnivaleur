@@ -27,9 +27,11 @@ from backend.services import relist as R  # noqa: E402
 
 
 class _DB:
-    """Items en één actieve advertentie; al het andere mag niet gevraagd worden."""
+    """Items en één actieve advertentie; al het andere mag niet gevraagd worden.
+    `verwijderd` zijn de geslaagde verwijderingen die in de opdrachten staan."""
     def __init__(self):
         self.gevraagd = []
+        self.verwijderd = []
 
     def table(self, naam):
         db = self
@@ -47,7 +49,8 @@ class _DB:
                                     "description": "x", "photo_urls": ["a", "b"], "price": 3300}],
                          "listings": [{"id": "l1", "item_id": "i1", "platform": "marktplaats",
                                        "status": "active", "platform_listing_id": "1528596781",
-                                       "platform_listing_url": None}]}.get(naam)
+                                       "platform_listing_url": None}],
+                         "jobs": db.verwijderd}.get(naam)
                 if rijen is None:
                     raise AssertionError(f"na de weigering mag {naam} niet meer gevraagd worden")
                 return types.SimpleNamespace(data=rijen)
@@ -68,7 +71,9 @@ def test_zakelijk_account_met_oude_extensie_krijgt_geen_vervanging(db, monkeypat
     with pytest.raises(R.RefreshError) as fout:
         asyncio.run(R.refresh_listing("i1", "marktplaats", "u", "relist"))
     assert "business account" in str(fout.value) and "Nothing was changed" in str(fout.value)
-    assert set(db.gevraagd) <= {"items", "listings"}     # geen opdracht, geen oogst, geen quotum
+    # geen opdracht, geen oogst, geen quotum (jobs wordt alleen gelezen: lukte
+    # verwijderen hier al eens?)
+    assert set(db.gevraagd) <= {"items", "listings", "jobs"}
 
 
 # 28-09-2026: vanaf 1.0.356 verwijdert de extensie bij een leeg overzicht via de
@@ -80,6 +85,42 @@ def test_zakelijk_vervangen_hangt_af_van_de_extensie(db, monkeypatch, versie, ka
     monkeypatch.setattr(J, "_verkoper_soort", lambda _db, _u, p: "TRADER")
     monkeypatch.setattr(J, "_draaiende_extensieversie", lambda _db, _u: versie)
     assert asyncio.run(R.zakelijk_vervangen_kan_niet(db, "u", "marktplaats")) is kan_niet
+
+
+# 28-09-2026, Zilverwebsite: zakelijk op Marktplaats, extensie 1.0.355, en toch
+# 60 van de 60 verwijderingen geslaagd via de advertentiepagina (20-09). Hun
+# persoonlijke overzicht is niet leeg, dus ook de oude extensie komt daar. De
+# weigering hield hen tegen op iets wat bij hen aantoonbaar werkt.
+@pytest.mark.parametrize("versie", [None, (1, 0, 355)])
+def test_zakelijk_met_bewezen_verwijdering_mag_vervangen(db, monkeypatch, versie):
+    R._VERWIJDEREN_BEWEZEN.clear()
+    monkeypatch.setattr(J, "_verkoper_soort", lambda _db, _u, p: "TRADER")
+    monkeypatch.setattr(J, "_draaiende_extensieversie", lambda _db, _u: versie)
+    db.verwijderd.append({"id": "j1"})
+    assert asyncio.run(R.zakelijk_vervangen_kan_niet(db, "u", "marktplaats")) is False
+    R._VERWIJDEREN_BEWEZEN.clear()
+
+
+def test_zakelijk_zonder_bewijs_blijft_geweigerd(db, monkeypatch):
+    """Johan Kist: nooit één verwijdering gelukt, dan blijft het nee."""
+    R._VERWIJDEREN_BEWEZEN.clear()
+    monkeypatch.setattr(J, "_verkoper_soort", lambda _db, _u, p: "TRADER")
+    monkeypatch.setattr(J, "_draaiende_extensieversie", lambda _db, _u: (1, 0, 355))
+    assert asyncio.run(R.zakelijk_vervangen_kan_niet(db, "u", "marktplaats")) is True
+    R._VERWIJDEREN_BEWEZEN.clear()
+
+
+def test_storing_bij_het_bewijs_houdt_de_weigering(monkeypatch):
+    """Weet niet is geen bewijs: dan blijft het zoals het was."""
+    R._VERWIJDEREN_BEWEZEN.clear()
+
+    class Kapot:
+        def table(self, _n):
+            raise RuntimeError("supabase hikt")
+    monkeypatch.setattr(J, "_verkoper_soort", lambda _db, _u, p: "TRADER")
+    monkeypatch.setattr(J, "_draaiende_extensieversie", lambda _db, _u: (1, 0, 355))
+    assert asyncio.run(R.zakelijk_vervangen_kan_niet(Kapot(), "u", "marktplaats")) is True
+    R._VERWIJDEREN_BEWEZEN.clear()
 
 
 def test_particulier_merkt_niets_van_de_versie(db, monkeypatch):

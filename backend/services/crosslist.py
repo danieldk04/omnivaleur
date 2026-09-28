@@ -2569,20 +2569,40 @@ async def relist_expiring_marktplaats():
     ruimste = max(RELIST_DAGEN_MIN, ruimste)
     nu = datetime.now(timezone.utc)
     cutoff = (nu - timedelta(days=ruimste)).isoformat()
-    listings_resp = (
-        (await naast_de_lus(lambda: db.table("listings")
-        .select("*")
-        .eq("platform", "marktplaats")
-        .eq("status", "active")
-        .lt("listed_at", cutoff)
-        # Oudste eerst. Wie het langst wacht is het dichtst bij de 30 dagen
-        # waarop Marktplaats de advertentie zelf weggooit, dus die heeft voorrang.
-        .order("listed_at")
-        .execute()))
-    )
-
-    if not listings_resp.data:
+    # ALLE ADVERTENTIES DIE AAN DE BEURT ZIJN, NIET DE OUDSTE 1.000.
+    #
+    # Hier stond één gewone select. PostgREST geeft daar stilzwijgend hooguit
+    # 1.000 rijen op terug, en omdat de oudste voorop stonden waren dat elke
+    # ronde dezelfde: advertenties die deze ronde toch overslaat (herplaatsen
+    # uit, geen abonnement meer, Admarkt zonder adres). Gemeten 28-09-2026:
+    # 8.775 advertenties aan de beurt, de ronde zag alleen die van vóór 21-08.
+    # Alles wat later geplaatst was kwam nooit meer aan de beurt. Bij
+    # Zilverwebsite (1.260 op Marktplaats) stond het herplaatsen daardoor sinds
+    # 20-09 stil, met 75 advertenties over hun ingestelde 30 dagen.
+    #
+    # Dus alles ophalen, gebladerd op id (listed_at staat bij duizenden op
+    # hetzelfde tijdstip, en bladeren op een kolom met gelijke waarden slaat
+    # rijen over), en daarna zelf op leeftijd sorteren. Alleen de kolommen die
+    # hieronder nodig zijn, want het zijn er duizenden.
+    from backend.database import fetch_all_in
+    listings = (await naast_de_lus(lambda: fetch_all(lambda: db.table("listings")
+                .select("id,item_id,listed_at,platform_listing_url")
+                .eq("platform", "marktplaats")
+                .eq("status", "active")
+                .lt("listed_at", cutoff)))) or []
+    if not listings:
         return
+    # Oudste eerst. Wie het langst wacht is het dichtst bij de 30 dagen
+    # waarop Marktplaats de advertentie zelf weggooit, dus die heeft voorrang.
+    listings.sort(key=lambda l: l.get("listed_at") or "")
+
+    # Van wie is welke advertentie: in één keer, niet per rij. Het grootste deel
+    # van de rijen valt hieronder af zonder dat er iets opgevraagd hoeft te
+    # worden (herplaatsen uit, verkoper zit aan zijn dagdeel), en dat moet ook
+    # zo blijven nu de ronde alle duizenden rijen ziet in plaats van 1.000.
+    eigenaar_van = {r["id"]: r["user_id"] for r in ((await naast_de_lus(
+        lambda: fetch_all_in(lambda: db.table("items").select("id,user_id"),
+                             "id", [l["item_id"] for l in listings]))) or [])}
 
     # NOOIT ALLES OP EEN DAG.
     #
@@ -2611,27 +2631,12 @@ async def relist_expiring_marktplaats():
     grens_per_verkoper: dict[str, int] = {}
 
     logger.info("Auto-relist: %s expiring Marktplaats listings, spread per seller",
-                len(listings_resp.data))
+                len(listings))
 
-    for listing in listings_resp.data:
+    for listing in listings:
         try:
-            item = eerste_rij(await naast_de_lus(lambda: db.table("items").select("*").eq("id", listing["item_id"]).limit(1).execute()))
-            if not item:
-                continue
-
-            eigenaar = item["user_id"]
-
-            # Verkocht op een ander kanaal? Dan niet verversen. De uitdeelstap in
-            # backend/api/jobs.py houdt zo'n publicatie ook tegen, maar dan is de
-            # oude advertentie al weggehaald — verversen is immers weghalen en
-            # opnieuw plaatsen. Hier stoppen betekent dat de advertentie gewoon
-            # blijft staan tot de verkoopafhandeling hem netjes weghaalt.
-            verkocht = ((await naast_de_lus(lambda: db.table("listings")
-                        .select("platform").eq("item_id", listing["item_id"])
-                        .eq("status", "sold").limit(1).execute())).data or [])
-            if verkocht:
-                logger.info("Auto-relist overgeslagen voor listing %s: item al verkocht op %s",
-                            listing["id"], verkocht[0]["platform"])
+            eigenaar = eigenaar_van.get(listing["item_id"])
+            if not eigenaar:
                 continue
 
             # Advertenties uit Admarkt (zakelijk Marktplaats) hebben geen eigen
@@ -2721,6 +2726,22 @@ async def relist_expiring_marktplaats():
                 # komt de volgende ronde vanzelf opnieuw langs — en omdat we op
                 # listed_at sorteren staat hij dan vooraan.
                 continue
+
+            # Verkocht op een ander kanaal? Dan niet verversen. Staat na de gratis
+            # controles hierboven, want dit is de enige die per rij iets opvraagt.
+            # De uitdeelstap in
+            # backend/api/jobs.py houdt zo'n publicatie ook tegen, maar dan is de
+            # oude advertentie al weggehaald — verversen is immers weghalen en
+            # opnieuw plaatsen. Hier stoppen betekent dat de advertentie gewoon
+            # blijft staan tot de verkoopafhandeling hem netjes weghaalt.
+            verkocht = ((await naast_de_lus(lambda: db.table("listings")
+                        .select("platform").eq("item_id", listing["item_id"])
+                        .eq("status", "sold").limit(1).execute())).data or [])
+            if verkocht:
+                logger.info("Auto-relist overgeslagen voor listing %s: item al verkocht op %s",
+                            listing["id"], verkocht[0]["platform"])
+                continue
+
             per_verkoper[eigenaar] = per_verkoper.get(eigenaar, 0) + 1
 
             # EERST WEG, DAN OPNIEUW. Hier stond alleen de "create" — op de
@@ -2738,7 +2759,7 @@ async def relist_expiring_marktplaats():
             from backend.services.relist import refresh_listing, RefreshError
             try:
                 await refresh_listing(listing["item_id"], "marktplaats",
-                                      item["user_id"], "relist",
+                                      eigenaar, "relist",
                                       eigen_quotum=True)
             except RefreshError as e:
                 # Dagquotum vol of nog in afkoeling: morgen weer. De advertentie
