@@ -14158,3 +14158,11 @@ hele pytest-suite 1960 groen.
 account doorgeklikt: Claude in Chrome was niet verbonden. Het bewijs dat de
 advertentiepagina-route bij zakelijk werkt komt uit de productiedata, niet uit een
 eigen proef op Daniels account.
+
+**Nagekomen, 28-09 09:46:** Daniels eerste herplaatsing met 1.0.356 faalde op
+(523) Red Ralph Lauren Knitted Sweater S. Niet door zakelijk: die advertentie
+heeft nooit op Marktplaats gestaan (plaatsing 29-07 mislukt, rij toch op actief
+zonder nummer, niet in zijn openbare lijst van 120). Enige zo'n rij van zijn 107.
+Verwijderopdracht 74f00bf1 met de hand op already_absent gezet; de plaatsing
+a913a285 staat voor 09:45 UTC en maakt hem nu echt aan. Niet nagekeken of die
+gelukt is.
