@@ -707,8 +707,10 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
     # niets veranderde. Johan klikte het die middag drie keer aan.
     # Hier en niet in het scherm: dit dekt ook het automatisch herplaatsen en
     # een dashboard dat nog een oude versie open heeft.
+    # Sinds 28-09-2026 alleen nog met een extensie van vóór 1.0.356, zie
+    # ZAKELIJK_VERVANGEN_VANAF.
     if strategy == "relist" and platform in ("marktplaats", "2dehands"):
-        if await zakelijk_account(db, user_id, platform):
+        if await zakelijk_vervangen_kan_niet(db, user_id, platform):
             raise RefreshError(melding_zakelijk_vervangen(platform))
 
     # Eerst: kunnen we deze advertentie straks überhaupt terugzetten? Zo niet,
