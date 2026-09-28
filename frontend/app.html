@@ -4626,11 +4626,36 @@ async function syncItems() {
 // in renderItemsTable.
 let _laadPoging = { bezig: false, om: null };
 
-async function loadAll(opties = {}) {
-  // Alleen de tikkende ronde gaat "snel". Alles wat na een handeling ververst,
-  // haalt bewust het volledige beeld op.
+// NOOIT TWEE LAADRONDES TEGELIJK (28-09-2026, Egbert). Een volledige ronde is bij
+// 5.533 artikelen zeven pagina's plus alle advertenties, zo'n 5 MB. Werd de
+// database trager, dan begon de volgende ronde al voor de vorige klaar was, en
+// die stapelden zich op tot de database er om 13:05 voor iedereen uitlag. Wie
+// tijdens een ronde vraagt, krijgt één ronde erna (volledig als iemand dat
+// vroeg), zodat het beeld na zijn handeling toch vers is.
+let _laadRonde = null;
+let _laadNaRonde = null;
+function loadAll(opties = {}) {
+  if (!_laadRonde) {
+    const ronde = _loadAllNu(opties).finally(() => { if (_laadRonde === ronde) _laadRonde = null; });
+    _laadRonde = ronde;
+    return ronde;
+  }
+  if (!_laadNaRonde) {
+    const wens = { snel: true, listings: false };
+    const na = _laadRonde.catch(() => {}).then(() => { _laadNaRonde = null; return loadAll(wens); });
+    _laadNaRonde = { wens, na };
+  }
+  if (!opties.snel) _laadNaRonde.wens.snel = false;
+  if (opties.listings) _laadNaRonde.wens.listings = true;
+  return _laadNaRonde.na;
+}
+
+async function _loadAllNu(opties = {}) {
+  // Alleen de tikkende ronde en een afgerond klusje gaan "snel". Alles wat na
+  // een handeling ververst, haalt bewust het volledige beeld op.
   const snel = !!opties.snel && !!_itemsSinds && (state.items || []).length > 0;
-  const listingsNodig = !snel || (Date.now() - _listingsOpgehaald) >= LISTINGS_INTERVAL;
+  const listingsNodig = !snel || !!opties.listings
+    || (Date.now() - _listingsOpgehaald) >= LISTINGS_INTERVAL;
   const [itemsRes, listingsRes, jobsRes, platformsRes, settingsRes] = await Promise.allSettled([
     snel ? syncItems() : fetchAllItems(_toonLaadVoortgang),
     listingsNodig ? apiFetch(`${API}/api/listings/`).then(parseJsonSafe) : Promise.resolve(null),
