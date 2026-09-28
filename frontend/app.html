@@ -12839,6 +12839,35 @@ function addPurchasePrice(itemId) {
   }, 150);
 }
 
+// Correct what an item COST. The cost cell only offered "＋ Add cost" while it
+// was empty; once a number stood there it was plain text, so a typo could not be
+// undone from the sales table. Johan Kist (28-09-2026) typed a wrong purchase
+// price, saw 100% profit, and found a pencil on the sale price but none here.
+// Empty clears the cost again: the sale then counts toward revenue only.
+async function setPurchasePrice(itemId, current) {
+  const raw = prompt(`What did you pay for this item? (€)\n\nLeave it empty if you don't know. The sale then still counts toward revenue, just not toward profit.`,
+    current != null ? Number(current).toFixed(2) : '');
+  if (raw === null) return;                     // cancelled
+  const tekst = String(raw).trim();
+  const val = tekst === '' ? null : parseFloat(tekst.replace(',', '.'));
+  if (val !== null && (isNaN(val) || val < 0)) { alert('Please enter a valid amount (e.g. 22.50).'); return; }
+  try {
+    const r = await apiFetch(`${API}/api/items/${itemId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ purchase_price: val }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || 'Could not save the purchase price');
+    const item = state.items.find(i => i.id === itemId);
+    if (item) item.purchase_price = data.purchase_price != null ? Number(data.purchase_price) : null;
+    showToast(val === null ? 'Purchase price removed. This sale now counts toward revenue only.'
+                           : 'Purchase price saved. Profit and margin updated.');
+    renderAnalytics();
+  } catch (e) {
+    alert('Error saving the purchase price: ' + e.message);
+  }
+}
+
 // Confirm/correct what an item ACTUALLY sold for (bids/offers mean it's rarely
 // the asking price). Updates the sold listing so revenue/profit turn exact.
 async function setSoldPrice(itemId, platform, suggested) {
