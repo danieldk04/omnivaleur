@@ -7264,6 +7264,12 @@ async function saveItem() {
   if (_uploadsInFlight > 0) return alert('Photos are still uploading — please wait for them to finish before saving.');
   const id = document.getElementById('edit-id').value;
   const data = leesItemFormulier();
+  const puntVeld = bedragMetDuizendtalpunt(id ? gewijzigdeVelden(data, _bewerkBeginstand) : data);
+  if (puntVeld) {
+    alert(`An amount reads as €${Number(puntVeld.value).toFixed(2)}. Did you use a dot for thousands? Here a dot is a decimal point, so 1.360 becomes 1.36. Type the amount without it, for example 1360 or 1360,50.`);
+    puntVeld.focus();
+    return;
+  }
   // Met een prijsvorm zonder bedrag (bieden, zie omschrijving, gratis) staat het
   // prijsveld uit. Een bedrag eisen liet de verkoper dan alleen de uitweg om de
   // vorm terug te zetten op vraagprijs, en dan gaat het artikel voor 0,01 weg.
