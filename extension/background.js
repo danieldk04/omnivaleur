@@ -5267,7 +5267,17 @@ async function bgDeleteMp2dh(job, serverUrl) {
       // An empty overview proves nothing — we can't tell "already sold/removed"
       // from "not logged in" or "markup changed", and guessing "gone" here is
       // what marked listings delisted in the dashboard while they stayed live.
-      if (!findResult?.rendered) {
+      //
+      // MET EEN ADVERTENTIENUMMER GAAN WE DOOR NAAR DE ADVERTENTIEPAGINA.
+      // Een zakelijk account heeft altijd een leeg overzicht (het overzicht is
+      // van het particuliere account), en daar hield de verwijdering hier op
+      // terwijl de route verderop, op nummer via de eigen advertentiepagina, bij
+      // zakelijke verkopers honderden keren gelukt is (gemeten 28-09-2026: zes
+      // zakelijke accounts, bij elk "deleted_via_ad_page"; 0b28c1ce kreeg
+      // daarnaast 14 keer deze melding). Die route kan niet de verkeerde
+      // advertentie raken en meldt alleen succes op bewijs (404/410 of het
+      // verlopen-blok), dus een uitgelogde verkoper krijgt nog steeds een fout.
+      if (!findResult?.rendered && !listingId) {
         throw new Error(
           `Couldn't read your ${platform} listings overview — no ads rendered on ${overviewUrl}. ` +
           `Make sure you're still logged in on ${platform}. Nothing was deleted.`
