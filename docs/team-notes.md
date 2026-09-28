@@ -14109,3 +14109,20 @@ en in de geheugenindex naar boven gehaald: hij stond voorbij het afkappunt.
 
 **Los gevonden:** drie JS-proeven van het dashboard falen al op main
 ("extState is not defined"), ook zonder deze wijziging. Als losse taak voorgesteld.
+
+## 28-09-2026: Dagelijkse klantfouten
+
+Gemeten over 24 uur: 732 opdrachten, 13 fouten bij 5 klanten. Niets gerepareerd,
+niets in onze code aangetoond.
+- 96e30080: Marktplaats kreeg om 21:02 de tekst niet in de editor; een minuut
+  later hetzelfde artikel wel geplaatst. Eenmalig, oorzaak niet aan te wijzen.
+- 96e30080: twee jassen met maat "Overige" weigeren op 2dehands en Marktplaats
+  (maat verplicht). Klant moet een maat kiezen; de melding zegt welke.
+- Rest is gisteren al behandeld (3bfbed2c verwijderingen, 1.0.355) of klant-eigen:
+  0b28c1ce betaalde rubriek, f8c0cce9 extensie stil sinds 25-09.
+- Wachtend werk: bcdf9aa4 (Egbert) 235 verzendkost-bijwerkingen en 96e30080 41,
+  beide computers 's nachts uit (laatst gezien 23:03 en 22:31 UTC). 1ba42900 één
+  opdracht vast op 'claimed' sinds 25-09, extensie sindsdien stil.
+
+Open: iedereen draait nog 1.0.354, dus 1.0.355 staat nog niet in de Web Store;
+vest 1013 bij 3bfbed2c en vloerkleed 96e30080 zoals gisteren.
