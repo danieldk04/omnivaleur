@@ -14177,3 +14177,24 @@ start die `leadgen-mail.yml` via `gh`, maar alleen als er geen ronde loopt of wa
 de machine bepaalt nog steeds wat er uitgaat. Mac uit = GitHub's eigen planning.
 Uitzetten: `launchctl bootout gui/$(id -u)/com.omnivaleur.leadmachine-seintje`.
 Stand nieuwe groep: 10 van 111 gemaild (Marktplaats), webshops en winkels volgen.
+
+## 28-09-2026 (middag): Dagelijkse klantfouten
+
+Gemeten over 24 uur: 54 fouten bij 3 klanten.
+- 96e30080: 40 verlengingen op 2dehands mislukt met "not in your 2dehands
+  overview (200 listings read)". Oorzaak in onze code: de extensie las alleen de
+  eerste 200 zoekertjes van het overzicht, de klant heeft er 625 actief. Beide
+  nagekeken zoekertjes (m2412149768, m2420198824) staan live. Gerepareerd in
+  extensie 1.0.357 (28238340, 0b18c48c): bladert nu door het hele overzicht.
+  Proef `tests/verlengen-2dehands-bladeren-test.js`: 19e90b78 faalt, nieuw
+  verlengt; hele reeks groen. Er ging niets kapot: niets werd gewijzigd.
+- 96e30080: cowboyhoed ("unisex accessoires", maat "One size") weigert op
+  Marktplaats en 2dehands omdat de gekozen rubriek een kledingmaat eist. Niet
+  uitgezocht welke rubriek gekozen werd; open.
+- f8c0cce9: Facebook-verwijdering Gibson J-45 twee keer "not found", waarschijnlijk
+  al weg op Facebook. Niet na te kijken van buitenaf.
+- Van de ochtend: maat "Overige" (klant), editor-hapering eenmalig; niets nieuws.
+
+Open: 1.0.355, 1.0.356 en 1.0.357 moeten naar de Chrome Web Store (Daniel);
+iedereen draait nog 1.0.354. Pas daarna is bij 96e30080 te meten of verlengen
+loopt.

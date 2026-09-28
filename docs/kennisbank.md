@@ -17,6 +17,60 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## eerste-bladzijde-is-niet-het-overzicht
+
+*28-09-2026 — Het MP/2dehands-overzicht (/my-account/sell/api/listings) geeft hooguit 200 per batch; wie niet bladert meldt "niet gevonden" bij grote verkopers*
+
+Op 28-09-2026 kreeg klant 96e30080 (625 actieve zoekertjes op 2dehands) 40 keer "Listing m… is not in your 2dehands overview (200 listings read)" terwijl de zoekertjes live stonden. bgExtend2dh las alleen batchNumber=1&batchSize=200. Gerepareerd in extensie 1.0.357: bladeren (1-based batchNumber, totalNumberOfResults) tot gevonden.
+
+**Why:** een getal als "200 listings read" in een fouttekst is een afkapgrens, geen telling. Zelfde familie als "teller-uit-een-afgekapte-lezing" en "shopify-zoeken-op-sku-stopte-te-vroeg".
+
+**How to apply:** elke lezing van een eigen overzicht die "niet gevonden" kan melden, moet bladeren tot het eind. Een haperende latere bladzijde is "niet gelezen", nooit "niet gevonden". Rond totaal in een fout (100, 200, 1000) = eerst de afkap verdenken.
+
+---
+
+## apify-gratis-limiet-op
+
+*28-09-2026 — "Apify gratis tier is $5/mnd en dat is ruim genoeg; kies actors die per resultaat afrekenen, niet per zoekopdracht"*
+
+Het Apify-account draait op het **gratis tier: $5 per maand**. Op 21-08-2026 gaf
+elke actor-aanroep "Monthly usage hard limit exceeded". Dat leek een tegoedprobleem
+maar was een **keuzeprobleem**: er werd een dure discovery-actor gebruikt met een
+limiet van 5 draaibeurten.
+
+Gemeten op 09-09-2026: met actors die **per resultaat** afrekenen is $5 juist heel
+veel. Een hashtagronde over 18 hashtags, 1.458 video's, kostte ongeveer $0,75.
+
+- `funny_ground/tiktok-scraper` — $0,0005 per resultaat, doet hashtags, zoekwoorden
+  én profielen in één actor. De beste standaardkeuze.
+- `apidojo/tiktok-profile-scraper-api` — $0,006 per profiel, dus ~800 profielen
+  voor $5.
+- `scraper-mind/tiktok-profile-email-scraper` — $0,00249 per profiel met e-mail.
+
+Twee dingen die veel werk schelen:
+
+1. **Apify-datasets zijn publiek leesbaar zonder token.** `https://api.apify.com/v2/datasets/<id>/items`
+   geeft gewoon 200. Verwerken kan dus altijd lokaal, ook als APIFY_TOKEN alleen
+   in Railway staat. `x-apify-pagination-total` in de header vertelt de voortgang
+   van een lopende ronde.
+2. Zacht falen blijft het risico: raakt het tegoed tóch op, dan valt de wekelijkse
+   social-scrape (`backend/services/social_scrape.py`) stil als lege sectie in het
+   zondagsrapport, niet als foutmelding.
+
+Instagram is het enige platform waarvoor Apify echt nodig is; TikTok en YouTube
+kunnen ook gratis, zie "tiktok-gratis-schrapen". Verwant:
+"leadgen-vier-bronnen", "omnivaleur-focus-business".
+
+**28-09-2026: tegoed op = stil minder resultaten.** Een hashtagrun van 5 tags gaf
+24 posts van 2 tags. Het log toonde alle 5 tags gevonden; de run had
+`maxTotalChargeUsd` 0,063 (niet door Daniel gezet) = het restant van de $5. Lees bij
+een magere run eerst `https://api.apify.com/v2/actor-runs/<id>` (open zonder token):
+`options.maxTotalChargeUsd` en `chargedEventCounts`. Instagram-profielen anoniem
+ophalen (web_profile_info) geeft 401 vanaf Daniels IP. De IG-sheet had al 118 benaderd,
+6 gereageerd, 0 aanmeldingen (juli/aug): Apify heeft nog geen aantoonbare klant opgeleverd.
+
+---
+
 ## leadbronnen-gemeten-26-09
 
 *28-09-2026 — "Alle gratis bronnen NL/BE gemeten 26-09 (28-09: titelmatch via Google blind op Vinted): bedrijven op MP/2dh op, particulieren 4.145 (MP) + 3.029 (2dh) met 20+ advertenties maar onbenaderbaar; webshops via zoekwoorden en OSM leveren nog; 342 kandidaten lokaal"*
@@ -5278,40 +5332,6 @@ als vanaf de server in `fail_job`.
 doorlaten, en een rem mag alleen tellen wat niet al verklaard en verholpen is.
 Zie "kansloze-kanaal-rem-telt-alleen-plaatsingen" en
 "een-bron-is-geen-bewijs-bij-weg".
-
----
-
-## apify-gratis-limiet-op
-
-*09-09-2026 — "Apify gratis tier is $5/mnd en dat is ruim genoeg; kies actors die per resultaat afrekenen, niet per zoekopdracht"*
-
-Het Apify-account draait op het **gratis tier: $5 per maand**. Op 21-08-2026 gaf
-elke actor-aanroep "Monthly usage hard limit exceeded". Dat leek een tegoedprobleem
-maar was een **keuzeprobleem**: er werd een dure discovery-actor gebruikt met een
-limiet van 5 draaibeurten.
-
-Gemeten op 09-09-2026: met actors die **per resultaat** afrekenen is $5 juist heel
-veel. Een hashtagronde over 18 hashtags, 1.458 video's, kostte ongeveer $0,75.
-
-- `funny_ground/tiktok-scraper` — $0,0005 per resultaat, doet hashtags, zoekwoorden
-  én profielen in één actor. De beste standaardkeuze.
-- `apidojo/tiktok-profile-scraper-api` — $0,006 per profiel, dus ~800 profielen
-  voor $5.
-- `scraper-mind/tiktok-profile-email-scraper` — $0,00249 per profiel met e-mail.
-
-Twee dingen die veel werk schelen:
-
-1. **Apify-datasets zijn publiek leesbaar zonder token.** `https://api.apify.com/v2/datasets/<id>/items`
-   geeft gewoon 200. Verwerken kan dus altijd lokaal, ook als APIFY_TOKEN alleen
-   in Railway staat. `x-apify-pagination-total` in de header vertelt de voortgang
-   van een lopende ronde.
-2. Zacht falen blijft het risico: raakt het tegoed tóch op, dan valt de wekelijkse
-   social-scrape (`backend/services/social_scrape.py`) stil als lege sectie in het
-   zondagsrapport, niet als foutmelding.
-
-Instagram is het enige platform waarvoor Apify echt nodig is; TikTok en YouTube
-kunnen ook gratis, zie "tiktok-gratis-schrapen". Verwant:
-"leadgen-vier-bronnen", "omnivaleur-focus-business".
 
 ---
 
