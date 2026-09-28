@@ -17,6 +17,29 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## leadmachine-seintje-vanaf-de-mac
+
+*28-09-2026 — "Sinds 28-09-2026 geeft een LaunchAgent op Daniels Mac GitHub elk half uur (08:00-21:30) een seintje voor de koude-mailronde, omdat GitHub's eigen planning maar 2-3 rondes per dag start"*
+
+LaunchAgent `com.omnivaleur.leadmachine-seintje` (StartInterval 1800, RunAtLoad)
+draait `~/Library/Application Support/omnivaleur/leadmachine_seintje.sh`: tussen
+08:00 en 21:30, en alleen als er geen leadgen-mail.yml-run loopt of wacht, doet het
+`gh workflow run leadgen-mail.yml -f opdracht=tick`. Log ernaast
+(`leadmachine_seintje.log`, laatste 400 regels). Buiten ~/Documents vanwege macOS.
+
+Waarom: GitHub startte geplande rondes 26-28 september maar 2 a 3 keer per dag; een
+ronde verstuurt hooguit 12 (3 beurten x 4), het dagbudget liep op naar 44. De
+machine zelf bepaalt nog steeds per dagrooster wat er uitgaat, dus extra seintjes
+betekenen geen extra volume, alleen dat het budget gehaald wordt. Mac uit = terug
+op GitHub's eigen planning.
+
+**Why:** een cron die je niet in de hand hebt, moet niet je enige hartslag zijn.
+**How to apply:** uitzetten met `launchctl bootout gui/$(id -u)/com.omnivaleur.leadmachine-seintje`.
+Nooit tegelijk de oude `com.omnivaleur.leadgen` (.uit) aanzetten. Zie
+"koude-mail-via-resend-zonder-pixel", "koude-mail-autonoom".
+
+---
+
 ## admarkt-zakelijke-marktplaats
 
 *28-09-2026 — Zakelijke Marktplaats-verkopers beheren hun advertenties in Admarkt; het persoonlijke overzicht is dan leeg en de scan vindt nul*

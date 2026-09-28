@@ -14166,3 +14166,14 @@ zonder nummer, niet in zijn openbare lijst van 120). Enige zo'n rij van zijn 107
 Verwijderopdracht 74f00bf1 met de hand op already_absent gezet; de plaatsing
 a913a285 staat voor 09:45 UTC en maakt hem nu echt aan. Niet nagekeken of die
 gelukt is.
+
+## 28-09-2026: seintje vanaf Daniels Mac voor de mailronde
+
+GitHub startte de geplande koude-mailrondes maar 2 a 3 keer per dag (een ronde
+verstuurt hooguit 12, dagbudget 44). Met Daniels akkoord draait nu op zijn Mac de
+LaunchAgent `com.omnivaleur.leadmachine-seintje`: elk half uur tussen 08:00 en 21:30
+start die `leadgen-mail.yml` via `gh`, maar alleen als er geen ronde loopt of wacht
+(nagemeten: tweede aanroep tijdens een lopende ronde deed niets). Het dagrooster in
+de machine bepaalt nog steeds wat er uitgaat. Mac uit = GitHub's eigen planning.
+Uitzetten: `launchctl bootout gui/$(id -u)/com.omnivaleur.leadmachine-seintje`.
+Stand nieuwe groep: 10 van 111 gemaild (Marktplaats), webshops en winkels volgen.
