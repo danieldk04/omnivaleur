@@ -12950,8 +12950,8 @@ async function setSoldPrice(itemId, platform, suggested) {
   const raw = prompt(`What did this item actually sell for on ${label}? (€)\n\nLeave the asking price if that's correct, or type the real amount received.`,
     suggested != null ? Number(suggested).toFixed(2) : '');
   if (raw === null) return;                     // cancelled
-  const val = parseFloat(String(raw).replace(',', '.'));
-  if (isNaN(val) || val < 0) { alert('Please enter a valid amount (e.g. 22.50).'); return; }
+  const val = leesBedrag(raw);                  // "1.675" is 1675, niet 1,68
+  if (val === null || isNaN(val) || val < 0) { alert('Please enter a valid amount (e.g. 22.50).'); return; }
   try {
     const r = await apiFetch(`${API}/api/listings/sold-price`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
