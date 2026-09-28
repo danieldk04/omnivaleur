@@ -7213,16 +7213,22 @@ function leesBedrag(raw) {
 // zien, alleen wat Chrome ervan maakte: "1.360" en "1.36000". Meer dan twee
 // cijfers achter de punt is nooit een bedrag in euro's, dus dan niet opslaan
 // maar vragen het zonder punt te typen. Alleen voor velden die de verkoper nu
-// invulde: een oud getal uit de database blokkeert het opslaan nooit.
-const BEDRAGVELDEN = {
-  price: 'f-price', compare_at_price: 'f-compare', purchase_price: 'f-purchase',
-  price_marktplaats: 'f-price-mp', price_2dehands: 'f-price-2dh', price_vinted: 'f-price-vinted',
-  price_ebay: 'f-price-ebay', price_shopify: 'f-price-shopify',
-};
-function bedragMetDuizendtalpunt(velden) {
-  for (const veld of Object.keys(velden)) {
-    const el = BEDRAGVELDEN[veld] && document.getElementById(BEDRAGVELDEN[veld]);
-    if (el && /\.\d{3,}$/.test(String(el.value || '').trim())) return el;
+// invulde: een oud getal uit de database blokkeert het opslaan nooit. Vergeleken
+// wordt met de tekst in het veld bij openen, niet met het getal: stond er al
+// 1,36 en typt hij opnieuw "1.360", dan is het getal gelijk maar de tekst niet.
+const BEDRAGVELDEN = ['f-price', 'f-compare', 'f-purchase', 'f-price-mp', 'f-price-2dh',
+  'f-price-vinted', 'f-price-ebay', 'f-price-shopify'];
+let _bedragBegin = null;
+function ruweBedragen() {
+  const uit = {};
+  for (const id of BEDRAGVELDEN) { const el = document.getElementById(id); if (el) uit[id] = el.value; }
+  return uit;
+}
+function bedragMetDuizendtalpunt() {
+  for (const id of BEDRAGVELDEN) {
+    const el = document.getElementById(id);
+    if (!el || (_bedragBegin && _bedragBegin[id] === el.value)) continue;
+    if (/\.\d{3,}$/.test(String(el.value || '').trim())) return el;
   }
   return null;
 }
