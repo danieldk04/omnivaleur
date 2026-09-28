@@ -12924,8 +12924,7 @@ async function setPurchasePrice(itemId, current) {
   const raw = prompt(`What did you pay for this item? (€)\n\nLeave it empty if you don't know. The sale then still counts toward revenue, just not toward profit.`,
     current != null ? Number(current).toFixed(2) : '');
   if (raw === null) return;                     // cancelled
-  const tekst = String(raw).trim();
-  const val = tekst === '' ? null : parseFloat(tekst.replace(',', '.'));
+  const val = leesBedrag(raw);                  // "1.360" is 1360, niet 1,36
   if (val !== null && (isNaN(val) || val < 0)) { alert('Please enter a valid amount (e.g. 22.50).'); return; }
   try {
     const r = await apiFetch(`${API}/api/items/${itemId}`, {
