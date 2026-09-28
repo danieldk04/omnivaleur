@@ -5355,6 +5355,12 @@ async function bgDeleteMp2dh(job, serverUrl) {
         // Onbewezen is géén succes. "Waarschijnlijk weg" melden als verwijderd is
         // de gevaarlijkste uitkomst van de drie: de verkoper denkt dat hij eraf
         // staat, en hij staat er nog.
+        if (!findResult?.rendered) {
+          throw new Error(
+            `Couldn't read your ${platform} listings overview — no ads rendered on ${overviewUrl}, ` +
+            `and the advert's own page gave no answer either. Make sure you're still logged in on ${platform}. Nothing was deleted.`
+          );
+        }
         throw new Error(
           `"${title}" cannot be found in your ${platform} listings overview, and we could not verify ` +
           `whether it is still online. Nothing was removed — check it by hand on ${platform}.`
