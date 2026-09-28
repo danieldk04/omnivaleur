@@ -14215,3 +14215,39 @@ draait het echte dashboard: cdebb9e3 faalt op het ontbrekende potloodje, nieuw
 
 Niet gemeten: welk artikel en welk bedrag bij Johan, want de database lag stil.
 Johans eigen aanpassing hebben we niet gedaan; dat doet hij zelf.
+
+## 28-09-2026 (middag): database plat door Egberts dashboard, en zijn patches stonden achter de verzendkosten
+
+Egbert mailde 14:56, 14:57 en 15:20: "veel sneller dan normaal nieuwe 2dehands
+tabbladen met advertenties die er al op staan", "doet helemaal geen nieuwe online
+zetten", en na opnieuw inloggen bleef het laden op 1000 staan met een servermelding.
+Daniel herstartte de database (Supabase gaf 521, van 13:05 tot ongeveer 14:20 UTC).
+
+**Gemeten.** Zijn extensie werkte van 12:25 tot 13:19 UTC de 235 verzendkost-
+bijwerkingen van gisteravond af, een per 9 seconden (alle 235 'done'). Zijn 98
+patches van 12:30 stonden daarachter: zelfde wachtrijgroep, oudste eerst. Tot de
+storing ging er één online. In de Railway HTTP-logs ging zijn verkeer van 5 MB naar
+33 tot 38 MB per tien minuten, 90 procent van alles wat de server verstuurde: het
+dashboard haalde na elk klaar klusje de hele voorraad (5.533 artikelen, zeven
+pagina's) en alle advertenties opnieuw op, en die rondes gingen over elkaar heen
+lopen toen de database trager werd. De ronde op de server zelf (verzending_2dh_ronde)
+was al om 05:28 klaar en speelde geen rol.
+
+**Veranderd (live).**
+- Een lopende verzendkost-bijwerking telt niet meer als "working" op het scherm,
+  dus zo'n klaar klusje laat het dashboard niets herladen.
+- Bijwerkingen gaan achter wat de verkoper zelf klaarzet (groep 3, zoals de
+  nachtronde). Een volle lezing van 500 die alleen uit bijwerkingen bestaat, leest
+  het eigen werk apart.
+- Dashboard: na een klaar klusje alleen wat er veranderde plus de advertenties,
+  en nooit twee laadrondes tegelijk; wie tijdens een ronde vraagt krijgt er een
+  erna. Werkt bij Egbert na een keer verversen van de pagina.
+
+**Proeven:** tests/test_bijwerkingen_leggen_niets_plat.py en
+tests/dashboard-laadrondes-test.js; beide laten d8011011 falen (oud: 10 van 10 keer
+alles herladen, tot 20 rondes tegelijk; eerst de oudste bijwerking) en de nieuwe
+versie slagen. Hele pytest-reeks groen.
+
+**Open.** Welke grens binnen Supabase het eerst op was (rekenkracht, schijf,
+verbindingen) is van hieruit niet te zien; dat staat alleen in het Supabase-
+dashboard. Niet nagekeken in zijn echte, ingelogde dashboard.

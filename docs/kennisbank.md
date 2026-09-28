@@ -17,6 +17,20 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## klaar-klusje-herlaadt-hele-voorraad
+
+*28-09-2026 — "Database 28-09-2026 plat door het dashboard: elk klaar klusje haalde alle 5.533 artikelen + advertenties opnieuw op; snel werk dat de klant niet ziet hoort niet in \"working\""*
+
+28-09-2026, 13:05 tot ~14:20 UTC lag de Supabase-database eruit, voor iedereen. Oorzaak aangetoond in de Railway HTTP-logs: Egbert (bcdf9aa4, 5.533 artikelen) had zijn dashboard open terwijl zijn extensie 235 verzendkost-bijwerkingen afwerkte, een per 9 seconden. `pollActivity` in app.html deed bij elke overgang working>0 naar 0 een volledige `loadAll()`: alle artikelen in 7 pagina's plus alle advertenties, ~5 MB. Zijn verkeer ging van 5 MB naar 33 tot 38 MB per tien minuten (90% van alle serveruitvoer), rondes overlapten zodra de database trager werd, en toen viel hij om. Tegelijk stonden zijn 98 patches van 12:30 achter die 235 bijwerkingen (zelfde groep in `_wachtrij_volgorde`, oudste eerst), dus er ging niets nieuws online.
+
+Gerepareerd: claimed 2dh-bijwerkingen tellen niet als "working" (jobs.py active_jobs), bijwerkingen in groep 3 achter eigen klikken, een volle lichte lezing leest het eigen werk apart, dashboard doet na een klaar klusje alleen `snel` + advertenties en draait nooit twee laadrondes tegelijk. Proeven: tests/test_bijwerkingen_leggen_niets_plat.py, tests/dashboard-laadrondes-test.js (oude versie d8011011 faalt).
+
+**Why:** een grote voorraad maakt elke volledige herlading duur; alles wat het scherm vaker dan eens per minuut laat herladen is bij 5.000+ artikelen een aanval op het gratis Supabase-plan. Zie "supabase-gratis-plan-egress" en "achtergrondronde-mag-de-lijst-niet-herbouwen".
+
+**How to apply:** nieuw achtergrondwerk dat de extensie snel achter elkaar doet: nooit in "working" van /api/jobs/active, nooit in dezelfde wachtrijgroep als de eigen klik. Bij een databasestoring eerst `npx -y @railway/cli logs --http --json --since/--until` per venster van 10 min (max 5000 regels, zsh splitst geen woorden: draai de lus in bash) en tel txBytes per srcIp en pad: dat wijst de veroorzaker aan.
+
+---
+
 ## eerste-bladzijde-is-niet-het-overzicht
 
 *28-09-2026 — Het MP/2dehands-overzicht (/my-account/sell/api/listings) geeft hooguit 200 per batch; wie niet bladert meldt "niet gevonden" bij grote verkopers*
