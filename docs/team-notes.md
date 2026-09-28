@@ -14251,3 +14251,35 @@ versie slagen. Hele pytest-reeks groen.
 **Open.** Welke grens binnen Supabase het eerst op was (rekenkracht, schijf,
 verbindingen) is van hieruit niet te zien; dat staat alleen in het Supabase-
 dashboard. Niet nagekeken in zijn echte, ingelogde dashboard.
+
+## 28-09-2026 (middag): automatisch herplaatsen stond bij iedereen stil sinds 20-09
+
+Aanleiding: mail van Zilverwebsite (Henriette/Jaap, gebruiker 26cf5471): het
+programma herplaatste 1.200 advertenties en doet "al een paar dagen niets", met
+de vraag of het elke dag 10 kan doen of dat ze zelf moeten verversen.
+
+**Oorzaak 1, bij iedereen.** `relist_expiring_marktplaats` vroeg alles wat aan de
+beurt was op met één gewone select. PostgREST geeft daar hooguit 1.000 rijen op
+terug, oudste eerst, en dat waren elke ronde dezelfde advertenties die de ronde
+toch overslaat. Gemeten: 8.775 aan de beurt, de ronde zag alleen die van vóór
+21-08. Droogproef met de echte ronde tegen productie (niets klaargezet): oud
+0 herplaatsingen bij 0 verkopers, nieuw 99 bij 3 verkopers (26cf5471: 60,
+0b28c1ce: 24, 96e30080: 15). Bij Zilverwebsite gingen de laatste op 20-09 uit.
+
+**Oorzaak 2, bij Zilverwebsite.** Zij zijn zakelijk op Marktplaats en draaien
+extensie 1.0.355; de weigering van vanochtend (vervangen bij zakelijk pas vanaf
+1.0.356) hield hen daarom ook tegen, en ook hun verversknop. Terwijl op 20-09 60
+van de 60 verwijderingen via de advertentiepagina lukten. Nu: staat er op dit
+account een geslaagde verwijdering met `deleted_via_ad_page`, dan weigeren we
+niet. Johan Kist (nooit gelukt) blijft geweigerd tot 1.0.356.
+
+**Commit** 16079d6f, live om 16:41. Proeven: `tests/test_herplaatsronde_ziet_alles.py`
+(oud faalt: 0 van 5, nieuw 5 van 5) en drie nieuwe in `tests/test_zakelijk_vervangen.py`;
+hele reeks 1.973 groen.
+
+**Open.** De eerste echte ronde na de deploy draait rond 22:40 (elke 6 uur,
+geteld vanaf de herstart); niet zelf gezien. Een vast aantal per dag instellen
+(de vraag van de klant) bestaat niet; nu ongeveer voorraad/20 per dag, bij hen
+~60, minus hun eigen nieuwe plaatsingen van die dag. De bovenbalk op Verversen
+toont "0 / 8" terwijl Marktplaats bij de knop op 3 per dag stopt.
+
