@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 28-09-2026 (Zakelijk account: gewone advertenties kunnen nu ook vervangen worden, vanaf extensie 1.0.356)_
+_Laatst bijgewerkt: 28-09-2026 (Inkoopprijs is in de verkooptabel te corrigeren; eerder: zakelijk account kan vervangen vanaf extensie 1.0.356)_
 
 ---
 
