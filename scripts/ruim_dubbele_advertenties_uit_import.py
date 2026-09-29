@@ -405,7 +405,7 @@ async def _live(listings: list[dict]) -> dict[str, bool | None]:
     return uit
 
 
-def main_op_code(user_id: str, apply: bool) -> None:
+def main_op_code(user_id: str, apply: bool, zelfde_bron_ok: set[str] = frozenset()) -> None:
     db = _db()
     items = _alle(db, "items", "id,user_id,title,description,price,price_marktplaats,"
                   "price_2dehands,photo_urls,created_at,sku,brand", user_id=user_id)
@@ -608,5 +608,12 @@ if __name__ == "__main__":
     p.add_argument("--apply", action="store_true")
     p.add_argument("--op-code", action="store_true",
                    help="tweelingen op de eigen code in de omschrijving plus afmeting")
+    p.add_argument("--zelfde-bron-ok", default="",
+                   help="codes (komma's) waarvan op foto is nagekeken dat twee rijen uit "
+                        "hetzelfde kanaal toch één voorwerp zijn")
     a = p.parse_args()
-    (main_op_code if a.op_code else main)(a.user, a.apply)
+    if a.op_code:
+        main_op_code(a.user, a.apply,
+                     {c.strip().upper() for c in a.zelfde_bron_ok.split(",") if c.strip()})
+    else:
+        main(a.user, a.apply)

@@ -47,6 +47,12 @@ Zo ziet een volledig bericht eruit (door Daniel goedgekeurd op 19-09-2026):
 > 2. [OOIT, 2 min] Logs van 15:00 exporteren, alleen als je wilt weten waarom de database omviel.
 > 3. [OVERSLAAN] De tests die de echte database aanspreken. Doe ik zelf.
 
+## Openstaande overdracht (weghalen zodra afgerond)
+
+Toon (De Juiste Toon, 96e30080): dubbele rijen en advertenties afmaken. Pak dit op
+zonder dat Daniel erom vraagt. Alle stappen staan in `docs/team-notes.md` onder
+"29-09-2026 (12:05): OVERDRACHT Toon". Deadline 06-10-2026.
+
 ## Begin elke sessie met kijken wat er veranderd is
 
 Voordat je aan wat dan ook begint — een codetaak, een vraag, een mail, een

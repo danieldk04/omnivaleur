@@ -17,43 +17,6 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
-## bol-past-niet-bij-tweedehands
-
-*29-09-2026 — "bol.com-koppeling uitgezocht 29-09-2026; tweedehands alleen boeken/muziek/games/films, EAN en KvK verplicht, dus past niet bij Omnivaleurs voorraad"*
-
-Klanten vragen regelmatig om een bol.com-koppeling. Uitgezocht op 29-09-2026, bij bol zelf gelezen
-(partnerplatform, assortimentsbeleid Boeken): "Tweedehands artikelen of marge-goederen kunnen alleen
-aangeboden worden in de categorieën boeken, muziek, games en films. Voor de overige categorieën kun je
-geen verkooprechten aanvragen." Daarnaast: elke aanbieding hangt aan een EAN uit de bol-catalogus
-(Retailer API, gratis, officiële server-koppeling zoals eBay/Shopify, geen extensie of AI nodig),
-alleen zakelijke verkopers met KvK (particulieren eruit sinds 03-05-2021), refurbished vraagt
-verkooprechten met minimaal EUR 15.000 aan inkoopfacturen. Kosten: commissie per verkoop, geen abonnement.
-
-**Why:** de kern van de voorraad (kleding, sieraden, antiek, unieke stukken) mag er niet op en heeft geen
-EAN; alleen boeken en games zouden kunnen, en films/cd's/dvd's plaatst Omnivaleur zelf nog niet.
-De site (frontend/marketplaces.html, "More platforms coming") noemde bol wel als binnenkort.
-
-**How to apply:** geen bol-koppeling bouwen zolang de doelgroep tweedehands kleding/sieraden/antiek is.
-Pas heroverwegen als er aantoonbaar betalende klanten zijn met veel boeken of games mét streepjescode
-en een KvK. Klantenservice-brein beantwoordt de vraag al. Zie "omnivaleur-focus-business" en
-"leadgen-op-conversie-niet-volume".
-
----
-
-## bedragveld-leest-duizendtalpunt-als-komma
-
-*29-09-2026 — "Chrome maakt van \"1.360\" en \"1.360,00\" in een type=number-veld 1,36 (gemeten nl-NL en en-US); parseFloat na replace(',', '.') doet hetzelfde. Johan Kist kreeg zo 1,36 inkoop op een gitaar van 1675"*
-
-28-09-2026, Johan Kist (Blackbird Guitars, user f8c0cce9): 100% winst op de Gibson Les Paul Studio Session, verkocht voor 1675, inkoopprijs 1,36 in de database. Een Nederlander schrijft duizend driehonderdzestig als "1.360". Gemeten in Chrome met Playwright (nl-NL en en-US, zelfde uitkomst): een `<input type=number step=0.01>` geeft voor "1.360" value "1.360" en voor "1.360,00" value "1.36000", allebei geldig, dus 1,36. Niet bewezen dat Johan dit typte, wel de enige verklaring die bij zijn bedrag past.
-
-Ook mijn eigen eerste reparatie had de valkuil: `parseFloat(tekst.replace(',', '.'))` in het prompt-potloodje maakte van "1.360" weer 1,36 en van een verkoopprijs "1.675" 1,675 (setSoldPrice deed dat al langer).
-
-**Why:** elk bedragveld en elk prompt-venster in het dashboard neemt Nederlandse bedragen aan, en duizendtallen met een punt worden stil een factor 1000 te klein. Bij een verkoopprijs of vraagprijs betekent dat een advertentie voor een paar euro.
-
-**How to apply:** tekst die we zelf zien (prompt) altijd door `leesBedrag` in frontend/app.html halen, nooit `parseFloat(x.replace(',', '.'))`. In het bewerkscherm houdt `bedragMetDuizendtalpunt` opslaan tegen als een veld dat de verkoper aanraakte meer dan twee cijfers achter de punt heeft; vergelijk daarbij met de tekst bij openen (`_bedragBegin`), niet met het getal, want 1,36 opnieuw getypt als "1.360" is hetzelfde getal. Proef: tests/aankoopprijs-aanpassen-test.mjs (PLAYWRIGHT=/Users/Danie/garmin-tracker/node_modules/playwright/index.mjs, draait op de gewone Chrome). Zie ook "voor-en-na-proef-mag-geen-head-gebruiken": de auto-push had de reparatie al in HEAD gezet, de eerste voor-en-na-proef tegen HEAD slaagde daardoor vals.
-
----
-
 ## tweeling-met-code-in-de-omschrijving
 
 *29-09-2026 — "Voorraad uit meerdere kanalen ingelezen met de eigen code in de omschrijving = losse rijen per kanaal, oude foto's en dubbele advertenties op Marktplaats (Toon, 29-09-2026)"*
@@ -94,6 +57,51 @@ staat.
   advertenties: die blijven, 2dehands wordt verlengd en niet herplaatst.
 
 Zie ook "import-dubbele-items-over-platforms", "omnivaleur-altijd-bewijzen".
+
+**Aanvulling 29-09-2026 (middag).** TK199 bewees dat de code alleen niet genoeg
+is: rijen zonder omschrijving horen erbij bij letterlijk dezelfde titel met
+afmeting. En de koppeling kan via een tussenrij twee kleden aan elkaar rijgen
+(TL104): eis daarom dat elke rij in de groep een maat deelt en geen andere code
+draagt, en kijk nieuwe groepen op foto na voor je iets weghaalt. Een versie op
+"verkocht" met een tweeling die nog live staat is geen theorie: TK199 werd op
+Marktplaats verkocht terwijl drie andere Marktplaats-advertenties bleven staan.
+
+---
+
+## bol-past-niet-bij-tweedehands
+
+*29-09-2026 — "bol.com-koppeling uitgezocht 29-09-2026; tweedehands alleen boeken/muziek/games/films, EAN en KvK verplicht, dus past niet bij Omnivaleurs voorraad"*
+
+Klanten vragen regelmatig om een bol.com-koppeling. Uitgezocht op 29-09-2026, bij bol zelf gelezen
+(partnerplatform, assortimentsbeleid Boeken): "Tweedehands artikelen of marge-goederen kunnen alleen
+aangeboden worden in de categorieën boeken, muziek, games en films. Voor de overige categorieën kun je
+geen verkooprechten aanvragen." Daarnaast: elke aanbieding hangt aan een EAN uit de bol-catalogus
+(Retailer API, gratis, officiële server-koppeling zoals eBay/Shopify, geen extensie of AI nodig),
+alleen zakelijke verkopers met KvK (particulieren eruit sinds 03-05-2021), refurbished vraagt
+verkooprechten met minimaal EUR 15.000 aan inkoopfacturen. Kosten: commissie per verkoop, geen abonnement.
+
+**Why:** de kern van de voorraad (kleding, sieraden, antiek, unieke stukken) mag er niet op en heeft geen
+EAN; alleen boeken en games zouden kunnen, en films/cd's/dvd's plaatst Omnivaleur zelf nog niet.
+De site (frontend/marketplaces.html, "More platforms coming") noemde bol wel als binnenkort.
+
+**How to apply:** geen bol-koppeling bouwen zolang de doelgroep tweedehands kleding/sieraden/antiek is.
+Pas heroverwegen als er aantoonbaar betalende klanten zijn met veel boeken of games mét streepjescode
+en een KvK. Klantenservice-brein beantwoordt de vraag al. Zie "omnivaleur-focus-business" en
+"leadgen-op-conversie-niet-volume".
+
+---
+
+## bedragveld-leest-duizendtalpunt-als-komma
+
+*29-09-2026 — "Chrome maakt van \"1.360\" en \"1.360,00\" in een type=number-veld 1,36 (gemeten nl-NL en en-US); parseFloat na replace(',', '.') doet hetzelfde. Johan Kist kreeg zo 1,36 inkoop op een gitaar van 1675"*
+
+28-09-2026, Johan Kist (Blackbird Guitars, user f8c0cce9): 100% winst op de Gibson Les Paul Studio Session, verkocht voor 1675, inkoopprijs 1,36 in de database. Een Nederlander schrijft duizend driehonderdzestig als "1.360". Gemeten in Chrome met Playwright (nl-NL en en-US, zelfde uitkomst): een `<input type=number step=0.01>` geeft voor "1.360" value "1.360" en voor "1.360,00" value "1.36000", allebei geldig, dus 1,36. Niet bewezen dat Johan dit typte, wel de enige verklaring die bij zijn bedrag past.
+
+Ook mijn eigen eerste reparatie had de valkuil: `parseFloat(tekst.replace(',', '.'))` in het prompt-potloodje maakte van "1.360" weer 1,36 en van een verkoopprijs "1.675" 1,675 (setSoldPrice deed dat al langer).
+
+**Why:** elk bedragveld en elk prompt-venster in het dashboard neemt Nederlandse bedragen aan, en duizendtallen met een punt worden stil een factor 1000 te klein. Bij een verkoopprijs of vraagprijs betekent dat een advertentie voor een paar euro.
+
+**How to apply:** tekst die we zelf zien (prompt) altijd door `leesBedrag` in frontend/app.html halen, nooit `parseFloat(x.replace(',', '.'))`. In het bewerkscherm houdt `bedragMetDuizendtalpunt` opslaan tegen als een veld dat de verkoper aanraakte meer dan twee cijfers achter de punt heeft; vergelijk daarbij met de tekst bij openen (`_bedragBegin`), niet met het getal, want 1,36 opnieuw getypt als "1.360" is hetzelfde getal. Proef: tests/aankoopprijs-aanpassen-test.mjs (PLAYWRIGHT=/Users/Danie/garmin-tracker/node_modules/playwright/index.mjs, draait op de gewone Chrome). Zie ook "voor-en-na-proef-mag-geen-head-gebruiken": de auto-push had de reparatie al in HEAD gezet, de eerste voor-en-na-proef tegen HEAD slaagde daardoor vals.
 
 ---
 

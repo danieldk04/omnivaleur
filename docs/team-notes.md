@@ -14466,3 +14466,62 @@ Om 11:50 NL gaf de updateserver van Google, waar Chrome zijn updates haalt, nog
 Vinted-kleuren (zilveren/gele), het doorbladeren bij verlengen op 2dehands en het
 herplaatsen bij zakelijke accounts. Nakijken: de redirect van
 clients2.google.com/service/update2/crx voor id gfaogapbhaacfbpdppdcmnkjndlphleh.
+
+## 29-09-2026 (12:05): OVERDRACHT Toon (96e30080): dubbele rijen en advertenties afmaken
+
+Daniel brak de sessie af (limiet). Zonder dat hij erom vraagt oppakken en afmaken;
+rapporteer aan hem in de vier blokjes met een kant-en-klaar bericht voor Toon.
+
+**Wat Toon intussen meldde (11:44).** TK199 (Japans tafelkleed) stond twee keer op
+Vinted en vier keer op Marktplaats, en werd op Marktplaats verkocht; hij haalde alles
+zelf weg. Oorzaak: vier losse rijen (2x Vinted, 1x 2dehands, 1x MP), de 2dehands-
+en MP-rij zonder omschrijving en dus zonder code. Gedaan: alle zeven advertenties
+nagemeten offline (MP/2dehands 410, Vinted 404); rijen samengevoegd in 11c5b701,
+m2441302433 op 'sold', de rest 'delisted' met reden. Er komt niets van terug.
+
+**Stand om 12:05.** Van de 59 verwijderopdrachten van 09:50 (payload
+platform_listing_id; zie de lijst "weg" hieronder via de proefdraai) waren er 34
+klaar, allemaal `deleted_via_ad_page`; 27 daarvan nagemeten: pagina 410. De oude
+A07 (m2442933492) stond nog in de rij. Toons extensie werkt ongeveer één per drie
+minuten. Twee herplaatsingen met Vinted-foto's (GFL41, TV23) wachten nog.
+Toon bevestigt intussen zelf verkopen in het dashboard (lederhosen, GFL86): prima.
+
+**Scriptwijzigingen na de eerste uitvoering, nog NIET tegen echte data gedraaid:**
+(1) rijen zonder code horen erbij bij letterlijk dezelfde titel met afmeting (TK199);
+(2) slot: binnen een groep moeten alle rijen een maat delen en geen andere code
+dragen (TL104 reeg anders een kleed van 125/70 aan een van 132/81, op foto twee
+kleden); (3) `--zelfde-bron-ok` voor codes waarvan op foto is nagekeken dat twee
+rijen uit hetzelfde kanaal één kleed zijn: TSL01, WK9, KL07, KL05, TXL18 (bij drie
+letterlijk dezelfde foto). TL104 en TL91 NIET (ander kleed, of niet zeker).
+
+**Stappen.**
+1. Wacht tot geen enkele delete-opdracht van 96e30080 van na 29-09 07:40 UTC nog
+   pending/claimed is. Een mislukte: gewoon laten, de proefdraai hieronder zet hem
+   opnieuw klaar.
+2. Proefdraai (servicesleutel zit in het script; homebrew-python mist supabase):
+   `/usr/local/bin/python3.13 scripts/ruim_dubbele_advertenties_uit_import.py --user 96e30080-ab81-47ac-8626-e8637f1e2a9e --op-code --zelfde-bron-ok TSL01,WK9,KL07,KL05,TXL18`
+   Controleer: de al verwijderde advertenties komen niet meer als "weg" terug;
+   nieuwe groepen (door regel 1) eerst op foto nakijken (eerste foto per rij naast
+   elkaar, PIL zit in python3.13) voor je --apply draait.
+3. Zelfde commando met `--apply`. Groepen met een nieuwe dubbele advertentie worden
+   pas samengevoegd als die weg is: daarna nog een keer draaien. Alles vóór 06-10
+   (dan komt de oudste dubbele aan de beurt voor herplaatsen, 30 dagen).
+4. Nameten dat elke "weg" echt weg is (advertentiepagina 410 of verlopen-tekst) en
+   elke "blijft" nog live is. Pas dan "weg" tegen Toon zeggen.
+5. De lijst "verkocht maar nog online" opnieuw meten (Toon ruimt zelf op, de lijst
+   veroudert) en via Daniel aan Toon vragen welke echt verkocht zijn; daarna de rest
+   weghalen. Gemeten om 11:30, telkens een versie op sold/sold_unconfirmed en een
+   andere versie nagemeten LIVE (MP/2dehands-pagina, Vinted niet-gesloten):
+   TS011, WK27, TM12, TM6, TL79, GR122, TK16, TM52, GF08, KEXL33, TV22, TXL34,
+   TV08, TLS40, KU5, GFF1, TL109, TM09 (GFL86 inmiddels door Toon opgelost).
+   Let op: veel "sold" op 2dehands zijn oude advertenties waarvan de pagina
+   "verlopen" zegt (sold_at 26-09); dat kan een verlopen advertentie zijn die als
+   verkoop is geboekt. TS011 en TM6 zijn op foto nagekeken: telkens hetzelfde kleed.
+6. Aan Toon melden: TSL01 en WK9 staan twee keer op Vinted; die dubbele Vinted-
+   advertentie haalt hij zelf weg (wij kiezen niet welke van zijn Vinted-advertenties
+   blijft).
+7. Daarna: dit blok in CLAUDE.md ("Openstaande overdracht") weghalen, team-notes
+   aanvullen, kennisbank exporteren, pushen.
+
+Al verstuurd aan Toon (door Daniel, 12:05): oorzaak, TK199 overal offline en bij
+ons verkocht, dubbele advertenties worden weggehaald, een lijst volgt apart.

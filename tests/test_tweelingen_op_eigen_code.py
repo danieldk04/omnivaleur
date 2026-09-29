@@ -63,3 +63,35 @@ def test_bron_is_het_kanaal_van_de_oudste_advertentierij():
     assert ruim.bron([{"platform": "marktplaats", "created_at": "2026-09-15"},
                       {"platform": "vinted", "created_at": "2026-08-28"}]) == "vinted"
     assert ruim.bron([]) == "?"
+
+
+# TK199 (29-09-2026): vier rijen, vier Marktplaats-advertenties, op Marktplaats
+# verkocht terwijl de andere drie bleven staan. De 2dehands-rij had geen
+# omschrijving en dus geen code; de titel is letterlijk gelijk.
+TK199_VINTED = {
+    "id": "11c5b701", "title": "Vintage tafelkleed met een Japans tafereel ovaal 160/140 cm",
+    "price": 30.0, "sku": "IMP-11C5B701", "created_at": "2026-08-28T10:55",
+    "description": "TK199\nVintage tafelkleed met een Japans tafereel\nAfmetingen 160/140 cm",
+    "photo_urls": ["v.jpg"],
+}
+TK199_2DEHANDS = {
+    "id": "b1350c16", "title": "Vintage tafelkleed met een Japans tafereel ovaal 160/140 cm",
+    "price": 30.0, "sku": "IMP-B1350C16", "created_at": "2026-09-05T14:08",
+    "description": "", "photo_urls": ["d.jpg"],
+}
+
+
+def test_rij_zonder_code_met_dezelfde_titel_hoort_erbij():
+    fam = ruim.families_op_code([TK199_VINTED, TK199_2DEHANDS])
+    assert [sorted(i["id"] for i in g) for g in fam] == [["11c5b701", "b1350c16"]]
+
+
+def test_zelfde_titel_met_andere_code_blijft_los():
+    ander = {**TK199_2DEHANDS, "description": "TK200 Vintage tafelkleed 160/140 cm"}
+    assert ruim.families_op_code([TK199_VINTED, ander]) == []
+
+
+def test_zelfde_titel_zonder_afmeting_blijft_los():
+    a = {**TK199_VINTED, "title": "Lederhosen dames", "description": ""}
+    b = {**TK199_2DEHANDS, "title": "Lederhosen dames"}
+    assert ruim.families_op_code([a, b]) == []
