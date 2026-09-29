@@ -158,16 +158,23 @@ Groetjes,
 Daniel
 ```
 
-Wat dat betekent:
-- Aanhef "Hoi <voornaam>,", slot "Groetjes," met op de regel eronder "Daniel".
-- Warm en enthousiast mag: "super leuk", een uitroepteken, een smiley aan het eind.
-  Geen boetekleed, geen uitleg van hoe wij iets repareerden.
-- "Goed nieuws:" met één concreet getal uit de meting.
-- Wat nog niet lukte: in een halve zin waarom (in gewone woorden, vanuit zijn kant),
-  dan precies wat hij doet, dan wat het hem oplevert.
-- Altijd afsluiten met het hulpaanbod: berichtje terug, of een call inplannen via het
+Wat de stijl is (Daniel, 29-09-2026: "hou altijd de positieve insteek, met voordelen
+voor de klant, tips etc"):
+- Altijd positief. Begin met wat al goed gaat, met een concreet getal uit de meting.
+  Wat nog niet lukt breng je als kans: wat hij doet en wat het hem oplevert (meer
+  zichtbaar, meer verkopen, tijd die hij terugwint), niet als probleem of fout.
+- Voordelen voor hem, niet functies van ons. Niet "je kunt ook op 2dehands plaatsen"
+  maar "met dezelfde voorraad ben je dan ook in België zichtbaar, zonder extra werk".
+- Een tip die bij zijn voorraad past, uit de kennisbank of uit zijn eigen meting (wat
+  andere verkopers van kleding, sieraden of meubels hielp), met het voordeel erbij.
+  Liever één sterke tip dan drie halve. Nooit een tip die je niet kunt onderbouwen.
+- Warm en persoonlijk: kort voorstellen als oprichter die zelf naar elk nieuw account
+  kijkt (alleen bij eerste contact, in eigen woorden), enthousiasme mag, een
+  uitroepteken of smiley ook. Geen boetekleed, geen uitleg van hoe wij iets repareerden.
+- Sluit af met het hulpaanbod: een berichtje terug, of een call inplannen via het
   dashboard (de Calendly-knop in het dashboard bestaat).
-- Hooguit 120 woorden (kennisbank: klantmail-kort-en-menselijk). Platte tekst, geen
+- Aanhef "Hoi <voornaam>,", slot "Groetjes," met op de regel eronder "Daniel".
+- Rond de 120 woorden (kennisbank: klantmail-kort-en-menselijk). Platte tekst, geen
   opmaaktekens, geen streepjes als leesteken, elke alinea één doorlopende regel.
 - Nederlands, tenzij hij duidelijk Engelstalig is; dan dezelfde opbouw in het Engels.
 - Schrijf nooit iets wat je niet gemeten hebt ("staan netjes op Vinted" alleen als het script
