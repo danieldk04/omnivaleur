@@ -46,6 +46,38 @@ from backend.services.crosslist import _exec
 
 logger = logging.getLogger(__name__)
 
+
+def _met_slottekst(gelokaliseerd: dict, platform: str, user_id: str) -> dict:
+    """De omschrijving met de vaste slottekst van de verkoper, zoals bij publiceren.
+
+    WAAROM DIT ER IS (29-09-2026, Henriette van Zilverwebsite). Van de eerste 26
+    herplaatsingen op Marktplaats stonden er 26 zonder de vaste tekst onder de
+    advertentie (en zonder het artikelnummer dat daarvoor hoort). refresh_listing
+    zette het resultaat van de vertaling rechtstreeks in de plaatsopdracht; alleen
+    publish_to_platforms (_pick) en de reddingsronde voegden de slottekst toe. Het
+    ging alleen goed als de tekst in het dashboard hem al bevatte, en dat is bij
+    ingelezen advertenties met een aangevulde tekst niet zo.
+
+    Zelfde regels als _pick in publish_to_platforms: eBay zonder slottekst en
+    zonder webadressen, Marktplaats en 2dehands met slottekst maar zonder
+    webadressen (dat kost EUR 9,00), de rest met slottekst.
+    """
+    from backend.services.crosslist import (slottekst_van, _met_slot, _zonder_slot,
+                                            _zonder_links)
+    slot = slottekst_van(user_id)
+    beschrijving = str(gelokaliseerd.get("description") or "")
+    titel = str(gelokaliseerd.get("title") or "")
+    if platform == "ebay":
+        beschrijving = _zonder_links(_zonder_slot(beschrijving, slot))
+        titel = _zonder_links(titel)
+    else:
+        beschrijving = _met_slot(beschrijving, slot)
+        if platform in ("marktplaats", "2dehands"):
+            beschrijving = _zonder_links(beschrijving)
+            titel = _zonder_links(titel)
+    return {**gelokaliseerd, "title": titel, "description": beschrijving}
+
+
 def _met_fabrikant(payload: dict, platform: str, user_id: str) -> dict:
     """Marktplaats en 2dehands eisen de EU-verantwoordelijke partij. Die hoort bij
     de verkoper, niet bij het artikel, dus hij wordt er hier bij gezet."""
