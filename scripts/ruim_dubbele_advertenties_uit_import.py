@@ -427,7 +427,17 @@ def main_op_code(user_id: str, apply: bool) -> None:
     for groep in fam:
         bronnen = {it["id"]: bron(per_item[it["id"]]) for it in groep}
         dubbel = [b for b, n in Counter(bronnen.values()).items() if n > 1 and b != "?"]
-        if dubbel:
+        # De koppeling kan via een tussenrij rijgen. TL104 bracht zo een kleed van
+        # 125/70 en een van 132/81 samen (op foto nagekeken: twee kleden). Elke
+        # rij moet dus dezelfde maat delen, en geen twee rijen een andere code.
+        codes = [eigen_codes(it.get("description")) for it in groep]
+        codes = [c for c in codes if c]
+        if not set.intersection(*(afmetingen(it) for it in groep)) or (
+                codes and not set.intersection(*codes)):
+            overgeslagen.append((groep, "maat of code verschilt binnen de groep"))
+            continue
+        codes_groep = set().union(*codes) if codes else set()
+        if dubbel and not (codes_groep & zelfde_bron_ok):
             overgeslagen.append((groep, f"twee rijen uit {dubbel[0]}: mogelijk twee exemplaren"))
             continue
         if any(l.get("status") in ("sold", "sold_unconfirmed")
