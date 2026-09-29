@@ -14748,15 +14748,16 @@ Opgepakt volgens de stappen van 12:05. Alles hieronder zelf gemeten.
 - GFL41 (51a86460): de herplaatsing van 09:50 mislukte ("cannot be found in your
   marktplaats listings") en m2441246787 staat niet meer op Marktplaats (pagina gaf
   weg), terwijl onze rij nog 'active' zegt. Vinted te koop, 2dehands actief.
-  Niet opnieuw geplaatst: of hij op Marktplaats verkocht is, is niet te zien. Vraag
-  staat in het bericht aan Toon.
+  Niet opnieuw geplaatst: of hij op Marktplaats verkocht is, is niet te zien. Nog
+  NIET aan Toon gevraagd (Daniel wilde een korter bericht); later vragen.
 - Verkocht maar nog online (gemeten 12:25 op de pagina's, 17:30 opnieuw op Vinted en
   in de database, ongewijzigd): GF08, GFF1, GR122, KEXL33, KU5, TK16, TL109, TL79,
   TLS40, TM09, TM12, TM52, TS011, TV08, TV22, TXL34, WK27. TM6 heeft Toon zelf als
   verkocht op Marktplaats bevestigd, maar staat nog twee keer te koop op Vinted
-  (9737196592, 9420885414); één of twee lopers is op foto niet zeker. Wacht op Toon.
-- Vinted dubbel: TSL01 staat twee keer te koop (9666484695, 9737343090), Toon haalt
-  er zelf één weg. WK9 is al opgelost (9658877117 geeft 404).
+  (9737196592, 9420885414); één of twee lopers is op foto niet zeker. TM6 staat mee
+  in de verkochtvraag aan Toon. Wacht op Toon.
+- Vinted dubbel: TSL01 staat twee keer te koop (9666484695, 9737343090). Nog NIET
+  aan Toon gemeld (korter bericht); later laten weten dat hij er zelf één weghaalt. WK9 is al opgelost (9658877117 geeft 404).
 - Toon (via Daniel, 29-09 middag): "Niets van tweedehands doorkoppelen, krijg teveel
   fraudeurs via die site." 2dehands staat bij publiceren nooit vooraf aangevinkt, dus
   nieuw werk gaat er alleen heen als hij het aanvinkt; om 13:07 tot 13:12 vinkte hij
