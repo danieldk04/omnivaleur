@@ -582,6 +582,17 @@ def _sterft_met_advertentie(url, platform: str) -> bool:
                for d in _KANAAL_FOTOSERVERS.get(platform, ()))
 
 
+# Marktplaats telt verzoeken per adres: na een veertigtal advertentiepagina's in
+# een paar minuten gaf het 403 op alles, ongeacht de browseraanduiding, en elke
+# nieuwe poging hield de blokkade in stand (gemeten 29-09-2026 vanaf Daniels
+# Mac). Dus: minstens _LIVE_PAUZE_SEC tussen twee pagina's, en na de eerste 403
+# of 429 een uur niets. Dezelfde server leest ook de verkoperslijst en
+# advertentiepagina's voor andere dingen; die mogen hier niet onder lijden.
+_LIVE_PAUZE_SEC = 8
+_LIVE_STIL_NA_BLOKKADE_SEC = 3600
+_live_klok = {"laatste": 0.0, "stil_tot": 0.0}
+
+
 async def _live_fotos(platform: str, listing: dict | None) -> list[str]:
     """De foto's zoals ze NU op de advertentie staan.
 
@@ -597,11 +608,29 @@ async def _live_fotos(platform: str, listing: dict | None) -> list[str]:
     if platform != "marktplaats" or not nummer:
         return []
     import httpx
-    from backend.services.mp_enrich import _fotos_uit_html
+    from backend.services.mp_enrich import UA, _fotos_uit_html
+    # De volledige browseraanduiding, zoals de rest van mp_enrich. Met een kale
+    # "Mozilla/5.0" gaf Marktplaats na een veertigtal pagina's 403 op alles;
+    # met deze op hetzelfde moment gewoon 200 (gemeten 29-09-2026).
+    import asyncio
+    import time
+    if time.monotonic() < _live_klok["stil_tot"]:
+        return []
+    wacht = _live_klok["laatste"] + _LIVE_PAUZE_SEC - time.monotonic()
+    if wacht > 0:
+        await asyncio.sleep(wacht)
+    _live_klok["laatste"] = time.monotonic()
+    kop = {"User-Agent": UA, "Accept": "text/html,application/xhtml+xml",
+           "Accept-Language": "nl-NL,nl;q=0.9"}
     try:
-        async with httpx.AsyncClient(timeout=20, follow_redirects=True,
-                                     headers={"User-Agent": "Mozilla/5.0"}) as client:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True, headers=kop) as client:
             r = await client.get(f"https://www.marktplaats.nl/{nummer}")
+        if r.status_code in (403, 429):
+            # Niet opnieuw proberen: elke poging houdt de blokkade in stand.
+            _live_klok["stil_tot"] = time.monotonic() + _LIVE_STIL_NA_BLOKKADE_SEC
+            logger.warning("herplaatsen: Marktplaats gaf %s op de advertentiepagina; "
+                           "een uur geen live foto's", r.status_code)
+            return []
         if r.status_code != 200 or nummer not in str(r.url):
             return []
         return _fotos_uit_html(r.text)

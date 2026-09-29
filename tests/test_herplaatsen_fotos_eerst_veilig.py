@@ -111,3 +111,25 @@ def test_pagina_met_minder_fotos_wordt_niet_overgenomen(monkeypatch):
     uit = asyncio.run(R._fotos_veiligstellen(_DB(), _item([MP] * 3), "marktplaats",
                                              {"platform_listing_id": "m1"}))
     assert len(uit["photo_urls"]) == 3
+
+
+def test_na_een_blokkade_een_uur_geen_verzoeken(monkeypatch):
+    """Marktplaats gaf na ~40 pagina's 403 op alles; elke nieuwe poging hield
+    dat in stand. Na de eerste 403 dus stoppen, niet herhalen."""
+    import httpx
+    verzoeken = []
+
+    class Client:
+        def __init__(self, *a, **k): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): return False
+        async def get(self, url):
+            verzoeken.append(url)
+            return SimpleNamespace(status_code=403, url=url, text="")
+    monkeypatch.setattr(httpx, "AsyncClient", Client)
+    monkeypatch.setattr(R, "_LIVE_PAUZE_SEC", 0)
+    monkeypatch.setitem(R._live_klok, "stil_tot", 0.0)
+    assert asyncio.run(R._live_fotos("marktplaats", {"platform_listing_id": "m1"})) == []
+    assert asyncio.run(R._live_fotos("marktplaats", {"platform_listing_id": "m2"})) == []
+    assert len(verzoeken) == 1
+    R._live_klok["stil_tot"] = 0.0
