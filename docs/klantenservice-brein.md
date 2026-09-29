@@ -932,16 +932,21 @@ Daniel
 Sinds 28-09-2026 kan dat vanaf dezelfde plek als de verkoopprijs. Voor die datum
 had alleen de verkoopprijs een potloodje in de verkooptabel; een ingevulde
 inkoopprijs was daar niet meer te wijzigen (wel via Items, tabblad Sold, Edit).
-Een inkoopprijs van 0 geeft 100% marge.
+Een inkoopprijs van 0 of een paar euro geeft 100% marge.
+
+Veel voorkomende oorzaak, tot 29-09-2026: wie "1.360" typte (Nederlands voor
+duizend driehonderdzestig) kreeg 1,36, want het bedragveld las de punt als
+komma. Sinds 29-09-2026 leest het potloodje "1.360" als 1360, en het
+bewerkscherm vraagt dan om het bedrag zonder punt te typen. Zie je een
+inkoopprijs van een paar euro bij een duur artikel, dan is dit het bijna zeker.
 
 Hoi <voornaam>,
 
-Terecht punt: de verkoopprijs kon je daar aanpassen, de inkoopprijs niet. Dat
-hebben we nu gelijkgetrokken. Ververs de pagina een keer, ga naar Analytics en
-klik in de verkooptabel op het potloodje naast de inkoopprijs. Vul het juiste
-bedrag in en de winst en marge rekenen meteen opnieuw. Weet je het bedrag niet,
-maak het veld dan leeg: de verkoop telt dan nog wel mee voor je omzet, alleen
-niet voor je winst.
+Goed nieuws: je kunt de inkoopprijs nu aanpassen op dezelfde plek als de
+verkoopprijs. Ververs de pagina een keer, ga naar Analyse (Analytics) en klik in
+de verkooptabel op het potloodje naast de inkoopprijs. Vul het juiste bedrag in
+en winst en marge rekenen meteen opnieuw. Weet je het bedrag niet, maak het veld
+dan leeg: de verkoop telt dan wel mee voor je omzet, alleen niet voor je winst.
 
 Groetjes,
 Daniel
