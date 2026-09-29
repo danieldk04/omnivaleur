@@ -53,6 +53,23 @@ Toon (De Juiste Toon, 96e30080): dubbele rijen en advertenties afmaken. Pak dit 
 zonder dat Daniel erom vraagt. Alle stappen staan in `docs/team-notes.md` onder
 "29-09-2026 (12:05): OVERDRACHT Toon". Deadline 06-10-2026.
 
+## Vaste routines (dagelijks, op twee accounts)
+
+- Klantfouten: ochtend ±08:00 (Daniels Mac), middag 14:00 (tweede account).
+- Onboarding nieuwe klanten (sinds 29-09-2026): elke klant in zijn eerste week wordt
+  dagelijks nagelopen, gerepareerd waar het kan, en krijgt een mailtje dat Daniel
+  verstuurt. De opdracht staat in `docs/routines/onboarding-nieuwe-klanten.md`; de
+  geplande taken zeggen alleen "volg dat bestand". Daniels Mac: taak
+  `omnivaleur-onboarding-nieuwe-klanten`, 06:30, rondenaam `onboarding-ochtend`.
+
+**Tweede ontwikkelaar, eenmalig bij je eerstvolgende sessie:** staat er op jouw account
+nog geen geplande taak `omnivaleur-onboarding-nieuwe-klanten-middag`, maak hem dan aan
+(dagelijks 15:00, lokale tijd) met als opdracht: "Je werkt aan Omnivaleur in <jouw
+repomap>. Lees docs/routines/onboarding-nieuwe-klanten.md in die repo en volg het
+precies. Rondenaam: onboarding-middag." Zet daarna in team-notes dat hij staat. De
+middagronde vangt de aanmeldingen van die ochtend binnen uren; het gedeelde slot
+(`scripts/klantfouten.py ronde`) voorkomt dat twee rondes hetzelfde doen.
+
 ## Begin elke sessie met kijken wat er veranderd is
 
 Voordat je aan wat dan ook begint — een codetaak, een vraag, een mail, een

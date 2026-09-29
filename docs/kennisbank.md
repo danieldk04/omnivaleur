@@ -17,6 +17,31 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## onboarding-routine-nieuwe-klanten
+
+*29-09-2026 — "Sinds 29-09-2026 loopt een dagelijkse routine elke klant in zijn eerste week na (06:30 Mac, 15:00 tweede account); opdracht in docs/routines, meting in scripts/nieuwe_klanten.py"*
+
+Elke klant in zijn eerste 7 dagen wordt dagelijks nagelopen: wat verkoopt hij, hoe ver
+is hij (extensie, inlezen, eerste geslaagde plaatsing), waar liep hij tegenaan, wat kan
+hij verwachten voor zijn assortiment. Repareren mag in code én klantdata (Daniels keuze
+29-09-2026), klantdata alleen na bewezen oorzaak, met meting ervoor en erna, nooit
+verzonnen waarden, nooit verwijderen. Per klant een mailtje dat Daniel zelf verstuurt.
+
+- Opdracht: `docs/routines/onboarding-nieuwe-klanten.md` (één versie voor beide accounts).
+- Meting: `scripts/nieuwe_klanten.py` (per user_id, `result` alleen per id); `gezien`
+  legt vast wat de ronde deed.
+- Planning: Daniels Mac taak `omnivaleur-onboarding-nieuwe-klanten` 06:30; tweede
+  account `...-middag` 15:00 (instructie in CLAUDE.md). Deelt het slot met de
+  klantfoutenrondes (`klantfouten.py ronde begin|klaar`).
+
+**Why:** de eerste uren beslissen of iemand blijft; onder 30 ingelezen artikelen betaalde
+nog nooit iemand ("trechter-aanmelding-tot-betalend-27-09").
+**How to apply:** wijzig de routine in het bestand in docs/routines, niet in de geplande
+taak. Meet extra alleen per klant ("meten-op-de-productiedatabase"). Mailtjes volgens
+"klantmail-kort-en-menselijk".
+
+---
+
 ## tweeling-met-code-in-de-omschrijving
 
 *29-09-2026 — "Voorraad uit meerdere kanalen ingelezen met de eigen code in de omschrijving = losse rijen per kanaal, oude foto's en dubbele advertenties op Marktplaats (Toon, 29-09-2026)"*

@@ -14551,3 +14551,33 @@ nog te repareren was. Server live op fc0846a1, niets hangt op 'claimed'.
 
 Opgelost sinds gisteren: niets nieuws dat terugkwam behalve het verlengen, dat op
 de Web Store wacht. Cowboyhoed One size (96e30080) kwam vandaag niet terug als fout.
+
+## 29-09-2026: routine onboarding nieuwe klanten
+
+Daniel wil dat elke nieuwe klant in de eerste uren merkt dat alles loopt: wie meteen
+vastloopt sluit af en komt niet terug. Daarom nu een vaste routine, elke ochtend 06:30
+op Daniels Mac (geplande taak `omnivaleur-onboarding-nieuwe-klanten`) en straks 15:00
+op het account van de tweede ontwikkelaar (instructie in CLAUDE.md, "Vaste routines").
+
+**Besluiten van Daniel (29-09):** draait op zijn Mac, niet in de cloud; per klant een
+mailtje klaarzetten dat hij zelf verstuurt; de routine mag code én klantdata
+rechtzetten. Klantdata onder voorwaarden: alleen na bewezen oorzaak, met meting ervoor
+en erna, velden alleen uit een bron (nooit verzinnen), nooit iets verwijderen of
+annuleren.
+
+**Gebouwd:** `scripts/nieuwe_klanten.py` meet per klant in zijn eerste 7 dagen:
+abonnement, extensie, voorraad en wat hij verkoopt, advertenties, opdrachten, eerste
+geslaagde plaatsing, fouten met tekst, vastgelopen werk en signalen. Alleen per user_id,
+kleine kolommen, `result` alleen per id op foutrijen. Onthoudt per klant wat de vorige
+ronde deed (`gezien`). De opdracht voor de routine staat in
+`docs/routines/onboarding-nieuwe-klanten.md`; de routine deelt het slot met de
+klantfoutenrondes. Proeven: `tests/test_nieuwe_klanten.py` (10 groen; de proef op de
+zware databasevraag is rood gemaakt door die vraag terug te zetten).
+
+**Eerste meting, echt gedraaid 29-09 12:40:** 56 accounts, 2 in hun eerste week, 3,8
+seconde, /health daarna 200.
+- 6e9f6f40 (hulshofmatthijs@gmail.com): aangemeld 22-09, nul artikelen, wel 22
+  Marktplaats-advertenties gescand maar nooit ingelezen, extensie 1.0.349 stil sinds
+  24-09, proef loopt vandaag 19:32 af.
+- 1ba42900 (Vagif): 86 artikelen, sieraden, eerste plaatsing binnen 40 minuten, 3x Vinted
+  geweigerd op lege kleur, extensie stil sinds 25-09.
