@@ -540,8 +540,22 @@ def main_op_code(user_id: str, apply: bool) -> None:
     # 3. De prijs die op dat kanaal al stond blijft de prijs op dat kanaal.
     for item_id, veld, prijs in prijzen:
         db.table("items").update({veld: prijs}).eq("id", item_id).is_(veld, "null").execute()
-    print(f"Klaar: {len(te_verwijderen)} verwijderopdrachten, {samengevoegd} rijen samengevoegd, "
-          f"{len(geweigerd)} geweigerd {geweigerd[:3]}.")
+    # 4. Waar op Marktplaats alleen de advertentie met de oude foto's staat: die
+    #    herplaatsen vanaf de samengevoegde rij, dus met de Vinted-foto's. Dit is
+    #    een reparatie (verkeerde foto's), vandaar zonder afkoeling; zelfde
+    #    afweging als foto_controle.py voor een advertentie zonder foto.
+    from backend.services.relist import RefreshError, refresh_listing
+    herplaatst = []
+    for blijft, houden in herplaatsen:
+        try:
+            asyncio.run(refresh_listing(houden["id"], "marktplaats", user_id, "relist",
+                                        eigen_quotum=True, negeer_afkoeling=True))
+            herplaatst.append(blijft["platform_listing_id"])
+        except RefreshError as e:
+            print(f"   herplaatsen {blijft['platform_listing_id']} geweigerd: {e}")
+    print(f"Klaar: {len(nieuw)} verwijderopdrachten, {len(annuleren)} opdrachten uit de rij, "
+          f"{samengevoegd} rijen samengevoegd, {len(geweigerd)} geweigerd {geweigerd[:3]}, "
+          f"{len(herplaatst)} herplaatst met de Vinted-foto's, {len(later)} rijen bij de tweede keer.")
 
 
 if __name__ == "__main__":
