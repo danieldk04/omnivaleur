@@ -34,6 +34,11 @@ verzonnen waarden, nooit verwijderen. Per klant een mailtje dat Daniel zelf vers
   account `...-middag` 15:00 (instructie in CLAUDE.md). Deelt het slot met de
   klantfoutenrondes (`klantfouten.py ronde begin|klaar`).
 
+**Mail pas na contactcheck (29-09-2026):** de eerste ronde mailde Vagif als vreemde
+terwijl hij via koude mail kwam, terugschreef en die middag een gesprek had. Het script
+toont nu koude mail, postvak (MAIL_PASS nodig) en vermeldingen; gesprek of contact
+binnen 48 uur = briefing in plaats van mail. Niet gelezen is nooit "geen contact".
+
 **Why:** de eerste uren beslissen of iemand blijft; onder 30 ingelezen artikelen betaalde
 nog nooit iemand ("trechter-aanmelding-tot-betalend-27-09").
 **How to apply:** wijzig de routine in het bestand in docs/routines, niet in de geplande

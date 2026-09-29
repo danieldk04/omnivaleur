@@ -90,6 +90,7 @@ def _vaste_indeling(monkeypatch):
     monkeypatch.setattr(N, "categoriegroep",
                         lambda c: "Kleding" if c and "heren" in c else "Sieraden" if c else "Onbekend")
     monkeypatch.setattr(N, "nieuwste_extensie", lambda: "1.0.358")
+    monkeypatch.setattr(N, "winkelversie", lambda: "1.0.355")
 
 
 def test_nieuwe_klanten_binnen_venster_zonder_eigen_accounts():
@@ -193,3 +194,53 @@ def test_tekst_toont_vorige_ronde():
     p["import"] = []
     uit = N.tekst(p, {"rondes": 1, "laatst": "2026-09-28T05:00", "samenvatting": "mail klaargezet"}, NU)
     assert "volgen, ronde 2" in uit and "mail klaargezet" in uit
+
+
+def test_klant_op_winkelversie_wacht_op_google_niet_op_zichzelf():
+    s = N.signalen(_profiel(extensie={"versie": "1.0.355", "laatst": NU},
+                            opdrachten=[("marktplaats create:done", 3)],
+                            eerste_gelukt={"marktplaats": NU}), NU)
+    assert [x.split(":")[0] for x in s] == ["WACHT_OP_WEB_STORE"]
+
+
+def test_koude_mail_met_antwoord_en_onleesbaar(monkeypatch):
+    opslag = {"mail_state": {"vagif@x.nl": {"verstuurd": [{"op": "2026-09-20T14:54:41", "beurt": "mail1"}],
+                                            "daniel_antwoordde": 1790145301.0}},
+              "mail_reacties": [{"op": "2026-09-23T04:53:32", "adres": "Vagif@X.nl", "soort": "warm",
+                                 "tekst": "Ja hoor, wat kost het?"}]}
+    monkeypatch.setattr(N.A, "_lees", lambda k, d: opslag.get(k, d))
+    k = N.koude_mail(["vagif@x.nl", "nieuw@x.nl"])
+    assert k["vagif@x.nl"]["verstuurd"][0][0] == "mail1"
+    assert k["vagif@x.nl"]["antwoorden"][0][1] == "warm"
+    assert k["vagif@x.nl"]["daniel_antwoordde"] is not None
+    assert k["nieuw@x.nl"]["verstuurd"] == []
+
+    monkeypatch.setattr(N.A, "_lees", lambda k, d: d)
+    assert isinstance(N.koude_mail(["vagif@x.nl"]), str)
+
+
+def test_postvak_zonder_wachtwoord_zegt_niet_gelezen(monkeypatch):
+    monkeypatch.delenv("MAIL_PASS", raising=False)
+    uit = N.postvak(["a@b.nl"])
+    assert isinstance(uit, str) and "niet gelezen" in uit
+    regels = N._contactregels({"koude_mail": "koude-mailgeschiedenis niet te lezen", "postvak": uit,
+                               "vermeldingen": []})
+    assert "niet gelezen" in regels[1] and "geen mail" not in regels[1]
+    assert "niet te lezen" in regels[0] and "nooit koud gemaild" not in regels[0]
+
+
+def test_vermeldingen_vindt_kopje_met_adres_en_geheugen(monkeypatch, tmp_path):
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "team-notes.md").write_text(
+        "## 28-09: iets anders\ntekst\n## 29-09: Vagif (vagif@x.nl) voor het gesprek van vanmiddag\nstand\n")
+    (tmp_path / "docs" / "kennisbank.md").write_text("# Les\nbij 1ba42900 ging het mis\n")
+    geheugen = tmp_path / "mem"
+    geheugen.mkdir()
+    (geheugen / "vinted-kleur.md").write_text("51 van 86 bij vagif@x.nl")
+    monkeypatch.setattr(N, "REPO", tmp_path)
+    monkeypatch.setattr(N, "GEHEUGEN", geheugen)
+    v = N.vermeldingen("vagif@x.nl", "1ba42900-77ec")
+    assert v == ["team-notes: 29-09: Vagif (vagif@x.nl) voor het gesprek van vanmiddag",
+                 "kennisbank: Les", "geheugen: vinted-kleur"]
+    monkeypatch.setattr(N, "GEHEUGEN", tmp_path / "bestaat-niet")
+    assert N.vermeldingen("vagif@x.nl", "1ba42900")[-1] == "geheugen: niet op deze machine"

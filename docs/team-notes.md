@@ -14597,3 +14597,32 @@ codewijziging, geen klantdata rechtgezet. Twee mailtjes klaargezet voor Daniel.
   is een keuze van de klant). Proef loopt af 29-09 19:32, daarna 2 dagen respijt.
   Open punt: wie na een geslaagde scan nooit importeert, krijgt nu van niemand een
   seintje; bij deze klant kostte dat de hele proefweek.
+
+## 29-09-2026 (middag): onboarding-routine aangescherpt na de eerste ronde
+
+De eerste ronde schreef Vagif een welkomstmail alsof hij een vreemde was, terwijl hij
+via de koude mail kwam (mail1 20-09, mail2 22-09), op 23-09 warm terugschreef, Daniel
+hem antwoordde, en er vanmiddag een gesprek met hem staat (kopje hierboven). En hij gaf
+Daniel het actiepunt "zet 1.0.358 in de Web Store", terwijl die al geüpload was.
+
+Daniel: streef naar 1000% zekerheid, pak alles aan, iets meer introductie bij wie hij
+nog niet sprak, en minder is meer.
+
+**Veranderd:**
+- `scripts/nieuwe_klanten.py` toont per klant wat Daniel al met hem had: koude mail
+  (mail_state en mail_reacties), het postvak (IMAP, alleen met MAIL_PASS in .env; zonder
+  zegt hij "niet gelezen", nooit "geen mail"), en elk kopje in team-notes en kennisbank
+  en elk geheugenbestand dat zijn adres of user_id noemt. Plus de versie die de Web
+  Store echt levert; een klant op die versie krijgt WACHT_OP_WEB_STORE, geen verwijt.
+- De routine: bij een gesprek of persoonlijk contact in de laatste 48 uur geen mailtje
+  maar een briefing; bij eerder contact aansluiten; bij geen contact een korte
+  introductie van Daniel. Hooguit 120 woorden, één ding om te doen. Elk signaal wordt in
+  de ronde zelf afgehandeld; een oorzaak die ook de volgende klant raakt wordt in het
+  product gerepareerd. Geen actiepunt voor Daniel dat al gedaan is.
+
+**Proeven:** 14 groen in `tests/test_nieuwe_klanten.py`, samen met test_klantfouten 32.
+Echt gedraaid: bij Vagif staan nu de koude mails, zijn antwoord, Daniels antwoord en het
+kopje over het gesprek; de eerste versie liet dat niet zien.
+
+**Open:** het postvak is op Daniels Mac niet leesbaar: MAIL_PASS staat alleen als
+GitHub-geheim, niet in .env.

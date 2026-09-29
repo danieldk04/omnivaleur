@@ -28,7 +28,13 @@ GEBRUIK
 from __future__ import annotations
 
 import argparse
+import email
+import email.header
+import email.utils
+import functools
+import imaplib
 import json
+import os
 import statistics
 import sys
 from collections import Counter
@@ -40,6 +46,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "scripts"))
 import mail_analyse as A  # noqa: E402
 import klantfouten as K  # noqa: E402
+import tel_extensieversies as V  # noqa: E402
 
 STAAT_SLEUTEL = "onboarding_klanten"
 FASE_DAGEN = 7            # de proefweek: zolang volgen we een klant dagelijks
@@ -49,6 +56,12 @@ VAST_NA_MIN = 60
 WEINIG_ARTIKELEN = 30     # 0 tot 29 ingelezen: nul betalend (gemeten 27-09-2026)
 EIGEN_DOMEINEN = ("omnivaleur.com", "crosslisteu.com")
 AMS = ZoneInfo("Europe/Amsterdam")
+# Daniels postvak, zoals in leadgen-mail.yml. Alleen het wachtwoord (MAIL_PASS) is geheim.
+POSTVAK = ("imap.zoho.eu", "daniel@omnivaleur.nl")
+POSTVAK_MAPPEN = ("INBOX", "Beantwoord", "Verzonden")
+# Waar eerdere sessies over klanten schreven. Het geheugen is per account; ontbreekt
+# het op deze machine, dan zegt het rapport dat.
+GEHEUGEN = Path.home() / ".claude" / "projects" / "-Users-Danie-Documents-omnivaleur" / "memory"
 
 
 def _nu() -> datetime:
@@ -76,6 +89,12 @@ def nieuwste_extensie() -> str:
         return json.loads((REPO / "extension" / "manifest.json").read_text())["version"]
     except (OSError, ValueError, KeyError):
         return ""
+
+
+@functools.cache
+def winkelversie() -> str:
+    """Wat Chrome bij een update echt binnenkrijgt. Leeg als de Web Store niet antwoordt."""
+    return V.winkelversie() or ""
 
 
 def categoriegroep(categorie: str | None) -> str:
@@ -240,10 +259,13 @@ def signalen(p: dict, nu: datetime) -> list[str]:
     elif nu - ext["laatst"] > timedelta(hours=24):
         uit.append(f"NIET_ACTIEF: extensie laatst gezien {_lokaal(ext['laatst'])}, "
                    f"{(nu - ext['laatst']).days} dag(en) geleden.")
-    nieuwst = nieuwste_extensie()
-    if ext["versie"] and nieuwst and _versie(ext["versie"]) < _versie(nieuwst):
-        uit.append(f"OUDE_EXTENSIE: draait {ext['versie']}, klaar staat {nieuwst} "
-                   "(kan aan de Web Store liggen, niet aan de klant).")
+    winkel, repo = winkelversie(), nieuwste_extensie()
+    if ext["versie"] and winkel and _versie(ext["versie"]) < _versie(winkel):
+        uit.append(f"OUDE_EXTENSIE: draait {ext['versie']}, de Web Store levert {winkel}; "
+                   "zijn Chrome heeft de update nog niet binnen.")
+    elif ext["versie"] and repo and _versie(ext["versie"]) < _versie(repo):
+        uit.append(f"WACHT_OP_WEB_STORE: draait {ext['versie']}, de Web Store levert "
+                   f"{winkel or '(niet te meten)'}; wat in {repo} gerepareerd is komt pas als Google het vrijgeeft.")
     if v["aantal"] == 0 and uren >= 2:
         uit.append(f"NIETS_INGELEZEN: {uren:.0f} uur na aanmelding nog nul artikelen.")
     elif 0 < v["aantal"] < WEINIG_ARTIKELEN:
@@ -273,6 +295,127 @@ def signalen(p: dict, nu: datetime) -> list[str]:
     if p["afgekapt"]:
         uit.append(f"AFGEKAPT: meer dan {MAX_RIJEN} rijen bij {', '.join(p['afgekapt'])}; tellingen zijn een ondergrens.")
     return uit
+
+
+# ---------------------------------------------------------------- wat Daniel al met hem had
+# Een mailtje aan iemand met wie Daniel al mailde of vanmiddag belt, moet daarop
+# aansluiten of wegblijven. Op 29-09-2026 schreef de eerste ronde Vagif aan alsof hij
+# een vreemde was, terwijl hij via de koude mail kwam, terugschreef, en er die middag
+# een gesprek stond. Elke bron die niet te lezen is zegt dat hardop: niet gelezen is
+# niet hetzelfde als geen contact.
+
+def _moment(w) -> datetime | None:
+    if isinstance(w, (int, float)):
+        return datetime.fromtimestamp(w, timezone.utc)
+    return _tijd(w)
+
+
+def koude_mail(adressen: list[str]) -> dict[str, dict] | str:
+    """Wat de koude-mailmachine deze adressen stuurde en wat ze terugschreven."""
+    state, reacties = A._lees("mail_state", None), A._lees("mail_reacties", None)
+    if not isinstance(state, dict) or not isinstance(reacties, list):
+        return "koude-mailgeschiedenis niet te lezen"
+    uit = {}
+    for adres in adressen:
+        s = state.get(adres) or state.get(adres.lower()) or {}
+        uit[adres] = {
+            "verstuurd": [(m.get("beurt"), _tijd(m.get("op"))) for m in s.get("verstuurd") or []
+                          if isinstance(m, dict)],
+            "antwoorden": [(_tijd(r.get("op")), r.get("soort"),
+                            " ".join(str(r.get("tekst") or "").split())[:160])
+                           for r in reacties if isinstance(r, dict)
+                           and str(r.get("adres") or "").lower() == adres.lower()],
+            "daniel_antwoordde": _moment(s.get("daniel_antwoordde")),
+        }
+    return uit
+
+
+def postvak(adressen: list[str]) -> dict[str, list[dict]] | str:
+    """Mail tussen Daniel en deze adressen, heen en terug. Vereist MAIL_PASS."""
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not wachtwoord:
+        return "postvak niet gelezen: MAIL_PASS staat niet in .env op deze machine"
+    uit: dict[str, list[dict]] = {a: [] for a in adressen}
+    geopend = []
+    try:
+        with imaplib.IMAP4_SSL(os.environ.get("IMAP_HOST") or POSTVAK[0], 993, timeout=30) as imap:
+            imap.login(os.environ.get("MAIL_USER") or POSTVAK[1], wachtwoord)
+            for map_ in POSTVAK_MAPPEN:
+                if imap.select(f'"{map_}"', readonly=True)[0] != "OK":
+                    continue
+                geopend.append(map_)
+                for adres in adressen:
+                    _, d = imap.search(None, f'(OR FROM "{adres}" TO "{adres}")')
+                    for num in (d[0] or b"").split()[-5:]:
+                        _, delen = imap.fetch(num, "(BODY.PEEK[HEADER.FIELDS (DATE SUBJECT)])")
+                        kop = email.message_from_bytes(delen[0][1])
+                        uit[adres].append({"map": map_, "datum": _maildatum(kop.get("Date")),
+                                           "onderwerp": str(email.header.make_header(
+                                               email.header.decode_header(kop.get("Subject") or "")))[:90]})
+    except (OSError, imaplib.IMAP4.error) as e:
+        return f"postvak niet gelezen: {e}"
+    if not geopend:
+        return "postvak niet gelezen: geen van de mappen te openen"
+    for lijst in uit.values():
+        lijst.sort(key=lambda m: m["datum"] or datetime.min.replace(tzinfo=timezone.utc))
+    return uit
+
+
+def _maildatum(w) -> datetime | None:
+    try:
+        return email.utils.parsedate_to_datetime(w)
+    except (TypeError, ValueError):
+        return None
+
+
+def vermeldingen(adres: str, uid: str) -> list[str]:
+    """Kopjes in team-notes en kennisbank, en geheugenbestanden, die deze klant noemen."""
+    zoek = [t for t in (adres.lower(), uid[:8].lower()) if t and t != "?"]
+    uit: list[str] = []
+    for naam in ("team-notes", "kennisbank"):
+        kop, gevonden = "", []
+        for regel in (REPO / "docs" / f"{naam}.md").read_text(errors="replace").splitlines():
+            if regel.startswith("#"):
+                kop = regel.lstrip("# ").strip()
+            if kop and any(t in regel.lower() for t in zoek) and kop not in gevonden:
+                gevonden.append(kop)
+        uit += [f"{naam}: {k}" for k in gevonden[-6:]]
+    if not GEHEUGEN.is_dir():
+        return uit + ["geheugen: niet op deze machine"]
+    for pad in sorted(GEHEUGEN.glob("*.md")):
+        if pad.name != "MEMORY.md" and any(t in pad.read_text(errors="replace").lower() for t in zoek):
+            uit.append(f"geheugen: {pad.stem}")
+    return uit
+
+
+def contact(profielen: list[dict]) -> None:
+    """Hangt koude mail, postvak en vermeldingen aan elk profiel."""
+    adressen = [p["email"] for p in profielen if "@" in (p["email"] or "")]
+    koud, post = koude_mail(adressen), postvak(adressen)
+    for p in profielen:
+        p["koude_mail"] = koud if isinstance(koud, str) else koud.get(p["email"])
+        p["postvak"] = post if isinstance(post, str) else post.get(p["email"], [])
+        p["vermeldingen"] = vermeldingen(p["email"] or "", p["user_id"])
+
+
+def _contactregels(p: dict) -> list[str]:
+    k, post = p.get("koude_mail"), p.get("postvak")
+    if isinstance(k, str):
+        koud = k
+    elif k and (k["verstuurd"] or k["antwoorden"]):
+        koud = ", ".join(f"{b} {_lokaal(t)}" for b, t in k["verstuurd"])
+        koud += "".join(f"; antwoordde {_lokaal(t)} ({s}): \"{x}\"" for t, s, x in k["antwoorden"])
+        if k["daniel_antwoordde"]:
+            koud += f"; Daniel antwoordde {_lokaal(k['daniel_antwoordde'])}"
+    else:
+        koud = "nooit koud gemaild"
+    if isinstance(post, str):
+        mails = post
+    else:
+        mails = (f"{len(post)} mail(s): " + "; ".join(
+            f"{_lokaal(m['datum'])} {m['map']} \"{m['onderwerp']}\"" for m in post[-5:])) if post else "geen mail"
+    return [f"   koude mail: {koud}", f"   postvak: {mails}",
+            f"   genoemd in: {' | '.join(p.get('vermeldingen') or []) or 'nergens'}"]
 
 
 # ---------------------------------------------------------------- staat en uitvoer
@@ -306,6 +449,8 @@ def tekst(p: dict, vorige: dict | None, nu: datetime) -> str:
               f"   extensie: {ext['versie'] or '-'}, laatst gezien {_lokaal(ext['laatst'])}"]
     if vorige:
         regels.append(f"   vorige ronde ({str(vorige.get('laatst'))[:16]} UTC): {vorige.get('samenvatting')}")
+    if "koude_mail" in p:
+        regels += _contactregels(p)
     prijs = (f"prijs {v['prijs'][0]:.0f} tot {v['prijs'][2]:.0f}, mediaan {v['prijs'][1]:.0f}"
              if v["prijs"] else "geen prijzen")
     regels += [f"   voorraad: {v['aantal']} artikelen (eerste {_lokaal(v['eerste'])}), {prijs}",
@@ -349,12 +494,14 @@ def main() -> None:
     db, vorig = get_db(), staat()
     profielen = [profiel(db, uid, alle.get(uid) or {"email": "?", "aangemeld": None,
                                                    "laatste_login": None}, nu) for uid in uids]
+    contact(profielen)
     if args.json:
         print(json.dumps(profielen, default=_json, ensure_ascii=False, indent=1))
         return
     nieuw = sum(1 for p in profielen if p["user_id"] not in vorig)
     print(f"{len(alle)} accounts gelezen; {len(profielen)} in hun eerste {args.dagen} dagen, "
-          f"waarvan {nieuw} nog nooit door de routine bekeken. Extensie in de repo: {nieuwste_extensie()}.\n")
+          f"waarvan {nieuw} nog nooit door de routine bekeken. Extensie: repo {nieuwste_extensie()}, "
+          f"Web Store levert {winkelversie() or '(niet te meten)'}.\n")
     for p in profielen:
         print(tekst(p, vorig.get(p["user_id"]), nu) + "\n")
 
