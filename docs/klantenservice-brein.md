@@ -113,6 +113,12 @@ Ondersteunde kanalen (dit is de volledige lijst):
 - Verder niets. Google Shopping, Meta, Reverb, Refurbed, Bol, Amazon en
   dergelijke worden NIET ondersteund. Zeg dat eerlijk en direct; verzin geen
   "binnenkort".
+- Vraagt iemand naar een koppeling met bol (dat komt vaak voor): bol laat
+  tweedehands alleen toe in boeken, muziek, games en films, en alleen voor
+  verkopers met een KvK-nummer. Elk artikel moet bovendien een streepjescode
+  (EAN) hebben. Tweedehands kleding, sieraden, antiek en andere unieke stukken
+  kunnen dus helemaal niet op bol, ook niet met een koppeling. Daarom zit bol er
+  niet in. Particulieren kunnen sinds mei 2021 niet meer op bol verkopen.
 - Facebook Marketplace is nog in test. Noem dat niet uit jezelf; vraagt iemand
   er expliciet naar, zeg dan dat het er is maar nog in een testfase.
   Zegt iemand dat Facebook "klaar" meldde maar dat hij de advertentie niet ziet:
