@@ -23,8 +23,10 @@ const OUD = "448c4256";
 function laad(bron) {
   const kaart = bron.match(/const COLOUR_MAP = \{[\s\S]*?\n  \};/)[0];
   const functie = bron.match(/function parseColours\(item\) \{[\s\S]*?\n  \}\n/)[0];
+  // Sinds 29-09-2026 leunt parseColours op kaartKleur; oudere versies hebben hem niet.
+  const hulp = (bron.match(/function kaartKleur\(w\) \{[\s\S]*?\n  \}\n/) || [""])[0];
   const ctx = {};
-  vm.runInNewContext(`${kaart}\n${functie}\nthis.parseColours = parseColours;`, ctx);
+  vm.runInNewContext(`${kaart}\n${hulp}\n${functie}\nthis.parseColours = parseColours;`, ctx);
   return ctx.parseColours;
 }
 
