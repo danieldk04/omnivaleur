@@ -8,6 +8,7 @@ productiedatabase, die twee keer omviel op `jobs.result` over een bereik.
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
