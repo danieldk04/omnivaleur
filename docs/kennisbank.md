@@ -17,6 +17,20 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## bedragveld-leest-duizendtalpunt-als-komma
+
+*29-09-2026 — "Chrome maakt van \"1.360\" en \"1.360,00\" in een type=number-veld 1,36 (gemeten nl-NL en en-US); parseFloat na replace(',', '.') doet hetzelfde. Johan Kist kreeg zo 1,36 inkoop op een gitaar van 1675"*
+
+28-09-2026, Johan Kist (Blackbird Guitars, user f8c0cce9): 100% winst op de Gibson Les Paul Studio Session, verkocht voor 1675, inkoopprijs 1,36 in de database. Een Nederlander schrijft duizend driehonderdzestig als "1.360". Gemeten in Chrome met Playwright (nl-NL en en-US, zelfde uitkomst): een `<input type=number step=0.01>` geeft voor "1.360" value "1.360" en voor "1.360,00" value "1.36000", allebei geldig, dus 1,36. Niet bewezen dat Johan dit typte, wel de enige verklaring die bij zijn bedrag past.
+
+Ook mijn eigen eerste reparatie had de valkuil: `parseFloat(tekst.replace(',', '.'))` in het prompt-potloodje maakte van "1.360" weer 1,36 en van een verkoopprijs "1.675" 1,675 (setSoldPrice deed dat al langer).
+
+**Why:** elk bedragveld en elk prompt-venster in het dashboard neemt Nederlandse bedragen aan, en duizendtallen met een punt worden stil een factor 1000 te klein. Bij een verkoopprijs of vraagprijs betekent dat een advertentie voor een paar euro.
+
+**How to apply:** tekst die we zelf zien (prompt) altijd door `leesBedrag` in frontend/app.html halen, nooit `parseFloat(x.replace(',', '.'))`. In het bewerkscherm houdt `bedragMetDuizendtalpunt` opslaan tegen als een veld dat de verkoper aanraakte meer dan twee cijfers achter de punt heeft; vergelijk daarbij met de tekst bij openen (`_bedragBegin`), niet met het getal, want 1,36 opnieuw getypt als "1.360" is hetzelfde getal. Proef: tests/aankoopprijs-aanpassen-test.mjs (PLAYWRIGHT=/Users/Danie/garmin-tracker/node_modules/playwright/index.mjs, draait op de gewone Chrome). Zie ook "voor-en-na-proef-mag-geen-head-gebruiken": de auto-push had de reparatie al in HEAD gezet, de eerste voor-en-na-proef tegen HEAD slaagde daardoor vals.
+
+---
+
 ## tweeling-met-code-in-de-omschrijving
 
 *29-09-2026 — "Voorraad uit meerdere kanalen ingelezen met de eigen code in de omschrijving = losse rijen per kanaal, oude foto's en dubbele advertenties op Marktplaats (Toon, 29-09-2026)"*

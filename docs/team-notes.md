@@ -14440,3 +14440,20 @@ TXL30 met twee maten blijft twee voorwerpen).
   Vinted; die blijven (2dehands wordt verlengd, niet herplaatst).
 - Klantenservice-brein in de repo bijgewerkt; de Drive-kopie niet (Google-koppeling
   lag eruit).
+
+## 29-09-2026: Johan Kist nagemeten, en "1.360" werd 1,36
+
+Gemeten in de database (alleen zijn account, f8c0cce9): 57 artikelen, 3 verkopen.
+De 100% winst is de Gibson Les Paul Studio Session: verkocht voor 1675, inkoopprijs
+1,36 (99,9%, afgerond 100%). De andere twee kloppen (Gibson J-45: 2400 tegen 1750;
+Padeltrain: 50 tegen 50). Niets aan zijn gegevens veranderd.
+
+Waarschijnlijke oorzaak, gemeten maar niet bewezen dat hij het zo typte: Chrome maakt
+van "1.360" en "1.360,00" in een bedragveld 1,36 (nl-NL en en-US). Het potloodje van
+28-09 had dezelfde valkuil, net als het potloodje van de verkoopprijs ("1.675" werd
+1,675). Gerepareerd: beide potloodjes lezen "1.360" als 1360; het bewerkscherm slaat
+een aangeraakt bedrag met meer dan twee cijfers achter de punt niet op en vraagt het
+zonder punt te typen. Proef `tests/aankoopprijs-aanpassen-test.mjs`: cdebb9e3 3 fout,
+277aac0e 10 fout, nu alles groen. Live sinds 9d2fe087 (samen met werk van een andere
+sessie). De Nederlandse melding is door een andere sessie meevertaald (ee79fb74).
+Johan moet het bedrag zelf corrigeren; mail door Daniel.
