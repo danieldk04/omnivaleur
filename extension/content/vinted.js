@@ -3525,6 +3525,21 @@
   // colour's checkbox with fallbacks (input → label → row), scrolls options into
   // view like the material picker, and VERIFIES at least one colour is checked —
   // retrying the whole open+pick cycle before giving up.
+  // EEN VERBOGEN KLEURNAAM STAAT NIET IN DE KAART (29-09-2026, Vagif).
+  // "zilveren", "gele", "gouden": 51 van zijn 86 sieraden dragen "zilveren", en
+  // geen Vinted-tegel heet zo, dus het verplichte kleurveld bleef leeg.
+  // shared.js (CL.dutchColor) kent die vormen al voor Marktplaats en 2dehands en
+  // wordt vóór dit script in de pagina geladen; hier werd hij niet gebruikt.
+  // Onbekend blijft onbekend: dan geeft dit niets terug en nooit een gok.
+  function kaartKleur(w) {
+    const laag = String(w || "").trim().toLowerCase();
+    if (!laag) return "";
+    if (COLOUR_MAP[laag]) return COLOUR_MAP[laag];
+    const nl = typeof CL !== "undefined" && CL && CL.dutchColor
+      ? String(CL.dutchColor(laag) || "").toLowerCase() : "";
+    return (nl && COLOUR_MAP[nl]) || "";
+  }
+
   function parseColours(item) {
     let raw = item.color ?? item.colour ?? item.colours ?? item.colors ?? "";
     // Vangnet: staat er geen kleur bij het item, haal hem dan uit de titel
@@ -3532,15 +3547,15 @@
     // bleef "Fill in colour to continue" staan.
     if (!String(raw).trim()) {
       const words = String(item.title || "").toLowerCase().split(/[^a-z]+/).filter(Boolean);
-      const hit = words.find(w => COLOUR_MAP[w]);
-      if (hit) raw = COLOUR_MAP[hit];
+      const hit = words.map(kaartKleur).find(Boolean);
+      if (hit) raw = hit;
     }
     const list = Array.isArray(raw) ? raw : String(raw).split(/[,/;&]|\s+en\s+|\s+and\s+/i);
     const out = [];
     for (const s of list) {
       const v = String(s).trim();
       if (!v) continue;
-      const mapped = COLOUR_MAP[v.toLowerCase()] || v;
+      const mapped = kaartKleur(v) || v;
       if (!out.some((o) => o.toLowerCase() === mapped.toLowerCase())) out.push(mapped);
       if (out.length === 2) break; // Vinted caps at 2 colours
     }
