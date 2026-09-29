@@ -219,8 +219,27 @@ def test_koude_mail_met_antwoord_en_onleesbaar(monkeypatch):
     assert isinstance(N.koude_mail(["vagif@x.nl"]), str)
 
 
+def test_postvak_leest_wachtwoord_uit_sleutelhanger(monkeypatch):
+    monkeypatch.delenv("MAIL_PASS", raising=False)
+    monkeypatch.setattr(N.subprocess, "run", lambda *a, **k: SimpleNamespace(returncode=0, stdout="uit-keychain\n"))
+    ingelogd = []
+
+    class NepImap:
+        def __init__(self, *a, **k): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def login(self, gebruiker, wachtwoord): ingelogd.append(wachtwoord)
+        def select(self, *a, **k): return ("OK", [b"0"])
+        def search(self, *a): return ("OK", [b""])
+
+    monkeypatch.setattr(N.imaplib, "IMAP4_SSL", NepImap)
+    assert N.postvak(["a@b.nl"]) == {"a@b.nl": []}
+    assert ingelogd == ["uit-keychain"]
+
+
 def test_postvak_zonder_wachtwoord_zegt_niet_gelezen(monkeypatch):
     monkeypatch.delenv("MAIL_PASS", raising=False)
+    monkeypatch.setattr(N.subprocess, "run", lambda *a, **k: SimpleNamespace(returncode=44, stdout=""))
     uit = N.postvak(["a@b.nl"])
     assert isinstance(uit, str) and "niet gelezen" in uit
     regels = N._contactregels({"koude_mail": "koude-mailgeschiedenis niet te lezen", "postvak": uit,
