@@ -134,6 +134,9 @@ Daniel verstuurt zelf; jij verstuurt niets. Wat hij krijgt hangt af van stap 3.0
 - Nooit contact: begin met een korte introductie van Daniel (oprichter van Omnivaleur,
   kijkt zelf naar elk nieuw account) en waarom hij schrijft.
 - Geen mailtje voor een klant bij wie niets veranderde en de vorige ronde er al een had.
+- De server stuurt zelf één herinnering aan wie liet scannen en na 24 uur nog niets
+  importeerde (sinds 29-09-2026). Staat bij de klant "automatische importherinnering"
+  met een datum, herhaal die boodschap dan niet.
 
 Minder is meer (kennisbank: klantmail-kort-en-menselijk): hooguit 120 woorden, platte
 tekst zonder opmaaktekens en zonder streepjes als leesteken. Goed nieuws vooraan, eerst

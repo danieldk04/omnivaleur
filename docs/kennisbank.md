@@ -17,6 +17,25 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## importherinnering-na-scan
+
+*29-09-2026 — Sinds 29-09-2026 mailt de server één keer wie liet scannen maar na 24 uur niets importeerde; link /app#import; vastgelegd in leadgen_opslag import_herinnering*
+
+`backend/services/import_herinnering.py`, elk uur, 10 tot 22 uur NL. Alleen accounts van
+de laatste 14 dagen met lopende proef of abonnement, een wachtende importkandidaat van
+24 uur of ouder, nog nooit iets geïmporteerd of gekoppeld, proef plus respijt nog niet
+voorbij. Eén keer per klant: leadgen_opslag `import_herinnering` wordt vóór het versturen
+geschreven; onleesbaar = niemand mailen. Wie Daniel zelf mailt kan er met de hand in.
+
+**Why:** Matthijs (6e9f6f40) scande 22 advertenties en klikte nooit op "Alles importeren";
+zijn proefweek ging voorbij met nul artikelen. De knop staat op het Import-scherm, niet
+op het eerste scherm na inloggen, en alleen onder "Klaar om te importeren".
+**How to apply:** mail een klant niet met dezelfde boodschap als de server al stuurde;
+`scripts/nieuwe_klanten.py` toont per klant of hij hem kreeg. Zie
+"onboarding-routine-nieuwe-klanten", "trechter-aanmelding-tot-betalend-27-09".
+
+---
+
 ## onboarding-routine-nieuwe-klanten
 
 *29-09-2026 — "Sinds 29-09-2026 loopt een dagelijkse routine elke klant in zijn eerste week na (06:30 Mac, 15:00 tweede account); opdracht in docs/routines, meting in scripts/nieuwe_klanten.py"*

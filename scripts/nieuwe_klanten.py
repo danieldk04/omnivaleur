@@ -392,7 +392,11 @@ def contact(profielen: list[dict]) -> None:
     """Hangt koude mail, postvak en vermeldingen aan elk profiel."""
     adressen = [p["email"] for p in profielen if "@" in (p["email"] or "")]
     koud, post = koude_mail(adressen), postvak(adressen)
+    # De automatische importherinnering (backend/services/import_herinnering.py).
+    herinnerd = A._lees("import_herinnering", None)
     for p in profielen:
+        p["importherinnering"] = (herinnerd.get(p["user_id"]) if isinstance(herinnerd, dict)
+                                  else "niet te lezen")
         p["koude_mail"] = koud if isinstance(koud, str) else koud.get(p["email"])
         p["postvak"] = post if isinstance(post, str) else post.get(p["email"], [])
         p["vermeldingen"] = vermeldingen(p["email"] or "", p["user_id"])
@@ -414,7 +418,11 @@ def _contactregels(p: dict) -> list[str]:
     else:
         mails = (f"{len(post)} mail(s): " + "; ".join(
             f"{_lokaal(m['datum'])} {m['map']} \"{m['onderwerp']}\"" for m in post[-5:])) if post else "geen mail"
+    herinnerd = p.get("importherinnering")
+    herinnering = (_lokaal(_tijd(herinnerd)) if herinnerd and herinnerd != "niet te lezen"
+                   else herinnerd or "niet verstuurd")
     return [f"   koude mail: {koud}", f"   postvak: {mails}",
+            f"   automatische importherinnering: {herinnering}",
             f"   genoemd in: {' | '.join(p.get('vermeldingen') or []) or 'nergens'}"]
 
 

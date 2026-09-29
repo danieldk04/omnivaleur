@@ -198,6 +198,17 @@ def start_scheduler():
         id="verkoop_herinnering",
         replace_existing=True,
     )
+    # Eén herinnering voor wie liet scannen maar na 24 uur nog niets importeerde
+    # (Matthijs, 29-09-2026: een proefweek lang nul artikelen). Elk uur; de functie
+    # kijkt zelf of het overdag is en wie hem al kreeg.
+    from backend.services.import_herinnering import herinner_niet_geimporteerd
+    _scheduler.add_job(
+        _off_the_request_loop(herinner_niet_geimporteerd),
+        "interval",
+        hours=1,
+        id="import_herinnering",
+        replace_existing=True,
+    )
     # Werk dat halverwege bleef steken weer vlot trekken. Elke zes uur is vaak
     # genoeg: een advertentie die tussen verwijderen en terugplaatsen hangt is
     # weg bij het platform, dus dat mag geen dagen duren.

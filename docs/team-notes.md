@@ -14626,3 +14626,29 @@ kopje over het gesprek; de eerste versie liet dat niet zien.
 
 **Open:** het postvak is op Daniels Mac niet leesbaar: MAIL_PASS staat alleen als
 GitHub-geheim, niet in .env.
+
+## 29-09-2026 (middag): automatische importherinnering
+
+Daniel zei ja: wie liet scannen maar na 24 uur nog niets importeerde krijgt één
+automatische mail (Nederlands met Engels eronder) met een link die direct op het
+Import-scherm opent (`/app#import`, nieuw), ook als de klant eerst moet inloggen
+(`login.html?naar=import`; nagedaan in de browser met een nagebootste inlog, gewone
+inlog gaat nog steeds naar het dashboard). Aanleiding: Matthijs (6e9f6f40), 22
+Marktplaats-advertenties gescand op 22-09, nooit geïmporteerd, proefweek voorbij.
+
+Voorwaarden: account van de laatste 14 dagen met een lopende proef of abonnement, een
+wachtende kandidaat van minstens 24 uur, nog nooit iets geïmporteerd of gekoppeld, proef
+plus respijt nog niet voorbij, alleen tussen 10 en 22 uur. Eén keer: vastgelegd in
+leadgen_opslag `import_herinnering` vóór de mail uitgaat; niet te lezen = niemand gemaild.
+Code: `backend/services/import_herinnering.py`, elk uur via de scheduler.
+
+Gecontroleerd voor het aanzetten: bij Matthijs stonden alle 22 onder "Klaar om te
+importeren" (naar "Te controleren" gaat alleen twijfel met een voorgesteld bestaand
+artikel), dus de knop "Alles importeren (22)" was voor hem zichtbaar, op het
+Import-scherm en niet op het eerste scherm. Droog gedraaid op de echte database: alleen
+Matthijs kwam in aanmerking. Omdat Daniel hem vandaag zelf mailt, staat hij met de hand
+als gemaild in de opslag (29-09 13:00); daarna kwam niemand meer in aanmerking.
+Proeven: `tests/test_import_herinnering.py` (9).
+
+Het Zoho-wachtwoord dat Daniel in de chat plakte is niet gebruikt en niet opgeslagen:
+een sessie logt nooit in met een echt wachtwoord. Daniel zet MAIL_PASS zelf in .env.

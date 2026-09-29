@@ -2788,7 +2788,12 @@ try {
   });
 } catch (e) {}
 
-if (!SESSIE.lees('cl_auth')) { window.location.href = '/login.html'; }
+// Een link naar een scherm (/app#import uit de importherinnering) moet ook na het
+// inloggen op dat scherm uitkomen; anders landt de klant op het dashboard.
+if (!SESSIE.lees('cl_auth')) {
+  const naarScherm = /^#[a-z]+$/.test(location.hash) ? location.hash.slice(1) : '';
+  window.location.href = naarScherm ? '/login.html?naar=' + naarScherm : '/login.html';
+}
 
 // ── Extension detection ───────────────────────────────────────────
 // The extension's content script (webapp_sync.js) answers our ping with
@@ -11632,6 +11637,9 @@ if (_urlParams.get('billing') === 'success' || _urlParams.get('billing') === 'ca
   showView('prijs');
 } else if (window.location.hash === '#platforms') {
   showView('platforms');
+} else if (window.location.hash === '#import') {
+  // De importherinnering linkt hierheen: meteen bij "Alles importeren".
+  showView('import');
 }
 loadAll().then(() => { if (window.location.hash === '#platforms') renderPlatforms(); });
 loadBillingStatus();

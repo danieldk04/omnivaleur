@@ -165,7 +165,9 @@ async function doLogin(e) {
     SESSIE.zet('cl_token', data.access_token);
     if (data.refresh_token) SESSIE.zet('cl_refresh', data.refresh_token);
     SESSIE.zet('cl_email', data.user.email);
-    window.location.href = '/app';
+    // Terug naar het scherm waar de link heen wees (bijv. #import), alleen een kale naam.
+    const naar = new URLSearchParams(location.search).get('naar') || '';
+    window.location.href = '/app' + (/^[a-z]+$/.test(naar) ? '#' + naar : '');
   } catch (err) {
     errEl.textContent = err.message;
     errEl.style.display = 'block';
