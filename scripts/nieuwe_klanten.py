@@ -330,11 +330,24 @@ def koude_mail(adressen: list[str]) -> dict[str, dict] | str:
     return uit
 
 
+def _mailwachtwoord() -> str | None:
+    """MAIL_PASS uit de omgeving, anders uit de Mac-sleutelhanger waar de oude
+    mailmachine (scripts/leadgen_tick.sh) het al bewaarde. Nooit printen."""
+    if os.environ.get("MAIL_PASS"):
+        return os.environ["MAIL_PASS"]
+    try:
+        r = subprocess.run(["security", "find-generic-password", "-a", SLEUTELHANGER[0],
+                            "-s", SLEUTELHANGER[1], "-w"], capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else None
+
+
 def postvak(adressen: list[str]) -> dict[str, list[dict]] | str:
-    """Mail tussen Daniel en deze adressen, heen en terug. Vereist MAIL_PASS."""
-    wachtwoord = os.environ.get("MAIL_PASS")
+    """Mail tussen Daniel en deze adressen, heen en terug."""
+    wachtwoord = _mailwachtwoord()
     if not wachtwoord:
-        return "postvak niet gelezen: MAIL_PASS staat niet in .env op deze machine"
+        return "postvak niet gelezen: geen MAIL_PASS in .env en niets in de sleutelhanger van deze machine"
     uit: dict[str, list[dict]] = {a: [] for a in adressen}
     geopend = []
     try:
