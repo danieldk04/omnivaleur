@@ -517,6 +517,13 @@ def main_op_code(user_id: str, apply: bool) -> None:
         _verwijderopdracht(db, user_id, l)
     for jid in annuleren:
         db.table("jobs").update({"status": "cancelled"}).eq("id", jid).eq("status", "pending").execute()
+    # Bewezen verlopen (de pagina zegt het letterlijk): archief, net als
+    # verlopen_controle.py. Anders telt hij na samenvoegen als tweede advertentie.
+    from backend.api.listings import VERDENKING_REDENEN
+    for l in verlopen:
+        db.table("listings").update({"status": "delisted",
+                                     "error_message": VERDENKING_REDENEN["verlopen"]}
+                                    ).eq("id", l["id"]).in_("status", list(LEVEND)).execute()
     # 2. Samenvoegen zoals backend/api/items.merge_items dat doet: advertenties en
     #    opdrachten naar de Vinted-rij, de andere rijen weg. Foto's blijven staan.
     samengevoegd, geweigerd = 0, []
