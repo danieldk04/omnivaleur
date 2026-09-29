@@ -1028,7 +1028,8 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
     # did. Without this the recreate posts the raw English DB row to
     # marktplaats/2dehands, so a relisted item silently loses its Dutch title.
     from backend.services.crosslist import localize_item_for_platform
-    localized = await localize_item_for_platform(item, platform)
+    localized = _met_slottekst(await localize_item_for_platform(item, platform),
+                               platform, user_id)
 
     create_payload = {
         **localized,
