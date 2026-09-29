@@ -14792,3 +14792,7 @@ Web Store levert 1.0.358, repo nu 1.0.361.
   twee ringen opnieuw laten plaatsen zodra 1.0.361 bij hem draait.
 - Let op: backend/services/crosslist.py en tests/test_stuck_publish_recovery.py stonden
   al gewijzigd en niet gecommit in de map; niet van deze ronde, niet aangeraakt.
+
+## 29-09-2026 (middag): Zilverwebsite, herplaatsingen zonder slottekst en artikelnummer
+
+Henriette meldde dat een aantal advertenties van vanochtend zonder artikelnummer en zonder de vaste tekst eronder online stonden. Gemeten: alle 26 herplaatsingen van die ochtend (via refresh_listing) misten de slottekst; alleen wie de tekst al in items.description had kreeg hem. Oorzaak: refresh_listing voegde de slottekst niet toe (publiceren en de reddingsronde wel). Gerepareerd met `_met_slottekst` in backend/services/relist.py (beide takken); proef tests/test_herplaatsen_slottekst.py draait de echte refresh_listing en faalt op de oude code. Bij 24 van de 26 items is het artikelnummer uit de webshop (products.json, sku, unieke titel) achter de tekst gezet in items.description, zodat de volgende herplaatsing hem meeneemt (oude teksten bewaard buiten de repo, niet nodig). De twee cabaretten staan niet meer in de webshop: geen nummer. De 26 live advertenties blijven zonder tot de volgende herplaatsing (relist_dagen 30); een tekst-edit op live Marktplaats-advertenties bestaat niet. Waterketel, ketting en Zinzi-ring staan sinds vanochtend weer actief op Marktplaats.

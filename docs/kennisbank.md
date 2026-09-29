@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## herplaatsen-vergat-de-slottekst
+
+*29-09-2026 — refresh_listing zette de vertaalde tekst zonder vaste slottekst in de plaatsopdracht; 26 van 26 herplaatsingen bij Zilverwebsite kwamen zonder slottekst en artikelnummer online (29-09-2026)*
+
+Herplaatsen (refresh_listing, beide takken) voegde de vaste slottekst van de verkoper NIET toe; alleen publish_to_platforms (_pick) en de reddingsronde deden dat. Het ging alleen goed als items.description de slottekst al bevatte (ingelezen advertenties). Bij items waarvan de tekst uit de webshop is aangevuld ontbrak hij, en het artikelnummer (staat bij Zilverwebsite als laatste regel vóór de slottekst) ook. Gemeten 29-09-2026: 26 van 26 herplaatsingen van die ochtend zonder, 24 daarvan met een eenduidig nummer uit de webshop (products.json, variants.sku, titel uniek).
+
+**Why:** "elk pad moet er zelf aan denken" is de vorm van deze fout, net als bij de vertaling ("vertaling-draait-de-richting-om"). Live advertenties zijn niet te bewerken (geen bewezen tekst-edit op Marktplaats; content_refresh doet op 2dehands alleen verzending), dus een gemiste slottekst blijft staan tot de volgende herplaatsing (relist_dagen, bij Zilverwebsite 30).
+
+**How to apply:** nieuwe paden die een 'create' klaarzetten gaan langs `relist._met_slottekst`. Bij aangevulde teksten ook het artikelnummer in items.description zetten. Voor-en-na-proef: tests/test_herplaatsen_slottekst.py draait de echte refresh_listing. Zie "marktplaats-fotoadres-sterft-met-de-advertentie".
+
+---
+
 ## klantmail-kort-en-menselijk
 
 *29-09-2026 — Klantmails van Daniel: hooguit 120 woorden, schrijven zoals je praat, goed nieuws vooraan, geen boetekleed en geen slijmen*
