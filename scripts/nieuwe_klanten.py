@@ -36,6 +36,7 @@ import imaplib
 import json
 import os
 import statistics
+import subprocess
 import sys
 from collections import Counter
 from datetime import datetime, timedelta, timezone
