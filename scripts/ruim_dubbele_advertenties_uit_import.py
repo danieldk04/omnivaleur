@@ -459,7 +459,11 @@ def main_op_code(user_id: str, apply: bool) -> None:
             print(f"   {kanaal}: blijft {blijft['platform_listing_id']}"
                   + "".join(f", weg {l['platform_listing_id']}" for l in rijen
                             if l in te_verwijderen))
-            if van is not houden and set(van.get("photo_urls") or []) != set(houden.get("photo_urls") or []):
+            # Alleen met een Vinted-rij is "nieuwere foto's" bewezen. Zonder die
+            # rij (GFL19: 2dehands en een rij zonder advertenties) is de ene
+            # set niet beter dan de andere, en herplaatsen dus alleen risico.
+            if (van is not houden and bronnen[houden["id"]] == "vinted"
+                    and set(van.get("photo_urls") or []) != set(houden.get("photo_urls") or [])):
                 oude_fotos.append((kanaal, blijft, houden))
                 print(f"      LET OP: die advertentie draagt de foto's van de {bronnen[van['id']]}-rij")
             veld = f"price_{kanaal}"
