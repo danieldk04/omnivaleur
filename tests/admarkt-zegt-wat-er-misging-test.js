@@ -29,6 +29,7 @@
  *
  * Draaien:  node tests/admarkt-zegt-wat-er-misging-test.js
  *           node tests/admarkt-zegt-wat-er-misging-test.js --oud   (hoort te falen)
+ *           node tests/admarkt-zegt-wat-er-misging-test.js --oud=8bc9565f   (proef 8 faalt)
  */
 const fs = require("fs");
 const path = require("path");
@@ -38,9 +39,13 @@ const { execSync } = require("child_process");
 const WORTEL = path.join(__dirname, "..");
 // Vast commitnummer, geen HEAD: na de commit zou de proef zichzelf vergelijken.
 const VOOR_DE_REPARATIE = "6765d602";
-const oud = process.argv.includes("--oud");
+// --oud=<commit> draait tegen een andere oude versie (8bc9565f: vóór de
+// inlogpagina-reparatie van 29-09-2026).
+const oudArg = process.argv.find(a => a === "--oud" || a.startsWith("--oud="));
+const oud = !!oudArg;
+const VOOR = (oudArg || "").startsWith("--oud=") ? oudArg.slice(6) : VOOR_DE_REPARATIE;
 const BG = oud
-  ? execSync(`git show ${VOOR_DE_REPARATIE}:extension/background.js`, { cwd: WORTEL, maxBuffer: 64e6 }).toString()
+  ? execSync(`git show ${VOOR}:extension/background.js`, { cwd: WORTEL, maxBuffer: 64e6 }).toString()
   : fs.readFileSync(path.join(WORTEL, "extension/background.js"), "utf8");
 
 let mislukt = 0;
@@ -73,7 +78,7 @@ async function draai({ antwoord, tabWeg = false, titel = "Admarkt", adres = "htt
   const ctx = {
     console: { log() {}, warn() {} },
     ADMARKT_MAX: 500,
-    JSON, Promise, Set, Array, Number, Math, String, Object, Error,
+    JSON, URL, Promise, Set, Array, Number, Math, String, Object, Error,
     setTimeout: (f) => f(),            // geen echte wachttijden in de proef
     encodeURIComponent,
     zorgVoorAdmarktMeekijker: async () => true,
@@ -179,6 +184,19 @@ const jsonAntwoord = (body) => ({ status: 200, type: "application/json", body })
     });
     ok("lege campagne meldt nog steeds 'no live adverts'", /no live adverts/i.test(r.fout || ""), r.fout);
     ok("lege campagne toont wél de stappen", /campagnes: 1/.test(r.fout || ""), r.fout);
+  }
+
+  // 8. Geen Marktplaats-inlog: Admarkt stuurt door naar de inlogpagina, en daar
+  //    geeft de tRPC-aanroep 404 text/plain (klant 82b13998, 29-09-2026). De
+  //    klant moet lezen dat hij niet ingelogd is, niet een procedurenaam + 404.
+  {
+    const r = await draai({
+      titel: "Login Mijn Marktplaats",
+      adres: "https://www.marktplaats.nl/identity/v2/login?target=https%3A%2F%2Fadmarkt.marktplaats.nl%2Faccounts%2Foauth%2Fauthorize",
+      antwoord: () => ({ status: 404, type: "text/plain", body: null }),
+    });
+    ok("inlogpagina zegt 'not signed in to Marktplaats'", /not signed in to Marktplaats/.test(r.fout || ""), r.fout);
+    ok("inlogpagina noemt geen HTTP 404 van een procedure", !/getAllCampaigns/.test(r.fout || ""), r.fout);
   }
 
   console.log(mislukt ? `\n${mislukt} controle(s) omgevallen\n` : "\nalles groen\n");

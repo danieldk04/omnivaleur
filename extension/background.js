@@ -7112,6 +7112,19 @@ async function bgScanAdmarkt(job, serverUrl) {
       // aanroep, dus een lege `stappen` bewijst dat die aanroep afbrak. Hij
       // klikte daarna nog twee keer opnieuw, want de tekst gaf hem niets.
       try {
+        // GEEN ADMARKT-SESSIE: DAN STAAN WE OP DE INLOGPAGINA (29-09-2026).
+        // Zonder Marktplaats-inlog stuurt Admarkt door naar
+        // www.marktplaats.nl/identity/v2/login. Een tRPC-aanroep daar geeft
+        // 404 text/plain, en de klant las "campaign.getAllCampaigns → HTTP 404"
+        // (klant 82b13998, particulier, twee keer). Wat er echt aan de hand is:
+        // niet ingelogd. Dat zeggen we dan ook, vóór er iets gevraagd wordt.
+        const hier = new URL(location.href);
+        if (!/^admarkt\./.test(hier.hostname) || /\/identity\/|\/login/i.test(hier.pathname)) {
+          return { fout: "login page", meta: {
+            stappen, pagina_titel: (document.title || "").slice(0, 120),
+            adres: (location.href || "").slice(0, 200),
+          } };
+        }
         // Advertenties hangen altijd onder een campagne; er is er minstens één,
         // ook bij wie er nooit een heeft aangemaakt ("Campagne zonder titel").
         const campagnes = (await roep("campaign.getAllCampaigns", {})).campaigns || [];
@@ -7226,6 +7239,16 @@ async function bgScanAdmarkt(job, serverUrl) {
       const sporen =
         ` page="${m.pagina_titel || "?"}" url=${m.adres || "?"} ` +
         `steps=[${(m.stappen || []).join(" | ") || "none"}]`;
+      if (result.fout === "login page") {
+        const naam = platform === "2dehands" ? "2dehands" : "Marktplaats";
+        const e = new Error(
+          `You are not signed in to ${naam} in this browser: Admarkt sent us to the ` +
+          `${naam} login page. Nothing was imported. Open ${site}, sign in, and run ` +
+          `the scan again.` + sporen
+        );
+        e.admarktNietIngelogd = true;
+        throw e;
+      }
       if (result.fout === "no campaigns on this account") {
         throw new Error(
           `Admarkt (${site}) shows no campaigns at all for this session, and every ` +
@@ -7457,6 +7480,7 @@ async function bgScanMp2dh(job, serverUrl) {
     // een andere nummerreeks (zie backend/services/mp_enrich.py), dus
     // samenvoegen op advertentienummer kan hier geen dubbele opleveren.
     let admarktFout = null;
+    let admarktNietIngelogd = false;
     let admarktKlaar = false;
     if (await admarktMeenemen(result.items.length, platform)) {
       await reportProgress(serverUrl, job.id, {
@@ -7488,7 +7512,10 @@ async function bgScanMp2dh(job, serverUrl) {
         // advertenties gevonden", dus die willen we terugzien — maar alleen
         // als het persoonlijke overzicht OOK niets had; anders verdringt een
         // Admarkt-foutmelding een prima geslaagde persoonlijke scan.
-        if (!result.items.length) admarktFout = String(e && e.message ? e.message : e);
+        if (!result.items.length) {
+          admarktFout = String(e && e.message ? e.message : e);
+          admarktNietIngelogd = !!(e && e.admarktNietIngelogd);
+        }
         else console.warn("[Omnivaleur] Admarkt-scan naast persoonlijk overzicht mislukt:", e);
       }
     }
@@ -7512,7 +7539,10 @@ async function bgScanMp2dh(job, serverUrl) {
       // particulier verkoopt en van wie 2dehands zelf al zei dat hij nul
       // advertenties heeft. Dat zou de stille afronding van 03-09-2026 weer
       // ongedaan maken.
-      if (admarktFout && !(platform === "2dehands" && echtLeeg)) {
+      // Zelfde geldt op Marktplaats als Admarkt ons naar de inlogpagina stuurde
+      // terwijl het persoonlijke overzicht met een 200 zei dat er niets staat:
+      // een particulier zonder advertenties, geen storing.
+      if (admarktFout && !((platform === "2dehands" || admarktNietIngelogd) && echtLeeg)) {
         throw new Error(`Admarkt: ${admarktFout}`);
       }
       const admarktAan = await admarktMeenemen(0, platform);

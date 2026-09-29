@@ -3209,5 +3209,7 @@
  "Error saving the purchase price: {0}": "Fout bij opslaan van de inkoopprijs: {0}",
  "Edit purchase price": "Inkoopprijs bewerken",
  "Relist skipped: this listing's photos are only stored on the marketplace itself and would disappear together with the old listing. Copying them to Omnivaleur didn't work, so nothing was removed. Try again later.": "Herplaatsen overgeslagen: de foto's van deze advertentie staan alleen op de site zelf en zouden samen met de oude advertentie verdwijnen. Kopiëren naar Omnivaleur lukte niet, dus er is niets weggehaald. Probeer het later opnieuw.",
- "An amount reads as €{0}. Did you use a dot for thousands? Here a dot is a decimal point, so 1.360 becomes 1.36. Type the amount without it, for example 1360 or 1360,50.": "Het bedrag wordt gelezen als €{0}. Gebruikte je een punt voor duizendtallen? Hier is een punt een decimaalteken, dus 1.360 wordt 1,36. Typ het bedrag zonder punt, bijvoorbeeld 1360 of 1360,50."
+ "An amount reads as €{0}. Did you use a dot for thousands? Here a dot is a decimal point, so 1.360 becomes 1.36. Type the amount without it, for example 1360 or 1360,50.": "Het bedrag wordt gelezen als €{0}. Gebruikte je een punt voor duizendtallen? Hier is een punt een decimaalteken, dus 1.360 wordt 1,36. Typ het bedrag zonder punt, bijvoorbeeld 1360 of 1360,50.",
+ "You are not signed in to {0} in this browser: Admarkt sent us to the {1} login page.": "Je bent in deze browser niet ingelogd bij {0}: Admarkt stuurde ons naar de inlogpagina van {1}.",
+ "Open {0}, sign in, and run the scan again.": "Open {0}, log in en start de scan opnieuw."
 }

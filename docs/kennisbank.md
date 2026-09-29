@@ -17,6 +17,200 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## admarkt-zakelijke-marktplaats
+
+*29-09-2026 — Zakelijke Marktplaats-verkopers beheren hun advertenties in Admarkt; het persoonlijke overzicht is dan leeg en de scan vindt nul*
+
+Een **zakelijk** Marktplaats-account beheert zijn advertenties op
+`admarkt.marktplaats.nl/advertisements`, niet op de persoonlijke
+"Mijn advertenties"-pagina die de scan leest. Die pagina is dan gewoon leeg.
+Gemeten bij Egbert Brouwer (Papa's Plectrums, plectrums/muziekmerchandise):
+**5.540 advertenties in Admarkt tegenover 0 in het gewone overzicht.**
+
+De Admarkt-lijst toont per rij: miniatuur, titel, datum, CPC, biedstrategie,
+pagina, budget, kliks, klikratio — **geen prijs en geen omschrijving**. Die
+moeten dus alsnog van de advertentiepagina zelf komen, net als bij de gewone
+import.
+
+**Twee wegen, en de dure is niet nodig gebleken.**
+1. *Officieel:* de iCAS Sellside-API (`admarkt.marktplaats.nl/api/sellside/`,
+   OAuth2 authorization code, kan ook namens andere verkopers werken). Klinkt
+   perfect, maar: "To request a client id and secret please ask your contact at
+   the respective tenant." Er is geen aanmeldknop — Marktplaats moet je die
+   sleutels persoonlijk geven. Dat is een zakelijke horde, geen technische.
+2. *Wat gebouwd is (extensie 1.0.201):* de pagina in een tabblad laden en lezen
+   wat hij zelf ophaalt.
+
+**Gemeten op Daniels eigen (lege) Admarkt-account, 16-08-2026** — hij heeft
+Marktplaats Pro zonder advertenties, en dat is genoeg om de pagina te bestuderen:
+- De site is een React-SPA met een **catch-all**: élk onbekend pad geeft
+  **HTTP 200 met de gewone pagina** terug in plaats van 404. Raden naar een
+  endpoint "lukt" dus altijd en levert nooit iets op. De controle op
+  `content-type: json` is daarom geen nettigheid maar de énige manier om te zien
+  dat er niets is. `/api/v2/{advertisements,listings,ads,campaigns,account}` gaven
+  allemaal 200 text/html.
+- De pagina haalt **`/csrf-token`** op → de advertentielijst kan een POST zijn,
+  en die valt met een eigen GET nooit na te doen.
+- Met 0 advertenties doet de pagina **geen enkel** gegevensverzoek voor de lijst.
+  Een leeg account kan de aanpak dus niet bewijzen, alleen ontkrachten.
+- Het datamodel is **campagne → listing** (`/campaign/{id}/listing/edit/{id}`);
+  "Alle advertenties" is een samenvoeging.
+
+**DE KOPPELING (gevonden en uitgeprobeerd op een live advertentie, 16-08-2026).**
+Admarkt praat **tRPC**: `GET /api/trpc/<procedure>?batch=1&input=<urlencoded json>`
+met `{"0": {…}}` als invoer, op de sessiecookie van de ingelogde verkoper.
+- `campaign.getAllCampaigns` → `{campaigns:[{id,title,status,…}], total}`.
+  Iedereen heeft er minstens één ("Campagne zonder titel").
+- `ad.getAds` met `{campaignId, pageToken?}` → `{ads, count, nextPageToken}`.
+- Advertentievelden: `id, title, images[], categoryId, status, dateCreated,
+  campaignId, links`. Foto's zitten in `images[].links` op meerdere maten,
+  **1024x1024** is de grootste; protocol-relatief, dus `https:` ervoor.
+- **Hoe je hier zoekt:** een onbekend PAD geeft 200 + de gewone pagina (nutteloos),
+  maar een onbekende PROCEDURE geeft netjes **404**. Dat is de oracle waarmee
+  `ad.getAds` gevonden is. De API noemt bovendien zelf de geldige veldnamen in
+  zijn foutmelding (zo bleek de dimensie `am:adID` te heten, niet `am:adId`).
+
+**Admarkt kent GEEN prijs en GEEN omschrijving.** Het zijn advertenties die naar
+de **eigen webwinkel** van de verkoper wijzen (`links.url`), niet naar een
+Marktplaats-advertentie. Een import levert dus titel + foto's + categorie op; de
+verkoper vult prijs en tekst zelf aan. Sla bewust **geen** `platform_listing_url`
+op — dat adres is de webwinkel en zou later de verkeerde pagina openen of
+verwijderen. Er valt om dezelfde reden ook niets te verrijken.
+
+**De meekijker (1.0.205) staat er nog als vangnet.**
+`content/admarkt_sniffer.js` draait op `document_start` in de **MAIN world**,
+aangemeld via `chrome.scripting.registerContentScripts` zodra de toestemming er
+is (executeScript is altijd te laat — dan heeft de app haar gegevens al binnen).
+Hij haakt `fetch` en `XMLHttpRequest` en bewaart json-antwoorden op
+`window.__omnivaleurVangst`. Methode, adres, sleutels en cookies kloppen dan per
+definitie. **Antwoorden worden geKLOOND, nooit uitgelezen** — lees je het
+origineel, dan is de body op voor de pagina zelf en breekt de site onder de
+gebruiker. Locales, csrf-token en html worden genegeerd.
+
+**Het API-adres wordt niet geraden maar waargenomen.** Ik heb geen zakelijk
+account en kan die pagina niet zien; een geraden endpoint was een gok geweest.
+`bgScanAdmarkt` leest daarom na het laden `performance.getEntriesByType("resource")`
+uit, haalt de data-verzoeken die de pagina zelf deed nog eens op met
+`credentials: "include"`, en zoekt in die antwoorden een array van objecten met
+een id- en een titel-veld. Wat gewerkt heeft komt terug in `meta.bron` en
+`meta.velden`, zodat het daarna hard vastgelegd kan worden. Mislukt het, dan
+meldt de fout wélke adressen zijn geprobeerd en wat ze gaven.
+
+**`optional_host_permissions`, nooit `host_permissions`.** Een update die een
+nieuwe vaste host-toestemming toevoegt zet Chrome bij **iedere** gebruiker de
+extensie stil tot hij hem accepteert. De schakelaar "Business account (Admarkt)"
+in de popup levert bovendien de gebruikersklik die `permissions.request` eist —
+vanuit een achtergrondscan kun je die toestemming niet vragen.
+
+**Vraag nooit een toestemming vanuit het uitklapvenster van de extensie.**
+Chrome sluit dat venster op het moment dat hij de vraag toont; de code die op
+het antwoord wacht verdwijnt mee en bij heropenen staat de schakelaar
+onveranderd uit. Voor de gebruiker lijkt de schakelaar dan klem te zitten — dat
+gebeurde in 1.0.201. De oplossing in 1.0.202: dezelfde `popup.html` openen in een
+tabblad (`?tab=1`) en `permissions.request` daar doen. **Gemeten werkend op
+15-08-2026:** tabblad opent, Chrome stelt de vraag, schakelaar blijft aan staan.
+
+**`calmModeToggle` in popup.html is een dode schakelaar** — hij schuift (pure
+CSS) maar er is geen enkele code die hem uitleest of opslaat; "calmMode" komt
+nergens voor in background.js. Calm mode heeft dus nooit gewerkt. Daniel weet
+het sinds 15-08-2026 en heeft het bewust geparkeerd.
+
+**BEWEZEN OP EEN ECHT ZAKELIJK ACCOUNT, 16-08-2026.** Egbert Brouwer (Papa's
+Plectrums, 5.540 advertenties) meldde "Ok nu is het gelukt" met extensie 1.0.206.
+Daarmee is de hele keten rond: schakelaar → toestemming → tRPC → import.
+De weg ernaartoe kostte vijf versies (1.0.201 t/m 1.0.206); wat elke ronde
+kostte was steeds hetzelfde soort fout — een aanname die stil faalde in plaats
+van te klagen.
+
+**Oudere aantekening, inmiddels achterhaald: de scan was ongetest op 15-08-2026** — alleen de toestemming
+is bewezen. Zie "extension-release-bump-version" en
+"marktplaats-category-ids".
+
+**2DEHANDS HEEFT ER OOK EEN (gemeten 10-09-2026).** In background.js stond jaren
+de aanname dat alleen Marktplaats een Admarkt heeft, met zoveel woorden in
+`mpEmptyScanReason`: "2dehands, dat geen Admarkt heeft". Onjuist.
+`https://admarkt.2dehands.be/` stuurt door naar de 2dehands-login met een eigen
+OAuth-console voor de Belgische tenant (`client_id=twhbe_console`, scopes
+`console_ro console_rw`); `admarkt.2ememain.be` landt op dezelfde login. Sinds
+1.0.316 is de hele Admarkt-lezer per kanaal: `ADMARKT_ORIGINS`, `admarktOrigin()`,
+en de meekijker wordt per console apart aangemeld (id `omnivaleur-admarkt` blijft
+ONGEWIJZIGD, anders krijgt iedereen die hem al heeft een tweede kopie).
+
+Twee dingen die daarbij anders zijn dan op Marktplaats:
+- De toestemming ligt op 2dehands al vast in het manifest via
+  `https://*.2dehands.be/*`, dus er is niets te vragen en geen schakelaar. Leun
+  daar niet blind op `permissions.contains`: die korte weg loopt via
+  `manifestDektOrigin()`, en alleen voor 2dehands, zodat de Marktplaats-weg (waar
+  `contains` tegelijk het opt-in-sein van de popup-schakelaar is) onaangeraakt
+  blijft.
+- Omdat er geen schakelaar is, mag een mislukte Admarkt-ronde op 2dehands geen
+  rode fout worden als de site zelf al zei dat het account nul advertenties heeft.
+  Anders wordt de stille afronding van 03-09-2026 weer ongedaan gemaakt.
+
+**Wat NIET gemeten kon worden:** of de procedurenamen `campaign.getAllCampaigns`
+en `ad.getAds` op de Belgische tenant hetzelfde heten. Credential-vrij is dat niet
+vast te stellen: daar zit de authenticatie VOOR de routering, dus elke procedure
+geeft 401, ook een verzonnen naam. Het 404-orakel uit deze notitie werkt daar dus
+alleen met een ingelogde sessie. Wijkt de naam af, dan meldt de scan wel precies
+welke procedure faalde en met welke code.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "admarkt-pro-mag-niet-geautomatiseerd" — Pro automatiseren mag uitsluitend via een erkende API-partner; beloof het een klant nooit
+- "admarkt-omschrijving-via-openbaar-mp" — Admarkt geeft geen prijs of tekst, de openbare zoek-API wel
+
+**[ACHTERHAALD op 28-09-2026, zie de alinea hieronder] Vervangen bij een zakelijk account kan niet, en de herkenning zag geïmporteerde
+accounts niet (17-09-2026, Johan Kist).** Herplaatsen begint met verwijderen via
+het persoonlijke overzicht, en dat is bij zakelijk leeg: de verwijdering mislukt
+altijd en de plaatsing wordt terecht overgeslagen. Johan kreeg in het
+publiceervenster toch "Replace that advert?" en klikte drie keer OK voor niets.
+`_verkoper_soort` keek alleen naar advertenties die WIJ plaatsten; wie alles
+importeerde bleef "weet niet". Nu ook de eigen actieve advertenties met nummer, en
+een lettertje voor het nummer telt niet mee (`a1528596781` in de zoek-API tegenover
+`1528596781` bij de import). Johan live: voor `None`, na `TRADER`. `refresh_listing`
+weigert vervangen bij TRADER (dekt ook automatisch herplaatsen en een oud
+dashboard) en het publiceervenster biedt het niet meer aan (`vervangbaar: false`).
+Proef: `tests/test_zakelijk_vervangen.py`.
+
+**Vervangen bij zakelijk KAN wel, sinds 28-09-2026 (extensie 1.0.356).** De regel
+van 17-09 ("verwijderen mislukt daar altijd") was een conclusie uit één klant, niet
+uit een meting. Gemeten in de jobs-tabel, per klant: zes TRADER-accounts hadden
+samen honderden geslaagde verwijderingen met note `deleted_via_ad_page`
+(0b28c1ce 438 klaar, 26cf5471 647, 96e30080 368 MP + 105 2dehands). De echte
+oorzaak zat in `bgDeleteMp2dh`: bij een LEEG overzicht (rendered 0) gooide hij
+meteen "Couldn't read your listings overview" en kwam hij nooit bij
+`verwijderViaAdvertentiepagina`, de route op nummer die bij zakelijk werkt. Die
+fout kwam bij 0b28c1ce 14 keer voor. Nu: met een advertentienummer gaat een leeg
+overzicht door naar de advertentiepagina; succes blijft alleen op bewijs
+(404/410/verlopen-blok). Server: `zakelijk_vervangen_kan_niet` in relist.py weigert
+alleen nog bij TRADER met een extensie onder `ZAKELIJK_VERVANGEN_VANAF` (1.0.356)
+of een onbekende versie. Proeven: `tests/zakelijk-verwijderen-leeg-overzicht-test.mjs`
+(voor-en-na tegen 2394639c) en `tests/test_zakelijk_vervangen.py`.
+Wat blijft: advertenties in een Pro-campagne (Admarkt, wijzen naar een webwinkel)
+hebben geen Marktplaats-advertentiepagina en kunnen we niet weghalen.
+
+**Why:** "kan niet" in een melding aan de klant moet uit een meting komen, niet uit
+één mislukte poging. Zie "verwijt-moet-uit-een-meting-komen".
+
+**How to apply:** blokkeer een functie voor een soort account pas als de database
+per klant laat zien dat hij daar faalt; kijk eerst of er bij datzelfde soort
+account geslaagde exemplaren zijn.
+
+**Geen Marktplaats-inlog = Admarkt landt op de inlogpagina (29-09-2026, klant 82b13998).**
+Zonder sessie stuurt admarkt.marktplaats.nl door naar
+`www.marktplaats.nl/identity/v2/login?target=...oauth/authorize...client_id=mp_console`.
+Een tRPC-aanroep op die pagina geeft **404 text/plain**, en dat las als "procedure
+bestaat niet" (het 404-orakel hierboven) terwijl het gewoon "niet ingelogd" was.
+Omdat de Admarkt-ronde sinds de vaste manifest-toestemming automatisch meeloopt bij
+een leeg persoonlijk overzicht, kreeg een particuliere Vinted-verkoopster deze
+Admarkt-fout. Sinds extensie 1.0.360 kijkt `bgScanAdmarkt` eerst of het tabblad echt
+op `admarkt.*` staat; zo niet: "You are not signed in to Marktplaats", en bij een
+persoonlijk overzicht met API 200 en nul advertenties rondt de scan netjes af als leeg
+account. Proef 8 in `tests/admarkt-zegt-wat-er-misging-test.js` (`--oud=8bc9565f` faalt).
+Les: een 404 is alleen een orakel als je zeker weet op wélke pagina je staat; lees
+eerst `location` na.
+
+---
+
 ## onboarding-routine-nieuwe-klanten
 
 *29-09-2026 — "Sinds 29-09-2026 loopt een dagelijkse routine elke klant in zijn eerste week na (06:30 Mac, 15:00 tweede account); opdracht in docs/routines, meting in scripts/nieuwe_klanten.py"*
@@ -511,186 +705,6 @@ op GitHub's eigen planning.
 **How to apply:** uitzetten met `launchctl bootout gui/$(id -u)/com.omnivaleur.leadmachine-seintje`.
 Nooit tegelijk de oude `com.omnivaleur.leadgen` (.uit) aanzetten. Zie
 "koude-mail-via-resend-zonder-pixel", "koude-mail-autonoom".
-
----
-
-## admarkt-zakelijke-marktplaats
-
-*28-09-2026 — Zakelijke Marktplaats-verkopers beheren hun advertenties in Admarkt; het persoonlijke overzicht is dan leeg en de scan vindt nul*
-
-Een **zakelijk** Marktplaats-account beheert zijn advertenties op
-`admarkt.marktplaats.nl/advertisements`, niet op de persoonlijke
-"Mijn advertenties"-pagina die de scan leest. Die pagina is dan gewoon leeg.
-Gemeten bij Egbert Brouwer (Papa's Plectrums, plectrums/muziekmerchandise):
-**5.540 advertenties in Admarkt tegenover 0 in het gewone overzicht.**
-
-De Admarkt-lijst toont per rij: miniatuur, titel, datum, CPC, biedstrategie,
-pagina, budget, kliks, klikratio — **geen prijs en geen omschrijving**. Die
-moeten dus alsnog van de advertentiepagina zelf komen, net als bij de gewone
-import.
-
-**Twee wegen, en de dure is niet nodig gebleken.**
-1. *Officieel:* de iCAS Sellside-API (`admarkt.marktplaats.nl/api/sellside/`,
-   OAuth2 authorization code, kan ook namens andere verkopers werken). Klinkt
-   perfect, maar: "To request a client id and secret please ask your contact at
-   the respective tenant." Er is geen aanmeldknop — Marktplaats moet je die
-   sleutels persoonlijk geven. Dat is een zakelijke horde, geen technische.
-2. *Wat gebouwd is (extensie 1.0.201):* de pagina in een tabblad laden en lezen
-   wat hij zelf ophaalt.
-
-**Gemeten op Daniels eigen (lege) Admarkt-account, 16-08-2026** — hij heeft
-Marktplaats Pro zonder advertenties, en dat is genoeg om de pagina te bestuderen:
-- De site is een React-SPA met een **catch-all**: élk onbekend pad geeft
-  **HTTP 200 met de gewone pagina** terug in plaats van 404. Raden naar een
-  endpoint "lukt" dus altijd en levert nooit iets op. De controle op
-  `content-type: json` is daarom geen nettigheid maar de énige manier om te zien
-  dat er niets is. `/api/v2/{advertisements,listings,ads,campaigns,account}` gaven
-  allemaal 200 text/html.
-- De pagina haalt **`/csrf-token`** op → de advertentielijst kan een POST zijn,
-  en die valt met een eigen GET nooit na te doen.
-- Met 0 advertenties doet de pagina **geen enkel** gegevensverzoek voor de lijst.
-  Een leeg account kan de aanpak dus niet bewijzen, alleen ontkrachten.
-- Het datamodel is **campagne → listing** (`/campaign/{id}/listing/edit/{id}`);
-  "Alle advertenties" is een samenvoeging.
-
-**DE KOPPELING (gevonden en uitgeprobeerd op een live advertentie, 16-08-2026).**
-Admarkt praat **tRPC**: `GET /api/trpc/<procedure>?batch=1&input=<urlencoded json>`
-met `{"0": {…}}` als invoer, op de sessiecookie van de ingelogde verkoper.
-- `campaign.getAllCampaigns` → `{campaigns:[{id,title,status,…}], total}`.
-  Iedereen heeft er minstens één ("Campagne zonder titel").
-- `ad.getAds` met `{campaignId, pageToken?}` → `{ads, count, nextPageToken}`.
-- Advertentievelden: `id, title, images[], categoryId, status, dateCreated,
-  campaignId, links`. Foto's zitten in `images[].links` op meerdere maten,
-  **1024x1024** is de grootste; protocol-relatief, dus `https:` ervoor.
-- **Hoe je hier zoekt:** een onbekend PAD geeft 200 + de gewone pagina (nutteloos),
-  maar een onbekende PROCEDURE geeft netjes **404**. Dat is de oracle waarmee
-  `ad.getAds` gevonden is. De API noemt bovendien zelf de geldige veldnamen in
-  zijn foutmelding (zo bleek de dimensie `am:adID` te heten, niet `am:adId`).
-
-**Admarkt kent GEEN prijs en GEEN omschrijving.** Het zijn advertenties die naar
-de **eigen webwinkel** van de verkoper wijzen (`links.url`), niet naar een
-Marktplaats-advertentie. Een import levert dus titel + foto's + categorie op; de
-verkoper vult prijs en tekst zelf aan. Sla bewust **geen** `platform_listing_url`
-op — dat adres is de webwinkel en zou later de verkeerde pagina openen of
-verwijderen. Er valt om dezelfde reden ook niets te verrijken.
-
-**De meekijker (1.0.205) staat er nog als vangnet.**
-`content/admarkt_sniffer.js` draait op `document_start` in de **MAIN world**,
-aangemeld via `chrome.scripting.registerContentScripts` zodra de toestemming er
-is (executeScript is altijd te laat — dan heeft de app haar gegevens al binnen).
-Hij haakt `fetch` en `XMLHttpRequest` en bewaart json-antwoorden op
-`window.__omnivaleurVangst`. Methode, adres, sleutels en cookies kloppen dan per
-definitie. **Antwoorden worden geKLOOND, nooit uitgelezen** — lees je het
-origineel, dan is de body op voor de pagina zelf en breekt de site onder de
-gebruiker. Locales, csrf-token en html worden genegeerd.
-
-**Het API-adres wordt niet geraden maar waargenomen.** Ik heb geen zakelijk
-account en kan die pagina niet zien; een geraden endpoint was een gok geweest.
-`bgScanAdmarkt` leest daarom na het laden `performance.getEntriesByType("resource")`
-uit, haalt de data-verzoeken die de pagina zelf deed nog eens op met
-`credentials: "include"`, en zoekt in die antwoorden een array van objecten met
-een id- en een titel-veld. Wat gewerkt heeft komt terug in `meta.bron` en
-`meta.velden`, zodat het daarna hard vastgelegd kan worden. Mislukt het, dan
-meldt de fout wélke adressen zijn geprobeerd en wat ze gaven.
-
-**`optional_host_permissions`, nooit `host_permissions`.** Een update die een
-nieuwe vaste host-toestemming toevoegt zet Chrome bij **iedere** gebruiker de
-extensie stil tot hij hem accepteert. De schakelaar "Business account (Admarkt)"
-in de popup levert bovendien de gebruikersklik die `permissions.request` eist —
-vanuit een achtergrondscan kun je die toestemming niet vragen.
-
-**Vraag nooit een toestemming vanuit het uitklapvenster van de extensie.**
-Chrome sluit dat venster op het moment dat hij de vraag toont; de code die op
-het antwoord wacht verdwijnt mee en bij heropenen staat de schakelaar
-onveranderd uit. Voor de gebruiker lijkt de schakelaar dan klem te zitten — dat
-gebeurde in 1.0.201. De oplossing in 1.0.202: dezelfde `popup.html` openen in een
-tabblad (`?tab=1`) en `permissions.request` daar doen. **Gemeten werkend op
-15-08-2026:** tabblad opent, Chrome stelt de vraag, schakelaar blijft aan staan.
-
-**`calmModeToggle` in popup.html is een dode schakelaar** — hij schuift (pure
-CSS) maar er is geen enkele code die hem uitleest of opslaat; "calmMode" komt
-nergens voor in background.js. Calm mode heeft dus nooit gewerkt. Daniel weet
-het sinds 15-08-2026 en heeft het bewust geparkeerd.
-
-**BEWEZEN OP EEN ECHT ZAKELIJK ACCOUNT, 16-08-2026.** Egbert Brouwer (Papa's
-Plectrums, 5.540 advertenties) meldde "Ok nu is het gelukt" met extensie 1.0.206.
-Daarmee is de hele keten rond: schakelaar → toestemming → tRPC → import.
-De weg ernaartoe kostte vijf versies (1.0.201 t/m 1.0.206); wat elke ronde
-kostte was steeds hetzelfde soort fout — een aanname die stil faalde in plaats
-van te klagen.
-
-**Oudere aantekening, inmiddels achterhaald: de scan was ongetest op 15-08-2026** — alleen de toestemming
-is bewezen. Zie "extension-release-bump-version" en
-"marktplaats-category-ids".
-
-**2DEHANDS HEEFT ER OOK EEN (gemeten 10-09-2026).** In background.js stond jaren
-de aanname dat alleen Marktplaats een Admarkt heeft, met zoveel woorden in
-`mpEmptyScanReason`: "2dehands, dat geen Admarkt heeft". Onjuist.
-`https://admarkt.2dehands.be/` stuurt door naar de 2dehands-login met een eigen
-OAuth-console voor de Belgische tenant (`client_id=twhbe_console`, scopes
-`console_ro console_rw`); `admarkt.2ememain.be` landt op dezelfde login. Sinds
-1.0.316 is de hele Admarkt-lezer per kanaal: `ADMARKT_ORIGINS`, `admarktOrigin()`,
-en de meekijker wordt per console apart aangemeld (id `omnivaleur-admarkt` blijft
-ONGEWIJZIGD, anders krijgt iedereen die hem al heeft een tweede kopie).
-
-Twee dingen die daarbij anders zijn dan op Marktplaats:
-- De toestemming ligt op 2dehands al vast in het manifest via
-  `https://*.2dehands.be/*`, dus er is niets te vragen en geen schakelaar. Leun
-  daar niet blind op `permissions.contains`: die korte weg loopt via
-  `manifestDektOrigin()`, en alleen voor 2dehands, zodat de Marktplaats-weg (waar
-  `contains` tegelijk het opt-in-sein van de popup-schakelaar is) onaangeraakt
-  blijft.
-- Omdat er geen schakelaar is, mag een mislukte Admarkt-ronde op 2dehands geen
-  rode fout worden als de site zelf al zei dat het account nul advertenties heeft.
-  Anders wordt de stille afronding van 03-09-2026 weer ongedaan gemaakt.
-
-**Wat NIET gemeten kon worden:** of de procedurenamen `campaign.getAllCampaigns`
-en `ad.getAds` op de Belgische tenant hetzelfde heten. Credential-vrij is dat niet
-vast te stellen: daar zit de authenticatie VOOR de routering, dus elke procedure
-geeft 401, ook een verzonnen naam. Het 404-orakel uit deze notitie werkt daar dus
-alleen met een ingelogde sessie. Wijkt de naam af, dan meldt de scan wel precies
-welke procedure faalde en met welke code.
-
-**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
-- "admarkt-pro-mag-niet-geautomatiseerd" — Pro automatiseren mag uitsluitend via een erkende API-partner; beloof het een klant nooit
-- "admarkt-omschrijving-via-openbaar-mp" — Admarkt geeft geen prijs of tekst, de openbare zoek-API wel
-
-**[ACHTERHAALD op 28-09-2026, zie de alinea hieronder] Vervangen bij een zakelijk account kan niet, en de herkenning zag geïmporteerde
-accounts niet (17-09-2026, Johan Kist).** Herplaatsen begint met verwijderen via
-het persoonlijke overzicht, en dat is bij zakelijk leeg: de verwijdering mislukt
-altijd en de plaatsing wordt terecht overgeslagen. Johan kreeg in het
-publiceervenster toch "Replace that advert?" en klikte drie keer OK voor niets.
-`_verkoper_soort` keek alleen naar advertenties die WIJ plaatsten; wie alles
-importeerde bleef "weet niet". Nu ook de eigen actieve advertenties met nummer, en
-een lettertje voor het nummer telt niet mee (`a1528596781` in de zoek-API tegenover
-`1528596781` bij de import). Johan live: voor `None`, na `TRADER`. `refresh_listing`
-weigert vervangen bij TRADER (dekt ook automatisch herplaatsen en een oud
-dashboard) en het publiceervenster biedt het niet meer aan (`vervangbaar: false`).
-Proef: `tests/test_zakelijk_vervangen.py`.
-
-**Vervangen bij zakelijk KAN wel, sinds 28-09-2026 (extensie 1.0.356).** De regel
-van 17-09 ("verwijderen mislukt daar altijd") was een conclusie uit één klant, niet
-uit een meting. Gemeten in de jobs-tabel, per klant: zes TRADER-accounts hadden
-samen honderden geslaagde verwijderingen met note `deleted_via_ad_page`
-(0b28c1ce 438 klaar, 26cf5471 647, 96e30080 368 MP + 105 2dehands). De echte
-oorzaak zat in `bgDeleteMp2dh`: bij een LEEG overzicht (rendered 0) gooide hij
-meteen "Couldn't read your listings overview" en kwam hij nooit bij
-`verwijderViaAdvertentiepagina`, de route op nummer die bij zakelijk werkt. Die
-fout kwam bij 0b28c1ce 14 keer voor. Nu: met een advertentienummer gaat een leeg
-overzicht door naar de advertentiepagina; succes blijft alleen op bewijs
-(404/410/verlopen-blok). Server: `zakelijk_vervangen_kan_niet` in relist.py weigert
-alleen nog bij TRADER met een extensie onder `ZAKELIJK_VERVANGEN_VANAF` (1.0.356)
-of een onbekende versie. Proeven: `tests/zakelijk-verwijderen-leeg-overzicht-test.mjs`
-(voor-en-na tegen 2394639c) en `tests/test_zakelijk_vervangen.py`.
-Wat blijft: advertenties in een Pro-campagne (Admarkt, wijzen naar een webwinkel)
-hebben geen Marktplaats-advertentiepagina en kunnen we niet weghalen.
-
-**Why:** "kan niet" in een melding aan de klant moet uit een meting komen, niet uit
-één mislukte poging. Zie "verwijt-moet-uit-een-meting-komen".
-
-**How to apply:** blokkeer een functie voor een soort account pas als de database
-per klant laat zien dat hij daar faalt; kijk eerst of er bij datzelfde soort
-account geslaagde exemplaren zijn.
 
 ---
 
