@@ -1255,7 +1255,7 @@ window.CL = (() => {
   function intendedForSelect() {
     const byLabel = findFieldByLabel("Bestemd voor");
     if (byLabel?.tagName === "SELECT") return byLabel;
-    return selectByOptions(["jongen", "meisje", "jongen of meisje"]);
+    return selectByOptions(["jongen", "meisje", "jongen of meisje", "dame", "heer", "dame of heer"]);
   }
 
   // Wat er op deze categorie staat, in het log — zodat een leeg kenmerk
@@ -1363,6 +1363,19 @@ window.CL = (() => {
       const boy = /jongen|boys?\b|garçon/.test(hay);
       const girl = /meisje|girls?\b|fille/.test(hay);
       const want = boy && !girl ? "Jongen" : girl && !boy ? "Meisje" : "Jongen of Meisje";
+      return fillNativeSelect(el, want);
+    }
+
+    // Sieraden (Ringen): "Dame", "Heer" of "Dame of Heer", op Marktplaats én
+    // 2dehands (gemeten 29-09-2026 in hun zoekfilters). Deze lijst kenden we
+    // niet, het veld bleef leeg en elke ring op 2dehands werd geweigerd (Vagif,
+    // 29-09-2026). Staat er niets over wie hem draagt, dan de neutrale optie,
+    // net als "Jongen of Meisje" hierboven.
+    if (opties.some((o) => /^(Dame|Heer)$/i.test(o))) {
+      const tekst = `${item.gender || ""} ${hay}`.toLowerCase();
+      const heer = /\bheren|\bheer\b|\bmen'?s?\b|\bman\b|\bmale\b/.test(tekst);
+      const dame = /\bdames|\bdame\b|\bvrouw|\bwomen|\bladies|\bfemale/.test(tekst);
+      const want = heer && !dame ? "Heer" : dame && !heer ? "Dame" : "Dame of Heer";
       return fillNativeSelect(el, want);
     }
 
