@@ -14319,3 +14319,35 @@ stonden in 13 uur 232 keer 401 tegen 9 keer 200, vooral twee adressen die een do
 sleutel blijven proberen (5.255.79.76 elke 5 minuten: het dashboard negeert de
 uitkomst van zijn eigen verversklok). Welk deel daarvan echt verlopen was, is uit
 de logs niet af te lezen.
+
+## 29-09-2026: Vagif (vagif.hamidov@hotmail.com) voor het gesprek van vanmiddag
+
+**Stand.** Aangemeld 25-09 18:38 NL, proef loopt tot 02-10 18:39 NL, nog geen
+betaalgegevens. 86 artikelen (bijna allemaal zilveren sieraden, verder
+videodeurbellen, parfum en amber tasbihs), allemaal op 25-09 ingelezen. Actief:
+Marktplaats 76, 2dehands 67, Vinted 14. Via ons geplaatst: 8 keer 2dehands en 2
+keer Marktplaats gelukt. Hij heeft het product alleen op 25-09 van 18:46 tot 19:25
+NL gebruikt. Zijn extensie (1.0.352, Windows) is daarna nooit meer gezien, midden
+in een 2dehands-plaatsing: de computer of Chrome ging dicht. Om 23:21 klikte hij
+nog een Vinted-scan aan vanuit een browser zonder draaiende extensie; die is na
+drie dagen vanzelf geannuleerd. Geen offline-mail gekregen, want die gaat alleen
+uit bij wachtende plaatsingen en niet bij een scan (bewust: de server zet zelf
+ook scans klaar). Wachten op hem: Video Deurbel met Monitor en Zilver 925 Armband
+met Dolphine Stone staan op "verkocht?" (Marktplaats).
+
+**Vinted-kleur gerepareerd (extensie 1.0.358).** Zijn drie Vinted-plaatsingen
+(steeds dezelfde robijnketting zonder kleur) zijn al op 26-09 opgelost. Maar
+nagemeten in zijn voorraad: 51 artikelen hebben kleur "zilveren" en een "gele",
+en de Vinted-stap kende alleen "zilver". Geen enkele Vinted-tegel heet zo, dus
+elk van die 52 was op Vinted vastgelopen. 69 van zijn artikelen staan op
+Marktplaats en niet op Vinted, dus dat was precies zijn groeiruimte. Nu leest
+vinted.js de kleur via shared.js (CL.dutchColor), dat dit voor Marktplaats al
+deed. Proef `tests/vinted-kleur-verbogen-test.js` draait de echte shared.js en
+parseColours: 84849c5e faalt op zilveren/gele, nieuw alles goed; alle negen
+proeven die vinted.js laden groen.
+
+**Open.** 1.0.358 moet naar de Chrome Web Store (Daniel), samen met de nog niet
+geüploade 1.0.355 tot 1.0.357 is dat één upload. Niet nagekeken op een echt
+Vinted-formulier. Zeven artikelen hebben geen kleur en ook geen kleurwoord in de
+titel (parels, smaragd, deurbellen, parfum); daar blijft het Vinted-tabblad open
+om zelf een kleur te kiezen.

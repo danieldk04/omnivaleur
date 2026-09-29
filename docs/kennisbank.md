@@ -17,6 +17,53 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-combi-maat-mist-eigen-split
+
+*29-09-2026 — "Vinted-maatkeuze faalde altijd bij een combi-maat als 'S / 36 / 8'; opgelost 23-09-2026"*
+
+Gemeten 23-09-2026 bij item ((269) Blue Ralph Lauren Cardigan: het Vinted-formulier
+bleef op "Select a size" staan met "Fill in size to continue" eronder, ondanks dat
+`items.size` gewoon gevuld was ("S / 36 / 8").
+
+**Oorzaak, aangetoond met de echte code.** De maatzoeker in
+`extension/content/vinted.js` (rond regel 3095) bouwt een `wants`-set van "hoe deze
+maat op Vinted zou kunnen heten". Bij een simpele maat als "S" werkte dat. Bij een
+combi-maat bleef de HELE string ("s / 36 / 8") in `wants` staan: die is nooit gelijk
+aan een losse Vinted-tegel als "S". De code splitste wél het Vinted-LABEL zelf op "/"
+(voor het geval Vinted een combi-label toont), maar nooit onze EIGEN waarde. Dus zelfs
+een simpele losse "S"-tegel op Vinted werd nooit gevonden.
+
+`extension/content/shared.js` (Marktplaats/2dehands, zie "maat-buiten-de-ladder")
+deed deze eigen-waarde-split al sinds eerder — de vinted.js-maatzoeker is een losse
+implementatie die deze stap gewoon miste. Geen architectuurfout, alleen deze ene plek.
+
+**Blast radius.** Bij deze ene klant staan 61 items met een combi-maat in dit exacte
+"LETTER / EU / UK"-formaat (query op `items.size like '%/%'`, gescopet op zijn
+`user_id`). Elke Vinted-publicatie van zo'n item strandde op de maat.
+
+**Bewijs.** `tests/vinted-combi-maat-test.js` knipt het echte matchblok uit
+vinted.js en draait het tegen Vinted's eigen dames-cardiganmaten (losse letters,
+géén combi-label). Tegen commit d6debad0 (vóór de reparatie) faalt de combi-maat
+zoals live gezien; tegen de huidige code slaagt hij. `node tests/vinted-combi-maat-test.js --oud` moet FALEN, zonder `--oud` moet hij slagen.
+
+**Fix.** `norm.split("/")` toegevoegd aan de `wants`-opbouw in vinted.js, exact
+zoals shared.js het al deed.
+
+**Openstaand.** Items die al eerder op deze maat-fout strandden, herkansen niet
+vanzelf; die moeten opnieuw de wachtrij in.
+
+**Tweede keer, nu met de kleur (29-09-2026, Vagif).** vinted.js had een eigen
+COLOUR_MAP zonder verbogen vormen; "zilveren" (51 van zijn 86 sieraden) en "gele"
+gingen ongewijzigd door en geen Vinted-tegel heet zo. shared.js kende ze al
+(CL.dutchColor). Opgelost met `kaartKleur` in vinted.js, die CL.dutchColor
+gebruikt in plaats van een tweede lijst (extensie 1.0.358). Proef
+tests/vinted-kleur-verbogen-test.js laadt de echte shared.js in node (klokken uit,
+anders blijft node hangen). **How to apply:** bij elke Vinted-veldfout eerst kijken
+of shared.js het voor Marktplaats al oplost; dan die aanroepen via `CL`, nooit
+naast elkaar een tweede lijst bijhouden.
+
+---
+
 ## storing-achter-cloudflare-logt-extensie-uit
 
 *29-09-2026 — "422 op /api/jobs/pending = extensie zonder inlog; Supabase 520-524 werd \"401 sessie verlopen\" en de extensie gooide haar inlog weg (tot 29-09-2026)"*
@@ -1324,43 +1371,6 @@ Zelfde dag, Yeti Acoustics: "Nu ga je de spamlijst in en blokkeer ik je mail" we
 **Why:** concurrent haalt een lead uit "jij bent aan zet"; een onterecht warme kost Daniel één blik, een onterecht bezette kost de lead.
 
 **How to apply:** INTERESSE in scripts/leadgen_mail.py maakt van concurrent + ja-signaal een warme reactie. Nooit kaal "interesse" toevoegen: dan telt "geen interesse" als ja. Toets een wijziging aan de indeling altijd tegen mail_reacties (91 echte reacties) met de oude versie ernaast. Zie "koude-mail-autonoom".
-
----
-
-## vinted-combi-maat-mist-eigen-split
-
-*23-09-2026 — "Vinted-maatkeuze faalde altijd bij een combi-maat als 'S / 36 / 8'; opgelost 23-09-2026"*
-
-Gemeten 23-09-2026 bij item ((269) Blue Ralph Lauren Cardigan: het Vinted-formulier
-bleef op "Select a size" staan met "Fill in size to continue" eronder, ondanks dat
-`items.size` gewoon gevuld was ("S / 36 / 8").
-
-**Oorzaak, aangetoond met de echte code.** De maatzoeker in
-`extension/content/vinted.js` (rond regel 3095) bouwt een `wants`-set van "hoe deze
-maat op Vinted zou kunnen heten". Bij een simpele maat als "S" werkte dat. Bij een
-combi-maat bleef de HELE string ("s / 36 / 8") in `wants` staan: die is nooit gelijk
-aan een losse Vinted-tegel als "S". De code splitste wél het Vinted-LABEL zelf op "/"
-(voor het geval Vinted een combi-label toont), maar nooit onze EIGEN waarde. Dus zelfs
-een simpele losse "S"-tegel op Vinted werd nooit gevonden.
-
-`extension/content/shared.js` (Marktplaats/2dehands, zie "maat-buiten-de-ladder")
-deed deze eigen-waarde-split al sinds eerder — de vinted.js-maatzoeker is een losse
-implementatie die deze stap gewoon miste. Geen architectuurfout, alleen deze ene plek.
-
-**Blast radius.** Bij deze ene klant staan 61 items met een combi-maat in dit exacte
-"LETTER / EU / UK"-formaat (query op `items.size like '%/%'`, gescopet op zijn
-`user_id`). Elke Vinted-publicatie van zo'n item strandde op de maat.
-
-**Bewijs.** `tests/vinted-combi-maat-test.js` knipt het echte matchblok uit
-vinted.js en draait het tegen Vinted's eigen dames-cardiganmaten (losse letters,
-géén combi-label). Tegen commit d6debad0 (vóór de reparatie) faalt de combi-maat
-zoals live gezien; tegen de huidige code slaagt hij. `node tests/vinted-combi-maat-test.js --oud` moet FALEN, zonder `--oud` moet hij slagen.
-
-**Fix.** `norm.split("/")` toegevoegd aan de `wants`-opbouw in vinted.js, exact
-zoals shared.js het al deed.
-
-**Openstaand.** Items die al eerder op deze maat-fout strandden, herkansen niet
-vanzelf; die moeten opnieuw de wachtrij in.
 
 ---
 
