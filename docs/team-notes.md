@@ -14581,3 +14581,19 @@ seconde, /health daarna 200.
   24-09, proef loopt vandaag 19:32 af.
 - 1ba42900 (Vagif): 86 artikelen, sieraden, eerste plaatsing binnen 40 minuten, 3x Vinted
   geweigerd op lege kleur, extensie stil sinds 25-09.
+
+## 29-09-2026: Onboarding nieuwe klanten (ochtend)
+
+Gemeten 12:30: 2 klanten in hun eerste week, beide voor het eerst in de routine. Geen
+codewijziging, geen klantdata rechtgezet. Twee mailtjes klaargezet voor Daniel.
+- 1ba42900 (vagif.hamidov@hotmail.com, zilveren sieraden): loopt op Marktplaats (76) en
+  2dehands (67), Vinted 15. De 3 Vinted-weigeringen op kleur zijn gerepareerd in 1.0.358
+  (074603f8), wacht op de Web Store. Overige 3 fouten: extensie sinds 25-09 19:25 niet
+  gezien (klant). Open: 2 "verkocht?"-vragen, extensie aanzetten.
+- 6e9f6f40 (hulshofmatthijs@gmail.com, Switch-games en Pixel 8 Pro-hoesjes): vast. De
+  Marktplaats-scan van 22-09 19:34 vond binnen een minuut 22 advertenties, alle 22 nog
+  'pending'; hij klikte nooit op "Alles importeren" (laatst ingelogd 22-09 22:04). Geen
+  bewijs dat de knop ontbrak, dus geen codewijziging; niet voor hem geïmporteerd (dat
+  is een keuze van de klant). Proef loopt af 29-09 19:32, daarna 2 dagen respijt.
+  Open punt: wie na een geslaagde scan nooit importeert, krijgt nu van niemand een
+  seintje; bij deze klant kostte dat de hele proefweek.
