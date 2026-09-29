@@ -74,16 +74,16 @@ aan dezelfde vorm. Zie "mails-kort-houden", "klantmails-meer-empathie" en
 
 **Toon: geen boetekleed (Daniel, 27-09-2026).** Na een mail aan Egbert met "de oorzaak aan onze kant is opgelost" en "kopers vinden ze daardoor slecht": "minder het boetekleed aantrekken". Meld wat er nu werkt en wat het oplevert, niet wat er fout zat. Een eigen vondst brengen als tip of aanbod ("in dezelfde rubriek worden ze beter gevonden, zal ik dat doen?"), niet als schuldbekentenis.
 
-**Welkomstmail aan een nieuwe klant (Daniel, 29-09-2026: "zo'n stijl wil ik dus dat je
-aanhoudt").** Zijn eigen mail aan een nieuwe klant, als voorbeeld vastgelegd in
-`docs/routines/onboarding-nieuwe-klanten.md` stap 5. Opbouw: "Hoi <voornaam>,", dan de
-introductie "Ik ben Daniel, de oprichter van Omnivaleur. Ik kijk zelf naar elk nieuw
-account om te zorgen dat er geen onduidelijkheden of problemen zijn; super leuk dat je
-een account hebt aangemaakt!", dan "Goed nieuws:" met één getal, dan wat nog niet lukte
-met waarom, wat hij doet en wat het oplevert, dan het hulpaanbod (berichtje of een call
-inplannen via het dashboard, de Calendly-knop), en als slot "Ik kijk er naar uit om je
-te helpen om meer tijd te besparen :)!" met "Groetjes," en "Daniel". Warm en enthousiast
-mag hier, met uitroepteken en smiley; het blijft onder 120 woorden.
+**Welkomstmail aan een nieuwe klant (Daniel, 29-09-2026).** Hij stuurde zijn eigen mail
+aan een nieuwe klant als voorbeeld ("zo'n stijl wil ik dus dat je aanhoudt") en
+verbeterde meteen: "niet precies dit format, maar wel dezelfde stijl. hou altijd de
+positieve insteek, met voordelen voor de klant, tips etc". Het voorbeeld staat in
+`docs/routines/onboarding-nieuwe-klanten.md` stap 5 als toon, niet als sjabloon: nooit
+de zinnen kopiëren. Altijd positief (eerst wat goed gaat, met een getal), wat nog niet
+lukt als kans met het voordeel voor hem erbij, één onderbouwde tip die bij zijn
+voorraad past, kort voorstellen als oprichter alleen bij eerste contact, afsluiten met
+het hulpaanbod (berichtje of call via de Calendly-knop in het dashboard). Warm mag,
+met uitroepteken of smiley; rond de 120 woorden.
 
 ---
 
