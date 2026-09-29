@@ -503,7 +503,8 @@ def main_op_code(user_id: str, apply: bool) -> None:
     print(f"{len(te_verwijderen)} dubbele advertenties weg ({len(te_verwijderen) - len(nieuw)} al onderweg), "
           f"{len(twijfel)} zonder uitspraak blijven staan.")
     print(f"{len(annuleren)} wachtende plaatsingen/verlengingen van die advertenties uit de rij.")
-    print(f"{len(oude_fotos)} advertenties houden de oude foto's tot ze herplaatst worden.")
+    print(f"{len(oude_fotos)} advertenties dragen de foto's van een andere bron dan Vinted; "
+          f"{len(herplaatsen)} op Marktplaats worden nu herplaatst met de Vinted-foto's.")
     print(f"{len(prijzen)} kanaalprijzen overgenomen van de rij waarvan de advertentie blijft.")
     if not apply:
         print("(Proefdraai: er is niets gewijzigd. Draai met --apply om het echt te doen.)")
