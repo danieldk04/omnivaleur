@@ -14399,3 +14399,44 @@ advertenties bij 7 klanten hebben alleen dode Marktplaats-foto's; die worden
 veiliggesteld zodra ze aan de beurt zijn, of blijven staan als dat niet lukt.
 Nog niet gezien: de server die zelf een advertentiepagina leest.
 
+
+## 29-09-2026: Toon (De Juiste Toon): oude 2dehands-foto's op Marktplaats, kleed A07
+
+Toon: "oude foto's, vermoedelijk van 2dehands, worden op Marktplaats gebruikt
+terwijl we de foto's op Vinted vernieuwen. Voorbeeld kleed Azteken A07."
+
+**Oorzaak, gemeten.** Hij las zijn voorraad drie keer in (28-08 Vinted, 05-09
+2dehands en Marktplaats). Elk kleed werd twee tot vijf losse rijen, elk met de
+foto's van zijn eigen bron, en meer dan één rij kreeg een eigen Marktplaats-
+advertentie. A07 stond twee keer live: m2443172233 met de Vinted-foto's (visueel
+gelijk aan wat nu op Vinted staat) en m2442933492 met de oude 2dehands-foto's.
+Geen enkele tweelingcontrole zag het: hij zet zijn code in de omschrijving, niet
+voor de titel, en de foto's verschillen per bron. Gevolg daarnaast: een verkoop op
+de ene rij haalt de advertenties van de andere rij niet weg.
+
+**Gedaan.** `scripts/ruim_dubbele_advertenties_uit_import.py --op-code`: tweeling =
+zelfde code in de omschrijving én zelfde afmeting (+ tweelingen.plausibel); twee
+rijen uit dezelfde bron of een verkochte rij: overgeslagen. De Vinted-rij blijft.
+Uitgevoerd om ~09:50: 59 verwijderopdrachten voor dubbele advertenties (52 MP,
+7 2dehands, elk eerst live nagekeken op de advertentiepagina), 7 rijen
+samengevoegd, 2 bewezen verlopen advertenties naar het archief, 2 Marktplaats-
+advertenties met 2dehands-foto's herplaatst met de Vinted-foto's (GFL41, TV23).
+Een derde herplaatsing (GFL19) was onterecht (geen Vinted-rij) en is teruggedraaid
+voor de extensie hem oppakte; regel in het script gerepareerd. Proef:
+`tests/test_tweelingen_op_eigen_code.py` (oude regel mist A07, nieuwe vindt hem,
+TXL30 met twee maten blijft twee voorwerpen).
+
+**Open.**
+- Toons extensie was offline (laatst 28-09 19:59 UTC): de verwijderingen staan
+  klaar, uitgevoerd zijn ze nog niet. Niet gezien dat ze lukken.
+- Stap 2: 58 rijen worden pas samengevoegd als hun dubbele advertentie weg is
+  (anders pakt herplaatsen de verkeerde van twee). Zelfde commando nog een keer
+  met --apply, vóór 06-10 (dan is de oudste dubbele aan de beurt om te herplaatsen).
+- 17 groepen staan op "verkocht" op de ene rij terwijl de tweeling nog live staat
+  (KU5, TLS40, TK16, TV22, TL109, GFF1, TK199, GF08, KEXL33, TM09, GR122, TM52,
+  TV08, TL79, TM12, TXL34, WK27). Echt verkocht of niet is van hieruit niet te
+  zien; Toon moet ze nalopen. Niets aan veranderd.
+- 44 van zijn eigen oorspronkelijke 2dehands-advertenties dragen oudere foto's dan
+  Vinted; die blijven (2dehands wordt verlengd, niet herplaatst).
+- Klantenservice-brein in de repo bijgewerkt; de Drive-kopie niet (Google-koppeling
+  lag eruit).

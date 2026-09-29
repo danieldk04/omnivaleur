@@ -17,6 +17,49 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## tweeling-met-code-in-de-omschrijving
+
+*29-09-2026 — "Voorraad uit meerdere kanalen ingelezen met de eigen code in de omschrijving = losse rijen per kanaal, oude foto's en dubbele advertenties op Marktplaats (Toon, 29-09-2026)"*
+
+29-09-2026, Toon (De Juiste Toon, 96e30080): "oude foto's, vermoedelijk van
+2dehands, worden op Marktplaats gebruikt terwijl we de foto's op Vinted
+vernieuwen. Voorbeeld kleed Azteken A07."
+
+**Why:** hij las zijn voorraad drie keer in (28-08 Vinted, 05-09 2dehands en
+Marktplaats). Elk kleed werd twee tot vijf losse rijen, elk met de foto's van
+zijn eigen bron, en meerdere rijen kregen een eigen Marktplaats-advertentie. A07
+stond twee keer live: m2443172233 met de Vinted-foto's (gelijk aan wat nu op
+Vinted staat, visueel nagekeken) en m2442933492 met de oude 2dehands-foto's.
+Geen enkele tweelingcontrole zag het: `tweelingen.py` kijkt naar het nummer
+VÓÓR de titel, de titel+foto-regel ("dubbele-advertentie-titel-en-foto") naar
+een gedeeld foto-adres. Toon zet zijn code in de OMSCHRIJVING ("A07", "Gf41",
+"TSL01"), titels verschillen op "cm" na en de foto's verschillen per bron.
+Gevolg naast de foto's: een verkoop op de ene rij haalt de advertenties van de
+andere rij niet weg. Gemeten: 90 groepen, 63 veilig samen te voegen, 59 dubbele
+advertenties; 17 groepen met een rij op "verkocht" terwijl de tweeling nog live
+staat.
+
+**How to apply:**
+- Herkenning: zelfde eigen code in de omschrijving ÉN zelfde afmeting ("155/120")
+  plus `tweelingen.plausibel`. De code alleen is niet genoeg: TXL30 is bij hem een
+  tapijt van 183/124 én een van 150/96. Twee rijen uit dezelfde bron (twee
+  Vinted-advertenties met dezelfde code) kunnen twee exemplaren zijn: laten liggen.
+- De Vinted-rij blijft, want daar houdt hij zijn foto's bij.
+- Script: `scripts/ruim_dubbele_advertenties_uit_import.py --user <id> --op-code`
+  (proefdraai), `--apply` om het te doen. Twee keer draaien: een groep waarvan een
+  advertentie nog weg moet wordt pas bij de tweede keer samengevoegd, want
+  `relist.refresh_listing` pakt `data[0]` van de actieve advertenties op dat
+  kanaal en kan dan de verkeerde van twee herplaatsen.
+- Lokaal ziet `get_db()` niets (anon-sleutel, zie
+  "leadgen-status-leest-anon-sleutel"); het script gebruikt de servicesleutel
+  en draait met `/usr/local/bin/python3.13` (homebrew-python mist supabase).
+- 44 van de 50 "oude foto's" waren Toons eigen oorspronkelijke 2dehands-
+  advertenties: die blijven, 2dehands wordt verlengd en niet herplaatst.
+
+Zie ook "import-dubbele-items-over-platforms", "omnivaleur-altijd-bewijzen".
+
+---
+
 ## marktplaats-fotoadres-sterft-met-de-advertentie
 
 *29-09-2026 — Een foto-adres op images.marktplaats.com hoort bij één advertentie en is dood zodra die weg is; na een herplaatsing wijzen onze opgeslagen adressen naar de oude. Herplaatsen kopieert daarom eerst (29-09-2026)*
