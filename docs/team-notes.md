@@ -14525,3 +14525,29 @@ letterlijk dezelfde foto). TL104 en TL91 NIET (ander kleed, of niet zeker).
 
 Al verstuurd aan Toon (door Daniel, 12:05): oorzaak, TK199 overal offline en bij
 ons verkocht, dubbele advertenties worden weggehaald, een lijst volgt apart.
+
+## 29-09-2026: Dagelijkse klantfouten (ochtendronde)
+
+Gemeten over 24 uur: 47 fouten bij 6 klanten; niets in onze code dat vandaag
+nog te repareren was. Server live op fc0846a1, niets hangt op 'claimed'.
+- 96e30080: 39 verlengingen op 2dehands weer "200 listings read", alle 39 op
+  extensie 1.0.355 (08:29 tot 09:59 UTC). De reparatie zit in 1.0.357; de Web
+  Store serveert nog 1.0.355. Niet mislukt, nog niet uitgerold. Nul verlengingen
+  gelukt bij haar tot 1.0.357/1.0.358 er is; hoe langer de keuring duurt, hoe
+  meer zoekertjes hun venster missen.
+- 96e30080: 1 Vinted-verwijdering "Frame with ID 0 was removed" (lederhosen maat
+  54, verkocht op Marktplaats 09:55). De Vinted-pagina geeft 404, twee andere
+  actieve Vinted-advertenties 200: de advertentie is dus wel weg, alleen onze rij
+  staat nog op 'active' met die fout. Eenmalig, oorzaak niet bewezen, niet
+  gerepareerd; open.
+- 26cf5471 (Zilverwebsite): 1 plaatsing "None of the 5 photo(s)", 06:27 UTC, is
+  een van de drie verloren herplaatsingen van vanochtend; al opgelost (6aa46252).
+- f8c0cce9: Gibson J-45 Facebook "not found" (2x) en een gesloten tabblad; klant.
+- 1ba42900 en d25f18a2: werk na 3 dagen opgeruimd, extensie stil sinds 25-09; klant.
+- Stil met werk klaar: bcdf9aa4 (proef tot 19-10, 149 wachtend, laatst gezien
+  28-09 15:31 UTC op 1.0.354) en 0b28c1ce (betalend, 70 wachtend, stil sinds
+  27-09). Uitgelogd of computer uit is uit de database niet te zien; Railway-logs
+  waren van hieruit niet bereikbaar.
+
+Opgelost sinds gisteren: niets nieuws dat terugkwam behalve het verlengen, dat op
+de Web Store wacht. Cowboyhoed One size (96e30080) kwam vandaag niet terug als fout.
