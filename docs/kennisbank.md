@@ -17,6 +17,43 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## onboarding-routine-nieuwe-klanten
+
+*29-09-2026 — "Sinds 29-09-2026 loopt een dagelijkse routine elke klant in zijn eerste week na (06:30 Mac, 15:00 tweede account); opdracht in docs/routines, meting in scripts/nieuwe_klanten.py"*
+
+Elke klant in zijn eerste 7 dagen wordt dagelijks nagelopen: wat verkoopt hij, hoe ver
+is hij (extensie, inlezen, eerste geslaagde plaatsing), waar liep hij tegenaan, wat kan
+hij verwachten voor zijn assortiment. Repareren mag in code én klantdata (Daniels keuze
+29-09-2026), klantdata alleen na bewezen oorzaak, met meting ervoor en erna, nooit
+verzonnen waarden, nooit verwijderen. Per klant een mailtje dat Daniel zelf verstuurt.
+
+- Opdracht: `docs/routines/onboarding-nieuwe-klanten.md` (één versie voor beide accounts).
+- Meting: `scripts/nieuwe_klanten.py` (per user_id, `result` alleen per id); `gezien`
+  legt vast wat de ronde deed.
+- Planning: Daniels Mac taak `omnivaleur-onboarding-nieuwe-klanten` 06:30; tweede
+  account `...-middag` 15:00 (instructie in CLAUDE.md). Deelt het slot met de
+  klantfoutenrondes (`klantfouten.py ronde begin|klaar`).
+
+**Mail pas na contactcheck (29-09-2026):** de eerste ronde mailde Vagif als vreemde
+terwijl hij via koude mail kwam, terugschreef en die middag een gesprek had. Het script
+toont nu koude mail, postvak (MAIL_PASS nodig) en vermeldingen; gesprek of contact
+binnen 48 uur = briefing in plaats van mail. Niet gelezen is nooit "geen contact".
+
+**Why:** de eerste uren beslissen of iemand blijft; onder 30 ingelezen artikelen betaalde
+nog nooit iemand ("trechter-aanmelding-tot-betalend-27-09").
+**How to apply:** wijzig de routine in het bestand in docs/routines, niet in de geplande
+taak. Meet extra alleen per klant ("meten-op-de-productiedatabase"). Mailtjes volgens
+"klantmail-kort-en-menselijk".
+
+Postvak (29-09-2026): het Zoho-wachtwoord staat al in de Mac-sleutelhanger onder
+`omnivaleur-leadgen-mail` (zo las de oude mailmachine het ook, zie
+"koude-mail-autonoom"). `scripts/nieuwe_klanten.py` valt daarop terug als MAIL_PASS
+ontbreekt. Vraag Daniel dus nooit om een wachtwoord of app-wachtwoord: kijk eerst met
+`security find-generic-password -a daniel@omnivaleur.nl -s omnivaleur-leadgen-mail`
+(zonder `-w`, dan zie je het niet) of het er staat.
+
+---
+
 ## vinted-404-pagina-kast-dicht
 
 *29-09-2026 — Op de 404-pagina van een verdwenen Vinted-advertentie geeft de kast-API 401; de startpagina 200. Kast nooit vanaf een 404-pagina lezen.*
@@ -74,36 +111,6 @@ op het eerste scherm na inloggen, en alleen onder "Klaar om te importeren".
 **How to apply:** mail een klant niet met dezelfde boodschap als de server al stuurde;
 `scripts/nieuwe_klanten.py` toont per klant of hij hem kreeg. Zie
 "onboarding-routine-nieuwe-klanten", "trechter-aanmelding-tot-betalend-27-09".
-
----
-
-## onboarding-routine-nieuwe-klanten
-
-*29-09-2026 — "Sinds 29-09-2026 loopt een dagelijkse routine elke klant in zijn eerste week na (06:30 Mac, 15:00 tweede account); opdracht in docs/routines, meting in scripts/nieuwe_klanten.py"*
-
-Elke klant in zijn eerste 7 dagen wordt dagelijks nagelopen: wat verkoopt hij, hoe ver
-is hij (extensie, inlezen, eerste geslaagde plaatsing), waar liep hij tegenaan, wat kan
-hij verwachten voor zijn assortiment. Repareren mag in code én klantdata (Daniels keuze
-29-09-2026), klantdata alleen na bewezen oorzaak, met meting ervoor en erna, nooit
-verzonnen waarden, nooit verwijderen. Per klant een mailtje dat Daniel zelf verstuurt.
-
-- Opdracht: `docs/routines/onboarding-nieuwe-klanten.md` (één versie voor beide accounts).
-- Meting: `scripts/nieuwe_klanten.py` (per user_id, `result` alleen per id); `gezien`
-  legt vast wat de ronde deed.
-- Planning: Daniels Mac taak `omnivaleur-onboarding-nieuwe-klanten` 06:30; tweede
-  account `...-middag` 15:00 (instructie in CLAUDE.md). Deelt het slot met de
-  klantfoutenrondes (`klantfouten.py ronde begin|klaar`).
-
-**Mail pas na contactcheck (29-09-2026):** de eerste ronde mailde Vagif als vreemde
-terwijl hij via koude mail kwam, terugschreef en die middag een gesprek had. Het script
-toont nu koude mail, postvak (MAIL_PASS nodig) en vermeldingen; gesprek of contact
-binnen 48 uur = briefing in plaats van mail. Niet gelezen is nooit "geen contact".
-
-**Why:** de eerste uren beslissen of iemand blijft; onder 30 ingelezen artikelen betaalde
-nog nooit iemand ("trechter-aanmelding-tot-betalend-27-09").
-**How to apply:** wijzig de routine in het bestand in docs/routines, niet in de geplande
-taak. Meet extra alleen per klant ("meten-op-de-productiedatabase"). Mailtjes volgens
-"klantmail-kort-en-menselijk".
 
 ---
 

@@ -14684,3 +14684,13 @@ kon (workspacemcp) is niet verbonden; de andere Drive-koppeling kan geen inhoud 
   'active' met de fout; niets aan haar data veranderd.
 - Open: of de "Frame with ID 0"-fout van vanochtend dezelfde 404-pagina als
   oorzaak heeft, is niet bewezen.
+
+## 29-09-2026 (middag): postvak leesbaar voor de onboarding-routine
+
+Het "Open"-punt hierboven is dicht. Het Zoho-wachtwoord stond al in de sleutelhanger van
+Daniels Mac (`omnivaleur-leadgen-mail`, sinds 11-08, zo las de oude mailmachine het).
+`scripts/nieuwe_klanten.py` gebruikt dat als MAIL_PASS ontbreekt. Gemeten: de ronde
+ziet nu Vagifs mail van 23-09 en Daniels mail aan Matthijs van vandaag 13:52. Op het
+account van de tweede ontwikkelaar staat het er niet; daar zegt de routine "niet
+gelezen" en schrijft ze niet alsof het eerste contact is. Daniel hoeft geen
+app-wachtwoord te maken.
