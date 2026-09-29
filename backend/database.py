@@ -568,6 +568,32 @@ class AuthTijdelijkOnbereikbaar(Exception):
     """Supabase kon niet beantwoord worden — dat is GEEN afgekeurd wachtwoord."""
 
 
+def _http_status_van_auth_fout(exc: BaseException) -> int | None:
+    """De HTTP-code die Supabase echt terugstuurde, ook als de bibliotheek hem kwijt is.
+
+    WAAROM (28-09-2026). Supabase staat achter Cloudflare. Ligt het plat, dan
+    komt er een HTML-pagina met 520 tot 524 terug. De Supabase-bibliotheek op de
+    server (gotrue 2.12.4) herkent alleen 502/503/504 als storing; van zo'n pagina
+    maakt ze een AuthUnknownError zonder statuscode. Hier gold dat dus als een
+    echt antwoord, en de endpoints maakten er "401 sessie verlopen" van. Elke
+    extensie die tijdens de storing van 28-09 haar inlogbewijs verversde, gooide
+    het daarop weg en vroeg daarna dagen om werk zonder inlog (422 op
+    /api/jobs/pending). De oorspronkelijke HTTP-fout hangt nog wel aan de keten
+    (gotrue gooit zijn eigen fout binnen de except), dus daar lezen we hem af.
+    """
+    huidige: BaseException | None = exc
+    while huidige is not None:
+        status = getattr(huidige, "status", None)
+        if isinstance(status, int) and status > 0:
+            return status
+        antwoord = getattr(huidige, "response", None)
+        code = getattr(antwoord, "status_code", None)
+        if isinstance(code, int):
+            return code
+        huidige = huidige.__cause__ or huidige.__context__
+    return None
+
+
 def auth_met_herkansing(aanroep, pogingen: int = 3):
     """
     Voer één auth-aanroep uit en probeer opnieuw als de verbinding wegviel.
