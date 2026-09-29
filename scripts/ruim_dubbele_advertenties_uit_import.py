@@ -522,6 +522,13 @@ def main_op_code(user_id: str, apply: bool) -> None:
             except Exception as e:  # noqa: BLE001 — unieke sleutel: deze rij laten staan
                 geweigerd.append((it["id"], str(e)[:120]))
                 continue
+            # Een wachtende plaatsing draagt een kopie van de oude rij, en dus de
+            # oude foto's. Die krijgt de foto's van de rij die blijft.
+            for j in (db.table("jobs").select("id,payload").eq("item_id", it["id"])
+                      .eq("action", "create").eq("status", "pending").execute().data or []):
+                db.table("jobs").update({"payload": {**(j.get("payload") or {}),
+                                                     "photo_urls": houden.get("photo_urls")}}
+                                        ).eq("id", j["id"]).execute()
             db.table("jobs").update({"item_id": houden["id"]}).eq("item_id", it["id"]).execute()
             db.table("items").delete().eq("id", it["id"]).eq("user_id", user_id).execute()
             samengevoegd += 1
