@@ -345,6 +345,23 @@ def families_op_code(items: list[dict]) -> list[list[dict]]:
             for b in rijen[i + 1:]:
                 if maten[a["id"]] & maten[b["id"]] and plausibel(a, b, merken) is None:
                     ouder[wortel(b["id"])] = wortel(a["id"])
+    # EN DE RIJ ZONDER CODE (29-09-2026, TK199). De 2dehands- en Marktplaats-rij
+    # van zijn Japanse tafelkleed hadden geen omschrijving, dus geen code, en
+    # bleven los: vier Marktplaats-advertenties voor één kleed, dat daar verkocht
+    # werd terwijl de andere drie bleven staan. Zulke rijen horen erbij bij
+    # letterlijk dezelfde titel (hoofdletters en "cm" daargelaten) met een
+    # afmeting erin, zolang geen van beide een ándere code draagt.
+    per_titel = defaultdict(list)
+    for it in items:
+        if _AFMETING.search(it.get("title") or ""):
+            per_titel[_kale_titel(it.get("title"))].append(it)
+    for rijen in per_titel.values():
+        for i, a in enumerate(rijen):
+            for b in rijen[i + 1:]:
+                ca, cb = eigen_codes(a.get("description")), eigen_codes(b.get("description"))
+                if (ca and cb and not ca & cb) or plausibel(a, b, merken) is not None:
+                    continue
+                ouder[wortel(b["id"])] = wortel(a["id"])
     groepen = defaultdict(list)
     for it in items:
         if it["id"] in ouder or it["id"] in ouder.values():
