@@ -60,12 +60,13 @@ LEVEND = ("active", "hidden", "pending", "relisting")
 def _db():
     """De servicesleutel als die er is. Met de gewone sleutel ziet een script
     lokaal door de rijbeveiliging niets, en meldt het "geen artikelen"."""
+    from backend import database
     from backend.config import settings
-    from backend.database import get_db
     if settings.supabase_service_key:
         from supabase import create_client
-        return create_client(settings.supabase_url, settings.supabase_service_key)
-    return get_db()
+        # Ook voor de backendfuncties die zelf get_db() aanroepen.
+        database._client = create_client(settings.supabase_url, settings.supabase_service_key)
+    return database.get_db()
 
 
 def _alle(db, tabel, kolommen, **eq):
