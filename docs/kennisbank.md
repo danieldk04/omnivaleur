@@ -17,6 +17,22 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## oudste-eerst-ziet-alleen-de-dode-kop
+
+*28-09-2026 — "Een ronde die \"oudste eerst\" ophaalt met één gewone select ziet elke keer dezelfde 1.000 overgeslagen rijen; automatisch herplaatsen stond daardoor 20-09 tot 28-09-2026 bij iedereen stil"*
+
+`relist_expiring_marktplaats` haalde alle advertenties die aan de beurt waren op met één gewone select, gesorteerd op leeftijd. PostgREST geeft stilzwijgend hooguit 1.000 rijen terug. De oudste 1.000 waren elke ronde dezelfde: rijen die de ronde toch overslaat (herplaatsen uit, geen abonnement, Admarkt zonder adres). Gemeten 28-09-2026: 8.775 aan de beurt, de ronde zag alleen die van vóór 21-08 en zette bij niemand iets klaar. Zilverwebsite merkte het als "doet al een paar dagen niets".
+
+**Why:** een lijst op volgorde waarvan de kop nooit wegloopt is geen wachtrij maar een prop. Hoe beter de ronde wordt in overslaan, hoe vaster hij zit. Het dashboard zei ondertussen "75 aan de beurt, worden per dag afgehandeld".
+
+**How to apply:**
+- Elke ronde die "de oudste N" wil: fetch_all op id (niet op een kolom met gelijke waarden zoals listed_at, dat slaat rijen over), daarna zelf sorteren. Zie "pagineren-zonder-order-mist-rijen".
+- Goedkope afvallers (per eigenaar: instelling, abonnement, dagdeel) vóór de aanroepen per rij, anders kost alles ophalen duizenden aanroepen.
+- Bewijs met een droogproef van de echte ronde tegen productie: refresh_listing vervangen door een opnemer, `_echte_datums_ophalen` (schrijft) uitzetten. Oud 0, nieuw 99.
+- Een weigering op kenmerk (zakelijk + oude extensie) mag niet winnen van bewijs op het account zelf: Zilverwebsite had 60 van 60 geslaagde `deleted_via_ad_page` en werd toch geweigerd. Zie "verwijt-moet-uit-een-meting-komen".
+
+---
+
 ## klaar-klusje-herlaadt-hele-voorraad
 
 *28-09-2026 — "Database 28-09-2026 plat door het dashboard: elk klaar klusje haalde alle 5.533 artikelen + advertenties opnieuw op; snel werk dat de klant niet ziet hoort niet in \"working\""*

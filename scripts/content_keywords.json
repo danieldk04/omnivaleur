@@ -578,7 +578,7 @@
       "pillar": "B",
       "format": "strategy",
       "slug": "how-to-avoid-selling-the-same-item-twice",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "hoe-voorkom-je-dat-je-hetzelfde-item-twee-keer-verkoopt",
       "priority": 70
     }
@@ -1199,6 +1199,16 @@
       "action": "created",
       "url_path": "/reseller-tools/dac7-vinted-reporting-rules-netherlands",
       "published_at": "2026-09-27T13:28:10.881373+00:00"
+    },
+    {
+      "keyword": "how to avoid selling the same item twice",
+      "slug": "how-to-avoid-selling-the-same-item-twice",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-avoid-selling-the-same-item-twice",
+      "published_at": "2026-09-28T16:21:43.220944+00:00"
     }
   ]
 }

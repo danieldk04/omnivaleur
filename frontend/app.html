@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=37edb3c5c5"></script>
+<script src="/i18n.js?v=7c3a717153"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -7096,6 +7096,7 @@ function gewijzigdeVelden(nu, begin) {
 function openAddItem() {
   importCreateCandidateId = null;
   _bewerkBeginstand = null;
+  _bedragBegin = null;
   document.getElementById('modal-title').textContent = 'New item';
   document.getElementById('edit-id').value = '';
   ['f-title','f-sku','f-desc','f-price','f-compare','f-purchase','f-brand','f-color','f-material','f-shopify-title','f-price-mp','f-price-2dh','f-price-vinted'].forEach(id => document.getElementById(id).value = '');
@@ -7166,6 +7167,7 @@ function editItem(id) {
   document.getElementById('crosslist-group').style.display = 'none';
   document.getElementById('save-btn').textContent = 'Save';
   _bewerkBeginstand = leesItemFormulier();
+  _bedragBegin = ruweBedragen();
   document.getElementById('modal-add').style.display = 'flex';
 }
 
@@ -7177,6 +7179,60 @@ function numOrNull(raw) {
   if (s === '') return null;
   const n = parseFloat(s);
   return isNaN(n) ? null : n;
+}
+
+// ── BEDRAGEN MET EEN DUIZENDTALPUNT (28-09-2026) ──────────────────────────────
+//
+// Johan Kist verkocht een gitaar voor 1675 en zag 100% winst: de inkoopprijs
+// stond op 1,36. Gemeten in Chrome (nl-NL en en-US): typ je "1.360" of
+// "1.360,00" in een bedragveld, dan leest het veld 1,36. Een Nederlander schrijft
+// duizend driehonderdzestig zo, en niets waarschuwde.
+//
+// leesBedrag is voor vensters waar we de getypte tekst zelf zien: "1.360",
+// "1.360,00", "1,360.00" en "12.500" worden duizendtallen; "22,50", "22.50" en
+// "1,36" blijven gewoon. Leeg geeft null, onleesbaar geeft NaN.
+function leesBedrag(raw) {
+  let s = String(raw ?? '').replace(/[€\s]/g, '');
+  if (s === '') return null;
+  const punt = s.includes('.'), komma = s.includes(',');
+  if (punt && komma) {
+    // Het laatste teken is de komma van de centen, het andere zijn duizendtallen.
+    const dec = s.lastIndexOf('.') > s.lastIndexOf(',') ? '.' : ',';
+    s = s.split(dec === '.' ? ',' : '.').join('').replace(dec, '.');
+  } else if (punt || komma) {
+    const sep = punt ? '.' : ',';
+    const delen = s.split(sep);
+    // Groepjes van drie na een voorloper van 1 tot 3 cijfers: duizendtallen.
+    // Een eurobedrag met drie cijfers achter de komma bestaat niet.
+    if (/^[1-9]\d{0,2}$/.test(delen[0]) && delen.slice(1).every(d => /^\d{3}$/.test(d))) s = delen.join('');
+    else if (delen.length === 2) s = delen.join('.');
+    else return NaN;
+  }
+  return /^\d+(\.\d+)?$/.test(s) ? parseFloat(s) : NaN;
+}
+
+// Het bewerkscherm heeft gewone bedragvelden en krijgt de getypte tekst niet te
+// zien, alleen wat Chrome ervan maakte: "1.360" en "1.36000". Meer dan twee
+// cijfers achter de punt is nooit een bedrag in euro's, dus dan niet opslaan
+// maar vragen het zonder punt te typen. Alleen voor velden die de verkoper nu
+// invulde: een oud getal uit de database blokkeert het opslaan nooit. Vergeleken
+// wordt met de tekst in het veld bij openen, niet met het getal: stond er al
+// 1,36 en typt hij opnieuw "1.360", dan is het getal gelijk maar de tekst niet.
+const BEDRAGVELDEN = ['f-price', 'f-compare', 'f-purchase', 'f-price-mp', 'f-price-2dh',
+  'f-price-vinted', 'f-price-ebay', 'f-price-shopify'];
+let _bedragBegin = null;
+function ruweBedragen() {
+  const uit = {};
+  for (const id of BEDRAGVELDEN) { const el = document.getElementById(id); if (el) uit[id] = el.value; }
+  return uit;
+}
+function bedragMetDuizendtalpunt() {
+  for (const id of BEDRAGVELDEN) {
+    const el = document.getElementById(id);
+    if (!el || (_bedragBegin && _bedragBegin[id] === el.value)) continue;
+    if (/\.\d{3,}$/.test(String(el.value || '').trim())) return el;
+  }
+  return null;
 }
 
 // ── DE ADVERTENTIEVORM (Marktplaats en 2dehands) ─────────────────────────────
@@ -7216,6 +7272,12 @@ async function saveItem() {
   if (_uploadsInFlight > 0) return alert('Photos are still uploading — please wait for them to finish before saving.');
   const id = document.getElementById('edit-id').value;
   const data = leesItemFormulier();
+  const puntVeld = bedragMetDuizendtalpunt();
+  if (puntVeld) {
+    alert(`An amount reads as €${Number(puntVeld.value).toFixed(2)}. Did you use a dot for thousands? Here a dot is a decimal point, so 1.360 becomes 1.36. Type the amount without it, for example 1360 or 1360,50.`);
+    puntVeld.focus();
+    return;
+  }
   // Met een prijsvorm zonder bedrag (bieden, zie omschrijving, gratis) staat het
   // prijsveld uit. Een bedrag eisen liet de verkoper dan alleen de uitweg om de
   // vorm terug te zetten op vraagprijs, en dan gaat het artikel voor 0,01 weg.
@@ -12876,8 +12938,7 @@ async function setPurchasePrice(itemId, current) {
   const raw = prompt(`What did you pay for this item? (€)\n\nLeave it empty if you don't know. The sale then still counts toward revenue, just not toward profit.`,
     current != null ? Number(current).toFixed(2) : '');
   if (raw === null) return;                     // cancelled
-  const tekst = String(raw).trim();
-  const val = tekst === '' ? null : parseFloat(tekst.replace(',', '.'));
+  const val = leesBedrag(raw);                  // "1.360" is 1360, niet 1,36
   if (val !== null && (isNaN(val) || val < 0)) { alert('Please enter a valid amount (e.g. 22.50).'); return; }
   try {
     const r = await apiFetch(`${API}/api/items/${itemId}`, {
@@ -12903,8 +12964,8 @@ async function setSoldPrice(itemId, platform, suggested) {
   const raw = prompt(`What did this item actually sell for on ${label}? (€)\n\nLeave the asking price if that's correct, or type the real amount received.`,
     suggested != null ? Number(suggested).toFixed(2) : '');
   if (raw === null) return;                     // cancelled
-  const val = parseFloat(String(raw).replace(',', '.'));
-  if (isNaN(val) || val < 0) { alert('Please enter a valid amount (e.g. 22.50).'); return; }
+  const val = leesBedrag(raw);                  // "1.675" is 1675, niet 1,68
+  if (val === null || isNaN(val) || val < 0) { alert('Please enter a valid amount (e.g. 22.50).'); return; }
   try {
     const r = await apiFetch(`${API}/api/listings/sold-price`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },

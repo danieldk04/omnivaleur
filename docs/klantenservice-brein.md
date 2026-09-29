@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 28-09-2026 (verzendkost-aanpassingen op 2dehands gaan achter nieuwe plaatsingen; eerder: inkoopprijs in de verkooptabel te corrigeren)_
+_Laatst bijgewerkt: 28-09-2026 (automatisch herplaatsen stond 20-09 tot 28-09 stil door een fout bij ons, loopt weer; eerder: verzendkost-aanpassingen op 2dehands gaan achter nieuwe plaatsingen)_
 
 ---
 
@@ -290,6 +290,17 @@ Contact:
   opnieuw proberen. Advertenties in een Pro-campagne (Admarkt, die naar een
   webwinkel wijzen) kan Omnivaleur niet offline halen; die haalt de klant op
   Marktplaats of 2dehands zelf weg.
+  Dat vervangen lukt ook met een oudere extensie, als het weghalen via de
+  advertentiepagina bij die klant al eens gelukt is (sinds 28-09-2026).
+- Automatisch herplaatsen op Marktplaats stond van 20-09 tot 28-09-2026 bij alle
+  klanten stil door een fout bij ons: de ronde zag alleen de 1.000 oudste
+  advertenties van alle klanten samen. Sinds 28-09 (middag) loopt het weer. Per
+  klant gaan er per dag ongeveer zijn aantal advertenties gedeeld door 20 uit
+  (minstens 25, hoogstens 100), de oudste eerst; nieuwe plaatsingen van die dag
+  tellen mee. Er ging niets verloren, de advertenties bleven online. Zelf
+  verversen kan ook, onder Verversen: op Marktplaats hooguit 3 per dag, en
+  dezelfde advertentie eens per 21 dagen. Een vast aantal per dag kan de klant
+  nog niet zelf instellen.
 - Marktplaats laat maar twee smartwatches gratis in de rubriek Smartwatches staan;
   de derde kost geld. Sinds 22-09-2026 zet Omnivaleur de derde en alle volgende
   vanzelf in Sporthorloges, waar die grens niet geldt, zodat ze gewoon gratis
