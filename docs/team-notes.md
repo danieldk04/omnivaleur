@@ -14385,3 +14385,17 @@ hun webshop (waterketel 9 foto's, slangenketting 46 cm 7 foto's) en zijn daarmee
 terug te zetten; de Zinzi-ring (violet) niet, die foto's zijn nergens meer. Wacht
 op Daniel.
 
+**Nagekomen 29-09 (ochtend).** Met Daniels akkoord de waterketel en de
+slangenketting 46 cm teruggezet via publish_to_platforms, met de foto's uit hun
+webshop (titel, prijs en omschrijving exact gelijk, in de webshop nog
+beschikbaar; 9 en 7 foto's, gekopieerd naar img.omnivaleur.com). Ze gaan eruit
+zodra hun computer aanstaat (extensie stil sinds 06:35 UTC). De 26 geslaagde
+herplaatsingen nagekeken in de openbare verkoperslijst: 26 online met foto's,
+26 keer de oude weg, geen dubbele. Marktplaats blokkeerde advertentiepagina's
+vanaf Daniels Mac (403) na een veertigtal verzoeken, ongeacht de
+browseraanduiding; de zoek-API bleef werken. Daarom haalt de server live foto's
+nu met 8 seconden ertussen en na een 403 een uur niet (210b0bf3). Nog 776
+advertenties bij 7 klanten hebben alleen dode Marktplaats-foto's; die worden
+veiliggesteld zodra ze aan de beurt zijn, of blijven staan als dat niet lukt.
+Nog niet gezien: de server die zelf een advertentiepagina leest.
+
