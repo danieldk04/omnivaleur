@@ -131,8 +131,7 @@ Daniel verstuurt zelf; jij verstuurt niets. Wat hij krijgt hangt af van stap 3.0
 - Eerder contact (koude mail, antwoord, mail heen en weer): sluit daarop aan, geen
   nieuwe introductie. Stond er een vraag van hem open, beantwoord die als Daniel dat nog
   niet deed.
-- Nooit contact: begin met een korte introductie van Daniel (oprichter van Omnivaleur,
-  kijkt zelf naar elk nieuw account) en waarom hij schrijft.
+- Nooit contact: begin met de introductie uit het voorbeeld hieronder.
 - Geen mailtje voor een klant bij wie niets veranderde en de vorige ronde er al een had.
 - De server stuurt zelf één herinnering aan wie liet scannen en na 24 uur nog niets
   importeerde (sinds 29-09-2026). Staat bij de klant "automatische importherinnering"
