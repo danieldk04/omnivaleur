@@ -137,13 +137,41 @@ Daniel verstuurt zelf; jij verstuurt niets. Wat hij krijgt hangt af van stap 3.0
   importeerde (sinds 29-09-2026). Staat bij de klant "automatische importherinnering"
   met een datum, herhaal die boodschap dan niet.
 
-Minder is meer (kennisbank: klantmail-kort-en-menselijk): hooguit 120 woorden, platte
-tekst zonder opmaaktekens en zonder streepjes als leesteken. Goed nieuws vooraan, eerst
-erkennen wat misging, één ding dat hij zelf moet doen, hooguit twee getallen, geen
-uitleg van hoe wij iets repareerden. Nederlands, tenzij hij duidelijk Engelstalig is.
-Ondertekend met Daniel. Schrijf nooit iets wat je niet gemeten hebt ("alles werkt"
-alleen bij een geslaagde plaatsing; "komt vanzelf binnen" alleen als de Web Store die
-versie al levert).
+Stijl: zo schrijft Daniel het zelf (29-09-2026, verstuurd aan een nieuwe klant, "zo'n
+stijl wil ik dus dat je aanhoudt"). Houd deze opbouw en toon aan, vul alleen de feiten
+van de klant in:
+
+```text
+Hoi Anneloes,
+
+Ik ben Daniel, de oprichter van Omnivaleur. Ik kijk zelf naar elk nieuw account om te zorgen dat er geen onduidelijkheden of problemen zijn; super leuk dat je een account hebt aangemaakt!
+
+Goed nieuws: je voorraad is binnen en 38 artikelen staan netjes op Vinted.
+
+Op Marktplaats is het nog niet gelukt, omdat je in Chrome niet bent ingelogd op marktplaats.nl. Als je daar wilt publiceren, log je eenmaal in en kies je daarna in je dashboard de artikelen en zet ze op Marktplaats. Dan ben je met dezelfde voorraad op twee plekken zichtbaar.
+
+Loop je ergens tegenaan, stuur me gerust een berichtje of, als je dat liever hebt, kun je ook via het dashboard een call inplannen.
+
+Ik kijk er naar uit om je te helpen om meer tijd te besparen :)!
+Groetjes,
+Daniel
+```
+
+Wat dat betekent:
+- Aanhef "Hoi <voornaam>,", slot "Groetjes," met op de regel eronder "Daniel".
+- Warm en enthousiast mag: "super leuk", een uitroepteken, een smiley aan het eind.
+  Geen boetekleed, geen uitleg van hoe wij iets repareerden.
+- "Goed nieuws:" met één concreet getal uit de meting.
+- Wat nog niet lukte: in een halve zin waarom (in gewone woorden, vanuit zijn kant),
+  dan precies wat hij doet, dan wat het hem oplevert.
+- Altijd afsluiten met het hulpaanbod: berichtje terug, of een call inplannen via het
+  dashboard (de Calendly-knop in het dashboard bestaat).
+- Hooguit 120 woorden (kennisbank: klantmail-kort-en-menselijk). Platte tekst, geen
+  opmaaktekens, geen streepjes als leesteken, elke alinea één doorlopende regel.
+- Nederlands, tenzij hij duidelijk Engelstalig is; dan dezelfde opbouw in het Engels.
+- Schrijf nooit iets wat je niet gemeten hebt ("staan netjes op Vinted" alleen bij
+  geslaagde plaatsingen; "komt vanzelf binnen" alleen als de Web Store die versie al
+  levert).
 
 ## Stap 6: vastleggen
 
