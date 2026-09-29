@@ -17,6 +17,24 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## auto-push-zet-tussenstand-live
+
+*29-09-2026 — De auto-push-hook commit en pusht elke Edit/Write los; een wijziging die over twee stappen verdeeld is (of een stap via Bash) gaat half live en Railway start niet op. Twee keer gebeurd (23-09, 27-09); en 29-09 pushte hij stil NIETS door een hangend autostash-conflict*
+
+23-09-2026: bij het bouwen van Shopify-inlezen gebruikte ik `BackgroundTasks` in een Edit en zette de bijbehorende import pas daarna met `sed` via Bash. De hook pushte de Edit meteen; de sed-stap werd niet gecommit. Drie Railway-deploys faalden op `NameError` (healthcheck), Daniel kreeg "build failed"-mails. De site bleef op de vorige versie draaien, dus geen klant merkte het.
+
+**Why:** elke Edit/Write is voor de hook een losse release naar productie; Bash-wijzigingen gaan er niet mee.
+
+**How to apply:** een wijziging die meerdere plekken raakt (import + gebruik, nieuwe functie + aanroep) in één Edit/Write zetten, of eerst het deel dat niets breekt (import, nieuwe module) en pas daarna het gebruik. Nooit een tijdelijke terugzetting (voor-en-na-proef) met de Edit-tool doen: via Bash naar een kopie, en daarna controleren dat `git diff` schoon is. Na afloop altijd `railway deployment list` bekijken. Zie ook "deploy-pipeline" en "voor-en-na-proef-mag-geen-head-gebruiken".
+
+**Opnieuw gebeurd 27-09-2026 (verzendkeuzes 2dehands), ondanks deze les.** Een nieuwe module schreef ik met Write, splitste ik daarna met een Python-script in twee (Bash, dus niet gepusht), en scheduler.py importeerde met Edit het nieuwe tweede bestand. Productie zat daardoor op een tussenstand (commit 08e97fec) waarin `_schoon(None)` de nieuwe sleutel miste, en alle deploys daarna faalden op de ontbrekende module. Gemerkt via `/health` (toont `commit`), niet via mails. Hersteld door alles in één commit te pushen; niemand geraakt (nagemeten: de enige verkoper met wachtende 2dehands-plaatsingen had een instellingenrij).
+
+**Aanvulling op How to apply:** kijk bij een wijziging over meerdere bestanden vóór de eerste Edit hoe hij in stukken live mag gaan: eerst nieuwe bestanden compleet met Write, dan pas de plekken die ze aanroepen. Splits of verplaats je iets met Bash, commit en push dan zelf meteen. Controleer na afloop `curl -s https://omnivaleur.com/health` op het commitnummer, niet alleen de statuscode: een mislukte deploy laat de oude versie gewoon 200 geven.
+
+**Omgekeerd: de hook kan ook stil NIETS pushen (29-09-2026).** De hook doet `git pull --rebase --autostash` bij een geweigerde push. Een conflict bij het terugzetten van die autostash (in `.claude-flow/*.json`, runtime-bestanden) liet vier bestanden op "needs merge" staan. Daarna faalde elke `git commit` van de hook zonder melding (`2>/dev/null || true`): van 11:56 tot ±13:30 ging geen enkele Edit van welke sessie dan ook live, terwijl sessies dachten van wel (een alinea in het klantenservice-brein bleef staan). Herkennen: `git ls-files -u` niet leeg, of `git status` toont `UU`. Herstellen: `git checkout HEAD -- <die bestanden>` (de andere kant staat in `git stash list` als autostash). Eigen commits met pathspec (`git commit -- bestanden`) werken wel tijdens zo'n toestand.
+
+---
+
 ## importherinnering-na-scan
 
 *29-09-2026 — Sinds 29-09-2026 mailt de server één keer wie liet scannen maar na 24 uur niets importeerde; link /app#import; vastgelegd in leadgen_opslag import_herinnering*
@@ -667,22 +685,6 @@ Het 2dehands-formulier (create én `/plaats/m{id}/edit`, live afgelezen): `input
 **Bijgesteld 27-09-2026 avond: de verkoper regelt het zelf (Daniel: "niet constant iedereen individueel berichten").** Drie keuzes in `verzending_2dh_modus` (instellingen.py): `standaard` (Bpost), `regel` (grens + woorden, zoals hierboven), `alles` (elk Marktplaats-bedrag, ook boven 7,10). Ontbreekt de sleutel, dan volgt hij uit grens/woorden (Egbert: regel). Eigen keuze per artikel in `platform_credentials` rij `_verzending_2dh_artikelen` ({item_id: centen | "bpost"}), gezet via Items > "2dehands shipping…"; gaat voor de regel en vraagt Marktplaats niets (`eigen_keuzes`, `doel` in verzending_2dh.py; de uitgifte `_zet_verzending_van_marktplaats` kijkt eerst daar). Toepassen op wat al online staat: `verzending_2dh_ronde.py`, stand in rij `_verzending_2dh_ronde`, planner elke 5 s, één verzoek naar buiten per tik voor alle verkopers samen, lease 90 s zodat een deploy hem overdraagt, drie kansen voor wat niet te lezen is, alleen een bijwerking als de openbare 2dehands-pagina iets anders toont, geen bijwerking voor een zoekertje dat "alleen ophalen" is (het wijzigformulier heeft dan geen verzendkeuze en de mislukking zou de noodrem dichtzetten). Een andere keuze opslaan stopt een lopende ronde (`stop_als_verouderd`).
 
 Gemeten op productie (Railway) bij Egbert: ongeveer 10 zoekertjes per minuut, Marktplaats gaf 403 op ongeveer 1 op de 18 pagina's (vanaf de Mac was het 1 op de 5 bij 5 s pauze). Terugzetten naar Bpost van wat al online staat kan de extensie niet (verzendingBijwerken zet alleen diy + bedrag). Afgewogen en bewust niet: per rubriek (zegt niets over brief of pakje) en het Marktplaats-bedrag per artikel bewaren (een ronde leest opnieuw; zelden nodig). Zie ook "auto-push-zet-tussenstand-live" (bij het bouwen hiervan ging productie op een tussenstand).
-
----
-
-## auto-push-zet-tussenstand-live
-
-*27-09-2026 — De auto-push-hook commit en pusht elke Edit/Write los; een wijziging die over twee stappen verdeeld is (of een stap via Bash) gaat half live en Railway start niet op. Twee keer gebeurd (23-09, 27-09)*
-
-23-09-2026: bij het bouwen van Shopify-inlezen gebruikte ik `BackgroundTasks` in een Edit en zette de bijbehorende import pas daarna met `sed` via Bash. De hook pushte de Edit meteen; de sed-stap werd niet gecommit. Drie Railway-deploys faalden op `NameError` (healthcheck), Daniel kreeg "build failed"-mails. De site bleef op de vorige versie draaien, dus geen klant merkte het.
-
-**Why:** elke Edit/Write is voor de hook een losse release naar productie; Bash-wijzigingen gaan er niet mee.
-
-**How to apply:** een wijziging die meerdere plekken raakt (import + gebruik, nieuwe functie + aanroep) in één Edit/Write zetten, of eerst het deel dat niets breekt (import, nieuwe module) en pas daarna het gebruik. Nooit een tijdelijke terugzetting (voor-en-na-proef) met de Edit-tool doen: via Bash naar een kopie, en daarna controleren dat `git diff` schoon is. Na afloop altijd `railway deployment list` bekijken. Zie ook "deploy-pipeline" en "voor-en-na-proef-mag-geen-head-gebruiken".
-
-**Opnieuw gebeurd 27-09-2026 (verzendkeuzes 2dehands), ondanks deze les.** Een nieuwe module schreef ik met Write, splitste ik daarna met een Python-script in twee (Bash, dus niet gepusht), en scheduler.py importeerde met Edit het nieuwe tweede bestand. Productie zat daardoor op een tussenstand (commit 08e97fec) waarin `_schoon(None)` de nieuwe sleutel miste, en alle deploys daarna faalden op de ontbrekende module. Gemerkt via `/health` (toont `commit`), niet via mails. Hersteld door alles in één commit te pushen; niemand geraakt (nagemeten: de enige verkoper met wachtende 2dehands-plaatsingen had een instellingenrij).
-
-**Aanvulling op How to apply:** kijk bij een wijziging over meerdere bestanden vóór de eerste Edit hoe hij in stukken live mag gaan: eerst nieuwe bestanden compleet met Write, dan pas de plekken die ze aanroepen. Splits of verplaats je iets met Bash, commit en push dan zelf meteen. Controleer na afloop `curl -s https://omnivaleur.com/health` op het commitnummer, niet alleen de statuscode: een mislukte deploy laat de oude versie gewoon 200 geven.
 
 ---
 

@@ -14652,3 +14652,16 @@ Proeven: `tests/test_import_herinnering.py` (9).
 
 Het Zoho-wachtwoord dat Daniel in de chat plakte is niet gebruikt en niet opgeslagen:
 een sessie logt nooit in met een echt wachtwoord. Daniel zet MAIL_PASS zelf in .env.
+
+## 29-09-2026 (middag): automatische push stond stil van 11:56 tot ±13:30
+
+Vier `.claude-flow`-bestanden stonden op "needs merge" na een mislukte autostash van de
+auto-push-hook. Daardoor faalde elke automatische commit zonder melding: wat sessies in
+die tijd met Edit wijzigden bleef lokaal staan (onder meer een alinea in het
+klantenservice-brein over Vinted-foto's en `scripts/backfill_terugkoppelingen.py`).
+Hersteld met `git checkout HEAD --` op die vier bestanden (de andere kant staat in
+`git stash list` als autostash); de hook pushte meteen daarna weer (cb67e18a). Wie in
+dat tijdvak werkte: kijk of je wijziging nu echt op origin staat.
+
+Drive-kopie van het klantenservice-brein niet bijgewerkt: de Google-koppeling die dat
+kon (workspacemcp) is niet verbonden; de andere Drive-koppeling kan geen inhoud schrijven.
