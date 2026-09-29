@@ -46,14 +46,26 @@ Gebruik:
 """
 import argparse
 import asyncio
+import re
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 BROK = 200
 LEVEND = ("active", "hidden", "pending", "relisting")
+
+
+def _db():
+    """De servicesleutel als die er is. Met de gewone sleutel ziet een script
+    lokaal door de rijbeveiliging niets, en meldt het "geen artikelen"."""
+    from backend.config import settings
+    from backend.database import get_db
+    if settings.supabase_service_key:
+        from supabase import create_client
+        return create_client(settings.supabase_url, settings.supabase_service_key)
+    return get_db()
 
 
 def _alle(db, tabel, kolommen, **eq):
