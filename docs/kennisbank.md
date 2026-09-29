@@ -17,6 +17,29 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-404-pagina-kast-dicht
+
+*29-09-2026 — Op de 404-pagina van een verdwenen Vinted-advertentie geeft de kast-API 401; de startpagina 200. Kast nooit vanaf een 404-pagina lezen.*
+
+Gemeten 29-09-2026 (item 10141774015, De Juiste Toon, lederhosen maat 54): de
+404-pagina van een verdwenen Vinted-advertentie ververst Vinted's sessiesleutel
+niet. `/api/v2/wardrobe/{id}/items` vanaf die pagina gaf 401, vanaf de
+startpagina 200. bgDeleteVinted nam de startpagina-route alleen als het
+lidnummer ontbrak; met lidnummer (via /api/v2/users/current of het menu) liep hij
+vast op "Could not read your Vinted wardrobe to verify item". Twee pogingen op
+één dag, telkens op dezelfde verkochte advertentie. Gerepareerd in 1.0.359.
+
+**Why:** een verkochte of weggehaalde advertentie bleef zo eeuwig 'active' met
+een foutmelding, terwijl hij aantoonbaar weg was.
+
+**How to apply:** lees de Vinted-kast altijd vanaf een pagina die bestaat
+(startpagina van hetzelfde land). Een kast die "onleesbaar" terugkomt is eerst
+een vraag naar de statuscode van de pagina waarop je stond. Proef:
+`node tests/vinted-verwijderen-404-test.js` (en `--oud`). Zie ook
+"403-na-verwijderen-is-blokkade" en "vinted-verwijderen-liep-zonder-klok".
+
+---
+
 ## auto-push-zet-tussenstand-live
 
 *29-09-2026 — De auto-push-hook commit en pusht elke Edit/Write los; een wijziging die over twee stappen verdeeld is (of een stap via Bash) gaat half live en Railway start niet op. Twee keer gebeurd (23-09, 27-09); en 29-09 pushte hij stil NIETS door een hangend autostash-conflict*
