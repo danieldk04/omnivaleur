@@ -489,7 +489,7 @@ def main_op_code(user_id: str, apply: bool) -> None:
     # weg is (tweede keer draaien). Anders heeft één artikel tijdelijk twee
     # advertenties op hetzelfde kanaal, en herplaatsen (refresh_listing) pakt dan
     # zomaar de eerste van de twee.
-    nog_weg = {l["item_id"] for l in te_verwijderen} | {
+    nog_weg = {l["item_id"] for l in te_verwijderen + twijfel} | {
         j["item_id"] for j in wachtend if j["action"] == "delete"
         and any(str(l.get("platform_listing_id")) == str(j.get("platform_listing_id"))
                 and l["status"] in LEVEND for l in per_item[j["item_id"]])}
