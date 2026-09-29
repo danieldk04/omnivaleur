@@ -238,31 +238,273 @@ def main(user_id: str, apply: bool) -> None:
         print("(Proefdraai — er is niets gewijzigd. Draai met --apply om het echt te doen.)")
         return
 
-    gezet = 0
     for r in te_verwijderen:
-        item = db.table("items").select("*").eq("id", r["item_id"]).single().execute().data
-        payload = {
+        _verwijderopdracht(db, user_id, r)
+    print(f"Klaar: {len(te_verwijderen)} verwijderopdracht(en) klaargezet.")
+
+
+def _verwijderopdracht(db, user_id: str, r: dict) -> None:
+    """Een verwijderopdracht op advertentienummer, met de titel waaronder hij
+    online staat (daarop zoekt de extensie hem in het overzicht)."""
+    from backend.services.crosslist import _last_listed_title
+    item = db.table("items").select("*").eq("id", r["item_id"]).single().execute().data
+    db.table("jobs").insert({
+        "user_id": user_id,
+        "item_id": r["item_id"],
+        "platform": r["platform"],
+        "action": "delete",
+        "status": "pending",
+        "payload": {
             **item,
             "title": _last_listed_title(db, r["item_id"], r["platform"],
                                         item.get("title", "")),
             "platform_listing_id": r["platform_listing_id"],
             "platform_listing_url": r.get("platform_listing_url"),
-        }
-        db.table("jobs").insert({
-            "user_id": user_id,
-            "item_id": r["item_id"],
-            "platform": r["platform"],
-            "action": "delete",
-            "status": "pending",
-            "payload": payload,
-        }).execute()
-        gezet += 1
-    print(f"Klaar: {gezet} verwijderopdracht(en) klaargezet.")
+        },
+    }).execute()
+
+
+# ---------------------------------------------------------------------------
+# TWEELINGEN OP DE EIGEN CODE IN DE OMSCHRIJVING (29-09-2026, De Juiste Toon)
+# ---------------------------------------------------------------------------
+# "Oude foto's, vermoedelijk van 2dehands, worden op Marktplaats gebruikt terwijl
+# we de foto's op Vinted vernieuwen. Voorbeeld kleed Azteken A07."
+#
+# GEMETEN. Toon las zijn voorraad drie keer in: op 28-08 uit Vinted, op 05-09
+# uit 2dehands en Marktplaats. Elk kleed werd zo twee tot vijf losse rijen, elk
+# met de foto's van zijn eigen bron. A07 staat twee keer live op Marktplaats:
+# m2443172233 met de acht Vinted-foto's (kleed op een stoel, dezelfde als nu op
+# Vinted) en m2442933492 met de oude 2dehands-foto's (kleed buiten op de grond).
+#
+# Waarom de bestaande controles het misten: tweelingen.py herkent een tweeling
+# aan het nummer VÓÓR de titel, en _families hierboven aan titel plus gedeelde
+# foto. Toon zet zijn nummer in de OMSCHRIJVING ("A07", "Gf41", "TSL01"), de
+# titels verschillen op "cm" na, en de foto's komen uit verschillende bronnen.
+#
+# De regel hier: dezelfde eigen code in de omschrijving ÉN dezelfde afmeting
+# ("155/120"), plus de harde kleur/maat/merk/prijscontrole uit tweelingen.py.
+# Codes worden hergebruikt (TXL30 is bij hem een tapijt van 183/124 én een van
+# 150/96), dus de code alleen is niet genoeg. En twee rijen uit dezelfde bron
+# (twee Vinted-advertenties met dezelfde code) kunnen twee exemplaren zijn: die
+# groep blijft liggen.
+#
+# Wat er gebeurt: de rijen worden één rij, en dat is de Vinted-rij, want Vinted
+# is waar hij zijn foto's bijhoudt. Per kanaal blijft één advertentie staan:
+# die van de Vinted-rij als die echt live staat, anders de nieuwste. De rest
+# krijgt een verwijderopdracht. Pas samengevoegd werkt een verkoop op het ene
+# kanaal ook door naar de advertenties die bij de andere rij hoorden.
+
+_CODE = re.compile(r"^[A-Za-z]{1,4}\d{1,4}$")
+_AFMETING = re.compile(r"(?<!\d)(\d{2,3})\s*/\s*(\d{2,3})(?!\d)")
+_CM = re.compile(r"(?<!\d)(\d{2,3})\s*cm\b", re.I)
+_VERLOPEN = re.compile(r"expired-listing-root|expiredlisting-module"
+                       r"|(advertentie|zoekertje)\s*(is)?\s*(helaas)?\s*verlopen")
+_OPENBAAR = {"marktplaats": "https://www.marktplaats.nl/{}",
+             "2dehands": "https://www.2dehands.be/{}"}
+
+
+def eigen_codes(omschrijving: str | None) -> set[str]:
+    """De losse codes die de verkoper in zijn omschrijving zet: A07, GF41, TSL01."""
+    return {w.upper() for w in re.split(r"[\s,.;:!#()\[\]]+", omschrijving or "")
+            if _CODE.match(w)}
+
+
+def afmetingen(item: dict) -> set[str]:
+    """"155/120" uit titel of omschrijving; anders "101cm" uit de titel."""
+    tekst = f"{item.get('title') or ''}\n{item.get('description') or ''}"
+    maten = {f"{a}/{b}" for a, b in _AFMETING.findall(tekst)}
+    return maten or {f"{m}cm" for m in _CM.findall(item.get("title") or "")}
+
+
+def bron(listings: list[dict]) -> str:
+    """Het kanaal waaruit deze rij is ingelezen: dat van zijn oudste advertentierij."""
+    rijen = sorted(listings, key=lambda l: str(l.get("created_at") or ""))
+    return rijen[0]["platform"] if rijen else "?"
+
+
+def families_op_code(items: list[dict]) -> list[list[dict]]:
+    """Rijen die hetzelfde voorwerp zijn: zelfde eigen code én zelfde afmeting."""
+    from backend.services.tweelingen import bekende_merken_van, plausibel
+    merken = bekende_merken_van(items)
+    maten = {it["id"]: afmetingen(it) for it in items}
+    per_code = defaultdict(list)
+    for it in items:
+        if maten[it["id"]]:
+            for c in eigen_codes(it.get("description")):
+                per_code[c].append(it)
+    ouder: dict[str, str] = {}
+
+    def wortel(x: str) -> str:
+        while ouder.get(x, x) != x:
+            x = ouder[x]
+        return x
+
+    for rijen in per_code.values():
+        for i, a in enumerate(rijen):
+            for b in rijen[i + 1:]:
+                if maten[a["id"]] & maten[b["id"]] and plausibel(a, b, merken) is None:
+                    ouder[wortel(b["id"])] = wortel(a["id"])
+    groepen = defaultdict(list)
+    for it in items:
+        if it["id"] in ouder or it["id"] in ouder.values():
+            groepen[wortel(it["id"])].append(it)
+    return [g for g in groepen.values() if len(g) > 1]
+
+
+async def _live(listings: list[dict]) -> dict[str, bool | None]:
+    """Per advertentierij: True = de advertentiepagina staat echt live, False =
+    verlopen of weg, None = geen uitspraak. Rustig aan: MP en 2dehands kappen een
+    snelle reeks af met 403."""
+    import httpx
+    from backend.services.verlopen_controle import UA
+    uit: dict[str, bool | None] = {}
+    async with httpx.AsyncClient(timeout=25, headers={"User-Agent": UA},
+                                 follow_redirects=True) as c:
+        for l in listings:
+            nummer = str(l.get("platform_listing_id") or "")
+            oordeel = None
+            for poging in range(4):
+                try:
+                    r = await c.get(_OPENBAAR[l["platform"]].format(nummer))
+                except Exception:  # noqa: BLE001 — geen verbinding is geen uitspraak
+                    await asyncio.sleep(3)
+                    continue
+                if r.status_code in (403, 429, 503):
+                    await asyncio.sleep(3 * (poging + 1))
+                    continue
+                tekst = (r.text or "").lower()
+                if _VERLOPEN.search(tekst) or r.status_code in (404, 410):
+                    oordeel = False
+                elif r.status_code == 200 and nummer in str(r.url) and len(tekst) > 5000:
+                    oordeel = True
+                break
+            uit[l["id"]] = oordeel
+            await asyncio.sleep(1.5)
+    return uit
+
+
+def main_op_code(user_id: str, apply: bool) -> None:
+    db = _db()
+    items = _alle(db, "items", "id,user_id,title,description,price,price_marktplaats,"
+                  "price_2dehands,photo_urls,created_at,sku,brand", user_id=user_id)
+    ids = [it["id"] for it in items]
+    listings = []
+    for i in range(0, len(ids), BROK):
+        listings += (db.table("listings")
+                     .select("id,item_id,platform,status,platform_listing_id,"
+                             "platform_listing_url,listed_at,created_at")
+                     .in_("item_id", ids[i:i + BROK]).execute().data or [])
+    per_item = defaultdict(list)
+    for l in listings:
+        per_item[l["item_id"]].append(l)
+
+    fam = families_op_code(items)
+    print(f"{len(items)} artikelen, {len(fam)} groepen met dezelfde eigen code én afmeting.")
+
+    plannen, overgeslagen = [], []
+    for groep in fam:
+        bronnen = {it["id"]: bron(per_item[it["id"]]) for it in groep}
+        dubbel = [b for b, n in Counter(bronnen.values()).items() if n > 1 and b != "?"]
+        if dubbel:
+            overgeslagen.append((groep, f"twee rijen uit {dubbel[0]}: mogelijk twee exemplaren"))
+            continue
+        if any(l.get("status") in ("sold", "sold_unconfirmed")
+               for it in groep for l in per_item[it["id"]]):
+            overgeslagen.append((groep, "verkoopgeschiedenis"))
+            continue
+        houden = (next((it for it in groep if bronnen[it["id"]] == "vinted"), None)
+                  or min(groep, key=lambda i: str(i.get("created_at") or "")))
+        plannen.append((groep, houden, bronnen))
+
+    # Alleen waar een kanaal twee of meer 'levende' rijen heeft valt er iets te
+    # kiezen; die advertentiepagina's kijken we echt na.
+    na_te_kijken = []
+    for groep, _, _ in plannen:
+        per_kanaal = defaultdict(list)
+        for it in groep:
+            for l in per_item[it["id"]]:
+                if l["status"] in LEVEND and l["platform"] in _OPENBAAR and l.get("platform_listing_id"):
+                    per_kanaal[l["platform"]].append(l)
+        na_te_kijken += [l for rijen in per_kanaal.values() if len(rijen) > 1 for l in rijen]
+    print(f"{len(na_te_kijken)} advertentiepagina's nakijken…")
+    live = asyncio.run(_live(na_te_kijken)) if na_te_kijken else {}
+
+    te_verwijderen, oude_fotos, twijfel, prijzen = [], [], [], []
+    for groep, houden, bronnen in plannen:
+        ids_groep = {it["id"] for it in groep}
+        print(f"\n{houden['title'][:60]!r}  ({'/'.join(sorted(eigen_codes(houden.get('description'))))})")
+        for it in groep:
+            print(f"   {'HOUDEN ' if it is houden else 'opgaan '} {bronnen[it['id']]:11} "
+                  f"{len(it.get('photo_urls') or [])} foto's, {it.get('price')} euro, {it['id'][:8]}")
+        for kanaal in _OPENBAAR:
+            rijen = [l for i in ids_groep for l in per_item[i]
+                     if l["platform"] == kanaal and l["status"] in LEVEND and l.get("platform_listing_id")]
+            if not rijen:
+                continue
+            if len(rijen) > 1:
+                echt = [l for l in rijen if live.get(l["id"]) is True]
+                twijfel += [l for l in rijen if live.get(l["id"]) is None]
+                if not echt:
+                    continue
+                echt.sort(key=lambda l: (l["item_id"] == houden["id"],
+                                         str(l.get("listed_at") or l.get("created_at") or "")),
+                          reverse=True)
+                blijft, weg = echt[0], echt[1:]
+                te_verwijderen += weg
+            else:
+                blijft = rijen[0]
+            van = next(it for it in groep if it["id"] == blijft["item_id"])
+            print(f"   {kanaal}: blijft {blijft['platform_listing_id']}"
+                  + "".join(f", weg {l['platform_listing_id']}" for l in rijen
+                            if l in te_verwijderen))
+            if van is not houden and set(van.get("photo_urls") or []) != set(houden.get("photo_urls") or []):
+                oude_fotos.append((kanaal, blijft, houden))
+                print(f"      LET OP: die advertentie draagt de foto's van de {bronnen[van['id']]}-rij")
+            veld = f"price_{kanaal}"
+            if (van is not houden and van.get("price") and van.get("price") != houden.get("price")
+                    and not houden.get(veld)):
+                prijzen.append((houden["id"], veld, van["price"]))
+
+    for groep, reden in overgeslagen:
+        print(f"\novergeslagen: {groep[0]['title'][:55]!r}: {reden}")
+    print(f"\n{len(plannen)} groepen worden één rij ({sum(len(g) - 1 for g, _, _ in plannen)} rijen gaan op).")
+    print(f"{len(te_verwijderen)} dubbele advertenties weg, {len(twijfel)} zonder uitspraak blijven staan.")
+    print(f"{len(oude_fotos)} advertenties houden de oude foto's tot ze herplaatst worden.")
+    print(f"{len(prijzen)} kanaalprijzen overgenomen van de rij waarvan de advertentie blijft.")
+    if not apply:
+        print("(Proefdraai: er is niets gewijzigd. Draai met --apply om het echt te doen.)")
+        return
+
+    # 1. Eerst de verwijderopdrachten, zolang de rij van de advertentie nog bestaat.
+    for l in te_verwijderen:
+        _verwijderopdracht(db, user_id, l)
+    # 2. Samenvoegen zoals backend/api/items.merge_items dat doet: advertenties en
+    #    opdrachten naar de Vinted-rij, de andere rijen weg. Foto's blijven staan.
+    samengevoegd, geweigerd = 0, []
+    for groep, houden, _ in plannen:
+        for it in groep:
+            if it is houden:
+                continue
+            try:
+                db.table("listings").update({"item_id": houden["id"]}).eq("item_id", it["id"]).execute()
+            except Exception as e:  # noqa: BLE001 — unieke sleutel: deze rij laten staan
+                geweigerd.append((it["id"], str(e)[:120]))
+                continue
+            db.table("jobs").update({"item_id": houden["id"]}).eq("item_id", it["id"]).execute()
+            db.table("items").delete().eq("id", it["id"]).eq("user_id", user_id).execute()
+            samengevoegd += 1
+    # 3. De prijs die op dat kanaal al stond blijft de prijs op dat kanaal.
+    for item_id, veld, prijs in prijzen:
+        db.table("items").update({veld: prijs}).eq("id", item_id).is_(veld, "null").execute()
+    print(f"Klaar: {len(te_verwijderen)} verwijderopdrachten, {samengevoegd} rijen samengevoegd, "
+          f"{len(geweigerd)} geweigerd {geweigerd[:3]}.")
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--user", required=True)
     p.add_argument("--apply", action="store_true")
+    p.add_argument("--op-code", action="store_true",
+                   help="tweelingen op de eigen code in de omschrijving plus afmeting")
     a = p.parse_args()
-    main(a.user, a.apply)
+    (main_op_code if a.op_code else main)(a.user, a.apply)
