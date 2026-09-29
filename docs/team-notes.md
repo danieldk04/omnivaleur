@@ -14767,3 +14767,28 @@ Opgepakt volgens de stappen van 12:05. Alles hieronder zelf gemeten.
   aan Toon stuurt. Niets aan veranderd.
 - Mijn Mac kreeg na ~150 advertentiepagina's in een uur 403 van Marktplaats; het
   script pauzeert 1,5 s per pagina, dat is te snel voor zoveel pagina's achter elkaar.
+
+## 29-09-2026: Onboarding nieuwe klanten (ochtendronde, gedraaid 20:10)
+
+Gemeten 20:11: 2 klanten in hun eerste week. Matthijs (6e9f6f40) valt buiten het venster.
+Web Store levert 1.0.358, repo nu 1.0.361.
+- 82b13998 (anneloesvdklift@gmail.com, nieuw, dameskleding en Young Living op Vinted):
+  loopt op Vinted (41 ingelezen, 38 actief, eerste plaatsing 1,4 uur na aanmelding).
+  Nul op Marktplaats en 2dehands: haar twee Marktplaats-scans stonden op de inlogpagina
+  (zie klantfouten 14:03, melding gerepareerd in 1.0.360). Kookboek "Makkelijk met
+  Miljuschka" weigert op Vinted omdat Vinted bij boeken een ISBN eist; wij kennen en
+  importeren geen ISBN (nergens in de code). Nooit contact: mailtje klaargezet.
+- 1ba42900 (Vagif, sieraden): loopt; Vinted lukt sinds 17:06 (1.0.358). Nieuw: twee
+  ringen op 2dehands geweigerd op "intended for". Oorzaak bewezen: Ringen (l1 1826, l2 22)
+  heeft op Marktplaats en 2dehands "Bestemd voor" met Dame / Heer / Dame of Heer (gemeten
+  in de zoekfilters van beide sites); selectIntendedFor kende alleen jongen/meisje en
+  instrumenten. Gerepareerd in 1.0.361 (d9576798): heren of dames uit titel, omschrijving
+  of gender, anders "Dame of Heer". Proef tests/bestemd-voor-dame-heer-test.js: code van
+  1fc27664 laat het veld leeg bij zijn twee ringen, nieuw kiest goed. Raakt 5 van zijn 24
+  ringen die nog niet op 2dehands staan. Niet opnieuw klaargezet: helpt pas als de Web
+  Store 1.0.361 levert. Deurbel in betaalde rubriek en "niet ingelogd op Vinted" zijn van
+  hem. Gesprek vandaag, dus briefing en geen mail.
+- Open: ISBN voor boeken op Vinted (geen Vinted-sessie om het formulier te meten); de
+  twee ringen opnieuw laten plaatsen zodra 1.0.361 bij hem draait.
+- Let op: backend/services/crosslist.py en tests/test_stuck_publish_recovery.py stonden
+  al gewijzigd en niet gecommit in de map; niet van deze ronde, niet aangeraakt.
