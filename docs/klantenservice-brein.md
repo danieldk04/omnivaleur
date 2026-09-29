@@ -331,6 +331,12 @@ Contact:
   verder met wat er klaarstaat. Tot 29-09-2026 kon een storing bij onze database
   de uitbreiding zo uitloggen (fout bij ons, gerepareerd); wie sindsdien het
   dashboard niet in die browser heeft geopend, staat mogelijk nog zo.
+- Weigert Vinted een artikel met "colour (empty ...)" of een kleur als "zilveren",
+  "gele" of "gouden": tot uitbreiding 1.0.358 herkende de Vinted-stap die
+  verbogen kleurnamen niet (Marktplaats en 2dehands wel). Fout bij ons,
+  gerepareerd in 1.0.358. Staat er helemaal geen kleur bij het artikel en ook
+  geen kleurwoord in de titel (bijvoorbeeld een parelketting), dan laat
+  Omnivaleur het Vinted-tabblad open zodat de klant zelf een kleur kiest.
 - Staat een artikel al op Marktplaats, dan komt het op 2dehands in precies
   dezelfde rubriek als op Marktplaats (sinds 13-09-2026). Daarvoor koos Omnivaleur
   soms zelf een rubriek op basis van de titel, en die kon betalend zijn terwijl de
