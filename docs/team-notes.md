@@ -14665,3 +14665,22 @@ dat tijdvak werkte: kijk of je wijziging nu echt op origin staat.
 
 Drive-kopie van het klantenservice-brein niet bijgewerkt: de Google-koppeling die dat
 kon (workspacemcp) is niet verbonden; de andere Drive-koppeling kan geen inhoud schrijven.
+
+## 29-09-2026 (13:45, automatisch): Klantfouten
+
+- fout-vinted-delete-d02c4b46 (96e30080, De Juiste Toon): "Could not read your
+  Vinted wardrobe to verify item 10141774015", 11:28 UTC. Zelfde artikel als de
+  "Frame with ID 0"-fout van vanochtend (lederhosen maat 54, verkocht op
+  Marktplaats). Gemeten: de Vinted-pagina geeft 404, en het artikel staat niet in
+  haar volledige kastscan van 11:30 (1.130 van 1.130). Oorzaak in onze code: op
+  zo'n 404-pagina geeft Vinted's kast-API 401 (startpagina: 200, zelf gemeten in
+  Chrome), en de extensie nam de omweg via de startpagina alleen als het
+  lidnummer ontbrak. Gerepareerd in extensie 1.0.359: kast onleesbaar op een
+  404-pagina gaat nu ook via de startpagina, en meldt de verwijdering dan als
+  "al weg" (of als verkoop als Vinted hem als verkocht kent). Proef
+  tests/vinted-verwijderen-404-test.js: oude code 2 mislukt, nieuwe alles goed.
+- Open: werkt pas bij haar zodra de Web Store 1.0.359 serveert (die serveert nog
+  1.0.355; 1.0.358 zit in de keuring). Tot dan blijft deze ene Vinted-rij op
+  'active' met de fout; niets aan haar data veranderd.
+- Open: of de "Frame with ID 0"-fout van vanochtend dezelfde 404-pagina als
+  oorzaak heeft, is niet bewezen.

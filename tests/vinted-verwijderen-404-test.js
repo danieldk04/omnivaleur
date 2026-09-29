@@ -80,6 +80,38 @@ const kast = (ids) => async () => ({
   ok("advertentie bestaat wél maar staat niet in mijn kast -> geen 404",
      r.present === false && r.httpStatus !== 404, r);
 
+  // 2d. Ingelogd, advertentie weg, en de kast-API geeft op die 404-pagina 401
+  //     (de 404-pagina ververst de sessiesleutel niet; gemeten 29-09-2026 op
+  //     item 10141774015). De statuscode moet meekomen én de afhandeling moet
+  //     dan de kast vanaf de startpagina lezen, niet opgeven.
+  const kastDichtOp404 = async (u) => {
+    if (String(u).includes("users/current")) return { ok: true, status: 200, json: async () => ({ user: { id: 12345 } }) };
+    if (String(u).includes("/wardrobe/")) return { ok: false, status: 401, json: async () => ({}) };
+    return { ok: false, status: 404, json: async () => ({}) };
+  };
+  r = await inTabblad("10141774015", doc([]), kastDichtOp404,
+                      { href: "https://www.vinted.nl/items/10141774015" }, setTimeout);
+  ok("ingelogd + advertentie weg + kast 401 -> present null MET statuscode 404",
+     r.userId === "12345" && r.present === null && r.httpStatus === 404, r);
+  // De afhandeling direct na de controle: welke voorwaarde stuurt naar de
+  // startpagina? Letterlijk uit de bron, uitgevoerd op deze uitkomst.
+  const naCheck = BG.slice(eind, eind + 2000);
+  const m = naCheck.match(/\n\s*if \((.*httpStatus === 404)\) \{/);
+  const naarStartpagina = m ? new Function("before", `return !!(${m[1]});`) : () => false;
+  ok("... en gaat dan via de startpagina de kast lezen", naarStartpagina(r), m && m[1]);
+
+  // 2e. Kast onleesbaar maar de pagina bestaat (200): geen startpagina-route,
+  //     gewoon afbreken zoals voorheen.
+  const kastDichtPaginaLeeft = async (u) => {
+    if (String(u).includes("users/current")) return { ok: true, status: 200, json: async () => ({ user: { id: 12345 } }) };
+    if (String(u).includes("/wardrobe/")) return { ok: false, status: 401, json: async () => ({}) };
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+  r = await inTabblad("10141774015", doc([]), kastDichtPaginaLeeft,
+                      { href: "https://www.vinted.nl/items/10141774015" }, setTimeout);
+  ok("kast 401 op een levende pagina -> niet naar de startpagina",
+     r.present === null && !naarStartpagina(r), r);
+
   // 3. Echt uitgelogd: de pagina bestaat wel (200), er is alleen geen menu.
   const paginaBestaat = async () => ({ ok: true, status: 200, json: async () => ({}) });
   r = await inTabblad("8289521490", doc([]), paginaBestaat,

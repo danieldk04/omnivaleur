@@ -5890,20 +5890,26 @@ async function bgDeleteVinted(job, serverUrl) {
       // van de advertentiepagina zelf zegt welke van de twee: 404 = weg.
       // Zonder dit liep een herplaatsing dood op "not in your wardrobe" terwijl
       // de advertentie aantoonbaar niet meer bestond (Daniel, 05-09-2026).
-      const wegOfVreemd = async () => {
-        let httpStatus = 0;
+      const paginaStatus = async () => {
         try {
           const r = await fetch(location.href, { headers: { Accept: "text/html" }, redirect: "follow" });
-          httpStatus = r.status;
-        } catch (e) { httpStatus = 0; }
-        return { userId, present: false, httpStatus };
+          return r.status;
+        } catch (e) { return 0; }
       };
+      const wegOfVreemd = async () => ({ userId, present: false, httpStatus: await paginaStatus() });
+      // Kast onleesbaar vanaf déze pagina. Op de 404-pagina van een verdwenen
+      // advertentie is dat de gewone gang: die pagina ververst Vinted's
+      // sessiesleutel niet, en de kast-API antwoordt daar 401 waar de
+      // startpagina 200 geeft (gemeten 29-09-2026 op item 10141774015, De Juiste
+      // Toon). De statuscode gaat mee, zodat de 404-route hieronder de kast
+      // vanaf de startpagina leest in plaats van op te geven.
+      const onleesbaar = async () => ({ userId, present: null, httpStatus: await paginaStatus() });
       try {
         for (let page = 1; page <= 60; page++) {
           const res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=${page}&per_page=96`, { headers: { Accept: "application/json" } });
-          if (!res.ok) return { userId, present: null };
+          if (!res.ok) return await onleesbaar();
           const data = await res.json();
-          if (data.code && data.code !== 0) return { userId, present: null };
+          if (data.code && data.code !== 0) return await onleesbaar();
           const items = data.items || [];
           const mine = items.find(it => String(it.id) === String(lid));
           // is_closed = Vinted's own "sold or ended" flag. A sold listing stays
@@ -5916,10 +5922,13 @@ async function bgDeleteVinted(job, serverUrl) {
           if (!pg.total_pages && items.length < 96) return await wegOfVreemd();
         }
         return { userId, present: null };  // never saw the end — don't claim absent
-      } catch (e) { return { userId, present: null }; }
+      } catch (e) { return await onleesbaar(); }
     }, [listingId]);
 
-    if (!before?.userId && before?.httpStatus === 404) {
+    // Ook mét lidnummer: een 404-pagina waarop de kast niet te lezen was, gaat
+    // dezelfde weg. Anders bleef een verkochte of weggehaalde advertentie
+    // eindeloos op "Could not read your Vinted wardrobe" hangen (29-09-2026).
+    if ((!before?.userId || before?.present === null) && before?.httpStatus === 404) {
       // De advertentiepagina bestaat niet meer. Dat is nog geen antwoord op de
       // vraag wát er gebeurd is, en het verschil is groot: verkocht hoort als
       // verkoop geboekt te worden, weggehaald mag gewoon opnieuw geplaatst.
