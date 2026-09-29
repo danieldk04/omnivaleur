@@ -169,8 +169,8 @@ Wat dat betekent:
 - Hooguit 120 woorden (kennisbank: klantmail-kort-en-menselijk). Platte tekst, geen
   opmaaktekens, geen streepjes als leesteken, elke alinea één doorlopende regel.
 - Nederlands, tenzij hij duidelijk Engelstalig is; dan dezelfde opbouw in het Engels.
-- Schrijf nooit iets wat je niet gemeten hebt ("staan netjes op Vinted" alleen bij
-  geslaagde plaatsingen; "komt vanzelf binnen" alleen als de Web Store die versie al
+- Schrijf nooit iets wat je niet gemeten hebt ("staan netjes op Vinted" alleen als het script
+  ze daar als actief telt; "komt vanzelf binnen" alleen als de Web Store die versie al
   levert).
 
 ## Stap 6: vastleggen
