@@ -445,6 +445,7 @@ def main_op_code(user_id: str, apply: bool) -> None:
             if len(rijen) > 1:
                 echt = [l for l in rijen if live.get(l["id"]) is True]
                 twijfel += [l for l in rijen if live.get(l["id"]) is None]
+                verlopen += [l for l in rijen if live.get(l["id"]) is False]
                 if not echt:
                     continue
                 echt.sort(key=lambda l: (l["item_id"] == houden["id"],
