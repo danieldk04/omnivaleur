@@ -374,7 +374,7 @@ async def _live(listings: list[dict]) -> dict[str, bool | None]:
                     await asyncio.sleep(3 * (poging + 1))
                     continue
                 tekst = (r.text or "").lower()
-                if _VERLOPEN.search(tekst) or r.status_code in (404, 410):
+                if _VERLOPEN.search(tekst) or r.status_code == 410:
                     oordeel = False
                 elif r.status_code == 200 and nummer in str(r.url) and len(tekst) > 5000:
                     oordeel = True
