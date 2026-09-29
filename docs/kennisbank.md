@@ -17,6 +17,29 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## bol-past-niet-bij-tweedehands
+
+*29-09-2026 — "bol.com-koppeling uitgezocht 29-09-2026; tweedehands alleen boeken/muziek/games/films, EAN en KvK verplicht, dus past niet bij Omnivaleurs voorraad"*
+
+Klanten vragen regelmatig om een bol.com-koppeling. Uitgezocht op 29-09-2026, bij bol zelf gelezen
+(partnerplatform, assortimentsbeleid Boeken): "Tweedehands artikelen of marge-goederen kunnen alleen
+aangeboden worden in de categorieën boeken, muziek, games en films. Voor de overige categorieën kun je
+geen verkooprechten aanvragen." Daarnaast: elke aanbieding hangt aan een EAN uit de bol-catalogus
+(Retailer API, gratis, officiële server-koppeling zoals eBay/Shopify, geen extensie of AI nodig),
+alleen zakelijke verkopers met KvK (particulieren eruit sinds 03-05-2021), refurbished vraagt
+verkooprechten met minimaal EUR 15.000 aan inkoopfacturen. Kosten: commissie per verkoop, geen abonnement.
+
+**Why:** de kern van de voorraad (kleding, sieraden, antiek, unieke stukken) mag er niet op en heeft geen
+EAN; alleen boeken en games zouden kunnen, en films/cd's/dvd's plaatst Omnivaleur zelf nog niet.
+De site (frontend/marketplaces.html, "More platforms coming") noemde bol wel als binnenkort.
+
+**How to apply:** geen bol-koppeling bouwen zolang de doelgroep tweedehands kleding/sieraden/antiek is.
+Pas heroverwegen als er aantoonbaar betalende klanten zijn met veel boeken of games mét streepjescode
+en een KvK. Klantenservice-brein beantwoordt de vraag al. Zie "omnivaleur-focus-business" en
+"leadgen-op-conversie-niet-volume".
+
+---
+
 ## bedragveld-leest-duizendtalpunt-als-komma
 
 *29-09-2026 — "Chrome maakt van \"1.360\" en \"1.360,00\" in een type=number-veld 1,36 (gemeten nl-NL en en-US); parseFloat na replace(',', '.') doet hetzelfde. Johan Kist kreeg zo 1,36 inkoop op een gitaar van 1675"*
