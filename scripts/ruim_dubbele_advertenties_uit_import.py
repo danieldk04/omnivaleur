@@ -430,7 +430,7 @@ def main_op_code(user_id: str, apply: bool) -> None:
     print(f"{len(na_te_kijken)} advertentiepagina's nakijken…")
     live = asyncio.run(_live(na_te_kijken)) if na_te_kijken else {}
 
-    te_verwijderen, oude_fotos, twijfel, prijzen = [], [], [], []
+    te_verwijderen, oude_fotos, twijfel, prijzen, verlopen = [], [], [], [], []
     for groep, houden, bronnen in plannen:
         ids_groep = {it["id"] for it in groep}
         print(f"\n{houden['title'][:60]!r}  ({'/'.join(sorted(eigen_codes(houden.get('description'))))})")
