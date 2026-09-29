@@ -594,7 +594,7 @@ def auth_met_herkansing(aanroep, pogingen: int = 3):
         try:
             return aanroep()
         except Exception as e:  # noqa: BLE001
-            status = getattr(e, "status", None)
+            status = _http_status_van_auth_fout(e)
             # Alleen opnieuw proberen bij een weggevallen verbinding of een 5xx
             # van Supabase zelf. Alles daarbuiten — verkeerd wachtwoord, verlopen
             # bewijs, te veel pogingen — is een écht antwoord en moet ongemoeid
