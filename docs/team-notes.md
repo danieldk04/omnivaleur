@@ -14714,3 +14714,55 @@ app-wachtwoord te maken.
 - Open: werkt pas bij haar als de Web Store 1.0.360 serveert (serveert nog 1.0.355).
   Haar Vinted-import liep wel goed. De afronding als leeg account (API 200 en nul
   advertenties) is niet apart met een proef gedekt, alleen de melding.
+
+## 29-09-2026 (avond): Toon (96e30080), overdracht dubbele rijen afgerond op één restje na
+
+Opgepakt volgens de stappen van 12:05. Alles hieronder zelf gemeten.
+
+**Gedaan.**
+- Gewacht tot alle 59 verwijderingen van 09:50 klaar waren (14:50 de laatste). De
+  proefdraai tijdens die rij zag TS22 nog live terwijl de extensie hem een minuut
+  later weghaalde: draai het script nooit terwijl er verwijderingen lopen.
+- Acht nieuwe groepen door de regel op gelijke titel en het slot (GR72, TK69, KEM3,
+  "Groen rond tafelkleed 140/140", GF20, en veranderd TM6, TL104, TS011) plus de oude
+  groepen met een nieuwe verwijdering (GF127, TK70, GF100, GFL102, GF72, TSL01, KL05)
+  op foto nagekeken: telkens hetzelfde kleed. TM6, TL104 en TS011 raakt het script
+  niet (verkocht of twee Vinted-rijen).
+- `--apply` twee keer: eerst 18 verwijderingen, 54 rijen samengevoegd, 1 bewezen
+  verlopen advertentie naar het archief; daarna 1 verwijdering (KL05 m2442937808),
+  15 rijen samengevoegd, KL07 (m2442964071) herplaatst met de Vinted-foto's.
+- Nameting: alle 82 uitgevoerde verwijderingen op Marktplaats en 2dehands sinds
+  07:40 (77 dubbele plus Toons eigen en herplaatsingen) geven 410 of "verlopen";
+  alle 125 advertenties die moesten blijven staan live (8 pas bij hermeting, eerst
+  "geen uitspraak"). De negen herplaatsingen van gisternacht en TV23 staan live
+  onder hun nieuwe nummer.
+- Klantenservice-brein: foto's die een klant later op Vinted vernieuwt komen niet
+  vanzelf over (scan vult alleen lege velden, alleen een prijswijziging gaat naar
+  live advertenties); advies: ook bij het artikel zetten, de volgende herplaatsing
+  op Marktplaats neemt ze mee.
+
+**Open.**
+- KL05: verwijdering m2442937808 en de herplaatsing van KL07 wachten op Toons
+  extensie (laatst gezien 14:56 UTC). Daarna het script nog één keer met --apply:
+  dat voegt de laatste twee KL05-rijen samen. Dat is alles wat technisch rest.
+- GFL41 (51a86460): de herplaatsing van 09:50 mislukte ("cannot be found in your
+  marktplaats listings") en m2441246787 staat niet meer op Marktplaats (pagina gaf
+  weg), terwijl onze rij nog 'active' zegt. Vinted te koop, 2dehands actief.
+  Niet opnieuw geplaatst: of hij op Marktplaats verkocht is, is niet te zien. Vraag
+  staat in het bericht aan Toon.
+- Verkocht maar nog online (gemeten 12:25 op de pagina's, 17:30 opnieuw op Vinted en
+  in de database, ongewijzigd): GF08, GFF1, GR122, KEXL33, KU5, TK16, TL109, TL79,
+  TLS40, TM09, TM12, TM52, TS011, TV08, TV22, TXL34, WK27. TM6 heeft Toon zelf als
+  verkocht op Marktplaats bevestigd, maar staat nog twee keer te koop op Vinted
+  (9737196592, 9420885414); één of twee lopers is op foto niet zeker. Wacht op Toon.
+- Vinted dubbel: TSL01 staat twee keer te koop (9666484695, 9737343090), Toon haalt
+  er zelf één weg. WK9 is al opgelost (9658877117 geeft 404).
+- Toon (via Daniel, 29-09 middag): "Niets van tweedehands doorkoppelen, krijg teveel
+  fraudeurs via die site." 2dehands staat bij publiceren nooit vooraf aangevinkt, dus
+  nieuw werk gaat er alleen heen als hij het aanvinkt; om 13:07 tot 13:12 vinkte hij
+  het nog aan. Er staan ruim 600 advertenties van hem live op 2dehands die wij
+  automatisch verlengen; een instelling om verlengen per klant uit te zetten bestaat
+  niet. De vraag (allemaal weghalen of laten staan) staat in het bericht dat Daniel
+  aan Toon stuurt. Niets aan veranderd.
+- Mijn Mac kreeg na ~150 advertentiepagina's in een uur 403 van Marktplaats; het
+  script pauzeert 1,5 s per pagina, dat is te snel voor zoveel pagina's achter elkaar.

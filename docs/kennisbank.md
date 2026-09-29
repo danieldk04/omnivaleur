@@ -17,6 +17,106 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## tweeling-met-code-in-de-omschrijving
+
+*29-09-2026 — "Voorraad uit meerdere kanalen ingelezen met de eigen code in de omschrijving = losse rijen per kanaal, oude foto's en dubbele advertenties op Marktplaats (Toon, 29-09-2026)"*
+
+29-09-2026, Toon (De Juiste Toon, 96e30080): "oude foto's, vermoedelijk van
+2dehands, worden op Marktplaats gebruikt terwijl we de foto's op Vinted
+vernieuwen. Voorbeeld kleed Azteken A07."
+
+**Why:** hij las zijn voorraad drie keer in (28-08 Vinted, 05-09 2dehands en
+Marktplaats). Elk kleed werd twee tot vijf losse rijen, elk met de foto's van
+zijn eigen bron, en meerdere rijen kregen een eigen Marktplaats-advertentie. A07
+stond twee keer live: m2443172233 met de Vinted-foto's (gelijk aan wat nu op
+Vinted staat, visueel nagekeken) en m2442933492 met de oude 2dehands-foto's.
+Geen enkele tweelingcontrole zag het: `tweelingen.py` kijkt naar het nummer
+VÓÓR de titel, de titel+foto-regel ("dubbele-advertentie-titel-en-foto") naar
+een gedeeld foto-adres. Toon zet zijn code in de OMSCHRIJVING ("A07", "Gf41",
+"TSL01"), titels verschillen op "cm" na en de foto's verschillen per bron.
+Gevolg naast de foto's: een verkoop op de ene rij haalt de advertenties van de
+andere rij niet weg. Gemeten: 90 groepen, 63 veilig samen te voegen, 59 dubbele
+advertenties; 17 groepen met een rij op "verkocht" terwijl de tweeling nog live
+staat.
+
+**How to apply:**
+- Herkenning: zelfde eigen code in de omschrijving ÉN zelfde afmeting ("155/120")
+  plus `tweelingen.plausibel`. De code alleen is niet genoeg: TXL30 is bij hem een
+  tapijt van 183/124 én een van 150/96. Twee rijen uit dezelfde bron (twee
+  Vinted-advertenties met dezelfde code) kunnen twee exemplaren zijn: laten liggen.
+- De Vinted-rij blijft, want daar houdt hij zijn foto's bij.
+- Script: `scripts/ruim_dubbele_advertenties_uit_import.py --user <id> --op-code`
+  (proefdraai), `--apply` om het te doen. Twee keer draaien: een groep waarvan een
+  advertentie nog weg moet wordt pas bij de tweede keer samengevoegd, want
+  `relist.refresh_listing` pakt `data[0]` van de actieve advertenties op dat
+  kanaal en kan dan de verkeerde van twee herplaatsen.
+- Lokaal ziet `get_db()` niets (anon-sleutel, zie
+  "leadgen-status-leest-anon-sleutel"); het script gebruikt de servicesleutel
+  en draait met `/usr/local/bin/python3.13` (homebrew-python mist supabase).
+- 44 van de 50 "oude foto's" waren Toons eigen oorspronkelijke 2dehands-
+  advertenties: die blijven, 2dehands wordt verlengd en niet herplaatst.
+
+Zie ook "import-dubbele-items-over-platforms", "omnivaleur-altijd-bewijzen".
+
+**Aanvulling 29-09-2026 (middag).** TK199 bewees dat de code alleen niet genoeg
+is: rijen zonder omschrijving horen erbij bij letterlijk dezelfde titel met
+afmeting. En de koppeling kan via een tussenrij twee kleden aan elkaar rijgen
+(TL104): eis daarom dat elke rij in de groep een maat deelt en geen andere code
+draagt, en kijk nieuwe groepen op foto na voor je iets weghaalt. Een versie op
+"verkocht" met een tweeling die nog live staat is geen theorie: TK199 werd op
+Marktplaats verkocht terwijl drie andere Marktplaats-advertenties bleven staan.
+
+**Afronding 29-09-2026 (avond).**
+- Nooit de proefdraai of --apply draaien terwijl de extensie nog verwijderingen
+  van dezelfde klant uitvoert. TS22 werd tijdens de proefdraai om 12:19 weggehaald
+  terwijl de proefdraai hem een minuut eerder nog live zag; `onderweg` telt alleen
+  pending/claimed/running, dus een --apply op dat moment had een tweede
+  verwijdering gemaakt die als "al weg" en dus als verkoopvraag terugkomt.
+- Herplaatsingen (delete met `_refresh_rollback`) staan bewust achteraan de rij
+  (`_wachtrij_volgorde`, groep 2/3). Bij Toon wachtten er negen van 23:27 tot na
+  13:39 achter 59 gewone verwijderingen en zijn eigen plaatsingen. Geen storing.
+- Een kept advertentie zonder uitspraak (pagina gaf geen oordeel, KL05
+  m2442707644) valt in die ronde buiten de keuze; de tweede ronde ziet de groep
+  opnieuw en ruimt dan de laatste dubbele op.
+- Foto's die de klant later op Vinted vernieuwt komen nooit vanzelf binnen:
+  een scan vult alleen lege velden aan (`_backfill_item_from_candidate`), en
+  `PATCH /items` stuurt alleen een prijswijziging door naar live advertenties.
+  Advies aan de klant: nieuwe foto's ook bij het artikel zetten; de volgende
+  herplaatsing op Marktplaats neemt ze mee (2dehands wordt verlengd, dus niet).
+- Toon wil sinds 29-09 niets meer naar 2dehands (te veel oplichters daar). In het
+  dashboard staat 2dehands nooit vooraf aangevinkt; er is geen instelling om
+  verlengen per klant uit te zetten.
+- Meet Vinted op de itempagina, zie "vinted-te-koop-meten".
+- `_live` in het script pauzeert 1,5 s per pagina. Na ~150 advertentiepagina's
+  binnen een uur gaf Marktplaats mijn Mac 403; nameten van veel advertenties dus
+  over meerdere rondes spreiden, en "geen uitspraak" later opnieuw meten (alle acht
+  bleken bij hermeting goed).
+
+---
+
+## vinted-te-koop-meten
+
+*29-09-2026 — Of een Vinted-advertentie nog te koop staat meet je op vinted.nl/items/{id}: "availability":"InStock" in de pagina; verkocht mist hem, weg geeft 404*
+
+Gemeten 29-09-2026 bij De Juiste Toon. De itempagina `https://www.vinted.nl/items/{nummer}`
+(gewone browseraanduiding uit `backend/services/vinted_enrich._UA`, geen inlog)
+geeft 200 met ~2 MB html. Een advertentie die te koop staat bevat
+`availability":"InStock` (escaped JSON, regex
+`availability\\?"\s*:\s*\\?"(?:https?://schema\.org/)?InStock`); een verkochte
+advertentie (bij ons 'sold') geeft ook 200 maar zonder die sleutel. Een
+weggehaalde geeft 404. `is_closed` staat NIET in de pagina, en het woord
+"Verkocht" staat op elke pagina (vertalingen), dus daarop zoeken bewijst niets.
+
+**Why:** "Vinted niet-gesloten" moest nagemeten worden voor de lijst "verkocht maar
+nog online" en voor dubbele Vinted-advertenties (TSL01 twee keer InStock; WK9 was
+één 404 en één InStock, dus al opgelost). Eén per seconde ging zonder 429.
+
+**How to apply:** gebruik dit om een Vinted-advertentie als live of weg te bewijzen
+voordat je iets tegen een klant zegt. Zie ook "openbare-lijst-toont-ook-verlopen"
+en "omnivaleur-altijd-bewijzen".
+
+---
+
 ## admarkt-zakelijke-marktplaats
 
 *29-09-2026 — Zakelijke Marktplaats-verkopers beheren hun advertenties in Admarkt; het persoonlijke overzicht is dan leeg en de scan vindt nul*
@@ -305,57 +405,6 @@ op het eerste scherm na inloggen, en alleen onder "Klaar om te importeren".
 **How to apply:** mail een klant niet met dezelfde boodschap als de server al stuurde;
 `scripts/nieuwe_klanten.py` toont per klant of hij hem kreeg. Zie
 "onboarding-routine-nieuwe-klanten", "trechter-aanmelding-tot-betalend-27-09".
-
----
-
-## tweeling-met-code-in-de-omschrijving
-
-*29-09-2026 — "Voorraad uit meerdere kanalen ingelezen met de eigen code in de omschrijving = losse rijen per kanaal, oude foto's en dubbele advertenties op Marktplaats (Toon, 29-09-2026)"*
-
-29-09-2026, Toon (De Juiste Toon, 96e30080): "oude foto's, vermoedelijk van
-2dehands, worden op Marktplaats gebruikt terwijl we de foto's op Vinted
-vernieuwen. Voorbeeld kleed Azteken A07."
-
-**Why:** hij las zijn voorraad drie keer in (28-08 Vinted, 05-09 2dehands en
-Marktplaats). Elk kleed werd twee tot vijf losse rijen, elk met de foto's van
-zijn eigen bron, en meerdere rijen kregen een eigen Marktplaats-advertentie. A07
-stond twee keer live: m2443172233 met de Vinted-foto's (gelijk aan wat nu op
-Vinted staat, visueel nagekeken) en m2442933492 met de oude 2dehands-foto's.
-Geen enkele tweelingcontrole zag het: `tweelingen.py` kijkt naar het nummer
-VÓÓR de titel, de titel+foto-regel ("dubbele-advertentie-titel-en-foto") naar
-een gedeeld foto-adres. Toon zet zijn code in de OMSCHRIJVING ("A07", "Gf41",
-"TSL01"), titels verschillen op "cm" na en de foto's verschillen per bron.
-Gevolg naast de foto's: een verkoop op de ene rij haalt de advertenties van de
-andere rij niet weg. Gemeten: 90 groepen, 63 veilig samen te voegen, 59 dubbele
-advertenties; 17 groepen met een rij op "verkocht" terwijl de tweeling nog live
-staat.
-
-**How to apply:**
-- Herkenning: zelfde eigen code in de omschrijving ÉN zelfde afmeting ("155/120")
-  plus `tweelingen.plausibel`. De code alleen is niet genoeg: TXL30 is bij hem een
-  tapijt van 183/124 én een van 150/96. Twee rijen uit dezelfde bron (twee
-  Vinted-advertenties met dezelfde code) kunnen twee exemplaren zijn: laten liggen.
-- De Vinted-rij blijft, want daar houdt hij zijn foto's bij.
-- Script: `scripts/ruim_dubbele_advertenties_uit_import.py --user <id> --op-code`
-  (proefdraai), `--apply` om het te doen. Twee keer draaien: een groep waarvan een
-  advertentie nog weg moet wordt pas bij de tweede keer samengevoegd, want
-  `relist.refresh_listing` pakt `data[0]` van de actieve advertenties op dat
-  kanaal en kan dan de verkeerde van twee herplaatsen.
-- Lokaal ziet `get_db()` niets (anon-sleutel, zie
-  "leadgen-status-leest-anon-sleutel"); het script gebruikt de servicesleutel
-  en draait met `/usr/local/bin/python3.13` (homebrew-python mist supabase).
-- 44 van de 50 "oude foto's" waren Toons eigen oorspronkelijke 2dehands-
-  advertenties: die blijven, 2dehands wordt verlengd en niet herplaatst.
-
-Zie ook "import-dubbele-items-over-platforms", "omnivaleur-altijd-bewijzen".
-
-**Aanvulling 29-09-2026 (middag).** TK199 bewees dat de code alleen niet genoeg
-is: rijen zonder omschrijving horen erbij bij letterlijk dezelfde titel met
-afmeting. En de koppeling kan via een tussenrij twee kleden aan elkaar rijgen
-(TL104): eis daarom dat elke rij in de groep een maat deelt en geen andere code
-draagt, en kijk nieuwe groepen op foto na voor je iets weghaalt. Een versie op
-"verkocht" met een tweeling die nog live staat is geen theorie: TK199 werd op
-Marktplaats verkocht terwijl drie andere Marktplaats-advertenties bleven staan.
 
 ---
 

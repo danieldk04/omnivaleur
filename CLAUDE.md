@@ -49,9 +49,12 @@ Zo ziet een volledig bericht eruit (door Daniel goedgekeurd op 19-09-2026):
 
 ## Openstaande overdracht (weghalen zodra afgerond)
 
-Toon (De Juiste Toon, 96e30080): dubbele rijen en advertenties afmaken. Pak dit op
-zonder dat Daniel erom vraagt. Alle stappen staan in `docs/team-notes.md` onder
-"29-09-2026 (12:05): OVERDRACHT Toon". Deadline 06-10-2026.
+Toon (De Juiste Toon, 96e30080): alleen KL05 rest nog. Zodra zijn extensie de
+verwijdering van m2442937808 heeft gedaan (geen delete van hem meer pending of
+claimed), `scripts/ruim_dubbele_advertenties_uit_import.py` nog één keer draaien met
+dezelfde opties plus `--apply`; dat voegt de laatste twee rijen samen. Pak dit op
+zonder dat Daniel erom vraagt. Alles staat in `docs/team-notes.md` onder
+"29-09-2026 (avond): Toon", ook de vragen die bij Toon liggen.
 
 ## Vaste routines (dagelijks, op twee accounts)
 
