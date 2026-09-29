@@ -14457,3 +14457,12 @@ zonder punt te typen. Proef `tests/aankoopprijs-aanpassen-test.mjs`: cdebb9e3 3 
 277aac0e 10 fout, nu alles groen. Live sinds 9d2fe087 (samen met werk van een andere
 sessie). De Nederlandse melding is door een andere sessie meevertaald (ee79fb74).
 Johan moet het bedrag zelf corrigeren; mail door Daniel.
+
+## 29-09-2026: extensie 1.0.358 geüpload, nog in keuring
+
+Daniel heeft 1.0.358 in de Chrome Web Store gezet (daarin ook 1.0.355 tot 1.0.357).
+Om 09:40 NL gaf de updateserver van Google, waar Chrome zijn updates haalt, nog
+1.0.355 uit: 1.0.358 staat dus nog in de keuring. Pas daarna werken bij klanten de
+Vinted-kleuren (zilveren/gele), het doorbladeren bij verlengen op 2dehands en het
+herplaatsen bij zakelijke accounts. Nakijken: de redirect van
+clients2.google.com/service/update2/crx voor id gfaogapbhaacfbpdppdcmnkjndlphleh.
