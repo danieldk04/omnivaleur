@@ -465,10 +465,40 @@ def main_op_code(user_id: str, apply: bool) -> None:
                     and not houden.get(veld)):
                 prijzen.append((houden["id"], veld, van["price"]))
 
+    # WAT ER AL IN DE WACHTRIJ STAAT. Een herplaatsing van een advertentie die
+    # weg moet zou hem met de oude foto's terugzetten, en een tweede
+    # verwijderopdracht op hetzelfde nummer komt terug als "al weg" en dus als
+    # verkoopvraag. Daarom: geen tweede verwijdering, en plaatsingen en
+    # verlengingen voor een advertentie die weg moet gaan uit de rij.
+    wachtend = []
+    for i in range(0, len(ids), BROK):
+        wachtend += (db.table("jobs")
+                     .select("id,item_id,platform,action,status,payload->>platform_listing_id")
+                     .in_("item_id", ids[i:i + BROK])
+                     .in_("status", ["pending", "claimed", "running"]).execute().data or [])
+    onderweg = {str(j.get("platform_listing_id")) for j in wachtend if j["action"] == "delete"}
+    weg_nummers = {str(l["platform_listing_id"]) for l in te_verwijderen}
+    weg_plekken = {(l["item_id"], l["platform"]) for l in te_verwijderen}
+    nieuw = [l for l in te_verwijderen if str(l["platform_listing_id"]) not in onderweg]
+    annuleren = [j["id"] for j in wachtend if j["status"] == "pending" and (
+        (j["action"] == "extend" and str(j.get("platform_listing_id")) in weg_nummers)
+        or (j["action"] == "create" and (j["item_id"], j["platform"]) in weg_plekken))]
+    # Een rij waarvan een advertentie nog weg moet voegen we pas samen als die weg
+    # is (tweede keer draaien). Anders heeft één artikel tijdelijk twee
+    # advertenties op hetzelfde kanaal, en herplaatsen pakt dan zomaar de eerste.
+    later = {l["item_id"] for l in te_verwijderen} | {
+        j["item_id"] for j in wachtend if j["action"] == "delete"
+        and any(str(l.get("platform_listing_id")) == str(j.get("platform_listing_id"))
+                and l["status"] in LEVEND for l in per_item[j["item_id"]])
+        and j["item_id"] not in {h["id"] for _, h, _ in plannen}}
+
     for groep, reden in overgeslagen:
         print(f"\novergeslagen: {groep[0]['title'][:55]!r}: {reden}")
-    print(f"\n{len(plannen)} groepen worden één rij ({sum(len(g) - 1 for g, _, _ in plannen)} rijen gaan op).")
-    print(f"{len(te_verwijderen)} dubbele advertenties weg, {len(twijfel)} zonder uitspraak blijven staan.")
+    print(f"\n{len(plannen)} groepen worden één rij ({sum(len(g) - 1 for g, _, _ in plannen)} rijen gaan op, "
+          f"waarvan {len(later)} pas bij de tweede keer draaien).")
+    print(f"{len(te_verwijderen)} dubbele advertenties weg ({len(te_verwijderen) - len(nieuw)} al onderweg), "
+          f"{len(twijfel)} zonder uitspraak blijven staan.")
+    print(f"{len(annuleren)} wachtende plaatsingen/verlengingen van die advertenties uit de rij.")
     print(f"{len(oude_fotos)} advertenties houden de oude foto's tot ze herplaatst worden.")
     print(f"{len(prijzen)} kanaalprijzen overgenomen van de rij waarvan de advertentie blijft.")
     if not apply:
@@ -476,14 +506,16 @@ def main_op_code(user_id: str, apply: bool) -> None:
         return
 
     # 1. Eerst de verwijderopdrachten, zolang de rij van de advertentie nog bestaat.
-    for l in te_verwijderen:
+    for l in nieuw:
         _verwijderopdracht(db, user_id, l)
+    for jid in annuleren:
+        db.table("jobs").update({"status": "cancelled"}).eq("id", jid).eq("status", "pending").execute()
     # 2. Samenvoegen zoals backend/api/items.merge_items dat doet: advertenties en
     #    opdrachten naar de Vinted-rij, de andere rijen weg. Foto's blijven staan.
     samengevoegd, geweigerd = 0, []
     for groep, houden, _ in plannen:
         for it in groep:
-            if it is houden:
+            if it is houden or it["id"] in later:
                 continue
             try:
                 db.table("listings").update({"item_id": houden["id"]}).eq("item_id", it["id"]).execute()
