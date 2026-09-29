@@ -241,6 +241,13 @@ Dubbele advertenties of een advertentie die verdwenen lijkt:
 - Er draait elk kwartier een controle die een artikel dat op het ene kanaal
   verkocht is, van de andere kanalen afhaalt. Dubbelingen die daardoor ontstaan
   worden vanzelf opgeruimd.
+- Oude foto's op Marktplaats terwijl de klant op Vinted nieuwe heeft, of hetzelfde
+  artikel twee keer op Marktplaats: dat gebeurt als de voorraad uit meerdere
+  kanalen is ingelezen en het eigen artikelnummer in de omschrijving staat in
+  plaats van voor de titel. Dan werd één artikel twee of drie losse rijen, elk met
+  de foto's van zijn eigen kanaal. Geef het artikelnummer door aan Daniel; wij
+  voegen de rijen samen (de Vinted-rij met de nieuwste foto's blijft) en halen de
+  dubbele advertentie weg. Voor De Juiste Toon is dat op 29-09-2026 gedaan.
 - Meldt een klant een concreet artikel dat echt fout staat, geef dat dan door
   aan Daniel in plaats van een oplossing te beloven.
 
