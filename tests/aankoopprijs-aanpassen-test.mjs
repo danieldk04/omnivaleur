@@ -214,6 +214,8 @@ if (r && r.potlood) {
 }
 
 // ── Het bewerkscherm: gewone bedragvelden, dus Chrome maakt van "1.360" 1,36 ──
+// De nagebouwde server heeft geen extensie; die melding ligt anders over het scherm.
+await page.addStyleTag({ content: "#ext-overlay{display:none!important}" });
 async function bewerk(getypt) {
   await page.evaluate(() => editItem("g1"));
   await page.waitForTimeout(300);
