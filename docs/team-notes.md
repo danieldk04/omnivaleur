@@ -14351,3 +14351,37 @@ geüploade 1.0.355 tot 1.0.357 is dat één upload. Niet nagekeken op een echt
 Vinted-formulier. Zeven artikelen hebben geen kleur en ook geen kleurwoord in de
 titel (parels, smaragd, deurbellen, parfum); daar blijft het Vinted-tabblad open
 om zelf een kleur te kiezen.
+
+## 29-09-2026: herplaatsen bij Zilverwebsite liep, maar 3 advertenties raakten kwijt; opgelost
+
+**Stand herplaatsen.** De ronde van 28-09 23:xx UTC zette er 58 klaar, die van 05:xx
+UTC nog 17 (samen de 75 die aan de beurt waren). Vanaf 05:32 UTC gingen ze eruit:
+29 verwijderd (alle via de advertentiepagina), 26 teruggeplaatst.
+
+**Wat misging.** 3 herplaatsingen verloren hun advertentie: weggehaald, daarna
+"None of the 5 photo(s) could be downloaded". Waterketel J. Borduur 1754
+(m2436411030), Zinzi-ring violet 17,5 mm (m2436410475), slangenketting 46 cm (de
+plaatsing hangt nog op 'claimed', de verwijdering is gedaan). Oorzaak: hun foto's
+stonden alleen op images.marktplaats.com, en de opgeslagen adressen hoorden bij de
+advertentie van vóór een eerdere herplaatsing. 451 van hun 451 advertenties met
+Marktplaats-foto's hebben zulke dode adressen; de live advertentie toont de foto's
+onder nieuwe adressen.
+
+**Gedaan.**
+- 48 klaarstaande herplaatsingen met Marktplaats-foto's teruggenomen vóór hun
+  verwijdering (39 Zilverwebsite, 9 bij 0b28c1ce); alle 48 staan actief, afkoeling
+  teruggezet zodat ze vanzelf weer aan de beurt komen.
+- Live (ee79fb74 en 6aa46252): herplaatsen kopieert de foto's eerst naar onze
+  opslag, bij Marktplaats de actuele van de live advertentie
+  (marktplaats.nl/{nummer}); lukt dat niet voor elke foto, dan wordt er niets
+  weggehaald. 36 van de 48 hebben hun foto's nu al bij ons (5 van 5); de overige
+  12 liepen op een tijdelijke blokkade van Marktplaats (403 na ~40 verzoeken vanaf
+  Daniels Mac) en probeert de server bij de volgende ronde zelf.
+- Proef `tests/test_herplaatsen_fotos_eerst_veilig.py`: oud faalt 7 van 7, nieuw groen;
+  hele reeks 1.982 groen.
+
+**Open.** Twee van de drie verloren advertenties staan met exact dezelfde titel in
+hun webshop (waterketel 9 foto's, slangenketting 46 cm 7 foto's) en zijn daarmee
+terug te zetten; de Zinzi-ring (violet) niet, die foto's zijn nergens meer. Wacht
+op Daniel.
+

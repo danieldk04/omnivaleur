@@ -301,6 +301,12 @@ Contact:
   verversen kan ook, onder Verversen: op Marktplaats hooguit 3 per dag, en
   dezelfde advertentie eens per 21 dagen. Een vast aantal per dag kan de klant
   nog niet zelf instellen.
+- Is een advertentie na herplaatsen van Marktplaats verdwenen (weggehaald, niet
+  teruggekomen)? Op 29-09-2026 gebeurde dat 3 keer bij Zilverwebsite: de foto's
+  stonden alleen bij Marktplaats en waren niet meer te downloaden. Sinds die
+  ochtend kopieert Omnivaleur de foto's eerst en haalt het niets weg als dat niet
+  lukt. Een verdwenen advertentie zet Daniel terug; vraag de klant om de foto's
+  als ze nergens anders staan.
 - Marktplaats laat maar twee smartwatches gratis in de rubriek Smartwatches staan;
   de derde kost geld. Sinds 22-09-2026 zet Omnivaleur de derde en alle volgende
   vanzelf in Sporthorloges, waar die grens niet geldt, zodat ze gewoon gratis

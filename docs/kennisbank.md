@@ -17,6 +17,24 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## marktplaats-fotoadres-sterft-met-de-advertentie
+
+*29-09-2026 — Een foto-adres op images.marktplaats.com hoort bij één advertentie en is dood zodra die weg is; na een herplaatsing wijzen onze opgeslagen adressen naar de oude. Herplaatsen kopieert daarom eerst (29-09-2026)*
+
+Herplaatsen op Marktplaats is eerst weghalen, dan opnieuw plaatsen. Staan de foto's van het item alleen op images.marktplaats.com, dan vindt de plaatsing daarna niets meer ("None of the 5 photo(s) could be downloaded") en is de advertentie definitief weg. Gemeten 29-09-2026 bij Zilverwebsite: 3 van de eerste 29 herplaatsingen na de reparatie van "oudste-eerst-ziet-alleen-de-dode-kop" zo verloren; 48 klaarstaande (ook 9 bij 0b28c1ce) met de hand teruggenomen.
+
+Erger: de opgeslagen adressen waren al dood VOOR het weghalen. Marktplaats geeft elke nieuwe advertentie nieuwe foto-adressen; na onze eerdere herplaatsing wijzen de adressen in items.photo_urls naar de verwijderde oude advertentie. 451 van 451 bij Zilverwebsite gaven 404 terwijl de live advertentie alle foto's toonde.
+
+**Why:** een foto-adres van het kanaal is geen opslag maar een verwijzing naar één advertentie. Wie dat als bron bewaart verliest het bij de eerste vervanging.
+
+**How to apply:**
+- `_fotos_veiligstellen` in relist.py kopieert naar onze opslag vóór de verwijderopdracht; lukt dat niet voor elke foto, dan RefreshError en blijft de advertentie staan.
+- Actuele foto's: `https://www.marktplaats.nl/{nummer}` stuurt door naar de advertentiepagina (200). `/seller/view/{nummer}` geeft de server 401, `/v/a/...` 404, en de zoek-API toont hooguit 3 foto's.
+- Veel pagina's snel achter elkaar ophalen geeft CloudFront 403 (na ~40 bij mij); dan terugvallen, nooit weghalen.
+- Na een herplaatsing zijn het de adressen van de NIEUWE advertentie die gelden; nooit de oude laten staan.
+
+---
+
 ## vinted-combi-maat-mist-eigen-split
 
 *29-09-2026 — "Vinted-maatkeuze faalde altijd bij een combi-maat als 'S / 36 / 8'; opgelost 23-09-2026"*
