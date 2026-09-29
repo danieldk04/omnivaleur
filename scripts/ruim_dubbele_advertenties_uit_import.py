@@ -147,10 +147,9 @@ def _families(items: list[dict]) -> list[list[dict]]:
 
 
 def main(user_id: str, apply: bool) -> None:
-    from backend.database import get_db
     from backend.services.crosslist import _last_listed_title, EXTENSION_PLATFORMS
 
-    db = get_db()
+    db = _db()
     items = _alle(db, "items", "id,title,price,photo_urls,created_at", user_id=user_id)
     if not items:
         print(f"Geen artikelen gevonden voor {user_id}.")
