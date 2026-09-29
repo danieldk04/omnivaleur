@@ -964,7 +964,8 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         # localized here too — otherwise a content refresh quietly turns a Dutch
         # marktplaats listing back into English.
         from backend.services.crosslist import localize_item_for_platform
-        localized = await localize_item_for_platform(item, platform)
+        localized = _met_slottekst(await localize_item_for_platform(item, platform),
+                                   platform, user_id)
         payload = {
             **localized,
             "platform_listing_id": listing["platform_listing_id"],
