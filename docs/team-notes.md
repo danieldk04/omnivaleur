@@ -14694,3 +14694,23 @@ ziet nu Vagifs mail van 23-09 en Daniels mail aan Matthijs van vandaag 13:52. Op
 account van de tweede ontwikkelaar staat het er niet; daar zegt de routine "niet
 gelezen" en schrijft ze niet alsof het eerste contact is. Daniel hoeft geen
 app-wachtwoord te maken.
+
+## 29-09-2026 (14:03, automatisch): Klantfouten
+
+- fout-marktplaats-scan-c4d0443c (82b13998, nieuwe klant van vandaag, verkoopt
+  Young Living-oliën op Vinted): twee Marktplaats-scans om 11:41 en 11:48 UTC met
+  "Admarkt could not be read: campaign.getAllCampaigns → HTTP 404 text/plain".
+  Gemeten in haar jobs: het Admarkt-tabblad stond op de inlogpagina van
+  Marktplaats (`www.marktplaats.nl/identity/v2/login?...client_id=mp_console`),
+  extensie 1.0.358. Ze is dus niet ingelogd bij Marktplaats in die Chrome (of heeft
+  daar geen account). Onze fout: bij een leeg persoonlijk overzicht loopt Admarkt
+  automatisch mee, en een tRPC-aanroep op die inlogpagina gaf 404, wat als
+  technische Admarkt-fout bij haar kwam. Gerepareerd in extensie 1.0.360 (690be2d2):
+  eerst kijken of het tabblad echt op Admarkt staat; zo niet, dan "You are not
+  signed in to Marktplaats … sign in and run the scan again" (ook in het NL), en
+  bij een ingelogd maar leeg persoonlijk overzicht rondt de scan af als leeg
+  account. Proef tests/admarkt-zegt-wat-er-misging-test.js: `--oud=8bc9565f` geeft
+  precies haar foutmelding, nieuwe code alles goed.
+- Open: werkt pas bij haar als de Web Store 1.0.360 serveert (serveert nog 1.0.355).
+  Haar Vinted-import liep wel goed. De afronding als leeg account (API 200 en nul
+  advertenties) is niet apart met een proef gedekt, alleen de melding.
