@@ -138,8 +138,9 @@ Daniel verstuurt zelf; jij verstuurt niets. Wat hij krijgt hangt af van stap 3.0
   met een datum, herhaal die boodschap dan niet.
 
 Stijl: zo schrijft Daniel het zelf (29-09-2026, verstuurd aan een nieuwe klant, "zo'n
-stijl wil ik dus dat je aanhoudt"). Houd deze opbouw en toon aan, vul alleen de feiten
-van de klant in:
+stijl wil ik dus dat je aanhoudt"). Dit is een voorbeeld van de toon, geen sjabloon
+("niet precies dit format, maar wel dezelfde stijl"): schrijf per klant een eigen mail
+die past bij wat hij verkoopt en waar hij staat, en kopieer de zinnen niet.
 
 ```text
 Hoi Anneloes,
