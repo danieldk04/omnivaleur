@@ -561,6 +561,60 @@ def ontbreekt_voor_herplaatsen(item: dict) -> str | None:
     return None
 
 
+# Fotoservers van het kanaal zelf. Een foto die daar staat verdwijnt zodra de
+# advertentie verdwijnt (gemeten 29-09-2026: 404 op alle vijf, minuten na het
+# weghalen). Zie _fotos_veiligstellen.
+_KANAAL_FOTOSERVERS = {"marktplaats": ("marktplaats.com", "marktplaats.nl"),
+                       "2dehands": ("2dehands.com", "2dehands.be", "2ememain.be")}
+
+FOTOS_NIET_VEILIG = ("Relist skipped: this listing's photos are only stored on the "
+                     "marketplace itself and would disappear together with the old "
+                     "listing. Copying them to Omnivaleur didn't work, so nothing was "
+                     "removed. Try again later.")
+
+
+def _sterft_met_advertentie(url, platform: str) -> bool:
+    if not isinstance(url, str):
+        return False
+    from urllib.parse import urlparse
+    host = urlparse(("https:" + url) if url.startswith("//") else url).netloc.lower()
+    return any(host == d or host.endswith("." + d)
+               for d in _KANAAL_FOTOSERVERS.get(platform, ()))
+
+
+async def _fotos_veiligstellen(db, item: dict, platform: str) -> dict:
+    """Kopieer foto's die op de fotoserver van het kanaal staan naar onze eigen
+    opslag, VOORDAT de oude advertentie wordt weggehaald.
+
+    WAAROM (29-09-2026, Zilverwebsite). Herplaatsen is eerst weghalen, dan
+    opnieuw plaatsen. Een foto op images.marktplaats.com verdwijnt samen met de
+    advertentie, dus de plaatsing erna vond niets meer ("None of the 5 photo(s)
+    could be downloaded") en de advertentie was definitief weg. Drie van de
+    eerste 29 herplaatsingen na de reparatie van 28-09 gingen zo verloren, alle
+    drie met alleen Marktplaats-foto's; er stonden er nog 48 klaar bij twee
+    klanten. Die foto's komen onder meer uit de oogst in refresh_listing,
+    die de adressen van de advertentie zelf overneemt.
+
+    Lukt het kopiëren niet voor elke foto, dan weigeren we: liever een
+    advertentie die blijft staan dan een die verdwijnt.
+    """
+    fotos = [u for u in (item.get("photo_urls") or []) if u]
+    if not any(_sterft_met_advertentie(u, platform) for u in fotos):
+        return item
+    from backend.services.photo_mirror import mirror_photos
+    gekopieerd = await mirror_photos(
+        [("https:" + u) if isinstance(u, str) and u.startswith("//") else u for u in fotos],
+        item["user_id"])
+    if not gekopieerd or any(_sterft_met_advertentie(u, platform) for u in gekopieerd):
+        logger.warning("herplaatsen %s: foto's niet veilig te stellen (%d van %d nog op het kanaal)",
+                       item.get("id"), sum(_sterft_met_advertentie(u, platform) for u in gekopieerd),
+                       len(fotos))
+        raise RefreshError(FOTOS_NIET_VEILIG)
+    await naast_de_lus(lambda: db.table("items").update({"photo_urls": gekopieerd})
+                       .eq("id", item["id"]).execute(), herkans=True)
+    return {**item, "photo_urls": gekopieerd}
+
+
 def _check_and_increment_quota(db, user_id: str, platform: str | None = None) -> None:
     today = datetime.now(timezone.utc).date().isoformat()
     row = db.table("refresh_quota").select("count").eq("user_id", user_id).eq("day", today).execute()
@@ -781,6 +835,9 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
 
     if not negeer_afkoeling:
         _check_cooldown(listing, platform)
+    # Foto's eerst naar ons, want straks zijn ze weg. Zie _fotos_veiligstellen.
+    if strategy == "relist" and platform in _KANAAL_FOTOSERVERS:
+        item = await _fotos_veiligstellen(db, item, platform)
     # `eigen_quotum` betekent: de aanroeper bewaakt zelf hoeveel er per dag mag.
     # Dat is het automatisch herplaatsen, dat zijn eigen, veel ruimere grens per
     # verkoper hanteert (~voorraad gedeeld door de cyclus). Het dagquotum
