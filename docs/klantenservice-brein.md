@@ -324,6 +324,13 @@ Contact:
   this browser" in het uitklapvenster met een knop om in te loggen, en een balk
   bovenaan het dashboard. De wachtrij blijft ondertussen staan en loopt vanzelf
   weer door zodra hij ingelogd is; hij hoeft niets opnieuw aan te klikken.
+- Doet de uitbreiding helemaal niets en staat er een rood uitroepteken met "not
+  logged in" bij het Omnivaleur-icoon, dan is de uitbreiding zelf uitgelogd bij
+  Omnivaleur. Oplossing: open het dashboard een keer in dezelfde browser als
+  ingelogde gebruiker; de uitbreiding neemt de inlog dan vanzelf over en gaat
+  verder met wat er klaarstaat. Tot 29-09-2026 kon een storing bij onze database
+  de uitbreiding zo uitloggen (fout bij ons, gerepareerd); wie sindsdien het
+  dashboard niet in die browser heeft geopend, staat mogelijk nog zo.
 - Staat een artikel al op Marktplaats, dan komt het op 2dehands in precies
   dezelfde rubriek als op Marktplaats (sinds 13-09-2026). Daarvoor koos Omnivaleur
   soms zelf een rubriek op basis van de titel, en die kon betalend zijn terwijl de
