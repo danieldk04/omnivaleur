@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 28-09-2026 (automatisch herplaatsen stond 20-09 tot 28-09 stil door een fout bij ons, loopt weer; eerder: verzendkost-aanpassingen op 2dehands gaan achter nieuwe plaatsingen)_
+_Laatst bijgewerkt: 29-09-2026 (uitbreiding logde zichzelf uit bij een databasestoring, gerepareerd; eerder: automatisch herplaatsen stond 20-09 tot 28-09 stil door een fout bij ons, loopt weer; daarvoor: verzendkost-aanpassingen op 2dehands gaan achter nieuwe plaatsingen)_
 
 ---
 
