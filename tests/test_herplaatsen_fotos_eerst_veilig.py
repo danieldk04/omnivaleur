@@ -79,3 +79,35 @@ def test_de_kopie_gebeurt_voor_de_verwijderopdracht():
     bron = inspect.getsource(R.refresh_listing)
     assert "_fotos_veiligstellen" in bron
     assert bron.index("_fotos_veiligstellen") < bron.index('db.table("jobs").insert')
+
+
+def test_verouderde_adressen_worden_vervangen_door_de_live_advertentie(monkeypatch):
+    """Zilverwebsite, 29-09-2026: 451 van 451 opgeslagen adressen dood, de live
+    advertentie toont alle vijf foto's onder nieuwe adressen."""
+    live = [f"https://images.marktplaats.com/api/v1/hz-mp-pro-listing/images/nieuw{i}?rule=ecg_mp_eps$_85" for i in range(5)]
+
+    async def van_de_pagina(_p, _l):
+        return live
+
+    async def kopie(urls, _u, _sem=None):
+        # alleen de live adressen zijn nog te downloaden
+        return [u.replace("images.marktplaats.com", "img.omnivaleur.com") if "nieuw" in u else u for u in urls]
+    monkeypatch.setattr(R, "_live_fotos", van_de_pagina)
+    monkeypatch.setattr(photo_mirror, "mirror_photos", kopie)
+    db = _DB()
+    uit = asyncio.run(R._fotos_veiligstellen(db, _item([MP] * 5), "marktplaats",
+                                             {"platform_listing_id": "m1"}))
+    assert len(uit["photo_urls"]) == 5 and all("img.omnivaleur.com" in u for u in uit["photo_urls"])
+
+
+def test_pagina_met_minder_fotos_wordt_niet_overgenomen(monkeypatch):
+    async def te_weinig(_p, _l):
+        return ["https://images.marktplaats.com/x/nieuw0"]
+
+    async def kopie(urls, _u, _sem=None):
+        return [u.replace("images.marktplaats.com", "img.omnivaleur.com") for u in urls]
+    monkeypatch.setattr(R, "_live_fotos", te_weinig)
+    monkeypatch.setattr(photo_mirror, "mirror_photos", kopie)
+    uit = asyncio.run(R._fotos_veiligstellen(_DB(), _item([MP] * 3), "marktplaats",
+                                             {"platform_listing_id": "m1"}))
+    assert len(uit["photo_urls"]) == 3

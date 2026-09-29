@@ -582,7 +582,36 @@ def _sterft_met_advertentie(url, platform: str) -> bool:
                for d in _KANAAL_FOTOSERVERS.get(platform, ()))
 
 
-async def _fotos_veiligstellen(db, item: dict, platform: str) -> dict:
+async def _live_fotos(platform: str, listing: dict | None) -> list[str]:
+    """De foto's zoals ze NU op de advertentie staan.
+
+    Marktplaats geeft elke nieuwe advertentie nieuwe foto-adressen, en de oude
+    gaan dood met de oude advertentie. Na een eerdere herplaatsing wijzen onze
+    opgeslagen adressen dus naar een advertentie die al weg is: gemeten
+    29-09-2026 bij Zilverwebsite 451 van de 451 advertenties met Marktplaats-
+    foto's, terwijl de live advertentie alle foto's gewoon toont. Het opgeslagen
+    adres (/seller/view/...) geeft de server 401; marktplaats.nl/{nummer} stuurt
+    door naar de advertentiepagina (200). Alleen Marktplaats: dat is gemeten.
+    """
+    nummer = str((listing or {}).get("platform_listing_id") or "").strip()
+    if platform != "marktplaats" or not nummer:
+        return []
+    import httpx
+    from backend.services.mp_enrich import _fotos_uit_html
+    try:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True,
+                                     headers={"User-Agent": "Mozilla/5.0"}) as client:
+            r = await client.get(f"https://www.marktplaats.nl/{nummer}")
+        if r.status_code != 200 or nummer not in str(r.url):
+            return []
+        return _fotos_uit_html(r.text)
+    except Exception as e:  # noqa: BLE001 — dan valt hij terug op wat we hebben
+        logger.warning("herplaatsen: live foto's van %s niet gelezen: %s", nummer, e)
+        return []
+
+
+async def _fotos_veiligstellen(db, item: dict, platform: str,
+                               listing: dict | None = None) -> dict:
     """Kopieer foto's die op de fotoserver van het kanaal staan naar onze eigen
     opslag, VOORDAT de oude advertentie wordt weggehaald.
 
@@ -602,10 +631,19 @@ async def _fotos_veiligstellen(db, item: dict, platform: str) -> dict:
     if not any(_sterft_met_advertentie(u, platform) for u in fotos):
         return item
     from backend.services.photo_mirror import mirror_photos
-    gekopieerd = await mirror_photos(
-        [("https:" + u) if isinstance(u, str) and u.startswith("//") else u for u in fotos],
-        item["user_id"])
-    if not gekopieerd or any(_sterft_met_advertentie(u, platform) for u in gekopieerd):
+    veilig = lambda lijst: bool(lijst) and not any(_sterft_met_advertentie(u, platform) for u in lijst)
+    gekopieerd: list[str] = []
+    # Eerst de foto's van de advertentie zoals hij nu online staat: die zijn
+    # actueel. Alleen als het er niet minder zijn dan wij hebben; een pagina die
+    # er minder toont zou stil foto's laten wegvallen.
+    live = await _live_fotos(platform, listing)
+    if len(live) >= len(fotos):
+        gekopieerd = await mirror_photos(live, item["user_id"])
+    if not veilig(gekopieerd):
+        gekopieerd = await mirror_photos(
+            [("https:" + u) if isinstance(u, str) and u.startswith("//") else u for u in fotos],
+            item["user_id"])
+    if not veilig(gekopieerd):
         logger.warning("herplaatsen %s: foto's niet veilig te stellen (%d van %d nog op het kanaal)",
                        item.get("id"), sum(_sterft_met_advertentie(u, platform) for u in gekopieerd),
                        len(fotos))
@@ -837,7 +875,7 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         _check_cooldown(listing, platform)
     # Foto's eerst naar ons, want straks zijn ze weg. Zie _fotos_veiligstellen.
     if strategy == "relist" and platform in _KANAAL_FOTOSERVERS:
-        item = await _fotos_veiligstellen(db, item, platform)
+        item = await _fotos_veiligstellen(db, item, platform, listing)
     # `eigen_quotum` betekent: de aanroeper bewaakt zelf hoeveel er per dag mag.
     # Dat is het automatisch herplaatsen, dat zijn eigen, veel ruimere grens per
     # verkoper hanteert (~voorraad gedeeld door de cyclus). Het dagquotum
