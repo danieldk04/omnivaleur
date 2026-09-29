@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 29-09-2026 (antwoord op de vaak gestelde vraag naar een koppeling met bol toegevoegd; een bedrag als "1.360" werd 1,36 in de inkoop- en verkoopprijs, gerepareerd; oude foto's op Marktplaats bij een voorraad die uit meerdere kanalen is ingelezen, opgeruimd bij De Juiste Toon; Vinted herkende "zilveren" en andere verbogen kleuren niet, gerepareerd in 1.0.358; uitbreiding logde zichzelf uit bij een databasestoring, gerepareerd; eerder: automatisch herplaatsen stond 20-09 tot 28-09 stil door een fout bij ons, loopt weer; daarvoor: verzendkost-aanpassingen op 2dehands gaan achter nieuwe plaatsingen)_
+_Laatst bijgewerkt: 29-09-2026 (foto's die een klant later op Vinted vernieuwt komen niet vanzelf over, advies toegevoegd; antwoord op de vaak gestelde vraag naar een koppeling met bol toegevoegd; een bedrag als "1.360" werd 1,36 in de inkoop- en verkoopprijs, gerepareerd; oude foto's op Marktplaats bij een voorraad die uit meerdere kanalen is ingelezen, opgeruimd bij De Juiste Toon; Vinted herkende "zilveren" en andere verbogen kleuren niet, gerepareerd in 1.0.358; uitbreiding logde zichzelf uit bij een databasestoring, gerepareerd; eerder: automatisch herplaatsen stond 20-09 tot 28-09 stil door een fout bij ons, loopt weer; daarvoor: verzendkost-aanpassingen op 2dehands gaan achter nieuwe plaatsingen)_
 
 ---
 
@@ -254,6 +254,13 @@ Dubbele advertenties of een advertentie die verdwenen lijkt:
   de foto's van zijn eigen kanaal. Geef het artikelnummer door aan Daniel; wij
   voegen de rijen samen (de Vinted-rij met de nieuwste foto's blijft) en halen de
   dubbele advertentie weg. Voor De Juiste Toon is dat op 29-09-2026 gedaan.
+- Foto's die de klant later op Vinted vernieuwt, neemt Omnivaleur niet vanzelf
+  over: opnieuw inlezen vult alleen lege velden aan en vervangt nooit foto's die
+  er al staan. Advies: zet de nieuwe foto's ook bij het artikel in Omnivaleur
+  (artikel openen, foto's). Een advertentie op Marktplaats die al online staat
+  houdt zijn foto's tot hij opnieuw geplaatst wordt; daarna gaan de nieuwe mee.
+  Op 2dehands wordt verlengd in plaats van opnieuw geplaatst, dus daar blijven de
+  foto's staan zoals ze online staan.
 - Meldt een klant een concreet artikel dat echt fout staat, geef dat dan door
   aan Daniel in plaats van een oplossing te beloven.
 
@@ -277,6 +284,12 @@ Contact:
   Moest iemand vóór 8 september steeds opnieuw inloggen, dan is dat opgelost.
 - Loopt de proefperiode af, dan krijg je daar twee dagen van tevoren een mail
   over, en daarna nog een laatste herinnering.
+- Heb je je advertenties laten scannen maar na een dag nog niets geïmporteerd, dan
+  krijg je daar één keer een mail over (sinds 29-09-2026). De gevonden advertenties
+  staan dan onder Importeren, tabblad Klaar om te importeren; de knop Alles
+  importeren zet ze in je voorraad. Pas daarna kan Omnivaleur ze op andere kanalen
+  plaatsen. De link in die mail opent dat scherm meteen, ook als je eerst moet
+  inloggen.
 - Sommige rubrieken op Marktplaats en 2dehands zijn betaalde rubrieken. Je krijgt
   daar een klein aantal gratis advertenties; daarna vraagt de site zelf geld per
   advertentie. Omnivaleur betaalt daar nooit voor: de opdracht stopt vóór de

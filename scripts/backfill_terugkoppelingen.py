@@ -26,7 +26,7 @@ def main() -> None:
     db = get_db()
     rijen = []
     for off in range(0, 2000, 25):
-        deel = (db.table("content_pages").select("slug,pillar,language,primary_keyword,title,body_html")
+        deel = (db.table("content_pages").select("id,slug,pillar,language,primary_keyword,title,body_html")
                 .eq("status", "published").order("created_at").range(off, off + 24).execute().data) or []
         rijen += deel
         if len(deel) < 25:
@@ -46,7 +46,7 @@ def main() -> None:
     for pad in wezen:
         r = paden[pad]
         bronnen = link_back(db, language=r.get("language", "en"), url_path=pad, title=r["title"],
-                            keyword=r.get("primary_keyword") or "", dry_run=not schrijf)
+                            keyword=r.get("primary_keyword") or "", dry_run=not schrijf, rijen=rijen)
         totaal += len(bronnen)
         print(f"  {pad}  ←  {', '.join(bronnen) or '(geen verwante pagina)'}")
     print(f"{'Geschreven' if schrijf else 'Zou schrijven'}: {totaal} links")
