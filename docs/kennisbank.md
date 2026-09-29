@@ -17,6 +17,40 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## storing-achter-cloudflare-logt-extensie-uit
+
+*29-09-2026 — "422 op /api/jobs/pending = extensie zonder inlog; Supabase 520-524 werd \"401 sessie verlopen\" en de extensie gooide haar inlog weg (tot 29-09-2026)"*
+
+**422 op /api/jobs/pending betekent altijd: geen Authorization-kop.** FastAPI keurt
+`authorization: str = Header(...)` af voordat er iets gebeurt; body is precies 100
+bytes (`{"detail":[{"type":"missing","loc":["header","authorization"],...`), rxBytes
+~750-850 tegen ~1800 met token. ~16 per minuut per adres = vier kanalen per ronde.
+Zo'n extensie doet niets tot de verkoper het dashboard in díe browser opent
+(webapp_sync.js geeft de inlog dan terug) of via het uitklapvenster inlogt.
+
+**Hoe ze uitgelogd raakten (bewezen 28/29-09-2026).** Supabase staat achter
+Cloudflare; bij een storing komt er HTML met 520-524. gotrue 2.12.4 (onder de
+gepinde supabase 2.7.4) kent alleen 502/503/504 als storing en maakt van de rest
+een AuthUnknownError zonder status. `auth_met_herkansing` zag dat als echt
+antwoord, /api/auth/refresh en get_current_user_full maakten er 401 van, en de
+extensie wist bij 401 haar inlog. Opgelost in `_http_status_van_auth_fout`
+(backend/database.py): leest de echte HTTP-code uit de foutketen. Proef:
+tests/test_auth_storing_cloudflare.py (oud 12 rood, nieuw groen).
+
+**Why:** de oude proeven vervingen auth_met_herkansing zelf en zagen de echte
+bibliotheek nooit een Cloudflare-pagina verwerken. En de lokale Mac draait
+supabase 2.31, die 520-524 wel goed doet: meet met de serverversie (venv met
+requirements.txt, zonder asyncpg/greenlet/playwright die niet bouwen op 3.13).
+
+**How to apply:** een 422-golf in de HTTP-logs is geen servercrash maar
+uitgelogde extensies; het adres is niet aan een klant te koppelen (geen inlog in
+het verzoek), wel via job-id's in paden als /complete. Railway-HTTP-logs per IP
+over dagen lopen vast (31 min, connection reset); filter op pad over hooguit 2
+dagen werkt wel. Zie "uitgelogd-door-de-gedeelde-vernieuwsleutel",
+"railway-doodt-lopend-verzoek-bij-deploy".
+
+---
+
 ## oudste-eerst-ziet-alleen-de-dode-kop
 
 *28-09-2026 — "Een ronde die \"oudste eerst\" ophaalt met één gewone select ziet elke keer dezelfde 1.000 overgeslagen rijen; automatisch herplaatsen stond daardoor 20-09 tot 28-09-2026 bij iedereen stil"*

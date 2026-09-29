@@ -14283,3 +14283,39 @@ geteld vanaf de herstart); niet zelf gezien. Een vast aantal per dag instellen
 ~60, minus hun eigen nieuwe plaatsingen van die dag. De bovenbalk op Verversen
 toont "0 / 8" terwijl Marktplaats bij de knop op 3 per dag stopt.
 
+
+## 29-09-2026: 422 op /api/jobs/pending = uitgelogde extensies; een storing logde ze uit
+
+In de Railway-logs van 28-09 kregen minstens acht klantadressen elke ronde een 422
+op /api/jobs/pending. Uitgezocht:
+
+- **Wat het is.** Een extensie zonder inlogbewijs. FastAPI weigert een verzoek
+  zonder Authorization-kop met 422 (100 bytes, live nagespeeld: identiek). Het
+  verzoek zelf doet niets kwaad, maar zo'n extensie pakt ook geen werk op. Ze
+  komt pas terug als de verkoper het dashboard in díe browser opent of via het
+  uitklapvenster inlogt.
+- **Waarom ze uitgelogd waren.** Bij een Supabase-storing (Cloudflare 520-524,
+  zoals 28-09 13:05-14:20 UTC) antwoordde /api/auth/refresh "401 sessie
+  verlopen", en daarop gooit de extensie haar inlog weg. Het dashboard stuurde je
+  om dezelfde reden naar het inlogscherm. Nagespeeld met de bibliotheekversies
+  van de server (supabase 2.7.4, gotrue 2.12.4). Gerepareerd in
+  backend/database.py (`_http_status_van_auth_fout`); nu 503 en blijft de inlog
+  staan. Proef `tests/test_auth_storing_cloudflare.py`: oude code 12 van 20
+  rood, nieuwe 20 van 20 groen; hele reeks zelfde 5 rode als vóór de wijziging
+  (dubbel_abonnement, verwijzing_gratis_maand, geen_http2_race: lokaal al rood).
+- **Wie.** Uit een verzoek zonder inlog is de klant niet af te lezen. Wel
+  gekoppeld: 85.145.96.28 = tamboer.joost (proef verlopen 23-09, geen werk
+  open, blijft twee oude afmeldingen van 17-09 opnieuw sturen). Egberts extensie
+  was 28-09 een tijd uitgelogd (148 keer 422), om 14:41 UTC pakte ze weer werk
+  op. Van de klanten met toegang en een stille extensie staat er werk klaar bij
+  0b28c1ce (amandahaas1979, betalend, stil sinds 27-09 ~11:45 UTC: Vinted-scan
+  27-09 en Marktplaats-plaatsing 28-09 01:14) en 1ba42900 (vagif, proef tot
+  02-10, Vinted-scan sinds 25-09). Of dat uitloggen is of een computer die uit
+  staat, is niet te zien.
+
+**Open.** Extensies die al uitgelogd zijn, blijven dat tot de verkoper het
+dashboard opent; de reparatie maakt dat niet ongedaan. Op /api/auth/refresh
+stonden in 13 uur 232 keer 401 tegen 9 keer 200, vooral twee adressen die een dode
+sleutel blijven proberen (5.255.79.76 elke 5 minuten: het dashboard negeert de
+uitkomst van zijn eigen verversklok). Welk deel daarvan echt verlopen was, is uit
+de logs niet af te lezen.
