@@ -484,14 +484,17 @@ def main_op_code(user_id: str, apply: bool) -> None:
     annuleren = [j["id"] for j in wachtend if j["status"] == "pending" and (
         (j["action"] == "extend" and str(j.get("platform_listing_id")) in weg_nummers)
         or (j["action"] == "create" and (j["item_id"], j["platform"]) in weg_plekken))]
-    # Een rij waarvan een advertentie nog weg moet voegen we pas samen als die weg
-    # is (tweede keer draaien). Anders heeft één artikel tijdelijk twee
-    # advertenties op hetzelfde kanaal, en herplaatsen pakt dan zomaar de eerste.
-    later = {l["item_id"] for l in te_verwijderen} | {
+    # Een groep waarvan een advertentie nog weg moet voegen we pas samen als die
+    # weg is (tweede keer draaien). Anders heeft één artikel tijdelijk twee
+    # advertenties op hetzelfde kanaal, en herplaatsen (refresh_listing) pakt dan
+    # zomaar de eerste van de twee.
+    nog_weg = {l["item_id"] for l in te_verwijderen} | {
         j["item_id"] for j in wachtend if j["action"] == "delete"
         and any(str(l.get("platform_listing_id")) == str(j.get("platform_listing_id"))
-                and l["status"] in LEVEND for l in per_item[j["item_id"]])
-        and j["item_id"] not in {h["id"] for _, h, _ in plannen}}
+                and l["status"] in LEVEND for l in per_item[j["item_id"]])}
+    uitstel = {h["id"] for g, h, _ in plannen if any(it["id"] in nog_weg for it in g)}
+    later = {it["id"] for g, h, _ in plannen if h["id"] in uitstel for it in g if it is not h}
+    herplaatsen = [(b, h) for k, b, h in oude_fotos if k == "marktplaats" and h["id"] not in uitstel]
 
     for groep, reden in overgeslagen:
         print(f"\novergeslagen: {groep[0]['title'][:55]!r}: {reden}")
