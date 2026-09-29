@@ -98,6 +98,7 @@ function laadZoeker(bron) {
   pak("colourOptionLabel", "function");
   pak("woordTreffer", "function");     // bestaat alleen in de nieuwe versie
   pak("findColourOption", "function");
+  pak("kaartKleur", "function");       // bestaat pas sinds 29-09-2026
   pak("parseColours", "function");
 
   const zand = { console: { log() {} } };
