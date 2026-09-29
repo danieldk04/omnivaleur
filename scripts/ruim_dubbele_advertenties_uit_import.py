@@ -317,6 +317,10 @@ def afmetingen(item: dict) -> set[str]:
     return maten or {f"{m}cm" for m in _CM.findall(item.get("title") or "")}
 
 
+def _kale_titel(titel: str | None) -> str:
+    return " ".join(re.sub(r"\bcm\b", " ", (titel or "").lower()).split())
+
+
 def bron(listings: list[dict]) -> str:
     """Het kanaal waaruit deze rij is ingelezen: dat van zijn oudste advertentierij."""
     rijen = sorted(listings, key=lambda l: str(l.get("created_at") or ""))
