@@ -581,6 +581,56 @@
       "status": "published",
       "nl_slug": "hoe-voorkom-je-dat-je-hetzelfde-item-twee-keer-verkoopt",
       "priority": 70
+    },
+    {
+      "keyword": "marktplaats fees explained",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "marktplaats-fees-explained",
+      "status": "published",
+      "nl_slug": "marktplaats-kosten-overzicht",
+      "priority": 71
+    },
+    {
+      "keyword": "omnivaleur vs zipsale",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "slug": "omnivaleur-vs-zipsale",
+      "status": "pending",
+      "nl_slug": "omnivaleur-vs-zipsale-vergelijking",
+      "priority": 72
+    },
+    {
+      "keyword": "how to photograph clothes for vinted",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "how-to-photograph-clothes-for-vinted",
+      "status": "pending",
+      "nl_slug": "kleding-fotograferen-voor-vinted",
+      "priority": 73
+    },
+    {
+      "keyword": "when does reselling become a business kvk",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "slug": "when-does-reselling-become-a-business-kvk",
+      "status": "pending",
+      "nl_slug": "wanneer-kvk-nodig-voor-verkopen-op-marktplaats",
+      "priority": 74
+    },
+    {
+      "keyword": "how to price second hand items",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "slug": "how-to-price-second-hand-items",
+      "status": "pending",
+      "nl_slug": "tweedehands-artikelen-prijzen-strategie",
+      "priority": 75
     }
   ],
   "published": [
@@ -1209,6 +1259,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-avoid-selling-the-same-item-twice",
       "published_at": "2026-09-28T16:21:43.220944+00:00"
+    },
+    {
+      "keyword": "marktplaats fees explained",
+      "slug": "marktplaats-fees-explained",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "created",
+      "url_path": "/reseller-tools/marktplaats-fees-explained",
+      "published_at": "2026-09-29T14:32:25.100864+00:00"
     }
   ]
 }
