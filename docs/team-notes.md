@@ -14974,3 +14974,17 @@ ronde van 16:05 niets nieuws in onze code. Niets hangt op 'claimed'. Geen repara
 - 82b13998 (Anneloes) en f8c0cce9: een Vinted-scan wacht sinds gisteravond,
   extensie sinds 29-09 niet gezien. Klant-eigen.
 - Open (ongewijzigd): 1.0.364 naar de Web Store (Vinted-verwijderen "Frame removed").
+
+## 30-09-2026 (22:20, automatisch): Klantfouten
+
+- fout-marktplaats-create-6d053254, a4fc5340 (JP MiniWheels, nieuw sinds 18:01, zakelijk
+  Marktplaats-account met ~530 advertenties, vrijwel allemaal modelauto's 1:43). Om 19:57
+  vroeg hij het verwijderen van zijn Golf V GTi aan (advertentie was al weg, pagina geeft nu
+  410), om 19:59 opnieuw plaatsen via ons. Geen herplaatsing van ons (geen _vervangt_listing_id).
+  Het formulier bleef staan met de knop "Naar betalen": met honderden live advertenties in
+  Modelauto's 1:43 is zijn gratis ruimte in die rubriek op. Daarnaast drie rode
+  fabrikantvelden: hij heeft "fabrikant meesturen" zelf uitgezet en Marktplaats vulde ze niet
+  voor. Extensie 1.0.363 klikte terecht niet op betalen; de server gaf de juiste uitleg.
+  Er stond verder niets in zijn rij. Klant-eigen (betaalmuur), geen reparatie.
+- Open, niet onderzocht: zijn listing-rij voor dit artikel staat nog op 'active' terwijl de
+  advertentie weg is (410). Ruimt de verkochtcontrole normaal zelf op.
