@@ -442,6 +442,47 @@ def _db_schrijf(naam: str, inhoud) -> bool:
     return True
 
 
+def _db_vervang_als(naam: str, verwacht: dict, inhoud) -> bool:
+    """Alleen schrijven als de rij nog is wat we lazen; True als het gelukt is.
+
+    WAAROM (30-09-2026). Lezen en dan schrijven laat een gat: om 06:47 UTC lazen
+    twee rondes tegelijk "klaar" en schreven allebei "bezig"; de laatste won en
+    beide gingen aan de slag. Hier doet de database de vergelijking zelf in één
+    UPDATE met de verwachte velden in de WHERE. Wie als tweede komt, vindt de rij
+    al veranderd en raakt niets. Geen `verwacht` betekent: alleen als de rij nog
+    niet bestaat (gewone insert, een tweede geeft 409).
+    """
+    verbinding = _supabase()
+    if not verbinding:
+        return False
+    import httpx
+    url, sleutel = verbinding
+    kop = {"apikey": sleutel, "Authorization": f"Bearer {sleutel}",
+           "Content-Type": "application/json", "Prefer": "return=representation"}
+    try:
+        if not verwacht:
+            r = httpx.post(f"{url}/rest/v1/{TABEL}", headers=kop,
+                           json={"naam": naam, "inhoud": inhoud}, timeout=30.0)
+        else:
+            params = {"naam": f"eq.{naam}"}
+            for k, v in verwacht.items():
+                params[f"inhoud->>{k}"] = "is.null" if v is None else f"eq.{v}"
+            r = httpx.patch(f"{url}/rest/v1/{TABEL}", params=params, headers=kop,
+                            json={"inhoud": inhoud}, timeout=30.0)
+        if r.status_code == 409:   # een ander maakte de rij net aan
+            gelukt = False
+        else:
+            r.raise_for_status()
+            gelukt = len(r.json()) == 1
+    except Exception as e:  # noqa: BLE001
+        raise OpslagOnbereikbaar(f"{naam} niet voorwaardelijk opgeslagen: {e}") from e
+    if gelukt:
+        _GELEZEN[naam] = inhoud
+    else:
+        _GELEZEN.pop(naam, None)   # een ander schreef; onze kopie is oud
+    return gelukt
+
+
 def _load(path: Path) -> list[dict]:
     if _supabase():
         return _db_lees(path.stem, []) or []

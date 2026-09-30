@@ -17,6 +17,19 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## slot-lezen-dan-schrijven-is-geen-slot
+
+*30-09-2026 — Een slot in leadgen_opslag via lezen-dan-schrijven laat twee rondes tegelijk binnen; gebruik L._db_vervang_als (voorwaardelijke PATCH)*
+
+Op 30-09-2026 06:47 UTC startten 'onboarding-ochtend' en 'ochtendronde' tegelijk (Mac ontwaakte). `ronde_begin` in scripts/klantfouten.py las 'klaar', schreef 'bezig', en beide kregen exit 0; de laatste schrijver hield het slot.
+
+Sindsdien zet `ronde_begin` het slot via `L._db_vervang_als(naam, verwacht, inhoud)` (scripts/leadgen_mail.py): één PATCH op leadgen_opslag met `inhoud->>status/wie/begon=eq.<gelezen waarde>` in de filter, of een gewone insert (409 = ander was eerder) als er nog geen rij is. De database beslist; de tweede krijgt 0 rijen terug en exit 3. Voor-en-na-proef met twee echte processen tegen Supabase op sleutel `klantfouten_ronde_proef`: oud gaf beide MAG, nieuw één.
+
+**Why:** een "controle achteraf" (schrijven, wachten, teruglezen) verkleint het gat maar sluit het niet; een voorwaardelijke update wel.
+**How to apply:** elk nieuw slot of teller in leadgen_opslag die meerdere schrijvers heeft: `_db_vervang_als`, nooit `_db_lees` + `_db_schrijf`. Let op de cache `_GELEZEN`: na een verloren poging moet hij leeg, anders leest dezelfde beurt de oude waarde terug.
+
+---
+
 ## instagram-leadgen-bronnen
 
 *30-09-2026 — Welke bronnen wel/niet werken voor Instagram-leadgen; Vinted is onscrapebaar en Marktplaats heeft geen brug naar Instagram*

@@ -14851,3 +14851,20 @@ Gemeten over 24 uur: 135 fouten bij 5 klanten. Web Store serveert nu 1.0.358
   netwerkfout). Alleen meten, gedrag ongewijzigd. Proef faalt op 85e84d99. Zodra
   Zilverwebsite het weer krijgt, zegt de melding of het een blokkade of uitloggen
   was. 11 bestaande JS-proeven waren al rood op de oude code, los hiervan.
+
+
+## 30-09-2026: Rondeslot laat nog maar één ronde tegelijk binnen
+
+- Oorzaak van de dubbele start om 06:47 UTC (zie hierboven): `ronde_begin` las
+  het slot en schreef het daarna, zonder dat de database controleerde of het
+  intussen veranderd was. Beide rondes lazen 'klaar', beide kregen exit 0.
+- Nu: het slot wordt gezet met één voorwaardelijke schrijfactie
+  (`_db_vervang_als` in scripts/leadgen_mail.py): alleen als status, wie en begon
+  nog zijn wat deze ronde las. De tweede krijgt exit 3 en raakt het slot van de
+  ander niet aan. Liever dit dan "schrijven, wachten, teruglezen": dat verkleint
+  het gat alleen.
+- Bewijs: nieuwe proef in tests/test_klantfouten.py (twee rondes lezen tegelijk)
+  faalt op de oude code en slaagt op de nieuwe. Daarnaast twee echte processen
+  tegen Supabase op proefsleutel `klantfouten_ronde_proef` (daarna weggehaald):
+  oud gaf beide toegang, nieuw precies één, met en zonder eerdere ronde.
+- Gedaan onder het slot met rondenaam `slot-reparatie`.

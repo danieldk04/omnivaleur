@@ -6,6 +6,7 @@ elke tien minuten opnieuw: elke sessie kost abonnement. En de meting draait op
 de productiedatabase, die twee keer omviel op `jobs.result` over alle klanten.
 """
 import sys
+import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -94,6 +95,21 @@ def kast(monkeypatch):
     monkeypatch.setattr(K.A.L, "_db_lees", lambda naam, standaard: inhoud.get(naam, standaard))
     monkeypatch.setattr(K.A.L, "_db_schrijf",
                         lambda naam, waarde: inhoud.__setitem__(naam, waarde) or True)
+    slot = threading.Lock()
+
+    def vervang_als(naam, verwacht, waarde):
+        # Zoals de database: één schrijver tegelijk, en alleen als de rij nog is
+        # wat de schrijver las. Geen rij verwacht = alleen als er nog geen is.
+        with slot:
+            nu_ = inhoud.get(naam)
+            if not verwacht:
+                if nu_ is not None:
+                    return False
+            elif nu_ is None or any(nu_.get(k) != v for k, v in verwacht.items()):
+                return False
+            inhoud[naam] = waarde
+            return True
+    monkeypatch.setattr(K.A.L, "_db_vervang_als", vervang_als)
     monkeypatch.setattr(K, "_nu", lambda: NU)
     return inhoud
 
@@ -245,6 +261,40 @@ def test_een_gestrande_ronde_houdt_niet_eeuwig_tegen(kast, monkeypatch):
     K.ronde_begin("ochtendronde")
     monkeypatch.setattr(K, "_nu", lambda: NU + K.RONDE_GESTRAND_NA + timedelta(minutes=1))
     assert K.ronde_begin("middagronde")[0]
+
+
+@pytest.mark.parametrize("al_eerder", [True, False])
+def test_twee_rondes_tegelijk_krijgen_niet_allebei_het_slot(kast, monkeypatch, al_eerder):
+    """30-09-2026 06:47 UTC: de Mac werd wakker, 'onboarding-ochtend' en 'ochtendronde'
+    lazen allebei 'klaar' voordat een van beide schreef, en kregen allebei exit 0."""
+    if al_eerder:
+        kast[K.RONDE_SLEUTEL] = {"status": "klaar", "wie": "middagronde", "begon": _t(900)}
+    samen = threading.Barrier(2, timeout=5)
+    echt_lezen = K.A.L._db_lees
+
+    gewacht = set()
+
+    def lees_dan_wachten(naam, standaard):
+        uit = echt_lezen(naam, standaard)
+        if naam == K.RONDE_SLEUTEL and threading.get_ident() not in gewacht:
+            gewacht.add(threading.get_ident())
+            samen.wait()            # beide hebben gelezen voordat een van beide schrijft
+        return uit
+    monkeypatch.setattr(K.A.L, "_db_lees", lees_dan_wachten)
+
+    uitkomst = {}
+    rondes = [threading.Thread(target=lambda w=w: uitkomst.__setitem__(w, K.ronde_begin(w)))
+              for w in ("onboarding-ochtend", "ochtendronde")]
+    for r in rondes:
+        r.start()
+    for r in rondes:
+        r.join(10)
+
+    winnaars = [w for w, (mag, _) in uitkomst.items() if mag]
+    assert len(uitkomst) == 2 and len(winnaars) == 1, uitkomst
+    assert kast[K.RONDE_SLEUTEL]["wie"] == winnaars[0], "het slot van de winnaar blijft staan"
+    verliezer = next(w for w in uitkomst if w not in winnaars)
+    assert winnaars[0] in uitkomst[verliezer][1]
 
 
 def test_niet_te_lezen_opslag_is_niet_vrij(monkeypatch):

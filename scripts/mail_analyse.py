@@ -140,6 +140,15 @@ def _schrijf(sleutel: str, inhoud) -> bool:
     return False
 
 
+def _schrijf_als(sleutel: str, verwacht: dict, inhoud) -> bool | None:
+    """Voorwaardelijk schrijven: True gelukt, False een ander was eerder, None storing."""
+    try:
+        return L._db_vervang_als(sleutel, verwacht, inhoud)
+    except Exception as e:  # noqa: BLE001
+        print(f"  !! {sleutel} NIET opgeslagen: {e}")
+    return None
+
+
 def analyses() -> dict:
     return _lees(ANALYSE_SLEUTEL, {}) or {}
 

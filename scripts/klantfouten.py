@@ -315,10 +315,20 @@ def ronde_begin(wie: str) -> tuple[bool, str]:
             and begon and nu - begon < RONDE_GESTRAND_NA):
         return False, (f"Ronde '{vorige.get('wie')}' is bezig sinds {vorige['begon'][:16]} UTC; "
                        "niet begonnen, anders repareren we hetzelfde twee keer.")
-    if not A._schrijf(RONDE_SLEUTEL, {"status": "bezig", "wie": wie, "begon": nu.isoformat(),
-                                      "vorige": {k: vorige.get(k) for k in
-                                                 ("wie", "status", "begon", "klaar", "samenvatting")}}):
+    # Alleen zetten als het slot nog is wat we net lazen. Op 30-09 06:47 UTC lazen
+    # twee rondes tegelijk 'klaar' en schreven allebei 'bezig'; beide gingen aan de slag.
+    verwacht = {k: vorige.get(k) for k in ("status", "wie", "begon")} if vorige else {}
+    gezet = A._schrijf_als(RONDE_SLEUTEL, verwacht,
+                           {"status": "bezig", "wie": wie, "begon": nu.isoformat(),
+                            "vorige": {k: vorige.get(k) for k in
+                                       ("wie", "status", "begon", "klaar", "samenvatting")}})
+    if gezet is None:
         return False, "Kon het slot niet zetten; niet begonnen."
+    if not gezet:
+        ander = A._lees(RONDE_SLEUTEL, {}) or {}
+        return False, (f"Ronde '{ander.get('wie')}' pakte het slot net eerder "
+                       f"({str(ander.get('begon'))[:16]} UTC); niet begonnen, "
+                       "anders repareren we hetzelfde twee keer.")
     if not vorige:
         return True, "Begonnen. Geen eerdere ronde bekend."
     return True, (f"Begonnen. Vorige ronde: '{vorige.get('wie')}', {vorige.get('status')}, "
