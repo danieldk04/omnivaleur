@@ -598,7 +598,7 @@
       "pillar": "C",
       "format": "competitor",
       "slug": "omnivaleur-vs-zipsale",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "omnivaleur-vs-zipsale-vergelijking",
       "priority": 72
     },
@@ -1269,6 +1269,16 @@
       "action": "created",
       "url_path": "/reseller-tools/marktplaats-fees-explained",
       "published_at": "2026-09-29T14:32:25.100864+00:00"
+    },
+    {
+      "keyword": "omnivaleur vs zipsale",
+      "slug": "omnivaleur-vs-zipsale",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "action": "created",
+      "url_path": "/vs/omnivaleur-vs-zipsale",
+      "published_at": "2026-09-30T14:27:33.250940+00:00"
     }
   ]
 }
