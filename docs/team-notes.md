@@ -14904,3 +14904,23 @@ verplicht. Een leeg veld blokkeert dus nooit; een verkeerde kleur misleidt wel.
 ## 30-09-2026: Watchero (Martijn Bax) wil begin oktober proberen
 - Martijn Bax (info@watchero.eu, Bussum) antwoordde op koude mail 3 van 29-09: nog steeds geinteresseerd, nog geen tijd gehad, wil begin volgende maand aanschaffen en uitproberen.
 - Afspraak met Daniel: follow-up rond 07-10-2026. Geplande eenmalige taak `watchero-follow-up` (07-10, 09:00) kijkt of er al een account is en schrijft anders een concept; Daniel verstuurt zelf.
+
+## 30-09-2026 (16:05, automatisch): Klantfouten
+
+- fout-vinted-delete-88c8b39f (Toon, 96e30080, 13:45 UTC, 1.0.358): "Frame with
+  ID 0 was removed". Onze code. Na de bevestigklik stuurt Vinted het tabblad door;
+  valt dat in ons wachtende script, dan breekt Chrome het af en meldden wij een
+  mislukking terwijl de verwijdering gelukt was. Bewijs: 8791506164 (tapijtje,
+  artikel 51a86460) stond om 13:03 in de kast, opdracht 0e158054 faalde, pagina
+  nu 404 (controle: een live advertentie van hem geeft 200). Zelfde op 29-09 met
+  10141774015 (380725d1). Gevolg: de kastscan stelde hem daarna de valse vraag
+  "mogelijk verkocht" over het tapijtje (verkocht op Marktplaats).
+- Gerepareerd in extensie 1.0.364: die fout laat nu de kast beslissen (weg =
+  geslaagd, staat er nog = fout); kastcontroles tijdens de doorsturing proberen
+  opnieuw. Proef tests/vinted-verwijderen-frame-weg-test.js faalt op 976bce47 (4
+  van 5), slaagt nu; bestaande Vinted-verwijderproeven groen.
+- Data: alleen de Vinted-regel van 51a86460 van sold_unconfirmed naar delisted
+  gezet (wat een geslaagde verwijdering had gedaan), zodat de valse vraag weg is.
+- Open: 1.0.364 (dist/omnivaleur-extension-1.0.364.zip) naar de Web Store. Tot dan
+  kan dit bij elke Vinted-verwijdering opnieuw gebeuren; niets gaat verloren, wel
+  een foutmelding plus een valse verkoopvraag.
