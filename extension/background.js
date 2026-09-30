@@ -5324,17 +5324,27 @@ async function bgDeleteMp2dh(job, serverUrl) {
       const opgeslagen = payload.platform_listing_url || "";
       const adUrl = listingId ? `${origin}/seller/view/${listingId}`
                   : (/\/v\//.test(opgeslagen) ? opgeslagen : "");
-      const live = adUrl ? await execInTab(tabId, async (u, wegBron, markerBron) => {
+      // WAT DE ADVERTENTIEPAGINA ANTWOORDDE REIST MEE IN DE FOUTMELDING.
+      // 30-09-2026, Zilverwebsite (26cf5471): 55 herplaatsingen in 17 minuten
+      // strandden hier op "gave no answer either", en achteraf was niet te
+      // zeggen of Marktplaats blokkeerde (403, zie verwijderViaAdvertentiepagina),
+      // de verkoper uitgelogd was of het tabblad wegviel. Alles gaf null.
+      const peiling = adUrl ? await execInTab(tabId, async (u, wegBron, markerBron) => {
         try {
           const r = await fetch(u, { credentials: "include", redirect: "follow" });
-          if (r.status === 404 || r.status === 410) return false;
-          if (!r.ok) return null; // niets bewezen
+          const waar = `HTTP ${r.status}` + (r.redirected ? ` via ${new URL(r.url).pathname}` : "");
+          if (r.status === 404 || r.status === 410) return { live: false, antwoord: waar };
+          if (!r.ok) return { live: null, antwoord: waar }; // niets bewezen
           const html = (await r.text()).toLowerCase();
-          if (new RegExp(markerBron).test(html)) return false;
-          if (new RegExp(wegBron).test(html)) return false;
-          return true;
-        } catch (e) { return null; }
-      }, [adUrl, WEG_TEKST_BRON, WEG_MARKER_BRON]).catch(() => null) : null;
+          if (new RegExp(markerBron).test(html)) return { live: false, antwoord: waar };
+          if (new RegExp(wegBron).test(html)) return { live: false, antwoord: waar };
+          return { live: true, antwoord: waar };
+        } catch (e) { return { live: null, antwoord: `fetch: ${String(e?.message || e).slice(0, 80)}` }; }
+      }, [adUrl, WEG_TEKST_BRON, WEG_MARKER_BRON])
+        .catch((e) => ({ live: null, antwoord: `tab: ${String(e?.message || e).slice(0, 80)}` }))
+        : { live: null, antwoord: "no advert number" };
+      const live = peiling?.live ?? null;
+      const antwoordStaart = ` | Advert page: ${peiling?.antwoord || "no answer"}`;
 
       if (live === true) {
         // NIET IN HET OVERZICHT, MAAR WEL ONLINE: VERWIJDER HEM DAN OP ZIJN
