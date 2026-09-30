@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     stripe_publishable_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_price_id: str = ""
+    # Omnivaleur Light (EUR 9,99 inclusief btw, tot 20 actieve artikelen). Leeg =
+    # Light staat uit: geen keuze op de betaalpagina en geen limiet voor iemand.
+    stripe_price_id_light: str = ""
     app_url: str = "https://omnivaleur.com"
 
     secret_key: str = "change-me"
