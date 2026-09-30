@@ -5070,6 +5070,19 @@ function classifyItems() {
   if (!state.listingsLoaded) {
     return { tabOf: new Map(), counts: { live: 0, todo: 0, hidden: 0, sold: 0, archived: 0 }, onbekend: true };
   }
+  // Een advertentieregel die op wachten/klaarstaan/bezig staat telt alleen als
+  // "bezig met plaatsen" als er ook echt een lopende create-opdracht voor dat
+  // item en kanaal is, of als de regel van de laatste 6 uur is. Anders is het een
+  // spookregel die nooit is afgesloten (30-09-2026: 87 regels bij 80 items, de
+  // oudste van 03-07): item stond dan weken op "Bezig met plaatsen" terwijl het
+  // allang online staat.
+  const lopendeCreate = new Set();
+  for (const j of (state.jobs || [])) {
+    if (j.item_id && (j.action === 'create' || !j.action) && ['pending', 'queued', 'claimed'].includes(j.status)) {
+      lopendeCreate.add(j.item_id + '|' + j.platform);
+    }
+  }
+  const zesUurGeleden = Date.now() - 6 * 3600 * 1000;
   const byItem = new Map();
   for (const l of state.listings) {
     let s = byItem.get(l.item_id);
@@ -5083,7 +5096,10 @@ function classifyItems() {
     else if (l.status === 'active' || l.status === 'relisting') s.live = true;
     // Hidden on the platform: still yours, still listed, but invisible to buyers.
     else if (l.status === 'hidden') s.hidden = true;
-    else if (l.status === 'pending' || l.status === 'queued' || l.status === 'claimed') s.publishing = true;
+    else if (l.status === 'pending' || l.status === 'queued' || l.status === 'claimed') {
+      const t = Date.parse(l.created_at);
+      if (lopendeCreate.has(l.item_id + '|' + l.platform) || !(t < zesUurGeleden)) s.publishing = true;
+    }
     else if (l.status === 'delisted') s.off = true;
   }
   // A queued create job also means "publishing", even before the listing row flips.
