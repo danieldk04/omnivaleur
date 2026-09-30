@@ -50,7 +50,12 @@ def optimize_image(data: bytes, ext_hint: str = "") -> tuple[bytes, str]:
         source_format = (img.format or "").upper()
 
         # An animated GIF loses its animation on re-encode. Leave it alone.
-        if source_format == "GIF" or getattr(img, "n_frames", 1) > 1:
+        # MPO is what an iPhone/Android camera writes: a normal JPEG plus a
+        # preview frame. It reports n_frames > 1 but is NOT an animation, and
+        # treating it as one left 6 MB originals untouched (item 1372, 30-09).
+        if source_format == "GIF" or (
+            source_format != "MPO" and getattr(img, "n_frames", 1) > 1
+        ):
             return data, (hint or "gif")
 
         img = ImageOps.exif_transpose(img) or img

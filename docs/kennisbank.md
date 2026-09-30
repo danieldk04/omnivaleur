@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## iphone-foto-mpo-werd-niet-verkleind
+
+*30-09-2026 — iPhone-foto's zijn MPO (n_frames>1); image_optimize hield ze voor animatie en liet 6 MB originelen staan, waardoor Marktplaats/2dehands op de foto-upload afhaakten*
+
+30-09-2026, klant 3bfbed2c, artikel 1372: zes foto's van 3,5 tot 7 MB. Marktplaats gaf "Uploading the photos took too long" (harde grens 120 s in marktplaats.js/tweedehands.js), 2dehands viel om op een leeg merkveld, Vinted lukte pas na ruim 5 minuten.
+
+**Why:** `optimize_image` sloeg alles met `n_frames > 1` over als animatie. Een camerafoto in MPO-formaat (JPEG plus voorbeeldframe) telt dan mee. Nu alleen GIF of echte meerframe-formaten behalve MPO overslaan. Proef: tests/test_image_optimize_mpo.py faalt op de oude code; echte foto 6187 KB werd 702 KB.
+
+**How to apply:** vermoed je trage foto-uploads, meet eerst de bestandsgrootte op img.omnivaleur.com. Al opgeslagen grote foto's worden niet vanzelf verkleind; alleen nieuwe uploads.
+
+---
+
 ## slot-lezen-dan-schrijven-is-geen-slot
 
 *30-09-2026 — Een slot in leadgen_opslag via lezen-dan-schrijven laat twee rondes tegelijk binnen; gebruik L._db_vervang_als (voorwaardelijke PATCH)*
