@@ -14900,3 +14900,7 @@ verplicht. Een leeg veld blokkeert dus nooit; een verkeerde kleur misleidt wel.
 - 2dehands.be gemeten met dezelfde methode: identieke structuur (165 rubrieken met kleurveld, 0 verplicht, 52 van 53 lijsten identiek; de 53e heet daar "Crème ou Beige").
 - Gemeten kleurlijsten hebben eigen namen: "Multi" (mobiele telefoonhoesjes), "Crème of
   Beige", "Zilver of Grijs", "Roze of Coral", Antraciet/Lichtgrijs bij dozen en tassen.
+
+## 30-09-2026: Watchero (Martijn Bax) wil begin oktober proberen
+- Martijn Bax (info@watchero.eu, Bussum) antwoordde op koude mail 3 van 29-09: nog steeds geinteresseerd, nog geen tijd gehad, wil begin volgende maand aanschaffen en uitproberen.
+- Afspraak met Daniel: follow-up rond 07-10-2026. Geplande eenmalige taak `watchero-follow-up` (07-10, 09:00) kijkt of er al een account is en schrijft anders een concept; Daniel verstuurt zelf.
