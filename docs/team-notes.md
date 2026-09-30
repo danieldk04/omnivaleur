@@ -14845,3 +14845,9 @@ Gemeten over 24 uur: 135 fouten bij 5 klanten. Web Store serveert nu 1.0.358
 - 82b13998: Admarkt-melding zit in 1.0.360 (nog in keuring). 1ba42900: "Bestemd
   voor" zit in 1.0.361 (nog in keuring); verder niet ingelogd op Vinted en een
   betaalde rubriek (klant).
+- Nagekomen (30-09, Daniel akkoord): extensie 1.0.362 schrijft bij "gave no
+  answer either" en "could not verify" nu mee wat de advertentiepagina
+  antwoordde (`| Advert page: HTTP 403`, doorsturing naar inlogpagina of
+  netwerkfout). Alleen meten, gedrag ongewijzigd. Proef faalt op 85e84d99. Zodra
+  Zilverwebsite het weer krijgt, zegt de melding of het een blokkade of uitloggen
+  was. 11 bestaande JS-proeven waren al rood op de oude code, los hiervan.
