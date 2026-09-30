@@ -3272,5 +3272,12 @@
  "Your first month is 50% off (on Pro, €10.00 instead of €19.99 excl. VAT). It is applied automatically when you upgrade, no code to type.": "Je eerste maand is 50% goedkoper (bij Pro €10,00 in plaats van €19,99 excl. btw). Dit wordt automatisch toegepast als je upgradet, je hoeft geen code te typen.",
  "Activate Light →": "Light activeren →",
  "Omnivaleur Light includes up to 20 active items and you have reached that. Mark something as sold, or upgrade to Pro for unlimited items.": "Omnivaleur Light bevat maximaal 20 actieve artikelen en die grens is bereikt. Markeer iets als verkocht, of stap over op Pro voor een onbeperkt aantal artikelen.",
- "Could not switch plans.": "Overstappen lukte niet."
+ "Could not switch plans.": "Overstappen lukte niet.",
+ "Your plan is set. Billing starts on {0}.": "Je abonnement staat. De betaling start op {0}.",
+ "Payment received. Your {0} subscription is active.": "Betaling ontvangen. Je {0}-abonnement is actief.",
+ "Your {0} subscription is confirmed. Your payment details are saved and your first payment is on {1}.": "Je {0}-abonnement is bevestigd. Je betaalgegevens zijn opgeslagen en je eerste betaling is op {1}.",
+ "Thank you! Your bank is processing the first direct debit. Your account keeps working.": "Bedankt! Je bank verwerkt de eerste incasso. Je account blijft gewoon werken.",
+ "Thank you! We are confirming your payment. This updates in a few seconds.": "Bedankt! We bevestigen je betaling. Dit wordt over een paar seconden bijgewerkt.",
+ "Checkout cancelled. You were not charged.": "Afrekenen geannuleerd. Er is niets afgeschreven.",
+ "✅ Subscription confirmed": "✅ Abonnement bevestigd"
 }

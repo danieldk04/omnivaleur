@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=c58bd1f967"></script>
+<script src="/i18n.js?v=686407ed45"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1937,6 +1937,10 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     <div id="view-prijs" class="view">
       <div style="max-width:600px;margin:0 auto">
 
+        <!-- Uitkomst van het afrekenen (Stripe stuurt terug met ?billing=success of cancel).
+             Stond er eerder niets: de klant landde op het prijsscherm zonder te horen of het gelukt was. -->
+        <div id="billing-melding" style="display:none;margin-bottom:20px;padding:16px 18px;border-radius:12px;font-size:14px;font-weight:600;line-height:1.5"></div>
+
         <!-- Account info — always visible -->
         <div class="card" style="margin-bottom:20px">
           <div class="card-header"><h2>Account</h2></div>
@@ -1993,6 +1997,17 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <div class="card">
           <div class="card-header"><h2>Subscription</h2></div>
 
+            <!-- Alleen bij Light: hoeveel van de 20 is er in gebruik, en de weg naar Pro.
+             Staat boven beide kaarten: tijdens de proefweek toont het dashboard de
+             proefkaart, ook nadat Light al is gekozen en de betaalgegevens staan. -->
+        <div id="billing-light-box" style="display:none;margin:20px 22px 0;padding:14px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:700;color:#1e40af"><span>Active items</span><span id="billing-light-count">0 / 20</span></div>
+          <div style="height:8px;background:#dbeafe;border-radius:99px;margin:8px 0 10px;overflow:hidden"><div id="billing-light-bar" style="height:100%;width:0;background:#2563eb"></div></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="font-size:12px;color:#3b82f6">Sold or removed items free up room. Need more? Pro has no limit.</div>
+            <button class="btn btn-sm btn-primary" onclick="upgradeToPro(this)" style="flex-shrink:0">Upgrade to Pro →</button>
+          </div>
+        </div>
           <!-- Active / past_due state -->
           <div id="billing-active-card" style="display:none;padding:20px 22px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
@@ -2010,15 +2025,6 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
               <div style="background:#f8faff;border:1px solid #e0e7ff;border-radius:10px;padding:14px 16px">
                 <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">Next billing date</div>
                 <div style="font-weight:700;font-size:14px" id="billing-next-date">—</div>
-              </div>
-            </div>
-            <!-- Alleen bij Light: hoeveel van de 20 is er in gebruik, en de weg naar Pro. -->
-            <div id="billing-light-box" style="display:none;margin-bottom:16px;padding:14px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px">
-              <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:700;color:#1e40af"><span>Active items</span><span id="billing-light-count">0 / 20</span></div>
-              <div style="height:8px;background:#dbeafe;border-radius:99px;margin:8px 0 10px;overflow:hidden"><div id="billing-light-bar" style="height:100%;width:0;background:#2563eb"></div></div>
-              <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-                <div style="font-size:12px;color:#3b82f6">Sold or removed items free up room. Need more? Pro has no limit.</div>
-                <button class="btn btn-sm btn-primary" onclick="upgradeToPro(this)" style="flex-shrink:0">Upgrade to Pro →</button>
               </div>
             </div>
             <div id="billing-payment-method" style="display:none;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:14px;padding:10px 12px;background:#f8faff;border-radius:8px">
@@ -3806,6 +3812,41 @@ async function loadBillingStatus() {
   renderBilling(_billingStatus);
   renderTrialBanner(_billingStatus);
   renderPlanKeuze(_billingStatus);
+  toonAfrekenMelding(_billingStatus);
+}
+
+// Na het afrekenen: zeggen of het gelukt is. De webhook van Stripe kan een paar
+// seconden achterlopen, dus zolang de rij nog niet is bijgewerkt vragen we
+// een paar keer opnieuw in plaats van "geen abonnement" te tonen.
+let _afrekenUitkomst = null;   // 'success' | 'cancel' | null
+let _afrekenPogingen = 0;
+
+function toonAfrekenMelding(data) {
+  const el = document.getElementById('billing-melding');
+  if (!el || !_afrekenUitkomst) return;
+  const groen = 'background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46';
+  const grijs = 'background:#f1f5f9;border:1px solid #cbd5e1;color:#334155';
+  const zet = (tekst, stijl) => { el.style.cssText = 'display:block;margin-bottom:20px;padding:16px 18px;border-radius:12px;font-size:14px;font-weight:600;line-height:1.5;' + stijl; el.textContent = tekst; };
+  if (_afrekenUitkomst === 'cancel') {
+    zet('Checkout cancelled. You were not charged.', grijs);
+    return;
+  }
+  const plan = data && data.plan === 'light' ? 'Light' : 'Pro';
+  const heeftAbo = !!(data && data.stripe_subscription_id);
+  if (data && data.status === 'active') {
+    zet(`Payment received. Your ${plan} subscription is active.`, groen);
+  } else if (data && data.status === 'payment_processing') {
+    zet('Thank you! Your bank is processing the first direct debit. Your account keeps working.', groen);
+  } else if (data && data.status === 'trialing' && heeftAbo) {
+    const tot = data.trial_ends_at ? new Date(data.trial_ends_at).toLocaleDateString('en-GB') : '—';
+    zet(`Your ${plan} subscription is confirmed. Your payment details are saved and your first payment is on ${tot}.`, groen);
+  } else {
+    zet('Thank you! We are confirming your payment. This updates in a few seconds.', groen);
+    if (_afrekenPogingen++ < 6) setTimeout(loadBillingStatus, 3000);
+    return;
+  }
+  showToast('✅ Subscription confirmed');
+  _afrekenUitkomst = null;   // één keer tonen per terugkeer, daarna blijft de melding staan
 }
 
 // Omnivaleur Light (€9.99 incl. btw, tot 20 actieve artikelen) naast Pro
@@ -3979,6 +4020,18 @@ function renderBilling(data) {
     const btn = document.getElementById('btn-checkout');
     if (btn) btn.textContent = days > 0 ? `Start ${days}-day free trial →` : 'Activate Pro →';
     document.getElementById('nav-prijs-label').textContent = 'Account';
+    // Al een abonnement gekozen en de betaalgegevens staan (Stripe houdt de
+    // status op 'trialing' tot de proef afloopt): geen tweede keuze tonen, maar
+    // het abonnement beheren. Een tweede checkout zou toch naar het portaal gaan.
+    const heeftAbo = !!data.stripe_subscription_id;
+    const keuze = document.getElementById('plan-keuze');
+    if (keuze) keuze.style.display = heeftAbo ? 'none' : 'grid';
+    if (btn) btn.onclick = heeftAbo ? () => openPortal() : () => startCheckout();
+    if (heeftAbo) {
+      const tot = trial_ends_at ? new Date(trial_ends_at).toLocaleDateString('en-GB') : '—';
+      if (note) note.textContent = `Your plan is set. Billing starts on ${tot}.`;
+      if (btn) btn.textContent = 'Manage subscription →';
+    }
 
   } else {
     // trial_expired / canceled / unknown — grace period, then hard block
@@ -11791,6 +11844,7 @@ async function pollActivity() {
 // ── Init ─────────────────────────────────────────────────────────
 const _urlParams = new URLSearchParams(window.location.search);
 if (_urlParams.get('billing') === 'success' || _urlParams.get('billing') === 'cancel') {
+  _afrekenUitkomst = _urlParams.get('billing');
   history.replaceState({}, '', window.location.pathname);
   showView('prijs');
 } else if (window.location.hash === '#platforms') {
