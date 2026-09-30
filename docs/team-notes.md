@@ -14924,3 +14924,21 @@ verplicht. Een leeg veld blokkeert dus nooit; een verkeerde kleur misleidt wel.
 - Open: 1.0.364 (dist/omnivaleur-extension-1.0.364.zip) naar de Web Store. Tot dan
   kan dit bij elke Vinted-verwijdering opnieuw gebeuren; niets gaat verloren, wel
   een foutmelding plus een valse verkoopvraag.
+
+## 30-09-2026 (middag): 2dehands verlengt grote partijen mee, Egbert (bcdf9aa4)
+
+Egbert (Papa's Plectrums) zet honderden zoekertjes op 2dehands (1.508 actief, 410 op
+27-09 alleen, allemaal via ons geplaatst). Vaste grens was 40 verlengingen per dag,
+5 tot 9 minuten uit elkaar. Het venster is dag 22 tot dag 28, dus een partij van één
+dag haalde er hooguit ~240 binnen; de rest zou verlopen (eerste vanaf 25-10).
+- Nu: grens = de partij die in het venster zit gedeeld door 6 dagen, minimaal 40,
+  hoogstens 200; bij een grote partij staan de verlengingen 2 tot 4 minuten uit
+  elkaar (200 x 3 min = 10 uur, past op een dag). `extend_expiring_2dehands`
+  leest nu ook alle rijen (was afgekapt op 1.000). Alleen serverkant, geen extensie.
+- Gemeten: verlengen ~72 s per opdracht (67 gemeten, 2 klanten), plaatsen ~17 s.
+- Proef: tests/test_verlengen_2dehands_backend.py, 3 nieuwe proeven falen op de
+  oude code (600 gaf 40 ipv 100, 1500 gaf 40 ipv 200).
+- Open: niet gemeten of 2dehands 200 verlengingen per dag pikt, of een net verlopen
+  zoekertje nog te verlengen is, en welke extensieversie Egbert draait (onder
+  1.0.358 leest verlengen maar 200 zoekertjes). Meting staat gepland op 05-10-2026
+  (taak egbert-verlengingen-meten).

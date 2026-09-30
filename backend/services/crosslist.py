@@ -2800,7 +2800,10 @@ async def relist_expiring_marktplaats():
 # vier weken verder ligt.
 _EXTEND_MIN_LEEFTIJD_DAGEN = 22   # 2dehands toont "Verlengen" ~7 dagen voor de 28e dag
 _EXTEND_MAX_LEEFTIJD_DAGEN = 45   # ouder: waarschijnlijk al verlopen; de extensie kijkt zelf
-_EXTEND_MAX_PER_VERKOPER_PER_DAG = 40
+_EXTEND_MAX_PER_VERKOPER_PER_DAG = 40      # ondergrens per dag; groeit mee met een grote partij
+_EXTEND_MAX_PER_VERKOPER_HOOGSTENS = 200   # bovengrens, ook voor de allergrootste partij
+_EXTEND_VENSTER_DAGEN = 6                  # dag 22 tot dag 28: zo lang is het venster echt
+_EXTEND_VERVALT_NA_DAGEN = 28
 _EXTEND_HERKANS_NA_DAGEN = 3      # niet elke 6-uursronde opnieuw inplannen vóór het venster
 
 
@@ -2817,18 +2820,48 @@ async def extend_expiring_2dehands():
     ondergrens = (nu - timedelta(days=_EXTEND_MAX_LEEFTIJD_DAGEN)).isoformat()
     bovengrens = (nu - timedelta(days=_EXTEND_MIN_LEEFTIJD_DAGEN)).isoformat()
 
-    rijen = ((await naast_de_lus(lambda: db.table("listings")
+    # ALLE rijen, gebladerd op id. Een gewone select geeft stilzwijgend hooguit
+    # 1.000 rijen (zie relist_expiring_marktplaats); een klant met een grote
+    # partij zou dan het grootste deel nooit zien. Daarna zelf oudste eerst:
+    # die staat het dichtst bij de dag waarop 2dehands hem zelf laat vervallen.
+    from backend.database import fetch_all, fetch_all_in
+    rijen = ((await naast_de_lus(lambda: fetch_all(lambda: db.table("listings")
              .select("id,item_id,platform_listing_id,platform_listing_url,listed_at")
              .eq("platform", "2dehands")
              .eq("status", "active")
              .gte("listed_at", ondergrens)
-             .lte("listed_at", bovengrens)
-             # Oudste eerst: die staat het dichtst bij de dag waarop 2dehands hem
-             # zelf laat vervallen.
-             .order("listed_at")
-             .execute())).data or [])
+             .lte("listed_at", bovengrens)))) or [])
     if not rijen:
         return
+    rijen.sort(key=lambda l: l.get("listed_at") or "")
+
+    # Van wie is welke rij, in één keer. De dagelijkse grens hangt af van hoe
+    # groot de partij van deze verkoper is, dus die moet vooraf bekend zijn.
+    eigenaar_van = {r["id"]: r["user_id"] for r in ((await naast_de_lus(
+        lambda: fetch_all_in(lambda: db.table("items").select("id,user_id"),
+                             "id", [l["item_id"] for l in rijen]))) or [])}
+    dringend_per_verkoper: dict[str, int] = {}
+    dringend_vanaf = (nu - timedelta(days=_EXTEND_VERVALT_NA_DAGEN)).isoformat()
+    for l in rijen:
+        if (l.get("listed_at") or "") >= dringend_vanaf:
+            e = eigenaar_van.get(l["item_id"])
+            if e:
+                dringend_per_verkoper[e] = dringend_per_verkoper.get(e, 0) + 1
+
+    def grens_voor(uid: str) -> int:
+        """Hoeveel verlengingen deze verkoper vandaag hoogstens krijgt.
+
+        WAAROM (30-09-2026). Een vaste 40 per dag haalt van een partij die op
+        één dag is geplaatst hooguit 6 x 40 = 240 binnen tussen dag 22 (het
+        venster gaat open) en dag 28 (2dehands laat hem vervallen). Egbert
+        (Papa's Plectrums) plaatste er 410 op één dag en zet er nog honderden
+        bij. Dus: de partij die nu in het venster zit, gedeeld door de dagen
+        die nog resten.
+        """
+        n = dringend_per_verkoper.get(uid, 0)
+        per_dag = -(-n // _EXTEND_VENSTER_DAGEN)
+        return max(_EXTEND_MAX_PER_VERKOPER_PER_DAG,
+                   min(per_dag, _EXTEND_MAX_PER_VERKOPER_HOOGSTENS))
 
     _auto_aan: dict[str, bool] = {}
 
@@ -2861,11 +2894,9 @@ async def extend_expiring_2dehands():
         if not re.match(r"^m\d{6,}$", str(listing.get("platform_listing_id") or "").strip()):
             continue
         try:
-            item = eerste_rij(await naast_de_lus(lambda: db.table("items").select("id,user_id")
-                    .eq("id", listing["item_id"]).limit(1).execute()))
-            if not item:
+            eigenaar = eigenaar_van.get(listing["item_id"])
+            if not eigenaar:
                 continue
-            eigenaar = item["user_id"]
             if not auto_aan(eigenaar):
                 continue
 
@@ -2898,7 +2929,8 @@ async def extend_expiring_2dehands():
                 if str(b.get("created_at") or "") > herkans_grens:
                     continue
 
-            if per_verkoper.get(eigenaar, 0) >= _EXTEND_MAX_PER_VERKOPER_PER_DAG:
+            grens = grens_voor(eigenaar)
+            if per_verkoper.get(eigenaar, 0) >= grens:
                 continue
             n = per_verkoper.get(eigenaar, 0)
             per_verkoper[eigenaar] = n + 1
@@ -2907,7 +2939,12 @@ async def extend_expiring_2dehands():
             # veertig verlengingen achter elkaar. Elke volgende opdracht van
             # dezelfde verkoper staat vijf tot negen minuten later klaar; de
             # extensie voert er sowieso maar één tegelijk uit.
-            scheduled_for = (nu + timedelta(minutes=n * random.randint(5, 9))).isoformat()
+            # Bij een grote partij (grens boven het minimum) 2 tot 4 minuten: bij
+            # 5 tot 9 zouden 200 verlengingen ruim 17 uur duren en dus niet op
+            # één dag passen. Het blijft gespreid en de extensie doet er één
+            # tegelijk (gemeten ~72 s per verlenging).
+            stap = (2, 4) if grens > _EXTEND_MAX_PER_VERKOPER_PER_DAG else (5, 9)
+            scheduled_for = (nu + timedelta(minutes=n * random.randint(*stap))).isoformat()
 
             payload = {
                 "platform_listing_id": listing.get("platform_listing_id"),

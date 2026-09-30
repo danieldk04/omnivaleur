@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 29-09-2026 (wie liet scannen maar na een dag niets importeerde krijgt één herinneringsmail; foto's die een klant later op Vinted vernieuwt komen niet vanzelf over, advies toegevoegd; antwoord op de vaak gestelde vraag naar een koppeling met bol toegevoegd; een bedrag als "1.360" werd 1,36 in de inkoop- en verkoopprijs, gerepareerd; oude foto's op Marktplaats bij een voorraad die uit meerdere kanalen is ingelezen, opgeruimd bij De Juiste Toon; Vinted herkende "zilveren" en andere verbogen kleuren niet, gerepareerd in 1.0.358; uitbreiding logde zichzelf uit bij een databasestoring, gerepareerd; eerder: automatisch herplaatsen stond 20-09 tot 28-09 stil door een fout bij ons, loopt weer; daarvoor: verzendkost-aanpassingen op 2dehands gaan achter nieuwe plaatsingen)_
+_Laatst bijgewerkt: 30-09-2026 (2dehands verlengt bij een grote partij tot 200 per dag in plaats van vast 40; wie liet scannen maar na een dag niets importeerde krijgt één herinneringsmail; foto's die een klant later op Vinted vernieuwt komen niet vanzelf over, advies toegevoegd; antwoord op de vaak gestelde vraag naar een koppeling met bol toegevoegd; een bedrag als "1.360" werd 1,36 in de inkoop- en verkoopprijs, gerepareerd; oude foto's op Marktplaats bij een voorraad die uit meerdere kanalen is ingelezen, opgeruimd bij De Juiste Toon; Vinted herkende "zilveren" en andere verbogen kleuren niet, gerepareerd in 1.0.358; uitbreiding logde zichzelf uit bij een databasestoring, gerepareerd; eerder: automatisch herplaatsen stond 20-09 tot 28-09 stil door een fout bij ons, loopt weer; daarvoor: verzendkost-aanpassingen op 2dehands gaan achter nieuwe plaatsingen)_
 
 ---
 
@@ -437,7 +437,7 @@ Contact:
 - Een zoekertje op 2dehands is vier weken zichtbaar. Loopt het bijna af, dan
   verlengt Omnivaleur het automatisch en gratis, mits de computer aanstaat met
   Chrome en de uitbreiding. Er wordt niets weggehaald en niets opnieuw geplaatst,
-  dus de advertentie houdt haar reacties en haar plek. Op Marktplaats gebeurt het
+  dus de advertentie houdt haar reacties en haar plek. Per dag verlengt Omnivaleur minimaal 40 zoekertjes per klant; heeft iemand een grote partij op dezelfde dag geplaatst, dan groeit dat mee tot hoogstens 200 per dag (sinds 30-09-2026), zodat ze binnen de week tussen dag 22 en dag 28 allemaal aan de beurt komen. Elke verlenging duurt ongeveer 72 seconden op de computer van de klant, die dus aan moet staan met Chrome en de extensie (versie 1.0.358 of hoger). Op Marktplaats gebeurt het
   net iets anders (daar wordt de advertentie vlak voor de 30e dag opnieuw
   geplaatst), maar het doel is hetzelfde: geen gaten in je advertenties.
 - De staat van een artikel ("Nieuw", "Zo goed als nieuw") komt bij een import van

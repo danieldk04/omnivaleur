@@ -56,6 +56,7 @@ class _Q:
     def lte(self, k, v): self.ltes[k] = v; return self
     def order(self, _k, desc=False, **_kw): self._desc = desc; return self
     def limit(self, n): self._n = n; return self
+    def range(self, a, b): self._bereik = (a, b); return self
 
     def _match(self, r):
         return (all(r.get(k) == v for k, v in self.eqs.items())
@@ -78,6 +79,9 @@ class _Q:
             for r in rijen:
                 r.update(self.velden)
             return type("R", (), {"data": rijen})()
+        if getattr(self, "_bereik", None):
+            a, b = self._bereik
+            rijen = rijen[a:b + 1]
         if self._n:
             rijen = rijen[: self._n]
         return type("R", (), {"data": rijen})()
@@ -339,3 +343,48 @@ def test_rij_zonder_2dehands_nummer_krijgt_geen_extend():
     )
     _draai_inplan(db)
     assert [j["item_id"] for j in db.jobs] == ["c"]
+
+
+# ── Grote partij: de dagelijkse grens groeit mee (30-09-2026, Egbert) ───────
+
+def _partij(n, dagen=24, uid="u1"):
+    listings = [{"id": f"L{i}", "item_id": f"it{i}", "platform": "2dehands",
+                 "status": "active", "listed_at": _oud(dagen),
+                 "platform_listing_id": f"m{2400000000 + i}",
+                 "platform_listing_url": f"https://www.2dehands.be/v/x/m{2400000000 + i}"}
+                for i in range(n)]
+    items = [{"id": f"it{i}", "user_id": uid} for i in range(n)]
+    return _DB(listings=listings, items=items)
+
+
+@pytest.mark.parametrize("n,verwacht", [
+    (100, 40),      # kleine partij: ondergrens blijft 40
+    (600, 100),     # 600 / 6 dagen
+    (1500, 200),    # bovengrens
+])
+def test_dagelijkse_grens_groeit_mee_met_de_partij(n, verwacht):
+    db = _partij(n)
+    _draai_inplan(db)
+    assert len(db.jobs) == verwacht
+    assert all(j["action"] == "extend" for j in db.jobs)
+
+
+def test_grote_partij_staat_dichter_op_elkaar_dan_een_kleine():
+    klein, groot = _partij(100), _partij(600)
+    _draai_inplan(klein)
+    _draai_inplan(groot)
+
+    def laatste(db):
+        nu = datetime.now(timezone.utc)
+        return max((datetime.fromisoformat(j["scheduled_for"]) - nu).total_seconds()
+                   for j in db.jobs) / 60
+    assert laatste(klein) <= 40 * 9          # 5 tot 9 minuten
+    assert laatste(groot) <= 100 * 4 + 1     # 2 tot 4 minuten: 100 in minder dan 7 uur
+
+
+def test_meer_dan_duizend_rijen_worden_allemaal_gezien():
+    # Een gewone select kapt op 1.000 af. Met 1.500 rijen die allemaal aan de
+    # beurt zijn moet de grens uit de HELE partij komen (200), niet uit 1.000 (167).
+    db = _partij(1500)
+    _draai_inplan(db)
+    assert len(db.jobs) == 200
