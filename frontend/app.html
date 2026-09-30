@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=ffa4c9fddf"></script>
+<script src="/i18n.js?v=74125feaf1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -2295,7 +2295,38 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
         <div class="form-group">
           <label>Colour</label>
-          <input id="f-color" type="text" placeholder="e.g. blue">
+          <select id="f-color">
+            <option value="">Choose a colour</option>
+            <option value="Black">Black</option>
+            <option value="Grey">Grey</option>
+            <option value="White">White</option>
+            <option value="Cream">Cream</option>
+            <option value="Beige">Beige</option>
+            <option value="Apricot">Apricot</option>
+            <option value="Orange">Orange</option>
+            <option value="Coral">Coral</option>
+            <option value="Red">Red</option>
+            <option value="Burgundy">Burgundy</option>
+            <option value="Pink">Pink</option>
+            <option value="Rose">Rose</option>
+            <option value="Purple">Purple</option>
+            <option value="Lilac">Lilac</option>
+            <option value="Light blue">Light blue</option>
+            <option value="Blue">Blue</option>
+            <option value="Navy">Navy</option>
+            <option value="Turquoise">Turquoise</option>
+            <option value="Mint">Mint</option>
+            <option value="Green">Green</option>
+            <option value="Dark green">Dark green</option>
+            <option value="Khaki">Khaki</option>
+            <option value="Brown">Brown</option>
+            <option value="Mustard">Mustard</option>
+            <option value="Yellow">Yellow</option>
+            <option value="Silver">Silver</option>
+            <option value="Gold">Gold</option>
+            <option value="Various">Various</option>
+            <option value="Clear">Clear</option>
+          </select>
         </div>
       </div>
       <div class="form-row">
@@ -7024,6 +7055,23 @@ function updateConditionHint() {
 // The size list can never cover every brand's labelling. A stored size that
 // isn't in it used to leave the field blank, so re-saving the item silently
 // wiped the size. Keep the value by adding it to the list on the spot.
+// Kleur is een keuzemenu met dezelfde 29 kleuren als Vinted (zie backend/services/kleur.py).
+// Een bestaande waarde die niet in de lijst staat ("Sunburst", een typefout) mag bij
+// opslaan niet stil verdwijnen: dan komt hij als extra keuze bovenaan te staan. De
+// server zet herkenbare woorden ("grijze", "rood", "dark blue") zelf om naar de lijst.
+function setColorValue(v) {
+  const sel = document.getElementById('f-color');
+  sel.querySelectorAll('option[data-extra]').forEach(o => o.remove());
+  v = (v == null ? '' : String(v)).trim();
+  if (!v) { sel.value = ''; return; }
+  const hit = [...sel.options].find(o => o.value.toLowerCase() === v.toLowerCase());
+  if (hit) { sel.value = hit.value; return; }
+  const extra = document.createElement('option');
+  extra.value = v; extra.textContent = v; extra.setAttribute('data-extra', '1'); extra.setAttribute('translate', 'no');
+  sel.insertBefore(extra, sel.options[1] || null);
+  sel.value = v;
+}
+
 function setSizeValue(value) {
   const sel = document.getElementById('f-size');
   if (!sel) return;
@@ -7145,7 +7193,7 @@ function editItem(id) {
   document.getElementById('f-purchase').value = item.purchase_price != null ? item.purchase_price : '';
   document.getElementById('f-brand').value = item.brand || '';
   setSizeValue(item.size || '');
-  document.getElementById('f-color').value = item.color || '';
+  setColorValue(item.color);
   document.getElementById('f-material').value = item.material || '';
   resetEbayCategory(item.ebay_category_id || '');
   if (item.title) loadEbayCategorySuggestions(item.title, item.ebay_category_id || '');
@@ -8373,7 +8421,7 @@ function openImportCreate(candidateId) {
   document.getElementById('f-desc').value = c.description || '';
   if (c.price != null) document.getElementById('f-price').value = c.price;
   document.getElementById('f-brand').value = c.brand || '';
-  document.getElementById('f-color').value = c.color || '';
+  setColorValue(c.color);
   document.getElementById('f-material').value = c.material || '';
   if (c.size) setSizeValue(c.size);
   if (c.condition) {

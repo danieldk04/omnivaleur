@@ -1,4 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends
+from backend.services.kleur import canonieke_kleur
 from backend.database import (get_db, fetch_all, fetch_all_in, naast_de_lus,
                                execute_with_retry, eerste_rij)
 from backend.api.deps import get_current_user, require_active_subscription
@@ -1600,7 +1601,7 @@ def _item_data_from_candidate(cand: dict, body: dict | None = None,
                       or body.get("_default_condition") or "good"),
         "category": pick("category") or inferred.get("category"),
         "gender": pick("gender") or inferred.get("gender"),
-        "color": pick("color") or inferred.get("color"),
+        "color": (lambda c: canonieke_kleur(c) or c)(pick("color") or inferred.get("color")),
         "material": pick("material"),
         # Fields the user types in the same form but that used to be dropped here,
         # so an imported item silently lost its SKU, its Shopify "was" price and

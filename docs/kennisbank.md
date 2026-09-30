@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## een-kleurenlijst-voor-alle-kanalen
+
+*30-09-2026 — Kleur is sinds 30-09-2026 een keuzemenu met Vinteds 29 kleuren; server zet losse tekst om; bron van de lijst is backend/services/kleur.py KLEUREN*
+
+Daniel (30-09-2026): kleur typen leidt tot typefouten en woorden in de verkeerde taal (Nederlands/Engels) die een kanaal niet kent. Sinds nu: dashboard-keuzemenu `f-color` (29 kleuren, Engelse naam bewaard, Nederlands via nl.json), `canonieke_kleur()` in backend/services/kleur.py zet herkenbare woorden om bij items aanmaken, wijzigen en importeren. Onbekend blijft staan zoals geschreven; een bestaande onbekende waarde blijft als extra keuze in het menu (setColorValue in app.html), nooit stil weg.
+
+**Why:** de kleur "Turquoise" bij een grijsgroene trui kwam uit Daniels eigen Google Sheet, niet uit onze code; de koppeling neemt het kleurwoord uit de titel over en kijkt niet naar foto's.
+
+**How to apply:** nieuwe kleur toevoegen = KLEUREN aanpassen, menu in app.html, nl.json. tests/test_kleurenlijst_alle_kanalen.py en tests/kleurenlijst-vinted-test.js bewaken de drie kanten. Extensie-wijziging (`various` in shared.js) is nog niet uitgebracht; server dekt Marktplaats/2dehands al.
+
+---
+
 ## iphone-foto-mpo-werd-niet-verkleind
 
 *30-09-2026 — iPhone-foto's zijn MPO (n_frames>1); image_optimize hield ze voor animatie en liet 6 MB originelen staan, waardoor Marktplaats/2dehands op de foto-upload afhaakten*

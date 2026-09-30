@@ -78,7 +78,7 @@ COLOUR_NL = {
     "turquoise": "Blauw", "teal": "Blauw", "mint": "Groen", "green": "Groen",
     "light green": "Groen", "dark green": "Groen", "olive": "Groen",
     "khaki": "Groen", "brown": "Bruin", "cognac": "Bruin", "mustard": "Geel",
-    "yellow": "Geel", "gold": "Goud", "multi": "Multicolour", "clear": "Wit",
+    "yellow": "Geel", "gold": "Goud", "multi": "Multicolour", "various": "Meerkleurig", "clear": "Wit",
 }
 
 _ACCENTEN = str.maketrans("àáâäèéêëìíîïòóôöùúûü", "aaaaeeeeiiiioooouuuu")
@@ -171,3 +171,119 @@ def normaliseer_kleur(waarde) -> str:
             return KLEUR_BASIS.get(stam, "")
     stam = _kleur_stam(rauw)
     return KLEUR_BASIS.get(stam, "") if stam else ""
+
+
+# ---------------------------------------------------------------------------
+# DE ENE KLEURENLIJST VOOR ALLE KANALEN (30-09-2026)
+#
+# Dezelfde 29 kleuren als Vinted (opgehaald bij Vinted zelf, zie
+# tests/vinted-kleur-afwerking-test.js): Vinted heeft de strengste lijst, en
+# elke kleur daarvan is voor Marktplaats en 2dehands terug te brengen tot hun
+# grondvorm. Het keuzemenu in het dashboard bewaart de Engelse naam (eerste
+# kolom); de tweede is wat een Nederlandse klant ziet; de derde is Vinteds
+# eigen code, waarmee tests/kleurenlijst-alle-kanalen-test.js controleert dat de
+# extensie de kleur ook echt op zijn tegel legt.
+# ---------------------------------------------------------------------------
+KLEUREN = [
+    ("Black", "Zwart", "BLACK"), ("Grey", "Grijs", "GREY"), ("White", "Wit", "WHITE"),
+    ("Cream", "Crème", "CREAM"), ("Beige", "Beige", "BODY"),
+    ("Apricot", "Pasteloranje", "APRICOT"), ("Orange", "Oranje", "ORANGE"),
+    ("Coral", "Koraal", "CORAL"), ("Red", "Rood", "RED"),
+    ("Burgundy", "Wijnrood", "BURGUNDY"), ("Pink", "Roze", "PINK"),
+    ("Rose", "Lichtroze", "ROSE"), ("Purple", "Paars", "PURPLE"),
+    ("Lilac", "Lila", "LILAC"), ("Light blue", "Lichtblauw", "LIGHT-BLUE"),
+    ("Blue", "Blauw", "BLUE"), ("Navy", "Marineblauw", "NAVY"),
+    ("Turquoise", "Turquoise", "TURQUOISE"), ("Mint", "Mintgroen", "MINT"),
+    ("Green", "Groen", "GREEN"), ("Dark green", "Donkergroen", "DARK-GREEN"),
+    ("Khaki", "Khaki", "KHAKI"), ("Brown", "Bruin", "BROWN"),
+    ("Mustard", "Mosterdgeel", "MUSTARD"), ("Yellow", "Geel", "YELLOW"),
+    ("Silver", "Zilver", "SILVER"), ("Gold", "Goud", "GOLD"),
+    ("Various", "Meerkleurig", "VARIOUS"), ("Clear", "Transparant", "CLEAR"),
+]
+_CANON = {en.lower(): en for en, _, _ in KLEUREN}
+_CANON.update({nl.lower().translate(_ACCENTEN): en for en, nl, _ in KLEUREN})
+
+# Wat iemand schrijft en wat de lijst niet letterlijk kent, naar de kleur die hij
+# bedoelt. Alleen woorden met een duidelijke bedoeling: onbekend blijft onbekend.
+_CANON_EXTRA = {
+    "gray": "Grey", "lichtgrijs": "Grey", "donkergrijs": "Grey", "light grey": "Grey",
+    "dark grey": "Grey", "light gray": "Grey", "dark gray": "Grey",
+    "antraciet": "Grey", "charcoal": "Grey", "anthracite": "Grey",
+    "ecru": "Cream", "creme": "Cream", "ivoor": "Cream", "ivory": "Cream",
+    "offwhite": "Cream", "off white": "Cream", "gebroken wit": "Cream",
+    "taupe": "Beige", "camel": "Beige", "tan": "Beige", "sand": "Beige", "zand": "Beige",
+    "oranje": "Orange", "salmon": "Coral", "zalm": "Coral",
+    "bordeaux": "Burgundy", "wijn": "Burgundy", "wine": "Burgundy", "maroon": "Burgundy",
+    "fuchsia": "Pink", "oudroze": "Rose", "lichtroze": "Rose", "light pink": "Rose",
+    "lavendel": "Lilac", "lavender": "Lilac", "violet": "Purple", "paars": "Purple",
+    "lichtblauw": "Light blue", "lightblue": "Light blue", "baby blue": "Light blue",
+    "babyblauw": "Light blue", "sky blue": "Light blue", "hemelsblauw": "Light blue",
+    "marine": "Navy", "marineblauw": "Navy", "navy blue": "Navy", "dark blue": "Navy",
+    "donkerblauw": "Navy", "kobalt": "Blue", "cobalt": "Blue", "denim": "Blue",
+    "jeans": "Blue", "royal blue": "Blue", "petrol": "Turquoise", "teal": "Turquoise",
+    "aqua": "Turquoise", "turkoois": "Turquoise",
+    "mintgroen": "Mint", "donkergroen": "Dark green", "darkgreen": "Dark green",
+    "olijf": "Khaki", "olive": "Khaki", "kaki": "Khaki", "legergroen": "Khaki",
+    "army": "Khaki", "army green": "Khaki", "lichtgroen": "Green", "light green": "Green",
+    "cognac": "Brown", "chocolade": "Brown", "chocolate": "Brown", "koffie": "Brown",
+    "mosterd": "Mustard", "mosterdgeel": "Mustard", "okergeel": "Mustard", "oker": "Mustard",
+    "zilver": "Silver", "goud": "Gold", "brons": "Gold", "bronze": "Gold",
+    "multi": "Various", "multicolour": "Various", "multicolor": "Various",
+    "meerkleurig": "Various", "divers": "Various", "diverse": "Various",
+    "veelkleurig": "Various", "gemengd": "Various", "bont": "Various",
+    "transparant": "Clear", "doorzichtig": "Clear", "transparent": "Clear",
+}
+_BASIS_NAAR_CANON = {
+    "zwart": "Black", "wit": "White", "grijs": "Grey", "beige": "Beige", "bruin": "Brown",
+    "rood": "Red", "bordeaux": "Burgundy", "roze": "Pink", "oranje": "Orange",
+    "geel": "Yellow", "groen": "Green", "blauw": "Blue", "paars": "Purple",
+    "goud": "Gold", "zilver": "Silver", "multicolour": "Various",
+}
+
+
+def _een_kleur(woord: str) -> str:
+    """Eén geschreven kleur naar de naam uit KLEUREN, of "" als we hem niet kennen."""
+    w = re.sub(r"\s+", " ", str(woord or "").strip().lower().translate(_ACCENTEN))
+    if not w:
+        return ""
+    for tabel in (_CANON, _CANON_EXTRA):
+        if w in tabel:
+            return tabel[w]
+    if w.replace(" ", "") in _CANON_EXTRA:
+        return _CANON_EXTRA[w.replace(" ", "")]
+    # Verbogen of samengesteld ("grijze", "lichtblauw"): alleen voor één los woord.
+    # Met een spatie of scheidingsteken erin zou "beige, bruin" op "bruin" eindigen.
+    if not re.search(r"[^a-z]", w):
+        stam = _kleur_stam(w)
+        return _BASIS_NAAR_CANON.get(stam, "") if stam else ""
+    return ""
+
+
+def canonieke_kleur(waarde) -> str:
+    """De kleur zoals het keuzemenu hem bewaart ("Grey", "Light blue"), of "".
+
+    Herkent Nederlands, Engels, verbogen vormen ("grijze", "rode") en gewone
+    typefouten niet: een woord dat we niet kennen geeft "" terug, zodat de
+    aanroeper de tekst van de verkoper laat staan. Twee kleuren ("beige, bruin",
+    "blue/white") worden alleen omgezet als BEIDE herkend worden.
+    """
+    rauw = str(waarde or "").strip()
+    if not rauw:
+        return ""
+    heel = _een_kleur(rauw)
+    if heel:
+        return heel
+    delen = [d for d in re.split(r"\s*(?:,|/|&|\+|;|\ben\b|\band\b)\s*", rauw, flags=re.I) if d.strip()]
+    if len(delen) < 2:
+        # "Beige bruin": geen scheidingsteken, dan het eerste woord dat we kennen.
+        eerste = [_een_kleur(x) for x in rauw.split()]
+        eerste = [x for x in eerste if x]
+        return eerste[0] if eerste and len(rauw.split()) <= 3 else ""
+    uit = [_een_kleur(d) for d in delen]
+    if not all(uit):
+        return ""
+    gezien: list[str] = []
+    for k in uit:
+        if k not in gezien:
+            gezien.append(k)
+    return ", ".join(gezien[:2])

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+from backend.services.kleur import canonieke_kleur
 from backend.models import ItemCreate, ItemOut
 from backend.database import (get_db, execute_with_retry, fetch_all, eerste_rij,
                               kolom_bestaat, IN_BROK)
@@ -77,12 +78,24 @@ async def _exec(query):
     return await asyncio.to_thread(query.execute)
 
 
+def _kleur_op_de_lijst(data: dict) -> None:
+    """Zet een geschreven kleur ("grijze", "dark blue") om naar de vaste lijst.
+
+    Onbekende woorden blijven precies zoals de verkoper ze schreef.
+    """
+    if isinstance(data.get("color"), str):
+        netjes = canonieke_kleur(data["color"])
+        if netjes:
+            data["color"] = netjes
+
+
 @router.post("/", response_model=dict)
 def create_item(item: ItemCreate, user_id: str = Depends(get_current_user)):
     db = get_db()
     data = item.model_dump()
     data["id"] = str(uuid.uuid4())
     data["user_id"] = user_id
+    _kleur_op_de_lijst(data)
     if not data.get("sku"):
         data["sku"] = f"REV-{data['id'][:8].upper()}"
     # Geen 502 of 503 als foutcode: Cloudflare vervangt die antwoorden door zijn
@@ -681,6 +694,7 @@ def get_item(item_id: str, user_id: str = Depends(get_current_user)):
 async def update_item(item_id: str, updates: dict, user_id: str = Depends(get_current_user)):
     db = get_db()
     clean = _strip_missing(updates)
+    _kleur_op_de_lijst(clean)
 
     # A price change has to reach the marketplaces, not just this row. Without
     # this the dashboard showed the new price while every channel kept selling

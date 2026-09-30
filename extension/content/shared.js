@@ -821,7 +821,7 @@ window.CL = (() => {
     turquoise: "Blauw", teal: "Blauw", mint: "Groen", green: "Groen",
     "light green": "Groen", "dark green": "Groen", olive: "Groen",
     khaki: "Groen", brown: "Bruin", cognac: "Bruin", mustard: "Geel",
-    yellow: "Geel", gold: "Goud", multi: "Multicolour", clear: "Wit",
+    yellow: "Geel", gold: "Goud", multi: "Multicolour", various: "Meerkleurig", clear: "Wit",
   };
 
   // ── VERBOGEN EN SAMENGESTELDE KLEURNAMEN ──────────────────────────────────
