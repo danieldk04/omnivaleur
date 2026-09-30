@@ -14942,3 +14942,18 @@ dag haalde er hooguit ~240 binnen; de rest zou verlopen (eerste vanaf 25-10).
   zoekertje nog te verlengen is, en welke extensieversie Egbert draait (onder
   1.0.358 leest verlengen maar 200 zoekertjes). Meting staat gepland op 05-10-2026
   (taak egbert-verlengingen-meten).
+
+## 30-09-2026: Onboarding nieuwe klanten (ochtendronde, gedraaid 18:20)
+
+Gemeten 18:19: 4 accounts in hun eerste week, 2 nieuw. Web Store levert 1.0.363, repo 1.0.364.
+- a4fc5340 (plmdemonnink@planet.nl): aangemeld 18:01, 18 minuten later nog geen extensie,
+  nul artikelen. Nooit contact, niet in de agenda. Welkomstmailtje klaargezet voor Daniel.
+- aa093a0a (info@revaleur.com): dat is Daniels eigen postbus (Reply-To en alarmadres), dus
+  een eigen account, geen klant. Extensie 1.0.363, nul artikelen. Geen mailtje.
+- 82b13998 (Anneloes): ongewijzigd, extensie sinds 29-09 17:24 niet gezien. Geen mailtje.
+- 1ba42900 (Vagif): draait nu 1.0.363, dus de Bestemd voor-reparatie van 1.0.361 is bij hem.
+  Zijn twee op "intended for" geweigerde ringen (items ee3e481d, ad433e1b; staan actief op
+  Marktplaats) opnieuw klaargezet voor 2dehands via publish_to_platforms. Voor: listing
+  delisted, geen open opdracht. Na: pending, opdrachten beb1db10 en 92d9698b. De Vinted
+  kleurfouten van 25-09 zijn achterhaald (die ketting staat actief op Vinted). Vier andere
+  wachtende opdrachten van hem staan gepland tussen 16:52 en 17:58 UTC (rustig tempo), niet vast.
