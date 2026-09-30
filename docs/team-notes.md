@@ -14897,5 +14897,6 @@ verplicht. Een leeg veld blokkeert dus nooit; een verkeerde kleur misleidt wel.
 - Proef tests/mp-kleurlijsten-alle-rubrieken-test.js faalt op 1.0.362 en slaagt nu.
 - Nog uit te brengen: extensie 1.0.363 (dist/omnivaleur-extension-1.0.363.zip) naar de
   Web Store. Tot dan draaien klanten het oude gedrag; niets blokkeert.
+- 2dehands.be gemeten met dezelfde methode: identieke structuur (165 rubrieken met kleurveld, 0 verplicht, 52 van 53 lijsten identiek; de 53e heet daar "Crème ou Beige").
 - Gemeten kleurlijsten hebben eigen namen: "Multi" (mobiele telefoonhoesjes), "Crème of
   Beige", "Zilver of Grijs", "Roze of Coral", Antraciet/Lichtgrijs bij dozen en tassen.

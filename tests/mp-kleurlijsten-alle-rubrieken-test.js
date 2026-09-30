@@ -114,7 +114,7 @@ const MAG_OOK = {
   Wit: ["Instelbaar wit", "Koel wit", "Neutraal wit", "Warm wit", "Daglicht"],
   Grijs: ["Zilver of Grijs", "Lichtgrijs", "Antraciet"],
   Zilver: ["Zilver of Grijs", "Grijs"],
-  Beige: ["Crème of Beige", "Crème", " Ivoor of Crème"],
+  Beige: ["Crème of Beige", "Crème ou Beige", "Crème", " Ivoor of Crème"],
   Roze: ["Roze of Coral", "Rose Goud"],
   Bordeaux: ["Rood"],
   Meerkleurig: ["Multi", "Multicolour"],

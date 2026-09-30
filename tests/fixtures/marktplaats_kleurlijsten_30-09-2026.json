@@ -1,5 +1,5 @@
 {
- "bron": "Marktplaats-plaatsformulier (ingelogd), 2087 rubrieken uit /plaats/api/v1/category-aggregate, 30-09-2026. Kleurveld bestaat in 165 rubrieken, verplicht in 0.",
+ "bron": "Marktplaats-plaatsformulier (ingelogd), 2087 rubrieken uit /plaats/api/v1/category-aggregate, 30-09-2026. Kleurveld bestaat in 165 rubrieken, verplicht in 0. Zelfde meting op 2dehands.be: 2087 rubrieken, 165 met kleurveld, 0 verplicht, 53 lijsten waarvan 52 identiek aan Marktplaats; de 53e heet daar 'Crème ou Beige'.",
  "rubriekenGetest": 2087,
  "rubriekenMetKleurveld": 165,
  "verplichtAantal": 0,
@@ -863,6 +863,18 @@
    ],
    "mandatory": false,
    "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Bruin",
+    "Crème ou Beige",
+    "Grijs",
+    "Wit",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1,
+   "alleenOp": "2dehands.be (Frans: Crème ou Beige)"
   }
  ]
 }
