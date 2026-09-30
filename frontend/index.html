@@ -71,12 +71,10 @@
     "Combined inbox for unread messages and open bids",
     "Margin calculator including per-platform fees"
   ],
-  "offers": {
-    "@type": "Offer",
-    "price": "19.99",
-    "priceCurrency": "EUR",
-    "description": "7-day free trial, no credit card required, then €19.99/month"
-  }
+  "offers": [
+    {"@type": "Offer", "name": "Omnivaleur Light", "price": "9.99", "priceCurrency": "EUR", "description": "7-day free trial, no credit card required, then €9.99/month including VAT, up to 20 active items"},
+    {"@type": "Offer", "name": "Omnivaleur Pro", "price": "19.99", "priceCurrency": "EUR", "description": "7-day free trial, no credit card required, then €19.99/month excluding VAT"}
+  ]
 }
 </script>
 <link rel="icon" type="image/png" href="logo.png">
@@ -981,16 +979,34 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
 
 <!-- PRICING -->
 <div id="pricing" style="background:#f8faff;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:80px 40px">
-  <div style="max-width:560px;margin:0 auto;text-align:center">
+  <div style="max-width:980px;margin:0 auto;text-align:center">
     <div class="section-label" style="text-align:center">Pricing</div>
-    <div class="section-title" style="text-align:center;margin-bottom:8px">One plan. Everything included.</div>
+    <div class="section-title" style="text-align:center;margin-bottom:8px">Two plans. Everything included.</div>
     <div style="font-size:16px;color:var(--muted);margin-bottom:48px">No hidden costs. Cancel anytime.</div>
 
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:32px;align-items:stretch;margin-top:8px">
+    <div class="reveal pricing-float" style="background:#fff;border:2px solid var(--border);border-radius:20px;padding:40px;position:relative;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(37,99,235,.06)">
+      <div style="position:absolute;top:-15px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5px 18px;border-radius:999px;white-space:nowrap">For private sellers</div>
+      <div style="font-size:13px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Light</div>
+      <div style="font-size:56px;font-weight:900;line-height:1;letter-spacing:-2px;margin-bottom:4px">€9<span style="font-size:28px;font-weight:700">.99</span><span style="font-size:18px;font-weight:500;color:var(--muted)">/mo</span> <span style="font-size:13px;font-weight:500;letter-spacing:0;color:var(--muted)">incl. VAT</span></div>
+      <div style="font-size:14px;color:var(--muted);margin-bottom:32px">7-day free trial · No credit card required</div>
+      <ul style="list-style:none;padding:0;margin:0 0 32px;flex:1;text-align:left;display:flex;flex-direction:column;gap:12px">
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Up to 20 active items</li>
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Marktplaats, 2dehands, Vinted, eBay &amp; Shopify</li>
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> A separate selling price per platform, per item</li>
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Import your existing listings</li>
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Auto-delist when sold</li>
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Auto-relist every 27 days + Vinted refresh</li>
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Listings auto-translated to Dutch</li>
+      </ul>
+      <a href="/register" class="btn btn-primary" style="width:100%;justify-content:center;font-size:16px;padding:16px;border-radius:12px;box-shadow:0 4px 20px rgba(37,99,235,.3)">Start 7-day free trial →</a>
+      <div style="font-size:12px;color:var(--muted);margin-top:12px">Then €9.99/month incl. VAT · Cancel anytime<br>Pay via iDEAL, Bancontact or credit card</div>
+    </div>
     <div class="reveal pricing-float" style="background:#fff;border:2px solid var(--blue);border-radius:20px;padding:40px;position:relative;box-shadow:0 8px 40px rgba(37,99,235,.1)">
-      <div style="position:absolute;top:-15px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--blue),var(--mint));color:#fff;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5px 18px;border-radius:999px;white-space:nowrap">Most popular</div>
+      <div style="position:absolute;top:-15px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--blue),var(--mint));color:#fff;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5px 18px;border-radius:999px;white-space:nowrap">For businesses</div>
 
       <div style="font-size:13px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Pro</div>
-      <div style="font-size:56px;font-weight:900;line-height:1;letter-spacing:-2px;margin-bottom:4px">€19<span style="font-size:28px;font-weight:700">.99</span><span style="font-size:18px;font-weight:500;color:var(--muted)">/mo</span></div>
+      <div style="font-size:56px;font-weight:900;line-height:1;letter-spacing:-2px;margin-bottom:4px">€19<span style="font-size:28px;font-weight:700">.99</span><span style="font-size:18px;font-weight:500;color:var(--muted)">/mo</span> <span style="font-size:13px;font-weight:500;letter-spacing:0;color:var(--muted)">excl. VAT</span></div>
       <div style="font-size:14px;color:var(--muted);margin-bottom:32px">7-day free trial · No credit card required</div>
 
       <ul style="list-style:none;padding:0;margin:0 0 32px;text-align:left;display:flex;flex-direction:column;gap:12px">
@@ -1006,10 +1022,11 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
       </ul>
 
       <a href="/register" class="btn btn-primary" style="width:100%;justify-content:center;font-size:16px;padding:16px;border-radius:12px;box-shadow:0 4px 20px rgba(37,99,235,.3)">Start 7-day free trial →</a>
-      <div style="font-size:12px;color:var(--muted);margin-top:12px">Then €19.99/month · Cancel anytime<br>Pay via iDEAL, Bancontact or credit card</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:12px">Then €19.99/month excl. VAT · Cancel anytime<br>Pay via iDEAL, Bancontact or credit card</div>
       <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:16px;border-top:1px solid var(--border);padding-top:14px;text-align:left">
         <b style="color:var(--text)">How the connections work.</b> eBay and Shopify connect through their official APIs. Marktplaats, 2dehands and Vinted have no public seller API, so publishing there runs through the free Omnivaleur Chrome extension on your own logged-in session — which means those platforms need your desktop browser open. Everything else works from any device, phone included.
       </div>
+    </div>
     </div>
   </div>
 </div>

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
 from backend.database import (get_db, fetch_all, fetch_all_in, update_in, naast_de_lus,
                               execute_with_retry, eerste_rij)
+from backend.services.light import neem_plaatsing_terug_boven_limiet
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.api.imports import _backfill_item_from_candidate
 from backend.services.crosslist import handle_item_sold, BEWIJS_KANAAL_ZEGT_VERKOCHT
@@ -2445,6 +2446,9 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
         _zet_verzending_van_marktplaats(db, user_id, kandidaat)
         _wijk_uit_naar_gratis_rubriek(db, user_id, kandidaat)
         if _weiger_bekende_betaalde_rubriek(db, user_id, kandidaat):
+            continue
+        # Omnivaleur Light: de laatste zeef voor elk pad dat een 'create' klaarzet.
+        if neem_plaatsing_terug_boven_limiet(db, user_id, kandidaat):
             continue
         uit = _zet_taal_goed(db, [kandidaat])
         if uit:

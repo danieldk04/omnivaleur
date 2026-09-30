@@ -23,6 +23,10 @@ from backend.services.referral_rewards import (
 
 logger = logging.getLogger(__name__)
 
+from backend.services.light import (  # noqa: E402
+    LIGHT_MAX_ARTIKELEN, PLAN_LIGHT, PLAN_PRO, actieve_artikelen, plan_uit_stripe,
+)
+
 router = APIRouter(prefix="/api/billing", tags=["billing"])
 
 stripe.api_key = settings.stripe_secret_key
@@ -157,9 +161,21 @@ async def billing_status(user=Depends(get_current_user_full)):
                     invalidate_access_cache(user_id)
                 except Exception:
                     logger.exception("Kon status payment_processing niet opslaan voor %s", user_id)
+        plan = sub.get("plan") or PLAN_PRO
+        actieve_items = None
+        if plan == PLAN_LIGHT:
+            try:
+                actieve_items = len(await asyncio.to_thread(actieve_artikelen, get_db(), user_id))
+            except Exception:
+                logger.exception("Kon de actieve artikelen van %s niet tellen", user_id)
         return {
             "status": status,
-            "plan": sub.get("plan", "pro"),
+            "plan": plan,
+            # Het dashboard toont de keuze tussen Light en Pro alleen als Light
+            # echt kan worden afgerekend, en de teller alleen bij een Light-klant.
+            "light_available": bool(settings.stripe_price_id_light),
+            "light_max_items": LIGHT_MAX_ARTIKELEN,
+            "active_items": actieve_items,
             "trial_ends_at": sub.get("trial_ends_at"),
             "current_period_end": sub.get("current_period_end"),
             "stripe_subscription_id": sub.get("stripe_subscription_id"),
@@ -243,10 +259,21 @@ def _maak_afrekensessie(session_args: dict):
         return stripe.checkout.Session.create(**session_args)
 
 
+def _prijs_voor_plan(plan: str | None) -> tuple[str, str]:
+    """(plan, Stripe-prijsnummer). Onbekend of niet ingesteld Light geeft een fout,
+    nooit stilletjes Pro: wie Light koos mag niet €19,99 betalen."""
+    if (plan or "").lower() == PLAN_LIGHT:
+        if not settings.stripe_price_id_light:
+            raise HTTPException(status_code=503, detail="Omnivaleur Light is not available yet")
+        return PLAN_LIGHT, settings.stripe_price_id_light
+    return PLAN_PRO, settings.stripe_price_id
+
+
 @router.post("/checkout")
-def create_checkout(user=Depends(get_current_user_full)):
+def create_checkout(user=Depends(get_current_user_full), body: dict = None):
     if not settings.stripe_secret_key or not settings.stripe_price_id:
         raise HTTPException(status_code=503, detail="Stripe is not configured")
+    plan, prijs_id = _prijs_voor_plan((body or {}).get("plan"))
 
     user_id = user.id
     db = get_db()
@@ -295,7 +322,7 @@ def create_checkout(user=Depends(get_current_user_full)):
     # meegeven zou hem verdubbelen voor wie halverwege upgradet. Stripe wil een
     # trial_end van minimaal 48 uur vooruit — zit iemand daaronder, dan start
     # het abonnement meteen.
-    subscription_data = {"metadata": {"user_id": user_id}}
+    subscription_data = {"metadata": {"user_id": user_id, "plan": plan}}
     trial_end = _trial_end_ts(sub.get("trial_ends_at"))
     if trial_end:
         subscription_data["trial_end"] = trial_end
@@ -319,12 +346,12 @@ def create_checkout(user=Depends(get_current_user_full)):
 
         session_args = dict(
             customer=customer_id,
-            line_items=[{"price": settings.stripe_price_id, "quantity": 1}],
+            line_items=[{"price": prijs_id, "quantity": 1}],
             mode="subscription",
             success_url=f"{settings.app_url}/app.html?billing=success",
             cancel_url=f"{settings.app_url}/app.html?billing=cancel",
             subscription_data=subscription_data,
-            metadata={"user_id": user_id},
+            metadata={"user_id": user_id, "plan": plan},
         )
         promo = find_active_promo()
         # Is deze klant door een vriend binnengebracht, dan is de eerste maand
@@ -408,6 +435,44 @@ async def list_invoices(user_id: str = Depends(get_current_user)):
             pass
 
     return {"invoices": invoice_list, "payment_method": payment_method}
+
+
+@router.post("/upgrade")
+def upgrade_to_pro(user=Depends(get_current_user_full)):
+    """Van Light naar Pro op hetzelfde abonnement, zonder tweede abonnement.
+
+    Lukt het wisselen niet (Stripe weigert, geen lopend abonnement), dan gaat de
+    klant naar het klantportaal in plaats van een fout te zien.
+    """
+    if not settings.stripe_secret_key or not settings.stripe_price_id:
+        raise HTTPException(status_code=503, detail="Stripe is not configured")
+    sub = _get_or_create_subscription(user.id)
+    sub_id = sub.get("stripe_subscription_id")
+    if not sub_id:
+        raise HTTPException(status_code=400, detail="No active subscription found")
+    try:
+        stripe_sub = stripe.Subscription.retrieve(sub_id)
+        regels = (stripe_sub.get("items") or {}).get("data") or []
+        if not regels:
+            raise RuntimeError("abonnement zonder regels")
+        stripe.Subscription.modify(
+            sub_id,
+            items=[{"id": regels[0]["id"], "price": settings.stripe_price_id}],
+            proration_behavior="create_prorations",
+        )
+        get_db().table("subscriptions").update({"plan": PLAN_PRO, "updated_at": _now()}).eq("user_id", user.id).execute()
+        invalidate_access_cache(user.id)
+        return {"upgraded": True}
+    except Exception:
+        logger.exception("Upgrade naar Pro mislukt voor %s, door naar het klantportaal", user.id)
+        try:
+            portal = stripe.billing_portal.Session.create(
+                customer=sub.get("stripe_customer_id"),
+                return_url=f"{settings.app_url}/app.html",
+            )
+            return {"upgraded": False, "url": portal.url if not isinstance(portal, dict) else portal.get("url")}
+        except Exception:
+            raise HTTPException(status_code=400, detail="Could not switch plans. Please use Manage subscription.")
 
 
 @router.post("/portal")
@@ -824,6 +889,7 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
                 "stripe_customer_id": customer_id,
                 "stripe_subscription_id": stripe_sub_id,
                 "status": stripe_sub["status"],
+                "plan": plan_uit_stripe(stripe_sub),
                 "current_period_end": _ts(_period_end(stripe_sub)),
                 "updated_at": _now(),
             }).eq("user_id", user_id).execute()))
@@ -849,6 +915,7 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
         if result.data:
             (await naast_de_lus(lambda: db.table("subscriptions").update({
                 "status": nieuwe_status,
+                "plan": plan_uit_stripe(stripe_sub),
                 "current_period_end": _ts(_period_end(stripe_sub)),
                 "updated_at": _now(),
             }).eq("stripe_subscription_id", stripe_sub_id).execute()))
@@ -865,6 +932,7 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
             try:
                 s = stripe.Subscription.retrieve(stripe_sub_id)
                 velden = {"status": s["status"], "updated_at": _now(),
+                          "plan": plan_uit_stripe(s),
                           "current_period_end": _ts(_period_end(s))}
             except Exception:
                 logger.exception("Kon abonnement niet ophalen na geslaagde betaling %s", stripe_sub_id)

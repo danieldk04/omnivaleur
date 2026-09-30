@@ -15008,3 +15008,29 @@ ronde van 16:05 niets nieuws in onze code. Niets hangt op 'claimed'. Geen repara
 - Open: de klant krijgt de ruwe formuliertekst ("Dit veld is verplicht",
   textAttribute[...]) in plaats van een zin die naar Preferences wijst. Een serveruitleg
   in fail_job voor dit geval zou helpen; niet gebouwd omdat de code doet wat bedoeld is.
+
+## 30-09-2026: Omnivaleur Light naast Pro (nieuw goedkoper plan voor particulieren)
+
+Besluit Daniel: een tweede abonnement voor particulieren die net meer dan af en toe
+verkopen en geen 20 euro willen betalen. Pro (19,99 excl. btw) blijft voor bedrijven.
+- Light: 9,99 per maand INCLUSIEF btw, tot 20 actieve artikelen, alle kanalen, 7 dagen
+  proef zoals altijd. Reden voor incl.: consumenten moeten de echte prijs zien, en
+  excl. zou 12,09 worden bij het afrekenen, boven de 8 tot 9 euro waar deze groep zit
+  (Flyp, Closo, FLUF). Netto ~8,26 voor Stripe-kosten.
+- Actief artikel = artikel met een advertentie die draait of klaarstaat (active, hidden,
+  pending, relisting). Verkocht of weggehaald maakt ruimte. De limiet geldt voor NIEUWE
+  artikelen die live gaan; wat al online staat blijft onderhouden (verversen, verlengen,
+  afmelden). Code: backend/services/light.py. Poorten op drie plekken zodat het geen
+  lek-pad wordt: publish_to_platforms (melding aan de klant), de laatste zeef in
+  get_pending_jobs (elk pad dat een create klaarzet), en beide importpaden
+  (create-item en bulk-import; wat niet past blijft pending).
+- Het plan staat in subscriptions.plan ('pro' of 'light') en komt uit de Stripe-prijs via
+  de webhook (checkout.session.completed, customer.subscription.updated, invoice.paid).
+  Staat STRIPE_PRICE_ID_LIGHT niet in Railway, dan is Light onzichtbaar en heeft niemand
+  een limiet. Dat is de aan/uit-schakelaar.
+- Upgrade naar Pro: POST /api/billing/upgrade wisselt de prijs op hetzelfde abonnement;
+  lukt dat niet, dan gaat de klant naar het klantportaal.
+- Open, niet gemeten: of Stripe een wissel van een inclusieve naar een exclusieve prijs op
+  één abonnement goed afhandelt (niet tegen echt Stripe geprobeerd); wat een Light-klant
+  ons aan serverwerk en support kost; of particulieren er echt voor betalen. Bewijs
+  vooraf: de ~20 afhakers die wel inlazen mailen met een betaallink.

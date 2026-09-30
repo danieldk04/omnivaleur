@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 30-09-2026 (2dehands verlengt bij een grote partij tot 200 per dag in plaats van vast 40; wie liet scannen maar na een dag niets importeerde krijgt één herinneringsmail; foto's die een klant later op Vinted vernieuwt komen niet vanzelf over, advies toegevoegd; antwoord op de vaak gestelde vraag naar een koppeling met bol toegevoegd; een bedrag als "1.360" werd 1,36 in de inkoop- en verkoopprijs, gerepareerd; oude foto's op Marktplaats bij een voorraad die uit meerdere kanalen is ingelezen, opgeruimd bij De Juiste Toon; Vinted herkende "zilveren" en andere verbogen kleuren niet, gerepareerd in 1.0.358; uitbreiding logde zichzelf uit bij een databasestoring, gerepareerd; eerder: automatisch herplaatsen stond 20-09 tot 28-09 stil door een fout bij ons, loopt weer; daarvoor: verzendkost-aanpassingen op 2dehands gaan achter nieuwe plaatsingen)_
+_Laatst bijgewerkt: 30-09-2026 (Omnivaleur Light naast Pro: 9,99 incl. btw tot 20 actieve artikelen; 2dehands verlengt bij een grote partij tot 200 per dag in plaats van vast 40; wie liet scannen maar na een dag niets importeerde krijgt één herinneringsmail; foto's die een klant later op Vinted vernieuwt komen niet vanzelf over, advies toegevoegd; antwoord op de vaak gestelde vraag naar een koppeling met bol toegevoegd; een bedrag als "1.360" werd 1,36 in de inkoop- en verkoopprijs, gerepareerd; oude foto's op Marktplaats bij een voorraad die uit meerdere kanalen is ingelezen, opgeruimd bij De Juiste Toon; Vinted herkende "zilveren" en andere verbogen kleuren niet, gerepareerd in 1.0.358; uitbreiding logde zichzelf uit bij een databasestoring, gerepareerd; eerder: automatisch herplaatsen stond 20-09 tot 28-09 stil door een fout bij ons, loopt weer; daarvoor: verzendkost-aanpassingen op 2dehands gaan achter nieuwe plaatsingen)_
 
 ---
 
@@ -86,7 +86,15 @@ Bestaande klant versus lead:
 
 Prijs en proef:
 
-- 19,99 euro per maand, alle marketplaces inbegrepen.
+- Twee abonnementen, alle marketplaces inbegrepen in allebei (sinds 30-09-2026):
+  Omnivaleur Light, 9,99 euro per maand inclusief btw, tot 20 actieve artikelen,
+  bedoeld voor particulieren. Omnivaleur Pro, 19,99 euro per maand exclusief btw,
+  geen limiet, bedoeld voor bedrijven.
+- Een actief artikel is een artikel dat ergens online staat of klaarstaat. Verkocht
+  of weggehaald telt niet meer mee. Wie op de 20 zit kan geen nieuw artikel meer
+  plaatsen tot er ruimte is, of stapt over op Pro via Account, knop Upgrade to Pro.
+  Wat al online staat blijft gewoon onderhouden.
+- Kiezen kan in het dashboard onder Account (Prijs) zodra de proef loopt of afloopt.
 - Eerste 7 dagen gratis, daarna maandelijks opzegbaar.
 - Na de proef zijn er nog 2 dagen respijt, daarna gaat publiceren op slot.
   Inloggen, je overzicht bekijken en betalen blijft altijd werken.
@@ -491,9 +499,11 @@ Daniel
 
 Hoi <voornaam>,
 
-Omnivaleur kost 19,99 euro per maand, met alle ondersteunde marketplaces
-inbegrepen: Marktplaats, 2dehands, Vinted, eBay en Shopify. De eerste 7 dagen
-zijn gratis en daarna is het maandelijks opzegbaar.
+Omnivaleur heeft twee abonnementen, allebei met alle ondersteunde marketplaces:
+Marktplaats, 2dehands, Vinted, eBay en Shopify. Light is 9,99 euro per maand
+inclusief btw en is voor tot 20 actieve artikelen. Pro is 19,99 euro per maand
+exclusief btw en heeft geen limiet. De eerste 7 dagen zijn gratis en daarna is het
+maandelijks opzegbaar.
 
 Wil je het eerst zien, hier staat een korte demo: https://omnivaleur.com/mp-video
 

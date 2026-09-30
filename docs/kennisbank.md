@@ -17,6 +17,35 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## omnivaleur-light-plan
+
+*30-09-2026 — "Omnivaleur Light (30-09-2026): 9,99 incl. btw, tot 20 actieve artikelen; plan in subscriptions.plan uit de Stripe-prijs; aan/uit met STRIPE_PRICE_ID_LIGHT in Railway; limiet op drie poorten"*
+
+Daniel besloot op 30-09-2026 tot een tweede abonnement naast Pro: Omnivaleur Light,
+EUR 9,99 per maand INCLUSIEF btw, tot 20 actieve artikelen, voor particulieren. Pro
+blijft 19,99 EXCLUSIEF btw voor bedrijven.
+
+**Why:** markt onder de 20 euro rekent 8 tot 9 (Flyp, Closo, FLUF), en van ~38 accounts
+met minder dan 30 ingelezen artikelen betaalde niemand (27-09). Incl. btw omdat een
+consument de echte prijs moet zien; excl. was 12,09 geworden bij het afrekenen.
+
+**How to apply:**
+- Code: `backend/services/light.py`. Actief artikel = item met een listing in active,
+  hidden, pending of relisting. Limiet geldt voor NIEUWE artikelen, bestaand werk loopt door.
+- Poorten: `publish_to_platforms` (crosslist.py), laatste zeef in `get_pending_jobs`
+  (jobs.py, dekt elk pad dat een create klaarzet, zie "filter-op-een-publicatiepad-is-geen-filter"),
+  en `create-item` plus `bulk-import` in imports.py. Een nieuwe plek die artikelen live zet
+  krijgt dezelfde poort of de limiet lekt.
+- Plan komt uit de Stripe-prijs via de webhook (`plan_uit_stripe`). `STRIPE_PRICE_ID_LIGHT`
+  leeg in Railway = Light onzichtbaar en niemand beperkt. Bij een telfout laat de poort door.
+- Niet gemeten tegen echt Stripe: wisselen van inclusieve naar exclusieve prijs op één
+  abonnement (`/api/billing/upgrade`, valt terug op het klantportaal).
+- Klantteksten staan in app.html, index.html, nl.html, terms.html, ai-info.html,
+  mp-video.html, klantenservice-brein.md en nl.json. Wijzigt de prijs, loop ze allemaal na.
+Zie ook "prijs-naar-aantal-advertenties", "trechter-aanmelding-tot-betalend-27-09".
+
+---
+
 ## frame-removed-na-klik-is-geen-mislukking
 
 *30-09-2026 — "Frame with ID 0 was removed" uit executeScript na een klik die de pagina doorstuurt betekent dat de klik werkte; laat de nameting beslissen*

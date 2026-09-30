@@ -13,7 +13,7 @@ omdat onze eigen telling haperde.
 import logging
 
 from backend.config import settings
-from backend.database import fetch_all
+from backend.database import fetch_all, fetch_all_in
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ LEVENDE_STATUS = ["active", "hidden", "pending", "relisting"]
 ONLINE_STATUS = ["active", "hidden", "relisting"]
 
 LIGHT_LIMIET_MELDING = (
-    f"Omnivaleur Light includes up to {LIGHT_MAX_ARTIKELEN} active items and you have reached that. "
+    "Omnivaleur Light includes up to 20 active items and you have reached that. "
     "Mark something as sold, or upgrade to Pro for unlimited items."
 )
 
@@ -69,16 +69,23 @@ def is_light(user_id: str) -> bool:
 
 
 def actieve_artikelen(db, user_id: str, statussen=None) -> set[str]:
-    """De id's van de artikelen van deze gebruiker met een draaiende advertentie."""
+    """De id's van de artikelen van deze gebruiker met een draaiende advertentie.
+
+    Bewust twee lichte vragen en geen join. De eerste versie vroeg het in één
+    keer met `items!inner(user_id)` en liep bij ELKE klant vast op de
+    statement-timeout van de database (4 tot 20 seconden, ook bij een account
+    zonder artikelen; gemeten 30-09-2026). Eerst de artikelen van de gebruiker
+    (index op user_id), dan de advertenties per brok artikelen.
+    """
     statussen = statussen or LEVENDE_STATUS
-
-    def bouw():
-        return (db.table("listings")
-                .select("id,item_id,items!inner(user_id)")
-                .eq("items.user_id", user_id)
-                .in_("status", statussen))
-
-    return {r["item_id"] for r in fetch_all(bouw, page_size=1000) if r.get("item_id")}
+    ids = [r["id"] for r in fetch_all(
+        lambda: db.table("items").select("id").eq("user_id", user_id), page_size=1000)]
+    if not ids:
+        return set()
+    rijen = fetch_all_in(
+        lambda: db.table("listings").select("id,item_id").in_("status", statussen),
+        "item_id", ids, page_size=1000)
+    return {r["item_id"] for r in rijen if r.get("item_id")}
 
 
 def ruimte_over(db, user_id: str) -> int | None:

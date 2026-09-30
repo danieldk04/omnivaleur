@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 import uuid
 
 from backend.database import execute_with_retry, fetch_all, get_db, naast_de_lus, eerste_rij
+from backend.services.light import publicatie_geblokkeerd
 from backend.platforms import get_platform
 
 _ENGLISH_PLATFORMS = {"vinted", "shopify", "etsy"}
@@ -1200,6 +1201,12 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     item = (item_resp.data or [None])[0]
     if not item:
         raise CrosslistValidationError({"item": ["This item does not exist (or is not yours)."]})
+
+    # Omnivaleur Light: tot 20 actieve artikelen. Een artikel dat al ergens draait
+    # telt al mee en mag naar een extra kanaal. Zie services/light.py.
+    light_reden = await naast_de_lus(lambda: publicatie_geblokkeerd(db, user_id, item_id))
+    if light_reden:
+        return [{"platform": p, "status": "blocked", "error": light_reden} for p in platforms]
 
     # Etsy isn't built yet (shown only as "Coming soon"). Refuse it explicitly so a
     # stray request can never half-publish or fall through to the extension path.

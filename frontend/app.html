@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=74125feaf1"></script>
+<script src="/i18n.js?v=c58bd1f967"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -850,6 +850,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <div style="font-weight:700;font-size:14px;color:#065f46" id="paywall-promo-title"></div>
         <div style="font-size:12px;color:#047857;margin-top:3px" id="paywall-promo-detail"></div>
       </div>
+      <div id="paywall-light" style="display:none;font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px">Only selling a few items? <a href="#" onclick="kiesPlan('light');startCheckout();return false" style="color:#2563eb;font-weight:700">Omnivaleur Light</a> is €9.99 per month incl. VAT for up to 20 items.</div>
       <button onclick="startCheckout()" style="width:100%;padding:14px;background:var(--grad);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px" id="paywall-cta">Start 7-day free trial →</button>
       <!-- Wie op slot staat kan nergens meer heen in de app, ook niet naar het
            verwijsscherm: dit venster ligt eroverheen. Juist deze groep kan met
@@ -1996,7 +1997,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <div id="billing-active-card" style="display:none;padding:20px 22px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
               <div>
-                <div style="font-size:15px;font-weight:700">Omnivaleur Pro</div>
+                <div id="billing-plan-name" style="font-size:15px;font-weight:700">Omnivaleur Pro</div>
                 <div id="billing-active-detail" style="font-size:13px;color:var(--muted);margin-top:2px"></div>
               </div>
               <span id="billing-status-badge" class="status-pill active">Active</span>
@@ -2004,11 +2005,20 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
               <div style="background:#f8faff;border:1px solid #e0e7ff;border-radius:10px;padding:14px 16px">
                 <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">Price</div>
-                <div style="font-weight:700;font-size:14px">€19.99 / month</div>
+                <div id="billing-price-value" style="font-weight:700;font-size:14px">€19.99 / month excl. VAT</div>
               </div>
               <div style="background:#f8faff;border:1px solid #e0e7ff;border-radius:10px;padding:14px 16px">
                 <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">Next billing date</div>
                 <div style="font-weight:700;font-size:14px" id="billing-next-date">—</div>
+              </div>
+            </div>
+            <!-- Alleen bij Light: hoeveel van de 20 is er in gebruik, en de weg naar Pro. -->
+            <div id="billing-light-box" style="display:none;margin-bottom:16px;padding:14px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:700;color:#1e40af"><span>Active items</span><span id="billing-light-count">0 / 20</span></div>
+              <div style="height:8px;background:#dbeafe;border-radius:99px;margin:8px 0 10px;overflow:hidden"><div id="billing-light-bar" style="height:100%;width:0;background:#2563eb"></div></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+                <div style="font-size:12px;color:#3b82f6">Sold or removed items free up room. Need more? Pro has no limit.</div>
+                <button class="btn btn-sm btn-primary" onclick="upgradeToPro(this)" style="flex-shrink:0">Upgrade to Pro →</button>
               </div>
             </div>
             <div id="billing-payment-method" style="display:none;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:14px;padding:10px 12px;background:#f8faff;border-radius:8px">
@@ -2039,16 +2049,27 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
               </div>
               <span id="billing-trial-badge" class="status-pill" style="background:#fef3c7;color:#92400e">Trial</span>
             </div>
-            <div style="background:#f8faff;border:1px solid #e0e7ff;border-radius:10px;padding:14px 16px;margin-bottom:16px">
-              <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">Price after trial</div>
-              <div style="font-weight:700;font-size:14px">€19.99 / month</div>
+            <!-- Twee plannen: Light voor particulieren (incl. btw), Pro voor bedrijven
+                 (excl. btw). De keuze verschijnt alleen als Light echt af te
+                 rekenen is (light_available uit /api/billing/status). -->
+            <div id="plan-keuze" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+              <div id="plan-kaart-light" onclick="kiesPlan('light')" style="display:none;cursor:pointer;border:2px solid #e0e7ff;border-radius:10px;padding:14px 16px;background:#fff">
+                <div style="font-size:12px;font-weight:800;color:#2563eb;text-transform:uppercase;letter-spacing:.6px">Light</div>
+                <div style="font-weight:800;font-size:18px;margin:4px 0 2px">€9.99 <span style="font-size:12px;font-weight:600;color:var(--muted)">/ month incl. VAT</span></div>
+                <div style="font-size:12px;color:var(--muted);line-height:1.5">Up to 20 active items. All marketplaces. For private sellers.</div>
+              </div>
+              <div id="plan-kaart-pro" onclick="kiesPlan('pro')" style="cursor:pointer;border:2px solid #2563eb;border-radius:10px;padding:14px 16px;background:#f8faff;grid-column:span 2">
+                <div style="font-size:12px;font-weight:800;color:#2563eb;text-transform:uppercase;letter-spacing:.6px">Pro</div>
+                <div style="font-weight:800;font-size:18px;margin:4px 0 2px">€19.99 <span style="font-size:12px;font-weight:600;color:var(--muted)">/ month excl. VAT</span></div>
+                <div style="font-size:12px;color:var(--muted);line-height:1.5">Unlimited items. All marketplaces. Built for businesses.</div>
+              </div>
             </div>
             <!-- Uitgenodigd door een vriend: de helft van de eerste maand.
                  Staat los van het actievak hierboven, want dat vertelt het
                  verhaal van de betaalstoring en dat hoort hier niet. -->
             <div id="billing-referral" style="display:none;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:14px 16px;margin-bottom:16px">
               <div style="font-weight:700;font-size:14px;color:#065f46">50% off your first month</div>
-              <div style="font-size:12px;color:#047857;margin-top:3px">A friend invited you, so your first month is &euro;10.00 instead of &euro;19.99. It is applied automatically at checkout, no code needed. After that it is &euro;19.99 per month, cancel anytime.</div>
+              <div style="font-size:12px;color:#047857;margin-top:3px">A friend invited you, so your first month is half price (on Pro, &euro;10.00 instead of &euro;19.99 excl. VAT). It is applied automatically at checkout, no code needed. After that it is the normal price, cancel anytime.</div>
             </div>
             <div id="billing-promo" style="display:none;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:14px 16px;margin-bottom:16px">
               <div style="font-weight:700;font-size:14px;color:#065f46" id="billing-promo-title"></div>
@@ -3784,6 +3805,67 @@ async function loadBillingStatus() {
   }
   renderBilling(_billingStatus);
   renderTrialBanner(_billingStatus);
+  renderPlanKeuze(_billingStatus);
+}
+
+// Omnivaleur Light (€9.99 incl. btw, tot 20 actieve artikelen) naast Pro
+// (€19.99 excl. btw). De keuze staat alleen op het scherm als de server zegt dat
+// Light af te rekenen is; anders blijft alles zoals het was.
+let _gekozenPlan = 'pro';
+
+function kiesPlan(plan) {
+  _gekozenPlan = plan === 'light' ? 'light' : 'pro';
+  const light = document.getElementById('plan-kaart-light');
+  const pro = document.getElementById('plan-kaart-pro');
+  if (light) { light.style.borderColor = _gekozenPlan === 'light' ? '#2563eb' : '#e0e7ff'; light.style.background = _gekozenPlan === 'light' ? '#f8faff' : '#fff'; }
+  if (pro) { pro.style.borderColor = _gekozenPlan === 'pro' ? '#2563eb' : '#e0e7ff'; pro.style.background = _gekozenPlan === 'pro' ? '#f8faff' : '#fff'; }
+  const naam = _gekozenPlan === 'light' ? 'Light' : 'Pro';
+  const btn = document.getElementById('btn-checkout');
+  // Werkt op de Engelse en de vertaalde knoptekst ("Activate Pro →" / "Pro activeren →").
+  if (btn && /Activate|activeren/.test(btn.textContent)) btn.textContent = btn.textContent.replace(/\b(Pro|Light)\b/, naam);
+}
+
+function renderPlanKeuze(data) {
+  const beschikbaar = !!(data && data.light_available);
+  const light = document.getElementById('plan-kaart-light');
+  const pro = document.getElementById('plan-kaart-pro');
+  if (light) light.style.display = beschikbaar ? 'block' : 'none';
+  if (pro) pro.style.gridColumn = beschikbaar ? 'auto' : 'span 2';
+  const pw = document.getElementById('paywall-light');
+  if (pw) pw.style.display = beschikbaar ? 'block' : 'none';
+  if (!beschikbaar) _gekozenPlan = 'pro';
+  kiesPlan(_gekozenPlan);
+
+  // Actieve klant: naam, prijs en teller volgen het plan.
+  const isLight = !!(data && data.plan === 'light');
+  const naam = document.getElementById('billing-plan-name');
+  if (naam) naam.textContent = isLight ? 'Omnivaleur Light' : 'Omnivaleur Pro';
+  const prijs = document.getElementById('billing-price-value');
+  if (prijs) prijs.textContent = isLight ? '€9.99 / month incl. VAT' : '€19.99 / month excl. VAT';
+  const box = document.getElementById('billing-light-box');
+  if (box) box.style.display = isLight ? 'block' : 'none';
+  if (isLight) {
+    const max = data.light_max_items || 20;
+    const n = data.active_items == null ? 0 : data.active_items;
+    document.getElementById('billing-light-count').textContent = `${n} / ${max}`;
+    const bar = document.getElementById('billing-light-bar');
+    bar.style.width = Math.min(100, Math.round(n / max * 100)) + '%';
+    bar.style.background = n >= max ? '#dc2626' : '#2563eb';
+  }
+}
+
+async function upgradeToPro(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Switching…'; }
+  try {
+    const res = await apiFetch(`${API}/api/billing/upgrade`, { method: 'POST' });
+    const data = await parseJsonSafe(res);
+    if (data.url) { window.location.href = data.url; return; }
+    if (data.upgraded) { await loadBillingStatus(); return; }
+    alert(data.detail || 'Could not switch plans. Please use Manage subscription.');
+  } catch (e) {
+    alert('Could not switch plans. ' + e.message);
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Upgrade to Pro →'; }
 }
 
 function renderBilling(data) {
@@ -4018,7 +4100,7 @@ function promoLine(promo) {
   const left = hours === Infinity ? ''
     : hours < 48 ? ` · ${hours}h left`
     : ` · ${Math.floor(hours / 24)} days left`;
-  return `${Math.round(promo.percent_off)}% off your first month: €${promoPrice(promo)} instead of €19.99${left}`;
+  return `${Math.round(promo.percent_off)}% off your first month (Pro: €${promoPrice(promo)} instead of €19.99 excl. VAT)${left}`;
 }
 
 // Dezelfde vulling voor het vak op de accountpagina en het vak in het slotvenster:
@@ -4038,8 +4120,8 @@ function fillPromoBox(boxId, promo) {
   // De laatste zin verwijst subtiel naar de mail: wie hem las herkent het, en wie
   // hem niet zag weet nu dat er een mail is en gaat kijken.
   document.getElementById(`${boxId}-detail`).textContent =
-    `Sorry about the checkout problem. Your first month is €${promoPrice(promo)} instead of €19.99, `
-    + `applied automatically at checkout, no code needed. After that it is €19.99 per month.${ends} `
+    `Sorry about the checkout problem. Your first month on Pro is €${promoPrice(promo)} instead of €19.99 excl. VAT, `
+    + `applied automatically at checkout, no code needed. After that it is the normal price.${ends} `
     + `Full story in my email to you.`;
 }
 
@@ -4375,8 +4457,10 @@ function renderTrialBanner(data) {
           </div>
           <div style="font-size:12px;color:${urgent ? '#b45309' : '#3b82f6'};margin-top:1px">
             ${data.referral_discount
-              ? `A friend invited you: 50% off your first month, €10.00 instead of €19.99`
-              : (promoLine(data.promo) || 'Activate Pro to keep full access · €19.99/month')}
+              ? `A friend invited you: 50% off your first month (Pro: €10.00 instead of €19.99 excl. VAT)`
+              : (promoLine(data.promo) || (data.light_available
+                  ? 'Keep full access: Light €9.99/month incl. VAT, or Pro €19.99/month excl. VAT'
+                  : 'Activate Pro to keep full access · €19.99/month excl. VAT'))}
           </div>
         </div>
       </div>
@@ -4439,7 +4523,10 @@ async function startCheckout() {
   const btns = document.querySelectorAll('#btn-checkout, .pricing-cta');
   btns.forEach(b => { b.textContent = 'Loading…'; b.disabled = true; });
   try {
-    const res = await apiFetch(`${API}/api/billing/checkout`, { method: 'POST' });
+    const res = await apiFetch(`${API}/api/billing/checkout`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan: _gekozenPlan }),
+    });
     // Rauwe tekst lezen: bij een gateway-fout komt er HTML terug en klapte
     // res.json() eruit, waarna de melding alleen nog "kan geen verbinding maken"
     // zei — precies de informatie die je niet nodig hebt.
@@ -8467,7 +8554,7 @@ function importCondition() {
 async function bulkImportAllCandidates(opties = {}) {
   if (!opties.stil && !confirm('Import all pending candidates now? Certain matches get linked to the existing item; the rest become new items.\n\nAnything we are not sure about stays in the list for you to decide.')) return;
   setBusy(true, 'Importing all pending candidates — this can take a while, please wait…');
-  let totalLinked = 0, totalCreated = 0, totalFailed = 0, totalParked = 0, offset = 0;
+  let totalLinked = 0, totalCreated = 0, totalFailed = 0, totalParked = 0, totalLight = 0, lightMelding = '', offset = 0;
   let aanvulNote = '';
   try {
     // Import in small batches, looping until the server reports nothing pending remains.
@@ -8555,7 +8642,9 @@ async function bulkImportAllCandidates(opties = {}) {
       totalCreated += data.created || 0;
       totalFailed += data.failed || 0;
       totalParked += data.parked || 0;
-      parkedHier += data.parked || 0;
+      parkedHier += (data.parked || 0) + (data.light_parked || 0);
+      totalLight += data.light_parked || 0;
+      if (data.light_limit) lightMelding = data.light_limit;
       // Rows parked for manual review stay pending on the server, so the next pass
       // must start past them — otherwise the same rows come back every time.
       offset = data.next_offset != null ? data.next_offset : offset;
@@ -8565,7 +8654,7 @@ async function bulkImportAllCandidates(opties = {}) {
       if (remaining <= 0) break;
       setBusyText(`Importing${kanaal ? ' ' + (PLATFORM_LABELS[kanaal] || kanaal) : ''}… ${totalLinked + totalCreated} done, ${remaining} to go — please wait…`);
       // Nothing moved this pass (all remaining are un-processable) — stop to avoid a loop.
-      if ((data.linked || 0) + (data.created || 0) + (data.failed || 0) + (data.parked || 0) === 0) break;
+      if ((data.linked || 0) + (data.created || 0) + (data.failed || 0) + (data.parked || 0) + (data.light_parked || 0) === 0) break;
     }
     }
     await loadDuplicates(true);   // een import is precies waar dubbelen ontstaan
@@ -8625,17 +8714,22 @@ async function bulkImportAllCandidates(opties = {}) {
       ? `\n\n⚠️ ${totalParked} listing(s) look like something you already imported from another channel — ` +
         `they are waiting under "To check", with both photos. Choose same piece or different piece there.`
       : '';
+    const lightNote = totalLight
+      ? `\n\n⚠️ ${lightMelding} ${totalLight} listing(s) are still waiting and will be imported when there is room.`
+      : '';
     const detail = `${totalLinked} linked, ${totalCreated} created${totalFailed ? `, ${totalFailed} failed` : ''}.`;
     if (imported === 0 && totalParked > 0 && totalFailed === 0) {
       alert(`Nothing was imported automatically.${parkedNote}`);
+    } else if (imported === 0 && totalLight > 0 && totalFailed === 0) {
+      alert(`Nothing was imported.${lightNote}`);
     } else if (imported === 0 && totalFailed === 0) {
       alert('Nothing to import — there were no pending listings.');
     } else if (imported === 0 && totalFailed > 0) {
       alert(`❌ Import failed — ${totalFailed} listing(s) could not be imported.`);
     } else if (totalFailed > 0) {
-      alert(`⚠️ Import partly succeeded: ${detail}\n\nThe failed ones stay out of your items — you can rescan and retry them.${parkedNote}${aanvulNote}`);
+      alert(`⚠️ Import partly succeeded: ${detail}\n\nThe failed ones stay out of your items — you can rescan and retry them.${parkedNote}${lightNote}${aanvulNote}`);
     } else {
-      alert(`✅ Import successful: ${detail}${parkedNote}${aanvulNote}`);
+      alert(`${totalLight ? '⚠️ Import stopped at your Light limit' : '✅ Import successful'}: ${detail}${parkedNote}${lightNote}${aanvulNote}`);
     }
   } catch (e) {
     // Even on error, refresh so any items already imported before the failure show up.

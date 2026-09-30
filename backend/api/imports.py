@@ -2,6 +2,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends
 from backend.services.kleur import canonieke_kleur
 from backend.database import (get_db, fetch_all, fetch_all_in, naast_de_lus,
                                execute_with_retry, eerste_rij)
+from backend.services.light import LIGHT_LIMIET_MELDING, ruimte_over
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.models import ItemCreate
 from datetime import datetime, timezone
@@ -2467,6 +2468,11 @@ async def create_item_from_candidate(candidate_id: str, body: dict, user_id: str
     if not cand:
         raise HTTPException(status_code=404, detail="Import candidate not found")
 
+    # Omnivaleur Light: tot 20 actieve artikelen. Zie services/light.py.
+    light_ruimte = await naast_de_lus(lambda: ruimte_over(db, user_id))
+    if light_ruimte is not None and light_ruimte <= 0:
+        raise HTTPException(status_code=403, detail=LIGHT_LIMIET_MELDING)
+
     item_data = _item_data_from_candidate(cand, body, inferred=await _infer_attributes_smart(
         cand.get("title"), cand.get("description"), cand.get("brand")))
     # Copy the photos into our own bucket before the item exists. A listing
@@ -2644,8 +2650,14 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
             if photos:
                 cand["photo_urls"] = photos
 
+    # Omnivaleur Light: nieuwe artikelen alleen zolang er ruimte is. Wat niet past
+    # blijft 'pending' (geparkeerd) en gaat vanzelf mee zodra er ruimte is.
+    light_ruimte = await asyncio.to_thread(lambda: ruimte_over(db, user_id))
+    light_vol = False
+    light_geparkeerd = 0
+
     def _process():
-        nonlocal linked, created, failed
+        nonlocal linked, created, failed, light_ruimte, light_vol, light_geparkeerd
         # Harde tijdgrens. Elke kandidaat kost hier een handvol losse
         # database-aanroepen, en bij een verkoper met duizenden advertenties
         # tikt dat op tot voorbij de tijd die de gateway een verzoek gunt — dan
@@ -2720,6 +2732,10 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
                     platforms_by_item.setdefault(match_id, set()).add(cand["platform"])
                     linked += 1
                 else:
+                    if light_ruimte is not None and light_ruimte <= 0:
+                        light_vol = True
+                        light_geparkeerd += 1
+                        continue
                     item_data = _item_data_from_candidate(
                         cand,
                         {"_default_condition": standaard_staat} if standaard_staat else None,
@@ -2754,6 +2770,8 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
                         listings_by_id[(cand["platform"], str(pid))] = created_item["id"]
                     platforms_by_item.setdefault(created_item["id"], set()).add(cand["platform"])
                     created += 1
+                    if light_ruimte is not None:
+                        light_ruimte -= 1
             except Exception:
                 # Mark it failed so it drops out of the pending set — otherwise the batched
                 # loop would re-fetch the same broken candidate every pass and never finish.
@@ -2775,7 +2793,10 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
     return {
         "linked": linked, "created": created, "failed": failed,
         "parked": parked, "remaining": remaining,   # remaining still counts parked rows
-        "next_offset": offset + parked,
+        "next_offset": offset + parked + light_geparkeerd,
+        "light_parked": light_geparkeerd,
+        # Light zit vol: het scherm legt uit waarom de rest blijft wachten.
+        "light_limit": LIGHT_LIMIET_MELDING if light_vol else None,
     }
 
 

@@ -119,7 +119,7 @@ Here is what happens next:
 Upgrading takes less than a minute. Your items, connected channels, and history
 will stay completely intact so you can keep going without missing a beat.
 
-Activate Pro here: {settings.app_url} (€19.99/month, cancel anytime)
+Activate Pro here: {settings.app_url} (Pro €19.99/month excl. VAT, or Light €9.99/month incl. VAT for up to 20 items, cancel anytime)
 
 If you hit any snags, have questions, or feel something is missing for your
 workflow, please email me directly at {CONTACT_EMAIL}
@@ -161,7 +161,7 @@ A quick reminder of what happens:
 If Omnivaleur is saving you time and keeping your store organized, you can keep
 everything running without a break.
 
-Keep Pro active: {settings.app_url} (€19.99/month, cancel anytime)
+Keep Pro active: {settings.app_url} (Pro €19.99/month excl. VAT, or Light €9.99/month incl. VAT for up to 20 items, cancel anytime)
 
 If you have decided to pass, I would genuinely appreciate knowing why. A single
 sentence in reply to this mail or sent to {CONTACT_EMAIL} helps me make the
@@ -205,7 +205,7 @@ What this means right now:
     still there, exactly as you left them. Turning Pro back on picks up where
     you stopped.
 
-Pick up where you left off: {settings.app_url} (€19.99/month, cancel anytime)
+Pick up where you left off: {settings.app_url} (Pro €19.99/month excl. VAT, or Light €9.99/month incl. VAT for up to 20 items, cancel anytime)
 
 And if you are not coming back, would you tell me why? One sentence is enough,
 and it is genuinely the most useful thing you can send me. Maybe something was
