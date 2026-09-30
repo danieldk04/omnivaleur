@@ -224,6 +224,25 @@ def bestaand_abonnement(customer_id: str | None) -> str | None:
     return None
 
 
+def _maak_afrekensessie(session_args: dict):
+    """19,99 is de prijs exclusief btw: Stripe rekent de btw er bovenop.
+
+    Lukt de belastingberekening niet (registratie of adres ontbreekt), dan gaat
+    het afrekenen door zonder btw in plaats van de klant te weigeren.
+    """
+    met_btw = dict(
+        session_args,
+        automatic_tax={"enabled": True},
+        customer_update={"address": "auto", "name": "auto"},
+        billing_address_collection="required",
+    )
+    try:
+        return stripe.checkout.Session.create(**met_btw)
+    except Exception:
+        logger.exception("Afrekenen met automatische btw mislukt, opnieuw zonder btw")
+        return stripe.checkout.Session.create(**session_args)
+
+
 @router.post("/checkout")
 def create_checkout(user=Depends(get_current_user_full)):
     if not settings.stripe_secret_key or not settings.stripe_price_id:
@@ -325,7 +344,7 @@ def create_checkout(user=Depends(get_current_user_full)):
         else:
             session_args["allow_promotion_codes"] = True
         try:
-            session = stripe.checkout.Session.create(**session_args)
+            session = _maak_afrekensessie(session_args)
         except Exception:
             if "discounts" not in session_args:
                 raise
@@ -335,7 +354,7 @@ def create_checkout(user=Depends(get_current_user_full)):
             logger.exception("Afrekenen met korting mislukt, opnieuw zonder korting")
             session_args.pop("discounts")
             session_args["allow_promotion_codes"] = True
-            session = stripe.checkout.Session.create(**session_args)
+            session = _maak_afrekensessie(session_args)
     except Exception as e:
         # Elke fout, niet alleen die van Stripe: een onverwachte crash gaf een
         # kale 500 waar de app niets zinnigs over kon zeggen.
