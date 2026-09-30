@@ -6149,7 +6149,25 @@ async function bgDeleteVinted(job, serverUrl) {
 
     // 2) Click Delete, then confirm. "Confirm and delete" is multi-word, so
     //    match on containing confirm/delete and never the Cancel button.
-    const clicked = await execInTab(tabId, _mwVintedVerwijderen);
+    //
+    // DE PAGINA MAG ONDER ONS VERDWIJNEN. (30-09-2026, De Juiste Toon)
+    //
+    // Na de bevestigklik haalt Vinted de advertentie weg en stuurt het tabblad
+    // door. Gebeurt dat terwijl ons script nog op het verdwijnen van het venster
+    // wacht, dan breekt Chrome het af met "Frame with ID 0 was removed". De
+    // verwijdering is dan juist gelukt: advertentie 8791506164 stond om 13:03 in
+    // de kast, de opdracht meldde om 13:44 deze fout, en de pagina gaf daarna
+    // 404. Hetzelfde op 29-09 met 10141774015. Dus geen fout gooien, maar de
+    // kast hieronder laten beslissen, net als bij een knop die niet reageerde.
+    let clicked;
+    try {
+      clicked = await execInTab(tabId, _mwVintedVerwijderen);
+    } catch (e) {
+      if (!/frame with id \d+ was removed|frame was removed/i.test(String(e?.message || e))) throw e;
+      console.log(`[Omnivaleur] bgDeleteVinted: pagina van ${listingId} verdween tijdens het klikken — de kast beslist of hij weg is`);
+      clicked = { clickedDelete: true, clickedConfirm: true, weggestuurd: true };
+      await waitForTabLoad(tabId);
+    }
 
     // De knoppen die er wél stonden gaan mee in de melding. Anders is dit
     // achteraf niet na te lopen zonder toegang tot het account van de verkoper.
