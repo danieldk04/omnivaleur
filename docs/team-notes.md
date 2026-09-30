@@ -14814,3 +14814,34 @@ upload vastgelegd.
   schrijft zonder controle achteraf, dus twee gelijktijdige starts komen er allebei door.
   Geen schade: deze ronde repareerde niets. `ronde klaar` weigerde terecht (slot niet van
   ons); het slot niet aangeraakt.
+
+## 30-09-2026: Dagelijkse klantfouten (ochtendronde)
+
+Gemeten over 24 uur: 135 fouten bij 5 klanten. Web Store serveert nu 1.0.358
+(gisteren 1.0.355); 1.0.360 en 1.0.361 nog in keuring. Niets hangt op 'claimed'.
+- 26cf5471 (Zilverwebsite): 55 herplaatsingen op Marktplaats vanochtend tussen
+  06:28 en 06:45 UTC mislukt met "no ads rendered ... advert's own page gave no
+  answer" (extensie 1.0.358); de 55 bijbehorende plaatsingen zijn netjes
+  overgeslagen, dus geen dubbelen. Om 06:45 lukte de volgende weer via de
+  advertentiepagina. In dezelfde minuut faalde haar Vinted-scan met "niet
+  ingelogd". Alle 55 rijen staan weer op 'active' zonder last_refreshed_at, dus
+  de volgende herplaatsronde pakt ze opnieuw op. Oorzaak NIET bewezen: de
+  voorcontrole op /seller/view geeft null bij elke niet-ok status en legt die
+  status niet vast; een 403-blokkade (zoals bij Toons tapijt, zie hieronder) of
+  een net opgestarte, nog niet ingelogde browser passen allebei. Open punt:
+  status meeschrijven in die foutmelding en bij 403/429 wachten zoals
+  verwijderViaAdvertentiepagina al doet; alleen doen met een meting erbij.
+- Gerepareerd (85e84d99): een tweede klik op publiceren binnen 5 minuten zette
+  een geclaimde plaatsing terug op 'pending' (grens stond op 60 s, extensie
+  heeft 3 min). Gaf 29-09 bij 82b13998 een tweede Vinted-advertentie. Deze
+  reparatie stond sinds 29-09 17:12 onafgemaakt en ongecommit in de werkmap.
+  Proef tests/test_stuck_publish_recovery.py faalt op de oude code; 2041 tests
+  groen.
+- 96e30080 (Toon): lammycoat met maat "Universeel" in een kledingrubriek (klant
+  moet een maat kiezen), boomstamlamp met merk "Handgemaakt" dat niet in de
+  merkenlijst staat (1x, lijst onbekend, open), tapijt-verwijdering zes keer 403
+  (blokkade, 1.0.355). Haar 40 verlengingen wachten tot haar extensie naar 1.0.358
+  gaat; nu is dat eindelijk in de Web Store.
+- 82b13998: Admarkt-melding zit in 1.0.360 (nog in keuring). 1ba42900: "Bestemd
+  voor" zit in 1.0.361 (nog in keuring); verder niet ingelogd op Vinted en een
+  betaalde rubriek (klant).
