@@ -1,0 +1,868 @@
+{
+ "bron": "Marktplaats-plaatsformulier (ingelogd), 2087 rubrieken uit /plaats/api/v1/category-aggregate, 30-09-2026. Kleurveld bestaat in 165 rubrieken, verplicht in 0.",
+ "rubriekenGetest": 2087,
+ "rubriekenMetKleurveld": 165,
+ "verplichtAantal": 0,
+ "lijsten": [
+  {
+   "values": [
+    "Beige",
+    "Blauw",
+    "Bruin",
+    "Geel",
+    "Goud",
+    "Grijs",
+    "Groen",
+    "Oranje",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zilver",
+    "Zwart",
+    "Meerkleurig"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 9
+  },
+  {
+   "values": [
+    "Beige",
+    "Blauw",
+    "Bruin",
+    "Geel",
+    "Goud",
+    "Grijs",
+    "Groen",
+    "Rood",
+    "Wit",
+    "Zilver",
+    "Zwart",
+    "Meerkleurig"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Beige",
+    "Blauw",
+    "Bruin",
+    "Geel",
+    "Goud",
+    "Grijs",
+    "Groen",
+    "Meerkleurig",
+    "Oranje",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zilver",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 2
+  },
+  {
+   "values": [
+    "Blauw",
+    "Groen",
+    "Zilver",
+    "Zwart",
+    "Oranje",
+    "Roze",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Wit",
+    "Zwart",
+    "Grijs",
+    "Zilver",
+    "Rood",
+    "Roze",
+    "Groen",
+    "Blauw",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 2
+  },
+  {
+   "values": [
+    "Beige",
+    "Blauw",
+    "Bruin",
+    "Geel",
+    "Goud",
+    "Grijs",
+    "Groen",
+    "Oranje",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zilver",
+    "Zwart",
+    "Meerkleurig",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 66
+  },
+  {
+   "values": [
+    "Beige",
+    "Blauw",
+    "Bruin",
+    "Goud",
+    "Grijs",
+    "Groen",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zilver",
+    "Zwart",
+    "Meerkleurig",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Beige",
+    "Blauw",
+    "Bruin",
+    "Geel",
+    "Goud",
+    "Grijs",
+    "Groen",
+    "Oranje",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zilver",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Beige",
+    "Blauw",
+    "Bruin",
+    "Geel",
+    "Groen",
+    "Rood",
+    "Wit",
+    "Zilver of Grijs",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 2
+  },
+  {
+   "values": [
+    "Antraciet",
+    "Beige",
+    "Blauw",
+    "Grijs",
+    "Groen",
+    "Lichtgrijs",
+    "Meerkleurig",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Beige",
+    "Blauw",
+    "Bruin",
+    "Grijs",
+    "Groen",
+    "Rood",
+    "Roze",
+    "Zwart",
+    "Meerkleurig"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 2
+  },
+  {
+   "values": [
+    "Blauw",
+    "Goud",
+    "Grijs",
+    "Groen",
+    "Rose Goud",
+    "Wit",
+    "Zilver",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Blauw",
+    "Grijs",
+    "Rood",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Bruin",
+    "Crème of Beige",
+    "Grijs",
+    "Wit",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Blauw",
+    "Rood",
+    "Wit",
+    "Zwart",
+    "Beige",
+    "Bruin",
+    "Geel",
+    "Grijs",
+    "Groen",
+    "Oranje",
+    "Paars",
+    "Roze",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 9
+  },
+  {
+   "values": [
+    "Beige",
+    "Blauw",
+    "Bruin",
+    "Geel",
+    "Goud",
+    "Grijs",
+    "Groen",
+    "Oranje",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zilver",
+    "Zwart",
+    "Transparant",
+    "Meerkleurig"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Beige",
+    "Blauw",
+    "Bruin",
+    "Geel",
+    "Grijs",
+    "Groen",
+    "Oranje",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Blauw",
+    "Bruin",
+    "Grijs",
+    "Rood",
+    "Wit",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Beige",
+    "Blauw",
+    "Bruin",
+    "Geel",
+    "Groen",
+    "Oranje",
+    "Paars",
+    "Goud",
+    "Grijs",
+    "Rood",
+    "Roze",
+    "Zilver",
+    "Wit",
+    "Zwart",
+    "Meerkleurig"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Beige",
+    "Blauw",
+    "Bruin",
+    "Crème",
+    "Geel",
+    "Goud",
+    "Grijs",
+    "Groen",
+    "Oranje",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zilver",
+    "Zwart",
+    "Meerkleurig"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 5
+  },
+  {
+   "values": [
+    "Beige",
+    "Bruin",
+    "Crème",
+    "Wit",
+    "Blauw",
+    "Grijs",
+    "Groen",
+    "Rood",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Beige",
+    "Blauw",
+    "Bruin",
+    "Crème",
+    "Geel",
+    "Goud",
+    "Grijs",
+    "Groen",
+    "Oranje",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zilver",
+    "Zwart"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 3
+  },
+  {
+   "values": [
+    "Beige",
+    "Blauw",
+    "Bruin",
+    "Geel",
+    "Goud",
+    "Grijs",
+    "Groen",
+    "Meerkleurig",
+    "Oranje",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zilver",
+    "Zwart"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Beige",
+    "Blauw",
+    "Bruin",
+    "Geel",
+    "Goud",
+    "Grijs",
+    "Groen",
+    "Oranje",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zilver",
+    "Zwart",
+    "Meerkleurig",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Bruin",
+    "Rood",
+    "Wit",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 2
+  },
+  {
+   "values": [
+    "Blauw",
+    "Grijs",
+    "Wit",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 2
+  },
+  {
+   "values": [
+    "Bruin",
+    "Rood",
+    "Wit",
+    "Zwart",
+    "Beige",
+    "Blauw",
+    "Geel",
+    "Grijs",
+    "Groen",
+    "Oranje",
+    "Roze",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 2
+  },
+  {
+   "values": [
+    "Bruin",
+    "Grijs",
+    "Wit",
+    " Ivoor of Crème",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Blauw",
+    "Bruin",
+    "Wit",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 2
+  },
+  {
+   "values": [
+    "Bruin",
+    "Wit",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Blauw",
+    "Bruin",
+    "Geel",
+    "Grijs",
+    "Groen",
+    "Oranje",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Blauw",
+    "Geel",
+    "Grijs",
+    "Groen",
+    "Oranje",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zilver",
+    "Zwart"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 7
+  },
+  {
+   "values": [
+    "Blauw",
+    "Rood",
+    "Wit",
+    "Zwart",
+    "Beige",
+    "Bruin",
+    "Geel",
+    "Goud",
+    "Grijs",
+    "Groen",
+    "Oranje",
+    "Paars",
+    "Roze",
+    "Zilver",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 7
+  },
+  {
+   "values": [
+    "Blauw",
+    "Rood",
+    "Wit",
+    "Zwart",
+    "Beige",
+    "Bruin",
+    "Geel",
+    "Goud",
+    "Grijs",
+    "Groen",
+    "Oranje",
+    "Paars",
+    "Roze",
+    "Overige kleuren",
+    "Zilver"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 2
+  },
+  {
+   "values": [
+    "Blauw",
+    "Geel",
+    "Groen",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zilver",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 2
+  },
+  {
+   "values": [
+    "Blauw",
+    "Roze",
+    "Zilver",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Blauw",
+    "Geel",
+    "Roze",
+    "Wit",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 2
+  },
+  {
+   "values": [
+    "Blauw",
+    "Geel",
+    "Goud",
+    "Grijs",
+    "Groen",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zilver",
+    "Zwart"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Wit",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Bruin",
+    "Wit",
+    "Zilver",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Blauw",
+    "Goud",
+    "Groen",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Zilver",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Blauw",
+    "Geel",
+    "Grijs",
+    "Groen",
+    "Oranje",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zilver",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 2
+  },
+  {
+   "values": [
+    "Paars",
+    "Roze",
+    "Wit",
+    "Zilver",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Blauw",
+    "Geel",
+    "Groen",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zilver",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Blauw",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zilver",
+    "Zwart",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Antraciet",
+    "Beige",
+    "Blauw",
+    "Bruin",
+    "Geel",
+    "Grijs",
+    "Groen",
+    "Oranje",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zwart",
+    "Multi"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Daglicht",
+    "Instelbaar wit",
+    "Koel wit",
+    "Neutraal wit",
+    "Warm wit",
+    "Meerkleurig",
+    "Overige lichtkleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Grijs",
+    "Rood",
+    "Wit",
+    "Zwart",
+    "Crème",
+    "Bruin",
+    "Blauw",
+    "Groen",
+    "Geel",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 2
+  },
+  {
+   "values": [
+    "Blauw",
+    "Bruin",
+    "Crème",
+    "Geel",
+    "Groen",
+    "Oranje",
+    "Paars",
+    "Rood",
+    "Wit",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Blauw",
+    "Rood",
+    "Wit",
+    "Zwart",
+    "Beige",
+    "Bruin",
+    "Geel",
+    "Grijs",
+    "Groen",
+    "Oranje",
+    "Paars",
+    "Roze",
+    "Goud",
+    "Meerkleurig",
+    "Zilver"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Beige",
+    "Blauw",
+    "Bruin",
+    "Geel",
+    "Goud",
+    "Grijs",
+    "Groen",
+    "Oranje",
+    "Paars",
+    "Rood",
+    "Roze",
+    "Wit",
+    "Zilver",
+    "Zwart",
+    "Transparant",
+    "Meerkleurig",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Paars",
+    "Wit",
+    "Zwart",
+    "Zilver",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  },
+  {
+   "values": [
+    "Geel",
+    "Grijs",
+    "Roze of Coral",
+    "Turquoise",
+    "Overige kleuren"
+   ],
+   "mandatory": false,
+   "aantalRubrieken": 1
+  }
+ ]
+}

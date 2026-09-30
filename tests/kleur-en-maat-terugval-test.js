@@ -169,7 +169,9 @@ console.log("\nEen categorie met een kortere lijst (geen Bordeaux, geen Multicol
 const kort = ["Zwart", "Wit", "Grijs", "Bruin", "Blauw", "Groen", "Rood", "Overige"];
 for (const [waarde, verwacht] of [
   ["bordeaux", "Rood"], ["divers", "Overige"], ["Meerkleurig", "Overige"],
-  ["beige", "Bruin"], ["taupe", "Bruin"],
+  // Sinds 30-09-2026: beige is geen bruin. Ontbreekt Beige, dan de eerlijke
+  // verzamelnaam "Overige" (het Kleur-veld is nergens verplicht, gemeten).
+  ["beige", "Overige"], ["taupe", "Overige"],
 ]) {
   const { veldwaarde } = vulKleur(CLnu, waarde, kort);
   check(`"${waarde}" → ${verwacht}`, veldwaarde === verwacht, `koos "${veldwaarde}"`);

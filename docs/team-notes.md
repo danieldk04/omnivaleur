@@ -14880,3 +14880,22 @@ Gemeten over 24 uur: 135 fouten bij 5 klanten. Web Store serveert nu 1.0.358
 - Open (ongewijzigd uit de kennisbank): foto's die vóór 1fc30967 zijn opgeslagen
   worden niet alsnog verkleind; bij een volgende trage upload eerst de grootte op
   img.omnivaleur.com meten.
+
+## 30-09-2026: Kleur op Marktplaats gemeten, extensie 1.0.363
+
+Daniel wilde zeker weten dat elke kleur op alle kanalen goed landt. Gemeten in
+zijn ingelogde Chrome: alle 2087 rubrieken van het Marktplaats-plaatsformulier
+(fixture tests/fixtures/marktplaats_kleurlijsten_30-09-2026.json). Het Kleur-veld
+bestaat in 165 rubrieken, met 53 verschillende lijsten, en is in GEEN ENKELE
+verplicht. Een leeg veld blokkeert dus nooit; een verkeerde kleur misleidt wel.
+- Oud gedrag (1.0.362): 20 van 4785 combinaties leeg, maar ook zwart, roze, groen
+  enz. als "Meerkleurig" ingevuld, roze en oranje als rood, paars als blauw, beige
+  als wit of bruin, goud als geel of bruin.
+- Nu (1.0.363): eigen kleur, anders een echte buurkleur (bordeaux naar rood, zilver
+  naar grijs, beige naar crème), anders "Overige kleuren", anders leeg (63 combinaties,
+  nergens verplicht). Meerkleurig alleen voor meerkleurig.
+- Proef tests/mp-kleurlijsten-alle-rubrieken-test.js faalt op 1.0.362 en slaagt nu.
+- Nog uit te brengen: extensie 1.0.363 (dist/omnivaleur-extension-1.0.363.zip) naar de
+  Web Store. Tot dan draaien klanten het oude gedrag; niets blokkeert.
+- Gemeten kleurlijsten hebben eigen namen: "Multi" (mobiele telefoonhoesjes), "Crème of
+  Beige", "Zilver of Grijs", "Roze of Coral", Antraciet/Lichtgrijs bij dozen en tassen.

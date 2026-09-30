@@ -973,15 +973,18 @@ window.CL = (() => {
   // daadwerkelijk in de lijst staat. Wat er echt in staat lezen we uit de
   // keuzelijst zelf — dat is meten in plaats van gokken, want elke categorie
   // biedt iets anders aan.
+  // GEMETEN OP 30-09-2026 (alle 2087 rubrieken uit het echte plaatsformulier,
+  // tests/fixtures/marktplaats_kleurlijsten_30-09-2026.json): het Kleur-veld
+  // bestaat in 165 rubrieken en is in GEEN ENKELE verplicht. Een leeg veld
+  // blokkeert dus nooit, een verkeerde kleur misleidt de koper wel. Vandaar alleen
+  // uitwijkkleuren die echt bij elkaar horen; anders "Overige kleuren"; anders leeg.
+  // Eerder stond hier roze naar rood, oranje naar rood, paars naar blauw, goud naar
+  // geel of bruin en beige naar wit, en pakte elke onbekende kleur "Meerkleurig".
   const COLOUR_FALLBACK = {
-    bordeaux: ["Rood", "Paars", "Bruin"],
-    multicolour: ["Multicolour", "Overige", "Overig"],
-    goud: ["Goud", "Geel", "Bruin"],
-    zilver: ["Grijs", "Wit"],
-    beige: ["Beige", "Bruin", "Wit"],
-    oranje: ["Oranje", "Rood", "Geel"],
-    paars: ["Paars", "Roze", "Blauw"],
-    roze: ["Roze", "Rood", "Paars"],
+    bordeaux: ["Rood"],
+    zilver: ["Zilver of Grijs", "Grijs"],
+    beige: ["Crème of Beige", "Crème"],
+    roze: ["Roze of Coral"],
   };
 
   // Maten die geen maat zijn maar "past iedereen". Marktplaats noemt dat per
@@ -1004,8 +1007,15 @@ window.CL = (() => {
       // woondekens" gebruikt "Meerkleurig" (gemeten op Toons eigen advertentie),
       // elders staat "Multicolour" of alleen "Overige". Ze allemaal langsgaan
       // kost niets: fillNativeSelect kiest alleen wat er echt in de lijst staat.
-      for (const alt of ["Meerkleurig", "Multicolour", "Veelkleurig", "Gemengd",
-                         "Overige", "Overig", "Anders", "Divers"]) {
+      // De verzamelnaam "Meerkleurig" alleen voor een kleur die dat ook IS: zwart
+      // dat als "Meerkleurig" werd ingevuld was fout (30-09-2026, gemeten).
+      const meerkleurig = ["meerkleurig", "multicolour", "multi", "veelkleurig",
+                           "gemengd", "divers"].includes(laag);
+      const verzamel = meerkleurig
+        ? ["Meerkleurig", "Multicolour", "Multi", "Veelkleurig", "Gemengd",
+           "Overige kleuren", "Overige", "Overig", "Anders", "Divers"]
+        : ["Overige kleuren", "Overige", "Overig", "Anders"];
+      for (const alt of verzamel) {
         if (!uit.includes(alt)) uit.push(alt);
       }
       return uit;
