@@ -17,6 +17,30 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## frame-removed-na-klik-is-geen-mislukking
+
+*30-09-2026 — "Frame with ID 0 was removed" uit executeScript na een klik die de pagina doorstuurt betekent dat de klik werkte; laat de nameting beslissen*
+
+"Frame with ID 0 was removed" komt uit chrome.scripting.executeScript wanneer het tabblad doorstuurt terwijl ons (async) script nog wacht. Bij Vinted-verwijderen gebeurt dat na de bevestigklik: de advertentie was dan juist wél weg (30-09-2026, Toon: 8791506164 om 13:03 in de kast, fout om 13:44, daarna 404). Gevolg was een foutmelding plus een valse "mogelijk verkocht"-vraag uit de kastscan. Gerepareerd in extensie 1.0.364.
+
+**Why:** een afgebroken script na een schrijvende klik zegt niets over of de klik lukte; de doorsturing is eerder een teken van succes.
+
+**How to apply:** vang die fout rond elke klik die kan navigeren, wacht op waitForTabLoad en laat de nameting (kast, openbare pagina) beslissen. Andere fouten (No tab with id) blijven fouten. Zie ook "vinted-opslaan-doodt-het-script" en "verkoopkanaal-moet-bewezen-zijn".
+
+---
+
+## watchero-martijn-bax-follow-up
+
+*30-09-2026 — "Watchero (Martijn Bax, info@watchero.eu) reageerde 30-09-2026 warm op koude mail 3; wil begin oktober proberen; follow-up rond 07-10-2026"*
+
+Watchero (Martijn Bax, Bussum, info@watchero.eu, smartwatches op Marktplaats) antwoordde op 30-09-2026 op de laatste koude mail van 29-09: "nog steeds geïnteresseerd, tijd nog niet gevonden om het aan te schaffen, begin volgende maand". Geen weigering, wel uitstel.
+
+**Why:** warme lead, geen actie nodig van hem tot begin oktober; te vroeg pushen kost de goodwill. Zie ook "smartwatch-wijkt-uit-naar-sporthorloges" (Watchero is al eerder als voorbeeldklant genoemd).
+
+**How to apply:** rond 07-10-2026 kijken of `info@watchero.eu` inmiddels een account heeft (omnivaleur.com/register). Zo nee: korte, persoonlijke follow-up laten versturen door Daniel (platte tekst, geen streepjes, aanbod om zelf door de start te helpen). Zo ja: onboarding-routine pakt hem op ("onboarding-routine-nieuwe-klanten").
+
+---
+
 ## een-kleurenlijst-voor-alle-kanalen
 
 *30-09-2026 — Kleur is sinds 30-09-2026 een keuzemenu met Vinteds 29 kleuren; server zet losse tekst om; bron van de lijst is backend/services/kleur.py KLEUREN*
