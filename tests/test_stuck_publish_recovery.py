@@ -27,6 +27,19 @@ def test_fresh_claim_is_left_alone():
     assert upd == {"payload": {"x": 1}}
 
 
+def test_vinted_plaatsing_binnen_de_bewaker_blijft_staan():
+    """Een tweede klik terwijl de extensie nog binnen haar drie minuten zit.
+
+    29-09-2026: claim 11:51, geplaatst 11:52:14, opnieuw geklikt, terug op
+    'pending', 11:54:34 een tweede advertentie. Twee minuten na de claim mag de
+    opdracht dus niet terug in de wachtrij.
+    """
+    upd = _republish_job_update({"status": "claimed", "claimed_at": _iso(120)}, {"x": 1}, now=NOW)
+    assert upd == {"payload": {"x": 1}}
+    upd = _republish_job_update({"status": "claimed", "claimed_at": _iso(200)}, {"x": 1}, now=NOW)
+    assert upd == {"payload": {"x": 1}}
+
+
 def test_stale_claim_is_requeued():
     upd = _republish_job_update(
         {"status": "claimed", "claimed_at": _iso(STALE_CLAIM_SECONDS + 30)}, {"x": 1}, now=NOW

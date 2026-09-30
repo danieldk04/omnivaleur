@@ -24,7 +24,20 @@ logger = logging.getLogger(__name__)
 # Hoe lang een geclaimde publicatieopdracht zonder teken van leven nog als "echt
 # bezig" telt. Klikt de gebruiker binnen die tijd nóg eens op publiceren, dan is
 # de extensie waarschijnlijk gewoon aan het werk; daarna niet meer.
-STALE_CLAIM_SECONDS = 60
+#
+# WAS 60 SECONDEN, EN DAT GAF EEN DUBBELE ADVERTENTIE (29-09-2026, 82b13998).
+# De extensie krijgt drie minuten per plaatsing (JOB_TAB_TIMEOUT_MIN in
+# background.js). Haar "Black turtleneck" werd om 11:51 opgepakt en stond om
+# 11:52:14 op Vinted; nog vóór de extensie dat had afgemeld drukte ze opnieuw op
+# publiceren, de claim was ouder dan 60 seconden en ging terug op 'pending'. Om
+# 11:54:08 pakte de extensie hem opnieuw op en plaatste hem om 11:54:34 een
+# tweede keer. De zoeker vond daarna twee gelijke advertenties, koppelde bij
+# twijfel niets en meldde "Nothing was published". Een gesloten tabblad of
+# gecrashte Chrome wordt intussen door de extensie zelf meteen afgemeld
+# (onRemoved, reconcileOrphanJobTabs), dus deze route is alleen nog nodig als
+# de extensie helemaal niets meer zegt: pas ná haar eigen bewaker, gelijk aan de
+# opruiming op de server (STALE_CLAIM_MINUTES in api/jobs.py).
+STALE_CLAIM_SECONDS = 5 * 60
 
 
 # ── Geen webadres in een Marktplaats- of 2dehands-advertentie ──────────────
