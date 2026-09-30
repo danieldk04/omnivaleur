@@ -24,7 +24,7 @@ const BG = oudArg
   : fs.readFileSync(path.join(__dirname, "..", "extension", "background.js"), "utf8");
 
 const kop = "await execInTab(tabId, async (u, wegBron, markerBron) => {";
-const start = BG.indexOf(kop);
+const start = BG.indexOf(kop, BG.indexOf("const opgeslagen = payload.platform_listing_url"));
 if (start < 0) throw new Error("de controle op de advertentiepagina is niet gevonden");
 const eind = BG.indexOf("}, [adUrl, WEG_TEKST_BRON, WEG_MARKER_BRON])", start);
 const body = BG.slice(start + kop.length, eind);
