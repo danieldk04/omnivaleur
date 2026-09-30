@@ -17,21 +17,39 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
-## herplaatsen-vergat-de-slottekst
+## instagram-leadgen-bronnen
 
-*29-09-2026 — refresh_listing zette de vertaalde tekst zonder vaste slottekst in de plaatsopdracht; 26 van 26 herplaatsingen bij Zilverwebsite kwamen zonder slottekst en artikelnummer online (29-09-2026)*
+*30-09-2026 — Welke bronnen wel/niet werken voor Instagram-leadgen; Vinted is onscrapebaar en Marktplaats heeft geen brug naar Instagram*
 
-Herplaatsen (refresh_listing, beide takken) voegde de vaste slottekst van de verkoper NIET toe; alleen publish_to_platforms (_pick) en de reddingsronde deden dat. Het ging alleen goed als items.description de slottekst al bevatte (ingelezen advertenties). Bij items waarvan de tekst uit de webshop is aangevuld ontbrak hij, en het artikelnummer (staat bij Zilverwebsite als laatste regel vóór de slottekst) ook. Gemeten 29-09-2026: 26 van 26 herplaatsingen van die ochtend zonder, 24 daarvan met een eenduidig nummer uit de webshop (products.json, variants.sku, titel uniek).
+Voor de Instagram-outreach van Omnivaleur (`scripts/leadgen_instagram.py`) zijn in juli 2026 drie bronnen live getest:
 
-**Why:** "elk pad moet er zelf aan denken" is de vorm van deze fout, net als bij de vertaling ("vertaling-draait-de-richting-om"). Live advertenties zijn niet te bewerken (geen bewezen tekst-edit op Marktplaats; content_refresh doet op 2dehands alleen verzending), dus een gemiste slottekst blijft staan tot de volgende herplaatsing (relist_dagen, bij Zilverwebsite 30).
+**Vinted — onbruikbaar als serverbron.** Zit achter Cloudflare en weigert datacenter-IP's. De publieke JSON-API geeft 403 op de homepage en 401 op `/api/v2/catalog/items`; drie verschillende Apify-actors (scrape.badger, epicscrapers, kazkn) gaven allemaal nul resultaten of faalden. Werkt alleen vanuit de browser van de gebruiker zelf, zoals de extensie doet.
 
-**How to apply:** nieuwe paden die een 'create' klaarzetten gaan langs `relist._met_slottekst`. Bij aangevulde teksten ook het artikelnummer in items.description zetten. Voor-en-na-proef: tests/test_herplaatsen_slottekst.py draait de echte refresh_listing. Zie "marktplaats-fotoadres-sterft-met-de-advertentie".
+**Marktplaats — scrapet prima, maar geen brug naar Instagram.** `haketa/marktplaats-scraper` werkt betrouwbaar (velden: sellerName, sellerId, sellerType, location). Maar er is geen automatische weg van een MP-verkoper naar zijn Instagram: handles raden uit de winkelnaam gaf 4 treffers op 13 gokken en de enige echte match was een verzamelaar uit Tokio, en **0 van 53 advertentiebeschrijvingen** noemde een @handle of instagram-link. Als leadbron voor IG dus dood; als losse lijst NL-verkopers nog wel bruikbaar.
+
+**Instagram-hashtags — beste bron, met afstand.** `apify/instagram-hashtag-scraper` op Nederlandse tags: 30 posts op #kringloopwinkel gaven 22 unieke NL-kringloopwinkels, 83% overleefde de Haiku-classificatie. Kies tags die een *verkoper* gebruikt en een koper niet (#kringloopwinkel wel, #thrifthaul niet). Let op: `coderx/instagram-hashtag-scraper` is goedkoper maar knijpt gratis accounts af tot **één run per dag**, en meldt dat als gewone datarij met een `error`-veld — niet als HTTP-fout.
+
+**Instagram keyword-discovery — werkt, maar 5 per run.** `afanasenko/instagram-profile-scraper` in `keywordDiscovery`-modus met **Nederlandstalige** zoektermen. Die taal is zelf het landfilter — "kringloop" bestaat alleen in NL/BE, terwijl "thrift" de halve wereld binnenhaalt.
+
+**De sleutel tot het omzeilen van die 5-limiet:** die zit op de *discovery*-actor, niet op Instagram-data in het algemeen. `figue/instagram-profile-scraper` haalt ongelimiteerd profielen op voor ~$0,001. Vandaar de splitsing in `discover` (alleen handles) → `enrich` (profieldata) in "leadgen-vier-bronnen". De limiet geldt bovendien *per run*, dus losse runs per stad geven 14x5 in plaats van 5.
+
+**Bewust niet gebouwd: instaloader.** Anoniem profielen ophalen is stuk (400 "ig_business_category_subvertical" op elk testaccount); werkend krijg je het alleen met ingelogde sessie, en dan riskeer je je eigen account voor data die $0,001 kost.
+
+Categorie-ID's van `haketa/marktplaats-scraper` zijn grotendeels dood: alleen **621 (Kleding|Dames), 504 (Huis en Inrichting), 1099 (Hobby en Vrije Tijd), 728 (Muziek), 91 (Auto's)** geven resultaten. De andere veertien in de enum accepteert hij wel maar leveren stil nul items — een geaccepteerde input is hier geen bewijs, zie ook "marktplaats-category-ids".
+
+Koude DM's mogen niet via de officiële Instagram-API (alleen antwoorden binnen 24 uur nadat iemand jou schrijft). Het script automatiseert daarom alles tot en met de kant-en-klare tekst in de "leadlist-outreach-formula", maar verstuurt zelf niets.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "instagram-ban-augustus-2026" — IG geblokkeerd via gekoppeld FB-profiel sinds ~09-08-2026; IG-leadgen staat stil
+- "tiktok-gratis-schrapen" — kan zonder Apify, maar alleen met stealth + verse browsersessie per hashtag
+
+**Stand 30-09-2026:** via Instagram 118 accounts benaderd, 6 reacties, 0 aanmeldingen. Koude mail naar winkels en webshops liep sinds 29-09 (111 adressen), resultaat pas rond 11-10-2026 te beoordelen. NL/BE-bedrijven via Marktplaats, 2dehands en Google grotendeels benaderd, 464 lagen nog klaar.
 
 ---
 
 ## klantmail-kort-en-menselijk
 
-*29-09-2026 — Klantmails van Daniel: hooguit 120 woorden, schrijven zoals je praat, goed nieuws vooraan, geen boetekleed en geen slijmen*
+*30-09-2026 — Klantmails van Daniel: hooguit 120 woorden, schrijven zoals je praat, goed nieuws vooraan, geen boetekleed en geen slijmen*
 
 Elke mail aan een klant is hooguit 120 woorden en staat vanuit zijn kant
 geschreven: wat er nu anders is en hoe dat zijn probleem oplost. Dat is het
@@ -96,6 +114,20 @@ lukt als kans met het voordeel voor hem erbij, één onderbouwde tip die bij zij
 voorraad past, kort voorstellen als oprichter alleen bij eerste contact, afsluiten met
 het hulpaanbod (berichtje of call via de Calendly-knop in het dashboard). Warm mag,
 met uitroepteken of smiley; rond de 120 woorden.
+
+**Weinig vragen per bericht (Daniel, 29-09-2026).** Een bericht aan Toon met vijf vragen: "dit zijn teveel vragen in een keer. maak een korter bericht met minder vragen (enkel de essentiële dus)". Stel alleen de vragen zonder antwoord waarop je niet verder kunt (bijvoorbeeld: wat is al verkocht, anders dubbele verkoop), hooguit twee. De rest noteer je in team-notes om later te vragen. Ook bij een WhatsApp-bericht om een review of doorverwijzing: "korter, en minder nadruk op de problemen". Problemen erkennen in één bijzin, de rest positief.
+
+---
+
+## herplaatsen-vergat-de-slottekst
+
+*29-09-2026 — refresh_listing zette de vertaalde tekst zonder vaste slottekst in de plaatsopdracht; 26 van 26 herplaatsingen bij Zilverwebsite kwamen zonder slottekst en artikelnummer online (29-09-2026)*
+
+Herplaatsen (refresh_listing, beide takken) voegde de vaste slottekst van de verkoper NIET toe; alleen publish_to_platforms (_pick) en de reddingsronde deden dat. Het ging alleen goed als items.description de slottekst al bevatte (ingelezen advertenties). Bij items waarvan de tekst uit de webshop is aangevuld ontbrak hij, en het artikelnummer (staat bij Zilverwebsite als laatste regel vóór de slottekst) ook. Gemeten 29-09-2026: 26 van 26 herplaatsingen van die ochtend zonder, 24 daarvan met een eenduidig nummer uit de webshop (products.json, variants.sku, titel uniek).
+
+**Why:** "elk pad moet er zelf aan denken" is de vorm van deze fout, net als bij de vertaling ("vertaling-draait-de-richting-om"). Live advertenties zijn niet te bewerken (geen bewezen tekst-edit op Marktplaats; content_refresh doet op 2dehands alleen verzending), dus een gemiste slottekst blijft staan tot de volgende herplaatsing (relist_dagen, bij Zilverwebsite 30).
+
+**How to apply:** nieuwe paden die een 'create' klaarzetten gaan langs `relist._met_slottekst`. Bij aangevulde teksten ook het artikelnummer in items.description zetten. Voor-en-na-proef: tests/test_herplaatsen_slottekst.py draait de echte refresh_listing. Zie "marktplaats-fotoadres-sterft-met-de-advertentie".
 
 ---
 
@@ -10035,34 +10067,6 @@ lees het terug vlak voor het plaatsen. Zie "extension-release-bump-version".
 
 **Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
 - "zoekertjestekst-zit-in-react-hook-form" — de controle leest _formValues.description bij Vinted
-
----
-
-## instagram-leadgen-bronnen
-
-*29-07-2026 — Welke bronnen wel/niet werken voor Instagram-leadgen; Vinted is onscrapebaar en Marktplaats heeft geen brug naar Instagram*
-
-Voor de Instagram-outreach van Omnivaleur (`scripts/leadgen_instagram.py`) zijn in juli 2026 drie bronnen live getest:
-
-**Vinted — onbruikbaar als serverbron.** Zit achter Cloudflare en weigert datacenter-IP's. De publieke JSON-API geeft 403 op de homepage en 401 op `/api/v2/catalog/items`; drie verschillende Apify-actors (scrape.badger, epicscrapers, kazkn) gaven allemaal nul resultaten of faalden. Werkt alleen vanuit de browser van de gebruiker zelf, zoals de extensie doet.
-
-**Marktplaats — scrapet prima, maar geen brug naar Instagram.** `haketa/marktplaats-scraper` werkt betrouwbaar (velden: sellerName, sellerId, sellerType, location). Maar er is geen automatische weg van een MP-verkoper naar zijn Instagram: handles raden uit de winkelnaam gaf 4 treffers op 13 gokken en de enige echte match was een verzamelaar uit Tokio, en **0 van 53 advertentiebeschrijvingen** noemde een @handle of instagram-link. Als leadbron voor IG dus dood; als losse lijst NL-verkopers nog wel bruikbaar.
-
-**Instagram-hashtags — beste bron, met afstand.** `apify/instagram-hashtag-scraper` op Nederlandse tags: 30 posts op #kringloopwinkel gaven 22 unieke NL-kringloopwinkels, 83% overleefde de Haiku-classificatie. Kies tags die een *verkoper* gebruikt en een koper niet (#kringloopwinkel wel, #thrifthaul niet). Let op: `coderx/instagram-hashtag-scraper` is goedkoper maar knijpt gratis accounts af tot **één run per dag**, en meldt dat als gewone datarij met een `error`-veld — niet als HTTP-fout.
-
-**Instagram keyword-discovery — werkt, maar 5 per run.** `afanasenko/instagram-profile-scraper` in `keywordDiscovery`-modus met **Nederlandstalige** zoektermen. Die taal is zelf het landfilter — "kringloop" bestaat alleen in NL/BE, terwijl "thrift" de halve wereld binnenhaalt.
-
-**De sleutel tot het omzeilen van die 5-limiet:** die zit op de *discovery*-actor, niet op Instagram-data in het algemeen. `figue/instagram-profile-scraper` haalt ongelimiteerd profielen op voor ~$0,001. Vandaar de splitsing in `discover` (alleen handles) → `enrich` (profieldata) in "leadgen-vier-bronnen". De limiet geldt bovendien *per run*, dus losse runs per stad geven 14x5 in plaats van 5.
-
-**Bewust niet gebouwd: instaloader.** Anoniem profielen ophalen is stuk (400 "ig_business_category_subvertical" op elk testaccount); werkend krijg je het alleen met ingelogde sessie, en dan riskeer je je eigen account voor data die $0,001 kost.
-
-Categorie-ID's van `haketa/marktplaats-scraper` zijn grotendeels dood: alleen **621 (Kleding|Dames), 504 (Huis en Inrichting), 1099 (Hobby en Vrije Tijd), 728 (Muziek), 91 (Auto's)** geven resultaten. De andere veertien in de enum accepteert hij wel maar leveren stil nul items — een geaccepteerde input is hier geen bewijs, zie ook "marktplaats-category-ids".
-
-Koude DM's mogen niet via de officiële Instagram-API (alleen antwoorden binnen 24 uur nadat iemand jou schrijft). Het script automatiseert daarom alles tot en met de kant-en-klare tekst in de "leadlist-outreach-formula", maar verstuurt zelf niets.
-
-**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
-- "instagram-ban-augustus-2026" — IG geblokkeerd via gekoppeld FB-profiel sinds ~09-08-2026; IG-leadgen staat stil
-- "tiktok-gratis-schrapen" — kan zonder Apify, maar alleen met stealth + verse browsersessie per hashtag
 
 ---
 
