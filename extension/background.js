@@ -6302,7 +6302,7 @@ async function bgDeleteVinted(job, serverUrl) {
         return [...v.querySelectorAll('button, a, [role="button"], [role="radio"], input[type="radio"]')]
           .map(e => (e.textContent || e.value || "").trim().slice(0, 30) + (e.dataset.testid ? `#${e.dataset.testid}` : ""))
           .filter(Boolean).join(" | ").slice(0, 400);
-      });
+      }).catch(() => "");
       // Staat er nog een venster open, dan is de bevestiging niet afgerond en
       // zegt dít precies welke knop er nog wachtte.
       throw new Error(`Vinted listing ${listingId} still in your wardrobe after confirming delete — removal was not verified.`
