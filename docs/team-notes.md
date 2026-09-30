@@ -14957,3 +14957,20 @@ Gemeten 18:19: 4 accounts in hun eerste week, 2 nieuw. Web Store levert 1.0.363,
   delisted, geen open opdracht. Na: pending, opdrachten beb1db10 en 92d9698b. De Vinted
   kleurfouten van 25-09 zijn achterhaald (die ketting staat actief op Vinted). Vier andere
   wachtende opdrachten van hem staan gepland tussen 16:52 en 17:58 UTC (rustig tempo), niet vast.
+
+## 30-09-2026 (21:15): Dagelijkse klantfouten (ochtendronde, 's avonds gedraaid)
+
+Gemeten over 24 uur: 119 fouten bij 3 klanten, allemaal al eerder gemeld; sinds de
+ronde van 16:05 niets nieuws in onze code. Niets hangt op 'claimed'. Geen reparatie.
+- 26cf5471 (Zilverwebsite): de 55 mislukte Marktplaats-herplaatsingen van 06:28 tot
+  06:45 UTC zijn niet teruggekomen; daarna 10 Marktplaats-plaatsingen geslaagd.
+  Wel faalt haar Vinted-scan sinds 13:03 elk half uur met "niet ingelogd" (5x op
+  1.0.363). Klant-eigen: om 18:23 en 18:53 slaagden de scans van 1ba42900 en
+  96e30080 op dezelfde versies, en haar eigen scan slaagde om 08:48 nog.
+- bcdf9aa4 (Egbert): 549 verzendkost-bijwerkingen en 51 plaatsingen wachten,
+  extensie sinds 15:54 UTC niet gezien (computer uit). Bijwerkingen staan bewust
+  achter nieuwe plaatsingen (groep 3); de laatste 50 liepen allemaal goed af, rem
+  staat open. Geen fout.
+- 82b13998 (Anneloes) en f8c0cce9: een Vinted-scan wacht sinds gisteravond,
+  extensie sinds 29-09 niet gezien. Klant-eigen.
+- Open (ongewijzigd): 1.0.364 naar de Web Store (Vinted-verwijderen "Frame removed").
