@@ -427,6 +427,48 @@ async def customer_portal(user_id: str = Depends(get_current_user)):
     return {"url": session.url}
 
 
+@router.post("/admin/btw")
+def btw_bovenop(apply: bool = False, user=Depends(get_current_user_full)):
+    """Btw bovenop de 19,99 voor bestaande betalende klanten. Owner-only.
+
+    Zonder apply=true verandert er niets: je krijgt de proefberekening van
+    Stripe (moet 19,99 + 4,20 = 24,19 zijn) en per abonnement wat er zou
+    gebeuren. Met apply=true gaat automatische btw aan, alleen bij klanten met
+    een land in hun Stripe-adres; zonder adres kan Stripe niet rekenen en zou de
+    volgende factuur mislukken, dus die slaan we over en melden we.
+    """
+    if not _is_owner_email(user.email):
+        raise HTTPException(status_code=403, detail="Not allowed")
+    proef = stripe.Invoice.create_preview(
+        customer_details={"address": {"country": "NL", "postal_code": "4614RG"}},
+        subscription_details={"items": [{"price": settings.stripe_price_id, "quantity": 1}]},
+        automatic_tax={"enabled": True},
+    )
+    resultaat = {
+        "proef_subtotaal": proef.subtotal / 100,
+        "proef_btw": (proef.total - proef.total_excluding_tax) / 100,
+        "proef_totaal": proef.total / 100,
+        "abonnementen": [],
+    }
+    for sub in stripe.Subscription.list(status="all", limit=100, expand=["data.customer"]).auto_paging_iter():
+        if sub.status not in ("active", "trialing", "past_due"):
+            continue
+        klant = sub.customer
+        adres = getattr(klant, "address", None)
+        land = getattr(adres, "country", None) if adres else None
+        aan = bool((sub.get("automatic_tax") or {}).get("enabled"))
+        rij = {"sub": sub.id, "email": getattr(klant, "email", None), "status": sub.status,
+               "adres_land": land, "btw_stond_aan": aan, "actie": "overgeslagen, geen adres"}
+        if aan:
+            rij["actie"] = "stond al aan"
+        elif land:
+            rij["actie"] = "wordt omgezet" if not apply else "omgezet"
+            if apply:
+                stripe.Subscription.modify(sub.id, automatic_tax={"enabled": True})
+        resultaat["abonnementen"].append(rij)
+    return resultaat
+
+
 @router.post("/admin/comp-account")
 def comp_account(email: str, user=Depends(get_current_user_full)):
     """Grants a free-forever account to the given email. Owner-only."""
