@@ -5391,12 +5391,14 @@ async function bgDeleteMp2dh(job, serverUrl) {
         if (!findResult?.rendered) {
           throw new Error(
             `Couldn't read your ${platform} listings overview — no ads rendered on ${overviewUrl}, ` +
-            `and the advert's own page gave no answer either. Make sure you're still logged in on ${platform}. Nothing was deleted.`
+            `and the advert's own page gave no answer either. Make sure you're still logged in on ${platform}. Nothing was deleted.` +
+            antwoordStaart
           );
         }
         throw new Error(
           `"${title}" cannot be found in your ${platform} listings overview, and we could not verify ` +
-          `whether it is still online. Nothing was removed — check it by hand on ${platform}.`
+          `whether it is still online. Nothing was removed — check it by hand on ${platform}.` +
+          antwoordStaart
         );
       }
       // Aantoonbaar weg = doel bereikt.
