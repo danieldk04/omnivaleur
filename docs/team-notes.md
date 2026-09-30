@@ -14988,3 +14988,23 @@ ronde van 16:05 niets nieuws in onze code. Niets hangt op 'claimed'. Geen repara
   Er stond verder niets in zijn rij. Klant-eigen (betaalmuur), geen reparatie.
 - Open, niet onderzocht: zijn listing-rij voor dit artikel staat nog op 'active' terwijl de
   advertentie weg is (410). Ruimt de verkochtcontrole normaal zelf op.
+
+## 30-09-2026 (22:45, automatisch): Klantfouten
+
+- fout-marktplaats-create-da5ad756, a4fc5340 (JP MiniWheels): twee nieuwe pogingen om 20:10
+  en 20:13 UTC om zijn VW Transporter (1:43) via ons op Marktplaats te zetten. Beide keren
+  stond er "Plaats je gratis advertentie", de gratis keuze was aangeklikt en de knop heette
+  "Plaats je advertentie": geen betaalmuur. Het enige wat Marktplaats rood maakte waren de
+  drie fabrikantvelden (naam, adres, e-mail), allemaal leeg. Zijn instellingen-rij is om
+  19:59:10 aangemaakt met fabrikant_meesturen uit en drie lege velden; standaard staat die
+  schakelaar aan. Hij zette hem dus zelf uit, 24 seconden voor zijn eerste plaatsing. Het
+  scherm zegt bij die schakelaar al dat Marktplaats de velden in sommige rubrieken zelf eist.
+  In Modelauto's 1:43 (speelgoed, GPSR) doet het dat. Wij mogen hier niets verzinnen.
+  Klant-eigen, geen reparatie. Hij kan verder door de schakelaar weer aan te zetten en zijn
+  eigen bedrijfsgegevens (of die van de fabrikant) in te vullen.
+- Correctie op de ronde van 22:20: de knop "Naar betalen" om 19:59 kwam één keer voor; de
+  twee pogingen daarna in dezelfde rubriek waren gratis. De blijvende blokkade is het
+  fabrikantblok, niet een volle rubriek. Niet nagegaan waarom de knop om 19:59 anders heette.
+- Open: de klant krijgt de ruwe formuliertekst ("Dit veld is verplicht",
+  textAttribute[...]) in plaats van een zin die naar Preferences wijst. Een serveruitleg
+  in fail_job voor dit geval zou helpen; niet gebouwd omdat de code doet wat bedoeld is.
