@@ -14808,3 +14808,9 @@ upload vastgelegd.
   Open blijft het kookboek (Vinted eist ISBN).
 - 1ba42900 (Vagif): loopt op Marktplaats, 2dehands en Vinted; proef tot 02-10, geen
   betaalmethode. De 5 ringen voor 2dehands wachten op 1.0.361. Geen mailtje (gesprek 29-09).
+- Slot: deze ronde en de klantfouten-ochtendronde begonnen allebei om 06:47 UTC (de Mac
+  sliep, beide taken startten bij het ontwaken). Beide lazen "klaar" en schreven "bezig";
+  de klantfoutenronde schreef als laatste en houdt het slot. `ronde begin` leest en
+  schrijft zonder controle achteraf, dus twee gelijktijdige starts komen er allebei door.
+  Geen schade: deze ronde repareerde niets. `ronde klaar` weigerde terecht (slot niet van
+  ons); het slot niet aangeraakt.
