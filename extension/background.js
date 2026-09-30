@@ -6290,7 +6290,7 @@ async function bgDeleteVinted(job, serverUrl) {
           }
           return null;
         } catch (e) { return null; }
-      }, [before.userId, listingId]);
+      }, [before.userId, listingId]).catch(() => null);  // doorsturing nog bezig: straks opnieuw
       if (present === false) { goneAfter = true; break; }
       await sleep(1800);
     }
