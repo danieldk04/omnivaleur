@@ -14868,3 +14868,15 @@ Gemeten over 24 uur: 135 fouten bij 5 klanten. Web Store serveert nu 1.0.358
   tegen Supabase op proefsleutel `klantfouten_ronde_proef` (daarna weggehaald):
   oud gaf beide toegang, nieuw precies één, met en zonder eerdere ronde.
 - Gedaan onder het slot met rondenaam `slot-reparatie`.
+
+## 30-09-2026 (10:25, automatisch): Klantfouten
+
+- fout-marktplaats-create-acb487d3 (3bfbed2c, artikel 1372, 07:04 UTC): "Uploading
+  the photos took too long". Oorzaak al bewezen en gerepareerd in 1fc30967 (07:13
+  UTC): iPhone-foto's (MPO) werden niet verkleind en bleven 3,5 tot 7 MB. Nameting
+  in productie: de acht foto's van 1372 zijn nu 112 tot 730 KB, en Marktplaats en
+  2dehands zijn om 07:19 UTC voor dit artikel geslaagd (764e168c, ab009aca). Klant
+  staat niet meer vast; niets gewijzigd deze ronde.
+- Open (ongewijzigd uit de kennisbank): foto's die vóór 1fc30967 zijn opgeslagen
+  worden niet alsnog verkleind; bij een volgende trage upload eerst de grootte op
+  img.omnivaleur.com meten.
