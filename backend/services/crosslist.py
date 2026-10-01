@@ -1182,6 +1182,35 @@ async def _prijsvorm_uit_eigen_advertentie(db, item: dict) -> dict:
     return item
 
 
+async def _wachtrij_klaarzetten(db, item_id: str, platform: str, rijen: list[dict]) -> None:
+    """Zet de rij klaar waar de afronding van deze publicatie op landt.
+
+    EEN OUDE RIJ MET NUMMER IS NIET DE WACHTENDE RIJ (01-10-2026, Vagif).
+
+    Hier stond een update op ALLE rijen van dit artikel op dit kanaal naar
+    'pending'. Had het artikel er al eens gestaan, dan droeg die rij het
+    nummer van de oude, weggehaalde advertentie. `_rond_publicatie_af` zoekt
+    de rij met het nieuwe nummer of een rij zonder nummer, vond geen van
+    beide, en zette er een nieuwe rij naast. De oude bleef voor altijd op
+    'pending' staan met een dood advertentienummer. Gemeten 01-10: 79 van
+    zulke rijen bij 6 klanten, elk naast een levende advertentie.
+
+    Nu: een rij zonder nummer wordt de wachtende rij; is die er niet, dan komt
+    er een bij. Rijen met een nummer houden hun eigen status (delisted, error),
+    want die vertellen wat er met die oude advertentie gebeurde.
+    """
+    zonder_nummer = [r for r in rijen if not r.get("platform_listing_id")]
+    if zonder_nummer:
+        await _exec(db.table("listings").update({"status": "pending", "error_message": None})
+                    .eq("id", zonder_nummer[0]["id"]))
+    else:
+        await _exec(db.table("listings").insert({
+            "item_id": item_id,
+            "platform": platform,
+            "status": "pending",
+        }))
+
+
 async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str) -> list[dict]:
     """
     Route each platform to the right handler:
