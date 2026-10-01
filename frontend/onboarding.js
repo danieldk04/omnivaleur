@@ -594,7 +594,7 @@
           <div style="font-size:11px;color:var(--muted,#64748b);margin-top:6px">Revaleur · KVK 86792423 · Kleine Melanen 5, 4614RG Bergen op Zoom</div></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button onclick="typeof openFounderCall==='function'&&openFounderCall()" class="btn btn-primary btn-sm" style="white-space:nowrap">Talk to the founder</button>
-          <a href="mailto:info@revaleur.com" class="btn btn-outline btn-sm" style="text-decoration:none;white-space:nowrap">Email support →</a>
+          <a href="mailto:info@omnivaleur.com" class="btn btn-outline btn-sm" style="text-decoration:none;white-space:nowrap">Email support →</a>
         </div></div></div></section>
     </div>`;
   };
