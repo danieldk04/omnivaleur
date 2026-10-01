@@ -15205,3 +15205,19 @@ a38d1044), geen opdracht hangt op 'claimed'.
   via de debugger, niet afhankelijk van de paginaklok) over. Die stap alsnog proberen en pas falen
   als het formulier 0 tekens vasthoudt zou dit geval waarschijnlijk vangen. Niet gedaan omdat het
   mechanisme niet bewezen is; eerst bij een volgende keer de klokstand in de voortgang bewaren.
+
+## 01-10-2026 (14:10, automatisch): Klantfouten
+
+- fout-vinted-scan-f0787f69 (26cf5471, 11:45 UTC): garderobescan op Vinted vond geen ingelogd
+  account. Gemeten over een week: 12 scans gelukt, 26 mislukt, allemaal op dezelfde extensiekopie
+  (versies lopen netjes 1.0.352 tot 1.0.364, één hartslagrij, geen tweede kopie) en allemaal op
+  vinted.nl, het domein waar zijn 13 advertenties staan. De mislukkingen komen in aaneengesloten
+  blokken van uren (26-09 08:13 tot 19:03, 30-09 17:20 tot 18:53) en daarna lukt het weer
+  (26-09 21:37, 01-10 05:48). Dat is een toestand die uren aanhoudt, geen wisselvallige herkenning:
+  hij is in die uren niet ingelogd op Vinted in die browser. De fout zit sinds 1.0.352 in dezelfde
+  vorm, dus geen gevolg van een recente wijziging. Andere klanten scannen gewoon (96e30080 25/25,
+  3bfbed2c 19/19). Oordeel klant, geen code gewijzigd.
+- Open: de scan herkent de inlog alleen aan de pagina (menulink en paginagegevens), terwijl de
+  rest van de extensie /api/v2/users/current vraagt (vintedIngelogd). Die vraag in de scan
+  meenemen zou een echte uitlog (401) hard onderscheiden van een pagina die anders oogt of een
+  botcontrole. Niet gedaan: geen bewijs dat de paginaherkenning ooit mis was.
