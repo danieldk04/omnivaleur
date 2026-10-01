@@ -15034,3 +15034,27 @@ verkopen en geen 20 euro willen betalen. Pro (19,99 excl. btw) blijft voor bedri
   één abonnement goed afhandelt (niet tegen echt Stripe geprobeerd); wat een Light-klant
   ons aan serverwerk en support kost; of particulieren er echt voor betalen. Bewijs
   vooraf: de ~20 afhakers die wel inlazen mailen met een betaallink.
+
+## 01-10-2026: Dagelijkse klantfouten (ochtendronde)
+
+Gemeten over 24 uur: 796 opdrachten afgerond, 25 fouten bij 5 klanten. Alles wat
+gisteravond al besproken was (Zilverwebsite Vinted uitgelogd, JP MiniWheels
+fabrikantvelden, Toons maat/merk-velden) is niet teruggekomen na 20:30 UTC. Geen
+reparatie in onze code nodig.
+- Toon KL05 afgerond: verwijdering m2442937808 was 30-09 15:14 UTC gedaan (pagina 404,
+  geen open verwijdering meer). Script met --apply: 2 rijen samengevoegd, verder niets.
+  Daarmee is de overdracht uit CLAUDE.md klaar.
+- bcdf9aa4 (Egbert), 2dehands "did not accept any photo": eenmalig. Zijn foto's zijn
+  allemaal AVIF, en sinds 24-09 gingen 1.000 plaatsingen met AVIF goed; de foto is
+  bereikbaar (200, image/avif). Geen patroon, oordeel onbekend.
+- 96e30080 (Toon), Marktplaats-scan "statement timeout" (57014) bij het opslaan om
+  20:54 UTC; de scan van 20:22 slaagde gewoon. Eenmalig, niet verklaard.
+- 96e30080 (Toon), Vinted-verwijderen "Delete control not found" + 403 op
+  6903891845 (Leren vest). Zijn extensie in Edge staat op 1.0.345, negentien versies
+  achter; de 403-uitleg (1.0.355) en Frame-removed (1.0.364) zitten daar niet in. De
+  advertentie staat nog op Vinted en bij ons op actief. Open: waarom Edge niet
+  bijwerkt.
+- Hangend op 'claimed': 3bfbed2c verwijdering sinds 30-09 21:18 en 26cf5471 plaatsing
+  sinds 06:51, beide precies op hun laatste levensteken (computer uit). Klant-eigen.
+- 0b28c1ce: 118 opdrachten wachten, extensie sinds 27-09 weg, offline-mail 30-09
+  verstuurd. bcdf9aa4: 682 verzendkost-bijwerkingen wachten, extensie actief, loopt.
