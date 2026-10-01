@@ -215,6 +215,31 @@ async def billing_status(user=Depends(get_current_user_full)):
 _LOPENDE_STATUSSEN = {"active", "trialing", "past_due", "unpaid", "incomplete"}
 
 
+def _levende_klant(customer_id: str | None) -> str | None:
+    """Het klantnummer als die klant bij Stripe nog bestaat, anders None.
+
+    Verwijdert iemand een klant in het Stripe-dashboard (opruimen na een proef),
+    dan bewaart onze tabel het dode nummer en weigerde Stripe elke afrekening
+    met "No such customer". Gemeten 01-10-2026 op het eigen testaccount van de
+    eigenaar. Alleen een bevestigd verwijderde of onbekende klant telt als weg;
+    kan Stripe het niet zeggen, dan blijft het nummer staan.
+    """
+    if not customer_id:
+        return None
+    try:
+        klant = stripe.Customer.retrieve(customer_id)
+    except Exception as e:
+        if "No such customer" in str(e) or getattr(e, "code", None) == "resource_missing":
+            logger.warning("Klant %s bestaat niet meer bij Stripe, er komt een nieuwe", customer_id)
+            return None
+        return customer_id
+    gewist = klant.get("deleted") if isinstance(klant, dict) else getattr(klant, "deleted", False)
+    if gewist:
+        logger.warning("Klant %s is bij Stripe verwijderd, er komt een nieuwe", customer_id)
+        return None
+    return customer_id
+
+
 def bestaand_abonnement(customer_id: str | None) -> str | None:
     """Het id van een al lopend abonnement van deze klant, of None.
 
@@ -285,7 +310,7 @@ def create_checkout(user=Depends(get_current_user_full), body: dict = None):
     # allowed") zodra de server met een gewone sleutel praat in plaats van de
     # service-role sleutel. Gevolg: iedere eerste betaalpoging klapte er hier op
     # stuk, nog voordat Stripe in zicht kwam.
-    customer_id = sub.get("stripe_customer_id")
+    customer_id = _levende_klant(sub.get("stripe_customer_id"))
 
     # NOOIT TWEE ABONNEMENTEN OP DEZELFDE KLANT.
     #

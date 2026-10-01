@@ -34,6 +34,12 @@ def _fake_stripe(monkeypatch, billing, subs):
         def create(**kw):
             return types.SimpleNamespace(url="https://portal.example/klant")
 
+    class Customer:
+        @staticmethod
+        def retrieve(cid):
+            return {"id": cid}
+
+    monkeypatch.setattr(billing.stripe, "Customer", Customer, raising=False)
     monkeypatch.setattr(billing.stripe, "Subscription", Subscription, raising=False)
     monkeypatch.setattr(billing.stripe.checkout, "Session", Sessions, raising=False)
     monkeypatch.setattr(billing.stripe, "billing_portal",
