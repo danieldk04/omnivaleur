@@ -15058,3 +15058,8 @@ reparatie in onze code nodig.
   sinds 06:51, beide precies op hun laatste levensteken (computer uit). Klant-eigen.
 - 0b28c1ce: 118 opdrachten wachten, extensie sinds 27-09 weg, offline-mail 30-09
   verstuurd. bcdf9aa4: 682 verzendkost-bijwerkingen wachten, extensie actief, loopt.
+
+Correctie 01-10 (Toon, versie): niet "Edge werkt niet bij". Gemeten per opdracht: 29-09
+draaide hij 1.0.355, 30-09 tot 14:xx UTC 1.0.358, en vanaf 20:00 UTC ineens 1.0.345.
+Hij ging dus terug in versie: om 20:00 pakte een tweede, oudere kopie het werk op
+(laatste hartslag: Edge). Welke browser de 1.0.358 was, staat nergens opgeslagen.
