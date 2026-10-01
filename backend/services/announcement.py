@@ -112,21 +112,22 @@ def collect_recipients() -> list[str]:
 # Geen euroteken of percentage in de onderwerpregel, dat is wat Gmail naar
 # Promoties stuurt. Eén taal (Nederlands), zoals Daniel vroeg.
 
-LIGHT_SUBJECT = "Een goedkoper abonnement voor wie minder verkoopt, van Daniel"
+LIGHT_SUBJECT = "Goedkoper abonnement bij minder verkopen"
 
+# Tekst van Daniel zelf (01-10-2026), letterlijk overgenomen.
 LIGHT_BODY = """Hoi,
 
-Ik ben Daniel, de man achter Omnivaleur. Ik schrijf dit zelf.
+Ik ben Daniel, de man achter Omnivaleur.
 
 Niet iedereen verkoopt de hele dag. Als je een paar tientjes artikelen tegelijk online hebt staan, is 19,99 euro per maand veel geld voor wat je er per maand mee verdient. Daar heb ik iets voor gebouwd.
 
-Omnivaleur Light kost 9,99 euro per maand, inclusief btw. Je krijgt dezelfde werking als Pro: een artikel één keer invoeren en op Marktplaats, 2dehands, Vinted, eBay en Shopify zetten, automatisch weghalen als het ergens verkocht is, en automatisch herplaatsen. Het enige verschil is dat Light bedoeld is voor maximaal 20 actieve artikelen tegelijk. Verkoop je iets, dan komt er weer ruimte vrij. Wat al online staat blijft altijd gewoon werken.
+Het nieuwe abonnement, Omnivaleur Light kost 9,99 euro per maand. Je krijgt dezelfde werking als Pro: een artikel één keer invoeren en op Marktplaats, 2dehands, Vinted, eBay en Shopify zetten, automatisch weghalen als het ergens verkocht is, en automatisch herplaatsen. Het enige verschil is dat Light bedoeld is voor maximaal 20 actieve artikelen tegelijk. Verkoop je iets, dan komt er weer ruimte vrij. Wat al online staat blijft altijd gewoon werken.
 
-Heb je meer artikelen, of verkoop je zakelijk? Dan blijft Pro er: 19,99 euro per maand exclusief btw, zonder limiet. Wisselen kan later altijd.
+Heb je meer artikelen, of verkoop je zakelijk? Dan blijft Pro er: 19,99 euro per maand, zonder limiet. Wisselen kan later altijd.
 
-Zo kies je: ga naar https://omnivaleur.com/app.html, open Account en kies Light of Pro. Loopt je proefperiode nog, dan loopt die gewoon door en betaal je pas als hij afloopt. Is je proefperiode voorbij, dan staan je artikelen en koppelingen er nog en kun je meteen verder.
+Om het Light abonnement aan te schaffen, ga je naar omnivaleur.com/app en kies je in het scherm voor "Light". Loopt je proefperiode nog, dan loopt die gewoon door en betaal je pas als hij afloopt. Is je proefperiode voorbij, dan staan je artikelen en koppelingen er nog en kun je meteen verder.
 
-Past dit niet bij je, of mis je iets? Antwoord dan op deze mail. Die komt rechtstreeks bij mij, en ik lees hem ook echt.
+Past dit niet bij je, of mis je iets? Antwoord dan op deze mail. Ik beantwoord je vragen graag :).
 
 Daniel van Omnivaleur
 """

@@ -92,6 +92,5 @@ def test_mailtekst_is_platte_tekst_met_de_juiste_feiten():
     tekst = ann.LIGHT_BODY + ann.LIGHT_SUBJECT
     for verboden in ("—", "–", "**", "##", " - ", "€", "%"):
         assert verboden not in tekst, f"opmaak of leesteken in de mail: {verboden!r}"
-    for feit in ("9,99", "inclusief btw", "19,99", "exclusief btw", "20 actieve artikelen",
-                 "https://omnivaleur.com/app.html"):
+    for feit in ("9,99", "19,99", "20 actieve artikelen", "omnivaleur.com/app"):
         assert feit in ann.LIGHT_BODY
