@@ -15081,3 +15081,27 @@ mailsysteem: Account, onderaan "Owner tools", knoppen "Light mail: preview list"
   Nederlands. De oude 'afrekenen werkt weer'-mail staat er nog, bereikbaar met soort=checkout.
 - Let op: onder de ontvangers zitten ook enkele buitenlandse adressen (.co.uk, .de), die een
   Nederlandse mail krijgen.
+
+## 01-10-2026: Onboarding nieuwe klanten (ochtend)
+
+Gemeten 09:55: 4 accounts in hun eerste week, geen nieuwe. Web Store levert 1.0.363, repo 1.0.364.
+- a4fc5340 (JP MiniWheels, plmdemonnink@planet.nl): 481 modelauto's ingelezen uit Marktplaats,
+  467 actief gekoppeld, nog geen plaatsing via ons. Alle drie de mislukte plaatsingen zijn
+  klant-eigen (lege fabrikantvelden, schakelaar zelf uit; een keer betaalde rubriek). Om 09:07
+  zette hij de VW Transporter opnieuw klaar (f2db01c1, gepland 11:08); die strandt weer zolang
+  het blok leeg is. Hij kreeg tot nu de ruwe formuliertekst; sinds 062ad6c6 een zin die naar
+  Voorkeuren wijst (NL+EN, voor-en-na-proef op zijn echte foutteksten). Vervolgmail klaargezet.
+- 1ba42900 (Vagif): de twee ringen staan nu actief op 2dehands (beb1db10, 92d9698b gelukt).
+  Proef tot 02-10 18:39, geen betaalmethode. Vervolgmail klaargezet.
+- 82b13998 (Anneloes): ongewijzigd, extensie sinds 29-09 niet gezien. Geen mailtje.
+- aa093a0a: Daniels eigen account. Geen mailtje.
+- Productfout gerepareerd (e2dbd54c, 350bf187, 062ad6c6): opnieuw publiceren van een artikel
+  dat er eerder stond zette de OUDE rij (met dood advertentienummer) op 'pending'; de afronding
+  maakte een nieuwe rij en de oude bleef eeuwig op 'pending'. Gemeten: 79 zulke rijen bij 6
+  klanten, alle 79 naast een levende advertentie. Nu wordt een rij zonder nummer de wachtende
+  rij, oude rijen houden hun eigen status. Oude code faalt in de proef, 2130 tests groen.
+  Klantdata: 60 van de 79 rijen hadden een afgeronde verwijdering na hun plaatsing als bewijs
+  en staan nu op 'delisted' (voor 79, na 19). De 19 zonder bewijs (26cf5471 6, 3bfbed2c 4,
+  96e30080 8, bcdf9aa4 1) bleven staan: daar is niet bewezen dat de oude advertentie weg is.
+- Let op: de auto-push zette om 10:00 een tussenstand van jobs.py live waarin het nieuwe
+  patroon nog niet gedefinieerd was (436856cd); 062ad6c6 om 10:03 herstelde dat.
