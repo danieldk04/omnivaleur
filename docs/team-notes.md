@@ -15147,3 +15147,12 @@ in zijn browser (rapport door Daniel geplakt), daarna door mij met `dig` gecontr
   de alarmmails (ALARM_NAAR).
 - Onbekend gebleven: naar welk adres info@omnivaleur.com bij Namecheap doorstuurde. Mails die daar
   voor 01-10 binnenkwamen zijn ergens heen gegaan dat niet meer te achterhalen is.
+
+## 01-10-2026 (later): mailkwaliteit omnivaleur.com, gedaan door Claude in Daniels browser
+- DMARC op omnivaleur.com: p=none met rua naar Cloudflare DMARC Management (eerste rapport na ongeveer 24
+  uur). Pas naar p=quarantine als over 2 tot 4 weken Zoho en Resend beide als aligned verschijnen.
+- Gravatar: info@omnivaleur.com geverifieerd en gekoppeld aan het Omnivaleur-logo. Zoho verstuurt het alias
+  als "Daniel van Omnivaleur".
+- Niet gedaan: RESEND_FROM in Railway staat nog op "Omnivaleur <info@omnivaleur.com>" (weergavenaam
+  aanpassen herstart de dienst kort, cosmetisch). BIMI staat niet aan (betaald certificaat nodig).
+  Zoho-profielfoto moet Daniel zelf uploaden. daniel@omnivaleur.nl staat niet in Gravatar.
