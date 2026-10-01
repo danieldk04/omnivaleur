@@ -15121,3 +15121,29 @@ Gemeten 09:55: 4 accounts in hun eerste week, geen nieuwe. Web Store levert 1.0.
   zet de verwijdering rond 09:22 UTC vanzelf opnieuw klaar. De 2dehands-verwijdering
   (4429d27c) wacht nog. Open: kijken of de herkansing slaagt; komt "geen verwijderknop"
   vaker terug, dan op de advertentiepagina wachten tot de knop verschijnt.
+
+## 01-10-2026: e-mail van Omnivaleur volledig in Zoho, info@omnivaleur.com is een alias
+
+Daniel wilde twee adressen, allebei in Zoho: info@omnivaleur.com en daniel@omnivaleur.nl. Gedaan door Claude
+in zijn browser (rapport door Daniel geplakt), daarna door mij met `dig` gecontroleerd.
+- Zoho (EU, mailadmin.zoho.eu): plan Mail Lite 5GB, jaarlijks, 1 licentie, loopt tot 11-08-2027 (EUR 10,80
+  per jaar). Een tweede postbus had een tweede licentie gekost. Gekozen: gratis alias. info@omnivaleur.com
+  is een alias op de gebruiker daniel@omnivaleur.nl, geen aparte postbus. Verzenden als info@ kan (Zoho
+  "Send Mail As").
+- Filter in Zoho Mail: Naar bevat info@omnivaleur.com, dan naar de map "Klanten". Zo komt klantmail niet in
+  de inbox waar het leadsysteem (IMAP) koude-mailantwoorden leest. Aanname, niet gemeten: het leadsysteem
+  leest alleen de inbox.
+- DNS omnivaleur.com (Cloudflare): de Namecheap-doorstuurservers (eforward1 tot 5) zijn vervangen door MX
+  mx.zoho.eu (10), mx2 (20), mx3 (50). SPF op de wortel is nu "v=spf1 include:zohomail.eu ~all". DKIM
+  zmail._domainkey toegevoegd en geverifieerd. DMARC ongewijzigd (p=none). Resend/SES-records
+  (send. en resend._domainkey) niet aangeraakt, Resend staat op Verified. omnivaleur.nl en revaleur.com
+  ongewijzigd. Gecontroleerd met dig op 01-10-2026.
+- Tests door Claude in de browser: mail naar info@ komt in de map Klanten; mail vanuit Zoho als info@ komt
+  aan met SPF, DKIM en DMARC op pass; app-testmail komt aan. Railway had REPLY_TO_EMAIL al op
+  info@omnivaleur.com en RESEND_FROM op "Omnivaleur <info@omnivaleur.com>" (door Claude in de browser
+  gezien, niet door mij). De codestandaard in backend/config.py is nu ook info@omnivaleur.com.
+- Verouderd: eerder stond hier dat antwoorden binnenkomen op info@revaleur.com. Dat was de standaard in de
+  code, niet wat Railway gebruikte. revaleur.com (Hostinger) blijft Daniels andere postbus en ontvangt nog
+  de alarmmails (ALARM_NAAR).
+- Onbekend gebleven: naar welk adres info@omnivaleur.com bij Namecheap doorstuurde. Mails die daar
+  voor 01-10 binnenkwamen zijn ergens heen gegaan dat niet meer te achterhalen is.
