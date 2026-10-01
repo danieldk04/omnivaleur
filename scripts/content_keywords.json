@@ -608,7 +608,7 @@
       "pillar": "B",
       "format": "howto",
       "slug": "how-to-photograph-clothes-for-vinted",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "kleding-fotograferen-voor-vinted",
       "priority": 73
     },
@@ -1279,6 +1279,16 @@
       "action": "created",
       "url_path": "/vs/omnivaleur-vs-zipsale",
       "published_at": "2026-09-30T14:27:33.250940+00:00"
+    },
+    {
+      "keyword": "how to photograph clothes for vinted",
+      "slug": "how-to-photograph-clothes-for-vinted",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-photograph-clothes-for-vinted",
+      "published_at": "2026-10-01T14:58:03.787284+00:00"
     }
   ]
 }
