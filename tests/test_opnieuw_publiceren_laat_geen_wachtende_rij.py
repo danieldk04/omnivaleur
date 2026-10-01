@@ -109,3 +109,33 @@ def test_rij_zonder_nummer_wordt_hergebruikt():
     asyncio.run(cl._wachtrij_klaarzetten(db, "ring", "2dehands", [dict(r) for r in db.listings]))
 
     assert len(db.listings) == 1 and db.listings[0]["status"] == "pending"
+
+
+# ── Lege fabrikantvelden: een zin die naar Preferences wijst (01-10-2026) ──
+
+_RUW = ("Error: Not published — complete the fields marked in red and click publish "
+        "yourself. Dit veld is verplicht. | Error: Dit veld is verplicht. | Fields "
+        "marked invalid: textAttribute[manufacturerTradename]=LEEG, "
+        "textAttribute[manufacturerAddress]=LEEG, textAttribute[manufacturerEmail]=LEEG")
+
+
+def test_lege_fabrikantvelden_wijzen_naar_preferences():
+    uit = api._rechtgezette_foutmelding({"platform": "marktplaats", "action": "create"},
+                                        {"error": _RUW}, None)
+    assert "Preferences" in uit["error"] and "textAttribute" not in uit["error"]
+    assert uit["error_oorspronkelijk"] == _RUW
+
+
+def test_betaalmuur_blijft_voorgaan():
+    tekst = ('Marktplaats (marktplaats.nl) charges for adverts in "Modelauto\'s": the site '
+             "says this is a paid category. textAttribute[manufacturerTradename]=LEEG")
+    uit = api._rechtgezette_foutmelding({"platform": "marktplaats", "action": "create"},
+                                        {"error": tekst}, None)
+    assert uit["error"] == tekst
+
+
+def test_ingevuld_fabrikantveld_telt_niet():
+    tekst = "Fields marked invalid: textAttribute[manufacturerTradename]=JP MiniWheels"
+    uit = api._rechtgezette_foutmelding({"platform": "marktplaats", "action": "create"},
+                                        {"error": tekst}, None)
+    assert uit.get("error") == tekst

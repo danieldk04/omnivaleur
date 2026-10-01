@@ -4621,6 +4621,10 @@ _BETAALMUUR = re.compile(
 # Meer is er niet nodig, en meer moet het ook niet worden: dit patroon mag niet
 # aanslaan op een gewone tekst waarin het woord toevallig voorkomt, daarom
 # staat het aan een van deze vaste zinnen vast.
+# Lege fabrikantvelden, zoals de extensie ze meldt: "textAttribute[
+# manufacturerTradename]=LEEG". Alleen het veld met LEEG erachter telt.
+_FABRIKANT_LEEG = re.compile(r"textAttribute\[manufacturer\w*\]=LEEG")
+
 _GEEN_ADRES = re.compile(
     r"postcode is still empty"
     r"|geen postcode ingevuld"
@@ -5477,9 +5481,10 @@ def _rechtgezette_foutmelding(job: dict | None, body: dict, versie, kansloos: bo
         return {**(body or {}), "error_oorspronkelijk": fout, "error": (
             "Not published: Marktplaats and 2dehands require the responsible party "
             "on this listing (trade name, postal address and email), and those fields "
-            "were empty. Go to Preferences, switch on \"Responsible party\", fill in "
-            "your business name, address and email once, and publish again. Every "
-            "next listing then carries them automatically.")}
+            "were empty. Go to Preferences, under \"Responsible party\" fill in your "
+            "trade name, address and email once and tick \"Add these details to my "
+            "Marktplaats & 2dehands listings\", then publish again. Every next "
+            "listing carries them automatically.")}
     # HET ANTWOORD DAT WE ZELF HEBBEN OPGEZOCHT GAAT VOOR (15-09-2026).
     # Weten we uit zijn eigen openbare advertentie dat dit een zakelijk account
     # is, dan is elk inlogverwijt hierboven onzin en hoeven we hem niets te
