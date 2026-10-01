@@ -15174,3 +15174,17 @@ in zijn browser (rapport door Daniel geplakt), daarna door mij met `dig` gecontr
 - Open: waarom een al verkocht artikel om 09:13 opnieuw ter plaatsing werd aangeboden (drie
   plaatsingen tegelijk, waarschijnlijk een klik in het dashboard). Niet uitgezocht; de
   annulering vangt het.
+
+## 01-10-2026 (12:35): Dagelijkse klantfouten (ochtendronde)
+
+Gemeten over 24 uur: 711 opdrachten afgerond, 27 fouten bij 4 klanten. Sinds de ronde van
+12:10 is er één fout bijgekomen: 96e30080 (Toon) 2dehands-plaatsing "Mooie broek" met maat
+"Universeel" in de rubriek broeken (10:32 UTC), dezelfde klant-eigen soort als haar
+bodywarmer van 08:20 en de lammycoat van 30-09: ze moet een echte maat kiezen. Alles wat de
+eerdere rondes vandaag meldden is niet teruggekomen. Server gezond (/health ok, commit
+a38d1044), geen opdracht hangt op 'claimed'.
+- Wachtend, klant-eigen: bcdf9aa4 (Egbert) 682 verzendkost-bijwerkingen en 24 plaatsingen,
+  extensie sinds 07:06 UTC stil na een goede ochtend (113 klaar tussen 05 en 08 UTC);
+  0b28c1ce 168 opdrachten, extensie sinds 27-09 weg. Drie losse Vinted-scans bij klanten
+  wier extensie sinds 29/30-09 niet meer gezien is.
+- Geen reparatie nodig. Niet meetbaar: fouten die alleen in de browser van de klant staan.
