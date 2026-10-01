@@ -15105,3 +15105,19 @@ Gemeten 09:55: 4 accounts in hun eerste week, geen nieuwe. Web Store levert 1.0.
   96e30080 8, bcdf9aa4 1) bleven staan: daar is niet bewezen dat de oude advertentie weg is.
 - Let op: de auto-push zette om 10:00 een tussenstand van jobs.py live waarin het nieuwe
   patroon nog niet gedefinieerd was (436856cd); 062ad6c6 om 10:03 herstelde dat.
+
+## 01-10-2026 (10:44, automatisch): Klantfouten
+
+- fout-marktplaats-delete-9331030f (Toon, 96e30080, 08:26 UTC, 1.0.363): "Originele
+  Lederhosen bruin maat 52" verkocht op Vinted om 08:21 UTC, de Marktplaats-verwijdering
+  (m2447791255) mislukte. Niet in het overzicht (bekend bij zijn zakelijke account),
+  daarna op de eigen advertentiepagina geen verwijderknop gezien: alleen Meldingen / DJT
+  De Juiste Toon / Privacyvoorkeuren, dus ingelogd op het juiste account. De advertentie
+  staat openbaar nog live. Eenmalig: van zijn ~85 Marktplaats-verwijderingen sinds 29-09
+  gingen alle andere via dezelfde pagina goed, en over alle klanten sinds 17-09 is dit de
+  enige keer dat die pagina geen knop toonde. Of de pagina nog niet klaar was met tekenen
+  of Marktplaats iets anders liet zien, is niet te bewijzen; niet gerepareerd. Oordeel
+  onbekend. Het verkoopvangnet (verkoop_reconciliatie, wacht 1 uur na de eerste poging)
+  zet de verwijdering rond 09:22 UTC vanzelf opnieuw klaar. De 2dehands-verwijdering
+  (4429d27c) wacht nog. Open: kijken of de herkansing slaagt; komt "geen verwijderknop"
+  vaker terug, dan op de advertentiepagina wachten tot de knop verschijnt.
