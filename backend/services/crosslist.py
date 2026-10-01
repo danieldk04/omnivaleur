@@ -1586,14 +1586,7 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
                     al_live["message"] = melding_zakelijk_vervangen(platform)
                 results.append(al_live)
                 continue
-            if not existing_listing.data:
-                await _exec(db.table("listings").insert({
-                    "item_id": item_id,
-                    "platform": platform,
-                    "status": "pending",
-                }))
-            else:
-                await _exec(db.table("listings").update({"status": "pending", "error_message": None}).eq("item_id", item_id).eq("platform", platform))
+            await _wachtrij_klaarzetten(db, item_id, platform, rijen)
             # Is er al een openstaande publicatieopdracht voor dit item op dit
             # platform? Dan die bijwerken in plaats van een tweede aanmaken. Zonder
             # deze stap leverde één keer opnieuw proberen na een time-out (het
