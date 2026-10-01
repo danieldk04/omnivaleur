@@ -15188,3 +15188,20 @@ a38d1044), geen opdracht hangt op 'claimed'.
   0b28c1ce 168 opdrachten, extensie sinds 27-09 weg. Drie losse Vinted-scans bij klanten
   wier extensie sinds 29/30-09 niet meer gezien is.
 - Geen reparatie nodig. Niet meetbaar: fouten die alleen in de browser van de klant staan.
+
+## 01-10-2026 (13:40, automatisch): Klantfouten
+
+- fout-marktplaats-create-3e87c488 (0b28c1ce, 11:21 UTC): herplaatsing van "Vintage Parelketting
+  van E. Meister Juwelier Zürich" (2bd11f9b). De verwijdering lukte om 11:20, het opnieuw plaatsen
+  strandde op "The description could not be placed into the editor". De advertentie stond daardoor
+  niet meer op Marktplaats. De tekst is gewoon (486 tekens, geen rare tekens); de elf herplaatsingen
+  ervoor en erna bij dezelfde klant op 1.0.363 lukten wel. Zeldzaam: zes keer in twee weken bij vier
+  klanten. Het tabblad werd die ochtend telkens bevroren en ontdooid (4 tot 14 keer per opdracht),
+  dus een bevriezing tijdens FILL_DESC (8 s-grens van runInMainWorld) ligt voor de hand, maar is niet
+  bewezen: de voortgangsregel van deze opdracht is door de foutmelding overschreven.
+- Gedaan: een nieuwe Marktplaats-plaatsing voor dit artikel klaargezet (job 59cb9393, zelfde
+  inhoud); de extensie van de klant draait nu. Geen code gewijzigd. Oordeel onbekend.
+- Open: als FILL_DESC false geeft, slaat fillForm ook de stap "echte tekst" (typBeschrijvingEcht,
+  via de debugger, niet afhankelijk van de paginaklok) over. Die stap alsnog proberen en pas falen
+  als het formulier 0 tekens vasthoudt zou dit geval waarschijnlijk vangen. Niet gedaan omdat het
+  mechanisme niet bewezen is; eerst bij een volgende keer de klokstand in de voortgang bewaren.
