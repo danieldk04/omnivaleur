@@ -15221,3 +15221,21 @@ a38d1044), geen opdracht hangt op 'claimed'.
   rest van de extensie /api/v2/users/current vraagt (vintedIngelogd). Die vraag in de scan
   meenemen zou een echte uitlog (401) hard onderscheiden van een pagina die anders oogt of een
   botcontrole. Niet gedaan: geen bewijs dat de paginaherkenning ooit mis was.
+
+## 01-10-2026 (22:15, automatisch): Klantfouten
+
+- fout-vinted-create-9866513a (1ba42900, 20:00 UTC): Vinted-plaatsing van "Zilver 925 oorbellen met
+  edelsteen" (bba29099) strandde op de kleur: "zilver, none of the colour tiles responded to a click".
+  Gemeten: "zilver" en "zilveren" komen in de extensie allebei uit op de tegel Silver (COLOUR_MAP en
+  CL.dutchColor), en twee minuten eerder plaatste dezelfde extensie (1.0.364, Windows) een ketting met
+  "zilveren" gewoon op Vinted, net als drie armbanden en een horloge op 29/30-09. De kleurnaam is dus
+  niet het probleem. Verschil is alleen de rubriek (oorbellen tegen kettingen) of een eenmalige hapering
+  van het tabblad; geen van beide is te bewijzen, want de voortgangsregel is door de foutmelding
+  overschreven. Marktplaats en 2dehands staan voor dit artikel actief; Vinted staat op error, het
+  tabblad is volgens de melding opengelaten zodat de klant de kleur zelf kan kiezen. Niets opnieuw
+  klaargezet (kans op een dubbele advertentie als het open tabblad alsnog wordt geplaatst). Geen code
+  gewijzigd. Oordeel onbekend.
+- Open: in fillColourVinted overschrijft de eindmelding "none of the colour tiles responded" de
+  eerdere, preciezere melding "'Silver' was not in Vinted's list of N colours (...)". Daardoor is uit
+  de fouttekst niet af te lezen of de tegel ontbrak of de klik niet aankwam. Bij een volgende keer
+  eerst die melding laten staan, dan pas repareren.
