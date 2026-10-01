@@ -3279,5 +3279,13 @@
  "Thank you! Your bank is processing the first direct debit. Your account keeps working.": "Bedankt! Je bank verwerkt de eerste incasso. Je account blijft gewoon werken.",
  "Thank you! We are confirming your payment. This updates in a few seconds.": "Bedankt! We bevestigen je betaling. Dit wordt over een paar seconden bijgewerkt.",
  "Checkout cancelled. You were not charged.": "Afrekenen geannuleerd. Er is niets afgeschreven.",
- "✅ Subscription confirmed": "✅ Abonnement bevestigd"
+ "✅ Subscription confirmed": "✅ Abonnement bevestigd",
+ "Light mail: preview list": "Light-mail: lijst bekijken",
+ "Light mail: SEND for real": "Light-mail: ECHT VERSTUREN",
+ "Omnivaleur Light mail to everyone without a running subscription. Anyone who already got it is skipped. Preview first.": "Omnivaleur Light-mail aan iedereen zonder lopend abonnement. Wie hem al kreeg wordt overgeslagen. Eerst de lijst bekijken.",
+ "This sends the Light mail to {0}. Anyone who already got it is skipped. There is no undo. Continue?": "Dit stuurt de Light-mail naar {0}. Wie hem al kreeg wordt overgeslagen. Terugdraaien kan niet. Doorgaan?",
+ "everyone without a running subscription": "iedereen zonder lopend abonnement",
+ "({0} already got it)": "({0} kregen hem al)",
+ "(could not record {0}, do not press again)": "(vastleggen lukte niet bij {0}, niet nog een keer drukken)",
+ "Could not check who already received this mail. Nothing was sent.": "Kon niet nagaan wie deze mail al kreeg. Er is niets verstuurd."
 }

@@ -570,28 +570,35 @@ def comp_account(email: str, user=Depends(get_current_user_full)):
 
 
 @router.post("/admin/announcement")
-def send_announcement(dry_run: bool = True, emails: str = "", user=Depends(get_current_user_full)):
-    """De eenmalige 'afrekenen werkt weer'-mail. Standaard een proefronde die
-    alleen vertelt wie hem zou krijgen; pas met dry_run=false gaat hij echt weg.
-    Eigenaar-only.
+def send_announcement(dry_run: bool = True, emails: str = "", soort: str = "light",
+                      user=Depends(get_current_user_full)):
+    """Eenmalige mail aan iedereen zonder lopend abonnement. Standaard een
+    proefronde die alleen vertelt wie hem zou krijgen; pas met dry_run=false gaat
+    hij echt weg. Eigenaar-only.
 
-    `emails` is een handmatige lijst adressen. Nodig omdat de server met de
-    publieke Supabase-sleutel praat en de gebruikerslijst dus niet mag opvragen
-    ("User not allowed"). Blijft het veld leeg, dan probeert hij het alsnog zelf."""
+    soort="light": de Omnivaleur Light-mail (standaard). Wie hem al kreeg wordt
+    overgeslagen, dus een tweede druk op de knop mailt niemand dubbel.
+    soort="checkout": de oude 'afrekenen werkt weer'-mail, alleen nog per hand.
+
+    `emails` is een handmatige lijst adressen. Blijft het veld leeg, dan bouwt de
+    server de lijst zelf (heeft de service-role sleutel van Supabase nodig)."""
     if not _is_owner_email(user.email):
         raise HTTPException(status_code=403, detail="Not allowed")
 
-    from backend.services.announcement import BODY, SUBJECT, collect_recipients, parse_email_list
+    from backend.services import announcement as ann
     from backend.services.billing import CONTACT_EMAIL
     from backend.services.email import send_email_checked
 
+    light = soort != "checkout"
+    subject, body = (ann.LIGHT_SUBJECT, ann.LIGHT_BODY) if light else (ann.SUBJECT, ann.BODY)
+
     if emails.strip():
-        recipients = parse_email_list(emails)
+        recipients = ann.parse_email_list(emails)
         if not recipients:
             raise HTTPException(status_code=400, detail="No valid email address in that list")
     else:
         try:
-            recipients = collect_recipients()
+            recipients = ann.collect_light_recipients() if light else ann.collect_recipients()
         except Exception as e:
             logger.exception("Kon de ontvangerslijst niet ophalen")
             raise HTTPException(
@@ -602,20 +609,36 @@ def send_announcement(dry_run: bool = True, emails: str = "", user=Depends(get_c
                 ),
             )
 
-    if dry_run:
-        return {"dry_run": True, "count": len(recipients), "recipients": recipients}
+    overgeslagen: list[str] = []
+    if light:
+        try:
+            klaar = ann.al_verstuurd(recipients)
+        except Exception:
+            # Zonder de verzendlijst weten we niet wie hem al had: liever niets
+            # versturen dan mensen dubbel mailen.
+            logger.exception("Kon niet nagaan wie de Light-mail al kreeg")
+            raise HTTPException(status_code=503, detail="Could not check who already received this mail. Nothing was sent.")
+        overgeslagen = [e for e in recipients if e in klaar]
+        recipients = [e for e in recipients if e not in klaar]
 
-    sent, failed = [], []
+    if dry_run:
+        return {"dry_run": True, "count": len(recipients), "recipients": recipients,
+                "already_sent": len(overgeslagen)}
+
+    sent, failed, niet_vastgelegd = [], [], []
     for email in recipients:
         try:
-            send_email_checked(SUBJECT, BODY, to=email, reply_to=CONTACT_EMAIL)
+            rid = send_email_checked(subject, body, to=email, reply_to=CONTACT_EMAIL)
             sent.append(email)
+            if light and not ann.markeer_verstuurd(email, rid):
+                niet_vastgelegd.append(email)
         except Exception as e:
             # Eén geweigerd adres mag de rest van de verzending niet stoppen.
             logger.exception(f"Aankondiging mislukt voor {email}")
             failed.append({"email": email, "error": f"{type(e).__name__}: {e}"})
-    logger.info(f"Aankondiging verstuurd naar {len(sent)}, mislukt {len(failed)}")
-    return {"dry_run": False, "sent": len(sent), "failed": failed, "recipients": sent}
+    logger.info(f"Aankondiging ({soort}) verstuurd naar {len(sent)}, mislukt {len(failed)}")
+    return {"dry_run": False, "sent": len(sent), "failed": failed, "recipients": sent,
+            "already_sent": len(overgeslagen), "not_recorded": niet_vastgelegd}
 
 
 @router.get("/admin/terughaal/kandidaten")

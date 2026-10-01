@@ -15063,3 +15063,21 @@ Correctie 01-10 (Toon, versie): niet "Edge werkt niet bij". Gemeten per opdracht
 draaide hij 1.0.355, 30-09 tot 14:xx UTC 1.0.358, en vanaf 20:00 UTC ineens 1.0.345.
 Hij ging dus terug in versie: om 20:00 pakte een tweede, oudere kopie het werk op
 (laatste hartslag: Edge). Welke browser de 1.0.358 was, staat nergens opgeslagen.
+
+## 01-10-2026: Light-mail met één knop naar iedereen zonder abonnement
+
+Daniel keurde Light na zijn eigen proefbetaling goed (plan stond op light in de database, teller
+en succesmelding gerepareerd). Voor de uitrol is de bestaande eigenaarsknop gebruikt, geen nieuw
+mailsysteem: Account, onderaan "Owner tools", knoppen "Light mail: preview list" en "SEND for real".
+- Ontvangers (`collect_light_recipients`): iedereen zonder lopend abonnement. Wie opzegde
+  (canceled) hoort er juist bij. Eruit: wie nu betaalt of een lopend abonnement heeft (ook in de
+  proefweek), gratis meegegeven accounts (proef ver in de toekomst), de eigenaar, en eigen of
+  testadressen (omnivaleur- en crosslist-domeinen, revaleur.com, .invalid). Gemeten 01-10-2026:
+  58 abonnementsrijen, 45 ontvangers.
+- Eén keer per adres: na elke verzending komt er een rij in mail_events met type
+  omnivaleur.light_mail (svix_id light-mail-<adres>). Een tweede druk op de knop slaat die
+  adressen over. Kan de controle niet gedaan worden, dan gaat er niets uit.
+- Tekst: `LIGHT_SUBJECT` en `LIGHT_BODY` in backend/services/announcement.py, platte tekst,
+  Nederlands. De oude 'afrekenen werkt weer'-mail staat er nog, bereikbaar met soort=checkout.
+- Let op: onder de ontvangers zitten ook enkele buitenlandse adressen (.co.uk, .de), die een
+  Nederlandse mail krijgen.
