@@ -5465,6 +5465,21 @@ def _rechtgezette_foutmelding(job: dict | None, body: dict, versie, kansloos: bo
     if _GEEN_ADRES.search(fout) and (job or {}).get("platform") in ("2dehands", "marktplaats"):
         return {**(body or {}), "error_oorspronkelijk": fout,
                 "error": _melding_geen_adres((job or {}).get("platform") or "", job)}
+    # LEGE FABRIKANTVELDEN ZIJN EEN INSTELLING VAN DE VERKOPER (01-10-2026).
+    #
+    # JP MiniWheels (zakelijk Marktplaats-account) zette "Responsible party"
+    # in Preferences uit, 24 seconden voor zijn eerste plaatsing. Marktplaats
+    # eist die drie velden bij hem wel, en hij kreeg drie keer de ruwe
+    # formuliertekst "Dit veld is verplicht | textAttribute[manufacturer...]
+    # =LEEG" te zien. Die velden kan alleen hij invullen; zeg hem waar.
+    if (_FABRIKANT_LEEG.search(fout) and (job or {}).get("action") == "create"
+            and (job or {}).get("platform") in ("marktplaats", "2dehands")):
+        return {**(body or {}), "error_oorspronkelijk": fout, "error": (
+            "Not published: Marktplaats and 2dehands require the responsible party "
+            "on this listing (trade name, postal address and email), and those fields "
+            "were empty. Go to Preferences, switch on \"Responsible party\", fill in "
+            "your business name, address and email once, and publish again. Every "
+            "next listing then carries them automatically.")}
     # HET ANTWOORD DAT WE ZELF HEBBEN OPGEZOCHT GAAT VOOR (15-09-2026).
     # Weten we uit zijn eigen openbare advertentie dat dit een zakelijk account
     # is, dan is elk inlogverwijt hierboven onzin en hoeven we hem niets te
