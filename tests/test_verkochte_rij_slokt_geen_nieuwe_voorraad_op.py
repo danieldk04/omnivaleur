@@ -385,9 +385,14 @@ def test_de_geannuleerde_publicatie_laat_geen_wachtende_rij_achter(monkeypatch):
 
     _, db = _deel_uit("2026-07-03T09:26:42+00:00", listings, monkeypatch)
 
-    opgeruimd = [u for u in db.updates
-                 if u[0] == "listings" and u[2].get("status") == "error"]
+    opgeruimd = [u for u in db.updates if u[0] == "listings"]
     assert opgeruimd, "de wachtende advertentierij blijft eeuwig op 'pending' staan"
+    from backend.services.verkoop_reconciliatie import _NOG_LEVEND
+    assert opgeruimd[0][2]["status"] not in _NOG_LEVEND, (
+        "de nooit geplaatste rij telt dan als 'nog online' en het verkoopvangnet "
+        "zet er een verwijdering zonder advertentienummer voor klaar die altijd "
+        "faalt (De Juiste Toon, 01-10-2026)")
+    assert opgeruimd[0][2]["status"] == "delisted"
     filters = opgeruimd[0][1]
     assert filters["item_id"] == "nieuw" and filters["platform"] == "marktplaats"
     assert filters["status"] == "pending", "alleen wachtende rijen mogen mee"

@@ -2217,10 +2217,22 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             # Gemeten in Daniels eigen account: vier van zulke rijen, de oudste
             # van 29-07. Alleen rijen zonder advertentienummer: een rij mét
             # nummer hoort bij een advertentie die echt op het kanaal staat, en
-            # die mogen we niet op 'error' zetten.
+            # die mogen we niet afsluiten.
+            #
+            # 'delisted', NIET 'error' (01-10-2026). 'error' telt in het
+            # verkoopvangnet (verkoop_reconciliatie) en in delist_all_platforms
+            # als "kan nog online staan". De Juiste Toon (96e30080): een al op
+            # Vinted verkochte Lederhosen werd opnieuw aangeboden, hier terecht
+            # geannuleerd, en twaalf minuten later zette het vangnet voor deze
+            # nooit geplaatste rij een verwijdering klaar op Marktplaats en
+            # 2dehands. Zonder advertentienummer kon de extensie hem niet vinden,
+            # beide verwijderingen faalden, en fail_job zette de rij daarna op
+            # 'active': het dashboard toonde een verkocht artikel als online.
+            # Deze rij is nooit op het kanaal geweest, dus 'delisted' is zijn
+            # echte staat; de reden blijft erbij staan.
             try:
                 db.table("listings").update(
-                    {"status": "error", "error_message": reden}
+                    {"status": "delisted", "error_message": reden}
                 ).eq("item_id", j["item_id"]).eq("platform", j["platform"]) \
                  .eq("status", "pending").is_("platform_listing_id", "null").execute()
             except Exception as e:  # noqa: BLE001 — de annulering zelf is het belangrijkst

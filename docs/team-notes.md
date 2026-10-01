@@ -15156,3 +15156,21 @@ in zijn browser (rapport door Daniel geplakt), daarna door mij met `dig` gecontr
 - Niet gedaan: RESEND_FROM in Railway staat nog op "Omnivaleur <info@omnivaleur.com>" (weergavenaam
   aanpassen herstart de dienst kort, cosmetisch). BIMI staat niet aan (betaald certificaat nodig).
   Zoho-profielfoto moet Daniel zelf uploaden. daniel@omnivaleur.nl staat niet in Gravatar.
+
+## 01-10-2026 (12:10, automatisch): Klantfouten
+
+- fout-marktplaats-delete-822f795e en fout-2dehands-delete-6e71b17e (Toon, 96e30080, 09:31 en
+  09:52 UTC): "Originele Lederhosen mt 52" (747cfbfd), een ander artikel dan dat van vanochtend.
+  Op 30-09 al op Vinted verkocht en toen op beide kanalen bewezen weg (410). Op 01-10 09:13 werd
+  het opnieuw aangeboden; get_pending_jobs annuleerde terecht ("already sold on vinted"), maar
+  zette de lege kanaalrij op 'error'. 'error' telt in het verkoopvangnet als "kan nog online
+  staan", dus om 09:26 kwamen er verwijderingen zonder advertentienummer die altijd falen, en
+  fail_job zette de rij daarna op 'active': het dashboard toonde het verkochte artikel als online.
+  Gerepareerd: de geannuleerde rij wordt 'delisted' (zijn echte staat). Proef faalt op de oude
+  code. De twee rijen van Toon en een derde van dezelfde soort (1df3bd1c) rechtgezet naar
+  'delisted', geen advertentie aangeraakt. Oordeel gerepareerd.
+- De Marktplaats-verwijdering van vanochtend ("bruin maat 52") is om 09:36 via het vangnet
+  alsnog gelukt (410), net als 2dehands om 09:47. Niets meer open.
+- Open: waarom een al verkocht artikel om 09:13 opnieuw ter plaatsing werd aangeboden (drie
+  plaatsingen tegelijk, waarschijnlijk een klik in het dashboard). Niet uitgezocht; de
+  annulering vangt het.
