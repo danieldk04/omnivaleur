@@ -15250,3 +15250,25 @@ hij er nog niet, maak hem aan op 10:00. Er staat nog geen notitie dat hij ooit i
 Aanleiding: de ochtendronde op Daniels Mac viel vandaag weg. De Mac sliep om 06:30, dus
 onboarding en klantfouten startten allebei pas bij het wakker worden (08:16) en de
 klantfoutenronde had het slot eerst.
+
+## 02-10-2026: Dagelijkse klantfouten (ochtendronde)
+
+Gemeten over 24 uur: 841 opdrachten afgerond, 21 fouten bij 5 klanten. Alles wat de rondes van
+01-10 meldden (maat Universeel bij Toon, Vinted-scan 26cf5471, beschrijving 0b28c1ce, Vinted-kleur
+1ba42900) is sindsdien niet teruggekomen. Server gezond (/health ok).
+- Gerepareerd (03b2ceae): f8c0cce9 (Bluebird, 315bbf11), twee keer een Marktplaats-verwijdering
+  "cannot be found ... check it by hand" (21:08 en 21:13 UTC). Mechanisme: een lege Marktplaats-rij
+  van een plaatsing die de uitgifte op 01-10 annuleerde ("already sold on vinted") gold voor
+  _nooit_online niet als nooit online, omdat die alleen op "nothing was published" in de fouttekst
+  lette. Bij elke verkoopmelding kwam er dus naast de echte verwijdering (nummer 1531436384, gelukt,
+  al weg) een kansloze zonder nummer bij. Nu telt een geannuleerde plaatsing die nooit door een
+  extensie is opgepakt als nooit online. Op de echte rij gemeten: oud False, nieuw True. Proef faalt
+  op de oude code. Geen advertentie aangeraakt; de rij staat al op 'delisted'.
+- Onbekend: dezelfde klant, Vinted-bijwerking (content_refresh) om 21:12 op hetzelfde artikel liep
+  vast op het bewerkformulier (timeout). Het artikel is op Vinted verkocht; een verkocht artikel heeft
+  geen bewerkformulier, maar de rij stond op het moment van klaarzetten nog op 'active', dus de
+  volgorde van verkoopmelding en bijwerking is niet te bewijzen.
+- Klant-eigen: 0b28c1ce een Marktplaats-plaatsing na drie dagen wachten vervallen (extensie sinds
+  01-10 stil, offline-mail 01-10 15:59). bcdf9aa4 (Egbert) heeft een 2dehands-plaatsing sinds 21:44
+  op 'claimed', extensie stil (offline-mail 01-10 11:36).
+- Niet meetbaar: fouten die alleen in de browser van de klant staan.
