@@ -23,6 +23,11 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
   Bij een formelere partij "Met vriendelijke groet,". Engelstalige mails aan
   websites of bloggers: "Best," met "Daniel de Koning" en "Founder, Omnivaleur".
 - Hele korte reacties hebben soms geen aanhef, alleen "Helder, ..." en de groet.
+- Binnen een lopend gesprek (tweede of derde mail aan dezelfde klant) mag de aanhef
+  helemaal weg: direct "Zelf kost je dat geen tijd...", "Fijn dat het filter staat."
+- Bij klanten in een lopend gesprek is "Hoi Voornaam," de gewone aanhef (02-10: ruim de
+  helft van de mails), "Hi Voornaam," vooral bij nieuwe of zakelijke contacten.
+- Soms staat er een punt achter de naam: "Daniel." Beide vormen komen voor.
 
 ## Toon
 
@@ -41,6 +46,17 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 
 ## Inhoud
 
+- Eerste mail aan een nieuwe aanmelder (onboarding): vaste opening "Ik ben Daniel, de
+  oprichter van Omnivaleur. Ik kijk zelf naar elk nieuw account...", dan wat er in zijn
+  account te zien is (goed nieuws eerst), dan één concrete stap ("Alles importeren").
+- Altijd concrete getallen uit het account of de meting noemen (aantal artikelen,
+  tijdstip, versienummer, dagen) in plaats van "veel" of "binnenkort".
+- Bij een storing of fout van ons: "Het ligt niet aan jou", "Er is niets kwijt", daarna
+  wat nu opgelost is en wat de klant nog moet doen (verversen, extensie bijwerken).
+- Beloofde vervolgcontrole noemt hij met datum: "Op 5 oktober kijk ik na of het goed loopt."
+- Nee van een klant: kort bedanken, "we laten het hierbij" of "dan weet je ons te vinden",
+  geen tegenargument, wel een warme wens.
+
 - Video aanbieden of sturen: altijd de link naar de leadpagina (zie memory
   "Leadpagina mp-video"), met "duurt 2 minuutjes".
 - Prijs noemen als het gevraagd wordt of ter sprake komt: kort, met "eerste 7 dagen
@@ -58,3 +74,4 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 
 (De routine voegt hier per dag één regel toe: datum, aantal vergeleken mails, wat nieuw was.)
 - 02-10-2026: 0 nieuwe mails, 0 met concept; niets te leren.
+- 02-10-2026 (tweede run): 29 nieuwe mails, 0 met concept; alleen algemene patronen: Hoi als standaardaanhef, aanhef weg binnen gesprek, vaste onboarding-opening, concrete getallen.
