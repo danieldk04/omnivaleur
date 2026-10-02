@@ -60,7 +60,8 @@ AMS = ZoneInfo("Europe/Amsterdam")
 # Daniels postvak, zoals in leadgen-mail.yml. Alleen het wachtwoord (MAIL_PASS) is geheim.
 POSTVAK = ("imap.zoho.eu", "daniel@omnivaleur.nl")
 SLEUTELHANGER = ("daniel@omnivaleur.nl", "omnivaleur-leadgen-mail")
-POSTVAK_MAPPEN = ("INBOX", "Beantwoord", "Verzonden")
+# "Klanten": sinds 01-10-2026 zet een Zoho-filter alle mail aan info@omnivaleur.com daar.
+POSTVAK_MAPPEN = ("INBOX", "Klanten", "Beantwoord", "Verzonden")
 # Waar eerdere sessies over klanten schreven. Het geheugen is per account; ontbreekt
 # het op deze machine, dan zegt het rapport dat.
 GEHEUGEN = Path.home() / ".claude" / "projects" / "-Users-Danie-Documents-omnivaleur" / "memory"
