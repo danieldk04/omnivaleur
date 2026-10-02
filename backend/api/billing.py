@@ -653,7 +653,8 @@ def send_announcement(dry_run: bool = True, emails: str = "", soort: str = "ligh
     sent, failed, niet_vastgelegd = [], [], []
     for email in recipients:
         try:
-            rid = send_email_checked(subject, body, to=email, reply_to=CONTACT_EMAIL)
+            rid = send_email_checked(subject, body, to=email, reply_to=CONTACT_EMAIL,
+                                     html=html_met_open_pixel(email, body, ann.pixel_laag(soort)))
             sent.append(email)
             if light and not ann.markeer_verstuurd(email, rid):
                 niet_vastgelegd.append(email)
