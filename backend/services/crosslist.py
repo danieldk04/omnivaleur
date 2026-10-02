@@ -2093,19 +2093,34 @@ def _zegt_niets_online(result) -> bool:
             and "wasn't confirmed" not in tekst and "was not confirmed" not in tekst)
 
 
+def _nooit_uitgedeeld(p: dict) -> bool:
+    """Geannuleerd voordat een extensie hem ooit oppakte: er kán niets online staan.
+
+    02-10-2026, f8c0cce9 (Bluebird). De uitgifte annuleerde een plaatsing van een
+    al verkocht artikel ({"cancelled": "Item already sold on vinted ..."}); die
+    zin noemt geen "nothing was published", dus gold de lege rij niet als nooit
+    online. Bij elke verkoopmelding kwam er daarna een Marktplaats-verwijdering
+    zonder advertentienummer bij, die altijd faalt ("check it by hand").
+    """
+    return (p.get("status") == "cancelled" and not p.get("claimed_at")
+            and isinstance(p.get("result"), dict) and bool(p["result"].get("cancelled"))
+            and not p["result"].get("error"))
+
+
 def _nooit_online(db, listing: dict) -> bool:
     """Is bewezen dat deze advertentie nooit op het kanaal heeft gestaan?"""
     if listing.get("platform_listing_id") or listing.get("listed_at"):
         return False
     try:
-        pogingen = (db.table("jobs").select("status,result")
+        pogingen = (db.table("jobs").select("status,result,claimed_at")
                     .eq("item_id", listing["item_id"]).eq("platform", listing["platform"])
                     .eq("action", "create").execute().data or [])
     except Exception as e:  # noqa: BLE001 — bij twijfel gewoon verwijderen
         logger.warning("[sold] plaatsingen van %s niet te lezen: %s", listing.get("id"), e)
         return False
     return bool(pogingen) and all(
-        p.get("status") in ("cancelled", "error") and _zegt_niets_online(p.get("result"))
+        _nooit_uitgedeeld(p)
+        or (p.get("status") in ("cancelled", "error") and _zegt_niets_online(p.get("result")))
         for p in pogingen)
 
 

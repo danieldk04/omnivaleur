@@ -93,3 +93,53 @@ def _oude_crosslist():
         oud = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(oud)
     return oud
+
+
+# 02-10-2026, f8c0cce9 (Bluebird). De uitgifte annuleerde de plaatsing omdat het
+# artikel al op Vinted verkocht was; de extensie heeft hem nooit gezien. Toch kwam
+# er bij elke verkoopmelding een Marktplaats-verwijdering zonder nummer bij.
+VOOR_UITGIFTE = "350bf187"
+GEANNULEERD = {"cancelled": "Item already sold on vinted — not published again."}
+
+
+def _situatie_uitgifte(claimed_at=None):
+    items = [{"id": "i1", "user_id": "u1", "title": "Bluebird Standard Series"}]
+    listings = [
+        {"id": "v1", "item_id": "i1", "platform": "vinted", "status": "active",
+         "platform_listing_id": "10118089566"},
+        {"id": "m1", "item_id": "i1", "platform": "marktplaats", "status": "delisted",
+         "platform_listing_id": None, "listed_at": None},
+    ]
+    db = _DB(items, listings)
+    db.rest.append({"item_id": "i1", "platform": "marktplaats", "action": "create",
+                    "status": "cancelled", "claimed_at": claimed_at, "result": dict(GEANNULEERD)})
+    return db, listings
+
+
+def _oude_crosslist_uitgifte():
+    bron = subprocess.run(["git", "show", f"{VOOR_UITGIFTE}:backend/services/crosslist.py"],
+                          cwd=ROOT, capture_output=True, text=True, check=True).stdout
+    assert "_nooit_uitgedeeld" not in bron, "verkeerd commitnummer gepind"
+    with tempfile.TemporaryDirectory() as map_:
+        pad = Path(map_) / "oude_crosslist_uitgifte.py"
+        pad.write_text(bron)
+        spec = importlib.util.spec_from_file_location("backend.services.oude_crosslist_uitgifte", pad)
+        oud = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(oud)
+    return oud
+
+
+def test_door_uitgifte_geannuleerde_plaatsing_vervalt_stil(monkeypatch):
+    db, listings = _situatie_uitgifte()
+    assert _verkoop(cl, monkeypatch, db) == []
+    assert listings[1]["status"] == "delisted"
+
+    db2, _ = _situatie_uitgifte()
+    assert _verkoop(_oude_crosslist_uitgifte(), monkeypatch, db2) == ["marktplaats"], (
+        "de oude versie stuurde er toch een verwijderopdracht op af")
+
+
+def test_opgepakt_en_daarna_geannuleerd_wordt_wel_verwijderd(monkeypatch):
+    db, _ = _situatie_uitgifte(claimed_at="2026-10-01T09:18:00+00:00")
+    assert _verkoop(cl, monkeypatch, db) == ["marktplaats"], (
+        "een extensie had hem in handen, dus hij kan online staan")
