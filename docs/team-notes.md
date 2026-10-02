@@ -15337,3 +15337,13 @@ wachtende opdrachten in totaal, Egbert (bcdf9aa4) echt 1.079, klant 0b28c1ce 171
 `extension_offline.py` kreeg stil maximaal 1.000 rijen (PostgREST), dus het getal was afgekapt en de
 tweede klant kwam nooit in beeld. Nu pagina voor pagina. Proef faalt op de oude code. Egbert moet
 nog antwoord: ja, dit is de wachtrij-mail; de 1.079 zijn vooral wachtende bijwerkingen/plaatsingen.
+
+## 02-10-2026: routine die Daniels schrijfstijl leert
+
+Daniel past mijn conceptmails steeds zelf aan (toon, aanhef, lengte) en wil daar minder tijd aan kwijt zijn.
+Gebouwd: `scripts/schrijfstijl_leren.py` (concept bewaren, eigen verzonden mails ophalen, koppelen) en een
+dagelijkse geplande taak `omnivaleur-schrijfstijl-leren` (07:21, Daniels Mac) die `docs/schrijfstijl-daniel.md`
+aanscherpt. Eigen mails herken je in map Verzonden aan de kop `X-Mailer: Zoho Mail`; de koude mails van de
+machine hebben die kop niet (68 van 298 in 14 dagen waren van hem). De Zoho-inlog (`IMAP_HOST`, `MAIL_USER`,
+`MAIL_PASS`) staat nu ook in Daniels lokale `.env`. Concepten en verzonden mails staan in `data/schrijfstijl/`,
+buiten git. Elke sessie die een klantmail beantwoordt leest het stijlbestand eerst en bewaart haar concept.

@@ -113,6 +113,21 @@ die iemand anders al een keer heeft gemaakt. Leer je zelf iets nieuws, leg het
 vast in je geheugen en draai daarna `python3 scripts/export_kennisbank.py`, en
 commit het bestand.
 
+## Mails voor Daniel opstellen: stijl lezen, concept bewaren
+
+Brengt Daniel je een klantmail om te beantwoorden (sinds 02-10-2026):
+
+1. Lees eerst [docs/schrijfstijl-daniel.md](docs/schrijfstijl-daniel.md) en schrijf het
+   concept in die stijl: aanhef, afsluiting, lengte, toon.
+2. Bewaar je concept meteen, zodat de nachtelijke routine het naast de echt verstuurde
+   mail kan leggen en daarvan leert:
+   `python3 scripts/schrijfstijl_leren.py concept --aan <adres van de klant> --onderwerp "<onderwerp>"`
+   met de conceptekst via stdin. Het adres moet dat van de ontvanger zijn, anders
+   koppelt de routine niets. De map `data/schrijfstijl/` blijft buiten git.
+3. De routine `omnivaleur-schrijfstijl-leren` draait dagelijks en past het stijlbestand
+   aan. Pas dat bestand niet zelf aan, tenzij Daniel een stijlregel uitspreekt: dan
+   direct erin zetten.
+
 ## Het klantenservice-brein bijwerken
 
 [docs/klantenservice-brein.md](docs/klantenservice-brein.md) is de bron die

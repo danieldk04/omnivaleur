@@ -9,3 +9,6 @@ scripts/output/leads/
 # Ruwe uitkomsten van de trendverkenning — data, geen code
 scripts/output/trends-verkenning-*.json
 scripts/output/trends-verkenning-*.html
+
+# Schrijfstijl leren: concepten en verzonden mails met klantgegevens
+data/schrijfstijl/
