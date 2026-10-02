@@ -17,6 +17,25 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## schrijfstijl-leren-uit-verzonden-mail
+
+*02-10-2026 — Sinds 02-10-2026 leest een dagelijkse routine Daniels eigen verzonden Zoho-mails en vergelijkt ze met Claudes concepten; elk concept bewaren en eerst docs/schrijfstijl-daniel.md lezen*
+
+Daniel paste mijn conceptmails steeds zelf aan en wil daar geen tijd meer aan kwijt zijn. Routine `omnivaleur-schrijfstijl-leren` (dagelijks 07:21, zijn Mac) leert uit wat hij echt verstuurt en schrijft het in `docs/schrijfstijl-daniel.md`.
+
+**Why:** een concept dat zonder aanpassing de deur uit kan, scheelt hem dagelijks tijd. Leren kan alleen als ik mijn concept naast zijn verzonden versie kan leggen.
+
+**How to apply:**
+- Brengt Daniel een klantmail: eerst `docs/schrijfstijl-daniel.md` lezen, dan concept schrijven, dan bewaren met `python3 scripts/schrijfstijl_leren.py concept --aan <adres klant> --onderwerp "..."` (tekst via stdin). Zonder dit leert de routine alleen van zijn mails, niet van mijn fouten.
+- Eigen mails in map Verzonden hebben `X-Mailer: Zoho Mail`; de koude mails van de machine hebben die kop niet (68 van 298 in 14 dagen waren van hem). Filter nooit op alleen de map, want 80% is machine.
+- Veel van zijn antwoorden zijn eerder door mij voorgesteld; zonder concept ernaast leer je mijn eigen stijl terug.
+- Zoho-inlog (`IMAP_HOST`, `MAIL_USER`, `MAIL_PASS`) staat in zijn lokale `.env`; Bash op `.env` wordt soms geweigerd, een python-script dat het bestand leest werkte wel.
+- Concepten en verzonden mails staan in `data/schrijfstijl/`, buiten git (klantgegevens).
+
+Zie "rapportage-in-gewone-taal" voor de vorm van de melding.
+
+---
+
 ## storing-mag-nooit-als-antwoord-tellen
 
 *02-10-2026 — Een opzoeking die niet lukt gaf hetzelfde lege antwoord als "niet gevonden"; bij Egbert annuleerde dat 50 zoekertjes in één minuut*
