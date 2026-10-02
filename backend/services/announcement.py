@@ -55,6 +55,11 @@ Daniel from Omnivaleur
 """
 
 
+def pixel_laag(soort: str) -> str:
+    """Naam waaronder de openingen van deze mail geteld worden."""
+    return "checkout-mail" if soort == "checkout" else "light-mail"
+
+
 def parse_email_list(raw: str) -> list[str]:
     """Adressen uit een geplakte lijst halen: komma's, puntkomma's, spaties en
     regeleindes door elkaar, en dubbele adressen eruit. Alles zonder @ valt af,
