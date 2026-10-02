@@ -15239,3 +15239,14 @@ a38d1044), geen opdracht hangt op 'claimed'.
   eerdere, preciezere melding "'Silver' was not in Vinted's list of N colours (...)". Daardoor is uit
   de fouttekst niet af te lezen of de tegel ontbrak of de klik niet aankwam. Bij een volgende keer
   eerst die melding laten staan, dan pas repareren.
+
+## 02-10-2026: tweede onboardingronde naar 10:00
+
+Daniel: de tweede onboardingronde (account van de tweede ontwikkelaar, rondenaam
+onboarding-middag) start voortaan om 10:00 in plaats van 15:00. CLAUDE.md en
+docs/routines/onboarding-nieuwe-klanten.md zijn bijgewerkt. Tweede ontwikkelaar: staat
+de taak omnivaleur-onboarding-nieuwe-klanten-middag al op 15:00, zet hem op 10:00; staat
+hij er nog niet, maak hem aan op 10:00. Er staat nog geen notitie dat hij ooit is aangemaakt.
+Aanleiding: de ochtendronde op Daniels Mac viel vandaag weg. De Mac sliep om 06:30, dus
+onboarding en klantfouten startten allebei pas bij het wakker worden (08:16) en de
+klantfoutenronde had het slot eerst.

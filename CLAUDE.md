@@ -58,10 +58,11 @@ Zo ziet een volledig bericht eruit (door Daniel goedgekeurd op 19-09-2026):
 
 **Tweede ontwikkelaar, eenmalig bij je eerstvolgende sessie:** staat er op jouw account
 nog geen geplande taak `omnivaleur-onboarding-nieuwe-klanten-middag`, maak hem dan aan
-(dagelijks 15:00, lokale tijd) met als opdracht: "Je werkt aan Omnivaleur in <jouw
+(dagelijks 10:00, lokale tijd; staat hij er al op 15:00, zet hem dan op 10:00, Daniel
+02-10-2026) met als opdracht: "Je werkt aan Omnivaleur in <jouw
 repomap>. Lees docs/routines/onboarding-nieuwe-klanten.md in die repo en volg het
 precies. Rondenaam: onboarding-middag." Zet daarna in team-notes dat hij staat. De
-middagronde vangt de aanmeldingen van die ochtend binnen uren; het gedeelde slot
+tweede ronde om 10:00 vangt de aanmeldingen van die nacht en ochtend; het gedeelde slot
 (`scripts/klantfouten.py ronde`) voorkomt dat twee rondes hetzelfde doen.
 
 ## Begin elke sessie met kijken wat er veranderd is
