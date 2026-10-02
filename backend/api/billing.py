@@ -725,7 +725,8 @@ def terughaal_verstuur(
     for o in ontvangers:
         subject, body = tc.render(groep, o)
         try:
-            send_email_checked(subject, body, to=o["email"], reply_to=CONTACT_EMAIL)
+            send_email_checked(subject, body, to=o["email"], reply_to=CONTACT_EMAIL,
+                               html=html_met_open_pixel(o["email"], body, f"terughaal-{groep.lower()}"))
             sent.append(o["email"])
         except Exception as e:
             # Een geweigerd adres mag de rest niet stoppen.
