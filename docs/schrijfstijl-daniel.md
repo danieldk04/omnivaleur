@@ -57,3 +57,4 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 ## Logboek van de routine
 
 (De routine voegt hier per dag één regel toe: datum, aantal vergeleken mails, wat nieuw was.)
+- 02-10-2026: 0 nieuwe mails, 0 met concept; niets te leren.
