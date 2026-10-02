@@ -15272,3 +15272,24 @@ Gemeten over 24 uur: 841 opdrachten afgerond, 21 fouten bij 5 klanten. Alles wat
   01-10 stil, offline-mail 01-10 15:59). bcdf9aa4 (Egbert) heeft een 2dehands-plaatsing sinds 21:44
   op 'claimed', extensie stil (offline-mail 01-10 11:36).
 - Niet meetbaar: fouten die alleen in de browser van de klant staan.
+
+## 02-10-2026: Onboarding nieuwe klanten (ochtend)
+
+Gemeten 08:50 tot 09:30: 4 accounts in hun eerste week, geen nieuwe. Web Store en repo allebei 1.0.364.
+De meting liep drie keer stuk op een statement timeout of leestime-out van Supabase (los van elkaar
+gemeten waren dezelfde vragen 0,1 tot 2 seconden); de vierde keer lukte. /health ok.
+- a4fc5340 (JP MiniWheels, Peter): van 481 ingelezen artikelen staan er nog 4 (eigen modelauto's,
+  aangemaakt 01-10 09:29 tot 09:41), 0 advertentierijen, alleen zijn scanopdrachten over. De
+  477 andere zijn weggehaald met Delete in het dashboard: dat is de enige route die artikel,
+  advertentierij en opdrachten samen wist (samenvoegen laat opdrachten staan, geen opruimscript
+  gedraaid). De importkandidaten staan nog op 'imported'. Zijn Marktplaats-advertenties zelf zijn
+  niet aangeraakt. Tijdstip niet te bewijzen: Railway geeft http-logs alleen van de huidige
+  deploy (02-10 06:22). Laatst ingelogd 01-10 10:38, extensie stil sinds 01-10 14:56,
+  fabrikantblok nog leeg en uit. De vervolgmail van 01-10 staat niet in Verzonden. Mailtje klaargezet.
+- 1ba42900 (Vagif): MP 80, 2dehands 75, Vinted 19 actief; zes herplaatsingen op 01-10 avond allemaal
+  gelukt. Vinted-scan van 00:12 UTC wacht op zijn extensie (computer uit). Proef tot vandaag 18:39,
+  geen betaalmethode. Mailtje klaargezet.
+- 82b13998 (Anneloes): ongewijzigd, geen mailtje. aa093a0a: Daniels eigen account.
+- Gerepareerd (scripts/nieuwe_klanten.py): het postvak werd zonder de map "Klanten" gelezen, waar
+  sinds 01-10 alle mail aan info@omnivaleur.com landt. Voor: 0 treffers op een afzender uit die map,
+  na: 1. Bij deze drie klanten staat er niets in Klanten.

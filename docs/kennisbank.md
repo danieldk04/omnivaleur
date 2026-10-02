@@ -17,6 +17,29 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## mail-omnivaleur-in-zoho
+
+*02-10-2026 — "Sinds 01-10-2026 is info@omnivaleur.com een Zoho-alias op daniel@omnivaleur.nl (map Klanten via filter); Resend verstuurt nog steeds vanaf info@; DNS omnivaleur.com bij Cloudflare op Zoho-MX; revaleur.com is Hostinger en apart"*
+
+Alle Omnivaleur-mail zit in Zoho EU (mailadmin.zoho.eu, Mail Lite, 1 licentie, tot 11-08-2027).
+- info@omnivaleur.com is een alias op daniel@omnivaleur.nl. Filter in Zoho: Naar bevat info@omnivaleur.com
+  gaat naar map "Klanten", zodat klantantwoorden apart blijven van de lead-inbox.
+- De app verstuurt via Resend vanaf info@omnivaleur.com (records op send. en resend._domainkey, niet
+  aanraken). Railway: REPLY_TO_EMAIL=info@omnivaleur.com, RESEND_FROM="Omnivaleur <info@omnivaleur.com>".
+- DNS van omnivaleur.com en omnivaleur.nl staat bij Cloudflare. revaleur.com is een losse Hostinger-postbus
+  (info@revaleur.com, alleen nog alarmmails) en valt buiten dit.
+
+**Why:** Daniel wilde twee adressen in Zoho in plaats van doorsturen via Namecheap. Eerdere aanname dat
+antwoorden op info@revaleur.com binnenkwamen was de code-standaard, niet Railway.
+**How to apply:** nieuwe mailfunctie met Reply-To: gebruik CONTACT_EMAIL (settings.reply_to_email). Een
+tweede postbus kost een Zoho-licentie (EUR 10,80 per jaar), een alias niet.
+Zie "omnivaleur-light-plan", "mailbox-eigenaarschap".
+
+Script dat het postvak leest (zoals scripts/nieuwe_klanten.py): neem de map "Klanten" mee. Tot 02-10-2026
+las de onboardingroutine alleen INBOX/Beantwoord/Verzonden en zag klantmail aan info@ dus niet.
+
+---
+
 ## omnivaleur-light-plan
 
 *01-10-2026 — "Omnivaleur Light (30-09-2026): 9,99 incl. btw, tot 20 actieve artikelen; plan in subscriptions.plan uit de Stripe-prijs; aan/uit met STRIPE_PRICE_ID_LIGHT in Railway; limiet op drie poorten"*
@@ -67,26 +90,6 @@ vangnet allemaal "kan nog op het kanaal staan". Een rij die nooit geplaatst is h
 **How to apply:** sluit je een nooit geplaatste rij af, gebruik 'delisted' met de reden in
 error_message. Zie je "no advert number" in een verwijderfout, kijk dan eerst of de rij ooit een
 advertentie had. Verwant: "herplaatsing-laat-oude-rij-staan", "verkoopkanaal-moet-bewezen-zijn".
-
----
-
-## mail-omnivaleur-in-zoho
-
-*01-10-2026 — "Sinds 01-10-2026 is info@omnivaleur.com een Zoho-alias op daniel@omnivaleur.nl (map Klanten via filter); Resend verstuurt nog steeds vanaf info@; DNS omnivaleur.com bij Cloudflare op Zoho-MX; revaleur.com is Hostinger en apart"*
-
-Alle Omnivaleur-mail zit in Zoho EU (mailadmin.zoho.eu, Mail Lite, 1 licentie, tot 11-08-2027).
-- info@omnivaleur.com is een alias op daniel@omnivaleur.nl. Filter in Zoho: Naar bevat info@omnivaleur.com
-  gaat naar map "Klanten", zodat klantantwoorden apart blijven van de lead-inbox.
-- De app verstuurt via Resend vanaf info@omnivaleur.com (records op send. en resend._domainkey, niet
-  aanraken). Railway: REPLY_TO_EMAIL=info@omnivaleur.com, RESEND_FROM="Omnivaleur <info@omnivaleur.com>".
-- DNS van omnivaleur.com en omnivaleur.nl staat bij Cloudflare. revaleur.com is een losse Hostinger-postbus
-  (info@revaleur.com, alleen nog alarmmails) en valt buiten dit.
-
-**Why:** Daniel wilde twee adressen in Zoho in plaats van doorsturen via Namecheap. Eerdere aanname dat
-antwoorden op info@revaleur.com binnenkwamen was de code-standaard, niet Railway.
-**How to apply:** nieuwe mailfunctie met Reply-To: gebruik CONTACT_EMAIL (settings.reply_to_email). Een
-tweede postbus kost een Zoho-licentie (EUR 10,80 per jaar), een alias niet.
-Zie "omnivaleur-light-plan", "mailbox-eigenaarschap".
 
 ---
 
