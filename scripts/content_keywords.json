@@ -618,7 +618,7 @@
       "pillar": "B",
       "format": "money_rules",
       "slug": "when-does-reselling-become-a-business-kvk",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "wanneer-kvk-nodig-voor-verkopen-op-marktplaats",
       "priority": 74
     },
@@ -1289,6 +1289,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-photograph-clothes-for-vinted",
       "published_at": "2026-10-01T14:58:03.787284+00:00"
+    },
+    {
+      "keyword": "when does reselling become a business kvk",
+      "slug": "when-does-reselling-become-a-business-kvk",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "action": "created",
+      "url_path": "/reseller-tools/when-does-reselling-become-a-business-kvk",
+      "published_at": "2026-10-02T14:22:28.366807+00:00"
     }
   ]
 }
