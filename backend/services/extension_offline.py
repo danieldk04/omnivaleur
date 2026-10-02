@@ -44,7 +44,8 @@ NL = ZoneInfo("Europe/Amsterdam")
 
 SCHRIJVEND = ("create", "delete", "content_refresh")
 LEVENDE_ABONNEMENTEN = ("trialing", "active")
-MAX_WACHTRIJ = 5000
+MAX_WACHTRIJ = 20000
+PAGINA = 1000
 
 # Vangnet voor het geval de markeerkolom nog niet in Supabase staat: dan onthoudt
 # de server het zelf. Dat overleeft geen herstart, dus de kolom blijft beter.
@@ -154,9 +155,19 @@ async def waarschuw_offline_extensies(now: datetime | None = None) -> int:
         return 0
 
     db = get_db()
-    wachtend = (db.table("jobs").select("user_id,created_at")
-                .eq("status", "pending").in_("action", list(SCHRIJVEND))
-                .limit(MAX_WACHTRIJ).execute().data or [])
+    # PostgREST kapt elke lezing stil af op 1.000 rijen, ook bij .limit(5000). Daarom
+    # pagina voor pagina, op een vaste volgorde. Gemeten 02-10-2026: 1.250 wachtend,
+    # de oude lezing zag er 1.000, dus Egbert (1.079) kreeg "1000 listings" en klant
+    # 0b28c1ce (171) kwam nooit in beeld.
+    wachtend: list[dict] = []
+    while len(wachtend) < MAX_WACHTRIJ:
+        pagina = (db.table("jobs").select("user_id,created_at")
+                  .eq("status", "pending").in_("action", list(SCHRIJVEND))
+                  .order("id").range(len(wachtend), len(wachtend) + PAGINA - 1)
+                  .execute().data or [])
+        wachtend.extend(pagina)
+        if len(pagina) < PAGINA:
+            break
     if not wachtend:
         return 0
 

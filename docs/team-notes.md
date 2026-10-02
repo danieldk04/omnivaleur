@@ -15297,6 +15297,18 @@ gemeten waren dezelfde vragen 0,1 tot 2 seconden); de vierde keer lukte. /health
 ## 02-10-2026: meetpixel in update- en aankondigingsmails
 Daniel wilde weten of de Light-mail (01-10, 46 adressen) geopend werd. Meting vooraf: 45 van 46 bezorgd (Resend), 1 onderdrukt, geen enkele openingsgebeurtenis omdat de Light-mail geen pixel had. Sinds nu dragen de aankondigingsmails (Light, checkout) en de terughaalmails een onzichtbare pixel via `html_met_open_pixel` (backend/services/email.py), geteld per mailnaam in `leadgen_opslag.mail_opens` (laag `light-mail`, `checkout-mail`, `terughaal-a/b/c`). Wachtwoord- en factuurmail krijgen bewust géén pixel. Let op: Apple Mail telt automatisch mee (te hoog), en wie plaatjes blokkeert telt niet mee (te laag).
 
+## 02-10-2026: koude mail stond stil omdat de lijst op was, tweede groep webshops erin
+Gemeten: de machine draaide gewoon, pauze uit, geen storing. Alle 404 adressen in de lijst waren al
+aan de beurt geweest (70 alle drie de mails, 30 antwoord, 107 wachten op mail 2, 30 op mail 3, 159 door
+Daniel zelf gemaild, 6 klant, 1 bounce). Laatste eerste-mails 30-09 (35), 01-10 maar 3, 02-10 nul.
+Tweede groep uit kandidaten_2026-09-26.json: alle kandidaten met aantoonbaar webshopsysteem die er nog
+niet in zaten, 73, min twee goede doelen (Freeperie, Assistance a l'Enfance) = 71 in extra_leads
+(nu 182). 38 platform webshop (Google/zoekwoorden), 33 platform winkel (OSM/antiekwinkel.nl, zoals bij
+groep 1, zodat vergelijken per bron blijft kloppen). Bron staat per lead, toegevoegd 02-10. Back-up van
+extra_leads vooraf lokaal. Niet in de sheet gezet (lokaal geen Google-sleutel); verzenden hangt daar niet van
+af, het stopvinkje wordt bij elke beurt gelezen. Overgebleven: ~216 winkels zonder webshop en 1.419
+Maps-winkels zonder website, nog geparkeerd. Evaluatie per bron blijft rond 11-10.
+
 ## 02-10-2026 (14:40): Dagelijkse klantfouten (tweede ochtendronde, laat gestart)
 
 Gemeten over 24 uur: 1.056 opdrachten afgerond, 21 fouten bij 6 klanten. Sinds de ronde van 08:20
@@ -15316,3 +15328,12 @@ Gibson J-45 op Facebook) en meer Vinted-scans van 26cf5471 (uitgelogd, klant). /
 - Klant-eigen: 26cf5471 Vinted uitgelogd (scans elk half uur fout). bcdf9aa4 (Egbert) 702 en
   0b28c1ce 172 wachtende opdrachten, extensies stil. Niets hangt op 'claimed'.
 - Niet meetbaar: fouten die alleen in de browser van de klant staan.
+
+## 02-10-2026 (laat): Offline-mail telde maximaal 1.000 (Egbert, papas-plectrums)
+
+Egbert stuurde de mail "1000 listings are waiting for your computer" door en vroeg of dit de mail
+is voor vernieuwen. Het is de wachtrij-mail (computer 3 uur stil), niet een verlengmail. Gemeten: 1.250
+wachtende opdrachten in totaal, Egbert (bcdf9aa4) echt 1.079, klant 0b28c1ce 171. De lezing in
+`extension_offline.py` kreeg stil maximaal 1.000 rijen (PostgREST), dus het getal was afgekapt en de
+tweede klant kwam nooit in beeld. Nu pagina voor pagina. Proef faalt op de oude code. Egbert moet
+nog antwoord: ja, dit is de wachtrij-mail; de 1.079 zijn vooral wachtende bijwerkingen/plaatsingen.

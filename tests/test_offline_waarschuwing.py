@@ -46,7 +46,13 @@ class _Q:
         self.in_filters[k] = list(v); return self
 
     def limit(self, _n):
+        self.max = min(_n, 1000); return self
+
+    def order(self, _k):
         return self
+
+    def range(self, a, b):
+        self.bereik = (a, min(b, a + 999)); return self
 
     def execute(self):
         bron = getattr(self.db, self.tabel)
@@ -60,6 +66,8 @@ class _Q:
             for r in rijen:
                 r.update(self.velden)
             self.db.updates.append((self.tabel, dict(self.velden)))
+        bereik = getattr(self, "bereik", (0, getattr(self, "max", 1000) - 1))
+        rijen = rijen[bereik[0]:bereik[1] + 1] if self.op == "select" else rijen
         return type("R", (), {"data": [dict(r) for r in rijen]})()
 
 
@@ -227,3 +235,15 @@ def test_lange_stilte_staat_in_dagen():
     assert "24 days" in tekst
     _, kort = mod.offline_mail(3, 5)
     assert "5 hours" in kort
+
+
+def test_meer_dan_duizend_wachtend_wordt_niet_afgekapt(monkeypatch):
+    """02-10-2026: 1.079 wachtend bij Egbert en 171 bij een tweede klant; de server
+    zag er stil maar 1.000 van, dus 'aantal' klopte niet en de tweede klant ontbrak."""
+    db = _DB(_jobs(1079, 5, "egbert") + _jobs(171, 5, "tweede"),
+             [_hart(4, "egbert"), _hart(4, "tweede")], [_abo("egbert"), _abo("tweede")])
+    verzonden = _opzet(monkeypatch, db)
+    assert asyncio.run(mod.waarschuw_offline_extensies(NU)) == 2
+    onderwerpen = sorted(v["subject"] for v in verzonden)
+    assert onderwerpen == ["1079 listings are waiting for your computer",
+                           "171 listings are waiting for your computer"]
