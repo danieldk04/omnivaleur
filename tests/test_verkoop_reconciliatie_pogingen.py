@@ -241,3 +241,61 @@ def test_verse_verkoop_wordt_meteen_afgemeld():
     aanroepen = _draai(vr, db, rondes=1)
     assert len(aanroepen) == 1
     assert aanroepen[0]["alleen_platforms"] == {"marktplaats"}
+
+
+# ── 7. Een mislukte lezing van de pogingen is geen "nul pogingen" ──────────
+#
+# 02-10-2026 02:12 UTC: twee verkochte artikelen met elk vier pogingen erop
+# (De Juiste Toon, vloerkleed 271/73; f8c0cce9, Gibson J-45) kregen toch een
+# vijfde verwijdering op elk kanaal. Een droge ronde op de echte database
+# dezelfde middag sloeg ze allebei netjes over. De enige weg naar die vijfde
+# poging: de vraag naar eerdere pogingen faalde, en de oude code las dat als
+# "nog nooit geprobeerd". Voor-proef tegen e4d005fd, de laatste commit zonder
+# deze reparatie.
+
+OUDE_COMMIT_LEZING = "e4d005fd"
+
+
+class _DBJobsStoring(_DB):
+    """Zoals _DB, maar elke select op jobs faalt (time-out van Supabase)."""
+    def table(self, naam):
+        q = _Q(self, naam)
+        if naam == "jobs":
+            oud = q.execute
+            def execute():
+                if q.op == "select":
+                    raise RuntimeError("canceling statement due to statement timeout")
+                return oud()
+            q.execute = execute
+        return q
+
+
+def _situatie_pogingen_op():
+    db = _DBJobsStoring(**{k: getattr(_situatie_toon(), k) for k in ("listings", "items")})
+    for n, uren in enumerate((90, 80, 40, 30)):
+        db.jobs.append({"id": f"op{n}", "user_id": "u1", "item_id": "it1",
+                        "platform": "marktplaats", "action": "delete",
+                        "status": "error", "created_at": _t(uren)})
+    return db
+
+
+def _module_uit(commit: str) -> types.ModuleType:
+    tekst = subprocess.run(
+        ["git", "show", f"{commit}:backend/services/verkoop_reconciliatie.py"],
+        cwd=ROOT, capture_output=True, text=True, check=True).stdout
+    assert "onleesbaar" not in tekst, f"{commit} bevat de reparatie al"
+    mod = types.ModuleType("vr_lezing_oud")
+    mod.__dict__["__file__"] = "vr_lezing_oud.py"
+    exec(compile(tekst, "vr_lezing_oud.py", "exec"), mod.__dict__)
+    return mod
+
+
+def test_oude_code_las_een_storing_als_nul_pogingen():
+    aanroepen = _draai(_module_uit(OUDE_COMMIT_LEZING), _situatie_pogingen_op(), rondes=1)
+    assert len(aanroepen) == 1, (
+        "de oude code hoort hier een vijfde poging te doen; dat is de fout van 02-10")
+
+
+def test_storing_bij_lezen_pogingen_slaat_het_artikel_over():
+    aanroepen = _draai(vr, _situatie_pogingen_op(), rondes=1)
+    assert aanroepen == [], "een mislukte lezing mag het budget niet resetten"

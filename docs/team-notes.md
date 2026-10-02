@@ -15296,3 +15296,23 @@ gemeten waren dezelfde vragen 0,1 tot 2 seconden); de vierde keer lukte. /health
 
 ## 02-10-2026: meetpixel in update- en aankondigingsmails
 Daniel wilde weten of de Light-mail (01-10, 46 adressen) geopend werd. Meting vooraf: 45 van 46 bezorgd (Resend), 1 onderdrukt, geen enkele openingsgebeurtenis omdat de Light-mail geen pixel had. Sinds nu dragen de aankondigingsmails (Light, checkout) en de terughaalmails een onzichtbare pixel via `html_met_open_pixel` (backend/services/email.py), geteld per mailnaam in `leadgen_opslag.mail_opens` (laag `light-mail`, `checkout-mail`, `terughaal-a/b/c`). Wachtwoord- en factuurmail krijgen bewust géén pixel. Let op: Apple Mail telt automatisch mee (te hoog), en wie plaatjes blokkeert telt niet mee (te laag).
+
+## 02-10-2026 (14:40): Dagelijkse klantfouten (tweede ochtendronde, laat gestart)
+
+Gemeten over 24 uur: 1.056 opdrachten afgerond, 21 fouten bij 6 klanten. Sinds de ronde van 08:20
+alleen nieuw: twee kansloze verwijderingen (De Juiste Toon, vloerkleed 271/73 op 2dehands; f8c0cce9,
+Gibson J-45 op Facebook) en meer Vinted-scans van 26cf5471 (uitgelogd, klant). /health ok.
+- Gerepareerd (zie commit hierna): die twee verwijderingen waren de vijfde poging van het
+  verkoopvangnet om 02:12 UTC, terwijl het na vier pogingen hoort te stoppen. Beide artikelen hadden
+  vier pogingen sinds de verkoop (26-09 en 28-09). Een droge ronde op de echte database vanmiddag
+  slaat ze allebei over, dus de enige weg naar de vijfde poging is dat de vraag naar eerdere pogingen
+  om 02:12 faalde en als "nog nooit geprobeerd" telde (deze ochtend liepen Supabase-vragen vaker op
+  een time-out). Nu wordt een artikel waarvan de pogingen niet te lezen zijn die ronde overgeslagen.
+  Proef faalt op e4d005fd. Het tijdstip van de storing zelf is niet te bewijzen: Railway-logs van
+  02:12 zijn weg door de deploys van vandaag.
+- Blijft open (bekend punt, vraagt een keuze): de 2dehands-rij van het vloerkleed staat op 'active'
+  zonder advertentienummer terwijl de plaatsing op 02-09 nooit is uitgegaan. Het vangnet laat hem nu
+  met rust (pogingen op), de verkoop is op 03-10 een week oud en valt dan uit het vangnet.
+- Klant-eigen: 26cf5471 Vinted uitgelogd (scans elk half uur fout). bcdf9aa4 (Egbert) 702 en
+  0b28c1ce 172 wachtende opdrachten, extensies stil. Niets hangt op 'claimed'.
+- Niet meetbaar: fouten die alleen in de browser van de klant staan.

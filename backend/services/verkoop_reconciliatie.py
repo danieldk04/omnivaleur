@@ -138,6 +138,13 @@ async def reconcileer_verkochte_artikelen() -> dict:
     # Wat er al geprobeerd is, per (artikel, kanaal). Eén vraag per brok, niet
     # per artikel: deze ronde draait elke twintig minuten.
     pogingen: dict[tuple[str, str], list[str]] = {}
+    # Artikelen waarvan we de eerdere pogingen NIET konden lezen. Die slaan we
+    # deze ronde over: een mislukte lezing is geen "nog nooit geprobeerd".
+    # 02-10-2026 02:12 UTC kregen twee verkochte artikelen (De Juiste Toon en
+    # f8c0cce9), elk met vier pogingen erop, toch een vijfde verwijdering op elk
+    # kanaal, terwijl dezelfde ronde ze daarvoor en daarna netjes oversloeg.
+    # Zie de les storing-mag-nooit-als-antwoord-tellen.
+    onleesbaar: set[str] = set()
     kandidaat_ids = [iid for _, iid in kandidaten]
     for i in range(0, len(kandidaat_ids), IN_BROK):
         brok = kandidaat_ids[i:i + IN_BROK]
@@ -148,7 +155,9 @@ async def reconcileer_verkochte_artikelen() -> dict:
                 .eq("action", "delete").in_("item_id", b)
                 .gte("created_at", grens).execute(), herkans=True)).data or [])
         except Exception as e:  # noqa: BLE001
-            logger.warning("verkoop-reconciliatie: kon eerdere pogingen niet lezen: %s", e)
+            logger.warning("verkoop-reconciliatie: kon eerdere pogingen niet lezen, "
+                           "%d artikel(en) deze ronde overgeslagen: %s", len(brok), e)
+            onleesbaar.update(brok)
             rows = []
         for r in rows:
             if r.get("item_id") and r.get("platform"):
@@ -165,6 +174,8 @@ async def reconcileer_verkochte_artikelen() -> dict:
         return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
 
     def _mag_opnieuw(iid: str, platform: str) -> bool:
+        if iid in onleesbaar:
+            return False
         # Alleen de pogingen NA de verkoop tellen mee. Een verwijderopdracht van
         # daarvoor hoort bij iets anders (een herplaatsing, een handmatige
         # afmelding) en mag dit vangnet niet vooraf opgebruiken.
