@@ -94,3 +94,29 @@ def test_mailtekst_is_platte_tekst_met_de_juiste_feiten():
         assert verboden not in tekst, f"opmaak of leesteken in de mail: {verboden!r}"
     for feit in ("9,99", "19,99", "20 actieve artikelen", "omnivaleur.com/app"):
         assert feit in ann.LIGHT_BODY
+
+
+def test_light_mail_draagt_een_meetpixel_die_de_telling_terugvindt(monkeypatch):
+    """02-10-2026: Daniel wilde weten hoeveel mensen de mail openen. De echte
+    verstuurroute moet een html-deel met pixel meegeven, en de code in die pixel
+    moet door de echte tellerroute naar adres en mailnaam terug te lezen zijn."""
+    import re
+    from backend.api import billing, tracking
+    from backend.services import email as mail
+
+    verstuurd = []
+    monkeypatch.setattr(mail, "send_email_checked",
+                        lambda subject, body, to=None, reply_to=None, html=None, **k:
+                        verstuurd.append((to, body, html)) or "rid-1")
+    monkeypatch.setattr(ann, "markeer_verstuurd", lambda e, r=None: True)
+    monkeypatch.setattr(ann, "al_verstuurd", lambda emails: set())
+    monkeypatch.setattr(billing, "_is_owner_email", lambda e: True)
+
+    billing.send_announcement(dry_run=False, emails="Klant@Voorbeeld.nl", soort="light",
+                              user=types.SimpleNamespace(email="o@x.nl"))
+
+    (to, body, html), = verstuurd
+    assert to == "klant@voorbeeld.nl"
+    assert html and body.split("\n")[0] in html            # zelfde tekst, plus opmaak
+    code = re.search(r"/t/o/([A-Za-z0-9_-]+)", html).group(1)
+    assert tracking._decode(code) == ("klant@voorbeeld.nl", "light-mail")

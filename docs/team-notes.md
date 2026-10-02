@@ -15293,3 +15293,6 @@ gemeten waren dezelfde vragen 0,1 tot 2 seconden); de vierde keer lukte. /health
 - Gerepareerd (scripts/nieuwe_klanten.py): het postvak werd zonder de map "Klanten" gelezen, waar
   sinds 01-10 alle mail aan info@omnivaleur.com landt. Voor: 0 treffers op een afzender uit die map,
   na: 1. Bij deze drie klanten staat er niets in Klanten.
+
+## 02-10-2026: meetpixel in update- en aankondigingsmails
+Daniel wilde weten of de Light-mail (01-10, 46 adressen) geopend werd. Meting vooraf: 45 van 46 bezorgd (Resend), 1 onderdrukt, geen enkele openingsgebeurtenis omdat de Light-mail geen pixel had. Sinds nu dragen de aankondigingsmails (Light, checkout) en de terughaalmails een onzichtbare pixel via `html_met_open_pixel` (backend/services/email.py), geteld per mailnaam in `leadgen_opslag.mail_opens` (laag `light-mail`, `checkout-mail`, `terughaal-a/b/c`). Wachtwoord- en factuurmail krijgen bewust géén pixel. Let op: Apple Mail telt automatisch mee (te hoog), en wie plaatjes blokkeert telt niet mee (te laag).

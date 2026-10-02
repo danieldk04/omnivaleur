@@ -612,7 +612,7 @@ def send_announcement(dry_run: bool = True, emails: str = "", soort: str = "ligh
 
     from backend.services import announcement as ann
     from backend.services.billing import CONTACT_EMAIL
-    from backend.services.email import send_email_checked
+    from backend.services.email import html_met_open_pixel, send_email_checked
 
     light = soort != "checkout"
     subject, body = (ann.LIGHT_SUBJECT, ann.LIGHT_BODY) if light else (ann.SUBJECT, ann.BODY)
@@ -698,7 +698,7 @@ def terughaal_verstuur(
 
     from backend.services import terughaalcampagne as tc
     from backend.services.billing import CONTACT_EMAIL
-    from backend.services.email import send_email_checked
+    from backend.services.email import html_met_open_pixel, send_email_checked
 
     groep = (groep or "").strip().upper()
     if groep not in tc.GROEPEN:
