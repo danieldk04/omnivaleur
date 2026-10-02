@@ -15,6 +15,29 @@ from backend.config import settings
 logger = logging.getLogger(__name__)
 
 
+def html_met_open_pixel(adres: str, tekst: str, laag: str) -> str:
+    """HTML-versie van een update- of aankondigingsmail met een onzichtbare
+    meetpixel (sinds 02-10-2026, Daniel: "bij iedere mail meten hoeveel mensen hem
+    openen"). De LAAG is de naam van de mail (bijvoorbeeld "light-mail"), zodat per
+    mail te zien is hoeveel adressen hem openden. Dezelfde route en telling als
+    de koude mail: /t/o/{code} in backend/api/tracking.py.
+
+    De pixel staat op het domein waarmee deze mail wordt verstuurd (app_url). Dat
+    is hier bewust: de koude mail laadt van een ander domein om de scheiding met
+    de systeemmail te bewaren, maar deze mail IS systeemmail van hetzelfde domein.
+
+    Alleen voor mails aan mensen met een account. Nooit voor wachtwoord- of
+    factuurmail: die moeten zo kaal mogelijk blijven om aan te komen."""
+    import base64
+    import html as _html
+
+    code = base64.urlsafe_b64encode(f"{adres.lower()}|{laag}".encode()).rstrip(b"=").decode()
+    veilig = _html.escape(tekst).replace("\n", "<br>")
+    return (f'<html><body style="font-family:sans-serif;white-space:pre-wrap">{veilig}'
+            f'<img src="{settings.app_url.rstrip("/")}/t/o/{code}" width="1" height="1" '
+            f'style="display:none" alt=""></body></html>')
+
+
 def ontvangers(veld: str | None) -> list[str]:
     """Eén of meer adressen uit één instelling.
 
