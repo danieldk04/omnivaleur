@@ -97,13 +97,16 @@ def cmd_ophalen(a) -> None:
             sys.exit("Map Verzonden niet gevonden: dit is een storing, geen lege lijst.")
         nummers = (imap.search(None, f"(SINCE {sinds})")[1][0] or b"").split()
         for n in nummers:
-            ruw = imap.fetch(n, "(BODY.PEEK[])")[1][0][1]
-            msg = email.message_from_bytes(ruw, policy=policy.default)
-            mid = str(msg.get("Message-ID") or "").strip()
+            kop = email.message_from_bytes(imap.fetch(
+                n, "(BODY.PEEK[HEADER.FIELDS (X-MAILER MESSAGE-ID)])")[1][0][1])
+            mid = str(kop.get("Message-ID") or "").strip()
             if not mid or mid in gezien:
                 continue
-            if "zoho mail" not in str(msg.get("X-Mailer") or "").lower():
+            # Eigen mails herkennen aan de kop; de machine zet die niet.
+            if "zoho mail" not in str(kop.get("X-Mailer") or "").lower():
                 continue
+            ruw = imap.fetch(n, "(BODY.PEEK[])")[1][0][1]
+            msg = email.message_from_bytes(ruw, policy=policy.default)
             aan = parseaddr(str(msg.get("To") or ""))[1].lower()
             if not aan or aan == eigen:
                 continue
