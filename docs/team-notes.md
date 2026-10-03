@@ -15405,3 +15405,19 @@ afspraken met deze klanten in Daniels agenda (zoekfunctie zelf werkt, controle o
   744ee9fe (kop = 25 wachters, uitgifte geeft niets) en op fd62f2c3 (oudere wachters vulden de kop nog).
 - Open: waarom de Marktplaats-opzoeking vanaf Railway een uur faalde. Geen Railway-CLI hier, dus de
   serverlogs niet gezien. Zijn 24 wachtende patches gaan nu pas na de rest van zijn rij.
+
+## 03-10-2026 (14:28, automatisch): Klantfouten
+
+- fout-facebook-create (f8c0cce9, 12:20 UTC, Fender Telecaster): het tabblad naar het Facebookformulier
+  kwam uit op /marketplace/np/create/limit_reached/. Facebook laat dit account voorlopig geen nieuwe
+  advertentie maken: klant-eigen, wij kunnen die grens niet opheffen. Wel onze fout: de melding zei
+  "we konden niet zien wat dit was, stuur het ons" terwijl het adres het antwoord gaf. Gerepareerd
+  (e5adc988, extensie 1.0.366): die pagina krijgt nu een eigen melding "Facebook limit reached",
+  met NL-vertaling. Proef tests/facebook-limiet-bereikt-test.js faalt op 6786e426 (3 fouten).
+- fout-vinted-create (f8c0cce9, zelfde artikel): eerste poging stopte op "Vul je staat in" zonder rood
+  veld; om 12:22 UTC is dezelfde opdracht alsnog als geplaatst afgemeld (vinted.nl/items/10225851626),
+  vermoedelijk na een klik van de klant zelf. Zijn eerdere ~30 gitaren met staat 'good' gingen wel goed
+  op Vinted; het staatherstel bestaat al. Zonder de logs uit zijn browser is het mechanisme niet te
+  bewijzen, dus niet gerepareerd. Open als dit vaker terugkomt.
+- Open: 1.0.366 (bevat ook 1.0.365) moet naar de Chrome Web Store. tests/stap-voor-stap-vastleggen-test.js
+  crasht, ook op de oude code; niet onderzocht.
