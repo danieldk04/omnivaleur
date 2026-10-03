@@ -25,7 +25,7 @@ from backend.main import KORTE_LINKS  # noqa: E402
 from backend.services import ga4  # noqa: E402
 import leadgen_mail as L  # noqa: E402
 
-ALLE = KANAAL_LINKS + [MAIL_LINK]
+ALLE = KANAAL_LINKS + [MAIL_LINK, FB_GROEP_LINK]
 
 
 def _tags(link: str) -> dict:
