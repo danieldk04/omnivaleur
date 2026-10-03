@@ -1573,6 +1573,12 @@ WACHTRIJ_KOP = 25
 WACHTRIJ_MAX = 500
 
 
+# De lichte velden waarmee de volgorde over de hele wachtrij bepaald wordt. Uit de
+# payload alleen het ene tijdstip dat zegt of een plaatsing op zijn rubriek wacht.
+_LICHTE_VELDEN = ("id,action,platform,item_id,created_at,scheduled_for,"
+                  "rubriek_sinds:payload->>_rubriek_zoeken_sinds")
+
+
 def _wachtrij_volgorde(licht: list[dict], now_dt: datetime) -> list[dict]:
     """De hele wachtrij op urgentie zetten (alleen met de lichte velden)."""
     # Welke verwijderingen staan er nog te wachten? Staat de verwijdering die bij
@@ -1592,6 +1598,16 @@ def _wachtrij_volgorde(licht: list[dict], now_dt: datetime) -> list[dict]:
         # Egbert): 235 bijwerkingen van gisteren stonden voor zijn 98 patches van
         # vandaag, en een uur lang ging er niets nieuws online.
         if _is_2dh_bijwerking(j):
+            return 3
+        # WIE OP ZIJN RUBRIEK WACHT, HOORT NIET IN DE KOP (03-10-2026, Egbert).
+        # 25 patches wachtten op hun Marktplaats-rubriek (de opzoeking vanaf de
+        # server faalde elke keer) en vulden precies de hele kop. Die worden bij
+        # het uitdelen allemaal teruggehouden, dus ging er een uur lang niets uit:
+        # niet zijn 82 andere plaatsingen, niet zijn 935 bijwerkingen, terwijl
+        # Chrome aanstond. Achteraan, net als bij het uitdelen zelf; ze komen
+        # weer aan de beurt zodra de rij voor hen leeg is.
+        sinds = _parse_ts(j.get("rubriek_sinds"))
+        if actie == "create" and sinds and now_dt - sinds < _RUBRIEK_ZOEK_GEDULD:
             return 3
         sleutel = (j.get("item_id"), j.get("platform"))
         if actie == "create" and j.get("scheduled_for"):
@@ -1925,14 +1941,14 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
         # alleen de kop volledig in — evenveel dataverkeer als de oude
         # limit(20), maar dan wel de twintig die er echt toe doen.
         licht = (db.table("jobs")
-                 .select("id,action,platform,item_id,created_at,scheduled_for")
+                 .select(_LICHTE_VELDEN)
                  .eq("user_id", user_id).eq("status", "pending").eq("platform", platform)
                  .order("created_at").limit(WACHTRIJ_MAX).execute().data or [])
         if len(licht) >= WACHTRIJ_MAX and any(_is_2dh_bijwerking(j) for j in licht):
             # Een volle lezing kan uit alleen oude bijwerkingen bestaan, en dan
             # valt de verse klik er buiten. Lees het eigen werk dan apart.
             eigen = (db.table("jobs")
-                     .select("id,action,platform,item_id,created_at,scheduled_for")
+                     .select(_LICHTE_VELDEN)
                      .eq("user_id", user_id).eq("status", "pending").eq("platform", platform)
                      .or_(_NIET_2DH_BIJWERKING)
                      .order("created_at").limit(WACHTRIJ_MAX).execute().data or [])

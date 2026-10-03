@@ -90,10 +90,11 @@ def test_de_uitgifte_geeft_weer_werk_als_de_rubriek_niet_op_te_vragen_is(monkeyp
     def houd_wachters_vast(db, user_id, job):
         return not job["payload"].get("_rubriek_zoeken_sinds")
 
-    for module in (J, _oude_jobs()):
+    oude = _oude_jobs()
+    for module in (J, oude):
         monkeypatch.setattr(module, "_zet_rubriek_van_marktplaats", houd_wachters_vast)
         monkeypatch.setattr(module, "_stuur_naar_eigenaar", lambda *a: None, raising=False)
     nu = _uitgifte(monkeypatch, _db(rij()), "1.0.364")
     assert [j["id"] for j in nu] == ["p00"]
-    oud = _uitgifte(monkeypatch, _db(rij()), "1.0.364", module=_oude_jobs())
+    oud = _uitgifte(monkeypatch, _db(rij()), "1.0.364", module=oude)
     assert oud == [], "zo kreeg zijn extensie een uur lang niets"
