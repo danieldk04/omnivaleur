@@ -628,7 +628,7 @@
       "pillar": "B",
       "format": "strategy",
       "slug": "how-to-price-second-hand-items",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "tweedehands-artikelen-prijzen-strategie",
       "priority": 75
     }
@@ -1299,6 +1299,16 @@
       "action": "created",
       "url_path": "/reseller-tools/when-does-reselling-become-a-business-kvk",
       "published_at": "2026-10-02T14:22:28.366807+00:00"
+    },
+    {
+      "keyword": "how to price second hand items",
+      "slug": "how-to-price-second-hand-items",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-price-second-hand-items",
+      "published_at": "2026-10-03T12:54:59.147969+00:00"
     }
   ]
 }
