@@ -131,6 +131,9 @@ def cmd_ophalen(a) -> None:
     nieuw.sort(key=lambda m: m["wanneer"])
     NIEUW.write_text(json.dumps(nieuw, ensure_ascii=False, indent=1))
     mt = sum(1 for m in nieuw if m["concept"])
+    # Zonder deze cijfers lijkt "0 nieuw" op een kapotte koppeling.
+    print(f"Gekeken: {totaal} mails in Verzonden (laatste {a.dagen} dagen), "
+          f"{eigen_n} van Daniel, {al_gezien} daarvan al verwerkt.")
     print(f"{len(nieuw)} nieuwe eigen mails, waarvan {mt} met concept ernaast -> {NIEUW}")
 
 
