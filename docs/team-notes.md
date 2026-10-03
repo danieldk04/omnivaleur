@@ -15434,3 +15434,14 @@ afspraken met deze klanten in Daniels agenda (zoekfunctie zelf werkt, controle o
 - Open: waarom die ene advertentie niet te vinden is (verlopen of verwijderd op MP?); die gaat pas na
   6 uur met de geraden rubriek uit. Zijn bewering "gebeurt na opnieuw inloggen op de computer" niet
   bewezen: de vastloper hierboven hangt niet aan inloggen. Antwoord aan hem staat nog niet verstuurd.
+
+## 03-10-2026 (18:20): Stiltes van de extensie worden vastgelegd
+
+- Reden: Egbert zegt dat zijn rij vastloopt na opnieuw inloggen op de computer; niet te toetsen omdat
+  extension_heartbeat alleen het laatste moment bewaart. Nu schrijft de server bij elke terugkeer na
+  meer dan 3 minuten stilte een rij naar `extension_stiltes` (van, tot, minuten, versie, browser).
+- Tabel moet met de hand worden gemaakt: `scripts/sql/extension_stiltes.sql` in de Supabase SQL-editor.
+  Tot dan wordt er niets vastgelegd (stil overgeslagen). Daarna na een paar dagen de stiltes van
+  bcdf9aa4 naast zijn klachten en naast jobs.created_at leggen.
+- Beperking: stilte door een serverherstart wordt opgevangen via de heartbeat-rij; stiltes van < 3 min
+  worden bewust niet bewaard.

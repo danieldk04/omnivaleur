@@ -265,6 +265,52 @@ EXTENSION_ONLINE_WINDOW_SECONDS = 120
 _HEARTBEAT_VERSIEKOLOM_UIT_TOT = [0.0]
 _HEARTBEAT_VERSIEKOLOM_PAUZE = 3600.0
 
+# STILTES VASTLEGGEN (03-10-2026, Egbert). Hij zegt dat zijn wachtrij vastloopt
+# "iedere keer nadat ik weer opnieuw ingelogd ben op de computer". Niet te meten:
+# extension_heartbeat bewaart alleen het laatste moment. Komt de extensie na meer
+# dan _STILTE_MIN_MINUTEN stilte terug, dan schrijven we één rij met van en tot
+# wanneer ze weg was. Zo kan een klacht naast de echte offline-momenten gelegd
+# worden. Tabel moet met de hand worden gemaakt (scripts/sql/extension_stiltes.sql);
+# tot dan wordt er niets vastgelegd en lijdt de aanwezigheidsstempel er niet onder.
+_STILTE_MIN_MINUTEN = 3
+_LAATST_GEZIEN: dict[str, datetime] = {}
+_STILTES_UIT_TOT = [0.0]
+
+
+def _leg_stilte_vast(db, user_id: str, nu: datetime, user_agent: str | None,
+                     versie: str | None) -> None:
+    """Schrijf een rij als deze extensie langer dan _STILTE_MIN_MINUTEN weg was.
+
+    Het vorige moment komt uit het geheugen van dit proces; na een herstart van de
+    server (elke deploy) eenmalig uit de heartbeat-rij, anders zou elke deploy alle
+    stiltes verstoppen."""
+    vorige = _LAATST_GEZIEN.get(user_id)
+    if vorige is None:
+        try:
+            rij = eerste_rij(db.table("extension_heartbeat").select("last_seen")
+                             .eq("user_id", user_id).limit(1).execute())
+            vorige = _parse_ts((rij or {}).get("last_seen"))
+        except Exception:  # noqa: BLE001
+            vorige = None
+    _LAATST_GEZIEN[user_id] = nu
+    if vorige is None or nu - vorige < timedelta(minutes=_STILTE_MIN_MINUTEN):
+        return
+    if time.monotonic() < _STILTES_UIT_TOT[0]:
+        return
+    try:
+        db.table("extension_stiltes").insert({
+            "user_id": user_id,
+            "stil_van": vorige.isoformat(),
+            "stil_tot": nu.isoformat(),
+            "minuten": round((nu - vorige).total_seconds() / 60, 1),
+            "ext_version": (versie or "")[:20] or None,
+            "user_agent": (user_agent or "")[:300] or None,
+        }).execute()
+    except Exception:  # noqa: BLE001
+        _STILTES_UIT_TOT[0] = time.monotonic() + 3600.0
+        logger.info("Tabel extension_stiltes ontbreekt nog; stiltes worden niet "
+                    "vastgelegd. SQL staat in scripts/sql/extension_stiltes.sql")
+
 
 def _record_extension_heartbeat(db, user_id: str, user_agent: str | None = None,
                                 versie: str | None = None) -> None:
@@ -281,9 +327,14 @@ def _record_extension_heartbeat(db, user_id: str, user_agent: str | None = None,
     from /complete) refreshes last_seen without wiping the UA the poll captured.
     """
     try:
+        nu_stempel = datetime.now(timezone.utc)
+        try:
+            _leg_stilte_vast(db, user_id, nu_stempel, user_agent, versie)
+        except Exception:  # noqa: BLE001 — meten mag de stempel nooit tegenhouden
+            pass
         row = {
             "user_id": user_id,
-            "last_seen": datetime.now(timezone.utc).isoformat(),
+            "last_seen": nu_stempel.isoformat(),
         }
         ua = (user_agent or "")[:300]
         if ua:
