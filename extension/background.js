@@ -4534,8 +4534,15 @@ function waitForTabLoad(tabId, timeoutMs = 20000) {
 // the ad stayed live (verified live 2026-07: 129 ads on the account, 50
 // rendered). Click through until the button is gone so the whole shop is loaded.
 async function expandMp2dhOverview(tabId) {
+  // Elke klik op "Toon 50 volgende" laadt 50 zoekertjes erbij. Tot 03-10-2026
+  // stopte dit na 40 klikken (2.050 rijen, "far beyond any real shop"), maar
+  // klant bcdf9aa4 heeft er 2.437. Zijn oudste zoekertjes, precies de zoekertjes
+  // die verlopen, stonden nooit op het scherm: verlengen vond geen knop, en een
+  // verwijdercontrole las zo'n afwezige rij als "weg". Nu tot 400 klikken
+  // (20.000 rijen); de knop verdwijnt vanzelf als alles er staat.
   const sleep = ms => new Promise(r => setTimeout(r, ms));
-  for (let i = 0; i < 40; i++) { // 40 x 50 = 2000 ads — far beyond any real shop
+  let leeg = 0;
+  for (let i = 0; i < 400; i++) {
     const clicked = await execInTab(tabId, () => {
       const btn = [...document.querySelectorAll("button")]
         .find(b => /toon\s+\d+\s+volgende/i.test(b.textContent || "") && !b.disabled);
@@ -4543,7 +4550,14 @@ async function expandMp2dhOverview(tabId) {
       btn.click();
       return true;
     });
-    if (!clicked) return;
+    if (!clicked) {
+      // Een knop die even uitgeschakeld is terwijl de vorige portie laadt is
+      // nog geen einde van de lijst: twee keer extra kijken voor we stoppen.
+      if (++leeg > 2) return;
+      await sleep(1500);
+      continue;
+    }
+    leeg = 0;
     await sleep(1200); // let the next batch render before looking again
   }
 }
