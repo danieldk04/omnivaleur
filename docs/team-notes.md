@@ -15347,3 +15347,23 @@ aanscherpt. Eigen mails herken je in map Verzonden aan de kop `X-Mailer: Zoho Ma
 machine hebben die kop niet (68 van 298 in 14 dagen waren van hem). De Zoho-inlog (`IMAP_HOST`, `MAIL_USER`,
 `MAIL_PASS`) staat nu ook in Daniels lokale `.env`. Concepten en verzonden mails staan in `data/schrijfstijl/`,
 buiten git. Elke sessie die een klantmail beantwoordt leest het stijlbestand eerst en bewaart haar concept.
+
+## 03-10-2026: Dagelijkse klantfouten (ochtendronde)
+
+Gemeten over 24 uur: 675 opdrachten afgerond, 11 fouten bij 6 klanten, sinds gisteren 14:28 UTC geen
+nieuwe fout meer behalve twee scans die na drie dagen wachten werden opgeruimd. Niets hangt op
+'claimed'. /health ok op b598cb82.
+- Gerepareerd (b744158d): elk lokaal script dat de database leest (deze ronde, de onboardingronde,
+  klantfouten.py) weigerde te starten. Gisteravond kwamen IMAP_HOST, MAIL_USER en MAIL_PASS in de
+  lokale .env voor het schrijfstijlscript, en `backend/config.py` stond op extra='forbid'. Nu
+  extra='ignore'. Proef: de config van b598cb82 faalt op de huidige .env, de nieuwe leest hem. De
+  server op Railway had er geen last van (geen .env daar).
+- Opgelost bevestigd: het verkoopvangnet (c3b891e3) zette vannacht geen vijfde verwijdering meer
+  klaar bij De Juiste Toon of f8c0cce9.
+- Klant-eigen: f8c0cce9 sloot op 02-10 14:24 de tabbladen van een Vinted- en Facebookplaatsing
+  (Bronzen Beeldje Golfer) binnen twee seconden tegelijk, dus het venster; een tweede Vinted-poging
+  sloot ook. Op Vinted staat het als concept. Niet te bewijzen zonder logs uit zijn browser.
+  0b28c1ce: 72 herplaatsingen na drie dagen opgeruimd, extensie stil sinds 01-10. 26cf5471 Vinted
+  uitgelogd, extensie stil sinds 02-10 09:49 met 128 wachtende opdrachten. bcdf9aa4 (Egbert) ruim
+  1.000 wachtende 2dehands-bijwerkingen, extensie laatst gezien 02-10 22:01.
+- Niet meetbaar: fouten die alleen in de browser van de klant staan.
