@@ -365,7 +365,7 @@ async def landing_nl():
 # browsers onthouden, en dan is de tag later niet meer te wijzigen.
 KORTE_LINKS = {
     k["kort"]: content.kanaal_pad(k)
-    for k in [*content.KANAAL_LINKS, content.MAIL_LINK]
+    for k in [*content.KANAAL_LINKS, content.MAIL_LINK, content.FB_GROEP_LINK]
 }
 
 
