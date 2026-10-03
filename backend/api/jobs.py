@@ -1604,11 +1604,12 @@ def _wachtrij_volgorde(licht: list[dict], now_dt: datetime) -> list[dict]:
         # server faalde elke keer) en vulden precies de hele kop. Die worden bij
         # het uitdelen allemaal teruggehouden, dus ging er een uur lang niets uit:
         # niet zijn 82 andere plaatsingen, niet zijn 935 bijwerkingen, terwijl
-        # Chrome aanstond. Achteraan, net als bij het uitdelen zelf; ze komen
-        # weer aan de beurt zodra de rij voor hen leeg is.
+        # Chrome aanstond. Helemaal achteraan, ook achter scans en achter
+        # bijwerkingen die jonger zijn: ze vullen alleen de plekken die over zijn,
+        # en komen weer aan de beurt zodra de rij voor hen leeg is.
         sinds = _parse_ts(j.get("rubriek_sinds"))
         if actie == "create" and sinds and now_dt - sinds < _RUBRIEK_ZOEK_GEDULD:
-            return 3
+            return 5
         sleutel = (j.get("item_id"), j.get("platform"))
         if actie == "create" and j.get("scheduled_for"):
             return 3 if sleutel in open_verwijderingen else 0
@@ -2442,15 +2443,15 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # de wachtrij kwam (bijvoorbeeld de uurlijkse controle) ging vóór een publicatie
     # waar iemand net op geklikt heeft — en dan lijkt de knop kapot. Publiceren en
     # verwijderen gaan nu altijd voor; scans vullen de rustige momenten op.
-    # En binnen de publicaties achteraan: wie op zijn Marktplaats-rubriek staat
+    # En helemaal achteraan, ook achter scans: wie op zijn Marktplaats-rubriek staat
     # te wachten (_zet_rubriek_van_marktplaats). Anders houdt één artikel waarvan
     # de rubriek even niet op te vragen is de hele rij achter zich tegen, want er
     # worden er maar vijf per ronde bekeken.
     if is_extension_dispatch:
         ready.sort(key=lambda j: (
-            0 if j.get("action") in SCHRIJVEND else 1,
             1 if (isinstance(j.get("payload"), dict)
-                  and j["payload"].get("_rubriek_zoeken_sinds")) else 0))
+                  and j["payload"].get("_rubriek_zoeken_sinds")) else 0,
+            0 if j.get("action") in SCHRIJVEND else 1))
 
     # Extension: exactly one job at a time. Dashboard: the whole queue, to count.
     if not is_extension_dispatch:

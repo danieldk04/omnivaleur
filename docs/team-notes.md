@@ -15392,3 +15392,16 @@ afspraken met deze klanten in Daniels agenda (zoekfunctie zelf werkt, controle o
   betaalmethode. Geen mailtje.
 - aa093a0a: Daniels eigen account.
 - Niets gerepareerd; geen oorzaak in onze code gevonden.
+
+## 03-10-2026 (11:55, automatisch): Klantfouten
+
+- vast-bcdf9aa4 (Egbert): Chrome aan, maar van 08:48 tot 09:40 UTC ging er niets uit (107 plaatsingen
+  en 935 verzendkost-bijwerkingen op 2dehands). Gemeten: de uitgifte leest de kop van 25 volledig in,
+  en dat waren precies zijn 25 oudste patches, die allemaal op hun Marktplaats-rubriek wachtten. De
+  opzoeking vanaf de server faalde elke drie minuten (één opdracht stond op 15 pogingen); lokaal lukte
+  dezelfde opzoeking wel. Om 09:40 lukte hij op de server weer en liep de rij vanzelf, vóór de deploy.
+- Gerepareerd (fd62f2c3 en de commit hierna): wachters staan nu helemaal achteraan in de volgorde en
+  vullen alleen plekken die over zijn, ook achter jongere bijwerkingen en scans. Proef faalt op
+  744ee9fe (kop = 25 wachters, uitgifte geeft niets) en op fd62f2c3 (oudere wachters vulden de kop nog).
+- Open: waarom de Marktplaats-opzoeking vanaf Railway een uur faalde. Geen Railway-CLI hier, dus de
+  serverlogs niet gezien. Zijn 24 wachtende patches gaan nu pas na de rest van zijn rij.

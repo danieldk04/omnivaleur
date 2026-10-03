@@ -64,6 +64,16 @@ def test_staan_er_alleen_nog_wachters_en_bijwerkingen_dan_gaan_de_bijwerkingen()
     assert all(j["action"] == "content_refresh" for j in kop)
 
 
+def test_ook_oudere_wachters_gaan_achter_jongere_bijwerkingen_en_scans():
+    wacht = NU - timedelta(hours=1)
+    rij = [_licht(f"w{i:02}", "create", wacht + timedelta(seconds=i), rubriek_sinds=wacht)
+           for i in range(25)]
+    rij += [_licht("b-jong", "content_refresh", NU - timedelta(minutes=5)),
+            _licht("scan", "scan", NU - timedelta(minutes=2))]
+    kop = J._wachtrij_volgorde(rij, NU)[:J.WACHTRIJ_KOP]
+    assert [j["id"] for j in kop[:2]] == ["b-jong", "scan"]
+
+
 def test_wachters_komen_weer_aan_de_beurt_als_de_rij_voor_hen_leeg_is():
     rij = [r for r in _egbert_om_half_tien() if r["id"].startswith("w")]
     assert len(J._wachtrij_volgorde(rij, NU)[:J.WACHTRIJ_KOP]) == 25
