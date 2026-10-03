@@ -610,6 +610,19 @@ MAIL_LINK = {
 }
 
 
+# De vastgepinde post in de eigen Facebookgroep (EU Resellers Community, 02-10-2026).
+# Net als de maillink staat hij hier los van KANAAL_LINKS: er is geen profiel dat
+# als sameAs op elke pagina hoort (de groep is besloten), alleen een korte link
+# met tags. Zo is na een paar weken te zien hoeveel bezoek en aanmeldingen de
+# groep opleverde.
+FB_GROEP_LINK = {
+    "kanaal": "Facebookgroep (EU Resellers Community)", "taal": "EN",
+    "profiel": "", "kort": "fb",
+    "pad": "/", "source": "facebook", "medium": "social",
+    "campagne": "groep-en",
+}
+
+
 def kanaal_pad(k: dict) -> str:
     """Het pad met tags, opgebouwd uit één afspraak in plaats van uit het hoofd.
     Volgorde vast (source, medium, campaign) zodat twee links naar hetzelfde
