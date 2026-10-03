@@ -92,7 +92,6 @@ def cmd_ophalen(a) -> None:
     sinds = (date.today() - timedelta(days=a.dagen)).strftime("%d-%b-%Y")
     nieuw: list[dict] = []
     totaal = eigen_n = al_gezien = 0
-    laatste_eigen = ""
     with imaplib.IMAP4_SSL(os.environ["IMAP_HOST"], 993) as imap:
         imap.login(os.environ["MAIL_USER"], os.environ["MAIL_PASS"])
         if imap.select('"Verzonden"', readonly=True)[0] != "OK":
