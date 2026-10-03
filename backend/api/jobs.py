@@ -1576,7 +1576,23 @@ WACHTRIJ_MAX = 500
 # De lichte velden waarmee de volgorde over de hele wachtrij bepaald wordt. Uit de
 # payload alleen het ene tijdstip dat zegt of een plaatsing op zijn rubriek wacht.
 _LICHTE_VELDEN = ("id,action,platform,item_id,created_at,scheduled_for,"
-                  "rubriek_sinds:payload->>_rubriek_zoeken_sinds")
+                  "rubriek_sinds:payload->>_rubriek_zoeken_sinds,"
+                  "rubriek_pogingen:payload->>_rubriek_pogingen")
+
+
+def _rubriek_mislukt(j: dict) -> int:
+    """Hoe vaak de rubrieksopzoeking voor deze wachtende plaatsing al mislukte.
+
+    Staat in de lichte velden (rubriek_pogingen) of, bij een volledige rij, in de
+    payload."""
+    pl = j.get("payload")
+    ruw = j.get("rubriek_pogingen")
+    if ruw is None and isinstance(pl, dict):
+        ruw = pl.get("_rubriek_pogingen")
+    try:
+        return int(ruw or 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _wachtrij_volgorde(licht: list[dict], now_dt: datetime) -> list[dict]:
@@ -1620,7 +1636,13 @@ def _wachtrij_volgorde(licht: list[dict], now_dt: datetime) -> list[dict]:
             return 3
         return 1
 
-    return sorted(licht, key=lambda j: (groep(j), j.get("created_at") or ""))
+    # BINNEN DE WACHTERS GAAT WIE HET MEEST MISLUKTE ACHTERAAN (03-10-2026, Egbert).
+    # Eén plaatsing waarvan de rubriek nooit te vinden was (13 pogingen in 39
+    # minuten) stond als oudste vooraan. Elke ronde werd alleen die geprobeerd, de
+    # opzoeking mislukte, en de rust van drie minuten hield de 24 andere tegen: die
+    # werden nooit geprobeerd, terwijl lokaal twee van de drie wel lukten.
+    return sorted(licht, key=lambda j: (
+        groep(j), _rubriek_mislukt(j) if groep(j) == 5 else 0, j.get("created_at") or ""))
 
 
 def _ruim_dubbele_scans_op(db, licht: list[dict], now: str) -> list[dict]:
@@ -2451,6 +2473,8 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
         ready.sort(key=lambda j: (
             1 if (isinstance(j.get("payload"), dict)
                   and j["payload"].get("_rubriek_zoeken_sinds")) else 0,
+            _rubriek_mislukt(j) if (isinstance(j.get("payload"), dict)
+                                    and j["payload"].get("_rubriek_zoeken_sinds")) else 0,
             0 if j.get("action") in SCHRIJVEND else 1))
 
     # Extension: exactly one job at a time. Dashboard: the whole queue, to count.

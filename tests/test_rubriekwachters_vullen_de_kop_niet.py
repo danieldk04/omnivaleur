@@ -108,3 +108,62 @@ def test_de_uitgifte_geeft_weer_werk_als_de_rubriek_niet_op_te_vragen_is(monkeyp
     assert [j["id"] for j in nu] == ["p00"]
     oud = _uitgifte(monkeypatch, _db(rij()), "1.0.364", module=oude)
     assert oud == [], "zo kreeg zijn extensie een uur lang niets"
+
+
+# ── Eén onvindbare rubriek vooraan hield de hele rij tegen (03-10-2026, 15:44 UTC) ──
+# Egbert: 25 plaatsingen van 15:05 wachtten nog steeds terwijl zijn extensie online
+# was. De oudste had 13 mislukte opzoekingen (13 x 3 minuten = 39 minuten); de
+# andere 24 waren nooit geprobeerd. Lokaal gedraaid vonden twee van de drie hun
+# rubriek wel.
+VOOR_DEZE_REPARATIE = "c2157f7b"
+
+
+def _oude_jobs_poison():
+    return _oude_module("backend/api/jobs.py", VOOR_DEZE_REPARATIE, "oude_jobs_poison",
+                        moet_bevatten=("_is_2dh_bijwerking",),
+                        moet_missen=("_rubriek_mislukt",))
+
+
+def test_een_onvindbare_rubriek_vooraan_houdt_de_rest_niet_meer_tegen(monkeypatch):
+    def rij():
+        wachters = []
+        for i in range(25):
+            w = {**_plaatsing_in_de_rij(f"w{i:02}", minuten=40 - i),
+                 "rubriek_sinds": _tijd(35),
+                 "rubriek_pogingen": "13" if i == 0 else None}
+            w["payload"] = {**w["payload"], "_rubriek_zoeken_sinds": _tijd(35),
+                            **({"_rubriek_pogingen": 13, "_onvindbaar": True} if i == 0 else {})}
+            wachters.append(w)
+        return wachters
+
+    def maak_fake():
+        rust = {"aan": False}
+
+        def fake(db, user_id, job):
+            # Dezelfde regels als _zet_rubriek_van_marktplaats: een mislukking zet de
+            # rust aan voor de hele gebruiker, een succes haalt hem weg.
+            if job["payload"].get("_onvindbaar"):
+                rust["aan"] = True
+                return False
+            if rust["aan"]:
+                return False
+            job["payload"] = {k: v for k, v in job["payload"].items()
+                              if k != "_rubriek_zoeken_sinds"}
+            return True
+        return fake
+
+    oude = _oude_jobs_poison()
+    for module in (J, oude):
+        monkeypatch.setattr(module, "_zet_rubriek_van_marktplaats", maak_fake())
+        monkeypatch.setattr(module, "_stuur_naar_eigenaar", lambda *a: None, raising=False)
+    nu = _uitgifte(monkeypatch, _db(rij()), "1.0.364")
+    assert nu and nu[0]["id"] != "w00", [j["id"] for j in nu]
+    oud = _uitgifte(monkeypatch, _db(rij()), "1.0.364", module=oude)
+    assert oud == [], "zo kreeg zijn extensie 38 minuten niets"
+
+
+def test_wie_het_meest_mislukte_staat_achteraan_bij_de_wachters():
+    wacht = NU - timedelta(hours=1)
+    rij = [{**_licht("oud", "create", wacht, rubriek_sinds=wacht), "rubriek_pogingen": "13"},
+           _licht("nieuw", "create", wacht + timedelta(minutes=1), rubriek_sinds=wacht)]
+    assert [j["id"] for j in J._wachtrij_volgorde(rij, NU)] == ["nieuw", "oud"]

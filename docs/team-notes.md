@@ -15421,3 +15421,16 @@ afspraken met deze klanten in Daniels agenda (zoekfunctie zelf werkt, controle o
   bewijzen, dus niet gerepareerd. Open als dit vaker terugkomt.
 - Open: 1.0.366 (bevat ook 1.0.365) moet naar de Chrome Web Store. tests/stap-voor-stap-vastleggen-test.js
   crasht, ook op de oude code; niet onderzocht.
+
+## 03-10-2026 (17:50): Egbert, "hij loopt vast, wachtrij maar er gebeurt niks"
+
+- Gemeten 15:44 UTC bij bcdf9aa4: extensie online (1.0.364), 25 plaatsingen sinds 15:05 niet opgepakt.
+  Alle 25 wachtten op hun Marktplaats-rubriek. De oudste (Michael Schenker patch) had 13 mislukte
+  opzoekingen, de andere 24 nul: elke ronde probeerde de server alleen de oudste, die faalde (zijn
+  advertentie komt niet terug in Marktplaats' zoekantwoord), de rust van 3 minuten hield de rest tegen.
+  Lokaal met de echte code: twee van de drie vonden hun rubriek wel.
+- Gerepareerd: binnen de wachters gaat wie het vaakst mislukte achteraan (`_rubriek_mislukt`). Proef in
+  tests/test_rubriekwachters_vullen_de_kop_niet.py faalt op c2157f7b (geeft niets uit), slaagt nu.
+- Open: waarom die ene advertentie niet te vinden is (verlopen of verwijderd op MP?); die gaat pas na
+  6 uur met de geraden rubriek uit. Zijn bewering "gebeurt na opnieuw inloggen op de computer" niet
+  bewezen: de vastloper hierboven hangt niet aan inloggen. Antwoord aan hem staat nog niet verstuurd.
