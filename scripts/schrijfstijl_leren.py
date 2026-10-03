@@ -102,10 +102,13 @@ def cmd_ophalen(a) -> None:
             kop = email.message_from_bytes(imap.fetch(
                 n, "(BODY.PEEK[HEADER.FIELDS (X-MAILER MESSAGE-ID)])")[1][0][1])
             mid = str(kop.get("Message-ID") or "").strip()
-            if not mid or mid in gezien:
-                continue
+            totaal += 1
             # Eigen mails herkennen aan de kop; de machine zet die niet.
-            if "zoho mail" not in str(kop.get("X-Mailer") or "").lower():
+            if not mid or "zoho mail" not in str(kop.get("X-Mailer") or "").lower():
+                continue
+            eigen_n += 1
+            if mid in gezien:
+                al_gezien += 1
                 continue
             ruw = imap.fetch(n, "(BODY.PEEK[])")[1][0][1]
             msg = email.message_from_bytes(ruw, policy=policy.default)
