@@ -6,7 +6,12 @@ _ENV_FILE = Path(__file__).parent.parent / ".env"
 
 
 class Settings(BaseSettings):
-    model_config = ConfigDict(env_file=str(_ENV_FILE), env_file_encoding='utf-8')
+    # extra='ignore': de lokale .env draagt ook sleutels voor losse scripts
+    # (IMAP_HOST, MAIL_USER, MAIL_PASS voor het postvak). Met de standaard
+    # 'forbid' weigerde elke import van deze module te starten zodra zo'n
+    # sleutel erin stond, en lagen alle lokale routines stil (03-10-2026).
+    model_config = ConfigDict(env_file=str(_ENV_FILE), env_file_encoding='utf-8',
+                              extra='ignore')
 
     supabase_url: str = ""
     supabase_key: str = ""
