@@ -15379,3 +15379,16 @@ nieuwe fout meer behalve twee scans die na drie dagen wachten werden opgeruimd. 
 - Open: 1.0.365 moet nog naar de Chrome Web Store; tot dan blijft het bij hem misgaan. Zijn vijf
   wachtende verlengopdrachten blijven staan. `zakelijk-verwijderen-leeg-overzicht-test.mjs` faalde al
   voor deze wijziging (2 fouten, ook op de oude code), niet onderzocht.
+
+## 03-10-2026: Onboarding nieuwe klanten (ochtend)
+
+Gemeten 11:05: 3 accounts in hun eerste week, geen nieuwe. Web Store 1.0.364, repo 1.0.365. Geen
+afspraken met deze klanten in Daniels agenda (zoekfunctie zelf werkt, controle op "call").
+- a4fc5340 (Peter, JP MiniWheels): ongewijzigd sinds 02-10. 4 eigen modelauto's, geen plaatsing,
+  extensie stil sinds 01-10 14:56, laatst ingelogd 01-10. Het mailtje van 02-10 staat niet in
+  Verzonden. Geen nieuw mailtje. Proef tot 07-10.
+- 82b13998 (Anneloes): ongewijzigd, 38 actief op Vinted, extensie stil sinds 29-09. Nieuw alleen: een
+  Vinted-scan is na drie dagen wachten opgeruimd (klant-eigen, oordeel gezet). Proef tot 06-10, geen
+  betaalmethode. Geen mailtje.
+- aa093a0a: Daniels eigen account.
+- Niets gerepareerd; geen oorzaak in onze code gevonden.
