@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## rubriekwachters-vulden-de-kop
+
+*03-10-2026 — "03-10-2026 Egbert: 25 op hun MP-rubriek wachtende plaatsingen vulden de hele kop (WACHTRIJ_KOP) van /pending; niets ging uit terwijl Chrome aanstond"*
+
+/pending bepaalt de volgorde met alleen lichte velden en leest dan de kop van 25 volledig in. Wat pas NA het inlezen wordt teruggehouden (rubriek wachten, bijwerking stil, betaalde rubriek) mag die kop nooit kunnen vullen: dan komt er niets uit, voor geen enkel kanaal. Op 03-10 waren Egberts 25 oudste 2dehands-plaatsingen precies die 25, de rubriekopzoeking vanaf de server faalde elke 3 min (lokaal werkte dezelfde opzoeking wel), en 82 plaatsingen plus 935 bijwerkingen stonden een uur stil. Reparatie fd62f2c3: `_LICHTE_VELDEN` haalt `payload->>_rubriek_zoeken_sinds` mee en `_wachtrij_volgorde` zet wachters in groep 3.
+
+**Why:** derde keer hetzelfde patroon, na "beurt-aan-wachtend-werk-legt-alles-stil" en "wachtend-werk-hoort-niet-in-de-wachtrij".
+
+**How to apply:** voeg je een nieuwe reden toe om een opdracht bij het uitdelen over te slaan, zorg dan dat de lichte volgorde hem ook al achteraan zet. Meet een vastloper door de kop na te rekenen met de echte `_wachtrij_volgorde` op de echte rij (alleen per user_id), niet door de uitgifte aan te roepen: die claimt.
+
+---
+
 ## 2dehands-verlengen-niet-herplaatsen
 
 *03-10-2026 — "2dehands heeft een gratis verlengknop; bijna verlopen zoekertjes verleng je, je haalt ze niet weg en plaatst ze niet opnieuw"*
