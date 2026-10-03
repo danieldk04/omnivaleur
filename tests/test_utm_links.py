@@ -19,7 +19,7 @@ REPO = Path(__file__).parent.parent
 sys.path.insert(0, str(REPO / "scripts"))
 
 from backend.api.content import (  # noqa: E402
-    KANAAL_LINKS, MAIL_LINK, kanaal_link, korte_link,
+    FB_GROEP_LINK, KANAAL_LINKS, MAIL_LINK, kanaal_link, korte_link,
 )
 from backend.main import KORTE_LINKS  # noqa: E402
 from backend.services import ga4  # noqa: E402
