@@ -17,6 +17,17 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## env-extra-sleutel-blokkeert-scripts
+
+*03-10-2026 — "Een onbekende sleutel in de lokale .env liet elke import van backend.config falen (extra_forbidden); sinds 03-10-2026 extra='ignore'"*
+
+Op 02-10-2026 kwamen IMAP_HOST, MAIL_USER en MAIL_PASS in de lokale .env (schrijfstijlscript). `backend/config.py` stond op pydantic's standaard extra='forbid', dus elke lokale import van backend.config of backend.database faalde met "Extra inputs are not permitted": klantfouten.py, de onboardingronde, alle meetscripts. Railway merkte niets (geen .env daar, gewone omgevingsvariabelen vallen niet onder forbid). Gerepareerd in b744158d met extra='ignore'.
+
+**Why:** de routines liepen stil vast zonder dat de server iets liet zien; /health bleef groen.
+**How to apply:** faalt een lokaal script op `extra_forbidden`, kijk dan naar nieuwe .env-regels, niet naar de code. Lezen van .env zelf wordt door de rechten geweigerd; omzeilen kan met `pydantic_settings.BaseSettings.model_config['extra']='ignore'` vóór de import. Zie ook "schrijfstijl-leren-uit-verzonden-mail".
+
+---
+
 ## schrijfstijl-leren-uit-verzonden-mail
 
 *02-10-2026 — Sinds 02-10-2026 leest een dagelijkse routine Daniels eigen verzonden Zoho-mails en vergelijkt ze met Claudes concepten; elk concept bewaren en eerst docs/schrijfstijl-daniel.md lezen*
