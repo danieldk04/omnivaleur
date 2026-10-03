@@ -15367,3 +15367,15 @@ nieuwe fout meer behalve twee scans die na drie dagen wachten werden opgeruimd. 
   uitgelogd, extensie stil sinds 02-10 09:49 met 128 wachtende opdrachten. bcdf9aa4 (Egbert) ruim
   1.000 wachtende 2dehands-bijwerkingen, extensie laatst gezien 02-10 22:01.
 - Niet meetbaar: fouten die alleen in de browser van de klant staan.
+
+## 03-10-2026 (09:50, automatisch): Klantfouten
+
+- fout-2dehands-extend (Egbert, bcdf9aa4, 4 keer vanochtend): "Verlengen-knop niet gevonden". Gemeten:
+  hij heeft 2.437 actieve zoekertjes op 2dehands; de extensie klapte het overzicht maar tot 2.050 rijen
+  open, en de vier mislukte horen bij zijn zes oudste, die onderaan staan. Gerepareerd (1366d103,
+  extensie 1.0.365): openklappen tot 20.000 rijen, en een knop die even uitgeschakeld is tijdens het
+  laden stopt het niet meer. Proef faalt op ec876d31 (2.050 van 2.437). Dezelfde functie voedt de
+  verwijdercontrole op 2dehands/Marktplaats; bij hem kon een afwezige rij als "weg" gelden.
+- Open: 1.0.365 moet nog naar de Chrome Web Store; tot dan blijft het bij hem misgaan. Zijn vijf
+  wachtende verlengopdrachten blijven staan. `zakelijk-verwijderen-leeg-overzicht-test.mjs` faalde al
+  voor deze wijziging (2 fouten, ook op de oude code), niet onderzocht.

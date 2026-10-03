@@ -17,6 +17,45 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## 2dehands-verlengen-niet-herplaatsen
+
+*03-10-2026 — "2dehands heeft een gratis verlengknop; bijna verlopen zoekertjes verleng je, je haalt ze niet weg en plaatst ze niet opnieuw"*
+
+Sinds 10-09-2026 heeft Omnivaleur een eigen opdrachtsoort `extend` voor 2dehands,
+naast create/delete/content_refresh/scan. Een 2dehands-zoekertje is 4 weken
+zichtbaar en kan daarna GRATIS verlengd worden; opnieuw plaatsen kost in een
+betalende rubriek geld of eet het gratis tegoed op. Dus verlengen, nooit het
+Marktplaats-pad (weghalen + opnieuw plaatsen) kopiëren. Er mag bij een `extend`
+nooit iets op 'relisting' of 'delisted', alleen `listed_at` opschuiven, en alleen
+met bewijs.
+
+Gemeten op account Revaleur:
+- overzicht-API: `/my-account/sell/api/listings?batchNumber=1&batchSize=200` geeft
+  per ad `{itemId, status, closeDate, reserved}`. `status:"EXPIRING"` ⟺ er staat
+  een verlengknop.
+- knop: `a[href="#verlengen"][data-ad-id="m…"]`. Klik verlengt meteen, geen
+  bevestiging; daarna een venster met een BETAALDE knop "Plaats bovenaan" (€0,24)
+  die je nooit aanraakt.
+- na verlengen: `closeDate` exact +28 dagen, status ACTIVE.
+- endpoint `POST /my-account/sell/extend.json {"itemId":"m…"}` bestaat maar geeft
+  403 bij een kale fetch (CSRF/WAF) — daarom de DOM-klik.
+
+Code: `extend_expiring_2dehands()` in `backend/services/crosslist.py`,
+`bgExtend2dh` in `extension/background.js` (1.0.318+), `complete_job`-tak in
+`backend/api/jobs.py`, test `tests/verlengen-2dehands-test.js`.
+
+Zie "eerst-recente-wijzigingen-lezen", "always-push-to-live",
+"extension-release-bump-version".
+
+**Groot overzicht (03-10-2026):** de knop staat alleen in de DOM als de rij is
+opengeklapt. `expandMp2dhOverview` stopte na 40 klikken (2.050 rijen); klant
+bcdf9aa4 heeft 2.437 zoekertjes en de verlopende zijn de oudste, dus onderaan:
+"Verlengen button could not be found". Nu 400 klikken (1.0.365). Dezelfde
+functie voedt de verwijdercontrole, die een afwezige rij als "weg" kan lezen.
+Proef: `tests/verlengen-2dehands-groot-overzicht-test.js`.
+
+---
+
 ## env-extra-sleutel-blokkeert-scripts
 
 *03-10-2026 — "Een onbekende sleutel in de lokale .env liet elke import van backend.config falen (extra_forbidden); sinds 03-10-2026 extra='ignore'"*
@@ -5586,38 +5625,6 @@ Zelfde toon als "klantmail-kort-en-menselijk": schrijven zoals je praat.
 
 **Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
 - "koude-mail-geen-naam-in-aanhef" — "Hi," is standaard, geen naam in de aanhef
-
----
-
-## 2dehands-verlengen-niet-herplaatsen
-
-*10-09-2026 — "2dehands heeft een gratis verlengknop; bijna verlopen zoekertjes verleng je, je haalt ze niet weg en plaatst ze niet opnieuw"*
-
-Sinds 10-09-2026 heeft Omnivaleur een eigen opdrachtsoort `extend` voor 2dehands,
-naast create/delete/content_refresh/scan. Een 2dehands-zoekertje is 4 weken
-zichtbaar en kan daarna GRATIS verlengd worden; opnieuw plaatsen kost in een
-betalende rubriek geld of eet het gratis tegoed op. Dus verlengen, nooit het
-Marktplaats-pad (weghalen + opnieuw plaatsen) kopiëren. Er mag bij een `extend`
-nooit iets op 'relisting' of 'delisted', alleen `listed_at` opschuiven, en alleen
-met bewijs.
-
-Gemeten op account Revaleur:
-- overzicht-API: `/my-account/sell/api/listings?batchNumber=1&batchSize=200` geeft
-  per ad `{itemId, status, closeDate, reserved}`. `status:"EXPIRING"` ⟺ er staat
-  een verlengknop.
-- knop: `a[href="#verlengen"][data-ad-id="m…"]`. Klik verlengt meteen, geen
-  bevestiging; daarna een venster met een BETAALDE knop "Plaats bovenaan" (€0,24)
-  die je nooit aanraakt.
-- na verlengen: `closeDate` exact +28 dagen, status ACTIVE.
-- endpoint `POST /my-account/sell/extend.json {"itemId":"m…"}` bestaat maar geeft
-  403 bij een kale fetch (CSRF/WAF) — daarom de DOM-klik.
-
-Code: `extend_expiring_2dehands()` in `backend/services/crosslist.py`,
-`bgExtend2dh` in `extension/background.js` (1.0.318+), `complete_job`-tak in
-`backend/api/jobs.py`, test `tests/verlengen-2dehands-test.js`.
-
-Zie "eerst-recente-wijzigingen-lezen", "always-push-to-live",
-"extension-release-bump-version".
 
 ---
 
