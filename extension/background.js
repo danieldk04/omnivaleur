@@ -3478,6 +3478,16 @@ async function meldNooitBegonnen(tabId, meta, snapshot) {
       `The ${site} listing form opened and our filling script did load, but it never got as far as `
       + `filling anything in. That is a fault on our side, not with your account or your login. `
       + `Nothing was published and nothing was changed on ${site}.` + feiten;
+  } else if (f && /\/marketplace\/(?:[^/]+\/)*create\/limit_reached/i.test(f.url || "")) {
+    // FACEBOOK ZEGT ZELF NEE (03-10-2026, klant f8c0cce9). Het tabblad naar
+    // /marketplace/create/item kwam uit op /marketplace/np/create/limit_reached/:
+    // Facebook laat dit account voorlopig geen nieuwe advertentie plaatsen. Hier
+    // stond dan "we could not tell … please send them to us", terwijl het adres
+    // het antwoord al gaf. Dat is een grens van Facebook, niet van ons.
+    tekst =
+      `Facebook did not let this account create a new listing: it showed its "limit reached" page `
+      + `instead of the listing form. Facebook sets that limit itself, not Omnivaleur. Nothing was `
+      + `published. Try again later; Facebook decides when the limit is lifted.` + feiten;
   } else if (f && (f.wachtwoordveld || /unauthorized|inloggen|log in|sign in/i.test(f.begin || ""))) {
     tekst =
       `The ${site} listing form never opened: that browser tab showed a login page instead. `
