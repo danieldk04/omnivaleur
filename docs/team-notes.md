@@ -15445,3 +15445,17 @@ afspraken met deze klanten in Daniels agenda (zoekfunctie zelf werkt, controle o
   bcdf9aa4 naast zijn klachten en naast jobs.created_at leggen.
 - Beperking: stilte door een serverherstart wordt opgevangen via de heartbeat-rij; stiltes van < 3 min
   worden bewust niet bewaard.
+
+## 04-10-2026: Dagelijkse klantfouten (ochtendronde)
+
+Gemeten 06:45 UTC over 24 uur: 1.115 opdrachten afgerond, 16 fouten bij 4 klanten. /health ok op 0b7fa3c5.
+Web Store staat op 1.0.366 (CRX-updatecheck), dus de verlengreparatie en de Facebook-limietmelding zijn uit.
+- 2dehands verlengen (Egbert, bcdf9aa4): nog 12 keer "Verlengen-knop niet gevonden", de laatste om 22:22 UTC,
+  allemaal op 1.0.364. De reparatie zit in 1.0.366; zijn Chrome had die om 22:25 nog niet. Bij zijn volgende
+  sessie nameten. Eén verlengopdracht staat op 'claimed' sinds 22:23, zijn computer ging daarna uit.
+- Klant-eigen: 26cf5471 17 Vinted-scans "niet ingelogd"; 96e30080 tapijten in betalende 2dehands-rubriek;
+  96e30080 schapenvachtjes: tabblad gaf een foutpagina, dezelfde verwijdering lukte 4 min later (410).
+  157 geannuleerde 2dehands-plaatsingen bij Egbert: zelf geannuleerd ("by user").
+- Onbekend: 1ba42900 een Vinted-plaatsing stil na stap rubriek (eenmalig, 1.0.364). Niet gerepareerd.
+- Geen wachtend werk bij een extensie die online was; alles wat wacht is gemaakt nadat de klant offline ging.
+- Niets gerepareerd. Niet meetbaar: fouten die alleen in de browser van de klant staan.
