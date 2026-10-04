@@ -5092,6 +5092,26 @@ async function bgExtend2dh(job, serverUrl) {
         statusAfter: (after && after.ad && after.ad.status) || null,
       };
     }, [itemId]);
+  };
+
+  try {
+    let uit;
+    for (let poging = 1; ; poging++) {
+      try {
+        uit = await meet();
+      } catch (e) {
+        if (poging >= 3 || !/frame with id \d+ was removed|frame was removed/i.test(String(e?.message || e))) throw e;
+        console.log(`[Omnivaleur] bgExtend2dh: overzicht ververste tijdens het meten van ${itemId}, opnieuw (${poging})`);
+        await sleep(5000);
+        continue;
+      }
+      if (poging < 3 && uit && uit.step === "read" && uit.fetchError) {
+        await sleep(5000);
+        await stuurWerkTabbladNaar(tabId, overviewUrl).catch(() => {});
+        continue;
+      }
+      break;
+    }
 
     if (uit && uit.step === "read" && (uit.empty || uit.httpError || uit.fetchError)) {
       throw new Error(
