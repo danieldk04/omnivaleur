@@ -15472,3 +15472,15 @@ Web Store staat op 1.0.366 (CRX-updatecheck), dus de verlengreparatie en de Face
 - Videometing: enablejsapi + YouTube IFrame API in frontend/mp-video.html meldt video_start, video_progress
   (25/50/75) en video_complete. Bewezen in echte Chrome tegen de echte video. Een milestone telt ook bij doorspoelen.
 - Bewust niet aangepast: "Video van 1 minuut" boven de video (Daniel 04-10: laten staan).
+
+## 04-10-2026: Kostenoverzicht in Drive, maandelijks bijgehouden
+
+- Daniel wilde een compleet overzicht van alle kosten. Er is geen kostentabel in de database; bedragen komen uit de
+  dashboards (Railway, Supabase, Anthropic, Claude.ai, Cloudflare, Resend, Apify, Stripe, Hostinger, Zoho).
+- Sheet "Omnivaleur kosten" staat in Drive in de map Omnivaleur (id 1BQ5bwdMXPEd-bAipoROaqSaEU0bThdvwBx5GdYYs43U),
+  gedeeld met de leadmachine-sleutel zodat de routine hem kan bijwerken. Eerste meting: ±EUR 128 per maand
+  (vast ±50, wisselend ±78), ±EUR 1.541 per jaar. Niet gemeten: Serper, domeinen, GitHub, Notion.
+- Routine `omnivaleur-kosten-bijhouden`, elke 1e van de maand 09:00 op Daniels Mac; opdracht in
+  docs/routines/kosten-bijhouden.md.
+- Supabase project `crosslist-eu` is de oude naam van Omnivaleur (productie). Nooit pauzeren. Het andere project
+  ("danieldekoning66@gmail.com's Project") kost ook compute en is nog niet uitgezocht.
