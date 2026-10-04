@@ -4,9 +4,9 @@ Bestand: Google Sheet "Omnivaleur kosten" in Drive, map Omnivaleur.
 Id: 1BQ5bwdMXPEd-bAipoROaqSaEU0bThdvwBx5GdYYs43U
 Link: https://docs.google.com/spreadsheets/d/1BQ5bwdMXPEd-bAipoROaqSaEU0bThdvwBx5GdYYs43U/edit
 
-Let op: crosslist-eu bij Supabase is de oude naam van Omnivaleur. Dat project is dus de
-productiedatabase en mag nooit gepauzeerd of verwijderd worden. Het andere Supabase-project
-("danieldekoning66@gmail.com's Project") is nog niet uitgezocht.
+Afspraak (Daniel, 04-10-2026): bij Claude/Anthropic telt alleen het Pro abonnement (EUR 18 per maand) mee.
+De Anthropic API en extra tegoed staan op 0 en worden niet bijgewerkt. Het project crosslist-eu bij Supabase
+buiten beschouwing laten.
 
 ## Opdracht
 
@@ -16,8 +16,7 @@ productiedatabase en mag nooit gepauzeerd of verwijderd worden. Het andere Supab
 2. Open in Daniels Chrome (Claude in Chrome, hij is daar ingelogd) de factuurpagina's en lees de echte bedragen:
    - Railway: railway.com/workspace/billing en /workspace/usage
    - Supabase: supabase.com/dashboard/org/_/billing, klik de organisatie aan (upcoming invoice en past invoices)
-   - Anthropic API: platform.claude.com/settings/billing (tegoed gekocht afgelopen maand, saldo, auto-reload)
-   - Claude.ai: claude.ai/settings/billing (abonnement, extra tegoed, saldo)
+   - Claude.ai: claude.ai/settings/billing (alleen het Pro abonnement, nu EUR 18)
    - Cloudflare: dash.cloudflare.com, Billing, Billable usage
    - Apify: console.apify.com/billing, Resend: resend.com/settings/billing
    - Stripe: dashboard.stripe.com/balance/overview (uitbetaling tegen 19,99 = kosten per betaling)

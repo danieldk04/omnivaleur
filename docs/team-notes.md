@@ -15484,3 +15484,9 @@ Web Store staat op 1.0.366 (CRX-updatecheck), dus de verlengreparatie en de Face
   docs/routines/kosten-bijhouden.md.
 - Supabase project `crosslist-eu` is de oude naam van Omnivaleur (productie). Nooit pauzeren. Het andere project
   ("danieldekoning66@gmail.com's Project") kost ook compute en is nog niet uitgezocht.
+
+## 04-10-2026 (later): Kostenoverzicht aangepast op wens van Daniel
+
+- Bij Claude/Anthropic telt alleen het Pro abonnement mee (EUR 18 per maand). De API-regel staat op 0, dus het
+  totaal is nu ±EUR 61 per maand (EUR 50 vast, EUR 10 Railway), ±EUR 730 per jaar.
+- Het Supabase-project crosslist-eu valt buiten beschouwing; eerdere regel hierboven daarover vervalt.
