@@ -15533,3 +15533,11 @@ klantafspraken in Daniels agenda t/m 06-10.
   op api.omnivaleur.com, oude commit, geen sleutels) ±USD 1,50 per maand. Beide niet aangeraakt: beslissing van Daniel.
 - Hostinger (revaleur.com, EUR 19 per jaar) is nog nodig zolang info@revaleur.com in backend/api/mail_verbinding.py en
   backend/api/content.py staat.
+
+- 2026-10-04 (Daniel zei ja op pauzeren en verwijderen, "alleen als het zeker zonder schade kan"): niets gepauzeerd, niets
+  verwijderd. Het Supabase-project "danieldekoning66@gmail.com's Project" (ref vztmureskmodkvkxkhmp) bevat in forge_state twee
+  rijen met echte gegevens van een ander project van Daniel (user_id daniel-apexforge, laatst bijgewerkt 2026-06-08, en een
+  tweede gebruiker 2026-06-01), en er komen nog ~7 verzoeken per dag binnen. Geen Omnivaleur-code gebruikt het, maar de
+  vorige noot "overbodig" gaat dus te ver: eerst vaststellen of ApexForge nog in gebruik is. Railway lovely-grace: code
+  migreert het oude api.omnivaleur.com al weg (extension/background.js getServerUrl), maar een oudere extensiekopie kan hem
+  nog aanroepen; onomkeerbaar verwijderen voor ±EUR 1,30 per maand niet gedaan.
