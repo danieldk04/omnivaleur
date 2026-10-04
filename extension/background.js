@@ -2152,6 +2152,11 @@ async function pollJobsEenRonde() {
       if (!res.ok) continue;
       const jobs = await res.json();
       if (Array.isArray(jobs) && jobs.length) werkKlaar = true;
+      if (Array.isArray(jobs)) {
+        const stand = {};
+        for (const j of jobs) stand[j.action] = (stand[j.action] || 0) + 1;
+        _wachtrijStand[platform] = stand;
+      }
       for (const job of jobs) {
         // Een scan leest je hele garderobe uit en duurt minuten. Zolang de ronde
         // dáárop stond te wachten, werd er in die tijd niets gepubliceerd: je
@@ -4503,6 +4508,50 @@ function execInTab(tabId, func, args = []) {
   });
 }
 
+// STATUSBALK IN HET WERKTABBLAD. (04-10-2026, Egbert bcdf9aa4)
+//
+// Het tabblad klikte zelf door "Toon 50 volgende" met alleen laadpuntjes in
+// beeld: hij zag veel gebeuren en wist niet wat, of voor hoeveel advertenties.
+// Nu staat onderin het tabblad wat er gebeurt en hoeveel. Elke verversing wist
+// de balk, dus elke update zet hem opnieuw neer. Mislukt het plaatsen, dan
+// verandert er niets aan het werk zelf.
+const _werkRegel1 = new Map();   // tabId -> bovenste regel (wat doen we)
+let _wachtrijStand = {};         // platform -> { actie: aantal wachtend }
+
+function wachtendAantal(platform, actie) {
+  return ((_wachtrijStand[platform] || {})[actie]) || 0;
+}
+
+async function zetWerkStatus(tabId, regel1, regel2) {
+  if (regel1 != null) _werkRegel1.set(tabId, regel1);
+  const r1 = _werkRegel1.get(tabId) || "";
+  try {
+    await execInTab(tabId, (a, b) => {
+      let el = document.getElementById("omnivaleur-werkstatus");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "omnivaleur-werkstatus";
+        el.setAttribute("translate", "no");
+        el.style.cssText = "position:fixed;left:50%;bottom:16px;transform:translateX(-50%);" +
+          "z-index:2147483647;background:#1b1f3b;color:#fff;font:600 14px/1.4 system-ui,sans-serif;" +
+          "padding:10px 18px;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.35);" +
+          "pointer-events:none;text-align:center;max-width:90vw";
+        (document.body || document.documentElement).appendChild(el);
+      }
+      el.textContent = "";
+      const t1 = document.createElement("div");
+      t1.textContent = "Omnivaleur: " + a;
+      el.appendChild(t1);
+      if (b) {
+        const t2 = document.createElement("div");
+        t2.style.cssText = "font-weight:400;opacity:.85";
+        t2.textContent = b;
+        el.appendChild(t2);
+      }
+    }, [r1, regel2 || ""]);
+  } catch (e) { /* tabblad weg of pagina bezig: de balk is bijzaak */ }
+}
+
 function waitForTabLoad(tabId, timeoutMs = 20000) {
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
@@ -4552,7 +4601,21 @@ async function expandMp2dhOverview(tabId) {
   // (20.000 rijen); de knop verdwijnt vanzelf als alles er staat.
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   let leeg = 0;
+  // Totaal voor de statusbalk; mislukt het lezen, dan laten we alleen het
+  // aantal geladen zoekertjes zien.
+  const totaal = await execInTab(tabId, async () => {
+    try {
+      const r = await fetch("/my-account/sell/api/listings?batchNumber=1&batchSize=1",
+        { headers: { Accept: "application/json" }, credentials: "include" });
+      const d = await r.json();
+      return d.totalNumberOfResults || null;
+    } catch (e) { return null; }
+  }).catch(() => null);
   for (let i = 0; i < 400; i++) {
+    const geladen = totaal ? Math.min(50 * (i + 1), totaal) : 50 * (i + 1);
+    await zetWerkStatus(tabId, null,
+      totaal ? `Je zoekertjes openklappen: ${geladen} van ${totaal}`
+             : `Je zoekertjes openklappen: ${geladen}+`);
     const clicked = await execInTab(tabId, () => {
       const btn = [...document.querySelectorAll("button")]
         .find(b => /toon\s+\d+\s+volgende/i.test(b.textContent || "") && !b.disabled);
@@ -5024,7 +5087,10 @@ async function bgExtend2dh(job, serverUrl) {
   const meet = async () => {
     await waitForTabLoad(tabId);
     await sleep(3000);                 // let React render the list
+    await zetWerkStatus(tabId,
+      `Zoekertje verlengen (${wachtendAantal("2dehands", "extend")} verlengopdrachten in de wachtrij)`);
     await expandMp2dhOverview(tabId);  // load every row, not just the first 50
+    await zetWerkStatus(tabId, null, "Het juiste zoekertje zoeken en verlengen");
     return execInTab(tabId, async (wantId) => {
       const nap = ms => new Promise(r => setTimeout(r, ms));
       // Bladeren tot het zoekertje er is. Alleen de eerste 200 lezen gaf op
@@ -5220,6 +5286,8 @@ async function bgDeleteMp2dh(job, serverUrl) {
       await waitForTabLoad(tabId);
     }
     await sleep(3000); // let React fully render listings
+    await zetWerkStatus(tabId,
+      `Advertentie verwijderen (${wachtendAantal(platform, "delete")} verwijderopdrachten in de wachtrij)`);
     await expandMp2dhOverview(tabId); // load ALL ads, not just the first 50
 
     // Find the listing's row and SELECT its checkbox. The "Mijn zoekertjes"
@@ -5613,6 +5681,7 @@ async function bgDeleteMp2dh(job, serverUrl) {
     // Expand here too: only the first 50 ads render, so on a shop with more than
     // that an ad sitting at #51+ is simply absent from the DOM — which this check
     // would read as "successfully deleted" and report a false success.
+    await zetWerkStatus(tabId, "Controleren of de advertentie weg is");
     await expandMp2dhOverview(tabId);
 
     const naControle = await execInTab(tabId, (rawTitle, listingId, wantSku) => {
@@ -7400,6 +7469,7 @@ async function bgScanMp2dh(job, serverUrl) {
 
   try {
     await waitForTabLoad(tabId);
+    await zetWerkStatus(tabId, "Je zoekertjes inlezen (alleen lezen, er wordt niets gewijzigd)");
     await sleep(3000); // let React fully render listings
 
     const result = await execInTab(tabId, async () => {

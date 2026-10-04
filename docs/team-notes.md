@@ -15551,3 +15551,13 @@ klantafspraken in Daniels agenda t/m 06-10.
   bevatten berichten van derden) in ~/.omnivaleur/apexforge-forge_state-kopie-2026-10-04.json op Daniels Mac, niet in git.
   Alleen crosslist-eu (de echte Omnivaleur-database) staat er nog; site en /health gaven daarna 200. Railway lovely-grace staat
   nog (bewust niet verwijderd).
+
+## 04-10-2026: Statusbalk in het werktabblad (Egbert bcdf9aa4, extensie 1.0.368)
+
+- Egbert zag in een open 2dehands-tabblad steeds "Toon 50 volgende zoekertjes" aangeklikt worden met alleen laadpuntjes,
+  zonder te weten wat of voor hoeveel advertenties (video 14-09, mail 04-10). Dat is de extensie die zijn 2.437 zoekertjes
+  openklapt om het juiste zoekertje te vinden.
+- Nu staat onderin dat tabblad een donkere balk: wat er gebeurt (verlengen, verwijderen, controleren, inlezen), hoeveel
+  verleng- of verwijderopdrachten in de wachtrij staan en "Je zoekertjes openklappen: 850 van 2437". Alleen tekst, het werk
+  zelf is niet veranderd. Gezien in een echte pagina; bestaande verleng-proeven groen.
+- Open: 1.0.368 moet naar de Web Store (dist/omnivaleur-extension-1.0.368.zip). Niet gemeten op zijn echte 2dehands-tabblad.

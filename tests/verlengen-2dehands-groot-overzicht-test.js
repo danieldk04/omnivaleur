@@ -64,6 +64,7 @@ function maakZand(totaal, { haperen = false } = {}) {
     if (!uit) pagina.bezig = false;
     return uit;
   };
+  zand.zetWerkStatus = async () => {};
   vm.createContext(zand);
   return zand;
 }

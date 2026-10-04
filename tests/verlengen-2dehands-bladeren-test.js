@@ -71,6 +71,8 @@ function maakZand(bron, ads) {
   zand.openWorkerTab = (_u, cb) => cb({ id: 7 });
   zand.waitForTabLoad = async () => {};
   zand.expandMp2dhOverview = async () => {};
+  zand.zetWerkStatus = async () => {};
+  zand.wachtendAantal = () => 0;
   zand.sluitWerkTabblad = () => {};
   zand.execInTab = async (_t, fn, args = []) => fn(...args);
   zand.finaliseJob = async (_s, _i, kind, body) => { zand.finalise.push({ kind, body }); };

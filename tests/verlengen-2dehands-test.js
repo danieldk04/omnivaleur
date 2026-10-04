@@ -100,6 +100,8 @@ function maakZand(ads, opties = {}) {
   zand.openWorkerTab = (url, cb) => { zand.navigaties.push(String(url)); cb({ id: 7 }); };
   zand.waitForTabLoad = async () => {};
   zand.expandMp2dhOverview = async () => {};
+  zand.zetWerkStatus = async () => {};
+  zand.wachtendAantal = () => 0;
   zand.sluitWerkTabblad = () => {};
   zand.execInTab = async (_tabId, fn, args = []) => fn(...args);
   zand.finaliseJob = async (_srv, _id, kind, body) => { zand.finalise.push({ kind, body }); };
