@@ -631,6 +631,56 @@
       "status": "published",
       "nl_slug": "tweedehands-artikelen-prijzen-strategie",
       "priority": 75
+    },
+    {
+      "keyword": "how to get more views on vinted",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "how-to-get-more-views-on-vinted",
+      "status": "published",
+      "nl_slug": "hoe-krijg-je-meer-weergaven-op-vinted",
+      "priority": 76
+    },
+    {
+      "keyword": "omnivaleur vs nifty",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "slug": "omnivaleur-vs-nifty",
+      "status": "pending",
+      "nl_slug": "omnivaleur-vs-nifty",
+      "priority": 77
+    },
+    {
+      "keyword": "how does marktplaats buyer protection work",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "how-does-marktplaats-buyer-protection-work",
+      "status": "pending",
+      "nl_slug": "hoe-werkt-marktplaats-kopersbescherming",
+      "priority": 78
+    },
+    {
+      "keyword": "second hand sales tax belgium",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "slug": "second-hand-sales-tax-belgium",
+      "status": "pending",
+      "nl_slug": "belasting-betalen-op-tweedehands-verkoop-belgie",
+      "priority": 79
+    },
+    {
+      "keyword": "relisting vs bumping second hand",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "slug": "relisting-vs-bumping-second-hand",
+      "status": "pending",
+      "nl_slug": "opnieuw-plaatsen-of-omhoogbellen",
+      "priority": 80
     }
   ],
   "published": [
@@ -1309,6 +1359,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-price-second-hand-items",
       "published_at": "2026-10-03T12:54:59.147969+00:00"
+    },
+    {
+      "keyword": "how to get more views on vinted",
+      "slug": "how-to-get-more-views-on-vinted",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-get-more-views-on-vinted",
+      "published_at": "2026-10-04T13:36:34.710263+00:00"
     }
   ]
 }
