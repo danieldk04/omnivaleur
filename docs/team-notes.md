@@ -15574,3 +15574,14 @@ klantafspraken in Daniels agenda t/m 06-10.
 - Niet meetbaar: fouten die alleen in de browser van de klant staan.
 
 - 2026-10-04 (Daniel): Goudlief (info@goudlief.nl, user 5aae4954) kreeg een nieuwe proef van 7 dagen, tot 2026-10-11 16:58 UTC, zodat ze Shopify kan koppelen en proberen. Ze was sinds 13-09 op slot (nooit een artikel ingelezen, Shopify niet gekoppeld); de koppelknop blokkeerde het scherm-slot, de server niet. Status trialing, drie herinneringskolommen leeggemaakt zodat ze weer waarschuwingen krijgt. Daniel mailt haar de uitleg (Google Doc "Shopify koppelen met Omnivaleur", als PDF).
+
+## 04-10-2026 (19:25, automatisch): Klantfouten
+
+- fout-2dehands-create-859d032b (Vagif 1ba42900, 17:05 UTC): verstelbare ring met maat "Aanpasbaar" werd door onze
+  eindcontrole tegengehouden omdat 2dehands in Ringen alleen ringmaten biedt (Kleiner dan 17 ... 20 of groter). Onze code,
+  niet de klant: vier van zijn ringen zonder maat gingen in dezelfde rubriek gewoon online, het veld is daar dus niet
+  verplicht. Nu laat de extensie het maatveld leeg bij Aanpasbaar/Verstelbaar/Adjustable en plaatst, net als zonder maat;
+  een echte maat die niet past houdt hem nog wel tegen. Extensie 1.0.369, proef tests/verstelbare-maat-test.js faalt op
+  e2d78cce met exact zijn foutmelding. Zijn tweede verstelbare ring (326c9095) heeft hetzelfde zodra hij hem plaatst.
+- Open: 1.0.369 naar de Web Store (dist/omnivaleur-extension-1.0.369.zip; bevat ook 1.0.367 en 1.0.368). Tot dan moet Vagif
+  de ring opnieuw laten plaatsen pas na de update. Zijn Vinted-plaatsing van dezelfde ring faalde op "niet ingelogd" (klant).

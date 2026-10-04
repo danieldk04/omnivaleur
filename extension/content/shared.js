@@ -989,8 +989,19 @@ window.CL = (() => {
 
   // Maten die geen maat zijn maar "past iedereen". Marktplaats noemt dat per
   // categorie anders, of helemaal niet.
-  const MAAT_UNIVERSEEL = ["Universeel", "One size", "Onesize", "Overige",
-                           "Overig", "Overige maten", "Niet van toepassing", "Anders"];
+  const MAAT_UNIVERSEEL = ["Universeel", "One size", "Onesize", "Verstelbaar",
+                           "Aanpasbaar", "Adjustable", "Overige", "Overig",
+                           "Overige maten", "Niet van toepassing", "Anders"];
+
+  // EEN VERSTELBARE MAAT IS GEEN MAAT (04-10-2026, Vagif 1ba42900).
+  // "Aanpasbaar" bij een ring: 2dehands biedt in Ringen alleen ringmaten
+  // (Kleiner dan 17 ... 20 of groter), en een verstelbare ring heeft er geen.
+  // Een van die maten kiezen is een verzonnen maat. Gemeten in zijn eigen
+  // opdrachten: vier ringen ZONDER maat gingen in dezelfde rubriek gewoon
+  // online, dus het veld is daar niet verplicht. Biedt de lijst geen
+  // "Verstelbaar" of verzamelnaam, dan blijft het veld leeg en plaatsen we,
+  // precies zoals bij een artikel zonder maat.
+  const MAAT_VERSTELBAAR = /^(aanpasbaar|verstelbaar|instelbaar|adjustable)$/i;
 
   function _alternatievenVoor(label, waarde) {
     const w = String(waarde || "").trim();
@@ -1504,7 +1515,9 @@ window.CL = (() => {
         ? `"${waarde}" staat niet in de lijst bij ${naam} — die biedt: ${opties.join(", ")}`
         : `${naam} kon niet worden ingevuld`);
     };
-    if (item.size) nietGeplaatst("Maat", item.size, "size");
+    if (item.size && !MAAT_VERSTELBAAR.test(String(item.size).trim())) {
+      nietGeplaatst("Maat", item.size, "size");
+    }
     if (item.color) nietGeplaatst("Kleur", dutchColor(item.color), "colour");
     // Ook hier de reden erbij, net als bij maat en kleur: een lege conditie is
     // vrijwel altijd "geen van deze opties leek op wat het item zegt te zijn",
