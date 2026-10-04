@@ -11,9 +11,9 @@ Wat het laat zien:
   1. Bezoek per bron/medium op /mp-video (koude-mail/email is de mail zelf).
   2. Hoe lang ze blijven en hoeveel er echt actief waren.
   3. Events op de pagina: scroll, cta_click, en video_start/progress/complete.
-     De video is een YouTube-embed zonder enablejsapi, dus de video_*-events
-     bestaan niet. Staan ze op 0, dan is dat een gat in de meting, geen slechte
-     video. Het kijkpercentage staat dan alleen in YouTube Studio.
+     Sinds 04-10-2026 meldt de YouTube-embed (enablejsapi) start, 25/50/75% en
+     uitgekeken. Let op: een milestone telt ook als iemand ernaartoe spoelt. Staan ze
+     voor die datum op 0, dan bestond de meting nog niet.
 """
 from __future__ import annotations
 
@@ -89,7 +89,7 @@ def main() -> int:
         print(f"   {naam:16} {_nl(e['eventCount']) if e else '0':>7} events"
               f"{'  (' + _nl(e['totalUsers']) + ' gebruikers)' if e else ''}")
     if "video_start" not in gezien:
-        print("   -> geen video-events: de embed meldt niets aan GA4. Kijkpercentage: YouTube Studio.")
+        print("   -> geen video_start: niemand drukte op play, of de meting bestond nog niet (voor 04-10-2026).")
 
     print("\n3. Welke knop is geklikt (cta_location)")
     knoppen = ga4._run(["customEvent:cta_location"], ["eventCount"], start, eind, limit=20)

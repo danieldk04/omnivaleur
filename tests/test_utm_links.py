@@ -146,3 +146,26 @@ def test_geen_getagde_links_binnen_de_eigen_site():
             if "utm_" in regel:
                 fout.append(f"{pad.name}: {regel}")
     assert not fout, "getagde interne links: " + ", ".join(fout)
+
+
+def test_demolink_in_mailteksten_is_de_korte_vorm():
+    """04-10-2026: Daniels videomails (en het Gemini-brein waar hij ze uit haalt)
+    wezen naar de lange /mp-video zonder tags. Analytics telde elk mailbezoek als
+    "direct", en een maand lang stond er 0 bezoek uit de koude mail. Alleen de korte
+    /mp zet de herkomst."""
+    for naam in ("docs/klantenservice-brein.md", "docs/schrijfstijl-daniel.md"):
+        tekst = (REPO / naam).read_text(encoding="utf-8")
+        for m in re.finditer(r"https://omnivaleur\.com/mp-video\b(?!\?)", tekst):
+            regel = tekst[max(0, tekst.rfind("\n", 0, m.start())):tekst.find("\n", m.end())]
+            assert "Nooit de lange" in regel or "lange /mp-video" in regel, (
+                f"{naam}: lange demolink zonder tags: {regel.strip()[:120]}")
+
+
+def test_videopagina_meldt_start_voortgang_en_einde():
+    """De YouTube-embed zonder enablejsapi meldde niets aan Analytics, dus er was
+    geen enkel kijkcijfer per bezoeker. Zonder deze drie delen blijft de meting stil."""
+    html = (REPO / "frontend" / "mp-video.html").read_text(encoding="utf-8")
+    assert "enablejsapi=1" in html
+    assert "youtube.com/iframe_api" in html
+    for naam in ("video_start", "video_progress", "video_complete"):
+        assert f"'{naam}'" in html

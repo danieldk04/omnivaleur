@@ -15459,3 +15459,16 @@ Web Store staat op 1.0.366 (CRX-updatecheck), dus de verlengreparatie en de Face
 - Onbekend: 1ba42900 een Vinted-plaatsing stil na stap rubriek (eenmalig, 1.0.364). Niet gerepareerd.
 - Geen wachtend werk bij een extensie die online was; alles wat wacht is gemaakt nadat de klant offline ging.
 - Niets gerepareerd. Niet meetbaar: fouten die alleen in de browser van de klant staan.
+
+## 04-10-2026: Analyse /mp-video, videometing erbij, mailbezoek stond als "direct"
+
+- Gemeten (GA4, 30 dagen): 54 weergaven, 21 bezoekers, 4 knopklikken, 0 aanmeldingen op de pagina. YouTube Studio:
+  17 weergaven (allemaal extern, dus via de pagina), 75% van de lengte bekeken, 87,5% haakt niet meteen af.
+  De video zelf presteert goed; het verkeer is te klein om conversie te beoordelen.
+- Oorzaak "direct": Daniels videomails wezen naar de lange https://omnivaleur.com/mp-video zonder UTM. Het
+  Gemini-brein (docs/klantenservice-brein.md) en onze concepten gebruikten die. Alleen de korte /mp zet de herkomst
+  (307 naar /mp-video met koude-mail/email, bewezen in Chrome: de page_view draagt de UTM). Nu overal /mp.
+  Daniel moet het brein opnieuw in de Gem plakken, anders blijft Gemini de oude link geven.
+- Videometing: enablejsapi + YouTube IFrame API in frontend/mp-video.html meldt video_start, video_progress
+  (25/50/75) en video_complete. Bewezen in echte Chrome tegen de echte video. Een milestone telt ook bij doorspoelen.
+- Bewust niet aangepast: "Video van 1 minuut" boven de video (Daniel 04-10: laten staan).

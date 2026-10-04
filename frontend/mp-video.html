@@ -345,7 +345,7 @@ footer a { color: var(--blue); font-weight: 650; text-decoration: none; }
     <div class="hero-visual">
       <div class="phone">
         <div class="phone-screen">
-          <iframe src="https://www.youtube.com/embed/ymDeS37aBW4?rel=0&playsinline=1" title="Omnivaleur — Marktplaats-aanbod overal tegelijk" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+          <iframe src="https://www.youtube.com/embed/ymDeS37aBW4?rel=0&playsinline=1&enablejsapi=1" id="demo-video" title="Omnivaleur — Marktplaats-aanbod overal tegelijk" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
         </div>
         <div class="float-tag t1"><img src="/assets/logos/marktplaats.png" alt=""> Marktplaats <span class="tick">✓</span></div>
         <div class="float-tag t2"><img src="/assets/logos/vinted.png" alt=""> Vinted <span class="tick">✓</span></div>
@@ -624,6 +624,40 @@ footer a { color: var(--blue); font-weight: 650; text-decoration: none; }
   document.querySelectorAll('.faq-q').forEach(function (q) {
     q.addEventListener('click', function () { q.parentElement.classList.toggle('open'); });
   });
+
+  // Videometing: meldt aan GA4 wanneer de demo start, op 25/50/75% en uitgekeken.
+  // Wat er niet gemeld wordt is evenzeer informatie: wie de pagina opent maar
+  // niet op play drukt, heeft de video niet gezien.
+  (function () {
+    var frame = document.getElementById('demo-video');
+    if (!frame || typeof gtag !== 'function') return;
+    var gemeld = {}, timer = null, speler = null;
+    function stuur(naam, extra) {
+      try { gtag('event', naam, Object.assign({ video_titel: 'mp-video-demo' }, extra || {})); } catch (e) {}
+    }
+    function tik() {
+      if (!speler || !speler.getDuration) return;
+      var duur = speler.getDuration();
+      if (!duur) return;
+      var pct = Math.floor(speler.getCurrentTime() / duur * 100);
+      [25, 50, 75].forEach(function (m) {
+        if (pct >= m && !gemeld[m]) { gemeld[m] = true; stuur('video_progress', { video_percent: m }); }
+      });
+    }
+    function klaar() {
+      speler = new YT.Player(frame, { events: { onStateChange: function (e) {
+        if (e.data === 1) {                               // speelt
+          if (!gemeld.start) { gemeld.start = true; stuur('video_start'); }
+          if (!timer) timer = setInterval(tik, 1000);
+        } else if (timer) { clearInterval(timer); timer = null; }
+        if (e.data === 0 && !gemeld.einde) { gemeld.einde = true; stuur('video_complete'); }
+      } } });
+    }
+    window.onYouTubeIframeAPIReady = klaar;
+    var t = document.createElement('script');
+    t.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(t);
+  })();
 
   // Dashboard-tabs
   var tabs = document.querySelectorAll('.tab');

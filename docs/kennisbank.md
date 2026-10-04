@@ -17,6 +17,29 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## mp-video-leadpage
+
+*04-10-2026 — "Concept-mails van de mailagent moeten naar /mp-video linken, nooit naar de kale YouTube-video"*
+
+De tweede mail in de koude-mail-sequence (en elk concept dat de mailagent klaarzet)
+moet linken naar de KORTE vorm `https://omnivaleur.com/mp` (307 naar /mp-video mét UTM koude-mail/email). De lange `/mp-video` zonder UTM telt in GA4 als "direct": 04-10-2026 bleek dat Daniels videomails (concepten en het Gemini-brein) die lange vorm gebruikten, dus 0 mailbezoek in 30 dagen.
+
+Nooit meer de kale YouTube-link versturen. Concreet vervangen:
+- OUD (niet gebruiken): `https://youtube.com/shorts/ymDeS37aBW4`
+- NIEUW (altijd deze):  `https://omnivaleur.com/mp`
+
+**Why:** Daniel wil een eigen, trackbare leadpagina met UTM's, founder-story en
+dashboardbeelden i.p.v. rechtstreeks naar YouTube sturen — geeft meer controle
+over conversie en meetbaarheid.
+
+**How to apply:** De link staat als constante `VIDEO` in
+[scripts/leadgen_mail.py:82](../../scripts/leadgen_mail.py) — is al aangepast
+naar de leadpagina (22-08-2026). Bij het schrijven van nieuwe mailteksten of
+templates: gebruik altijd die `VIDEO`-constante, nooit een los ingetypte
+YouTube-URL. Zie ook "mailagent-slimme-antwoorden" en "koude-mail-autonoom".
+
+---
+
 ## rubriekwachters-vulden-de-kop
 
 *03-10-2026 — "03-10-2026 Egbert: 25 op hun MP-rubriek wachtende plaatsingen vulden de hele kop (WACHTRIJ_KOP) van /pending; niets ging uit terwijl Chrome aanstond"*
@@ -9394,29 +9417,6 @@ Zie "tiktok-gratis-schrapen" en "apify-gratis-limiet-op".
 **Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
 - "trendmotor-gesproken-hooks" — TikTok levert ondertiteling mee, YouTube niet; YT-datums uit de zoekpagina
 - "videoknipper" — stille video's automatisch inkorten; script + dashboard in ~/Documents/Handige Scripts Mac
-
----
-
-## mp-video-leadpage
-
-*22-08-2026 — "Concept-mails van de mailagent moeten naar /mp-video linken, nooit naar de kale YouTube-video"*
-
-De tweede mail in de koude-mail-sequence (en elk concept dat de mailagent klaarzet)
-moet linken naar `https://omnivaleur.com/mp-video`.
-
-Nooit meer de kale YouTube-link versturen. Concreet vervangen:
-- OUD (niet gebruiken): `https://youtube.com/shorts/ymDeS37aBW4`
-- NIEUW (altijd deze):  `https://omnivaleur.com/mp-video`
-
-**Why:** Daniel wil een eigen, trackbare leadpagina met UTM's, founder-story en
-dashboardbeelden i.p.v. rechtstreeks naar YouTube sturen — geeft meer controle
-over conversie en meetbaarheid.
-
-**How to apply:** De link staat als constante `VIDEO` in
-[scripts/leadgen_mail.py:82](../../scripts/leadgen_mail.py) — is al aangepast
-naar de leadpagina (22-08-2026). Bij het schrijven van nieuwe mailteksten of
-templates: gebruik altijd die `VIDEO`-constante, nooit een los ingetypte
-YouTube-URL. Zie ook "mailagent-slimme-antwoorden" en "koude-mail-autonoom".
 
 ---
 
