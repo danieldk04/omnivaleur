@@ -15585,3 +15585,18 @@ klantafspraken in Daniels agenda t/m 06-10.
   e2d78cce met exact zijn foutmelding. Zijn tweede verstelbare ring (326c9095) heeft hetzelfde zodra hij hem plaatst.
 - Open: 1.0.369 naar de Web Store (dist/omnivaleur-extension-1.0.369.zip; bevat ook 1.0.367 en 1.0.368). Tot dan moet Vagif
   de ring opnieuw laten plaatsen pas na de update. Zijn Vinted-plaatsing van dezelfde ring faalde op "niet ingelogd" (klant).
+
+## 04-10-2026 (20:00, automatisch): Klantfouten
+
+- Alle vier de meldingen komen uit één reeks bij 96e30080 (Chromebook, extensie 1.0.366) van 17:55 tot 17:58 UTC. Van
+  17:37 tot 17:55 liepen 17 opdrachten goed (verlengingen +28 dagen, MP-verwijderingen en -plaatsingen). Daarna verdween
+  elk werktabblad binnen een halve minuut: twee tabbladen tegelijk (2dehands-verlengen en MP-verwijderen, 17:55:54-56),
+  daarna een derde ("No tab with id"), en drie verlengingen braken af op "Frame with ID 0 was removed". Om 18:00 lukte
+  de volgende opdracht weer, zonder dat er iets veranderd was; de extensie bleef de hele tijd in contact.
+- Oordeel: oorzaak buiten onze code, vrijwel zeker de klant die de tabbladen (of het venster) dichtdeed die in zijn eigen
+  venster opdoken; niet te bewijzen, want het sluiten zelf wordt niet gemeld. Niets gerepareerd. De MP-plaatsing die werd
+  overgeslagen is het vangnet dat zijn werk deed: oude advertentie bleef staan, geen dubbele.
+- "Frame with ID 0 was removed" bij verlengen door een verversing is al opgevangen in 1.0.367 (opnieuw meten); die
+  versie, en 1.0.368 en 1.0.369, staan nog niet in de Web Store.
+- Open: als "No tab with id" vaker in reeksen opduikt, de extensie laten meesturen of het tabblad door de gebruiker of
+  met het venster is gesloten (tabs.onRemoved, isWindowClosing), zodat het oordeel een meting wordt.
