@@ -15545,3 +15545,9 @@ klantafspraken in Daniels agenda t/m 06-10.
 - 2026-10-04 (Daniel): tweede Supabase-project (ApexForge, vgm AxonGear, geen prio) pauzeren kan niet: de knop "Pause project"
   staat uitgegrijsd omdat de organisatie op Pro zit. Enige weg naar besparing is verwijderen (onomkeerbaar), pas na een kopie
   van de twee forge_state-rijen en alleen op Daniels zeggen. Staat nu gewoon door te lopen, ±EUR 8,50 per maand.
+
+- 2026-10-04 (Daniel, expliciet "verwijder"): Supabase-project "danieldekoning66@gmail.com's Project" (ApexForge, ref
+  vztmureskmodkvkxkhmp) verwijderd, bespaart ±EUR 8,50 per maand. Eerst een kopie van forge_state (zonder chatgesprekken, die
+  bevatten berichten van derden) in ~/.omnivaleur/apexforge-forge_state-kopie-2026-10-04.json op Daniels Mac, niet in git.
+  Alleen crosslist-eu (de echte Omnivaleur-database) staat er nog; site en /health gaven daarna 200. Railway lovely-grace staat
+  nog (bewust niet verwijderd).
