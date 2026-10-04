@@ -15496,3 +15496,14 @@ Web Store staat op 1.0.366 (CRX-updatecheck), dus de verlengreparatie en de Face
 - Daniel: Serper, GitHub en Notion zijn gratis (0), domeinen ±EUR 1 per maand (schatting). Alles staat nu in de sheet.
   Totaal ±EUR 62 per maand (EUR 51 vast, EUR 10 Railway), ±EUR 741 per jaar. Verwijzing voor de tweede ontwikkelaar
   staat in CLAUDE.md onder "Vaste routines".
+
+## 04-10-2026: Onboarding nieuwe klanten (ochtend)
+
+Gemeten 04-10: 3 accounts in hun eerste week, geen nieuwe. Web Store en repo beide 1.0.366. Geen
+klantafspraken in Daniels agenda t/m 06-10.
+- a4fc5340 (Peter, JP MiniWheels): ongewijzigd sinds 01-10. 4 modelauto's, geen plaatsing, extensie stil
+  sinds 01-10 14:56. Proef tot 07-10. Geen nieuw mailtje.
+- 82b13998 (Anneloes): ongewijzigd, 38 actief op Vinted, extensie stil sinds 29-09. Proef tot 06-10, geen
+  betaalmethode. Geen mailtje.
+- aa093a0a: Daniels eigen account.
+- Niets gerepareerd; geen nieuwe fouten.
