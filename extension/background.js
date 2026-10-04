@@ -5130,6 +5130,19 @@ async function bgExtend2dh(job, serverUrl) {
       await finaliseJob(serverUrl, job.id, "complete", { note: "reserved_not_extended" });
       return;
     }
+    // Al verlengd: deze opdracht geldt alleen voor zoekertjes van 22+ dagen oud,
+    // die hooguit een week voor zich hebben. Ligt het einde nog 21+ dagen weg,
+    // dan is hij al verlengd (door een eerdere klik vlak voor een verversing, of
+    // door de verkoper zelf). Melden als verlengd, anders schuift listed_at nooit
+    // op en komt er elke nacht een nutteloze opdracht bij.
+    const dagenTeGaan = uit && uit.closeDate
+      ? (new Date(uit.closeDate) - Date.now()) / 86400000 : null;
+    if (uit && uit.notExpiring && dagenTeGaan != null && dagenTeGaan >= 21) {
+      await finaliseJob(serverUrl, job.id, "complete", {
+        verlengd: true, note: "already_extended", new_close: uit.closeDate, status: uit.status || null,
+      });
+      return;
+    }
     if (uit && uit.notExpiring) {
       await finaliseJob(serverUrl, job.id, "complete",
         { note: "not_in_extend_window", status: uit.status || null });
