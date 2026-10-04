@@ -15490,3 +15490,9 @@ Web Store staat op 1.0.366 (CRX-updatecheck), dus de verlengreparatie en de Face
 - Bij Claude/Anthropic telt alleen het Pro abonnement mee (EUR 18 per maand). De API-regel staat op 0, dus het
   totaal is nu ±EUR 61 per maand (EUR 50 vast, EUR 10 Railway), ±EUR 730 per jaar.
 - Het Supabase-project crosslist-eu valt buiten beschouwing; eerdere regel hierboven daarover vervalt.
+
+## 04-10-2026 (nog later): Kostenoverzicht compleet
+
+- Daniel: Serper, GitHub en Notion zijn gratis (0), domeinen ±EUR 1 per maand (schatting). Alles staat nu in de sheet.
+  Totaal ±EUR 62 per maand (EUR 51 vast, EUR 10 Railway), ±EUR 741 per jaar. Verwijzing voor de tweede ontwikkelaar
+  staat in CLAUDE.md onder "Vaste routines".

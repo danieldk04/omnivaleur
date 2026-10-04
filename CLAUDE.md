@@ -56,6 +56,9 @@ Zo ziet een volledig bericht eruit (door Daniel goedgekeurd op 19-09-2026):
   geplande taken zeggen alleen "volg dat bestand". Daniels Mac: taak
   `omnivaleur-onboarding-nieuwe-klanten`, 06:30, rondenaam `onboarding-ochtend`.
 
+- Kosten (sinds 04-10-2026): alle maandelijkse kosten van Omnivaleur staan in de Drive-sheet "Omnivaleur kosten" (map Omnivaleur),
+  elke 1e van de maand bijgewerkt door taak `omnivaleur-kosten-bijhouden`; opdracht in `docs/routines/kosten-bijhouden.md`.
+
 **Tweede ontwikkelaar, eenmalig bij je eerstvolgende sessie:** staat er op jouw account
 nog geen geplande taak `omnivaleur-onboarding-nieuwe-klanten-middag`, maak hem dan aan
 (dagelijks 10:00, lokale tijd; staat hij er al op 15:00, zet hem dan op 10:00, Daniel

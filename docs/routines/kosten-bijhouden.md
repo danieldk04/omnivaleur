@@ -21,10 +21,11 @@ buiten beschouwing laten.
    - Apify: console.apify.com/billing, Resend: resend.com/settings/billing
    - Stripe: dashboard.stripe.com/balance/overview (uitbetaling tegen 19,99 = kosten per betaling)
    - Hostinger: hpanel.hostinger.com/billing/subscriptions
-   Serper vraagt inloggen: sla over en laat de rij op "Niet gemeten" staan. Voer nooit wachtwoorden in.
+   Serper, GitHub en Notion zijn gratis (Daniel, 04-10-2026), staan op 0. Domeinen zijn ±EUR 1 per maand (schatting Daniel);
+   lees het echte bedrag zodra Daniel zegt waar ze geregistreerd staan. Voer nooit wachtwoorden in.
 3. Schrijf per dienst kolom E (tekst met het gemeten bedrag), F (maandbedrag in euro, als getal), G (datum van meting,
    JJJJ-MM-DD) en I (opmerking) bij. Schrijf met de Sheets-klasse via schrijf(), die schrijft RAW:
-   dus alleen rijen 5 tot 20, NOOIT de totaalrijen 22 tot 25, daar staan formules.
+   dus alleen rijen 5 tot 20 (Vast is rijen 5 tot 12 plus 17 tot 20), NOOIT de totaalrijen 22 tot 25, daar staan formules.
    Dollars omrekenen tegen de koers van die dag, zet de gebruikte koers in B2.
 4. Nieuwe kostenpost gevonden (nieuwe dienst, plan veranderd, tegoed bijgekocht)? Zet hem in de juiste groep
    (Vast rijen 5 tot 12, Wisselend rijen 13 tot 16). Een nieuwe rij tussen de groepen invoegen via wijzig() zodat
