@@ -59,7 +59,7 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 
 - Video aanbieden of sturen: altijd de link naar de leadpagina (zie memory
   "Leadpagina mp-video"), met "duurt 2 minuutjes".
-- Videomail (03 van 5 recente mails): "Dank voor je reactie. Via deze link kan je de video bekijken: <link> ." dan "Ik ben benieuwd wat je ervan vindt! Laat gerust weten als je naar aanleiding van de video nog vragen hebt." Link staat los met spatie voor de punt. Mag met "Hi,", "Hoi Voornaam," of "Goedemorgen Voornaam,".
+- Videomail (3 van 5 recente mails): "Dank voor je reactie. Via deze link kan je de video bekijken: <link> ." dan "Ik ben benieuwd wat je ervan vindt! Laat gerust weten als je naar aanleiding van de video nog vragen hebt." Link staat los met spatie voor de punt. Mag met "Hi,", "Hoi Voornaam," of "Goedemorgen Voornaam,".
 - Prijs noemen als het gevraagd wordt of ter sprake komt: kort, met "eerste 7 dagen
   gratis" erbij.
 - Geen jargon naar klanten. Technische oorzaken in één zin, de nadruk op wat de
