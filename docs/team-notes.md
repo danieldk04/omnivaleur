@@ -15572,3 +15572,5 @@ klantafspraken in Daniels agenda t/m 06-10.
   40 verlengopdrachten wachten maar zijn extensie is sinds 13:39 UTC offline.
 - Web Store staat nog op 1.0.366; 1.0.367 (opnieuw meten na verversing) en 1.0.368 (statusbalk) wachten op uploaden.
 - Niet meetbaar: fouten die alleen in de browser van de klant staan.
+
+- 2026-10-04 (Daniel): Goudlief (info@goudlief.nl, user 5aae4954) kreeg een nieuwe proef van 7 dagen, tot 2026-10-11 16:58 UTC, zodat ze Shopify kan koppelen en proberen. Ze was sinds 13-09 op slot (nooit een artikel ingelezen, Shopify niet gekoppeld); de koppelknop blokkeerde het scherm-slot, de server niet. Status trialing, drie herinneringskolommen leeggemaakt zodat ze weer waarschuwingen krijgt. Daniel mailt haar de uitleg (Google Doc "Shopify koppelen met Omnivaleur", als PDF).
