@@ -15507,3 +15507,18 @@ klantafspraken in Daniels agenda t/m 06-10.
   betaalmethode. Geen mailtje.
 - aa093a0a: Daniels eigen account.
 - Niets gerepareerd; geen nieuwe fouten.
+
+## 04-10-2026 (11:20, automatisch): Klantfouten
+
+- Beide fouten van Egbert (bcdf9aa4) om 08:53-08:56 UTC, vlak nadat zijn computer wakker werd. Een verlengopdracht
+  van gisteravond (1.0.364, bevroren door de slaap) liep door en kreeg "Failed to fetch": netwerk nog niet terug.
+  De volgende (1.0.366) kreeg "Frame with ID 0 was removed": het overzicht ververste terwijl de extensie zijn 2.437
+  zoekertjes las. Daarna ging het weer goed (5960575c verlengd, +28 dagen).
+- Onze fout: allebei zeggen niets over het zoekertje, maar de extensie gaf meteen op, ook als de klik al gelukt was.
+  Gerepareerd in extensie 1.0.367: bij een verversing of Failed to fetch laadt ze het overzicht opnieuw en meet
+  opnieuw (hooguit 3 keer). Staat het einde van een zoekertje van 22+ dagen oud nog 21+ dagen weg, dan telt het als
+  al verlengd (note already_extended), zodat listed_at meeschuift. Proef tests/verlengen-2dehands-verversen-test.js
+  faalt op 9a363988, slaagt nu.
+- Open: 1.0.367 moet nog naar de Web Store (dist/omnivaleur-extension-1.0.367.zip). Niet te zien of de klik op
+  26d157e5 vóór de verversing al gelukt was; de volgende ronde meet dat vanzelf. 50+ verlengopdrachten van Egbert
+  wachten nog, zijn extensie werkt ze af.

@@ -17,6 +17,17 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## verlengen-overleeft-verversing
+
+*04-10-2026 — 2dehands verlengen bij een groot overzicht: verversing of Failed to fetch na wakker worden is geen fout, opnieuw meten (1.0.367)*
+
+04-10-2026, Egbert (bcdf9aa4, 2.437 zoekertjes): na het wakker worden van zijn computer faalden verlengopdrachten met "Frame with ID 0 was removed" (overzicht ververste tijdens het minutenlange lezen) en "Failed to fetch" (netwerk nog niet terug). bgExtend2dh gaf meteen op, ook als de klik al gelukt was. Sinds 1.0.367 laadt hij opnieuw en meet opnieuw (max 3x); einde 21+ dagen weg bij een zoekertje van 22+ dagen = al verlengd (note already_extended, verlengd true).
+
+**Why:** een storing in de meting is geen uitslag over het zoekertje; zie ook "frame-removed-na-klik-is-geen-mislukking" en "storing-mag-nooit-als-antwoord-tellen".
+**How to apply:** elk langlopend execInTab-script op een kanaalpagina moet "frame removed" opvangen met opnieuw meten, nooit met een fout of een gok.
+
+---
+
 ## mp-video-leadpage
 
 *04-10-2026 — "Concept-mails van de mailagent moeten naar /mp-video linken, nooit naar de kale YouTube-video"*
