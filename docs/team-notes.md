@@ -15522,3 +15522,14 @@ klantafspraken in Daniels agenda t/m 06-10.
 - Open: 1.0.367 moet nog naar de Web Store (dist/omnivaleur-extension-1.0.367.zip). Niet te zien of de klik op
   26d157e5 vóór de verversing al gelukt was; de volgende ronde meet dat vanzelf. 50+ verlengopdrachten van Egbert
   wachten nog, zijn extensie werkt ze af.
+
+## 04-10-2026: Zijn de kosten nodig? Onderzocht
+
+- Supabase Pro blijft nodig: 11,4 GB verkeer in 4 dagen tegen 5 GB per maand op het gratis plan (zie 31-08 toen het
+  project op slot ging). Het project `crosslist-eu` is de productiedatabase (Railway wijst ernaar, 300.000 verzoeken
+  per dag). Dat is geen overbodige kost en nooit pauzeren of verwijderen.
+- Wel overbodig: Supabase-project "danieldekoning66@gmail.com's Project" (alleen tabel forge_state, 7 verzoeken per dag,
+  status Unhealthy, nergens in onze code) kost ±USD 10 per maand. En Railway-project lovely-grace (tweede lege service
+  op api.omnivaleur.com, oude commit, geen sleutels) ±USD 1,50 per maand. Beide niet aangeraakt: beslissing van Daniel.
+- Hostinger (revaleur.com, EUR 19 per jaar) is nog nodig zolang info@revaleur.com in backend/api/mail_verbinding.py en
+  backend/api/content.py staat.
