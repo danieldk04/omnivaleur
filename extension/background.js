@@ -5012,12 +5012,20 @@ async function bgExtend2dh(job, serverUrl) {
     )
   );
 
-  try {
+  // DE PAGINA MAG ONDER ONS VERVERSEN. (04-10-2026, Egbert bcdf9aa4)
+  //
+  // Bij 2.437 zoekertjes duurt openklappen plus lezen minuten. Ververst het
+  // tabblad in die tijd (computer net wakker, 2dehands vernieuwt de sessie),
+  // dan breekt Chrome het script af met "Frame with ID 0 was removed", en een
+  // eerste fetch na het wakker worden geeft "Failed to fetch". Allebei zeggen
+  // ze niets over het zoekertje. Dus: pagina opnieuw laten laden en opnieuw
+  // meten. Een klik die vóór het verversen al werkte zien we dan terug als een
+  // vervaldatum ver in de toekomst (zie alVerlengd hieronder).
+  const meet = async () => {
     await waitForTabLoad(tabId);
     await sleep(3000);                 // let React render the list
     await expandMp2dhOverview(tabId);  // load every row, not just the first 50
-
-    const uit = await execInTab(tabId, async (wantId) => {
+    return execInTab(tabId, async (wantId) => {
       const nap = ms => new Promise(r => setTimeout(r, ms));
       // Bladeren tot het zoekertje er is. Alleen de eerste 200 lezen gaf op
       // 28-09-2026 bij een klant met 625 zoekertjes 40 keer "not in your
