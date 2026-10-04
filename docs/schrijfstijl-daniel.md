@@ -59,6 +59,7 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 
 - Video aanbieden of sturen: altijd de link naar de leadpagina (zie memory
   "Leadpagina mp-video"), met "duurt 2 minuutjes".
+- Videomail (03 van 5 recente mails): "Dank voor je reactie. Via deze link kan je de video bekijken: <link> ." dan "Ik ben benieuwd wat je ervan vindt! Laat gerust weten als je naar aanleiding van de video nog vragen hebt." Link staat los met spatie voor de punt. Mag met "Hi,", "Hoi Voornaam," of "Goedemorgen Voornaam,".
 - Prijs noemen als het gevraagd wordt of ter sprake komt: kort, met "eerste 7 dagen
   gratis" erbij.
 - Geen jargon naar klanten. Technische oorzaken in één zin, de nadruk op wat de
@@ -66,7 +67,7 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 
 ## Nog te leren (invullen zodra er vergelijkingen zijn)
 
-- Wat Daniel in mijn concepten steeds schrapt of toevoegt.
+- Wat Daniel in mijn concepten steeds schrapt of toevoegt. Eerste signalen (03-10, elk nog 1x, dus nog geen regel): hij schrapte in een storingsmail de opening "Dank voor je bericht, en excuus voor het gedoe. Het lag aan ons" en begon direct met de feiten, en hij zette "Hi," in plaats van mijn "Hoi Voornaam,"; bij een vraag om referenties voegde hij een tweede bewijs (Trustpilot-link) toe en haalde de gratis proef naar een eigen alinea.
 - Of hij bij technische mails liever kort of liever volledig is.
 - Welke woorden hij nooit gebruikt.
 
@@ -76,3 +77,4 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - 02-10-2026: 0 nieuwe mails, 0 met concept; niets te leren.
 - 02-10-2026 (tweede run): 29 nieuwe mails, 0 met concept; alleen algemene patronen: Hoi als standaardaanhef, aanhef weg binnen gesprek, vaste onboarding-opening, concrete getallen.
 - 03-10-2026: 0 nieuwe mails, 0 met concept; niets te leren (de 29 van gisteren zijn al verwerkt).
+- 04-10-2026: Gekeken: 107 mails in Verzonden, 16 van Daniel, 11 al verwerkt; 5 nieuw, 2 met concept; videomail-sjabloon (3x) herkend, twee eerste concept-verschillen onder Nog te leren.
