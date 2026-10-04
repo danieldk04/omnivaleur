@@ -15561,3 +15561,14 @@ klantafspraken in Daniels agenda t/m 06-10.
   verleng- of verwijderopdrachten in de wachtrij staan en "Je zoekertjes openklappen: 850 van 2437". Alleen tekst, het werk
   zelf is niet veranderd. Gezien in een echte pagina; bestaande verleng-proeven groen.
 - Open: 1.0.368 moet naar de Web Store (dist/omnivaleur-extension-1.0.368.zip). Niet gemeten op zijn echte 2dehands-tabblad.
+
+## 04-10-2026 (17:55): Dagelijkse klantfouten (late ochtendronde)
+
+- Sinds de middagronde nieuw: 4 verlengfouten bij Egbert (bcdf9aa4) tussen 10:54 en 10:55 UTC, op 1.0.366. 2dehands gaf
+  in die minuut zelf HTTP 404 en 500 op het zoekertjesoverzicht; 57 verlengingen ervoor en erna lukten allemaal (+28 dagen).
+  Klant/kanaal, niets gerepareerd. De zes mislukte opdrachten van vandaag komen na 3 dagen vanzelf terug (06-10, ruim voor
+  hun einde rond 09-10).
+- Klant-eigen: 26cf5471 Vinted-scans "niet ingelogd" (nog steeds, elk half uur) en een betalende MP-rubriek; 96e30080 heeft
+  40 verlengopdrachten wachten maar zijn extensie is sinds 13:39 UTC offline.
+- Web Store staat nog op 1.0.366; 1.0.367 (opnieuw meten na verversing) en 1.0.368 (statusbalk) wachten op uploaden.
+- Niet meetbaar: fouten die alleen in de browser van de klant staan.
