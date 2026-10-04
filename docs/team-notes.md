@@ -15541,3 +15541,7 @@ klantafspraken in Daniels agenda t/m 06-10.
   vorige noot "overbodig" gaat dus te ver: eerst vaststellen of ApexForge nog in gebruik is. Railway lovely-grace: code
   migreert het oude api.omnivaleur.com al weg (extension/background.js getServerUrl), maar een oudere extensiekopie kan hem
   nog aanroepen; onomkeerbaar verwijderen voor ±EUR 1,30 per maand niet gedaan.
+
+- 2026-10-04 (Daniel): tweede Supabase-project (ApexForge, vgm AxonGear, geen prio) pauzeren kan niet: de knop "Pause project"
+  staat uitgegrijsd omdat de organisatie op Pro zit. Enige weg naar besparing is verwijderen (onomkeerbaar), pas na een kopie
+  van de twee forge_state-rijen en alleen op Daniels zeggen. Staat nu gewoon door te lopen, ±EUR 8,50 per maand.
