@@ -15619,3 +15619,7 @@ klantafspraken in Daniels agenda t/m 06-10.
   (6 klaar in 6 minuten, 2 bezig). Klant-eigen, niets gerepareerd.
 - Open zoals gisteren: 1.0.367, 1.0.368 en 1.0.369 naar de Web Store (dist/omnivaleur-extension-1.0.369.zip).
 - Niet meetbaar: fouten die alleen in de browser van de klant staan.
+
+## 05-10-2026: Overdracht aan de tweede ontwikkelaar
+
+Op verzoek van Daniel staat de stand van zaken in docs/overdracht.md, de klantfoutenronde in docs/routines/klantfouten.md (was alleen een geplande taak op Daniels Mac), en CLAUDE.md wijst ernaar als eerste stap. De tweede ontwikkelaar maakt in zijn eerste sessie zelf de taken onboarding-middag (10:00) en klantfouten-middagronde (14:00) aan. Kennisbank opnieuw geexporteerd (310 lessen). Eerstvolgende opdracht voor hem: Shopify-koppeling voor Goudlief (proef tot 11-10).

@@ -5,6 +5,14 @@ Code session opened against this repo — on any of Daniel's machines or
 Anthropic accounts. That makes it the right place for anything that must
 never depend on which account happens to be running.
 
+## EERSTE STAP op een ander account dan Daniels: docs/overdracht.md
+
+Lees [docs/overdracht.md](docs/overdracht.md) als allereerste, nog voor je de opdracht
+uitvoert (Daniel, 05-10-2026). Daar staat de actuele stand, wat open staat, en wat je in je
+eerste sessie zelf en zonder te vragen doet: de geplande routines aanmaken (onboarding
+10:00, klantfouten 14:00), een eerste ronde draaien, en je omgeving controleren. De
+opdrachten van de routines staan in `docs/routines/`. Daniel hoeft er niet om te vragen.
+
 ## Elk bericht: vier blokjes plus urgentie
 
 Daniel, 19-09-2026. Elk antwoord aan hem krijgt dezelfde vorm, ook als er geen
