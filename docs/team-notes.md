@@ -15737,3 +15737,14 @@ hun eerste week, geen nieuwe sinds de middagronde. Web Store levert nu 1.0.369, 
 - 20 zoekertjes ouder dan 22 dagen (geplaatst 10-11 sept): 2 hebben een geslaagde of nog-niet-aan-de-beurt-opdracht, 18 hebben alleen
   een foutopdracht en dus geen verlenging. Oudste verloopt volgens de extensie rond 09-10. Niet gemeten: of die 18 nu op 2dehands
   nog bestaan en of 1.0.367/368 (knop vinden na verversing) bij hem al draait; hij zat nog op 1.0.366.
+
+## 05-10-2026: Onboarding nieuwe klanten (middag, tweede run 17:20 lokaal)
+
+Extra middagronde. 6 accounts in hun eerste week, één nieuw. Web Store levert 1.0.369, gelijk aan de repo.
+- 4c673a4a (marketing@winterhome.eu), nieuw 15:30: Winter Home, Zwitsers bedrijf in nieuwe luxe woontextiel (plaids,
+  kussens, schapenvachten), verkoopt via eigen webshop en aan wederverkopers. Eén minuut ingelogd, geen extensie,
+  0 artikelen. Past niet vanzelf bij tweedehands-only; mailtje (Engels) klaargezet dat vraagt wat ze willen plaatsen
+  en hoe ze starten. Agenda niet nagekeken (workspacemcp niet bereikbaar).
+- 0d396015 (amhin): nog steeds onbevestigd. Morgen nakijken, dan spamtip-mailtje.
+- 31d28378 (Janneke), a4fc5340 (Peter), 82b13998 (Anneloes), aa093a0a (Daniel): ongewijzigd.
+- Niets gerepareerd, geen nieuwe fouten.
