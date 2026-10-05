@@ -145,7 +145,7 @@ def test_shopify_fouten_worden_leesbare_taal(monkeypatch, code, fragment):
 
 
 # ── 2b. Shopify's eigen reden komt bij de winkelier ──────────────────────────
-# Janneke (Goudlief, 05-10-2026) kreeg één melding met drie mogelijke oorzaken.
+# Janneke (31d28378, 05-10-2026) kreeg één melding met drie mogelijke oorzaken.
 # Shopify zegt wél welke: gemeten tegen de echte /admin/oauth/access_token, als
 # HTML-pagina met de code kaal in de titel en met uitleg verderop in de tekst.
 
