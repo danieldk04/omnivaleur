@@ -127,6 +127,7 @@
   .ob-chips{display:flex;gap:6px;flex-wrap:wrap}
   .ob-chip{font-size:12px;font-weight:600;color:#334155;background:#fff;border:1px solid var(--border,#e2e8f0);border-radius:99px;padding:5px 11px;cursor:pointer;text-decoration:none}
   .ob-chip:hover{border-color:#93c5fd;color:var(--blue,#2563eb)}
+  .ob-taal{font-size:11px;font-weight:800;color:#64748b;background:#f1f5f9;border:0;border-radius:99px;padding:3px 10px;cursor:pointer}.ob-taal-aan{background:#0f172a;color:#fff}
   .ob-sectie{scroll-margin-top:80px}
   .ob-sectie > .ob-card{margin-bottom:0}
   .ob-sectie-kop{padding:16px 22px;border-bottom:1px solid var(--border,#e2e8f0)}
@@ -558,13 +559,28 @@
   // Uitlegvideo's: één regel per video. Komt er een Nederlandse bij, zet dan taal "NL"
   // en dezelfde titel erbij; de kaart toont de taal als label.
   const VIDEOS = [
-    { titel: "Connect Shopify to Omnivaleur", tekst: "How to create the small app in your Shopify admin and link it, step by step with screen recordings.", taal: "EN", bron: "/assets/videos/shopify-koppelen-en.mp4", poster: "/assets/videos/shopify-koppelen-en.jpg" },
+    { titel: "Connect Shopify to Omnivaleur", tekst: "How to create the small app in your Shopify admin and link it, step by step with screen recordings.",
+      talen: { EN: "shopify-koppelen-en", NL: "shopify-koppelen-nl" } },
   ];
+  OB.videoTaal = function (knop, taal, basis) {
+    const kaart = knop.closest("[data-video]");
+    const v = kaart.querySelector("video");
+    v.pause();
+    v.poster = `/assets/videos/${basis}.jpg`;
+    v.querySelector("source").src = `/assets/videos/${basis}.mp4`;
+    v.load();
+    kaart.querySelectorAll("[data-taal]").forEach((k) => k.classList.toggle("ob-taal-aan", k.dataset.taal === taal));
+  };
   function videosHtml() {
-    return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px">${VIDEOS.map((v) => `
-      <div><video controls preload="none" playsinline poster="${esc(v.poster)}" style="width:100%;border-radius:12px;background:#0f172a;display:block"><source src="${esc(v.bron)}" type="video/mp4"></video>
-      <div style="font-weight:700;font-size:13.5px;margin:10px 0 2px">${esc(v.titel)} <span style="font-size:10.5px;font-weight:800;color:#64748b;background:#f1f5f9;border-radius:99px;padding:2px 8px;margin-left:4px" translate="no">${esc(v.taal)}</span></div>
-      <div style="font-size:12.5px;color:var(--muted,#64748b);line-height:1.5">${esc(v.tekst)}</div></div>`).join("")}</div>`;
+    const nl = (document.documentElement.lang || "").toLowerCase().startsWith("nl");
+    return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px">${VIDEOS.map((v) => {
+      const start = nl && v.talen.NL ? "NL" : "EN";
+      const basis = v.talen[start];
+      return `<div data-video><video controls preload="none" playsinline poster="/assets/videos/${basis}.jpg" style="width:100%;border-radius:12px;background:#0f172a;display:block"><source src="/assets/videos/${basis}.mp4" type="video/mp4"></video>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0 2px"><div style="font-weight:700;font-size:13.5px">${esc(v.titel)}</div>
+      <div style="display:flex;gap:4px" translate="no">${Object.keys(v.talen).map((t) => `<button type="button" class="ob-taal${t === start ? " ob-taal-aan" : ""}" data-taal="${t}" onclick="OB.videoTaal(this,'${t}','${v.talen[t]}')">${t}</button>`).join("")}</div></div>
+      <div style="font-size:12.5px;color:var(--muted,#64748b);line-height:1.5">${esc(v.tekst)}</div></div>`;
+    }).join("")}</div>`;
   }
 
   function sectie(id, titel, sub, lijf) {
