@@ -15765,3 +15765,16 @@ Extra middagronde. 6 accounts in hun eerste week, één nieuw. Web Store levert 
   halen. Open: de betaalmuurmelding van de extensie zou de uitkomst van de gratis-klik moeten meesturen, zodat een
   volgende keer wel te zien is of die klik na het ontwaken mislukte. Gebeurt het nog eens na een lange opdracht, dan
   is dat de eerste plek om te kijken.
+
+## 05-10-2026: Onboarding nieuwe klanten (middag, derde run 20:10 lokaal)
+
+7 accounts in hun eerste week, één nieuw. Web Store levert 1.0.369, gelijk aan de repo.
+- cdf0ec2c (partablecs@gmail.com), nieuw 18:37 lokaal: extensie 1.0.369 meteen geïnstalleerd (Windows, Chrome 143),
+  verbinding uit Portugal (MEO-IPv6). Railway-logs: twee minuten in het dashboard, daarna via de homepage opnieuw
+  ingelogd, wachtwoord fout, wachtwoord hersteld (Resend: afgeleverd), ingelogd 18:43 en na 25 seconden weg. Nooit een
+  scan gestart, 0 artikelen, Preferences leeg. Geen productfout aangetoond. Let op: vinted.pt staat niet in de
+  extensie (alleen .nl/.be/.de/.fr/.com). Engels mailtje klaargezet dat vraagt waar hij verkoopt.
+- 0d396015 (amhin@hotmail.be): Resend zegt dat de bevestigingsmail 08:23 UTC is afgeleverd; na 10 uur niet geklikt.
+  Mailtje met de tip om in ongewenste mail te kijken klaargezet.
+- 4c673a4a (Winter Home): Daniel mailde 17:22, verder ongewijzigd. Janneke, Peter, Anneloes, Daniels account: ongewijzigd.
+- Niets gerepareerd, geen nieuwe fouten.
