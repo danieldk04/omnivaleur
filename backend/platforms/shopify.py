@@ -556,7 +556,7 @@ async def vraag_token(shop: str, client_id: str, client_secret: str) -> dict:
         code, uitleg = _oauth_fout(r.text)
         logger.warning("Shopify weigerde de app-gegevens voor %s: HTTP %s %s %s",
                        shop, r.status_code, code or "?", uitleg)
-        raise ValueError(_oauth_melding(code, uitleg, shop))
+        raise ShopifyGeweigerd(_oauth_melding(code, uitleg, shop), code, uitleg, shop)
     if r.status_code == 404:
         # Gemeten 05-10-2026: een winkeladres dat niet bestaat geeft hier 404
         # "Store unavailable". Typt iemand alleen zijn winkelnaam ("goudlief"),
