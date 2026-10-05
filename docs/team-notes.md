@@ -15748,3 +15748,20 @@ Extra middagronde. 6 accounts in hun eerste week, één nieuw. Web Store levert 
 - 0d396015 (amhin): nog steeds onbevestigd. Morgen nakijken, dan spamtip-mailtje.
 - 31d28378 (Janneke), a4fc5340 (Peter), 82b13998 (Anneloes), aa093a0a (Daniel): ongewijzigd.
 - Niets gerepareerd, geen nieuwe fouten.
+
+## 05-10-2026 (18:30, automatisch): Klantfouten
+
+- fout-2dehands-create-bbd731cb, Egbert (bcdf9aa4), 1x om 16:11 UTC: de sleutelhanger "Queen Silver Crest" kwam na de
+  plaatsklik op de 2dehands-betaalpagina uit (extensie 1.0.369). De rubriek Verzamelen > Muziek, Artiesten en
+  Beroemdheden is bij hem aantoonbaar gratis: 2.605 gratis plaatsingen sinds 01-09, en om 16:12 en 16:13 gingen er
+  nog twee gratis online (gratis-keuze geklikt). Geen link in de tekst. De opdracht liep 50 minuten (opgepakt 15:21,
+  daarna niets tot 16:11), dus zijn computer sliep waarschijnlijk midden in het formulier. Waarom juist deze op de
+  rekening kwam is niet te bewijzen: de stand van de gratis-klik zit niet in de betaalmuurmelding. Niet gerepareerd.
+- Gevolgschade hersteld (data, geen code): de server las die ene betaalpagina als "betalende rubriek" en nam de
+  volgende plaatsing (Pink Floyd sleutelhanger, opdracht 1de5a618, nooit opgepakt) terug. Teruggezet op pending,
+  2dehands-rij van dat artikel weer pending. De rubriek staat vanzelf weer open (laatste gebeurtenis is een
+  geslaagde plaatsing).
+- Open: de Queen-advertentie staat nog op zijn onbetaalde 2dehands-bestelling; de melding vraagt hem die weg te
+  halen. Open: de betaalmuurmelding van de extensie zou de uitkomst van de gratis-klik moeten meesturen, zodat een
+  volgende keer wel te zien is of die klik na het ontwaken mislukte. Gebeurt het nog eens na een lange opdracht, dan
+  is dat de eerste plek om te kijken.
