@@ -19,9 +19,9 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ## shopify-oauth-fout-staat-in-de-html
 
-*05-10-2026 — "Shopify's token-uitwisseling zegt in een HTML-pagina precies wat fout is (geheim, niet geïnstalleerd, andere organisatie); wegpoetsen liet Janneke (Goudlief) vastlopen"*
+*05-10-2026 — "Shopify's token-uitwisseling zegt in een HTML-pagina precies wat fout is (geheim, niet geïnstalleerd, andere organisatie); wegpoetsen liet Janneke (31d28378) vastlopen. Klant nooit op gevoel aan een account koppelen."*
 
-05-10-2026, Janneke (Goudlief, winkel info-3927.myshopify.com): koppelen met een eigen Dev Dashboard-app gaf "Shopify didn't accept those app credentials" met drie mogelijke oorzaken door elkaar, in het Engels op een Nederlands scherm. `vraag_token` (backend/platforms/shopify.py) gooide Shopify's antwoord weg.
+05-10-2026, Janneke (31d28378, account van 04-10 19:04 UTC): koppelen met een eigen Dev Dashboard-app gaf "Shopify didn't accept those app credentials" met drie mogelijke oorzaken door elkaar, in het Engels op een Nederlands scherm. `vraag_token` (backend/platforms/shopify.py) gooide Shopify's antwoord weg.
 
 Gemeten tegen de echte `POST https://{shop}/admin/oauth/access_token` (client_credentials): Shopify antwoordt met een HTML-pagina, HTTP 400, code kaal in de `<title>` en met uitleg verderop als "Oauth error <code>: <uitleg>":
 - `invalid_request: Missing or invalid client secret` = fout of leeg geheim (ook de client ID in het geheimveld). Shopify controleert het geheim vóór winkel en organisatie: met een fout geheim krijg je deze melding op elke winkel, dus hij zegt niets over installatie.
@@ -31,6 +31,8 @@ Gemeten tegen de echte `POST https://{shop}/admin/oauth/access_token` (client_cr
 - Winkeladres dat niet bestaat: HTTP 404 "Store unavailable". Wie alleen de winkelnaam typt ("goudlief") krijgt goudlief.myshopify.com, terwijl het echte adres vaak willekeurig is.
 
 Het echte .myshopify.com-adres van een winkel vind je zonder login in de broncode van de webshop (`curl -sL https://goudlief.nl | grep -o '[a-z0-9-]*\.myshopify\.com'`).
+
+**Ook geleerd, dezelfde dag:** ik hield Janneke voor Goudlief (5aae4954) omdat Goudlief die dag ook om Shopify-hulp vroeg, en zette het winkeladres van goudlief.nl in het bericht aan haar. Ze bleek een ander, nieuw account. Een tweede sessie nam mijn codecommentaar over, en dat leek toen een bevestiging. Koppel een klant pas aan een account op het e-mailadres in de database (auth.admin), nooit op tijdstip of onderwerp, en zet niets persoonlijks (winkeladres, aantallen) in een bericht zolang dat niet vaststaat.
 
 **Why:** een melding met drie oorzaken laat de klant gokken en laat ons niets zien. De klant liep vast en vroeg om WhatsApp.
 

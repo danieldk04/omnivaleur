@@ -15648,6 +15648,8 @@ Op verzoek van Daniel staat de stand van zaken in docs/overdracht.md, de klantfo
   op eafd2f2b met exact haar melding. Echt gedraaid tegen Shopify met haar Client ID en een fout geheim.
 - Daniel stuurt haar via WhatsApp de stappen. Open: of het daarna lukt; zo niet, dan zegt de melding op haar scherm nu
   welke stap.
+- Daarbij: elke mislukte Shopify-koppeling mailt Daniel nu het winkeladres, Shopify's reden en wat de klant zag (één
+  mail per klant per melding per half uur). Haar vorige poging was niet terug te vinden; de volgende wel.
 
 ## 05-10-2026: Goudlief vraagt hulp bij Shopify koppelen (niet Janneke)
 
