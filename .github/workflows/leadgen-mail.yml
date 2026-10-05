@@ -92,6 +92,11 @@ jobs:
             python scripts/leadgen_mail.py tick || true
             if [ "$i" -lt 3 ]; then sleep 420; fi
           done
+      # Eenmalige inhaalronde (05-10-2026): opvolging na de video voor mensen die buiten
+      # de leadlijst vielen. Idempotent, alleen overdag, hooguit 5 per beurt; zie
+      # scripts/video_inhaal.py. Doet niets meer zodra alle doelen klaar zijn.
+      - if: github.event.inputs.opdracht == '' || github.event.inputs.opdracht == 'tick'
+        run: python scripts/video_inhaal.py --echt || true
       # Een momentopname (status/dagbericht/leren) zonder de mail-lus: voor als
       # Daniel gewoon wil weten waar het staat, zonder dat er meteen weer een
       # ronde mails/concepten bijkomt.

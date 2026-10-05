@@ -2451,6 +2451,9 @@ def _video_opvolging(state: dict, boek: "Leadboek", gebruiker: str, host: str,
 
 def video_opvolging_opdracht(args) -> None:
     """`leadgen_mail.py video-opvolging [--echt]`: zonder --echt alleen kijken."""
+    global VIDEO_HOOGUIT_DAGEN
+    if args.tot_dagen:      # eenmalig: ook oudere video's inhalen (Daniel, 05-10-2026)
+        VIDEO_HOOGUIT_DAGEN = args.tot_dagen
     boek = Leadboek()
     n = _video_opvolging(_state(), boek, _need("MAIL_USER"), os.environ.get("MAIL_HOST", ""),
                          droog=not args.echt)
@@ -5793,6 +5796,8 @@ def main() -> None:
     vo = sub.add_parser("video-opvolging",
                         help="wie krijgt nu een opvolging na de video (zonder --echt: alleen kijken)")
     vo.add_argument("--echt", action="store_true", help="ook echt versturen")
+    vo.add_argument("--tot-dagen", type=int, default=0,
+                    help="eenmalig: ook video's tot zoveel dagen oud opvolgen (standaard 10)")
     vo.set_defaults(func=video_opvolging_opdracht)
 
     tk = sub.add_parser("teksten", help="mailteksten uit de spreadsheet controleren en tonen")
