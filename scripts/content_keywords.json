@@ -648,7 +648,7 @@
       "pillar": "C",
       "format": "competitor",
       "slug": "omnivaleur-vs-nifty",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "omnivaleur-vs-nifty",
       "priority": 77
     },
@@ -1369,6 +1369,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-get-more-views-on-vinted",
       "published_at": "2026-10-04T13:36:34.710263+00:00"
+    },
+    {
+      "keyword": "omnivaleur vs nifty",
+      "slug": "omnivaleur-vs-nifty",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "action": "created",
+      "url_path": "/vs/omnivaleur-vs-nifty",
+      "published_at": "2026-10-05T16:38:20.223540+00:00"
     }
   ]
 }
