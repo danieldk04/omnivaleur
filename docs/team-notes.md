@@ -15608,3 +15608,14 @@ klantafspraken in Daniels agenda t/m 06-10.
   De offline-mail ging op 04-10 10:25 UTC al de deur uit. De uitleg in de foutmelding klopt met de meting. Klant-eigen
   (computer of browser uit), niets gerepareerd. Er staan sinds 05-10 00:34 weer nieuwe MP-opdrachten voor hem klaar die
   meegaan zodra hij de browser opent. Let op: zijn abonnementsperiode loopt vandaag 09:03 UTC af (verlenging via Stripe).
+
+## 05-10-2026 (08:10): Dagelijkse klantfouten (ochtendronde)
+
+- Sinds de nachtronde (02:10) geen enkele nieuwe fout. Laatste 24 uur 24 fouten, allemaal al beoordeeld in de rondes van
+  04-10 en 05-10 02:10; `klantfouten.py` toont 0 open. Geen opdrachten die langer dan 2 uur op claimed hangen.
+- 50 geannuleerde MP-opdrachten (25 verwijderen, 25 plaatsen) om 00:03 zijn van 0b28c1ce, wiens extensie sinds 01-10 offline
+  is (3-dagengrens). Klant-eigen, al gemeld.
+- 96e30080 had 57 opdrachten die 's nachts wachtten (Chromebook uit); om 06:05 UTC kwam hij online en sindsdien lopen ze weg
+  (6 klaar in 6 minuten, 2 bezig). Klant-eigen, niets gerepareerd.
+- Open zoals gisteren: 1.0.367, 1.0.368 en 1.0.369 naar de Web Store (dist/omnivaleur-extension-1.0.369.zip).
+- Niet meetbaar: fouten die alleen in de browser van de klant staan.
