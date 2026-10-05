@@ -4642,6 +4642,67 @@ _TIJDSOVERSCHRIJDING = re.compile(r"timed out waiting for this .* job to finish"
 # "timed out", "not signed in" en "queue stopped" — drie verschijningsvormen van
 # hetzelfde: 2dehands.be laat dit account niet plaatsen via /plaats. De oude rem
 # keek alleen naar drie identieke "timed out" op rij en sloeg daardoor over.
+def _diag_uit_fout(fout) -> list | None:
+    """De diagnostiek die de extensie achter een foutmelding hangt, of None.
+
+    Vorm: `... | Diag: [ ... ] [extensie 1.0.329]`. raw_decode leest precies één
+    JSON-waarde en laat de rest staan. Dat moet ook: achter de diagnostiek staat
+    nog " [extensie 1.0.329]", en zoeken naar de laatste blokhaak pakte die erbij,
+    waarna het inlezen stilletjes faalde en het vangnet hieronder nul van de 83
+    echte gevallen herkende.
+    """
+    fout = str(fout or "")
+    merk = "| Diag: "
+    i = fout.find(merk)
+    if i < 0:
+        return None
+    try:
+        diag, _rest = json.JSONDecoder().raw_decode(fout[i + len(merk):])
+    except Exception:  # noqa: BLE001
+        return None
+    return diag if isinstance(diag, list) else None
+
+
+def _verwijdering_openbaar_bewezen(job: dict, fout) -> bool:
+    """Bevestigd verwijderd, tabblad daarna weg: toont de openbare pagina dat hij weg is?
+
+    WAAROM (05-10-2026, klant 26cf5471). Een herplaatsing van "Gouden oorbellen met
+    granaat": de extensie klikte Verwijderen, beantwoordde "Niet verkocht via
+    Marktplaats" en het venster ging dicht. Daarna was het werktabblad weg, en alle
+    drie de controles gaven "No tab with id". Geboekt als "Nothing was removed",
+    de plaatsing werd overgeslagen, en het artikel stond nergens meer: Marktplaats
+    gaf voor die advertentie 404/410.
+
+    Alleen dit ene geval: het venster is aantoonbaar beantwoord en de extensie
+    kreeg zelf geen antwoord van het kanaal (geen enkele statuscode). Dan kijkt de
+    server op www.marktplaats.nl/<nummer> (of 2dehands.be). Gemeten 05-10-2026:
+    een levende advertentie geeft daar 200, een verdwenen 404. Alleen 404/410 is
+    bewijs; een storing, blokkade of 200 laat het een mislukking.
+    """
+    if not job or job.get("action") != "delete":
+        return False
+    site = {"marktplaats": "www.marktplaats.nl", "2dehands": "www.2dehands.be"}.get(job.get("platform"))
+    m = re.fullmatch(r"m\d+", str((job.get("payload") or {}).get("platform_listing_id") or "").strip().lower())
+    diag = _diag_uit_fout(fout)
+    if not site or not m or diag is None:
+        return False
+    beantwoord = any(isinstance(d, dict) and d.get("fase") == "bevestigen" and d.get("clicked")
+                     for d in diag)
+    checks = [d for d in diag if isinstance(d, dict) and d.get("fase") == "fetch-check"]
+    if not beantwoord or not checks or any(d.get("status") is not None for d in checks):
+        return False
+    try:
+        import httpx
+        from backend.services.mp_enrich import UA
+        r = httpx.get(f"https://{site}/{m.group(0)}",
+                      headers={"User-Agent": UA, "Accept": "text/html"},
+                      timeout=8, follow_redirects=True)
+        return r.status_code in (404, 410)
+    except Exception as e:  # noqa: BLE001 — geen bewijs, dus gewoon een mislukking
+        logger.warning("%s %s niet na te kijken: %s", site, m.group(0), e)
+        return False
+
+
 def _kanaal_bevestigde_verwijdering(job: dict) -> bool:
     """Zegt de diagnostiek van deze mislukte verwijdering dat het kanaal zelf 404/410 gaf?
 
@@ -4655,21 +4716,8 @@ def _kanaal_bevestigde_verwijdering(job: dict) -> bool:
     "410" bevat hier niets kan veroorzaken. Lukt het inlezen niet, dan doen we
     niets.
     """
-    fout = str((job.get("result") or {}).get("error") or "")
-    merk = "| Diag: "
-    i = fout.find(merk)
-    if i < 0:
-        return False
-    staart = fout[i + len(merk):]
-    # raw_decode leest precies één JSON-waarde en laat de rest staan. Dat moet
-    # ook: achter de diagnostiek staat nog " [extensie 1.0.329]", en zoeken naar
-    # de laatste blokhaak pakte die erbij — waarna het inlezen stilletjes faalde
-    # en dit vangnet nul van de 83 echte gevallen herkende.
-    try:
-        diag, _rest = json.JSONDecoder().raw_decode(staart)
-    except Exception:  # noqa: BLE001
-        return False
-    if not isinstance(diag, list):
+    diag = _diag_uit_fout((job.get("result") or {}).get("error"))
+    if diag is None:
         return False
     # De LAATSTE fetch-controle telt. Een eerdere poging kan nog van vóór het
     # verwijderen komen; het gaat om wat het kanaal als laatste zei.
@@ -5629,6 +5677,23 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
         logger.info("job %s: 2dehands-bijwerking meldde een fout, maar de openbare pagina "
                     "toont het nieuwe bedrag al; afgerond als gelukt", job_id)
         return {"ok": True, "completed": True, "reason": "public_page_already_shows_it"}
+
+    # Een verwijdering die bevestigd is, waarna het tabblad verdween voor de
+    # extensie kon nakijken, en die op de openbare pagina weg is, is gelukt.
+    # Anders slaat de uitgifte de herplaatsing over en staat het artikel nergens.
+    # Zie _verwijdering_openbaar_bewezen.
+    if job and _verwijdering_openbaar_bewezen(job, (body or {}).get("error")):
+        execute_with_retry(db.table("jobs").update({
+            "status": "done",
+            "result": {"note": "already_absent",
+                       "correctie": ("Het venster was beantwoord en daarna was het tabblad weg; "
+                                     "de openbare pagina van het kanaal gaf 404/410."),
+                       "oorspronkelijke_fout": (body or {}).get("error")},
+            "done_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("id", job_id).eq("user_id", user_id))
+        logger.info("job %s: verwijdering meldde een fout zonder antwoord van het kanaal, "
+                    "maar de openbare pagina is weg; afgerond als gelukt", job_id)
+        return {"ok": True, "completed": True, "reason": "public_page_gone"}
 
     # Een scan die door een verouderde kopie van de extensie is opgepakt telt
     # niet als mislukt: die kopie kán het werk gewoon niet. Terug in de wachtrij,
