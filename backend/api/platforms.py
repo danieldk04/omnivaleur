@@ -318,6 +318,42 @@ def _koppel_bestaande_shopify_catalogus(background_tasks: BackgroundTasks, user_
     background_tasks.add_task(reconcile_verweesde_shopify_listings, user_id)
 
 
+# Laatste alarm per klant en melding, zodat vijf pogingen achter elkaar met
+# dezelfde fout één mail geven en niet vijf.
+_SHOPIFY_ALARM_SINDS: dict[tuple[str, str], float] = {}
+SHOPIFY_ALARM_STILTE_SEC = 30 * 60
+
+
+def _meld_mislukte_shopify_koppeling(user_id: str, shop: str, fout: Exception) -> bool:
+    """Mail Daniel bij een mislukte Shopify-koppeling, met Shopify's eigen reden.
+
+    Janneke (31d28378, 05-10-2026) liep vast bij stap 3 en niemand kon zien wat
+    Shopify had gezegd: het stond nergens, en haar winkeladres en geheim worden
+    pas bewaard als het lukt. Met deze mail ziet Daniel bij de eerstvolgende
+    poging welke stap het is, terwijl de klant nog achter haar scherm zit."""
+    import time
+    from backend.services.email import send_email
+    from backend.services.referral_mail import email_van
+
+    sleutel = (user_id, str(fout))
+    nu = time.time()
+    if nu - _SHOPIFY_ALARM_SINDS.get(sleutel, 0) < SHOPIFY_ALARM_STILTE_SEC:
+        return False
+    _SHOPIFY_ALARM_SINDS[sleutel] = nu
+
+    adres = email_van(user_id) or user_id
+    code = getattr(fout, "code", "") or "geen"
+    uitleg = getattr(fout, "uitleg", "") or ""
+    tekst = (
+        f"{adres} probeerde Shopify te koppelen en dat lukte niet.\n\n"
+        f"Winkeladres: {shop or '(leeg)'}\n"
+        f"Reden van Shopify: {code} {uitleg}".rstrip() + "\n"
+        f"Dit zag de klant op het scherm:\n{fout}\n\n"
+        "De klant kan het meteen opnieuw proberen. Lukt het, dan komt er geen mail.\n"
+    )
+    return bool(send_email(subject=f"Shopify koppelen mislukt: {adres}", body=tekst))
+
+
 @router.get("/shopify/auth-url")
 async def shopify_auth_url(shop: str, user_id: str = Depends(get_current_user)):
     shop = shop.strip().lower()
