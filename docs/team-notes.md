@@ -15623,3 +15623,13 @@ klantafspraken in Daniels agenda t/m 06-10.
 ## 05-10-2026: Overdracht aan de tweede ontwikkelaar
 
 Op verzoek van Daniel staat de stand van zaken in docs/overdracht.md, de klantfoutenronde in docs/routines/klantfouten.md (was alleen een geplande taak op Daniels Mac), en CLAUDE.md wijst ernaar als eerste stap. De tweede ontwikkelaar maakt in zijn eerste sessie zelf de taken onboarding-middag (10:00) en klantfouten-middagronde (14:00) aan. Kennisbank opnieuw geexporteerd (310 lessen). Eerstvolgende opdracht voor hem: Shopify-koppeling voor Goudlief (proef tot 11-10).
+
+## 05-10-2026 (middag, 07:10 UTC): Dagelijkse klantfouten
+
+- Geen nieuwe fouten sinds de ochtendronde; `klantfouten.py` toont 13 soorten, 0 open. Niets gerepareerd.
+- 26cf5471 heeft 109 wachtende MP-opdrachten (nachtronde 00:35), maar is online (1.0.368) en werkt ze weg: elke ~1,5 min
+  een klaar, laatste 07:07 UTC. Geen rem.
+- 1ba42900 (51 wachtend) is offline sinds 04-10 20:50 UTC, 0b28c1ce (199 wachtend) sinds 01-10. Klant-eigen.
+- 3bfbed2c: nieuwe Vinted-scanfout "niet ingelogd" om 07:01 (bekende soort, klant-eigen).
+- Geen opdrachten langer dan een uur op claimed. /health 200 op 65eb34be.
+- Open zoals gisteren: 1.0.367 tot 1.0.369 naar de Web Store. Niet meetbaar: fouten die alleen in de browser van de klant staan.
