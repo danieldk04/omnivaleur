@@ -101,7 +101,7 @@ Daniel: Lekker bezig! Bundel verkopen is altijd het fijnste want dan ben je in e
 Post: iemand heeft problemen met de scan van een QR-code bij de pakketpunt.
 Daniel: Heb ik ook gehad. Wat je kan doen is mevrouw een berichtje sturen dat ze haar helderheid van haar telefoon op 100% moet zetten, ook kan het helpen om de cijfercode uit de email te gebruiken. Lukt dat niet, even contact op laten nemen met Vinted, hier kan jij niks aan doen namelijk :)
 
-Post: iemand vraagt of je Vinted wel kan laten ketenen met een extensie, bezorgd over blokkade.
+Post: iemand vraagt of een tool als Omnivaleur geen Vinted-blokkade kan geven.
 Daniel: Terechte vraag. Omnivaleur draait als Chrome-extensie in je eigen browser, op je eigen account, en doet dezelfde stappen die je zelf ook zou doen. Met Calm mode zit er 3 tot 8 minuten tussen twee plaatsingen in plaats van alles tegelijk. Een garantie geef ik niet, maar het is alsof je een menselijke stagiaire hebt die taken voor je uitvoert :). Wil je Vinted liever buiten schot houden, dan zet je alleen Marktplaats en 2dehands aan. Ik stuur je ook even een pb.
 
 Post: Daniel ziet dat iemand een interesse toont en wil doorpraten.
