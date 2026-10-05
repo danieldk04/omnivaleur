@@ -472,6 +472,45 @@ from backend.platforms.base import PlatformBase
 from backend.platforms.shopify_importer import create_product, delete_product
 
 
+def _oauth_fout(tekst: str) -> tuple[str, str]:
+    """Shopify's eigen reden uit een geweigerde uitwisseling.
+
+    Shopify antwoordt met een HTML-pagina, niet met JSON. De reden staat erin
+    als "Oauth error <code>: <uitleg>". Elk van de vier codes vraagt een andere
+    handeling van de winkelier; die weggooien gaf Janneke (Goudlief, 05-10-2026)
+    één melding met drie mogelijke oorzaken en geen manier om te zien welke.
+    """
+    m = re.search(r"Oauth error ([a-z_]+)(?::\s*([^<\n]+))?", tekst or "")
+    if not m:
+        return "", ""
+    return m.group(1), (m.group(2) or "").strip()
+
+
+def _oauth_melding(code: str, uitleg: str, shop: str) -> str:
+    """Eén handeling per oorzaak. Gemeten op 05-10-2026 tegen de echte server:
+    fout of leeg geheim (ook de client ID in het geheimveld) geeft
+    invalid_request "Missing or invalid client secret"; een onbekende client ID
+    geeft application_cannot_be_found."""
+    if code == "invalid_request" and "secret" in uitleg.lower():
+        return ("Shopify says the client secret is wrong. In the Dev Dashboard, open your app, "
+                "go to Settings and copy the Secret again with its copy button. Paste only the "
+                "secret into the second box, not the client ID.")
+    if code == "application_cannot_be_found":
+        return ("Shopify doesn't know this client ID. In the Dev Dashboard, open your app, "
+                "go to Settings and copy the Client ID again with its copy button.")
+    if code == "app_not_installed":
+        return (f"Your app isn't installed on {shop} yet. In the Dev Dashboard, open your app, "
+                "click Install app and choose this store. Then try again here.")
+    if code == "shop_not_permitted":
+        return (f"Your app belongs to a different Shopify account than {shop}. Log in to Shopify "
+                "with the account that owns this store, create the app again from your store's "
+                "Settings, Apps, Develop apps, and use its new client ID and secret.")
+    return ("Shopify didn't accept those app credentials. Check that the client ID and "
+            "client secret belong to an app in the SAME Shopify organisation as this store, "
+            "and that you installed the app on the store."
+            + (f" Shopify's reason: {code}." if code else ""))
+
+
 async def vraag_token(shop: str, client_id: str, client_secret: str) -> dict:
     """Een verse sleutel opvragen met de gegevens van de app zelf.
 
