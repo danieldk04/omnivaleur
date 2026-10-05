@@ -477,7 +477,7 @@ def _oauth_fout(tekst: str) -> tuple[str, str]:
 
     Shopify antwoordt met een HTML-pagina, niet met JSON. De reden staat erin
     als "Oauth error <code>: <uitleg>". Elk van de vier codes vraagt een andere
-    handeling van de winkelier; die weggooien gaf Janneke (Goudlief, 05-10-2026)
+    handeling van de winkelier; die weggooien gaf Janneke (31d28378, 05-10-2026)
     één melding met drie mogelijke oorzaken en geen manier om te zien welke.
     """
     # De code staat er twee keer in: kaal in de titel, met uitleg in de tekst.
