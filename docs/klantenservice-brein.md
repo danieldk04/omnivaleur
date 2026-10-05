@@ -205,6 +205,15 @@ Hoe de kanalen gekoppeld worden:
   ontwikkelen) en plak je de rechten die Omnivaleur toont, en tot slot zet je de
   Client ID en Client secret uit die app terug in het venster. Kom je er niet
   uit, dan stellen we het samen in.
+- Lukt het koppelen niet, dan zegt het venster sinds 05-10-2026 precies welke
+  stap fout ging: het geheim klopt niet (opnieuw kopiëren met het kopieerknopje
+  bij Settings in het Dev Dashboard), de app is nog niet geïnstalleerd op de
+  winkel (in het Dev Dashboard op Install app klikken en de winkel kiezen), de
+  app hoort bij een ander Shopify-account dan de winkel (opnieuw aanmaken
+  vanuit de winkel zelf), of er bestaat geen winkel op dat adres (het adres op
+  .myshopify.com staat in de adresbalk van het Shopify-beheer, vaak een naam
+  als info-3927.myshopify.com en niet de naam van de webshop). Vroeger toonde
+  het één algemene Engelse melding met alle oorzaken door elkaar.
 - Importeren van meerdere kanalen: ga naar Import, vink aan waar je verkoopt en druk
   op "Import from all ticked channels". Omnivaleur leest alle kanalen, koppelt een
   advertentie alleen vanzelf als het zeker is (dezelfde advertentie of hetzelfde
