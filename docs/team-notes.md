@@ -15714,3 +15714,15 @@ Eerste middagronde op het tweede account. 5 accounts in hun eerste week, 2 nieuw
 - Opdracht voor een Claude Project dat Facebookreacties schrijft in Daniels stijl: `docs/facebook-reactiebot.md`. Feiten komen uit `docs/klantenservice-brein.md` (als Project knowledge toevoegen). Vervangt de Gemini Gem, die aanvulde met eigen kennis.
 - Een Claude Project reist niet mee met de repo en kan niet automatisch bij een ander account gezet worden. Elk account maakt het zelf aan: Project maken, opdracht uit het bestand plakken (alles onder de streep), het brein-bestand toevoegen.
 - Voorbeelden in het bestand zijn alleen Daniels korte, menselijke reacties. De lange lijstachtige reacties uit de Gem zijn bewust weggelaten, die lazen als AI en bevatten gewaagde beweringen.
+
+## 05-10-2026: Onboarding nieuwe klanten (ochtend)
+
+De ochtendronde op Daniels Mac draaide pas om 15:27 lokaal, na de middagronde van het tweede account. 5 accounts in
+hun eerste week, geen nieuwe sinds de middagronde. Web Store levert nu 1.0.369, gelijk aan de repo.
+- 0d396015 (amhin@hotmail.be): na 7 uur nog steeds niet bevestigd en nooit ingelogd. Afleverstatus van de
+  bevestigingsmail niet te zien (de Resend-sleutel in de lokale .env is ongeldig). Morgen nakijken; is hij dan nog
+  onbevestigd, dan een kort mailtje met de tip om in de map ongewenste mail te kijken.
+- 31d28378 (Janneke), a4fc5340 (Peter), 82b13998 (Anneloes): ongewijzigd ten opzichte van de middagronde.
+  Anneloes' proef loopt af 06-10 13:36 UTC, de server stuurt zelf de herinnering.
+- aa093a0a: Daniels eigen account.
+- Niets gerepareerd, geen mailtjes, geen nieuwe fouten.
