@@ -15664,3 +15664,17 @@ Op verzoek van Daniel staat de stand van zaken in docs/overdracht.md, de klantfo
 ## 05-10-2026: Onboarding-routine staat op het tweede account
 
 De geplande taak `omnivaleur-onboarding-nieuwe-klanten-middag` is aangemaakt (dagelijks 10:00, lokale tijd, rondenaam `onboarding-middag`, opdracht uit docs/routines/onboarding-nieuwe-klanten.md). `omnivaleur-klantfouten-middagronde` (14:00) stond er al. Eerste automatische run morgen 10:05; vandaag is de ronde van 10:00 niet gedraaid.
+
+## 05-10-2026: Onboarding nieuwe klanten (middag)
+
+Eerste middagronde op het tweede account. 5 accounts in hun eerste week, 2 nieuw. Web Store levert nu 1.0.368; alleen
+1.0.369 staat nog open. Agenda niet te bekijken (Google-koppeling maakte geen verbinding).
+- 0d396015 (amhin@hotmail.be, nieuw, 08:23 UTC): e-mail nog niet bevestigd, nog nooit ingelogd, dus nog geen proef en
+  niets te zien. De bevestigingsmail ging om 08:23 UTC uit. Volgende ronde nakijken of hij is bevestigd.
+- 31d28378 (Janneke): Shopify nog niet gekoppeld, 0 artikelen, geen extensie. Eén Marktplaats-scan wacht sinds 04-10
+  19:20 UTC op een extensie die ze niet heeft; na drie dagen vervalt die met de gemeten uitleg. Daniel heeft
+  WhatsApp-contact, dus briefing in plaats van mailtje.
+- a4fc5340 (Peter) en 82b13998 (Anneloes): ongewijzigd, extensies stil sinds 01-10 en 29-09. Proeven lopen af 07-10 en
+  06-10; de server stuurt zelf de proefherinnering. Geen mailtje.
+- aa093a0a: Daniels eigen account.
+- Niets gerepareerd, geen nieuwe fouten.
