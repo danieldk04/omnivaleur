@@ -555,6 +555,18 @@
     }).join("");
   }
 
+  // Uitlegvideo's: één regel per video. Komt er een Nederlandse bij, zet dan taal "NL"
+  // en dezelfde titel erbij; de kaart toont de taal als label.
+  const VIDEOS = [
+    { titel: "Connect Shopify to Omnivaleur", tekst: "How to create the small app in your Shopify admin and link it, step by step with screen recordings.", taal: "EN", bron: "/assets/videos/shopify-koppelen-en.mp4", poster: "/assets/videos/shopify-koppelen-en.jpg" },
+  ];
+  function videosHtml() {
+    return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px">${VIDEOS.map((v) => `
+      <div><video controls preload="none" playsinline poster="${esc(v.poster)}" style="width:100%;border-radius:12px;background:#0f172a;display:block"><source src="${esc(v.bron)}" type="video/mp4"></video>
+      <div style="font-weight:700;font-size:13.5px;margin:10px 0 2px">${esc(v.titel)} <span style="font-size:10.5px;font-weight:800;color:#64748b;background:#f1f5f9;border-radius:99px;padding:2px 8px;margin-left:4px" translate="no">${esc(v.taal)}</span></div>
+      <div style="font-size:12.5px;color:var(--muted,#64748b);line-height:1.5">${esc(v.tekst)}</div></div>`).join("")}</div>`;
+  }
+
   function sectie(id, titel, sub, lijf) {
     return `<section class="ob-sectie" id="ob-${id}"><div class="ob-card">
       <div class="ob-sectie-kop"><h2>${titel}</h2>${sub ? `<p>${sub}</p>` : ""}</div>
@@ -576,6 +588,7 @@
       <nav class="ob-chips" aria-label="Help sections">
         <a class="ob-chip" href="#" onclick="OB.naarHelp('werking');return false">How it works</a>
         <a class="ob-chip" href="#" onclick="OB.naarHelp('starten');return false">Getting started</a>
+        <a class="ob-chip" href="#" onclick="OB.naarHelp('video');return false">Video guides</a>
         <a class="ob-chip" href="#" onclick="OB.naarHelp('iconen');return false">The icons</a>
         <a class="ob-chip" href="#" onclick="OB.naarHelp('kanalen');return false">Marketplaces & costs</a>
         <a class="ob-chip" href="#" onclick="OB.naarHelp('vragen');return false">Questions</a>
@@ -585,6 +598,7 @@
       ${sectie("starten", "Getting started", "The same steps as on your dashboard. Hidden them there? <a href='#' onclick='OB.toonWeer();return false' style='color:var(--blue,#2563eb);font-weight:650'>Show them again</a>.",
         `<ol style="margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:var(--muted,#64748b)">${OB.stappen({}).map((s) =>
           `<li style="margin-bottom:8px"><b style="color:var(--text,#0f172a)">${esc(s.titel)}${s.optioneel ? " (optional)" : ""}.</b> ${s.tekst}</li>`).join("")}</ol>`)}
+      ${sectie("video", "Video guides", "Short screen recordings that show it step by step.", videosHtml())}
       ${sectie("iconen", "The icons on each item", "Every item shows one icon per marketplace. Its colour tells you where the item really is.", iconenHtml())}
       ${sectie("kanalen", "What you need per marketplace", "And what the marketplaces themselves may charge. Those costs are between you and the marketplace; Omnivaleur never pays anything on your behalf.", `<div class="ob-kanalen">${KANALEN.map(kanaalKaart).join("")}</div>`)}
       ${sectie("vragen", "Questions", "", `<div id="ob-faq-lijst">${faqHtml()}</div><div class="ob-geen" id="ob-geen">Nothing found. Ask us directly below: we reply within one business day.</div>`)}
