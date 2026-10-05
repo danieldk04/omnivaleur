@@ -15678,3 +15678,16 @@ Eerste middagronde op het tweede account. 5 accounts in hun eerste week, 2 nieuw
   06-10; de server stuurt zelf de proefherinnering. Geen mailtje.
 - aa093a0a: Daniels eigen account.
 - Niets gerepareerd, geen nieuwe fouten.
+
+## 05-10-2026 (middag, 12:10 UTC): Dagelijkse klantfouten
+
+- Laatste 24 uur 16 foutsoorten, 5 open. Vier daarvan zijn dezelfde twee advertenties van 96e30080 (Toon, 1.0.369): jas met
+  maat "Overige"/"Universeel" en boomstamlamp met merk "Handgemaakt", beide op MP en 2dehands. Zelfde items als 01-10, de
+  melding noemt de lijst die het kanaal wel biedt. Klant-eigen, niets gerepareerd.
+- 26cf5471, MP-verwijdering "Gouden oorbellen met granaat" (07:22 UTC): venster beantwoord, tabblad daarna weg (drie keer
+  "No tab with id", extensie 1.0.368), geboekt als mislukt, de herplaatsing overgeslagen. De advertentie geeft op
+  marktplaats.nl nu 410: het artikel staat dus nergens meer. Een andere sessie heeft hiervoor een reparatie klaarstaan
+  (_verwijdering_openbaar_bewezen in backend/api/jobs.py plus tests/test_verwijdering_tabblad_weg.py), nog niet gecommit en
+  dus niet live (/health toont 56717038). Niet dubbel gedaan. Open: die reparatie committen en dan de rij van dit artikel
+  rechtzetten en opnieuw plaatsen.
+- Geen opdrachten die vastzitten, /health ok. Niet meetbaar: fouten die alleen in de browser van de klant staan.
