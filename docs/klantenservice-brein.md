@@ -212,7 +212,8 @@ Hoe de kanalen gekoppeld worden:
   app hoort bij een ander Shopify-account dan de winkel (opnieuw aanmaken
   vanuit de winkel zelf), of er bestaat geen winkel op dat adres (het adres op
   .myshopify.com staat in de adresbalk van het Shopify-beheer, vaak een naam
-  als info-3927.myshopify.com en niet de naam van de webshop). Vroeger toonde
+  als ab12cd-3e.myshopify.com en niet de naam van de webshop; de hele link uit
+  de adresbalk plakken mag ook). Vroeger toonde
   het één algemene Engelse melding met alle oorzaken door elkaar.
 - Importeren van meerdere kanalen: ga naar Import, vink aan waar je verkoopt en druk
   op "Import from all ticked channels". Omnivaleur leest alle kanalen, koppelt een
