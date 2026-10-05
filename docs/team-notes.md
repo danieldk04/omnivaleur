@@ -15709,3 +15709,8 @@ Eerste middagronde op het tweede account. 5 accounts in hun eerste week, 2 nieuw
   01-10), 1ba42900 (25 paren, laatst gezien 04-10 20:50 UTC), 26cf5471 (oorbellen 74d66f61 nog pending, laatst gezien 10:57
   UTC) en 31d28378 (Janneke, nooit een extensie). Klant-eigen, geen rem van onze kant.
 - Open: 74d66f61 nakijken zodra 26cf5471 online komt. Niet meetbaar: fouten die alleen in de browser van de klant staan.
+
+## 05-10-2026: Facebook-reactiebot (Claude Project)
+- Opdracht voor een Claude Project dat Facebookreacties schrijft in Daniels stijl: `docs/facebook-reactiebot.md`. Feiten komen uit `docs/klantenservice-brein.md` (als Project knowledge toevoegen). Vervangt de Gemini Gem, die aanvulde met eigen kennis.
+- Een Claude Project reist niet mee met de repo en kan niet automatisch bij een ander account gezet worden. Elk account maakt het zelf aan: Project maken, opdracht uit het bestand plakken (alles onder de streep), het brein-bestand toevoegen.
+- Voorbeelden in het bestand zijn alleen Daniels korte, menselijke reacties. De lange lijstachtige reacties uit de Gem zijn bewust weggelaten, die lazen als AI en bevatten gewaagde beweringen.
