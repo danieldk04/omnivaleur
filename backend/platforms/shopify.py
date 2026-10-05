@@ -480,9 +480,11 @@ def _oauth_fout(tekst: str) -> tuple[str, str]:
     handeling van de winkelier; die weggooien gaf Janneke (Goudlief, 05-10-2026)
     één melding met drie mogelijke oorzaken en geen manier om te zien welke.
     """
-    m = re.search(r"Oauth error ([a-z_]+)(?::\s*([^<\n]+))?", tekst or "")
-    if not m:
+    # De code staat er twee keer in: kaal in de titel, met uitleg in de tekst.
+    treffers = list(re.finditer(r"Oauth error ([a-z_]+)(?::\s*([^<\n]+))?", tekst or ""))
+    if not treffers:
         return "", ""
+    m = next((t for t in treffers if t.group(2)), treffers[0])
     return m.group(1), (m.group(2) or "").strip()
 
 
