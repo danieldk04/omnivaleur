@@ -406,6 +406,14 @@ async def shopify_connect_app(body: dict, background_tasks: BackgroundTasks,
     try:
         g = await controleer_app_gegevens(shop, body.get("client_id"), body.get("client_secret"))
     except ValueError as e:
+        # Wachten op de mail, want na de HTTPException draait geen achtergrondtaak
+        # meer. Een haperende mailserver mag de klant niet laten wachten.
+        import asyncio
+        try:
+            await asyncio.wait_for(asyncio.to_thread(_meld_mislukte_shopify_koppeling,
+                                                     user_id, shop, e), timeout=8)
+        except Exception as fout:
+            logger.error("Alarm over mislukte Shopify-koppeling niet verstuurd: %s", fout)
         raise HTTPException(status_code=400, detail=str(e))
 
     _save_credentials(user_id, "shopify", {
