@@ -15726,3 +15726,14 @@ hun eerste week, geen nieuwe sinds de middagronde. Web Store levert nu 1.0.369, 
   Anneloes' proef loopt af 06-10 13:36 UTC, de server stuurt zelf de herinnering.
 - aa093a0a: Daniels eigen account.
 - Niets gerepareerd, geen mailtjes, geen nieuwe fouten.
+
+## 05-10-2026: Meting verlengingen Egbert (bcdf9aa4), alleen gemeten
+
+- Meting klopt: 5.533 artikelen, 2.713 2dehands-rijen, 2.711 actief (hij heeft er dus meer dan de 1.508 van 30-09).
+- Verlengopdrachten sinds 01-10: 73. 53 echt verlengd (bewijs: new_close ruim 4 weken verder, listed_at schoof bij 53 mee),
+  2 'not_in_extend_window' (nog niet aan de beurt), 18 fout. De fouten: 16x 'Verlengen-knop niet gevonden' (1.0.364 en 1.0.366),
+  1x HTTP 500 op het overzicht, 1x knop geklikt maar vervaldatum bewoog niet. Geen enkele '200 listings read' (die oorzaak speelt niet).
+- Hij draait 1.0.366 (laatst gezien 05-10 02:23 UTC, Windows). Laatste verlengopdracht 04-10 13:27 UTC; er staat nu niets open.
+- 20 zoekertjes ouder dan 22 dagen (geplaatst 10-11 sept): 2 hebben een geslaagde of nog-niet-aan-de-beurt-opdracht, 18 hebben alleen
+  een foutopdracht en dus geen verlenging. Oudste verloopt volgens de extensie rond 09-10. Niet gemeten: of die 18 nu op 2dehands
+  nog bestaan en of 1.0.367/368 (knop vinden na verversing) bij hem al draait; hij zat nog op 1.0.366.
