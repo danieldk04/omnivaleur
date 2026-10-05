@@ -15600,3 +15600,11 @@ klantafspraken in Daniels agenda t/m 06-10.
   versie, en 1.0.368 en 1.0.369, staan nog niet in de Web Store.
 - Open: als "No tab with id" vaker in reeksen opduikt, de extensie laten meesturen of het tabblad door de gebruiker of
   met het venster is gesloten (tabs.onRemoved, isWindowClosing), zodat het oordeel een meting wordt.
+
+## 05-10-2026 (02:10, automatisch): Klantfouten
+
+- fout-marktplaats-scan-89d5a96f (0b28c1ce, Pro actief, Windows, extensie 1.0.363): de MP-scan verliep na 3 dagen
+  omdat zijn extensie sinds 01-10 11:44 UTC niet meer is gezien; sindsdien is er geen enkele opdracht van hem opgepakt.
+  De offline-mail ging op 04-10 10:25 UTC al de deur uit. De uitleg in de foutmelding klopt met de meting. Klant-eigen
+  (computer of browser uit), niets gerepareerd. Er staan sinds 05-10 00:34 weer nieuwe MP-opdrachten voor hem klaar die
+  meegaan zodra hij de browser opent. Let op: zijn abonnementsperiode loopt vandaag 09:03 UTC af (verlenging via Stripe).
