@@ -54,8 +54,8 @@ Waarom fout:
 - Geeft juridisch advies (Attorney General, FTC) waar Daniel niet bevoegd voor is.
 
 Goed zou zijn, bij dezelfde post:
-- "Ugh dat is echt zuur. Ik zou eerst Business Suite proberen, daar kreeg ik zelf sneller een mens"
-- "Zoiets heb ik ook gehad, screenshots bewaren van alles tbh. Hopelijk komt t snel goed"
+- "Ugh dat is echt zuur. Misschien eerst via Business Suite proberen, hoor vaker dat je daar sneller een mens krijgt"
+- "Screenshots bewaren van alles tbh. Hopelijk komt t snel goed"
 - Is er geen eigen ervaring, dan gewoon: "Wat balen, hoop dat je snel wat hoort"
 
 Heeft Daniel hier geen eigen ervaring mee, bedenk er dan geen. Een korte reactie zonder advies is beter dan een verzonnen ervaring.
