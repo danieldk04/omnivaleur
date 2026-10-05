@@ -15633,3 +15633,17 @@ Op verzoek van Daniel staat de stand van zaken in docs/overdracht.md, de klantfo
 - 3bfbed2c: nieuwe Vinted-scanfout "niet ingelogd" om 07:01 (bekende soort, klant-eigen).
 - Geen opdrachten langer dan een uur op claimed. /health 200 op 65eb34be.
 - Open zoals gisteren: 1.0.367 tot 1.0.369 naar de Web Store. Niet meetbaar: fouten die alleen in de browser van de klant staan.
+
+## 05-10-2026: Shopify koppelen bij Goudlief (Janneke) liep vast, melding zegt nu welke stap
+
+- Janneke (Goudlief, winkel info-3927.myshopify.com, gevonden in de broncode van goudlief.nl) maakte de app in het Dev
+  Dashboard aan maar kreeg bij stap 3 "Shopify didn't accept those app credentials", Engels op een Nederlands scherm.
+  Haar Client ID is echt (gemeten: Shopify kent de app). Wat er dan nog fout kan zijn: het geheim, de app niet
+  geïnstalleerd op de winkel, of de app onder een ander Shopify-account. Welke van de drie het was is niet meer te
+  meten: onze server gooide Shopify's reden weg en haar geheim is nergens bewaard.
+- Gerepareerd: de server leest Shopify's eigen reden ("Oauth error <code>: <uitleg>" in de HTML-pagina) en zegt per
+  oorzaak één handeling, ook in het Nederlands; een niet bestaand winkeladres (404) krijgt een eigen melding. De reden
+  komt in de Railway-log ("Shopify weigerde de app-gegevens voor"). Proef tests/test_shopify_eigen_sleutel.py faalt
+  op eafd2f2b met exact haar melding. Echt gedraaid tegen Shopify met haar Client ID en een fout geheim.
+- Daniel stuurt haar via WhatsApp de stappen. Open: of het daarna lukt; zo niet, dan zegt de melding op haar scherm nu
+  welke stap.

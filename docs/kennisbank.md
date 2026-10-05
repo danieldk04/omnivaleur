@@ -17,6 +17,27 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## shopify-oauth-fout-staat-in-de-html
+
+*05-10-2026 — "Shopify's token-uitwisseling zegt in een HTML-pagina precies wat fout is (geheim, niet geïnstalleerd, andere organisatie); wegpoetsen liet Janneke (Goudlief) vastlopen"*
+
+05-10-2026, Janneke (Goudlief, winkel info-3927.myshopify.com): koppelen met een eigen Dev Dashboard-app gaf "Shopify didn't accept those app credentials" met drie mogelijke oorzaken door elkaar, in het Engels op een Nederlands scherm. `vraag_token` (backend/platforms/shopify.py) gooide Shopify's antwoord weg.
+
+Gemeten tegen de echte `POST https://{shop}/admin/oauth/access_token` (client_credentials): Shopify antwoordt met een HTML-pagina, HTTP 400, code kaal in de `<title>` en met uitleg verderop als "Oauth error <code>: <uitleg>":
+- `invalid_request: Missing or invalid client secret` = fout of leeg geheim (ook de client ID in het geheimveld). Shopify controleert het geheim vóór winkel en organisatie: met een fout geheim krijg je deze melding op elke winkel, dus hij zegt niets over installatie.
+- `application_cannot_be_found` = onbekende client ID.
+- `app_not_installed` = app niet op deze winkel geïnstalleerd, of het verkeerde winkeladres (forum, Shopify-medewerker).
+- `shop_not_permitted` = app en winkel in een andere organisatie.
+- Winkeladres dat niet bestaat: HTTP 404 "Store unavailable". Wie alleen de winkelnaam typt ("goudlief") krijgt goudlief.myshopify.com, terwijl het echte adres vaak willekeurig is.
+
+Het echte .myshopify.com-adres van een winkel vind je zonder login in de broncode van de webshop (`curl -sL https://goudlief.nl | grep -o '[a-z0-9-]*\.myshopify\.com'`).
+
+**Why:** een melding met drie oorzaken laat de klant gokken en laat ons niets zien. De klant liep vast en vroeg om WhatsApp.
+
+**How to apply:** `_oauth_fout` en `_oauth_melding` in shopify.py geven één handeling per code en loggen code en uitleg (`Shopify weigerde de app-gegevens voor`). Komt er een klacht over Shopify koppelen: zoek die logregel in Railway, dan weet je de oorzaak. Nieuwe servermeldingen die via `ValueError` naar het scherm gaan vindt `scripts/i18n_extract.py` niet; zet de vertaling zelf in nl.json en borg het met een proef (tests/test_shopify_eigen_sleutel.py). Zie "shopify-app-store-geweigerd" en "storing-mag-nooit-als-antwoord-tellen".
+
+---
+
 ## verlengen-overleeft-verversing
 
 *04-10-2026 — 2dehands verlengen bij een groot overzicht: verversing of Failed to fetch na wakker worden is geen fout, opnieuw meten (1.0.367)*
