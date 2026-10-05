@@ -15691,3 +15691,13 @@ Eerste middagronde op het tweede account. 5 accounts in hun eerste week, 2 nieuw
   dus niet live (/health toont 56717038). Niet dubbel gedaan. Open: die reparatie committen en dan de rij van dit artikel
   rechtzetten en opnieuw plaatsen.
 - Geen opdrachten die vastzitten, /health ok. Niet meetbaar: fouten die alleen in de browser van de klant staan.
+
+## 05-10-2026 (middag, 13:05 UTC): Oorbellen van 26cf5471 hersteld, reparatie live (75d06eb6)
+
+- Reparatie van de andere sessie gecommit en live (75d06eb6): een verwijdering waarvan het venster beantwoord is, het tabblad
+  daarna weg was en de openbare pagina 404/410 geeft, telt als gelukt, zodat de herplaatsing doorgaat. Voor-en-na: 7 proeven
+  falen op 96330d2c, slagen op de nieuwe code; hele reeks 2174 groen.
+- Rechtgezet met bewijs (marktplaats.nl/m2438638431 geeft 410): verwijderopdracht 3e84868e op 'done' (already_absent),
+  plaatsing 74d66f61 terug op 'pending' met verse created_at. Geen andere opdracht van de klant aangeraakt.
+- Open: haar extensie (1.0.368) was voor het laatst gezien om 10:57 UTC, dus de plaatsing wacht tot ze online is. Effect
+  (advertentie weer op Marktplaats) nog niet gemeten; volgende ronde nakijken of 74d66f61 op 'done' staat.
