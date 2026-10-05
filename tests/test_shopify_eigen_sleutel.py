@@ -191,14 +191,19 @@ def test_shopify_zegt_welke_stap_fout_ging(monkeypatch, status, pagina, fragment
 def test_mislukte_koppeling_mailt_daniel_met_shopifys_reden(monkeypatch):
     """Janneke (31d28378): haar poging was achteraf niet terug te vinden. Nu krijgt
     Daniel bij de eerstvolgende mislukking het adres en Shopify's reden, één keer."""
+    import sys
+    import types
     import backend.api.platforms as pl
-    import backend.services.email as em
-    import backend.services.referral_mail as rm
     from backend.platforms.shopify import ShopifyGeweigerd
 
+    # Nepmodules: er mag geen echte mail uit, en geen echte adresopvraag.
     verstuurd = []
-    monkeypatch.setattr(em, "send_email", lambda subject, body, **kw: verstuurd.append((subject, body)) or True)
-    monkeypatch.setattr(rm, "email_van", lambda uid: "klant@example.com")
+    em = types.ModuleType("backend.services.email")
+    em.send_email = lambda subject, body, **kw: verstuurd.append((subject, body)) or True
+    rm = types.ModuleType("backend.services.referral_mail")
+    rm.email_van = lambda uid: "klant@example.com"
+    monkeypatch.setitem(sys.modules, "backend.services.email", em)
+    monkeypatch.setitem(sys.modules, "backend.services.referral_mail", rm)
     monkeypatch.setattr(pl, "_SHOPIFY_ALARM_SINDS", {})
     fout = ShopifyGeweigerd("Your app isn't installed on w.myshopify.com yet.",
                             "app_not_installed", "The application is not installed on this shop.",
