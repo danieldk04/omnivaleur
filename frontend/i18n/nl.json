@@ -3299,5 +3299,11 @@
  "Shopify's reason: {0}.": "Reden volgens Shopify: {0}.",
  "There's no Shopify store at {0}. Go back to step 1 and copy the address from your Shopify admin: it's the one ending in .myshopify.com.": "Er is geen Shopify-winkel op {0}. Ga terug naar stap 1 en kopieer het adres uit je Shopify-beheer: het adres dat eindigt op .myshopify.com.",
  "Your app belongs to a different Shopify account than {0}. Log in to Shopify with the account that owns this store, create the app again from your store's Settings, Apps, Develop apps, and use its new client ID and secret.": "Je app hoort bij een ander Shopify-account dan {0}. Log in bij Shopify met het account waar deze winkel onder valt, maak de app opnieuw aan in je winkel via Instellingen, Apps, Apps ontwikkelen, en gebruik de nieuwe client ID en het nieuwe geheim.",
- "Your app isn't installed on {0} yet. In the Dev Dashboard, open your app, click Install app and choose this store. Then try again here.": "Je app is nog niet geïnstalleerd op {0}. Open je app in het Dev Dashboard, klik op Install app en kies deze winkel. Probeer het daarna hier opnieuw."
+ "Your app isn't installed on {0} yet. In the Dev Dashboard, open your app, click Install app and choose this store. Then try again here.": "Je app is nog niet geïnstalleerd op {0}. Open je app in het Dev Dashboard, klik op Install app en kies deze winkel. Probeer het daarna hier opnieuw.",
+ ", choose": ", kies",
+ "Start from Dev Dashboard": "Start from Dev Dashboard",
+ "2. Under": "2. Ga naar",
+ "Versions": "Versions",
+ ", find the box for": ", zoek het vak voor",
+ "and pick this store.": "en kies deze winkel."
 }
