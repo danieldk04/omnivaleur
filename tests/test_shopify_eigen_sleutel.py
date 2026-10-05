@@ -144,6 +144,62 @@ def test_shopify_fouten_worden_leesbare_taal(monkeypatch, code, fragment):
     assert "_ssl" not in str(e.value) and "Traceback" not in str(e.value)
 
 
+# ── 2b. Shopify's eigen reden komt bij de winkelier ──────────────────────────
+# Janneke (Goudlief, 05-10-2026) kreeg één melding met drie mogelijke oorzaken.
+# Shopify zegt wél welke: gemeten tegen de echte /admin/oauth/access_token, als
+# HTML-pagina met de code kaal in de titel en met uitleg verderop in de tekst.
+
+class _Html:
+    def __init__(self, code, tekst):
+        self.status_code = code
+        self.text = tekst
+
+
+def _shopify_pagina(code, uitleg):
+    return (f"<html>\n<head>\n  <title>400 - Oauth error {code}</title>\n</head>\n<body>\n"
+            f"        <p class=\"content--desc-large\">Oops, something went wrong.</p>\n"
+            f"          Oauth error {code}: {uitleg}\n</body>\n</html>")
+
+
+@pytest.mark.parametrize("status,pagina,fragment", [
+    (400, _shopify_pagina("invalid_request", "Missing or invalid client secret"),
+     "client secret is wrong"),
+    (400, _shopify_pagina("application_cannot_be_found",
+                          "Could not find Shopify API application with api_key"),
+     "doesn't know this client ID"),
+    (400, _shopify_pagina("app_not_installed", "The application is not installed on this shop."),
+     "isn't installed on winkel.myshopify.com"),
+    (400, _shopify_pagina("shop_not_permitted",
+                          "Client credentials cannot be performed on this shop."),
+     "different Shopify account than winkel.myshopify.com"),
+    (404, "<html><head><title>Store unavailable</title></head></html>",
+     "no Shopify store at winkel.myshopify.com"),
+])
+def test_shopify_zegt_welke_stap_fout_ging(monkeypatch, status, pagina, fragment):
+    import httpx
+    from backend.platforms.shopify import vraag_token
+
+    async def post(self, url, **kw):
+        return _Html(status, pagina)
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", post)
+    with pytest.raises(ValueError) as e:
+        asyncio.run(vraag_token("winkel.myshopify.com", "a" * 32, "shpss_" + "b" * 32))
+    assert fragment in str(e.value)
+
+
+def test_elke_shopify_reden_staat_ook_in_het_nederlands():
+    """Het koppelscherm is Nederlands; zonder vertaling las Janneke de melding in het Engels."""
+    import json
+    from backend.platforms.shopify import _oauth_melding
+    wb = json.loads((ROOT / "frontend/i18n/nl.json").read_text(encoding="utf-8"))
+    for code, uitleg in [("invalid_request", "Missing or invalid client secret"),
+                         ("application_cannot_be_found", ""), ("app_not_installed", ""),
+                         ("shop_not_permitted", ""), ("", "")]:
+        assert _oauth_melding(code, uitleg, "{0}") in wb, code
+    assert "Shopify's reason: {0}." in wb
+
+
 # ── 3. Opslaan gebeurt pas ná de controle ────────────────────────────────────
 
 def test_endpoint_slaat_niets_op_zonder_controle():
