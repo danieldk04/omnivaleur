@@ -15778,3 +15778,14 @@ Extra middagronde. 6 accounts in hun eerste week, één nieuw. Web Store levert 
   Mailtje met de tip om in ongewenste mail te kijken klaargezet.
 - 4c673a4a (Winter Home): Daniel mailde 17:22, verder ongewijzigd. Janneke, Peter, Anneloes, Daniels account: ongewijzigd.
 - Niets gerepareerd, geen nieuwe fouten.
+
+## 05-10-2026: Videometing en inhaalronde opvolging
+
+- Meting (scripts/video_meting.py, alleen lezen): video gestuurd aan 63 adressen, 60 vroegen er zelf om. 31 reageerden (49%),
+  9 namen een account (14%). Opening is niet meetbaar: Daniels eigen mails dragen geen pixel, en 44 van 63 kregen de lange
+  link /mp-video (telt in GA4 als direct). Opvolging 1 bij niet-klanten: 22 verstuurd, 6 reacties. 20 mensen die erom vroegen en
+  stil bleven hebben nooit een opvolging gekregen: ze stonden niet in de leadlijst of mail_state, dus de machine zag ze niet.
+- Daniel (05-10): die 17 echte (zonder mail-tester, Brevo-relay en Virtuflow) alsnog opvolgen: V1 nu, V2 na 4 dagen.
+  scripts/video_inhaal.py, stap in .github/workflows/leadgen-mail.yml, doelen in Supabase leadgen_opslag "video_inhaal"
+  (niet in de repo, die is publiek). Tekst V1 in de sheet aangepast: "Vragen mag ook gewoon, als iets niet helemaal duidelijk is."
+- Open: per-lead opening van de video blijft onmeetbaar zonder persoonlijke link.
