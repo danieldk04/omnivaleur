@@ -15660,3 +15660,7 @@ Op verzoek van Daniel staat de stand van zaken in docs/overdracht.md, de klantfo
 - Janneke (jannekeheijne1988@hotmail.com, 31d28378, account 04-10 19:04 UTC) is een andere klant. De koppeling "Janneke
   (Goudlief)" in het stuk hierboven, shopify.py en de kennisbank klopt niet; de sessie die dat schreef past het aan.
 - Daniel kreeg een mailconcept met haar winkeladres en een aanbod om samen te bellen (bewaard voor de schrijfstijlroutine).
+
+## 05-10-2026: Onboarding-routine staat op het tweede account
+
+De geplande taak `omnivaleur-onboarding-nieuwe-klanten-middag` is aangemaakt (dagelijks 10:00, lokale tijd, rondenaam `onboarding-middag`, opdracht uit docs/routines/onboarding-nieuwe-klanten.md). `omnivaleur-klantfouten-middagronde` (14:00) stond er al. Eerste automatische run morgen 10:05; vandaag is de ronde van 10:00 niet gedraaid.
