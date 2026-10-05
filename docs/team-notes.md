@@ -15634,9 +15634,10 @@ Op verzoek van Daniel staat de stand van zaken in docs/overdracht.md, de klantfo
 - Geen opdrachten langer dan een uur op claimed. /health 200 op 65eb34be.
 - Open zoals gisteren: 1.0.367 tot 1.0.369 naar de Web Store. Niet meetbaar: fouten die alleen in de browser van de klant staan.
 
-## 05-10-2026: Shopify koppelen bij Goudlief (Janneke) liep vast, melding zegt nu welke stap
+## 05-10-2026: Shopify koppelen bij Janneke (31d28378) liep vast, melding zegt nu welke stap
 
-- Janneke (Goudlief, winkel info-3927.myshopify.com, gevonden in de broncode van goudlief.nl) maakte de app in het Dev
+- Janneke (31d28378, account van 04-10 19:04 UTC; NIET Goudlief, dat had ik eerst ten onrechte aangenomen, en ook het
+  winkeladres info-3927.myshopify.com is van Goudlief, niet van haar) maakte de app in het Dev
   Dashboard aan maar kreeg bij stap 3 "Shopify didn't accept those app credentials", Engels op een Nederlands scherm.
   Haar Client ID is echt (gemeten: Shopify kent de app). Wat er dan nog fout kan zijn: het geheim, de app niet
   geïnstalleerd op de winkel, of de app onder een ander Shopify-account. Welke van de drie het was is niet meer te
@@ -15647,3 +15648,13 @@ Op verzoek van Daniel staat de stand van zaken in docs/overdracht.md, de klantfo
   op eafd2f2b met exact haar melding. Echt gedraaid tegen Shopify met haar Client ID en een fout geheim.
 - Daniel stuurt haar via WhatsApp de stappen. Open: of het daarna lukt; zo niet, dan zegt de melding op haar scherm nu
   welke stap.
+
+## 05-10-2026: Goudlief vraagt hulp bij Shopify koppelen (niet Janneke)
+
+- Goudlief (info@goudlief.nl, 5aae4954) mailde 04-10 20:04 dat het koppelen niet lukt en vroeg om samen in te stellen. Haar
+  account: proef tot 11-10 16:58 UTC, geen enkele koppeling, 0 artikelen, 0 opdrachten. Laatste login 04-10 17:53 UTC.
+- Haar winkel is info-3927.myshopify.com (zelfde producten en Shopify.shop als goudlief.nl), 4.879 openbare producten.
+  Het inlezen is ooit gedraaid op 304 producten; haar winkel is zestien keer zo groot, dat is nog niet gezien.
+- Janneke (jannekeheijne1988@hotmail.com, 31d28378, account 04-10 19:04 UTC) is een andere klant. De koppeling "Janneke
+  (Goudlief)" in het stuk hierboven, shopify.py en de kennisbank klopt niet; de sessie die dat schreef past het aan.
+- Daniel kreeg een mailconcept met haar winkeladres en een aanbod om samen te bellen (bewaard voor de schrijfstijlroutine).
