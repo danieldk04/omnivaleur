@@ -15701,3 +15701,11 @@ Eerste middagronde op het tweede account. 5 accounts in hun eerste week, 2 nieuw
   plaatsing 74d66f61 terug op 'pending' met verse created_at. Geen andere opdracht van de klant aangeraakt.
 - Open: haar extensie (1.0.368) was voor het laatst gezien om 10:57 UTC, dus de plaatsing wacht tot ze online is. Effect
   (advertentie weer op Marktplaats) nog niet gemeten; volgende ronde nakijken of 74d66f61 op 'done' staat.
+
+## 05-10-2026 (middag, 13:10 UTC): Dagelijkse klantfouten
+
+- Geen open foutsoorten (15 in 24 uur, alle al beoordeeld). Geen opdrachten die vastzitten op claimed, /health ok op 777be7ae.
+- Wachtend werk zit alleen bij klanten wier extensie uit staat: 0b28c1ce (25 herplaatsparen, extensie 1.0.363 laatst gezien
+  01-10), 1ba42900 (25 paren, laatst gezien 04-10 20:50 UTC), 26cf5471 (oorbellen 74d66f61 nog pending, laatst gezien 10:57
+  UTC) en 31d28378 (Janneke, nooit een extensie). Klant-eigen, geen rem van onze kant.
+- Open: 74d66f61 nakijken zodra 26cf5471 online komt. Niet meetbaar: fouten die alleen in de browser van de klant staan.
