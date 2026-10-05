@@ -472,6 +472,15 @@ from backend.platforms.base import PlatformBase
 from backend.platforms.shopify_importer import create_product, delete_product
 
 
+class ShopifyGeweigerd(ValueError):
+    """Shopify weigerde de app-gegevens. De tekst is voor de winkelier; code en
+    uitleg zijn Shopify's eigen woorden, voor het alarm aan Daniel."""
+
+    def __init__(self, melding: str, code: str = "", uitleg: str = "", shop: str = ""):
+        super().__init__(melding)
+        self.code, self.uitleg, self.shop = code, uitleg, shop
+
+
 def _oauth_fout(tekst: str) -> tuple[str, str]:
     """Shopify's eigen reden uit een geweigerde uitwisseling.
 
