@@ -503,10 +503,18 @@ async def vraag_token(shop: str, client_id: str, client_secret: str) -> dict:
             },
         )
     if r.status_code in (400, 401, 403):
+        code, uitleg = _oauth_fout(r.text)
+        logger.warning("Shopify weigerde de app-gegevens voor %s: HTTP %s %s %s",
+                       shop, r.status_code, code or "?", uitleg)
+        raise ValueError(_oauth_melding(code, uitleg, shop))
+    if r.status_code == 404:
+        # Gemeten 05-10-2026: een winkeladres dat niet bestaat geeft hier 404
+        # "Store unavailable". Typt iemand alleen zijn winkelnaam ("goudlief"),
+        # dan maken wij er goudlief.myshopify.com van, terwijl de echte vaak
+        # een willekeurige naam is (info-3927.myshopify.com).
         raise ValueError(
-            "Shopify didn't accept those app credentials. Check that the client ID and "
-            "client secret belong to an app in the SAME Shopify organisation as this store, "
-            "and that you installed the app on the store."
+            f"There's no Shopify store at {shop}. Go back to step 1 and copy the address "
+            "from your Shopify admin: it's the one ending in .myshopify.com."
         )
     if r.status_code >= 400:
         raise ValueError(f"Shopify returned an unexpected error ({r.status_code}). Please try again.")
