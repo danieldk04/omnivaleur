@@ -188,6 +188,38 @@ def test_shopify_zegt_welke_stap_fout_ging(monkeypatch, status, pagina, fragment
     assert fragment in str(e.value)
 
 
+def test_mislukte_koppeling_mailt_daniel_met_shopifys_reden(monkeypatch):
+    """Janneke (31d28378): haar poging was achteraf niet terug te vinden. Nu krijgt
+    Daniel bij de eerstvolgende mislukking het adres en Shopify's reden, één keer."""
+    import backend.api.platforms as pl
+    import backend.services.email as em
+    import backend.services.referral_mail as rm
+    from backend.platforms.shopify import ShopifyGeweigerd
+
+    verstuurd = []
+    monkeypatch.setattr(em, "send_email", lambda subject, body, **kw: verstuurd.append((subject, body)) or True)
+    monkeypatch.setattr(rm, "email_van", lambda uid: "klant@example.com")
+    monkeypatch.setattr(pl, "_SHOPIFY_ALARM_SINDS", {})
+    fout = ShopifyGeweigerd("Your app isn't installed on w.myshopify.com yet.",
+                            "app_not_installed", "The application is not installed on this shop.",
+                            "w.myshopify.com")
+
+    assert pl._meld_mislukte_shopify_koppeling("u1", "w.myshopify.com", fout)
+    onderwerp, tekst = verstuurd[0]
+    assert "klant@example.com" in onderwerp
+    assert "w.myshopify.com" in tekst and "app_not_installed" in tekst
+    assert "isn't installed" in tekst
+    # Dezelfde fout meteen nog eens: geen tweede mail.
+    assert not pl._meld_mislukte_shopify_koppeling("u1", "w.myshopify.com", fout)
+    assert len(verstuurd) == 1
+
+
+def test_koppelroute_meldt_een_mislukking_voor_de_foutmelding():
+    fn = PLATFORMS.split("async def shopify_connect_app(")[1].split("\n@router.")[0]
+    behandel = fn.split("except ValueError as e:")[1]
+    assert behandel.index("_meld_mislukte_shopify_koppeling") < behandel.index("raise HTTPException")
+
+
 def test_elke_shopify_reden_staat_ook_in_het_nederlands():
     """Het koppelscherm is Nederlands; zonder vertaling las Janneke de melding in het Engels."""
     import json
