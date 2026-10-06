@@ -103,6 +103,8 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
 .platform-logos { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 32px; }
 .platform-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 8px 18px; font-size: 13px; font-weight: 500; color: var(--muted); display: flex; align-items: center; gap: 7px; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
 .platform-chip.soon { opacity: .55; border-style: dashed; }
+.platform-chip.beta { border-color: rgba(245,158,11,.45); }
+.beta-label { font-size: 10px; font-weight: 700; color: #b45309; background: rgba(245,158,11,.14); padding: 1px 6px; border-radius: 100px; letter-spacing: .03em; text-transform: uppercase; }
 .platform-logo { height: 16px; width: auto; max-width: 20px; object-fit: contain; display: block; }
 .soon-label { font-size: 10px; font-weight: 700; color: #d97706; background: rgba(245,158,11,.1); padding: 1px 6px; border-radius: 100px; letter-spacing: .03em; }
 
@@ -131,6 +133,7 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
 .platform-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; }
 .badge-live { background: rgba(52,211,153,.12); color: #059669; border: 1px solid rgba(52,211,153,.3); }
+.badge-beta { background: rgba(245,158,11,.14); color: #b45309; border: 1px solid rgba(245,158,11,.35); }
 .badge-soon { background: rgba(245,158,11,.1); color: #d97706; border: 1px solid rgba(245,158,11,.25); }
 .badge-eu { background: rgba(37,99,235,.08); color: var(--blue); border: 1px solid rgba(37,99,235,.2); }
 .platform-card h3 { font-size: 17px; font-weight: 800; margin-bottom: 6px; }
@@ -255,11 +258,11 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
     <div class="platform-chip"><img class="platform-logo" src="/assets/logos/vinted.png" alt="Vinted logo"> Vinted</div>
     <div class="platform-chip"><img class="platform-logo" src="/assets/logos/ebay.webp" alt="eBay logo"> eBay</div>
     <div class="platform-chip"><img class="platform-logo" src="/assets/logos/shopify.webp" alt="Shopify logo"> Shopify</div>
+    <div class="platform-chip beta"><img class="platform-logo" src="/assets/logos/facebook.svg" alt="Facebook Marketplace logo"> Facebook Marketplace <span class="beta-label">beta</span></div>
     <div class="platform-chip soon"><img class="platform-logo" src="/assets/logos/etsy.svg" alt="Etsy logo"> Etsy <span class="soon-label">coming soon</span></div>
     <div class="platform-chip soon"><img class="platform-logo" src="/assets/logos/kleinanzeigen.svg" alt="Kleinanzeigen logo"> Kleinanzeigen <span class="soon-label">coming soon</span></div>
     <div class="platform-chip soon"><img class="platform-logo" src="/assets/logos/wallapop.png" alt="Wallapop logo"> Wallapop <span class="soon-label">coming soon</span></div>
-    <div class="platform-chip soon"><img class="platform-logo" src="/assets/logos/facebook.svg" alt="Facebook Marketplace logo"> Facebook Marketplace <span class="soon-label">coming soon</span></div>
-  </div>
+      </div>
 </section>
 
 <!-- PRODUCT SHOWCASE -->
@@ -482,7 +485,7 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
       <div class="platform-header">
         <div class="platform-logo-box"><img src="/assets/logos/facebook.svg" alt="Facebook Marketplace logo"></div>
         <div class="platform-badges">
-          <span class="badge badge-soon">Coming soon</span>
+          <span class="badge badge-beta">Beta</span>
           <span class="badge badge-eu">Pan-EU</span>
         </div>
       </div>
@@ -593,7 +596,7 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
         Which marketplaces are available now?
         <div class="faq-icon">+</div>
       </button>
-      <div class="faq-answer">Currently Marktplaats (NL), Vinted (pan-EU), 2dehands (BE), eBay Europe and Shopify are fully integrated. Etsy, Kleinanzeigen (DE), Wallapop (ES) and Facebook Marketplace are coming soon. We continuously add new platforms based on user feedback.</div>
+      <div class="faq-answer">Currently Marktplaats (NL), Vinted (pan-EU), 2dehands (BE), eBay Europe and Shopify are fully integrated. Facebook Marketplace works as a beta: Facebook doesn't officially allow automated listing, so use it deliberately. Etsy, Kleinanzeigen (DE) and Wallapop (ES) are coming soon. We continuously add new platforms based on user feedback.</div>
     </div>
 
     <div class="faq-item">
