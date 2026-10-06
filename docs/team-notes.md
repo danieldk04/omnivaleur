@@ -15845,3 +15845,12 @@ ronde van 08:46: partablecs, Winter Home en amhin nog steeds 0 artikelen, Jannek
 - Verder wachtend werk alleen bij extensies die uit staan: 0b28c1ce (sinds 01-10), 1ba42900 (sinds 04-10 20:50).
 - Overige fouten van 24 uur (MP/2dehands maat en merk leeg, Facebook tabblad dicht, 2dehands betaalpagina Egbert) waren
   al afgehandeld. /health ok na de meting.
+
+## 06-10-2026 (12:45, automatisch): Klantfouten
+
+- fout-shopify-scan-b18675c1, 1x bij 8f91a370 (amandaonline001, account van vandaag 10:21 UTC). Klant-eigen: ze vinkte
+  bij Import alle vier kanalen aan, ook Shopify, maar heeft alleen eBay gekoppeld (10:38). De server meldt dan terecht
+  dat de winkel niet gekoppeld is; de andere kanalen liepen gewoon door (Marktplaats en 2dehands klaar 10:42, Vinted om
+  10:43 bezig met 145 advertenties). Geen code gewijzigd.
+- Open, geen storing: de Shopify-keuze bij Import staat ook aan te vinken voor wie geen winkel koppelde. Kan later grijs
+  met "koppel eerst" als dit vaker voorkomt.
