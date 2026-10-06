@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=2ad5429353"></script>
+<script src="/i18n.js?v=f6dc3d076f"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1783,6 +1783,15 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
       </div>
 
+      <!-- Vinted-herplaatsen uit: zeg het hier, met een knop naar de schakelaar -->
+      <div id="vinted-uit-banner" style="display:none;gap:12px;align-items:center;flex-wrap:wrap;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.25);border-radius:12px;padding:13px 16px;margin:0 0 16px">
+        <div style="flex:1;min-width:240px;font-size:12.5px;color:var(--muted);line-height:1.6">
+          <div style="font-weight:700;color:var(--text,#111);margin-bottom:3px;font-size:13px">Relisting on Vinted is switched off</div>
+          Vinted's terms (since 5 October 2026) forbid deleting and re-adding the same item and using external tools for it. That is why Vinted listings can only get a light refresh here, nothing is deleted or reposted. Want to relist anyway, at your own risk?
+        </div>
+        <button class="btn btn-sm btn-primary" onclick="gaNaarVintedHerplaatsen()">Turn it on in Preferences</button>
+      </div>
+
       <!-- Refresh sub-tabs: Vinted table + dedicated relist tracker -->
       <div style="display:flex;gap:6px;margin:16px 0 14px;border-bottom:1px solid var(--border)">
         <button id="refresh-tab-btn-listings" class="refresh-subtab active" onclick="switchRefreshTab('listings')">Listings</button>
@@ -2530,6 +2539,11 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     </div>
     <div class="modal-body">
       <p id="refresh-modal-item-name" style="font-weight:600;margin-bottom:16px"></p>
+
+      <div id="refresh-modal-vinted-uit" style="display:none;font-size:12.5px;color:var(--muted);background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.25);border-radius:9px;padding:11px 13px;margin:0 0 14px;line-height:1.55">
+        <b style="color:var(--text,#111)">Relisting on Vinted is switched off.</b> This is only a light refresh of your existing listing (photos re-saved in a new order). Nothing is deleted or reposted.
+        <div style="margin-top:9px"><button class="btn btn-sm btn-primary" onclick="gaNaarVintedHerplaatsen()">Turn it on in Preferences</button></div>
+      </div>
 
       <div id="refresh-modal-strategy-group" style="display:none;margin-bottom:18px">
         <label>Strategy</label>
@@ -9224,6 +9238,11 @@ function extraOudeExtensieMelding(status) {
 
 function renderRefreshView() {
   const now = Date.now();
+  const vintedBanner = document.getElementById('vinted-uit-banner');
+  if (vintedBanner) {
+    const heeftVinted = (state.listings || []).some(l => l.platform === 'vinted');
+    vintedBanner.style.display = (heeftVinted && !vintedHerplaatsenAan()) ? 'flex' : 'none';
+  }
 
   const usedToday = state.listings.filter(l => {
     if (!l.last_refreshed_at) return false;
@@ -9416,6 +9435,22 @@ function vintedRelistGeblokkeerd(platform, strategy) {
   return false;
 }
 
+// Knop "Turn it on in Preferences": sluit wat open staat, ga naar de schakelaar
+// en laat hem even oplichten zodat hij niet te missen is.
+function gaNaarVintedHerplaatsen() {
+  closeModal('modal-refresh');
+  closeModal('modal-relist-briefing');
+  showView('preferences');
+  setTimeout(() => {
+    const veld = document.getElementById('vinted-herplaatsen-aan');
+    const kaart = veld && veld.closest('.vg-chip');
+    if (!kaart) return;
+    kaart.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    kaart.style.boxShadow = '0 0 0 3px rgba(37,99,235,.55)';
+    setTimeout(() => { kaart.style.boxShadow = ''; }, 3500);
+  }, 150);
+}
+
 function refreshItem(itemId, title, platform) {
   let strategies = REFRESH_PLATFORM_STRATEGIES[platform];
   if (!strategies) { alert(`Refresh isn't available for ${platform} yet.`); return; }
@@ -9429,6 +9464,8 @@ function refreshItem(itemId, title, platform) {
   document.getElementById('refresh-modal-item-name').textContent =
     `${title} — ${PLATFORM_LABELS[platform] || platform}`;
 
+  document.getElementById('refresh-modal-vinted-uit').style.display =
+    (platform === 'vinted' && !vintedHerplaatsenAan()) ? 'block' : 'none';
   const hasChoice = strategies.length > 1;
   document.getElementById('refresh-modal-strategy-group').style.display = hasChoice ? 'block' : 'none';
   document.querySelectorAll('input[name="refresh-strategy"]').forEach(r => { r.checked = r.value === (hasChoice ? 'content' : strategies[0]); });
