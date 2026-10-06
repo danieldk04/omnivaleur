@@ -293,14 +293,14 @@ def schrijf(user_id: str, wijziging: dict) -> dict:
 
 
 VINTED_HERPLAATSEN_UIT = (
-    "Relisting on Vinted is switched off. Vinted's terms (since 5 October "
-    "2026) forbid deleting and re-adding the same item and using external "
-    "tools for it, and breaking them can get your account blocked. You can "
-    "switch it on in Settings, at your own risk.")
+    "Refreshing and relisting on Vinted is switched off. Vinted's terms (since "
+    "5 October 2026) forbid external tools and deleting and re-adding the same "
+    "item, and breaking them can get your account blocked. You can switch it on "
+    "in Preferences, at your own risk.")
 
 
 def vinted_herplaatsen_toegestaan(user_id: str) -> bool:
-    """Heeft deze verkoper herplaatsen op Vinted bewust aangezet?
+    """Heeft deze verkoper verversen en herplaatsen op Vinted bewust aangezet?
 
     Bij twijfel NEE: lukt het lezen van de instelling niet, dan blijft het uit.
     Dit is het enige antwoord waar elk herplaatspad op Vinted langs moet."""

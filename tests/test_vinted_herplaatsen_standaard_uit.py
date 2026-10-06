@@ -26,14 +26,16 @@ def test_vinted_relist_geweigerd_zonder_aanzet(monkeypatch):
         _draai("u1")
 
 
-def test_andere_kanalen_en_content_niet_geweigerd(monkeypatch):
+def test_vinted_content_ook_geweigerd_andere_kanalen_niet(monkeypatch):
     monkeypatch.setattr(instellingen, "lees", lambda u: instellingen._schoon({}))
     bereikt = []
     monkeypatch.setattr(relist, "get_db", lambda: bereikt.append(1) or (_ for _ in ()).throw(RuntimeError("db")))
-    for platform, strategy in (("vinted", "content"), ("marktplaats", "relist")):
-        with pytest.raises(RuntimeError, match="db"):
-            _draai("u1", platform, strategy)
-    assert len(bereikt) == 2
+    with pytest.raises(relist.RefreshError, match="switched off"):
+        _draai("u1", "vinted", "content")
+    assert bereikt == [], "database aangeraakt bij Vinted content"
+    with pytest.raises(RuntimeError, match="db"):
+        _draai("u1", "marktplaats", "relist")
+    assert len(bereikt) == 1
 
 
 def test_vinted_wacht_langer_en_koelt_langer():
@@ -65,6 +67,7 @@ def _klant(monkeypatch, toegestaan):
 
 @pytest.mark.parametrize("pad,body", [
     ("/api/listings/refresh", {"item_id": "i", "platform": "vinted", "strategy": "relist"}),
+    ("/api/listings/refresh", {"item_id": "i", "platform": "vinted", "strategy": "content"}),
     ("/api/jobs/relist-retry", {"item_id": "i", "platform": "vinted"}),
 ])
 def test_routes_weigeren_vinted_relist_als_uit(monkeypatch, pad, body):

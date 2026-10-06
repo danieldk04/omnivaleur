@@ -15819,3 +15819,11 @@ Extra middagronde. 6 accounts in hun eerste week, één nieuw. Web Store levert 
 
 Egbert Brouwer zag het inlogscherm terwijl advertenties wel doorliepen: de database lag vannacht ~02:00 tot 08:00 plat tot Daniel hem via Supabase herstartte. Supabase-logs (gelezen door Claude in Daniels browser): server t4g.nano met 0,5 GB geheugen, ~1 GB swap, schijf-IOwait 85 tot 100%, checkpoints van 26 tot 172 s, statement timeouts. Verkeer was klein (11.694 verzoeken in 9 uur), dus het is capaciteit, geen overbelasting zoals 19-09 en 28-09. Daniel zet de server naar Micro (Free Upgrade, prijs blijft $9,68/mnd). Alarmmail kwam vannacht wel binnen.
 Gemeten en gerepareerd: `/api/jobs/onboarding` las tot 50 afgeronde opdrachten met volledig `result`, scans erbij: 11,9 MB per aanroep bij één verkoper (nu 21 kB, 1,04 s naar 0,18 s). `_laatste_eigen_meting` las tien scanresultaten voor één veldje. De tabel `jobs` (20.491 rijen, 190 MB) wordt nergens opgeruimd; scanresultaten zijn ~250 kB per stuk. Openstaand: opruiming van oude scanresultaten, en of Micro genoeg blijft.
+
+## 06-10-2026: Ook de lichte verversing op Vinted staat uit
+
+- Daniel (06-10): ook de lichte verversing (content, foto's opnieuw opslaan via de bewerkpagina) op Vinted standaard uit,
+  want de voorwaarden verbieden externe tools in het algemeen. Eén schakelaar `vinted_herplaatsen` ("Allow refreshing and
+  relisting on Vinted") dekt nu beide. Server weigert elke Vinted-verversing in relist.refresh_listing en relist-retry;
+  het scherm toont een melding met knop naar Voorkeuren en verbergt de Verversen-knop.
+- Open: reeds wachtende Vinted-opdrachten van vóór de wijziging lopen door.

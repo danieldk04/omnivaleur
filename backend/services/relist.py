@@ -872,7 +872,7 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
             f"Available here: {', '.join(sorted(allowed)) or 'none'}."
         )
 
-    if platform == "vinted" and strategy == "relist":
+    if platform == "vinted":
         from backend.services import instellingen as _inst
         if not _inst.vinted_herplaatsen_toegestaan(user_id):
             raise RefreshError(_inst.VINTED_HERPLAATSEN_UIT)
