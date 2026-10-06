@@ -15833,3 +15833,15 @@ Gemeten en gerepareerd: `/api/jobs/onboarding` las tot 50 afgeronde opdrachten m
 6 accounts in hun eerste week, geen nieuwe. Web Store levert 1.0.369, gelijk aan de repo. Alles ongewijzigd sinds de
 ronde van 08:46: partablecs, Winter Home en amhin nog steeds 0 artikelen, Janneke geen koppeling, Peter (proef tot
 07-10 18:02) en Daniels eigen account stil. Anneloes valt buiten het venster. Niets gerepareerd, geen mailtjes.
+
+## 06-10-2026 (middag, 08:30 UTC): Dagelijkse klantfouten
+
+- Open soort: fout-vinted-content_refresh-a83a9075, 3x bij 3bfbed2c (07:43 tot 07:57 UTC). Klant-eigen: hij is sinds
+  05-10 01:00 niet ingelogd op Vinted (20 scans mislukt met dezelfde reden), terwijl Vinted-scans van 96e30080 (06:34)
+  en f8c0cce9 op dezelfde extensie 1.0.369 wel slagen. Geen code gewijzigd.
+- Egbert (bcdf9aa4): extensie stil sinds 06:23 UTC met één plaatsing op 'claimed' en 47 plaatsingen plus 18
+  verversingen wachtend; tot dat moment liep alles door. Computer uit of slaapt, klant-eigen. Volgende ronde nakijken of
+  de hangende plaatsing weer oppakt zodra hij online komt.
+- Verder wachtend werk alleen bij extensies die uit staan: 0b28c1ce (sinds 01-10), 1ba42900 (sinds 04-10 20:50).
+- Overige fouten van 24 uur (MP/2dehands maat en merk leeg, Facebook tabblad dicht, 2dehands betaalpagina Egbert) waren
+  al afgehandeld. /health ok na de meting.
