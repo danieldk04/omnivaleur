@@ -15870,3 +15870,13 @@ ronde van 08:46: partablecs, Winter Home en amhin nog steeds 0 artikelen, Jannek
 - Egbert (bcdf9aa4): nog steeds stil sinds 06:23 UTC, plaatsing 6fdc0e04 staat op 'claimed', 47 plaatsingen en 18
   verversingen wachten. Klant-eigen, ongewijzigd sinds de vorige ronde.
 - Wachtend werk verder alleen bij extensies die al dagen uit staan: 0b28c1ce (01-10), 1ba42900 (04-10).
+
+## 06-10-2026 (20:05, automatisch): Klantfouten
+
+- fout-2dehands-create-653a054e, 1x bij Egbert (bcdf9aa4), 17:49 UTC. Klant-eigen: zijn extensie was van 17:16:52 tot
+  17:49:02 UTC helemaal stil (rij in extension_stiltes, 32,2 min), midden in de plaatsing van de Motörhead-sleutelhanger
+  na stap "bidding". De 3-minutenbewaker kon pas afgaan toen de computer terugkwam. Daarna liepen de volgende plaatsingen
+  weer elke ~45 s gewoon door. De advertentie staat wél online (m2450795555, openbare pagina 200 met de juiste titel);
+  de server zette de rij zelf op actief. Geen code gewijzigd, niets voor de klant te doen.
+- Past bij zijn klacht van 03-10 ("loopt vast na opnieuw inloggen"): dat zijn stiltes van de computer, geen storing.
+  Zijn wachtrij: 44 plaatsingen en 108 verversingen op 2dehands, gaan door zolang de extensie aan staat.
