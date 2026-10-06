@@ -15814,3 +15814,8 @@ Extra middagronde. 6 accounts in hun eerste week, één nieuw. Web Store levert 
   afkoeling 28 dagen, wachttijd 6 tot 24 uur (was 45 min tot 4 uur), schakelaar met waarschuwing in Instellingen.
   Wel/niet-croppen van foto's om herkenning te ontwijken: bewust niet gebouwd (Vinted eist onbewerkte eigen foto's).
 - Open: of de extensie zelf (plaatsen, bijwerken) onder het verbod op "externe tools" valt is niet beslist.
+
+## 06-10-2026 Database vastgelopen: te kleine server, plus twee zware vragen
+
+Egbert Brouwer zag het inlogscherm terwijl advertenties wel doorliepen: de database lag vannacht ~02:00 tot 08:00 plat tot Daniel hem via Supabase herstartte. Supabase-logs (gelezen door Claude in Daniels browser): server t4g.nano met 0,5 GB geheugen, ~1 GB swap, schijf-IOwait 85 tot 100%, checkpoints van 26 tot 172 s, statement timeouts. Verkeer was klein (11.694 verzoeken in 9 uur), dus het is capaciteit, geen overbelasting zoals 19-09 en 28-09. Daniel zet de server naar Micro (Free Upgrade, prijs blijft $9,68/mnd). Alarmmail kwam vannacht wel binnen.
+Gemeten en gerepareerd: `/api/jobs/onboarding` las tot 50 afgeronde opdrachten met volledig `result`, scans erbij: 11,9 MB per aanroep bij één verkoper (nu 21 kB, 1,04 s naar 0,18 s). `_laatste_eigen_meting` las tien scanresultaten voor één veldje. De tabel `jobs` (20.491 rijen, 190 MB) wordt nergens opgeruimd; scanresultaten zijn ~250 kB per stuk. Openstaand: opruiming van oude scanresultaten, en of Micro genoeg blijft.

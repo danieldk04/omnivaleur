@@ -2658,16 +2658,26 @@ def onboarding_status(user_id: str = Depends(get_current_user)):
     try:
         uit["extensie"] = bool(db.table("extension_heartbeat").select("user_id")
                                .eq("user_id", user_id).limit(1).execute().data)
-        klaar = (db.table("jobs").select("platform,action,result")
-                 .eq("user_id", user_id).eq("status", "done")
-                 .in_("platform", ["marktplaats", "2dehands", "vinted", "facebook"])
-                 .in_("action", ["create", "scan"])
-                 .order("done_at", desc=True).limit(50).execute().data or [])
-        uit["kanaal"] = bool(klaar)
+        # GEEN `result` VAN SCANS OPHALEN (06-10-2026). Een scanresultaat is
+        # honderden kilobytes groot, en dit antwoord gebruikte alleen dat van
+        # plaatsingen. Vijftig rijen met scans erbij kon zo megabytes per aanroep
+        # lezen, op een database die al op 0,5 GB geheugen draaide. Nu: een
+        # lichte vraag voor "kanaal", en alleen de uitkomst van plaatsingen voor
+        # "gepubliceerd".
+        platforms = ["marktplaats", "2dehands", "vinted", "facebook"]
+        uit["kanaal"] = bool(
+            db.table("jobs").select("id")
+            .eq("user_id", user_id).eq("status", "done")
+            .in_("platform", platforms).in_("action", ["create", "scan"])
+            .limit(1).execute().data)
+        plaatsingen = (db.table("jobs").select("result")
+                       .eq("user_id", user_id).eq("status", "done")
+                       .in_("platform", platforms).eq("action", "create")
+                       .order("done_at", desc=True).limit(50).execute().data or [])
         uit["gepubliceerd"] = any(
-            j["action"] == "create" and isinstance(j.get("result"), dict)
+            isinstance(j.get("result"), dict)
             and (j["result"].get("platform_listing_id") or j["result"].get("bevestigd"))
-            for j in klaar)
+            for j in plaatsingen)
         if not uit["gepubliceerd"]:
             items = [i["id"] for i in (db.table("items").select("id").eq("user_id", user_id)
                                        .limit(500).execute().data or [])]
@@ -6368,7 +6378,9 @@ def _laatste_eigen_meting(db, user_id: str, platform: str) -> str | None:
     """
     try:
         rijen = execute_with_retry(
-            db.table("jobs").select("result,done_at,created_at")
+            # Alleen scan_meta uit het resultaat, niet het hele resultaat: een
+            # scanresultaat is honderden kilobytes en dit leest er tien (06-10-2026).
+            db.table("jobs").select("scan_meta:result->scan_meta,done_at,created_at")
             .eq("user_id", user_id).eq("platform", platform)
             .eq("action", "scan").eq("status", "done")
             .order("created_at", desc=True).limit(10)
@@ -6378,7 +6390,7 @@ def _laatste_eigen_meting(db, user_id: str, platform: str) -> str | None:
         return None
     grens = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
     for r in rijen:
-        meta = ((r.get("result") or {}).get("scan_meta") or {})
+        meta = r.get("scan_meta") or ((r.get("result") or {}).get("scan_meta")) or {}
         wanneer = r.get("done_at") or r.get("created_at") or ""
         if meta.get("api_status") == 200 and wanneer >= grens:
             return wanneer

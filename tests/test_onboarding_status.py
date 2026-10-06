@@ -75,3 +75,35 @@ def test_ebay_of_shopify_advertentie_telt(monkeypatch):
     uit = _status(monkeypatch, items=[{"id": "i1", "user_id": "u"}],
                   listings=[{"id": "l", "item_id": "i1", "platform": "ebay", "status": "active"}])
     assert uit["gepubliceerd"] is True
+
+
+def test_scanresultaten_worden_niet_meegelezen(monkeypatch):
+    """06-10-2026: dit antwoord las tot 50 afgeronde opdrachten MET hun resultaat,
+    scans erbij (honderden kB elk, 11,9 MB gemeten bij één verkoper) op een
+    database van 0,5 GB geheugen. Een vraag die scans meeneemt mag `result` niet
+    selecteren."""
+    gezien = []
+
+    class Q:
+        def __init__(self, kolommen): self.kolommen = kolommen; self.acties = None
+        def select(self, kolommen, *_a, **_k): self.kolommen = kolommen; return self
+        def eq(self, k, v):
+            if k == "action": self.acties = [v]
+            return self
+        def in_(self, k, v):
+            if k == "action": self.acties = list(v)
+            return self
+        def order(self, *_a, **_k): return self
+        def limit(self, *_a): return self
+        def execute(self):
+            gezien.append((self.kolommen, self.acties))
+            return types.SimpleNamespace(data=[])
+
+    class DB:
+        def table(self, naam): return Q("")
+
+    monkeypatch.setattr(J, "get_db", lambda: DB())
+    J.onboarding_status(user_id="u")
+    for kolommen, acties in gezien:
+        if acties and "scan" in acties:
+            assert "result" not in kolommen, (kolommen, acties)
