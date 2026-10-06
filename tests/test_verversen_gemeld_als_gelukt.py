@@ -27,6 +27,15 @@ import asyncio
 import pytest
 
 from backend.api import jobs as J
+from backend.services import instellingen as _inst
+
+
+@pytest.fixture(autouse=True)
+def _vinted_herplaatsen_aan(monkeypatch):
+    # Deze tests gaan over de boekhouding van een herkansing, met Vinted als
+    # voorbeeldkanaal. Dat de schakelaar uit staat is getest in
+    # test_vinted_herplaatsen_standaard_uit.py.
+    monkeypatch.setattr(_inst, "vinted_herplaatsen_toegestaan", lambda u: True)
 
 
 class _Bouwer:
