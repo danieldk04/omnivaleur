@@ -15789,3 +15789,17 @@ Extra middagronde. 6 accounts in hun eerste week, één nieuw. Web Store levert 
   scripts/video_inhaal.py, stap in .github/workflows/leadgen-mail.yml, doelen in Supabase leadgen_opslag "video_inhaal"
   (niet in de repo, die is publiek). Tekst V1 in de sheet aangepast: "Vragen mag ook gewoon, als iets niet helemaal duidelijk is."
 - Open: per-lead opening van de video blijft onmeetbaar zonder persoonlijke link.
+
+## 06-10-2026: Onboarding nieuwe klanten (middag-ronde, gedraaid 08:46 lokaal)
+
+7 accounts in hun eerste week, geen nieuwe. Web Store levert 1.0.369, gelijk aan de repo. Railway-logs niet gelezen
+(railway-CLI ontbreekt op deze machine), agenda niet (workspacemcp niet bereikbaar).
+- 82b13998 (Anneloes): mailde 05-10 22:34 op de Light-mail: "account verwijderen per direct". Er bestaat geen
+  verwijderfunctie in het product en verwijderen is Daniels handeling. Antwoordconcept bewaard (schrijfstijl). Proef loopt
+  vandaag 13:36 UTC af zonder betaalmethode, dus geen kosten. Haar 38 Vinted-advertenties staan op haar eigen Vinted.
+- 31d28378 (Janneke): logde 05-10 21:49 lokaal nog in, nog steeds geen Shopify-koppeling, geen extensie, 0 artikelen.
+  Geen Shopify-alarmmail in het postvak. Marktplaats-scan vervalt vanzelf 07-10. Daniel heeft WhatsApp-contact.
+- cdf0ec2c (partablecs): extensie 21:45 nog gezien, nooit gescand. Daniel mailde 20:18, geen antwoord.
+- 0d396015 (amhin): nog onbevestigd, Daniel mailde 20:20. 4c673a4a (Winter Home), a4fc5340 (Peter, proef tot 07-10),
+  aa093a0a: ongewijzigd.
+- Niets gerepareerd, geen nieuwe fouten.
