@@ -4970,8 +4970,9 @@ async function mpAdvertentieSnapshot(tabId) {
         if (label && waarde) kenmerk[label.trim().toLowerCase()] = waarde.trim();
       }
       const conditieNaarOns = (w) => {
-        const t = (w || "").toLowerCase();
+        const t = (w || "").toLowerCase().replace(/-/g, " ");
         if (!t) return "";
+        if (t.includes("niet werkend") || t.includes("werkt niet")) return "poor";
         if (t.includes("nieuw met")) return "new_with_tags";
         if (t.includes("zo goed als nieuw")) return "good";
         if (t.includes("nieuw")) return "new";
@@ -7842,7 +7843,15 @@ async function bgScanMp2dh(job, serverUrl) {
                     if (/^https?:\/\//.test(u)) photos.push(u);
                   }
                 }
-                return { description: description.trim().slice(0, 20000), photo_urls: [...new Set(photos)] };
+                // De staat die de verkoper zelf koos staat als slug in dezelfde
+                // pagina: "conditie":"zo-goed-als-nieuw" / "gedragen" /
+                // "niet-werkend". Zonder dit kwam elke Marktplaats-kandidaat
+                // zonder staat binnen en kreeg hij de standaard van de lading:
+                // bij amandaonline001 (06-10-2026) stonden 19 gedragen of kapotte
+                // artikelen daardoor als "Nieuw met kaartje" in haar voorraad.
+                const cm = html.match(/"conditie"\s*:\s*"([a-z0-9-]{2,40})"/i);
+                const condition = cm ? cm[1].replace(/-/g, " ") : "";
+                return { description: description.trim().slice(0, 20000), photo_urls: [...new Set(photos)], condition };
               } catch (e3) {
                 await nap(500 * Math.pow(2, attempt));
               }
@@ -7854,6 +7863,7 @@ async function bgScanMp2dh(job, serverUrl) {
         if (e) {
           enriched++;
           if (e.description) it.description = e.description;
+          if (e.condition && !it.condition) it.condition = e.condition;
           if (e.photo_urls && e.photo_urls.length) {
             it.photo_urls = e.photo_urls;
             it.photo_url = it.photo_url || e.photo_urls[0];

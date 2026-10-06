@@ -73,6 +73,11 @@ VERWACHT = {
     "Defect": "poor",
     "Comme neuf": "good",
     "Utilisé": "fair",
+    # Marktplaats-advertentiepagina, als slug (06-10-2026, amandaonline001)
+    "zo-goed-als-nieuw": "good",
+    "niet-werkend": "poor",
+    "gedragen": "fair",
+    "nieuw": "new",
     # Hoofdletters en spaties maken niets uit
     "  zo GOED als   nieuw ": "good",
 }

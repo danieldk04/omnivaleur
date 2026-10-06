@@ -394,9 +394,13 @@ def _fotos_uit_html(ruwe: str) -> list[str]:
 
 def _onze_conditie(waarde: str) -> str:
     """Marktplaats' woord voor de staat, in het woord dat wij gebruiken."""
-    t = (waarde or "").lower()
+    t = (waarde or "").lower().replace("-", " ")
     if not t:
         return ""
+    # Vóór "nieuw": anders valt niets hier ooit op, en "Niet werkend" stond
+    # helemaal niet in de lijst (06-10-2026, kapotte printer werd geen "poor").
+    if "niet werkend" in t or "werkt niet" in t:
+        return "poor"
     if "nieuw met" in t:
         return "new_with_tags"
     if "zo goed als nieuw" in t:

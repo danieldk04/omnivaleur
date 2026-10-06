@@ -84,7 +84,9 @@ _STAAT_WOORDEN = (
 
 def _map_condition(raw: str | None) -> str | None:
     """De staat zoals het platform hem noemt, als onze trede. None = onbekend."""
-    s = " ".join((raw or "").lower().split())
+    # Marktplaats levert de staat uit de advertentiepagina als slug
+    # ("zo-goed-als-nieuw", "niet-werkend"); streepjes tellen als spatie.
+    s = " ".join((raw or "").lower().replace("-", " ").split())
     if not s:
         return None
     for trede, patronen in _STAAT_WOORDEN:

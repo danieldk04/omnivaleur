@@ -170,6 +170,9 @@ def test_maat_emmertjes_van_marktplaats_komen_niet_in_het_item():
     assert mod._onze_maat("46") == "46"
     assert mod._onze_conditie("Zo goed als nieuw") == "good"
     assert mod._onze_conditie("Gedragen") == "fair"
+    assert mod._onze_conditie("Niet werkend") == "poor"
+    assert mod._onze_conditie("niet-werkend") == "poor"
+    assert mod._onze_conditie("zo-goed-als-nieuw") == "good"
     assert mod._onze_conditie("Nieuw met prijskaartje") == "new_with_tags"
 
 
