@@ -17,6 +17,20 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## marktplaats-staat-als-slug
+
+*06-10-2026 — "Marktplaats-scan las de staat niet uit; lading-standaard \"nieuw met kaartje\" kwam op gedragen en kapotte artikelen (06-10-2026, extensie 1.0.370)"*
+
+Tot extensie 1.0.370 kwam elke Marktplaats-importkandidaat zonder staat binnen (import_candidates.condition leeg). De import viel dan terug op de standaard die de klant voor de hele lading koos. Bij amandaonline001 (8f91a370, 06-10-2026) stonden zo 19 artikelen op "Nieuw met kaartje" terwijl haar eigen advertentie "gedragen", "zo goed als nieuw" of "niet werkend" zei (een kapotte Canon-printer).
+
+De advertentiepagina bevat de staat als slug: `"conditie":"zo-goed-als-nieuw"` / `"gedragen"` / `"niet-werkend"` / `"nieuw"`. De verrijkronde op de server (`_conditie_correctie`) helpt niet: die verbetert alleen de oude gok "good", nooit een lading-standaard. En "niet werkend" stond in geen van de twee kleine vertaallijstjes (`_onze_conditie`, `conditieNaarOns`).
+
+**Why:** een koper die "nieuw met kaartje" leest en een gedragen trui krijgt, stuurt hem terug; de klant ziet het niet, want het veld is gevuld.
+
+**How to apply:** meet de staat tegen de openbare advertentiepagina per klant (curl + grep `"conditie"`), nooit aannemen dat een gevuld veld klopt. Klanten met extensie onder 1.0.370 die uit Marktplaats importeerden met een lading-standaard kunnen hetzelfde hebben. Zie "verzonnen-standaard-is-erger-dan-leeg" en "staat-bij-import".
+
+---
+
 ## antwoord-van-ander-adres-via-draad
 
 *06-10-2026 — 06-10 Antiek de Evenaar kreeg mail 2 na een nee van 29-09; antwoord kwam van ander adres en werd niet herkend; nu via In-Reply-To*

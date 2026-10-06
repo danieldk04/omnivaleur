@@ -15900,3 +15900,25 @@ ook geld dan de gewone rem. Nummers en namen nagemeten in de openbare boom van 2
 Proef: tests/test_tapijt_wijkt_uit_naar_overige.py (oude code op 1c6a4841 neemt de rest van de rij terug).
 Niet meetbaar zonder zijn inlog: of 536 bij hem nu nog een gratis plek heeft. Tapijten die op 20-09 al geannuleerd
 zijn komen niet vanzelf terug; die moet hij opnieuw klaarzetten. Geldt voor alle klanten, op Marktplaats en 2dehands.
+
+## 06-10-2026: Onboarding nieuwe klanten (middag, avondrun 21:10 lokaal)
+
+7 accounts in hun eerste week, 1 nieuw. Web Store levert 1.0.369; repo nu 1.0.370 (nog niet geüpload). Agenda niet
+gelezen (workspacemcp niet bereikbaar).
+- 8f91a370 (amandaonline001, nieuw 12:21): heren- en damesmode nieuw met label (Pinewood, Cast Iron, PME Legend).
+  218 artikelen in; 142 actief op Vinted, 108 op Marktplaats, 4 op 2dehands; eerste plaatsing na 3,4 uur. Geen eerder
+  contact met Daniel.
+  - Gerepareerd (bc557b8f): de Marktplaats-scan las de staat niet uit, dus alles kreeg haar lading-standaard "nieuw met
+    kaartje". Gemeten tegen haar 116 openbare MP-advertenties: 19 geïmporteerde artikelen zeiden zelf "gedragen" (9),
+    "zo goed als nieuw" (9) of "niet werkend" (1, Canon-printer). Die 19 rechtgezet naar fair/good/poor (voor 19x
+    new_with_tags, na 9 good, 9 fair, 1 poor); ze stonden alleen op MP, geen open opdrachten. Extensie leest nu
+    `"conditie"` uit de advertentiepagina; server en extensie kennen "niet werkend". Voor-en-na: oude imports.py faalt
+    op de slugs, nieuwe niet; volle testsuite 2201 groen.
+  - 61 artikelen met prijs 0 zijn echte "Bieden"-advertenties (MP priceType FAST_BID, nagemeten); geen fout. Op Vinted
+    kan zo'n artikel pas als zij een prijs invult.
+  - Extensie stil sinds 19:41 lokaal, 1 Vinted-plaatsing op 'claimed' en 2 2dehands-plaatsingen wachtend. Klant-eigen
+    (computer of Chrome dicht); gaan door als ze online komt. Volgende ronde nakijken.
+  - Mailtje klaargezet voor Daniel.
+- partablecs, Winter Home, amhin, Janneke, Peter (proef tot 07-10 18:02), aa093a0a: ongewijzigd, geen mailtje.
+- Open: andere klanten die onder 1.0.370 uit Marktplaats importeerden met een lading-standaard kunnen hetzelfde hebben;
+  niet over meerdere klanten gemeten (productiedatabase-regel).
