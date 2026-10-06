@@ -17,6 +17,30 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## antwoord-van-ander-adres-via-draad
+
+*06-10-2026 — 06-10 Antiek de Evenaar kreeg mail 2 na een nee van 29-09; antwoord kwam van ander adres en werd niet herkend; nu via In-Reply-To*
+
+Koude mail 1 ging naar info@antiekdeevenaar.nl, de eigenaar antwoordde 29-09 "geen interesse" vanaf ed.adema@planet.nl (iPhone-citaat zonder ontvanger). Domeinkoppeling en citaatkoppeling vonden niets, dus de lead bleef "niet beantwoord" en mail 2 ging 06-10 14:01 toch uit. Zijn reactie: meer mails zijn volstrekt overbodig, hij reageert niet meer.
+
+**Why:** een antwoord van een privéadres is voor adres, domein en citaat onzichtbaar. Alleen In-Reply-To/References wijst altijd naar onze eigen mail.
+
+**How to apply:** `_adres_uit_draad` in scripts/leadgen_mail.py koppelt nu eerst via de draad (sinds 06-10-2026, test tests/test_leadgen_antwoord_via_draad.py). Gemeten: alleen Eddie kreeg na een antwoord nog een mail. Zie "elke-ronde-dezelfde-logregel" voor een verwante stille mist, en "klanten-zijn-geen-leads".
+
+---
+
+## frame-removed-na-klik-is-geen-mislukking
+
+*05-10-2026 — "Frame with ID 0 was removed" uit executeScript na een klik die de pagina doorstuurt betekent dat de klik werkte; laat de nameting beslissen*
+
+"Frame with ID 0 was removed" komt uit chrome.scripting.executeScript wanneer het tabblad doorstuurt terwijl ons (async) script nog wacht. Bij Vinted-verwijderen gebeurt dat na de bevestigklik: de advertentie was dan juist wél weg (30-09-2026, Toon: 8791506164 om 13:03 in de kast, fout om 13:44, daarna 404). Gevolg was een foutmelding plus een valse "mogelijk verkocht"-vraag uit de kastscan. Gerepareerd in extensie 1.0.364.
+
+**Why:** een afgebroken script na een schrijvende klik zegt niets over of de klik lukte; de doorsturing is eerder een teken van succes.
+
+**How to apply:** vang die fout rond elke klik die kan navigeren, wacht op waitForTabLoad en laat de nameting (kast, openbare pagina) beslissen. "No tab with id" is in de extensie nog steeds een fout, maar geen bewijs dat het niet lukte: 05-10-2026 (26cf5471, MP-oorbellen) was het venster beantwoord, het tabblad daarna weg, de advertentie wel weg (404), en de herplaatsing werd overgeslagen zodat het artikel nergens stond. Sindsdien kijkt `fail_job` bij zo'n verwijdering (venster beantwoord, geen enkele statuscode in de controles) zelf op www.marktplaats.nl/<m-nummer> of 2dehands.be: 404/410 = gelukt (`_verwijdering_openbaar_bewezen`). Levende advertentie geeft daar 200. Zie ook "vinted-opslaan-doodt-het-script" en "verkoopkanaal-moet-bewezen-zijn".
+
+---
+
 ## shopify-oauth-fout-staat-in-de-html
 
 *05-10-2026 — "Shopify's token-uitwisseling zegt in een HTML-pagina precies wat fout is (geheim, niet geïnstalleerd, andere organisatie); wegpoetsen liet Janneke (31d28378) vastlopen. Klant nooit op gevoel aan een account koppelen."*
@@ -270,18 +294,6 @@ vangnet allemaal "kan nog op het kanaal staan". Een rij die nooit geplaatst is h
 **How to apply:** sluit je een nooit geplaatste rij af, gebruik 'delisted' met de reden in
 error_message. Zie je "no advert number" in een verwijderfout, kijk dan eerst of de rij ooit een
 advertentie had. Verwant: "herplaatsing-laat-oude-rij-staan", "verkoopkanaal-moet-bewezen-zijn".
-
----
-
-## frame-removed-na-klik-is-geen-mislukking
-
-*30-09-2026 — "Frame with ID 0 was removed" uit executeScript na een klik die de pagina doorstuurt betekent dat de klik werkte; laat de nameting beslissen*
-
-"Frame with ID 0 was removed" komt uit chrome.scripting.executeScript wanneer het tabblad doorstuurt terwijl ons (async) script nog wacht. Bij Vinted-verwijderen gebeurt dat na de bevestigklik: de advertentie was dan juist wél weg (30-09-2026, Toon: 8791506164 om 13:03 in de kast, fout om 13:44, daarna 404). Gevolg was een foutmelding plus een valse "mogelijk verkocht"-vraag uit de kastscan. Gerepareerd in extensie 1.0.364.
-
-**Why:** een afgebroken script na een schrijvende klik zegt niets over of de klik lukte; de doorsturing is eerder een teken van succes.
-
-**How to apply:** vang die fout rond elke klik die kan navigeren, wacht op waitForTabLoad en laat de nameting (kast, openbare pagina) beslissen. Andere fouten (No tab with id) blijven fouten. Zie ook "vinted-opslaan-doodt-het-script" en "verkoopkanaal-moet-bewezen-zijn".
 
 ---
 

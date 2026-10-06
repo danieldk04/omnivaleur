@@ -15880,3 +15880,12 @@ ronde van 08:46: partablecs, Winter Home en amhin nog steeds 0 artikelen, Jannek
   de server zette de rij zelf op actief. Geen code gewijzigd, niets voor de klant te doen.
 - Past bij zijn klacht van 03-10 ("loopt vast na opnieuw inloggen"): dat zijn stiltes van de computer, geen storing.
   Zijn wachtrij: 44 plaatsingen en 108 verversingen op 2dehands, gaan door zolang de extensie aan staat.
+
+## 06-10-2026: Antiek de Evenaar kreeg mail 2 na een nee
+
+Eddie (Antiek de Evenaar, Aduard) schreef op 29-09 "geen interesse" vanaf ed.adema@planet.nl. Mail 1 was naar
+info@antiekdeevenaar.nl gegaan, dus de machine koppelde het antwoord niet aan de lead en mail 2 ging op 06-10 14:01
+toch uit. Zijn antwoord van 06-10 20:26: nog meer mail is overbodig, hij reageert niet meer. Reparatie:
+`_adres_uit_draad` koppelt antwoorden eerst via In-Reply-To aan onze eigen mail, ongeacht van welk adres ze komen.
+Gemeten op de echte postbus sinds 25-09: alleen Eddie kreeg na een antwoord nog een mail. Eddie zelf staat pas als
+afgewezen in de administratie zodra de eerstvolgende tick met deze code draait. Daniel besluit of hij een excuus wil.

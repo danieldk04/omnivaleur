@@ -1503,6 +1503,30 @@ def _adres_uit_citaat(body: str, state: dict) -> str | None:
     return None
 
 
+def _adres_uit_draad(msg, state: dict, verzonden: list[dict]) -> str | None:
+    """Het adres waar wij naartoe schreven, via de draad van dit antwoord.
+
+    Gemeten geval Antiek de Evenaar (06-10-2026): mail 1 ging naar
+    info@antiekdeevenaar.nl, de eigenaar antwoordde "geen interesse" vanaf zijn
+    privéadres ed.adema@planet.nl, en zijn iPhone citeert alleen "Daniel de Koning
+    schreef", zonder ontvanger. Domein en citaat vonden dus niets, het antwoord
+    werd niet gezien en een week later kreeg hij mail 2 toch. Elk antwoord draagt
+    wél In-Reply-To en References van onze mail, ongeacht van welk adres het komt:
+    dat is de enige sleutel die altijd klopt. Alleen een adres dat al in de
+    administratie staat telt mee."""
+    verwezen = set()
+    for veld in ("In-Reply-To", "References"):
+        for mid in _leesbaar(msg.get(veld)).split():
+            if mid.startswith("<"):
+                verwezen.add(mid)
+    if not verwezen:
+        return None
+    for mail in verzonden:
+        if mail.get("mid") in verwezen and mail.get("adres") in state:
+            return mail["adres"]
+    return None
+
+
 def _laatst_verstuurd_per_adres() -> dict[str, float]:
     """Per ontvanger het tijdstip van onze laatste mail, in seconden sinds 1970."""
     uit: dict[str, float] = {}
@@ -1750,6 +1774,11 @@ def _check_inbox(state: dict, boek: "Leadboek", dagen: int) -> tuple[int, int, i
                 continue
 
             st = state.get(afzender)
+            if not st:
+                # De draad gaat vóór elke gok op domein of citaat: In-Reply-To
+                # wijst naar onze eigen mail en dus naar het adres dat we kennen.
+                afzender = _adres_uit_draad(msg, state, _verzonden_lezen()) or afzender
+                st = state.get(afzender)
             if not st:
                 # Antwoorden komen lang niet altijd terug van het adres waar wij
                 # naartoe schreven. A. Dinkelaar kreeg mail op
@@ -3542,6 +3571,7 @@ def _verzonden_lezen() -> list[dict]:
                     "op": ts,
                     "eigen": _kern_tekst(tekst),
                     "verwijst": verwijzingen,
+                    "mid": _leesbaar(msg.get("Message-ID", "")).strip(),
                 })
     except Exception as e:  # noqa: BLE001
         print(f"  (verzonden map niet gelezen: {e})")
