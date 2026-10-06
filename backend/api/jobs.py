@@ -810,11 +810,21 @@ _BETAALDE_RUBRIEK_GEHEUGEN = timedelta(days=28)
 # Er wordt pas uitgeweken als die rubriek bij DEZE verkoper aantoonbaar geld
 # kost. Zolang er een gratis plek is blijft een smartwatch in Smartwatches, waar
 # kopers hem het eerst zoeken.
+#
+# TAPIJTEN (06-10-2026, Toon / De Juiste Toon, 2dehands.be). "Stoffering |
+# Tapijten en Vloerkleden" (504/533) is bij hem vol en kost geld; zijn eigen
+# oplossing was "Woonaccessoires | Overige" (504/536), waar hij ze gratis kwijt
+# kon. 533 en 536 zijn op 06-10-2026 nagemeten in de openbare boom van
+# 2dehands.be en marktplaats.nl (zelfde nummers, zelfde namen). De extensie
+# kent 504/536 al als "wonen vachten".
 _GRATIS_UITWIJK = {
     "sieraden smartwatch": "sieraden sporthorloge",
     "mp:1826/3041": "mp:1826/3045",
+    "wonen tapijten en kleden": "wonen vachten",
+    "mp:504/533": "mp:504/536",
 }
-_UITWIJK_MP_NAAM = {"mp:1826/3045": "Sporthorloges"}
+_UITWIJK_MP_NAAM = {"mp:1826/3045": "Sporthorloges",
+                    "mp:504/536": "Woonaccessoires | Overige"}
 
 
 def _uitwijk_payload(payload) -> dict | None:

@@ -15889,3 +15889,14 @@ toch uit. Zijn antwoord van 06-10 20:26: nog meer mail is overbodig, hij reageer
 `_adres_uit_draad` koppelt antwoorden eerst via In-Reply-To aan onze eigen mail, ongeacht van welk adres ze komen.
 Gemeten op de echte postbus sinds 25-09: alleen Eddie kreeg na een antwoord nog een mail. Eddie zelf staat pas als
 afgewezen in de administratie zodra de eerstvolgende tick met deze code draait. Daniel besluit of hij een excuus wil.
+
+## 06-10-2026: Toon (De Juiste Toon): tapijten wijken uit naar Woonaccessoires | Overige
+
+Toon vroeg via 2dehands.be om tapijten door te plaatsen in "decoratie overige", want "Tapijten en Vloerkleden"
+(504/533) kost bij hem geld en zelf kreeg hij ze daar gratis kwijt. Zelfde mechanisme als de smartwatches
+(`_GRATIS_UITWIJK` in backend/api/jobs.py): bij een betaalmelding op 533 gaat de opdracht, en wat er nog wacht,
+terug in de rij als 504/536 ("Woonaccessoires | Overige", in de extensie "wonen vachten"). Hooguit één sprong; kost 536
+ook geld dan de gewone rem. Nummers en namen nagemeten in de openbare boom van 2dehands.be en marktplaats.nl.
+Proef: tests/test_tapijt_wijkt_uit_naar_overige.py (oude code op 1c6a4841 neemt de rest van de rij terug).
+Niet meetbaar zonder zijn inlog: of 536 bij hem nu nog een gratis plek heeft. Tapijten die op 20-09 al geannuleerd
+zijn komen niet vanzelf terug; die moet hij opnieuw klaarzetten. Geldt voor alle klanten, op Marktplaats en 2dehands.
