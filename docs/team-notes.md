@@ -15854,3 +15854,19 @@ ronde van 08:46: partablecs, Winter Home en amhin nog steeds 0 artikelen, Jannek
   10:43 bezig met 145 advertenties). Geen code gewijzigd.
 - Open, geen storing: de Shopify-keuze bij Import staat ook aan te vinken voor wie geen winkel koppelde. Kan later grijs
   met "koppel eerst" als dit vaker voorkomt.
+
+## 06-10-2026 (middag, 12:10 UTC): Dagelijkse klantfouten
+
+- Geen open foutsoorten; alle 5 soorten van 24 uur waren al afgehandeld. Geen code gewijzigd. Geen betaalslot bij wie
+  werk heeft wachten. /health ok na de meting.
+- 8f91a370 (amandaonline001, nieuw vandaag): 3 Vinted-prijswijzigingen om 11:46 mislukt op "niet ingelogd op Vinted".
+  Dat zijn prijswijzigingen, geen verversingen, dus de nieuwe Vinted-schakelaar raakt ze terecht niet. De controle keek
+  ook in een tabblad op Vinted zelf; haar scan van 10:49 lukte nog, daarna kennelijk uitgelogd. Klant-eigen.
+- 8f91a370: 4 2dehands-plaatsingen sinds 11:45 wachten op hun Marktplaats-rubriek (1 tot 3 mislukte opzoekingen op de
+  server). Lokaal nagedaan voor de Melrose-trui: de opzoeking geeft nu gewoon Dames > Tops. Railway-logs niet te lezen,
+  dus waarom het op de server mislukte is onbekend. Haar extensie is stil sinds 12:00 UTC, dus er wordt nu niet opnieuw
+  gezocht. Volgende ronde nakijken of deze vier uitgaan zodra ze online komt (geduld is 6 uur, daarna gaan ze met de
+  geraden rubriek).
+- Egbert (bcdf9aa4): nog steeds stil sinds 06:23 UTC, plaatsing 6fdc0e04 staat op 'claimed', 47 plaatsingen en 18
+  verversingen wachten. Klant-eigen, ongewijzigd sinds de vorige ronde.
+- Wachtend werk verder alleen bij extensies die al dagen uit staan: 0b28c1ce (01-10), 1ba42900 (04-10).
