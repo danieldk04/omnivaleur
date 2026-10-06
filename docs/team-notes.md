@@ -15803,3 +15803,14 @@ Extra middagronde. 6 accounts in hun eerste week, één nieuw. Web Store levert 
 - 0d396015 (amhin): nog onbevestigd, Daniel mailde 20:20. 4c673a4a (Winter Home), a4fc5340 (Peter, proef tot 07-10),
   aa093a0a: ongewijzigd.
 - Niets gerepareerd, geen nieuwe fouten.
+
+## 06-10-2026: Vinted-herplaatsen standaard uit
+
+- Vinted-voorwaarden per 05-10-2026 (par. 6 en 7, door Daniel zelf gelezen): externe softwaretools en het herhaaldelijk
+  verwijderen en opnieuw plaatsen van hetzelfde artikel zijn verboden; sancties waarschuwing, artikel weg, blokkade, ook
+  geautomatiseerd. Daniels wallet zat dicht door de Vinted Pay-overstap (Mangopay, 05-10), los van relisten.
+- Daniel (06-10): herplaatsen op Vinted standaard uit met waarschuwing; wachttijd tussen weghalen en terugzetten langer.
+  Gedaan: instelling `vinted_herplaatsen` (standaard uit) in instellingen.py, poort in relist.refresh_listing, Vinted-
+  afkoeling 28 dagen, wachttijd 6 tot 24 uur (was 45 min tot 4 uur), schakelaar met waarschuwing in Instellingen.
+  Wel/niet-croppen van foto's om herkenning te ontwijken: bewust niet gebouwd (Vinted eist onbewerkte eigen foto's).
+- Open: of de extensie zelf (plaatsen, bijwerken) onder het verbod op "externe tools" valt is niet beslist.

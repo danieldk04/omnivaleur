@@ -189,7 +189,7 @@ VERZENDING_2DH_MODUS = "verzending_2dh_modus"
 VERZENDING_2DH_MODI = ("standaard", "regel", "alles")
 
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
-             "auto_relist": True, VERKOOPVRAAG: True, VERZENDING_2DH_WOORDEN: [],
+             "auto_relist": True, "vinted_herplaatsen": False, VERKOOPVRAAG: True, VERZENDING_2DH_WOORDEN: [],
              VERZENDING_2DH_BRIEF_ONDER: 0, VERZENDING_2DH_MODUS: "standaard",
              "fabrikant_naam": "", "fabrikant_adres": "", "fabrikant_email": "",
              FABRIKANT_MEESTUREN: True,
@@ -214,6 +214,11 @@ def _schoon(rauw: dict | None) -> dict:
     # listen op marktplaats" is een terechte klacht als je die knop niet hebt.
     if "auto_relist" in rauw:
         uit["auto_relist"] = bool(rauw.get("auto_relist"))
+    # Vinted verbiedt sinds 05-10-2026 (voorwaarden par. 6) externe software en
+    # het herhaaldelijk verwijderen en opnieuw plaatsen van hetzelfde artikel.
+    # Daarom staat herplaatsen op Vinted standaard UIT en kost het een bewuste klik.
+    if "vinted_herplaatsen" in rauw:
+        uit["vinted_herplaatsen"] = bool(rauw.get("vinted_herplaatsen"))
     if VERKOOPVRAAG in rauw:
         uit[VERKOOPVRAAG] = bool(rauw.get(VERKOOPVRAAG))
     # Marktplaats kapt deze velden zelf af op 255 tekens; langer opslaan zou

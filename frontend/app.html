@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=c97ad84a3c"></script>
+<script src="/i18n.js?v=2ad5429353"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1691,6 +1691,15 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <input type="checkbox" id="auto-relist-aan" onchange="saveAutoRelist()">
           <span>Relist my Marktplaats listings automatically</span>
         </label>
+        <label class="vg-chip" style="max-width:420px;margin-bottom:6px">
+          <input type="checkbox" id="vinted-herplaatsen-aan" onchange="saveVintedHerplaatsen()">
+          <span>Allow relisting on Vinted (at my own risk)</span>
+        </label>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          Off by default. Vinted's terms since 5 October 2026 forbid deleting and re-adding the same item
+          and using external tools for it. Breaking them can get your Vinted account warned, restricted or blocked.
+          If you switch it on, a Vinted listing is only taken down once every 28 days and comes back 6 to 24 hours later.
+        </div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <label for="relist-dagen" style="font-size:13px">Relist after</label>
           <input type="number" id="relist-dagen" min="7" max="85" step="1" style="max-width:90px">
@@ -8826,7 +8835,7 @@ const REFRESH_DAILY_CAP = 8;
 // Marktplaats vraagt geld voor bovenaan komen, dus opnieuw plaatsen is daar
 // gevoeliger dan op Vinted en de rem staat er strakker.
 const REFRESH_PLATFORMS = ['vinted', 'marktplaats', '2dehands'];
-const REFRESH_COOLDOWN_BY_PLATFORM = { marktplaats: 21, '2dehands': 21 };
+const REFRESH_COOLDOWN_BY_PLATFORM = { vinted: 28, marktplaats: 21, '2dehands': 21 };
 const cooldownDays = p => REFRESH_COOLDOWN_BY_PLATFORM[p] || REFRESH_COOLDOWN_DAYS;
 const PLATFORM_LABEL = { vinted: 'Vinted', marktplaats: 'Marktplaats', '2dehands': '2dehands' };
 const REFRESH_PLATFORM_STRATEGIES = {
@@ -9396,8 +9405,12 @@ function rfLastRefreshCell(l) {
 let refreshModalState = null;
 
 function refreshItem(itemId, title, platform) {
-  const strategies = REFRESH_PLATFORM_STRATEGIES[platform];
+  let strategies = REFRESH_PLATFORM_STRATEGIES[platform];
   if (!strategies) { alert(`Refresh isn't available for ${platform} yet.`); return; }
+  // Vinted: herplaatsen staat standaard uit (voorwaarden van 05-10-2026, par. 6).
+  if (platform === 'vinted' && !(state.settings && state.settings.vinted_herplaatsen)) {
+    strategies = strategies.filter(s => s !== 'relist');
+  }
   const item = state.items.find(i => i.id === itemId);
   refreshModalState = { itemId, title, platform, strategies, currentPrice: item?.price || 0 };
 
@@ -12217,6 +12230,11 @@ async function loadRelistDagen() {
       schakel.checked = data.auto_relist !== false;
       schakel.closest('.vg-chip').classList.toggle('on', schakel.checked);
     }
+    const vintedSchakel = document.getElementById('vinted-herplaatsen-aan');
+    if (vintedSchakel) {
+      vintedSchakel.checked = data.vinted_herplaatsen === true;
+      vintedSchakel.closest('.vg-chip').classList.toggle('on', vintedSchakel.checked);
+    }
     const vraagSchakel = document.getElementById('verkoopvraag-aan');
     if (vraagSchakel) {
       vraagSchakel.checked = data.verkoopvraag !== false;
@@ -12628,6 +12646,33 @@ async function saveFabrikant() {
 
 // Aan of uit hoort meteen te gelden. Een schakelaar die pas werkt na Opslaan is
 // precies het soort ding waarvan je later denkt dat je hem hebt omgezet.
+async function saveVintedHerplaatsen() {
+  const schakel = document.getElementById('vinted-herplaatsen-aan');
+  const melding = document.getElementById('relist-dagen-status');
+  if (!schakel) return;
+  if (schakel.checked && !confirm("Vinted's terms forbid deleting and re-adding the same item and using external tools for it. Your Vinted account can be warned, restricted or blocked. Switch it on anyway?")) {
+    schakel.checked = false;
+  }
+  schakel.closest('.vg-chip').classList.toggle('on', schakel.checked);
+  melding.textContent = 'Saving…';
+  try {
+    const r = await apiFetchRetry(`${API}/api/items/settings`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vinted_herplaatsen: schakel.checked }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+    state.settings = { ...state.settings, ...data };
+    schakel.checked = data.vinted_herplaatsen === true;
+    schakel.closest('.vg-chip').classList.toggle('on', schakel.checked);
+    melding.textContent = schakel.checked
+      ? 'Saved — relisting on Vinted is on, at your own risk.'
+      : 'Saved — Omnivaleur no longer relists on Vinted.';
+  } catch (e) {
+    melding.textContent = `Could not save: ${e.message}`;
+  }
+}
+
 async function saveAutoRelist() {
   const schakel = document.getElementById('auto-relist-aan');
   const melding = document.getElementById('relist-dagen-status');

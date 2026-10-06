@@ -121,6 +121,7 @@ MAX_REFRESHES_PER_USER_PER_DAY = 8
 COOLDOWN_DAYS_PER_PLATFORM = {
     "marktplaats": 21,
     "2dehands": 21,
+    "vinted": 28,
 }
 MAX_MP_REFRESHES_PER_USER_PER_DAY = 3
 
@@ -129,6 +130,11 @@ def _cooldown_days(platform: str) -> int:
     return COOLDOWN_DAYS_PER_PLATFORM.get(platform, MIN_COOLDOWN_DAYS)
 RELIST_DELAY_MIN_MINUTES = 45   # recreate happens 45min-4h after delete
 RELIST_DELAY_MAX_MINUTES = 240
+# Vinted (05-10-2026): wie het toch aanzet, laat het artikel eerst 6 tot 24 uur
+# weg zijn in plaats van 45 minuten tot 4 uur. Weghalen en direct terugzetten is
+# het patroon waar de nieuwe voorwaarden (par. 6) tegen zijn.
+VINTED_DELAY_MIN_MINUTES = 360
+VINTED_DELAY_MAX_MINUTES = 1440
 CONTENT_PRICE_JITTER_PCT = 0.02  # +/-2% nudge, rounded to a sane price
 
 
@@ -866,6 +872,15 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
             f"Available here: {', '.join(sorted(allowed)) or 'none'}."
         )
 
+    if platform == "vinted" and strategy == "relist":
+        from backend.services.instellingen import lees as _lees_instellingen
+        if not _lees_instellingen(user_id).get("vinted_herplaatsen", False):
+            raise RefreshError(
+                "Relisting on Vinted is switched off. Vinted's terms (since 5 October "
+                "2026) forbid deleting and re-adding the same item and using external "
+                "tools for it, and breaking them can get your account blocked. You can "
+                "switch it on in Settings, at your own risk.")
+
     db = get_db()
 
     item_resp = (await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).execute(), herkans=True))
@@ -1011,7 +1026,10 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
     # altijd twee opdrachten, of geen enkele. Nooit alleen een verwijdering.
 
     # ---- 1. Alles voorbereiden. Hier mag het misgaan; er is nog niets weg. ----
-    delay_minutes = random.randint(RELIST_DELAY_MIN_MINUTES, RELIST_DELAY_MAX_MINUTES)
+    if platform == "vinted":
+        delay_minutes = random.randint(VINTED_DELAY_MIN_MINUTES, VINTED_DELAY_MAX_MINUTES)
+    else:
+        delay_minutes = random.randint(RELIST_DELAY_MIN_MINUTES, RELIST_DELAY_MAX_MINUTES)
     scheduled_for = (now + timedelta(minutes=delay_minutes)).isoformat()
 
     if new_price is not None:
