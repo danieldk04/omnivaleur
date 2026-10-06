@@ -15827,3 +15827,9 @@ Gemeten en gerepareerd: `/api/jobs/onboarding` las tot 50 afgeronde opdrachten m
   relisting on Vinted") dekt nu beide. Server weigert elke Vinted-verversing in relist.refresh_listing en relist-retry;
   het scherm toont een melding met knop naar Voorkeuren en verbergt de Verversen-knop.
 - Open: reeds wachtende Vinted-opdrachten van vóór de wijziging lopen door.
+
+## 06-10-2026: Onboarding nieuwe klanten (middag, 10:05 lokaal)
+
+6 accounts in hun eerste week, geen nieuwe. Web Store levert 1.0.369, gelijk aan de repo. Alles ongewijzigd sinds de
+ronde van 08:46: partablecs, Winter Home en amhin nog steeds 0 artikelen, Janneke geen koppeling, Peter (proef tot
+07-10 18:02) en Daniels eigen account stil. Anneloes valt buiten het venster. Niets gerepareerd, geen mailtjes.
