@@ -873,13 +873,9 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         )
 
     if platform == "vinted" and strategy == "relist":
-        from backend.services.instellingen import lees as _lees_instellingen
-        if not _lees_instellingen(user_id).get("vinted_herplaatsen", False):
-            raise RefreshError(
-                "Relisting on Vinted is switched off. Vinted's terms (since 5 October "
-                "2026) forbid deleting and re-adding the same item and using external "
-                "tools for it, and breaking them can get your account blocked. You can "
-                "switch it on in Settings, at your own risk.")
+        from backend.services import instellingen as _inst
+        if not _inst.vinted_herplaatsen_toegestaan(user_id):
+            raise RefreshError(_inst.VINTED_HERPLAATSEN_UIT)
 
     db = get_db()
 

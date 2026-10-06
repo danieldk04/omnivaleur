@@ -292,6 +292,25 @@ def schrijf(user_id: str, wijziging: dict) -> dict:
     return nieuw
 
 
+VINTED_HERPLAATSEN_UIT = (
+    "Relisting on Vinted is switched off. Vinted's terms (since 5 October "
+    "2026) forbid deleting and re-adding the same item and using external "
+    "tools for it, and breaking them can get your account blocked. You can "
+    "switch it on in Settings, at your own risk.")
+
+
+def vinted_herplaatsen_toegestaan(user_id: str) -> bool:
+    """Heeft deze verkoper herplaatsen op Vinted bewust aangezet?
+
+    Bij twijfel NEE: lukt het lezen van de instelling niet, dan blijft het uit.
+    Dit is het enige antwoord waar elk herplaatspad op Vinted langs moet."""
+    try:
+        return lees(user_id).get("vinted_herplaatsen", False) is True
+    except Exception as e:  # noqa: BLE001
+        logger.warning("vinted_herplaatsen niet gelezen voor %s: %s", user_id, e)
+        return False
+
+
 def verkoopvraag_aan(user_id: str) -> bool:
     """Wil deze verkoper de vraag "is dit verkocht?" krijgen?
 

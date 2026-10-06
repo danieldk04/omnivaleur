@@ -9404,11 +9404,23 @@ function rfLastRefreshCell(l) {
 
 let refreshModalState = null;
 
+// Vinted-herplaatsen: alleen als de verkoper het zelf aanzette. Elk herplaatspad
+// in het scherm gaat hier langs; de server weigert het daarnaast zelf.
+const vintedHerplaatsenAan = () => !!(state.settings && state.settings.vinted_herplaatsen === true);
+const VINTED_HERPLAATSEN_UIT = "Relisting on Vinted is switched off. Vinted's terms (since 5 October 2026) forbid deleting and re-adding the same item and using external tools for it, and breaking them can get your account blocked. You can switch it on in Settings, at your own risk.";
+function vintedRelistGeblokkeerd(platform, strategy) {
+  if (platform === 'vinted' && strategy === 'relist' && !vintedHerplaatsenAan()) {
+    alert(VINTED_HERPLAATSEN_UIT);
+    return true;
+  }
+  return false;
+}
+
 function refreshItem(itemId, title, platform) {
   let strategies = REFRESH_PLATFORM_STRATEGIES[platform];
   if (!strategies) { alert(`Refresh isn't available for ${platform} yet.`); return; }
   // Vinted: herplaatsen staat standaard uit (voorwaarden van 05-10-2026, par. 6).
-  if (platform === 'vinted' && !(state.settings && state.settings.vinted_herplaatsen)) {
+  if (platform === 'vinted' && !vintedHerplaatsenAan()) {
     strategies = strategies.filter(s => s !== 'relist');
   }
   const item = state.items.find(i => i.id === itemId);
@@ -9469,6 +9481,7 @@ function confirmRefresh() {
   const strategy = strategies.length > 1
     ? document.querySelector('input[name="refresh-strategy"]:checked').value
     : strategies[0];
+  if (vintedRelistGeblokkeerd(platform, strategy)) return;
   let newPrice = null;
   if (strategy === 'relist') {
     newPrice = parseFloat(document.getElementById('refresh-modal-new-price').value);
@@ -9520,6 +9533,7 @@ function openRefreshBriefing(strategy, label) {
 }
 
 async function doRefresh(itemId, platform, strategy, newPrice) {
+  if (vintedRelistGeblokkeerd(platform, strategy)) return;
   try {
     const body = { item_id: itemId, platform, strategy };
     if (newPrice != null) body.new_price = newPrice;
@@ -9565,6 +9579,7 @@ async function doRefresh(itemId, platform, strategy, newPrice) {
 }
 
 async function retryRelist(itemId, platform, btn) {
+  if (vintedRelistGeblokkeerd(platform, 'relist')) return;
   const label = PLATFORM_LABELS[platform] || platform;
   if (!confirm(`Retry the relist on ${label}? The old listing is still live, so this safely deletes it again and republishes with a fresh date.`)) return;
   if (btn) { btn.disabled = true; btn.textContent = 'Retrying…'; }
@@ -9669,6 +9684,7 @@ async function relistPublishedByHand(itemId, platform, btn) {
 }
 
 async function refreshStaleListings(platform) {
+  if (vintedRelistGeblokkeerd(platform, 'relist')) return;
   const label = PLATFORM_LABELS[platform] || platform;
   if (!confirm(`Refresh your oldest active ${label} listings (30+ days old)? This queues a legitimate delete+recreate for up to 5 items, rate-limited and delayed to avoid a scripted pattern.`)) return;
   setBusy(true, `Queuing ${label} refreshes…`);
@@ -9773,7 +9789,8 @@ async function meldAlLive(itemId, alLive, kop) {
   const naam = r => PLATFORM_LABELS[r.platform] || r.platform;
   // vervangbaar === false: de server zag een zakelijk account, en daar kan
   // vervangen niet. Dan niet vragen maar gewoon zeggen waarom (Johan Kist).
-  const kan = itemId ? alLive.filter(r => VERVANGBAAR_KANAAL.includes(r.platform) && r.vervangbaar !== false) : [];
+  const kan = itemId ? alLive.filter(r => VERVANGBAAR_KANAAL.includes(r.platform) && r.vervangbaar !== false
+    && !(r.platform === 'vinted' && !vintedHerplaatsenAan())) : [];
   const rest = alLive.filter(r => !kan.includes(r));
   if (rest.length) {
     alert(kop + `Not published:\n`

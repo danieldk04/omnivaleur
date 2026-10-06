@@ -3060,6 +3060,12 @@ async def relist_retry(body: dict, user_id: str = Depends(require_active_subscri
     if not item_id or not platform:
         raise HTTPException(status_code=400, detail="item_id and platform are required")
 
+    # Vinted-herplaatsen uit: dan ook niets opschonen of annuleren, gewoon weigeren.
+    if platform == "vinted":
+        from backend.services import instellingen as _inst
+        if not _inst.vinted_herplaatsen_toegestaan(user_id):
+            raise HTTPException(status_code=400, detail=_inst.VINTED_HERPLAATSEN_UIT)
+
     db = get_db()
 
     # EERST DE BOEKHOUDING VAN DE MISLUKTE POGING TERUGDRAAIEN.
