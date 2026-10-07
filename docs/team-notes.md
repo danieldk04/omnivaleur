@@ -16035,3 +16035,22 @@ Gemeten met extension_stiltes en zijn jobs (alleen zijn user_id), 03-10 16:24 to
   /mp (koude-mail/email). Niet mail: google/organic 4, threads 1, trustpilot 1. Beide aanmeldingen (sign_up) in die
   periode kwamen via de lange link. Kanttekening: "direct" kan ook Daniel zelf zijn die de pagina opent; niet te scheiden.
   Het rapport telt email/cold_email en /mp-video.html nu ook als mail; GA4 zelf is niet aangepast.
+
+## 07-10-2026: Goudlief antwoordt: 245 barcodes weg, titels boven 60, 19 mislukte imports
+
+- Daniel stuurde zijn antwoord. De 245 producten met alleen een barcode en geen foto zijn uit
+  Omnivaleur verwijderd (artikel, Shopify-koppelregel; geen opdrachten, geen andere kanalen).
+  Shopify zelf is niet aangeraakt. Hun kandidaten blijven op imported, dus een nieuwe scan haalt
+  ze niet terug. Voorraad nu 691 artikelen (672 + 19 hieronder).
+- Titels boven 60: 155 van zijn 672. De extensie kapte al af op 60, maar 74 eindigden op een losse
+  komma of "uit de". De server kort nu zelf in vlak voor de opdracht uitgaat (jobs.py
+  _mp_titel_binnen_grens, alleen create en content_refresh voor Marktplaats en 2dehands; een
+  verwijderopdracht houdt de oude titel om op te zoeken). Gemeten op al zijn 155: 0 los eind,
+  smartTrunc verandert er niets meer aan, kortste 43 tekens. Geen nieuwe extensie nodig.
+- Zijn vraag naar AI die titels herschrijft: zit er niet in, niet gebouwd. Beslissing voor Daniel.
+- 19 kandidaten stonden op failed. Oorzaak bewezen: de Shopify-lezer pakt het tweede " - "-stuk
+  van de titel als maat, 34 tekens in een kolom van 20 (fout 22001). Gerepareerd in imports.py
+  (_past: te lange waarde blijft leeg), voor-en-na-proef, en de 19 met de nieuwe code alsnog
+  ingelezen. Nog 28 wachtende met dezelfde lange maat gaan nu goed.
+- Zijn import stond om 09:24 lokaal stil (tabblad dicht, vermoedelijk): 3.217 van de 4.153
+  Shopify-producten wachten nog. Gemeten tempo ~12 per minuut, dus nog enkele uren.

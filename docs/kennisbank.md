@@ -17,6 +17,30 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## import-veld-langer-dan-database
+
+*07-10-2026 — 07-10-2026 Goudlief: items-kolommen hebben vaste lengtes (size 20, condition 20, color/sku 50, rest 100); te lang = stil "failed" bij import*
+
+De tabel items heeft varchar-grenzen: sku 50, title 100, brand 100, size 20, condition 20,
+category 100, color 50, material 100 (gemeten via de OpenAPI-beschrijving van PostgREST,
+GET {SUPABASE_URL}/rest/v1/ met Accept: application/openapi+json). Pydantic ItemCreate kent
+alleen de titelgrens. Een te lange waarde laat de database het hele artikel weigeren
+(fout 22001), en bulk-import vangt dat zonder log op en zet de kandidaat op "failed".
+
+Bij Goudlief pakte de Shopify-lezer het tweede " - "-stuk van de titel als maat
+("Meesterbeits Deur & Kozijn Dekkend", 34 tekens): 19 mislukt, 28 op weg daarheen.
+Sinds d9ccd6f4 laat `_past` in backend/api/imports.py een te lange waarde leeg.
+
+Zelfde dag: Marktplaats/2dehands-titels worden op de server ingekort tot 60 tekens
+zonder losse komma of los lidwoord (`_mp_titel_binnen_grens` in jobs.py, alleen
+create en content_refresh). Oud: 74 van zijn 155 lange titels eindigden op "casual," of "uit de".
+
+**Why:** "failed" zonder reden kost een klant producten die hij nooit terugziet.
+**How to apply:** Staan kandidaten op failed, doe de create-stap lokaal na zonder de
+except (zie "import-titel-boven-100-tekens"); de databasefout noemt het veld niet, wel de lengte.
+
+---
+
 ## mp-video-leadpage
 
 *07-10-2026 — "Concept-mails van de mailagent moeten naar /mp-video linken, nooit naar de kale YouTube-video"*
