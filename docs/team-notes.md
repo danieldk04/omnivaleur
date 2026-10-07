@@ -15991,3 +15991,8 @@ Gemeten met extension_stiltes en zijn jobs (alleen zijn user_id), 03-10 16:24 to
 
 - Geen account voor info@watchero.eu of iets met watchero/bax in Supabase auth (63 gebruikers, nieuwste 06-10 10:21).
 - Follow-up voor Martijn Bax geschreven en als concept bewaard (data/schrijfstijl); Daniel verstuurt zelf.
+- Uit het gesprek (Daniel, 07-10): de producten met alleen een EAN verkoopt hij via bol (koppeling via ESS), niet op
+  Marktplaats. Shopify-scan zet zulke producten (barcode als naam, geen foto) voortaan op genegeerd (f491054c). De 245
+  die al ingelezen zijn blijven staan tot hij antwoordt; Daniel vraagt het hem in de mail. Staat: 27 echte artikelen op
+  "good", de rest op new_with_tags; Daniel laat hem dat zelf kiezen (Staat wijzigen… in bulk bestaat al).
+  Verzending: pakket_grens staat op 0 en locatie is leeg (Marktplaats neemt dan zijn accountgegevens).

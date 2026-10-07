@@ -25,7 +25,7 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 **Why:** een 'failed' kandidaat zegt niets over de oorzaak; de import vangt alles.
 **How to apply:** zie je 'failed' importkandidaten, bootsen ze dan lokaal na met `_item_data_from_candidate` + `ItemCreate(**d)`; dat geeft de echte fout. Na een reparatie terugzetten op 'pending'.
-Ook gezien: een Shopify-winkel kan producten hebben met alleen een barcode als titel en geen foto (Goudlief: 245); die komen als lege artikelen binnen. Zie "shopify-oauth-fout-staat-in-de-html".
+Ook gezien: een Shopify-winkel kan producten hebben met alleen een barcode als titel en geen foto (Goudlief: 245); die komen als lege artikelen binnen. Dat zijn bol-producten (bol vult de inhoud bij de EAN aan); sinds f491054c begint zo'n Shopify-kandidaat zonder foto als 'ignored'. Zie "shopify-oauth-fout-staat-in-de-html".
 
 ---
 
