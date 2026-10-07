@@ -16142,3 +16142,12 @@ Daniel: "dit doen we later", uitrol de komende periode gefaseerd, Goudlief is hi
 - Open: dezelfde proef op de 540 titels van andere klanten (sieraden, antiek), voor aansluiten.
   Aansluiten kan in `_mp_titel_binnen_grens` achter een schakelaar per gebruiker, eerst alleen Daniel.
   Prijsverhoging: dit als zichtbare AI-functie bij de aankondiging gebruiken, niet stil uitrollen.
+
+## 07-10-2026 (middag, 14:05): Dagelijkse klantfouten, tweede middagronde
+
+- Geen nieuwe fout sinds 09:00 UTC; klantfouten.py toont 4 soorten, 0 open. De drie foutopdrachten in 24 uur zijn de al
+  beoordeelde (wollen jas 96e30080 07:44, 2dehands-time-out Egbert 06-10 17:49). Geen code gewijzigd.
+- Lopend (12:06 UTC): 96e30080 heeft de MP-herplaatsingen bijna af (5 wachtend, was 77 om 09:12); Egbert bcdf9aa4 plaatst
+  en ververst door (laatste 11:58), 21 wachtend. Geen rem, geen te lang vastgehouden opdracht bij wie online is.
+- Stil met wachtend werk, klant-eigen (computer uit): 26cf5471, 0b28c1ce, 1ba42900, 8f91a370 (Vinted-plaatsing al 18 uur
+  'claimed', gaat door als ze online komt), 7fe36b46 (stil sinds 27-08), f8c0cce9 (stil sinds 06-10 22:21).
