@@ -623,6 +623,100 @@ def _haal_links_eruit(db, jobs: list) -> int:
     return aangepast
 
 
+# ── Marktplaats en 2dehands nemen hoogstens 60 tekens titel ──────────────────
+#
+# WAAROM DIT ER IS (07-10-2026, Goudlief). 155 van zijn 672 Shopify-titels zijn
+# langer dan 60 tekens (tot 100). De extensie kapte ze af op het laatste hele
+# woord, en dan stond er op Marktplaats "Armbanden van roestvrij staal,
+# geometrisch, casual," of "... eenvoudige dagelijkse sieraden uit de". Hier
+# korten we eerst zelf in, op dezelfde manier als smartTrunc in
+# extension/content/shared.js (hele " - "-stukken eraf, anders op een heel
+# woord), en halen we daarna een losse komma of een los lidwoord of voorzetsel
+# aan het eind weg. Wat hier uitgaat is dan al binnen de grens, dus smartTrunc
+# laat het ongemoeid: wat in de opdracht staat is letterlijk wat er getypt wordt.
+#
+# Alleen plaatsen en bijwerken. Een verwijderopdracht zoekt in noodgevallen op de
+# titel die destijds is geplaatst; die mag hier niet veranderen.
+MP_MAX_TITEL = 60
+_TITEL_ACTIES = ("create", "content_refresh")
+_LOS_EIND = {
+    "de", "het", "een", "en", "of", "met", "van", "voor", "uit", "in", "op", "aan",
+    "bij", "tot", "om", "door", "naar", "over", "als", "zonder", "per", "&", "+",
+    "the", "and", "or", "with", "for", "of", "a", "an", "to", "from", "by", "in",
+}
+
+
+def _js_lengte(tekst: str) -> int:
+    """Lengte zoals de browser hem telt (een emoji telt daar als twee)."""
+    return len(tekst.encode("utf-16-le")) // 2
+
+
+def _js_kap(tekst: str, maximum: int) -> str:
+    """Het langste begin van `tekst` dat in de browser binnen `maximum` past."""
+    while _js_lengte(tekst) > maximum:
+        tekst = tekst[:-1]
+    return tekst
+
+
+def _mp_titel(titel: str, maximum: int = MP_MAX_TITEL) -> str:
+    """Titel binnen de grens van Marktplaats en 2dehands, zonder los eind."""
+    if _js_lengte(titel) <= maximum:
+        return titel
+    korter = None
+    scheiding = " - "
+    if scheiding in titel:
+        delen = titel.split(scheiding)
+        while len(delen) > 1 and _js_lengte(scheiding.join(delen)) > maximum:
+            delen.pop()
+        if _js_lengte(scheiding.join(delen)) <= maximum:
+            korter = scheiding.join(delen)
+    if korter is None:
+        kop = _js_kap(titel, maximum + 1)
+        knip = kop.rfind(" ")
+        korter = kop[:knip] if knip > 0 else _js_kap(titel, maximum)
+    vorige = None
+    while korter != vorige:
+        vorige = korter
+        korter = korter.rstrip(" ,;:/-–|.(")
+        if korter.count("(") > korter.count(")"):
+            korter = korter[:korter.rfind("(")]
+            continue
+        laatste = korter.rsplit(" ", 1)
+        if len(laatste) == 2 and laatste[1].lower() in _LOS_EIND:
+            korter = laatste[0]
+    return korter or _js_kap(titel, maximum)
+
+
+def _mp_titel_binnen_grens(db, jobs: list) -> int:
+    """Kort de titel in van elke uitgaande plaatsing of bijwerking voor
+    Marktplaats en 2dehands. Geeft terug hoeveel er zijn aangepast.
+
+    We schrijven het terug in de opdracht, net als _haal_links_eruit, zodat in de
+    geschiedenis staat wat er werkelijk op de site is gezet."""
+    aangepast = 0
+    for j in jobs or []:
+        if j.get("platform") not in ("marktplaats", "2dehands"):
+            continue
+        if j.get("action") not in _TITEL_ACTIES:
+            continue
+        pl = j.get("payload")
+        if not isinstance(pl, dict) or not isinstance(pl.get("title"), str):
+            continue
+        nieuw_titel = _mp_titel(pl["title"].strip())
+        if nieuw_titel == pl["title"]:
+            continue
+        nieuw = {**pl, "title": nieuw_titel}
+        logger.info("job %s (%s): titel ingekort tot %d tekens", j.get("id"),
+                    j.get("platform"), _js_lengte(nieuw_titel))
+        j["payload"] = nieuw
+        aangepast += 1
+        try:
+            db.table("jobs").update({"payload": nieuw}).eq("id", j["id"]).execute()
+        except Exception as e:  # noqa: BLE001 — de opdracht die uitgaat is al goed
+            logger.warning("job %s: ingekorte titel niet kunnen opslaan: %s", j.get("id"), e)
+    return aangepast
+
+
 # ── Vinted neemt hoogstens 2000 tekens omschrijving ──────────────────────────
 #
 # GEMETEN 17-09-2026, Johan Kist (Blackbird Guitars). Vinted weigerde zijn gitaren
