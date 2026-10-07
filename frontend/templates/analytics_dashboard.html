@@ -208,6 +208,46 @@
   </section>
 
   <section>
+    <h2 class="sec">🔥 Warme leads: wie reageerde en hoe het ermee staat</h2>
+    {% if warm %}
+    {% set w = warm.samenvatting %}
+    <div class="card">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;margin-bottom:12px">
+        <div><div class="note">Warme leads</div><strong style="font-size:22px">{{ w.warm }}</strong></div>
+        <div><div class="note">Wacht op jou</div><strong style="font-size:22px">{{ w.wacht_op_jou }}</strong></div>
+        <div><div class="note">Video, nooit opgevolgd</div><strong style="font-size:22px">{{ w.video_nooit_opgevolgd }}</strong></div>
+        <div><div class="note">In opvolging</div><strong style="font-size:22px">{{ w.in_opvolging }}</strong></div>
+        <div><div class="note">Doodgelopen</div><strong style="font-size:22px">{{ w.doodgelopen }}</strong></div>
+        <div><div class="note">Account genomen</div><strong style="font-size:22px">{{ w.account }}</strong></div>
+      </div>
+      <p class="note" style="margin-top:0">Video gestuurd aan <strong>{{ w.video }}</strong>:
+        <strong>{{ w.video_reactie }}</strong> reageerden daarna ({{ (100 * w.video_reactie // w.video) if w.video else 0 }}%),
+        <strong>{{ w.video_account }}</strong> namen een account ({{ (100 * w.video_account // w.video) if w.video else 0 }}%).
+        Koude mail: {{ w.koud_beantwoord }} van {{ w.koud_aangeschreven }} aangeschreven reageerden
+        ({{ (100 * w.koud_beantwoord // w.koud_aangeschreven) if w.koud_aangeschreven else 0 }}%).</p>
+      <table>
+        <tr><th>Lead</th><th>Status</th><th>Bal bij</th><th class="num">Video</th><th class="num">Opvolgingen</th><th class="num">Hun laatste</th><th class="num">Ons laatste</th><th class="num">Dagen stil</th></tr>
+        {% for l in warm.leads %}
+        <tr><td title="{{ l.adres }}">{{ l.naam }}</td>
+            <td>{{ l.status }}</td>
+            <td>{{ {"jij": "jou", "hen": "hen", "klaar": "–"}[l.bal] }}</td>
+            <td class="num">{{ l.video_dag }}</td>
+            <td class="num">{{ l.opvolgingen if l.video_op else "–" }}</td>
+            <td class="num">{{ l.in_dag }}</td>
+            <td class="num">{{ l.uit_dag }}</td>
+            <td class="num">{{ l.dagen_stil }}</td></tr>
+        {% endfor %}
+      </table>
+      <div class="note">Warm is iemand die op een mail reageerde of om de video vroeg. Bijgewerkt {{ warm.tijd[:16].replace("T", " ") }} UTC,
+        daarna ongeveer elke 3 uur. Opvolging telt alleen een mail van jou of de machine zonder antwoord ertussen.
+        "Wacht op jou" betekent dat hun bericht het laatste is.</div>
+    </div>
+    {% else %}
+    <div class="card empty">Nog geen momentopname van de warme leads.</div>
+    {% endif %}
+  </section>
+
+  <section>
     <h2 class="sec">🧭 Wat ze op de site doen</h2>
     {% if report.channels.landing_pages or report.channels.pages %}
     <div class="card">

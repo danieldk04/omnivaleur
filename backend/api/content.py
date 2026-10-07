@@ -658,6 +658,7 @@ async def analytics_dashboard(request: Request, token: str | None = None, dagen:
     # de rest van de site niet stilstaat zolang dit dashboard laadt.
     report = await asyncio.to_thread(build_report, None, False, dagen)
     mailvideo = await asyncio.to_thread(_mail_naar_videopagina, report["period"])
+    warm = await asyncio.to_thread(_warme_leads)
     kanalen = [{**k, "link": kanaal_link(k, SITE_URL),
                 "kortelink": korte_link(k, SITE_URL)} for k in KANAAL_LINKS]
     mail = {**MAIL_LINK, "link": kanaal_link(MAIL_LINK, SITE_URL),
@@ -665,8 +666,27 @@ async def analytics_dashboard(request: Request, token: str | None = None, dagen:
     return templates.TemplateResponse(
         "analytics_dashboard.html",
         {"request": request, "report": report, "token": token, "site_url": SITE_URL,
-         "kanalen": kanalen, "maillink": mail, "mailvideo": mailvideo, "periodes": PERIODES},
+         "kanalen": kanalen, "maillink": mail, "mailvideo": mailvideo, "warm": warm, "periodes": PERIODES},
     )
+
+
+def _warme_leads() -> dict | None:
+    """De momentopname van scripts/warme_leads.py (draait in de leadmachine, want
+    alleen die kan bij de mailbox). None als die er nog niet is of niet te lezen is."""
+    from datetime import datetime
+    try:
+        from backend.database import execute_with_retry, get_admin_db
+        rijen = execute_with_retry(get_admin_db().table("leadgen_opslag")
+                                   .select("inhoud").eq("naam", "warme_leads")).data or []
+        snap = rijen[0]["inhoud"] if rijen else None
+    except Exception:  # noqa: BLE001 — een dashboardblok mag de rest niet breken
+        return None
+    if not snap:
+        return None
+    dag = lambda t: datetime.fromtimestamp(t).strftime("%d-%m") if t else "–"
+    snap["leads"] = [{**l, "video_dag": dag(l.get("video_op")), "in_dag": dag(l.get("laatst_in")),
+                      "uit_dag": dag(l.get("laatst_uit"))} for l in snap.get("leads", [])]
+    return snap
 
 
 def _mail_naar_videopagina(periode: dict) -> list[dict]:

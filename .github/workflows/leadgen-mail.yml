@@ -97,6 +97,10 @@ jobs:
       # scripts/video_inhaal.py. Doet niets meer zodra alle doelen klaar zijn.
       - if: github.event.inputs.opdracht == '' || github.event.inputs.opdracht == 'tick'
         run: python scripts/video_inhaal.py --echt || true
+      # Momentopname van de warme leads voor het marketingdashboard (07-10-2026);
+      # hooguit eens per 3 uur, het script slaat zelf over als de vorige vers is.
+      - if: github.event.inputs.opdracht == '' || github.event.inputs.opdracht == 'tick'
+        run: python scripts/warme_leads.py || true
       # Een momentopname (status/dagbericht/leren) zonder de mail-lus: voor als
       # Daniel gewoon wil weten waar het staat, zonder dat er meteen weer een
       # ronde mails/concepten bijkomt.

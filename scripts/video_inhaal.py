@@ -74,7 +74,7 @@ def draai(echt: bool) -> int:
                 d["klaar"] = "heeft een account"
                 continue
             if "v1" in d:
-                if ons.get(adres, 0) > datetime.fromisoformat(d["v1"]).timestamp() + 120:
+                if ons.get(adres, 0) > datetime.fromisoformat(d["v1"]).timestamp() + 600:
                     d["klaar"] = "Daniel schreef zelf daarna"
                     continue
                 if (nu - datetime.fromisoformat(d["v1"])).total_seconds() / 86400 < V2_NA_DAGEN:
@@ -123,7 +123,10 @@ def draai(echt: bool) -> int:
                 continue
             with lm._postbode(gebruiker, host) as stuur:
                 stuur(msg)
-            d["v1" if stap == 1 else "v2"] = nu.isoformat(timespec="seconds")
+            # Het moment van VERSTUREN, niet van het begin van de beurt: de mails gaan
+            # een paar minuten na elkaar, en met het beginmoment las de volgende beurt
+            # onze eigen mail aan als "Daniel schreef zelf daarna" (06-10-2026).
+            d["v1" if stap == 1 else "v2"] = datetime.now().isoformat(timespec="seconds")
             if stap == 2:
                 d["klaar"] = "alle opvolgingen verstuurd"
             lm._db_schrijf(NAAM, rec)       # meteen: een afgebroken beurt mag niets dubbel doen

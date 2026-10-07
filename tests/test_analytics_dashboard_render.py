@@ -189,3 +189,26 @@ def test_dagcijfers_tonen_niet_gemeten_dagen_als_leeg(monkeypatch):
     assert d["this"]["clicks"][-3:] == [None, None, None] and d["this"]["clicks"][3] == 5
     assert d["prev"]["clicks"][0] == 2 and d["this"]["signups"] == [0, 0, 0, 0, 0, 0, 1]
     assert d["prev"]["signups"][-1] == 1
+
+
+def test_warme_leads_staan_op_het_dashboard_en_ontbreken_zonder_fout():
+    """Daniel, 07-10-2026: wie reageerde of om de video vroeg, met status en bal.
+    Zonder momentopname moet de pagina blijven staan."""
+    zonder = _render(VOL, warm=None)
+    assert "Nog geen momentopname van de warme leads" in zonder
+    warm = {
+        "tijd": "2026-10-07T10:00:00+00:00",
+        "samenvatting": {"warm": 2, "wacht_op_jou": 1, "in_opvolging": 1, "doodgelopen": 0,
+                         "account": 0, "video": 2, "video_reactie": 1, "video_account": 0,
+                         "video_nooit_opgevolgd": 0, "koud_aangeschreven": 10, "koud_beantwoord": 2},
+        "leads": [
+            {"adres": "a@x.nl", "naam": "Winkel A", "status": "Wacht op jou: ze schreven terug",
+             "bal": "jij", "video_op": 1.0, "video_dag": "01-10", "opvolgingen": 0,
+             "in_dag": "05-10", "uit_dag": "03-10", "dagen_stil": 2},
+            {"adres": "b@x.nl", "naam": "Winkel B", "status": "Opvolging 1 gestuurd",
+             "bal": "hen", "video_op": None, "video_dag": "–", "opvolgingen": 0,
+             "in_dag": "–", "uit_dag": "06-10", "dagen_stil": 1},
+        ],
+    }
+    html = _render(VOL, warm=warm)
+    assert "Winkel A" in html and "Wacht op jou: ze schreven terug" in html and "Opvolging 1 gestuurd" in html
