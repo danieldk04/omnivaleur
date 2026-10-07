@@ -29,20 +29,7 @@ from backend.services import ga4  # noqa: E402
 
 PAD = "/mp-video"
 MAIL_BRON = "koude-mail"
-
-
-def _lange_maillink(r: dict) -> bool:
-    """Daniel stuurde in zijn eigen mails vaak de lange /mp-video in plaats van /mp
-    (05-10-2026: 44 van 63 videomails). Zonder tags zet Analytics zo'n bezoek op
-    "direct", of op de webmail als verwijzer. De pagina staat niet in het menu en
-    niet in Google, dus wie er zonder tags binnenkomt, kwam uit een mail. Sinds
-    07-10-2026 tagt de server de lange link zelf; dit haalt de oudere bezoeken terug."""
-    src, med = r["sessionSource"].lower(), r["sessionMedium"].lower()
-    if med == "cold_email":
-        return True  # de oudere tag op dezelfde maillink (email / cold_email), voor koude-mail/email
-    if "utm_source" in r["landingPagePlusQueryString"]:
-        return False
-    return (src, med) == ("(direct)", "(none)") or (med == "referral" and "mail" in src)
+_lange_maillink = ga4.lange_maillink
 
 
 def _nl(n) -> str:

@@ -291,3 +291,55 @@ def social_posts(start: str, end: str, limit: int = 50) -> list[dict]:
             continue
         out.append(r)
     return sorted(out, key=lambda r: r.get("sessions", 0), reverse=True)
+
+
+# ---------------------------------------------------------------------------
+# Mail naar de videopagina (/mp en /mp-video samen)
+# ---------------------------------------------------------------------------
+VIDEOPAGINA = "/mp-video"
+
+
+def lange_maillink(r: dict) -> bool:
+    """Daniel stuurde in zijn eigen mails vaak de lange /mp-video in plaats van /mp
+    (05-10-2026: 44 van 63 videomails). Zonder tags zet Analytics zo'n bezoek op
+    "direct", of op de webmail als verwijzer. De pagina staat niet in het menu en
+    niet in Google, dus wie er zonder tags binnenkomt, kwam uit een mail. Sinds
+    07-10-2026 tagt de server de lange link zelf; dit haalt de oudere bezoeken terug."""
+    src, med = r["sessionSource"].lower(), r["sessionMedium"].lower()
+    if med == "cold_email":
+        return True  # de oudere tag op dezelfde maillink (email / cold_email), voor koude-mail/email
+    if "utm_source" in r["landingPagePlusQueryString"]:
+        return False
+    return (src, med) == ("(direct)", "(none)") or (med == "referral" and "mail" in src)
+
+
+def mail_naar_videopagina(start: str, end: str) -> dict | None:
+    """Bezoek en aanmeldingen uit de mail op de videopagina, korte en lange link
+    op één hoop. None als Analytics niet te lezen is. Een lege uitkomst van GA4 is
+    niet te onderscheiden van een mislukte vraag, dus aanmeldingen worden apart
+    gevraagd: lukt dat niet, dan staan ze op None in plaats van op 0."""
+    if not is_configured():
+        return None
+    dims = ["landingPagePlusQueryString", "sessionSource", "sessionMedium"]
+    rijen = _run(dims, ["sessions", "keyEvents:sign_up"], start, end, limit=5000)
+    met_aanmeldingen = bool(rijen)
+    if not rijen:
+        rijen = _run(dims, ["sessions"], start, end, limit=5000)
+    uit = {"bezoek": 0, "aanmeldingen": 0 if met_aanmeldingen else None, "anders": 0,
+           "kort": 0, "lang": 0}
+    for r in rijen:
+        pad = r["landingPagePlusQueryString"].split("?")[0].rstrip("/").removesuffix(".html")
+        if pad != VIDEOPAGINA:
+            continue
+        s = r.get("sessions", 0)
+        if r["sessionSource"] == "koude-mail":
+            uit["kort"] += s
+        elif lange_maillink(r):
+            uit["lang"] += s
+        else:
+            uit["anders"] += s
+            continue
+        uit["bezoek"] += s
+        if met_aanmeldingen:
+            uit["aanmeldingen"] += r.get("keyEvents:sign_up", 0)
+    return uit

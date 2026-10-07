@@ -18,7 +18,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 SJABLONEN = Path(__file__).parent.parent / "frontend" / "templates"
 
 
-def _render(report: dict) -> str:
+def _render(report: dict, **extra) -> str:
     env = Environment(loader=FileSystemLoader(str(SJABLONEN)))
     sjabloon = env.get_template("analytics_dashboard.html")
     return sjabloon.render(
@@ -30,6 +30,7 @@ def _render(report: dict) -> str:
         maillink={"kanaal": "Koude mail", "taal": "NL", "pad": "/mp-video",
                   "link": "https://omnivaleur.com/mp-video?utm_source=koude-mail",
                   "kortelink": "https://omnivaleur.com/mp"},
+        **extra,
     )
 
 
@@ -103,3 +104,15 @@ def test_categorietabel_blijft_weg_zolang_hij_niets_zegt():
         {**c, "clicks": c["clicks"] * 10} for c in weinig["categories"]
     ]}
     assert "Welk soort artikel trekt zoekverkeer" in _render(veel)
+
+
+def test_mailbezoek_op_de_videopagina_staat_op_het_dashboard():
+    """07-10-2026: /mp en /mp-video samen als mailbezoek, met aanmeldingen erbij.
+    Lukt de vraag naar aanmeldingen niet, dan 'onbekend' en geen nul."""
+    html = _render(LEEG, mailvideo=[
+        {"label": "Laatste 30 dagen", "bezoek": 79, "aanmeldingen": 2, "kort": 6, "lang": 73, "anders": 6},
+        {"label": "Sinds 1 juni 2026", "bezoek": 5, "aanmeldingen": None, "kort": 1, "lang": 4, "anders": 0},
+    ])
+    assert "Uit de mail naar de videopagina" in html
+    assert "<strong>79</strong>" in html and "onbekend" in html
+    assert "Analytics nog niet gekoppeld" in _render(LEEG, mailvideo=[])

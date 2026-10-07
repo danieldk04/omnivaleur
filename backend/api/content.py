@@ -660,8 +660,23 @@ async def analytics_dashboard(request: Request, token: str | None = None):
     return templates.TemplateResponse(
         "analytics_dashboard.html",
         {"request": request, "report": report, "token": token, "site_url": SITE_URL,
-         "kanalen": kanalen, "maillink": mail},
+         "kanalen": kanalen, "maillink": mail, "mailvideo": _mail_naar_videopagina()},
     )
+
+
+def _mail_naar_videopagina() -> list[dict]:
+    """Mailbezoek op de videopagina, /mp en /mp-video samen (Daniel, 07-10-2026).
+    Twee vensters: de laatste 30 dagen, en alles sinds de pagina bestaat."""
+    from datetime import date, timedelta
+    from backend.services import ga4
+    vandaag = date.today()
+    uit = []
+    for label, start in (("Laatste 30 dagen", vandaag - timedelta(days=30)),
+                         ("Sinds 1 juni 2026", date(2026, 6, 1))):
+        cijfers = ga4.mail_naar_videopagina(start.isoformat(), vandaag.isoformat())
+        if cijfers is not None:
+            uit.append({"label": label, **cijfers})
+    return uit
 
 
 # Het trenddashboard (wekelijkse social-meting) staat als één gezipt HTML-bestand

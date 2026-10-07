@@ -113,6 +113,27 @@
   </section>
 
   <section>
+    <h2 class="sec">✉️ Uit de mail naar de videopagina</h2>
+    {% if mailvideo %}
+    <div class="card"><table>
+      <tr><th>Periode</th><th class="num">Bezoeken uit de mail</th><th class="num">Aanmeldingen</th><th class="num">via /mp</th><th class="num">via /mp-video</th><th class="num">Ander bezoek</th></tr>
+      {% for m in mailvideo %}
+      <tr><td>{{ m.label }}</td>
+          <td class="num"><strong>{{ m.bezoek }}</strong></td>
+          <td class="num">{{ m.aanmeldingen if m.aanmeldingen is not none else "onbekend" }}</td>
+          <td class="num">{{ m.kort }}</td>
+          <td class="num">{{ m.lang }}</td>
+          <td class="num">{{ m.anders }}</td></tr>
+      {% endfor %}
+    </table>
+    <div class="note">De korte link /mp en de lange /mp-video tellen samen als mail. Ander bezoek is wie via
+      Google of social op de videopagina kwam. Een bezoek op de lange link zonder herkomst kan ook van jou zelf zijn.</div></div>
+    {% else %}
+    <div class="card empty">Analytics nog niet gekoppeld.</div>
+    {% endif %}
+  </section>
+
+  <section>
     <h2 class="sec">🧭 Wat ze op de site doen</h2>
     {% if report.channels.landing_pages or report.channels.pages %}
     <div class="card">
