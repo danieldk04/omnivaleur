@@ -15942,3 +15942,29 @@ gelezen (workspacemcp niet bereikbaar).
 - Nagemeten 17 minuten na de vorige ronde: 907 opdrachten in 24 uur, dezelfde 13 mislukt, geen nieuwe fout sinds
   05:50 UTC. Alles klant-eigen, niets open in klantfouten.py. De Vinted-plaatsing van 8f91a370 staat nog op
   'claimed' sinds 06-10 17:41 UTC (extensie stil). Geen code gewijzigd.
+
+## 07-10-2026: Egbert (bcdf9aa4): loopt zijn wachtrij vast na opnieuw inloggen? Gemeten: nee
+
+Zijn klacht van 03-10: de wachtrij loopt vast "iedere keer nadat ik weer opnieuw ingelogd ben op de computer".
+Gemeten met extension_stiltes en zijn jobs (alleen zijn user_id), 03-10 16:24 tot 07-10 06:41 UTC.
+- 13 echte stiltes (16 rijen; 05-10 15:22 staat er drie keer in, zie onder), samen 54,7 uur stil.
+- 9 keer kwam zijn computer terug terwijl er werk wachtte (7 tot 150 opdrachten). Alle 9 keer werd binnen 1 minuut de
+  eerste opdracht opgepakt (0,0 tot 1,0 min), daarna 6 tot 173 opdrachten in het eerste uur. De andere 4 keer wachtte er
+  niets. Terugkomen na een stilte zet de rij dus niet vast.
+- Twee keer viel de computer stil midden in een plaatsing (06-10 06:23 en 17:16 UTC). Die opdracht bleef dan op
+  'claimed' staan tot hij terugkwam en ging daarna meteen door. Dat ziet er voor hem uit als "vast", maar het is de
+  computer die uit ging, niet het terugkomen.
+- Eén echte stilstand zonder stilte: 05-10 19:18 tot 06-10 06:07 UTC (10 uur 49 min) geen enkele claim, terwijl er
+  64 2dehands-plaatsingen klaarstonden en geen stilte is vastgelegd. Geen rubriekwachters (0 van 64). Van 00:00 tot
+  06:00 UTC lag de database plat (zie 06-10 "Database vastgelopen"); de rij liep 7 minuten na de herstart weer. Wat
+  19:18 tot 00:00 UTC deed is niet vast te stellen zonder Railway- of Supabase-logs: óf de database liep toen al vast
+  (verzoeken kwamen binnen, opdrachten gingen niet uit), óf zijn computer was uit en de stilterij ging verloren omdat
+  het wegschrijven om 06:07 tegen de herstellende database faalde (fout wordt stil opgevangen). Met inloggen heeft
+  het in beide gevallen niets te maken.
+- Vanochtend kwam hij om 06:36 UTC terug met 38 verlengingen wachtend; de eerste ging na 5 s, liep goed (~4 min per
+  verlenging), 36 nog aan de beurt.
+- Meetvalkuil: backend.database.get_db() leest lokaal met de anon-sleutel en ziet door RLS 0 rijen in
+  extension_stiltes. Lees met settings.supabase_service_key. Kleine schoonheidsfout: na een herstart van de server
+  schrijven gelijktijdige verzoeken dezelfde stilte meerdere keren weg (05-10 15:22, 3x). Telt dubbel, verder onschuldig.
+- Geen code gewijzigd. Conclusie voor Daniel: zijn vastlopers zijn een computer die uit of in slaap gaat (vaak midden
+  in een plaatsing), en één keer de databasestoring van 06-10. Niet het opnieuw inloggen.
