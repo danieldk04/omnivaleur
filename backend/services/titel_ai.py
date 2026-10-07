@@ -36,7 +36,7 @@ def _lengte(tekst: str) -> int:
 
 
 def _woorden(tekst: str) -> list[str]:
-    return [w.lower() for w in _WOORD.findall(tekst)]
+    return [w.lower().replace("’", "'") for w in _WOORD.findall(tekst)]
 
 
 def voorstel_is_veilig(oud: str, nieuw: str) -> bool:
