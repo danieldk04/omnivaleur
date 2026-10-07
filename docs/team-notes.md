@@ -16084,3 +16084,13 @@ Aanleiding: Goudlief vroeg of Omnivaleur titels met AI kan verbeteren tot binnen
   0 en "nieuw", en de grafiek tekent dan geen vorige lijn maar zegt dat er nog niet gemeten werd.
 - Laden duurt 8 tot 12 seconden (een twintigtal vragen aan Google achter elkaar). Draait nu in een
   eigen draad, zodat de rest van de site er niet op wacht.
+
+## 07-10-2026 (automatisch): Klantfouten
+
+- 96e30080, MP-herplaatsing "Mooie wollen jas" (07:44 UTC, extensie 1.0.370): de verwijderopdracht faalde met alleen
+  "No tab with id" in de diagnose, zonder fase bevestigen. Het werktabblad was dus weg vóór het venster beantwoord was;
+  de reparatie van 05-10 (_verwijdering_openbaar_bewezen) geldt terecht niet. Openbare pagina m2439192675: 200 https://www.marktplaats.nl/v/kleding-dames/jassen-winter/m2439192675-mooie-wollen-jas.
+  De plaatsing erna is terecht overgeslagen (anders dubbel). Vijf minuten later lukte een andere verwijdering bij
+  dezelfde klant gewoon (lederhosen, 410). Geen code gewijzigd: waarom het tabblad wegging is niet bewezen.
+- Open: ronde afgebroken door tokenlimiet. Niet nagekeken: of de volgende nachtronde dit artikel vanzelf opnieuw
+  probeert, en of "No tab with id" vóór het bevestigen vaker voorkomt bij deze klant.
