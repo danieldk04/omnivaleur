@@ -682,7 +682,9 @@ def _mp_titel(titel: str, maximum: int = MP_MAX_TITEL) -> str:
             korter = korter[:korter.rfind("(")]
             continue
         laatste = korter.rsplit(" ", 1)
-        if len(laatste) == 2 and laatste[1].lower() in _LOS_EIND:
+        # "Vitamine A" en "Type A" houden hun letter; alleen een kleine "a" is los.
+        if (len(laatste) == 2 and laatste[1].lower() in _LOS_EIND
+                and (len(laatste[1]) > 1 or laatste[1].islower())):
             korter = laatste[0]
     return korter or _js_kap(titel, maximum)
 
