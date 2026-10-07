@@ -40,23 +40,60 @@
   .utm-grid input,.utm-grid select{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:400;color:var(--text)}
   .utm-out{display:flex;gap:8px;align-items:center}
   .utm-out input{flex:1;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:ui-monospace,monospace;background:#f8fafc}
-  @media(max-width:600px){.trunc{max-width:150px}main{padding:20px 12px 60px}}
+  .tw{overflow-x:auto}
+  td.was,th.was{color:var(--muted)}
+  .seg{display:inline-flex;background:#fff;border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
+  .seg a{padding:6px 12px;border-radius:7px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none}
+  .seg a.on{background:var(--blue,#2563eb);color:#fff}
+  .tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border-bottom:1px solid var(--border);margin:-18px -20px 14px}
+  .tab{background:none;border:none;border-bottom:3px solid transparent;text-align:left;padding:14px 18px 12px;cursor:pointer;font:inherit;color:inherit}
+  .tab:hover{background:#f8fafc}
+  .tab.on{border-bottom-color:var(--blue,#2563eb)}
+  .tab .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+  .tab .val{font-size:1.6rem;font-weight:700;margin:2px 0}
+  .tab .sub{font-size:12px;color:var(--muted)}
+  .big{font-size:1.8rem;font-weight:700}
+  #grafiek{position:relative;min-height:240px}
+  #grafiek svg{display:block}
+  #tip{position:absolute;pointer-events:none;background:#0f172a;color:#fff;font-size:12px;line-height:1.5;padding:7px 10px;border-radius:8px;white-space:nowrap;display:none;z-index:2}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--muted);margin-top:6px}
+  .legend i{display:inline-block;width:22px;height:0;border-top:3px solid #2563eb;vertical-align:middle;margin-right:6px}
+  .legend i.prev{border-top:2px dashed #94a3b8}
+  @media(max-width:600px){.trunc{max-width:150px}main{padding:20px 12px 60px}.tab{padding:12px}.tab .val{font-size:1.3rem}}
 </style>
 </head>
 <body>
+{% macro pct(v) -%}
+  {{ ('%+.0f'|format(v)) if (v|abs) >= 10 else ('%+.1f'|format(v)|replace('.', ',')) }}%
+{%- endmacro %}
 {% macro delta(v) %}
-  {%- if v is none -%}<span class="flat">nieuw</span>
-  {%- elif v >= 0 -%}<span class="up">+{{ v }}%</span>
-  {%- else -%}<span class="down">{{ v }}%</span>{%- endif -%}
+  {%- if v is none or v is undefined -%}<span class="flat">nieuw</span>
+  {%- elif v >= 0 -%}<span class="up">{{ pct(v) }}</span>
+  {%- else -%}<span class="down">{{ pct(v) }}</span>{%- endif -%}
 {% endmacro %}
+{# Verschil tussen twee aantallen; leeg als er in beide perioden niets was. #}
+{% macro verschil(nu, was) %}
+  {%- set nu = nu or 0 -%}{%- set was = was or 0 -%}
+  {%- if was == 0 and nu == 0 -%}<span class="flat">·</span>
+  {%- elif was == 0 -%}<span class="flat">nieuw</span>
+  {%- else -%}{{ delta((nu - was) / was * 100) }}{%- endif -%}
+{% endmacro %}
+{% macro datum(iso) -%}
+  {%- set m = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'] -%}
+  {{ iso[8:10]|int }} {{ m[iso[5:7]|int - 1] }}
+{%- endmacro %}
 
 <main>
   <div class="head">
     <h1>📊 Marketing-dashboard</h1>
-    <span class="pill">wekelijks · zondagochtend per e-mail</span>
+    <nav class="seg" aria-label="Periode">
+      {% for n in (periodes or [7, 28, 90]) %}<a href="?token={{ token|urlencode }}&amp;dagen={{ n }}"
+         class="{{ 'on' if n == (report.period.dagen or 7) }}">{{ n }} dagen</a>{% endfor %}
+    </nav>
   </div>
-  <p class="period">Week {{ report.period.this[0] }} t/m {{ report.period.this[1] }}
-     · vergeleken met {{ report.period.prev[0] }} t/m {{ report.period.prev[1] }}</p>
+  <p class="period">Laatste {{ report.period.dagen or 7 }} dagen: {{ datum(report.period.this[0]) }} t/m {{ datum(report.period.this[1]) }}
+     · vergeleken met {{ datum(report.period.prev[0]) }} t/m {{ datum(report.period.prev[1]) }}
+     · <span class="pill">elke zondag per e-mail</span></p>
 
   <div class="insights">
     <ul>
@@ -65,31 +102,65 @@
   </div>
 
   {% set tot = report.channels.totals or {} %}
+  {% set totp = report.channels.totals_prev or {} %}
+  {% set vor = report.period.vorige or 'vorige week' %}
+  {% set su = report.signups %}
+  <div class="card" style="margin-bottom:16px">
+    <div class="tabs" role="tablist">
+      <button class="tab on" type="button" data-m="sessions">
+        <div class="lbl">Bezoeken</div>
+        <div class="val">{{ tot.sessions or 0 }}</div>
+        <div class="sub">{{ verschil(tot.sessions, totp.sessions) }} · {{ vor }} {{ totp.sessions or 0 }}</div>
+      </button>
+      <button class="tab" type="button" data-m="newUsers">
+        <div class="lbl">Nieuwe bezoekers</div>
+        <div class="val">{{ tot.newUsers or 0 }}</div>
+        <div class="sub">{{ verschil(tot.newUsers, totp.newUsers) }} · {{ vor }} {{ totp.newUsers or 0 }}</div>
+      </button>
+      <button class="tab" type="button" data-m="signups">
+        <div class="lbl">Aanmeldingen</div>
+        {% if su.available %}
+        <div class="val">{{ su.this_week }}</div>
+        <div class="sub">{{ verschil(su.this_week, su.prev_week) }} · {{ vor }} {{ su.prev_week }}</div>
+        {% else %}<div class="val">?</div><div class="sub">niet beschikbaar</div>{% endif %}
+      </button>
+      <button class="tab" type="button" data-m="clicks">
+        <div class="lbl">Zoekclicks</div>
+        <div class="val">{{ report.seo.total_clicks or 0 }}</div>
+        <div class="sub">{{ verschil(report.seo.total_clicks, report.seo.total_clicks_prev) }} · {{ vor }} {{ report.seo.total_clicks_prev or 0 }}</div>
+      </button>
+    </div>
+    <div id="grafiek"><div id="tip"></div></div>
+    <div class="legend">
+      <span><i></i>laatste {{ report.period.dagen or 7 }} dagen</span>
+      <span><i class="prev"></i>{{ vor }}</span>
+      <span id="grafNoot"></span>
+    </div>
+  </div>
+
   <div class="grid">
     <div class="card">
-      <h2>Bezoekers</h2>
-      <div style="font-size:1.8rem;font-weight:700">{{ tot.sessions or 0 }}</div>
-      <div class="flat">{{ tot.newUsers or 0 }} voor het eerst hier</div>
-    </div>
-    <div class="card">
-      <h2>Aanmeldingen</h2>
-      {% if report.signups.available %}
-      <div style="font-size:1.8rem;font-weight:700">{{ report.signups.this_week }}</div>
-      <div>{{ delta(report.signups.delta) }} · vorige week {{ report.signups.prev_week }}</div>
-      {% else %}<div class="empty">niet beschikbaar</div>{% endif %}
-    </div>
-    <div class="card">
       <h2>Van bezoek naar account</h2>
-      {% if report.signups.available and (tot.newUsers or 0) > 0 %}
-      <div style="font-size:1.8rem;font-weight:700">{{ ((report.signups.this_week / tot.newUsers * 100) | round(1)) | string | replace('.', ',') }}%</div>
-      <div class="flat">{{ report.signups.this_week }} van {{ tot.newUsers }} nieuwe bezoekers</div>
+      {% if su.available and (tot.newUsers or 0) > 0 %}
+      {% set r_nu = su.this_week / tot.newUsers * 100 %}
+      <div class="big">{{ (r_nu | round(1)) | string | replace('.', ',') }}%</div>
+      <div class="flat">{{ su.this_week }} van {{ tot.newUsers }} nieuwe bezoekers</div>
+      {% if (totp.newUsers or 0) > 0 %}
+      {% set r_was = su.prev_week / totp.newUsers * 100 %}
+      <div class="note">{{ vor }}: {{ (r_was | round(1)) | string | replace('.', ',') }}%
+        ({{ su.prev_week }} van {{ totp.newUsers }})</div>
+      {% endif %}
       {% else %}<div class="empty">nog te weinig bezoek</div>{% endif %}
     </div>
     <div class="card">
       <h2>Blijven ze hangen</h2>
       {% if tot.engagementRate %}
-      <div style="font-size:1.8rem;font-weight:700">{{ (tot.engagementRate * 100) | round(0) | int }}%</div>
+      <div class="big">{{ (tot.engagementRate * 100) | round(0) | int }}%</div>
       <div class="flat">gemiddeld {{ (tot.averageSessionDuration or 0) | round(0) | int }} seconden per bezoek</div>
+      {% if totp.engagementRate %}
+      <div class="note">{{ vor }}: {{ (totp.engagementRate * 100) | round(0) | int }}%,
+        {{ (totp.averageSessionDuration or 0) | round(0) | int }} seconden</div>
+      {% endif %}
       {% else %}<div class="empty">nog geen data</div>{% endif %}
     </div>
   </div>
@@ -97,14 +168,17 @@
   <section>
     <h2 class="sec">🔎 Waar bezoekers vandaan komen</h2>
     {% if report.channels.connected %}
-    <div class="card"><table>
-      <tr><th>Kanaal</th><th class="num">Bezoeken</th><th class="num">vs vorige</th><th class="num">Nieuw</th><th class="num">Aanmeldingen</th></tr>
+    <div class="card tw"><table>
+      <tr><th>Kanaal</th><th class="num">Bezoeken</th><th class="num was">vorige</th><th class="num">Verschil</th>
+          <th class="num">Nieuw</th><th class="num">Aanmeldingen</th><th class="num was">vorige</th></tr>
       {% for c in report.channels.channels %}
       <tr><td>{{ c.sessionDefaultChannelGroup }}</td>
           <td class="num">{{ c.sessions or 0 }}</td>
-          <td class="num">{{ delta(c.sessions_delta) }}</td>
+          <td class="num was">{{ c.sessions_prev or 0 }}</td>
+          <td class="num">{{ verschil(c.sessions, c.sessions_prev) }}</td>
           <td class="num">{{ c.newUsers or 0 }}</td>
-          <td class="num">{{ c.conversions or 0 }}</td></tr>
+          <td class="num">{{ c.conversions or 0 }}</td>
+          <td class="num was">{{ c.conversions_prev or 0 }}</td></tr>
       {% endfor %}
     </table></div>
     {% else %}
@@ -115,7 +189,7 @@
   <section>
     <h2 class="sec">✉️ Uit de mail naar de videopagina</h2>
     {% if mailvideo %}
-    <div class="card"><table>
+    <div class="card tw"><table>
       <tr><th>Periode</th><th class="num">Bezoeken uit de mail</th><th class="num">Aanmeldingen</th><th class="num">via /mp</th><th class="num">via /mp-video</th><th class="num">Ander bezoek</th></tr>
       {% for m in mailvideo %}
       <tr><td>{{ m.label }}</td>
@@ -142,38 +216,41 @@
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px">
         <div>
           <table>
-            <tr><th>Binnenkomst</th><th class="num">Bezoeken</th><th class="num">Blijft</th></tr>
+            <tr><th>Binnenkomst</th><th class="num">Bezoeken</th><th class="num was">vorige</th><th class="num">Blijft</th></tr>
             {% for p in report.channels.landing_pages %}
             <tr><td class="trunc" title="{{ p.landingPagePlusQueryString }}">{{ p.landingPagePlusQueryString or '/' }}</td>
                 <td class="num">{{ p.sessions or 0 }}</td>
+                <td class="num was">{{ p.sessions_prev or 0 }}</td>
                 <td class="num">{{ ((p.engagementRate or 0) * 100) | round(0) | int }}%</td></tr>
             {% endfor %}
           </table>
         </div>
         <div>
           <table>
-            <tr><th>Bekeken pagina</th><th class="num">Weergaven</th><th class="num">Mensen</th></tr>
+            <tr><th>Bekeken pagina</th><th class="num">Weergaven</th><th class="num was">vorige</th><th class="num">Mensen</th></tr>
             {% for p in report.channels.pages %}
             <tr><td class="trunc" title="{{ p.pagePath }}">{{ p.pagePath }}</td>
                 <td class="num">{{ p.screenPageViews or 0 }}</td>
+                <td class="num was">{{ p.views_prev or 0 }}</td>
                 <td class="num">{{ p.activeUsers or 0 }}</td></tr>
             {% endfor %}
           </table>
         </div>
       </div>
     </div>
-    {% else %}<div class="card empty">Nog geen paginagegevens deze week.</div>{% endif %}
+    {% else %}<div class="card empty">Nog geen paginagegevens in deze periode.</div>{% endif %}
   </section>
 
   <section>
     <h2 class="sec">📱 Welk social-kanaal levert wat op</h2>
     {% if report.social.platforms %}
-    <div class="card"><table>
-      <tr><th>Platform</th><th class="num">Bezoeken</th><th class="num">vs vorige</th><th class="num">Nieuw</th><th class="num">Aanmeldingen</th></tr>
+    <div class="card tw"><table>
+      <tr><th>Platform</th><th class="num">Bezoeken</th><th class="num was">vorige</th><th class="num">Verschil</th><th class="num">Nieuw</th><th class="num">Aanmeldingen</th></tr>
       {% for p in report.social.platforms %}
       <tr><td>{{ p.platform }}</td>
           <td class="num">{{ p.sessions }}</td>
-          <td class="num">{{ delta(p.sessions_delta) }}</td>
+          <td class="num was">{{ p.sessions_prev or 0 }}</td>
+          <td class="num">{{ verschil(p.sessions, p.sessions_prev) }}</td>
           <td class="num">{{ p.newUsers }}</td>
           <td class="num">{{ p.conversions }}</td></tr>
       {% endfor %}
@@ -193,24 +270,25 @@
     </details>
     {% endif %}
     {% else %}
-    <div class="card empty">Nog geen herkend social-verkeer deze week.</div>
+    <div class="card empty">Nog geen herkend social-verkeer in deze periode.</div>
     {% endif %}
   </section>
 
   <section>
     <h2 class="sec">🔍 Zoekverkeer — {{ report.seo.total_clicks or 0 }} clicks, {{ report.seo.total_impressions or 0 }} keer vertoond</h2>
     {% if report.seo.connected and not report.seo.has_data %}
-    <div class="card empty">Search Console is gekoppeld, maar heeft nog geen zoekverkeer in deze week.
+    <div class="card empty">Search Console is gekoppeld, maar heeft nog geen zoekverkeer in deze periode.
       Nieuwe pagina's hebben dagen tot weken nodig voordat Google ze meetelt.</div>
     {% elif report.seo.connected %}
     <div class="card">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px">
         <div>
           <table>
-            <tr><th>Pagina</th><th class="num">Clicks</th><th class="num">Positie</th></tr>
+            <tr><th>Pagina</th><th class="num">Clicks</th><th class="num was">vorige</th><th class="num">Positie</th></tr>
             {% for p in report.seo.top_pages[:6] %}
             <tr><td class="trunc" title="{{ p.url }}">{{ p.url.replace(site_url, '') or '/' }}</td>
                 <td class="num">{{ p.clicks }}</td>
+                <td class="num was">{{ p.clicks_prev or 0 }}</td>
                 <td class="num">{{ p.position }}</td></tr>
             {% endfor %}
           </table>
@@ -223,7 +301,7 @@
             <tr><td>{{ q.query }}</td><td class="num">{{ q.clicks_prev }}</td><td class="num up">{{ q.clicks }}</td></tr>
             {% endfor %}
           </table>
-          {% else %}<div class="empty">Geen stijgende zoektermen deze week.</div>{% endif %}
+          {% else %}<div class="empty">Geen stijgende zoektermen in deze periode.</div>{% endif %}
         </div>
       </div>
     </div>
@@ -237,7 +315,7 @@
         and (report.categories|sum(attribute='clicks')) >= 20 %}
   <section>
     <h2 class="sec">🗂️ Welk soort artikel trekt zoekverkeer</h2>
-    <div class="card"><table>
+    <div class="card tw"><table>
       <tr><th>Categorie</th><th class="num">Pagina's</th><th class="num">Clicks</th><th class="num">vs vorige</th><th class="num">CTR</th></tr>
       {% for c in report.categories %}
       <tr><td>{{ c.category }}</td>
@@ -336,6 +414,55 @@
 </main>
 
 <script>
+const DAG = {{ (report.daily or {})|tojson }};
+const MAAND = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+const WEEKDAG = ['zo','ma','di','wo','do','vr','za'];
+const NAAM = {sessions:'bezoeken', newUsers:'nieuwe bezoekers', signups:'aanmeldingen', clicks:'zoekclicks'};
+let metriek = 'sessions';
+function dag(iso, metWeekdag){const d=new Date(iso+'T12:00:00');return (metWeekdag?WEEKDAG[d.getDay()]+' ':'')+d.getDate()+' '+MAAND[d.getMonth()];}
+function stapVoor(max){const ruw=max/4, p=Math.pow(10,Math.floor(Math.log10(ruw)));for(const f of [1,2,5,10]){if(f*p>=ruw)return Math.max(1,f*p);}return Math.max(1,10*p);}
+function tekenGrafiek(){
+  const box=document.getElementById('grafiek'), tip=document.getElementById('tip'), noot=document.getElementById('grafNoot');
+  box.querySelectorAll('svg,.empty').forEach(e=>e.remove());
+  if(!DAG.dates||!DAG.this){box.insertAdjacentHTML('beforeend','<div class="empty">Nog geen dagcijfers beschikbaar.</div>');return;}
+  const nu=DAG.this[metriek]||[], was=DAG.prev[metriek]||[], n=DAG.dates.length;
+  const gemeten=nu.concat(was).filter(v=>v!==null);
+  if(!gemeten.length){box.insertAdjacentHTML('beforeend','<div class="empty">Deze meting is nog niet gekoppeld.</div>');noot.textContent='';return;}
+  noot.textContent = (metriek==='clicks' && nu.some(v=>v===null)) ? 'Google Search Console loopt 2 à 3 dagen achter; die dagen ontbreken nog.' : '';
+  const W=Math.max(280, box.clientWidth), H=W<500?200:250, L=34, R=10, T=12, B=26;
+  const top0=Math.max(1,...gemeten), stap=stapVoor(top0), top=Math.ceil(top0/stap)*stap;
+  const x=i=>L+(n===1?(W-L-R)/2:i*(W-L-R)/(n-1)), y=v=>T+(H-T-B)*(1-v/top);
+  const lijn=a=>{let d='',pen=false;a.forEach((v,i)=>{if(v===null){pen=false;return;}d+=(pen?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1);pen=true;});return d;};
+  let g='';
+  for(let v=0;v<=top;v+=stap){g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="#e2e8f0"/>'+
+     '<text x="'+(L-6)+'" y="'+(y(v)+4)+'" text-anchor="end" font-size="11" fill="#94a3b8">'+v+'</text>';}
+  const elke=Math.max(1,Math.ceil(n/(W<500?4:7)));
+  for(let i=0;i<n;i+=elke){g+='<text x="'+x(i)+'" y="'+(H-6)+'" text-anchor="middle" font-size="11" fill="#94a3b8">'+dag(DAG.dates[i], n<=7)+'</text>';}
+  g+='<path d="'+lijn(was)+'" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5 4"/>';
+  g+='<path d="'+lijn(nu)+'" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round"/>';
+  if(n<=31) nu.forEach((v,i)=>{if(v!==null)g+='<circle cx="'+x(i)+'" cy="'+y(v)+'" r="3" fill="#2563eb"/>';});
+  g+='<line id="hov" y1="'+T+'" y2="'+(H-B)+'" stroke="#cbd5e1" visibility="hidden"/>';
+  box.insertAdjacentHTML('afterbegin','<svg width="'+W+'" height="'+H+'" role="img" aria-label="Verloop per dag">'+g+'</svg>');
+  const svg=box.querySelector('svg'), hov=svg.querySelector('#hov');
+  const toon=e=>{
+    const r=svg.getBoundingClientRect(), px=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+    const i=Math.max(0,Math.min(n-1,Math.round((px-L)/((W-L-R)/Math.max(1,n-1)))));
+    hov.setAttribute('x1',x(i));hov.setAttribute('x2',x(i));hov.setAttribute('visibility','visible');
+    const f=v=>v===null?'nog niet gemeten':v;
+    tip.innerHTML='<b>'+dag(DAG.dates[i],true)+'</b>: '+f(nu[i])+' '+NAAM[metriek]+'<br>'+dag(DAG.prev_dates[i],true)+': '+f(was[i]);
+    tip.style.display='block';
+    tip.style.left=Math.min(Math.max(0,x(i)-tip.offsetWidth/2),W-tip.offsetWidth)+'px';tip.style.top='0px';
+  };
+  svg.addEventListener('mousemove',toon);svg.addEventListener('touchstart',toon,{passive:true});
+  svg.addEventListener('mouseleave',()=>{tip.style.display='none';hov.setAttribute('visibility','hidden');});
+}
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t===b));
+  metriek=b.dataset.m; tekenGrafiek();
+}));
+let wacht; window.addEventListener('resize',()=>{clearTimeout(wacht);wacht=setTimeout(tekenGrafiek,150);});
+tekenGrafiek();
+
 const SITE_URL = {{ site_url|tojson }};
 function slugify(s){return (s||'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');}
 function buildUtm(){

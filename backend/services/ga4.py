@@ -177,6 +177,18 @@ def sessions_by_day(start: str, end: str) -> dict[str, int]:
     return out
 
 
+def by_day(start: str, end: str) -> dict[str, dict]:
+    """Sessies, nieuwe bezoekers en conversies per dag als {'YYYY-MM-DD': {...}}:
+    de lijnen in de dashboardgrafiek."""
+    out: dict[str, dict] = {}
+    for r in _run(dimensions=["date"], metrics=["sessions", "newUsers", "conversions"],
+                  start=start, end=end, limit=400):
+        d = str(r.pop("date", "") or "")
+        if len(d) == 8 and d.isdigit():
+            out[f"{d[:4]}-{d[4:6]}-{d[6:]}"] = r
+    return out
+
+
 def top_landing_pages(start: str, end: str, limit: int = 15) -> list[dict]:
     """Waar bezoekers binnenkomen — 'welke pagina vangt het verkeer op'.
 

@@ -30,20 +30,26 @@ SITE_URL = "https://omnivaleur.com"
 # ---------------------------------------------------------------------------
 # Datumvensters
 # ---------------------------------------------------------------------------
-def _windows(today: date | None = None) -> dict:
+PERIODES = (7, 28, 90)
+
+
+def _windows(today: date | None = None, dagen: int = 7) -> dict:
     """
-    'Deze week' = de zojuist afgelopen ma..zo (t/m gisteren als het zondag is),
-    'vorige week' = de 7 dagen daarvoor. GSC-data heeft ~2-3 dagen vertraging,
-    dus we vergelijken volle, vergelijkbare 7-daagse blokken.
+    'Deze periode' = de laatste `dagen` volle dagen t/m gisteren, 'vorige' = even
+    zoveel dagen direct daarvoor. De zondagsmail gebruikt 7 (week op week); het
+    dashboard laat ook 28 en 90 kiezen (Daniel, 07-10-2026). GSC-data heeft ~2-3
+    dagen vertraging, dus we vergelijken volle, even lange blokken.
     """
     today = today or date.today()
     this_end = today - timedelta(days=1)
-    this_start = this_end - timedelta(days=6)
+    this_start = this_end - timedelta(days=dagen - 1)
     prev_end = this_start - timedelta(days=1)
-    prev_start = prev_end - timedelta(days=6)
+    prev_start = prev_end - timedelta(days=dagen - 1)
     return {
         "this": (this_start.isoformat(), this_end.isoformat()),
         "prev": (prev_start.isoformat(), prev_end.isoformat()),
+        "dagen": dagen,
+        "vorige": "vorige week" if dagen == 7 else f"vorige {dagen} dagen",
     }
 
 
@@ -128,15 +134,35 @@ def _channels_section(win: dict) -> dict:
     now = ga4.channels(this_s, this_e)
     prev = {r["sessionDefaultChannelGroup"]: r for r in ga4.channels(prev_s, prev_e)}
     for r in now:
-        p = prev.get(r["sessionDefaultChannelGroup"], {})
-        r["sessions_delta"] = _pct_delta(r.get("sessions", 0), p.get("sessions", 0))
+        p = prev.pop(r["sessionDefaultChannelGroup"], {})
+        r["sessions_prev"] = p.get("sessions", 0)
+        r["conversions_prev"] = p.get("conversions", 0)
+        r["sessions_delta"] = _pct_delta(r.get("sessions", 0), r["sessions_prev"])
+    # Een kanaal dat deze periode wegviel hoort er ook bij: anders zie je een
+    # daling nooit, alleen dat de rij er niet meer staat.
+    for naam, p in prev.items():
+        if p.get("sessions"):
+            now.append({"sessionDefaultChannelGroup": naam, "sessions": 0, "newUsers": 0,
+                        "conversions": 0, "sessions_prev": p["sessions"],
+                        "conversions_prev": p.get("conversions", 0), "sessions_delta": -100.0})
+
+    landing = ga4.top_landing_pages(this_s, this_e, limit=8)
+    landing_prev = {r["landingPagePlusQueryString"]: r
+                    for r in ga4.top_landing_pages(prev_s, prev_e, limit=200)}
+    for r in landing:
+        r["sessions_prev"] = landing_prev.get(r["landingPagePlusQueryString"], {}).get("sessions", 0)
+    pages = ga4.top_pages(this_s, this_e, limit=8)
+    pages_prev = {r["pagePath"]: r for r in ga4.top_pages(prev_s, prev_e, limit=200)}
+    for r in pages:
+        r["views_prev"] = pages_prev.get(r["pagePath"], {}).get("screenPageViews", 0)
 
     return {
         "connected": True,
         "channels": now,
-        "landing_pages": ga4.top_landing_pages(this_s, this_e, limit=8),
-        "pages": ga4.top_pages(this_s, this_e, limit=8),
+        "landing_pages": landing,
+        "pages": pages,
         "totals": ga4.totals(this_s, this_e),
+        "totals_prev": ga4.totals(prev_s, prev_e),
     }
 
 
@@ -169,7 +195,8 @@ def _social_section(win: dict) -> dict:
     prev = _by_platform(ga4.traffic_sources(prev_s, prev_e))
     platforms = []
     for plat, a in now.items():
-        a["sessions_delta"] = _pct_delta(a["sessions"], prev.get(plat, {}).get("sessions", 0))
+        a["sessions_prev"] = prev.get(plat, {}).get("sessions", 0)
+        a["sessions_delta"] = _pct_delta(a["sessions"], a["sessions_prev"])
         a["conv_rate"] = round(a["conversions"] / a["sessions"] * 100, 1) if a["sessions"] else 0.0
         platforms.append(a)
     platforms.sort(key=lambda x: x["sessions"], reverse=True)
@@ -243,14 +270,21 @@ def _signup_dates() -> list[str] | None:
     """
     from backend.database import get_admin_db
 
+    # Zonder paginering geeft Supabase alleen de nieuwste 50 accounts. Gemeten
+    # 07-10-2026: 50 van de 63, de oudste van 21-07. Een periode van 90 dagen
+    # telde daardoor te weinig aanmeldingen, en de vorige periode bijna nul.
     try:
-        users = get_admin_db().auth.admin.list_users()
-        rows = users if isinstance(users, list) else getattr(users, "users", []) or []
+        admin = get_admin_db().auth.admin
         out = []
-        for u in rows:
-            created = getattr(u, "created_at", None) or (u.get("created_at") if isinstance(u, dict) else None)
-            if created:
-                out.append(str(created)[:10])
+        for pagina in range(1, 50):
+            users = admin.list_users(page=pagina, per_page=1000)
+            rows = users if isinstance(users, list) else getattr(users, "users", []) or []
+            for u in rows:
+                created = getattr(u, "created_at", None) or (u.get("created_at") if isinstance(u, dict) else None)
+                if created:
+                    out.append(str(created)[:10])
+            if len(rows) < 1000:
+                break
         return out
     except Exception as e:
         logger.info(f"Signup-telling niet beschikbaar (best effort): {e}")
@@ -319,17 +353,49 @@ def _trend(win: dict, signup_dates: list[str] | None, weeks: int = WEEKS_BACK) -
     return out
 
 
+def _daily(win: dict, signup_dates: list[str] | None) -> dict:
+    """Dag voor dag, deze periode naast de vorige: de grafiek op het dashboard.
+
+    Dag i van 'prev' staat tegenover dag i van 'this', zoals Google Analytics
+    twee perioden over elkaar legt. None betekent 'niet gemeten', nooit nul:
+    Search Console loopt twee à drie dagen achter, en die laatste dagen als 0
+    tekenen leest als een instorting die er niet is.
+    """
+    n = win["dagen"]
+    prev_s, this_e = win["prev"][0], win["this"][1]
+    d0 = date.fromisoformat(prev_s)
+    alle = [(d0 + timedelta(days=i)).isoformat() for i in range(2 * n)]
+
+    ga = ga4.by_day(prev_s, this_e) if ga4.is_configured() else {}
+    klik = {r["keys"][0]: round(r["clicks"]) for r in gsc.query_window(["date"], prev_s, this_e, row_limit=500)}
+    klik_tot = max(klik) if klik else None
+    klik_van = min(klik) if klik else None
+
+    def reeks(dagen: list[str]) -> dict:
+        return {
+            "sessions": [ga.get(d, {}).get("sessions", 0) if ga else None for d in dagen],
+            "newUsers": [ga.get(d, {}).get("newUsers", 0) if ga else None for d in dagen],
+            "signups": ([sum(1 for x in signup_dates if x == d) for d in dagen]
+                        if signup_dates is not None else [None] * len(dagen)),
+            "clicks": [klik.get(d, 0) if klik_tot and klik_van <= d <= klik_tot else None for d in dagen],
+        }
+
+    return {"dates": alle[n:], "prev_dates": alle[:n],
+            "this": reeks(alle[n:]), "prev": reeks(alle[:n])}
+
+
 # ---------------------------------------------------------------------------
 # Patroonherkenning
 # ---------------------------------------------------------------------------
-def _patterns(seo: dict, channels: dict, signups: dict, social: dict, categories: list[dict]) -> list[str]:
+def _patterns(seo: dict, channels: dict, signups: dict, social: dict, categories: list[dict],
+              vorige: str = "vorige week") -> list[str]:
     out: list[str] = []
 
     if seo.get("connected"):
         d = seo.get("total_clicks_delta")
         if d is not None:
             arrow = "📈" if d >= 0 else "📉"
-            out.append(f"{arrow} SEO-clicks {'+' if d >= 0 else ''}{d}% vs vorige week ({seo['total_clicks']} clicks).")
+            out.append(f"{arrow} SEO-clicks {'+' if d >= 0 else ''}{d}% vs {vorige} ({seo['total_clicks']} clicks).")
         if seo.get("risers"):
             r = seo["risers"][0]
             out.append(f"🔎 Snelst stijgende zoekterm: “{r['query']}” ({r['clicks_prev']}→{r['clicks']} clicks).")
@@ -374,7 +440,7 @@ def _patterns(seo: dict, channels: dict, signups: dict, social: dict, categories
             out.append("🏷️ Tip: tag je post-links met UTM's (zie de linkbouwer in het dashboard) "
                        "om per TikTok/Reel/Pin te zien wat bezoek én signups oplevert.")
     elif social.get("connected"):
-        out.append("📱 Nog geen herkend social-verkeer deze week — begin met UTM-links te delen.")
+        out.append("📱 Nog geen herkend social-verkeer in deze periode — begin met UTM-links te delen.")
 
     # Beste contentcategorie — beslissingswaardig: hier zit je meeste organische bereik.
     if categories:
@@ -397,7 +463,7 @@ def _patterns(seo: dict, channels: dict, signups: dict, social: dict, categories
     if signups.get("available"):
         d = signups.get("delta")
         dtxt = f"{'+' if (d or 0) >= 0 else ''}{d}%" if d is not None else "n.v.t."
-        out.append(f"👤 Nieuwe signups: {signups['this_week']} (vorige week {signups['prev_week']}, {dtxt}).")
+        out.append(f"👤 Nieuwe signups: {signups['this_week']} ({vorige} {signups['prev_week']}, {dtxt}).")
 
     return out
 
@@ -405,8 +471,8 @@ def _patterns(seo: dict, channels: dict, signups: dict, social: dict, categories
 # ---------------------------------------------------------------------------
 # Publieke API
 # ---------------------------------------------------------------------------
-def build_report(today: date | None = None, include_social: bool = False) -> dict:
-    win = _windows(today)
+def build_report(today: date | None = None, include_social: bool = False, dagen: int = 7) -> dict:
+    win = _windows(today, dagen)
     seo = _seo_section(win)
     channels = _channels_section(win)
     social = _social_section(win)
@@ -414,7 +480,8 @@ def build_report(today: date | None = None, include_social: bool = False) -> dic
     signup_dates = _signup_dates()
     signups = _signups_section(win, signup_dates)
     trend = _trend(win, signup_dates)
-    patterns = _patterns(seo, channels, signups, social, categories)
+    patterns = _patterns(seo, channels, signups, social, categories, win["vorige"])
+    daily = _daily(win, signup_dates)
 
     # On-platform post-prestaties (Apify) — traag, dus alleen bij de zondagse mail en
     # bij de handmatige dashboard-knop. Anders alleen de koppelstatus doorgeven.
@@ -427,7 +494,7 @@ def build_report(today: date | None = None, include_social: bool = False) -> dic
         social_content = {"connected": social_scrape.is_configured(), "deferred": True}
 
     report = {
-        "period": {"this": win["this"], "prev": win["prev"]},
+        "period": {"this": win["this"], "prev": win["prev"], "dagen": dagen, "vorige": win["vorige"]},
         "seo": seo,
         "channels": channels,
         "social": social,
@@ -435,10 +502,13 @@ def build_report(today: date | None = None, include_social: bool = False) -> dic
         "categories": categories,
         "signups": signups,
         "trend": trend,
+        "daily": daily,
         "patterns": patterns,
     }
     report["actions"] = _actions(report)
-    _store_snapshot(report)
+    # Het geheugen is week op week; een dashboardblik op 28 of 90 dagen hoort daar niet in.
+    if dagen == 7:
+        _store_snapshot(report)
     return report
 
 

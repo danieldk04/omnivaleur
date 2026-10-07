@@ -649,10 +649,15 @@ def korte_link(k: dict, site_url: str = "") -> str:
 
 
 @router.get("/analytics", response_class=HTMLResponse)
-async def analytics_dashboard(request: Request, token: str | None = None):
+async def analytics_dashboard(request: Request, token: str | None = None, dagen: int = 7):
     _require_dashboard_token(token)
-    from backend.services.analytics_report import build_report
-    report = build_report()
+    import asyncio
+    from backend.services.analytics_report import PERIODES, build_report
+    dagen = dagen if dagen in PERIODES else 7
+    # Een twintigtal vragen aan Google achter elkaar: in een eigen draad, zodat
+    # de rest van de site niet stilstaat zolang dit dashboard laadt.
+    report = await asyncio.to_thread(build_report, None, False, dagen)
+    mailvideo = await asyncio.to_thread(_mail_naar_videopagina, report["period"])
     kanalen = [{**k, "link": kanaal_link(k, SITE_URL),
                 "kortelink": korte_link(k, SITE_URL)} for k in KANAAL_LINKS]
     mail = {**MAIL_LINK, "link": kanaal_link(MAIL_LINK, SITE_URL),
@@ -660,20 +665,21 @@ async def analytics_dashboard(request: Request, token: str | None = None):
     return templates.TemplateResponse(
         "analytics_dashboard.html",
         {"request": request, "report": report, "token": token, "site_url": SITE_URL,
-         "kanalen": kanalen, "maillink": mail, "mailvideo": _mail_naar_videopagina()},
+         "kanalen": kanalen, "maillink": mail, "mailvideo": mailvideo, "periodes": PERIODES},
     )
 
 
-def _mail_naar_videopagina() -> list[dict]:
+def _mail_naar_videopagina(periode: dict) -> list[dict]:
     """Mailbezoek op de videopagina, /mp en /mp-video samen (Daniel, 07-10-2026).
-    Twee vensters: de laatste 30 dagen, en alles sinds de pagina bestaat."""
-    from datetime import date, timedelta
+    Dezelfde twee perioden als de rest van het dashboard, plus alles sinds de
+    pagina bestaat."""
     from backend.services import ga4
-    vandaag = date.today()
+    n = periode["dagen"]
     uit = []
-    for label, start in (("Laatste 30 dagen", vandaag - timedelta(days=30)),
-                         ("Sinds 1 juni 2026", date(2026, 6, 1))):
-        cijfers = ga4.mail_naar_videopagina(start.isoformat(), vandaag.isoformat())
+    for label, (start, eind) in ((f"Laatste {n} dagen", periode["this"]),
+                                 (periode["vorige"].capitalize(), periode["prev"]),
+                                 ("Sinds 1 juni 2026", ("2026-06-01", periode["this"][1]))):
+        cijfers = ga4.mail_naar_videopagina(start, eind)
         if cijfers is not None:
             uit.append({"label": label, **cijfers})
     return uit
