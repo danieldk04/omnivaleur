@@ -19,7 +19,8 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - Aanhef: "Hi," of "Hi Voornaam,". Daarnaast "Hoi Voornaam," bij mensen met wie hij
   vaker mailt, en "Ha Voornaam," bij losse, warme contacten. Geen "Beste", geen
   "Geachte". Weet je de voornaam niet, dan gewoon "Hi,".
-- Afsluiting: "Groetjes," en dan "Daniel" op een eigen regel. Soms "Groet,".
+- Afsluiting: "Groetjes," dan een lege regel, dan "Daniel" op een eigen regel (07-10: in 19 van 19
+  mails zo; mijn concepten zetten "Daniel" direct onder "Groetjes,", dat past hij aan). Soms "Groet,".
   Bij een formelere partij "Met vriendelijke groet,". Engelstalige mails aan
   websites of bloggers: "Best," met "Daniel de Koning" en "Founder, Omnivaleur".
 - Hele korte reacties hebben soms geen aanhef, alleen "Helder, ..." en de groet.
@@ -31,15 +32,17 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 
 ## Toon
 
-- Warm en informeel, "je" en nooit "u". Een enkele keer ";)" of ":-)", niet vaker
-  dan één per mail.
+- Warm en informeel, "je" en nooit "u". Smiley's: ":)" is de gewone vorm (6 van 19 mails),
+  aan het eind van een zin of vlak voor de groet, soms ":)." of ":)!"; ";)" en ":-)" zijn zeldzaam.
+  Niet vaker dan één per mail.
 - Opent met een korte erkenning: "Dank voor je reactie!", "Helder,", "Top,",
   "Is helemaal goed hoor." Direct daarna de inhoud.
 - Eerlijk zeggen wat niet kan of niet bij de klant past, zonder te verkopen. Bij
   een nee van de klant: bedanken, uit de lijst halen, succes wensen. Niet doordrukken.
 - Bij een fout van ons: kort erkennen, zeggen wat er mis was in gewone taal,
   zeggen wat nu anders is. Geen lange excuses, hooguit "Excuus voor deze problemen".
-- Sluit af met een uitnodiging in plaats van een vraag aan het eind: "Laat maar
+- Sluit af met een uitnodiging in plaats van een vraag aan het eind: "Laat me weten als je
+  nog vragen hebt of hulp nodig hebt" (4x vervangt hij daarmee mijn eigen slotzin), "Laat maar
   weten wat je ervan vindt", "Kom je ergens tegenaan, laat het me weten, dan kijk
   ik met je mee."
 - Wensen aan het eind passen bij de klant: "Succes met de verkoop!", "Fijne vakantie!".
@@ -54,12 +57,20 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - Bij een storing of fout van ons: "Het ligt niet aan jou", "Er is niets kwijt", daarna
   wat nu opgelost is en wat de klant nog moet doen (verversen, extensie bijwerken).
 - Beloofde vervolgcontrole noemt hij met datum: "Op 5 oktober kijk ik na of het goed loopt."
-- Nee van een klant: kort bedanken, "we laten het hierbij" of "dan weet je ons te vinden",
+- Nee van een klant: één keer vragen waarom ("Puur uit interesse en ter verbetering van het
+  platform", 2x, ook bij account verwijderen), erbij zeggen dat hij er niet meer over mailt.
+  Mijn concepten sloten zonder die vraag af met "Succes met de verkoop"; hij zet de vraag erin.
+  Verder: kort bedanken, "we laten het hierbij" of "dan weet je ons te vinden",
   geen tegenargument, wel een warme wens.
 
 - Video aanbieden of sturen: altijd de korte link https://omnivaleur.com/mp (stuurt door naar de
   leadpagina en zet de herkomst voor Analytics; de lange /mp-video telt als "direct"), met "duurt 2 minuutjes".
 - Videomail (3 van 5 recente mails): "Dank voor je reactie. Via deze link kan je de video bekijken: <link> ." dan "Ik ben benieuwd wat je ervan vindt! Laat gerust weten als je naar aanleiding van de video nog vragen hebt." Link staat los met spatie voor de punt. Mag met "Hi,", "Hoi Voornaam," of "Goedemorgen Voornaam,".
+- Kanalen opsommen: altijd de volledige lijst, dus Marktplaats, 2dehands, Vinted, eBay, FB
+  Marketplace en Shopify. Mijn concepten lieten FB Marketplace weg, hij zet het er 3x bij.
+- Bij een fout of storing van ons is hij korter dan mijn concept: geen openingszin als "Dank voor de
+  video, nu zie ik precies wat je bedoelt", geen uitleg wie het had moeten zien, direct de
+  feiten en het nieuwe versienummer. "Excuus voor ..." in één zin is genoeg (3x gezien).
 - Prijs noemen als het gevraagd wordt of ter sprake komt: kort, met "eerste 7 dagen
   gratis" erbij.
 - Geen jargon naar klanten. Technische oorzaken in één zin, de nadruk op wat de
@@ -67,7 +78,7 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 
 ## Nog te leren (invullen zodra er vergelijkingen zijn)
 
-- Wat Daniel in mijn concepten steeds schrapt of toevoegt. Eerste signalen (03-10, elk nog 1x, dus nog geen regel): hij schrapte in een storingsmail de opening "Dank voor je bericht, en excuus voor het gedoe. Het lag aan ons" en begon direct met de feiten, en hij zette "Hi," in plaats van mijn "Hoi Voornaam,"; bij een vraag om referenties voegde hij een tweede bewijs (Trustpilot-link) toe en haalde de gratis proef naar een eigen alinea.
+- Wat Daniel in mijn concepten steeds schrapt of toevoegt. Nog 1x gezien (07-10): hij schrapt verkoopzinnen (gratis proef, videolink) bij een klant die al meedenkt; hij verzacht "Beloven kan ik het nog niet" met "denk graag met jullie mee :)"; hij noemt installatietijd optimistischer ("meestal binnen een paar uur"). Eerdere signalen (03-10): hij schrapte in een storingsmail de opening "Dank voor je bericht, en excuus voor het gedoe. Het lag aan ons" en begon direct met de feiten, en hij zette "Hi," in plaats van mijn "Hoi Voornaam,"; bij een vraag om referenties voegde hij een tweede bewijs (Trustpilot-link) toe en haalde de gratis proef naar een eigen alinea.
 - Of hij bij technische mails liever kort of liever volledig is.
 - Welke woorden hij nooit gebruikt.
 
@@ -78,3 +89,4 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - 02-10-2026 (tweede run): 29 nieuwe mails, 0 met concept; alleen algemene patronen: Hoi als standaardaanhef, aanhef weg binnen gesprek, vaste onboarding-opening, concrete getallen.
 - 03-10-2026: 0 nieuwe mails, 0 met concept; niets te leren (de 29 van gisteren zijn al verwerkt).
 - 04-10-2026: Gekeken: 107 mails in Verzonden, 16 van Daniel, 11 al verwerkt; 5 nieuw, 2 met concept; videomail-sjabloon (3x) herkend, twee eerste concept-verschillen onder Nog te leren.
+- 07-10-2026: Gekeken: 125 mails in Verzonden (3 dagen), 19 van Daniel, 0 al verwerkt; 19 nieuw, 12 met concept (maar bij 5 hoorde het concept bij een eerdere mail in dezelfde draad, dus echte vergelijking ca. 7). Nieuw: lege regel voor "Daniel", ":)" als standaard smiley, waarom-vraag bij een nee, volledige kanalenlijst, kortere foutmails.
