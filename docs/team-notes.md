@@ -16070,3 +16070,17 @@ Aanleiding: Goudlief vroeg of Omnivaleur titels met AI kan verbeteren tot binnen
   zou ~$30 kosten als de gratis Google-laag op is (vanochtend 1.319 keer 429). Idee: alleen de
   passende tak meesturen, ~10x kleiner.
 - Beide staan in docs/overdracht.md onder "Op de planning voor later". Daniel komt erop terug.
+
+## 07-10-2026: analyticsdashboard vergelijkt nu per periode
+
+- Daniel wilde de vergelijking met de vorige periode en grafieken zoals Google Analytics. Bovenaan
+  kies je nu 7, 28 of 90 dagen (`?dagen=`), steeds tegen even veel dagen ervoor. De kerncijfers
+  staan als tabs boven een grafiek per dag, met de vorige periode als stippellijn eroverheen. Elke
+  tabel heeft een kolom "vorige"; een kanaal dat wegviel blijft zichtbaar met -100%. De zondagsmail
+  blijft week op week en ongewijzigd.
+- Gevonden en gerepareerd: de aanmeldingentelling las alleen de nieuwste 50 accounts (er zijn er
+  63). Live gecontroleerd: 90 dagen geeft 54 plus 9 in de periode ervoor, samen 63.
+- Bij 90 dagen valt de vorige periode (april tot juli) vóór de start van Analytics: daar staat
+  0 en "nieuw", en de grafiek tekent dan geen vorige lijn maar zegt dat er nog niet gemeten werd.
+- Laden duurt 8 tot 12 seconden (een twintigtal vragen aan Google achter elkaar). Draait nu in een
+  eigen draad, zodat de rest van de site er niet op wacht.

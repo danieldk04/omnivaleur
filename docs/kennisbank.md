@@ -17,6 +17,17 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## supabase-list-users-stopt-bij-50
+
+*07-10-2026 — auth.admin.list_users() zonder paginering geeft alleen de nieuwste 50 accounts; tellingen over langere tijd vallen stil te laag uit*
+
+`get_admin_db().auth.admin.list_users()` geeft zonder `page`/`per_page` alleen de nieuwste 50 accounts terug. Gemeten 07-10-2026: 50 van de 63, de oudste van 21-07. Het marketingrapport telde aanmeldingen daarmee; zolang het alleen week op week keek viel het niet op, bij een periode van 90 dagen wel.
+
+**Why:** de fout is stil: er komt een lijst terug die er compleet uitziet.
+**How to apply:** altijd pagineren (`list_users(page=p, per_page=1000)` tot een pagina korter is dan 1000), en bij elke telling over accounts controleren of het totaal toevallig precies 50 is. Zie `_signup_dates` in backend/services/analytics_report.py.
+
+---
+
 ## import-veld-langer-dan-database
 
 *07-10-2026 — 07-10-2026 Goudlief: items-kolommen hebben vaste lengtes (size 20, condition 20, color/sku 50, rest 100); te lang = stil "failed" bij import*
