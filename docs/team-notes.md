@@ -16107,3 +16107,14 @@ bereikbaar).
 - Peter (a4fc5340): proef loopt vandaag 18:02 af, 4 artikelen, nooit geplaatst, extensie stil sinds 01-10. Geen mailtje.
 - partablecs, Winter Home, amhin, Janneke, aa093a0a: ongewijzigd, geen mailtje.
 - Niets gerepareerd, geen code gewijzigd.
+
+## 07-10-2026 (middag): Dagelijkse klantfouten
+
+- 897 opdrachten in 24 uur, geen nieuwe fout sinds 09:00 UTC; klantfouten.py toont 7 soorten, 0 open. Geen code gewijzigd.
+- Online en lopend (09:12 UTC): 96e30080 werkt de MP-herplaatsingen en 2dehands-plaatsingen af (laatste 09:11, 38 verwijderingen
+  en 39 plaatsingen wachten nog); Egbert bcdf9aa4 verlengt elke 6 minuten (calm mode), 16 wachten nog. Geen rem.
+- Open punt van de automatische ronde, gemeten: "No tab with id" kwam bij 96e30080 in 7 dagen maar één keer eerder voor
+  (04-10, drie keer kort na elkaar, extensie 1.0.366). Geen patroon. "Mooie wollen jas" (538ae770) staat nog online en heeft
+  nog geen nieuwe poging; niets kwijt. Of de nachtronde hem opnieuw oppakt: morgenochtend nakijken.
+- Stil met wachtend werk: 0b28c1ce (75+75 MP, stil sinds 01-10), 26cf5471 (64+64, stil sinds 06-10 10:09), 1ba42900 (34+34,
+  stil sinds 04-10), 8f91a370 (stil sinds 06-10 17:41). Allemaal computer uit, klant-eigen.
