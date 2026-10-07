@@ -310,6 +310,52 @@ async def bulk_condition(body: dict, user_id: str = Depends(get_current_user)):
     return {"updated": aantal, "condition": conditie}
 
 
+@router.post("/bulk-bidding")
+async def bulk_bidding(body: dict, user_id: str = Depends(get_current_user)):
+    """Bieden toestaan (Marktplaats/2dehands) voor veel items in één keer.
+
+    WAAROM (07-10-2026, Goudlief): bieden stond alleen per artikel in het
+    bewerkscherm. Met duizenden Shopify-producten is dat onbegonnen werk.
+    `percentage` is het minimumbod als deel van de prijs (zoals in het
+    bewerkscherm); 0 of leeg zet bieden uit. Geldt voor nieuwe plaatsingen;
+    een advertentie die al online staat verandert niet vanzelf mee.
+    """
+    ruw = (body or {}).get("percentage")
+    try:
+        pct = int(ruw) if ruw not in (None, "") else 0
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Percentage must be a whole number")
+    if not 0 <= pct <= 100:
+        raise HTTPException(status_code=400, detail="Percentage must be between 0 and 100")
+
+    db = get_db()
+    ids = [str(i) for i in ((body or {}).get("ids") or []) if i]
+    alles = bool((body or {}).get("all_items"))
+    if not ids and not alles:
+        raise HTTPException(status_code=400, detail="No items selected")
+
+    def _doe() -> int:
+        doel = ids
+        if alles:
+            doel = [r["id"] for r in fetch_all(
+                lambda: db.table("items").select("id").eq("user_id", user_id))]
+        gedaan = 0
+        for i in range(0, len(doel), IN_BROK):
+            rijen = execute_with_retry(
+                db.table("items").update({"bid_percentage": pct or None})
+                .eq("user_id", user_id).in_("id", doel[i:i + IN_BROK])
+            )
+            gedaan += len(getattr(rijen, "data", None) or [])
+        return gedaan
+
+    try:
+        aantal = await asyncio.to_thread(_doe)
+    except Exception as e:  # noqa: BLE001
+        logger.exception("bulk-bidding mislukt voor %s", user_id)
+        raise HTTPException(status_code=500, detail=f"Could not update bidding: {e}")
+    return {"updated": aantal, "percentage": pct or None}
+
+
 # De doelgroeptakken van de taxonomie. Een rubriek uit een andere tak (wonen,
 # antiek, muziek, sieraden, games, electronics, audio) hoort géén doelgroep te
 # hebben — precies wat het bewerkscherm ook doet zodra het soort geen kleding

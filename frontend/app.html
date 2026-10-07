@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=1933c99b75"></script>
+<script src="/i18n.js?v=ee2d0f269b"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1203,6 +1203,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <button class="btn btn-sm btn-outline" onclick="openBulkPrice()">Change price…</button>
           <button class="btn btn-sm btn-outline" onclick="doBulkCondition()">Change condition…</button>
           <button class="btn btn-sm btn-outline" onclick="openBulkCategory()">Change category…</button>
+          <button class="btn btn-sm btn-outline" onclick="doBulkBidding()">Allow bidding…</button>
           <button class="btn btn-sm btn-outline" onclick="openBulkVerzending2dh()">2dehands shipping…</button>
           <button class="btn btn-sm btn-warning" onclick="bulkDelist()">Delist all</button>
           <button class="btn btn-sm btn-danger" onclick="bulkDelete()">Delete</button>
@@ -8401,6 +8402,10 @@ async function loadImportSummary() {
   if (!s || !s.total) { box.style.display = 'none'; return; }
 
   const pending = s.by_status?.pending || 0;
+  // De lijst toont hooguit 500; "Import all" doet ze allemaal. Zonder dit stond
+  // er "Import all 500" bij 3.875 wachtende (Goudlief, 07-10-2026).
+  importWachtendTotaal = pending;
+  toonImportTab();
   const done = (s.by_status?.imported || 0) + (s.by_status?.linked || 0);
   const reopenable = (s.by_status?.ignored || 0) + (s.by_status?.failed || 0);
   const platforms = Object.entries(s.by_platform || {})
@@ -8464,6 +8469,7 @@ function matchBadge(reason) {
 
 // Welk tabblad open staat. Leeg = vanzelf: eerst wat nagekeken moet worden.
 let importTab = null;
+let importWachtendTotaal = 0;
 function zetImportTab(t) { importTab = t; toonImportTab(); }
 function toonImportTab() {
   const nCheck = Number(document.getElementById('imp-count-check')?.textContent) || 0;
@@ -8480,7 +8486,8 @@ function toonImportTab() {
   document.getElementById('imp-pane-ready').style.display = t === 'ready' ? '' : 'none';
   const bulk = document.getElementById('imp-bulk-btn');
   bulk.style.display = t === 'ready' && nReady ? '' : 'none';
-  bulk.textContent = `Import all ${nReady}`;
+  const nAlles = Math.max(nReady, importWachtendTotaal - nCheck);
+  bulk.textContent = `Import all ${nAlles}`;
 }
 
 const IMPORT_MATCH_PREFIX = { same_listing: 'Already linked: ', same_code: 'Same number: ', same_title: 'Same title: ' };
@@ -13036,6 +13043,54 @@ async function doBulkCondition() {
   } catch (e) {
     setBusy(false);
     alert(`Could not update the condition: ${e.message}`);
+  }
+}
+
+// ── Bieden toestaan voor een hele selectie ───────────────────────────────────
+// WAAROM (07-10-2026, Goudlief): bieden stond alleen per artikel in het
+// bewerkscherm, en zij importeert duizenden producten uit Shopify.
+async function doBulkBidding() {
+  const ids = [...selectedIds];
+  if (!ids.length) return;
+  const totaal = (state.items || []).length;
+  let alleItems = false;
+  if (totaal > ids.length) {
+    alleItems = confirm(
+      `${ids.length} item${ids.length === 1 ? ' is' : 's are'} selected on this page.\n\n` +
+      `OK  = apply to ALL ${totaal} items in your dashboard\n` +
+      `Cancel = apply to the ${ids.length} selected only`);
+  }
+  const aantal = alleItems ? totaal : ids.length;
+  const antwoord = prompt(
+    `Allow bidding on Marktplaats and 2dehands for ${aantal} item${aantal === 1 ? '' : 's'}.\n\n` +
+    'Lowest bid you accept, as a percentage of the price (for example 70).\n' +
+    'Type 0 to turn bidding off.', '70');
+  if (antwoord === null) return;
+  const pct = parseInt(String(antwoord).trim(), 10);
+  if (!(pct >= 0 && pct <= 100)) { alert('Type a whole number from 0 to 100.'); return; }
+
+  setBusy(true, `Updating bidding for ${aantal} item${aantal === 1 ? '' : 's'}…`);
+  try {
+    const res = await apiFetchRetry(`${API}/api/items/bulk-bidding`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(alleItems ? { percentage: pct, all_items: true }
+                                     : { percentage: pct, ids }),
+    });
+    const data = await parseJsonSafe(res);
+    if (!res.ok) throw new Error((data && data.detail) || `HTTP ${res.status}`);
+    for (const item of (state.items || [])) {
+      if (alleItems || selectedIds.has(item.id)) item.bid_percentage = pct || null;
+    }
+    setBusy(false);
+    clearSelection();
+    applyFilters(false);
+    const n = data.updated ?? aantal;
+    alert(pct
+      ? `✅ Bidding allowed on ${n} item${n === 1 ? '' : 's'}, lowest bid ${pct}% of the price. This applies to new placements; adverts already online keep their setting.`
+      : `✅ Bidding turned off on ${n} item${n === 1 ? '' : 's'}.`);
+  } catch (e) {
+    setBusy(false);
+    alert(`Could not update bidding: ${e.message}`);
   }
 }
 

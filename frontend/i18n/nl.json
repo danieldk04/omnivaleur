@@ -3332,5 +3332,16 @@
  "Vinted's terms forbid external tools and deleting and re-adding the same item. Your Vinted account can be warned, restricted or blocked. Switch it on anyway?": "De voorwaarden van Vinted verbieden externe tools en het verwijderen en opnieuw toevoegen van hetzelfde artikel. Je Vinted-account kan een waarschuwing, beperking of blokkade krijgen. Toch aanzetten?",
  "Saved — refreshing and relisting on Vinted is on, at your own risk.": "Opgeslagen: verversen en herplaatsen op Vinted staat aan, op eigen risico.",
  "Saved — Omnivaleur no longer refreshes or relists on Vinted.": "Opgeslagen: Omnivaleur ververst of herplaatst niet meer op Vinted.",
- "Off by default. Vinted's terms since 5 October 2026 forbid using external tools and deleting and re-adding the same item. Breaking them can get your Vinted account warned, restricted or blocked. If you switch it on, a Vinted listing is refreshed at most once every 28 days, and a relist takes it down and brings it back 6 to 24 hours later.": "Standaard uit. De voorwaarden van Vinted verbieden sinds 5 oktober 2026 externe tools en het verwijderen en opnieuw toevoegen van hetzelfde artikel. Overtreed je ze, dan kan je Vinted-account een waarschuwing, beperking of blokkade krijgen. Zet je het aan, dan wordt een Vinted-advertentie hooguit eens per 28 dagen ververst, en een herplaatsing haalt hem weg en zet hem 6 tot 24 uur later terug."
+ "Off by default. Vinted's terms since 5 October 2026 forbid using external tools and deleting and re-adding the same item. Breaking them can get your Vinted account warned, restricted or blocked. If you switch it on, a Vinted listing is refreshed at most once every 28 days, and a relist takes it down and brings it back 6 to 24 hours later.": "Standaard uit. De voorwaarden van Vinted verbieden sinds 5 oktober 2026 externe tools en het verwijderen en opnieuw toevoegen van hetzelfde artikel. Overtreed je ze, dan kan je Vinted-account een waarschuwing, beperking of blokkade krijgen. Zet je het aan, dan wordt een Vinted-advertentie hooguit eens per 28 dagen ververst, en een herplaatsing haalt hem weg en zet hem 6 tot 24 uur later terug.",
+ "Allow bidding on Marktplaats and 2dehands for {0} item{1}.": "Bieden toestaan op Marktplaats en 2dehands voor {0} {1|artikel|artikelen}.",
+ "Allow bidding…": "Bieden toestaan…",
+ "Could not update bidding: {0}": "Kon bieden niet bijwerken: {0}",
+ "Lowest bid you accept, as a percentage of the price (for example 70).": "Laagste bod dat je accepteert, als percentage van de prijs (bijvoorbeeld 70).",
+ "Percentage must be a whole number": "Het percentage moet een heel getal zijn",
+ "Percentage must be between 0 and 100": "Het percentage moet tussen 0 en 100 liggen",
+ "Type 0 to turn bidding off.": "Typ 0 om bieden uit te zetten.",
+ "Type a whole number from 0 to 100.": "Typ een heel getal van 0 tot en met 100.",
+ "Updating bidding for {0} item{1}…": "Bieden bijwerken voor {0} {1|artikel|artikelen}…",
+ "✅ Bidding allowed on {0} item{1}, lowest bid {2}% of the price. This applies to new placements; adverts already online keep their setting.": "✅ Bieden toegestaan op {0} {1|artikel|artikelen}, laagste bod {2}% van de prijs. Dit geldt voor nieuwe plaatsingen; advertenties die al online staan houden hun instelling.",
+ "✅ Bidding turned off on {0} item{1}.": "✅ Bieden uitgezet op {0} {1|artikel|artikelen}."
 }

@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 06-10-2026 (Facebook Marketplace staat nu overal op de website als beta; eerder: 05-10-2026: Shopify koppelen: een mislukte koppeling noemt nu de precieze stap die fout ging, in het Nederlands; eerder: 04-10-2026: de demolink is nu altijd de korte https://omnivaleur.com/mp, zodat Analytics ziet dat het bezoek uit een mail komt; eerder: 30-09-2026: Omnivaleur Light naast Pro: 9,99 incl. btw tot 20 actieve artikelen; 2dehands verlengt bij een grote partij tot 200 per dag in plaats van vast 40; wie liet scannen maar na een dag niets importeerde krijgt één herinneringsmail; foto's die een klant later op Vinted vernieuwt komen niet vanzelf over, advies toegevoegd; antwoord op de vaak gestelde vraag naar een koppeling met bol toegevoegd; een bedrag als "1.360" werd 1,36 in de inkoop- en verkoopprijs, gerepareerd; oude foto's op Marktplaats bij een voorraad die uit meerdere kanalen is ingelezen, opgeruimd bij De Juiste Toon; Vinted herkende "zilveren" en andere verbogen kleuren niet, gerepareerd in 1.0.358; uitbreiding logde zichzelf uit bij een databasestoring, gerepareerd; eerder: automatisch herplaatsen stond 20-09 tot 28-09 stil door een fout bij ons, loopt weer; daarvoor: verzendkost-aanpassingen op 2dehands gaan achter nieuwe plaatsingen)_
+_Laatst bijgewerkt: 07-10-2026 (bieden toestaan kan nu voor veel artikelen tegelijk; een onderbroken import gaat verder met Alles importeren, zonder dubbelen; lange Shopify-namen komen nu wel binnen; eerder: 06-10-2026: Facebook Marketplace staat nu overal op de website als beta; eerder: 05-10-2026: Shopify koppelen: een mislukte koppeling noemt nu de precieze stap die fout ging, in het Nederlands; eerder: 04-10-2026: de demolink is nu altijd de korte https://omnivaleur.com/mp, zodat Analytics ziet dat het bezoek uit een mail komt; eerder: 30-09-2026: Omnivaleur Light naast Pro: 9,99 incl. btw tot 20 actieve artikelen; 2dehands verlengt bij een grote partij tot 200 per dag in plaats van vast 40; wie liet scannen maar na een dag niets importeerde krijgt één herinneringsmail; foto's die een klant later op Vinted vernieuwt komen niet vanzelf over, advies toegevoegd; antwoord op de vaak gestelde vraag naar een koppeling met bol toegevoegd; een bedrag als "1.360" werd 1,36 in de inkoop- en verkoopprijs, gerepareerd; oude foto's op Marktplaats bij een voorraad die uit meerdere kanalen is ingelezen, opgeruimd bij De Juiste Toon; Vinted herkende "zilveren" en andere verbogen kleuren niet, gerepareerd in 1.0.358; uitbreiding logde zichzelf uit bij een databasestoring, gerepareerd; eerder: automatisch herplaatsen stond 20-09 tot 28-09 stil door een fout bij ons, loopt weer; daarvoor: verzendkost-aanpassingen op 2dehands gaan achter nieuwe plaatsingen)_
 
 ---
 
@@ -232,6 +232,13 @@ Hoe de kanalen gekoppeld worden:
   stuk en zet je daarna op Marktplaats, 2dehands, Vinted en eBay. Uitverkochte
   producten en concepten komen niet mee. Staat een product met meerdere maten of
   kleuren in Shopify, dan komt het als een artikel binnen met de prijs van de eerste.
+- Grote import onderbroken (tabblad dicht)? Niet opnieuw scannen hoeft niet: open Import en druk
+  weer op Alles importeren, hij gaat verder waar hij was. Opnieuw scannen mag ook en maakt geen
+  dubbelen. De knop telt alles wat nog wacht; de lijst eronder toont er hooguit 500. Een
+  productnaam boven de 100 tekens wordt in Omnivaleur ingekort, in Shopify blijft hij heel.
+- Bieden toestaan voor veel artikelen tegelijk: in Voorraad aanvinken (of alles selecteren),
+  dan Bieden toestaan… en het laagste bod als percentage van de prijs typen, 0 zet het uit.
+  Geldt voor nieuwe plaatsingen; advertenties die al online staan veranderen niet mee.
 - Zodra Shopify gekoppeld is plaatst Omnivaleur je klaargezette advertenties ook
   als product in je winkel en houdt de voorraad bij. Verkoop je iets in je eigen
   Shopify-winkel, dan haalt Omnivaleur het artikel automatisch van de andere
