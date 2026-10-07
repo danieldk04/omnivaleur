@@ -429,7 +429,10 @@
     const site = { marktplaats: "marktplaats.nl", "2dehands": "2dehands.be", vinted: "vinted.nl", facebook: "facebook.com/marketplace" }[platform];
     let badge = `<span class="badge" style="background:#f1f5f9;color:#475569">Uses your Chrome login</span>`;
     let regel = `Sign in to <b>${site}</b> in the Chrome where the extension runs. Omnivaleur publishes as you.`;
-    if (meting && meting.ingelogd === false) {
+    if (meting && meting.ingelogd === true) {
+      badge = `<span class="badge active">✓ Signed in</span>`;
+      regel = `You're signed in to <b>${site}</b> in this browser. Omnivaleur publishes as you.`;
+    } else if (meting && meting.ingelogd === false) {
       badge = `<span class="badge" style="background:#fff7ed;color:#9a3412">Not signed in</span>`;
       regel = `You're not signed in to <b>${site}</b> in this browser. <a href="https://${site}" target="_blank" rel="noopener" style="color:var(--blue,#2563eb);font-weight:650">Open and sign in →</a>`;
     }

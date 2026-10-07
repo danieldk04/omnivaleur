@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=ee2d0f269b"></script>
+<script src="/i18n.js?v=3f73d14ec1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -2915,6 +2915,10 @@ window.addEventListener('message', (event) => {
   renderKanaalSessie();
   if (typeof renderExtStatus === 'function') renderExtStatus();
   laadGepubliceerdeVersie();
+  // De extensie meet de kanaalsessies pas nadat ze antwoordde. Eén keer later
+  // opnieuw vragen, en Platforms meteen bijwerken als die open staat.
+  if (document.getElementById('view-platforms')?.classList.contains('active')) renderPlatforms();
+  if (!window._kanaalHerping) { window._kanaalHerping = true; setTimeout(_extPingEenmaal, 12000); }
 });
 
 // Wat er op dit moment in de Chrome Web Store staat. Hoogstens één keer per uur

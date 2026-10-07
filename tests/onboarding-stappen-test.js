@@ -59,5 +59,10 @@ const OB2 = laad({ status: "ready", kanalen: { "2dehands": { ingelogd: false } }
 const uitgelogd = OB2.kanaalStatus("2dehands", 4);
 ok("bewezen uitgelogd: 'Not signed in' met link", /Not signed in/.test(uitgelogd.badge) && /2dehands\.be/.test(uitgelogd.regel), uitgelogd);
 
+const OB3 = laad({ status: "ready", kanalen: { marktplaats: { ingelogd: true }, vinted: { ingelogd: true } } });
+const janneke = OB3.kanaalStatus("vinted", 0);
+ok("bewezen ingelogd (Janneke, 07-10): 'Signed in' in plaats van 'Uses your Chrome login'",
+   /Signed in/.test(janneke.badge) && !/Not signed in|Uses your Chrome login/.test(janneke.badge), janneke.badge);
+
 console.log(mislukt ? `\n${mislukt} MISLUKT` : "\nalles groen");
 process.exit(mislukt ? 1 : 0);

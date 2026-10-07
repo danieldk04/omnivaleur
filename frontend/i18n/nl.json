@@ -3343,5 +3343,7 @@
  "Type a whole number from 0 to 100.": "Typ een heel getal van 0 tot en met 100.",
  "Updating bidding for {0} item{1}…": "Bieden bijwerken voor {0} {1|artikel|artikelen}…",
  "✅ Bidding allowed on {0} item{1}, lowest bid {2}% of the price. This applies to new placements; adverts already online keep their setting.": "✅ Bieden toegestaan op {0} {1|artikel|artikelen}, laagste bod {2}% van de prijs. Dit geldt voor nieuwe plaatsingen; advertenties die al online staan houden hun instelling.",
- "✅ Bidding turned off on {0} item{1}.": "✅ Bieden uitgezet op {0} {1|artikel|artikelen}."
+ "✅ Bidding turned off on {0} item{1}.": "✅ Bieden uitgezet op {0} {1|artikel|artikelen}.",
+ "✓ Signed in": "✓ Ingelogd",
+ "You're signed in to": "Je bent ingelogd bij"
 }

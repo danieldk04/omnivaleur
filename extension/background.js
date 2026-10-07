@@ -3924,6 +3924,56 @@ async function mpIngelogdOpDeSiteZelf(platform) {
   return oordeel;
 }
 
+// DE VERKOPER IS INGELOGD, EN HET DASHBOARD MOET HET ZIEN (07-10-2026, Janneke).
+//
+// Een kanaalsessie werd alleen vastgelegd tijdens echt werk (plaatsen, scannen).
+// Een nieuwe klant die nog niets had geplaatst stond daardoor op Platforms met
+// "Uses your Chrome login" en "no adverts yet", ook al was ze op Marktplaats en
+// Vinted gewoon ingelogd. Nu meten we dat zodra het dashboard opent.
+// Alleen bewezen uitslagen: een 200 op een afgeschermd adres (achtergrond) bewijst
+// "ja"; "nee" komt alleen uit een tabblad op de site zelf, en alleen als er nog
+// geen meting is of de laatste ouder is dan een half uur.
+const SESSIE_METING_VERS_MS = 30 * 60 * 1000;
+const SESSIE_METING_PAUZE_MS = 60 * 1000;
+let _sessieMeetLoopt = false;
+let _sessieMeetKlaarOm = 0;
+
+async function meetKanaalSessiesVoorDashboard() {
+  if (_sessieMeetLoopt || Date.now() < _sessieMeetKlaarOm) return;
+  _sessieMeetLoopt = true;
+  try {
+    const verseMeting = async (platform) => {
+      const stand = (await leesKanaalSessies())[platform];
+      return !!(stand && Date.now() - (stand.at || 0) < SESSIE_METING_VERS_MS);
+    };
+    // 1. Goedkoop en zonder tabblad: alleen een 200 telt.
+    for (const platform of ["marktplaats", "2dehands"]) {
+      await mpSessie(platform).catch(() => {});
+    }
+    let vintedOrigin = null;
+    try { vintedOrigin = await vintedIngelogdOrigin(null); } catch (_) {}
+    if (typeof vintedOrigin === "string") {
+      await onthoudKanaalSessie("vinted", true, { status: 200, url: vintedOrigin });
+    }
+    // 2. Zonder bewijs en zonder verse meting: kijk op de site zelf. Een zakelijk
+    // Marktplaats-account krijgt op het persoonlijke adres een 401 en kan alleen
+    // zo herkend worden (zie mpIngelogdOpDeSiteZelf).
+    const mpStand = (await leesKanaalSessies()).marktplaats;
+    if (!(mpStand && mpStand.ingelogd === true) && !(await verseMeting("marktplaats"))) {
+      await mpIngelogdOpDeSiteZelf("marktplaats").catch(() => {});
+    }
+    const vStand = (await leesKanaalSessies()).vinted;
+    if (!(vStand && vStand.ingelogd === true) && !(await verseMeting("vinted"))) {
+      const o = await vintedEerstepartijOrigin(null).catch(() => null);
+      if (typeof o === "string") await onthoudKanaalSessie("vinted", true, { status: 200, url: o });
+      else if (o === false) await onthoudKanaalSessie("vinted", false, { status: 401 });
+    }
+  } finally {
+    _sessieMeetLoopt = false;
+    _sessieMeetKlaarOm = Date.now() + SESSIE_METING_PAUZE_MS;
+  }
+}
+
 async function mpSessie(platform) {
   const url = MP_SESSIE_URL[platform];
   if (!url) return { ingelogd: null, status: null };
@@ -7516,10 +7566,16 @@ async function bgScanAdmarkt(job, serverUrl) {
       // Niets nieuws terwijl we al een deel binnen hadden: dan zijn we gewoon
       // aan het eind. Dat is klaar, geen fout.
       if ((OVERSLAAN > 0 || BEKEND.length) && m.totaal) return { items: [], meta: { ...m, klaar: true } };
-      throw new Error(
+      // Admarkt antwoordde, de campagne bestaat, er staat alleen niets live in.
+      // Dat is een leeg account, geen inlogprobleem (Janneke, 07-10-2026: ingelogd,
+      // kreeg toch "returned no live adverts"). De aanroeper rondt dit netjes af
+      // als het persoonlijke overzicht met een 200 ook niets zegt.
+      const leeg = new Error(
         `Admarkt returned no live adverts. page="${m.pagina_titel || "?"}" ` +
         `steps=[${(m.stappen || []).join(" | ") || "none"}]`
       );
+      leeg.admarktLeeg = true;
+      throw leeg;
     }
     return result;
   } finally {
@@ -7752,7 +7808,7 @@ async function bgScanMp2dh(job, serverUrl) {
         // Admarkt-foutmelding een prima geslaagde persoonlijke scan.
         if (!result.items.length) {
           admarktFout = String(e && e.message ? e.message : e);
-          admarktNietIngelogd = !!(e && e.admarktNietIngelogd);
+          admarktNietIngelogd = !!(e && (e.admarktNietIngelogd || e.admarktLeeg));
         }
         else console.warn("[Omnivaleur] Admarkt-scan naast persoonlijk overzicht mislukt:", e);
       }
@@ -10250,6 +10306,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // token exists and which account it belongs to — never the token itself.
   if (msg.type === "GET_AUTH_STATE") {
     chrome.storage.local.get(["authToken", "userEmail", KANAAL_SESSIE_SLEUTEL], (s) => {
+      // Het dashboard kijkt: meet ondertussen of deze browser op de kanalen is
+      // ingelogd, zodat Platforms "Signed in" kan tonen (Janneke, 07-10-2026).
+      if (s.authToken) meetKanaalSessiesVoorDashboard().catch(() => {});
       sendResponse({
         signedIn: !!s.authToken,
         email: s.userEmail || "",
