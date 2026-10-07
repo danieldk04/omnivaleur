@@ -686,6 +686,11 @@ def _warme_leads() -> dict | None:
     dag = lambda t: datetime.fromtimestamp(t).strftime("%d-%m") if t else "–"
     snap["leads"] = [{**l, "video_dag": dag(l.get("video_op")), "in_dag": dag(l.get("laatst_in")),
                       "uit_dag": dag(l.get("laatst_uit"))} for l in snap.get("leads", [])]
+    snap["wacht"] = [l for l in snap["leads"] if l["status"].startswith("Wacht op jou")]
+    telling: dict = {}
+    for l in snap["leads"]:
+        telling[l["status"]] = telling.get(l["status"], 0) + 1
+    snap["staan"] = sorted(telling.items(), key=lambda x: -x[1])
     return snap
 
 

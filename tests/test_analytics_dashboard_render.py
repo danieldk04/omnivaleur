@@ -210,5 +210,7 @@ def test_warme_leads_staan_op_het_dashboard_en_ontbreken_zonder_fout():
              "in_dag": "–", "uit_dag": "06-10", "dagen_stil": 1},
         ],
     }
+    warm["wacht"] = [warm["leads"][0]]
+    warm["staan"] = [("Wacht op jou: ze schreven terug", 1), ("Opvolging 1 gestuurd", 1)]
     html = _render(VOL, warm=warm)
     assert "Winkel A" in html and "Wacht op jou: ze schreven terug" in html and "Opvolging 1 gestuurd" in html

@@ -225,19 +225,34 @@
         <strong>{{ w.video_account }}</strong> namen een account ({{ (100 * w.video_account // w.video) if w.video else 0 }}%).
         Koude mail: {{ w.koud_beantwoord }} van {{ w.koud_aangeschreven }} aangeschreven reageerden
         ({{ (100 * w.koud_beantwoord // w.koud_aangeschreven) if w.koud_aangeschreven else 0 }}%).</p>
+      {% set wacht = warm.wacht or [] %}
+      {% if wacht %}
+      <h3 style="font-size:14px;margin:14px 0 6px">Wacht op jou ({{ wacht|length }})</h3>
       <table>
-        <tr><th>Lead</th><th>Status</th><th>Bal bij</th><th class="num">Video</th><th class="num">Opvolgingen</th><th class="num">Hun laatste</th><th class="num">Ons laatste</th><th class="num">Dagen stil</th></tr>
-        {% for l in warm.leads %}
-        <tr><td title="{{ l.adres }}">{{ l.naam }}</td>
-            <td>{{ l.status }}</td>
-            <td>{{ {"jij": "jou", "hen": "hen", "klaar": "–"}[l.bal] }}</td>
-            <td class="num">{{ l.video_dag }}</td>
-            <td class="num">{{ l.opvolgingen if l.video_op else "–" }}</td>
-            <td class="num">{{ l.in_dag }}</td>
-            <td class="num">{{ l.uit_dag }}</td>
-            <td class="num">{{ l.dagen_stil }}</td></tr>
+        <tr><th>Lead</th><th class="num">Hun laatste bericht</th><th class="num">Ons laatste</th><th class="num">Dagen stil</th></tr>
+        {% for l in wacht %}
+        <tr><td title="{{ l.adres }}">{{ l.naam }}</td><td class="num">{{ l.in_dag }}</td>
+            <td class="num">{{ l.uit_dag }}</td><td class="num">{{ l.dagen_stil }}</td></tr>
         {% endfor %}
       </table>
+      {% endif %}
+      <h3 style="font-size:14px;margin:14px 0 6px">Waar staan ze</h3>
+      <table>
+        <tr><th>Status</th><th class="num">Aantal</th></tr>
+        {% for naam, n in warm.staan or [] %}
+        <tr><td>{{ naam }}</td><td class="num">{{ n }}</td></tr>
+        {% endfor %}
+      </table>
+      <details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">Alle {{ warm.leads|length }} warme leads bekijken</summary>
+      <table style="margin-top:8px">
+        <tr><th>Lead</th><th>Status</th><th class="num">Video</th><th class="num">Opvolg.</th><th class="num">Dagen stil</th></tr>
+        {% for l in warm.leads %}
+        <tr><td title="{{ l.adres }}">{{ l.naam }}</td><td>{{ l.status }}</td>
+            <td class="num">{{ l.video_dag }}</td>
+            <td class="num">{{ l.opvolgingen if l.video_op else "–" }}</td>
+            <td class="num">{{ l.dagen_stil }}</td></tr>
+        {% endfor %}
+      </table></details>
       <div class="note">Warm is iemand die op een mail reageerde of om de video vroeg. Bijgewerkt {{ warm.tijd[:16].replace("T", " ") }} UTC,
         daarna ongeveer elke 3 uur. Opvolging telt alleen een mail van jou of de machine zonder antwoord ertussen.
         "Wacht op jou" betekent dat hun bericht het laatste is.</div>
