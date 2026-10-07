@@ -4257,6 +4257,23 @@ def _rijke_velden(row: dict, photo_urls, vorige: dict | None) -> dict:
     return nieuw
 
 
+_BARCODE = re.compile(r"\d{8,14}")
+
+
+def _alleen_barcode(platform: str, titel: str, fotos: list) -> bool:
+    """Een Shopify-product dat alleen een barcode als naam heeft en geen foto.
+
+    WAAROM (07-10-2026, Goudlief): wie via bol verkoopt zet zulke producten in
+    Shopify met alleen de EAN; bol vult de rest aan. Op Marktplaats of Vinted
+    is het een advertentie zonder naam en foto, en hij wil ze daar ook niet.
+    Hij had er 245; "Import all" zette ze als lege artikelen in zijn voorraad.
+    Zo'n rij begint als genegeerd, niet als weg: "Show the ignored again" haalt
+    hem terug.
+    """
+    return (platform == "shopify" and not fotos
+            and bool(_BARCODE.fullmatch((titel or "").strip())))
+
+
 def _store_scan_results(db, job, scraped: list[dict]):
     """
     Persist scraped "my listings" cards as import_candidates for manual review.
@@ -4490,6 +4507,7 @@ def _store_scan_results(db, job, scraped: list[dict]):
                 prior_status[str(platform_listing_id)]
                 if prior_status.get(str(platform_listing_id), "pending") != "pending"
                 else "linked" if listings_by_id.get((job["platform"], str(platform_listing_id)))
+                else "ignored" if _alleen_barcode(job["platform"], title, photo_urls)
                 else "pending"),
         }
         # Full snapshot columns — only present once the schema migration has run.
