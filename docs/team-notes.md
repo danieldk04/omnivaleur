@@ -15996,3 +15996,12 @@ Gemeten met extension_stiltes en zijn jobs (alleen zijn user_id), 03-10 16:24 to
   die al ingelezen zijn blijven staan tot hij antwoordt; Daniel vraagt het hem in de mail. Staat: 27 echte artikelen op
   "good", de rest op new_with_tags; Daniel laat hem dat zelf kiezen (Staat wijzigen… in bulk bestaat al).
   Verzending: pakket_grens staat op 0 en locatie is leeg (Marktplaats neemt dan zijn accountgegevens).
+
+## 07-10-2026: Janneke 31d28378 Shopify: niet gekoppeld, geen nieuwe poging gezien sinds de reparatie van 05-10
+
+- Gemeten alleen op haar user_id: geen rij in platform_credentials (controle: tabel is met de service-sleutel leesbaar),
+  0 artikelen, 0 Shopify-opdrachten, geen extensie, proef tot 11-10 21:06 lokaal. Laatst ingelogd 05-10 21:49 lokaal.
+- Geen alarmmail "Shopify koppelen mislukt" in Resend tussen 05-10 en 06-10 18:42 lokaal (verder reikt Resends lijst
+  niet), en geen koppelpoging in de Railway-logs sinds 07-10 09:06 lokaal (ouder bewaart Railway niet). Tussen 06-10
+  18:42 en 07-10 09:06 lokaal is niet te meten. Haar oude foutcode blijft onbekend. Daniel vraagt haar het opnieuw te
+  proberen, dan zegt het scherm en zijn mail welke stap.
