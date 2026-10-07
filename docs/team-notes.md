@@ -15922,3 +15922,17 @@ gelezen (workspacemcp niet bereikbaar).
 - partablecs, Winter Home, amhin, Janneke, Peter (proef tot 07-10 18:02), aa093a0a: ongewijzigd, geen mailtje.
 - Open: andere klanten die onder 1.0.370 uit Marktplaats importeerden met een lading-standaard kunnen hetzelfde hebben;
   niet over meerdere klanten gemeten (productiedatabase-regel).
+
+## 07-10-2026: Dagelijkse klantfouten (ochtend)
+
+- 909 opdrachten in 24 uur, 13 mislukt, alle klant-eigen en al eerder beoordeeld: Vinted niet ingelogd (3bfbed2c,
+  26cf5471, 8f91a370), Shopify-scan zonder koppeling (8f91a370), 2dehands-time-out bij Egbert door 32 min stille
+  computer. Enige open foutsoort: één MP-plaatsing bij 0b28c1ce vervallen na 3 dagen, extensie uit sinds 01-10. Klant.
+- Opgelost sinds gisteren: de 4 2dehands-plaatsingen van 8f91a370 die op hun rubriek wachtten zijn alle 4 uitgegaan.
+  Nu wachten er 2 nieuwe plus 1 Vinted-plaatsing op 'claimed' sinds 17:41 UTC; haar extensie is sindsdien stil.
+- De nachtronde van 02:00 UTC zette 156 MP-herplaatsingen klaar (26cf5471 64, 96e30080 54, 0b28c1ce 25, 1ba42900 9,
+  7fe36b46 4). Normaal; 96e30080 werkte die van eerdere nachten gewoon af.
+- Waarneming, geen storing: /health telt sinds de deploy van 21:18 lokaal 103x HTTP 429 tegen 54x 200 van Google.
+  Het gratis dagmaximum is op; vertalingen gaan dan naar Claude (betaald, niet in de teller te zien). 202
+  2dehands-plaatsingen gingen gewoon uit, dus klanten merken het niet. Railway-logs niet gelezen.
+- Geen code gewijzigd.
