@@ -194,7 +194,7 @@
       {% for m in mailvideo %}
       <tr><td>{{ m.label }}</td>
           <td class="num"><strong>{{ m.bezoek }}</strong></td>
-          <td class="num">{{ m.aanmeldingen if m.aanmeldingen is not none else "onbekend" }}</td>
+          <td class="num">{{ m.aanmeldingen if m.aanmeldingen is not none else ("onbekend" if m.bezoek else 0) }}</td>
           <td class="num">{{ m.kort }}</td>
           <td class="num">{{ m.lang }}</td>
           <td class="num">{{ m.anders }}</td></tr>
@@ -428,7 +428,11 @@ function tekenGrafiek(){
   const nu=DAG.this[metriek]||[], was=DAG.prev[metriek]||[], n=DAG.dates.length;
   const gemeten=nu.concat(was).filter(v=>v!==null);
   if(!gemeten.length){box.insertAdjacentHTML('beforeend','<div class="empty">Deze meting is nog niet gekoppeld.</div>');noot.textContent='';return;}
-  noot.textContent = (metriek==='clicks' && nu.some(v=>v===null)) ? 'Google Search Console loopt 2 à 3 dagen achter; die dagen ontbreken nog.' : '';
+  // Een vorige periode met overal nul valt vóór de start van de meting (90 dagen
+  // terug reikt tot april, Analytics telt pas sinds juli). Geen lijn op nul tekenen.
+  const vorigLeeg = !was.some(v=>v);
+  noot.textContent = vorigLeeg ? 'In de vorige periode werd dit nog niet gemeten.'
+    : (metriek==='clicks' && nu.some(v=>v===null)) ? 'Google Search Console loopt 2 à 3 dagen achter; die dagen ontbreken nog.' : '';
   const W=Math.max(280, box.clientWidth), H=W<500?200:250, L=34, R=10, T=12, B=26;
   const top0=Math.max(1,...gemeten), stap=stapVoor(top0), top=Math.ceil(top0/stap)*stap;
   const x=i=>L+(n===1?(W-L-R)/2:i*(W-L-R)/(n-1)), y=v=>T+(H-T-B)*(1-v/top);
@@ -438,7 +442,7 @@ function tekenGrafiek(){
      '<text x="'+(L-6)+'" y="'+(y(v)+4)+'" text-anchor="end" font-size="11" fill="#94a3b8">'+v+'</text>';}
   const elke=Math.max(1,Math.ceil(n/(W<500?4:7)));
   for(let i=0;i<n;i+=elke){g+='<text x="'+x(i)+'" y="'+(H-6)+'" text-anchor="middle" font-size="11" fill="#94a3b8">'+dag(DAG.dates[i], n<=7)+'</text>';}
-  g+='<path d="'+lijn(was)+'" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5 4"/>';
+  if(!vorigLeeg) g+='<path d="'+lijn(was)+'" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5 4"/>';
   g+='<path d="'+lijn(nu)+'" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round"/>';
   if(n<=31) nu.forEach((v,i)=>{if(v!==null)g+='<circle cx="'+x(i)+'" cy="'+y(v)+'" r="3" fill="#2563eb"/>';});
   g+='<line id="hov" y1="'+T+'" y2="'+(H-B)+'" stroke="#cbd5e1" visibility="hidden"/>';
