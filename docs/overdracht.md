@@ -94,6 +94,13 @@ Lopend en relevant voor je werk:
 - Koude mail aan winkels en webshops: evaluatie per bron rond 11-10.
 - Open idee, geen prioriteit: als "No tab with id" in reeksen terugkomt, laat de extensie
   meesturen of het tabblad door de gebruiker of met het venster is gesloten.
+- Op de planning voor later (Daniel, 07-10-2026), niet zelf oppakken: Daniel komt erop terug.
+  1. Rubriekvraag bij importeren kleiner maken: nu ~9.000 tokens per product omdat alle 469
+     rubrieken meegaan; alleen de passende tak meesturen scheelt ~10x. Raakt de rubriekkwaliteit,
+     dus voor-en-na meten (zie kennisbank rubriekvraag-volgorde-niet-omgooien).
+  2. AI-titels voor Marktplaats/2dehands: alleen titels boven 60 tekens, ~25 per vraag, eenmalig
+     per artikel bewaren, met controle dat elk woord in de oude titel staat (anders terug naar
+     _mp_titel). Metingen en voorbeelden: team-notes 07-10-2026 "AI-titels en rubriekvraag".
 
 Prijs en product in het kort: EUR 19,99 per maand, 5 kanalen, 7 dagen proef plus 2 respijt;
 Omnivaleur Light EUR 9,99 tot 20 actieve artikelen. Details in kennisbank

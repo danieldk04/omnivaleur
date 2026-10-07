@@ -16054,3 +16054,19 @@ Gemeten met extension_stiltes en zijn jobs (alleen zijn user_id), 03-10 16:24 to
   ingelezen. Nog 28 wachtende met dezelfde lange maat gaan nu goed.
 - Zijn import stond om 09:24 lokaal stil (tabblad dicht, vermoedelijk): 3.217 van de 4.153
   Shopify-producten wachten nog. Gemeten tempo ~12 per minuut, dus nog enkele uren.
+
+## 07-10-2026: AI-titels en rubriekvraag: uitgezocht, op de planning voor later
+
+Aanleiding: Goudlief vroeg of Omnivaleur titels met AI kan verbeteren tot binnen 60 tekens. Daniel:
+"kan dit niet gratis?", na de opties: "zet dit op de planning voor later". Niets gebouwd.
+- Gemeten op 15 echte lange titels van Goudlief. Zonder AI (opvulwoorden weg): gratis, maar de
+  woordenlijst past alleen bij zijn stijl en gaf rommel ("luipaardprint - - 14 mm"). AI met 15
+  titels in één vraag (Claude Haiku): 574 tokens in, 275 uit, ~0,2 cent samen, 0 boven 60. Wel
+  betekenisverlies: "armbandensets" werd "armband", "Bedelarmbanden" werd "Armband"; nodig is een
+  strengere opdracht plus een woordcontrole met terugval op _mp_titel. Meeliften op de rubriekvraag
+  (0 extra vragen) afgeraden: eerder werd die vraag slechter na een aanpassing.
+- Rubriekvraag bij importeren: 29.388 tekens, 8.957 tokens per product (geteld met count_tokens),
+  vooral de lijst van 469 rubrieken. Op Claude ~$0,009 per product; de rest van Goudlief (3.217)
+  zou ~$30 kosten als de gratis Google-laag op is (vanochtend 1.319 keer 429). Idee: alleen de
+  passende tak meesturen, ~10x kleiner.
+- Beide staan in docs/overdracht.md onder "Op de planning voor later". Daniel komt erop terug.
