@@ -64,7 +64,8 @@ def _opdracht(titels: list[str]) -> str:
         "product type, colour, size and any number. A code like (658) or #644 at "
         "the start must stay exactly as is. Remove filler first: condition "
         "phrases like 'Very Good Condition' or 'Excellent', 'Authentic', "
-        "'Size', repeated words. Do not leave a loose dash, comma or small word "
+        "'Size', 'Men's'/'Women's', fit words like 'Slim Fit' or 'Regular Fit', "
+        "repeated words. The colour must stay: drop anything else before the colour. Do not leave a loose dash, comma or small word "
         "at the end.\n"
         "Answer with only a JSON array of strings, same order and same count as "
         "the input, no explanation.\n\nINPUT:\n" + json.dumps(titels, ensure_ascii=False)
