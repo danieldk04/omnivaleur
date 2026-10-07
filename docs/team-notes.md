@@ -15986,3 +15986,8 @@ Gemeten met extension_stiltes en zijn jobs (alleen zijn user_id), 03-10 16:24 to
   percentage of 0 voor uit, alleen nieuwe plaatsingen). Knop "Import all 500" telde het maximum van de lijst; telt nu
   alles wat wacht. Nagekeken: opnieuw scannen houdt de status, dus geen dubbelen. Om 08:52 413 ingelezen, 3.740 wachtend.
   Mailconcept voor Daniel bewaard.
+
+## 07-10-2026: Watchero follow-up (geplande taak)
+
+- Geen account voor info@watchero.eu of iets met watchero/bax in Supabase auth (63 gebruikers, nieuwste 06-10 10:21).
+- Follow-up voor Martijn Bax geschreven en als concept bewaard (data/schrijfstijl); Daniel verstuurt zelf.
