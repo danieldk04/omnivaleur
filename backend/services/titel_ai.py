@@ -59,7 +59,8 @@ def voorstel_is_veilig(oud: str, nieuw: str) -> bool:
 def _opdracht(titels: list[str]) -> str:
     return (
         "Shorten each product title to at most 55 characters for a second-hand "
-        "marketplace. Rules: keep the original language of each title, never "
+        "marketplace. Remove as few words as possible: if the title fits after "
+        "removing only filler, stop there. Rules: keep the original language of each title, never "
         "translate. Only remove words, never add or change words. Keep brand, "
         "product type, colour, size and any number. A code like (658) or #644 at "
         "the start must stay exactly as is. Remove filler first: condition "
