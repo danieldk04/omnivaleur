@@ -16005,3 +16005,16 @@ Gemeten met extension_stiltes en zijn jobs (alleen zijn user_id), 03-10 16:24 to
   niet), en geen koppelpoging in de Railway-logs sinds 07-10 09:06 lokaal (ouder bewaart Railway niet). Tussen 06-10
   18:42 en 07-10 09:06 lokaal is niet te meten. Haar oude foutcode blijft onbekend. Daniel vraagt haar het opnieuw te
   proberen, dan zegt het scherm en zijn mail welke stap.
+
+## 07-10-2026: Egbert (bcdf9aa4): verlengen klapte elke keer het hele overzicht open
+
+- Zijn mail: elke verlenging begint opnieuw met alle zoekertjes openen. Klopt. Gemeten op zijn extend-opdrachten van
+  vanochtend: 4,2 tot 5,9 minuten per verlenging, achter elkaar (0,1 tot 0,2 min ertussen). Elke opdracht opende het
+  overzicht en klikte ~48 keer "Toon 50 volgende" (2.437 zoekertjes) om één knop te vinden.
+- Gerepareerd (extensie 1.0.371): verlengen zet eerst het eigen 2dehands-filter "Loopt af" aan (Dropdown-filterOpStatus,
+  API inExpirationWindow=true) en klapt alleen open tot de knop van dat zoekertje er staat. Nagemeten op account
+  Revaleur: filter toont precies de 4 van 93 die de API EXPIRING noemt, knop in 4 s, geen klik nodig; filter is na
+  verversen weer weg. Vangnet: geen filter op de pagina, of de API noemt hem aflopend maar het filter toont hem niet,
+  dan het oude pad (hele overzicht). Al verlengd of niet in het venster: niets meer openklappen.
+- Proef tests/verlengen-2dehands-filter-test.js: oude versie 48 klikken, nieuwe 0 tot 2. Niet gemeten: de echte tijd
+  per verlenging bij Egbert; dat kan pas als 1.0.371 in de Web Store staat. Mailconcept voor Daniel bewaard.

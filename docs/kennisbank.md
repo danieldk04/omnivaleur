@@ -17,6 +17,52 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## 2dehands-verlengen-niet-herplaatsen
+
+*07-10-2026 — "2dehands heeft een gratis verlengknop; bijna verlopen zoekertjes verleng je, je haalt ze niet weg en plaatst ze niet opnieuw"*
+
+Sinds 10-09-2026 heeft Omnivaleur een eigen opdrachtsoort `extend` voor 2dehands,
+naast create/delete/content_refresh/scan. Een 2dehands-zoekertje is 4 weken
+zichtbaar en kan daarna GRATIS verlengd worden; opnieuw plaatsen kost in een
+betalende rubriek geld of eet het gratis tegoed op. Dus verlengen, nooit het
+Marktplaats-pad (weghalen + opnieuw plaatsen) kopiëren. Er mag bij een `extend`
+nooit iets op 'relisting' of 'delisted', alleen `listed_at` opschuiven, en alleen
+met bewijs.
+
+Gemeten op account Revaleur:
+- overzicht-API: `/my-account/sell/api/listings?batchNumber=1&batchSize=200` geeft
+  per ad `{itemId, status, closeDate, reserved}`. `status:"EXPIRING"` ⟺ er staat
+  een verlengknop.
+- knop: `a[href="#verlengen"][data-ad-id="m…"]`. Klik verlengt meteen, geen
+  bevestiging; daarna een venster met een BETAALDE knop "Plaats bovenaan" (€0,24)
+  die je nooit aanraakt.
+- na verlengen: `closeDate` exact +28 dagen, status ACTIVE.
+- endpoint `POST /my-account/sell/extend.json {"itemId":"m…"}` bestaat maar geeft
+  403 bij een kale fetch (CSRF/WAF) — daarom de DOM-klik.
+
+Code: `extend_expiring_2dehands()` in `backend/services/crosslist.py`,
+`bgExtend2dh` in `extension/background.js` (1.0.318+), `complete_job`-tak in
+`backend/api/jobs.py`, test `tests/verlengen-2dehands-test.js`.
+
+Zie "eerst-recente-wijzigingen-lezen", "always-push-to-live",
+"extension-release-bump-version".
+
+**Groot overzicht (03-10-2026):** de knop staat alleen in de DOM als de rij is
+opengeklapt. `expandMp2dhOverview` stopte na 40 klikken (2.050 rijen); klant
+bcdf9aa4 heeft 2.437 zoekertjes en de verlopende zijn de oudste, dus onderaan:
+"Verlengen button could not be found". Nu 400 klikken (1.0.365). Dezelfde
+functie voedt de verwijdercontrole, die een afwezige rij als "weg" kan lezen.
+Proef: `tests/verlengen-2dehands-groot-overzicht-test.js`.
+
+**Filter "Loopt af" (07-10-2026, 1.0.371):** het overzicht heeft `select#Dropdown-filterOpStatus` met waarde
+`expiring`; de pagina vraagt dan `/my-account/sell/api/listings?...&inExpirationWindow=true` en toont alleen de
+zoekertjes met verlengknop. `expandMp2dhOverview(tabId, {verlengId})` zet dat filter, klapt alleen open tot de knop
+er staat, en valt pas terug op het hele overzicht als de API hem aflopend noemt. Zonder dit kostte elke verlenging
+bij 2.437 zoekertjes ~5 min (Egbert). De API kent ook `query=` en `categoryId=`. Proef:
+`tests/verlengen-2dehands-filter-test.js`.
+
+---
+
 ## import-titel-boven-100-tekens
 
 *07-10-2026 — Shopify-titels tot 255 tekens vielen bij inlezen stil op 'failed' (ItemCreate max 100); nu ingekort op heel woord, volle naam in shopify_title*
@@ -133,45 +179,6 @@ YouTube-URL. Zie ook "mailagent-slimme-antwoorden" en "koude-mail-autonoom".
 **Why:** derde keer hetzelfde patroon, na "beurt-aan-wachtend-werk-legt-alles-stil" en "wachtend-werk-hoort-niet-in-de-wachtrij".
 
 **How to apply:** voeg je een nieuwe reden toe om een opdracht bij het uitdelen over te slaan, zorg dan dat de lichte volgorde hem ook al achteraan zet. Meet een vastloper door de kop na te rekenen met de echte `_wachtrij_volgorde` op de echte rij (alleen per user_id), niet door de uitgifte aan te roepen: die claimt.
-
----
-
-## 2dehands-verlengen-niet-herplaatsen
-
-*03-10-2026 — "2dehands heeft een gratis verlengknop; bijna verlopen zoekertjes verleng je, je haalt ze niet weg en plaatst ze niet opnieuw"*
-
-Sinds 10-09-2026 heeft Omnivaleur een eigen opdrachtsoort `extend` voor 2dehands,
-naast create/delete/content_refresh/scan. Een 2dehands-zoekertje is 4 weken
-zichtbaar en kan daarna GRATIS verlengd worden; opnieuw plaatsen kost in een
-betalende rubriek geld of eet het gratis tegoed op. Dus verlengen, nooit het
-Marktplaats-pad (weghalen + opnieuw plaatsen) kopiëren. Er mag bij een `extend`
-nooit iets op 'relisting' of 'delisted', alleen `listed_at` opschuiven, en alleen
-met bewijs.
-
-Gemeten op account Revaleur:
-- overzicht-API: `/my-account/sell/api/listings?batchNumber=1&batchSize=200` geeft
-  per ad `{itemId, status, closeDate, reserved}`. `status:"EXPIRING"` ⟺ er staat
-  een verlengknop.
-- knop: `a[href="#verlengen"][data-ad-id="m…"]`. Klik verlengt meteen, geen
-  bevestiging; daarna een venster met een BETAALDE knop "Plaats bovenaan" (€0,24)
-  die je nooit aanraakt.
-- na verlengen: `closeDate` exact +28 dagen, status ACTIVE.
-- endpoint `POST /my-account/sell/extend.json {"itemId":"m…"}` bestaat maar geeft
-  403 bij een kale fetch (CSRF/WAF) — daarom de DOM-klik.
-
-Code: `extend_expiring_2dehands()` in `backend/services/crosslist.py`,
-`bgExtend2dh` in `extension/background.js` (1.0.318+), `complete_job`-tak in
-`backend/api/jobs.py`, test `tests/verlengen-2dehands-test.js`.
-
-Zie "eerst-recente-wijzigingen-lezen", "always-push-to-live",
-"extension-release-bump-version".
-
-**Groot overzicht (03-10-2026):** de knop staat alleen in de DOM als de rij is
-opengeklapt. `expandMp2dhOverview` stopte na 40 klikken (2.050 rijen); klant
-bcdf9aa4 heeft 2.437 zoekertjes en de verlopende zijn de oudste, dus onderaan:
-"Verlengen button could not be found". Nu 400 klikken (1.0.365). Dezelfde
-functie voedt de verwijdercontrole, die een afwezige rij als "weg" kan lezen.
-Proef: `tests/verlengen-2dehands-groot-overzicht-test.js`.
 
 ---
 

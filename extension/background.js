@@ -4592,7 +4592,75 @@ function waitForTabLoad(tabId, timeoutMs = 20000) {
 // row as "this listing is already gone", so a delete silently completed while
 // the ad stayed live (verified live 2026-07: 129 ads on the account, 50
 // rendered). Click through until the button is gone so the whole shop is loaded.
-async function expandMp2dhOverview(tabId) {
+async function expandMp2dhOverview(tabId, opts = {}) {
+  // ALLEEN DE ZOEKERTJES DIE AFLOPEN. (07-10-2026, Egbert bcdf9aa4)
+  //
+  // Elke verlengopdracht klapte zijn hele overzicht van 2.437 zoekertjes open
+  // (~49 klikken) om er één knop in te vinden: ~5 minuten per verlenging, en
+  // de klant zag het overzicht bij elke opdracht van voren af aan beginnen.
+  // 2dehands heeft zelf een filter "Loopt af" (select Dropdown-filterOpStatus,
+  // waarde "expiring"; de pagina vraagt dan de API met inExpirationWindow=true).
+  // Daarin staan precies de zoekertjes met een verlengknop (nagemeten op
+  // account Revaleur: 4 van 93, dezelfde 4 die de API EXPIRING noemt). Het
+  // filter blijft niet hangen na verversen, de klant ziet er later niets van.
+  // Lukt het filter niet, of staat de knop er dan niet, dan het oude pad.
+  const verlengId = opts.verlengId || null;
+  const heeftKnop = (id) => execInTab(tabId,
+    (i) => !!document.querySelector(`a[href="#verlengen"][data-ad-id="${i}"]`), [id]).catch(() => false);
+  if (verlengId) {
+    const filter = await execInTab(tabId, async () => {
+      const s = document.getElementById("Dropdown-filterOpStatus");
+      if (!s || ![...s.options].some(o => o.value === "expiring")) return null;
+      let totaal = null;
+      try {
+        const r = await fetch("/my-account/sell/api/listings?batchNumber=1&batchSize=1&inExpirationWindow=true",
+          { headers: { Accept: "application/json" }, credentials: "include" });
+        const d = await r.json();
+        if (typeof d.totalNumberOfResults === "number") totaal = d.totalNumberOfResults;
+      } catch (e) { /* totaal onbekend, dan wachten we op de vaste tijd */ }
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value").set.call(s, "expiring");
+      s.dispatchEvent(new Event("change", { bubbles: true }));
+      return { totaal };
+    }).catch(() => null);
+    if (filter) {
+      // Wachten tot de gefilterde lijst er staat: eerst is hij even leeg.
+      const verwacht = filter.totaal == null ? null : Math.min(50, filter.totaal);
+      for (let t = 0; t < 40; t++) {
+        await new Promise(r => setTimeout(r, 500));
+        if (verwacht == null) { if (t >= 7) break; continue; }
+        const n = await execInTab(tabId, () =>
+          new Set([...document.querySelectorAll("[data-ad-id]")].map(e => e.getAttribute("data-ad-id"))).size
+        ).catch(() => -1);
+        if (n === verwacht && (verwacht > 0 || t >= 3)) break;
+      }
+      await klapOpen(filter.totaal, "Je aflopende zoekertjes openklappen");
+      if (await heeftKnop(verlengId)) return;
+      // Geen knop in de gefilterde lijst. Staat het zoekertje ook niet bij
+      // de aflopende, dan valt er niets te klikken en beslist de meting in
+      // bgExtend2dh (al verlengd, nog niet in het venster, weg). Alleen als
+      // 2dehands hem wél aflopend noemt, het hele overzicht als vangnet.
+      const aflopend = await execInTab(tabId, async (id) => {
+        try {
+          for (let b = 1; b <= 50; b++) {
+            const r = await fetch(`/my-account/sell/api/listings?batchNumber=${b}&batchSize=100&inExpirationWindow=true`,
+              { headers: { Accept: "application/json" }, credentials: "include" });
+            if (!r.ok) return null;
+            const ads = (await r.json()).ads || [];
+            if (ads.some(a => String(a.itemId) === id)) return true;
+            if (ads.length < 100) return false;
+          }
+          return null;
+        } catch (e) { return null; }
+      }, [verlengId]).catch(() => null);
+      if (aflopend === false) return;
+      await stuurWerkTabbladNaar(tabId, "https://www.2dehands.be/my-account/sell/index.html").catch(() => {});
+      await waitForTabLoad(tabId);
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+  await klapOpen(undefined, "Je zoekertjes openklappen");
+
+  async function klapOpen(bekendTotaal, label) {
   // Elke klik op "Toon 50 volgende" laadt 50 zoekertjes erbij. Tot 03-10-2026
   // stopte dit na 40 klikken (2.050 rijen, "far beyond any real shop"), maar
   // klant bcdf9aa4 heeft er 2.437. Zijn oudste zoekertjes, precies de zoekertjes
@@ -4603,7 +4671,7 @@ async function expandMp2dhOverview(tabId) {
   let leeg = 0;
   // Totaal voor de statusbalk; mislukt het lezen, dan laten we alleen het
   // aantal geladen zoekertjes zien.
-  const totaal = await execInTab(tabId, async () => {
+  const totaal = bekendTotaal !== undefined ? bekendTotaal : await execInTab(tabId, async () => {
     try {
       const r = await fetch("/my-account/sell/api/listings?batchNumber=1&batchSize=1",
         { headers: { Accept: "application/json" }, credentials: "include" });
@@ -4613,9 +4681,11 @@ async function expandMp2dhOverview(tabId) {
   }).catch(() => null);
   for (let i = 0; i < 400; i++) {
     const geladen = totaal ? Math.min(50 * (i + 1), totaal) : 50 * (i + 1);
+    // Staat de knop die we zoeken er al, dan hoeft de rest niet open.
+    if (verlengId && await heeftKnop(verlengId)) return;
     await zetWerkStatus(tabId, null,
-      totaal ? `Je zoekertjes openklappen: ${geladen} van ${totaal}`
-             : `Je zoekertjes openklappen: ${geladen}+`);
+      totaal ? `${label}: ${geladen} van ${totaal}`
+             : `${label}: ${geladen}+`);
     const clicked = await execInTab(tabId, () => {
       const btn = [...document.querySelectorAll("button")]
         .find(b => /toon\s+\d+\s+volgende/i.test(b.textContent || "") && !b.disabled);
@@ -4632,6 +4702,7 @@ async function expandMp2dhOverview(tabId) {
     }
     leeg = 0;
     await sleep(1200); // let the next batch render before looking again
+  }
   }
 }
 
@@ -5090,7 +5161,8 @@ async function bgExtend2dh(job, serverUrl) {
     await sleep(3000);                 // let React render the list
     await zetWerkStatus(tabId,
       `Zoekertje verlengen (${wachtendAantal("2dehands", "extend")} verlengopdrachten in de wachtrij)`);
-    await expandMp2dhOverview(tabId);  // load every row, not just the first 50
+    // Alleen de aflopende zoekertjes, tot de knop van dit zoekertje er staat.
+    await expandMp2dhOverview(tabId, { verlengId: itemId });
     await zetWerkStatus(tabId, null, "Het juiste zoekertje zoeken en verlengen");
     return execInTab(tabId, async (wantId) => {
       const nap = ms => new Promise(r => setTimeout(r, ms));
