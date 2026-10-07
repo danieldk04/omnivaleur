@@ -326,9 +326,21 @@ async def ai_info_page():
 
 
 @app.get("/mp-video")
-async def mp_video_page():
+async def mp_video_page(request: Request):
     """Losse leadpagina voor de video in de koude-mail-sequence. Bewust niet
-    in het menu en niet geïndexeerd: alleen bereikbaar via de maillink."""
+    in het menu en niet geïndexeerd: alleen bereikbaar via de maillink.
+
+    Daniel stuurt in zijn eigen mails soms de lange /mp-video in plaats van /mp.
+    Zonder tags telde Analytics dat als "direct" (04-10-2026: 44 van 63 videomails),
+    dus de lange link krijgt dezelfde tags als de korte. Niet bij een klik vanaf
+    onze eigen site (de Video-link in de NL-voettekst blijft intern) en niet bij
+    zoekmachines, want die zouden een omleiding naar een getagde URL indexeren."""
+    if "utm_source" not in request.query_params:
+        verwijzer = urlparse(request.headers.get("referer") or "").hostname or ""
+        intern = verwijzer == "omnivaleur.com" or verwijzer.endswith(".omnivaleur.com")
+        robot = re.search(r"bot|crawl|spider|slurp", request.headers.get("user-agent") or "", re.I)
+        if not intern and not robot:
+            return RedirectResponse(KORTE_LINKS[content.MAIL_LINK["kort"]], status_code=307)
     return met_site_chrome("mp-video.html", "nl", "/mp-video")
 
 
