@@ -15979,6 +15979,6 @@ Gemeten met extension_stiltes en zijn jobs (alleen zijn user_id), 03-10 16:24 to
   de drie eerste lange titels kwamen om 08:42 goed binnen. De 7 mislukte staan weer in de rij.
 - Haar winkel zelf heeft 245 producten met alleen een barcode als naam, zonder foto en omschrijving (vendor Goudlief en
   "Bargains by DJ"). Die staan nu als lege artikelen in haar voorraad; niet verwijderd, Daniel beslist.
-- 2.111 van de 4.153 producten hebben vendor "Bargains by DJ". Onbekend of dat bij Goudlief hoort.
+- 2.189 van de 4.153 producten hebben vendor "Bargains by DJ". Onbekend of dat bij Goudlief hoort.
 - Extensie 1.0.369, Chrome haalt 1.0.370 vanzelf. Proef tot 11-10 18:58 lokaal, geen betaalmethode. Nog geen plaatsing.
 - Rubriekkeuze per product: Google-dagmaximum is op (1.319x 429), dus deze import gaat via Claude (betaald).
