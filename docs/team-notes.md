@@ -15936,3 +15936,9 @@ gelezen (workspacemcp niet bereikbaar).
   Het gratis dagmaximum is op; vertalingen gaan dan naar Claude (betaald, niet in de teller te zien). 202
   2dehands-plaatsingen gingen gewoon uit, dus klanten merken het niet. Railway-logs niet gelezen.
 - Geen code gewijzigd.
+
+## 07-10-2026: Dagelijkse klantfouten (ochtend, tweede ronde 08:10 lokaal)
+
+- Nagemeten 17 minuten na de vorige ronde: 907 opdrachten in 24 uur, dezelfde 13 mislukt, geen nieuwe fout sinds
+  05:50 UTC. Alles klant-eigen, niets open in klantfouten.py. De Vinted-plaatsing van 8f91a370 staat nog op
+  'claimed' sinds 06-10 17:41 UTC (extensie stil). Geen code gewijzigd.
