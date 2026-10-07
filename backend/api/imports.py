@@ -1580,6 +1580,22 @@ def _titel_ingekort(titel: str) -> str:
     return kort[:_TITEL_MAX]
 
 
+# De velden van een artikel hebben in de database een vaste lengte. Past een
+# waarde er niet in, dan weigert de database het hele artikel en valt het stil
+# om op "failed". Goudlief (07-10-2026): de Shopify-lezer pakt het tweede stuk
+# van "Cetabever - Meesterbeits Deur & Kozijn Dekkend - RAL 7022 - 750 ML" als
+# maat, 34 tekens in een veld van 20; 19 producten mislukten, 28 stonden klaar om
+# hetzelfde te doen. Zo'n lange waarde is geen maat of kleur, dus leeg laten.
+_VELD_MAX = {"brand": 100, "size": 20, "color": 50, "material": 100,
+             "category": 100, "sku": 50}
+
+
+def _past(veld: str, waarde):
+    if isinstance(waarde, str) and len(waarde.strip()) > _VELD_MAX.get(veld, len(waarde)):
+        return None
+    return waarde
+
+
 def _item_data_from_candidate(cand: dict, body: dict | None = None,
                               inferred: dict | None = None) -> dict:
     """
@@ -1608,8 +1624,8 @@ def _item_data_from_candidate(cand: dict, body: dict | None = None,
         "photo_urls": body.get("photo_urls") or _photos_from_candidate(cand),
         "description": pick("description"),
         "purchase_price": body.get("purchase_price"),
-        "brand": pick("brand"),
-        "size": pick("size"),
+        "brand": _past("brand", pick("brand")),
+        "size": _past("size", pick("size")),
         # De staat komt van drie kanten, in deze volgorde: wat de gebruiker in het
         # formulier typte, wat het platform meegaf, en anders de standaard voor
         # deze hele lading. Die laatste bestaat omdat Admarkt geen staat meelevert
@@ -1620,14 +1636,14 @@ def _item_data_from_candidate(cand: dict, body: dict | None = None,
         "condition": (body.get("condition")
                       or _map_condition(cand.get("condition"))
                       or body.get("_default_condition") or "good"),
-        "category": pick("category") or inferred.get("category"),
+        "category": _past("category", pick("category") or inferred.get("category")),
         "gender": pick("gender") or inferred.get("gender"),
-        "color": (lambda c: canonieke_kleur(c) or c)(pick("color") or inferred.get("color")),
-        "material": pick("material"),
+        "color": _past("color", (lambda c: canonieke_kleur(c) or c)(pick("color") or inferred.get("color"))),
+        "material": _past("material", pick("material")),
         # Fields the user types in the same form but that used to be dropped here,
         # so an imported item silently lost its SKU, its Shopify "was" price and
         # any per-platform price overrides.
-        "sku": body.get("sku"),
+        "sku": _past("sku", body.get("sku")),
         "shopify_title": body.get("shopify_title") or (volle_titel if titel != volle_titel else None),
         "compare_at_price": body.get("compare_at_price"),
         "price_marktplaats": body.get("price_marktplaats"),
@@ -1733,7 +1749,8 @@ def _backfill_patch(current: dict, cand: dict, inferred: dict | None = None) -> 
     """
     patch = {}
     for field in ("description", "brand", "size", "color", "material"):
-        if _is_empty(current.get(field)) and not _is_empty(cand.get(field)):
+        if (_is_empty(current.get(field)) and not _is_empty(cand.get(field))
+                and _past(field, cand[field]) is not None):
             patch[field] = cand[field]
     if _is_empty(current.get("condition")) and _map_condition(cand.get("condition")):
         patch["condition"] = _map_condition(cand.get("condition"))
@@ -1747,7 +1764,8 @@ def _backfill_patch(current: dict, cand: dict, inferred: dict | None = None) -> 
     if inferred is None:
         inferred = _infer_attributes(cand.get("title"), cand.get("description"))
     for field in ("color", "gender", "category"):
-        if field not in patch and _is_empty(current.get(field)) and inferred.get(field):
+        if (field not in patch and _is_empty(current.get(field)) and inferred.get(field)
+                and _past(field, inferred[field]) is not None):
             patch[field] = inferred[field]
     return patch
 

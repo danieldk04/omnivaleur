@@ -128,7 +128,7 @@ def test_ingekorte_titel_wordt_in_de_opdracht_bewaard():
     job = {"id": "j1", "platform": "marktplaats", "action": "create",
            "payload": {"title": GOUDLIEF[0], "price": 12.5}}
     assert _zeef(db, [job]) == 1
-    assert db.opgeslagen == [job["payload"]]
+    assert db.opgeslagen == [{"payload": job["payload"]}]
     assert job["payload"]["price"] == 12.5
 
 
@@ -139,5 +139,5 @@ def test_emoji_telt_zoals_de_browser_telt():
 
 
 def test_hoofdletter_aan_het_eind_blijft():
-    titel = "Multivitamine tabletten voor volwassenen met extra Vitamine A " + "x" * 10
+    titel = "Tabletten voor volwassenen met extra Vitamine A " + "x" * 20
     assert api._mp_titel(titel).endswith("Vitamine A")
