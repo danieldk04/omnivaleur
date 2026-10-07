@@ -16018,3 +16018,15 @@ Gemeten met extension_stiltes en zijn jobs (alleen zijn user_id), 03-10 16:24 to
   dan het oude pad (hele overzicht). Al verlengd of niet in het venster: niets meer openklappen.
 - Proef tests/verlengen-2dehands-filter-test.js: oude versie 48 klikken, nieuwe 0 tot 2. Niet gemeten: de echte tijd
   per verlenging bij Egbert; dat kan pas als 1.0.371 in de Web Store staat. Mailconcept voor Daniel bewaard.
+
+## 07-10-2026: /mp en /mp-video tellen allebei als mailverkeer
+
+- Daniel wil dat het niet uitmaakt welke van de twee hij stuurt. De server stuurt een kale /mp-video nu met 307 naar
+  dezelfde getagde URL als /mp (koude-mail/email/marktplaats-nl). Uitzonderingen: een klik vanaf onze eigen site (Video
+  in de NL-voettekst), een zoekmachine, en een link die al tags draagt. Live nagemeten: lang en kort geven dezelfde
+  omleiding, getagd/intern/Googlebot krijgen de pagina. Voor-en-na-proef: dezelfde test faalt op de oude versie (200).
+- Verleden: scripts/mp_video_rapport.py telt bezoeken op de lange link zonder tags (direct, of webmail als verwijzer)
+  als mail en noemt bovenaan het totaal uit de mail. Niet gedraaid: de GA4-sleutels staan alleen in Railway, niet op
+  de Mac, en de ingebouwde browser is niet bij Google ingelogd. De oude cijfers zelf zijn dus nog niet opgehaald.
+- Incident: de auto-push zette de route live zonder de twee importregels; /mp-video gaf een paar minuten rond 09:25
+  een foutpagina (500) tot 7315e075 live stond. /mp werkte de hele tijd.
