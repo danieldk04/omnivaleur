@@ -16094,3 +16094,16 @@ Aanleiding: Goudlief vroeg of Omnivaleur titels met AI kan verbeteren tot binnen
   dezelfde klant gewoon (lederhosen, 410). Geen code gewijzigd: waarom het tabblad wegging is niet bewezen.
 - Open: ronde afgebroken door tokenlimiet. Niet nagekeken: of de volgende nachtronde dit artikel vanzelf opnieuw
   probeert, en of "No tab with id" vóór het bevestigen vaker voorkomt bij deze klant.
+
+## 07-10-2026: Onboarding nieuwe klanten (middag)
+
+7 accounts in hun eerste week, 0 nieuw. Web Store levert 1.0.370; repo 1.0.371. Agenda niet gelezen (workspacemcp niet
+bereikbaar).
+- 8f91a370 (amandaonline001): ongewijzigd sinds 06-10 19:41 lokaal; extensie (1.0.369) stil. Open: 1 Vinted-plaatsing op
+  'claimed', 2 2dehands-plaatsingen en 1 Vinted-scan wachtend; gaan door als ze online komt. De 3 mislukte Vinted
+  content_refresh-opdrachten (06-10 11:46 UTC) zijn prijswijzigingen uit crosslist (_price_update), niet de verversing die
+  sinds 6a87b221 standaard uit staat; fout "niet ingelogd op Vinted", klant-eigen en al beoordeeld. Geen mailtje (gisteren
+  al een).
+- Peter (a4fc5340): proef loopt vandaag 18:02 af, 4 artikelen, nooit geplaatst, extensie stil sinds 01-10. Geen mailtje.
+- partablecs, Winter Home, amhin, Janneke, aa093a0a: ongewijzigd, geen mailtje.
+- Niets gerepareerd, geen code gewijzigd.
