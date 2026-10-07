@@ -1564,6 +1564,22 @@ def _is_footwear_text(title: str | None, description: str | None) -> bool:
     return any(re.search(r"\b" + w + r"(?:s|en)?\b", d) for w in _FOOTWEAR_WORDS)
 
 
+# Een artikel mag hooguit 100 tekens als titel hebben (ItemCreate). Shopify laat
+# 255 toe, en Goudlief (07-10-2026) heeft 250 producten boven de 100: die vielen
+# bij het inlezen stil om op "failed". Inkorten op een heel woord; de volledige
+# naam blijft de titel in Shopify zelf (shopify_title), zodat we die nooit
+# verminken. Marktplaats en Vinted korten bij het plaatsen toch al naar 60.
+_TITEL_MAX = 100
+
+
+def _titel_ingekort(titel: str) -> str:
+    if len(titel) <= _TITEL_MAX:
+        return titel
+    kort = titel[:_TITEL_MAX + 1].rsplit(" ", 1)[0] if " " in titel[:_TITEL_MAX + 1] else ""
+    kort = (kort or titel[:_TITEL_MAX]).rstrip(" ,.;:-/")
+    return kort[:_TITEL_MAX]
+
+
 def _item_data_from_candidate(cand: dict, body: dict | None = None,
                               inferred: dict | None = None) -> dict:
     """
@@ -1584,8 +1600,10 @@ def _item_data_from_candidate(cand: dict, body: dict | None = None,
         v = body.get(key)
         return v if v is not None else (cand.get(cand_key or key) or default)
 
+    volle_titel = (pick("title") or "Untitled").strip() or "Untitled"
+    titel = _titel_ingekort(volle_titel)
     return {
-        "title": pick("title") or "Untitled",
+        "title": titel,
         "price": body.get("price") if body.get("price") is not None else (cand.get("price") or 0),
         "photo_urls": body.get("photo_urls") or _photos_from_candidate(cand),
         "description": pick("description"),
@@ -1610,7 +1628,7 @@ def _item_data_from_candidate(cand: dict, body: dict | None = None,
         # so an imported item silently lost its SKU, its Shopify "was" price and
         # any per-platform price overrides.
         "sku": body.get("sku"),
-        "shopify_title": body.get("shopify_title"),
+        "shopify_title": body.get("shopify_title") or (volle_titel if titel != volle_titel else None),
         "compare_at_price": body.get("compare_at_price"),
         "price_marktplaats": body.get("price_marktplaats"),
         "price_2dehands": body.get("price_2dehands"),
