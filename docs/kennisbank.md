@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## import-titel-boven-100-tekens
+
+*07-10-2026 — Shopify-titels tot 255 tekens vielen bij inlezen stil op 'failed' (ItemCreate max 100); nu ingekort op heel woord, volle naam in shopify_title*
+
+07-10-2026, Goudlief (5aae4954): 7 producten op 'failed' en 243 wachtend met een titel boven de 100 tekens. ItemCreate staat 100 toe, Shopify 255; de bulk-import vangt elke fout en zet de kandidaat stil op 'failed', zonder reden. Reparatie 419ef1a7: `_titel_ingekort` in backend/api/imports.py kort op een heel woord in, de volle naam gaat naar shopify_title zodat Shopify nooit verminkt wordt. Proef: tests/test_import_lange_titel.py (faalt op de oude versie).
+
+**Why:** een 'failed' kandidaat zegt niets over de oorzaak; de import vangt alles.
+**How to apply:** zie je 'failed' importkandidaten, bootsen ze dan lokaal na met `_item_data_from_candidate` + `ItemCreate(**d)`; dat geeft de echte fout. Na een reparatie terugzetten op 'pending'.
+Ook gezien: een Shopify-winkel kan producten hebben met alleen een barcode als titel en geen foto (Goudlief: 245); die komen als lege artikelen binnen. Zie "shopify-oauth-fout-staat-in-de-html".
+
+---
+
 ## marktplaats-staat-als-slug
 
 *06-10-2026 — "Marktplaats-scan las de staat niet uit; lading-standaard \"nieuw met kaartje\" kwam op gedragen en kapotte artikelen (06-10-2026, extensie 1.0.370)"*

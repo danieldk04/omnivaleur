@@ -15968,3 +15968,17 @@ Gemeten met extension_stiltes en zijn jobs (alleen zijn user_id), 03-10 16:24 to
   schrijven gelijktijdige verzoeken dezelfde stilte meerdere keren weg (05-10 15:22, 3x). Telt dubbel, verder onschuldig.
 - Geen code gewijzigd. Conclusie voor Daniel: zijn vastlopers zijn een computer die uit of in slaap gaat (vaak midden
   in een plaatsing), en één keer de databasestoring van 06-10. Niet het opnieuw inloggen.
+
+## 07-10-2026: Goudlief na de call, account doorgelopen
+
+- Shopify-import loopt (Daniel startte hem met haar): 4.153 producten gescand, om 08:43 lokaal 278 ingelezen, 3.875
+  wachtend, ongeveer 16 per minuut. De import draait in haar browser: tabblad dicht = pauze, opnieuw "Import all" gaat
+  verder waar hij was. Tussen 08:21 en 08:41 stond hij stil, daarna weer verder; oorzaak niet te zien zonder Railway-logs.
+- Gerepareerd (419ef1a7): producten met een titel boven de 100 tekens vielen stil op "failed" (7 stuks, 243 wachtend
+  met hetzelfde lot). Nu ingekort op een heel woord, volle naam blijft de Shopify-titel. Live gezien op haar account:
+  de drie eerste lange titels kwamen om 08:42 goed binnen. De 7 mislukte staan weer in de rij.
+- Haar winkel zelf heeft 245 producten met alleen een barcode als naam, zonder foto en omschrijving (vendor Goudlief en
+  "Bargains by DJ"). Die staan nu als lege artikelen in haar voorraad; niet verwijderd, Daniel beslist.
+- 2.111 van de 4.153 producten hebben vendor "Bargains by DJ". Onbekend of dat bij Goudlief hoort.
+- Extensie 1.0.369, Chrome haalt 1.0.370 vanzelf. Proef tot 11-10 18:58 lokaal, geen betaalmethode. Nog geen plaatsing.
+- Rubriekkeuze per product: Google-dagmaximum is op (1.319x 429), dus deze import gaat via Claude (betaald).
