@@ -1,6 +1,8 @@
 import hashlib
 import logging
 import os
+import re
+from urllib.parse import urlparse
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
 from fastapi import FastAPI, Request

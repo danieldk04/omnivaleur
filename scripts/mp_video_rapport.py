@@ -8,7 +8,8 @@ waar de GA4_*- en GOOGLE_ADS_*-sleutels in de omgeving staan (Daniels Mac).
     python3 scripts/mp_video_rapport.py --dagen 14
 
 Wat het laat zien:
-  1. Bezoek per bron/medium op /mp-video (koude-mail/email is de mail zelf).
+  1. Bezoek per bron/medium op /mp-video (koude-mail/email is de mail zelf; een
+     bezoek zonder tags op de lange link telt ook als mail, zie _lange_maillink).
   2. Hoe lang ze blijven en hoeveel er echt actief waren.
   3. Events op de pagina: scroll, cta_click, en video_start/progress/complete.
      Sinds 04-10-2026 meldt de YouTube-embed (enablejsapi) start, 25/50/75% en
@@ -27,6 +28,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from backend.services import ga4  # noqa: E402
 
 PAD = "/mp-video"
+MAIL_BRON = "koude-mail"
+
+
+def _lange_maillink(r: dict) -> bool:
+    """Daniel stuurde in zijn eigen mails vaak de lange /mp-video in plaats van /mp
+    (05-10-2026: 44 van 63 videomails). Zonder tags zet Analytics zo'n bezoek op
+    "direct", of op de webmail als verwijzer. De pagina staat niet in het menu en
+    niet in Google, dus wie er zonder tags binnenkomt, kwam uit een mail. Sinds
+    07-10-2026 tagt de server de lange link zelf; dit haalt de oudere bezoeken terug."""
+    if "utm_source" in r["landingPagePlusQueryString"]:
+        return False
+    src, med = r["sessionSource"].lower(), r["sessionMedium"].lower()
+    return (src, med) == ("(direct)", "(none)") or (med == "referral" and "mail" in src)
 
 
 def _nl(n) -> str:
@@ -67,9 +81,15 @@ def main() -> int:
     per: dict[tuple, dict] = {}
     for r in rijen:
         k = (r["sessionSource"], r["sessionMedium"])
+        if _lange_maillink(r):
+            k = (MAIL_BRON, "email (lange link)")
         t = per.setdefault(k, dict(s=0, u=0, e=0, d=0.0, c=0))
         t["s"] += r["sessions"]; t["u"] += r["activeUsers"]; t["e"] += r["engagedSessions"]
         t["d"] += r["userEngagementDuration"]; t["c"] += r["conversions"]
+
+    mail = [t for (src, _), t in per.items() if src == MAIL_BRON]
+    print(f"Uit de mail samen: {_nl(sum(t['s'] for t in mail))} sessies, "
+          f"{_nl(sum(t['c'] for t in mail))} conversies (korte /mp en lange /mp-video)\n")
 
     print("1. Bezoek per bron (landing op /mp-video)")
     print(f"   {'bron / medium':34} {'sessies':>8} {'betrokken':>10} {'gem. tijd':>10} {'conv.':>6}")

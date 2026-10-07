@@ -169,3 +169,42 @@ def test_videopagina_meldt_start_voortgang_en_einde():
     assert "youtube.com/iframe_api" in html
     for naam in ("video_start", "video_progress", "video_complete"):
         assert f"'{naam}'" in html
+
+
+def test_lange_maillink_telt_net_als_de_korte():
+    """07-10-2026: Daniel stuurt soms /mp-video in plaats van /mp. Beide moeten in
+    Analytics als mail tellen, dus de lange link zonder tags krijgt dezelfde
+    omleiding. Een klik vanaf de eigen site en een zoekmachine niet, en een link
+    die al tags draagt blijft gewoon de pagina."""
+    from fastapi.testclient import TestClient
+    from backend.main import app
+
+    client = TestClient(app)
+    mp = client.get("/mp", follow_redirects=False).headers["location"]
+    lang = client.get("/mp-video", follow_redirects=False)
+    assert lang.status_code == 307 and lang.headers["location"] == mp
+
+    getagd = client.get(mp, follow_redirects=False)
+    assert getagd.status_code == 200
+    intern = client.get("/mp-video", follow_redirects=False,
+                        headers={"referer": "https://omnivaleur.com/nl"})
+    assert intern.status_code == 200
+    robot = client.get("/mp-video", follow_redirects=False,
+                       headers={"user-agent": "Mozilla/5.0 (compatible; Googlebot/2.1)"})
+    assert robot.status_code == 200
+    webmail = client.get("/mp-video", follow_redirects=False,
+                         headers={"referer": "https://mail.google.com/"})
+    assert webmail.status_code == 307
+
+
+def test_rapport_telt_oude_bezoeken_op_de_lange_link_als_mail():
+    sys.path.insert(0, str(REPO / "scripts"))
+    import mp_video_rapport as R
+
+    def rij(pad, src, med):
+        return {"landingPagePlusQueryString": pad, "sessionSource": src, "sessionMedium": med}
+
+    assert R._lange_maillink(rij("/mp-video", "(direct)", "(none)"))
+    assert R._lange_maillink(rij("/mp-video", "mail.google.com", "referral"))
+    assert not R._lange_maillink(rij("/mp-video?utm_source=koude-mail", "koude-mail", "email"))
+    assert not R._lange_maillink(rij("/mp-video", "google", "organic"))
