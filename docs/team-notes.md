@@ -15982,3 +15982,7 @@ Gemeten met extension_stiltes en zijn jobs (alleen zijn user_id), 03-10 16:24 to
 - 2.189 van de 4.153 producten hebben vendor "Bargains by DJ". Onbekend of dat bij Goudlief hoort.
 - Extensie 1.0.369, Chrome haalt 1.0.370 vanzelf. Proef tot 11-10 18:58 lokaal, geen betaalmethode. Nog geen plaatsing.
 - Rubriekkeuze per product: Google-dagmaximum is op (1.319x 429), dus deze import gaat via Claude (betaald).
+- Na haar mail (08:50): bieden toestaan in bulk gebouwd (57a945c3, knop "Allow bidding…" bij een selectie in Items,
+  percentage of 0 voor uit, alleen nieuwe plaatsingen). Knop "Import all 500" telde het maximum van de lijst; telt nu
+  alles wat wacht. Nagekeken: opnieuw scannen houdt de status, dus geen dubbelen. Om 08:52 413 ingelezen, 3.740 wachtend.
+  Mailconcept voor Daniel bewaard.
