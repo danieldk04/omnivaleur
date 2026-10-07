@@ -16118,3 +16118,27 @@ bereikbaar).
   nog geen nieuwe poging; niets kwijt. Of de nachtronde hem opnieuw oppakt: morgenochtend nakijken.
 - Stil met wachtend werk: 0b28c1ce (75+75 MP, stil sinds 01-10), 26cf5471 (64+64, stil sinds 06-10 10:09), 1ba42900 (34+34,
   stil sinds 04-10), 8f91a370 (stil sinds 06-10 17:41). Allemaal computer uit, klant-eigen.
+
+## 07-10-2026: AI-titels getest op Daniels account, nog niet aangesloten, gefaseerd uitrollen
+
+Daniel: "dit doen we later", uitrol de komende periode gefaseerd, Goudlief is hierover geïnformeerd.
+- Gebouwd: `backend/services/titel_ai.py` (`kort_titels`). Vraagt per 20 titels aan het taalmodel een
+  inkorting tot 55 tekens en keurt elk voorstel af tenzij: binnen 60, elk woord staat in de oude titel,
+  een (nummer) of #nummer vooraan blijft, elk getal en elke maat (XS tot XXXL) komt terug. Geen
+  voorstel betekent dat de aanroeper bij `_mp_titel` blijft. NERGENS AANGESLOTEN: niets in
+  `jobs.py` roept het aan, klanten merken niets.
+- Gemeten op dkresellacademy (459 artikelen, 72 boven 60): 4 vragen, ~13 seconden, 63 tot 70 van 72
+  geldige voorstellen per ronde (het model is niet deterministisch). Winst zit vooral bij titels
+  waar `_mp_titel` het belangrijke stuk afkapt: "Slim Fit - Men XS" verloor de maat, "| Heather Grey"
+  werd "Heather". Titels met " - Very Good" aan het eind geven bijna geen verschil. Zwak: een maat als
+  "Medium" valt soms weg (staat niet in de maatlijst), "Men's" valt weg. Alleen kleding getest.
+- Telling over alle 62 abonnementen (alleen gelezen): 12.055 artikelen, 540 boven 60 (4,5%); Goudlief
+  80 van 5.533; 34 accounts zonder artikelen. Kosten per titel ~0,01 tot 0,04 cent, alle 540 samen
+  een paar tientjes cent. De dure AI is de rubriekvraag bij import (~0,9 cent per product).
+- GEVONDEN: lokaal gaf Gemini HTTP 402 (tegoed op), dus liep alles via Claude. Nog uitzoeken of de
+  Railway-sleutel dezelfde is; zo ja dan staan vertalen en andere AI-lagen daar ook stil.
+- Shopify: bewust NIET beloofd. Daar blijft de volledige naam staan; titel terugschrijven raakt de
+  eigen winkel van de klant en hoort bij een aparte, veilige stap (knop die de klant zelf indrukt).
+- Open: dezelfde proef op de 540 titels van andere klanten (sieraden, antiek), voor aansluiten.
+  Aansluiten kan in `_mp_titel_binnen_grens` achter een schakelaar per gebruiker, eerst alleen Daniel.
+  Prijsverhoging: dit als zichtbare AI-functie bij de aankondiging gebruiken, niet stil uitrollen.

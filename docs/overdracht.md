@@ -98,7 +98,8 @@ Lopend en relevant voor je werk:
   1. Rubriekvraag bij importeren kleiner maken: nu ~9.000 tokens per product omdat alle 469
      rubrieken meegaan; alleen de passende tak meesturen scheelt ~10x. Raakt de rubriekkwaliteit,
      dus voor-en-na meten (zie kennisbank rubriekvraag-volgorde-niet-omgooien).
-  2. AI-titels voor Marktplaats/2dehands: alleen titels boven 60 tekens, ~25 per vraag, eenmalig
+  2. (07-10: module `backend/services/titel_ai.py` gebouwd en getest, NIET aangesloten; zie team-notes
+     07-10-2026 "AI-titels getest") AI-titels voor Marktplaats/2dehands: alleen titels boven 60 tekens, ~25 per vraag, eenmalig
      per artikel bewaren, met controle dat elk woord in de oude titel staat (anders terug naar
      _mp_titel). Metingen en voorbeelden: team-notes 07-10-2026 "AI-titels en rubriekvraag".
 
