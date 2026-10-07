@@ -208,3 +208,5 @@ def test_rapport_telt_oude_bezoeken_op_de_lange_link_als_mail():
     assert R._lange_maillink(rij("/mp-video", "mail.google.com", "referral"))
     assert not R._lange_maillink(rij("/mp-video?utm_source=koude-mail", "koude-mail", "email"))
     assert not R._lange_maillink(rij("/mp-video", "google", "organic"))
+    assert R._lange_maillink(rij("/mp-video?utm_source=email", "email", "cold_email"))
+    assert not R._lange_maillink(rij("/mp-video?utm_source=threads", "threads", "social"))

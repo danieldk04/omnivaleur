@@ -37,9 +37,11 @@ def _lange_maillink(r: dict) -> bool:
     "direct", of op de webmail als verwijzer. De pagina staat niet in het menu en
     niet in Google, dus wie er zonder tags binnenkomt, kwam uit een mail. Sinds
     07-10-2026 tagt de server de lange link zelf; dit haalt de oudere bezoeken terug."""
+    src, med = r["sessionSource"].lower(), r["sessionMedium"].lower()
+    if med == "cold_email":
+        return True  # de oudere tag op dezelfde maillink (email / cold_email), voor koude-mail/email
     if "utm_source" in r["landingPagePlusQueryString"]:
         return False
-    src, med = r["sessionSource"].lower(), r["sessionMedium"].lower()
     return (src, med) == ("(direct)", "(none)") or (med == "referral" and "mail" in src)
 
 
@@ -77,7 +79,7 @@ def main() -> int:
         ["sessions", "activeUsers", "engagedSessions", "engagementRate",
          "userEngagementDuration", "conversions"],
         start, eind, limit=1000)
-    rijen = [r for r in rijen if r["landingPagePlusQueryString"].split("?")[0].rstrip("/") == PAD]
+    rijen = [r for r in rijen if r["landingPagePlusQueryString"].split("?")[0].rstrip("/").removesuffix(".html") == PAD]
     per: dict[tuple, dict] = {}
     for r in rijen:
         k = (r["sessionSource"], r["sessionMedium"])

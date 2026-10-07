@@ -16030,3 +16030,8 @@ Gemeten met extension_stiltes en zijn jobs (alleen zijn user_id), 03-10 16:24 to
   de Mac, en de ingebouwde browser is niet bij Google ingelogd. De oude cijfers zelf zijn dus nog niet opgehaald.
 - Incident: de auto-push zette de route live zonder de twee importregels; /mp-video gaf een paar minuten rond 09:25
   een foutpagina (500) tot 7315e075 live stond. /mp werkte de hele tijd.
+- Oude cijfers, gemeten in GA4 via Daniels Chrome (landingspagina /mp-video, 1 jun t/m 7 okt): 85 sessies. Uit de mail
+  79: 66 via de lange link zonder tags (direct, incl. 1 op /mp-video.html), 7 met de oudere tag email/cold_email, 6 via
+  /mp (koude-mail/email). Niet mail: google/organic 4, threads 1, trustpilot 1. Beide aanmeldingen (sign_up) in die
+  periode kwamen via de lange link. Kanttekening: "direct" kan ook Daniel zelf zijn die de pagina opent; niet te scheiden.
+  Het rapport telt email/cold_email en /mp-video.html nu ook als mail; GA4 zelf is niet aangepast.
