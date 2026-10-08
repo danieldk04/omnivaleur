@@ -94,6 +94,7 @@ function bouwWereld(settings, items) {
     functieUit("itemGroep"),
     functieUit("isNonClothingItem"),
     functieUit("missingFieldsForPlatform"),
+    functieUit("prijsvormZonderBedrag"),
     functieUit("fabrikantCompleet"),
     functieUit("locatieblokLeeg"),
     functieUit("platformOordeel"),

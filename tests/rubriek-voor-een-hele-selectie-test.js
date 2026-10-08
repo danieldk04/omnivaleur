@@ -118,6 +118,7 @@ function bouwWereld(items) {
     constUit("CROSSLIST_NON_CLOTHING_PLATFORM_REQUIRED"),
     functieUit("isNonClothingItem"),
     functieUit("missingFieldsForPlatform"),
+    functieUit("prijsvormZonderBedrag"),
     functieUit("bulkCategoryOpties"),
     functieUit("bulkCategoryDoelgroep"),
     functieUit("bulkCategoryRestwerk"),

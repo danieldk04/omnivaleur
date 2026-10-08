@@ -17,6 +17,56 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## advertentie-zonder-vraagprijs
+
+*08-10-2026 — "Bieden, Zie omschrijving en Gratis zijn echte advertentievormen op Marktplaats en 2dehands; een ontbrekende prijs is dus niet altijd een gebrek en een verzonnen bedrag is schade"*
+
+13-09-2026, De Juiste Toon. Zijn advertentie "Schapenvachten diverse maten Luxe
+modellen" stond op Marktplaats als **Zie omschrijving**: in de tekst staat
+"Prijzen 35 tot 50 euro" en de vacht bepaalt het bedrag. Bij ons kwam die binnen
+met prijs 0, en omdat een prijs verplicht was konden we hem niet meer plaatsen.
+
+Ik had er eerst zelf 35 euro op gezet omdat dat in zijn tekst stond. Dat was
+fout, en dat is de les: **een verzonnen prijs is geen nette terugval maar
+schade.** Met 35 euro erop heeft elke koper recht op de duurste vacht voor de
+laagste prijs. Bij zoiets nooit gokken maar kijken wat de advertentie zelf is.
+
+**Waar je het wél kunt aflezen**, in deze volgorde:
+1. De advertentiepagina van hetzelfde artikel op het andere kanaal, als die nog
+   draait. `advertentie_kenmerken(url)` in `backend/services/mp_enrich.py` geeft
+   `{"soort": "SEE_DESCRIPTION", "cents": 0}`. Zo is het hier vastgesteld.
+2. De openbare zoek-API, veld `priceInfo`: `priceCents` plus `priceType`.
+3. NIET uit `import_candidates`: een Admarkt-import levert nooit een prijs mee,
+   die staat daar op 0.00 ook bij advertenties die gewoon 35 euro kosten.
+
+**Wat het formulier kent.** Precies vier vormen, nagemeten op het echte
+ingelogde plaatsformulier: Vraagprijs (FIXED), Bieden (FAST_BID), Zie
+omschrijving (SEE_DESCRIPTION) en Gratis (FREE). Meer aanbieden in het dashboard
+zou een publicatie laten stranden op een keuzelijst waar die vorm niet in staat.
+
+Sinds 13-09-2026 kiest de verkoper dit zelf in het artikelvenster
+(`price_type`), is de prijs op Marktplaats en 2dehands niet meer verplicht bij
+een vorm zonder bedrag (op Vinted en eBay wél, die kennen deze vormen niet), en
+draagt de opdracht `mp_prijstype` mee met prijs 0 — anders kiest de extensie
+alsnog "Vraagprijs", want een bedrag groter dan nul wint altijd.
+
+**Het scherm liep tot 08-10-2026 niet mee** (Amanda 8f91a370). De server liet
+het bedrag al vallen bij een vorm zonder bedrag, en zocht de vorm zelf op bij de
+eigen MP-advertentie; `missingFieldsForPlatform` in app.html eiste nog altijd een
+bedrag. Haar 56 Bieden-advertenties stonden voor 2dehands grijs met "Missing:
+Price", een verzoek bereikte de server nooit. De Marktplaats-import zet
+`price_type` niet, dus bij elke MP-import van biedadvertenties zat dit. Nu
+spiegelt `prijsvormZonderBedrag` de server. Les: wijzig je een verplicht veld op
+de server, zoek dan dezelfde regel in app.html. Proef:
+`tests/bieden-niet-grijs-naar-2dehands-test.js`.
+
+Zie ook "verzonnen-standaard-is-erger-dan-leeg" en
+"marktplaats-publiceren-valkuilen". Migratie: de kolom `items.price_type`
+moest met de hand worden aangemaakt, zie "sold-price-actual"; tot die tijd
+filtert `_strip_missing` het veld eruit zodat opslaan niet breekt.
+
+---
+
 ## voorraadwinkel-shopify-is-de-baas
 
 *08-10-2026 — Verkoopafhandeling ging uit van unieke artikelen; bij een winkel met voorraad wiste een MP-verkoop het hele Shopify-product. Sinds 08-10-2026 is de Shopify-voorraad de baas.*
@@ -5226,46 +5276,6 @@ leeg lijkt. Eerst `fetch` nabouwen, dan pas instellingen zetten, dan even wachte
 Zie `tests/wakker-houden-echt-test.mjs`. Hoort bij
 "plaatsen-stopt-als-de-computer-slaapt" en
 "voor-en-na-proef-mag-geen-head-gebruiken".
-
----
-
-## advertentie-zonder-vraagprijs
-
-*13-09-2026 — "Bieden, Zie omschrijving en Gratis zijn echte advertentievormen op Marktplaats en 2dehands; een ontbrekende prijs is dus niet altijd een gebrek en een verzonnen bedrag is schade"*
-
-13-09-2026, De Juiste Toon. Zijn advertentie "Schapenvachten diverse maten Luxe
-modellen" stond op Marktplaats als **Zie omschrijving**: in de tekst staat
-"Prijzen 35 tot 50 euro" en de vacht bepaalt het bedrag. Bij ons kwam die binnen
-met prijs 0, en omdat een prijs verplicht was konden we hem niet meer plaatsen.
-
-Ik had er eerst zelf 35 euro op gezet omdat dat in zijn tekst stond. Dat was
-fout, en dat is de les: **een verzonnen prijs is geen nette terugval maar
-schade.** Met 35 euro erop heeft elke koper recht op de duurste vacht voor de
-laagste prijs. Bij zoiets nooit gokken maar kijken wat de advertentie zelf is.
-
-**Waar je het wél kunt aflezen**, in deze volgorde:
-1. De advertentiepagina van hetzelfde artikel op het andere kanaal, als die nog
-   draait. `advertentie_kenmerken(url)` in `backend/services/mp_enrich.py` geeft
-   `{"soort": "SEE_DESCRIPTION", "cents": 0}`. Zo is het hier vastgesteld.
-2. De openbare zoek-API, veld `priceInfo`: `priceCents` plus `priceType`.
-3. NIET uit `import_candidates`: een Admarkt-import levert nooit een prijs mee,
-   die staat daar op 0.00 ook bij advertenties die gewoon 35 euro kosten.
-
-**Wat het formulier kent.** Precies vier vormen, nagemeten op het echte
-ingelogde plaatsformulier: Vraagprijs (FIXED), Bieden (FAST_BID), Zie
-omschrijving (SEE_DESCRIPTION) en Gratis (FREE). Meer aanbieden in het dashboard
-zou een publicatie laten stranden op een keuzelijst waar die vorm niet in staat.
-
-Sinds 13-09-2026 kiest de verkoper dit zelf in het artikelvenster
-(`price_type`), is de prijs op Marktplaats en 2dehands niet meer verplicht bij
-een vorm zonder bedrag (op Vinted en eBay wél, die kennen deze vormen niet), en
-draagt de opdracht `mp_prijstype` mee met prijs 0 — anders kiest de extensie
-alsnog "Vraagprijs", want een bedrag groter dan nul wint altijd.
-
-Zie ook "verzonnen-standaard-is-erger-dan-leeg" en
-"marktplaats-publiceren-valkuilen". Migratie: de kolom `items.price_type`
-moest met de hand worden aangemaakt, zie "sold-price-actual"; tot die tijd
-filtert `_strip_missing` het veld eruit zodat opslaan niet breekt.
 
 ---
 

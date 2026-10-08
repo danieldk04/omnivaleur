@@ -16305,6 +16305,26 @@ laatste was nog niet gebeurd. Daniel: "bouw dat in" (c75efda2).
 - Extensie 1.0.374 voortaan ook vanuit de cloudsessie te bouwen (`./scripts/build-extension.sh`) en
   als bestand naar Daniel te sturen; hij hoeft dan alleen te uploaden, zijn Mac is niet nodig.
 
+## 08-10-2026: Amanda (8f91a370) boekte een supportcall, audit en reparatie
+
+Calendly-boeking voor maandag 12-10 12:00: "hoe je Omnivaleur moet gebruiken en waarom ik continue vastloop met
+tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef tot 13-10 12:22, geen betaalmethode.
+- Stand: 219 artikelen (144 uit Vinted, 74 uit MP), actief 141 Vinted, 117 MP, 17 2dehands, 13 eBay. Extensie
+  1.0.372, vandaag online. Nog niet op het kanaal en klaar om te plaatsen: 16 naar Vinted, 65 naar MP, 96 naar 2dehands.
+- Fout bij ons, gerepareerd (d25c8be4): 56 van haar MP-advertenties staan op Bieden (geen bedrag). De server laat dan
+  het bedrag vallen en leest de vorm van haar eigen MP-advertentie (nagemeten op 3 echte: FAST_BID, niets mist), maar
+  het publiceervenster eiste altijd een bedrag, dus 2dehands stond bij alle 56 grijs met "Missing: Price". Nu volgt
+  het venster de server. Proef tests/bieden-niet-grijs-naar-2dehands-test.js: oude app.html 3 fout, nieuwe groen;
+  17 dashboardproeven groen, 7 waren al rood vóór deze wijziging (niet aangeraakt).
+- Klant-eigen of beperking van het kanaal: dezelfde 56 kunnen niet naar Vinted zonder bedrag (Vinted kent geen
+  Bieden). Voor MP/2dehands missen kleur (39) en maat (41) bij een deel, vooral heren overhemden en truien.
+  Omschrijvingen zijn er bijna overal (2 leeg).
+- Open, klant-eigen: 3 Vinted-prijswijzigingen van 06-10 11:46 kwamen niet aan (toen uitgelogd op Vinted), nooit
+  opnieuw geprobeerd; de Vinted-plaatsing van het Rovince-shirt (06-10, time-out) ook niet. Shopify-scan-fout:
+  Shopify aangevinkt zonder winkel.
+- Open bij ons, niet gedaan: de MP-import legt de biedvorm niet vast (price_type blijft leeg); de server zoekt hem
+  nu pas op bij het plaatsen. Werkt, maar het artikelvenster toont daardoor geen "Bieden".
+
 ## 08-10-2026 (vervolg 4): nieuwe Shopify-producten komen elk uur vanzelf binnen
 
 - Aanleiding: Janneke (31d28378) vroeg "en nieuwe producten worden vanzelf gesynchroniseerd?". Dat werden
