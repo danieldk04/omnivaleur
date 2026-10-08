@@ -629,6 +629,15 @@ async def _shop_creds(credentials: dict) -> tuple[Optional[str], Optional[str]]:
     try:
         from backend.database import get_db, naast_de_lus
         db = get_db()
+        # Opnieuw lezen: `extra` kan oud zijn, en terugschrijven zou wissen wat
+        # een andere routine er intussen bijzette (zoals de voorraadvlag).
+        try:
+            vers_extra = ((await naast_de_lus(lambda: db.table("platform_credentials")
+                           .select("extra_data").eq("user_id", credentials["user_id"])
+                           .eq("platform", "shopify").limit(1).execute())).data or [{}])[0].get("extra_data")
+            extra = {**extra, **(vers_extra or {})}
+        except Exception:  # noqa: BLE001
+            pass
         (await naast_de_lus(lambda: db.table("platform_credentials").update({
             "access_token": vers["access_token"],
             "extra_data": {**extra, "token_expires_at": vers["expires_at"],

@@ -241,6 +241,14 @@ async def scan_winkel(user_id: str, job_id: str) -> None:
                        "Platforms and make sure read_products is among the permissions.")
             return
 
+        # Een winkel met voorraad krijgt meteen de vlag, zodat zijn eerste verkoop
+        # elders het product niet wist. Zie backend/services/shopify_voorraad.py.
+        try:
+            from backend.services.shopify_voorraad import markeer_als_voorraadwinkel
+            await markeer_als_voorraadwinkel(db, user_id, producten)
+        except Exception:  # noqa: BLE001 — de scan gaat voor
+            logger.exception("shopify-scan: voorraadvlag niet gezet voor %s", user_id)
+
         winkelnaam = winkelnaam_als_merk(producten)
         regels = [naar_scanregel(p, shop, winkelnaam) for p in producten]
         await zet({"result": {"_progress": {"stage": "saving", "current": len(regels),

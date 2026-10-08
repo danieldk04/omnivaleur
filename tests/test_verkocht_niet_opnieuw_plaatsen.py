@@ -172,7 +172,9 @@ def test_verschillende_producten_met_hetzelfde_nummer_blijven_ongekoppeld():
 def test_de_verkoopafhandeling_kijkt_naar_de_hele_familie():
     bron = (WORTEL / "backend/services/crosslist.py").read_text()
     kop = bron.index("async def handle_item_sold")
-    blok = bron[kop:kop + 9000]
+    # Tot de volgende functie, niet een vast aantal tekens: elke toevoeging
+    # bovenin (zoals de voorraadcontrole van 08-10-2026) schoof de familie eruit.
+    blok = bron[kop:bron.index("\ndef _enqueue_extension_delete", kop)]
     assert "familie_ids" in blok and '.in_("item_id", familie)' in blok
 
 

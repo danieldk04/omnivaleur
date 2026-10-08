@@ -155,8 +155,12 @@ async def na_verkoop(db, item_id: str, sold_on_platform: str) -> str | None:
         gevlagd = True
 
     if sold_on_platform == "shopify":
-        # Shopify heeft de voorraad bij de bestelling zelf al verlaagd.
-        return BLIJFT if stuks > 0 else (OP if gevlagd else None)
+        # Shopify verlaagt de voorraad bij de bestelling zelf, maar de teller op
+        # de variant loopt een paar seconden achter (GEMETEN 08-10-2026: na een
+        # aanpassing gaf hij nog de oude stand). Een webhook die meteen komt kan
+        # dus de stand van vóór de verkoop zien. Bij 1 weten we niet of dat het
+        # laatste stuk was; dan liever elders offline dan dubbel verkocht.
+        return BLIJFT if stuks > 1 else (OP if gevlagd else None)
 
     if not gevlagd:
         return None     # uniek artikel: het oude gedrag, product weg uit Shopify

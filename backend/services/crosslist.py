@@ -2215,6 +2215,26 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
         await _vraag_het_de_verkoper(db, item_id, sold_on_platform)
         return
 
+    # Winkel met voorraad (08-10-2026, Goudlief): zolang Shopify nog stuks heeft
+    # is er niets verkocht in de zin van "overal weg". Een verkoop elders haalt
+    # één stuk van de Shopify-voorraad af in plaats van het product te wissen.
+    # Zie backend/services/shopify_voorraad.py.
+    from backend.services import shopify_voorraad
+    try:
+        voorraad = await shopify_voorraad.na_verkoop(db, item_id, sold_on_platform)
+    except Exception as e:  # noqa: BLE001 — dan geldt het oude gedrag
+        logger.warning("[sold] voorraadcontrole mislukt voor %s: %s", item_id, e)
+        voorraad = None
+    if voorraad == shopify_voorraad.BLIJFT:
+        if sold_on_platform != "shopify":
+            # Die advertentie heeft zijn koper gehad; de rest blijft staan.
+            (await naast_de_lus(lambda: db.table("listings").update({"status": "delisted"})
+             .eq("item_id", item_id).eq("platform", sold_on_platform)
+             .in_("status", list(shopify_voorraad.LEVEND)).execute()))
+        logger.info("[sold] item_id=%s verkocht op %s, Shopify heeft nog voorraad: "
+                    "niets afgemeld", item_id, sold_on_platform)
+        return
+
     from backend.services.verkoopdatum import als_datum, lees_verkoopdatum
     echte_datum = lees_verkoopdatum(sold_at) if sold_at is not None else None
 
@@ -2355,6 +2375,9 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
         l for l in (all_rows.data or [])
         if l["platform"] not in sold_platforms
         and l["status"] in ("active", "relisting", "error", "delisted", "hidden", "pending")
+        # Voorraad op bij een voorraadwinkel: het Shopify-product blijft staan
+        # (Shopify toont het als uitverkocht) zodat het aangevuld kan worden.
+        and not (voorraad == shopify_voorraad.OP and l["platform"] == "shopify")
     ]
 
     logger.info(

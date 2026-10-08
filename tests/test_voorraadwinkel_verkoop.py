@@ -183,6 +183,13 @@ def test_laatste_stuk_in_shopify_verkocht_haalt_de_rest_weg(monkeypatch):
     assert sorted(g["extensie_weg"]) == ["2dehands", "marktplaats"]
 
 
+def test_shopify_teller_op_1_kiest_de_voorzichtige_kant(monkeypatch):
+    # De teller kan nog de stand van vóór de bestelling tonen: 1 kan 0 zijn.
+    db, winkel = _situatie(stuks=1)
+    g = _verkoop(cl, monkeypatch, db, winkel, "shopify")
+    assert sorted(g["extensie_weg"]) == ["2dehands", "marktplaats"] and not g["shopify_gewist"]
+
+
 def test_meerdere_varianten_niet_raden(monkeypatch):
     varianten = [{"id": 1, "inventory_item_id": 11, "inventory_management": "shopify", "inventory_quantity": 41},
                  {"id": 2, "inventory_item_id": 12, "inventory_management": "shopify", "inventory_quantity": 38}]
