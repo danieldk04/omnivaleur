@@ -17,6 +17,22 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## eigen-merk-overige-merken
+
+*08-10-2026 — Merk niet in de MP/2dehands-keuzelijst (eigen merk Goudlief, Handgemaakt) gaf "left empty: brand"; nu Overige merken (1.0.373)*
+
+Bij veel Marktplaats/2dehands-rubrieken is Merk een korte keuzelijst (Schoudertassen: Björn Borg, Esprit, Kipling, Oilily,
+Overige merken) en NIET verplicht (gemeten 08-10-2026 op /plaats/1826/1840?bucketId=201, veld "mandatory":false). Een eigen
+merk paste nergens, het veld bleef leeg en verifyMpGroupFields hield de hele advertentie tegen. Sinds 1.0.373 kiest
+fillBrandField dan "Overige merken"/"Overig"/"Merkloos" (kiesOverigMerk in shared.js). Proef: tests/eigen-merk-overige-merken-test.js.
+
+**Why:** Toon (Handgemaakt, 05-10) en Goudlief (07-10) werden als "klant" beoordeeld terwijl het onze keuze was om te weigeren.
+
+**How to apply:** "left empty: brand" bij een keuzelijst is onze fout, geen klantfout. De merkkiezer met pillen (autocomplete)
+heeft deze terugval nog niet; komt die fout terug, daar ook "Overige merken" zoeken. Zie "verbogen-kleurnamen-matchen-niet".
+
+---
+
 ## supabase-list-users-stopt-bij-50
 
 *07-10-2026 — auth.admin.list_users() zonder paginering geeft alleen de nieuwste 50 accounts; tellingen over langere tijd vallen stil te laag uit*

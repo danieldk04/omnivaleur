@@ -16170,6 +16170,41 @@ Ze appte Daniel 07-10 rond 22:30 (Shopify is intussen gekoppeld, er staat "veel"
   om een voorbeeld; let op dat Shopify-producten met alleen een barcode en geen foto als genegeerd beginnen (f491054).
 - Hele testreeks: zelfde 65 bestaande fouten vóór en na (deze cloudomgeving mist oude commits en mappen), 5 nieuwe groen.
 
+## 08-10-2026: Dagelijkse klantfouten (ochtendronde, 10:40)
+
+- Slot stond sinds 08:19 UTC op "onboarding-middag" (tweede account); Daniel bevestigde dat die niets meer deed, dus vrijgegeven
+  en de ronde gedraaid. Geen code gewijzigd.
+- 675 opdrachten klaar in 24 uur, 20 fouten, 11 soorten, 0 open (allemaal eerder beoordeeld). 10 daarvan: 26cf5471 Vinted-scan
+  zonder Vinted-inlog (klant). Laatste fout 23:36 UTC, sinds middernacht niets nieuws.
+- Opgelost: "Mooie wollen jas" 538ae770 (96e30080) is in de nachtronde wel herplaatst (verwijderen 08:27, plaatsen 08:28 UTC).
+- Open, niet gerepareerd: Goudlief (5aae4954) "Crossbodytassen met stippen" weigerde op MP en 2dehands met lege brand. Merk
+  "Goudlief" staat niet in de merkkiezer en de extensie heeft geen terugval (Overige/geen merk). Of Merk daar verplicht is
+  heb ik niet live gemeten; één artikel, dus eerst bij Daniel neerleggen.
+- Stil met wachtend werk, computer uit (klant-eigen): 26cf5471 127, Goudlief 113 (laatste hartslag 21:00), 0b28c1ce 101
+  (stil sinds 01-10; de nachtronde maakt en annuleert elke keer 25+25 MP-opdrachten), bcdf9aa4 61, 7fe36b46 8.
+
+## 08-10-2026: Onboarding nieuwe klanten (ochtend, 10:45 lokaal)
+
+De middagronde (08:19 UTC) is op zeggen van Daniel gestopt zonder verslag; deze ronde deed het daarna. 6 accounts in hun
+eerste week, 1 nieuw. Web Store en repo allebei 1.0.372. Agenda niet gelezen (workspacemcp niet bereikbaar).
+- f3e9dfbc (robbertbolier, nieuw 07-10 20:05): geen extensie, nul artikelen, nooit contact. Welkomstmailtje klaargezet.
+- 31d28378 (Janneke, kinderkleding en kinderschoenen): 1.755 van 1.917 artikelen zonder rubriek, dus niet te plaatsen.
+  Gemeten: de AI-rubriekvraag krijgt geen antwoord. Lokaal Google 402 (sleutel f7c8c67f, tegoed op) en Claude "credit
+  balance too low"; de server gebruikt de gratis Google-sleutel ddf59aed, die na de grote imports van 07-10 op 429 zat.
+  Woordenlijst zonder AI: kinderschoenen maat 15 tot 29 krijgen wel een rubriek (ea76a8fc), "Babypakje / romper",
+  "Longsleeve Noppies maat 44/50", "Schoenen Jopper schoenmaat 31" en de "* Jurk / rok"-achtige titels niet. Herstelronde
+  doet 200 per nacht, haar proef loopt 11-10 af. Niet gerepareerd; beslissing over tegoed bij Daniel.
+  Let op: backend/scheduler.py heeft een niet-vastgelegde wijziging van de gestopte ronde (rubriekherstel 05:00 naar 09:30,
+  verse gratis Google-dag). Niet door deze ronde gecommit.
+- 8f91a370 (amandaonline001): extensie 1.0.372, eerste Vinted-plaatsing 08-10 10:28; 142 Vinted, 117 MP, 17 2dehands actief.
+  58 artikelen zonder prijs niet nagelopen. Geen mailtje (06-10 al een).
+- partablecs, Winter Home, amhin: ongewijzigd, geen mailtje. Peter valt buiten het venster (proef 07-10 afgelopen).
+- Gerepareerd (Daniel: "zoek uit en fix"): Merk is bij Schoudertassen een keuzelijst van vijf merken plus "Overige merken" en
+  niet verplicht (live gemeten). Extensie 1.0.373 kiest nu "Overige merken" als het eigen merk er niet in staat, op
+  Marktplaats en 2dehands. Proef tests/eigen-merk-overige-merken-test.js: oude code laat Merk leeg, nieuwe kiest Overige merken.
+  Zelfde oorzaak als Toon (Handgemaakt, 05-10), die toen ten onrechte als klantfout gold. Pillenkiezer (autocomplete) heeft
+  de terugval nog niet. Werkt pas na upload naar de Web Store.
+
 ## 08-10-2026 (vervolg): Janneke, twee gaten die de eerste reparatie niet dichtte
 
 - Vinted koos voor kinderen nooit een vast pad maar zocht, en gaf regels onder Kids geen
@@ -16178,7 +16213,7 @@ Ze appte Daniel 07-10 rond 22:30 (Shopify is intussen gekoppeld, er staat "veel"
   rubriekreparatie van vanochtend was Vinted bij haar blijven weigeren. Nu: bij gender of
   rubriek kinderen telt Kids/Girls/Boys mee en vallen Women/Men af; laarzen, sandalen,
   sneakers en sloffen krijgen hun eigen trefwoord. Proef `tests/vinted-kinderschoenen-test.js`
-  (faalt op f608939). Extensie 1.0.373; bereikt haar pas na de Chrome Web Store.
+  (faalt op f608939). Extensie 1.0.374; bereikt haar pas na de Chrome Web Store.
 - "Kan nog niet alle producten vinden": de Shopify-scan leest alleen actieve producten met
   voorraad > 0 (of zonder voorraadbeheer). Concepten en voorraad-0 vielen stil weg. De scan
   telt nu de concepten (products/count.json?status=draft) en de melding na de scan noemt
