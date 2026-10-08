@@ -668,7 +668,7 @@
       "pillar": "B",
       "format": "money_rules",
       "slug": "second-hand-sales-tax-belgium",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "belasting-betalen-op-tweedehands-verkoop-belgie",
       "priority": 79
     },
@@ -1389,6 +1389,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-does-marktplaats-buyer-protection-work",
       "published_at": "2026-10-06T14:41:03.219049+00:00"
+    },
+    {
+      "keyword": "second hand sales tax belgium",
+      "slug": "second-hand-sales-tax-belgium",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "action": "created",
+      "url_path": "/reseller-tools/second-hand-sales-tax-belgium",
+      "published_at": "2026-10-08T15:08:30.331916+00:00"
     }
   ]
 }
