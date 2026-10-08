@@ -1427,6 +1427,25 @@ window.CL = (() => {
         || qs('[id*="rand"][id^="singleSelectAttribute["]');
   }
 
+  // EIGEN MERK DAT NIET IN DE LIJST STAAT (08-10-2026).
+  //
+  // Goudlief verkoopt onder haar eigen naam. Bij Tassen > Schoudertassen is Merk
+  // op Marktplaats een keuzelijst met vijf merken plus "Overige merken", en niet
+  // verplicht (gemeten 08-10-2026 op /plaats/1826/1840?bucketId=201). "Goudlief"
+  // paste nergens op, het veld bleef leeg en verifyMpGroupFields hield de hele
+  // advertentie tegen, op Marktplaats en 2dehands. "Overige merken" is wat een
+  // verkoper zelf ook zou kiezen.
+  const OVERIG_MERK = /^(overige?( merken?)?|ander(e|s)?( merk(en)?)?|merkloos|geen merk|onbekend)$/i;
+  function kiesOverigMerk(selectEl) {
+    const o = [...(selectEl?.options || [])].find((x) => x.value !== "" && !x.disabled
+      && OVERIG_MERK.test(String(x.text || "").trim()));
+    if (!o) return false;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value").set;
+    setter.call(selectEl, o.value);
+    selectEl.dispatchEvent(new Event("change", { bubbles: true }));
+    return true;
+  }
+
   function fieldFilled(el) {
     return !!el && !!(el.value || "").trim();
   }
