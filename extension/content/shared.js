@@ -1434,7 +1434,7 @@ window.CL = (() => {
   async function fillBrandField(brand) {
     const el = brandField();
     if (!el || !brand) return false;
-    if (el.tagName === "SELECT") return fillNativeSelect(el, brand);
+    if (el.tagName === "SELECT") return fillNativeSelect(el, brand) || kiesOverigMerk(el);
     // Het merkveld is een autocomplete: gewoon tekst erin zetten wordt door de
     // pagina teruggedraaid. De beproefde route loopt via de main world.
     await fillBrand(brand);
