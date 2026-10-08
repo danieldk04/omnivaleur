@@ -67,6 +67,11 @@ Zoek het laatste kopje "Onboarding nieuwe klanten" en lees wat toen per klant sp
   `gecontroleerd` bij Janneke terwijl ze `imported`-kandidaten heeft = de ronde draait niet:
   zoek de oorzaak (draait main 5be1191c of nieuwer op Railway, staat `shopify_auto_import`
   in de scheduler) en repareer volgens Stap 4. Zet het resultaat ook in het rapport aan Daniel.
+- **09-10-2026, rubrieken bij Janneke na opladen tegoed.** Daniel laadde 08-10 ~12:00 het
+  Anthropic-tegoed op (automatisch opladen staat aan). Tel alleen-lezen hoeveel van Jannekes
+  (31d28378) artikelen nog geen rubriek hebben (gisteren 1.755) en zet het getal in hetzelfde
+  team-notes-kopje. Daalt het niet duidelijk, zoek dan in de Railway-logs naar fouten van de
+  rubriekvraag (`TELLER_RUBRIEKVRAAG`, 429, credit) en repareer volgens Stap 4.
 
 ## Stap 2: meten
 
