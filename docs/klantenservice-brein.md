@@ -248,6 +248,9 @@ Hoe de kanalen gekoppeld worden:
 - Bieden toestaan voor veel artikelen tegelijk: in Voorraad aanvinken (of alles selecteren),
   dan Bieden toestaan… en het laagste bod als percentage van de prijs typen, 0 zet het uit.
   Geldt voor nieuwe plaatsingen; advertenties die al online staan veranderen niet mee.
+- Marktplaats-advertenties op "Bieden" (zonder bedrag): die gaan naar 2dehands gewoon als
+  Bieden. Tot 08-10-2026 stond 2dehands daarbij ten onrechte grijs met "Prijs ontbreekt",
+  gerepareerd. Naar Vinted kan pas met een bedrag erbij, want Vinted kent geen Bieden.
 - Zodra Shopify gekoppeld is plaatst Omnivaleur je klaargezette advertenties ook
   als product in je winkel en houdt de voorraad bij. Verkoop je iets in je eigen
   Shopify-winkel, dan haalt Omnivaleur het artikel automatisch van de andere
