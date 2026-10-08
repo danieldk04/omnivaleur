@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=3f73d14ec1"></script>
+<script src="/i18n.js?v=d65b8a0450"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -8344,6 +8344,10 @@ function pollScanProgress(platform, jobId) {
               showToast('Scan complete — everything Marktplaats has is already in your dashboard.');
             } else if (rest > 0) {
               showToast(`Fetched ${meta.gevonden || 0} adverts. ${rest.toLocaleString('en-GB')} still to go — import these first, then scan again for the next batch.`);
+            } else if (platform === 'shopify' && ((Number(meta.uitverkocht) || 0) + (Number(meta.concepten) || 0)) > 0) {
+              // Janneke (08-10-2026): "kan nog niet alle producten vinden". De scan
+              // neemt alleen actieve producten met voorraad mee; zeg waar de rest is.
+              showToast(`Scan complete. Not imported: ${Number(meta.uitverkocht) || 0} sold out (stock 0) and ${Number(meta.concepten) || 0} drafts in Shopify. Set them to Active with stock 1 in Shopify, then scan again.`);
             } else {
               showToast('Scan complete — see the summary below for what it found.');
             }

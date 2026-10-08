@@ -3206,6 +3206,20 @@
     if (!hints.length && cat) hints.push(cat);
     const wantMen = gender === "heren" || gender === "men";
     const wantWomen = gender === "dames" || gender === "women";
+    // KINDERSPULLEN HOREN ONDER KIDS (08-10-2026, Janneke 31d28378).
+    // Voor kinderen bestaat geen vast pad, dus dit liep altijd via zoeken. Daar
+    // kreeg een rij onder Kids geen voorkeur en een rij onder Women of Men geen
+    // straf: regenlaarsjes maat 27 konden zo bij de damesschoenen belanden, of bij
+    // een gelijke stand dames tegen heren helemaal niets krijgen.
+    const wantKids = /^(kinderen|kids|jongens|meisjes|baby|peuter)/.test(gender)
+      || /^(kinderen|jongens|meisjes|tieners|baby|peuter)/.test(cat);
+    if (wantKids && /schoen/.test(cat)) {
+      const t = `${item.title || ""} ${item.description || ""}`.toLowerCase();
+      if (/laars|laarzen|laarsjes|boots|snowboot/.test(t)) hints = ["boots", "wellies", ...hints];
+      if (/sandaal|sandalen|sandals/.test(t)) hints = ["sandals", ...hints];
+      if (/sneaker|gympen|trainers/.test(t)) hints = ["trainers", "sneakers", ...hints];
+      if (/slof|sloffen|pantoffel|slippers/.test(t)) hints = ["slippers", ...hints];
+    }
 
     inp.focus();
     inp.click();
@@ -3411,6 +3425,13 @@
       const isWomenRow = /\bwomen\b/.test(t);
       if (wantMen) { if (isMenRow) s += 3; if (isWomenRow) s -= 5; }
       if (wantWomen) { if (isWomenRow) s += 3; if (isMenRow) s -= 5; }
+      if (wantKids) {
+        // Vinted in het Nederlands zegt Kinderen/Meisjes/Jongens en Heren/Dames.
+        const isKidsRow = /\b(kids|girls|boys|baby|babies|kinderen|meisjes|jongens)\b/.test(t);
+        const isVolwassen = isMenRow || isWomenRow || /\b(heren|dames)\b/.test(t);
+        if (isVolwassen && !isKidsRow) return -Infinity;
+        if (isKidsRow) s += 3;
+      }
       if (hints.length === 0 && /shoe|clothing|jacket|dress|jeans/.test(t)) { s += 1; geraakt = true; }
       // EEN BONUSPUNT MAG NOOIT DE KEUZE MAKEN.
       //
@@ -3455,7 +3476,7 @@
       // men-row tied with a women-row while the item has no gender. For everything
       // else (games, electronics, unisex, or a tie between same-gender leaves) the
       // tiebreak above is trustworthy, so we commit rather than skip the category.
-      if (scored.length > 1 && scored[0].s === scored[1].s && !wantMen && !wantWomen) {
+      if (scored.length > 1 && scored[0].s === scored[1].s && !wantMen && !wantWomen && !wantKids) {
         const a = scored[0].c.text, b = scored[1].c.text;
         const genderClash =
           (/\bmen\b/.test(a) && !/women/.test(a) && /\bwomen\b/.test(b)) ||

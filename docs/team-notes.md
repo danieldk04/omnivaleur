@@ -16169,3 +16169,18 @@ Ze appte Daniel 07-10 rond 22:30 (Shopify is intussen gekoppeld, er staat "veel"
 - Open: "kan nog niet alle producten vinden" is niet gemeten (geen database vanuit deze cloudsessie). Daniel vraagt haar
   om een voorbeeld; let op dat Shopify-producten met alleen een barcode en geen foto als genegeerd beginnen (f491054).
 - Hele testreeks: zelfde 65 bestaande fouten vóór en na (deze cloudomgeving mist oude commits en mappen), 5 nieuwe groen.
+
+## 08-10-2026 (vervolg): Janneke, twee gaten die de eerste reparatie niet dichtte
+
+- Vinted koos voor kinderen nooit een vast pad maar zocht, en gaf regels onder Kids geen
+  voorkeur. Nagebouwd in Chromium met Vinteds voorstellen voor regenlaarzen (dames, heren,
+  2x kids): de oude extensie koos NIETS (gelijkspel dames/heren → afgebroken), dus ook na de
+  rubriekreparatie van vanochtend was Vinted bij haar blijven weigeren. Nu: bij gender of
+  rubriek kinderen telt Kids/Girls/Boys mee en vallen Women/Men af; laarzen, sandalen,
+  sneakers en sloffen krijgen hun eigen trefwoord. Proef `tests/vinted-kinderschoenen-test.js`
+  (faalt op f608939). Extensie 1.0.373; bereikt haar pas na de Chrome Web Store.
+- "Kan nog niet alle producten vinden": de Shopify-scan leest alleen actieve producten met
+  voorraad > 0 (of zonder voorraadbeheer). Concepten en voorraad-0 vielen stil weg. De scan
+  telt nu de concepten (products/count.json?status=draft) en de melding na de scan noemt
+  beide aantallen, EN + NL. Niet gemeten bij haar: vanuit de cloudsessie geen toegang tot
+  de database of haar winkel; omnivaleur.com zelf is vanaf hier ook niet bereikbaar (proxy 403).
