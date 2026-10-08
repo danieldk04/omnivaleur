@@ -1120,6 +1120,108 @@ async def _haiku_classificatie(client, prompt: str):
     raise laatste
 
 
+from collections import Counter as _Counter  # noqa: E402
+
+# Hoe vaak de korte kledingvraag volstond (zichtbaar in logs/tests).
+TELLER_RUBRIEKVRAAG: _Counter = _Counter()
+
+_KLEDINGTAKKEN = ("dames", "heren", "kinderen", "unisex", "sieraden")
+
+# Een woord dat zegt: dit is iets om te dragen.
+_KLEDINGWOORD_RE = re.compile(
+    r"\b(?:shirt|t-shirt|tshirt|polo|blouse|top|topje|trui|sweater|vest|hoodie|"
+    r"jas|jasje|jack|jacket|coat|parka|blazer|colbert|pak|kostuum|broek|jeans|"
+    r"chino|short|shorts|legging|rok|rokje|jurk|jurkje|dress|skirt|romper|"
+    r"rompertje|boxpakje|pakje|longsleeve|overhemd|sokken|ondergoed|bikini|"
+    r"badpak|zwembroek|pyjama|schoen|schoenen|schoentjes|sneaker|sneakers|"
+    r"laars|laarzen|laarsjes|boots|sandaal|sandalen|slippers|pumps|hakken|"
+    r"loafers|instappers|ketting|armband|ring|oorbellen|horloge|tas|tasje|"
+    r"portemonnee|zonnebril|sjaal|muts|pet|cap|riem|"
+    r"maat|mt|size|kinderkleding|babykleding)\b",
+    re.I)
+
+# Een woord dat naar een andere tak wijst: dan meteen de volledige vraag.
+# "kleed" en "foulard" omdat hun regel naar de woontak verwijst.
+_ANDERE_TAK_RE = re.compile(
+    r"(?:kleed|foulard|tapijt|plaid|deken|kussen|gordijn|lamp|stoel|tafel|kast|"
+    r"vaas|servies|bestek|zilverwerk|porselein|schilderij|antiek|brocante|"
+    r"gitaar|piano|plectrum|versterker|lego|duplo|playmobil|puzzel|spel|"
+    r"pokemon|knuffel|pop\b|boek|roman|strip|fiets|helm|iphone|telefoon|"
+    r"samsung|laptop|tablet|ipad|computer|console|playstation|xbox|nintendo|"
+    r"switch|camera|speaker|koptelefoon|televisie|tv\b|racket|dumbbell|"
+    r"kettlebell|ski\b|snowboard|golf|wasmachine|koffie|stofzuiger|boor|"
+    r"zaag|gereedschap|ladder|kinderwagen|autostoel|cd\b|dvd|lp\b|vinyl|"
+    r"munt|postzegel|kerst)",
+    re.I)
+
+
+def _alleen_kledingtakken(title: str | None, description: str | None) -> bool:
+    """Kleding/schoenen/sieraad volgens de titel, en niets wat ergens anders op wijst."""
+    titel = title or ""
+    if not _KLEDINGWOORD_RE.search(titel):
+        return False
+    return not _ANDERE_TAK_RE.search(f"{titel} {(description or '')[:300]}")
+
+
+def _kledingprompt(title: str | None, description: str | None, brand: str | None) -> str:
+    """De rubriekvraag met alleen de kledingtakken en hun regels."""
+    lijnen = "\n".join(f"  {g}: {', '.join(_TAXONOMY[g])}" for g in _KLEDINGTAKKEN)
+    return (
+        "You categorise second-hand listings for a Dutch marketplace. This one looks\n"
+        "like clothing, footwear, jewellery or an accessory.\n\n"
+        f"Brand: {brand or 'unknown'}\n"
+        f"Title: {title or ''}\n"
+        f"Description: {(description or '')[:1500]}\n\n"
+        "Pick the single best gender and category from this exact taxonomy:\n"
+        f"{lijnen}\n\n"
+        "Rules:\n"
+        "- The category MUST be copied verbatim from the list for the gender you pick.\n"
+        "- WHAT the garment is comes from the title and description ONLY. The brand\n"
+        "  never decides that: Puma shoes are shoes, Nike trousers are trousers.\n"
+        "  Use the brand only to choose between a sporty and a casual variant of the\n"
+        "  SAME garment (e.g. Gymshark shorts = sportbroeken rather than shorts).\n"
+        "- Footwear (shoes, sneakers, trainers, boots, loafers, heels, sandals) always\n"
+        "  goes in a footwear category, whatever the brand is.\n"
+        "- Loafers, moccasins, penny loafers and boat shoes are NOT formal shoes:\n"
+        '  they belong in the plain shoes category ("heren schoenen" /\n'
+        '  "schoenen dames"). Only laced dress shoes (oxford, derby, brogue) are\n'
+        '  "heren formele schoenen".\n'
+        "- Athletic shorts belong in a sportbroeken category, NOT shorts or jeans.\n"
+        "- Children's and baby clothing and shoes go in the kinderen branch. Baby sizes\n"
+        "  (44 to 86) are babykleding, toddler sizes (92 to 104) peuterkleding, shoe\n"
+        '  sizes under 34 "kinderen schoenen".\n'
+        "- If gender is not stated or implied, use unisex where a sensible unisex\n"
+        "  category exists; otherwise pick the most likely gender.\n"
+        "- Costumes, fancy dress and folk dress (lederhosen, dirndl, carnival,\n"
+        "  Halloween, cosplay) go in a verkleedkleding category, never everyday clothing.\n"
+        '- The "sieraden" branch covers jewellery, watches, bags, suitcases, wallets\n'
+        "  and sunglasses. Anything worn or carried as an accessory goes there, however\n"
+        '  old or silver. When you pick a "sieraden" category, gender must be\n'
+        '  "sieraden" too.\n'
+        "- Set confidence low if you are guessing about what the item is.\n"
+        "- If the item is NOT clothing, footwear, jewellery or an accessory, respond\n"
+        '  {"gender":"none","category":"none","confidence":"high"}.\n\n'
+        'Respond with ONLY JSON: {"gender":"...","category":"...","confidence":"high|medium|low"}'
+    )
+
+
+def _lees_rubriekantwoord(raw: str, *, toegestaan=None, alleen_zeker: bool = False) -> dict:
+    """Antwoord van de korte vraag naar {gender, category}, of {} als het niet telt."""
+    m = re.search(r"\{.*\}", raw or "", re.S)
+    if not m:
+        return {}
+    data = json.loads(m.group(0))
+    category = data.get("category")
+    if alleen_zeker and data.get("confidence") not in ("high", "medium"):
+        return {}
+    if category not in _ALL_CATEGORIES:
+        return {}
+    tak = _TAK_VAN_RUBRIEK[category]
+    if toegestaan and tak not in toegestaan:
+        return {}
+    return {"gender": tak, "category": category}
+
+
 async def _classify_with_claude(title: str | None, description: str | None,
                                 brand: str | None) -> dict:
     """
@@ -1272,6 +1374,28 @@ async def _classify_with_claude(title: str | None, description: str | None,
             "  item is never antique, and an appliance or tool is not home decoration.\n\n"
             'Respond with ONLY JSON: {"gender":"...","category":"...","confidence":"high|medium|low"}'
         )
+        # KLEDING EERST MET EEN KORTE VRAAG (Daniel, 08-10-2026: tegoed sparen).
+        # De volledige vraag is ~9.000 tokens, vooral de 469 rubrieken van
+        # takken als boeken en klussen. Is het herkenbaar kleding, schoenen of
+        # een sieraad, dan eerst alleen die vijf takken (~6x kleiner). Alleen
+        # een zeker antwoord telt; bij twijfel, "past nergens" of een rubriek
+        # buiten die takken alsnog de volledige vraag hieronder.
+        if _alleen_kledingtakken(title, description):
+            kort = _kledingprompt(title, description, brand)
+            try:
+                uit = _lees_rubriekantwoord(
+                    (await _haiku_classificatie(client, kort)).strip(),
+                    toegestaan=_KLEDINGTAKKEN, alleen_zeker=True)
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"Korte rubriekvraag mislukt ({type(e).__name__}: {e}); volledige vraag")
+                uit = {}
+            if uit.get("category"):
+                TELLER_RUBRIEKVRAAG["kort"] += 1
+                return uit
+            TELLER_RUBRIEKVRAAG["kort_daarna_volledig"] += 1
+        else:
+            TELLER_RUBRIEKVRAAG["volledig"] += 1
+
         raw = (await _haiku_classificatie(client, prompt)).strip()
         m = re.search(r"\{.*\}", raw, re.S)
         if not m:

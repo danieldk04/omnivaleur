@@ -16284,3 +16284,21 @@ laatste was nog niet gebeurd. Daniel: "bouw dat in" (c75efda2).
   7e767cdb; sold_price en sold_at staan er nog). Die 8 verkopen tellen daardoor niet meer in Omnivaleur-Analytics.
 - Open: verkopen van voorraadartikelen worden niet als omzet in Analytics geboekt (een 'sold'-rij zou het artikel
   overal blokkeren). Een aangevuld artikel dat op nul stond komt niet vanzelf terug op de andere kanalen.
+
+## 08-10-2026 (vervolg 3): korte rubriekvraag voor kleding, en een correctie op de kosten
+
+- Gebouwd (Daniel: "bouw die tak-besparing maar meteen"): `_classify_with_claude` stelt herkenbare
+  kleding, schoenen en sieraden eerst een korte vraag met alleen de takken dames, heren, kinderen,
+  unisex en sieraden (~4.000 tekens in plaats van ~30.000, ruim 7x kleiner). Alleen een zeker
+  antwoord binnen die takken telt. Bij twijfel, "past nergens", een rubriek erbuiten of een storing
+  volgt de oude volledige vraag, dus slechter dan voorheen kan het niet worden. Een woord dat naar
+  een andere tak wijst (kleed, foulard, lego, fiets, gitaar, kerst ...) gaat meteen naar de volledige
+  vraag. `TELLER_RUBRIEKVRAAG` telt kort / kort_daarna_volledig / volledig. Tests:
+  `tests/test_korte_kledingvraag.py`. Niet gemeten tegen het echte model (geen tegoed, geen sleutel
+  in de cloudsessie): de eerste echte ronde moet laten zien hoe vaak de korte vraag volstaat.
+- CORRECTIE op vervolg 2: betaalde Gemini is niet ~10x goedkoper dan Claude Haiku. Openbare prijzen
+  oktober 2026: Gemini 3.5 Flash-Lite ~$0,30 per miljoen invoertokens, Flash ~$0,75, Haiku 4.5 $1.
+  Hooguit ~3x. Met de korte vraag kost een kledingartikel op Haiku ~0,15 cent, 1.000 stuks ~€1,50.
+  Het verschil tussen de aanbieders is daarmee klein geworden; Google-betaling is geen must.
+- Extensie 1.0.374 voortaan ook vanuit de cloudsessie te bouwen (`./scripts/build-extension.sh`) en
+  als bestand naar Daniel te sturen; hij hoeft dan alleen te uploaden, zijn Mac is niet nodig.
