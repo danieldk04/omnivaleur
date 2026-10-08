@@ -16234,3 +16234,24 @@ eerste week, 1 nieuw. Web Store en repo allebei 1.0.372. Agenda niet gelezen (wo
   lege velden. Het dashboard zet een kanaal op slot zolang de rubriek leeg is, dus plaatsen vult
   het niet vanzelf; deze ronde wel. Niet gemeten hoeveel van haar 1.755 hij vult (geen database
   vanuit de cloud); hooguit de titels zonder maat, merk of babywoord blijven leeg.
+
+## 08-10-2026 (vervolg 2): zelf live zetten, en wat de AI-rubriekvraag kost
+
+**Werkafspraak (Daniel, 08-10-2026):** vraag Daniel nooit meer of een PR naar main mag. Zet het
+zelf live. Kijk wel eerst of er andere sessies bezig zijn (`list_sessions`, open PR's, nieuwe
+commits op main) en neem hun werk mee in de nieuwste versie, zodat sessies elkaar niet in de weg
+zitten. Bij een sessie die op dat moment echt draait op dezelfde bestanden: wachten of samenvoegen,
+niet overschrijven.
+
+**AI-kosten van de rubriekvraag (uitgezocht voor Daniel tegoed bijvult):**
+- Rubrieken gaan sinds 23-09 al eerst naar Gemini (`backend/services/taalmodel.py`), Claude Haiku is
+  alleen reserve. Het probleem van 07/08-10: de serversleutel ddf59aed is de gratis Google-laag en zat na
+  de grote imports op 429 (dagmaximum), en het Claude-tegoed is op. Dus beide lagen dicht.
+- Per product ~9.000 invoertokens (de lijst van 469 rubrieken). Claude Haiku ~0,9 cent per product;
+  Janneke's 1.755 lege artikelen ~16 dollar, 10.000 imports per maand ~90 dollar. Betaalde Gemini
+  Flash-Lite is ongeveer tien keer goedkoper (~0,1 cent per product, schatting op openbare
+  prijzen, niet gemeten op de rekening).
+- Advies: niet Anthropic bijvullen als hoofdroute, maar betaling aanzetten op de Google-sleutel van
+  de server met een maandlimiet; de gratis laag blijft dan eerst opgaan. De woordenlijstronde (PR 13)
+  vult gratis wat herkenbaar is, zodat de AI alleen de rest krijgt. Verdere besparing: alleen de
+  passende tak van de rubriekenlijst meesturen (~10x kleiner), staat al op de planning.
