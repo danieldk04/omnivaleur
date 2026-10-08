@@ -53,6 +53,21 @@ Aan het eind ALTIJD, ook bij afbreken:
 `git log --since="30 hours ago" --name-only` en de onderkant van `docs/team-notes.md`.
 Zoek het laatste kopje "Onboarding nieuwe klanten" en lees wat toen per klant speelde.
 
+## Stap 1b: eenmalige controles (alleen op de genoemde datum, daarna laten staan als afgevinkt)
+
+- **09-10-2026, automatische Shopify-import (Daniel: "check dit morgen voor mij").** Sinds
+  08-10 ~11:45 draait elk uur `backend/services/shopify_auto_import.py` (PR 15, main 5be1191c).
+  Lees alleen-lezen, voor Janneke (31d28378) en elke andere winkel in `platform_credentials`
+  met platform `shopify`: de rij met platform `_settings`, veld
+  `extra_data.shopify_auto_import_stand`, plus het aantal `import_candidates` (platform shopify)
+  per status. Goed = `gecontroleerd` heeft een tijd van vandaag en `fout` is leeg. Leg vast in
+  team-notes onder een kopje "09-10-2026: controle automatische Shopify-import": per winkel
+  `gecontroleerd`, `laatst_toegevoegd_om`, `totaal_toegevoegd`, `te_controleren`, `fout`, en
+  of hij aan staat (bij None: aan zodra er een kandidaat met status `imported` is). Geen
+  `gecontroleerd` bij Janneke terwijl ze `imported`-kandidaten heeft = de ronde draait niet:
+  zoek de oorzaak (draait main 5be1191c of nieuwer op Railway, staat `shopify_auto_import`
+  in de scheduler) en repareer volgens Stap 4. Zet het resultaat ook in het rapport aan Daniel.
+
 ## Stap 2: meten
 
 `PY scripts/nieuwe_klanten.py`. Dat geeft per klant in zijn eerste 7 dagen: abonnement,
