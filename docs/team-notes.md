@@ -16182,3 +16182,20 @@ Ze appte Daniel 07-10 rond 22:30 (Shopify is intussen gekoppeld, er staat "veel"
   heb ik niet live gemeten; één artikel, dus eerst bij Daniel neerleggen.
 - Stil met wachtend werk, computer uit (klant-eigen): 26cf5471 127, Goudlief 113 (laatste hartslag 21:00), 0b28c1ce 101
   (stil sinds 01-10; de nachtronde maakt en annuleert elke keer 25+25 MP-opdrachten), bcdf9aa4 61, 7fe36b46 8.
+
+## 08-10-2026: Onboarding nieuwe klanten (ochtend, 10:45 lokaal)
+
+De middagronde (08:19 UTC) is op zeggen van Daniel gestopt zonder verslag; deze ronde deed het daarna. 6 accounts in hun
+eerste week, 1 nieuw. Web Store en repo allebei 1.0.372. Agenda niet gelezen (workspacemcp niet bereikbaar).
+- f3e9dfbc (robbertbolier, nieuw 07-10 20:05): geen extensie, nul artikelen, nooit contact. Welkomstmailtje klaargezet.
+- 31d28378 (Janneke, kinderkleding en kinderschoenen): 1.755 van 1.917 artikelen zonder rubriek, dus niet te plaatsen.
+  Gemeten: de AI-rubriekvraag krijgt geen antwoord. Lokaal Google 402 (sleutel f7c8c67f, tegoed op) en Claude "credit
+  balance too low"; de server gebruikt de gratis Google-sleutel ddf59aed, die na de grote imports van 07-10 op 429 zat.
+  Woordenlijst zonder AI: kinderschoenen maat 15 tot 29 krijgen wel een rubriek (ea76a8fc), "Babypakje / romper",
+  "Longsleeve Noppies maat 44/50", "Schoenen Jopper schoenmaat 31" en de "* Jurk / rok"-achtige titels niet. Herstelronde
+  doet 200 per nacht, haar proef loopt 11-10 af. Niet gerepareerd; beslissing over tegoed bij Daniel.
+  Let op: backend/scheduler.py heeft een niet-vastgelegde wijziging van de gestopte ronde (rubriekherstel 05:00 naar 09:30,
+  verse gratis Google-dag). Niet door deze ronde gecommit.
+- 8f91a370 (amandaonline001): extensie 1.0.372, eerste Vinted-plaatsing 08-10 10:28; 142 Vinted, 117 MP, 17 2dehands actief.
+  58 artikelen zonder prijs niet nagelopen. Geen mailtje (06-10 al een).
+- partablecs, Winter Home, amhin: ongewijzigd, geen mailtje. Peter valt buiten het venster (proef 07-10 afgelopen).
