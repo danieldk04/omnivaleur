@@ -16169,3 +16169,16 @@ Ze appte Daniel 07-10 rond 22:30 (Shopify is intussen gekoppeld, er staat "veel"
 - Open: "kan nog niet alle producten vinden" is niet gemeten (geen database vanuit deze cloudsessie). Daniel vraagt haar
   om een voorbeeld; let op dat Shopify-producten met alleen een barcode en geen foto als genegeerd beginnen (f491054).
 - Hele testreeks: zelfde 65 bestaande fouten vóór en na (deze cloudomgeving mist oude commits en mappen), 5 nieuwe groen.
+
+## 08-10-2026: Dagelijkse klantfouten (ochtendronde, 10:40)
+
+- Slot stond sinds 08:19 UTC op "onboarding-middag" (tweede account); Daniel bevestigde dat die niets meer deed, dus vrijgegeven
+  en de ronde gedraaid. Geen code gewijzigd.
+- 675 opdrachten klaar in 24 uur, 20 fouten, 11 soorten, 0 open (allemaal eerder beoordeeld). 10 daarvan: 26cf5471 Vinted-scan
+  zonder Vinted-inlog (klant). Laatste fout 23:36 UTC, sinds middernacht niets nieuws.
+- Opgelost: "Mooie wollen jas" 538ae770 (96e30080) is in de nachtronde wel herplaatst (verwijderen 08:27, plaatsen 08:28 UTC).
+- Open, niet gerepareerd: Goudlief (5aae4954) "Crossbodytassen met stippen" weigerde op MP en 2dehands met lege brand. Merk
+  "Goudlief" staat niet in de merkkiezer en de extensie heeft geen terugval (Overige/geen merk). Of Merk daar verplicht is
+  heb ik niet live gemeten; één artikel, dus eerst bij Daniel neerleggen.
+- Stil met wachtend werk, computer uit (klant-eigen): 26cf5471 127, Goudlief 113 (laatste hartslag 21:00), 0b28c1ce 101
+  (stil sinds 01-10; de nachtronde maakt en annuleert elke keer 25+25 MP-opdrachten), bcdf9aa4 61, 7fe36b46 8.
