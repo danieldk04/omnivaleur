@@ -1737,7 +1737,7 @@ window.CL = (() => {
     // Native <select> for Merk (some categories) — works from isolated world
     const trigger = findFieldByLabel("Merk");
     if (trigger?.tagName === "SELECT") {
-      return fillNativeSelect(trigger, brand);
+      return fillNativeSelect(trigger, brand) || kiesOverigMerk(trigger);
     }
 
     _pendingBrand = brand;
