@@ -3661,12 +3661,31 @@
       .filter((el) => el.querySelector('[data-testid^="color_code_"]'));
   }
 
+  // DE LIJSTVORM HEEFT GEEN KLEURCODE, ALLEEN DE NEDERLANDSE NAAM (08-10-2026).
+  // Wij zoeken op Vinteds code ("Silver"), de tegel heet op vinted.nl "Zilver".
+  // In de rastervorm draagt elke tegel zijn code (color_code_SILVER); in de
+  // lijstvorm met aanvinkvakjes ontbreekt die, en dan vond de zoeker geen enkele
+  // kleur: Zilver, Zwart, Grijs, allemaal "(niets)". Janneke, kinderlaarzen in
+  // Zilver: "colour (Silver — none of the colour tiles responded to a click)".
+  // Zonder code leiden we hem daarom af uit de Nederlandse naam (Vinteds eigen
+  // 29 tegels, zie backend/services/kleur.py KLEUREN).
   function colourOptionLabel(el) {
+    const NL_CODE = {
+      "zwart": "black", "grijs": "grey", "wit": "white", "crème": "cream", "creme": "cream",
+      "beige": "body", "pasteloranje": "apricot", "oranje": "orange", "koraal": "coral",
+      "rood": "red", "wijnrood": "burgundy", "roze": "pink", "lichtroze": "rose",
+      "paars": "purple", "lila": "lilac", "lichtblauw": "light blue", "blauw": "blue",
+      "marineblauw": "navy", "turquoise": "turquoise", "mintgroen": "mint", "groen": "green",
+      "donkergroen": "dark green", "khaki": "khaki", "bruin": "brown", "mosterdgeel": "mustard",
+      "geel": "yellow", "zilver": "silver", "goud": "gold", "meerkleurig": "various",
+      "transparant": "clear",
+    };
     const code = el.querySelector('[data-testid^="color_code_"]')?.dataset.testid || "";
     const title = el.querySelector('[class*="web_ui__Cell__title"]');
+    const text = ((title ? title.textContent : el.textContent) || "").trim().toLowerCase();
     return {
-      text: ((title ? title.textContent : el.textContent) || "").trim().toLowerCase(),
-      code: code.replace("color_code_", "").replace(/-/g, " ").toLowerCase(),
+      text,
+      code: code.replace("color_code_", "").replace(/-/g, " ").toLowerCase() || NL_CODE[text] || "",
     };
   }
 
@@ -3843,11 +3862,12 @@
       clog(`Vinted kleur: paneel open, ${zichtbaar.length} opties, bv. ${zichtbaar.slice(0, 8).join(" / ")}`);
 
       let geklikt = false;
+      let nietInLijst = "";
       for (const colour of colours) {
         const opts = kleurOpties();
         const opt = findColourOption(colour, opts);
         if (!opt) {
-          kleurDiagnose = `"${colour}" was not in Vinted's list of ${opts.length} colours `
+          nietInLijst = kleurDiagnose = `"${colour}" was not in Vinted's list of ${opts.length} colours `
             + `(${opts.map((e) => colourOptionLabel(e).text).filter(Boolean).slice(0, 15).join(", ")})`;
           clog("Vinted kleur: " + kleurDiagnose);
           continue;
@@ -3872,9 +3892,12 @@
         clog("Vinted kleur: aangevinkt (veld toont de waarde nog niet)");
         return true;
       }
+      // Een kleur die niet in de lijst stond is een ándere fout dan een tegel die
+      // niet reageert; die preciezere melding overschreven we hier vroeger, dus
+      // was uit de fouttekst niet af te lezen welke van de twee het was.
       kleurDiagnose = geklikt
         ? "the colour was clicked but Vinted did not take it"
-        : "none of the colour tiles responded to a click";
+        : nietInLijst || "none of the colour tiles responded to a click";
       clog("Vinted kleur: " + kleurDiagnose + " — nog een poging");
       await sleep(400);
     }

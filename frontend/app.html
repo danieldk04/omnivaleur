@@ -5403,9 +5403,12 @@ function applyFilters(resetPage) {
   const filtered = state.items.filter(item => {
     if (tabOf.get(item.id) !== itemsTab) return false;
     if (platformItemIds && !platformItemIds.has(item.id)) return false;
+    // Elk woord los, in elke volgorde (Janneke, 08-10-2026): "winterjas noppies"
+    // zocht die twee woorden aaneen en vond dus niets, terwijl ze haar
+    // Noppies-winterjassen zocht. De maat telt mee, zodat "winterjas 104" werkt.
     if (search) {
-      const hooi = `${item.title || ''} ${item.brand || ''} ${item.description || ''}`.toLowerCase();
-      if (!hooi.includes(search)) return false;
+      const hooi = `${item.title || ''} ${item.brand || ''} ${item.size || ''} ${item.description || ''}`.toLowerCase();
+      if (!search.split(' ').every(w => hooi.includes(w))) return false;
     }
     if (exacteWoorden.length && !exacteWoorden.every(w => w.test(item.title || ''))) return false;
     if (catFilter !== 'all' && String(item.category || '') !== catFilter) return false;

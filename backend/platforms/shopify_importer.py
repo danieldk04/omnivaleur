@@ -1282,11 +1282,13 @@ def _convert(p: dict) -> dict:
     for opt in p.get("options", []):
         name = opt.get("name", "").lower()
         values = [v for v in opt.get("values", []) if v and v != "Default Title"]
-        if "size" in name and values:
+        # Ook de Nederlandse namen: een winkel in het Nederlands noemt de optie
+        # "Maat" of "Kleur", en dan bleef het maatveld leeg (Janneke, 08-10-2026).
+        if ("size" in name or "maat" in name) and values:
             size = values[0]
-        elif ("color" in name or "colour" in name) and values:
+        elif ("color" in name or "colour" in name or "kleur" in name) and values:
             color = values[0]
-        elif "material" in name and values:
+        elif ("material" in name or "materiaal" in name) and values:
             material = values[0]
 
     if not material:

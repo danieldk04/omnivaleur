@@ -1484,6 +1484,67 @@ def _kinderschoenmaat(text: str) -> bool:
     return False
 
 
+# DE MAAT EN HET MERK STAAN VAAK ALLEEN IN DE TITEL (08-10-2026, Janneke 31d28378).
+#
+# "Regenlaarzen Bergstein schoenmaat 31*": geen maatveld, geen merkveld, dus
+# hield het dashboard Marktplaats en 2dehands op slot met "Voeg brand, size toe".
+# Alleen de schoenmaat lezen we uit de titel: bij een schoen is "maat 31"
+# eenduidig, bij kleding ("maat 44/50", "maat 98") niet, en een maat die het
+# kanaal niet kent is erger dan een lege. Het merk alleen als het een merk is dat
+# deze verkoper zelf al bij een ander artikel invulde, en precies één ervan.
+_MAAT_IN_TITEL_RE = re.compile(
+    r"\b(?:schoenmaat|maat|mt|size|eu)\.?\s*:?\s*(\d{2})(?:[.,](5))?(?![\d/])")
+_GEEN_MERK = {"overige", "overige merken", "onbekend", "geen merk", "no brand", "unknown",
+              "other", "others", "diversen", "vintage", "handmade", "handgemaakt", "merkloos"}
+# Merken die ook een gewoon woord zijn: "Only worn once" is geen Only-jurk. Die
+# vullen we nooit uit de titel in; daar beslist de verkoper.
+_MERK_IS_OOK_WOORD = {"only", "pieces", "object", "selected", "guess", "basic", "basics",
+                      "score", "name it", "even", "blue", "replay", "esprit", "new look",
+                      "mexx", "vans", "boss", "bench", "sissy", "noisy may", "vila", "jack",
+                      "hema", "zeeman", "primark", "action", "lucky", "monki", "kids",
+                      "baby", "classic", "sport", "sports", "original", "originals"}
+
+
+def _schoenmaat_uit_titel(title: str | None) -> str | None:
+    """De schoenmaat uit een titel met een schoenwoord: "Regenlaarzen Bergstein
+    schoenmaat 31*" → "31". Eén maat, 15 tot en met 50; twee verschillende maten
+    in één titel ("maat 27 en 28") → None, want dan weten we het niet."""
+    tekst = (title or "").lower()
+    if not ("schoenmaat" in tekst or any(_word_in(w, tekst) for w in _SCHOEN_WOORDEN)):
+        return None
+    maten = set()
+    for m in _MAAT_IN_TITEL_RE.finditer(tekst):
+        if 15 <= int(m.group(1)) <= 50:
+            maten.add(m.group(1) + ("." + m.group(2) if m.group(2) else ""))
+    return maten.pop() if len(maten) == 1 else None
+
+
+def merken_uit_voorraad(rijen) -> dict:
+    """kleine letters → de schrijfwijze die deze verkoper het vaakst gebruikt.
+
+    Alleen merken die hij bij minstens twee artikelen invulde: één keer kan een
+    tikfout of een gok zijn, twee keer is zijn eigen woordenschat."""
+    from collections import Counter
+    tel: dict[str, Counter] = {}
+    for r in rijen:
+        merk = " ".join(str(r.get("brand") or "").split())
+        laag = merk.lower()
+        if len(merk) < 3 or laag in _GEEN_MERK or laag in _MERK_IS_OOK_WOORD:
+            continue
+        tel.setdefault(laag, Counter())[merk] += 1
+    return {k: c.most_common(1)[0][0] for k, c in tel.items() if sum(c.values()) >= 2}
+
+
+def _merk_uit_titel(title: str | None, merken: dict) -> str | None:
+    """Het merk uit de titel, maar alleen een merk dat de verkoper zelf al bij
+    een ander artikel invulde, en alleen als er precies één in staat. Een merk dat
+    binnen een langer merk valt ("Nike" in "Nike ACG") telt niet apart."""
+    tekst = " ".join((title or "").lower().split())
+    gevonden = [k for k in merken if re.search(r"(?<![\w])" + re.escape(k) + r"(?![\w])", tekst)]
+    gevonden = [k for k in gevonden if not any(k != g and k in g for g in gevonden)]
+    return merken[gevonden[0]] if len(gevonden) == 1 else None
+
+
 # KINDERKLEDING HERKEN JE OOK AAN DE MAAT (08-10-2026, Janneke 31d28378).
 #
 # Bij Janneke stonden 1.755 van de 1.917 artikelen zonder rubriek: kinder- en
@@ -1839,7 +1900,7 @@ def _item_data_from_candidate(cand: dict, body: dict | None = None,
         "description": pick("description"),
         "purchase_price": body.get("purchase_price"),
         "brand": _past("brand", pick("brand")),
-        "size": _past("size", pick("size")),
+        "size": _past("size", pick("size") or _schoenmaat_uit_titel(volle_titel)),
         # De staat komt van drie kanten, in deze volgorde: wat de gebruiker in het
         # formulier typte, wat het platform meegaf, en anders de standaard voor
         # deze hele lading. Die laatste bestaat omdat Admarkt geen staat meelevert
@@ -1981,6 +2042,10 @@ def _backfill_patch(current: dict, cand: dict, inferred: dict | None = None) -> 
         if (field not in patch and _is_empty(current.get(field)) and inferred.get(field)
                 and _past(field, inferred[field]) is not None):
             patch[field] = inferred[field]
+    if "size" not in patch and _is_empty(current.get("size")):
+        maat = _schoenmaat_uit_titel(cand.get("title"))
+        if maat:
+            patch["size"] = maat
     return patch
 
 
@@ -2862,6 +2927,15 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
     # De eigen merkenwoordenschat van deze verkoper: nodig om te beslissen of
     # twee advertenties met hetzelfde nummer echt hetzelfde artikel zijn.
     merken_van_verkoper = bekende_merken_van(items) | bekende_merken_van(candidates)
+    # En om een leeg merk uit de titel te halen: "Regenlaarzen Bergstein
+    # schoenmaat 31*" krijgt Bergstein als de verkoper dat merk elders al invulde.
+    # Vóór het koppelen, zodat ook de vergelijking op merk het ziet.
+    _merken = merken_uit_voorraad(list(items) + list(candidates))
+    for c in candidates:
+        if not str(c.get("brand") or "").strip():
+            merk = _merk_uit_titel(c.get("title"), _merken)
+            if merk:
+                c["brand"] = merk
 
     # Work out up front which rows must NOT be processed automatically, and drop
     # them from this pass entirely: everything that is not certain (see

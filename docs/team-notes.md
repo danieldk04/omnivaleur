@@ -16362,3 +16362,29 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   Computer uit met werk vastgeclaimd: Goudlief 5aae4954 (sinds 07-10 21:00 UTC) en bcdf9aa4 (sinds 23:36 UTC).
 - Goudlief-merkreparatie van vanochtend (9f69689b, extensie 1.0.373) nog niet na te meten: haar extensie is sinds
   gisteravond niet meer online geweest.
+
+## 08-10-2026 (vervolg 5): Janneke, vijf vragen uit haar app van 14:32 tot 14:47
+
+- "Vinted wouldn't accept these fields: colour (Silver — none of the colour tiles responded…)": Vinted tekent
+  de kleurkiezer soms als lijst met aanvinkvakjes, zonder color_code_ en alleen met de Nederlandse naam. De
+  zoeker vergeleek "silver" met "zilver" en vond in die vorm GEEN ENKELE kleur (28 van 32 controles fout op
+  de oude code, `tests/vinted-kleur-lijstvorm-nl-test.js`). Nu leidt colourOptionLabel de code af uit de
+  Nederlandse naam. Ook de melding "'X' was not in Vinted's list" wordt niet meer overschreven (open punt
+  van 01-10). Extensie 1.0.375; bereikt haar pas na de Chrome Web Store. Niet live in Vinted gemeten dat haar
+  geval de lijstvorm was; wel de enige verklaring die ook de Zilver-oorbellen van 01-10 dekt.
+- "Voeg brand, size toe voor Marktplaats en 2dehands" bij "Regenlaarzen Bergstein schoenmaat 31*": maat en
+  merk stonden alleen in de titel. Nu: schoenmaat uit de titel (alleen met schoenwoord, 15–50, één maat;
+  kledingmaten bewust niet), merk uit de titel als de verkoper dat merk zelf al bij minstens twee artikelen
+  invulde (stoplijst voor merken die ook een woord zijn: Only, Pieces, Vans…). Bij importeren, herscannen,
+  publiceren, en een ronde voor de bestaande voorraad (`vul_maat_en_merk_uit_titel`, hangt aan de
+  woordenlijstronde: 3 min na start, daarna elke 3 uur). Shopify-opties "Maat", "Kleur", "Materiaal" worden
+  nu ook herkend. Proef `tests/test_maat_merk_uit_titel.py`.
+- Opvallend in haar schermafbeelding: "schoenmaat 27" heeft maat 30 in het maatveld. Bestaande waarden
+  overschrijven we niet; laten checken in haar Shopify.
+- "Kan dit product niet vinden" (Bergstein schoenmaat 24, voorraad 6): niet te meten zonder database.
+  Waarschijnlijkst: het staat bij Import onder "te controleren" (dubbel-twijfel), of het is na haar laatste
+  scan toegevoegd en komt met de uurronde binnen. Morgenochtend in de onboardingronde nakijken.
+- Zoeken met meerdere woorden ("winterjas noppies") vond niets: de hele zin werd aaneen gezocht. Nu elk woord
+  los, in elke volgorde, maat telt mee. Proef `tests/zoekbalk-meerdere-woorden-test.js` (3 fout op oud).
+- Vinted in het Engels en verwijderingen "staat al in de catalogus": antwoord in het brein gezet.
+- Hele testreeks: zelfde 71 bestaande fouten en 13 fouten bij het verzamelen vóór en na, 7 nieuwe groen.
