@@ -405,6 +405,21 @@ def start_scheduler():
         id="daily_rubriekherstel",
         replace_existing=True,
     )
+    # Eerst de gratis woordenlijst over ALLE lege rubrieken, kort na elke start
+    # en daarna elke drie uur. Zie vul_rubrieken_uit_woordenlijst (Janneke,
+    # 08-10-2026: 1.755 artikelen zonder rubriek, nachtronde doet er 200).
+    from backend.services.categorie_herstel import vul_rubrieken_uit_woordenlijst
+    from datetime import datetime as _dt2, timedelta as _td2
+    _scheduler.add_job(
+        _off_the_request_loop(vul_rubrieken_uit_woordenlijst),
+        "interval",
+        hours=3,
+        id="rubrieken_woordenlijst",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        next_run_time=_dt2.now() + _td2(minutes=3),
+    )
     # Nieuwe Shopify-producten die buiten Omnivaleur om worden toegevoegd —
     # bulkimport, handmatig in het winkelbeheer — zelf herkennen. Zonder deze
     # ronde blijft de koppeling die net na het verbinden gebeurt (zie

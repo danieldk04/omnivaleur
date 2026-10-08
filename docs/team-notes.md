@@ -16219,3 +16219,18 @@ eerste week, 1 nieuw. Web Store en repo allebei 1.0.372. Agenda niet gelezen (wo
   telt nu de concepten (products/count.json?status=draft) en de melding na de scan noemt
   beide aantallen, EN + NL. Niet gemeten bij haar: vanuit de cloudsessie geen toegang tot
   de database of haar winkel; omnivaleur.com zelf is vanaf hier ook niet bereikbaar (proxy 403).
+- Hoofdzaak, uit de onboardingronde van vanochtend: 1.755 van haar 1.917 artikelen zonder rubriek
+  (AI zonder tegoed). Twee gaten in de woordenlijst: (1) een kindersignaal zonder jongen/meisje gaf
+  geen rubriek, (2) kindermaten, babywoorden en kindermerken werden niet herkend. Nu: dubbele maat op
+  het kinderraster (44/50 … 170/176), losse maat 68 t/m 176 behalve 98 en 110 (lange herenmaten),
+  babywoorden (ook samenstellingen: babypakje, rompertje, slabbetjes), kindermerken (Noppies, Jopper,
+  Vingino, Z8, Feetje, …; Bergstein NIET, die maakt ook volwassen laarzen), schoenmaat t/m 33 met
+  schoenwoord. Rubriek: baby (≤86 of babywoord), peuter (92–104), jurk/rok → meisjes; verder blijft
+  hij leeg, jongen/meisje raden we niet. Elk volwassen woord (ook vastgeschreven: herenjas,
+  damesblazer) houdt het volwassen. Proef `tests/test_kinderkleding_woordenlijst.py`, met de
+  Revaleur-titels (colbert 50/56/106, pantalon 98, overhemd 110) als vangrail.
+- Nieuwe ronde `vul_rubrieken_uit_woordenlijst` (services/categorie_herstel.py): alleen woordenlijst,
+  geen AI, ALLE lege rubrieken in één keer, 3 min na elke start en daarna elke 3 uur. Vult alleen
+  lege velden. Het dashboard zet een kanaal op slot zolang de rubriek leeg is, dus plaatsen vult
+  het niet vanzelf; deze ronde wel. Niet gemeten hoeveel van haar 1.755 hij vult (geen database
+  vanuit de cloud); hooguit de titels zonder maat, merk of babywoord blijven leeg.

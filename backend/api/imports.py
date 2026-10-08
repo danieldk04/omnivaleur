@@ -1349,12 +1349,59 @@ _SCHOEN_WOORDEN = (
 
 
 def _kinderschoenmaat(text: str) -> bool:
-    """Staat er een schoenmaat van 15 tot en met 29 in de tekst ("schoenmaat 27",
-    "maat 19", "mt. 24", "size 22")? Volwassenen hebben die maten niet."""
+    """Staat er een schoenmaat van 15 tot en met 33 in de tekst ("schoenmaat 27",
+    "maat 19", "mt. 24", "size 31")? Volwassenen hebben die maten niet; de
+    kleinste damesmaat die je tegenkomt is 34-35. Alleen gebruikt samen met een
+    schoenwoord. Was eerst tot en met 29: "Schoenen Jopper schoenmaat 31" van
+    Janneke viel er dan net buiten (onboardingronde 08-10-2026)."""
     for m in re.finditer(r"\b(?:schoenmaat|maat|mt|size)\.?\s*:?\s*(\d{2})(?:[.,]5)?\b", text):
-        if 15 <= int(m.group(1)) <= 29:
+        if 15 <= int(m.group(1)) <= 33:
             return True
     return False
+
+
+# KINDERKLEDING HERKEN JE OOK AAN DE MAAT (08-10-2026, Janneke 31d28378).
+#
+# Bij Janneke stonden 1.755 van de 1.917 artikelen zonder rubriek: kinder- en
+# babykleding met titels als "Babypakje / romper" en "Longsleeve Noppies maat
+# 44/50", zonder "kids", "jongens" of "meisjes" erin. De AI die zulke gevallen
+# oplost had geen tegoed. De kindermaten zelf zijn eenduidig:
+#   * een dubbele maat op het kinderraster ("44/50", "56/62", "98/104") bestaat
+#     bij volwassenen niet;
+#   * enkele maten 68 tot en met 176 op het kinderraster ook niet, BEHALVE 98 en
+#     110: dat zijn lange herenmaten. Die en 44/50/56/62 (colbertmaten) tellen
+#     alleen als dubbele maat.
+_KINDERRASTER = (44, 50, 56, 62, 68, 74, 80, 86, 92, 98, 104, 110, 116, 122, 128,
+                 134, 140, 146, 152, 158, 164, 170, 176)
+_KINDERMAAT_LOS = {68, 74, 80, 86, 92, 104, 116, 122, 128, 134, 140, 146, 152, 158,
+                   164, 170, 176}
+
+# Merken die alleen kinderkleding of kinderschoenen maken.
+_KINDERMERKEN = (
+    "noppies", "jopper", "vingino", "z8", "tumble n dry", "tumble 'n dry",
+    "name it", "feetje", "prenatal", "prénatal", "b.nosy", "quapi", "molo", "mini rodini",
+    "petit bateau", "bobo choses", "shoesme", "develab", "bunnies jr", "braqeez",
+    "like flo", "levv", "little label", "dirkje", "mayoral", "babyface", "koeka",
+)
+
+# Babywoorden; ook als deel van een samenstelling ("babypakje", "rompertje").
+_BABY_RE = re.compile(r"\b(baby\w*|romper\w*|boxpak\w*|kruippak\w*|slab\w*|newborn|"
+                      r"prematuur|preemie|slaapzakje\w*|rompertje\w*)\b")
+_MEISJES_RE = re.compile(r"\b(jurk\w*|rok|rokje\w*|rokken|tuniek\w*|tutu\w*|dress|dresses|skirts?)\b")
+
+
+def _kindermaat(text: str) -> int | None:
+    """De kleinste kindermaat in de tekst, of None. Zie _KINDERRASTER."""
+    gevonden = []
+    for m in re.finditer(r"\b(\d{2,3})\s*/\s*(\d{2,3})\b", text):
+        a, b = int(m.group(1)), int(m.group(2))
+        if a in _KINDERRASTER and b in _KINDERRASTER and b - a == 6:
+            gevonden.append(a)
+    for m in re.finditer(r"\b(?:maat|mt|size)\.?\s*:?\s*(\d{2,3})\b(?!\s*/)(?!\s*cm)", text):
+        n = int(m.group(1))
+        if n in _KINDERMAAT_LOS:
+            gevonden.append(n)
+    return min(gevonden) if gevonden else None
 
 
 def _infer_attributes(title: str | None, description: str | None = None) -> dict:
@@ -1394,6 +1441,13 @@ def _infer_attributes(title: str | None, description: str | None = None) -> dict
     # rubriek leeg en weigerde elk kanaal het plaatsen.
     if not gender and _kinderschoenmaat(text) and any(_word_in(w, text) for w in _SCHOEN_WOORDEN):
         gender = "kinderen"
+    kindermaat = _kindermaat(text)
+    is_baby = _BABY_RE.search(text) is not None
+    # "herenjas", "damesblazer": volwassen, ook als het woord aan een ander vastzit.
+    volwassen = re.search(r"heren|dames|women|\bmen'?s?\b|ladies", text) is not None
+    if not gender and not volwassen and (kindermaat or is_baby
+                                         or any(_word_in(w, text) for w in _KINDERMERKEN)):
+        gender = "kinderen"
     # "women"/"womens" also contain "men" as a substring, but whole-word matching
     # keeps them distinct, so the order above is safe.
     if gender:
@@ -1425,6 +1479,15 @@ def _infer_attributes(title: str | None, description: str | None = None) -> dict
         elif any(_word_in(w, text) for w in ("boys", "boy", "jongens", "jongen")):
             out["category"] = "jongens kleding"
         elif any(_word_in(w, text) for w in ("girls", "girl", "meisjes", "meisje")):
+            out["category"] = "meisjes kleding"
+        # Zonder jongen of meisje in de titel: leeftijd uit maat of babywoord,
+        # anders een jurk of rok als meisjeskleding. Wat daarna nog over is
+        # blijft leeg; liever geen rubriek dan jongen en meisje omdraaien.
+        elif is_baby or (kindermaat is not None and kindermaat <= 86):
+            out["category"] = "babykleding"
+        elif kindermaat is not None and kindermaat <= 104:
+            out["category"] = "peuterkleding"
+        elif _MEISJES_RE.search(text):
             out["category"] = "meisjes kleding"
     elif not gender and _is_grand_foulard(title, description):
         # Zie _is_grand_foulard: de combinatie "grand foulard" is woontextiel.
