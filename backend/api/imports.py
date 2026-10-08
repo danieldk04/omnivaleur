@@ -2779,6 +2779,10 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
     standaard_staat = body.get("default_condition")
     if standaard_staat not in ("new_with_tags", "new", "good", "fair", "poor"):
         standaard_staat = None
+    # Alleen deze kandidaten (de automatische Shopify-import, zie
+    # services/shopify_auto_import.py): die importeert wat er sinds het vorige
+    # uur bijkwam, en laat liggen wat de verkoper zelf nog moet beslissen.
+    alleen_ids = [str(i) for i in (body.get("candidate_ids") or []) if i][:500]
 
     # Process in bounded batches so a single request can never run long enough for the
     # reverse proxy / gateway to time out and hand the browser an HTML error page (which
@@ -2826,6 +2830,8 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
         q = db.table("import_candidates").select("*").eq("user_id", user_id).eq("status", "pending")
         if platform:
             q = q.eq("platform", platform)
+        if alleen_ids:
+            q = q.in_("id", alleen_ids)
         # Ordered by platform first, so the queue is walked one channel at a time
         # with a single stable offset. A batch that straddles two channels is cut
         # back to the first one; the next pass picks up from the boundary.
@@ -3036,6 +3042,8 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
         remaining_q = db.table("import_candidates").select("id", count="exact").eq("user_id", user_id).eq("status", "pending")
         if platform:
             remaining_q = remaining_q.eq("platform", platform)
+        if alleen_ids:
+            remaining_q = remaining_q.in_("id", alleen_ids)
         return remaining_q.execute().count or 0
 
     remaining = await asyncio.to_thread(_process)

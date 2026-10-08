@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=d65b8a0450"></script>
+<script src="/i18n.js?v=b3691229c8"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -135,6 +135,9 @@ a { color: inherit; text-decoration: none; }
 .imp-chip.on .imp-tick { background: var(--blue); border-color: var(--blue); }
 .imp-soon { font-size: 12px; color: var(--muted); margin-left: 4px; }
 .imp-status { font-size: 12.5px; color: var(--muted); flex: 1; min-width: 200px; line-height: 1.55; }
+.imp-auto { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+.imp-auto .vg-chip { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.imp-auto .imp-status span + span, .imp-auto .imp-status span + b { margin-left: 2px; }
 .imp-cond { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
 .imp-cond label { text-transform: none; letter-spacing: normal; font-weight: 500; margin: 0; font-size: 12.5px; color: var(--muted); }
 .imp-cond select { width: auto; max-width: 200px; padding: 4px 8px; font-size: 12.5px; }
@@ -1892,6 +1895,9 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       <div class="card" style="padding:18px 20px;margin-bottom:20px">
         <div id="import-scan-grid" class="imp-chips"></div>
         <div id="import-alles"></div>
+        <!-- Nieuwe Shopify-producten vanzelf (08-10-2026, Janneke). Alleen te
+             zien met een gekoppelde winkel. Zie services/shopify_auto_import.py. -->
+        <div id="import-auto"></div>
         <!-- Eén staat voor de hele lading. Marktplaats/Admarkt levert geen staat
              mee, waardoor alles op "Like new" belandde; wie uitsluitend nieuwe
              spullen verkoopt moest dat honderden keren corrigeren. -->
@@ -7959,6 +7965,7 @@ function renderImportScanButtons() {
   const soon = straks.length
     ? `<span class="imp-soon">${straks.map(p => esc(PLATFORM_LABELS[p] || p)).join(' and ')} coming soon</span>` : '';
   document.getElementById('import-scan-grid').innerHTML = chips + soon;
+  renderImportAuto();
   // De eerder gekozen staat terugzetten, één keer per pagina.
   const sel = document.getElementById('import-condition');
   if (sel && !sel.dataset.gezet) {
@@ -8043,6 +8050,59 @@ const importAllesStand = {}; // platform -> { stage, message, klaar, fout, gevon
 
 function laatsteImportRonde() {
   try { return JSON.parse(localStorage.getItem('importLaatsteRonde') || 'null'); } catch (_) { return null; }
+}
+
+// NIEUWE SHOPIFY-PRODUCTEN VANZELF (08-10-2026, Janneke: "en nieuwe producten
+// worden vanzelf gesynchroniseerd?"). De server kijkt elk uur en importeert wat
+// er in de winkel bijkwam; hier staat de schakelaar en wanneer er gekeken is.
+// Zonder eigen keuze staat hij aan bij wie ooit zelf uit Shopify importeerde.
+function renderImportAuto() {
+  const box = document.getElementById('import-auto');
+  if (!box) return;
+  if (!(state.connected || []).includes('shopify')) { box.innerHTML = ''; return; }
+  const s = state.settings || {};
+  const aan = s.shopify_auto_import_aan === true;
+  const st = s.shopify_auto_import_stand || {};
+  const tijd = iso => new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const delen = [];
+  if (!aan) delen.push(`<span>Off. New Shopify products only come in when you press Import.</span>`);
+  else if (st.fout) delen.push(`<span style="color:#b45309">⚠️ ${esc(st.fout)}</span>`);
+  else if (!st.gecontroleerd) delen.push(`<span>We check your store every hour. The first check runs within the hour.</span>`);
+  else {
+    delen.push(`<span>We check your store every hour. Last check ${esc(tijd(st.gecontroleerd))}.</span>`);
+    if (st.laatst_toegevoegd_om) delen.push(`<span>Last new product added ${esc(tijd(st.laatst_toegevoegd_om))}.</span>`);
+    if (st.te_controleren) delen.push(`<b style="color:#92400e">${Number(st.te_controleren)} waiting under To check.</b>`);
+  }
+  box.innerHTML = `<div class="imp-auto">
+    <label class="vg-chip${aan ? ' on' : ''}">
+      <input type="checkbox" id="shopify-auto-aan" ${aan ? 'checked' : ''} onchange="saveShopifyAuto(this.checked)">
+      ${platIcon('shopify', 16)}<span>Add new Shopify products automatically</span>
+    </label>
+    <div class="imp-status" id="shopify-auto-regel">${delen.join(' ')}</div>
+  </div>`;
+}
+
+async function saveShopifyAuto(aan) {
+  const regel = document.getElementById('shopify-auto-regel');
+  const schakel = document.getElementById('shopify-auto-aan');
+  if (schakel) schakel.closest('.vg-chip').classList.toggle('on', aan);
+  if (regel) regel.textContent = 'Saving…';
+  try {
+    const r = await apiFetchRetry(`${API}/api/items/settings`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shopify_auto_import: aan }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data?.detail || `HTTP ${r.status}`);
+    state.settings = { ...state.settings, ...data };
+    renderImportAuto();
+    showToast(data.shopify_auto_import_aan
+      ? 'Saved. New products in your Shopify store are added every hour.'
+      : 'Saved. New Shopify products only come in when you press Import.');
+  } catch (e) {
+    renderImportAuto();
+    showToast(`Could not save: ${e.message}`);
+  }
 }
 
 function renderImportAlles() {

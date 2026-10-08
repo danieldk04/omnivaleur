@@ -16324,3 +16324,28 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   Shopify aangevinkt zonder winkel.
 - Open bij ons, niet gedaan: de MP-import legt de biedvorm niet vast (price_type blijft leeg); de server zoekt hem
   nu pas op bij het plaatsen. Werkt, maar het artikelvenster toont daardoor geen "Bieden".
+
+## 08-10-2026 (vervolg 4): nieuwe Shopify-producten komen elk uur vanzelf binnen
+
+- Aanleiding: Janneke (31d28378) vroeg "en nieuwe producten worden vanzelf gesynchroniseerd?". Dat werden
+  ze niet: de dagelijkse reconcile koppelt alleen bestaande artikelen. Daniel: "bouw die automatische
+  Shopify-import maar meteen".
+- Nieuw: `backend/services/shopify_auto_import.py`, elk uur (scheduler-taak `shopify_auto_import`). Leest de
+  actieve producten, pakt alleen wat nog nooit gezien is (geen kandidaat, geen eigen advertentie), niet
+  uitverkocht en minstens 15 minuten oud (een product dat wij net publiceerden wordt zo nooit een tweede
+  artikel). Dan dezelfde opslag (`_store_scan_results`) en dezelfde importbeslissing als Alles importeren
+  (`bulk_import_candidates`, nu met `candidate_ids` om tot precies die kandidaten te beperken). Twijfel
+  blijft onder Te controleren; wat de verkoper eerder liet liggen of negeerde wordt niet aangeraakt.
+- Aan of uit: instelling `shopify_auto_import` (True/False/None). None = aan zodra de verkoper ooit zelf
+  iets uit Shopify importeerde (status 'imported'). Daardoor staat hij bij Revaleur, dat Shopify alleen als
+  doel gebruikt, UIT: daar zou elk niet te koppelen product een dubbel artikel worden. Overslaan bij een
+  verlopen proef of mislukte betaling, en als er net een scan of import met de knop loopt.
+- Scherm: op Import staat bij een gekoppelde winkel de schakelaar "Add new Shopify products automatically"
+  met wanneer er voor het laatst gekeken is en wanneer er voor het laatst iets bij kwam (`shopify_auto_import_stand`
+  in de instellingen, alleen door de server te schrijven). NL-vertaling erbij.
+- Tests: `tests/test_shopify_auto_import.py` (14), met een proef dat ze echt falen als het filter op
+  kandidaten, de 15-minutenregel of de stopconditie weg is. Volledige suite: zelfde 71 bestaande
+  omgevingsfouten als op main, niets nieuws.
+- Kosten: alleen nieuwe producten gaan langs de rubriekvraag, dus enkele centen per dag. De $6 Haiku op
+  07-10 in de Anthropic-console was Jannekes inhaalronde met de oude volledige vraag (~0,8 cent per
+  artikel, ~750 artikelen) tot het tegoed op was; met de korte vraag en de woordenlijst is dat nu ~5x minder.
