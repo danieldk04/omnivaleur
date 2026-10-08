@@ -14,9 +14,14 @@ WAT DEZE RONDE DOET (elk uur)
      producten uit Shopify geïmporteerd, of zetten het bewust aan. Wie Shopify
      alleen gebruikt om NAAR te publiceren (Revaleur) krijgt niets: daar zou
      elk product dat niet op nummer te koppelen is een tweede artikel worden.
-  2. Alleen producten die Omnivaleur nog nooit zag: niet als importkandidaat,
-     niet als eigen advertentie. Wat de verkoper eerder liet liggen of negeerde
-     blijft van hem; dit pakt alleen wat sinds de vorige keer is bijgekomen.
+  2. Producten die Omnivaleur nog nooit zag: niet als importkandidaat, niet als
+     eigen advertentie. Daarnaast, één keer per dag, de ACHTERSTAND: producten
+     die bij een eerdere scan wel binnenkwamen maar nooit geïmporteerd zijn
+     (status 'pending') en nog te koop staan. 'Pending' is geen keuze van de
+     verkoper; 'ignored' wel, en dat blijft van hem. Waarom (08-10-2026): bij
+     Janneke stonden vier Bergstein-laarzen maat 24 sinds de scan van 07-10 op
+     'pending'. De ronde zag ze als "bekend" en liet ze liggen, dus ze kon ze
+     niet vinden.
   3. Precies dezelfde opslag en dezelfde importbeslissing als de knop
      (jobs._store_scan_results en imports.bulk_import_candidates). Wat daar
      twijfel is, blijft hier ook staan onder "To check".
@@ -45,6 +50,9 @@ MIN_LEEFTIJD = timedelta(minutes=15)
 HANDMATIG_RUST_S = 300
 GROEP = 400                               # kandidaat-id's per importronde
 MAX_RONDES = 40                           # ruim genoeg voor een groep van 400 per 25
+# De achterstand één keer per dag: wat twijfel is blijft 'pending', en die
+# zouden we anders elk uur opnieuw (met een modelvraag) beoordelen.
+ACHTERSTAND_ELKE = timedelta(hours=24)
 
 
 def is_bron(db, user_id: str) -> bool:
@@ -105,6 +113,30 @@ def nieuwe_producten(producten: list[dict], bekend: set[str], nu: datetime) -> l
             and str(p["id"]) not in bekend
             and not uitverkocht(p)
             and _oud_genoeg(p, nu)]
+
+
+def _achterstand_aan_de_beurt(stand: dict, nu: datetime) -> bool:
+    vorige = stand.get("achterstand_om")
+    if not vorige:
+        return True
+    try:
+        t = datetime.fromisoformat(str(vorige).replace("Z", "+00:00"))
+    except ValueError:
+        return True
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=timezone.utc)
+    return nu - t >= ACHTERSTAND_ELKE
+
+
+def _achterstand(db, user_id: str, producten: list[dict]) -> list[str]:
+    """Kandidaten die nog 'pending' staan terwijl het product te koop is."""
+    from backend.services.shopify_scan import uitverkocht
+
+    te_koop = {str(p["id"]) for p in producten if p.get("id") is not None and not uitverkocht(p)}
+    return [c["id"] for c in fetch_all(
+        lambda: db.table("import_candidates").select("id,platform_listing_id,status")
+        .eq("user_id", user_id).eq("platform", "shopify").eq("status", "pending"))
+        if str(c.get("platform_listing_id")) in te_koop]
 
 
 def _scan_loopt(db, user_id: str) -> bool:
@@ -185,7 +217,10 @@ async def importeer_nieuwe_producten(user_id: str) -> dict:
 
     bekend = await naast_de_lus(lambda: _bekende_productnummers(db, user_id))
     nieuw = nieuwe_producten(producten, bekend, nu)
-    if not nieuw:
+    achterstand_ids = []
+    if _achterstand_aan_de_beurt(inst.get(STAND) or {}, nu):
+        achterstand_ids = await naast_de_lus(lambda: _achterstand(db, user_id, producten))
+    if not nieuw and not achterstand_ids:
         await naast_de_lus(lambda: _bewaar_stand(user_id, gecontroleerd=nu.isoformat(), fout=None))
         return {"nieuw": 0}
 
@@ -197,17 +232,20 @@ async def importeer_nieuwe_producten(user_id: str) -> dict:
     except Exception:  # noqa: BLE001
         logger.exception("shopify-auto-import: voorraadvlag niet gezet voor %s", user_id)
 
-    winkelnaam = winkelnaam_als_merk(producten)
-    regels = [naar_scanregel(p, shop, winkelnaam) for p in nieuw]
-    job = {"id": None, "user_id": user_id, "platform": "shopify"}
-    await naast_de_lus(lambda: _store_scan_results(db, job, regels))
+    ids = []
+    if nieuw:
+        winkelnaam = winkelnaam_als_merk(producten)
+        regels = [naar_scanregel(p, shop, winkelnaam) for p in nieuw]
+        job = {"id": None, "user_id": user_id, "platform": "shopify"}
+        await naast_de_lus(lambda: _store_scan_results(db, job, regels))
 
-    pids = [r["platform_listing_id"] for r in regels]
-    kandidaten = await naast_de_lus(lambda: fetch_all_in(
-        lambda: db.table("import_candidates").select("id,status")
-        .eq("user_id", user_id).eq("platform", "shopify"),
-        "platform_listing_id", pids))
-    ids = [c["id"] for c in kandidaten if c.get("status") == "pending"]
+        pids = [r["platform_listing_id"] for r in regels]
+        kandidaten = await naast_de_lus(lambda: fetch_all_in(
+            lambda: db.table("import_candidates").select("id,status")
+            .eq("user_id", user_id).eq("platform", "shopify"),
+            "platform_listing_id", pids))
+        ids = [c["id"] for c in kandidaten if c.get("status") == "pending"]
+    ids += [i for i in achterstand_ids if i not in ids]
 
     # De importbeslissing van de knop, beperkt tot precies deze kandidaten. Een
     # verse lezing van de voorraad: een cache van een eerdere sessie kent de
@@ -244,6 +282,8 @@ async def importeer_nieuwe_producten(user_id: str) -> dict:
     stand = {"gecontroleerd": nu.isoformat(), "fout": None,
              "laatst_nieuw": toegevoegd + gekoppeld,
              "te_controleren": te_controleren}
+    if achterstand_ids:
+        stand["achterstand_om"] = nu.isoformat()
     if toegevoegd or gekoppeld:
         stand["laatst_toegevoegd_om"] = nu.isoformat()
         stand["totaal_toegevoegd"] = int(vorige.get("totaal_toegevoegd") or 0) + toegevoegd
@@ -251,7 +291,8 @@ async def importeer_nieuwe_producten(user_id: str) -> dict:
     logger.info("shopify-auto-import %s: %d nieuw in de winkel, %d toegevoegd, %d gekoppeld, "
                 "%d te controleren, %d mislukt", user_id, len(nieuw), toegevoegd, gekoppeld,
                 te_controleren, mislukt)
-    return {"nieuw": len(nieuw), "toegevoegd": toegevoegd, "gekoppeld": gekoppeld,
+    return {"nieuw": len(nieuw), "achterstand": len(achterstand_ids),
+            "toegevoegd": toegevoegd, "gekoppeld": gekoppeld,
             "te_controleren": te_controleren, "mislukt": mislukt}
 
 

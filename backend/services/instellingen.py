@@ -195,7 +195,7 @@ VERZENDING_2DH_MODI = ("standaard", "regel", "alles")
 SHOPIFY_AUTO_IMPORT = "shopify_auto_import"
 SHOPIFY_AUTO_IMPORT_STAND = "shopify_auto_import_stand"
 _STAND_VELDEN = ("gecontroleerd", "fout", "laatst_nieuw", "te_controleren",
-                 "laatst_toegevoegd_om", "totaal_toegevoegd")
+                 "laatst_toegevoegd_om", "totaal_toegevoegd", "achterstand_om")
 
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "auto_relist": True, "vinted_herplaatsen": False, VERKOOPVRAAG: True, VERZENDING_2DH_WOORDEN: [],

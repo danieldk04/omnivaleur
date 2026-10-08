@@ -16388,3 +16388,13 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   los, in elke volgorde, maat telt mee. Proef `tests/zoekbalk-meerdere-woorden-test.js` (3 fout op oud).
 - Vinted in het Engels en verwijderingen "staat al in de catalogus": antwoord in het brein gezet.
 - Hele testreeks: zelfde 71 bestaande fouten en 13 fouten bij het verzamelen vóór en na, 7 nieuwe groen.
+
+## 08-10-2026 (vervolg 6): Bergstein maat 24 gevonden, achterstand in de automatische import
+
+- Daniel draaide de query in Supabase: vier kandidaten "Schoenen | Regenlaarzen Bergstein schoenmaat 24" (#, 3x *),
+  alle vier `pending`, geen suggested_item_id, aangemaakt bij de scan van 07-10 13:20 UTC. Nooit geïmporteerd.
+- Gat in mijn eigen auto-import van vanochtend: die nam alleen producten die nog nooit gezien waren, en telde
+  `pending` als "bekend". Wat bij een eerdere scan bleef liggen kwam dus nooit binnen. Nu: één keer per dag
+  (`achterstand_om` in de stand) ook alle `pending` Shopify-kandidaten waarvan het product nog te koop staat.
+  `ignored` blijft van de verkoper; twijfel blijft "te controleren". Proef in tests/test_shopify_auto_import.py.
+- Gevolg voor Janneke: de eerste uurronde na de deploy importeert haar hele achterstand, niet alleen deze vier.

@@ -226,17 +226,16 @@ def _ronde(monkeypatch, bulk_op_nepdb, db, producten, keuze=None, toegang=True):
     return uit, stand, gezien
 
 
-def test_een_nieuw_product_wordt_een_artikel_en_de_rest_blijft_van_de_verkoper(monkeypatch, bulk_op_nepdb):
-    db = _DB(import_candidates=[_cand(1, "imported"), _cand(2, "pending", "Liet ze liggen"),
-                                _cand(3, "ignored")])
-    producten = [_product(1, "Oud"), _product(2, "Liet ze liggen"), _product(3, "Genegeerd"),
+def test_een_nieuw_product_wordt_een_artikel_en_genegeerd_blijft_van_de_verkoper(monkeypatch, bulk_op_nepdb):
+    db = _DB(import_candidates=[_cand(1, "imported"), _cand(3, "ignored")])
+    producten = [_product(1, "Oud"), _product(3, "Genegeerd"),
                  _product(4, "Nieuw rompertje maat 74")]
     uit, stand, gezien = _ronde(monkeypatch, bulk_op_nepdb, db, producten)
     assert gezien == ["4"]
     assert uit["toegevoegd"] == 1
     assert [i["title"] for i in db.t["items"]] == ["Nieuw rompertje maat 74"]
     status = {c["platform_listing_id"]: c["status"] for c in db.t["import_candidates"]}
-    assert status == {"1": "imported", "2": "pending", "3": "ignored", "4": "imported"}
+    assert status == {"1": "imported", "3": "ignored", "4": "imported"}
     assert db.t["listings"][0]["platform_listing_id"] == "4"
     assert stand["laatst_toegevoegd_om"] == NU.isoformat() and stand["fout"] is None
     # En de volgende ronde doet niets meer.
@@ -308,3 +307,27 @@ def test_de_ronde_draait_elk_uur():
     assert 'id="shopify_auto_import"' in bron
     blok = bron[bron.index("importeer_alle_winkels),"):bron.index('id="shopify_auto_import"')]
     assert '"interval"' in blok and "hours=1" in blok
+
+
+def test_achterstand_pending_van_een_eerdere_scan_komt_alsnog_binnen(monkeypatch, bulk_op_nepdb):
+    """Janneke, 08-10-2026: vier Bergstein-laarzen maat 24 stonden sinds de scan
+    van 07-10 op 'pending'. De ronde zag ze als bekend en liet ze liggen."""
+    db = _DB(import_candidates=[_cand(1, "imported"),
+                                _cand(2, "pending", "Schoenen | Regenlaarzen Bergstein schoenmaat 24*"),
+                                _cand(3, "ignored"),
+                                _cand(5, "pending", "Uitverkocht intussen")])
+    producten = [_product(1, "Oud"), _product(2, "Schoenen | Regenlaarzen Bergstein schoenmaat 24*"),
+                 _product(3, "Genegeerd")]
+    uit, stand, gezien = _ronde(monkeypatch, bulk_op_nepdb, db, producten)
+    assert gezien == [] and uit["achterstand"] == 1 and uit["toegevoegd"] == 1
+    status = {c["platform_listing_id"]: c["status"] for c in db.t["import_candidates"]}
+    # Genegeerd blijft genegeerd; een product dat niet meer te koop staat blijft liggen.
+    assert status == {"1": "imported", "2": "imported", "3": "ignored", "5": "pending"}
+    assert [i["title"] for i in db.t["items"]] == ["Schoenen | Regenlaarzen Bergstein schoenmaat 24*"]
+    assert stand["achterstand_om"] == NU.isoformat()
+
+
+def test_achterstand_hooguit_een_keer_per_dag():
+    assert auto._achterstand_aan_de_beurt({}, NU)
+    assert not auto._achterstand_aan_de_beurt({"achterstand_om": (NU - timedelta(hours=23)).isoformat()}, NU)
+    assert auto._achterstand_aan_de_beurt({"achterstand_om": (NU - timedelta(hours=25)).isoformat()}, NU)
