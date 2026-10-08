@@ -317,3 +317,60 @@ async def herstel_rubrieken(limiet: int = STANDAARD_LIMIET,
                 f"{leeg} zonder uitkomst, {mislukt} mislukt")
     return {"gelezen": len(items), "gevuld": gevuld,
             "leeg_gebleven": leeg, "mislukt": mislukt}
+
+
+# DE WOORDENLIJST HOEFT NIET OP DE NACHT TE WACHTEN (08-10-2026, Janneke 31d28378).
+#
+# Bij Janneke stonden 1.755 van de 1.917 artikelen zonder rubriek, en zonder
+# rubriek zet het dashboard elk kanaal op slot. De nachtronde hierboven doet er
+# 200 per keer, met één modelvraag per artikel, en het model had geen tegoed;
+# haar proef liep af voordat hij rond was. Voor een groot deel van zo'n voorraad
+# is het model niet eens nodig: de woordenlijst (api/imports._infer_attributes)
+# herkent nu ook kindermaten, babywoorden en kindermerken. Die is gratis en
+# snel, dus deze ronde loopt ALLE lege rubrieken in één keer na. Vult alleen
+# lege velden, net als de nachtronde; wat de woordenlijst niet weet blijft leeg
+# voor het model of de verkoper.
+async def vul_rubrieken_uit_woordenlijst(user_id: str | None = None,
+                                         max_artikelen: int = 20000) -> dict:
+    from backend.api.imports import _infer_attributes
+
+    db = get_db()
+    velden = "id,title,description,category,gender,color"
+    gelezen = gevuld = mislukt = 0
+    laatste_id = None
+    while gelezen < max_artikelen:
+        q = (db.table("items").select(velden)
+             .or_("category.is.null,category.eq.")
+             .order("id"))
+        if user_id:
+            q = q.eq("user_id", user_id)
+        if laatste_id:
+            q = q.gt("id", laatste_id)
+        try:
+            rijen = q.limit(500).execute().data or []
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Woordenlijstronde kon de voorraad niet lezen: {e}")
+            mislukt += 1
+            break
+        if not rijen:
+            break
+        laatste_id = rijen[-1]["id"]
+        for item in rijen:
+            gelezen += 1
+            uitkomst = _infer_attributes(item.get("title"), item.get("description")) or {}
+            patch = {
+                k: v for k, v in uitkomst.items()
+                if k in ("category", "gender", "color") and v
+                and not str(item.get(k) or "").strip()
+            }
+            if not patch.get("category"):
+                continue
+            try:
+                db.table("items").update(patch).eq("id", item["id"]).execute()
+                gevuld += 1
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"Woordenlijstronde: opslaan mislukt voor {item.get('id')}: {e}")
+                mislukt += 1
+    logger.info(f"Woordenlijstronde: {gelezen} zonder rubriek bekeken, {gevuld} gevuld, "
+                f"{mislukt} mislukt")
+    return {"gelezen": gelezen, "gevuld": gevuld, "mislukt": mislukt}

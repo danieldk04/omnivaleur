@@ -175,6 +175,27 @@ def fotos_aanvullen(db, user_id: str, regels: list[dict]) -> int:
     return bijgewerkt
 
 
+async def tel_concepten(shop: str, token: str) -> int:
+    """Hoeveel producten staan in de winkel als concept (draft).
+
+    WAAROM (08-10-2026, Janneke 31d28378): "kan nog niet alle producten vinden".
+    De scan leest alleen actieve producten, en een concept bleef zo stil weg.
+    Met dit getal zegt het dashboard waar de rest is. Mislukt het tellen, dan
+    0: de scan zelf mag hier nooit op stuklopen."""
+    import httpx
+
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(20.0, connect=10.0)) as c:
+            r = await c.get(f"https://{shop}/admin/api/{API_VERSIE}/products/count.json",
+                            params={"status": "draft"},
+                            headers={"X-Shopify-Access-Token": token})
+            if r.status_code != 200:
+                return 0
+            return int((r.json() or {}).get("count") or 0)
+    except Exception:  # noqa: BLE001
+        return 0
+
+
 async def scan_winkel(user_id: str, job_id: str) -> None:
     """Draait als achtergrondtaak na /imports/scan/shopify. Sluit de opdracht
     altijd af, met 'done' of met een 'error' die de verkoper kan lezen: een
@@ -234,6 +255,7 @@ async def scan_winkel(user_id: str, job_id: str) -> None:
         except Exception:  # noqa: BLE001 — foto's aanvullen mag de scan niet laten falen
             logger.exception("shopify-scan: foto's aanvullen mislukt voor %s", user_id)
 
+        concepten = await tel_concepten(shop, token)
         te_koop = [r for r in regels if not r["is_closed"]]
         logger.info("shopify-scan %s (%s): %d producten, %d te koop, %d uitverkocht",
                     user_id, shop, len(regels), len(te_koop), len(regels) - len(te_koop))
@@ -241,7 +263,8 @@ async def scan_winkel(user_id: str, job_id: str) -> None:
                    "result": {"listings": [{"platform_listing_id": r["platform_listing_id"]}
                                            for r in te_koop],
                               "scan_meta": {"gevonden": len(te_koop),
-                                            "uitverkocht": len(regels) - len(te_koop)}}})
+                                            "uitverkocht": len(regels) - len(te_koop),
+                                            "concepten": concepten}}})
     except Exception as e:  # noqa: BLE001
         logger.exception("shopify-scan mislukt voor %s", user_id)
         try:

@@ -76,3 +76,43 @@ def test_vastgelopen_shopify_scan_gaat_niet_terug_naar_de_extensie():
 
     jobs._recover_stale_claims(DB(), "u1", None, datetime.now(timezone.utc))
     assert updates and updates[0]["status"] == "error"
+
+
+# Janneke (31d28378, 08-10-2026): "kan nog niet alle producten vinden". De scan
+# leest alleen actieve producten; het aantal concepten moet mee naar het dashboard,
+# en een fout bij het tellen mag de scan nooit laten falen.
+def test_tel_concepten_geeft_aantal_en_nul_bij_fout(monkeypatch):
+    import asyncio
+    import httpx
+    from backend.services import shopify_scan
+
+    gevraagd = {}
+
+    class Antwoord:
+        def __init__(self, code, data):
+            self.status_code, self._data = code, data
+        def json(self):
+            return self._data
+
+    def nep_client(code, data, fout=False):
+        class Client:
+            def __init__(self, *a, **k): pass
+            async def __aenter__(self): return self
+            async def __aexit__(self, *a): return False
+            async def get(self, url, params=None, headers=None):
+                if fout:
+                    raise httpx.ConnectError("weg")
+                gevraagd.update(url=url, params=params)
+                return Antwoord(code, data)
+        return Client
+
+    monkeypatch.setattr(httpx, "AsyncClient", nep_client(200, {"count": 7}))
+    assert asyncio.run(shopify_scan.tel_concepten("winkel.myshopify.com", "t")) == 7
+    assert gevraagd["url"].endswith("/products/count.json")
+    assert gevraagd["params"] == {"status": "draft"}
+
+    monkeypatch.setattr(httpx, "AsyncClient", nep_client(403, {}))
+    assert asyncio.run(shopify_scan.tel_concepten("winkel.myshopify.com", "t")) == 0
+
+    monkeypatch.setattr(httpx, "AsyncClient", nep_client(200, {}, fout=True))
+    assert asyncio.run(shopify_scan.tel_concepten("winkel.myshopify.com", "t")) == 0

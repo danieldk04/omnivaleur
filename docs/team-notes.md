@@ -16204,3 +16204,54 @@ eerste week, 1 nieuw. Web Store en repo allebei 1.0.372. Agenda niet gelezen (wo
   Marktplaats en 2dehands. Proef tests/eigen-merk-overige-merken-test.js: oude code laat Merk leeg, nieuwe kiest Overige merken.
   Zelfde oorzaak als Toon (Handgemaakt, 05-10), die toen ten onrechte als klantfout gold. Pillenkiezer (autocomplete) heeft
   de terugval nog niet. Werkt pas na upload naar de Web Store.
+
+## 08-10-2026 (vervolg): Janneke, twee gaten die de eerste reparatie niet dichtte
+
+- Vinted koos voor kinderen nooit een vast pad maar zocht, en gaf regels onder Kids geen
+  voorkeur. Nagebouwd in Chromium met Vinteds voorstellen voor regenlaarzen (dames, heren,
+  2x kids): de oude extensie koos NIETS (gelijkspel dames/heren → afgebroken), dus ook na de
+  rubriekreparatie van vanochtend was Vinted bij haar blijven weigeren. Nu: bij gender of
+  rubriek kinderen telt Kids/Girls/Boys mee en vallen Women/Men af; laarzen, sandalen,
+  sneakers en sloffen krijgen hun eigen trefwoord. Proef `tests/vinted-kinderschoenen-test.js`
+  (faalt op f608939). Extensie 1.0.374; bereikt haar pas na de Chrome Web Store.
+- "Kan nog niet alle producten vinden": de Shopify-scan leest alleen actieve producten met
+  voorraad > 0 (of zonder voorraadbeheer). Concepten en voorraad-0 vielen stil weg. De scan
+  telt nu de concepten (products/count.json?status=draft) en de melding na de scan noemt
+  beide aantallen, EN + NL. Niet gemeten bij haar: vanuit de cloudsessie geen toegang tot
+  de database of haar winkel; omnivaleur.com zelf is vanaf hier ook niet bereikbaar (proxy 403).
+- Hoofdzaak, uit de onboardingronde van vanochtend: 1.755 van haar 1.917 artikelen zonder rubriek
+  (AI zonder tegoed). Twee gaten in de woordenlijst: (1) een kindersignaal zonder jongen/meisje gaf
+  geen rubriek, (2) kindermaten, babywoorden en kindermerken werden niet herkend. Nu: dubbele maat op
+  het kinderraster (44/50 … 170/176), losse maat 68 t/m 176 behalve 98 en 110 (lange herenmaten),
+  babywoorden (ook samenstellingen: babypakje, rompertje, slabbetjes), kindermerken (Noppies, Jopper,
+  Vingino, Z8, Feetje, …; Bergstein NIET, die maakt ook volwassen laarzen), schoenmaat t/m 33 met
+  schoenwoord. Rubriek: baby (≤86 of babywoord), peuter (92–104), jurk/rok → meisjes; verder blijft
+  hij leeg, jongen/meisje raden we niet. Elk volwassen woord (ook vastgeschreven: herenjas,
+  damesblazer) houdt het volwassen. Proef `tests/test_kinderkleding_woordenlijst.py`, met de
+  Revaleur-titels (colbert 50/56/106, pantalon 98, overhemd 110) als vangrail.
+- Nieuwe ronde `vul_rubrieken_uit_woordenlijst` (services/categorie_herstel.py): alleen woordenlijst,
+  geen AI, ALLE lege rubrieken in één keer, 3 min na elke start en daarna elke 3 uur. Vult alleen
+  lege velden. Het dashboard zet een kanaal op slot zolang de rubriek leeg is, dus plaatsen vult
+  het niet vanzelf; deze ronde wel. Niet gemeten hoeveel van haar 1.755 hij vult (geen database
+  vanuit de cloud); hooguit de titels zonder maat, merk of babywoord blijven leeg.
+
+## 08-10-2026 (vervolg 2): zelf live zetten, en wat de AI-rubriekvraag kost
+
+**Werkafspraak (Daniel, 08-10-2026):** vraag Daniel nooit meer of een PR naar main mag. Zet het
+zelf live. Kijk wel eerst of er andere sessies bezig zijn (`list_sessions`, open PR's, nieuwe
+commits op main) en neem hun werk mee in de nieuwste versie, zodat sessies elkaar niet in de weg
+zitten. Bij een sessie die op dat moment echt draait op dezelfde bestanden: wachten of samenvoegen,
+niet overschrijven.
+
+**AI-kosten van de rubriekvraag (uitgezocht voor Daniel tegoed bijvult):**
+- Rubrieken gaan sinds 23-09 al eerst naar Gemini (`backend/services/taalmodel.py`), Claude Haiku is
+  alleen reserve. Het probleem van 07/08-10: de serversleutel ddf59aed is de gratis Google-laag en zat na
+  de grote imports op 429 (dagmaximum), en het Claude-tegoed is op. Dus beide lagen dicht.
+- Per product ~9.000 invoertokens (de lijst van 469 rubrieken). Claude Haiku ~0,9 cent per product;
+  Janneke's 1.755 lege artikelen ~16 dollar, 10.000 imports per maand ~90 dollar. Betaalde Gemini
+  Flash-Lite is ongeveer tien keer goedkoper (~0,1 cent per product, schatting op openbare
+  prijzen, niet gemeten op de rekening).
+- Advies: niet Anthropic bijvullen als hoofdroute, maar betaling aanzetten op de Google-sleutel van
+  de server met een maandlimiet; de gratis laag blijft dan eerst opgaan. De woordenlijstronde (PR 13)
+  vult gratis wat herkenbaar is, zodat de AI alleen de rest krijgt. Verdere besparing: alleen de
+  passende tak van de rubriekenlijst meesturen (~10x kleiner), staat al op de planning.

@@ -967,6 +967,7 @@
  "Fetch the missing description from your own Vinted adverts": "Haal de ontbrekende omschrijving op uit je eigen Vinted-advertenties",
  "Fetch the missing details for {0} item{1} from your own Marktplaats adverts? Anything you already filled in stays as it is. This can take a few minutes.": "De ontbrekende gegevens voor {0} {1|item|items} uit je eigen Marktplaats-advertenties ophalen?\n\nWat je al hebt ingevuld blijft zoals het is. Dit kan een paar minuten duren.",
  "Fetch the price and description from your own public Marktplaats or 2dehands adverts": "Haal de prijs en omschrijving op uit je eigen openbare advertenties op Marktplaats of 2dehands",
+ "Scan complete. Not imported: {0} sold out (stock 0) and {1} drafts in Shopify. Set them to Active with stock 1 in Shopify, then scan again.": "Scan klaar. Niet ingelezen: {0} uitverkocht (voorraad 0) en {1} concepten in Shopify. Zet ze in Shopify op Actief met voorraad 1 en scan daarna opnieuw.",
  "Fetched {0} adverts. {1} still to go — import these first, then scan again for the next batch.": "{0} advertenties opgehaald. Nog {1} te gaan: importeer deze eerst en scan daarna opnieuw voor de volgende groep.",
  "Fetched {0} description{1} and {2} price{3}…": "{0} {1|omschrijving|omschrijvingen} en {2} {3|prijs|prijzen} opgehaald…",
  "Fetched {0} description{1}…": "{0} {1|omschrijving|omschrijvingen} opgehaald…",
