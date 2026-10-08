@@ -1338,6 +1338,25 @@ def _is_grand_foulard(title: str | None, description: str | None = None) -> bool
     return re.search(r"\bgrand\s?foulards?\b", tekst) is not None
 
 
+# Schoenwoorden in het Nederlands en Engels, als heel woord. Alleen gebruikt
+# samen met een kindersignaal, dus "boot" als vaartuig doet hier geen kwaad.
+_SCHOEN_WOORDEN = (
+    "schoen", "schoenen", "schoentje", "schoentjes", "laars", "laarzen", "laarsjes",
+    "regenlaars", "regenlaarzen", "snowboots", "sneaker", "sneakers", "sandaal",
+    "sandalen", "slof", "sloffen", "pantoffel", "pantoffels", "klompen", "shoes",
+    "boots", "sandals", "slippers",
+)
+
+
+def _kinderschoenmaat(text: str) -> bool:
+    """Staat er een schoenmaat van 15 tot en met 29 in de tekst ("schoenmaat 27",
+    "maat 19", "mt. 24", "size 22")? Volwassenen hebben die maten niet."""
+    for m in re.finditer(r"\b(?:schoenmaat|maat|mt|size)\.?\s*:?\s*(\d{2})(?:[.,]5)?\b", text):
+        if 15 <= int(m.group(1)) <= 29:
+            return True
+    return False
+
+
 def _infer_attributes(title: str | None, description: str | None = None) -> dict:
     """Best-effort colour / gender / category from the listing text. Conservative:
     only returns a value when confident, so callers can fill empty fields without
@@ -1368,6 +1387,13 @@ def _infer_attributes(title: str | None, description: str | None = None) -> dict
         gender = "unisex"
     else:
         gender = None
+    # KINDERSCHOENEN HERKEN JE AAN DE MAAT. Een schoenmaat onder de 30 bestaat
+    # bij volwassenen niet. Janneke (31d28378, 07-10-2026) verkoopt
+    # kinderschoenen vanaf maat 19 met titels als "Schoenen | Regenlaarzen
+    # Bergstein schoenmaat 27": geen "kids" of "kinder" erin, dus bleef de
+    # rubriek leeg en weigerde elk kanaal het plaatsen.
+    if not gender and _kinderschoenmaat(text) and any(_word_in(w, text) for w in _SCHOEN_WOORDEN):
+        gender = "kinderen"
     # "women"/"womens" also contain "men" as a substring, but whole-word matching
     # keeps them distinct, so the order above is safe.
     if gender:
@@ -1382,7 +1408,8 @@ def _infer_attributes(title: str | None, description: str | None = None) -> dict
     if gender == "kinderen":
         # Kids' taxonomy is age/gender-based, not garment-based: a "Boys XL vest"
         # is simply "jongens kleding". Shoes/sportswear are the only garment splits.
-        if any(_garment_in(k) for k in ("shoe", "sneaker", "boot", "trainer")):
+        if (any(_garment_in(k) for k in ("shoe", "sneaker", "boot", "trainer"))
+                or any(_word_in(w, text) for w in _SCHOEN_WOORDEN)):
             out["category"] = "kinderen schoenen"
         elif any(_garment_in(k) for k in ("cycling", "wielren", "wielrenshirt", "fietsshirt")):
             out["category"] = "kinderen wielrenkleding"

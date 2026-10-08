@@ -2274,7 +2274,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
               <option>L28</option><option>L30</option><option>L32</option><option>L34</option><option>L36</option><option>L38</option>
             </optgroup>
             <optgroup label="Shoes (EU)">
-              <option>30</option><option>31</option><option>32</option><option>33</option><option>34</option><option>35</option><option>35.5</option><option>36</option><option>36.5</option><option>37</option><option>37.5</option><option>38</option><option>38.5</option><option>39</option><option>39.5</option><option>40</option><option>40.5</option><option>41</option><option>41.5</option><option>42</option><option>42.5</option><option>43</option><option>43.5</option><option>44</option><option>44.5</option><option>45</option><option>45.5</option><option>46</option><option>46.5</option><option>47</option><option>48</option><option>49</option><option>50</option>
+              <option>15</option><option>16</option><option>17</option><option>18</option><option>19</option><option>20</option><option>21</option><option>22</option><option>23</option><option>24</option><option>25</option><option>26</option><option>27</option><option>28</option><option>29</option><option>30</option><option>31</option><option>32</option><option>33</option><option>34</option><option>35</option><option>35.5</option><option>36</option><option>36.5</option><option>37</option><option>37.5</option><option>38</option><option>38.5</option><option>39</option><option>39.5</option><option>40</option><option>40.5</option><option>41</option><option>41.5</option><option>42</option><option>42.5</option><option>43</option><option>43.5</option><option>44</option><option>44.5</option><option>45</option><option>45.5</option><option>46</option><option>46.5</option><option>47</option><option>48</option><option>49</option><option>50</option>
             </optgroup>
             <optgroup label="Kids">
               <option>44</option><option>50</option><option>56</option><option>62</option><option>68</option><option>74</option><option>80</option><option>86</option><option>92</option><option>98</option><option>104</option><option>110</option><option>116</option><option>122</option><option>128</option><option>134</option><option>140</option><option>146</option><option>152</option><option>158</option><option>164</option><option>170</option><option>176</option>
@@ -9979,6 +9979,17 @@ function publishFailureMessage(res, data, rawText) {
   return reden ? `Publishing failed${status}: ${reden}` : `Publishing failed${status} — the server gave no reason. Please try again; if it keeps happening, send this code to support.`;
 }
 
+// Veldnamen zoals de server ze stuurt ("category") zijn geen tekst voor een
+// mens, en de vertaallaag kent ze niet. Janneke (31d28378, 07-10-2026) kreeg
+// daardoor "Vinted: category" en de hele melding bleef Engels op haar
+// Nederlandse scherm. Deze namen staan ook zo boven de velden in het formulier.
+const VELD_NAMEN = {
+  category: 'Category', gender: 'Gender / Audience', brand: 'Brand', size: 'Size',
+  color: 'Colour', price: 'Price', description: 'Description', photos: 'Photos',
+  photo_urls: 'Photos',
+};
+function veldNaam(veld) { return VELD_NAMEN[veld] || veld; }
+
 function formatMissingFieldsError(data) {
   const missing = data && data.detail && data.detail.missing_fields;
   if (!missing) return null;
@@ -9987,10 +9998,10 @@ function formatMissingFieldsError(data) {
   // zich suf — vandaar een eigen zin met de weg ernaartoe.
   const fabrikantMist = Object.values(missing)
     .some(f => Array.isArray(f) && f.includes('manufacturer_details'));
-  const lines = Object.entries(missing).map(([platform, fields]) => {
-    const zonder = (fields || []).filter(f => f !== 'manufacturer_details');
-    return zonder.length ? `${PLATFORM_LABELS[platform] || platform}: ${zonder.join(', ')}` : null;
-  }).filter(Boolean);
+  // Eén regel per veld: zo vertaalt de vertaallaag elke regel los.
+  const lines = Object.entries(missing).flatMap(([platform, fields]) =>
+    (fields || []).filter(f => f !== 'manufacturer_details')
+      .map(f => `${PLATFORM_LABELS[platform] || platform}: ${veldNaam(f)}`));
   const staart = fabrikantMist
     ? `Marktplaats and 2dehands require a responsible party: trade name, postal address and email address.\n`
       + `Fill it in once under Protections → "Responsible party" and every listing carries it.`
@@ -10359,11 +10370,11 @@ function renderPlatformCheckboxes(containerId, itemId) {
       const actie = kanOphalen
         ? `<span class="pm-cb-missing" style="cursor:pointer;text-decoration:underline"
              onclick="event.preventDefault();event.stopPropagation();haalOmschrijvingOp('${itemId}', this)"
-             title="Fetch the description from your Vinted listing">Missing: ${esc(missing.join(', '))} — fetch from Vinted →</span>`
+             title="Fetch the description from your Vinted listing">Missing: ${esc(missing.map(veldNaam).join(', '))} — fetch from Vinted →</span>`
         : `<span class="pm-cb-missing" style="cursor:pointer;text-decoration:underline"
              onclick="event.preventDefault();event.stopPropagation();closeModal('modal-crosslist');closeModal('modal-bulk-crosslist');editItem('${itemId}')"
-             title="Open this item and fill in what's missing">Missing: ${esc(missing.join(', '))} — fill in →</span>`;
-      return `<label class="platform-checkbox platform-checkbox-disabled" title="Missing: ${esc(missing.join(', '))}">
+             title="Open this item and fill in what's missing">Missing: ${esc(missing.map(veldNaam).join(', '))} — fill in →</span>`;
+      return `<label class="platform-checkbox platform-checkbox-disabled" title="Missing: ${esc(missing.map(veldNaam).join(', '))}">
         <input type="checkbox" value="${p}" disabled>
         <span>${PLATFORM_ICONS[p]} ${label}</span>
         ${actie}
