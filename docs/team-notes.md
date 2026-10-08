@@ -16255,3 +16255,10 @@ niet overschrijven.
   de server met een maandlimiet; de gratis laag blijft dan eerst opgaan. De woordenlijstronde (PR 13)
   vult gratis wat herkenbaar is, zodat de AI alleen de rest krijgt. Verdere besparing: alleen de
   passende tak van de rubriekenlijst meesturen (~10x kleiner), staat al op de planning.
+
+## 08-10-2026: Onboarding nieuwe klanten (ochtend, late start 11:03 lokaal)
+
+De geplande 06:30-ronde startte pas om 11:03, twintig minuten na de ronde van 10:45. Zelfde 6 klanten, geen nieuwe
+aanmelding, geen nieuwe fout bij een van hen in 24 uur (Amanda's Vinted-time-out en Jannekes Admarkt-scan zijn van 07-10
+en al beoordeeld). De ene open foutsoort (Marktplaats verwijderen, overzicht leeg) hoort bij geen van deze klanten en is
+voor de klantfoutenronde. Repo 1.0.374, Web Store 1.0.372. Geen code, geen mailtjes.
