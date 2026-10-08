@@ -16151,3 +16151,21 @@ Daniel: "dit doen we later", uitrol de komende periode gefaseerd, Goudlief is hi
   en ververst door (laatste 11:58), 21 wachtend. Geen rem, geen te lang vastgehouden opdracht bij wie online is.
 - Stil met wachtend werk, klant-eigen (computer uit): 26cf5471, 0b28c1ce, 1ba42900, 8f91a370 (Vinted-plaatsing al 18 uur
   'claimed', gaat door als ze online komt), 7fe36b46 (stil sinds 27-08), f8c0cce9 (stil sinds 06-10 22:21).
+
+## 08-10-2026: Janneke (31d28378) liep vast op kinderschoenen; drie reparaties
+
+Ze appte Daniel 07-10 rond 22:30 (Shopify is intussen gekoppeld, er staat "veel" in). Drie dingen:
+- Maatlijst begon bij schoenen op 30, zij verkoopt kinderschoenen vanaf maat 19. Nu 15 tot en met 29 erbij in "Shoes (EU)".
+- "Schoenen | Regenlaarzen Bergstein schoenmaat 27" kreeg geen rubriek: geen "kids" of "kinder" in de titel, dus weigerden
+  Vinted, Marktplaats en 2dehands. `_infer_attributes` (backend/api/imports.py) ziet nu schoenwoord plus schoenmaat 15 tot 29
+  als kinderschoen en geeft gender kinderen, rubriek "kinderen schoenen". Bij publiceren vult `_fill_inferred_gaps` dat
+  vanzelf in, dus haar artikelen hoeven niet opnieuw ingelezen te worden. Proef tests/test_kinderschoenen_rubriek.py
+  (2 van 5 falen op de oude code, alle 5 slagen nu; volwassen maat 38 en "jeans maat 28" blijven buiten de kinderrubriek).
+- De melding "Can't publish yet ... Vinted: category" bleef helemaal Engels op haar Nederlandse scherm: de vertaallaag
+  vertaalt een melding met meerdere regels alleen als elke regel bekend is, en "category" (de kolomnaam) was dat niet.
+  Nu één regel per veld met de naam uit het formulier (VELD_NAMEN in frontend/app.html). In Chromium nagemeten: oud geeft
+  precies haar melding, nieuw "Kan nog niet plaatsen; dit item mist: Vinted: Categorie".
+- Haar vraag of de Vinted-fotobescherming ook eigen dubbele advertenties herkent: nee, staat nu in het brein.
+- Open: "kan nog niet alle producten vinden" is niet gemeten (geen database vanuit deze cloudsessie). Daniel vraagt haar
+  om een voorbeeld; let op dat Shopify-producten met alleen een barcode en geen foto als genegeerd beginnen (f491054).
+- Hele testreeks: zelfde 65 bestaande fouten vóór en na (deze cloudomgeving mist oude commits en mappen), 5 nieuwe groen.
