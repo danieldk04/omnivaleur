@@ -901,6 +901,15 @@ async def _fill_inferred_gaps(db, item: dict) -> dict:
         k: v for k, v in inferred.items()
         if k in ("color", "gender", "category") and v and not (item.get(k) or "").strip()
     }
+    # De schoenmaat staat vaak alleen in de titel ("schoenmaat 31"); zie
+    # api/imports._schoenmaat_uit_titel. Alleen als het maatveld leeg is.
+    try:
+        from backend.api.imports import _schoenmaat_uit_titel
+        maat = _schoenmaat_uit_titel(item.get("title"))
+        if maat and not str(item.get("size") or "").strip():
+            patch["size"] = maat
+    except Exception as e:
+        logger.warning(f"Size from title failed for item {item.get('id')}: {e}")
     if not patch:
         return item
     try:

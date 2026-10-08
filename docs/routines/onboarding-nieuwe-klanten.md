@@ -67,6 +67,12 @@ Zoek het laatste kopje "Onboarding nieuwe klanten" en lees wat toen per klant sp
   `gecontroleerd` bij Janneke terwijl ze `imported`-kandidaten heeft = de ronde draait niet:
   zoek de oorzaak (draait main 5be1191c of nieuwer op Railway, staat `shopify_auto_import`
   in de scheduler) en repareer volgens Stap 4. Zet het resultaat ook in het rapport aan Daniel.
+- **09-10-2026, Janneke kan "Schoenen | Regenlaarzen Bergstein schoenmaat 24" niet vinden** (Shopify,
+  actief, voorraad 6). Zoek alleen-lezen in `import_candidates` (user 31d28378, platform shopify) op die
+  titel: status, `suggested_item_id`, `match_reason`, en of er een item met die titel is. Zet in hetzelfde
+  team-notes-kopje waarom hij ontbrak (te controleren, nooit gescand, gekoppeld aan een ander artikel) en
+  repareer volgens Stap 4 als het een fout van ons is. Tel ook hoeveel van haar artikelen nog zonder maat
+  of merk zijn (de maat-en-merkronde van 08-10 vult die uit de titel).
 - **09-10-2026, rubrieken bij Janneke na opladen tegoed.** Daniel laadde 08-10 ~12:00 het
   Anthropic-tegoed op (automatisch opladen staat aan). Tel alleen-lezen hoeveel van Jannekes
   (31d28378) artikelen nog geen rubriek hebben (gisteren 1.755) en zet het getal in hetzelfde

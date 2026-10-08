@@ -373,4 +373,76 @@ async def vul_rubrieken_uit_woordenlijst(user_id: str | None = None,
                 mislukt += 1
     logger.info(f"Woordenlijstronde: {gelezen} zonder rubriek bekeken, {gevuld} gevuld, "
                 f"{mislukt} mislukt")
+    uit = {"gelezen": gelezen, "gevuld": gevuld, "mislukt": mislukt}
+    try:
+        uit["maat_en_merk"] = await vul_maat_en_merk_uit_titel(user_id, max_artikelen)
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Maat-en-merkronde mislukt: {e}")
+    return uit
+
+
+# MAAT EN MERK UIT DE TITEL, VOOR WAT AL IN DE VOORRAAD STAAT (08-10-2026, Janneke).
+#
+# "Regenlaarzen Bergstein schoenmaat 31*" stond zonder maat en merk in haar
+# voorraad, en het dashboard hield Marktplaats en 2dehands daarom op slot ("Voeg
+# brand, size toe"). Het importeren vult dat sinds vandaag zelf in; deze ronde
+# doet hetzelfde voor wat er al stond. Zelfde regels als bij importeren
+# (api/imports._schoenmaat_uit_titel en _merk_uit_titel): alleen een schoenmaat,
+# alleen een merk dat de verkoper zelf al gebruikt, alleen lege velden.
+async def vul_maat_en_merk_uit_titel(user_id: str | None = None,
+                                     max_artikelen: int = 20000) -> dict:
+    from backend.api.imports import _schoenmaat_uit_titel, _merk_uit_titel, merken_uit_voorraad
+    from backend.database import fetch_all
+
+    db = get_db()
+    gelezen = gevuld = mislukt = 0
+    laatste_id = None
+    merken_per_verkoper: dict[str, dict] = {}
+    while gelezen < max_artikelen:
+        q = (db.table("items").select("id,user_id,title,size,brand")
+             .or_("size.is.null,size.eq.,brand.is.null,brand.eq.")
+             .order("id"))
+        if user_id:
+            q = q.eq("user_id", user_id)
+        if laatste_id:
+            q = q.gt("id", laatste_id)
+        try:
+            rijen = q.limit(500).execute().data or []
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Maat-en-merkronde kon de voorraad niet lezen: {e}")
+            mislukt += 1
+            break
+        if not rijen:
+            break
+        laatste_id = rijen[-1]["id"]
+        for item in rijen:
+            gelezen += 1
+            patch = {}
+            if not str(item.get("size") or "").strip():
+                maat = _schoenmaat_uit_titel(item.get("title"))
+                if maat:
+                    patch["size"] = maat
+            if not str(item.get("brand") or "").strip():
+                uid = item.get("user_id")
+                if uid not in merken_per_verkoper:
+                    try:
+                        merken_per_verkoper[uid] = merken_uit_voorraad(fetch_all(
+                            lambda: db.table("items").select("id,brand").eq("user_id", uid)
+                            .neq("brand", "")))
+                    except Exception as e:  # noqa: BLE001
+                        logger.warning(f"Maat-en-merkronde: merken van {uid} niet gelezen: {e}")
+                        merken_per_verkoper[uid] = {}
+                merk = _merk_uit_titel(item.get("title"), merken_per_verkoper[uid])
+                if merk:
+                    patch["brand"] = merk
+            if not patch:
+                continue
+            try:
+                db.table("items").update(patch).eq("id", item["id"]).execute()
+                gevuld += 1
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"Maat-en-merkronde: opslaan mislukt voor {item.get('id')}: {e}")
+                mislukt += 1
+    logger.info(f"Maat-en-merkronde: {gelezen} zonder maat of merk bekeken, {gevuld} gevuld, "
+                f"{mislukt} mislukt")
     return {"gelezen": gelezen, "gevuld": gevuld, "mislukt": mislukt}
