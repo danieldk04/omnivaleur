@@ -16349,3 +16349,16 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
 - Kosten: alleen nieuwe producten gaan langs de rubriekvraag, dus enkele centen per dag. De $6 Haiku op
   07-10 in de Anthropic-console was Jannekes inhaalronde met de oude volledige vraag (~0,8 cent per
   artikel, ~750 artikelen) tot het tegoed op was; met de korte vraag en de woordenlijst is dat nu ~5x minder.
+
+## 08-10-2026 (middag, 14:20): Dagelijkse klantfouten
+
+- 625 opdrachten afgerond in 24 uur: 493 klaar, 30 fout, 102 geannuleerd (101 daarvan de bekende nachtronde van 0b28c1ce,
+  stil sinds 01-10). Geen code gewijzigd.
+- Nieuw sinds de ochtendronde, alleen 26cf5471: twee MP-verwijderingen om 08:36 UTC (eerste opdrachten na het aanzetten)
+  kregen HTTP 401 en lege verkooplijst; de 37 verwijderingen en 37 plaatsingen direct daarna lukten wel. Daardoor zijn
+  8d5ff966 en ffa807bf vannacht niet herplaatst; niets dubbel, niets kwijt. Oorzaak niet aantoonbaar in onze code, als
+  onbekend gemeld. Komt het terug op de eerste opdracht na opstart, dan is het een patroon om te repareren.
+- Klant-eigen: 26cf5471 niet ingelogd op Vinted (15 scans fout), Amanda 8f91a370 Vinted uitgelogd (1 prijswijziging).
+  Computer uit met werk vastgeclaimd: Goudlief 5aae4954 (sinds 07-10 21:00 UTC) en bcdf9aa4 (sinds 23:36 UTC).
+- Goudlief-merkreparatie van vanochtend (9f69689b, extensie 1.0.373) nog niet na te meten: haar extensie is sinds
+  gisteravond niet meer online geweest.
