@@ -3446,9 +3446,25 @@ function missingFieldsForPlatform(item, platform) {
   const platReq = ((isNonClothingItem(item) || geenCategorie) && CROSSLIST_PLATFORM_REQUIRED[platform])
     ? CROSSLIST_NON_CLOTHING_PLATFORM_REQUIRED
     : (CROSSLIST_PLATFORM_REQUIRED[platform] || []);
-  const required = [...CROSSLIST_UNIVERSAL_REQUIRED, ...platReq];
+  const zonderBedrag = (platform === 'marktplaats' || platform === '2dehands') && prijsvormZonderBedrag(item);
+  const required = [...CROSSLIST_UNIVERSAL_REQUIRED, ...platReq].filter(f => !(f === 'price' && zonderBedrag));
   return required.filter(f => f === 'photo_urls' ? !(item.photo_urls?.length) : !String(item[f] || '').trim())
     .map(f => CROSSLIST_FIELD_LABELS[f] || f);
+}
+
+// BIEDEN HEEFT GEEN BEDRAG (Amanda 8f91a370, 08-10-2026). Haar 56
+// Marktplaats-advertenties op "Bieden" stonden hier grijs voor 2dehands met
+// "Missing: Price", terwijl de server die vorm kent en hem zelf van de eigen
+// Marktplaats-advertentie leest als hij nog niet bekend is. Spiegelt
+// zonder_bedrag en _prijsvorm_uit_eigen_advertentie in crosslist.py. Blijkt
+// de advertentie toch een vraagprijs te hebben, dan meldt de server het bedrag.
+function prijsvormZonderBedrag(item) {
+  const vorm = String(item?.price_type || '').trim().toUpperCase();
+  if (['FAST_BID', 'SEE_DESCRIPTION', 'FREE'].includes(vorm)) return true;
+  if (vorm || item?.price) return false;
+  return (state.listings || []).some(l => l.item_id === item?.id
+    && (l.platform === 'marktplaats' || l.platform === '2dehands')
+    && String(l.platform_listing_url || '').trim());
 }
 
 function missingFieldsAllPlatforms(item) {
