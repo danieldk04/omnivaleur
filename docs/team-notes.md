@@ -16199,3 +16199,8 @@ eerste week, 1 nieuw. Web Store en repo allebei 1.0.372. Agenda niet gelezen (wo
 - 8f91a370 (amandaonline001): extensie 1.0.372, eerste Vinted-plaatsing 08-10 10:28; 142 Vinted, 117 MP, 17 2dehands actief.
   58 artikelen zonder prijs niet nagelopen. Geen mailtje (06-10 al een).
 - partablecs, Winter Home, amhin: ongewijzigd, geen mailtje. Peter valt buiten het venster (proef 07-10 afgelopen).
+- Gerepareerd (Daniel: "zoek uit en fix"): Merk is bij Schoudertassen een keuzelijst van vijf merken plus "Overige merken" en
+  niet verplicht (live gemeten). Extensie 1.0.373 kiest nu "Overige merken" als het eigen merk er niet in staat, op
+  Marktplaats en 2dehands. Proef tests/eigen-merk-overige-merken-test.js: oude code laat Merk leeg, nieuwe kiest Overige merken.
+  Zelfde oorzaak als Toon (Handgemaakt, 05-10), die toen ten onrechte als klantfout gold. Pillenkiezer (autocomplete) heeft
+  de terugval nog niet. Werkt pas na upload naar de Web Store.
