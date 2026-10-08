@@ -28,7 +28,9 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
   helemaal weg: direct "Zelf kost je dat geen tijd...", "Fijn dat het filter staat."
 - Bij klanten in een lopend gesprek is "Hoi Voornaam," de gewone aanhef (02-10: ruim de
   helft van de mails), "Hi Voornaam," vooral bij nieuwe of zakelijke contacten.
-- Soms staat er een punt achter de naam: "Daniel." Beide vormen komen voor.
+- Soms staat er een punt achter de naam: "Daniel." Beide vormen komen voor (08-10: 2x bij een nee-mail).
+- Aanhef met voornaam in een lopend gesprek schrapt hij vaak: mijn "Hoi Egbert," werd 2x niets, en
+  "Hi Martijn," bleef staan. Bij een antwoord op een vraag zet hij liever "Hi," of niets.
 
 ## Toon
 
@@ -46,6 +48,15 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
   weten wat je ervan vindt", "Kom je ergens tegenaan, laat het me weten, dan kijk
   ik met je mee."
 - Wensen aan het eind passen bij de klant: "Succes met de verkoop!", "Fijne vakantie!".
+
+- Openingszin van erkenning ("Goed gezien, en je hebt gelijk.", "Goed punt.", "Goed idee, en") schrapt hij
+  (08-10: 3 van 3 concepten); hij begint met de inhoud ("Ik ben er al mee aan de slag", "Nu loopt alles...").
+  Een kort "Thanks voor je tip." mag wel. Dit sluit aan op de regel over foutmails hieronder.
+- Slot: ":)" erbij als hij zijn eigen slotzin schrijft ("...laat ik het weten :)"). Mijn slot
+  "Laat me weten als het anders loopt" en "Dank voor het meedenken :)" laat hij soms weg of verving hij door
+  een eigen luchtige zin ("zekerheid boven snelheid ... :)").
+- Mijn persoonlijke aanbod in een eerste follow-up ("Ik help je graag persoonlijk", "Zal ik een moment
+  inplannen?") schrapt hij voor een neutraal "Laat me gerust weten als je ergens hulp bij nodig hebt."
 
 ## Inhoud
 
@@ -78,6 +89,8 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 
 ## Nog te leren (invullen zodra er vergelijkingen zijn)
 
+- Nee-mail aan een bedrijf ("jullie"): 2x zonder waarom-vraag, alleen "Dank voor jullie reactie. Ik zal jullie hier niet meer over benaderen. Veel succes met de verkoop!" Nog uitzoeken wanneer wel/niet de waarom-vraag.
+- Bij een lange uitleg na een telefoongesprek opent hij met "Even resumé en antwoord op je vragen:". Nog 1x gezien.
 - Wat Daniel in mijn concepten steeds schrapt of toevoegt. Nog 1x gezien (07-10): hij schrapt verkoopzinnen (gratis proef, videolink) bij een klant die al meedenkt; hij verzacht "Beloven kan ik het nog niet" met "denk graag met jullie mee :)"; hij noemt installatietijd optimistischer ("meestal binnen een paar uur"). Eerdere signalen (03-10): hij schrapte in een storingsmail de opening "Dank voor je bericht, en excuus voor het gedoe. Het lag aan ons" en begon direct met de feiten, en hij zette "Hi," in plaats van mijn "Hoi Voornaam,"; bij een vraag om referenties voegde hij een tweede bewijs (Trustpilot-link) toe en haalde de gratis proef naar een eigen alinea.
 - Of hij bij technische mails liever kort of liever volledig is.
 - Welke woorden hij nooit gebruikt.
@@ -90,3 +103,4 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - 03-10-2026: 0 nieuwe mails, 0 met concept; niets te leren (de 29 van gisteren zijn al verwerkt).
 - 04-10-2026: Gekeken: 107 mails in Verzonden, 16 van Daniel, 11 al verwerkt; 5 nieuw, 2 met concept; videomail-sjabloon (3x) herkend, twee eerste concept-verschillen onder Nog te leren.
 - 07-10-2026: Gekeken: 125 mails in Verzonden (3 dagen), 19 van Daniel, 0 al verwerkt; 19 nieuw, 12 met concept (maar bij 5 hoorde het concept bij een eerdere mail in dezelfde draad, dus echte vergelijking ca. 7). Nieuw: lege regel voor "Daniel", ":)" als standaard smiley, waarom-vraag bij een nee, volledige kanalenlijst, kortere foutmails.
+- 08-10-2026: Gekeken: 150 mails in Verzonden (3 dagen), 26 van Daniel, 17 al verwerkt; 9 nieuw, 6 met concept. Nieuw: hij schrapt erkennende openingszinnen (3x), voegt ":)" aan het slot toe (2x), schrapt persoonlijk aanbod, nee-mail zonder waarom-vraag (2x).
