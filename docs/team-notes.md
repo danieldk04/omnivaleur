@@ -16284,3 +16284,5 @@ laatste was nog niet gebeurd. Daniel: "bouw dat in" (c75efda2).
   7e767cdb; sold_price en sold_at staan er nog). Die 8 verkopen tellen daardoor niet meer in Omnivaleur-Analytics.
 - Open: verkopen van voorraadartikelen worden niet als omzet in Analytics geboekt (een 'sold'-rij zou het artikel
   overal blokkeren). Een aangevuld artikel dat op nul stond komt niet vanzelf terug op de andere kanalen.
+- Daniel 08-10: omzet uit voorraadverkopen in Analytics en het vanzelf terugkomen van een aangevuld artikel
+  "gaan we ooit doen, niet nu". Bewust uitgesteld; niet zelf oppakken, hij komt erop terug.
