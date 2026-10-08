@@ -16262,3 +16262,25 @@ De geplande 06:30-ronde startte pas om 11:03, twintig minuten na de ronde van 10
 aanmelding, geen nieuwe fout bij een van hen in 24 uur (Amanda's Vinted-time-out en Jannekes Admarkt-scan zijn van 07-10
 en al beoordeeld). De ene open foutsoort (Marktplaats verwijderen, overzicht leeg) hoort bij geen van deze klanten en is
 voor de klantfoutenronde. Repo 1.0.374, Web Store 1.0.372. Geen code, geen mailtjes.
+
+## 08-10-2026: Winkel met voorraad, Shopify-voorraad is de baas (Goudlief 5aae4954)
+
+Daniel zag op de site van Goudlief (een man, geen vrouw) dat hij veel stuks per product heeft. Gemeten: 4.919
+Shopify-producten, 3.907 met meer dan 5 stuks, voorraadbeheer overal aan, drie locaties waarvan twee
+dropshipping (AutoDS, Yehwang). De verkoopafhandeling ging uit van unieke artikelen: een Shopify-verkoop haalde
+Marktplaats en 2dehands offline, en een verkoop op Marktplaats of 2dehands wiste het hele Shopify-product. Dat
+laatste was nog niet gebeurd. Daniel: "bouw dat in" (c75efda2).
+- Nieuw: backend/services/shopify_voorraad.py, aangeroepen bovenin handle_item_sold. Shopify-verkoop met meer dan
+  1 stuk over: niets afmelden of boeken. Verkoop elders: één stuk eraf (inventory_levels/adjust, locatie met de
+  meeste voorraad), het product blijft; bij nul elders offline en Shopify-product blijft uitverkocht staan.
+- Vlag `voorraad_meerdere` in platform_credentials.extra_data, gezet bij de import-scan of zodra een product met
+  meer dan 1 stuk langskomt. Zonder vlag geldt precies het oude gedrag (uniek tweedehands artikel). Goudlief
+  heeft de vlag. De sleutelverversing in _shop_creds leest extra_data nu opnieuw, zodat hij de vlag niet wist.
+- Meerdere varianten met voorraad: we raden niet welke verkocht is, de voorraad blijft staan.
+- Echt gemeten op Daniels winkel (product 15995839512906): één stuk eraf en terug werkte; de teller op de
+  variant liep een paar seconden achter. Daarom telt bij een Shopify-verkoop een stand van 1 als mogelijk op.
+- Hersteld: Goudliefs 8 Shopify-verkopen van 05 tot 07-10 stonden op 'sold' terwijl er nog 9 tot 123 stuks
+  waren. Rijen terug naar 'active' (ids 33edc1da, 72d31188, 1cbda59d, 5293bf45, 65e062bb, 8cafc2c8, 4db01c11,
+  7e767cdb; sold_price en sold_at staan er nog). Die 8 verkopen tellen daardoor niet meer in Omnivaleur-Analytics.
+- Open: verkopen van voorraadartikelen worden niet als omzet in Analytics geboekt (een 'sold'-rij zou het artikel
+  overal blokkeren). Een aangevuld artikel dat op nul stond komt niet vanzelf terug op de andere kanalen.

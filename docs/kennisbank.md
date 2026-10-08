@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## voorraadwinkel-shopify-is-de-baas
+
+*08-10-2026 — Verkoopafhandeling ging uit van unieke artikelen; bij een winkel met voorraad wiste een MP-verkoop het hele Shopify-product. Sinds 08-10-2026 is de Shopify-voorraad de baas.*
+
+handle_item_sold behandelde elk artikel als uniek: verkocht = overal weg, en voor Shopify betekent "weg" delete_product. Bij Goudlief (4.919 producten, meeste >5 stuks) zou één Marktplaats-verkoop het product met 123 stuks uit zijn winkel wissen, en elke Shopify-verkoop zette het artikel op 'sold' waardoor het nergens meer ververst werd.
+
+**Why:** een 'sold'-rij op welk kanaal ook blokkeert het hele artikel (items.py, auto-relist, uitgifte in jobs.py). Je kunt een voorraadverkoop dus niet als 'sold' boeken zonder het artikel stil te leggen.
+
+**How to apply:** backend/services/shopify_voorraad.py beslist vóór de boeking (BLIJFT / OP / None). De vlag `voorraad_meerdere` in platform_credentials.extra_data scheidt een voorraadwinkel van een uniek tweedehands artikel; zonder vlag geldt het oude gedrag. De voorraadteller op een Shopify-variant loopt seconden achter na een aanpassing of bestelling (gemeten), dus lees direct na een verkoop nooit "1" als "nog over". Schrijf je in extra_data, lees hem dan opnieuw vlak voor het schrijven, anders wis je wat een andere routine erin zette. Zie "import-titel-boven-100-tekens".
+
+---
+
 ## eigen-merk-overige-merken
 
 *08-10-2026 — Merk niet in de MP/2dehands-keuzelijst (eigen merk Goudlief, Handgemaakt) gaf "left empty: brand"; nu Overige merken (1.0.373)*
