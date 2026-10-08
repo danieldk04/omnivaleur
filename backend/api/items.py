@@ -203,8 +203,17 @@ def read_settings(user_id: str = Depends(get_current_user)):
     """De persoonlijke instellingen van deze verkoper."""
     from backend.services.instellingen import (RELIST_DAGEN_MAX, RELIST_DAGEN_MIN,
                                                lees)
-    return {**lees(user_id), "relist_dagen_min": RELIST_DAGEN_MIN,
-            "relist_dagen_max": RELIST_DAGEN_MAX}
+    inst = lees(user_id)
+    return {**inst, "relist_dagen_min": RELIST_DAGEN_MIN,
+            "relist_dagen_max": RELIST_DAGEN_MAX,
+            "shopify_auto_import_aan": _shopify_auto_import_aan(user_id, inst)}
+
+
+def _shopify_auto_import_aan(user_id: str, inst: dict) -> bool:
+    """Wat de automatische Shopify-import werkelijk doet, ook als de verkoper
+    nooit zelf koos (zie services/shopify_auto_import.staat_aan)."""
+    from backend.services.shopify_auto_import import staat_aan
+    return staat_aan(get_db(), user_id, inst)
 
 
 @router.put("/settings")
@@ -213,8 +222,10 @@ def write_settings(body: dict, user_id: str = Depends(get_current_user)):
     buiten bereik wordt bijgesteld en dat hoort het scherm te laten zien."""
     from backend.services.instellingen import (RELIST_DAGEN_MAX, RELIST_DAGEN_MIN,
                                                VERKOOPVRAAG, schrijf)
+    # De stand van de automatische Shopify-import schrijft alleen de server.
+    body = {k: v for k, v in (body or {}).items() if k != "shopify_auto_import_stand"}
     try:
-        bewaard = schrijf(user_id, body or {})
+        bewaard = schrijf(user_id, body)
     except Exception as e:  # noqa: BLE001
         logger.exception("instellingen opslaan mislukt voor %s", user_id)
         raise HTTPException(status_code=500, detail=f"Could not save settings: {e}")
@@ -233,7 +244,8 @@ def write_settings(body: dict, user_id: str = Depends(get_current_user)):
     if VERKOOPVRAAG in (body or {}) and not bewaard.get(VERKOOPVRAAG, True):
         _sluit_openstaande_verkoopvragen(user_id)
     return {**bewaard, "relist_dagen_min": RELIST_DAGEN_MIN,
-            "relist_dagen_max": RELIST_DAGEN_MAX}
+            "relist_dagen_max": RELIST_DAGEN_MAX,
+            "shopify_auto_import_aan": _shopify_auto_import_aan(user_id, bewaard)}
 
 
 def _sluit_openstaande_verkoopvragen(user_id: str) -> int:

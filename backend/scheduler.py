@@ -436,6 +436,20 @@ def start_scheduler():
         id="daily_shopify_reconciliatie",
         replace_existing=True,
     )
+    # Nieuwe Shopify-producten vanzelf importeren, elk uur, bij verkopers voor
+    # wie Shopify de bron is. Zie backend/services/shopify_auto_import.py.
+    from backend.services.shopify_auto_import import importeer_alle_winkels
+
+    _scheduler.add_job(
+        _off_the_request_loop(importeer_alle_winkels),
+        "interval",
+        hours=1,
+        id="shopify_auto_import",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        next_run_time=_dt2.now() + _td2(minutes=10),
+    )
     # ── De koude-mailmachine ──────────────────────────────────────────────
     #
     # Draaide tot 20-08-2026 op Daniels eigen Mac, via een LaunchAgent. Dat werkt

@@ -188,13 +188,23 @@ VERZENDING_2DH_BRIEF_ONDER_MAX = 710   # nooit boven Bpost 0-2 kg zelf
 VERZENDING_2DH_MODUS = "verzending_2dh_modus"
 VERZENDING_2DH_MODI = ("standaard", "regel", "alles")
 
+# NIEUWE SHOPIFY-PRODUCTEN VANZELF IMPORTEREN (08-10-2026, Janneke).
+# None = niet zelf gekozen: dan aan zodra de verkoper ooit zelf uit Shopify
+# importeerde (zie services/shopify_auto_import.py). De stand schrijft alleen de
+# server; het scherm leest er wanneer er gekeken is en wat erbij kwam.
+SHOPIFY_AUTO_IMPORT = "shopify_auto_import"
+SHOPIFY_AUTO_IMPORT_STAND = "shopify_auto_import_stand"
+_STAND_VELDEN = ("gecontroleerd", "fout", "laatst_nieuw", "te_controleren",
+                 "laatst_toegevoegd_om", "totaal_toegevoegd")
+
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "auto_relist": True, "vinted_herplaatsen": False, VERKOOPVRAAG: True, VERZENDING_2DH_WOORDEN: [],
              VERZENDING_2DH_BRIEF_ONDER: 0, VERZENDING_2DH_MODUS: "standaard",
              "fabrikant_naam": "", "fabrikant_adres": "", "fabrikant_email": "",
              FABRIKANT_MEESTUREN: True,
              "locatie_land": "", "locatie_plaats": "", "locatie_postcode": "",
-             "levering": "beide", "pakket_grens": 0, "slottekst": ""}
+             "levering": "beide", "pakket_grens": 0, "slottekst": "",
+             SHOPIFY_AUTO_IMPORT: None, SHOPIFY_AUTO_IMPORT_STAND: {}}
 
 
 def _schoon(rauw: dict | None) -> dict:
@@ -221,6 +231,12 @@ def _schoon(rauw: dict | None) -> dict:
         uit["vinted_herplaatsen"] = bool(rauw.get("vinted_herplaatsen"))
     if VERKOOPVRAAG in rauw:
         uit[VERKOOPVRAAG] = bool(rauw.get(VERKOOPVRAAG))
+    if SHOPIFY_AUTO_IMPORT in rauw:
+        keuze = rauw.get(SHOPIFY_AUTO_IMPORT)
+        uit[SHOPIFY_AUTO_IMPORT] = None if keuze is None else bool(keuze)
+    stand = rauw.get(SHOPIFY_AUTO_IMPORT_STAND)
+    if isinstance(stand, dict):
+        uit[SHOPIFY_AUTO_IMPORT_STAND] = {k: stand[k] for k in _STAND_VELDEN if k in stand}
     # Marktplaats kapt deze velden zelf af op 255 tekens; langer opslaan zou
     # betekenen dat het scherm iets anders toont dan wat er geplaatst wordt.
     for veld in FABRIKANT_VELDEN:

@@ -3346,5 +3346,15 @@
  "✅ Bidding allowed on {0} item{1}, lowest bid {2}% of the price. This applies to new placements; adverts already online keep their setting.": "✅ Bieden toegestaan op {0} {1|artikel|artikelen}, laagste bod {2}% van de prijs. Dit geldt voor nieuwe plaatsingen; advertenties die al online staan houden hun instelling.",
  "✅ Bidding turned off on {0} item{1}.": "✅ Bieden uitgezet op {0} {1|artikel|artikelen}.",
  "✓ Signed in": "✓ Ingelogd",
- "You're signed in to": "Je bent ingelogd bij"
+ "You're signed in to": "Je bent ingelogd bij",
+ "Off. New Shopify products only come in when you press Import.": "Uit. Nieuwe Shopify-producten komen alleen binnen als je op Importeren drukt.",
+ "We check your store every hour. The first check runs within the hour.": "We kijken elk uur in je winkel. De eerste keer is binnen het uur.",
+ "We check your store every hour. Last check {0}.": "We kijken elk uur in je winkel. Laatst gekeken {0}.",
+ "Last new product added {0}.": "Laatste nieuwe product toegevoegd {0}.",
+ "{0} waiting under To check.": "{0} wachten onder Te controleren.",
+ "Add new Shopify products automatically": "Nieuwe Shopify-producten automatisch toevoegen",
+ "Saved. New products in your Shopify store are added every hour.": "Opgeslagen. Nieuwe producten in je Shopify-winkel komen er elk uur bij.",
+ "Saved. New Shopify products only come in when you press Import.": "Opgeslagen. Nieuwe Shopify-producten komen alleen binnen als je op Importeren drukt.",
+ "⚠️ Shopify refused access. Reconnect your store under Platforms.": "⚠️ Shopify weigert de toegang. Koppel je winkel opnieuw onder Platforms.",
+ "Shopify refused access. Reconnect your store under Platforms.": "Shopify weigert de toegang. Koppel je winkel opnieuw onder Platforms."
 }
