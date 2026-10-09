@@ -124,16 +124,16 @@ async def na_verkoop(db, item_id: str, sold_on_platform: str) -> str | None:
     nieuw = any(r.get("platform") == sold_on_platform and r.get("status") in LEVEND for r in rijen)
     if nieuw:
         if variaties is None:
-            if stuks > 0:
-                await _een_eraf(client, product_id, None, stuks, item_id, sold_on_platform)
+            if stuks > 0 and await _een_eraf(client, product_id, None, stuks, item_id,
+                                             sold_on_platform):
                 stuks -= 1
         else:
             met_voorraad = [v for v in variaties if int(v.get("stock_quantity") or 0) > 0]
             if len(met_voorraad) == 1:
                 v = met_voorraad[0]
-                await _een_eraf(client, product_id, str(v["id"]), int(v.get("stock_quantity") or 0),
-                                item_id, sold_on_platform)
-                stuks -= 1
+                if await _een_eraf(client, product_id, str(v["id"]),
+                                   int(v.get("stock_quantity") or 0), item_id, sold_on_platform):
+                    stuks -= 1
             elif len(met_voorraad) > 1:
                 logger.info("woocommerce-voorraad: item %s heeft %d maten met voorraad; welke er op "
                             "%s verkocht is weten we niet, voorraad blijft staan",
@@ -142,10 +142,13 @@ async def na_verkoop(db, item_id: str, sold_on_platform: str) -> str | None:
 
 
 async def _een_eraf(client, product_id: str, variatie: str | None, nu: int,
-                    item_id: str, kanaal: str) -> None:
+                    item_id: str, kanaal: str) -> bool:
+    """Eén stuk eraf. True als de winkel het aannam."""
     try:
         await client.werk_bij(product_id, {"stock_quantity": max(nu - 1, 0)}, variatie=variatie)
         logger.info("woocommerce-voorraad: item %s verkocht op %s, product %s%s nu %d stuks",
                     item_id, kanaal, product_id, f"/{variatie}" if variatie else "", max(nu - 1, 0))
+        return True
     except Exception as e:  # noqa: BLE001
         logger.warning("woocommerce-voorraad: stuk eraf mislukt voor %s: %s", product_id, e)
+        return False
