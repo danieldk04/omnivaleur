@@ -567,6 +567,16 @@ class WooCommercePlatform(PlatformBase):
 
     async def update_listing_price(self, platform_listing_id: str, price: float, credentials: dict) -> bool:
         c = self._eis(credentials)
+        product = await c.product(platform_listing_id)
+        if product is None:
+            raise RuntimeError(f"WooCommerce product {platform_listing_id} no longer exists")
+        if product.get("type") == "variable":
+            # Elke maat kan een eigen prijs hebben; één bedrag over alle maten
+            # heen zetten zou die stil gelijktrekken.
+            raise RuntimeError("This product has variants (sizes) in WooCommerce. Change its "
+                               "prices in WooCommerce itself.")
+        # De actieprijs leegmaken: anders blijft de oude actieprijs gelden en ziet
+        # de koper de nieuwe prijs nooit.
         await c.werk_bij(platform_listing_id, {"regular_price": f"{float(price):.2f}", "sale_price": ""})
         return True
 
