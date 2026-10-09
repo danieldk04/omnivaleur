@@ -3637,7 +3637,12 @@ async function vintedIngelogdOrigin(voorkeur) {
 let _vintedEerstepartij = null;                 // { origin: string|false, at }
 
 async function vintedEerstepartijOrigin(voorkeur) {
-  if (_vintedEerstepartij && Date.now() - _vintedEerstepartij.at < EERSTEPARTIJ_TTL_MS) {
+  // Alleen een JA wordt onthouden. Een "nee" bleef tot 1.0.376 tien minuten
+  // staan, en dan weigerde elke plaatsing in die tijd met "je bent niet
+  // ingelogd", ook nadat de verkoper opnieuw had ingelogd (Janneke 31d28378,
+  // 09-10-2026: "Hij blijft deze melding geven. Ik ben wel ingelogd").
+  if (_vintedEerstepartij && _vintedEerstepartij.origin
+      && Date.now() - _vintedEerstepartij.at < EERSTEPARTIJ_TTL_MS) {
     return _vintedEerstepartij.origin;
   }
   const kandidaten = [];
@@ -3647,23 +3652,89 @@ async function vintedEerstepartijOrigin(voorkeur) {
 
   let ergensOnzeker = false;
   for (const origin of kandidaten) {
-    const uit = await eerstepartijStatus(`${origin}/`, "/api/v2/users/current");
-    if (!uit || uit.status == null || (uit.status !== 200 && uit.status !== 401 && uit.status !== 403)) {
-      ergensOnzeker = true;                               // tabblad ging niet open, of onderhoud
-      continue;
-    }
-    if (uit.status === 200 && uit.body && uit.body.user && uit.body.user.id) {
+    const oordeel = await vintedIngelogdInTabblad(origin);
+    if (oordeel === true) {
       _vintedEerstepartij = { origin, at: Date.now() };
       _vintedOriginCache = { origin, at: Date.now() };
       return origin;
     }
+    if (oordeel === null) ergensOnzeker = true;
   }
   // Konden we het ergens niet vaststellen, dan is dit geen "nee". Een onzekere
   // controle mag nooit een publicatie tegenhouden, en al helemaal geen verwijt
   // opleveren.
-  if (ergensOnzeker) return null;
-  _vintedEerstepartij = { origin: false, at: Date.now() };
-  return false;
+  _vintedEerstepartij = null;
+  return ergensOnzeker ? null : false;
+}
+
+// INGELOGD OP VINTED, GEMETEN IN EEN TABBLAD OP VINTED ZELF (1.0.377).
+//
+// /api/v2/users/current alleen was niet genoeg. Vinted werkt met een kortlevend
+// toegangskoekje dat de site zelf ververst zodra je er rondklikt. Is dat koekje
+// verlopen, dan geeft de API 401 aan iemand die gewoon is ingelogd (Janneke
+// 31d28378, 09-10-2026). Daarom:
+//   1. de API; ja = ja;
+//   2. bij 401 even wachten (de geopende pagina ververst het koekje) en nog eens;
+//   3. het plaatsformulier zelf: een uitgelogde bezoeker wordt doorgestuurd naar
+//      /member/... (inloggen/registreren). Blijft hij op /items/new, dan is de
+//      sessie er en lag het alleen aan het koekje.
+// Alleen als API en formulier allebei "uitgelogd" zeggen is het nee. Een
+// incognitovenster zegt niets (eigen, lege koekjespot): dan weten we het niet.
+async function vintedIngelogdInTabblad(origin) {
+  let tabId = null;
+  try {
+    tabId = await new Promise((res, rej) =>
+      openWorkerTab(`${origin}/`, t => t ? res(t.id) : rej(new Error("geen tabblad")), { silent: true })
+    );
+    await waitForTabLoad(tabId);
+    try {
+      const t = await chrome.tabs.get(tabId);
+      if (t && t.incognito) return null;
+    } catch (_) { /* geen venstergegevens: gewoon meten */ }
+    const uit = await execInTab(tabId, async () => {
+      const vraag = async () => {
+        try {
+          const r = await fetch("/api/v2/users/current", { headers: { Accept: "application/json" }, credentials: "include" });
+          const b = r.ok ? await r.json().catch(() => null) : null;
+          return { status: r.status, id: b && b.user && b.user.id ? b.user.id : null };
+        } catch (_) { return { status: null, id: null }; }
+      };
+      let api = await vraag();
+      if (!api.id && (api.status === 401 || api.status === 403)) {
+        await new Promise(r => setTimeout(r, 4000));
+        api = await vraag();
+      }
+      let formulier = null;
+      if (!api.id) {
+        try {
+          const r = await fetch("/items/new", { credentials: "include", redirect: "follow" });
+          formulier = { status: r.status, url: String(r.url || "") };
+        } catch (_) { /* weet niet */ }
+      }
+      return { api, formulier };
+    }, []);
+    return vintedOordeel(uit);
+  } catch (e) {
+    console.warn("[Omnivaleur] Vinted-inlogcontrole in tabblad mislukt:", e);
+    return null;
+  } finally {
+    if (tabId != null) sluitWerkTabblad(tabId);
+  }
+}
+
+// true = ingelogd, false = zeker uitgelogd, null = weet niet. Los gezet zodat
+// de proef hem zonder browser kan nalopen.
+function vintedOordeel(uit) {
+  if (!uit || !uit.api) return null;
+  if (uit.api.id) return true;
+  const f = uit.formulier;
+  if (!f || !f.status) return null;
+  let pad = "";
+  try { pad = new URL(f.url).pathname; } catch (_) { pad = f.url; }
+  const naarInloggen = /^\/(?:member\/|signup|login|session)/.test(pad);
+  if (f.status === 200 && /^\/items\/new/.test(pad)) return true;
+  if (naarInloggen && (uit.api.status === 401 || uit.api.status === 403)) return false;
+  return null;
 }
 
 // Zet de opdracht klaar op het domein waar de verkoper echt is ingelogd, en

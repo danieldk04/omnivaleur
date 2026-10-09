@@ -144,6 +144,15 @@ ctx.fetch = async () => ({
   json: async () => ctx.achtergrondBody || null,
 });
 ctx.eerstepartijStatus = async () => { ctx.tabbladen++; return ctx.eerstepartij; };
+// Vinted meet sinds 1.0.377 in zijn eigen tabbladcontrole (met het
+// plaatsformulier erbij); hier dezelfde nagebootste site-uitslag.
+ctx.vintedIngelogdInTabblad = async () => {
+  ctx.tabbladen++;
+  const e = ctx.eerstepartij;
+  if (!e || e.status == null) return null;
+  if (e.status === 200 && e.body && e.body.user && e.body.user.id) return true;
+  return e.status === 401 || e.status === 403 ? false : null;
+};
 ctx.stopPlatformWachtrij = async (serverUrl, platform, reden) => { ctx.gestopt.push({ platform, reden }); };
 vm.createContext(ctx);
 vm.runInContext(bron, ctx);
