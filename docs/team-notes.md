@@ -16501,6 +16501,7 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   mp-video, registratie, footer, llms.txt, ai-info, voorwaarden, privacy (de API-sleutel staat op onze server),
   Help en startgids in het dashboard, en de blogmachine (die noemde nog Etsy, dat ondersteunen we niet).
   Taalregel op de site gelijkgetrokken: Vinted en WooCommerce krijgen de eigen tekst.
+
 ## 2026-10-09 12:30: Kostencheck Anthropic na de kostenrem (eerste meting, nog geen oordeel)
 - Console, dagkosten (UTC): 07-10 $6,18, 08-10 $18,00 (Haiku $17,30), 09-10 $0,94 tot 12:25 lokaal. 09-10 bevat nog de uren vóór de rem.
 - Logs: laatste verzoek met 8.939 invoertokens (volledige rubriekvraag) was 11:49 lokaal, dus vóór de rem (commits 12:19 en 12:21). Na 12:21 staat er niets in de logs.
