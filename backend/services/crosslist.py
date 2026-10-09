@@ -1021,6 +1021,14 @@ def _met_slot(tekst: str, slot: str) -> str:
     # met slottekst en al weer wordt ingelezen bij een scan.
     if slot.strip() and _slot_al_aanwezig(schoon, slot):
         return schoon
+    # Halverwege afgekapt (ingelezen tekst die op de lengtegrens stopte)? Dan
+    # het afgekapte begin vervangen, anders leest de koper dat begin twee keer.
+    eerste = (_als_platte_regels(slot) or [""])[0]
+    begin = schoon.find(eerste) if eerste else -1
+    if begin >= 0:
+        rest = " ".join(_als_platte_regels(schoon[begin:]))
+        if " ".join(_als_platte_regels(slot)).startswith(rest):
+            schoon = schoon[:begin].rstrip()
     return (schoon + "\n\n" + slot).strip() if schoon else slot
 
 
