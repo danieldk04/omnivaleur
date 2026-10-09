@@ -16570,3 +16570,24 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
 - Open, niet van klanten: tests/test_korte_kledingvraag.py faalt (5) sinds de kostenrem 18a473ac, de nep in de
   proef kent het argument claude_ok niet. test_vinted_categories.py liep achter op 1.0.373 (wantKids), bijgezet.
 - Verder rustig: Amanda 8f91a370 Vinted-kleding nog open zoals vanochtend (geen nieuwe pogingen). Wachter op 0 open.
+
+## 09-10-2026 (avond): Janneke, "Gedeelde advertentie" op twee jassen; alles nieuw zonder prijskaartje
+- Melding: haar dashboard zei "advertentie 10303777676 op Vinted wordt ook gebruikt door een andere kopie van
+  dit item"; de jas stond wel op Marktplaats, niet op Vinted.
+- Oorzaak (bewezen): twee echte stukken met dezelfde titel "Tussenjas Name it maat 128" (rood 62921089, bruin
+  2997321d). De bruine faalde 14:41 UTC op Vinted (niet ingelogd); bij de tweede poging 14:44 deed de controle
+  vooraf in content/vinted.js (resolveCreatedVintedItem, exact op titel) "staat al online" en koppelde de
+  advertentie van de rode (note already_published_manually). Dezelfde titelzoeker zit in de achtergrond
+  (bgVindVintedAdvertentie, watchdog en tabblad-weg). Bij haar hebben 2.316 van 3.219 artikelen een titelgenoot;
+  41 nog niet op Vinted geplaatste artikelen hebben een titelgenoot die er al staat (19 daarvan twee of meer).
+- Gerepareerd (a9327da6, jobs.py al eerder live via auto-push): de uitgifte geeft `_vinted_bezet` mee en zet
+  voor oude extensies de nieuwste titelgenoot in `platform_listing_id` (die sloegen ze al over); afmelden met
+  een advertentie die bij een ander artikel van dezelfde verkoper hoort wordt geweigerd met een eerlijke fout;
+  extensie 1.0.376 slaat alle titelgenoten over. Proef test_vinted_titelgenoot_niet_koppelen draait de echte
+  functie uit 991ff841 en uit de werkmap in Node: oud koppelt de rode jas, nieuw niet.
+- Ze vroeg ook: al haar artikelen zijn nieuw, kan dat vanzelf. 3.115 van haar 3.219 stonden op "good" (Zo goed
+  als nieuw), omdat de Shopify-import zonder staat op good terugvalt. Nieuw: instelling `import_staat`; de
+  keuzelijst bij Import bewaart hem op de server en de automatische Shopify/WooCommerce-import volgt hem.
+- Open, wacht op Daniels akkoord (de veiligheidscontrole hield het tegen): bij Janneke de foute koppeling
+  6d61f407 (bruine jas, Vinted 10303777676) verwijderen en een nieuwe Vinted-plaatsing klaarzetten; haar 3.115
+  "good" op "new" zetten en import_staat op new. Extensie 1.0.376 uploaden (dist/omnivaleur-extension-1.0.376.zip).
