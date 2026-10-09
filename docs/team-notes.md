@@ -16635,3 +16635,9 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   03-09); Berichten legt uit waarom het getal blijft staan (badge-klacht 02-09); de werkbalk noemt de gele
   foutopsporingsbalk (mail 04-09); acht nieuwe Help-vragen. Bovenaan de klantpost: importeren (20), publiceren (10),
   verversen (7), allemaal storingen die al gerepareerd zijn, geen schermvragen.
+- Mailbox gelezen (Daniel: "ook na 6 september"): Zoho via IMAP, alleen-lezen, 1-9 t/m 9-10, alle mappen; de klantpost
+  zit in "Beantwoord" (172), niet in de inbox (46). Terugkerende schermvragen erbij gebouwd (2799c940): de balk zegt per
+  kanaal hoeveel er wacht (Egbert 04-10, server levert `per_soort`, boven 50 een minuut gecachet); Calm mode uitgelegd
+  (Goudlief 08-10); filter "Nog niet op <kanaal>" bij Items (Egbert 02-10); geen inlogwaarschuwing voor een kanaal
+  zonder werk of advertenties (Goudlief 09-10); Platforms zegt "er valt niets te koppelen" bij Vinted/MP (Janneke 04-10).
+  Proef tests/wachtrijbalk-eerlijk-test.js uitgebreid; valt om op de oude app.html.
