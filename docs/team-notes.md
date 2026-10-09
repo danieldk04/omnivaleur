@@ -16648,3 +16648,9 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
 - Rondleiding (Daniel: "met animaties, met het echte dashboard"): "Laat het me zien in mijn dashboard" loopt 9 tot 10
   stappen af met een bewegende spotlight op het echte scherm. Vaste regel voor elke volgende grote wijziging (CLAUDE.md).
   Live met echte muisklik twee keer goed; één eerdere klik via de toegankelijkheidsboom startte hem niet, niet herhaald.
+- Telefoonproef (Daniel: "test het ook op telefoonformaat"), 390 px met zijn account: op een telefoon kwam het
+  blokkerende venster "installeer de Chrome-extensie", dat kan daar niet. Nu weg; wie nog nooit een extensie had ziet
+  op de telefoon "Het plaatsen gebeurt op je computer". Knoppen van Wat is er nieuw blijven in beeld, rondleiding telt
+  op een telefoon 6 stappen (menu-stappen vallen af) en schuift de tabel naar het groene icoon. Live (PR 28, 7e8c1102),
+  live nagelopen op 390 px (6/6) en op gewoon scherm (9/9). Proef extensie-stempel-test 3b faalt op oud.
+  Bij het testen stond Daniels taalkeuze ineens op Engels (waarschijnlijk een klik op EN in het menu); teruggezet op NL.

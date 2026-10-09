@@ -17,6 +17,38 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## dashboard-opruimronde-09-10
+
+*09-10-2026 — "Opruimronde dashboard 09-10-2026: menu 14 naar 11, tabbladen, \"Niet geplaatst\" telde verkochte mee, Bescherming vol jargon en foute feiten"*
+
+09-10-2026 liep ik het hele dashboard door met Daniels echte account (461 artikelen) en ruimde op, op de tak
+claude/dashboard-opruimen (Daniel keurt eerst, dan pas live).
+
+Gevonden en gemeten:
+- "Niet geplaatst" op het dashboard telde alles zonder actieve advertentie, ook verkocht, verborgen en
+  gearchiveerd: 118, terwijl "Bekijken" het tabblad Te plaatsen met 2 opende. Nu dezelfde indeling als
+  classifyItems() bij Items.
+- Bescherming beweerde vast "na 27 dagen herplaatsen" (is instelbaar, en uit te zetten) en "je schrijft in het
+  Engels" (onjuist sinds Help 17-09), plus vakjargon (pixel-hashing, Lexical, EditorState).
+- De actiekolom bij Items viel op een 1470 px scherm half buiten beeld (Offline halen). Nu twee knoppen per rij.
+- Oranje "268" bij Blijft liggen in het menu las als storing; telling staat nu op het tabblad.
+
+Werkwijze voor een voorbeeld met echte gegevens zonder live te zetten: de repo is openbaar, dus in het ingelogde
+tabblad op omnivaleur.com (een 404-pad, verse globals) de tak-versie van app.html van raw.githubusercontent.com
+ophalen en met document.write schrijven, met een fetch-omleiding voor /i18n/nl.json. Lokaal (127.0.0.1) ophalen
+blokkeert Chrome vanaf een openbare site. Zie ook "dashboardwijziging-krijgt-klantmelding".
+
+Let op: `git stash` in een worktree deelt refs/stash met de hoofdmap. Een lege stash gevolgd door pop pakte de
+stash van een andere sessie; teruggehaald via git fsck en git stash store.
+
+Telefoonproef (09-10-2026): Chrome-vensters gaan niet smaller dan ~734 px. Test telefoonbreedte met een iframe van
+390 px naar /app op een 404-pad van omnivaleur.com (zelfde herkomst, dus zelfde inlog). Gevonden: op een telefoon kwam
+het blokkerende venster "installeer de Chrome-extensie" (kan daar niet); nu weg via _opTelefoon(). Een extensie draait
+niet in zo'n iframe, dus wat de extensie doet is daar niet te zien. Let op: klikken onderin het menu kan "EN" raken en
+zet dan omni_taal van de gebruiker om; controleer en zet terug.
+
+---
+
 ## dashboardwijziging-krijgt-klantmelding
 
 *09-10-2026 — "Elke grote wijziging in het dashboard krijgt een \"Wat is er nieuw\"-venster voor bestaande klanten (Daniel, 09-10-2026)"*
@@ -65,32 +97,6 @@ Klantpost lezen (09-10-2026): de klantmails staan vooral in de map "Beantwoord" 
 (46, vooral leads en spam). Alleen-lezen via IMAP met MAIL_USER/MAIL_PASS/IMAP_HOST uit .env (zoals
 scripts/schrijfstijl_leren.py), BODY.PEEK zodat niets als gelezen wordt gemarkeerd. Filter niet op onderwerp: Egberts
 63 mails hangen onder de oude leaddraad "Vraagje over jullie Marktplaats-aanbod".
-
----
-
-## dashboard-opruimronde-09-10
-
-*09-10-2026 — "Opruimronde dashboard 09-10-2026: menu 14 naar 11, tabbladen, \"Niet geplaatst\" telde verkochte mee, Bescherming vol jargon en foute feiten"*
-
-09-10-2026 liep ik het hele dashboard door met Daniels echte account (461 artikelen) en ruimde op, op de tak
-claude/dashboard-opruimen (Daniel keurt eerst, dan pas live).
-
-Gevonden en gemeten:
-- "Niet geplaatst" op het dashboard telde alles zonder actieve advertentie, ook verkocht, verborgen en
-  gearchiveerd: 118, terwijl "Bekijken" het tabblad Te plaatsen met 2 opende. Nu dezelfde indeling als
-  classifyItems() bij Items.
-- Bescherming beweerde vast "na 27 dagen herplaatsen" (is instelbaar, en uit te zetten) en "je schrijft in het
-  Engels" (onjuist sinds Help 17-09), plus vakjargon (pixel-hashing, Lexical, EditorState).
-- De actiekolom bij Items viel op een 1470 px scherm half buiten beeld (Offline halen). Nu twee knoppen per rij.
-- Oranje "268" bij Blijft liggen in het menu las als storing; telling staat nu op het tabblad.
-
-Werkwijze voor een voorbeeld met echte gegevens zonder live te zetten: de repo is openbaar, dus in het ingelogde
-tabblad op omnivaleur.com (een 404-pad, verse globals) de tak-versie van app.html van raw.githubusercontent.com
-ophalen en met document.write schrijven, met een fetch-omleiding voor /i18n/nl.json. Lokaal (127.0.0.1) ophalen
-blokkeert Chrome vanaf een openbare site. Zie ook "dashboardwijziging-krijgt-klantmelding".
-
-Let op: `git stash` in een worktree deelt refs/stash met de hoofdmap. Een lege stash gevolgd door pop pakte de
-stash van een andere sessie; teruggehaald via git fsck en git stash store.
 
 ---
 
