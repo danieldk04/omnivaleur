@@ -206,7 +206,14 @@ def read_settings(user_id: str = Depends(get_current_user)):
     inst = lees(user_id)
     return {**inst, "relist_dagen_min": RELIST_DAGEN_MIN,
             "relist_dagen_max": RELIST_DAGEN_MAX,
-            "shopify_auto_import_aan": _shopify_auto_import_aan(user_id, inst)}
+            "shopify_auto_import_aan": _shopify_auto_import_aan(user_id, inst),
+            "woocommerce_auto_import_aan": _woo_auto_import_aan(user_id, inst)}
+
+
+def _woo_auto_import_aan(user_id: str, inst: dict) -> bool:
+    """Zie services/woocommerce_auto_import.staat_aan."""
+    from backend.services.woocommerce_auto_import import staat_aan
+    return staat_aan(get_db(), user_id, inst)
 
 
 def _shopify_auto_import_aan(user_id: str, inst: dict) -> bool:
@@ -223,7 +230,8 @@ def write_settings(body: dict, user_id: str = Depends(get_current_user)):
     from backend.services.instellingen import (RELIST_DAGEN_MAX, RELIST_DAGEN_MIN,
                                                VERKOOPVRAAG, schrijf)
     # De stand van de automatische Shopify-import schrijft alleen de server.
-    body = {k: v for k, v in (body or {}).items() if k != "shopify_auto_import_stand"}
+    body = {k: v for k, v in (body or {}).items()
+            if k not in ("shopify_auto_import_stand", "woocommerce_auto_import_stand")}
     try:
         bewaard = schrijf(user_id, body)
     except Exception as e:  # noqa: BLE001
@@ -245,7 +253,8 @@ def write_settings(body: dict, user_id: str = Depends(get_current_user)):
         _sluit_openstaande_verkoopvragen(user_id)
     return {**bewaard, "relist_dagen_min": RELIST_DAGEN_MIN,
             "relist_dagen_max": RELIST_DAGEN_MAX,
-            "shopify_auto_import_aan": _shopify_auto_import_aan(user_id, bewaard)}
+            "shopify_auto_import_aan": _shopify_auto_import_aan(user_id, bewaard),
+            "woocommerce_auto_import_aan": _woo_auto_import_aan(user_id, bewaard)}
 
 
 def _sluit_openstaande_verkoopvragen(user_id: str) -> int:

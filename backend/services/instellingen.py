@@ -194,6 +194,9 @@ VERZENDING_2DH_MODI = ("standaard", "regel", "alles")
 # server; het scherm leest er wanneer er gekeken is en wat erbij kwam.
 SHOPIFY_AUTO_IMPORT = "shopify_auto_import"
 SHOPIFY_AUTO_IMPORT_STAND = "shopify_auto_import_stand"
+# Hetzelfde voor WooCommerce (09-10-2026, services/woocommerce_auto_import.py).
+WOO_AUTO_IMPORT = "woocommerce_auto_import"
+WOO_AUTO_IMPORT_STAND = "woocommerce_auto_import_stand"
 _STAND_VELDEN = ("gecontroleerd", "fout", "laatst_nieuw", "te_controleren",
                  "laatst_toegevoegd_om", "totaal_toegevoegd", "achterstand_om")
 
@@ -204,7 +207,8 @@ STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              FABRIKANT_MEESTUREN: True,
              "locatie_land": "", "locatie_plaats": "", "locatie_postcode": "",
              "levering": "beide", "pakket_grens": 0, "slottekst": "",
-             SHOPIFY_AUTO_IMPORT: None, SHOPIFY_AUTO_IMPORT_STAND: {}, "vinted_taal": "zelf"}
+             SHOPIFY_AUTO_IMPORT: None, SHOPIFY_AUTO_IMPORT_STAND: {}, "vinted_taal": "zelf",
+             WOO_AUTO_IMPORT: None, WOO_AUTO_IMPORT_STAND: {}}
 
 
 def _schoon(rauw: dict | None) -> dict:
@@ -241,6 +245,12 @@ def _schoon(rauw: dict | None) -> dict:
     stand = rauw.get(SHOPIFY_AUTO_IMPORT_STAND)
     if isinstance(stand, dict):
         uit[SHOPIFY_AUTO_IMPORT_STAND] = {k: stand[k] for k in _STAND_VELDEN if k in stand}
+    if WOO_AUTO_IMPORT in rauw:
+        keuze = rauw.get(WOO_AUTO_IMPORT)
+        uit[WOO_AUTO_IMPORT] = None if keuze is None else bool(keuze)
+    stand = rauw.get(WOO_AUTO_IMPORT_STAND)
+    if isinstance(stand, dict):
+        uit[WOO_AUTO_IMPORT_STAND] = {k: stand[k] for k in _STAND_VELDEN if k in stand}
     # Marktplaats kapt deze velden zelf af op 255 tekens; langer opslaan zou
     # betekenen dat het scherm iets anders toont dan wat er geplaatst wordt.
     for veld in FABRIKANT_VELDEN:

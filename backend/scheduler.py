@@ -466,6 +466,31 @@ def start_scheduler():
         coalesce=True,
         next_run_time=_dt2.now() + _td2(minutes=10),
     )
+    # WooCommerce (09-10-2026): verkopen in de winkel elke 5 minuten nakijken,
+    # nieuwe producten elk uur. Geen webhook: WooCommerce zet die stil uit na een
+    # paar mislukte afleveringen. Zie backend/services/woocommerce_orders.py.
+    from backend.services.woocommerce_orders import controleer_woocommerce_verkopen
+    from backend.services.woocommerce_auto_import import importeer_alle_winkels as woo_auto_import
+
+    _scheduler.add_job(
+        _off_the_request_loop(controleer_woocommerce_verkopen),
+        "interval",
+        minutes=5,
+        id="woocommerce_verkopen",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    _scheduler.add_job(
+        _off_the_request_loop(woo_auto_import),
+        "interval",
+        hours=1,
+        id="woocommerce_auto_import",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        next_run_time=_dt2.now() + _td2(minutes=12),
+    )
     # ── De koude-mailmachine ──────────────────────────────────────────────
     #
     # Draaide tot 20-08-2026 op Daniels eigen Mac, via een LaunchAgent. Dat werkt
