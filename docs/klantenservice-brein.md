@@ -117,6 +117,11 @@ Taal van het dashboard:
 - "Te plaatsen" op het dashboard telt de artikelen die nog nergens online
   staan, precies wat het tabblad Te plaatsen bij Items laat zien. Voor de
   opruimronde stonden daar ook verkochte en gearchiveerde artikelen in mee.
+- Kan iemand zijn advertentie niet vinden: een klik op het groene icoon bij het
+  artikel opent de advertentie zelf (sinds oktober 2026). "Actieve
+  advertenties" telt een artikel op drie kanalen als drie.
+- Het getal bij Berichten komt van de kanalen zelf en zakt pas als de berichten
+  daar gelezen zijn, met tot 15 minuten vertraging.
 - Het menu van de Chrome-extensie zelf (het pop-upje als je op het
   puzzelstukje klikt) blijft Engels; in het Nederlandse dashboard staan de
   namen van die knoppen daarom ook in het Engels ("Calm mode", "Business account
