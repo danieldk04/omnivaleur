@@ -258,11 +258,11 @@ class WooClient:
             for poging in range(POGINGEN):
                 url, kop = _met_auth(methode, _api_url(self.api_root, route, params),
                                      self.ck, self.cs, self.modus)
+                if body is not None:
+                    kop = {**kop, "Content-Type": "application/json"}
                 try:
                     r = await client.request(methode, url, headers=kop,
-                                             content=json.dumps(body) if body is not None else None,
-                                             **({"headers": {**kop, "Content-Type": "application/json"}}
-                                                if body is not None else {}))
+                                             content=json.dumps(body) if body is not None else None)
                 except (httpx.TransportError, httpx.TimeoutException) as e:
                     laatste = e
                     if poging < POGINGEN - 1:
@@ -270,9 +270,11 @@ class WooClient:
                         continue
                     raise WooFout("Your shop did not answer (the connection dropped). We try "
                                   "again later.", "onbereikbaar") from e
-                if r.status_code in (429, 500, 502, 503, 504) and poging < POGINGEN - 1 \
-                        and "json" not in (r.headers.get("content-type") or "").lower() \
-                        or r.status_code in (429, 502, 503, 504) and poging < POGINGEN - 1:
+                # Een PHP-crash (500 met een HTML-pagina) is vaak tijdelijk; een 500
+                # met WooCommerce-JSON is een echte weigering en heeft geen herkansing.
+                tijdelijk = r.status_code in (429, 502, 503, 504) or (
+                    r.status_code == 500 and "json" not in (r.headers.get("content-type") or "").lower())
+                if tijdelijk and poging < POGINGEN - 1:
                     wacht = WACHT_S[min(poging, len(WACHT_S) - 1)]
                     try:
                         wacht = max(wacht, min(int(r.headers.get("retry-after") or 0), 60))
