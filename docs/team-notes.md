@@ -16556,3 +16556,17 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
 - "Add brand, size for Marktplaats & 2dehands" werd "Voeg brand, size toe": de veldnamen stonden niet in nl.json.
   Nu "Voeg merk, maat toe" (getest met de echte i18n.js in Node).
 - Niet gedaan: haar proef verlengen (11-10). Advies aan Daniel: tot 18-10, beslissing bij hem.
+
+## 09-10-2026 (15:45): Dagelijkse klantfouten (tweede ronde)
+- Sinds de ronde van vanochtend één nieuw probleem, wel een groot: Goudlief 5aae4954 kwam om 10:39 UTC terug
+  online, was uitgelogd op Marktplaats en 2dehands, en daarop verdwenen alle 679 wachtende plaatsingen (337 MP,
+  342 2dehands) in één klap. Dat uitloggen is van de klant; dat de hele rij verdween was onze fout.
+- Oorzaak (bewezen): de regel "een inlogverwijt wist nooit een wachtrij" herkende alleen de zin "you are not
+  signed in to". De extensie meldt een tabblad op /identity/v2/login met een andere zin, dus die ging naar
+  _stop_wachtrij. Gerepareerd in 566f44c2: nu pauze van 20 minuten en één opdracht met uitleg, de rest blijft
+  staan. Proef met de letterlijke zin faalt op 429793f7, slaagt nu. Sinds 14-09 is alleen Goudlief geraakt.
+- Open, wacht op Daniel: de 679 geannuleerde opdrachten van Goudlief terugzetten op wachtend. Niet zelf gedaan
+  (klantdata, en ze is nog uitgelogd: eerst inloggen, anders pauzeert het kanaal meteen weer).
+- Open, niet van klanten: tests/test_korte_kledingvraag.py faalt (5) sinds de kostenrem 18a473ac, de nep in de
+  proef kent het argument claude_ok niet. test_vinted_categories.py liep achter op 1.0.373 (wantKids), bijgezet.
+- Verder rustig: Amanda 8f91a370 Vinted-kleding nog open zoals vanochtend (geen nieuwe pogingen). Wachter op 0 open.

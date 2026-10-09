@@ -17,6 +17,54 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## tabblad-op-de-inlogpagina
+
+*09-10-2026 — Een werktabblad dat op /identity/v2/login uitkomt bewijst alleen dat DIT verzoek geen particuliere sessie meedroeg; een zakelijk account krijgt hetzelfde beeld*
+
+Komt een werktabblad van Marktplaats of 2dehands uit op `/identity/v2/login`,
+dan droeg DAT verzoek geen geldige particuliere sessie mee. Dat is iets anders
+dan "de verkoper is uitgelogd": een ZAKELIJK account krijgt op zijn persoonlijke
+advertentieoverzicht exact hetzelfde beeld, zie
+"zakelijk-account-lijkt-op-uitgelogd" (Egbert, 15-09-2026, bewezen met
+`"sellerType":"TRADER"` op zijn eigen advertentiepagina). Nagemeten 14-09-2026 met
+een kale aanvraag zonder cookies: `GET /my-account/sell/index.html` met
+`Accept: text/html` geeft 302 naar precies die pagina, met
+`Accept: application/json` 401 "Unauthorized" (12 bytes). Dat is dus het beeld
+van een bezoeker zonder cookies, en niets anders.
+
+Bij Egbert Brouwer is dat twee keer gebeurd terwijl hij zei dat hij ingelogd
+was: 05-09-2026 (305 opdrachten) en 14-09-2026 (288 opdrachten). Hij had beide
+keren gelijk. De tweede is opgelost: zijn account was zakelijk geworden. De
+eerste is de leugenachtige achtergrondmeting uit de service worker (06-09-2026:
+401 uit de achtergrond en 200 uit een tabblad, dertien seconden ertussen). Incognito verklaart het niet:
+publiceren ging pas vanaf 06-09-2026 in een bestaand venster (f12d3bba), daarvoor
+in ons eigen venster, en dat is nooit incognito.
+
+**Why:** "hij is niet ingelogd" is een conclusie, en die is bij deze man 27 keer
+fout geweest (oude achtergrondcontrole, 22-08 tot 09-09). Marktplaats en 2dehands
+zijn aparte inlogs van dezelfde eigenaar en hij werkt vrijwel alleen op
+Marktplaats, dus "ik ben ingelogd" kan waar zijn en de 2dehands-sessie toch weg.
+
+**How to apply:** noem de waarneming (HTTP-code plus waar het tabblad uitkwam),
+niet het oordeel, en stel één vraag: open die pagina en zeg wat je ziet. Zo'n
+melding mag nooit een wachtrij wissen; sinds 14-09-2026 gaat het kanaal twintig
+minuten op pauze en draagt één opdracht de uitleg
+(`_pauzeer_op_inlogverwijt` in jobs.py). Openstaand: de verkoper hoort te zien
+dat zijn sessie weg is vóórdat hij honderden artikelen klaarzet;
+`scan_meta.signed_in` weet het al, het dashboard doet er niets mee. Zie
+"storing-mag-nooit-als-antwoord-tellen", "auth-fouten-lijken-op-verkeerd-wachtwoord"
+en "uitgelogd-door-de-gedeelde-vernieuwsleutel".
+
+**Gat in de herkenning (09-10-2026, Goudlief 5aae4954).** De regel "nooit een wachtrij wissen" hing aan
+`_CLAIM_NIET_INGELOGD`, een patroon op de TEKST van de melding. De adresbewaking in background.js
+stuurt een andere zin ("that tab was sent to the ... login page"), die viel erbuiten en ging dus
+alsnog naar `_stop_wachtrij`: 337 MP en 342 2dehands in één klap. Patroon uitgebreid (566f44c2).
+Les: een afspraak die op een meldingstekst leunt breekt zodra iemand de zin herschrijft; zet bij
+elke nieuwe extensiemelding over inloggen een proef met de letterlijke zin in
+tests/test_inlogverwijt_wist_geen_wachtrij.py.
+
+---
+
 ## herplaatsen-vergat-de-slottekst
 
 *09-10-2026 — 29-09 herplaatsen zonder slottekst; de reparatie zette hem daarna bij 111 Zilverwebsite-advertenties DUBBEL (09-10), want 'slot in tekst' mist opmaak, eigen zoekwoorden en afgekapte tekst*
@@ -4655,46 +4703,6 @@ mag blijven publiceren.
 Zie "tabblad-op-de-inlogpagina", "storing-mag-nooit-als-antwoord-tellen",
 "beloofd-tempo-moet-gemeten-tempo-zijn" en
 "aanwezigheid-niet-vragen-maar-stempelen".
-
----
-
-## tabblad-op-de-inlogpagina
-
-*15-09-2026 — Een werktabblad dat op /identity/v2/login uitkomt bewijst alleen dat DIT verzoek geen particuliere sessie meedroeg; een zakelijk account krijgt hetzelfde beeld*
-
-Komt een werktabblad van Marktplaats of 2dehands uit op `/identity/v2/login`,
-dan droeg DAT verzoek geen geldige particuliere sessie mee. Dat is iets anders
-dan "de verkoper is uitgelogd": een ZAKELIJK account krijgt op zijn persoonlijke
-advertentieoverzicht exact hetzelfde beeld, zie
-"zakelijk-account-lijkt-op-uitgelogd" (Egbert, 15-09-2026, bewezen met
-`"sellerType":"TRADER"` op zijn eigen advertentiepagina). Nagemeten 14-09-2026 met
-een kale aanvraag zonder cookies: `GET /my-account/sell/index.html` met
-`Accept: text/html` geeft 302 naar precies die pagina, met
-`Accept: application/json` 401 "Unauthorized" (12 bytes). Dat is dus het beeld
-van een bezoeker zonder cookies, en niets anders.
-
-Bij Egbert Brouwer is dat twee keer gebeurd terwijl hij zei dat hij ingelogd
-was: 05-09-2026 (305 opdrachten) en 14-09-2026 (288 opdrachten). Hij had beide
-keren gelijk. De tweede is opgelost: zijn account was zakelijk geworden. De
-eerste is de leugenachtige achtergrondmeting uit de service worker (06-09-2026:
-401 uit de achtergrond en 200 uit een tabblad, dertien seconden ertussen). Incognito verklaart het niet:
-publiceren ging pas vanaf 06-09-2026 in een bestaand venster (f12d3bba), daarvoor
-in ons eigen venster, en dat is nooit incognito.
-
-**Why:** "hij is niet ingelogd" is een conclusie, en die is bij deze man 27 keer
-fout geweest (oude achtergrondcontrole, 22-08 tot 09-09). Marktplaats en 2dehands
-zijn aparte inlogs van dezelfde eigenaar en hij werkt vrijwel alleen op
-Marktplaats, dus "ik ben ingelogd" kan waar zijn en de 2dehands-sessie toch weg.
-
-**How to apply:** noem de waarneming (HTTP-code plus waar het tabblad uitkwam),
-niet het oordeel, en stel één vraag: open die pagina en zeg wat je ziet. Zo'n
-melding mag nooit een wachtrij wissen; sinds 14-09-2026 gaat het kanaal twintig
-minuten op pauze en draagt één opdracht de uitleg
-(`_pauzeer_op_inlogverwijt` in jobs.py). Openstaand: de verkoper hoort te zien
-dat zijn sessie weg is vóórdat hij honderden artikelen klaarzet;
-`scan_meta.signed_in` weet het al, het dashboard doet er niets mee. Zie
-"storing-mag-nooit-als-antwoord-tellen", "auth-fouten-lijken-op-verkeerd-wachtwoord"
-en "uitgelogd-door-de-gedeelde-vernieuwsleutel".
 
 ---
 
