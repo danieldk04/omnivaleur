@@ -122,6 +122,13 @@ Taal van het dashboard:
   advertenties" telt een artikel op drie kanalen als drie.
 - Het getal bij Berichten komt van de kanalen zelf en zakt pas als de berichten
   daar gelezen zijn, met tot 15 minuten vertraging.
+- Wil iemand weten wat er op een kanaal nog niet staat: bij Items, eerste
+  filter, "Nog niet op 2dehands" (of een ander kanaal). De balk bovenaan noemt
+  per kanaal hoeveel nieuwe advertenties, verlengingen en verwijderingen er
+  wachten. Calm mode is een instelling in de extensie (icoon rechtsboven in
+  Chrome) die rustig plaatst, ongeveer één per paar minuten.
+- Niet ingelogd op een kanaal dat iemand niet gebruikt geeft geen waarschuwing
+  meer; alleen als er werk wacht of advertenties online staan op dat kanaal.
 - Het menu van de Chrome-extensie zelf (het pop-upje als je op het
   puzzelstukje klikt) blijft Engels; in het Nederlandse dashboard staan de
   namen van die knoppen daarom ook in het Engels ("Calm mode", "Business account
