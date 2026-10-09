@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=b3691229c8"></script>
+<script src="/i18n.js?v=b4263cded0"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1703,6 +1703,14 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           Off by default. Vinted's terms since 5 October 2026 forbid using external tools and deleting and re-adding the same item.
           Breaking them can get your Vinted account warned, restricted or blocked.
           If you switch it on, a Vinted listing is refreshed at most once every 28 days, and a relist takes it down and brings it back 6 to 24 hours later.
+        </div>
+        <label class="vg-chip" style="max-width:420px;margin-bottom:6px">
+          <input type="checkbox" id="vinted-nederlands-aan" onchange="saveVintedTaal()">
+          <span>Write my Vinted listings in Dutch</span>
+        </label>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          Off by default: Vinted sells across Europe, so titles and descriptions go out in English.
+          Switch it on to keep them in Dutch. Applies to new listings; what is already on Vinted stays as it is.
         </div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <label for="relist-dagen" style="font-size:13px">Relist after</label>
@@ -12393,6 +12401,11 @@ async function loadRelistDagen() {
       vintedSchakel.checked = data.vinted_herplaatsen === true;
       vintedSchakel.closest('.vg-chip').classList.toggle('on', vintedSchakel.checked);
     }
+    const taalSchakel = document.getElementById('vinted-nederlands-aan');
+    if (taalSchakel) {
+      taalSchakel.checked = data.vinted_taal === 'nl';
+      taalSchakel.closest('.vg-chip').classList.toggle('on', taalSchakel.checked);
+    }
     const vraagSchakel = document.getElementById('verkoopvraag-aan');
     if (vraagSchakel) {
       vraagSchakel.checked = data.verkoopvraag !== false;
@@ -12826,6 +12839,30 @@ async function saveVintedHerplaatsen() {
     melding.textContent = schakel.checked
       ? 'Saved — refreshing and relisting on Vinted is on, at your own risk.'
       : 'Saved — Omnivaleur no longer refreshes or relists on Vinted.';
+  } catch (e) {
+    melding.textContent = `Could not save: ${e.message}`;
+  }
+}
+
+async function saveVintedTaal() {
+  const schakel = document.getElementById('vinted-nederlands-aan');
+  const melding = document.getElementById('relist-dagen-status');
+  if (!schakel) return;
+  schakel.closest('.vg-chip').classList.toggle('on', schakel.checked);
+  melding.textContent = 'Saving…';
+  try {
+    const r = await apiFetchRetry(`${API}/api/items/settings`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vinted_taal: schakel.checked ? 'nl' : 'en' }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+    state.settings = { ...state.settings, ...data };
+    schakel.checked = data.vinted_taal === 'nl';
+    schakel.closest('.vg-chip').classList.toggle('on', schakel.checked);
+    melding.textContent = schakel.checked
+      ? 'Saved — new Vinted listings go out in Dutch.'
+      : 'Saved — new Vinted listings go out in English.';
   } catch (e) {
     melding.textContent = `Could not save: ${e.message}`;
   }

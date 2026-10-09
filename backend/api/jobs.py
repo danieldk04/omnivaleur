@@ -1550,7 +1550,8 @@ def _zet_taal_goed(db, jobs: list) -> int:
     schrijven we het resultaat terug in de opdracht — anders zou dezelfde
     opdracht bij elke poll opnieuw vertaald worden.
 
-    Alleen de Nederlandstalige kanalen. Op Vinted en Shopify gaat de tekst uit
+    Alleen de Nederlandstalige kanalen (en Vinted voor wie daar Nederlands koos,
+    instelling vinted_taal). Op Vinted en Shopify gaat de tekst verder uit
     zoals de verkoper hem zelf schreef, en die hoort hier niet alsnog door een
     vertaling heen te gaan.
     """
@@ -1569,7 +1570,7 @@ def _zet_taal_goed(db, jobs: list) -> int:
             continue
         try:
             platform = j.get("platform")
-            doeltaal = taal_van_platform(platform)
+            doeltaal = taal_van_platform(platform, j.get("user_id"))
             if doeltaal != "nl":
                 door.append(j)
                 continue

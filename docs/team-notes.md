@@ -16414,3 +16414,14 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
 - Klant-eigen: Goudlief 5aae4954 sloot Chrome 08-10 21:41 midden in plaatsen, sindsdien offline met 679 plaatsingen
   (MP 337, 2dehands 342) wachtend. bcdf9aa4 tabblad weg 19:51. Amanda 10:48 uitgelogd op Vinted.
 - Alle 7 open foutsoorten beoordeeld (3 klant, 4 onbekend), wachter staat op 0 open.
+
+## 09-10-2026: Vinted in het Nederlands, per verkoper (Janneke)
+
+- Janneke (07:21): "Ik heb dit graag gewoon in het Nederlands. Kan dat?" Daniel dacht dat een Nederlandse tekst op
+  Vinted gewoon Nederlands bleef. Nagemeten: nee. Vinted zit in `_ENGLISH_PLATFORMS`; publiceren, herplaatsen en
+  de reddingsronde vertalen elke niet-Engelse tekst naar het Engels. Proef `tests/test_vinted_taal.py` (eerste test).
+- Nu: instelling `vinted_taal` ("en" standaard, "nl"), schakelaar "Write my Vinted listings in Dutch" bij
+  Instellingen (EN + NL). `taal_van_platform(platform, user_id)` kiest per verkoper; publish_to_platforms,
+  localize_item_for_platform, localiseer_sync en de taalzeef in jobs.py volgen die. Een minuut gecachet.
+  Bestaande Vinted-advertenties blijven zoals ze zijn. Testreeks: zelfde 71 bestaande fouten, 4 nieuwe groen.
+- Haar dashboard staat in het Nederlands (haar schermafbeeldingen: "Te plaatsen", "Filters wissen").

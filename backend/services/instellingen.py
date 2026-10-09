@@ -204,7 +204,7 @@ STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              FABRIKANT_MEESTUREN: True,
              "locatie_land": "", "locatie_plaats": "", "locatie_postcode": "",
              "levering": "beide", "pakket_grens": 0, "slottekst": "",
-             SHOPIFY_AUTO_IMPORT: None, SHOPIFY_AUTO_IMPORT_STAND: {}}
+             SHOPIFY_AUTO_IMPORT: None, SHOPIFY_AUTO_IMPORT_STAND: {}, "vinted_taal": "en"}
 
 
 def _schoon(rauw: dict | None) -> dict:
@@ -229,6 +229,11 @@ def _schoon(rauw: dict | None) -> dict:
     # Daarom staat herplaatsen op Vinted standaard UIT en kost het een bewuste klik.
     if "vinted_herplaatsen" in rauw:
         uit["vinted_herplaatsen"] = bool(rauw.get("vinted_herplaatsen"))
+    # De taal van de advertenties op Vinted: standaard Engels, want Vinted
+    # verkoopt internationaal; wie in het Nederlands wil kiest "nl" (Janneke,
+    # 09-10-2026). Alleen deze twee, al het andere blijft Engels.
+    if str(rauw.get("vinted_taal") or "").strip().lower() == "nl":
+        uit["vinted_taal"] = "nl"
     if VERKOOPVRAAG in rauw:
         uit[VERKOOPVRAAG] = bool(rauw.get(VERKOOPVRAAG))
     if SHOPIFY_AUTO_IMPORT in rauw:
