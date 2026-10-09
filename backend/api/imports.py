@@ -1589,6 +1589,84 @@ def _kindermaat(text: str) -> int | None:
     return min(gevonden) if gevonden else None
 
 
+# KINDERMAAT EN KINDERMERK UIT DE TITEL (09-10-2026, Janneke 31d28378, Daniel: "go").
+#
+# Van haar 2.748 artikelen hadden er ~2.070 geen maat en 2.746 geen merk, dus
+# bleven Marktplaats en 2dehands dicht ("Voeg merk, maat toe"). Haar titels
+# zeggen het wel: "Tussenjas Name it maat 128", "Trui Your Wishes maat 122-128".
+# Bij kleding lazen we de maat bewust niet uit de titel (een maat die het kanaal
+# niet kent is erger dan een lege). Voor KINDERkleding geldt dat niet: het
+# kinderraster (50, 56, ... 176) is op Marktplaats "Maat 128" en op Vinted
+# "8 jaar / 128 cm", en de extensie vindt beide aan het kale getal. Daarom alleen
+# bij een artikel dat al als kinderartikel bekend is, alleen getallen op dat
+# raster, en precies één maat. Een dubbele maat ("122-128", "44/50") wordt de
+# eerste: Vinted kent alleen losse maten, en zo staat hij er ook op Marktplaats.
+_KIND_RUBRIEK_RE = re.compile(r"kinder|jongens|meisjes|baby|peuter|\bkids\b")
+
+
+def _is_kinderartikel(gender: str | None, category: str | None) -> bool:
+    return (str(gender or "").strip().lower() == "kinderen"
+            or _KIND_RUBRIEK_RE.search(str(category or "").lower()) is not None)
+
+
+def _kindermaat_uit_titel(title: str | None) -> str | None:
+    tekst = (title or "").lower()
+    maten = set()
+    for m in re.finditer(r"\b(?:maat|mt|size)\.?\s*:?\s*(\d{2,3})(?:\s*[-/]\s*(\d{2,3}))?(?!\d)(?!\s*cm)",
+                         tekst):
+        a = int(m.group(1))
+        if a not in _KINDERRASTER:
+            return None
+        if m.group(2):
+            b = int(m.group(2))
+            if b not in _KINDERRASTER or b - a != 6:
+                return None
+        maten.add(a)
+    return str(maten.pop()) if len(maten) == 1 else None
+
+
+def maat_uit_titel(title: str | None, gender: str | None = None,
+                   category: str | None = None) -> str | None:
+    """De maat uit de titel: een schoenmaat, of bij een kinderartikel een
+    kindermaat. Anders None (zie hierboven en _schoenmaat_uit_titel)."""
+    schoen = _schoenmaat_uit_titel(title)
+    if schoen:
+        return schoen
+    if "schoen" in str(category or "").lower() or not _is_kinderartikel(gender, category):
+        return None
+    return _kindermaat_uit_titel(title)
+
+
+# De kindermerken uit _KINDERMERKEN zoals ze op Vinted en Marktplaats heten. Bij
+# een kinderartikel zijn ze eenduidig, ook "Name it" (bij volwassenen is dat
+# gewone taal, zie _MERK_IS_OOK_WOORD).
+_KINDERMERK_NAAM = {
+    "noppies": "Noppies", "jopper": "Jopper", "vingino": "Vingino", "z8": "Z8",
+    "tumble n dry": "Tumble 'n Dry", "tumble 'n dry": "Tumble 'n Dry", "name it": "Name It",
+    "feetje": "Feetje", "prenatal": "Prénatal", "prénatal": "Prénatal", "b.nosy": "B.Nosy",
+    "quapi": "Quapi", "molo": "Molo", "mini rodini": "Mini Rodini", "petit bateau": "Petit Bateau",
+    "bobo choses": "Bobo Choses", "shoesme": "Shoesme", "develab": "Develab",
+    "bunnies jr": "Bunnies Jr", "braqeez": "Braqeez", "like flo": "Like Flo", "levv": "LEVV",
+    "little label": "Little Label", "dirkje": "Dirkje", "mayoral": "Mayoral",
+    "babyface": "Babyface", "koeka": "Koeka", "bergstein": "Bergstein",
+}
+
+
+def merk_uit_titel(title: str | None, eigen_merken: dict, gender: str | None = None,
+                   category: str | None = None) -> str | None:
+    """Een merk dat de verkoper zelf al gebruikt, of bij een kinderartikel een
+    bekend kindermerk; alleen als er precies één in de titel staat."""
+    merken = dict(eigen_merken or {})
+    if _is_kinderartikel(gender, category):
+        for k, naam in _KINDERMERK_NAAM.items():
+            merken.setdefault(k, naam)
+    tekst = " ".join((title or "").lower().split())
+    gevonden = {k for k in merken if re.search(r"(?<![\w])" + re.escape(k) + r"(?![\w])", tekst)}
+    gevonden = {k for k in gevonden if not any(k != g and k in g for g in gevonden)}
+    namen = {merken[k] for k in gevonden}
+    return namen.pop() if len(namen) == 1 else None
+
+
 def _infer_attributes(title: str | None, description: str | None = None) -> dict:
     """Best-effort colour / gender / category from the listing text. Conservative:
     only returns a value when confident, so callers can fill empty fields without
@@ -1900,7 +1978,9 @@ def _item_data_from_candidate(cand: dict, body: dict | None = None,
         "description": pick("description"),
         "purchase_price": body.get("purchase_price"),
         "brand": _past("brand", pick("brand")),
-        "size": _past("size", pick("size") or _schoenmaat_uit_titel(volle_titel)),
+        "size": _past("size", pick("size") or maat_uit_titel(
+            volle_titel, pick("gender") or inferred.get("gender"),
+            pick("category") or inferred.get("category"))),
         # De staat komt van drie kanten, in deze volgorde: wat de gebruiker in het
         # formulier typte, wat het platform meegaf, en anders de standaard voor
         # deze hele lading. Die laatste bestaat omdat Admarkt geen staat meelevert
@@ -2043,7 +2123,9 @@ def _backfill_patch(current: dict, cand: dict, inferred: dict | None = None) -> 
                 and _past(field, inferred[field]) is not None):
             patch[field] = inferred[field]
     if "size" not in patch and _is_empty(current.get("size")):
-        maat = _schoenmaat_uit_titel(cand.get("title"))
+        maat = maat_uit_titel(cand.get("title"),
+                              patch.get("gender") or current.get("gender") or inferred.get("gender"),
+                              patch.get("category") or current.get("category") or inferred.get("category"))
         if maat:
             patch["size"] = maat
     return patch
@@ -2995,7 +3077,10 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
     _merken = merken_uit_voorraad(list(items) + list(candidates))
     for c in candidates:
         if not str(c.get("brand") or "").strip():
-            merk = _merk_uit_titel(c.get("title"), _merken)
+            _afl = _infer_attributes(c.get("title"), c.get("description"))
+            merk = merk_uit_titel(c.get("title"), _merken,
+                                  c.get("gender") or _afl.get("gender"),
+                                  c.get("category") or _afl.get("category"))
             if merk:
                 c["brand"] = merk
 

@@ -16523,3 +16523,17 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   gesloten in de kast staan en wordt dus niet gemist.
 - Proeven: test_shopify_dubbel_alleen_op_nummer (6), test_vinted_verse_advertentie_niet_weg (5, 3 falen op de
   oude code). Volledige suite voor en na gelijk (76 bestaande fouten, 15 errors).
+
+## 09-10-2026 (middag, vervolg): kindermaat en kindermerk uit de titel, waarschuwing in het Nederlands (Janneke, Daniel "go")
+
+- Janneke: ~2.070 van 2.748 zonder maat, 2.746 zonder merk, dus Marktplaats/2dehands dicht ("Voeg brand, size toe").
+  Nu `maat_uit_titel` en `merk_uit_titel` in imports.py, gebruikt bij importeren, bij publiceren (crosslist
+  `_fill_inferred_gaps`) en in de ronde `vul_maat_en_merk_uit_titel` (3 min na elke start en elke 3 uur).
+- Regels: alleen bij een kinderartikel (geslacht kinderen of een kinderrubriek; zonder rubriek beslist de titel via
+  `_infer_attributes`). Maat alleen op het kinderraster 44-176, precies één; "122-128" en "44/50" worden de eerste
+  (Vinted kent alleen losse maten, "8 jaar / 128 cm"; Marktplaats "Maat 128", beide vindt de extensie aan het kale
+  getal). Merk uit `_KINDERMERK_NAAM` (de vaste kindermerken + Bergstein) of eigen merken, precies één.
+  Volwassen kleding blijft zoals het was: geen maat uit de titel.
+- "Add brand, size for Marktplaats & 2dehands" werd "Voeg brand, size toe": de veldnamen stonden niet in nl.json.
+  Nu "Voeg merk, maat toe" (getest met de echte i18n.js in Node).
+- Niet gedaan: haar proef verlengen (11-10). Advies aan Daniel: tot 18-10, beslissing bij hem.

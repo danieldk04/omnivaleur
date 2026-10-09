@@ -3443,5 +3443,13 @@
  "Dutch or English, whichever you prefer. Omnivaleur translates for each marketplace: Dutch for Marktplaats, 2dehands and eBay, English for Shopify. Vinted and WooCommerce get exactly what you wrote.": "Nederlands of Engels, wat je wilt. Omnivaleur vertaalt voor elke marktplaats: Nederlands voor Marktplaats, 2dehands en eBay, Engels voor Shopify. Vinted en WooCommerce krijgen precies wat jij schreef.",
  "Yes, if it runs on Shopify or WooCommerce: connect it under Platforms and import under Import. Other webshop systems can't be imported. The adverts you already have on": "Ja, als hij op Shopify of WooCommerce draait: koppel hem onder Platforms en importeer onder Importeren. Andere webshopsystemen kunnen niet geïmporteerd worden. De advertenties die je al hebt op",
  "you can import under Import too.": "kun je ook importeren onder Importeren.",
- "on the item and pick where it sold: Omnivaleur takes it off your other marketplaces. A sale on Vinted, or a paid order on eBay, Shopify or WooCommerce, is picked up automatically. When an advert simply disappears from Vinted, Marktplaats or 2dehands you get a": "bij het item en kies waar het verkocht is: Omnivaleur haalt het van je andere marktplaatsen. Een verkoop op Vinted, of een betaalde bestelling op eBay, Shopify of WooCommerce, wordt automatisch opgemerkt. Verdwijnt een advertentie gewoon van Vinted, Marktplaats of 2dehands, dan krijg je eerst een"
+ "on the item and pick where it sold: Omnivaleur takes it off your other marketplaces. A sale on Vinted, or a paid order on eBay, Shopify or WooCommerce, is picked up automatically. When an advert simply disappears from Vinted, Marktplaats or 2dehands you get a": "bij het item en kies waar het verkocht is: Omnivaleur haalt het van je andere marktplaatsen. Een verkoop op Vinted, of een betaalde bestelling op eBay, Shopify of WooCommerce, wordt automatisch opgemerkt. Verdwijnt een advertentie gewoon van Vinted, Marktplaats of 2dehands, dan krijg je eerst een",
+ "brand": "merk",
+ "size": "maat",
+ "color": "kleur",
+ "gender": "geslacht",
+ "category": "rubriek",
+ "photos": "foto's",
+ "description": "omschrijving",
+ "price": "prijs"
 }

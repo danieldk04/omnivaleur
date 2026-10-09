@@ -937,10 +937,17 @@ async def _fill_inferred_gaps(db, item: dict) -> dict:
     # De schoenmaat staat vaak alleen in de titel ("schoenmaat 31"); zie
     # api/imports._schoenmaat_uit_titel. Alleen als het maatveld leeg is.
     try:
-        from backend.api.imports import _schoenmaat_uit_titel
-        maat = _schoenmaat_uit_titel(item.get("title"))
+        from backend.api.imports import maat_uit_titel, merk_uit_titel
+        gender = patch.get("gender") or item.get("gender")
+        category = patch.get("category") or item.get("category")
+        maat = maat_uit_titel(item.get("title"), gender, category)
         if maat and not str(item.get("size") or "").strip():
             patch["size"] = maat
+        # Kindermerk uit de titel (Janneke 09-10-2026); eigen merken doet de
+        # ronde in categorie_herstel, hier alleen het vaste kinderlijstje.
+        merk = merk_uit_titel(item.get("title"), {}, gender, category)
+        if merk and not str(item.get("brand") or "").strip():
+            patch["brand"] = merk
     except Exception as e:
         logger.warning(f"Size from title failed for item {item.get('id')}: {e}")
     if not patch:

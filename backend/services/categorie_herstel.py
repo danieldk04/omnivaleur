@@ -387,11 +387,12 @@ async def vul_rubrieken_uit_woordenlijst(user_id: str | None = None,
 # voorraad, en het dashboard hield Marktplaats en 2dehands daarom op slot ("Voeg
 # brand, size toe"). Het importeren vult dat sinds vandaag zelf in; deze ronde
 # doet hetzelfde voor wat er al stond. Zelfde regels als bij importeren
-# (api/imports._schoenmaat_uit_titel en _merk_uit_titel): alleen een schoenmaat,
+# (api/imports.maat_uit_titel en merk_uit_titel): een schoenmaat, of bij een
+# kinderartikel een kindermaat of kindermerk (sinds 09-10-2026),
 # alleen een merk dat de verkoper zelf al gebruikt, alleen lege velden.
 async def vul_maat_en_merk_uit_titel(user_id: str | None = None,
                                      max_artikelen: int = 20000) -> dict:
-    from backend.api.imports import _schoenmaat_uit_titel, _merk_uit_titel, merken_uit_voorraad
+    from backend.api.imports import maat_uit_titel, merk_uit_titel, merken_uit_voorraad, _infer_attributes
     from backend.database import fetch_all
 
     db = get_db()
@@ -399,7 +400,7 @@ async def vul_maat_en_merk_uit_titel(user_id: str | None = None,
     laatste_id = None
     merken_per_verkoper: dict[str, dict] = {}
     while gelezen < max_artikelen:
-        q = (db.table("items").select("id,user_id,title,size,brand")
+        q = (db.table("items").select("id,user_id,title,size,brand,gender,category")
              .or_("size.is.null,size.eq.,brand.is.null,brand.eq.")
              .order("id"))
         if user_id:
@@ -418,8 +419,15 @@ async def vul_maat_en_merk_uit_titel(user_id: str | None = None,
         for item in rijen:
             gelezen += 1
             patch = {}
+            # Nog zonder geslacht of rubriek? Dan zegt de titel of het een
+            # kinderartikel is ("Winterjas Noppies maat 98"), zoals bij importeren.
+            gender, category = item.get("gender"), item.get("category")
+            if not (str(gender or "").strip() and str(category or "").strip()):
+                afl = _infer_attributes(item.get("title"))
+                gender = gender or afl.get("gender")
+                category = category or afl.get("category")
             if not str(item.get("size") or "").strip():
-                maat = _schoenmaat_uit_titel(item.get("title"))
+                maat = maat_uit_titel(item.get("title"), gender, category)
                 if maat:
                     patch["size"] = maat
             if not str(item.get("brand") or "").strip():
@@ -432,7 +440,8 @@ async def vul_maat_en_merk_uit_titel(user_id: str | None = None,
                     except Exception as e:  # noqa: BLE001
                         logger.warning(f"Maat-en-merkronde: merken van {uid} niet gelezen: {e}")
                         merken_per_verkoper[uid] = {}
-                merk = _merk_uit_titel(item.get("title"), merken_per_verkoper[uid])
+                merk = merk_uit_titel(item.get("title"), merken_per_verkoper[uid],
+                                      gender, category)
                 if merk:
                     patch["brand"] = merk
             if not patch:

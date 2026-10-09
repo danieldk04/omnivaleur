@@ -128,3 +128,24 @@ def test_ronde_vult_bestaande_voorraad(monkeypatch):
     assert (per_id["a4"]["size"], per_id["a4"]["brand"]) == (None, None)
     assert (per_id["b1"]["size"], per_id["b1"]["brand"]) == ("40", None)
     assert uit["gevuld"] == 2 and uit["mislukt"] == 0
+
+
+def test_ronde_vult_kindermaat_en_kindermerk(monkeypatch):
+    """09-10-2026: ook kinderkleding, en ook als de rubriek nog leeg is."""
+    from backend.services import categorie_herstel
+    import backend.database as database
+    db = _DB([
+        {"id": "k1", "user_id": "j", "title": "Tussenjas Name it maat 128", "size": None, "brand": None,
+         "gender": None, "category": None},
+        {"id": "k2", "user_id": "j", "title": "Winterjas Noppies maat 98", "size": None, "brand": None,
+         "gender": "kinderen", "category": "peuterkleding"},
+        {"id": "k3", "user_id": "j", "title": "Herenjas maat 98", "size": None, "brand": None,
+         "gender": "heren", "category": None},
+    ])
+    monkeypatch.setattr(categorie_herstel, "get_db", lambda: db)
+    monkeypatch.setattr(database, "execute_with_retry", lambda q: q.execute())
+    asyncio.run(categorie_herstel.vul_maat_en_merk_uit_titel())
+    per_id = {r["id"]: r for r in db.items}
+    assert (per_id["k1"]["size"], per_id["k1"]["brand"]) == ("128", "Name It")
+    assert (per_id["k2"]["size"], per_id["k2"]["brand"]) == ("98", "Noppies")
+    assert (per_id["k3"]["size"], per_id["k3"]["brand"]) == (None, None)
