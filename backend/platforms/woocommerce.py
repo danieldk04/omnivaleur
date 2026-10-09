@@ -403,11 +403,12 @@ async def controleer_sleutels(adres_of_api: str, ck: str, cs: str) -> dict:
         api_root = await ontdek_api(adres)
     laatste: WooFout | None = None
     for modus in modi_voor(api_root):
+        client = WooClient(api_root, ck, cs, modus)
         try:
-            _, data, kop = await WooClient(api_root, ck, cs, modus).verzoek(
+            _, data, kop = await client.verzoek(
                 "GET", "wc/v3/products", {"per_page": 1, "status": "any"}, timeout=30.0)
             totaal = int(kop.get("x-wp-total") or 0) if kop.get("x-wp-total") else None
-            return {"api_root": api_root, "site": site_van_api(api_root), "modus": modus,
+            return {"api_root": api_root, "site": site_van_api(api_root), "modus": client.modus,
                     "producten": totaal}
         except WooFout as e:
             laatste = e
