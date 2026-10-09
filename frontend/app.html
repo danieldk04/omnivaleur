@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=2bc4e94246"></script>
+<script src="/i18n.js?v=7717edb5f6"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -3233,6 +3233,17 @@ function hideExtSigninCallout() {
   document.getElementById('ext-signin-callout').style.display = 'none';
 }
 
+// Op een telefoon of tablet bestaan Chrome-extensies niet. Daar dus nooit het
+// blokkerende "installeer de extensie"-venster: dat stuurt iemand naar iets wat
+// op dat apparaat niet kan (telefoonproef 09-10-2026). De statusregel bovenaan
+// (renderExtensionStatus) zegt daar wat er op de computer moet gebeuren.
+function _opTelefoon() {
+  try {
+    return matchMedia('(max-width: 768px)').matches
+      || matchMedia('(hover: none) and (pointer: coarse)').matches;
+  } catch (e) { return false; }
+}
+
 // Renders whichever of the two setup states applies. 'checking' shows nothing —
 // never flash "install the extension" at someone who has it.
 function renderExtSetup() {
@@ -3245,7 +3256,7 @@ function renderExtSetup() {
 
   // Install step: blocking, because publishing is impossible without it.
   // Dismissal is per-browser ("Not now"), but a real detection still wins.
-  modal.style.display = (missing && !localStorage.getItem('cl_ext_ok')) ? 'flex' : 'none';
+  modal.style.display = (missing && !_opTelefoon() && !localStorage.getItem('cl_ext_ok')) ? 'flex' : 'none';
 
   // Bijwerkstap: net zo blokkerend. Een te oude kopie is erger dan geen kopie,
   // want ze neemt werk aan en levert het half af. Het weggeklikte "toch doorgaan"
@@ -9756,6 +9767,15 @@ function renderExtensionStatus() {
     // hide rather than show a misleading state. Een verouderde kopie melden we
     // wél, ook dan.
     if (!data || data.online === null || data.online === undefined) {
+      // Nog nooit een extensie gezien en je kijkt op je telefoon: zeg waar het
+      // plaatsen gebeurt, in plaats van niets (het installatievenster komt op
+      // een telefoon bewust niet, zie _opTelefoon).
+      if (!oud && data && _opTelefoon()) {
+        el.style.display = 'flex';
+        el.className = 'comp-status comp-status-offline';
+        el.innerHTML = `<span class="comp-dot"></span><div><b>Publishing happens on your computer.</b> Open omnivaleur.com/app in Chrome on your computer and add the Omnivaleur extension there. On your phone you can check and manage everything.</div>`;
+        return;
+      }
       if (!oud) { el.style.display = 'none'; return; }
       el.style.display = 'flex';
       el.className = 'comp-status comp-status-offline';
