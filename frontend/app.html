@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=5d890cf879"></script>
+<script src="/i18n.js?v=9615a4575d"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -885,6 +885,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <li><b>Margin calculator</b> is now a tab under <b>Analytics</b>.</li>
         <li><b>Automatic protections</b> is now a tab under <b>Preferences</b>.</li>
         <li><b>Earn 1 month free</b> moved to the bottom of the menu, above Help.</li>
+        <li>The bar at the top now shows <b>how many adverts are waiting</b> per marketplace, and under Items you can filter on <b>Not on 2dehands yet</b> (and the other marketplaces).</li>
         <li><b>Green icons</b> now open your advert: click one on an item to see the advert on that marketplace.</li>
         <li>The number <b>To list</b> on the dashboard was sometimes too high. It now only counts items that are not online anywhere yet.</li>
       </ul>
@@ -1199,6 +1200,11 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <option value="facebook">Facebook Marketplace</option>
             <option value="ebay">eBay</option>
             <option value="shopify">Shopify</option>
+            <option value="niet:marktplaats">Not on Marktplaats yet</option>
+            <option value="niet:2dehands">Not on 2dehands yet</option>
+            <option value="niet:vinted">Not on Vinted yet</option>
+            <option value="niet:ebay">Not on eBay yet</option>
+            <option value="niet:shopify">Not on Shopify yet</option>
           </select>
           <select id="filter-vinted" onchange="applyFilters()" title="Hides items Vinted refuses (coins, banknotes, stamps, archaeological items) or that your own Vinted setting leaves out">
             <option value="all">Vinted: all</option>
@@ -5553,13 +5559,17 @@ function applyFilters(resetPage) {
   for (const t of ITEMS_TABS) document.getElementById('tabcount-' + t).textContent = counts[t];
   document.querySelectorAll('.items-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === itemsTab));
 
+  // "Hoe houd ik overzicht wat al op 2eHands staat?" (Egbert, 02-10-2026): naast
+  // "op kanaal X" ook "nog niet op kanaal X".
+  const nietOp = platformFilter.startsWith('niet:') ? platformFilter.slice(5) : '';
+  const opKanaal = nietOp || platformFilter;
   const platformItemIds = platformFilter !== 'all'
-    ? new Set(state.listings.filter(l => l.platform === platformFilter && l.status === 'active').map(l => l.item_id))
+    ? new Set(state.listings.filter(l => l.platform === opKanaal && l.status === 'active').map(l => l.item_id))
     : null;
 
   const filtered = state.items.filter(item => {
     if (tabOf.get(item.id) !== itemsTab) return false;
-    if (platformItemIds && !platformItemIds.has(item.id)) return false;
+    if (platformItemIds && (nietOp ? platformItemIds.has(item.id) : !platformItemIds.has(item.id))) return false;
     // Elk woord los, in elke volgorde (Janneke, 08-10-2026): "winterjas noppies"
     // zocht die twee woorden aaneen en vond dus niets, terwijl ze haar
     // Noppies-winterjassen zocht. De maat telt mee, zodat "winterjas 104" werkt.
@@ -11993,6 +12003,32 @@ const ACTION_VERB = {
   extend: 'renewing a listing',
 };
 
+// "Wat staat er te wachten": per kanaal en soort, met het echte aantal van de
+// server (per_soort). Elk zelfstandig naamwoord is een eigen tekstknoop, zodat de
+// vertaallaag het kan vinden.
+const WACHT_NAAMWOORD = {
+  create: ['new advert', 'new adverts'], delete: ['removal', 'removals'],
+  content_refresh: ['update', 'updates'], extend: ['renewal', 'renewals'],
+  scan: ['check of your listings', 'checks of your listings'],
+};
+function wachtrijOverzicht() {
+  let soorten = _activityState.per_soort;
+  if (!Array.isArray(soorten) || !soorten.length) {
+    const tel = {};
+    for (const j of (_activityState.queued || [])) {
+      const k = (j.action || 'create') + '|' + j.platform;
+      tel[k] = (tel[k] || 0) + 1;
+    }
+    soorten = Object.entries(tel).map(([k, n]) => ({ action: k.split('|')[0], platform: k.split('|')[1], n }));
+  }
+  if (!soorten.length) return '';
+  const regels = soorten.slice(0, 6).map(s => {
+    const woord = WACHT_NAAMWOORD[s.action] || ['task', 'tasks'];
+    return `<span style="white-space:nowrap">${esc(PLATFORM_LABELS[s.platform] || s.platform)}: <b>${s.n}</b> <span>${woord[s.n === 1 ? 0 : 1]}</span></span>`;
+  });
+  return `<div style="margin-top:6px"><span>Waiting now:</span> ${regels.join(' &nbsp;·&nbsp; ')}</div>`;
+}
+
 function describeJobs(jobs, totaal) {
   // "Vinted (removing a listing)" style, de-duplicated, max 3 shown.
   const parts = jobs.slice(0, 3).map(j => {
@@ -12037,7 +12073,12 @@ function renderKanaalSessie() {
   const bar = document.getElementById('kanaal-sessie-bar');
   if (!bar) return;
   const kanalen = (extState && extState.kanalen) || {};
-  const uit = Object.entries(kanalen).filter(([, v]) => v && v.ingelogd === false);
+  // Alleen kanalen waar hij iets heeft: werk dat wacht of advertenties die online
+  // staan (die moeten er bij een verkoop af kunnen). Goudlief (09-10-2026): "een
+  // uitroepteken omdat ik niet op Vinted ben ingelogd, maar dat wil ik ook niet".
+  const inGebruik = p => (state.jobs || []).some(j => j.platform === p)
+    || (state.listings || []).some(l => l.platform === p && l.status === 'active');
+  const uit = Object.entries(kanalen).filter(([p, v]) => v && v.ingelogd === false && inGebruik(p));
   if (!uit.length) { bar.style.display = 'none'; return; }
   const namen = uit.map(([p]) => (KANAAL_SITE[p] || { naam: p }).naam);
   const sinds = _kanaalSinds(Math.min(...uit.map(([, v]) => v.sinds || v.at || 0)));
@@ -12206,11 +12247,12 @@ function renderActivityBar() {
       }
     } else if (pace && pace.calm && pace.seconds_between) {
       const minuten = Math.max(1, Math.round(pace.seconds_between / 60));
-      title.textContent = `${nQueued} job${nQueued === 1 ? '' : 's'} queued — Calm mode is spacing them out`;
-      text.innerHTML = `Calm mode is on, so the extension does about <b>one every ${minuten} minutes</b> `
-        + `instead of back to back. These ${nQueued} will take ${fmtQueueEta(nQueued, pace.seconds_per_job || pace.seconds_between)} `
-        + `(${describeJobs(queued, nQueued)}). <b>Nothing is stuck</b> — long quiet gaps are what Calm mode does. `
-        + `To run them straight through, click the Omnivaleur extension icon and switch Calm mode off.`
+      // "Wat wordt bedoeld met calm mode?" (Goudlief, 08-10-2026). Zeg wat het is
+      // voordat je de naam gebruikt.
+      title.textContent = `${nQueued} waiting, placed slowly on purpose (Calm mode)`;
+      text.innerHTML = `Calm mode is a setting in the extension: it places about <b>one every ${minuten} minutes</b>, `
+        + `so it looks like a person doing it. These ${nQueued} will take ${fmtQueueEta(nQueued, pace.seconds_per_job || pace.seconds_between)}. `
+        + `<b>Nothing is stuck.</b> Want it faster? Click the Omnivaleur icon at the top right of Chrome and switch Calm mode off.`
         + voortgang + stilZin;
     } else {
       // OOK ZONDER CALM MODE IS EEN LANGE RIJ EEN LANGE RIJ.
@@ -12248,6 +12290,7 @@ function renderActivityBar() {
       ? 'Stop this one'
       : `Clear queue (${nQueued})`;
   }
+  if (nQueued > 0) text.innerHTML += wachtrijOverzicht();
   bar.style.display = 'flex';
 }
 
@@ -12308,7 +12351,7 @@ async function cancelActiveJobs() {
       const r = await apiFetch(`${API}/api/jobs/cancel-queued`, { method: 'POST' });
       const body = await requireOk(r, 'Could not clear the queue');
       aantal = body.cancelled ?? 0;
-      _activityState = { ..._activityState, queued: [], queued_total: 0 };
+      _activityState = { ..._activityState, queued: [], queued_total: 0, per_soort: [] };
     } else {
       // Eén lopende opdracht afbreken. Ook hier telt alleen wat de server
       // bevestigt: een geweigerd verzoek mag niet als "gelukt" van het scherm
@@ -12355,6 +12398,7 @@ async function pollActivity() {
     const prevWorking = (_activityState.working || []).length;
     _activityState = { working: data.working || [], queued: data.queued || [],
                        queued_total: data.queued_total ?? (data.queued || []).length,
+                       per_soort: Array.isArray(data.per_soort) ? data.per_soort : null,
                        pace: data.pace || null };
     renderActivityBar();
     renderKanaalSessie();

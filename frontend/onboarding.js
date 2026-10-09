@@ -429,10 +429,14 @@
     const meting = (ext.kanalen || {})[platform];
     const site = { marktplaats: "marktplaats.nl", "2dehands": "2dehands.be", vinted: "vinted.nl", facebook: "facebook.com/marketplace" }[platform];
     let badge = `<span class="badge" style="background:#f1f5f9;color:#475569">Uses your Chrome login</span>`;
-    let regel = `Sign in to <b>${site}</b> in the Chrome where the extension runs. Omnivaleur publishes as you.`;
+    let regel = `Sign in to <a href="https://${site}" target="_blank" rel="noopener" style="color:var(--blue,#2563eb);font-weight:650">${site}</a> in the Chrome where the extension runs. There is nothing to connect: Omnivaleur publishes as you.`;
     if (meting && meting.ingelogd === true) {
       badge = `<span class="badge active">✓ Signed in</span>`;
       regel = `You're signed in to <b>${site}</b> in this browser. Omnivaleur publishes as you.`;
+    } else if (meting && meting.ingelogd === false && !(actief > 0)) {
+      // Niet ingelogd op een kanaal dat hij niet gebruikt is geen probleem.
+      badge = `<span class="badge" style="background:#f1f5f9;color:#475569">Not signed in</span>`;
+      regel = `Not signed in to <b>${site}</b> in this browser. Only needed if you want to sell there. <a href="https://${site}" target="_blank" rel="noopener" style="color:var(--blue,#2563eb);font-weight:650">Open and sign in →</a>`;
     } else if (meting && meting.ingelogd === false) {
       badge = `<span class="badge" style="background:#fff7ed;color:#9a3412">Not signed in</span>`;
       regel = `You're not signed in to <b>${site}</b> in this browser. <a href="https://${site}" target="_blank" rel="noopener" style="color:var(--blue,#2563eb);font-weight:650">Open and sign in →</a>`;
@@ -504,6 +508,10 @@
       "That is normal. Omnivaleur uses it to keep the tab working at full speed while it fills in the form. Don't click it away; it disappears by itself when the advert is done."],
     ["Publishing", "Can I set shipping costs per marketplace?",
       "Yes. Under <b>Preferences</b>, at <b>How you deliver</b>, you set what Marktplaats and 2dehands show. eBay shipping is under <b>Platforms › eBay</b>. On Vinted the buyer pays shipping through Vinted itself."],
+    ["Publishing", "What is Calm mode?",
+      "A setting in the extension (click the Omnivaleur icon at the top right of Chrome). With Calm mode on, Omnivaleur places about one advert every few minutes instead of one after the other, so it looks like a person doing it. Slower, but calmer for your accounts. Switch it off and the queue runs straight through."],
+    ["Publishing", "How do I see which items are not on 2dehands yet?",
+      "Go to <b>Items</b> and pick <b>Not on 2dehands yet</b> in the first filter. That works for every marketplace. Select them all and use <b>Publish to…</b> to place them in one go."],
     ["Publishing", "Why does it take a while?",
       "Each advert takes about a minute or two, because the marketplace's own form needs that time, and Omnivaleur deliberately leaves a little room between adverts. With a big stock it's best to let it run overnight. Keep the computer on and awake with Chrome running; Omnivaleur keeps it awake by itself while work is waiting."],
     ["Publishing", "It says I'm not signed in, but I am",

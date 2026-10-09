@@ -3075,6 +3075,41 @@ def relist_status(user_id: str = Depends(get_current_user)):
 # de teller eronder moet weten wanneer hij de grens raakt.
 _ACTIEF_LIMIET = 50
 
+# Wat er wacht, per soort en kanaal, voor de balk op het dashboard. Egbert
+# (04-10-2026): "ik zie veel gebeuren op 2eHands in een geopend tabblad, zonder
+# dat ik weet wat er precies gebeurt en voor hoeveel advertenties". Boven de 50
+# kost dit een extra lezing van twee kleine kolommen; die bewaren we een minuut
+# per verkoper, want de balk vraagt elke vier seconden.
+_PER_SOORT_CACHE: dict[str, tuple[float, list]] = {}
+
+
+def _wachtrij_per_soort(db, user_id: str, queued: list, volledig: bool, now: str) -> list:
+    import time
+    if volledig:
+        rijen = queued
+    else:
+        gecachet = _PER_SOORT_CACHE.get(user_id)
+        if gecachet and time.monotonic() - gecachet[0] < 60:
+            return gecachet[1]
+        try:
+            rijen = fetch_all(lambda: db.table("jobs").select("id,action,platform")
+                              .eq("user_id", user_id).eq("status", "pending")
+                              .or_(f"scheduled_for.is.null,scheduled_for.lte.{now}"))
+        except Exception as e:  # noqa: BLE001 — een overzicht mag de balk nooit slopen
+            logger.warning("active_jobs: wachtrij per soort niet te lezen: %s", e)
+            return []
+    tel: dict[tuple, int] = {}
+    for j in rijen:
+        if _is_2dh_bijwerking(j):
+            continue
+        sleutel = (j.get("action") or "create", j.get("platform") or "")
+        tel[sleutel] = tel.get(sleutel, 0) + 1
+    uit = [{"action": a, "platform": p, "n": n}
+           for (a, p), n in sorted(tel.items(), key=lambda kv: -kv[1])]
+    if not volledig:
+        _PER_SOORT_CACHE[user_id] = (time.monotonic(), uit)
+    return uit
+
 
 @router.get("/active")
 def active_jobs(user_id: str = Depends(get_current_user)):
@@ -3200,6 +3235,7 @@ def active_jobs(user_id: str = Depends(get_current_user)):
     # Het gemeten tempo mee terug: het dashboard beloofde "within ~15 seconds"
     # terwijl Calm mode er 3 tot 8 minuten van maakt. Zie _gemeten_tempo.
     return {"working": working, "queued": queued, "queued_total": queued_total,
+            "per_soort": _wachtrij_per_soort(db, user_id, queued, len(rows) < _ACTIEF_LIMIET, now),
             "pace": _gemeten_tempo(db, user_id)}
 
 
