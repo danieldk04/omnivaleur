@@ -206,6 +206,27 @@ def _met_auth(methode: str, url: str, ck: str, cs: str, modus: str) -> tuple[str
     raise ValueError(f"onbekende inlogmodus {modus}")
 
 
+def lees_json(tekst: str):
+    """JSON uit een antwoord, ook als PHP er eerst een waarschuwing voor zette.
+
+    Een WordPress-site met display_errors aan zet "Warning: ..." of "Deprecated:
+    ..." als HTML vóór de gegevens (gezien op de testwinkel met WooCommerce 5.1,
+    09-10-2026). De gegevens zelf kloppen; alleen het begin moet eraf."""
+    try:
+        return json.loads(tekst)
+    except ValueError:
+        pass
+    dec = json.JSONDecoder()
+    for m in re.finditer(r"(?m)(?:^|>)\s*([\[{])", tekst or ""):
+        try:
+            data, eind = dec.raw_decode(tekst, m.start(1))
+        except ValueError:
+            continue
+        if not tekst[eind:].strip() and isinstance(data, (list, dict)):
+            return data
+    raise ValueError("geen JSON")
+
+
 def modi_voor(api_root: str) -> tuple[str, ...]:
     return ("basic", "query") if api_root.lower().startswith("https://") else ("oauth1",)
 
@@ -266,7 +287,13 @@ class WooClient:
                                              content=json.dumps(body) if body is not None else None)
                 except (httpx.TransportError, httpx.TimeoutException) as e:
                     laatste = e
-                    if poging < POGINGEN - 1:
+                    # Iets AANMAKEN (POST) alleen opnieuw als de winkel het verzoek
+                    # aantoonbaar nooit kreeg. GEMETEN 09-10-2026 op WooCommerce 5.1:
+                    # de winkel crashte ná het opslaan, en vier herhaalpogingen
+                    # maakten vier bestellingen. Bij een product zou dat vier keer
+                    # hetzelfde artikel in de winkel zijn.
+                    nooit_aangekomen = isinstance(e, (httpx.ConnectError, httpx.ConnectTimeout))
+                    if poging < POGINGEN - 1 and (methode != "POST" or nooit_aangekomen):
                         await asyncio.sleep(WACHT_S[min(poging, len(WACHT_S) - 1)])
                         continue
                     raise WooFout("Your shop did not answer (the connection dropped). We try "
@@ -275,6 +302,8 @@ class WooClient:
                 # met WooCommerce-JSON is een echte weigering en heeft geen herkansing.
                 tijdelijk = r.status_code in (429, 502, 503, 504) or (
                     r.status_code == 500 and "json" not in (r.headers.get("content-type") or "").lower())
+                if methode == "POST" and r.status_code != 429:
+                    tijdelijk = False   # zie hierboven: misschien al aangemaakt
                 if tijdelijk and poging < POGINGEN - 1:
                     wacht = WACHT_S[min(poging, len(WACHT_S) - 1)]
                     try:
@@ -303,7 +332,7 @@ class WooClient:
                         continue
                     raise fout
                 try:
-                    data = r.json()
+                    data = lees_json(r.text)
                 except ValueError as e:
                     raise WooFout("Your shop answered with a web page instead of data. A cache or "
                                   "security plugin is probably in the way.", "geen_json",
@@ -342,7 +371,14 @@ class WooClient:
         params = {"status": "publish", "orderby": "id", "order": "asc"}
         if gewijzigd_na:
             params.update({"modified_after": gewijzigd_na, "dates_are_gmt": "true"})
-        return await self.alle_paginas("wc/v3/products", params)
+        alle = await self.alle_paginas("wc/v3/products", params)
+        if not gewijzigd_na:
+            return alle
+        # Een winkel van vóór WooCommerce 5.8 kent modified_after niet en geeft
+        # alles (gemeten op 5.1, 09-10-2026); dan zelf nafilteren.
+        sinds = gewijzigd_na.replace("Z", "")
+        return [p for p in alle if max(str(p.get("date_modified_gmt") or ""),
+                                       str(p.get("date_created_gmt") or "")) >= sinds]
 
     async def product(self, pid: str) -> dict | None:
         try:
@@ -373,9 +409,36 @@ class WooClient:
         return data
 
     async def bestellingen(self, gewijzigd_na: str) -> list[dict]:
-        return await self.alle_paginas("wc/v3/orders", {
-            "status": ",".join(BETAALDE_STATUSSEN), "modified_after": gewijzigd_na,
-            "dates_are_gmt": "true", "orderby": "modified", "order": "asc"})
+        """Betaalde bestellingen die sinds `gewijzigd_na` (UTC, zonder zone) veranderden.
+
+        OUDE WINKELS (gemeten 09-10-2026: 5 van de 44 leadwinkels met een zichtbare
+        versie draaien ouder dan 9, eentje 3.5). modified_after en dates_are_gmt
+        bestaan pas sinds WooCommerce 5.8, en een lijst statussen in één veld ook
+        niet overal; een oude winkel negeert wat hij niet kent en geeft dan ÁLLE
+        bestellingen ooit. Daarom: nieuwste eerst, zelf op tijd en status filteren,
+        en stoppen zodra een hele pagina van vóór het merkteken is."""
+        sinds = gewijzigd_na.replace("Z", "")
+        uit: list[dict] = []
+
+        def _tijd(o: dict) -> str:
+            return max(str(o.get("date_modified_gmt") or ""), str(o.get("date_created_gmt") or ""))
+
+        import httpx
+        async with httpx.AsyncClient(timeout=httpx.Timeout(90.0, connect=15.0),
+                                     follow_redirects=False, headers={"User-Agent": UA}) as c:
+            for pagina in range(1, MAX_PAGINAS + 1):
+                _, data, _ = await self.verzoek("GET", "wc/v3/orders", {
+                    "modified_after": gewijzigd_na, "dates_are_gmt": "true",
+                    "orderby": "date", "order": "desc",
+                    "per_page": PER_PAGINA, "page": pagina}, client=c)
+                if not isinstance(data, list):
+                    break
+                recent = [o for o in data if _tijd(o) >= sinds]
+                uit += [o for o in recent if o.get("status") in BETAALDE_STATUSSEN]
+                if len(data) < PER_PAGINA or not recent:
+                    break
+                await asyncio.sleep(PAUZE_S)
+        return uit
 
 
 # Een bestelling in deze stand heeft de voorraad al verlaagd: het stuk is weg.
@@ -510,8 +573,10 @@ def productvelden(item: dict) -> dict:
         "backorders": "no",
         "images": [{"src": u} for u in _foto_urls(item)],
     }
-    if item.get("sku"):
-        velden["sku"] = str(item["sku"])[:100]
+    # Altijd een artikelnummer: daarmee vinden we een product terug als het
+    # aanmaken halverwege afbrak, en koppelt een bestelling ook zonder productnummer.
+    if item.get("sku") or item.get("id"):
+        velden["sku"] = str(item.get("sku") or f"OMNI-{str(item['id'])[:12]}")[:100]
     return velden
 
 
@@ -530,14 +595,27 @@ class WooCommercePlatform(PlatformBase):
         c = self._eis(credentials)
         # Bestaat het al (een eerdere poging die werd afgekapt terwijl de winkel
         # nog foto's ophaalde)? Dan dat product gebruiken, geen tweede maken.
-        bestaand = await c.zoek_op_sku(str(item["sku"])) if item.get("sku") else None
+        velden = productvelden(item)
+        sku = velden.get("sku")
+        bestaand = await c.zoek_op_sku(sku) if sku else None
         if bestaand:
             product = bestaand
         else:
             # Foto's ophalen gebeurt binnen hetzelfde verzoek in de winkel; tien
             # grote foto's kosten een trage host ruim een minuut.
-            _, product, _ = await c.verzoek("POST", "wc/v3/products", body=productvelden(item),
-                                            timeout=180.0)
+            try:
+                _, product, _ = await c.verzoek("POST", "wc/v3/products", body=velden, timeout=180.0)
+            except WooFout as e:
+                # Afgebroken of gecrasht na het opslaan? Dan staat het product er
+                # misschien al: eerst kijken, nooit blind opnieuw aanmaken.
+                if e.soort == "sleutel" or not sku:
+                    raise
+                await asyncio.sleep(3)
+                product = await c.zoek_op_sku(sku)
+                if not product:
+                    raise
+                logger.info("woocommerce: product %s bestond na een fout toch (sku %s)",
+                            product.get("id"), sku)
         uit = {"platform_listing_id": str(product["id"]),
                "platform_listing_url": product.get("permalink")}
         if on_created:
@@ -590,7 +668,10 @@ class WooCommercePlatform(PlatformBase):
             return "error"
         if p is None or p.get("status") == "trash":
             return "not_found"
-        return "sold" if p.get("stock_status") == "outofstock" else "active"
+        # Uitverkocht is GEEN verkoop: een winkelier zet een product ook zelf op
+        # uitverkocht, en wij doen het na een verkoop elders. Een verkoop komt
+        # alleen uit een bestelling (woocommerce_orders.py), met bewijs.
+        return "active"
 
     async def refresh_credentials(self, credentials: dict) -> dict:
         return credentials      # WooCommerce-sleutels verlopen niet

@@ -372,3 +372,74 @@ def test_oauth1_handtekening_is_stabiel():
     b = w.oauth1_params("GET", "http://a.nl/wp-json/wc/v3/products?per_page=1", "ck_1", "cs_1",
                         nonce="n", tijd=1)
     assert a == b and a["oauth_signature_method"] == "HMAC-SHA256"
+
+
+# ── Oude winkels en rommelige antwoorden (09-10-2026) ──────────────────────
+
+def test_php_waarschuwing_voor_de_gegevens_wordt_overgeslagen():
+    tekst = ('<br />\n<b>Warning</b>:  require(/wordpress/.maintenance): failed to open stream in '
+             '<b>/wordpress/wp-includes/load.php</b> on line <b>444</b><br />\n[{"id": 9}]')
+    assert w.lees_json(tekst) == [{"id": 9}]
+    try:
+        w.lees_json("<html><body>Access denied</body></html>")
+        raise AssertionError("een blokkadepagina is geen gegevens")
+    except ValueError:
+        pass
+
+
+def test_oude_winkel_negeert_het_tijdfilter_en_geeft_alles(monkeypatch):
+    """WooCommerce < 5.8 kent modified_after niet. Dan mag er geen oude
+    bestelling als nieuwe verkoop binnenkomen, en stopt het bladeren."""
+    pagina1 = ([{"id": i, "status": "completed", "date_created_gmt": "2026-10-09T08:00:00",
+                 "date_modified_gmt": "2026-10-09T08:00:00"} for i in range(3)]
+               + [{"id": 50 + i, "status": "completed", "date_created_gmt": "2025-01-01T00:00:00",
+                   "date_modified_gmt": "2025-01-01T00:00:00"} for i in range(97)])
+    pagina2 = [{"id": 900 + i, "status": "completed", "date_created_gmt": "2024-01-01T00:00:00",
+                "date_modified_gmt": "2024-01-01T00:00:00"} for i in range(100)]
+    gevraagd = []
+
+    async def _verzoek(self, methode, route, params=None, **k):
+        gevraagd.append(params["page"])
+        return 200, (pagina1 if params["page"] == 1 else pagina2), {}
+
+    monkeypatch.setattr(w.WooClient, "verzoek", _verzoek)
+    uit = asyncio.run(w.WooClient("https://a.nl/wp-json/", "ck_x", "cs_x").bestellingen("2026-10-09T07:50:00"))
+    assert [o["id"] for o in uit] == [0, 1, 2]
+    assert gevraagd == [1, 2], "pagina 2 is helemaal oud: daar stopt het"
+
+
+def test_alleen_betaalde_bestellingen_tellen(monkeypatch):
+    rij = [{"id": i, "status": s, "date_created_gmt": "2026-10-09T08:00:00",
+            "date_modified_gmt": "2026-10-09T08:00:00"}
+           for i, s in enumerate(["pending", "processing", "on-hold", "cancelled", "completed",
+                                  "failed", "refunded"])]
+
+    async def _verzoek(self, *a, **k): return 200, rij, {}
+    monkeypatch.setattr(w.WooClient, "verzoek", _verzoek)
+    uit = asyncio.run(w.WooClient("https://a.nl/wp-json/", "ck_x", "cs_x").bestellingen("2026-10-09T07:00:00"))
+    assert sorted(o["status"] for o in uit) == ["completed", "on-hold", "processing"]
+
+
+def test_aanmaken_wordt_nooit_blind_herhaald(monkeypatch):
+    """WooCommerce 5.1 crashte ná het opslaan (500); vier herhaalpogingen gaven
+    vier bestellingen. Een product mag zo nooit dubbel in de winkel komen."""
+    posts, gezocht = [], []
+
+    async def _verzoek(self, methode, route, params=None, body=None, **k):
+        if methode == "POST":
+            posts.append(body["sku"])
+            raise w.WooFout("crash", "serverfout", 500)
+        gezocht.append(params.get("sku"))
+        # Eerste zoektocht: nog niets. Na de crash: het product staat er wel.
+        return 200, ([] if len(gezocht) == 1 else [{"id": 77, "permalink": "https://a.nl/p/77"}]), {}
+
+    monkeypatch.setattr(w.WooClient, "verzoek", _verzoek)
+    async def _geen_wacht(*_a): return None
+    monkeypatch.setattr(w.asyncio, "sleep", _geen_wacht)
+    creds = {"access_token": "ck_x", "refresh_token": "cs_x",
+             "extra_data": {"api_root": "https://a.nl/wp-json/", "modus": "basic"}}
+    uit = asyncio.run(w.WooCommercePlatform().create_listing(
+        {"id": "abcdef123456789", "title": "Jas", "price": 10}, creds))
+    assert posts == ["OMNI-abcdef123456"], "precies één keer aangemaakt"
+    assert uit["platform_listing_id"] == "77", "het product van de crash teruggevonden"
+

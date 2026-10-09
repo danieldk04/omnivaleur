@@ -16483,6 +16483,25 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   NIET getest: een echte klantwinkel, en de één-klik-route tot het einde (die eist https naar omnivaleur.com).
 - Open: Mikkis antwoorden (Daniel); eerste echte koppeling meekijken in de onboardingronde.
 
+## 09-10-2026 (vervolg): WooCommerce live, oude winkels, circuitproef, overal op de site
+
+- Live gezet (merge #22, commit 3eb6af9e op Railway). Terugroepadres bereikbaar via Cloudflare, ook vanuit een
+  datacenter; een vervalste aanvraag krijgt onze eigen 403.
+- Gemeten: van de 44 leadwinkels met zichtbare versie draaien 39 WooCommerce 10 of 11, 5 ouder (3.5, 5.1, 7.9,
+  8.8, 9.6). Getest tegen een echte WooCommerce 5.1: daar wordt het tijdfilter genegeerd; nu zelf nafilteren en
+  stoppen met bladeren. Ook PHP-waarschuwingen vóór de gegevens worden overgeslagen.
+- Gevonden en gerepareerd: een winkel die crasht NA het opslaan kreeg bij elke herhaalpoging een nieuw exemplaar
+  (oude code: 4 bestellingen uit één verzoek, nieuwe code: 1). Aanmaken wordt nooit meer blind herhaald; elk
+  product dat Omnivaleur aanmaakt krijgt een artikelnummer (OMNI-... als de verkoper er geen had) om het terug
+  te vinden.
+- Circuitproef over alle zeven kanalen (tests/test_verkoopcircuit.py): verkoop op elk kanaal haalt het overal
+  elders weg, het verkoopkanaal blijft met rust, WooCommerce gaat op uitverkocht, een herhaalde melding maakt
+  niets dubbel.
+- WooCommerce staat nu op: homepage EN/NL (chip, tour, prijsblok, koppeluitleg), kanalenpagina (eigen kaart),
+  mp-video, registratie, footer, llms.txt, ai-info, voorwaarden, privacy (de API-sleutel staat op onze server),
+  Help en startgids in het dashboard, en de blogmachine (die noemde nog Etsy, dat ondersteunen we niet).
+  Taalregel op de site gelijkgetrokken: Vinted en WooCommerce krijgen de eigen tekst.
+
 ## 2026-10-09 12:30: Kostencheck Anthropic na de kostenrem (eerste meting, nog geen oordeel)
 - Console, dagkosten (UTC): 07-10 $6,18, 08-10 $18,00 (Haiku $17,30), 09-10 $0,94 tot 12:25 lokaal. 09-10 bevat nog de uren vóór de rem.
 - Logs: laatste verzoek met 8.939 invoertokens (volledige rubriekvraag) was 11:49 lokaal, dus vóór de rem (commits 12:19 en 12:21). Na 12:21 staat er niets in de logs.

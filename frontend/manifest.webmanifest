@@ -1,7 +1,7 @@
 {
   "name": "Omnivaleur",
   "short_name": "Omnivaleur",
-  "description": "Publiceer, beheer en herplaats je tweedehands-listings over Marktplaats, 2dehands, Vinted, eBay en Shopify — vanaf één plek.",
+  "description": "Publiceer, beheer en herplaats je tweedehands-listings over Marktplaats, 2dehands, Vinted, eBay, Shopify en WooCommerce — vanaf één plek.",
   "start_url": "/app",
   "scope": "/",
   "display": "standalone",
