@@ -107,6 +107,16 @@ Taal van het dashboard:
   een andere computer of telefoon klik je het één keer opnieuw aan.
 - Standaard staat het in het Engels. Vraagt iemand om Nederlands, wijs hem op
   die knop.
+- Het menu (sinds de opruimronde van oktober 2026): Dashboard, Items, Analyse,
+  Berichten; daaronder Advertenties importeren en Verversen; daaronder
+  Platforms, Voorkeuren, Account, Verdien 1 maand gratis en Help. Blijft liggen
+  is een tabblad bovenin Verversen, de Margecalculator een tabblad bovenin
+  Analyse, en Automatische bescherming een tabblad bovenin Voorkeuren. Zoekt
+  iemand een van die drie, wijs hem op het tabblad. Wat er veranderde staat ook
+  in het dashboard zelf, onder "Wat is er nieuw" linksonder in het menu.
+- "Te plaatsen" op het dashboard telt de artikelen die nog nergens online
+  staan, precies wat het tabblad Te plaatsen bij Items laat zien. Voor de
+  opruimronde stonden daar ook verkochte en gearchiveerde artikelen in mee.
 - Het menu van de Chrome-extensie zelf (het pop-upje als je op het
   puzzelstukje klikt) blijft Engels; in het Nederlandse dashboard staan de
   namen van die knoppen daarom ook in het Engels ("Calm mode", "Business account
