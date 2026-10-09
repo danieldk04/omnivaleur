@@ -17,6 +17,28 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## titelgenoot-krijgt-andermans-advertentie
+
+*09-10-2026 — "Vinted \"staat al online\"-controle zoekt op titel; twee stukken met één titel kregen één advertentie (Janneke 09-10-2026)"*
+
+Elke Vinted-plaatsing begint met een controle "staat hij al online?" op exacte titel in de eigen kast
+(resolveCreatedVintedItem in content/vinted.js); de achtergrond doet hetzelfde bij watchdog en tabblad-weg
+(bgVindVintedAdvertentie). Twee echte stukken met dezelfde titel (Janneke: rode en bruine "Tussenjas Name it
+maat 128") waren niet uit elkaar te houden: de bruine kreeg de advertentie van de rode, stond niet op Vinted, en
+het dashboard toonde "Gedeelde advertentie". Gerepareerd 09-10-2026 (a9327da6): uitgifte geeft `_vinted_bezet`
+mee (en voor oude extensies de nieuwste titelgenoot in `platform_listing_id`, dat ze al oversloegen), de server
+weigert bij afmelden een advertentie die bij een ander artikel van dezelfde verkoper hoort, extensie 1.0.376
+slaat alle titelgenoten over.
+
+**Why:** sinds Shopify-producten met dezelfde titel als twee stukken gelden (09-10) zijn titelgenoten gewoon;
+bij Janneke 2.316 van 3.219 artikelen.
+
+**How to apply:** elke koppeling op titel (scan, herstel, "al geplaatst") moet advertenties uitsluiten die al
+bij een ander artikel horen. Een advertentienummer hoort bij één artikel; zie ook "dubbele-advertentie-titel-en-foto"
+en "titel-op-het-kanaal-is-niet-de-brontitel".
+
+---
+
 ## tabblad-op-de-inlogpagina
 
 *09-10-2026 — Een werktabblad dat op /identity/v2/login uitkomt bewijst alleen dat DIT verzoek geen particuliere sessie meedroeg; een zakelijk account krijgt hetzelfde beeld*
