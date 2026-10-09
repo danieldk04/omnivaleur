@@ -28,7 +28,7 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
   helemaal weg: direct "Zelf kost je dat geen tijd...", "Fijn dat het filter staat."
 - Bij klanten in een lopend gesprek is "Hoi Voornaam," de gewone aanhef (02-10: ruim de
   helft van de mails), "Hi Voornaam," vooral bij nieuwe of zakelijke contacten.
-- Soms staat er een punt achter de naam: "Daniel." Beide vormen komen voor (08-10: 2x bij een nee-mail).
+- Soms staat er een punt achter de naam: "Daniel." Beide vormen komen voor (08-10: 2x, 09-10: 1x, steeds bij een nee-mail).
 - Aanhef met voornaam in een lopend gesprek schrapt hij vaak: mijn "Hoi Egbert," werd 2x niets, en
   "Hi Martijn," bleef staan. Bij een antwoord op een vraag zet hij liever "Hi," of niets.
 
@@ -50,9 +50,9 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - Wensen aan het eind passen bij de klant: "Succes met de verkoop!", "Fijne vakantie!".
 
 - Openingszin van erkenning ("Goed gezien, en je hebt gelijk.", "Goed punt.", "Goed idee, en") schrapt hij
-  (08-10: 3 van 3 concepten); hij begint met de inhoud ("Ik ben er al mee aan de slag", "Nu loopt alles...").
+  (08-10: 3 van 3 concepten; 09-10 bleef "Nee, die advertentie komt niet terug." juist staan omdat het het antwoord zelf is); hij begint met de inhoud ("Ik ben er al mee aan de slag", "Nu loopt alles...").
   Een kort "Thanks voor je tip." mag wel. Dit sluit aan op de regel over foutmails hieronder.
-- Slot: ":)" erbij als hij zijn eigen slotzin schrijft ("...laat ik het weten :)"). Mijn slot
+- Slot: ":)" voegt hij aan mijn laatste zin toe (09-10: 3 van 3 concepten, ook midden in de slotzin: "Maandag lopen we de rest samen door :)."). ":)" erbij als hij zijn eigen slotzin schrijft ("...laat ik het weten :)"). Mijn slot
   "Laat me weten als het anders loopt" en "Dank voor het meedenken :)" laat hij soms weg of verving hij door
   een eigen luchtige zin ("zekerheid boven snelheid ... :)").
 - Mijn persoonlijke aanbod in een eerste follow-up ("Ik help je graag persoonlijk", "Zal ik een moment
@@ -87,6 +87,9 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - Geen jargon naar klanten. Technische oorzaken in één zin, de nadruk op wat de
   klant nu merkt en wat hij moet doen (bijvoorbeeld "ververs de pagina met Command Shift R").
 
+- Bij een fout van ons verzacht hij soms "lag voor een deel aan ons" naar "lag aan een instelling" en "opgelost" naar "rechtgezet" (1x, 09-10). Nog te weinig voor een regel.
+- Na een gesprek of toezegging voegt hij een eigen losse slotzin toe ("Graag gedaan, laat gerust weten als je verder ergens tegenaanloopt", 09-10) en zet hij zijn voorstelzin erin ("Ik ben Daniel, oprichter van Omnivaleur") ook als mijn concept die miste.
+
 ## Nog te leren (invullen zodra er vergelijkingen zijn)
 
 - Nee-mail aan een bedrijf ("jullie"): 2x zonder waarom-vraag, alleen "Dank voor jullie reactie. Ik zal jullie hier niet meer over benaderen. Veel succes met de verkoop!" Nog uitzoeken wanneer wel/niet de waarom-vraag.
@@ -104,3 +107,4 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - 04-10-2026: Gekeken: 107 mails in Verzonden, 16 van Daniel, 11 al verwerkt; 5 nieuw, 2 met concept; videomail-sjabloon (3x) herkend, twee eerste concept-verschillen onder Nog te leren.
 - 07-10-2026: Gekeken: 125 mails in Verzonden (3 dagen), 19 van Daniel, 0 al verwerkt; 19 nieuw, 12 met concept (maar bij 5 hoorde het concept bij een eerdere mail in dezelfde draad, dus echte vergelijking ca. 7). Nieuw: lege regel voor "Daniel", ":)" als standaard smiley, waarom-vraag bij een nee, volledige kanalenlijst, kortere foutmails.
 - 08-10-2026: Gekeken: 150 mails in Verzonden (3 dagen), 26 van Daniel, 17 al verwerkt; 9 nieuw, 6 met concept. Nieuw: hij schrapt erkennende openingszinnen (3x), voegt ":)" aan het slot toe (2x), schrapt persoonlijk aanbod, nee-mail zonder waarom-vraag (2x).
+- 09-10-2026: Gekeken: 112 mails in Verzonden (3 dagen), 20 van Daniel, 15 al verwerkt; 5 nieuw, 3 met concept. Nieuw: hij voegt ":)" aan mijn slotzin toe (3x, nu een regel), eigen slotzin erbij, "Daniel." met punt bij nee-mail, zachtere schuldtoon (1x).
