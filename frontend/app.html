@@ -5369,7 +5369,9 @@ function _rlPlaats() {
   if (top + kh > innerHeight - 8) top = Math.max(8, r.top - m - 12 - kh);
   let left = r.left + r.width / 2 - kb / 2;
   // Een smal doel links in het menu: kaart ernaast in plaats van eroverheen.
-  if (el.closest('.sidebar')) { left = r.right + m + 16; top = Math.min(Math.max(8, r.top - 10), innerHeight - kh - 8); }
+  // Naast het menu alleen op een breed scherm; op een telefoon is daar geen ruimte
+  // en kwam de kaart over het menu-item heen te liggen.
+  if (el.closest('.sidebar') && innerWidth > 768) { left = r.right + m + 16; top = Math.min(Math.max(8, r.top - 10), innerHeight - kh - 8); }
   left = Math.min(Math.max(8, left), innerWidth - kb - 8);
   Object.assign(kaart.style, { top: top + 'px', left: left + 'px' });
 }
