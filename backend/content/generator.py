@@ -292,7 +292,7 @@ def _relevant_sources(keyword: str, pillar: str, limit: int = 8) -> list[dict]:
 # enige type feit dat een concurrent niet kan overschrijven. Houd deze lijst
 # eerlijk: alles hier moet kloppen met wat de app daadwerkelijk doet.
 OWN_DATA_POINTS = [
-    "Omnivaleur publishes to six marketplaces from one intake form: Marktplaats, 2dehands, Vinted, eBay, Etsy and Shopify.",
+    "Omnivaleur publishes to seven channels from one intake form: Marktplaats, 2dehands, Vinted, eBay, Shopify, WooCommerce and Facebook Marketplace (beta).",
     "A single item in Omnivaleur typically carries 3-5 active listings at once; the app tracks each platform's status separately.",
     "Omnivaleur's Vinted refresh tool caps itself at 8 free refreshes per day and states outright that no tool can guarantee a marketplace won't flag an account.",
     "Omnivaleur's analytics calculate profit from the real sale price (which sellers confirm per sale), not the asking price — on second-hand marketplaces the two differ by roughly 10-20%.",
@@ -402,7 +402,7 @@ def _build_prompt(
     own_data = [OWN_DATA_POINTS[(seed + i) % len(OWN_DATA_POINTS)] for i in range(2)]
     own_data_block = "\n".join(f"- {d}" for d in own_data)
 
-    return f"""You are an experienced European reseller and full-stack SEO/GEO expert writing for Omnivaleur, a SaaS that automatically cross-lists items across Marktplaats, 2dehands, Vinted, eBay, Etsy and Shopify. You write like a reseller helping a colleague, not a marketing department.
+    return f"""You are an experienced European reseller and full-stack SEO/GEO expert writing for Omnivaleur, a SaaS that automatically cross-lists items across Marktplaats, 2dehands, Vinted, eBay, Shopify, WooCommerce and Facebook Marketplace (beta). You write like a reseller helping a colleague, not a marketing department.
 
 CRITICAL LANGUAGE RULE: the target keyword and competitor research below may be phrased in Dutch (that is simply what people search for). You must nonetheless write the ENTIRE article — title, meta description, H1, quick answer, body, FAQ, everything — in {language}. Translate the concept and intent of the Dutch keyword into a natural {language} article. Do NOT copy or echo any Dutch phrasing anywhere in your output, including the H1. If you catch yourself writing a Dutch word, stop and translate it.
 

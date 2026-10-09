@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=f48d6e14fe"></script>
+<script src="/i18n.js?v=b69d09823f"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1331,7 +1331,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     <div id="view-platforms" class="view">
       <div class="view-header">
         <h1>Platforms</h1>
-        <p>Marktplaats, 2dehands, Vinted and Facebook work through your own login in Chrome: sign in to each one there, in the Chrome with the extension. eBay and Shopify you connect once, below.</p>
+        <p>Marktplaats, 2dehands, Vinted and Facebook work through your own login in Chrome: sign in to each one there, in the Chrome with the extension. eBay, Shopify and WooCommerce you connect once, below.</p>
       </div>
       <div id="platforms-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;max-width:900px"></div>
 
@@ -3686,7 +3686,7 @@ const PLATFORM_EMOJI_FALLBACK = { marktplaats: '🇳🇱', '2dehands': '🇧🇪
 // falls back to the old emoji if the favicon fails to load (offline, blocked, etc).
 // Platforms whose favicon the Google service can't resolve (Facebook blocks it,
 // which is why its dot showed a generic doc/printer icon) use a bundled logo.
-const LOCAL_LOGOS = { facebook: '/assets/logos/facebook.svg' };
+const LOCAL_LOGOS = { facebook: '/assets/logos/facebook.svg', woocommerce: '/assets/logos/woocommerce.svg' };
 function platIcon(key, size) {
   size = size || 16;
   const fallback = PLATFORM_EMOJI_FALLBACK[key] || '🏪';

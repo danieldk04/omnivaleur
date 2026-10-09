@@ -218,6 +218,7 @@
     api: () => `<div>
         <div class="ob-m-rij"><span class="ob-m-pil">${logo("ebay", 13)} eBay</span><span class="ob-m-knop">Connect</span></div>
         <div class="ob-m-rij"><span class="ob-m-pil">${logo("shopify", 13)} Shopify</span><span class="ob-m-knop">Connect</span></div>
+        <div class="ob-m-rij"><span class="ob-m-pil">${logo("woocommerce", 13)} WooCommerce</span><span class="ob-m-knop">Connect</span></div>
       </div>`,
   };
 
@@ -265,9 +266,9 @@
                  <button class="ob-link" onclick="OB.naarHelp('iconen')">What do the icons mean?</button>`,
       },
       {
-        id: "api", optioneel: true, klaar: gekoppeld.includes("ebay") || gekoppeld.includes("shopify"),
-        titel: "Connect eBay or Shopify",
-        tekst: "eBay and Shopify don't use the extension: you connect them once under Platforms. eBay first checks your identity and bank account before you can list. Shopify only applies if your webshop runs on Shopify.",
+        id: "api", optioneel: true, klaar: gekoppeld.includes("ebay") || gekoppeld.includes("shopify") || gekoppeld.includes("woocommerce"),
+        titel: "Connect eBay, Shopify or WooCommerce",
+        tekst: "eBay, Shopify and WooCommerce don't use the extension: you connect them once under Platforms. eBay first checks your identity and bank account before you can list. Shopify and WooCommerce only apply if your webshop runs on one of them.",
         acties: `<button class="btn btn-outline btn-sm" onclick="OB.ga('platforms')">Open Platforms</button>`,
       },
     ];
@@ -468,23 +469,29 @@
       "Adverts go on ebay.nl, in Dutch.",
     ]],
     ["shopify", "Shopify", "Connect", [
-      "<b>Only if your webshop runs on Shopify.</b> Other webshops can't be connected or imported.",
+      "<b>Only if your webshop runs on Shopify.</b> A WooCommerce shop has its own connection, below.",
       "Connect under Platforms: the screen walks you through creating a small app in your Shopify admin.",
       "A paid order in your shop takes the item off your other marketplaces automatically.",
+    ]],
+    ["woocommerce", "WooCommerce", "Connect", [
+      "<b>Only if your webshop runs on WooCommerce</b> (WordPress).",
+      "Connect under Platforms: fill in your shop's address and click <b>Approve</b> in your own WooCommerce. If that doesn't work, paste a REST API key with Read/Write instead.",
+      "Import your products under Import; new products come in every hour by themselves.",
+      "A paid order in your shop takes the item off your other marketplaces within minutes. A sale elsewhere sets the product in your shop to out of stock; it is never deleted.",
     ]],
   ];
 
   const FAQ = [
     ["Getting started", "Do I need an account on every marketplace?",
-      "Yes. Omnivaleur doesn't create adverts under its own name: it publishes <b>as you</b>, on your own accounts. For Marktplaats, 2dehands, Vinted and Facebook you sign in once in the Chrome where the extension runs. eBay and Shopify you connect once under <b>Platforms</b>."],
+      "Yes. Omnivaleur doesn't create adverts under its own name: it publishes <b>as you</b>, on your own accounts. For Marktplaats, 2dehands, Vinted and Facebook you sign in once in the Chrome where the extension runs. eBay, Shopify and WooCommerce you connect once under <b>Platforms</b>."],
     ["Getting started", "What does “Uses your Chrome login” on Platforms mean?",
       "That this marketplace works through your own login in Chrome, not through a separate link with Omnivaleur. It does not mean you're signed in. If Omnivaleur notices you're not, the card says <b>Not signed in</b>, and a bar on the dashboard tells you too."],
     ["Getting started", "I clicked the marketplace icons: is my item published now?",
       "No. Only <b>Publish</b> places adverts. Clicking a grey icon opens a choice: publish there, or paste the link if the advert is already there. Before 17 September a click only marked an item as live; if icons turned green without adverts behind them, let us know and we'll clean it up."],
     ["Getting started", "Which language should I write in?",
-      "Dutch or English, whichever you prefer. Omnivaleur translates for each marketplace: Dutch for Marktplaats, 2dehands and eBay, English for Vinted and Shopify."],
+      "Dutch or English, whichever you prefer. Omnivaleur translates for each marketplace: Dutch for Marktplaats, 2dehands and eBay, English for Shopify. Vinted and WooCommerce get exactly what you wrote."],
     ["Getting started", "Can I import from my own website?",
-      "Not at the moment. You can import the adverts you already have on <b>Marktplaats, 2dehands and Vinted</b> under Import. If your website runs on Shopify, connect it under Platforms."],
+      "Yes, if it runs on Shopify or WooCommerce: connect it under Platforms and import under Import. Other webshop systems can't be imported. The adverts you already have on <b>Marktplaats, 2dehands and Vinted</b> you can import under Import too."],
     ["Publishing", "I pressed Publish, but nothing happens",
       "Look at the top of your dashboard: a bar tells you what's holding things up. The usual reasons: the computer with the extension is off or asleep, the extension isn't signed in, or you're not signed in to that marketplace in Chrome. Once that's fixed the queue starts again by itself; you don't need to press Publish again."],
     ["Publishing", "Why does it take a while?",
@@ -500,7 +507,7 @@
     ["Publishing", "The extension opens a tab but the advert isn't submitted",
       "Usually you're not signed in to that marketplace in this Chrome. Open the site, sign in, and publish again. If the tab shows a form with red fields, the icon on the item tells you what was missing."],
     ["Selling", "What happens when an item sells?",
-      "Press <b>Sold</b> on the item and pick where it sold: Omnivaleur takes it off your other marketplaces. A sale on Vinted, or a paid order on eBay or Shopify, is picked up automatically. When an advert simply disappears from Vinted, Marktplaats or 2dehands you get a <b>Did this item sell?</b> question first, so nothing is taken down on a guess."],
+      "Press <b>Sold</b> on the item and pick where it sold: Omnivaleur takes it off your other marketplaces. A sale on Vinted, or a paid order on eBay, Shopify or WooCommerce, is picked up automatically. When an advert simply disappears from Vinted, Marktplaats or 2dehands you get a <b>Did this item sell?</b> question first, so nothing is taken down on a guess."],
     ["Selling", "I sold something, but it's still on my business account",
       "Normal adverts on a business account are taken offline as usual. Adverts in a Pro (Admarkt) campaign Omnivaleur can't take offline: remove those on Marktplaats or 2dehands yourself."],
     ["Selling", "Sold on Vinted, but still on Marktplaats",
