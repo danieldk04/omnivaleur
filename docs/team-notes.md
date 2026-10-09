@@ -16523,3 +16523,22 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   gesloten in de kast staan en wordt dus niet gemist.
 - Proeven: test_shopify_dubbel_alleen_op_nummer (6), test_vinted_verse_advertentie_niet_weg (5, 3 falen op de
   oude code). Volledige suite voor en na gelijk (76 bestaande fouten, 15 errors).
+
+## 09-10-2026: Zilverwebsite, slottekst dubbel onder herplaatste advertenties (Jaap mailde)
+- Klacht: bij herplaatsen op Marktplaats stond de vaste tekst onder de advertentie twee keer. Jaap herstelde er zelf ~25.
+- Oorzaak (bewezen): sinds de slottekst-reparatie van 29-09 voegt herplaatsen de slottekst toe als hij "nog niet
+  in de tekst staat". Die controle vergeleek letter voor letter. Bij Jaap staat hij er al, maar met opmaak uit de
+  webshop (vet, regeleinden als code), met eigen zoekwoorden per advertentie, met een oudere zoekwoordenlijst of
+  afgekapt. Op het scherm is dat dezelfde tekst, dus de koper las hem twee keer.
+- Omvang: 111 advertenties zijn met dubbele tekst online gegaan (01-10 t/m 09-10, 46 vanochtend), alle 111 nog
+  actief. Bij de andere vier verkopers met een slottekst: De Juiste Toon (96e30080) kreeg 8 advertenties met een
+  dubbele slotregel (6 MP, 2 2dehands); de nieuwe code voorkomt er 7 van.
+- Gerepareerd in backend/services/crosslist.py (_slot_al_aanwezig), geldt voor publiceren, herplaatsen en de
+  reddingsronde. Gemeten op alle 1.276 artikelen van Jaap: oude code 817 keer dubbel, nieuwe nul, geen tekst kwijt.
+  Vier nieuwe proeven falen op de oude code, slagen op de nieuwe.
+- Wat al online staat wordt niet vanzelf rechtgezet (live tekst bewerken op Marktplaats is niet bewezen); bij de
+  volgende herplaatsing (Jaap: elke 30 dagen) komt elke advertentie er goed op. Lijst van de 111 voor Jaap gemaakt.
+- Open: twee andere verkopers hebben bij 1 en 21 artikelen een oudere, anders geformuleerde slottekst in de
+  omschrijving; daar komt adres/telefoon twee keer. Bewust niet geraden welke versie moet winnen.
+- Na te kijken 10-10 (klantfoutenronde): de nachtelijke herplaatsing bij 26cf5471 (rond 03:45 UTC) moet nul
+  plaatsopdrachten hebben waarin "Passie voor antiek zilver, dat zit in ons DNA" twee keer staat (platte tekst).

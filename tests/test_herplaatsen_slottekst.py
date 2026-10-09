@@ -109,3 +109,74 @@ def test_herplaatsing_draagt_de_slottekst_mee(opzet):
     beschrijving = _create(db)["payload"]["description"]
     assert beschrijving.startswith(TEKST)
     assert SLOT in beschrijving
+
+
+# ── 09-10-2026, Jaap van Zilverwebsite: "de tekst onder de advertentie werd 2x
+# geplaatst". De slottekst stond al in de omschrijving, maar in een vorm die letter
+# voor letter verschilt: met opmaak uit de webshop, met eigen zoekwoorden erachter,
+# met een oudere zoekwoordenlijst, of halverwege afgekapt. Gemeten op zijn 1.276
+# artikelen: de oude controle zette hem bij 817 dubbel, de nieuwe bij nul.
+
+JAAP_SLOT = (
+    "Wordt zorgvuldig ingepakt en GRATIS verzonden.\n\n"
+    "Passie voor antiek zilver, dat zit in ons DNA, al 20 jaar. Een hobby die steeds leuker "
+    "wordt en die we nu ook willen delen met verzamelaars en andere geïnteresseerden.\n\n"
+    "Kijkt u ook eens bij de andere advertenties van Zilverwebsite of check onze website voor "
+    "een verzameling van unieke zilveren antieke messen, Zeeuws paeremes, Fries oorijzer, "
+    "roomlepels, bonbonmandjes, broodmandjes, fruitschaal, soezenmandjes, beker,\n"
+    "Moderne en antieke armbanden, oorbellen, ringen, hangers, ketting, broches, Art Deco, "
+    "Biedermeier, 17e eeuw, 18e eeuw, 19e eeuw, van Kempen en Begeer, Zinzi.")
+JAAP_TEKST = "Zilveren peper- of zoutstrooier.\n\nGewicht: 21 gram.\n\n24-03-953"
+
+
+def _keer_gelezen(tekst: str) -> int:
+    """Hoe vaak de koper de vaste alinea leest (de extensie haalt opmaak weg)."""
+    import re
+    plat = " ".join(re.sub(r"<[^>]+>", " ", tekst).split())
+    return plat.count("Passie voor antiek zilver, dat zit in ons DNA")
+
+
+def _als_html(tekst: str) -> str:
+    return (tekst.replace("GRATIS", "<strong>GRATIS</strong>").replace("\n\n", "<br/><br/>")
+            .replace("\n", "<br/>"))
+
+
+@pytest.fixture
+def jaap(opzet, monkeypatch):
+    monkeypatch.setattr(crosslist, "slottekst_van", lambda uid: JAAP_SLOT)
+    return opzet
+
+
+def test_slottekst_met_opmaak_uit_de_webshop_niet_dubbel(jaap):
+    """Het screenshot van Jaap: twee keer exact dezelfde tekst, door de echte refresh_listing."""
+    db = jaap({**ITEM, "description": _als_html(JAAP_TEKST + "\n\n" + JAAP_SLOT)})
+    asyncio.run(R.refresh_listing("i1", "marktplaats", "u1", "relist"))
+    beschrijving = _create(db)["payload"]["description"]
+    assert _keer_gelezen(beschrijving) == 1
+    assert "24-03-953" in beschrijving
+
+
+def test_slottekst_met_eigen_zoekwoorden_niet_dubbel(jaap):
+    eigen = JAAP_TEKST + "\n\n" + JAAP_SLOT.replace("Zinzi.", "Zinzi, valentijnscadeau, robijn kleur")
+    uit = R._met_slottekst({"title": "t", "description": eigen}, "marktplaats", "u1")["description"]
+    assert uit == eigen
+
+
+def test_slottekst_met_oudere_zoekwoordenlijst_niet_dubbel(jaap):
+    regels = JAAP_SLOT.split("\n\n")
+    ouder = JAAP_TEKST + "\n\n" + "\n\n".join(regels[:2]) + "\n\nKijkt u ook eens, pijpwroeters, 19e eeuw,"
+    uit = R._met_slottekst({"title": "t", "description": ouder}, "marktplaats", "u1")["description"]
+    assert _keer_gelezen(uit) == 1
+
+
+def test_afgekapte_slottekst_wordt_vervangen_door_de_hele(jaap):
+    afgekapt = _als_html(JAAP_TEKST + "\n\n" + JAAP_SLOT[:110])
+    uit = R._met_slottekst({"title": "t", "description": afgekapt}, "marktplaats", "u1")["description"]
+    assert _keer_gelezen(uit) == 1
+    assert uit.endswith(JAAP_SLOT)
+    assert "24-03-953" in uit
+
+
+def test_ontbrekende_slottekst_komt_er_nog_steeds_onder(jaap):
+    uit = R._met_slottekst({"title": "t", "description": JAAP_TEKST}, "marktplaats", "u1")["description"]
+    assert uit == JAAP_TEKST + "\n\n" + JAAP_SLOT
