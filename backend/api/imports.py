@@ -1106,7 +1106,7 @@ async def _haiku_classificatie(client, prompt: str):
                     prompt, max_tokens=200, tijdslimiet=20.0, wat="rubriekkeuze",
                     # Zonder denkstap: 182 van 199 gelijk aan mét, 3x zo snel
                     # (gemeten 23-09-2026 op echte artikelen van acht takken).
-                    denken=False)
+                    denken=False, claude_toegestaan=False)
         except Exception as e:
             laatste = e
             if poging == _CLASSIFY_POGINGEN - 1:
