@@ -17,6 +17,52 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## dashboard-opruimronde-09-10
+
+*09-10-2026 — "Opruimronde dashboard 09-10-2026: menu 14 naar 11, tabbladen, \"Niet geplaatst\" telde verkochte mee, Bescherming vol jargon en foute feiten"*
+
+09-10-2026 liep ik het hele dashboard door met Daniels echte account (461 artikelen) en ruimde op, op de tak
+claude/dashboard-opruimen (Daniel keurt eerst, dan pas live).
+
+Gevonden en gemeten:
+- "Niet geplaatst" op het dashboard telde alles zonder actieve advertentie, ook verkocht, verborgen en
+  gearchiveerd: 118, terwijl "Bekijken" het tabblad Te plaatsen met 2 opende. Nu dezelfde indeling als
+  classifyItems() bij Items.
+- Bescherming beweerde vast "na 27 dagen herplaatsen" (is instelbaar, en uit te zetten) en "je schrijft in het
+  Engels" (onjuist sinds Help 17-09), plus vakjargon (pixel-hashing, Lexical, EditorState).
+- De actiekolom bij Items viel op een 1470 px scherm half buiten beeld (Offline halen). Nu twee knoppen per rij.
+- Oranje "268" bij Blijft liggen in het menu las als storing; telling staat nu op het tabblad.
+
+Werkwijze voor een voorbeeld met echte gegevens zonder live te zetten: de repo is openbaar, dus in het ingelogde
+tabblad op omnivaleur.com (een 404-pad, verse globals) de tak-versie van app.html van raw.githubusercontent.com
+ophalen en met document.write schrijven, met een fetch-omleiding voor /i18n/nl.json. Lokaal (127.0.0.1) ophalen
+blokkeert Chrome vanaf een openbare site. Zie ook "dashboardwijziging-krijgt-klantmelding".
+
+Let op: `git stash` in een worktree deelt refs/stash met de hoofdmap. Een lege stash gevolgd door pop pakte de
+stash van een andere sessie; teruggehaald via git fsck en git stash store.
+
+---
+
+## dashboardwijziging-krijgt-klantmelding
+
+*09-10-2026 — "Elke grote wijziging in het dashboard krijgt een \"Wat is er nieuw\"-venster voor bestaande klanten (Daniel, 09-10-2026)"*
+
+Voer je iets groots door in het dashboard (indeling, menu, namen van knoppen of schermen, nieuwe werkwijze), dan
+krijgen klanten daar in het dashboard zelf een melding over: wat er veranderd is en waar ze het nu vinden. In
+Nederlands en Engels (zie "vertaallaag-nooit-half"). Kleine reparaties zonder zichtbare verandering hoeven niet.
+
+**Why:** Daniel, 09-10-2026: "zodat niemand in de war raakt door nieuwe dingen". Klanten raakten eerder al van slag
+door een nieuwe banner (Egbert, papas-plectrums) en door knoppen die stil van betekenis veranderden.
+
+**How to apply:** in frontend/app.html staat het venster `#nieuws-venster` (statische HTML, zodat
+scripts/i18n_extract.py de teksten vindt). Vervang de inhoud, geef `NIEUWS_ID` een nieuwe waarde en zet
+`NIEUWS_SINDS` op de datum van de wijziging. Elke klant met een artikel van vóór die datum ziet hem één keer;
+weggeklikt staat op de server (instelling `nieuws_gezien` in backend/services/instellingen.py) en in de browser.
+Terug te lezen via "What's new" onderin het menu. Zet in je rapport aan Daniel welke melding klanten krijgen.
+Eerste keer: opruimronde dashboard 09-10-2026 (PR claude/dashboard-opruimen), zie "dashboard-opruimronde-09-10".
+
+---
+
 ## titelgenoot-krijgt-andermans-advertentie
 
 *09-10-2026 — "Vinted \"staat al online\"-controle zoekt op titel; twee stukken met één titel kregen één advertentie (Janneke 09-10-2026)"*

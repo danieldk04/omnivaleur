@@ -16606,3 +16606,19 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
 - De ~680 eerdere plaatsingen (MP 341, 2dehands 345) stonden op 'error': tabblad naar de inlogpagina gestuurd. Wachtrij is leeg.
   NIET zomaar opnieuw plaatsen: veel producten staan al live op Marktplaats, dat geeft dubbele advertenties.
 - Open: koppelen van Marktplaats-advertenties aan bestaande Shopify-artikelen op titel en foto in plaats van nieuwe artikelen te maken.
+
+## 09-10-2026 (avond): dashboard opgeruimd, wacht op Daniels akkoord (tak claude/dashboard-opruimen)
+- Daniel vroeg het dashboard duidelijker en overzichtelijker te maken op basis van alle klantfeedback, en koos:
+  grondig opruimen (zelfde schermen, geen herontwerp), eerst zelf keuren, dan in één keer live.
+- Nieuwe vaste regel (Daniel): elke grote dashboardwijziging krijgt een "Wat is er nieuw"-venster voor bestaande
+  klanten. Staat in CLAUDE.md (op de tak) en in de kennisbank.
+- Op de tak: menu van 14 naar 11 (Blijft liggen, Margecalculator en Bescherming zijn tabbladen onder Verversen,
+  Analyse en Voorkeuren; Verdien 1 maand gratis als gewoon menu-item boven Help); "Niet geplaatst" (118 bij
+  Daniel, telde verkochte en gearchiveerde mee) heet nu Te plaatsen en telt als het tabblad (2); verwijsblok op
+  het dashboard is één regel; wachtrijbalk zegt "laat Chrome open, je scherm mag uit"; updatemelding van de
+  extensie korter; Verversen begint met één zin plus uitklapper; Bescherming zonder jargon en met kloppende
+  feiten (herplaatsen is instelbaar, schrijven mag in het Nederlands); Items-knoppen twee per rij zodat Offline
+  halen niet buiten beeld valt; verkoopvraag wijst op de uit-knop voor nieuwe voorraad. Server: instelling
+  nieuws_gezien. Getest met Daniels echte account (voorbeeld in zijn tabblad, niets live), 596 tests groen.
+- Na het samenvoegen nog te doen: de Drive-kopie van het klantenservice-brein bijwerken (de tak heeft het
+  repo-bestand al bijgewerkt).
