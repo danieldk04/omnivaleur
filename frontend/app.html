@@ -5311,6 +5311,15 @@ async function rondleidingStap(richting) {
       showView(stap.view);
       await new Promise(r => setTimeout(r, 350));
     }
+    // Staat het doel buiten beeld in een schuifbare lijst (op een telefoon zit
+    // het groene icoon rechts in een tabel die opzij schuift), schuif er dan
+    // eerst naartoe. Niet voor het menu: dat zit op een telefoon dicht.
+    let kandidaat = null;
+    try { kandidaat = document.querySelector(stap.doel); } catch (e) { /* ongeldige keuze */ }
+    if (kandidaat && !kandidaat.closest('.sidebar') && kandidaat.getClientRects().length && !_rlDoel(stap)) {
+      kandidaat.scrollIntoView({ block: 'center', inline: 'center' });
+      await new Promise(r => setTimeout(r, 150));
+    }
     el = _rlDoel(stap);
     if (el) break;
   }
