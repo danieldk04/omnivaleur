@@ -62,13 +62,13 @@ a { color: inherit; text-decoration: none; }
 .nav-item.nav-gift svg { opacity: 1; color: #6ee7b7; }
 /* Tabbladen bovenin een scherm dat twee menu-items samenvoegt (09-10-2026). */
 /* Rondleiding over het echte dashboard (09-10-2026): een spotlight die meebeweegt. */
-#rondleiding .rl-blok { position: fixed; inset: 0; z-index: 299; }
-#rondleiding .rl-gat { position: fixed; z-index: 300; border-radius: 12px; pointer-events: none;
+#rondleiding .rl-blok { position: fixed; inset: 0; z-index: 1000; }
+#rondleiding .rl-gat { position: fixed; z-index: 1001; border-radius: 12px; pointer-events: none;
   box-shadow: 0 0 0 9999px rgba(15,23,42,.62); outline: 3px solid #60a5fa;
   transition: top .45s cubic-bezier(.2,.8,.2,1), left .45s cubic-bezier(.2,.8,.2,1), width .45s cubic-bezier(.2,.8,.2,1), height .45s cubic-bezier(.2,.8,.2,1);
   animation: rl-puls 1.6s ease-out infinite; }
 @keyframes rl-puls { 0% { outline-offset: 0; outline-color: rgba(96,165,250,1); } 80%, 100% { outline-offset: 10px; outline-color: rgba(96,165,250,0); } }
-#rondleiding .rl-kaart { position: fixed; z-index: 301; width: min(340px, calc(100vw - 32px)); background: #fff; color: var(--text);
+#rondleiding .rl-kaart { position: fixed; z-index: 1002; width: min(340px, calc(100vw - 32px)); background: #fff; color: var(--text);
   border-radius: 14px; padding: 14px 16px 12px; box-shadow: 0 16px 48px rgba(0,0,0,.3); font-size: 14px; line-height: 1.55;
   transition: top .45s cubic-bezier(.2,.8,.2,1), left .45s cubic-bezier(.2,.8,.2,1), opacity .25s; }
 #rondleiding .rl-kaart.rl-wissel { opacity: 0; }
@@ -5259,6 +5259,15 @@ function _rlDoel(stap) {
   if (r.width < 4 || r.height < 4 || r.right <= 0 || r.left >= innerWidth) return null;
   return el;
 }
+// Komt deze stap straks echt in beeld? Binnen een scherm (.view) wel zodra dat
+// scherm open is; daarbuiten alleen als het nu getoond wordt (de wachtrijbalk
+// staat er bijvoorbeeld alleen als er iets wacht).
+function _rlBestaat(st) {
+  let el = null;
+  try { el = document.querySelector(st.doel); } catch (e) { return false; }
+  if (!el) return false;
+  return el.closest('.view') ? true : el.getClientRects().length > 0;
+}
 function startRondleiding() {
   sluitNieuws();
   _rl.stappen = [...document.querySelectorAll('#rondleiding-stappen > div')].map(d => ({
@@ -5296,10 +5305,10 @@ async function rondleidingStap(richting) {
   if (rr.top < 70 || rr.bottom > innerHeight - 170) el.scrollIntoView({ block: 'center', inline: 'nearest' });
   kaart.querySelector('.rl-tekst').innerHTML = _rl.stappen[i].html;
   // Teller: welk stuk van de stappen die er bij hem echt zijn.
-  const zichtbaar = _rl.stappen.filter(st => st === _rl.stappen[i] || !!document.querySelector(st.doel)).length;
-  const nr = _rl.stappen.slice(0, i + 1).filter(st => st === _rl.stappen[i] || !!document.querySelector(st.doel)).length;
+  const zichtbaar = _rl.stappen.filter(st => st === _rl.stappen[i] || _rlBestaat(st)).length;
+  const nr = _rl.stappen.slice(0, i + 1).filter(st => st === _rl.stappen[i] || _rlBestaat(st)).length;
   kaart.querySelector('.rl-teller').textContent = `${nr} / ${Math.max(nr, zichtbaar)}`;
-  const laatste = !_rl.stappen.slice(i + 1).some(st => !!document.querySelector(st.doel));
+  const laatste = !_rl.stappen.slice(i + 1).some(_rlBestaat);
   kaart.querySelector('.rl-terug').style.visibility = nr > 1 ? 'visible' : 'hidden';
   kaart.querySelector('.rl-verder').style.display = laatste ? 'none' : '';
   kaart.querySelector('.rl-klaar').style.display = laatste ? '' : 'none';
