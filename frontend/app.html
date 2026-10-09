@@ -5319,7 +5319,12 @@ async function rondleidingStap(richting) {
       showView(stap.view);
       await new Promise(r => setTimeout(r, 350));
     }
-    if (_opTelefoon() && inMenu && !menuOpen) { toggleSidebar(); await new Promise(r => setTimeout(r, 320)); }
+    if (_opTelefoon() && inMenu && !menuOpen) {
+      toggleSidebar();
+      // Wacht tot het menu echt in beeld is geschoven; een vaste pauze was op een
+      // trage telefoon te kort en dan viel de stap weg. Hooguit twee seconden.
+      for (let t = 0; t < 20 && !_rlDoel(stap); t++) await new Promise(r => setTimeout(r, 100));
+    }
     else if (!inMenu && menuOpen) { closeSidebar(); await new Promise(r => setTimeout(r, 280)); }
     // Staat het doel buiten beeld in een schuifbare lijst (op een telefoon zit
     // het groene icoon rechts in een tabel die opzij schuift), schuif er dan
