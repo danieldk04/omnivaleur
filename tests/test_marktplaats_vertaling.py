@@ -293,8 +293,10 @@ def test_elke_localisatie_stempelt_de_taal(monkeypatch):
     assert nl[crosslist.TAAL_VELD] == "nl"
     assert nl["title"] == f"[nl] {ENGELSE_TITEL}"
 
-    en = crosslist.localiseer_sync(dict(ITEM), "vinted")
-    assert en[crosslist.TAAL_VELD] == "en"
+    # Vinted krijgt sinds 09-10-2026 standaard precies de eigen tekst, dus geen
+    # vertaling en geen stempel (zie tests/test_vinted_taal.py).
+    vinted = crosslist.localiseer_sync(dict(ITEM), "vinted")
+    assert crosslist.TAAL_VELD not in vinted and vinted["title"] == ITEM["title"]
 
     onbekend = crosslist.localiseer_sync(dict(ITEM), "facebook")
     assert crosslist.TAAL_VELD not in onbekend

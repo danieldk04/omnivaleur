@@ -13,7 +13,10 @@ from backend.database import execute_with_retry, fetch_all, get_db, naast_de_lus
 from backend.services.light import publicatie_geblokkeerd
 from backend.platforms import get_platform
 
-_ENGLISH_PLATFORMS = {"vinted", "shopify", "etsy"}
+# Vinted staat hier bewust NIET meer in (Daniel, 09-10-2026): wat de verkoper in
+# Omnivaleur intikt gaat exact zo naar Vinted. Alleen wie zelf "vertaal naar het
+# Engels" aanzet krijgt een vertaling; zie taal_van_platform en vinted_taal.
+_ENGLISH_PLATFORMS = {"shopify", "etsy"}
 # marktplaats/2dehands require Dutch — user now enters English, so translate EN→NL.
 # eBay ook (15-09-2026): we plaatsen op ebay.nl en verzenden alleen binnen
 # Nederland, dus de koper zoekt in het Nederlands. Engels stond er sinds de eerste
@@ -656,12 +659,15 @@ _PLATFORM_TAAL = {
 
 
 def taal_van_platform(platform: str, user_id: str | None = None) -> str | None:
-    """De taal waarin dit platform zijn advertenties verwacht, of None.
+    """De taal waarin dit platform zijn advertenties verwacht, of None (= niet vertalen).
 
-    Vinted is standaard Engels, maar een verkoper kan Nederlands kiezen
-    (instelling vinted_taal, Janneke 09-10-2026). Zonder user_id: de standaard."""
-    if platform == "vinted" and user_id and vinted_taal(user_id) == "nl":
-        return "nl"
+    VINTED: PRECIES WAT DE VERKOPER INTIKTE (Daniel, 09-10-2026). Tot vandaag ging
+    elke tekst op Vinted vertaald naar het Engels de deur uit, ook een Nederlandse
+    tekst op vinted.nl. Janneke: "Ik heb dit graag gewoon in het Nederlands." Nu
+    vertalen we voor Vinted alleen als de verkoper dat zelf aanzette (instelling
+    vinted_taal = "en"). Marktplaats en 2dehands blijven altijd Nederlands."""
+    if platform == "vinted":
+        return "en" if user_id and vinted_taal(user_id) == "en" else None
     return _PLATFORM_TAAL.get(platform)
 
 
@@ -669,7 +675,8 @@ _VINTED_TAAL_CACHE: dict[str, tuple[float, str]] = {}
 
 
 def vinted_taal(user_id: str) -> str:
-    """'nl' of 'en'. Bij een leesfout de standaard: Engels, zoals altijd.
+    """'en' (vertalen) of 'zelf' (exact wat de verkoper intikte, de standaard).
+    Bij een leesfout de standaard: niets vertalen.
 
     Een minuut onthouden: het uitdelen van opdrachten vraagt dit bij elke poll."""
     import time as _t
@@ -678,10 +685,10 @@ def vinted_taal(user_id: str) -> str:
         return hit[1]
     try:
         from backend.services.instellingen import lees as _lees_instellingen
-        taal = "nl" if (_lees_instellingen(user_id) or {}).get("vinted_taal") == "nl" else "en"
+        taal = "en" if (_lees_instellingen(user_id) or {}).get("vinted_taal") == "en" else "zelf"
     except Exception as e:  # noqa: BLE001
         logger.warning("Kon de Vinted-taal niet lezen voor %s: %s", user_id, e)
-        return "en"
+        return "zelf"
     _VINTED_TAAL_CACHE[user_id] = (_t.monotonic(), taal)
     return taal
 
