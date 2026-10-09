@@ -3483,5 +3483,15 @@
  "Copy my link": "Kopieer mijn link",
  "{0} for sale · {1} sold": "{0} te koop · {1} verkocht",
  "Selling new stock, with more of the same item? Then this question doesn't fit you; switch it off under": "Verkoop je nieuwe voorraad, met meer van hetzelfde artikel? Dan past deze vraag niet bij jou; zet hem uit bij",
- "Fill it in once under Preferences → \"Responsible party\" and every listing carries it.": "Vul het één keer in bij Voorkeuren → \"Verantwoordelijke partij\" en elke advertentie neemt het mee."
+ "Fill it in once under Preferences → \"Responsible party\" and every listing carries it.": "Vul het één keer in bij Voorkeuren → \"Verantwoordelijke partij\" en elke advertentie neemt het mee.",
+ "The number": "Het getal",
+ "on the dashboard was sometimes too high. It now only counts items that are not online anywhere yet.": "op het dashboard was soms te hoog. Het telt nu alleen artikelen die nog nergens online staan.",
+ "Import them": "Importeer ze",
+ "We found 1 advert of yours that is not in Omnivaleur yet.": "We vonden 1 advertentie van je die nog niet in Omnivaleur staat.",
+ "One click puts it in, so you can publish it on your other channels.": "Met één klik zet je hem erin, en daarna kun je hem op je andere kanalen plaatsen.",
+ "We found {0} adverts of yours that are not in Omnivaleur yet.": "We vonden {0} advertenties van je die nog niet in Omnivaleur staan.",
+ "One click puts them in, so you can publish them on your other channels.": "Met één klik zet je ze erin, en daarna kun je ze op je andere kanalen plaatsen.",
+ "Test phase · read below": "Testfase · lees hieronder",
+ "Facebook Marketplace is still in a test phase.": "Facebook Marketplace zit nog in een testfase.",
+ "It works, but Facebook doesn't allow tools that place adverts for you. So there is a chance Facebook blocks your account. Want to be safe? Use a separate Facebook account, or skip Facebook. Sold something? Check that the advert is gone from Facebook; if not, remove it yourself.": "Het werkt, maar Facebook staat hulpmiddelen die voor jou advertenties plaatsen niet toe. Er is dus een kans dat Facebook je account blokkeert. Wil je op zeker spelen? Gebruik een apart Facebook-account, of sla Facebook over. Iets verkocht? Kijk of de advertentie van Facebook af is; zo niet, haal hem dan zelf weg."
 }

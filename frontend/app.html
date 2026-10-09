@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=6245465708"></script>
+<script src="/i18n.js?v=4d5f60610b"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -885,7 +885,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <li><b>Margin calculator</b> is now a tab under <b>Analytics</b>.</li>
         <li><b>Automatic protections</b> is now a tab under <b>Preferences</b>.</li>
         <li><b>Earn 1 month free</b> moved to the bottom of the menu, above Help.</li>
-        <li><b>To list</b> on the dashboard now counts the same items as the To list tab under Items.</li>
+        <li>The number <b>To list</b> on the dashboard was sometimes too high. It now only counts items that are not online anywhere yet.</li>
       </ul>
       <div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:16px">You can read this again via "What's new" at the bottom of the menu.</div>
       <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="sluitNieuws()">Got it</button>
@@ -970,6 +970,11 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       <!-- Is a computer with the extension online to actually run queued jobs?
            Key for anyone working from their phone. Populated by loadExtensionStatus(). -->
       <div class="comp-status" style="display:none"></div>
+
+      <!-- Gescand maar nooit ingelezen. 29-09-2026: een nieuwe klant liet zijn 22
+           Marktplaats-advertenties scannen, klikte nooit op importeren en verloor
+           zo zijn hele proefweek. Zie toonImportSeintje(). -->
+      <div id="import-seintje" style="display:none"></div>
 
       <!-- Beginnen: vinkt af op wat er echt gebeurde. Zie frontend/onboarding.js. -->
       <div id="ob-checklist"></div>
@@ -5077,13 +5082,12 @@ function renderDashboard() {
   document.getElementById('stat-queued').textContent = queued;
   document.getElementById('stat-queued-sub').textContent = queued ? 'keep Chrome open' : 'nothing queued';
 
-  const banner = document.getElementById('jobs-banner');
-  if (queued > 0) {
-    banner.style.display = 'flex';
-    document.getElementById('jobs-count').textContent = queued;
-  } else {
-    banner.style.display = 'none';
-  }
+  // De oude balk "X opdrachten wachten" blijft verborgen (09-10-2026): de balk
+  // bovenaan elk scherm (renderActivityBar) zegt hetzelfde, maar dan per
+  // situatie juist (niet ingelogd, computer uit, rustig tempo). Twee balken
+  // die elkaar konden tegenspreken maakten het alleen onduidelijker.
+  document.getElementById('jobs-banner').style.display = 'none';
+  toonImportSeintje();
   // Keep the "computer online?" indicator's queued count in sync with the latest
   // dashboard data (uses the already-fetched status, no extra request).
   renderExtensionStatus();
@@ -5118,6 +5122,33 @@ function renderDashboard() {
   document.getElementById('dashboard-items-body').innerHTML = rows || LEEG_DASHBOARD;
   if (window.OB) OB.opDashboard();
   toonNieuws(false);
+}
+
+// ── Gescand, nooit ingelezen ──────────────────────────────────────
+// Alleen bij wie nog bijna niets in Omnivaleur heeft: wie al een voorraad heeft
+// en advertenties bewust laat liggen, hoeft dit niet elke dag te zien. Eén
+// lichte vraag per paginabezoek (/api/imports/summary telt alleen).
+let _importSeintjeGevraagd = false;
+async function toonImportSeintje() {
+  const doel = document.getElementById('import-seintje');
+  if (!doel || _importSeintjeGevraagd || !state.listingsLoaded) return;
+  if ((state.items || []).length >= 5) { doel.style.display = 'none'; return; }
+  _importSeintjeGevraagd = true;
+  try {
+    const r = await apiFetch(`${API}/api/imports/summary`);
+    if (!r.ok) return;
+    const d = await parseJsonSafe(r);
+    const n = (d && d.by_status && d.by_status.pending) || 0;
+    if (!n) return;
+    doel.innerHTML = `<div style="display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px 16px;margin-bottom:20px;font-size:13.5px;color:#1e3a8a;line-height:1.5">
+      <span style="font-size:18px">&#128229;</span>
+      <div style="flex:1;min-width:220px">${n === 1
+        ? `<b>We found 1 advert of yours that is not in Omnivaleur yet.</b> One click puts it in, so you can publish it on your other channels.`
+        : `<b>We found ${n} adverts of yours that are not in Omnivaleur yet.</b> One click puts them in, so you can publish them on your other channels.`}</div>
+      <button class="btn btn-sm btn-primary" onclick="showView('import')">Import them</button>
+    </div>`;
+    doel.style.display = 'block';
+  } catch (e) { /* geen seintje is beter dan een fout */ }
 }
 
 // ── Wat is er nieuw ───────────────────────────────────────────────
@@ -6624,7 +6655,7 @@ function renderPlatforms() {
     // dat als "mijn account is gekoppeld". Zie OB.kanaalStatus in onboarding.js.
     const kanaal = p.type === 'extension' && window.OB ? OB.kanaalStatus(p.id, count) : null;
     if (p.type === 'extension' && p.beta) {
-      action = `<span class="badge" style="background:#fef3c7;color:#92400e">Beta · use at your own risk</span>`;
+      action = `<span class="badge" style="background:#fef3c7;color:#92400e">Test phase · read below</span>`;
     } else if (p.type === 'extension') {
       action = kanaal ? kanaal.badge : `<span class="badge">Uses your Chrome login</span>`;
     } else if (ok && cfg?.connectable) {
@@ -6710,9 +6741,9 @@ function renderPlatforms() {
     </div>`;
   }).join('');
   const facebookNote = `<div style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:8px;padding:10px 12px;margin-top:10px">
-    <strong>Facebook Marketplace is beta.</strong> Facebook does not officially allow automated listing and actively detects it.
-    Publishing happens in your own logged-in Chrome, but there is a real risk that Facebook flags or blocks your account.
-    Use this deliberately and at your own risk — preferably with a separate account. Sold? Remove your Facebook listing yourself if the automatic removal fails.
+    <strong>Facebook Marketplace is still in a test phase.</strong> It works, but Facebook doesn't allow tools that place adverts for you.
+    So there is a chance Facebook blocks your account. Want to be safe? Use a separate Facebook account, or skip Facebook.
+    Sold something? Check that the advert is gone from Facebook; if not, remove it yourself.
   </div>`;
   document.getElementById('platforms-body').innerHTML = html + facebookNote;
   if (state.connected.includes('ebay')) { loadEbayShipFrom(); loadEbayGereedheid(); }
