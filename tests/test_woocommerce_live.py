@@ -118,9 +118,14 @@ def test_echte_bestelling_wordt_gezien_en_verlaagt_de_voorraad(winkel):
     from backend.services.woocommerce_orders import regels_uit_bestelling
     p = _nieuw_product(winkel, stock_quantity=5, sku=f"ORD-{time.time_ns()}")
     sinds = (datetime.now(timezone.utc) - timedelta(minutes=2)).replace(tzinfo=None).isoformat(timespec="seconds")
-    _run(winkel.verzoek("POST", "wc/v3/orders", body={
-        "status": "processing", "set_paid": True,
-        "line_items": [{"product_id": p["id"], "quantity": 1}]}))
+    try:
+        _run(winkel.verzoek("POST", "wc/v3/orders", body={
+            "status": "processing", "set_paid": True,
+            "line_items": [{"product_id": p["id"], "quantity": 1}]}))
+    except w.WooFout:
+        # De Playground-winkel met WooCommerce 5.1 crasht NA het opslaan van een
+        # bestelling (php-wasm, 09-10-2026). De bestelling bestaat dan wel.
+        pass
     orders = _run(winkel.bestellingen(sinds))
     regels = [r for o in orders for r in regels_uit_bestelling(o)]
     assert any(r["product_id"] == str(p["id"]) and r["sku"] == p["sku"] for r in regels)

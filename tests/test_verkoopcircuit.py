@@ -121,10 +121,14 @@ def test_verkoop_op_een_kanaal_haalt_het_overal_anders_weg(monkeypatch, kanaal):
 def test_dezelfde_verkoop_twee_keer_gemeld_maakt_niets_dubbel(monkeypatch, kanaal):
     db, winkel = _situatie(stuks_in_winkel=0 if kanaal == "woocommerce" else 1)
     _verkoop(monkeypatch, db, winkel, kanaal)
-    tweede = _verkoop(monkeypatch, db, winkel, kanaal)
+    schrijf_na_eerste = len(winkel.schrijf)
+    _verkoop(monkeypatch, db, winkel, kanaal)
     assert _verwijderopdrachten(db) == sorted(p for p in EXTENSIE if p != kanaal), \
         "geen tweede verwijderopdracht"
-    assert tweede == [], "eBay en Shopify zijn al afgemeld; niet nog eens"
+    # eBay en Shopify worden bewust opnieuw geprobeerd (handle_item_sold: een eerder
+    # mislukte afmelding kan als 'delisted' staan); voor de winkel is dat geen
+    # nieuwe schrijfactie, het product staat al op uitverkocht.
+    assert len(winkel.schrijf) == schrijf_na_eerste
     assert sum(1 for l in db.t["listings"] if l["status"] == "sold") == 1
 
 
