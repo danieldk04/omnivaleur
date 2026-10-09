@@ -148,6 +148,16 @@ demolink, of ontstaat er een nieuwe veelvoorkomende klantvraag of bug, werk dan
 in dezelfde beurt de betreffende regel in dat bestand bij en zet de datum
 bovenaan opnieuw. Zo blijft het actueel zonder dat het Daniel iets kost.
 
+## Grote wijziging in het dashboard: klanten krijgen een melding
+
+Daniel, 09-10-2026: verander je iets groots in het dashboard (menu, indeling, namen van
+schermen of knoppen, een nieuwe werkwijze), dan krijgen bestaande klanten in het dashboard
+zelf een "Wat is er nieuw"-venster, "zodat niemand in de war raakt door nieuwe dingen".
+In `frontend/app.html`: vervang de inhoud van `#nieuws-venster`, geef `NIEUWS_ID` een nieuwe
+waarde en zet `NIEUWS_SINDS` op de datum van de wijziging. Tweetalig, zoals alle klanttekst.
+Noem in je rapport aan Daniel welke melding klanten krijgen. Kleine reparaties zonder
+zichtbare verandering hoeven niet.
+
 ## Tekst in het dashboard: ook in het Nederlands
 
 Het dashboard is Engels geschreven en wordt op het scherm vertaald door
