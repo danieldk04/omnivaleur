@@ -16482,3 +16482,10 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   hosting die de inlogregel weggooit), 27 met nagebootste winkel, hele testreeks gelijk aan main (12 oude fouten).
   NIET getest: een echte klantwinkel, en de één-klik-route tot het einde (die eist https naar omnivaleur.com).
 - Open: Mikkis antwoorden (Daniel); eerste echte koppeling meekijken in de onboardingronde.
+
+## 2026-10-09 12:30: Kostencheck Anthropic na de kostenrem (eerste meting, nog geen oordeel)
+- Console, dagkosten (UTC): 07-10 $6,18, 08-10 $18,00 (Haiku $17,30), 09-10 $0,94 tot 12:25 lokaal. 09-10 bevat nog de uren vóór de rem.
+- Logs: laatste verzoek met 8.939 invoertokens (volledige rubriekvraag) was 11:49 lokaal, dus vóór de rem (commits 12:19 en 12:21). Na 12:21 staat er niets in de logs.
+- Let op: het Anthropic-tegoed staat op min $0,05 ("Add funds to resume API access"). Het stilvallen na 12:21 kan dus door de rem komen óf doordat de API geblokkeerd is. Dat is niet uit elkaar te halen.
+- /health van omnivaleur.com: taalmodel_sinds_start leeg (antwoord_door en google_codes {}), server net opnieuw gestart op 18a473ac, nog geen verkeer gemeten.
+- Oordeel: nog niet te geven. Opnieuw meten na ~13:00 en op 10-10 (norm: onder ~$1 en geen 8.9k-verzoeken). Niets gewijzigd aan code of backend/scheduler.py.
