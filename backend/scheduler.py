@@ -405,6 +405,22 @@ def start_scheduler():
         id="daily_rubriekherstel",
         replace_existing=True,
     )
+    # EENMALIGE INHAALRONDE (09-10-2026, Janneke 31d28378). Na de woordenlijst
+    # stonden er bij haar nog 758 zonder rubriek; met 200 per nacht is dat pas
+    # na haar proef (11-10) rond. Daniel laadde het tegoed op 08-10 op. Eén keer
+    # 1.000, kort na de start, en alleen tot en met 10-10: daarna nooit meer.
+    # Nieuwste eerst, dus haar artikelen van 07/08-10 gaan voor. ~1 cent per stuk.
+    async def rubriekherstel_inhaal():
+        return await herstel_rubrieken(limiet=1000)
+
+    if _dt.now().date() <= _dt(2026, 10, 10).date():
+        _scheduler.add_job(
+            _off_the_request_loop(rubriekherstel_inhaal),
+            "date",
+            run_date=_dt.now() + _td(minutes=8),
+            id="eenmalig_rubriekherstel_inhaal",
+            replace_existing=True,
+        )
     # Eerst de gratis woordenlijst over ALLE lege rubrieken, kort na elke start
     # en daarna elke drie uur. Zie vul_rubrieken_uit_woordenlijst (Janneke,
     # 08-10-2026: 1.755 artikelen zonder rubriek, nachtronde doet er 200).
