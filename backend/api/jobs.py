@@ -2617,6 +2617,7 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # zoals de verkoper het schreef — nooit een verzonnen kleur. Vinted heeft een
     # eigen kleurenlijst en blijft hier buiten.
     _zet_kleur_goed(ready)
+    _vinted_titelgenoten_meegeven(db, user_id, ready)
 
     # Wie het eerst geholpen wordt: de gebruiker. Een scan die toevallig eerder in
     # de wachtrij kwam (bijvoorbeeld de uurlijkse controle) ging vóór een publicatie
