@@ -17,6 +17,34 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## mail-omnivaleur-in-zoho
+
+*09-10-2026 — "Sinds 01-10-2026 is info@omnivaleur.com een Zoho-alias op daniel@omnivaleur.nl (map Klanten via filter); Resend verstuurt nog steeds vanaf info@; DNS omnivaleur.com bij Cloudflare op Zoho-MX; revaleur.com is Hostinger en apart"*
+
+Alle Omnivaleur-mail zit in Zoho EU (mailadmin.zoho.eu, Mail Lite, 1 licentie, tot 11-08-2027).
+- info@omnivaleur.com is een alias op daniel@omnivaleur.nl. Filter in Zoho: Naar bevat info@omnivaleur.com
+  gaat naar map "Klanten", zodat klantantwoorden apart blijven van de lead-inbox.
+- De app verstuurt via Resend vanaf info@omnivaleur.com (records op send. en resend._domainkey, niet
+  aanraken). Railway: REPLY_TO_EMAIL=info@omnivaleur.com, RESEND_FROM="Omnivaleur <info@omnivaleur.com>".
+- DNS van omnivaleur.com en omnivaleur.nl staat bij Cloudflare. revaleur.com is een losse Hostinger-postbus
+  (info@revaleur.com, alleen nog alarmmails) en valt buiten dit.
+
+**Why:** Daniel wilde twee adressen in Zoho in plaats van doorsturen via Namecheap. Eerdere aanname dat
+antwoorden op info@revaleur.com binnenkwamen was de code-standaard, niet Railway.
+**How to apply:** nieuwe mailfunctie met Reply-To: gebruik CONTACT_EMAIL (settings.reply_to_email). Een
+tweede postbus kost een Zoho-licentie (EUR 10,80 per jaar), een alias niet.
+Zie "omnivaleur-light-plan", "mailbox-eigenaarschap".
+
+Script dat het postvak leest (zoals scripts/nieuwe_klanten.py): neem de map "Klanten" mee. Tot 02-10-2026
+las de onboardingroutine alleen INBOX/Beantwoord/Verzonden en zag klantmail aan info@ dus niet.
+
+Klantpost lezen (09-10-2026): de klantmails staan vooral in de map "Beantwoord" (172 sinds 1 sept), niet in INBOX
+(46, vooral leads en spam). Alleen-lezen via IMAP met MAIL_USER/MAIL_PASS/IMAP_HOST uit .env (zoals
+scripts/schrijfstijl_leren.py), BODY.PEEK zodat niets als gelezen wordt gemarkeerd. Filter niet op onderwerp: Egberts
+63 mails hangen onder de oude leaddraad "Vraagje over jullie Marktplaats-aanbod".
+
+---
+
 ## dashboard-opruimronde-09-10
 
 *09-10-2026 — "Opruimronde dashboard 09-10-2026: menu 14 naar 11, tabbladen, \"Niet geplaatst\" telde verkochte mee, Bescherming vol jargon en foute feiten"*
@@ -520,29 +548,6 @@ bij een mislukte vraag naar eerdere verwijderpogingen "nul pogingen" en zette bi
 artikelen die hun vier pogingen op hadden een vijfde verwijdering klaar. Herkenningsteken: een
 extra poging op álle kanalen tegelijk, bij meerdere klanten in dezelfde minuut, terwijl een droge
 ronde ze nu overslaat. Regel blijft: wat je niet kon lezen sla je over, je telt het niet als leeg.
-
----
-
-## mail-omnivaleur-in-zoho
-
-*02-10-2026 — "Sinds 01-10-2026 is info@omnivaleur.com een Zoho-alias op daniel@omnivaleur.nl (map Klanten via filter); Resend verstuurt nog steeds vanaf info@; DNS omnivaleur.com bij Cloudflare op Zoho-MX; revaleur.com is Hostinger en apart"*
-
-Alle Omnivaleur-mail zit in Zoho EU (mailadmin.zoho.eu, Mail Lite, 1 licentie, tot 11-08-2027).
-- info@omnivaleur.com is een alias op daniel@omnivaleur.nl. Filter in Zoho: Naar bevat info@omnivaleur.com
-  gaat naar map "Klanten", zodat klantantwoorden apart blijven van de lead-inbox.
-- De app verstuurt via Resend vanaf info@omnivaleur.com (records op send. en resend._domainkey, niet
-  aanraken). Railway: REPLY_TO_EMAIL=info@omnivaleur.com, RESEND_FROM="Omnivaleur <info@omnivaleur.com>".
-- DNS van omnivaleur.com en omnivaleur.nl staat bij Cloudflare. revaleur.com is een losse Hostinger-postbus
-  (info@revaleur.com, alleen nog alarmmails) en valt buiten dit.
-
-**Why:** Daniel wilde twee adressen in Zoho in plaats van doorsturen via Namecheap. Eerdere aanname dat
-antwoorden op info@revaleur.com binnenkwamen was de code-standaard, niet Railway.
-**How to apply:** nieuwe mailfunctie met Reply-To: gebruik CONTACT_EMAIL (settings.reply_to_email). Een
-tweede postbus kost een Zoho-licentie (EUR 10,80 per jaar), een alias niet.
-Zie "omnivaleur-light-plan", "mailbox-eigenaarschap".
-
-Script dat het postvak leest (zoals scripts/nieuwe_klanten.py): neem de map "Klanten" mee. Tot 02-10-2026
-las de onboardingroutine alleen INBOX/Beantwoord/Verzonden en zag klantmail aan info@ dus niet.
 
 ---
 
