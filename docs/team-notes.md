@@ -16622,3 +16622,9 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   nieuws_gezien. Getest met Daniels echte account (voorbeeld in zijn tabblad, niets live), 596 tests groen.
 - Na het samenvoegen nog te doen: de Drive-kopie van het klantenservice-brein bijwerken (de tak heeft het
   repo-bestand al bijgewerkt).
+- Vervolg (Daniel: "moet 100% duidelijk zijn voor iedereen"): na het hele logboek (542 koppen) erbij gelegd nog op de tak
+  (57769536): de oude wachtrijbalk op het dashboard weg (de balk bovenaan zegt per situatie het juiste, twee balken
+  spraken elkaar soms tegen); seintje "We vonden N advertenties die nog niet in Omnivaleur staan" voor wie minder dan
+  5 artikelen heeft (hulshofmatthijs 29-09 verloor zo zijn proefweek); Facebook-uitleg in gewone woorden (Johan Kist
+  17-09 snapte "beta, use at your own risk" niet). Niet kunnen lezen: de opgeslagen mailanalyse in de database
+  (leesactie op productie niet toegestaan zonder Daniels akkoord) en de Zoho-inbox zelf.
