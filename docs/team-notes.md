@@ -16439,3 +16439,26 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   planner en roept herstel_rubrieken(limiet=1000) aan.
 - De stand van de automatische import (eerste query) is nog niet teruggekomen: Supabase toont alleen de laatste
   uitkomst. Daniel moet die los draaien.
+
+## 09-10-2026: Onboarding nieuwe klanten (ochtend, 11:00 lokaal)
+
+- Janneke 31d28378: controle automatische Shopify-import (uit Stap 1b). Alle drie winkels gecontroleerd vandaag 08:47 UTC,
+  `fout` leeg. Janneke: totaal_toegevoegd 831, laatst_toegevoegd_om 08-10 15:20 UTC, achterstand_om 08-10 13:31 UTC,
+  aan (None, imported-kandidaten). Goudlief 5aae4954: 1.899 toegevoegd, 376 pending. 3bfbed2c: 2.
+- Janneke heeft nog 563 Shopify-kandidaten op pending, waarvan 560 te koop in haar winkel (gemeten via Shopify zelf).
+  Nagebootst met de echte importcode: 528 worden bewust geparkeerd als twijfel, omdat een item met dezelfde titel al aan
+  een ander Shopify-product hangt (vijftien keer "Trui Your Wishes maat 122-128"); 35 zonder match (vermoedelijk
+  tweeling-oordeel of na de achterstand binnengekomen; de achterstand draait vandaag ~13:31 UTC opnieuw).
+- Gerepareerd 425629a1 (+ proef 65cb63d3): die 526 met alleen een gelijke titel kregen in Te controleren de uitleg
+  "zelfde nummer als een product in je winkel" en na koppelen "verwijder het extra product in Shopify". Er was geen
+  nummer gelijk. Nu heten ze second_advert ("alleen de titel komt overeen"); blijft een vraag, gedrag verder gelijk.
+  Proef faalt op de oude code, 72 bestaande importproeven groen voor en na. Echte data nagebootst: 515 second_advert,
+  11 sold_match, 2 shopify_duplicate (echt nummer).
+- Bergstein schoenmaat 24: staat er, vier items aangemaakt 08-10 13:34 tot 13:46 UTC door de achterstandsronde.
+- Rubrieken: 470 zonder (08-10 1.755, vanochtend 758), inhaalronde loopt. Zonder maat 2.072 en zonder merk 2.746 van
+  2.748: zoals ontworpen (kledingmaten bewust niet uit de titel, merk alleen als ze het zelf twee keer invulde).
+- Open voor Daniel: 526 keuzes één voor één is veel voor haar. Beslissing of twee Shopify-producten met alleen
+  dezelfde titel voortaan vanzelf als twee stukken binnenkomen. Proef loopt af 11-10 21:06.
+- Amanda 8f91a370: Vinted-kleding blijft open zoals in de klantfoutenronde van vanochtend; extensie offline sinds
+  08-10 18:33; call ma 12-10. Geen mailtje.
+- robbertbolier, partablecs, winterhome, amhin: ongewijzigd, nul artikelen, al gemaild. Geen mailtje.
