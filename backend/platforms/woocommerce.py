@@ -244,6 +244,7 @@ class WooClient:
     def __init__(self, api_root: str, ck: str, cs: str, modus: str = "basic"):
         self.api_root = api_root
         self.ck, self.cs, self.modus = ck, cs, modus
+        self.modus_gewijzigd = False
 
     async def verzoek(self, methode: str, route: str, params: dict | None = None,
                       body: dict | None = None, timeout: float = 60.0, client=None):
