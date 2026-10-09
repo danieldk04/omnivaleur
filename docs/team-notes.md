@@ -16595,3 +16595,49 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   efe38617 voor de bruine jas (uitgifte geeft op de echte database 10303777676 als bezet mee), 3.115 artikelen
   good -> new (nu 3.208 new, 11 new_with_tags), import_staat new. Lijst van de omgezette id's bewaard in de
   sessie-scratchpad. Na te kijken 10-10: efe38617 is done met een ánder Vinted-nummer dan 10303777676.
+
+## 09-10-2026 (avond): Goudlief 5aae4954, Marktplaats-import gepauzeerd
+
+- Meting: op Marktplaats staan 3.613 advertenties van Goudlief.NL (openbare lijst, compleet), Omnivaleur kent er 119.
+  Wie de andere ~3.490 plaatste is niet vastgesteld (AutoDS is een gok). Bij 1.741 is de titel gelijk aan een Shopify-artikel.
+- Zijn Marktplaats-import (3.505 kandidaten) maakte nieuwe artikelen naast zijn Shopify-artikelen: van 125 nieuwe had 45 dezelfde
+  titel als een bestaand artikel. Daniel koos "pauzeer": alle 3.476 wachtende Marktplaats-kandidaten op 'ignored' gezet, ids bewaard
+  (scratchpad goudlief_mp_pending_ids.json, terugzetten = status 'pending'). De 45 dubbelen en de 125 nieuwe artikelen zijn niet aangeraakt.
+- De ~680 eerdere plaatsingen (MP 341, 2dehands 345) stonden op 'error': tabblad naar de inlogpagina gestuurd. Wachtrij is leeg.
+  NIET zomaar opnieuw plaatsen: veel producten staan al live op Marktplaats, dat geeft dubbele advertenties.
+- Open: koppelen van Marktplaats-advertenties aan bestaande Shopify-artikelen op titel en foto in plaats van nieuwe artikelen te maken.
+
+## 09-10-2026 (avond): dashboard opgeruimd, wacht op Daniels akkoord (tak claude/dashboard-opruimen)
+- Daniel vroeg het dashboard duidelijker en overzichtelijker te maken op basis van alle klantfeedback, en koos:
+  grondig opruimen (zelfde schermen, geen herontwerp), eerst zelf keuren, dan in één keer live.
+- Nieuwe vaste regel (Daniel): elke grote dashboardwijziging krijgt een "Wat is er nieuw"-venster voor bestaande
+  klanten. Staat in CLAUDE.md (op de tak) en in de kennisbank.
+- Op de tak: menu van 14 naar 11 (Blijft liggen, Margecalculator en Bescherming zijn tabbladen onder Verversen,
+  Analyse en Voorkeuren; Verdien 1 maand gratis als gewoon menu-item boven Help); "Niet geplaatst" (118 bij
+  Daniel, telde verkochte en gearchiveerde mee) heet nu Te plaatsen en telt als het tabblad (2); verwijsblok op
+  het dashboard is één regel; wachtrijbalk zegt "laat Chrome open, je scherm mag uit"; updatemelding van de
+  extensie korter; Verversen begint met één zin plus uitklapper; Bescherming zonder jargon en met kloppende
+  feiten (herplaatsen is instelbaar, schrijven mag in het Nederlands); Items-knoppen twee per rij zodat Offline
+  halen niet buiten beeld valt; verkoopvraag wijst op de uit-knop voor nieuwe voorraad. Server: instelling
+  nieuws_gezien. Getest met Daniels echte account (voorbeeld in zijn tabblad, niets live), 596 tests groen.
+- Na het samenvoegen nog te doen: de Drive-kopie van het klantenservice-brein bijwerken (de tak heeft het
+  repo-bestand al bijgewerkt).
+- Vervolg (Daniel: "moet 100% duidelijk zijn voor iedereen"): na het hele logboek (542 koppen) erbij gelegd nog op de tak
+  (57769536): de oude wachtrijbalk op het dashboard weg (de balk bovenaan zegt per situatie het juiste, twee balken
+  spraken elkaar soms tegen); seintje "We vonden N advertenties die nog niet in Omnivaleur staan" voor wie minder dan
+  5 artikelen heeft (hulshofmatthijs 29-09 verloor zo zijn proefweek); Facebook-uitleg in gewone woorden (Johan Kist
+  17-09 snapte "beta, use at your own risk" niet). Niet kunnen lezen: de opgeslagen mailanalyse in de database
+  (leesactie op productie niet toegestaan zonder Daniels akkoord) en de Zoho-inbox zelf.
+- Finale versie (a9135d4f + brein), na Daniels akkoord om de database te lezen: mail_analyse (600 mails, 23-08 t/m
+  06-09, daarna stond de mailagent uit) en bug_signalen (49 patronen, alle opgelost, afgewezen of uitgedoofd)
+  doorgenomen. Toegevoegd: groen kanaalicoon opent de advertentie ("geplaatst maar ik zie hem niet", Toon 03-09 en
+  mail 05-09); "Actieve advertenties" zegt dat het alle kanalen samen zijn ("16.602 terwijl ik er 5.540 heb",
+  03-09); Berichten legt uit waarom het getal blijft staan (badge-klacht 02-09); de werkbalk noemt de gele
+  foutopsporingsbalk (mail 04-09); acht nieuwe Help-vragen. Bovenaan de klantpost: importeren (20), publiceren (10),
+  verversen (7), allemaal storingen die al gerepareerd zijn, geen schermvragen.
+- Mailbox gelezen (Daniel: "ook na 6 september"): Zoho via IMAP, alleen-lezen, 1-9 t/m 9-10, alle mappen; de klantpost
+  zit in "Beantwoord" (172), niet in de inbox (46). Terugkerende schermvragen erbij gebouwd (2799c940): de balk zegt per
+  kanaal hoeveel er wacht (Egbert 04-10, server levert `per_soort`, boven 50 een minuut gecachet); Calm mode uitgelegd
+  (Goudlief 08-10); filter "Nog niet op <kanaal>" bij Items (Egbert 02-10); geen inlogwaarschuwing voor een kanaal
+  zonder werk of advertenties (Goudlief 09-10); Platforms zegt "er valt niets te koppelen" bij Vinted/MP (Janneke 04-10).
+  Proef tests/wachtrijbalk-eerlijk-test.js uitgebreid; valt om op de oude app.html.
