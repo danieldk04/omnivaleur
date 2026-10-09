@@ -16398,3 +16398,19 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   (`achterstand_om` in de stand) ook alle `pending` Shopify-kandidaten waarvan het product nog te koop staat.
   `ignored` blijft van de verkoper; twijfel blijft "te controleren". Proef in tests/test_shopify_auto_import.py.
 - Gevolg voor Janneke: de eerste uurronde na de deploy importeert haar hele achterstand, niet alleen deze vier.
+
+## 09-10-2026: Dagelijkse klantfouten
+
+- 523 opdrachten afgerond in 24 uur, 21 fout bij 5 klanten. Geen code gewijzigd.
+- Opgelost sinds gisteren: de MP-401 bij opstart van 26cf5471 kwam niet terug. Vanochtend 06:07 tot nu 106 MP-opdrachten
+  (53 verwijderd, 53 geplaatst) en een Vinted-scan, allemaal goed. Ook weer ingelogd op Vinted.
+- Open, patroon bij één klant: Amanda 8f91a370 krijgt geen enkel kledingstuk op Vinted. 6 van 6 sinds 07-10 mislukt
+  (jassen, blouses, 2x jurken casual, overhemd, plus een prijswijziging jeans); alleen een pet (unisex, via zoeken) lukte.
+  Steeds na de rubriekstap: twee keer 3 minuten stilte, twee keer weigert Vinted met "Kies een subcategorie" of
+  "Vul je staat in" terwijl prijs leeg is en het formulier 0 foto's telt. Prijzen staan wel in de opdracht (15 tot 210).
+  Haar Vinted staat in het Nederlands; de boom in vinted.js klikt Engelse namen af (Women > Clothing > ...). Andere
+  klanten plaatsen kleding wel (3bfbed2c, c2371efe, 82b13998). Niet gerepareerd: mechanisme niet aantoonbaar zonder
+  haar scherm. Haar supportcall van ma 12-10 12:00 is de kans om één plaatsing live mee te kijken.
+- Klant-eigen: Goudlief 5aae4954 sloot Chrome 08-10 21:41 midden in plaatsen, sindsdien offline met 679 plaatsingen
+  (MP 337, 2dehands 342) wachtend. bcdf9aa4 tabblad weg 19:51. Amanda 10:48 uitgelogd op Vinted.
+- Alle 7 open foutsoorten beoordeeld (3 klant, 4 onbekend), wachter staat op 0 open.
