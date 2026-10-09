@@ -17,6 +17,22 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## herplaatsen-vergat-de-slottekst
+
+*09-10-2026 — 29-09 herplaatsen zonder slottekst; de reparatie zette hem daarna bij 111 Zilverwebsite-advertenties DUBBEL (09-10), want 'slot in tekst' mist opmaak, eigen zoekwoorden en afgekapte tekst*
+
+Herplaatsen (refresh_listing, beide takken) voegde de vaste slottekst van de verkoper NIET toe; alleen publish_to_platforms (_pick) en de reddingsronde deden dat. Het ging alleen goed als items.description de slottekst al bevatte (ingelezen advertenties). Bij items waarvan de tekst uit de webshop is aangevuld ontbrak hij, en het artikelnummer (staat bij Zilverwebsite als laatste regel vóór de slottekst) ook. Gemeten 29-09-2026: 26 van 26 herplaatsingen van die ochtend zonder, 24 daarvan met een eenduidig nummer uit de webshop (products.json, variants.sku, titel uniek).
+
+**Why:** "elk pad moet er zelf aan denken" is de vorm van deze fout, net als bij de vertaling ("vertaling-draait-de-richting-om"). Live advertenties zijn niet te bewerken (geen bewezen tekst-edit op Marktplaats; content_refresh doet op 2dehands alleen verzending), dus een gemiste slottekst blijft staan tot de volgende herplaatsing (relist_dagen, bij Zilverwebsite 30).
+
+**How to apply:** nieuwe paden die een 'create' klaarzetten gaan langs `relist._met_slottekst`. Bij aangevulde teksten ook het artikelnummer in items.description zetten. Voor-en-na-proef: tests/test_herplaatsen_slottekst.py draait de echte refresh_listing. Zie "marktplaats-fotoadres-sterft-met-de-advertentie".
+
+**Vervolg 09-10-2026 (Jaap, "de tekst onder de advertentie werd 2x geplaatst", 25 met de hand hersteld).** De reparatie van 29-09 zette de slottekst er bij 111 advertenties een tweede keer onder (01-10 t/m 09-10, 46 op één ochtend). `_met_slot` keek of de slottekst er al stond met `slot in tekst`, letter voor letter. Bij Zilverwebsite stond hij er wél, maar anders: met opmaak uit de webshop (`<strong>GRATIS</strong>`, `<br/>`; de extensie haalt die weg, dus de koper las twee identieke blokken), met eigen zoekwoorden achter de vaste lijst, met een oudere zoekwoordenlijst, of halverwege afgekapt. Gemeten op zijn 1.276 artikelen: oude controle 817 keer dubbel, nieuwe (`_slot_al_aanwezig`: per regel op de platte tekst, grootste deel of een letterlijke alinea van 120+ tekens; afgekapte staart wordt vervangen) nul, niets ingekort. Proef: tests/test_herplaatsen_slottekst.py, vier nieuwe proeven falen op de oude code.
+
+Les: vergelijk tekst altijd zoals de koper hem leest (zonder opmaak, met genormaliseerde witruimte), nooit de ruwe databasetekst. En een reparatie die tekst toevoegt meet je op de omschrijvingen van het hele account, niet op een paar voorbeelden. Rest: bij twee andere verkopers (1 en 21 artikelen) staat een oudere, anders geformuleerde versie van hun slottekst; daar komen adres/telefoon twee keer, bewust niet geraden.
+
+---
+
 ## woocommerce-koppeling
 
 *09-10-2026 — "09-10-2026 WooCommerce gebouwd (Mikkis): één klik via /wc-auth, drie inlogmodi, nooit wissen, bestellingen zelf nakijken; testwinkel via WordPress Playground; gemeten op 100 leadwinkels"*
@@ -615,18 +631,6 @@ het hulpaanbod (berichtje of call via de Calendly-knop in het dashboard). Warm m
 met uitroepteken of smiley; rond de 120 woorden.
 
 **Weinig vragen per bericht (Daniel, 29-09-2026).** Een bericht aan Toon met vijf vragen: "dit zijn teveel vragen in een keer. maak een korter bericht met minder vragen (enkel de essentiële dus)". Stel alleen de vragen zonder antwoord waarop je niet verder kunt (bijvoorbeeld: wat is al verkocht, anders dubbele verkoop), hooguit twee. De rest noteer je in team-notes om later te vragen. Ook bij een WhatsApp-bericht om een review of doorverwijzing: "korter, en minder nadruk op de problemen". Problemen erkennen in één bijzin, de rest positief.
-
----
-
-## herplaatsen-vergat-de-slottekst
-
-*29-09-2026 — refresh_listing zette de vertaalde tekst zonder vaste slottekst in de plaatsopdracht; 26 van 26 herplaatsingen bij Zilverwebsite kwamen zonder slottekst en artikelnummer online (29-09-2026)*
-
-Herplaatsen (refresh_listing, beide takken) voegde de vaste slottekst van de verkoper NIET toe; alleen publish_to_platforms (_pick) en de reddingsronde deden dat. Het ging alleen goed als items.description de slottekst al bevatte (ingelezen advertenties). Bij items waarvan de tekst uit de webshop is aangevuld ontbrak hij, en het artikelnummer (staat bij Zilverwebsite als laatste regel vóór de slottekst) ook. Gemeten 29-09-2026: 26 van 26 herplaatsingen van die ochtend zonder, 24 daarvan met een eenduidig nummer uit de webshop (products.json, variants.sku, titel uniek).
-
-**Why:** "elk pad moet er zelf aan denken" is de vorm van deze fout, net als bij de vertaling ("vertaling-draait-de-richting-om"). Live advertenties zijn niet te bewerken (geen bewezen tekst-edit op Marktplaats; content_refresh doet op 2dehands alleen verzending), dus een gemiste slottekst blijft staan tot de volgende herplaatsing (relist_dagen, bij Zilverwebsite 30).
-
-**How to apply:** nieuwe paden die een 'create' klaarzetten gaan langs `relist._met_slottekst`. Bij aangevulde teksten ook het artikelnummer in items.description zetten. Voor-en-na-proef: tests/test_herplaatsen_slottekst.py draait de echte refresh_listing. Zie "marktplaats-fotoadres-sterft-met-de-advertentie".
 
 ---
 
