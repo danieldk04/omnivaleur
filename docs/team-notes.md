@@ -16654,3 +16654,8 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   op een telefoon 6 stappen (menu-stappen vallen af) en schuift de tabel naar het groene icoon. Live (PR 28, 7e8c1102),
   live nagelopen op 390 px (6/6) en op gewoon scherm (9/9). Proef extensie-stempel-test 3b faalt op oud.
   Bij het testen stond Daniels taalkeuze ineens op Engels (waarschijnlijk een klik op EN in het menu); teruggezet op NL.
+- Daniel testte de rondleiding op zijn iPhone: het menu bleef openstaan en het groene icoon verdween erachter. Gerepareerd
+  (PR 29 en 30, live 60564b3a): "Wat is er nieuw" en de start doen het menu dicht; op een telefoon klapt het menu alleen
+  open bij de menustappen (en wacht tot het in beeld is), de kaart staat dan onder of boven het menu-item; na Klaar is het
+  menu dicht. Nagelopen op 390 px: 9 van 9 stappen. Proeven in een tabblad dat op de achtergrond staat zijn waardeloos:
+  Chrome bevriest dan elke animatie (visibilityState hidden).
