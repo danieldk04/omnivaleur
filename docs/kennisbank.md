@@ -46,6 +46,8 @@ Telefoonproef (09-10-2026): Chrome-vensters gaan niet smaller dan ~734 px. Test 
 het blokkerende venster "installeer de Chrome-extensie" (kan daar niet); nu weg via _opTelefoon(). Een extensie draait
 niet in zo'n iframe, dus wat de extensie doet is daar niet te zien. Let op: klikken onderin het menu kan "EN" raken en
 zet dan omni_taal van de gebruiker om; controleer en zet terug.
+Animatieproeven in Chrome alleen als het tabblad zichtbaar is (document.visibilityState === "visible"): op de
+achtergrond bevriest Chrome transities en rAF, dan meet je tussenstanden en lijken stappen weg te vallen.
 
 ---
 
