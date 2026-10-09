@@ -1023,9 +1023,11 @@ def _met_slot(tekst: str, slot: str) -> str:
         return schoon
     # Halverwege afgekapt (ingelezen tekst die op de lengtegrens stopte)? Dan
     # het afgekapte begin vervangen, anders leest de koper dat begin twee keer.
-    eerste = (_als_platte_regels(slot) or [""])[0]
-    begin = schoon.find(eerste) if eerste else -1
-    if begin >= 0:
+    woorden = (_als_platte_regels(slot) or [""])[0].split()
+    # Opmaakcodes mogen tussen de woorden staan (<strong>GRATIS</strong>).
+    gevonden = re.search(r"(?:\s|<[^>]*>)+".join(map(re.escape, woorden)), schoon) if woorden else None
+    if gevonden:
+        begin = gevonden.start()
         rest = " ".join(_als_platte_regels(schoon[begin:]))
         if " ".join(_als_platte_regels(slot)).startswith(rest):
             schoon = schoon[:begin].rstrip()
