@@ -388,7 +388,7 @@
   const ICOON_UITLEG = [
     ["grijs", "", "Not on this marketplace", "Click it to publish there, or to paste the link if the advert is already there. A click never marks anything live by itself."],
     ["oranje", "…", "Being published", "The extension is working on it. Leave the tab it opens alone; it closes by itself."],
-    ["groen", "✓", "Live", "The advert is really online on that marketplace."],
+    ["groen", "✓", "Live", "The advert is really online on that marketplace. Click it to open the advert."],
     ["rood", "!", "Didn't work", "Hover over it (or click) to read why. Fix that, then publish again."],
     ["paars", "⧉", "Live under a copy", "The same item exists twice in your dashboard and the other copy is live. Don't publish again: merge the copies."],
   ];
@@ -429,10 +429,14 @@
     const meting = (ext.kanalen || {})[platform];
     const site = { marktplaats: "marktplaats.nl", "2dehands": "2dehands.be", vinted: "vinted.nl", facebook: "facebook.com/marketplace" }[platform];
     let badge = `<span class="badge" style="background:#f1f5f9;color:#475569">Uses your Chrome login</span>`;
-    let regel = `Sign in to <b>${site}</b> in the Chrome where the extension runs. Omnivaleur publishes as you.`;
+    let regel = `Sign in to <a href="https://${site}" target="_blank" rel="noopener" style="color:var(--blue,#2563eb);font-weight:650">${site}</a> in the Chrome where the extension runs. There is nothing to connect: Omnivaleur publishes as you.`;
     if (meting && meting.ingelogd === true) {
       badge = `<span class="badge active">✓ Signed in</span>`;
       regel = `You're signed in to <b>${site}</b> in this browser. Omnivaleur publishes as you.`;
+    } else if (meting && meting.ingelogd === false && !(actief > 0)) {
+      // Niet ingelogd op een kanaal dat hij niet gebruikt is geen probleem.
+      badge = `<span class="badge" style="background:#f1f5f9;color:#475569">Not signed in</span>`;
+      regel = `Not signed in to <b>${site}</b> in this browser. Only needed if you want to sell there. <a href="https://${site}" target="_blank" rel="noopener" style="color:var(--blue,#2563eb);font-weight:650">Open and sign in →</a>`;
     } else if (meting && meting.ingelogd === false) {
       badge = `<span class="badge" style="background:#fff7ed;color:#9a3412">Not signed in</span>`;
       regel = `You're not signed in to <b>${site}</b> in this browser. <a href="https://${site}" target="_blank" rel="noopener" style="color:var(--blue,#2563eb);font-weight:650">Open and sign in →</a>`;
@@ -488,12 +492,26 @@
       "That this marketplace works through your own login in Chrome, not through a separate link with Omnivaleur. It does not mean you're signed in. If Omnivaleur notices you're not, the card says <b>Not signed in</b>, and a bar on the dashboard tells you too."],
     ["Getting started", "I clicked the marketplace icons: is my item published now?",
       "No. Only <b>Publish</b> places adverts. Clicking a grey icon opens a choice: publish there, or paste the link if the advert is already there. Before 17 September a click only marked an item as live; if icons turned green without adverts behind them, let us know and we'll clean it up."],
+    ["Getting started", "What is the difference between Refresh and Stale stock?",
+      "<b>Refresh</b> puts old adverts back at the top of the “Newest” list on the marketplace. <b>Stale stock</b> lists items that have been online a long time without selling, with a lower price you can apply in one click. Both are under <b>Refresh</b> in the menu, as two tabs."],
+    ["Getting started", "Why are there more active listings than items?",
+      "An item on three marketplaces counts as three adverts. <b>Total items</b> is your stock; <b>Active listings</b> is all your adverts on all marketplaces together."],
     ["Getting started", "Which language should I write in?",
       "Dutch or English, whichever you prefer. Omnivaleur translates for each marketplace: Dutch for Marktplaats, 2dehands and eBay, English for Shopify. Vinted and WooCommerce get exactly what you wrote."],
     ["Getting started", "Can I import from my own website?",
       "Yes, if it runs on Shopify or WooCommerce: connect it under Platforms and import under Import. Other webshop systems can't be imported. The adverts you already have on <b>Marktplaats, 2dehands and Vinted</b> you can import under Import too."],
     ["Publishing", "I pressed Publish, but nothing happens",
       "Look at the top of your dashboard: a bar tells you what's holding things up. The usual reasons: the computer with the extension is off or asleep, the extension isn't signed in, or you're not signed in to that marketplace in Chrome. Once that's fixed the queue starts again by itself; you don't need to press Publish again."],
+    ["Publishing", "It says published, but I can't find my advert",
+      "Click the <b>green icon</b> of that marketplace on the item: it opens your advert. A brand-new advert can take a few minutes before it shows up in the marketplace's search. On a business account, look under your business adverts."],
+    ["Publishing", "Chrome shows a yellow bar: Omnivaleur started debugging this browser",
+      "That is normal. Omnivaleur uses it to keep the tab working at full speed while it fills in the form. Don't click it away; it disappears by itself when the advert is done."],
+    ["Publishing", "Can I set shipping costs per marketplace?",
+      "Yes. Under <b>Preferences</b>, at <b>How you deliver</b>, you set what Marktplaats and 2dehands show. eBay shipping is under <b>Platforms › eBay</b>. On Vinted the buyer pays shipping through Vinted itself."],
+    ["Publishing", "What is Calm mode?",
+      "A setting in the extension (click the Omnivaleur icon at the top right of Chrome). With Calm mode on, Omnivaleur places about one advert every few minutes instead of one after the other, so it looks like a person doing it. Slower, but calmer for your accounts. Switch it off and the queue runs straight through."],
+    ["Publishing", "How do I see which items are not on 2dehands yet?",
+      "Go to <b>Items</b> and pick <b>Not on 2dehands yet</b> in the first filter. That works for every marketplace. Select them all and use <b>Publish to…</b> to place them in one go."],
     ["Publishing", "Why does it take a while?",
       "Each advert takes about a minute or two, because the marketplace's own form needs that time, and Omnivaleur deliberately leaves a little room between adverts. With a big stock it's best to let it run overnight. Keep the computer on and awake with Chrome running; Omnivaleur keeps it awake by itself while work is waiting."],
     ["Publishing", "It says I'm not signed in, but I am",
@@ -512,6 +530,12 @@
       "Normal adverts on a business account are taken offline as usual. Adverts in a Pro (Admarkt) campaign Omnivaleur can't take offline: remove those on Marktplaats or 2dehands yourself."],
     ["Selling", "Sold on Vinted, but still on Marktplaats",
       "Vinted doesn't tell anyone about a sale; Omnivaleur notices it by reading your Vinted wardrobe. If you remove a sold item from Vinted yourself, you'll see a <b>Did this item sell?</b> question on your dashboard. Answer it and the item comes off your other marketplaces."],
+    ["Selling", "I sell new stock and keep getting “Did this item sell?”",
+      "That question is meant for one-off items. Selling new stock with more of the same? Switch it off under <b>Preferences</b>, at <b>Upkeep</b>: “Ask me before anything counts as sold”. Questions already open are cleared right away."],
+    ["Selling", "I entered the wrong purchase price",
+      "Go to <b>Analytics</b> and click the pencil next to the purchase price in the sales table. Type the amount without a thousands dot: 1360, not 1.360. Profit and margin update straight away."],
+    ["Account", "The Messages number doesn't go down after reading",
+      "That number comes from the marketplaces themselves and is updated every 15 minutes while your computer with the extension is on. Read the messages on the marketplace; the number follows by itself."],
     ["Account", "Are my marketplace passwords stored?",
       "No. Omnivaleur never sees or stores them. The extension uses the login you already have in Chrome."],
     ["Account", "Can I use Omnivaleur on my phone?",

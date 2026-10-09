@@ -205,6 +205,11 @@ _STAND_VELDEN = ("gecontroleerd", "fout", "laatst_nieuw", "te_controleren",
 # keuzelijst heeft: Janneke verkoopt alleen nieuw en moest 3.115 artikelen
 # "Zo goed als nieuw" met de hand op Nieuw zetten (09-10-2026).
 IMPORT_STAAT = "import_staat"
+
+# Welk "Wat is er nieuw"-bericht in het dashboard deze verkoper al wegklikte
+# (NIEUWS_ID in frontend/app.html). Op de server en niet alleen in de browser:
+# anders krijgt hij hetzelfde bericht op elke computer opnieuw (09-10-2026).
+NIEUWS_GEZIEN = "nieuws_gezien"
 STATEN = ("new_with_tags", "new", "good", "fair", "poor")
 
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
@@ -215,7 +220,8 @@ STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "locatie_land": "", "locatie_plaats": "", "locatie_postcode": "",
              "levering": "beide", "pakket_grens": 0, "slottekst": "",
              SHOPIFY_AUTO_IMPORT: None, SHOPIFY_AUTO_IMPORT_STAND: {}, "vinted_taal": "zelf",
-             WOO_AUTO_IMPORT: None, WOO_AUTO_IMPORT_STAND: {}, IMPORT_STAAT: None}
+             WOO_AUTO_IMPORT: None, WOO_AUTO_IMPORT_STAND: {}, IMPORT_STAAT: None,
+             NIEUWS_GEZIEN: None}
 
 
 def _schoon(rauw: dict | None) -> dict:
@@ -240,6 +246,9 @@ def _schoon(rauw: dict | None) -> dict:
     # Daarom staat herplaatsen op Vinted standaard UIT en kost het een bewuste klik.
     if "vinted_herplaatsen" in rauw:
         uit["vinted_herplaatsen"] = bool(rauw.get("vinted_herplaatsen"))
+    gezien = rauw.get(NIEUWS_GEZIEN)
+    if isinstance(gezien, str) and 0 < len(gezien.strip()) <= 60:
+        uit[NIEUWS_GEZIEN] = gezien.strip()
     if rauw.get(IMPORT_STAAT) in STATEN:
         uit[IMPORT_STAAT] = rauw[IMPORT_STAAT]
     # Vinted: standaard exact de tekst van de verkoper ("zelf"). Alleen wie zelf

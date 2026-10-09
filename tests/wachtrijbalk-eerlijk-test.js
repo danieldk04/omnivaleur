@@ -54,12 +54,16 @@ function nepScherm() {
   return { knopen, getElementById: (id) => knopen[id] || null };
 }
 
-function draai({ queued, pace, online, kanalen }) {
+function draai({ queued, pace, online, kanalen, per_soort }) {
   const scherm = nepScherm();
   const bron = [
     constanteUit("KANAAL_SITE"),
     functieUit("fmtQueueEta"),
     functieUit("fmtSeenAgo"),
+    constanteUit("WACHT_NAAMWOORD"),
+    "const PLATFORM_LABELS = { marktplaats: 'Marktplaats', '2dehands': '2dehands', vinted: 'Vinted' };",
+    "const esc = (s) => String(s);",
+    functieUit("wachtrijOverzicht"),
     functieUit("renderActivityBar"),
     "renderActivityBar();",
     "return { titel: document.getElementById('ext-activity-title').textContent,",
@@ -71,7 +75,7 @@ function draai({ queued, pace, online, kanalen }) {
   // plaats van op de tekst die hij zou moeten beoordelen.
   const fn = new Function("document", "_activityState", "state", "describeJobs", "extState", bron);
   return fn(scherm,
-            { working: [], queued, pace },
+            { working: [], queued, pace, per_soort },
             { extStatus: online === null ? null : { online, seconds_ago: online ? 3 : 9000 } },
             () => "50 listings",
             { status: "ready", version: "1.0.348", email: "klant@example.nl",
@@ -88,7 +92,7 @@ check("noemt Calm mode bij naam", /Calm mode/.test(kalm.titel + kalm.tekst));
 check("noemt het gemeten tempo (6 minuten)", /one every 6 minutes/.test(kalm.tekst), kalm.tekst.slice(0, 140));
 check("noemt hoe lang die 50 gaan duren", /about 5 hours/.test(kalm.tekst), kalm.tekst.slice(0, 200));
 check("zegt met zoveel woorden dat er niets stuk is", /Nothing is stuck/.test(kalm.tekst));
-check("vertelt waar de schakelaar zit", /extension icon/.test(kalm.tekst));
+check("vertelt waar de schakelaar zit", /Omnivaleur icon at the top right of Chrome/.test(kalm.tekst));
 
 console.log("Zonder Calm mode blijft de oude, kloppende tekst staan");
 const snel = draai({ queued: VIJFTIG, pace: { calm: false, seconds_between: 11, samples: 10 }, online: true });
@@ -149,6 +153,19 @@ const ingelogd = draai({ queued: VIJFTIG.map(j => ({ ...j, platform: "2dehands" 
                          pace: { calm: false, seconds_between: 11, samples: 10 },
                          online: true, kanalen: { "2dehands": { ingelogd: true } } });
 check("belooft weer een start", !/nothing can start yet/.test(ingelogd.titel), ingelogd.titel);
+
+// 04-10-2026, Egbert: "ik zie veel gebeuren op 2eHands in een geopend tabblad,
+// zonder dat ik weet wat er precies gebeurt en voor hoeveel advertenties".
+console.log("De balk zegt per kanaal wat er wacht, met het echte aantal van de server");
+const overzicht = draai({ queued: VIJFTIG, pace: { calm: false, seconds_between: 11, samples: 10 },
+                          online: true,
+                          per_soort: [{ action: "create", platform: "2dehands", n: 337 },
+                                      { action: "extend", platform: "2dehands", n: 1 }] });
+check("noemt 337 nieuwe op 2dehands", /2dehands: <b>337<\/b> <span>new adverts<\/span>/.test(overzicht.tekst), overzicht.tekst.slice(-300));
+check("enkelvoud bij één verlenging", /<b>1<\/b> <span>renewal<\/span>/.test(overzicht.tekst), overzicht.tekst.slice(-300));
+
+console.log("Calm mode wordt uitgelegd voordat de naam valt");
+check("zegt wat Calm mode is", /Calm mode is a setting in the extension/.test(kalmEcht.tekst), kalmEcht.tekst.slice(0, 200));
 
 console.log(mislukt === 0 ? "\nAlles goed." : `\n${mislukt} controle(s) mislukt.`);
 process.exit(mislukt === 0 ? 0 : 1);
