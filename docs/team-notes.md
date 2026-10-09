@@ -16659,3 +16659,15 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   open bij de menustappen (en wacht tot het in beeld is), de kaart staat dan onder of boven het menu-item; na Klaar is het
   menu dicht. Nagelopen op 390 px: 9 van 9 stappen. Proeven in een tabblad dat op de achtergrond staat zijn waardeloos:
   Chrome bevriest dan elke animatie (visibilityState hidden).
+
+## 09-10-2026 (avond): Vinted "not signed in" bij een ingelogde verkoper, extensie 1.0.377 (Janneke)
+
+- Janneke 22:39: "Hij blijft deze melding geven. Ik ben wel ingelogd" bij Vinted-plaatsingen ("You are not signed in
+  to Vinted in this browser"). Twee fouten in de extensie: (1) alleen /api/v2/users/current telde, en dat geeft 401
+  zodra Vinteds kortlevende toegangskoekje verlopen is; (2) een "nee" uit de tabbladcontrole werd 10 minuten
+  onthouden, dus opnieuw inloggen hielp niet.
+- 1.0.377: nieuwe `vintedIngelogdInTabblad` (API, bij 401 na 4 s nog eens, daarna het plaatsformulier /items/new:
+  blijft hij daar = ingelogd, doorgestuurd naar /member/... = uitgelogd); alleen nee als beide nee zeggen; incognito
+  = weet niet; alleen een ja wordt onthouden. Proef tests/vinted-inlog-verlopen-koekje-test.js (faalt op de oude
+  code); vinted-inlogdomein en inlogverwijt-proef kregen een stub voor de nieuwe functie.
+- Daniel moet dist/omnivaleur-extension-1.0.377.zip in de Web Store zetten.

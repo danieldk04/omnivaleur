@@ -67,6 +67,12 @@ function maakZand(sessieOp, kapot = []) {
       ? { status: 200, body: { user: { id: 42 } }, url: `${origin}/` }
       : { status: 401, body: null, url: `${origin}/member/general` };
   };
+  // Sinds 1.0.377 kijkt de tabbladcontrole voor Vinted ook naar het
+  // plaatsformulier (vintedIngelogdInTabblad); zelfde nagebootste uitslag.
+  zand.vintedIngelogdInTabblad = async (origin) => {
+    if (kapot.includes(origin)) return null;
+    return origin === sessieOp;
+  };
   vm.createContext(zand);
   return zand;
 }
