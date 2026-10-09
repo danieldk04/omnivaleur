@@ -681,7 +681,7 @@ MAIL1 = """{aanhef},
 Even kort: ik heb {bedrijf} gebouwd, waarmee {jij} alles in een keer op
 alle marketplaces {zet_werkwoord} in plaats van het handmatig over te tikken.
 Zelf verkoop ik ook tweedehands, 700+ reviews met Revaleur, dus ik weet precies
-hoeveel tijd dat kost. Inmiddels gebruiken 38 andere resellers het.
+hoeveel tijd dat kost. Inmiddels gebruiken 64 andere resellers het.
 
 De eerste 7 dagen zijn gratis, en als het {jou} geen tijd bespaart {jij_stopt}
 gewoon weer.
@@ -751,7 +751,7 @@ sneller weg zijn. Daar heb ik {bedrijf} voor gebouwd: {jij} {zet_werkwoord} een
 artikel klaar en het staat in een keer overal, in plaats van het overal apart
 over te tikken.
 Zelf verkoop ik ook tweedehands, 700+ reviews met Revaleur. Inmiddels gebruiken
-38 andere resellers het.
+64 andere resellers het.
 
 De eerste 7 dagen zijn gratis, en als het {jou} niks oplevert {jij_stopt} gewoon
 weer.
