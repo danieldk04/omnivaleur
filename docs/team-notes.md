@@ -16595,3 +16595,14 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   efe38617 voor de bruine jas (uitgifte geeft op de echte database 10303777676 als bezet mee), 3.115 artikelen
   good -> new (nu 3.208 new, 11 new_with_tags), import_staat new. Lijst van de omgezette id's bewaard in de
   sessie-scratchpad. Na te kijken 10-10: efe38617 is done met een ánder Vinted-nummer dan 10303777676.
+
+## 09-10-2026 (avond): Goudlief 5aae4954, Marktplaats-import gepauzeerd
+
+- Meting: op Marktplaats staan 3.613 advertenties van Goudlief.NL (openbare lijst, compleet), Omnivaleur kent er 119.
+  Wie de andere ~3.490 plaatste is niet vastgesteld (AutoDS is een gok). Bij 1.741 is de titel gelijk aan een Shopify-artikel.
+- Zijn Marktplaats-import (3.505 kandidaten) maakte nieuwe artikelen naast zijn Shopify-artikelen: van 125 nieuwe had 45 dezelfde
+  titel als een bestaand artikel. Daniel koos "pauzeer": alle 3.476 wachtende Marktplaats-kandidaten op 'ignored' gezet, ids bewaard
+  (scratchpad goudlief_mp_pending_ids.json, terugzetten = status 'pending'). De 45 dubbelen en de 125 nieuwe artikelen zijn niet aangeraakt.
+- De ~680 eerdere plaatsingen (MP 341, 2dehands 345) stonden op 'error': tabblad naar de inlogpagina gestuurd. Wachtrij is leeg.
+  NIET zomaar opnieuw plaatsen: veel producten staan al live op Marktplaats, dat geeft dubbele advertenties.
+- Open: koppelen van Marktplaats-advertenties aan bestaande Shopify-artikelen op titel en foto in plaats van nieuwe artikelen te maken.
