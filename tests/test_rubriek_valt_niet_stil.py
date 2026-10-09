@@ -53,6 +53,11 @@ def _neppe_anthropic(gedrag):
 def nep_anthropic(monkeypatch):
     def zetten(gedrag):
         monkeypatch.setitem(sys.modules, "anthropic", _neppe_anthropic(gedrag))
+        # Sinds 09-10-2026 gaat een rubriekvraag nooit meer naar Claude (kosten);
+        # de herkansingen en de rem werken nu op het taalmodel (Gemini).
+        from backend.services import taalmodel
+        monkeypatch.setattr(taalmodel, "vraag",
+                            lambda opdracht, **kw: gedrag().content[0].text)
         monkeypatch.setattr(imp, "_CLASSIFY_WACHT_S", (0.0, 0.0))
     return zetten
 

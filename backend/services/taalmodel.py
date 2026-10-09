@@ -35,8 +35,33 @@ class TaalmodelOnbeschikbaar(Exception):
     """Gemini en Claude gaven allebei geen bruikbaar antwoord."""
 
 
+# KOSTENREM OP CLAUDE (09-10-2026, Daniel: "echt veel te duur"). Gemeten in de
+# Anthropic-console: 07-10 ~6 dollar, 08-10 ~17 dollar, allemaal Haiku, bijna
+# alles vragen van ~8.900 invoertokens met een antwoord van ~27 tokens: de
+# volledige rubriekvraag. De gratis Google-sleutel gaf na de Shopify-imports
+# 48.099x HTTP 429 tegen 104x 200, dus elke vraag viel door naar Claude.
+# Twee remmen: rubriekvragen mogen nooit naar Claude (claude_toegestaan=False,
+# de woordenlijst en de verkoper vangen dat op), en alles wat wel mag is per
+# dag begrensd. De teller loopt per proces; een herstart zet hem terug op nul,
+# dus het is een noodrem en geen boekhouding.
+CLAUDE_MAX_PER_DAG = 300
+_CLAUDE_DAG: dict = {"dag": None, "n": 0}
+
+
+def _claude_ruimte() -> bool:
+    from datetime import datetime, timezone
+    vandaag = datetime.now(timezone.utc).date()
+    if _CLAUDE_DAG["dag"] != vandaag:
+        _CLAUDE_DAG["dag"], _CLAUDE_DAG["n"] = vandaag, 0
+    if _CLAUDE_DAG["n"] >= CLAUDE_MAX_PER_DAG:
+        return False
+    _CLAUDE_DAG["n"] += 1
+    return True
+
+
 def vraag(opdracht: str, *, max_tokens: int = 1024, claude_model: str = HAIKU,
-          tijdslimiet: float = 30.0, wat: str = "taalvraag", denken: bool = True) -> str:
+          tijdslimiet: float = 30.0, wat: str = "taalvraag", denken: bool = True,
+          claude_toegestaan: bool = True) -> str:
     """Het antwoord als tekst. Gooit TaalmodelOnbeschikbaar als niets lukte."""
     from backend.services import gemini_vertaling
 
@@ -49,7 +74,12 @@ def vraag(opdracht: str, *, max_tokens: int = 1024, claude_model: str = HAIKU,
         logger.warning("%s: Gemini gaf niets bruikbaars, Claude als reserve", wat)
 
     reden: Exception | str = "geen Google-sleutel en geen Anthropic-sleutel"
-    if settings.anthropic_api_key:
+    if not claude_toegestaan:
+        reden = "Claude is voor deze vraag uitgezet (kosten)"
+    elif not _claude_ruimte():
+        TELLER["claude_dagmaximum"] += 1
+        reden = f"dagmaximum van {CLAUDE_MAX_PER_DAG} Claude-vragen bereikt"
+    elif settings.anthropic_api_key:
         try:
             import anthropic
             client = anthropic.Anthropic(api_key=settings.anthropic_api_key,

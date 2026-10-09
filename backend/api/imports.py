@@ -1083,7 +1083,7 @@ _CLASSIFY_POGINGEN = 3
 _CLASSIFY_WACHT_S = (1.0, 3.0)
 
 
-async def _haiku_classificatie(client, prompt: str):
+async def _haiku_classificatie(client, prompt: str, claude_ok: bool = False):
     """Eén classificatievraag, met rem en herkansingen. Geeft de antwoordtekst.
 
     Sinds 23-09-2026 gaat de vraag eerst naar Gemini en pas daarna naar Claude
@@ -1106,7 +1106,7 @@ async def _haiku_classificatie(client, prompt: str):
                     prompt, max_tokens=200, tijdslimiet=20.0, wat="rubriekkeuze",
                     # Zonder denkstap: 182 van 199 gelijk aan mét, 3x zo snel
                     # (gemeten 23-09-2026 op echte artikelen van acht takken).
-                    denken=False)
+                    denken=False, claude_toegestaan=claude_ok)
         except Exception as e:
             laatste = e
             if poging == _CLASSIFY_POGINGEN - 1:
@@ -1384,7 +1384,7 @@ async def _classify_with_claude(title: str | None, description: str | None,
             kort = _kledingprompt(title, description, brand)
             try:
                 uit = _lees_rubriekantwoord(
-                    (await _haiku_classificatie(client, kort)).strip(),
+                    (await _haiku_classificatie(client, kort, claude_ok=True)).strip(),
                     toegestaan=_KLEDINGTAKKEN, alleen_zeker=True)
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"Korte rubriekvraag mislukt ({type(e).__name__}: {e}); volledige vraag")
