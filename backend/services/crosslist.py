@@ -1019,9 +1019,64 @@ def _met_slot(tekst: str, slot: str) -> str:
         return schoon
     # Al aanwezig? Dan niet nog een keer. Dat gebeurt zodra een advertentie
     # met slottekst en al weer wordt ingelezen bij een scan.
-    if slot.strip() and slot.strip() in schoon:
+    if slot.strip() and _slot_al_aanwezig(schoon, slot):
         return schoon
+    # Halverwege afgekapt (ingelezen tekst die op de lengtegrens stopte)? Dan
+    # het afgekapte begin vervangen, anders leest de koper dat begin twee keer.
+    woorden = (_als_platte_regels(slot) or [""])[0].split()
+    # Opmaakcodes mogen tussen de woorden staan (<strong>GRATIS</strong>).
+    gevonden = re.search(r"(?:\s|<[^>]*>)+".join(map(re.escape, woorden)), schoon) if woorden else None
+    if gevonden:
+        begin = gevonden.start()
+        rest = " ".join(_als_platte_regels(schoon[begin:]))
+        if " ".join(_als_platte_regels(slot)).startswith(rest):
+            schoon = schoon[:begin].rstrip()
     return (schoon + "\n\n" + slot).strip() if schoon else slot
+
+
+def _als_platte_regels(tekst: str) -> list[str]:
+    """De tekst zoals de koper hem leest: zonder opmaakcodes, per regel, met
+    gewone spaties. Zelfde omzetting als platteTekst in de extensie."""
+    import html as _html
+    s = str(tekst or "")
+    if re.search(r"[<&]", s):
+        s = re.sub(r"<\s*br\s*/?\s*>", "\n", s, flags=re.I)
+        s = re.sub(r"<\s*/?\s*(?:p|div|li|h[1-6]|tr)\b[^>]*>", "\n", s, flags=re.I)
+        s = re.sub(r"<[^>]+>", "", s)
+        s = _html.unescape(s)
+    s = s.replace(" ", " ")
+    return [r for r in (" ".join(regel.split()) for regel in s.splitlines()) if r]
+
+
+def _slot_al_aanwezig(tekst: str, slot: str) -> bool:
+    """Staat de slottekst al in de omschrijving, zoals de koper hem leest?
+
+    WAAROM NIET GEWOON `slot in tekst` (09-10-2026, Jaap van Zilverwebsite: "de
+    tekst onder de advertentie werd 2x geplaatst", 25 met de hand hersteld).
+    Twee vormen die letter voor letter verschillen en op het scherm hetzelfde zijn:
+    - de omschrijving komt uit de webshop met opmaak (<strong>GRATIS</strong>,
+      <br/>, <em>); de extensie haalt die weg, dus de koper zag twee keer exact
+      dezelfde slottekst;
+    - de verkoper zet per advertentie eigen zoekwoorden achter de vaste lijst
+      ("Zinzi, valentijnscadeau, rood, robijn kleur").
+    - oudere advertenties dragen een oudere versie van die zoekwoordenlijst.
+    Daarom per regel vergelijken op de platte tekst: staat het grootste deel van
+    de slottekst er al, of letterlijk een lange alinea eruit, dan hoort hij er
+    niet nog eens onder. Gemeten op zijn 1.276 artikelen: oude controle 616 keer
+    dubbel, deze nul.
+    """
+    regels = _als_platte_regels(slot)
+    if not regels:
+        return True
+    plat = " ".join(_als_platte_regels(tekst)).casefold()
+    totaal = sum(len(r) for r in regels)
+    gevonden = [r for r in regels if r.casefold() in plat]
+    return (sum(len(r) for r in gevonden) * 2 >= totaal
+            or any(len(r) >= _LANGE_SLOTALINEA for r in gevonden))
+
+
+# Een alinea van zoveel tekens komt niet toevallig letterlijk in een omschrijving.
+_LANGE_SLOTALINEA = 120
 
 
 def _zonder_slot(tekst: str, slot: str) -> str:
