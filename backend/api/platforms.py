@@ -1,6 +1,7 @@
 """
 Platform auth endpoints — login endpoints for all platforms.
 """
+import asyncio
 import logging
 import re
 from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks
@@ -676,3 +677,168 @@ def _save_credentials(user_id: str, platform: str, tokens: dict):
         "token_expires_at": tokens.get("token_expires_at"),
         "extra_data": tokens.get("extra_data"),
     }, on_conflict="user_id,platform").execute()
+
+
+# ── WooCommerce (09-10-2026) ─────────────────────────────────────────────
+#
+# Twee wegen naar dezelfde koppeling, zie backend/platforms/woocommerce.py:
+#   1. Eén klik: de verkoper vult zijn winkeladres in, wij sturen hem naar
+#      WooCommerce's eigen toestemmingsscherm in zijn winkel. Daar klikt hij op
+#      Approve; zijn WINKEL stuurt de sleutel naar /woocommerce/callback.
+#   2. Sleutel plakken: voor winkels waar dat scherm niet werkt (de winkel kan
+#      ons niet bereiken, een beveiligingsplugin houdt het tegen).
+# In beide gevallen wordt de sleutel pas als gekoppeld getoond als hij echt werkt.
+
+WOO_RETURN_URL = "https://omnivaleur.com/app#platforms"
+WOO_CALLBACK_URL = "https://omnivaleur.com/api/platforms/woocommerce/callback"
+
+
+def _bewaar_woo(user_id: str, ck: str, cs: str, gegevens: dict, hoe: str) -> None:
+    from backend.platforms.woocommerce import PLATFORM
+    db = get_db()
+    # De voorraadvlag en het merkteken van de bestellingen blijven staan bij
+    # opnieuw koppelen; een nieuwe sleutel is geen nieuwe winkel.
+    oud = ((db.table("platform_credentials").select("extra_data").eq("user_id", user_id)
+            .eq("platform", PLATFORM).limit(1).execute().data or [{}])[0].get("extra_data") or {})
+    zelfde_winkel = oud.get("api_root") == gegevens["api_root"]
+    extra = {**(oud if zelfde_winkel else {}),
+             "api_root": gegevens["api_root"], "site": gegevens["site"],
+             "modus": gegevens["modus"], "koppeling": hoe}
+    extra.pop("verkoop_fout", None)
+    extra.pop("koppeling_kapot", None)
+    _save_credentials(user_id, PLATFORM, {"access_token": ck, "refresh_token": cs,
+                                          "extra_data": extra})
+
+
+@router.get("/woocommerce/auth-url")
+async def woocommerce_auth_url(store: str, user_id: str = Depends(get_current_user)):
+    from backend.platforms.woocommerce import (WooFout, koppel_url, maak_staat,
+                                               normaliseer_adres, ontdek_api)
+    adres = normaliseer_adres(store)
+    if not adres:
+        raise HTTPException(status_code=400,
+                            detail="Enter your shop's address, for example yourshop.nl.")
+    try:
+        api_root = await ontdek_api(adres)
+    except WooFout as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not api_root.lower().startswith("https://"):
+        # WooCommerce stuurt de sleutel alleen naar een https-adres, en over http
+        # werkt de knop-route in de praktijk niet. Plakken kan wel.
+        raise HTTPException(status_code=400, detail=(
+            "Your shop doesn't use https, so the one-click connection isn't available. "
+            "Use 'Paste a key instead' below."))
+    return {"url": koppel_url(api_root, maak_staat(user_id, api_root),
+                              WOO_RETURN_URL, WOO_CALLBACK_URL),
+            "site": api_root}
+
+
+@router.post("/woocommerce/callback")
+async def woocommerce_callback(request: Request, background_tasks: BackgroundTasks):
+    """Hier stuurt de WINKEL de sleutel heen nadat de verkoper Approve klikte.
+
+    Geen inlog: de winkel roept dit aan, niet de browser. Wie het is staat in de
+    getekende staat die wij zelf in het toestemmingsadres zetten (lees_staat);
+    zonder geldige handtekening wordt er niets bewaard. Antwoord altijd snel met
+    200 bij een geldige staat: WooCommerce wacht hierop en toont de verkoper
+    anders een foutmelding, terwijl de sleutel dan al bestaat."""
+    from backend.platforms.woocommerce import lees_staat
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail="no JSON")
+    staat = lees_staat(str(body.get("user_id") or ""))
+    ck, cs = str(body.get("consumer_key") or ""), str(body.get("consumer_secret") or "")
+    if not staat or not (ck.startswith("ck_") and cs.startswith("cs_")):
+        logger.warning("woocommerce-callback geweigerd: staat %s, sleutel %s",
+                       "geldig" if staat else "ongeldig", "ja" if ck else "nee")
+        raise HTTPException(status_code=403, detail="invalid state")
+    background_tasks.add_task(_woo_controleer_en_bewaar, staat["u"], staat["a"], ck, cs)
+    return {"ok": True}
+
+
+async def _woo_controleer_en_bewaar(user_id: str, api_root: str, ck: str, cs: str) -> None:
+    from backend.platforms.woocommerce import WooFout, controleer_sleutels
+    try:
+        gegevens = await controleer_sleutels(api_root, ck, cs)
+    except WooFout as e:
+        logger.warning("woocommerce: sleutel van %s via de knop werkt niet: %s", user_id[:8], e)
+        _woo_mislukt[user_id] = str(e)
+        try:
+            await asyncio.to_thread(_meld_mislukte_woo_koppeling, user_id, api_root, e)
+        except Exception:  # noqa: BLE001
+            pass
+        return
+    except Exception as e:  # noqa: BLE001
+        logger.exception("woocommerce: controle na de knop mislukt voor %s", user_id[:8])
+        _woo_mislukt[user_id] = f"Could not check the key ({type(e).__name__}). Try again."
+        return
+    await naast_de_lus(lambda: _bewaar_woo(user_id, ck, cs, gegevens, "knop"))
+    _woo_mislukt.pop(user_id, None)
+    logger.info("woocommerce: %s gekoppeld via de knop (%s, %s)", user_id[:8],
+                gegevens["site"], gegevens["modus"])
+
+
+# Wat er misging na de knop, zodat het scherm het kan zeggen. In het geheugen:
+# het gaat om de minuut na het klikken, en een herstart betekent hooguit dat
+# de verkoper het nog eens probeert.
+_woo_mislukt: dict[str, str] = {}
+
+
+@router.post("/woocommerce/connect-keys")
+async def woocommerce_connect_keys(body: dict, user_id: str = Depends(get_current_user)):
+    """Koppelen met een sleutel die de verkoper zelf in WooCommerce aanmaakte.
+
+    Body: {"store": "mijnwinkel.nl", "consumer_key": "ck_...", "consumer_secret": "cs_..."}"""
+    from backend.platforms.woocommerce import WooFout, controleer_sleutels
+    store = str(body.get("store") or "").strip()
+    try:
+        gegevens = await controleer_sleutels(store, str(body.get("consumer_key") or ""),
+                                             str(body.get("consumer_secret") or ""))
+    except WooFout as e:
+        try:
+            await asyncio.wait_for(asyncio.to_thread(_meld_mislukte_woo_koppeling,
+                                                     user_id, store, e), timeout=10)
+        except Exception:  # noqa: BLE001 — de mail mag de melding niet tegenhouden
+            pass
+        raise HTTPException(status_code=400, detail=str(e))
+    await naast_de_lus(lambda: _bewaar_woo(user_id, str(body["consumer_key"]).strip(),
+                                           str(body["consumer_secret"]).strip(), gegevens, "sleutel"))
+    return {"status": "connected", "platform": "woocommerce", "site": gegevens["site"],
+            "producten": gegevens.get("producten")}
+
+
+@router.get("/woocommerce/info")
+def woocommerce_info(user_id: str = Depends(get_current_user)):
+    """Gekoppeld, met welke winkel, en of het nakijken van verkopen nog lukt."""
+    from backend.platforms.woocommerce import PLATFORM
+    rij = (get_db().table("platform_credentials").select("extra_data").eq("user_id", user_id)
+           .eq("platform", PLATFORM).limit(1).execute().data or [])
+    extra = (rij[0].get("extra_data") if rij else None) or {}
+    return {"connected": bool(rij), "site": extra.get("site"),
+            "verkoop_fout": extra.get("verkoop_fout"),
+            "mislukt": None if rij else _woo_mislukt.get(user_id)}
+
+
+_WOO_ALARM_SINDS: dict = {}
+
+
+def _meld_mislukte_woo_koppeling(user_id: str, winkel: str, fout: Exception) -> bool:
+    """Mail Daniel bij een mislukte koppeling, met de reden. Zoals bij Shopify:
+    bij Janneke kon niemand zien wat er misging terwijl zij nog achter haar
+    scherm zat. Hooguit één mail per klant per fout per kwartier."""
+    import time
+    from backend.services.email import send_email
+    from backend.services.referral_mail import email_van
+
+    sleutel = (user_id, str(fout))
+    nu = time.time()
+    if nu - _WOO_ALARM_SINDS.get(sleutel, 0) < 900:
+        return False
+    _WOO_ALARM_SINDS[sleutel] = nu
+    adres = email_van(user_id) or user_id
+    tekst = (f"{adres} probeerde WooCommerce te koppelen en dat lukte niet.\n\n"
+             f"Winkel: {winkel or '(leeg)'}\n"
+             f"Soort fout: {getattr(fout, 'soort', type(fout).__name__)}\n"
+             f"Dit zag de klant op het scherm:\n{fout}\n")
+    return bool(send_email(subject=f"WooCommerce koppelen mislukt: {adres}", body=tekst))

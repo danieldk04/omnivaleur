@@ -797,7 +797,7 @@ async def localize_item_for_platform(item: dict, platform: str) -> dict:
 # best-effort and carries an account-ban risk — surfaced to the user in the UI.
 EXTENSION_PLATFORMS = {"marktplaats", "2dehands", "vinted", "facebook"}
 # Platforms handled server-side via official API
-API_PLATFORMS = {"ebay", "shopify"}
+API_PLATFORMS = {"ebay", "shopify", "woocommerce"}
 # Built in the backend but NOT yet released — surfaced as "Coming soon" in the UI
 # and refused by publish_to_platforms so nothing half-lists. Etsy's platform code
 # exists (backend/platforms/etsy.py) but the flow isn't finished/tested.
@@ -1807,7 +1807,7 @@ async def _publish_one(item: dict, platform_name: str, credentials: dict, user_i
         # Bewust NIET meesmokkelen in de inloggegevens: die worden bij sommige
         # platforms met een ververst token teruggeschreven naar de database, en
         # dan zou er een functie in dat veld belanden.
-        if platform_name == "shopify":
+        if platform_name in ("shopify", "woocommerce"):
             result = await platform.create_listing(item, credentials, on_created=_leg_vast)
         else:
             result = await platform.create_listing(item, credentials)
@@ -2269,13 +2269,22 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
     except Exception as e:  # noqa: BLE001 — dan geldt het oude gedrag
         logger.warning("[sold] voorraadcontrole mislukt voor %s: %s", item_id, e)
         voorraad = None
+    # Hetzelfde voor een WooCommerce-winkel met voorraad (09-10-2026). Geeft None
+    # als het artikel geen WooCommerce-product heeft; dan geldt wat hierboven kwam.
+    if voorraad is None:
+        from backend.services import woocommerce_voorraad
+        try:
+            voorraad = await woocommerce_voorraad.na_verkoop(db, item_id, sold_on_platform)
+        except Exception as e:  # noqa: BLE001 — dan geldt het oude gedrag
+            logger.warning("[sold] WooCommerce-voorraadcontrole mislukt voor %s: %s", item_id, e)
+            voorraad = None
     if voorraad == shopify_voorraad.BLIJFT:
-        if sold_on_platform != "shopify":
+        if sold_on_platform not in ("shopify", "woocommerce"):
             # Die advertentie heeft zijn koper gehad; de rest blijft staan.
             (await naast_de_lus(lambda: db.table("listings").update({"status": "delisted"})
              .eq("item_id", item_id).eq("platform", sold_on_platform)
              .in_("status", list(shopify_voorraad.LEVEND)).execute()))
-        logger.info("[sold] item_id=%s verkocht op %s, Shopify heeft nog voorraad: "
+        logger.info("[sold] item_id=%s verkocht op %s, de winkel heeft nog voorraad: "
                     "niets afgemeld", item_id, sold_on_platform)
         return
 
@@ -2421,7 +2430,7 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
         and l["status"] in ("active", "relisting", "error", "delisted", "hidden", "pending")
         # Voorraad op bij een voorraadwinkel: het Shopify-product blijft staan
         # (Shopify toont het als uitverkocht) zodat het aangevuld kan worden.
-        and not (voorraad == shopify_voorraad.OP and l["platform"] == "shopify")
+        and not (voorraad == shopify_voorraad.OP and l["platform"] in ("shopify", "woocommerce"))
     ]
 
     logger.info(
@@ -3252,7 +3261,7 @@ async def _delist_one(listing: dict):
 #   vinted       — queued as an extension edit job.
 # Marktplaats, 2dehands and Facebook have no edit automation at all yet, so
 # they are reported as "unsupported" rather than silently skipped.
-_PRICE_SYNC_API = {"ebay", "shopify"}
+_PRICE_SYNC_API = {"ebay", "shopify", "woocommerce"}
 _PRICE_SYNC_EXTENSION = {"vinted"}
 
 

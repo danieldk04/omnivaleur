@@ -3,6 +3,7 @@ from backend.platforms.marktplaats import MarktplaatsPlatform, TweedehandsPlatfo
 from backend.platforms.ebay import EbayPlatform
 from backend.platforms.etsy import EtsyPlatform
 from backend.platforms.shopify import ShopifyPlatform
+from backend.platforms.woocommerce import WooCommercePlatform
 
 PLATFORM_REGISTRY = {
     "vinted": VintedPlatform(),
@@ -11,6 +12,7 @@ PLATFORM_REGISTRY = {
     "ebay": EbayPlatform(),
     "etsy": EtsyPlatform(),
     "shopify": ShopifyPlatform(),
+    "woocommerce": WooCommercePlatform(),
 }
 
 

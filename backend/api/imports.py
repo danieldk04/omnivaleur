@@ -2119,7 +2119,7 @@ def _match_candidate(cand: dict, items: list[dict], listings_by_id: dict,
     # Shopify: het artikelnummer staat op de variant, niet in de titel. De scan
     # heeft er al op gekoppeld (jobs._store_scan_results, row["sku"]) en die
     # keuze als suggested_item_id bewaard; hier is het nummer zelf niet meer.
-    if cand.get("platform") == "shopify" and cand.get("suggested_item_id") \
+    if cand.get("platform") in ("shopify", "woocommerce") and cand.get("suggested_item_id") \
             and any(it["id"] == cand["suggested_item_id"] for it in items):
         return cand["suggested_item_id"], "same_code"
     return None, None
@@ -2464,6 +2464,8 @@ def start_scan(platform: str, background_tasks: BackgroundTasks,
                user_id: str = Depends(require_active_subscription)):
     if platform == "shopify":
         return _start_shopify_scan(user_id, background_tasks)
+    if platform == "woocommerce":
+        return _start_server_scan(user_id, background_tasks, "woocommerce")
     if platform not in SCANNABLE_PLATFORMS:
         raise HTTPException(status_code=400, detail=f"Scanning isn't available for {platform}")
     db = get_db()
@@ -2610,6 +2612,39 @@ def _start_shopify_scan(user_id: str, background_tasks: BackgroundTasks) -> dict
     return {"job_id": job_id}
 
 
+def _start_server_scan(user_id: str, background_tasks: BackgroundTasks, platform: str) -> dict:
+    """Een scan die de server zelf doet, met de sleutel van de koppeling.
+
+    Zoals Shopify hierboven: bewust niet in SCANNABLE_PLATFORMS (dat betekent
+    "de extensie doet het") en meteen op 'claimed', zodat de extensie hem nooit
+    oppakt. WooCommerce sinds 09-10-2026 (services/woocommerce_scan.py)."""
+    from backend.services.woocommerce_scan import scan_winkel
+
+    db = get_db()
+    lopend = execute_with_retry(
+        db.table("jobs").select("id").eq("user_id", user_id).eq("platform", platform)
+        .eq("action", "scan").in_("status", ["pending", "claimed"]).limit(1)
+    ).data
+    if lopend:
+        return {"job_id": lopend[0]["id"]}
+    job_id = str(uuid.uuid4())
+    try:
+        execute_with_retry(db.table("jobs").insert({
+            "id": job_id, "user_id": user_id, "item_id": None, "platform": platform,
+            "action": "scan", "status": "claimed", "payload": {},
+            "claimed_at": datetime.now(timezone.utc).isoformat(),
+            "result": {"_progress": {"stage": "opening",
+                                     "message": "Connecting to your WooCommerce shop…"}},
+        }), dubbel_is_ok=True)
+    except Exception:  # noqa: BLE001
+        logger.exception("Kon %s-scan niet aanmaken voor %s", platform, user_id)
+        raise HTTPException(
+            status_code=503,
+            detail="Could not start the scan just now — the database did not respond. Try again in a moment.")
+    background_tasks.add_task(scan_winkel, user_id, job_id)
+    return {"job_id": job_id}
+
+
 @router.get("/")
 async def list_import_candidates(platform: str = None, status: str = "pending", user_id: str = Depends(get_current_user)):
     import asyncio
@@ -2745,7 +2780,7 @@ async def link_candidate(candidate_id: str, body: dict, user_id: str = Depends(g
 
     existing = (await naast_de_lus(lambda: db.table("listings").select("id,status,platform_listing_id").eq("item_id", item_id).eq("platform", cand["platform"]).execute()))
     listed_at = cand.get("platform_listed_at") or datetime.now(timezone.utc).isoformat()
-    if cand["platform"] == "shopify" and existing.data:
+    if cand["platform"] in ("shopify", "woocommerce") and existing.data:
         # Een Shopify-productnummer verandert nooit, dus een ánder nummer is een
         # ánder product: hetzelfde stuk staat twee keer in de winkel. Overschrijven
         # maakte het eerste product onvindbaar, en een verkoop daarvan haalde het

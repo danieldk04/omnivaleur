@@ -515,7 +515,7 @@ def _recover_stale_claims(db, user_id: str, platform: str, now_dt: datetime) -> 
         # de extensie. Terug op 'pending' zou de extensie hem oppakken en niet
         # kunnen uitvoeren; blijft hij hangen (bijvoorbeeld door een deploy
         # middenin), dan is afsluiten met een fout het enige eerlijke.
-        if j["action"] == "scan" and j.get("platform") == "shopify":
+        if j["action"] == "scan" and j.get("platform") in ("shopify", "woocommerce"):
             retry_safe = False
 
         if retry_safe and reclaims < MAX_RECLAIMS:
@@ -2791,7 +2791,7 @@ def onboarding_status(user_id: str = Depends(get_current_user)):
             if items:
                 uit["gepubliceerd"] = bool(
                     db.table("listings").select("id").in_("item_id", items[:200])
-                    .in_("platform", ["ebay", "shopify"]).eq("status", "active")
+                    .in_("platform", ["ebay", "shopify", "woocommerce"]).eq("status", "active")
                     .limit(1).execute().data)
     except Exception as e:  # noqa: BLE001 — een halve lijst is beter dan een kapot dashboard
         logger.warning("onboarding-status voor %s niet compleet: %s", user_id, e)

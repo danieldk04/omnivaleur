@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=ac14665991"></script>
+<script src="/i18n.js?v=f48d6e14fe"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -2718,6 +2718,51 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
      verholpen. Het dashboard zette al die tijd een groen "Extension active (v1.0.218)"
      neer, want de ondergrens stond nog op 1.0.171. Een kopie die het werk aantoonbaar
      niet aankan mag nooit meer als "in orde" doorgaan. -->
+<!-- WooCommerce koppelen (09-10-2026, Mikkis). Eén klik naar het eigen
+     toestemmingsscherm van WooCommerce in de winkel van de verkoper; lukt dat niet
+     (geen https, de winkel kan ons niet bereiken), dan een sleutel plakken. Zie
+     backend/api/platforms.py > woocommerce_auth_url en woocommerce_connect_keys. -->
+<div id="woo-connect-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:502;align-items:center;justify-content:center;padding:20px;overflow-y:auto">
+  <div style="background:#fff;border-radius:20px;max-width:520px;width:100%;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,.2);margin:auto">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+      <div style="width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#9b5c8f,#7f54b3);display:flex;align-items:center;justify-content:center"><img src="https://www.google.com/s2/favicons?sz=64&domain=woocommerce.com" alt="" style="width:22px;height:22px;border-radius:4px" onerror="this.outerHTML='🛍️'"></div>
+      <div style="font-size:18px;font-weight:800;letter-spacing:-.3px">Connect WooCommerce</div>
+    </div>
+    <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:6px">What's your shop's address?</div>
+    <p style="font-size:13.5px;color:#64748b;line-height:1.6;margin-bottom:14px">
+      The address your customers visit, for example <b>yourshop.nl</b>. We send you to your own WooCommerce, where you click <b>Approve</b>. Log in there first if it asks.
+    </p>
+    <input id="woo-store-input" type="text" placeholder="yourshop.nl" autocomplete="off" spellcheck="false"
+           onkeydown="if(event.key==='Enter')startWooKnop()"
+           style="padding:13px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;width:100%;box-sizing:border-box">
+    <button id="woo-connect-btn" onclick="startWooKnop()"
+            style="width:100%;margin-top:14px;padding:13px;background:linear-gradient(135deg,#9b5c8f,#7f54b3);color:#fff;border:none;border-radius:100px;font-size:15px;font-weight:700;cursor:pointer">Continue to WooCommerce</button>
+
+    <details id="woo-keys" style="margin-top:18px;border:1.5px solid #e2e8f0;border-radius:12px;padding:10px 14px">
+      <summary style="cursor:pointer;font-size:13.5px;font-weight:700;color:#0f172a">Paste a key instead</summary>
+      <div style="font-size:13px;color:#334155;line-height:1.7;margin:10px 0 12px">
+        <div>1. In WordPress, open <a id="woo-keys-link" href="#" target="_blank" rel="noopener"><b>WooCommerce → Settings → Advanced → REST API</b></a>.</div>
+        <div>2. Click <b>Add key</b>, name it Omnivaleur, set <b>Permissions</b> to <b>Read/Write</b> and click <b>Generate API key</b>.</div>
+        <div>3. Copy the consumer key and the consumer secret here.</div>
+      </div>
+      <label style="font-size:12px;font-weight:700;color:#0f172a">Consumer key</label>
+      <input id="woo-ck-input" type="text" autocomplete="off" spellcheck="false" placeholder="ck_…"
+             style="padding:12px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:13px;width:100%;box-sizing:border-box;font-family:monospace;margin:6px 0 12px">
+      <label style="font-size:12px;font-weight:700;color:#0f172a">Consumer secret</label>
+      <input id="woo-cs-input" type="password" autocomplete="off" spellcheck="false" placeholder="cs_…"
+             onkeydown="if(event.key==='Enter')submitWooKeys()"
+             style="padding:12px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:13px;width:100%;box-sizing:border-box;font-family:monospace;margin:6px 0 12px">
+      <button id="woo-keys-btn" onclick="submitWooKeys()"
+              style="width:100%;padding:12px;background:#0f172a;color:#fff;border:none;border-radius:100px;font-size:14px;font-weight:700;cursor:pointer">Connect with this key</button>
+    </details>
+
+    <div id="woo-connect-msg" style="display:none;font-size:13px;line-height:1.55;padding:12px 14px;border-radius:11px;margin-top:16px"></div>
+    <button onclick="closeWooConnect()" style="width:100%;padding:10px;margin-top:8px;background:transparent;border:none;font-size:13px;font-weight:600;color:#94a3b8;cursor:pointer">Cancel</button>
+    <p style="font-size:12px;color:#94a3b8;margin-top:10px;line-height:1.5;text-align:center">
+      Stuck? Reply to any of our emails and we'll set it up with you.
+    </p>
+  </div>
+</div>
 <div id="shopify-connect-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:502;align-items:center;justify-content:center;padding:20px;overflow-y:auto">
   <div style="background:#fff;border-radius:20px;max-width:520px;width:100%;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,.2);margin:auto">
 
@@ -3386,7 +3431,9 @@ async function apiFetchRetry(url, opts = {}, tries = 3) {
 // analytics or the calculator, so it's deliberately left out of this list.
 const PLATFORMS = ['marktplaats', '2dehands', 'vinted', 'facebook', 'ebay', 'shopify'];
 // Publish server-side via official API — must be connected before they can be selected.
-const API_PLATFORMS_FE = new Set(['ebay', 'shopify']);
+const API_PLATFORMS_FE = new Set(['ebay', 'shopify', 'woocommerce']);
+// Scans die de server zelf doet met de sleutel van de winkel; de extensie doet hier niets.
+const SERVER_SCANS = new Set(['shopify', 'woocommerce']);
 
 // Mirrors backend/services/crosslist.py's _UNIVERSAL_REQUIRED / _PLATFORM_REQUIRED —
 // lets the dashboard warn about missing data before a publish attempt even fires,
@@ -3632,9 +3679,9 @@ function smartMissingBadge(item) {
   const n = Object.keys(missingByPlatform).length;
   return chip('#fffbeb', '#b45309', '⚠', `Missing data for ${n} platform${n !== 1 ? 's' : ''}`, fullTip);
 }
-const PLATFORM_LABELS = { marktplaats: 'Marktplaats', '2dehands': '2dehands', ebay: 'eBay', etsy: 'Etsy', shopify: 'Shopify', vinted: 'Vinted', facebook: 'Facebook Marketplace' };
-const PLATFORM_DOMAINS = { marktplaats: 'marktplaats.nl', '2dehands': '2dehands.be', vinted: 'vinted.nl', facebook: 'facebook.com', ebay: 'ebay.com', etsy: 'etsy.com', shopify: 'shopify.com' };
-const PLATFORM_EMOJI_FALLBACK = { marktplaats: '🇳🇱', '2dehands': '🇧🇪', vinted: '👕', facebook: '📘', ebay: '🛒', etsy: '🎨', shopify: '🏪' };
+const PLATFORM_LABELS = { marktplaats: 'Marktplaats', '2dehands': '2dehands', ebay: 'eBay', etsy: 'Etsy', shopify: 'Shopify', woocommerce: 'WooCommerce', vinted: 'Vinted', facebook: 'Facebook Marketplace' };
+const PLATFORM_DOMAINS = { marktplaats: 'marktplaats.nl', '2dehands': '2dehands.be', vinted: 'vinted.nl', facebook: 'facebook.com', ebay: 'ebay.com', etsy: 'etsy.com', shopify: 'shopify.com', woocommerce: 'woocommerce.com' };
+const PLATFORM_EMOJI_FALLBACK = { marktplaats: '🇳🇱', '2dehands': '🇧🇪', vinted: '👕', facebook: '📘', ebay: '🛒', etsy: '🎨', shopify: '🏪', woocommerce: '🛍️' };
 // Real platform logos via Google's favicon service (no local asset hosting needed) —
 // falls back to the old emoji if the favicon fails to load (offline, blocked, etc).
 // Platforms whose favicon the Google service can't resolve (Facebook blocks it,
@@ -4950,6 +4997,9 @@ async function _loadAllNu(opties = {}) {
   if (platformsRes.status === 'fulfilled' && Array.isArray(platformsRes.value?.connected)) {
     state.connected = platformsRes.value.connected;
     state.opnieuwKoppelen = platformsRes.value.opnieuw_koppelen || [];
+    // WooCommerce staat alleen in de rij kanaaliconen bij wie hem gekoppeld
+    // heeft; bij iedereen anders zou het een grijs icoon zijn dat niets doet.
+    if (state.connected.includes('woocommerce') && !PLATFORMS.includes('woocommerce')) PLATFORMS.push('woocommerce');
   }
   // De eigen voorkeur moet binnen zijn vóór er iets wordt ingedeeld, anders
   // oordeelt het scherm even met een lege instelling en ziet hij artikelen die
@@ -5095,7 +5145,7 @@ function renderPlatformMatrix(itemId) {
     }
   }
 
-  const SHORT = { marktplaats: 'MP', '2dehands': '2dh', vinted: 'V', facebook: 'FB', ebay: 'eBay', etsy: 'Etsy', shopify: 'Shop' };
+  const SHORT = { marktplaats: 'MP', '2dehands': '2dh', vinted: 'V', facebook: 'FB', ebay: 'eBay', etsy: 'Etsy', shopify: 'Shop', woocommerce: 'Woo' };
 
   const dots = PLATFORMS.map(p => {
     const icon = PLATFORM_ICONS[p];
@@ -6493,6 +6543,7 @@ const PLATFORM_CONNECT = {
   ebay: { connectable: true, connect: connectEbay },
   etsy: { connectable: false, note: 'Coming soon' },
   shopify: { connectable: true, connect: connectShopify },
+  woocommerce: { connectable: true, connect: connectWooCommerce },
 };
 
 function renderPlatforms() {
@@ -6504,6 +6555,7 @@ function renderPlatforms() {
     { id: 'ebay', label: 'eBay', type: 'api', icon: platIcon('ebay', 20) },
     { id: 'etsy', label: 'Etsy', type: 'api', icon: platIcon('etsy', 20) },
     { id: 'shopify', label: 'Shopify', type: 'api', icon: platIcon('shopify', 20) },
+    { id: 'woocommerce', label: 'WooCommerce', type: 'api', icon: platIcon('woocommerce', 20) },
   ];
   const html = items.map(p => {
     const ok = state.connected.includes(p.id);
@@ -6546,6 +6598,10 @@ function renderPlatforms() {
     // eBay gets an inline ship-from sub-section inside its own card, so the
     // address always reads as belonging to eBay (not a stray card in the grid).
     let extra = '';
+    if (p.id === 'woocommerce' && ok) {
+      extra = `<div id="woo-info" style="margin-top:10px;font-size:12px;color:var(--muted)"></div>`;
+      setTimeout(laadWooInfo, 0);
+    }
     if (p.id === 'ebay' && ok) {
       extra = `<div id="ebay-gereed" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border,#e5e7eb);font-size:12px">
         <div style="font-weight:700;font-size:12px;margin-bottom:6px">Ready to sell on eBay?</div>
@@ -6920,6 +6976,148 @@ async function submitShopifyToken() {
     knop.disabled = false;
     knop.textContent = 'Connect store';
   }
+}
+
+// ── WooCommerce koppelen (09-10-2026, Mikkis) ─────────────────────
+// Eén klik: wij sturen de verkoper naar het toestemmingsscherm in zijn eigen
+// WooCommerce; zijn winkel stuurt de sleutel rechtstreeks naar onze server.
+// Daarna komt hij hier terug met ?success=1 en kijken we of de sleutel werkt.
+// Lukt dat niet, dan plakt hij een sleutel. Zie backend/platforms/woocommerce.py.
+function connectWooCommerce() {
+  document.getElementById('woo-connect-msg').style.display = 'none';
+  document.getElementById('woo-connect-overlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('woo-store-input').focus(), 50);
+}
+
+function closeWooConnect() {
+  // Het geheim niet laten staan in een gesloten venster.
+  document.getElementById('woo-cs-input').value = '';
+  document.getElementById('woo-connect-overlay').style.display = 'none';
+}
+
+function _wooMsg(tekst, soort) {
+  const el = document.getElementById('woo-connect-msg');
+  const kleuren = { fout: ['#fef2f2', '#b91c1c'], let: ['#fffbeb', '#b45309'], goed: ['#f0fdf4', '#15803d'] }[soort]
+    || ['#f8fafc', '#475569'];
+  el.style.background = kleuren[0];
+  el.style.color = kleuren[1];
+  el.textContent = tekst;
+  el.style.display = 'block';
+}
+
+function _wooAdres() {
+  let v = (document.getElementById('woo-store-input').value || '').trim();
+  if (v && !/^https?:\/\//i.test(v)) v = 'https://' + v;
+  return v.replace(/\/wp-admin.*$/i, '').replace(/\/+$/, '');
+}
+
+function _wooToonSleutels() {
+  const adres = _wooAdres();
+  const link = document.getElementById('woo-keys-link');
+  if (adres) link.href = adres + '/wp-admin/admin.php?page=wc-settings&tab=advanced&section=keys&create-key=1';
+  document.getElementById('woo-keys').open = true;
+}
+
+async function startWooKnop() {
+  const adres = _wooAdres();
+  if (!adres) { _wooMsg('Fill in your shop address first.', 'fout'); return; }
+  const knop = document.getElementById('woo-connect-btn');
+  knop.disabled = true;
+  knop.textContent = 'Looking up your shop…';
+  try {
+    const r = await apiFetch(`${API}/api/platforms/woocommerce/auth-url?store=${encodeURIComponent(adres)}`);
+    const data = await parseJsonSafe(r);
+    if (!r.ok || !data?.url) {
+      _wooMsg((data && data.detail) || `Could not find your shop (HTTP ${r.status}).`, 'fout');
+      _wooToonSleutels();
+      return;
+    }
+    try { localStorage.setItem('wooKoppelAdres', adres); } catch (_) {}
+    window.location.href = data.url;
+  } catch (e) {
+    _wooMsg('Could not reach Omnivaleur: ' + e.message, 'fout');
+  } finally {
+    knop.disabled = false;
+    knop.textContent = 'Continue to WooCommerce';
+  }
+}
+
+async function submitWooKeys() {
+  const adres = _wooAdres();
+  const ck = document.getElementById('woo-ck-input').value.trim();
+  const cs = document.getElementById('woo-cs-input').value.trim();
+  if (!adres || !ck || !cs) { _wooMsg('Fill in your shop address, the consumer key and the consumer secret.', 'fout'); return; }
+  const knop = document.getElementById('woo-keys-btn');
+  knop.disabled = true;
+  knop.textContent = 'Checking with your shop…';
+  try {
+    const r = await apiFetch(`${API}/api/platforms/woocommerce/connect-keys`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ store: adres, consumer_key: ck, consumer_secret: cs }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) { _wooMsg((data && data.detail) || `Your shop refused the key (HTTP ${r.status}).`, 'fout'); return; }
+    document.getElementById('woo-cs-input').value = '';
+    _wooGekoppeld(data.site);
+  } catch (e) {
+    _wooMsg('Could not reach Omnivaleur: ' + e.message, 'fout');
+  } finally {
+    knop.disabled = false;
+    knop.textContent = 'Connect with this key';
+  }
+}
+
+function _wooGekoppeld(site) {
+  if (!state.connected.includes('woocommerce')) state.connected.push('woocommerce');
+  if (!PLATFORMS.includes('woocommerce')) PLATFORMS.push('woocommerce');
+  renderPlatforms();
+  if (typeof renderImportScanButtons === 'function') renderImportScanButtons();
+  _wooMsg(`Connected to ${site || 'your shop'}. Go to Import to bring in your products.`, 'goed');
+  showToast(`WooCommerce connected: ${site || 'your shop'}. Go to Import to bring in your products.`);
+  setTimeout(closeWooConnect, 1800);
+}
+
+async function laadWooInfo() {
+  const box = document.getElementById('woo-info');
+  if (!box) return;
+  try {
+    const r = await apiFetch(`${API}/api/platforms/woocommerce/info`);
+    const d = await parseJsonSafe(r);
+    if (!r.ok || !d) return;
+    const fout = d.verkoop_fout;
+    const winkel = String(d.site || '').replace(/^https?:\/\//, '');
+    box.innerHTML = (winkel ? `<div>${esc(winkel)}</div>` : '')
+      + (fout ? `<div style="color:#b45309;margin-top:4px">⚠️ We can't reach your shop since ${esc(new Date(fout.sinds).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}: ${esc(fout.reden || '')} Sales in your shop are not removed from other channels until this works again.</div>` : '');
+  } catch (_) { /* alleen een melding */ }
+}
+
+// Terug uit WooCommerce: ?success=1 of 0 staat in het adres.
+async function wooNaTerugkeer() {
+  const q = new URLSearchParams(window.location.search);
+  if (!q.has('success') || !q.has('user_id')) return;
+  const gelukt = q.get('success') === '1';
+  history.replaceState({}, '', window.location.pathname + window.location.hash);
+  showView('platforms');
+  if (!gelukt) { showToast('WooCommerce: you did not approve the connection. Nothing was changed.'); return; }
+  showToast('Checking the connection with your shop…');
+  for (let i = 0; i < 15; i++) {
+    await new Promise(res => setTimeout(res, 2000));
+    try {
+      const r = await apiFetch(`${API}/api/platforms/woocommerce/info`);
+      const d = await parseJsonSafe(r);
+      if (r.ok && d?.connected) { _wooGekoppeld(d.site); return; }
+      if (r.ok && d?.mislukt) {
+        connectWooCommerce();
+        try { document.getElementById('woo-store-input').value = localStorage.getItem('wooKoppelAdres') || ''; } catch (_) {}
+        _wooMsg(d.mislukt + ' You can also paste a key below.', 'fout');
+        _wooToonSleutels();
+        return;
+      }
+    } catch (_) { /* volgende ronde */ }
+  }
+  connectWooCommerce();
+  _wooMsg('Your shop did not send us the key. Some security plugins block this; paste a key below instead.', 'let');
+  _wooToonSleutels();
 }
 
 async function disconnectPlatform(platform) {
@@ -7938,7 +8136,7 @@ async function markSoldItem(itemId, title) {
 
 // ── Import existing listings (scan platform → review → link/create) ──────
 // Shopify leest de server zelf uit met de gekoppelde winkel (services/shopify_scan.py).
-const IMPORT_SCANNABLE = { vinted: true, marktplaats: true, '2dehands': true, shopify: true, ebay: false, etsy: false };
+const IMPORT_SCANNABLE = { vinted: true, marktplaats: true, '2dehands': true, shopify: true, woocommerce: true, ebay: false, etsy: false };
 const scanningPlatforms = {}; // platform -> true while a scan is queued/running in the background
 let importCandidatesById = {}; // id -> candidate, so the item modal can prefill from a scan
 let importCreateCandidateId = null; // set while the item modal is creating an item from an import
@@ -7951,7 +8149,8 @@ let importCreateCandidateId = null; // set while the item modal is creating an i
 function importKanalen() {
   try {
     const bewaard = JSON.parse(localStorage.getItem('importKanalen') || 'null');
-    if (Array.isArray(bewaard)) return bewaard.filter(p => IMPORT_SCANNABLE[p]);
+    if (Array.isArray(bewaard)) return bewaard.filter(p => IMPORT_SCANNABLE[p]
+      && (p !== 'woocommerce' || (state.connected || []).includes('woocommerce')));
   } catch (_) {}
   const op = new Set((state.listings || []).map(l => l.platform));
   return Object.keys(IMPORT_SCANNABLE).filter(p => IMPORT_SCANNABLE[p] && op.has(p));
@@ -7967,7 +8166,10 @@ function zetImportKanaal(p, aan) {
 function renderImportScanButtons() {
   const gekozen = new Set(importKanalen());
   const bezig = importAllesBezig || Object.values(scanningPlatforms).some(Boolean);
-  const kan = Object.keys(IMPORT_SCANNABLE).filter(p => IMPORT_SCANNABLE[p]);
+  // WooCommerce alleen bij wie hem gekoppeld heeft: voor de rest is het een
+  // vinkje dat alleen "connect first" kan opleveren.
+  const kan = Object.keys(IMPORT_SCANNABLE).filter(p => IMPORT_SCANNABLE[p]
+    && (p !== 'woocommerce' || (state.connected || []).includes('woocommerce')));
   const straks = Object.keys(IMPORT_SCANNABLE).filter(p => !IMPORT_SCANNABLE[p]);
   const chips = kan.map(p => {
     const aan = gekozen.has(p);
@@ -8071,13 +8273,19 @@ function laatsteImportRonde() {
 function renderImportAuto() {
   const box = document.getElementById('import-auto');
   if (!box) return;
-  if (!(state.connected || []).includes('shopify')) { box.innerHTML = ''; return; }
+  box.innerHTML = ['shopify', 'woocommerce']
+    .filter(p => (state.connected || []).includes(p))
+    .map(_importAutoBlok).join('');
+}
+
+function _importAutoBlok(p) {
+  const naam = PLATFORM_LABELS[p] || p;
   const s = state.settings || {};
-  const aan = s.shopify_auto_import_aan === true;
-  const st = s.shopify_auto_import_stand || {};
+  const aan = s[`${p}_auto_import_aan`] === true;
+  const st = s[`${p}_auto_import_stand`] || {};
   const tijd = iso => new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const delen = [];
-  if (!aan) delen.push(`<span>Off. New Shopify products only come in when you press Import.</span>`);
+  if (!aan) delen.push(`<span>Off. New ${esc(naam)} products only come in when you press Import.</span>`);
   else if (st.fout) delen.push(`<span style="color:#b45309">⚠️ ${esc(st.fout)}</span>`);
   else if (!st.gecontroleerd) delen.push(`<span>We check your store every hour. The first check runs within the hour.</span>`);
   else {
@@ -8085,32 +8293,36 @@ function renderImportAuto() {
     if (st.laatst_toegevoegd_om) delen.push(`<span>Last new product added ${esc(tijd(st.laatst_toegevoegd_om))}.</span>`);
     if (st.te_controleren) delen.push(`<b style="color:#92400e">${Number(st.te_controleren)} waiting under To check.</b>`);
   }
-  box.innerHTML = `<div class="imp-auto">
+  return `<div class="imp-auto">
     <label class="vg-chip${aan ? ' on' : ''}">
-      <input type="checkbox" id="shopify-auto-aan" ${aan ? 'checked' : ''} onchange="saveShopifyAuto(this.checked)">
-      ${platIcon('shopify', 16)}<span>Add new Shopify products automatically</span>
+      <input type="checkbox" id="${p}-auto-aan" ${aan ? 'checked' : ''} onchange="saveImportAuto('${p}', this.checked)">
+      ${platIcon(p, 16)}<span>Add new ${esc(naam)} products automatically</span>
     </label>
-    <div class="imp-status" id="shopify-auto-regel">${delen.join(' ')}</div>
+    <div class="imp-status" id="${p}-auto-regel">${delen.join(' ')}</div>
   </div>`;
 }
 
-async function saveShopifyAuto(aan) {
-  const regel = document.getElementById('shopify-auto-regel');
-  const schakel = document.getElementById('shopify-auto-aan');
+// Bleef bestaan voor wie nog een oude kopie van deze pagina open heeft.
+function saveShopifyAuto(aan) { return saveImportAuto('shopify', aan); }
+
+async function saveImportAuto(p, aan) {
+  const naam = PLATFORM_LABELS[p] || p;
+  const regel = document.getElementById(`${p}-auto-regel`);
+  const schakel = document.getElementById(`${p}-auto-aan`);
   if (schakel) schakel.closest('.vg-chip').classList.toggle('on', aan);
   if (regel) regel.textContent = 'Saving…';
   try {
     const r = await apiFetchRetry(`${API}/api/items/settings`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ shopify_auto_import: aan }),
+      body: JSON.stringify({ [`${p}_auto_import`]: aan }),
     });
     const data = await parseJsonSafe(r);
     if (!r.ok) throw new Error(data?.detail || `HTTP ${r.status}`);
     state.settings = { ...state.settings, ...data };
     renderImportAuto();
-    showToast(data.shopify_auto_import_aan
-      ? 'Saved. New products in your Shopify store are added every hour.'
-      : 'Saved. New Shopify products only come in when you press Import.');
+    showToast(data[`${p}_auto_import_aan`]
+      ? `Saved. New products in your ${naam} store are added every hour.`
+      : `Saved. New ${naam} products only come in when you press Import.`);
   } catch (e) {
     renderImportAuto();
     showToast(`Could not save: ${e.message}`);
@@ -8204,7 +8416,7 @@ async function wachtOpScan(platform, jobId) {
       }
     }
     if (Date.now() - laatsteBeweging > STALL_MS || Date.now() - start > MAX_MS) {
-      return { ok: false, fout: platform === 'shopify'
+      return { ok: false, fout: SERVER_SCANS.has(platform)
         ? 'no answer from your store. Try again in a moment.'
         : 'no answer from the Omnivaleur extension. Is Chrome open with the extension on?' };
     }
@@ -8216,7 +8428,7 @@ async function importeerAlleKanalen() {
   if (!kanalen.length || importAllesBezig) return;
   importAllesBezig = true;
   for (const k of Object.keys(importAllesStand)) delete importAllesStand[k];
-  kanalen.forEach(p => { importAllesStand[p] = { stage: p === 'shopify' ? 'opening' : 'queued' }; });
+  kanalen.forEach(p => { importAllesStand[p] = { stage: SERVER_SCANS.has(p) ? 'opening' : 'queued' }; });
   renderImportScanButtons();
   const ronde = { tijd: Date.now(), kanalen: {}, linked: 0, created: 0, twijfel: 0, fouten: 0 };
   try {
@@ -8355,7 +8567,7 @@ async function scanPlatform(platform) {
     scanningPlatforms[platform] = true;
     renderImportScanButtons();
     // Shopify wacht niet op de extensie; 'queued' zou dat wel beweren.
-    renderImportProgress(platform, { stage: platform === 'shopify' ? 'opening' : 'queued', message: platform === 'shopify' ? 'Connecting to your Shopify store…' : undefined });
+    renderImportProgress(platform, { stage: SERVER_SCANS.has(platform) ? 'opening' : 'queued', message: platform === 'shopify' ? 'Connecting to your Shopify store…' : platform === 'woocommerce' ? 'Connecting to your WooCommerce shop…' : undefined });
     if (data.job_id) pollScanProgress(platform, data.job_id);
     else { // no job id (shouldn't happen) — fall back to timed reloads
       setTimeout(() => loadImportCandidates(platform), 15000);
@@ -8432,6 +8644,8 @@ function pollScanProgress(platform, jobId) {
               showToast('Scan complete — everything Marktplaats has is already in your dashboard.');
             } else if (rest > 0) {
               showToast(`Fetched ${meta.gevonden || 0} adverts. ${rest.toLocaleString('en-GB')} still to go — import these first, then scan again for the next batch.`);
+            } else if (platform === 'woocommerce' && ((Number(meta.uitverkocht) || 0) + (Number(meta.concepten) || 0)) > 0) {
+              showToast(`Scan complete. Not imported: ${Number(meta.uitverkocht) || 0} out of stock and ${Number(meta.concepten) || 0} drafts in WooCommerce. Publish them with stock in WooCommerce, then scan again.`);
             } else if (platform === 'shopify' && ((Number(meta.uitverkocht) || 0) + (Number(meta.concepten) || 0)) > 0) {
               // Janneke (08-10-2026): "kan nog niet alle producten vinden". De scan
               // neemt alleen actieve producten met voorraad mee; zeg waar de rest is.
@@ -12042,7 +12256,7 @@ if (_urlParams.get('billing') === 'success' || _urlParams.get('billing') === 'ca
   // De importherinnering linkt hierheen: meteen bij "Alles importeren".
   showView('import');
 }
-loadAll().then(() => { if (window.location.hash === '#platforms') renderPlatforms(); });
+loadAll().then(() => { if (window.location.hash === '#platforms') renderPlatforms(); wooNaTerugkeer(); });
 loadBillingStatus();
 // De verwijskaart hoort meteen op het dashboard te staan, niet pas nadat
 // iemand toevallig op het verwijsscherm is geweest.
