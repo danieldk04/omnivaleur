@@ -17,6 +17,29 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## dashboardwijziging-krijgt-klantmelding
+
+*09-10-2026 — "Elke grote wijziging in het dashboard krijgt een \"Wat is er nieuw\"-venster voor bestaande klanten (Daniel, 09-10-2026)"*
+
+Voer je iets groots door in het dashboard (indeling, menu, namen van knoppen of schermen, nieuwe werkwijze), dan
+krijgen klanten daar in het dashboard zelf een melding over: wat er veranderd is en waar ze het nu vinden. In
+Nederlands en Engels (zie "vertaallaag-nooit-half"). Kleine reparaties zonder zichtbare verandering hoeven niet.
+
+**Why:** Daniel, 09-10-2026: "zodat niemand in de war raakt door nieuwe dingen". Klanten raakten eerder al van slag
+door een nieuwe banner (Egbert, papas-plectrums) en door knoppen die stil van betekenis veranderden.
+
+**How to apply:** in frontend/app.html staat het venster `#nieuws-venster` (statische HTML, zodat
+scripts/i18n_extract.py de teksten vindt). Vervang de inhoud, geef `NIEUWS_ID` een nieuwe waarde en zet
+`NIEUWS_SINDS` op de datum van de wijziging. Elke klant met een artikel van vóór die datum ziet hem één keer;
+weggeklikt staat op de server (instelling `nieuws_gezien` in backend/services/instellingen.py) en in de browser.
+Terug te lezen via "What's new" onderin het menu.
+Sinds 09-10-2026 hoort er ALTIJD een rondleiding bij (Daniel: "met animaties, met het echte dashboard"): de stappen in
+`#rondleiding-stappen` (data-view = scherm, data-doel = wat oplicht; niet zichtbaar = overgeslagen). Loop hem zelf af
+in de browser met een echte muisklik voor je hem live zet; zet nieuwe stappen in statische HTML zodat de vertaling ze vindt. Zet in je rapport aan Daniel welke melding klanten krijgen.
+Eerste keer: opruimronde dashboard 09-10-2026 (PR claude/dashboard-opruimen), zie "dashboard-opruimronde-09-10".
+
+---
+
 ## mail-omnivaleur-in-zoho
 
 *09-10-2026 — "Sinds 01-10-2026 is info@omnivaleur.com een Zoho-alias op daniel@omnivaleur.nl (map Klanten via filter); Resend verstuurt nog steeds vanaf info@; DNS omnivaleur.com bij Cloudflare op Zoho-MX; revaleur.com is Hostinger en apart"*
@@ -68,26 +91,6 @@ blokkeert Chrome vanaf een openbare site. Zie ook "dashboardwijziging-krijgt-kla
 
 Let op: `git stash` in een worktree deelt refs/stash met de hoofdmap. Een lege stash gevolgd door pop pakte de
 stash van een andere sessie; teruggehaald via git fsck en git stash store.
-
----
-
-## dashboardwijziging-krijgt-klantmelding
-
-*09-10-2026 — "Elke grote wijziging in het dashboard krijgt een \"Wat is er nieuw\"-venster voor bestaande klanten (Daniel, 09-10-2026)"*
-
-Voer je iets groots door in het dashboard (indeling, menu, namen van knoppen of schermen, nieuwe werkwijze), dan
-krijgen klanten daar in het dashboard zelf een melding over: wat er veranderd is en waar ze het nu vinden. In
-Nederlands en Engels (zie "vertaallaag-nooit-half"). Kleine reparaties zonder zichtbare verandering hoeven niet.
-
-**Why:** Daniel, 09-10-2026: "zodat niemand in de war raakt door nieuwe dingen". Klanten raakten eerder al van slag
-door een nieuwe banner (Egbert, papas-plectrums) en door knoppen die stil van betekenis veranderden.
-
-**How to apply:** in frontend/app.html staat het venster `#nieuws-venster` (statische HTML, zodat
-scripts/i18n_extract.py de teksten vindt). Vervang de inhoud, geef `NIEUWS_ID` een nieuwe waarde en zet
-`NIEUWS_SINDS` op de datum van de wijziging. Elke klant met een artikel van vóór die datum ziet hem één keer;
-weggeklikt staat op de server (instelling `nieuws_gezien` in backend/services/instellingen.py) en in de browser.
-Terug te lezen via "What's new" onderin het menu. Zet in je rapport aan Daniel welke melding klanten krijgen.
-Eerste keer: opruimronde dashboard 09-10-2026 (PR claude/dashboard-opruimen), zie "dashboard-opruimronde-09-10".
 
 ---
 

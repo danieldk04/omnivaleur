@@ -16641,3 +16641,10 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   (Goudlief 08-10); filter "Nog niet op <kanaal>" bij Items (Egbert 02-10); geen inlogwaarschuwing voor een kanaal
   zonder werk of advertenties (Goudlief 09-10); Platforms zegt "er valt niets te koppelen" bij Vinted/MP (Janneke 04-10).
   Proef tests/wachtrijbalk-eerlijk-test.js uitgebreid; valt om op de oude app.html.
+- Live gezet na Daniels "zet maar live" (PR 26, commit 6804843d; daarna PR 27, bcdd37e1). In zijn echte dashboard
+  nagekeken: nieuw menu, venster "Wat is er nieuw", server bewaart nieuws_gezien. Volledige testreeks main en tak naast
+  elkaar: dezelfde 11 pytest- en 95 node-fouten, niets nieuws. Drive-kopie van het brein bijgewerkt via de lokale
+  Google Drive-map (~/Library/CloudStorage/GoogleDrive-.../Mijn Drive/Omnivaleur/Gemini Gems Databases/).
+- Rondleiding (Daniel: "met animaties, met het echte dashboard"): "Laat het me zien in mijn dashboard" loopt 9 tot 10
+  stappen af met een bewegende spotlight op het echte scherm. Vaste regel voor elke volgende grote wijziging (CLAUDE.md).
+  Live met echte muisklik twee keer goed; één eerdere klik via de toegankelijkheidsboom startte hem niet, niet herhaald.
