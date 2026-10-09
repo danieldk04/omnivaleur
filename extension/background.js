@@ -4162,7 +4162,10 @@ async function bgVindVintedAdvertentie(item) {
         { headers: { Accept: "application/json" }, credentials: "include" });
       if (!res.ok) continue;
       const items = (await res.json())?.items || [];
-      const levend = items.filter((it) => !it.is_closed && !it.is_draft);
+      // Niet die van een ánder artikel met dezelfde titel: zie
+      // _vinted_titelgenoten_meegeven in backend/api/jobs.py (Janneke, 09-10-2026).
+      const bezet = new Set((item?._vinted_bezet || []).map(String));
+      const levend = items.filter((it) => !it.is_closed && !it.is_draft && !bezet.has(String(it.id)));
       // Streng naar soepel, en elke stap moet PRECIES EEN kandidaat opleveren.
       // Bij twijfel liever niets koppelen dan de verkeerde advertentie: een
       // verkeerde koppeling betekent later de verkeerde advertentie weghalen.

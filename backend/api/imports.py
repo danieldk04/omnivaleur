@@ -2988,6 +2988,14 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
     standaard_staat = body.get("default_condition")
     if standaard_staat not in ("new_with_tags", "new", "good", "fair", "poor"):
         standaard_staat = None
+    if standaard_staat is None:
+        # De automatische import heeft geen keuzelijst: dan geldt wat de
+        # verkoper bij importeren koos (instelling import_staat).
+        try:
+            from backend.services.instellingen import IMPORT_STAAT, lees
+            standaard_staat = (await naast_de_lus(lambda: lees(user_id))).get(IMPORT_STAAT)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("import_staat niet gelezen voor %s: %s", user_id, e)
     # Alleen deze kandidaten (de automatische Shopify-import, zie
     # services/shopify_auto_import.py): die importeert wat er sinds het vorige
     # uur bijkwam, en laat liggen wat de verkoper zelf nog moet beslissen.

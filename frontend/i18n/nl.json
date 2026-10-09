@@ -3451,5 +3451,6 @@
  "category": "rubriek",
  "photos": "foto's",
  "description": "omschrijving",
- "price": "prijs"
+ "price": "prijs",
+ "Not placed on {0}: the advert we found there belongs to \"{1}\", another item with the same title, so it was not linked to this one. Publish this item again to give it its own advert.": "Niet geplaatst op {0}: de advertentie die we daar vonden hoort bij \"{1}\", een ander item met dezelfde titel, dus die is niet aan dit item gekoppeld. Publiceer dit item opnieuw, dan krijgt het een eigen advertentie."
 }

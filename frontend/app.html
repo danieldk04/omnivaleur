@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=ba14ad914f"></script>
+<script src="/i18n.js?v=37111d48f0"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1912,7 +1912,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
              spullen verkoopt moest dat honderden keren corrigeren. -->
         <div class="imp-cond">
           <label for="import-condition">Listings without a condition become</label>
-          <select id="import-condition" onchange="importCondition()">
+          <select id="import-condition" onchange="importConditionGekozen()">
             <option value="new_with_tags">New with tags</option>
             <option value="new">New (without tags)</option>
             <option value="good" selected>Like new</option>
@@ -8184,7 +8184,7 @@ function renderImportScanButtons() {
   const sel = document.getElementById('import-condition');
   if (sel && !sel.dataset.gezet) {
     sel.dataset.gezet = '1';
-    try { const b = localStorage.getItem('importCondition'); if (b) sel.value = b; } catch (_) {}
+    const b = bewaardeImportStaat(); if (b) sel.value = b;
   }
   renderImportAlles();
 }
@@ -8240,11 +8240,9 @@ function renderImportProgress(platform, prog) {
     </div>`;
   // De eerder gekozen staat terugzetten; hij hoort niet elke keer op standaard
   // te springen als je in porties importeert.
-  try {
-    const bewaard = localStorage.getItem('importCondition');
-    const sel = document.getElementById('import-condition');
-    if (bewaard && sel) sel.value = bewaard;
-  } catch (_) {}
+  const bewaard = bewaardeImportStaat();
+  const sel = document.getElementById('import-condition');
+  if (bewaard && sel) sel.value = bewaard;
 }
 
 function clearImportProgress() {
@@ -8943,8 +8941,33 @@ function openImportCreate(candidateId) {
 
 // De gekozen staat onthouden, zodat hij bij een volgende lading blijft staan —
 // wie nieuwe spullen verkoopt, verkoopt die volgende week ook.
+// Wat hij hier kiest geldt ook voor de automatische import van Shopify en
+// WooCommerce, die geen keuzelijst heeft. Daarom bewaart de server het
+// (instelling import_staat), niet alleen deze browser.
+async function importConditionGekozen() {
+  const el = document.getElementById('import-condition');
+  if (el) el.dataset.gekozen = '1';
+  const v = importCondition();
+  try {
+    const r = await apiFetchRetry(`${API}/api/items/settings`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ import_staat: v }),
+    });
+    const bewaard = await parseJsonSafe(r);
+    if (bewaard && !('detail' in bewaard)) state.settings = { ...(state.settings || {}), ...bewaard };
+  } catch (_) { /* de browser onthoudt hem in elk geval */ }
+}
+
+function bewaardeImportStaat() {
+  if (state.settings?.import_staat) return state.settings.import_staat;
+  try { return localStorage.getItem('importCondition'); } catch (_) { return null; }
+}
+
 function importCondition() {
   const el = document.getElementById('import-condition');
+  // Niet zelf gekozen op deze pagina? Dan wat hij eerder koos, ook als de
+  // instellingen pas binnenkwamen nadat de keuzelijst al getekend was.
+  if (el && !el.dataset.gekozen) { const b = bewaardeImportStaat(); if (b) el.value = b; }
   const v = el ? el.value : localStorage.getItem('importCondition');
   if (v) { try { localStorage.setItem('importCondition', v); } catch (_) {} }
   return v || 'good';

@@ -2256,6 +2256,7 @@
     const target = norm(item.title);
     if (!target) return null;
 
+    const bezet = new Set((item._vinted_bezet || []).map(String));
     const userId = await getVintedUserId();
     if (!userId) return null;
 
@@ -2274,6 +2275,11 @@
           // the one we just created (a relist posts exactly one new item).
           const hit = items.find((it) => {
             if (String(it.id) === String(excludeId)) return false;
+            // Advertenties van een ánder artikel met dezelfde titel (de server
+            // geeft ze mee, zie _vinted_titelgenoten_meegeven in jobs.py). Twee
+            // stukken met één titel zijn anders niet uit elkaar te houden: de
+            // tweede jas kreeg de advertentie van de eerste (Janneke, 09-10-2026).
+            if (bezet.has(String(it.id))) return false;
             // Verkochte, beëindigde en concept-advertenties tellen niet mee: die
             // staan wel in de garderobe maar zijn niet "het item staat online".
             if (it.is_closed || it.is_draft) return false;

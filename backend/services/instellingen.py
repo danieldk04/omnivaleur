@@ -200,6 +200,13 @@ WOO_AUTO_IMPORT_STAND = "woocommerce_auto_import_stand"
 _STAND_VELDEN = ("gecontroleerd", "fout", "laatst_nieuw", "te_controleren",
                  "laatst_toegevoegd_om", "totaal_toegevoegd", "achterstand_om")
 
+# De staat die een import geeft aan wat het kanaal zonder staat aanlevert
+# (Shopify, WooCommerce, Admarkt). Ook voor de automatische import, die geen
+# keuzelijst heeft: Janneke verkoopt alleen nieuw en moest 3.115 artikelen
+# "Zo goed als nieuw" met de hand op Nieuw zetten (09-10-2026).
+IMPORT_STAAT = "import_staat"
+STATEN = ("new_with_tags", "new", "good", "fair", "poor")
+
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "auto_relist": True, "vinted_herplaatsen": False, VERKOOPVRAAG: True, VERZENDING_2DH_WOORDEN: [],
              VERZENDING_2DH_BRIEF_ONDER: 0, VERZENDING_2DH_MODUS: "standaard",
@@ -208,7 +215,7 @@ STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "locatie_land": "", "locatie_plaats": "", "locatie_postcode": "",
              "levering": "beide", "pakket_grens": 0, "slottekst": "",
              SHOPIFY_AUTO_IMPORT: None, SHOPIFY_AUTO_IMPORT_STAND: {}, "vinted_taal": "zelf",
-             WOO_AUTO_IMPORT: None, WOO_AUTO_IMPORT_STAND: {}}
+             WOO_AUTO_IMPORT: None, WOO_AUTO_IMPORT_STAND: {}, IMPORT_STAAT: None}
 
 
 def _schoon(rauw: dict | None) -> dict:
@@ -233,6 +240,8 @@ def _schoon(rauw: dict | None) -> dict:
     # Daarom staat herplaatsen op Vinted standaard UIT en kost het een bewuste klik.
     if "vinted_herplaatsen" in rauw:
         uit["vinted_herplaatsen"] = bool(rauw.get("vinted_herplaatsen"))
+    if rauw.get(IMPORT_STAAT) in STATEN:
+        uit[IMPORT_STAAT] = rauw[IMPORT_STAAT]
     # Vinted: standaard exact de tekst van de verkoper ("zelf"). Alleen wie zelf
     # kiest voor "en" krijgt een vertaling naar het Engels (Daniel, 09-10-2026).
     if str(rauw.get("vinted_taal") or "").strip().lower() == "en":
