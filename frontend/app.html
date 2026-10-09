@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=37111d48f0"></script>
+<script src="/i18n.js?v=6245465708"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -59,6 +59,17 @@ a { color: inherit; text-decoration: none; }
 .nav-item.nav-cta:hover { filter: brightness(1.08); box-shadow: 0 6px 22px rgba(16,185,129,.4); color: #fff; }
 .nav-item.nav-cta.active { box-shadow: 0 0 0 2px rgba(52,211,153,.65), 0 4px 16px rgba(37,99,235,.35); }
 .nav-item.nav-cta svg { opacity: 1; color: #a7f3d0; }
+.nav-item.nav-gift svg { opacity: 1; color: #6ee7b7; }
+/* Tabbladen bovenin een scherm dat twee menu-items samenvoegt (09-10-2026). */
+.subtabs { display: flex; gap: 4px; margin: 0 0 18px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.subtab { background: none; border: none; padding: 9px 14px; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; gap: 6px; align-items: center; font-family: inherit; }
+.subtab:hover { color: var(--text); }
+.subtab.active { color: var(--blue); border-bottom-color: var(--blue); }
+.subtab .subtab-telling { background: #f1f5f9; color: var(--muted); font-size: 10.5px; font-weight: 800; padding: 1px 7px; border-radius: 999px; }
+/* Knoppen in een artikelregel: twee per rij, zodat de laatste kolom niet
+   buiten beeld valt op een laptopscherm (09-10-2026: Offline halen stond er half naast). */
+.row-actions { display: grid; grid-template-columns: repeat(2, max-content); gap: 4px; }
+.row-actions .btn { margin-left: 0 !important; justify-content: center; }
 .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; opacity: .8; }
 .nav-item.active svg { opacity: 1; }
 .sidebar-bottom { padding: 14px 16px; border-top: 1px solid rgba(255,255,255,.07); }
@@ -753,19 +764,12 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       <span id="nav-notif-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;padding:0 5px;border-radius:9px;display:none;align-items:center;justify-content:center"></span>
     </div>
 
-    <!-- Verwijzen staat bewust in Main en niet onder Account: het is geen
-         instelling die je een keer nakijkt maar iets wat elke maand geld waard
-         is, en wat niemand opzoekt als het weggestopt staat. -->
-    <div class="nav-item nav-cta" data-view="referral" onclick="showView('referral')">
-      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 4.5a2.5 2.5 0 10-2.5 2.5H9V4.5zM11 7h2.5A2.5 2.5 0 1011 4.5V7zM3 8.5A1.5 1.5 0 014.5 7H9v3H3V8.5zM11 10V7h4.5A1.5 1.5 0 0117 8.5V10h-6zM4 11.5h5V17H5.5A1.5 1.5 0 014 15.5v-4zM11 17v-5.5h5v4a1.5 1.5 0 01-1.5 1.5H11z"/></svg>
-      <span>Earn 1 month free</span>
-      <span id="nav-referral-badge" style="display:none;margin-left:auto;background:var(--mint);color:#053b2c;font-size:10px;font-weight:800;min-width:18px;height:18px;padding:0 5px;border-radius:9px;align-items:center;justify-content:center"></span>
-    </div>
 
     <!-- Tools: one-off operations you reach for now and then, as opposed to the
-         Main entries you live in. Import and the margin calculator used to be
-         buttons hidden in the Items header, so you only found them if you were
-         already on Items. -->
+         Main entries you live in. Sinds 09-10-2026 (opruimronde) staan Stale stock
+         onder Refresh, de margecalculator onder Analytics en Protections onder
+         Preferences, als tabblad bovenin dat scherm. Veertien menu-items waren er
+         te veel; zie NAV_PARENT en SUBTABS. -->
     <div class="nav-section-label">Tools</div>
 
     <div class="nav-item" data-view="import" onclick="showView('import')">
@@ -778,16 +782,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       <span>Refresh</span>
     </div>
 
-    <div class="nav-item" data-view="stale" onclick="showView('stale')">
-      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.5 2.5a1 1 0 101.414-1.414L11 9.586V6z" clip-rule="evenodd"/></svg>
-      <span>Stale stock</span>
-      <span id="nav-stale-badge" style="display:none;margin-left:auto;background:#f59e0b;color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;padding:0 5px;border-radius:9px;align-items:center;justify-content:center"></span>
-    </div>
 
-    <div class="nav-item" data-view="calculator" onclick="showView('calculator')">
-      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H6zm1 2h6v2H7V4zm0 4h2v2H7V8zm4 0h2v2h-2V8zm-4 4h2v2H7v-2zm4 0h2v2h-2v-2z" clip-rule="evenodd"/></svg>
-      <span>Margin calculator</span>
-    </div>
 
     <div class="nav-section-label">Account</div>
 
@@ -801,14 +796,16 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       <span>Preferences</span>
     </div>
 
-    <div class="nav-item" data-view="protections" onclick="showView('protections')">
-      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-      <span>Protections</span>
-    </div>
 
     <div class="nav-item" data-view="prijs" onclick="showView('prijs')">
       <svg viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"/></svg>
       <span id="nav-prijs-label">Subscription</span>
+    </div>
+
+    <div class="nav-item nav-gift" data-view="referral" onclick="showView('referral')">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 4.5a2.5 2.5 0 10-2.5 2.5H9V4.5zM11 7h2.5A2.5 2.5 0 1011 4.5V7zM3 8.5A1.5 1.5 0 014.5 7H9v3H3V8.5zM11 10V7h4.5A1.5 1.5 0 0117 8.5V10h-6zM4 11.5h5V17H5.5A1.5 1.5 0 014 15.5v-4zM11 17v-5.5h5v4a1.5 1.5 0 01-1.5 1.5H11z"/></svg>
+      <span>Earn 1 month free</span>
+      <span id="nav-referral-badge" style="display:none;margin-left:auto;background:var(--mint);color:#053b2c;font-size:10px;font-weight:800;min-width:18px;height:18px;padding:0 5px;border-radius:9px;align-items:center;justify-content:center"></span>
     </div>
 
     <div class="nav-item" data-view="help" onclick="showView('help')">
@@ -823,6 +820,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       <span id="ext-label">Loading...</span>
     </div>
     <div data-taalkeuze style="color:rgba(255,255,255,.55);font-size:11px;margin-top:8px"></div>
+    <button onclick="toonNieuws(true)" style="background:transparent;border:none;color:rgba(255,255,255,.45);font-size:11px;cursor:pointer;padding:4px 0;margin-top:4px;text-align:left;display:block">What's new</button>
     <button id="logout-btn" onclick="SESSIE.wisAlles(); window.location.href='/'" style="background:transparent;border:none;color:rgba(255,255,255,.3);font-size:11px;cursor:pointer;padding:4px 0;margin-top:6px;text-align:left;width:100%;">← Log out</button>
   </div>
 </div>
@@ -868,6 +866,29 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
       </div>
       <button onclick="SESSIE.wisAlles(); sessionStorage.clear(); window.location.href='/'" style="width:100%;padding:10px;background:transparent;border:none;color:var(--muted);font-size:13px;cursor:pointer">Log out</button>
+    </div>
+  </div>
+
+  <!-- ── WAT IS ER NIEUW ───────────────────────────────────────────
+       Daniel, 09-10-2026: elke grote wijziging in het dashboard krijgt een
+       melding voor de klant, zodat niemand in de war raakt. Nieuw bericht?
+       Vervang de inhoud hieronder en geef NIEUWS_ID een nieuwe waarde (en
+       NIEUWS_SINDS de datum van de wijziging). Elke klant die al artikelen had
+       vóór die datum ziet hem één keer; wie later begon kent het oude niet. -->
+  <div id="nieuws-venster" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:190;align-items:center;justify-content:center;padding:16px">
+    <div role="dialog" aria-labelledby="nieuws-titel" style="background:#fff;border-radius:18px;padding:28px 28px 22px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow:auto">
+      <div style="font-size:12px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--blue);margin-bottom:6px">What's new</div>
+      <div id="nieuws-titel" style="font-size:20px;font-weight:900;letter-spacing:-.3px;margin-bottom:8px">A tidier dashboard</div>
+      <div style="font-size:13.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">We cleaned up the menu, based on the questions we got from sellers. Nothing has been removed; a few things moved:</div>
+      <ul style="font-size:13.5px;line-height:1.6;margin:0 0 14px;padding-left:20px">
+        <li><b>Stale stock</b> is now a tab under <b>Refresh</b>.</li>
+        <li><b>Margin calculator</b> is now a tab under <b>Analytics</b>.</li>
+        <li><b>Automatic protections</b> is now a tab under <b>Preferences</b>.</li>
+        <li><b>Earn 1 month free</b> moved to the bottom of the menu, above Help.</li>
+        <li><b>To list</b> on the dashboard now counts the same items as the To list tab under Items.</li>
+      </ul>
+      <div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:16px">You can read this again via "What's new" at the bottom of the menu.</div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="sluitNieuws()">Got it</button>
     </div>
   </div>
 
@@ -917,7 +938,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       <div id="jobs-banner" class="jobs-banner" style="display:none">
         <div style="display:flex;align-items:center;gap:8px">
           <span>⏳</span>
-          <span><strong><span id="jobs-count">0</span> job(s)</strong> waiting for Chrome extension to pick up</span>
+          <span><strong><span id="jobs-count">0</span> task(s) waiting</strong> for Chrome on your computer. They go out one by one, so keep Chrome open; your screen may switch off.</span>
         </div>
         <button class="btn btn-sm btn-outline" id="refresh-btn" onclick="refreshDashboard(this)">Refresh</button>
       </div>
@@ -940,10 +961,8 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       <div id="ext-update-banner" class="trial-banner" style="display:none;background:#fffbeb;border:1px solid #fcd34d;color:#78350f">
         <div style="display:flex;align-items:center;gap:8px">
           <span>⬆️</span>
-          <span>A newer version of the Omnivaleur extension (<strong>v<span id="ext-update-latest">?</span></strong>) is on its way to you &mdash;
-            you're still on <strong>v<span id="ext-update-current">?</span></strong>. You don't need to do anything:
-            Chrome checks for updates by itself every few hours while your browser is open, and installs it automatically.
-            If this takes a while, that's not something going wrong on our side &mdash; every new version has to be reviewed and approved by Google first before Chrome will offer it to anyone.</span>
+          <span>A new version of the extension (<strong>v<span id="ext-update-latest">?</span></strong>) is on its way; you have <strong>v<span id="ext-update-current">?</span></strong>.
+            You don't need to do anything: Chrome installs it by itself within a few hours, while your browser is open.</span>
         </div>
         <button class="btn btn-sm btn-outline" onclick="dismissExtUpdateBanner()" style="flex-shrink:0">Dismiss</button>
       </div>
@@ -976,7 +995,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
         <div class="stat">
           <div class="stat-icon">📭</div>
-          <div class="stat-label">Not published</div>
+          <div class="stat-label">To list</div>
           <div class="stat-value" id="stat-unpublished">—</div>
           <div class="stat-sub"><a href="#" onclick="showView('items');setFilter('pub','no');return false" style="color:var(--blue);font-size:12px;font-weight:600">View →</a></div>
         </div>
@@ -1022,6 +1041,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
 
     <!-- ── ANALYTICS VIEW ───────────────────────────────────────────── -->
     <div id="view-analytics" class="view">
+      <div class="subtabs" data-groep="analyse"><button class="subtab" data-sub="analytics" onclick="showView('analytics')">Sales &amp; profit</button><button class="subtab" data-sub="calculator" onclick="showView('calculator')">Margin calculator</button></div>
       <div class="an-header">
         <h2 style="font-size:18px;font-weight:800;color:var(--text)">Analytics</h2>
         <div class="an-period-tabs" id="an-period-tabs">
@@ -1235,6 +1255,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
 
     <!-- ── STALE STOCK VIEW ────────────────────────────────────────── -->
     <div id="view-stale" class="view">
+      <div class="subtabs" data-groep="onderhoud"><button class="subtab" data-sub="refresh" onclick="showView('refresh')">Refresh listings</button><button class="subtab" data-sub="stale" onclick="showView('stale')">Stale stock<span class="subtab-telling" data-stale-telling style="display:none"></span></button></div>
       <div class="view-header">
         <h1>Stale stock</h1>
         <p>Items that have been live a long time without selling. Dropping the price is usually what gets them moving.</p>
@@ -1292,6 +1313,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
 
     <!-- ── MARGIN CALCULATOR VIEW ──────────────────────────────────── -->
     <div id="view-calculator" class="view">
+      <div class="subtabs" data-groep="analyse"><button class="subtab" data-sub="analytics" onclick="showView('analytics')">Sales &amp; profit</button><button class="subtab" data-sub="calculator" onclick="showView('calculator')">Margin calculator</button></div>
       <div class="view-header">
         <h1>Margin calculator</h1>
         <p>Enter your purchase price and desired profit — we calculate the minimum selling price per platform including fees.</p>
@@ -1344,6 +1366,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     </div>
 
     <div id="view-protections" class="view">
+      <div class="subtabs" data-groep="voorkeuren"><button class="subtab" data-sub="preferences" onclick="showView('preferences')">Settings</button><button class="subtab" data-sub="protections" onclick="showView('protections')">Automatic protections</button></div>
       <div class="view-header">
         <h1>Automatic protections</h1>
         <p>Omnivaleur handles these issues automatically — you don't have to do anything.</p>
@@ -1367,7 +1390,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
               <div class="protection-status"><span class="protection-status-dot"></span> Active — every 6 hours</div>
             </div>
           </div>
-          <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">Free Marktplaats listings expire silently after 28 days. Omnivaleur checks every 6 hours and automatically relists after 27 days so you stay visible.</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">Free Marktplaats listings expire by themselves after a while. Omnivaleur puts them back up before that happens, so you stay visible. You choose after how many days under Settings, and you can switch it off there.</div>
           <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong style="color:var(--text)">Without this:</strong> your listing disappears after 28 days without any warning.</div>
         </div>
 
@@ -1379,7 +1402,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
               <div class="protection-status"><span class="protection-status-dot"></span> Active — every upload</div>
             </div>
           </div>
-          <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">Vinted detects identical photos from other platforms via pixel-hashing. Omnivaleur slightly modifies each photo via canvas — invisible to the eye, unique hash for Vinted.</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">Vinted recognises photos that are also used on other sites. Omnivaleur changes each photo a tiny bit before it goes to Vinted. You can't see the difference; Vinted treats it as a new photo.</div>
           <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong style="color:var(--text)">Without this:</strong> risk of account ban on Vinted.</div>
         </div>
 
@@ -1391,7 +1414,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
               <div class="protection-status"><span class="protection-status-dot"></span> Active — every publish</div>
             </div>
           </div>
-          <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">2dehands only supports 7 HTML tags in descriptions. Omnivaleur automatically strips all unsupported formatting before publishing.</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">2dehands accepts only simple text in a description. Omnivaleur removes formatting 2dehands can't handle before publishing, so your listing doesn't fail.</div>
           <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong style="color:var(--text)">Without this:</strong> publish fails or description is empty.</div>
         </div>
 
@@ -1403,7 +1426,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
               <div class="protection-status"><span class="protection-status-dot"></span> Active — Marktplaats &amp; 2dehands</div>
             </div>
           </div>
-          <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">You enter listings in English — Omnivaleur automatically translates titles and descriptions to Dutch before publishing on Marktplaats and 2dehands.</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">Write your listings in Dutch or English. For Marktplaats and 2dehands, Omnivaleur translates English titles and descriptions to Dutch before publishing.</div>
           <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong style="color:var(--text)">Without this:</strong> English text visible on Dutch-language platforms.</div>
         </div>
 
@@ -1415,7 +1438,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
               <div class="protection-status"><span class="protection-status-dot"></span> Active — all platforms</div>
             </div>
           </div>
-          <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">Once an item sells on one platform, all other active listings are automatically removed. No double sales, no manual cleanup.</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">When an item sells on one platform, Omnivaleur removes it from your other platforms. No double sales. If we can't be sure it sold, we ask you first.</div>
           <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong style="color:var(--text)">Without this:</strong> risk of double sales and negative reviews.</div>
         </div>
 
@@ -1427,7 +1450,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
               <div class="protection-status"><span class="protection-status-dot"></span> Active — every publish</div>
             </div>
           </div>
-          <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">Marktplaats uses a custom rich-text editor (Lexical) that ignores standard DOM input. Omnivaleur fills it correctly via the internal EditorState API.</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">The description box on Marktplaats is hard to fill in automatically. Omnivaleur fills it the way Marktplaats expects, so your text is never left empty.</div>
           <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong style="color:var(--text)">Without this:</strong> description stays empty on publish.</div>
         </div>
 
@@ -1442,6 +1465,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
          over Refresh en Platforms — vier invulvelden tussen uitleg over
          quota's en risico's, waar niemand ze zocht. -->
     <div id="view-preferences" class="view">
+      <div class="subtabs" data-groep="voorkeuren"><button class="subtab" data-sub="preferences" onclick="showView('preferences')">Settings</button><button class="subtab" data-sub="protections" onclick="showView('protections')">Automatic protections</button></div>
       <div class="view-header">
         <h1>Preferences</h1>
         <p>Everything you fill in yourself, in one place. These settings apply to every listing Omnivaleur publishes or relists for you.</p>
@@ -1757,9 +1781,14 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     </div>
 
     <div id="view-refresh" class="view">
+      <div class="subtabs" data-groep="onderhoud"><button class="subtab" data-sub="refresh" onclick="showView('refresh')">Refresh listings</button><button class="subtab" data-sub="stale" onclick="showView('stale')">Stale stock<span class="subtab-telling" data-stale-telling style="display:none"></span></button></div>
       <div class="view-header">
         <h1>Refresh</h1>
-        <p>Bump old listings that sank in the "Newest" sort, on Vinted, Marktplaats and 2dehands. Rate-limited on purpose: on Vinted 1x per listing per 14 days and 8 refreshes/day; on <b>Marktplaats and 2dehands 1x per 21 days and only 3/day</b>, because Marktplaats charges for bumping a listing and therefore watches remove-and-repost far more closely than Vinted does. Nothing here fakes engagement, and nothing is guaranteed to change ranking. eBay relist-ended lives under <a href="#" onclick="showView('items');return false" style="color:var(--blue)">Items</a> for now — more platforms will get their own tab here as refresh support expands.</p>
+        <p>Bring old listings back to the top of the "Newest" sort on Vinted, Marktplaats and 2dehands. Slowly and on purpose, so it looks like normal shop upkeep.</p>
+        <details style="margin-top:6px;font-size:12.5px;color:var(--muted);line-height:1.6">
+          <summary style="cursor:pointer;color:var(--blue);font-weight:600">How often can a listing be refreshed?</summary>
+          On Vinted once per listing every 14 days, at most 8 a day. On <b>Marktplaats and 2dehands once every 21 days, at most 3 a day</b>: Marktplaats charges for bumping a listing and watches remove-and-repost closely. Nothing here fakes engagement, and nothing guarantees a better ranking. Relisting ended eBay listings is done under <a href="#" onclick="showView('items');return false" style="color:var(--blue)">Items</a>.
+        </details>
       </div>
 
 
@@ -3738,10 +3767,10 @@ function calcMargin() {
 }
 
 // ── Navigation ──────────────────────────────────────────────────
-// Sub-views die geen eigen nav-item hebben, maar onder een ouder vallen. Sinds
-// calculator, import, refresh en stale onder Tools hun eigen nav-item hebben is
-// deze map leeg — hij blijft staan voor toekomstige sub-views.
-const NAV_PARENT = {};
+// Sub-views die geen eigen nav-item hebben, maar onder een ouder vallen. Sinds de
+// opruimronde van 09-10-2026 zijn dat er drie; ze staan als tabblad bovenin het
+// scherm van hun ouder (.subtabs), en het menu-item van de ouder licht op.
+const NAV_PARENT = { stale: 'refresh', calculator: 'analytics', protections: 'preferences' };
 function showView(name) {
   // Find the target BEFORE hiding anything. Hiding first and then hitting a
   // missing view threw, which left every view hidden and the whole app blank
@@ -3761,6 +3790,7 @@ function showView(name) {
   // Nav-highlight via data-view (robuust: onafhankelijk van DOM-volgorde/aantal).
   const navName = NAV_PARENT[name] || name;
   document.querySelector('.nav-item[data-view="' + navName + '"]')?.classList.add('active');
+  target.querySelectorAll('.subtab').forEach(b => b.classList.toggle('active', b.dataset.sub === name));
   const titles = { dashboard: 'Dashboard', items: 'Items', analytics: 'Analytics', berichten: 'Messages', calculator: 'Margin calculator', refresh: 'Refresh', import: 'Import listings', stale: 'Stale stock', help: 'Help', platforms: 'Platforms', preferences: 'Preferences', protections: 'Protections', prijs: 'Account', referral: 'Earn 1 month free' };
   document.getElementById('topbar-title').textContent = titles[name] || name;
   // The view is already on screen at this point, so a failing renderer can only
@@ -4421,37 +4451,18 @@ function renderReferralTeaser() {
     else { badge.style.display = 'none'; }
   }
 
+  // Eén smalle regel. Het grote blauwe blok stond boven de tellers en duwde
+  // het eigenlijke werk naar beneden (opruimronde 09-10-2026). Delen via
+  // WhatsApp of mail en de lijst met wie er via je link kwam staan onder Details.
   const gehaald = s.months_earned
-    ? `<span style="color:#6ee7b7;font-weight:700">${s.months_earned} month${s.months_earned !== 1 ? 's' : ''} earned</span>`
-    : `<span style="color:rgba(255,255,255,.6)">No months earned yet</span>`;
-  const onderweg = s.trial
-    ? ` &middot; <span style="color:rgba(255,255,255,.75)">${s.trial} on trial right now</span>` : '';
-
+    ? ` <b style="color:#047857">${s.months_earned} month${s.months_earned !== 1 ? 's' : ''} earned.</b>` : '';
   doel.innerHTML = `
-    <div style="background:linear-gradient(135deg,#0f172a 0%,#1d4ed8 60%,#10b981 160%);border-radius:14px;padding:20px 22px;margin-bottom:22px;color:#fff;box-shadow:0 6px 24px rgba(29,78,216,.25)">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
-        <div style="min-width:260px;flex:1">
-          <div style="font-size:17px;font-weight:800;letter-spacing:-.3px;display:flex;align-items:center;gap:8px">
-            <span style="font-size:20px">&#127873;</span> Earn 1 month free
-          </div>
-          <div style="font-size:13px;color:rgba(255,255,255,.8);margin-top:4px;line-height:1.5">
-            Every seller who subscribes through your link gives you a free month. They get 50% off their first month.
-          </div>
-          <div style="font-size:12px;margin-top:8px">${gehaald}${onderweg}</div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px;min-width:280px">
-          <div style="display:flex;gap:8px">
-            <input readonly value="${esc(_referral.link)}" onclick="this.select()"
-                   style="flex:1;min-width:0;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:600">
-            <button onclick="referralCopy(_referral.link, this)"
-                    style="background:#fff;color:#0f172a;border:none;border-radius:8px;padding:9px 16px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">Copy</button>
-          </div>
-          <div style="display:flex;gap:8px">
-            <button onclick="referralWhatsapp()" style="flex:1;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">WhatsApp</button>
-            <button onclick="referralEmail()" style="flex:1;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">Email</button>
-            <button onclick="showView('referral')" style="flex:1;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">Details</button>
-          </div>
-        </div>
+    <div style="display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:10px 14px;margin-bottom:20px;font-size:13px;color:#065f46;line-height:1.5">
+      <span style="font-size:18px">&#127873;</span>
+      <div style="flex:1;min-width:220px"><b>Earn 1 month free.</b> Every seller who subscribes through your link gives you a free month; they get 50% off their first month.${gehaald}</div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-sm btn-outline" onclick="referralCopy(_referral.link, this)">Copy my link</button>
+        <button class="btn btn-sm btn-ghost" onclick="showView('referral')">Details</button>
       </div>
     </div>`;
 }
@@ -5049,17 +5060,22 @@ const LEEG_DASHBOARD = `<tr><td colspan="4"><div class="empty"><div class="empty
 function renderDashboard() {
   const active = state.listings.filter(l => l.status === 'active').length;
   const queued = state.jobs.length;
-  const publishedItemIds = new Set(state.listings.filter(l => l.status === 'active').map(l => l.item_id));
-  const unpublished = state.items.filter(i => !publishedItemIds.has(i.id)).length;
+  // Dezelfde indeling als de tabbladen bij Items. Hier stond "alles zonder
+  // actieve advertentie", dus ook verkochte, verborgen en gearchiveerde
+  // artikelen: het dashboard zei 118 en de knop Bekijken opende "Te plaatsen"
+  // met 2 erin (eigen account, 09-10-2026).
+  const indeling = classifyItems();
+  const unpublished = indeling.onbekend ? '—' : indeling.counts.todo;
 
   document.getElementById('stat-items').textContent = state.items.length;
-  document.getElementById('stat-items-sub').textContent = state.items.length === 1 ? '1 item' : `${state.items.length} items total`;
+  document.getElementById('stat-items-sub').textContent = indeling.onbekend ? ''
+    : `${indeling.counts.live} for sale · ${indeling.counts.sold} sold`;
   document.getElementById('stat-active').textContent = active;
   const activePlatformCount = new Set(state.listings.filter(l=>l.status==='active').map(l=>l.platform)).size;
   document.getElementById('stat-active-sub').textContent = `on ${activePlatformCount} platform${activePlatformCount === 1 ? '' : 's'}`;
   document.getElementById('stat-unpublished').textContent = unpublished;
   document.getElementById('stat-queued').textContent = queued;
-  document.getElementById('stat-queued-sub').textContent = queued ? 'waiting for extension' : 'nothing queued';
+  document.getElementById('stat-queued-sub').textContent = queued ? 'keep Chrome open' : 'nothing queued';
 
   const banner = document.getElementById('jobs-banner');
   if (queued > 0) {
@@ -5101,6 +5117,46 @@ function renderDashboard() {
   </tr>`).join('');
   document.getElementById('dashboard-items-body').innerHTML = rows || LEEG_DASHBOARD;
   if (window.OB) OB.opDashboard();
+  toonNieuws(false);
+}
+
+// ── Wat is er nieuw ───────────────────────────────────────────────
+// Zie het venster #nieuws-venster. Gezien = op de server (instelling
+// nieuws_gezien, dus ook op een andere computer) én in deze browser (voor als
+// de server even niet bereikbaar is). Nooit tonen zolang de instellingen niet
+// binnen zijn: dan weten we niet of hij hem al zag.
+const NIEUWS_ID = '2026-10-dashboard-opgeruimd';
+const NIEUWS_SINDS = '2026-10-10';
+let _nieuwsGetoond = false;
+function _nieuwsAlGezien() {
+  if ((state.settings || {}).nieuws_gezien === NIEUWS_ID) return true;
+  try { return localStorage.getItem('omni_nieuws_gezien') === NIEUWS_ID; } catch (e) { return false; }
+}
+function toonNieuws(opVerzoek) {
+  const venster = document.getElementById('nieuws-venster');
+  if (!venster) return;
+  if (!opVerzoek) {
+    if (_nieuwsGetoond || !state.settings || !('relist_dagen' in state.settings)) return;
+    if (_nieuwsAlGezien()) return;
+    // Alleen wie het oude dashboard kende: een artikel van vóór de wijziging.
+    const kendeOud = (state.items || []).some(i => i.created_at && i.created_at < NIEUWS_SINDS);
+    if (!kendeOud) return;
+    const slot = document.getElementById('paywall-overlay');
+    if (slot && slot.style.display !== 'none') return;
+  }
+  _nieuwsGetoond = true;
+  venster.style.display = 'flex';
+}
+function sluitNieuws() {
+  document.getElementById('nieuws-venster').style.display = 'none';
+  try { localStorage.setItem('omni_nieuws_gezien', NIEUWS_ID); } catch (e) {}
+  if ((state.settings || {}).nieuws_gezien === NIEUWS_ID) return;
+  apiFetch(`${API}/api/items/settings`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nieuws_gezien: NIEUWS_ID }),
+  }).then(r => r.ok ? r.json() : null).then(d => {
+    if (d && !('detail' in d)) state.settings = { ...(state.settings || {}), ...d };
+  }).catch(() => {});
 }
 
 function renderListingBadges(itemId) {
@@ -5696,7 +5752,7 @@ function itemActions(item) {
   const t = esc(item.title);
   const edit = `<button class="btn btn-sm btn-outline" onclick="editItem('${item.id}')" style="margin-left:4px">Edit</button>`;
   if (itemsTab === 'sold' || itemsTab === 'archived') {
-    return `<button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}')" title="Put this item back up for sale">Relist</button>${edit}`;
+    return `<div class="row-actions"><button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}')" title="Put this item back up for sale">Relist</button>${edit}</div>`;
   }
   if (itemsTab === 'hidden') {
     // Unhiding has to happen on the platform itself — we can't flip that flag
@@ -5705,15 +5761,15 @@ function itemActions(item) {
     const open = url
       ? `<a class="btn btn-sm btn-primary" href="${esc(url)}" target="_blank" rel="noopener" title="Unhide it on the platform — the next scan picks that up automatically">Open on platform</a>`
       : '';
-    return `${open}${edit}
-      <button class="btn btn-sm btn-danger" onclick="delistItem('${item.id}','${t}')" style="margin-left:4px" title="Remove it from the platform for good">Delist</button>`;
+    return `<div class="row-actions">${open}${edit}
+      <button class="btn btn-sm btn-danger" onclick="delistItem('${item.id}','${t}')" style="margin-left:4px" title="Remove it from the platform for good">Delist</button></div>`;
   }
   if (itemsTab === 'todo') {
-    return `<button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}')">Publish</button>${edit}`;
+    return `<div class="row-actions"><button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}')">Publish</button>${edit}</div>`;
   }
-  return `<button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}')" title="Publish to more platforms">Publish</button>${edit}
+  return `<div class="row-actions"><button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}')" title="Publish to more platforms">Publish</button>${edit}
     <button class="btn btn-sm btn-success" onclick="markSoldItem('${item.id}','${t}')" style="margin-left:4px" title="Mark sold — delists it everywhere else">Sold</button>
-    <button class="btn btn-sm btn-danger" onclick="delistItem('${item.id}','${t}')" style="margin-left:4px" title="Delist from all platforms">Delist</button>`;
+    <button class="btn btn-sm btn-danger" onclick="delistItem('${item.id}','${t}')" style="margin-left:4px" title="Delist from all platforms">Delist</button></div>`;
 }
 
 // ── "Is dit verkocht?" ────────────────────────────────────────────────────
@@ -5790,6 +5846,7 @@ function renderSoldConfirmBar() {
     <div style="padding:10px 14px">
       <div style="font-size:12.5px;color:var(--text);line-height:1.55"><b>Nothing has been removed from any platform, and none of this counts as revenue yet.</b> Omnivaleur only takes a listing down from your other channels once <i>you</i> confirm the sale here. Marktplaats and 2dehands don't reliably tell us about a hand sale, so we ask instead of guessing.</div>
       <div style="font-size:11.5px;color:var(--muted);margin-top:4px"><b>Yes, sold</b> &rarr; removed from every other platform, counted in Analytics. &nbsp; <b>No</b> &rarr; stays for sale everywhere else, moved to Archived here.</div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:4px">Selling new stock, with more of the same item? Then this question doesn't fit you; switch it off under <a href="#" onclick="showView('preferences');return false" style="color:var(--blue);font-weight:600">Preferences</a>.</div>
       ${regels}${meer}
     </div>
   </div>`;
@@ -8177,7 +8234,7 @@ function renderImportScanButtons() {
       onclick="zetImportKanaal('${p}', ${!aan})"><span class="imp-tick">${aan ? '✓' : ''}</span>${platIcon(p, 18)}${esc(PLATFORM_LABELS[p] || p)}</button>`;
   }).join('');
   const soon = straks.length
-    ? `<span class="imp-soon">${straks.map(p => esc(PLATFORM_LABELS[p] || p)).join(' and ')} coming soon</span>` : '';
+    ? `<span class="imp-soon">${straks.map(p => esc(PLATFORM_LABELS[p] || p)).join(', ')} coming soon</span>` : '';
   document.getElementById('import-scan-grid').innerHTML = chips + soon;
   renderImportAuto();
   // De eerder gekozen staat terugzetten, één keer per pagina.
@@ -10333,7 +10390,7 @@ function formatMissingFieldsError(data) {
       .map(f => `${PLATFORM_LABELS[platform] || platform}: ${veldNaam(f)}`));
   const staart = fabrikantMist
     ? `Marktplaats and 2dehands require a responsible party: trade name, postal address and email address.\n`
-      + `Fill it in once under Protections → "Responsible party" and every listing carries it.`
+      + `Fill it in once under Preferences → "Responsible party" and every listing carries it.`
     : '';
   if (!lines.length) return `Can't publish yet.\n\n${staart}`;
   return `Can't publish yet — this item is missing:\n\n${lines.join('\n')}\n\n`
@@ -12408,11 +12465,11 @@ function staleOverview() {
 
 // Sidebar badge — the count at the 90-day mark, which is the default view.
 function renderStaleBadge() {
-  const el = document.getElementById('nav-stale-badge');
-  if (!el) return;
   const n = staleCandidates(90).length;
-  el.textContent = n;
-  el.style.display = n > 0 ? 'inline-flex' : 'none';
+  document.querySelectorAll('[data-stale-telling]').forEach(el => {
+    el.textContent = n;
+    el.style.display = n > 0 ? 'inline-block' : 'none';
+  });
 }
 
 function setStaleDays(d) {
