@@ -288,7 +288,19 @@ class WooClient:
                     raise WooFout(f"Your shop redirects to {r.headers.get('location')}. "
                                   f"Connect again with that address.", "verhuisd", r.status_code)
                 if r.status_code >= 400:
-                    raise _lees_fout(r)
+                    fout = _lees_fout(r)
+                    # Geweigerd met de sleutel in de kopregel: probeer hem in het
+                    # adres. GEMETEN op de lokale testwinkel (09-10-2026): 4 van 16
+                    # verzoeken kwamen zonder kopregel aan bij PHP, het adres ging 20
+                    # van 20 goed. Een hosting met meerdere servers kan net zo
+                    # wisselend zijn; één vaste keuze bij het koppelen is dan niet
+                    # genoeg. De nieuwe modus blijft hangen en wordt opgeslagen
+                    # door wie modus_gewijzigd ziet staan.
+                    if fout.soort == "sleutel" and self.modus == "basic":
+                        self.modus = "query"
+                        self.modus_gewijzigd = True
+                        continue
+                    raise fout
                 try:
                     data = r.json()
                 except ValueError as e:
