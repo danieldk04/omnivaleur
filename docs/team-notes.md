@@ -16591,3 +16591,7 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
 - Open, wacht op Daniels akkoord (de veiligheidscontrole hield het tegen): bij Janneke de foute koppeling
   6d61f407 (bruine jas, Vinted 10303777676) verwijderen en een nieuwe Vinted-plaatsing klaarzetten; haar 3.115
   "good" op "new" zetten en import_staat op new. Extensie 1.0.376 uploaden (dist/omnivaleur-extension-1.0.376.zip).
+- Gedaan na Daniels akkoord (avond): koppeling 6d61f407 weg (rode jas houdt 10303777676), nieuwe Vinted-plaatsing
+  efe38617 voor de bruine jas (uitgifte geeft op de echte database 10303777676 als bezet mee), 3.115 artikelen
+  good -> new (nu 3.208 new, 11 new_with_tags), import_staat new. Lijst van de omgezette id's bewaard in de
+  sessie-scratchpad. Na te kijken 10-10: efe38617 is done met een ánder Vinted-nummer dan 10303777676.
