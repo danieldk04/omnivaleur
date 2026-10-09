@@ -16508,3 +16508,18 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
 - Let op: het Anthropic-tegoed staat op min $0,05 ("Add funds to resume API access"). Het stilvallen na 12:21 kan dus door de rem komen óf doordat de API geblokkeerd is. Dat is niet uit elkaar te halen.
 - /health van omnivaleur.com: taalmodel_sinds_start leeg (antwoord_door en google_codes {}), server net opnieuw gestart op 18a473ac, nog geen verkeer gemeten.
 - Oordeel: nog niet te geven. Opnieuw meten na ~13:00 en op 10-10 (norm: onder ~$1 en geen 8.9k-verzoeken). Niets gewijzigd aan code of backend/scheduler.py.
+
+## 09-10-2026 (middag): Shopify-tweelingen zonder vraag, verse Vinted-advertentie nooit "weg" (Janneke)
+
+- Janneke 31d28378 had 291 keer "Alleen de titel komt overeen" onder Te controleren (Hip Shoestyle schoenmaat 26,
+  30, 31, 31, ...) en zou ze een voor een moeten toevoegen. Daniel: "fix met 100% zekerheid". Besluit: twee
+  Shopify-producten met alleen dezelfde titel zijn twee stukken (haar eigen winkel telt ze als twee). Geen vraag
+  meer; Alles importeren maakt er een eigen item van (`_ander_shopify_product` in imports.py, zelfde pad als
+  "Ander stuk, toevoegen"). Op Vinted/Marktplaats blijft een tweede advertentie met dezelfde titel een vraag.
+- Haar "Winterjas Noppies maat 98" kreeg "Is dit item verkocht? Niet meer gevonden in je Vinted-kast" terwijl hij
+  online stond, online for 0 dagen. Oorzaak: geplaatst terwijl de kastscan liep (of nog in Vinted-controle), dus niet
+  in de momentopname. Nu: afwezigheid telt pas na 24 uur (`VERDWIJN_JONGER_DAN` in jobs.py), en een vinted_weg-vraag
+  gaat vanzelf terug naar live zodra een volledige scan hem open in de kast ziet. Een echte Vinted-verkoop blijft
+  gesloten in de kast staan en wordt dus niet gemist.
+- Proeven: test_shopify_dubbel_alleen_op_nummer (6), test_vinted_verse_advertentie_niet_weg (5, 3 falen op de
+  oude code). Volledige suite voor en na gelijk (76 bestaande fouten, 15 errors).

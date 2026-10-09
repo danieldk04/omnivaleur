@@ -4063,6 +4063,29 @@ def _sync_vinted_hidden(db, job, scraped: list[dict]):
 VERDWIJN_AANDEEL = 0.10
 VERDWIJN_ONDERGRENS = 10
 
+# EEN VERSE ADVERTENTIE IS NOOIT "WEG" (09-10-2026, Janneke 31d28378). Haar
+# "Winterjas Noppies maat 98" kreeg "staat niet meer in je Vinted-kast" terwijl
+# hij gewoon online stond, "online for 0 dagen". Een scan leest de kast en meldt
+# pas minuten later; wat in die tussentijd geplaatst werd zat niet in de
+# momentopname. En een nieuwe Vinted-advertentie staat soms eerst even in
+# controle voor hij in de kast verschijnt. Daarom telt afwezigheid pas na een
+# dag. Een verkochte advertentie blijft op Vinted gewoon in de kast staan
+# (gesloten), dus een echte verkoop wordt hier niet door gemist.
+VERDWIJN_JONGER_DAN = timedelta(hours=24)
+
+
+def _te_jong_om_weg_te_zijn(listing: dict, nu: datetime) -> bool:
+    start = listing.get("listed_at") or listing.get("created_at")
+    if not start:
+        return False
+    try:
+        t = datetime.fromisoformat(str(start).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=timezone.utc)
+    return nu - t < VERDWIJN_JONGER_DAN
+
 
 async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict | None = None):
     """
@@ -4177,12 +4200,35 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
 
     active = await naast_de_lus(lambda: fetch_all_in(
         lambda: db.table("listings")
-        .select("id,item_id,platform_listing_id")
+        .select("id,item_id,platform_listing_id,listed_at,created_at")
         .eq("platform", "vinted")
         # 'hidden' hoort erbij: een verborgen advertentie kan gewoon verkocht zijn
         # (Vinted zet hem dan op closed), en die verkoop werd anders nooit gezien.
         .in_("status", ["active", "relisting", "hidden"]),
         "item_id", item_ids))
+    nu = datetime.now(timezone.utc)
+
+    # Stond hij als "weg uit de kast" op de vraag, maar ziet deze volledige scan
+    # hem gewoon open in de kast? Dan was de vraag onterecht: terug naar live,
+    # zonder dat de verkoper iets hoeft te doen ("Nee" zou hem archiveren).
+    try:
+        vraag_rijen = await naast_de_lus(lambda: fetch_all_in(
+            lambda: db.table("listings").select("id,platform_listing_id")
+            .eq("platform", "vinted").eq("status", "sold_unconfirmed")
+            .eq("error_message", VERDENKING_REDENEN["vinted_weg"]),
+            "item_id", item_ids))
+        terug = [r["id"] for r in vraag_rijen
+                 if r.get("platform_listing_id") is not None
+                 and str(r["platform_listing_id"]) in seen_ids
+                 and str(r["platform_listing_id"]) not in closed_ids]
+        if terug:
+            await naast_de_lus(lambda: update_in(
+                lambda: db.table("listings"), "id", terug,
+                {"status": "active", "error_message": None}))
+            logger.info("Vinted reconcile voor %s: %d onterechte verkoopvraag(en) terug naar live",
+                        job["user_id"], len(terug))
+    except Exception as e:  # noqa: BLE001 — herstel mag de rest niet tegenhouden
+        logger.warning("Vinted reconcile: kon onterechte verkoopvragen niet terugzetten: %s", e)
     # Two very different signals, handled differently on purpose:
     #   is_closed  → Vinted's own "sold/ended" flag. On Vinted a listing doesn't
     #                expire on its own, so closed ≈ sold → book it as a sale.
@@ -4235,7 +4281,7 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
                 newly_sold += 1
             except Exception as e:
                 logger.warning(f"Vinted sale reconcile failed for item {l['item_id']}: {e}")
-        elif pid not in seen_ids:
+        elif pid not in seen_ids and not _te_jong_om_weg_te_zijn(l, nu):
             verdwenen.append(l)
 
     # ── WEG UIT DE KAST IS EEN VRAAG, GEEN VERKOOP OP VINTED ────────────────
