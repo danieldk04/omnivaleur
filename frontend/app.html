@@ -949,7 +949,6 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <button class="btn btn-sm btn-primary rl-klaar" onclick="stopRondleiding()">Done</button>
       </div>
     </div>
-    </div>
   </div>
 
   <div class="content">
@@ -5267,6 +5266,7 @@ function startRondleiding() {
   _rl.i = -1;
   document.getElementById('rondleiding').hidden = false;
   addEventListener('resize', _rlPlaats);
+  addEventListener('scroll', _rlPlaats, true);
   rondleidingStap(1);
 }
 async function rondleidingStap(richting) {
@@ -5290,8 +5290,10 @@ async function rondleidingStap(richting) {
   _rl.bezig = false;
   if (!el) { if (richting > 0) stopRondleiding(); else kaart.classList.remove('rl-wissel'); return; }
   _rl.i = i;
-  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  await new Promise(r => setTimeout(r, 380));
+  // Alleen scrollen als het doel niet helemaal in beeld staat, en dan meteen:
+  // een vloeiende scroll laat de spotlight op een tussenstand meten.
+  const rr = el.getBoundingClientRect();
+  if (rr.top < 70 || rr.bottom > innerHeight - 170) el.scrollIntoView({ block: 'center', inline: 'nearest' });
   kaart.querySelector('.rl-tekst').innerHTML = _rl.stappen[i].html;
   // Teller: welk stuk van de stappen die er bij hem echt zijn.
   const zichtbaar = _rl.stappen.filter(st => st === _rl.stappen[i] || !!document.querySelector(st.doel)).length;
@@ -5301,7 +5303,10 @@ async function rondleidingStap(richting) {
   kaart.querySelector('.rl-terug').style.visibility = nr > 1 ? 'visible' : 'hidden';
   kaart.querySelector('.rl-verder').style.display = laatste ? 'none' : '';
   kaart.querySelector('.rl-klaar').style.display = laatste ? '' : 'none';
-  _rlPlaats();
+  // Het scherm schuift nog even in (viewIn); volg het doel tot het stilstaat.
+  const tot = performance.now() + 700;
+  const volg = () => { _rlPlaats(); if (performance.now() < tot && _rl.i === i) requestAnimationFrame(volg); };
+  volg();
   kaart.classList.remove('rl-wissel');
 }
 function _rlPlaats() {
@@ -5318,13 +5323,14 @@ function _rlPlaats() {
   if (top + kh > innerHeight - 8) top = Math.max(8, r.top - m - 12 - kh);
   let left = r.left + r.width / 2 - kb / 2;
   // Een smal doel links in het menu: kaart ernaast in plaats van eroverheen.
-  if (r.right < 320 && r.width < 300) { left = r.right + m + 16; top = Math.min(Math.max(8, r.top - 10), innerHeight - kh - 8); }
+  if (el.closest('.sidebar')) { left = r.right + m + 16; top = Math.min(Math.max(8, r.top - 10), innerHeight - kh - 8); }
   left = Math.min(Math.max(8, left), innerWidth - kb - 8);
   Object.assign(kaart.style, { top: top + 'px', left: left + 'px' });
 }
 function stopRondleiding() {
   document.getElementById('rondleiding').hidden = true;
   removeEventListener('resize', _rlPlaats);
+  removeEventListener('scroll', _rlPlaats, true);
   _rl.i = -1;
   showView('dashboard');
 }
