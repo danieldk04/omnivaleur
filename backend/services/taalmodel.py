@@ -44,7 +44,7 @@ class TaalmodelOnbeschikbaar(Exception):
 # de woordenlijst en de verkoper vangen dat op), en alles wat wel mag is per
 # dag begrensd. De teller loopt per proces; een herstart zet hem terug op nul,
 # dus het is een noodrem en geen boekhouding.
-CLAUDE_MAX_PER_DAG = 400
+CLAUDE_MAX_PER_DAG = 300
 _CLAUDE_DAG: dict = {"dag": None, "n": 0}
 
 

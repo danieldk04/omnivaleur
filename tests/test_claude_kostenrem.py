@@ -48,3 +48,13 @@ def test_dagmaximum_stopt_claude():
             except taalmodel.TaalmodelOnbeschikbaar:
                 pass
     assert len(calls) == 3
+
+
+def test_korte_kledingvraag_mag_wel_naar_claude():
+    calls = []
+    a, b = _gemini_429()
+    taalmodel._CLAUDE_DAG.update(dag=None, n=0)
+    with a, b, mock.patch.dict(sys.modules, {"anthropic": _nep_claude(calls)}), \
+         mock.patch.object(taalmodel.settings, "anthropic_api_key", "x"):
+        asyncio.run(imports._haiku_classificatie(None, "kort", claude_ok=True))
+    assert len(calls) == 1
