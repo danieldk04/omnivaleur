@@ -16462,3 +16462,23 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
 - Amanda 8f91a370: Vinted-kleding blijft open zoals in de klantfoutenronde van vanochtend; extensie offline sinds
   08-10 18:33; call ma 12-10. Geen mailtje.
 - robbertbolier, partablecs, winterhome, amhin: ongewijzigd, nul artikelen, al gemaild. Geen mailtje.
+
+## 09-10-2026: WooCommerce gebouwd (Mikkis vroeg erom, Daniel: "meet de WooCommerce-winkels, bouw daarna in")
+
+- Aanleiding: Mikkis (info@mikkis.nl, lead, kinderkleding en speelgoed, 2.504 producten in WooCommerce) vroeg
+  hoe het met WooCommerce werkt. WooCommerce is bij onze leads drie keer zo gewoon als Shopify (154 tegen 48).
+- Gemeten op 100 WooCommerce-webshops uit de leadlijst (alleen openbare productlijsten gelezen): 76 bereikbaar,
+  21 met de WooCommerce-API uitgezet of verborgen, 3 dood. 69 tonen hun producten openbaar: samen 5.569
+  bekeken, 94% gewone producten, 6% met maten/varianten, 36% zonder artikelnummer. Bij Mikkis heten de
+  eigenschappen Merk, Maat, Staat en Geslacht; die worden herkend.
+- Gebouwd: koppelen met één klik (WooCommerce's eigen Approve-scherm) of met een geplakte sleutel; inlezen als
+  importkandidaten; nieuwe producten elk uur; verkoop in de webshop haalt het artikel binnen ~5 min elders weg
+  (zelf bestellingen ophalen, geen webhook); verkoop elders zet het product op uitverkocht, nooit wissen;
+  voorraadwinkel: één stuk eraf, zelfde regel als Goudlief/Shopify; publiceren naar WooCommerce kan ook.
+- Keuzes: een bestelling "in de wacht" (bankoverschrijving) telt als verkocht, want WooCommerce heeft het stuk
+  dan al vastgezet; liever elders offline dan dubbel verkocht. Prijs van een product met maten wordt niet
+  vanuit Omnivaleur gezet (elke maat kan een eigen prijs hebben).
+- Getest: 27 proeven tegen een echte WooCommerce 11.2 (lokale testwinkel, drie manieren van inloggen, ook een
+  hosting die de inlogregel weggooit), 27 met nagebootste winkel, hele testreeks gelijk aan main (12 oude fouten).
+  NIET getest: een echte klantwinkel, en de één-klik-route tot het einde (die eist https naar omnivaleur.com).
+- Open: Mikkis antwoorden (Daniel); eerste echte koppeling meekijken in de onboardingronde.

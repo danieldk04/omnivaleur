@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 09-10-2026 (Vinted krijgt nu precies de tekst die je in Omnivaleur schreef, zonder vertaling; vertalen naar het Engels is een keuze bij Instellingen; eerder: 08-10-2026: de automatische Shopify-import haalt één keer per dag ook producten binnen die bij een eerdere scan bleven wachten en nog te koop staan; genegeerde producten blijven genegeerd; zoeken in Items werkt nu met meerdere woorden in elke volgorde, zoals "winterjas noppies", en de maat telt mee; een lege maat of merk wordt ingevuld uit de titel (schoenmaat, en alleen merken die de klant zelf al gebruikt), ook voor wat al in de voorraad stond; Vinted vond in de lijstvorm van de kleurkiezer geen enkele kleur (zoals Zilver), gerepareerd in extensie 1.0.375; nieuwe Shopify-producten komen elk uur vanzelf binnen bij wie uit Shopify importeert, met een schakelaar op de pagina Import; Bieden-advertenties van Marktplaats kunnen nu naar 2dehands, het venster vroeg ten onrechte om een bedrag; winkels met meerdere stuks per product: de Shopify-voorraad is nu de baas bij een verkoop, een verkoop elders haalt één stuk af in plaats van het product te wissen; kinder- en babykleding krijgt nu vanzelf een rubriek aan de maat (zoals 44/50, 62/68, 92), aan woorden als romper of babypakje en aan kindermerken als Noppies en Jopper; artikelen zonder rubriek worden elke drie uur nagelopen in plaats van 200 per nacht; Vinted zet kinderschoenen nu onder Kids, vanaf extensie 1.0.374; de Shopify-scan meldt hoeveel producten als uitverkocht of concept zijn overgeslagen; kinderschoenen: maten 15 tot en met 29 staan nu in de maatlijst, en een schoen met een schoenmaat onder de 30 in de titel krijgt vanzelf de rubriek Kinderen, schoenen; de melding "kan nog niet plaatsen" noemt de velden nu in gewone taal en staat helemaal in het Nederlands; eerder: 07-10-2026: titels boven 60 tekens worden op Marktplaats en 2dehands netjes ingekort; Shopify-producten met een lange maat mislukten bij importeren, gerepareerd; bieden toestaan kan nu voor veel artikelen tegelijk; een onderbroken import gaat verder met Alles importeren, zonder dubbelen; lange Shopify-namen komen nu wel binnen; eerder: 06-10-2026: Facebook Marketplace staat nu overal op de website als beta; eerder: 05-10-2026: Shopify koppelen: een mislukte koppeling noemt nu de precieze stap die fout ging, in het Nederlands; eerder: 04-10-2026: de demolink is nu altijd de korte https://omnivaleur.com/mp, zodat Analytics ziet dat het bezoek uit een mail komt; eerder: 30-09-2026: Omnivaleur Light naast Pro: 9,99 incl. btw tot 20 actieve artikelen; 2dehands verlengt bij een grote partij tot 200 per dag in plaats van vast 40; wie liet scannen maar na een dag niets importeerde krijgt één herinneringsmail; foto's die een klant later op Vinted vernieuwt komen niet vanzelf over, advies toegevoegd; antwoord op de vaak gestelde vraag naar een koppeling met bol toegevoegd; een bedrag als "1.360" werd 1,36 in de inkoop- en verkoopprijs, gerepareerd; oude foto's op Marktplaats bij een voorraad die uit meerdere kanalen is ingelezen, opgeruimd bij De Juiste Toon; Vinted herkende "zilveren" en andere verbogen kleuren niet, gerepareerd in 1.0.358; uitbreiding logde zichzelf uit bij een databasestoring, gerepareerd; eerder: automatisch herplaatsen stond 20-09 tot 28-09 stil door een fout bij ons, loopt weer; daarvoor: verzendkost-aanpassingen op 2dehands gaan achter nieuwe plaatsingen)_
+_Laatst bijgewerkt: 09-10-2026 (WooCommerce is een nieuw kanaal: koppelen met één klik op Approve in je eigen WooCommerce of met een geplakte sleutel, producten inlezen via Import, nieuwe producten elk uur vanzelf, een verkoop in je webshop haalt het artikel binnen een paar minuten van je andere kanalen, een verkoop elders zet het product in je webshop op uitverkocht en verwijdert het nooit; Vinted krijgt nu precies de tekst die je in Omnivaleur schreef, zonder vertaling; vertalen naar het Engels is een keuze bij Instellingen; eerder: 08-10-2026: de automatische Shopify-import haalt één keer per dag ook producten binnen die bij een eerdere scan bleven wachten en nog te koop staan; genegeerde producten blijven genegeerd; zoeken in Items werkt nu met meerdere woorden in elke volgorde, zoals "winterjas noppies", en de maat telt mee; een lege maat of merk wordt ingevuld uit de titel (schoenmaat, en alleen merken die de klant zelf al gebruikt), ook voor wat al in de voorraad stond; Vinted vond in de lijstvorm van de kleurkiezer geen enkele kleur (zoals Zilver), gerepareerd in extensie 1.0.375; nieuwe Shopify-producten komen elk uur vanzelf binnen bij wie uit Shopify importeert, met een schakelaar op de pagina Import; Bieden-advertenties van Marktplaats kunnen nu naar 2dehands, het venster vroeg ten onrechte om een bedrag; winkels met meerdere stuks per product: de Shopify-voorraad is nu de baas bij een verkoop, een verkoop elders haalt één stuk af in plaats van het product te wissen; kinder- en babykleding krijgt nu vanzelf een rubriek aan de maat (zoals 44/50, 62/68, 92), aan woorden als romper of babypakje en aan kindermerken als Noppies en Jopper; artikelen zonder rubriek worden elke drie uur nagelopen in plaats van 200 per nacht; Vinted zet kinderschoenen nu onder Kids, vanaf extensie 1.0.374; de Shopify-scan meldt hoeveel producten als uitverkocht of concept zijn overgeslagen; kinderschoenen: maten 15 tot en met 29 staan nu in de maatlijst, en een schoen met een schoenmaat onder de 30 in de titel krijgt vanzelf de rubriek Kinderen, schoenen; de melding "kan nog niet plaatsen" noemt de velden nu in gewone taal en staat helemaal in het Nederlands; eerder: 07-10-2026: titels boven 60 tekens worden op Marktplaats en 2dehands netjes ingekort; Shopify-producten met een lange maat mislukten bij importeren, gerepareerd; bieden toestaan kan nu voor veel artikelen tegelijk; een onderbroken import gaat verder met Alles importeren, zonder dubbelen; lange Shopify-namen komen nu wel binnen; eerder: 06-10-2026: Facebook Marketplace staat nu overal op de website als beta; eerder: 05-10-2026: Shopify koppelen: een mislukte koppeling noemt nu de precieze stap die fout ging, in het Nederlands; eerder: 04-10-2026: de demolink is nu altijd de korte https://omnivaleur.com/mp, zodat Analytics ziet dat het bezoek uit een mail komt; eerder: 30-09-2026: Omnivaleur Light naast Pro: 9,99 incl. btw tot 20 actieve artikelen; 2dehands verlengt bij een grote partij tot 200 per dag in plaats van vast 40; wie liet scannen maar na een dag niets importeerde krijgt één herinneringsmail; foto's die een klant later op Vinted vernieuwt komen niet vanzelf over, advies toegevoegd; antwoord op de vaak gestelde vraag naar een koppeling met bol toegevoegd; een bedrag als "1.360" werd 1,36 in de inkoop- en verkoopprijs, gerepareerd; oude foto's op Marktplaats bij een voorraad die uit meerdere kanalen is ingelezen, opgeruimd bij De Juiste Toon; Vinted herkende "zilveren" en andere verbogen kleuren niet, gerepareerd in 1.0.358; uitbreiding logde zichzelf uit bij een databasestoring, gerepareerd; eerder: automatisch herplaatsen stond 20-09 tot 28-09 stil door een fout bij ons, loopt weer; daarvoor: verzendkost-aanpassingen op 2dehands gaan achter nieuwe plaatsingen)_
 
 ---
 
@@ -117,7 +117,7 @@ Taal van het dashboard:
 
 Ondersteunde kanalen (dit is de volledige lijst):
 
-- Marktplaats, 2dehands, Vinted, eBay, Shopify en Facebook Marketplace (die laatste als beta).
+- Marktplaats, 2dehands, Vinted, eBay, Shopify, WooCommerce (sinds 09-10-2026) en Facebook Marketplace (die laatste als beta).
 - Verder niets. Google Shopping, Meta, Reverb, Refurbed, Bol, Amazon en
   dergelijke worden NIET ondersteund. Zeg dat eerlijk en direct; verzin geen
   "binnenkort".
@@ -161,7 +161,7 @@ Hoe de kanalen gekoppeld worden:
 - Marktplaats, 2dehands en Vinted lopen via de gratis Chrome-uitbreiding. Die
   installeer je een keer en je logt in op je eigen accounts; verder hoef je niets
   te koppelen.
-- eBay en Shopify koppel je een keer in je dashboard, bij Platforms. Dat gaat via
+- eBay, Shopify en WooCommerce koppel je een keer in je dashboard, bij Platforms. Dat gaat via
   de officiele koppeling van het platform zelf.
 - Vraagt iemand wat "Uses your Chrome login" bij Platforms betekent: dat dat kanaal
   via zijn eigen inlog in Chrome werkt. Het zegt niet dat hij ingelogd is. Is hij
@@ -241,6 +241,31 @@ Hoe de kanalen gekoppeld worden:
   laatst gekeken is. Wat de klant eerder liet liggen of negeerde blijft liggen, en twijfel
   (lijkt op een artikel dat er al is) wacht onder Te controleren. Een product dat Omnivaleur
   zelf naar Shopify zette wordt nooit een tweede artikel.
+- WooCommerce (sinds 09-10-2026). Koppelen: Platforms, WooCommerce, Connect. Vul het adres
+  van je webshop in (zoals jouwwebshop.nl) en klik Verder naar WooCommerce. Je komt in je
+  eigen WordPress op een scherm van WooCommerce zelf, "Omnivaleur would like to connect to
+  your store"; daar klik je Approve (eerst inloggen als hij daarom vraagt). Daarna sta je
+  weer in Omnivaleur en is de webshop gekoppeld. Lukt dat niet (een beveiligingsplugin, of
+  de webshop heeft geen https), dan kan het ook met een sleutel: in WordPress WooCommerce,
+  Instellingen, Geavanceerd, REST API, Sleutel toevoegen, rechten Lezen/Schrijven, en de
+  consumer key en het consumer secret plakken onder "Liever een sleutel plakken".
+- Daarna: Import, vink WooCommerce aan en importeer. Merk, maat, staat en doelgroep komen
+  mee als ze in WooCommerce als eigenschap staan (Merk, Maat, Staat, Geslacht). Alleen
+  gepubliceerde producten met voorraad komen binnen; concepten en uitverkochte producten
+  niet, en de scan zegt hoeveel dat er zijn. Nieuwe producten komen elk uur vanzelf binnen
+  (schakelaar op Import), net als bij Shopify.
+- Verkocht in de webshop: binnen ongeveer 5 minuten haalt Omnivaleur het artikel van de
+  andere kanalen. Verkocht op een ander kanaal: het product in de webshop gaat op
+  uitverkocht. Het wordt nooit verwijderd, de productpagina en foto's blijven staan.
+  Heeft een product meer stuks (voorraad 2 of meer), dan gaat er bij een verkoop elders één
+  stuk af en blijft alles staan tot het op is. Bij een product met meerdere maten met
+  voorraad weet Omnivaleur niet welke maat elders verkocht is; dan blijft de voorraad
+  staan en past de klant die zelf aan.
+- Kan Omnivaleur de webshop een tijd niet bereiken (storing bij de hosting, sleutel
+  ingetrokken), dan staat dat bij Platforms onder WooCommerce, met sinds wanneer. Zolang
+  dat zo is worden verkopen in de webshop niet van de andere kanalen gehaald.
+- Prijs aanpassen in Omnivaleur gaat ook naar WooCommerce (een actieprijs vervalt dan).
+  Bij een product met maten (varianten) niet: die prijzen pas je in WooCommerce zelf aan.
 - Grote import onderbroken (tabblad dicht)? Niet opnieuw scannen hoeft niet: open Import en druk
   weer op Alles importeren, hij gaat verder waar hij was. Opnieuw scannen mag ook en maakt geen
   dubbelen. De knop telt alles wat nog wacht; de lijst eronder toont er hooguit 500. Een

@@ -17,6 +17,26 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## woocommerce-koppeling
+
+*09-10-2026 — "09-10-2026 WooCommerce gebouwd (Mikkis): één klik via /wc-auth, drie inlogmodi, nooit wissen, bestellingen zelf nakijken; testwinkel via WordPress Playground; gemeten op 100 leadwinkels"*
+
+WooCommerce is sinds 09-10-2026 een kanaal, gebouwd op het Shopify-pad (scan als importkandidaten, automatische import per uur, voorraad als baas). Code: backend/platforms/woocommerce.py en services/woocommerce_{scan,orders,voorraad,auto_import}.py.
+
+Wat je moet weten om het niet stuk te maken:
+- Elke winkel is eigen hosting. GEMETEN 09-10 op 100 WooCommerce-leadwinkels: 76 bereikbaar (WooCommerce-401 met JSON), 21 met WordPress-API maar zonder wc-routes (uitgezet of verborgen door een plugin, met sleutel misschien wel), 3 dood. Mikkis (2.504 producten) verbrak de verbinding bij snel bladeren: altijd pauze + herhaalpogingen.
+- Inloggen: https = sleutel in de kopregel, valt vanzelf terug op de sleutel in het adres als de host de kopregel weggooit (op de testwinkel ging 4 van 16 zo mis, het adres 20 van 20 goed); http = OAuth 1.0a (HMAC-SHA256, geheim + '&'). De modus wordt bewaard in extra_data.modus.
+- Eén klik: /wc-auth/v1/authorize (zonder mooie permalinks ?wc-auth-version=1&wc-auth-route=authorize). WooCommerce 11.2 POST de sleutel als JSON naar onze callback, eist https, en wist de sleutel als het antwoord geen 200 is. De callback is openbaar; wie het is staat in een getekende staat (lees_staat), anders 403.
+- Nooit een product wissen: elders verkocht = op uitverkocht (stock 0 of outofstock).
+- Geen webhooks: WooCommerce zet ze stil uit na >5 mislukte afleveringen. Bestellingen elke 5 min zelf ophalen (processing, completed, on-hold) met modified_after en dates_are_gmt.
+- Credentials: access_token = consumer key, refresh_token = consumer secret, extra_data.api_root.
+
+**Why:** Daniel wilde het "in één keer 100% voor iedereen"; elke winkel is anders, dus robuustheid zit in terugvallen en meten, niet in aannames.
+
+**How to apply:** proef tegen een echte WooCommerce met tests/test_woocommerce_live.py en een lokale testwinkel: `npx @wp-playground/cli@latest server --port=9400 --blueprint=...` met WooCommerce en een sleutel via runPHP (zie de docstring). Een mu-plugin die $_SERVER['HTTPS'] zet bootst https na, maar zet daarna home op https: geef dan WOO_TEST_API mee. Zie ook "shopify-voorraad-is-de-baas" en "storing-mag-nooit-als-antwoord-tellen".
+
+---
+
 ## advertentie-zonder-vraagprijs
 
 *08-10-2026 — "Bieden, Zie omschrijving en Gratis zijn echte advertentievormen op Marktplaats en 2dehands; een ontbrekende prijs is dus niet altijd een gebrek en een verzonnen bedrag is schade"*
