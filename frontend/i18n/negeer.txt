@@ -168,3 +168,5 @@ input[name="bulk-verzending"]:checked
 #rondleiding-stappen > div
 #rondleiding .rl-kaart
 #rondleiding .rl-gat
+(max-width: 768px)
+(hover: none) and (pointer: coarse)

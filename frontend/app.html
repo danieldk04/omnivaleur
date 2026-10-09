@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=2bc4e94246"></script>
+<script src="/i18n.js?v=7717edb5f6"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -891,7 +891,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
        Vervang de inhoud hieronder en geef NIEUWS_ID een nieuwe waarde (en
        NIEUWS_SINDS de datum van de wijziging). Elke klant die al artikelen had
        vóór die datum ziet hem één keer; wie later begon kent het oude niet. -->
-  <div id="nieuws-venster" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:190;align-items:center;justify-content:center;padding:16px">
+  <div id="nieuws-venster" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:900;align-items:center;justify-content:center;padding:16px">
     <div role="dialog" aria-labelledby="nieuws-titel" style="background:#fff;border-radius:18px;padding:28px 28px 22px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow:auto">
       <div style="font-size:12px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--blue);margin-bottom:6px">What's new</div>
       <div id="nieuws-titel" style="font-size:20px;font-weight:900;letter-spacing:-.3px;margin-bottom:8px">A tidier dashboard</div>
@@ -913,8 +913,11 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <li>Clearer texts everywhere, in plain words.</li>
       </ul>
       <div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:16px">You can read this again via "What's new" at the bottom of the menu.</div>
-      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="startRondleiding()">Show me in my dashboard</button>
-      <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:6px" onclick="sluitNieuws()">Got it, no tour</button>
+      <!-- Knoppen blijven onderin staan, ook als de lijst op een telefoon moet scrollen. -->
+      <div style="position:sticky;bottom:-22px;background:#fff;padding:10px 0 4px;margin-bottom:-4px">
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="startRondleiding()">Show me in my dashboard</button>
+        <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:6px" onclick="sluitNieuws()">Got it, no tour</button>
+      </div>
     </div>
   </div>
 
@@ -930,7 +933,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     <div data-view="analytics" data-doel="#view-analytics .subtab[data-sub='calculator']"><b>Margin calculator</b> is now a tab here, under Analytics.</div>
     <div data-view="preferences" data-doel="#view-preferences .subtab[data-sub='protections']"><b>Automatic protections</b> is now a tab here, under Preferences.</div>
     <div data-view="dashboard" data-doel=".nav-item[data-view='referral']"><b>Earn 1 month free</b> is now here, at the bottom of the menu.</div>
-    <div data-view="dashboard" data-doel="#dashboard-items-body .pm-dot[data-url]">Click a <b>green icon</b> to open your advert on that marketplace.</div>
+    <div data-view="dashboard" data-doel="#dashboard-items-body .pm-dot[data-url]">Click the <b>green icon</b> to open your advert on that marketplace.</div>
     <div data-view="dashboard" data-doel=".stat:has(#stat-unpublished)"><b>To list</b> now only counts items that are not online anywhere yet. Click View to see them.</div>
     <div data-view="dashboard" data-doel="#ext-activity-bar">This bar shows what is waiting, per marketplace: new adverts, renewals and removals.</div>
     <div data-view="items" data-doel="#filter-platform">New in this filter: <b>Not on 2dehands yet</b>, and the same for every marketplace. Handy to see what still has to go there.</div>
@@ -3233,6 +3236,17 @@ function hideExtSigninCallout() {
   document.getElementById('ext-signin-callout').style.display = 'none';
 }
 
+// Op een telefoon of tablet bestaan Chrome-extensies niet. Daar dus nooit het
+// blokkerende "installeer de extensie"-venster: dat stuurt iemand naar iets wat
+// op dat apparaat niet kan (telefoonproef 09-10-2026). De statusregel bovenaan
+// (renderExtensionStatus) zegt daar wat er op de computer moet gebeuren.
+function _opTelefoon() {
+  try {
+    return matchMedia('(max-width: 768px)').matches
+      || matchMedia('(hover: none) and (pointer: coarse)').matches;
+  } catch (e) { return false; }
+}
+
 // Renders whichever of the two setup states applies. 'checking' shows nothing —
 // never flash "install the extension" at someone who has it.
 function renderExtSetup() {
@@ -3245,7 +3259,7 @@ function renderExtSetup() {
 
   // Install step: blocking, because publishing is impossible without it.
   // Dismissal is per-browser ("Not now"), but a real detection still wins.
-  modal.style.display = (missing && !localStorage.getItem('cl_ext_ok')) ? 'flex' : 'none';
+  modal.style.display = (missing && !_opTelefoon() && !localStorage.getItem('cl_ext_ok')) ? 'flex' : 'none';
 
   // Bijwerkstap: net zo blokkerend. Een te oude kopie is erger dan geen kopie,
   // want ze neemt werk aan en levert het half af. Het weggeklikte "toch doorgaan"
@@ -5266,7 +5280,11 @@ function _rlBestaat(st) {
   let el = null;
   try { el = document.querySelector(st.doel); } catch (e) { return false; }
   if (!el) return false;
-  return el.closest('.view') ? true : el.getClientRects().length > 0;
+  if (el.closest('.view')) return true;
+  // Daarbuiten: alleen wat nu echt in beeld staat. Op een telefoon zit het menu
+  // dicht en buiten het scherm; die stappen tellen dan niet mee.
+  const r = el.getBoundingClientRect();
+  return r.width >= 4 && r.height >= 4 && r.right > 0 && r.left < innerWidth;
 }
 function startRondleiding() {
   sluitNieuws();
@@ -5292,6 +5310,15 @@ async function rondleidingStap(richting) {
     if (stap.view && (!actief || actief.id !== 'view-' + stap.view)) {
       showView(stap.view);
       await new Promise(r => setTimeout(r, 350));
+    }
+    // Staat het doel buiten beeld in een schuifbare lijst (op een telefoon zit
+    // het groene icoon rechts in een tabel die opzij schuift), schuif er dan
+    // eerst naartoe. Niet voor het menu: dat zit op een telefoon dicht.
+    let kandidaat = null;
+    try { kandidaat = document.querySelector(stap.doel); } catch (e) { /* ongeldige keuze */ }
+    if (kandidaat && !kandidaat.closest('.sidebar') && kandidaat.getClientRects().length && !_rlDoel(stap)) {
+      kandidaat.scrollIntoView({ block: 'center', inline: 'center' });
+      await new Promise(r => setTimeout(r, 150));
     }
     el = _rlDoel(stap);
     if (el) break;
@@ -9756,6 +9783,15 @@ function renderExtensionStatus() {
     // hide rather than show a misleading state. Een verouderde kopie melden we
     // wél, ook dan.
     if (!data || data.online === null || data.online === undefined) {
+      // Nog nooit een extensie gezien en je kijkt op je telefoon: zeg waar het
+      // plaatsen gebeurt, in plaats van niets (het installatievenster komt op
+      // een telefoon bewust niet, zie _opTelefoon).
+      if (!oud && data && _opTelefoon()) {
+        el.style.display = 'flex';
+        el.className = 'comp-status comp-status-offline';
+        el.innerHTML = `<span class="comp-dot"></span><div><b>Publishing happens on your computer.</b> Open omnivaleur.com/app in Chrome on your computer and add the Omnivaleur extension there. On your phone you can check and manage everything.</div>`;
+        return;
+      }
       if (!oud) { el.style.display = 'none'; return; }
       el.style.display = 'flex';
       el.className = 'comp-status comp-status-offline';

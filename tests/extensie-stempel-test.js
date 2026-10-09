@@ -59,7 +59,7 @@ function bouwScherm(stempel) {
     extState: { status: "checking", version: "", email: "" },
   };
   vm.createContext(sandbox);
-  for (const naam of ["extStempel", "_extGeefOp", "renderExtSetup", "renderExtStatus",
+  for (const naam of ["_opTelefoon", "extStempel", "_extGeefOp", "renderExtSetup", "renderExtStatus",
                       "extVersionIsOld", "extVersionAchter", "versieLager",
                       "versieAchterstand", "extVersionStaatStil"]) {
     vm.runInContext(functieUit(naam), sandbox);
@@ -102,6 +102,15 @@ console.log("\n3. Echt niet geïnstalleerd blijft gewoon 'niet gevonden'");
   vm.runInContext("_extGeefOp();", sandbox);
   ok(sandbox.extState.status === "missing", "zonder stempel: 'niet gevonden'");
   ok(vakken["ext-overlay"].style.display === "flex", "en het installatievenster hoort er dan ook te staan");
+}
+
+console.log("\n3b. Op een telefoon: geen installatievenster, want daar bestaan geen extensies");
+{
+  const { sandbox, vakken } = bouwScherm("");
+  sandbox.matchMedia = () => ({ matches: true });
+  vm.runInContext("_extGeefOp();", sandbox);
+  ok(sandbox.extState.status === "missing", "zonder stempel nog steeds 'niet gevonden'");
+  ok(vakken["ext-overlay"].style.display === "none", "maar geen blokkerend venster over het telefoonscherm");
 }
 
 console.log("\n4. Een wakkere extensie wordt niet overschreven");
