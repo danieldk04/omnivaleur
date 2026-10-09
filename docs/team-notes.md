@@ -16628,3 +16628,10 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   5 artikelen heeft (hulshofmatthijs 29-09 verloor zo zijn proefweek); Facebook-uitleg in gewone woorden (Johan Kist
   17-09 snapte "beta, use at your own risk" niet). Niet kunnen lezen: de opgeslagen mailanalyse in de database
   (leesactie op productie niet toegestaan zonder Daniels akkoord) en de Zoho-inbox zelf.
+- Finale versie (a9135d4f + brein), na Daniels akkoord om de database te lezen: mail_analyse (600 mails, 23-08 t/m
+  06-09, daarna stond de mailagent uit) en bug_signalen (49 patronen, alle opgelost, afgewezen of uitgedoofd)
+  doorgenomen. Toegevoegd: groen kanaalicoon opent de advertentie ("geplaatst maar ik zie hem niet", Toon 03-09 en
+  mail 05-09); "Actieve advertenties" zegt dat het alle kanalen samen zijn ("16.602 terwijl ik er 5.540 heb",
+  03-09); Berichten legt uit waarom het getal blijft staan (badge-klacht 02-09); de werkbalk noemt de gele
+  foutopsporingsbalk (mail 04-09); acht nieuwe Help-vragen. Bovenaan de klantpost: importeren (20), publiceren (10),
+  verversen (7), allemaal storingen die al gerepareerd zijn, geen schermvragen.
