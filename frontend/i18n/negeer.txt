@@ -165,3 +165,6 @@ omnivaleur.com/r/
 input[name="verzending-2dh-modus"]
 input[name="verzending-2dh-modus"]:checked
 input[name="bulk-verzending"]:checked
+#rondleiding-stappen > div
+#rondleiding .rl-kaart
+#rondleiding .rl-gat

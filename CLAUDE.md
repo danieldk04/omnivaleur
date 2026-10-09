@@ -155,6 +155,10 @@ schermen of knoppen, een nieuwe werkwijze), dan krijgen bestaande klanten in het
 zelf een "Wat is er nieuw"-venster, "zodat niemand in de war raakt door nieuwe dingen".
 In `frontend/app.html`: vervang de inhoud van `#nieuws-venster`, geef `NIEUWS_ID` een nieuwe
 waarde en zet `NIEUWS_SINDS` op de datum van de wijziging. Tweetalig, zoals alle klanttekst.
+Daarbij altijd een rondleiding op het echte dashboard (Daniel, 09-10-2026: "met animaties,
+met het echte dashboard"): vervang de stappen in `#rondleiding-stappen`, één per wijziging,
+met `data-view` (welk scherm) en `data-doel` (wat oplicht). Loop hem zelf af in de browser
+voor je hem live zet.
 Noem in je rapport aan Daniel welke melding klanten krijgen. Kleine reparaties zonder
 zichtbare verandering hoeven niet.
 

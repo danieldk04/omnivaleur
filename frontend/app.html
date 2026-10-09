@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=60456dde29"></script>
+<script src="/i18n.js?v=2bc4e94246"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -61,6 +61,22 @@ a { color: inherit; text-decoration: none; }
 .nav-item.nav-cta svg { opacity: 1; color: #a7f3d0; }
 .nav-item.nav-gift svg { opacity: 1; color: #6ee7b7; }
 /* Tabbladen bovenin een scherm dat twee menu-items samenvoegt (09-10-2026). */
+/* Rondleiding over het echte dashboard (09-10-2026): een spotlight die meebeweegt. */
+#rondleiding .rl-blok { position: fixed; inset: 0; z-index: 1000; }
+#rondleiding .rl-gat { position: fixed; z-index: 1001; border-radius: 12px; pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(15,23,42,.62); outline: 3px solid #60a5fa;
+  transition: top .45s cubic-bezier(.2,.8,.2,1), left .45s cubic-bezier(.2,.8,.2,1), width .45s cubic-bezier(.2,.8,.2,1), height .45s cubic-bezier(.2,.8,.2,1);
+  animation: rl-puls 1.6s ease-out infinite; }
+@keyframes rl-puls { 0% { outline-offset: 0; outline-color: rgba(96,165,250,1); } 80%, 100% { outline-offset: 10px; outline-color: rgba(96,165,250,0); } }
+#rondleiding .rl-kaart { position: fixed; z-index: 1002; width: min(340px, calc(100vw - 32px)); background: #fff; color: var(--text);
+  border-radius: 14px; padding: 14px 16px 12px; box-shadow: 0 16px 48px rgba(0,0,0,.3); font-size: 14px; line-height: 1.55;
+  transition: top .45s cubic-bezier(.2,.8,.2,1), left .45s cubic-bezier(.2,.8,.2,1), opacity .25s; }
+#rondleiding .rl-kaart.rl-wissel { opacity: 0; }
+#rondleiding .rl-kop { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+#rondleiding .rl-teller { font-size: 11px; font-weight: 800; letter-spacing: .5px; color: var(--blue); }
+#rondleiding .rl-stop { background: none; border: none; font-size: 20px; line-height: 1; color: var(--muted); cursor: pointer; padding: 0 2px; }
+#rondleiding .rl-knoppen { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; }
+@media (prefers-reduced-motion: reduce) { #rondleiding .rl-gat, #rondleiding .rl-kaart { transition: none; animation: none; } }
 .subtabs { display: flex; gap: 4px; margin: 0 0 18px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .subtab { background: none; border: none; padding: 9px 14px; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; gap: 6px; align-items: center; font-family: inherit; }
 .subtab:hover { color: var(--text); }
@@ -820,7 +836,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       <span id="ext-label">Loading...</span>
     </div>
     <div data-taalkeuze style="color:rgba(255,255,255,.55);font-size:11px;margin-top:8px"></div>
-    <button onclick="toonNieuws(true)" style="background:transparent;border:none;color:rgba(255,255,255,.45);font-size:11px;cursor:pointer;padding:4px 0;margin-top:4px;text-align:left;display:block">What's new</button>
+    <button id="nieuws-knop" onclick="toonNieuws(true)" style="background:transparent;border:none;color:rgba(255,255,255,.45);font-size:11px;cursor:pointer;padding:4px 0;margin-top:4px;text-align:left;display:block">What's new</button>
     <button id="logout-btn" onclick="SESSIE.wisAlles(); window.location.href='/'" style="background:transparent;border:none;color:rgba(255,255,255,.3);font-size:11px;cursor:pointer;padding:4px 0;margin-top:6px;text-align:left;width:100%;">← Log out</button>
   </div>
 </div>
@@ -897,7 +913,41 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <li>Clearer texts everywhere, in plain words.</li>
       </ul>
       <div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:16px">You can read this again via "What's new" at the bottom of the menu.</div>
-      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="sluitNieuws()">Got it</button>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="startRondleiding()">Show me in my dashboard</button>
+      <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:6px" onclick="sluitNieuws()">Got it, no tour</button>
+    </div>
+  </div>
+
+  <!-- ── RONDLEIDING ───────────────────────────────────────────────
+       Daniel, 09-10-2026: "meer met animaties, met het echte dashboard". Elke
+       stap opent het echte scherm, zet er een bewegende spotlight op en legt het
+       in één zin uit. Bij een volgende grote wijziging: vervang de stappen
+       hieronder (data-view = welk scherm, data-doel = wat oplicht). Een stap
+       waarvan het doel niet in beeld is (telefoon, lege lijst) wordt overgeslagen.
+       De teksten staan hier als HTML, zodat de vertaallaag ze vindt. -->
+  <div id="rondleiding-stappen" hidden>
+    <div data-view="refresh" data-doel="#view-refresh .subtab[data-sub='stale']"><b>Stale stock</b> is now a tab here, under Refresh. It shows items that have been online a long time without selling.</div>
+    <div data-view="analytics" data-doel="#view-analytics .subtab[data-sub='calculator']"><b>Margin calculator</b> is now a tab here, under Analytics.</div>
+    <div data-view="preferences" data-doel="#view-preferences .subtab[data-sub='protections']"><b>Automatic protections</b> is now a tab here, under Preferences.</div>
+    <div data-view="dashboard" data-doel=".nav-item[data-view='referral']"><b>Earn 1 month free</b> is now here, at the bottom of the menu.</div>
+    <div data-view="dashboard" data-doel="#dashboard-items-body .pm-dot[data-url]">Click a <b>green icon</b> to open your advert on that marketplace.</div>
+    <div data-view="dashboard" data-doel=".stat:has(#stat-unpublished)"><b>To list</b> now only counts items that are not online anywhere yet. Click View to see them.</div>
+    <div data-view="dashboard" data-doel="#ext-activity-bar">This bar shows what is waiting, per marketplace: new adverts, renewals and removals.</div>
+    <div data-view="items" data-doel="#filter-platform">New in this filter: <b>Not on 2dehands yet</b>, and the same for every marketplace. Handy to see what still has to go there.</div>
+    <div data-view="help" data-doel=".nav-item[data-view='help']"><b>Help</b> now answers the questions we get most, like "Where is my advert?" and "What is Calm mode?".</div>
+    <div data-view="dashboard" data-doel="#nieuws-knop">Want to see this again later? Click <b>What's new</b>.</div>
+  </div>
+  <div id="rondleiding" hidden>
+    <div class="rl-blok"></div>
+    <div class="rl-gat"></div>
+    <div class="rl-kaart" role="dialog" aria-live="polite">
+      <div class="rl-kop"><span class="rl-teller" translate="no"></span><button class="rl-stop" onclick="stopRondleiding()" aria-label="Stop the tour">&times;</button></div>
+      <div class="rl-tekst"></div>
+      <div class="rl-knoppen">
+        <button class="btn btn-sm btn-ghost rl-terug" onclick="rondleidingStap(-1)">Back</button>
+        <button class="btn btn-sm btn-primary rl-verder" onclick="rondleidingStap(1)">Next</button>
+        <button class="btn btn-sm btn-primary rl-klaar" onclick="stopRondleiding()">Done</button>
+      </div>
     </div>
   </div>
 
@@ -5195,6 +5245,105 @@ function toonNieuws(opVerzoek) {
   _nieuwsGetoond = true;
   venster.style.display = 'flex';
 }
+// ── Rondleiding ───────────────────────────────────────────────────
+// Loopt de stappen in #rondleiding-stappen af op het echte dashboard. Een stap
+// waarvan het doel er niet is of niet in beeld staat (telefoon met dichte
+// zijbalk, lege lijst, geen wachtrij) slaan we over in plaats van een gat in
+// het niets te tonen.
+let _rl = { stappen: [], i: -1, bezig: false };
+function _rlDoel(stap) {
+  let el = null;
+  try { el = document.querySelector(stap.doel); } catch (e) { return null; }
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  if (r.width < 4 || r.height < 4 || r.right <= 0 || r.left >= innerWidth) return null;
+  return el;
+}
+// Komt deze stap straks echt in beeld? Binnen een scherm (.view) wel zodra dat
+// scherm open is; daarbuiten alleen als het nu getoond wordt (de wachtrijbalk
+// staat er bijvoorbeeld alleen als er iets wacht).
+function _rlBestaat(st) {
+  let el = null;
+  try { el = document.querySelector(st.doel); } catch (e) { return false; }
+  if (!el) return false;
+  return el.closest('.view') ? true : el.getClientRects().length > 0;
+}
+function startRondleiding() {
+  sluitNieuws();
+  _rl.stappen = [...document.querySelectorAll('#rondleiding-stappen > div')].map(d => ({
+    view: d.dataset.view, doel: d.dataset.doel, html: d.innerHTML }));
+  _rl.i = -1;
+  document.getElementById('rondleiding').hidden = false;
+  addEventListener('resize', _rlPlaats);
+  addEventListener('scroll', _rlPlaats, true);
+  rondleidingStap(1);
+}
+async function rondleidingStap(richting) {
+  if (_rl.bezig) return;
+  _rl.bezig = true;
+  const kaart = document.querySelector('#rondleiding .rl-kaart');
+  kaart.classList.add('rl-wissel');
+  let i = _rl.i, el = null;
+  while (true) {
+    i += richting;
+    if (i < 0 || i >= _rl.stappen.length) break;
+    const stap = _rl.stappen[i];
+    const actief = document.querySelector('.view.active');
+    if (stap.view && (!actief || actief.id !== 'view-' + stap.view)) {
+      showView(stap.view);
+      await new Promise(r => setTimeout(r, 350));
+    }
+    el = _rlDoel(stap);
+    if (el) break;
+  }
+  _rl.bezig = false;
+  if (!el) { if (richting > 0) stopRondleiding(); else kaart.classList.remove('rl-wissel'); return; }
+  _rl.i = i;
+  // Alleen scrollen als het doel niet helemaal in beeld staat, en dan meteen:
+  // een vloeiende scroll laat de spotlight op een tussenstand meten.
+  const rr = el.getBoundingClientRect();
+  if (rr.top < 70 || rr.bottom > innerHeight - 170) el.scrollIntoView({ block: 'center', inline: 'nearest' });
+  kaart.querySelector('.rl-tekst').innerHTML = _rl.stappen[i].html;
+  // Teller: welk stuk van de stappen die er bij hem echt zijn.
+  const zichtbaar = _rl.stappen.filter(st => st === _rl.stappen[i] || _rlBestaat(st)).length;
+  const nr = _rl.stappen.slice(0, i + 1).filter(st => st === _rl.stappen[i] || _rlBestaat(st)).length;
+  kaart.querySelector('.rl-teller').textContent = `${nr} / ${Math.max(nr, zichtbaar)}`;
+  const laatste = !_rl.stappen.slice(i + 1).some(_rlBestaat);
+  kaart.querySelector('.rl-terug').style.visibility = nr > 1 ? 'visible' : 'hidden';
+  kaart.querySelector('.rl-verder').style.display = laatste ? 'none' : '';
+  kaart.querySelector('.rl-klaar').style.display = laatste ? '' : 'none';
+  // Het scherm schuift nog even in (viewIn); volg het doel tot het stilstaat.
+  const tot = performance.now() + 700;
+  const volg = () => { _rlPlaats(); if (performance.now() < tot && _rl.i === i) requestAnimationFrame(volg); };
+  volg();
+  kaart.classList.remove('rl-wissel');
+}
+function _rlPlaats() {
+  if (_rl.i < 0) return;
+  const el = _rlDoel(_rl.stappen[_rl.i]);
+  if (!el) return;
+  const r = el.getBoundingClientRect(), m = 6;
+  const gat = document.querySelector('#rondleiding .rl-gat');
+  Object.assign(gat.style, { top: (r.top - m) + 'px', left: (r.left - m) + 'px',
+                             width: (r.width + 2 * m) + 'px', height: (r.height + 2 * m) + 'px' });
+  const kaart = document.querySelector('#rondleiding .rl-kaart');
+  const kb = kaart.offsetWidth, kh = kaart.offsetHeight || 150;
+  let top = r.bottom + m + 12;
+  if (top + kh > innerHeight - 8) top = Math.max(8, r.top - m - 12 - kh);
+  let left = r.left + r.width / 2 - kb / 2;
+  // Een smal doel links in het menu: kaart ernaast in plaats van eroverheen.
+  if (el.closest('.sidebar')) { left = r.right + m + 16; top = Math.min(Math.max(8, r.top - 10), innerHeight - kh - 8); }
+  left = Math.min(Math.max(8, left), innerWidth - kb - 8);
+  Object.assign(kaart.style, { top: top + 'px', left: left + 'px' });
+}
+function stopRondleiding() {
+  document.getElementById('rondleiding').hidden = true;
+  removeEventListener('resize', _rlPlaats);
+  removeEventListener('scroll', _rlPlaats, true);
+  _rl.i = -1;
+  showView('dashboard');
+}
+
 function sluitNieuws() {
   document.getElementById('nieuws-venster').style.display = 'none';
   try { localStorage.setItem('omni_nieuws_gezien', NIEUWS_ID); } catch (e) {}

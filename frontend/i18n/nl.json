@@ -3572,5 +3572,21 @@
  "Under Items, the first filter has \"Not on 2dehands yet\", and the same for every marketplace.": "Bij Items heeft het eerste filter nu \"Nog niet op 2dehands\", en zo voor elk kanaal.",
  "\"To list\" on the dashboard now only counts items that are not online anywhere yet.": "\"Te plaatsen\" op het dashboard telt nu alleen artikelen die nog nergens online staan.",
  "Help answers the questions we get most, like \"Where is my advert?\" and \"What is Calm mode?\".": "Help beantwoordt de vragen die we het vaakst krijgen, zoals \"Waar is mijn advertentie?\" en \"Wat is Calm mode?\".",
- "Clearer texts everywhere, in plain words.": "Overal duidelijkere teksten, in gewone woorden."
+ "Clearer texts everywhere, in plain words.": "Overal duidelijkere teksten, in gewone woorden.",
+ "Show me in my dashboard": "Laat het me zien in mijn dashboard",
+ "Got it, no tour": "Begrepen, geen rondleiding",
+ "is now a tab here, under Refresh. It shows items that have been online a long time without selling.": "is nu hier een tabblad, onder Verversen. Het toont artikelen die lang online staan zonder te verkopen.",
+ "is now a tab here, under Analytics.": "is nu hier een tabblad, onder Analyse.",
+ "is now a tab here, under Preferences.": "is nu hier een tabblad, onder Voorkeuren.",
+ "is now here, at the bottom of the menu.": "staat nu hier, onderaan het menu.",
+ "Click a": "Klik op een",
+ "to open your advert on that marketplace.": "om je advertentie op dat kanaal te openen.",
+ "now only counts items that are not online anywhere yet. Click View to see them.": "telt nu alleen artikelen die nog nergens online staan. Klik op Bekijken om ze te zien.",
+ "This bar shows what is waiting, per marketplace: new adverts, renewals and removals.": "Deze balk laat per kanaal zien wat er wacht: nieuwe advertenties, verlengingen en verwijderingen.",
+ "New in this filter:": "Nieuw in dit filter:",
+ ", and the same for every marketplace. Handy to see what still has to go there.": ", en zo voor elk kanaal. Handig om te zien wat er nog naartoe moet.",
+ "now answers the questions we get most, like \"Where is my advert?\" and \"What is Calm mode?\".": "beantwoordt nu de vragen die we het vaakst krijgen, zoals \"Waar is mijn advertentie?\" en \"Wat is Calm mode?\".",
+ "Want to see this again later? Click": "Later nog eens zien? Klik op",
+ "Stop the tour": "Stop de rondleiding",
+ "Next": "Volgende"
 }
