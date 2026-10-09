@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=4d5f60610b"></script>
+<script src="/i18n.js?v=5d890cf879"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -885,6 +885,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <li><b>Margin calculator</b> is now a tab under <b>Analytics</b>.</li>
         <li><b>Automatic protections</b> is now a tab under <b>Preferences</b>.</li>
         <li><b>Earn 1 month free</b> moved to the bottom of the menu, above Help.</li>
+        <li><b>Green icons</b> now open your advert: click one on an item to see the advert on that marketplace.</li>
         <li>The number <b>To list</b> on the dashboard was sometimes too high. It now only counts items that are not online anywhere yet.</li>
       </ul>
       <div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:16px">You can read this again via "What's new" at the bottom of the menu.</div>
@@ -1040,7 +1041,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <div class="stat" style="grid-column:1/-1;color:var(--muted)">Loading…</div>
       </div>
       <div style="margin-top:16px;font-size:12px;color:var(--muted);line-height:1.6;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px">
-        <strong>How does this work?</strong> The desktop extension reads the counts from your own logged-in session on Marktplaats, 2dehands and Vinted (every 15 min) — only the numbers, never the contents of your messages. Keep your computer with the extension running to stay up to date. eBay/Shopify will follow later via their official API.
+        <strong>How does this work?</strong> The desktop extension reads the counts from your own logged-in session on Marktplaats, 2dehands and Vinted (every 15 min) — only the numbers, never the contents of your messages. Keep your computer with the extension running to stay up to date. The number goes down once you have read the messages on the marketplace itself. eBay/Shopify will follow later via their official API.
       </div>
     </div>
 
@@ -5077,7 +5078,10 @@ function renderDashboard() {
     : `${indeling.counts.live} for sale · ${indeling.counts.sold} sold`;
   document.getElementById('stat-active').textContent = active;
   const activePlatformCount = new Set(state.listings.filter(l=>l.status==='active').map(l=>l.platform)).size;
-  document.getElementById('stat-active-sub').textContent = `on ${activePlatformCount} platform${activePlatformCount === 1 ? '' : 's'}`;
+  // "Waar komen 16.602 advertenties vandaan, ik heb er 5.540" (klantmail 03-09):
+  // een artikel op drie kanalen telt hier drie keer. Zeg dat erbij.
+  document.getElementById('stat-active-sub').textContent = activePlatformCount === 1
+    ? 'your adverts on 1 platform' : `your adverts on ${activePlatformCount} platforms together`;
   document.getElementById('stat-unpublished').textContent = unpublished;
   document.getElementById('stat-queued').textContent = queued;
   document.getElementById('stat-queued-sub').textContent = queued ? 'keep Chrome open' : 'nothing queued';
@@ -5280,8 +5284,15 @@ function renderPlatformMatrix(itemId) {
     const klikTip = isBusy ? tip + ' — click if it is already live, to mark it listed and clear this'
       : isError ? tip + '. Click to see what you can do'
       : `${PLATFORM_LABELS[p]}: not listed — click to publish it here`;
+    // Groen met een adres: één klik opent de advertentie zelf. "Hij is geplaatst
+    // maar ik zie hem niet" kwam steeds terug (Toon 03-09, klantmail 05-09-2026);
+    // hij stond er gewoon, ze wisten alleen niet waar (opruimronde 09-10-2026).
+    const liveUrl = l && l.status === 'active' && /^https:\/\//.test(l.platform_listing_url || '')
+      ? l.platform_listing_url : '';
     const clickAttrs = canMark
       ? ` onclick="event.stopPropagation();${klik}" style="cursor:pointer" title="${esc(klikTip)}"`
+      : liveUrl
+      ? ` data-url="${esc(liveUrl)}" onclick="event.stopPropagation();window.open(this.dataset.url,'_blank','noopener')" style="cursor:pointer" title="${esc(`Live on ${PLATFORM_LABELS[p] || p}. Click to open the advert`)}"`
       : ` title="${tip}"`;
     return `<div class="pm-dot"${clickAttrs}>
       <div class="pm-dot-icon ${cls}">${icon}${badgeEl}</div>
@@ -12118,7 +12129,8 @@ function renderActivityBar() {
     const vintedDelete = working.some(j => j.platform === 'vinted' && j.action === 'delete');
     text.innerHTML = 'It just opened a Chrome tab and is doing this automatically. '
       + '<b>Don\'t click, type in, or close that tab</b>, and don\'t start new actions here — '
-      + 'the tab closes by itself when it\'s done. Interrupting it makes the listing fail.'
+      + 'the tab closes by itself when it\'s done. Interrupting it makes the listing fail. '
+      + 'Chrome may show a yellow bar saying Omnivaleur started debugging this browser: that is normal, leave it.'
       + (vintedDelete
         ? ' <b>Removing a Vinted listing can take several minutes</b> — it checks your whole wardrobe first to make sure the right item goes. That is normal, not stuck.'
         : '');
