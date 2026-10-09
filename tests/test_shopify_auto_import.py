@@ -182,6 +182,23 @@ def test_bulk_met_candidate_ids_laat_de_rest_liggen(bulk_op_nepdb):
     assert [i["title"] for i in db.t["items"]] == ["Nieuw"]
 
 
+@pytest.mark.parametrize("keuze, verwacht", [("new", "new"), (None, "good")])
+def test_automatische_import_volgt_de_gekozen_staat(bulk_op_nepdb, monkeypatch, keuze, verwacht):
+    """Janneke verkoopt alleen nieuw (09-10-2026). De automatische import heeft
+    geen keuzelijst en zette alles op "Zo goed als nieuw"; nu geldt haar keuze."""
+    db = _DB(import_candidates=[_cand(2, "pending", "Nieuw")])
+    bulk_op_nepdb(db)
+    monkeypatch.setattr(instellingen, "lees", lambda _u: instellingen._schoon({"import_staat": keuze}))
+    asyncio.run(imp.bulk_import_candidates(
+        {"platform": "shopify", "candidate_ids": ["c-2"], "limit": 25}, user_id="u"))
+    assert [i["condition"] for i in db.t["items"]] == [verwacht]
+
+
+def test_import_staat_alleen_een_bestaande_staat():
+    assert instellingen._schoon({"import_staat": "new"})["import_staat"] == "new"
+    assert instellingen._schoon({"import_staat": "banaan"})["import_staat"] is None
+
+
 # ── 4. de hele ronde ──────────────────────────────────────────────────────
 def _ronde(monkeypatch, bulk_op_nepdb, db, producten, keuze=None, toegang=True):
     bulk_op_nepdb(db)
