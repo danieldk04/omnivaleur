@@ -16428,3 +16428,14 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   in test_marktplaats_vertaling.py die Vinted-Engels vastlegde is bewust omgezet. Testreeks: zelfde 71 bestaande
   fouten vóór en na. Bestaande Vinted-advertenties blijven zoals ze zijn.
 - Haar dashboard staat in het Nederlands (haar schermafbeeldingen: "Te plaatsen", "Filters wissen").
+
+## 09-10-2026: controle automatische Shopify-import en rubrieken (Janneke), eenmalige inhaalronde
+
+- De onboarding-ochtendronde op Daniels Mac legde vandaag niets vast; de controle ging via Daniel in Supabase.
+- Jannekes artikelen zonder rubriek: 758 (08-10: 1.755). De woordenlijstronde deed het meeste; de rest heeft het
+  model nodig. Met 200 per nacht is dat pas na haar proef (11-10) rond. Daarom één inhaalronde van 1.000 (nieuwste
+  eerst, dus vooral haar artikelen), 8 min na de deploy, alleen t/m 10-10 (`eenmalig_rubriekherstel_inhaal` in
+  scheduler.py). Kosten hooguit ~10 dollar (eerst gratis Gemini, dan Haiku). Nagebootst: de taak staat in de
+  planner en roept herstel_rubrieken(limiet=1000) aan.
+- De stand van de automatische import (eerste query) is nog niet teruggekomen: Supabase toont alleen de laatste
+  uitkomst. Daniel moet die los draaien.
