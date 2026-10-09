@@ -584,4 +584,4 @@ def eerste_regel(e: Exception) -> str:
 
 __all__ = ["WooClient", "WooFout", "WooCommercePlatform", "controleer_sleutels", "ontdek_api",
            "normaliseer_adres", "maak_staat", "lees_staat", "koppel_url", "client_uit",
-           "platte_tekst", "BETAALDE_STATUSSEN", "PLATFORM", "Optional"]
+           "platte_tekst", "BETAALDE_STATUSSEN", "PLATFORM"]
