@@ -2198,7 +2198,12 @@ def _twijfelreden(cand: dict, item_id: str | None, reden: str | None,
     """
     if not item_id or reden == "same_listing":
         return None
-    if (cand.get("platform") == "shopify"
+    # Alleen bij een gedeeld NUMMER zegt de winkel zelf dat het één stuk is. Is
+    # alleen de titel gelijk, dan zijn het meestal twee stukken (Janneke 09-10:
+    # 526 kinderschoenen en truien met dezelfde titel kregen "zelfde nummer,
+    # verwijder het extra product in Shopify"). Dat valt hieronder onder
+    # second_advert: blijft een vraag, met de uitleg die klopt.
+    if (cand.get("platform") == "shopify" and reden != "same_title"
             and shopify_van_item.get(item_id, set()) - {str(cand.get("platform_listing_id"))}):
         return "shopify_duplicate"
     if item_id in verkocht:
