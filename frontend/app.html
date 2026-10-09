@@ -5257,6 +5257,7 @@ function toonNieuws(opVerzoek) {
     if (slot && slot.style.display !== 'none') return;
   }
   _nieuwsGetoond = true;
+  if (opVerzoek) closeSidebar();
   venster.style.display = 'flex';
 }
 // ── Rondleiding ───────────────────────────────────────────────────
@@ -5280,7 +5281,7 @@ function _rlBestaat(st) {
   let el = null;
   try { el = document.querySelector(st.doel); } catch (e) { return false; }
   if (!el) return false;
-  if (el.closest('.view')) return true;
+  if (el.closest('.view') || el.closest('.sidebar')) return true;
   // Daarbuiten: alleen wat nu echt in beeld staat. Op een telefoon zit het menu
   // dicht en buiten het scherm; die stappen tellen dan niet mee.
   const r = el.getBoundingClientRect();
@@ -5288,6 +5289,7 @@ function _rlBestaat(st) {
 }
 function startRondleiding() {
   sluitNieuws();
+  closeSidebar();
   _rl.stappen = [...document.querySelectorAll('#rondleiding-stappen > div')].map(d => ({
     view: d.dataset.view, doel: d.dataset.doel, html: d.innerHTML }));
   _rl.i = -1;
@@ -5306,11 +5308,19 @@ async function rondleidingStap(richting) {
     i += richting;
     if (i < 0 || i >= _rl.stappen.length) break;
     const stap = _rl.stappen[i];
+    // Telefoon: het menu zit dicht. Een stap over het menu klapt het even open,
+    // elke andere stap doet het weer dicht. Daniel, 09-10-2026: op zijn iPhone
+    // bleef het menu openstaan en verdween het groene icoon erachter.
+    let inMenu = false;
+    try { inMenu = !!document.querySelector(stap.doel)?.closest('.sidebar'); } catch (e) { /* ongeldig */ }
+    const menuOpen = document.getElementById('sidebar').classList.contains('open');
     const actief = document.querySelector('.view.active');
     if (stap.view && (!actief || actief.id !== 'view-' + stap.view)) {
       showView(stap.view);
       await new Promise(r => setTimeout(r, 350));
     }
+    if (_opTelefoon() && inMenu && !menuOpen) { toggleSidebar(); await new Promise(r => setTimeout(r, 320)); }
+    else if (!inMenu && menuOpen) { closeSidebar(); await new Promise(r => setTimeout(r, 280)); }
     // Staat het doel buiten beeld in een schuifbare lijst (op een telefoon zit
     // het groene icoon rechts in een tabel die opzij schuift), schuif er dan
     // eerst naartoe. Niet voor het menu: dat zit op een telefoon dicht.
@@ -5368,6 +5378,7 @@ function stopRondleiding() {
   removeEventListener('resize', _rlPlaats);
   removeEventListener('scroll', _rlPlaats, true);
   _rl.i = -1;
+  closeSidebar();
   showView('dashboard');
 }
 
