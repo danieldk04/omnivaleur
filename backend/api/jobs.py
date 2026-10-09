@@ -3885,6 +3885,27 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
     # meetronde: de plaatsing was klaar voor we hem konden uitlezen en het
     # antwoord op "loopt hij door?" was daarmee verdwenen. Het is één regel om
     # te bewaren en het is de enige plek waar dit spoor bestaat.
+    # EEN ADVERTENTIE DIE AL BIJ EEN ANDER ARTIKEL HOORT IS NIET DEZE (09-10-2026).
+    #
+    # De extensie zoekt bij twijfel op titel in de eigen kast ("al geplaatst",
+    # "tabblad weg maar hij staat er"). Bij twee stukken met dezelfde titel vindt
+    # ze dan de advertentie van het andere stuk, en daarmee hingen bij Janneke
+    # twee jassen aan één Vinted-advertentie terwijl de tweede nooit geplaatst
+    # was. Liever een eerlijke fout dan een koppeling die later de verkeerde
+    # advertentie laat weghalen.
+    if job["action"] == "create" and body.get("platform_listing_id"):
+        ander = await naast_de_lus(lambda: _advertentie_van_ander_artikel(db, job, body))
+        if ander:
+            kanaal = {"vinted": "Vinted", "marktplaats": "Marktplaats", "2dehands": "2dehands",
+                      "facebook": "Facebook"}.get(job["platform"], job["platform"])
+            logger.warning("job %s: %s-advertentie %s hoort al bij \"%s\"; niet gekoppeld",
+                           job_id, job["platform"], body["platform_listing_id"], ander)
+            await naast_de_lus(lambda: fail_job(job_id, {"error": (
+                f"Not placed on {kanaal}: the advert we found there belongs to \"{ander}\", "
+                f"another item with the same title, so it was not linked to this one. "
+                f"Publish this item again to give it its own advert.")}, user_id=user_id))
+            return {"ok": True, "status": "advert_belongs_to_other_item"}
+
     oud_progress = (job.get("result") or {}).get("_progress") if isinstance(job.get("result"), dict) else None
     nieuw_result = {**body} if isinstance(body, dict) else {"result": body}
     if oud_progress and "_progress" not in nieuw_result:
