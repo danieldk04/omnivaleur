@@ -16414,3 +16414,17 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
 - Klant-eigen: Goudlief 5aae4954 sloot Chrome 08-10 21:41 midden in plaatsen, sindsdien offline met 679 plaatsingen
   (MP 337, 2dehands 342) wachtend. bcdf9aa4 tabblad weg 19:51. Amanda 10:48 uitgelogd op Vinted.
 - Alle 7 open foutsoorten beoordeeld (3 klant, 4 onbekend), wachter staat op 0 open.
+
+## 09-10-2026: Vinted krijgt precies de eigen tekst; vertalen naar Engels is een keuze (Daniel, Janneke)
+
+- Janneke (07:21): "Ik heb dit graag gewoon in het Nederlands. Kan dat?" Nagemeten: tot vandaag vertaalde elke
+  route (publiceren, herplaatsen, reddingsronde) de tekst voor Vinted naar het Engels, ook een Nederlandse tekst.
+- **Beslissing Daniel (09-10-2026):** wat de gebruiker in Omnivaleur intikt gaat EXACT zo naar Vinted. Alleen
+  Marktplaats en 2dehands (en eBay) krijgen een vertaalslag naar het Nederlands, omdat dat Nederlandse platforms
+  zijn. Engels op Vinted alleen als de gebruiker dat zelf aanzet.
+- Code: vinted uit `_ENGLISH_PLATFORMS`; `taal_van_platform("vinted", user_id)` geeft None (niet vertalen) tenzij
+  instelling `vinted_taal` = "en". Schakelaar "Translate my Vinted listings into English" bij Instellingen (EN + NL),
+  standaard uit. Shopify en Etsy blijven Engels (niet gevraagd). Proef `tests/test_vinted_taal.py`; de oude proef
+  in test_marktplaats_vertaling.py die Vinted-Engels vastlegde is bewust omgezet. Testreeks: zelfde 71 bestaande
+  fouten vóór en na. Bestaande Vinted-advertenties blijven zoals ze zijn.
+- Haar dashboard staat in het Nederlands (haar schermafbeeldingen: "Te plaatsen", "Filters wissen").

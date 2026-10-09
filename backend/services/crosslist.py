@@ -13,7 +13,10 @@ from backend.database import execute_with_retry, fetch_all, get_db, naast_de_lus
 from backend.services.light import publicatie_geblokkeerd
 from backend.platforms import get_platform
 
-_ENGLISH_PLATFORMS = {"vinted", "shopify", "etsy"}
+# Vinted staat hier bewust NIET meer in (Daniel, 09-10-2026): wat de verkoper in
+# Omnivaleur intikt gaat exact zo naar Vinted. Alleen wie zelf "vertaal naar het
+# Engels" aanzet krijgt een vertaling; zie taal_van_platform en vinted_taal.
+_ENGLISH_PLATFORMS = {"shopify", "etsy"}
 # marktplaats/2dehands require Dutch — user now enters English, so translate EN→NL.
 # eBay ook (15-09-2026): we plaatsen op ebay.nl en verzenden alleen binnen
 # Nederland, dus de koper zoekt in het Nederlands. Engels stond er sinds de eerste
@@ -655,9 +658,39 @@ _PLATFORM_TAAL = {
 }
 
 
-def taal_van_platform(platform: str) -> str | None:
-    """De taal waarin dit platform zijn advertenties verwacht, of None."""
+def taal_van_platform(platform: str, user_id: str | None = None) -> str | None:
+    """De taal waarin dit platform zijn advertenties verwacht, of None (= niet vertalen).
+
+    VINTED: PRECIES WAT DE VERKOPER INTIKTE (Daniel, 09-10-2026). Tot vandaag ging
+    elke tekst op Vinted vertaald naar het Engels de deur uit, ook een Nederlandse
+    tekst op vinted.nl. Janneke: "Ik heb dit graag gewoon in het Nederlands." Nu
+    vertalen we voor Vinted alleen als de verkoper dat zelf aanzette (instelling
+    vinted_taal = "en"). Marktplaats en 2dehands blijven altijd Nederlands."""
+    if platform == "vinted":
+        return "en" if user_id and vinted_taal(user_id) == "en" else None
     return _PLATFORM_TAAL.get(platform)
+
+
+_VINTED_TAAL_CACHE: dict[str, tuple[float, str]] = {}
+
+
+def vinted_taal(user_id: str) -> str:
+    """'en' (vertalen) of 'zelf' (exact wat de verkoper intikte, de standaard).
+    Bij een leesfout de standaard: niets vertalen.
+
+    Een minuut onthouden: het uitdelen van opdrachten vraagt dit bij elke poll."""
+    import time as _t
+    hit = _VINTED_TAAL_CACHE.get(user_id)
+    if hit and _t.monotonic() - hit[0] < 60:
+        return hit[1]
+    try:
+        from backend.services.instellingen import lees as _lees_instellingen
+        taal = "en" if (_lees_instellingen(user_id) or {}).get("vinted_taal") == "en" else "zelf"
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Kon de Vinted-taal niet lezen voor %s: %s", user_id, e)
+        return "zelf"
+    _VINTED_TAAL_CACHE[user_id] = (_t.monotonic(), taal)
+    return taal
 
 
 def _al_in_doeltaal(item: dict, taal: str) -> bool:
@@ -683,7 +716,7 @@ def localiseer_sync(item: dict, platform: str) -> dict:
     twee vertalingen samen duren nog altijd korter dan de klik waar de verkoper
     op wacht.
     """
-    taal = taal_van_platform(platform)
+    taal = taal_van_platform(platform, item.get("user_id"))
     if not taal:
         return item
     if _al_in_doeltaal(item, taal) and platform != "shopify":
@@ -736,7 +769,7 @@ async def localize_item_for_platform(item: dict, platform: str) -> dict:
     dan komt er een VertalingOnbeschikbaar naar boven, tenzij de advertentie al in
     de doeltaal staat — zie _zonder_vertaling.
     """
-    taal = taal_van_platform(platform)
+    taal = taal_van_platform(platform, item.get("user_id"))
     if not taal:
         return item
     if _al_in_doeltaal(item, taal) and platform != "shopify":
@@ -1440,8 +1473,10 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     # Pre-translate concurrently for platforms that need a different language
     english_item = None
     dutch_item = None
-    need_en = any(p in _ENGLISH_PLATFORMS for p in platforms)
-    need_nl = any(p in _DUTCH_PLATFORMS for p in platforms)
+    # Per kanaal de taal; Vinted kan per verkoper Nederlands zijn.
+    _taal_van = {p: taal_van_platform(p, user_id) for p in platforms}
+    need_en = any(t == "en" for t in _taal_van.values())
+    need_nl = any(t == "nl" for t in _taal_van.values())
 
     brand = item.get("brand") or None
 
@@ -1502,9 +1537,9 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     _slot = slottekst_van(user_id)
 
     def _pick(platform: str) -> dict:
-        if platform in _ENGLISH_PLATFORMS and english_item:
+        if _taal_van.get(platform) == "en" and english_item:
             base = english_item
-        elif platform in _DUTCH_PLATFORMS and dutch_item:
+        elif _taal_van.get(platform) == "nl" and dutch_item:
             base = dutch_item
         else:
             base = item
