@@ -373,9 +373,36 @@ class WooClient:
         return data
 
     async def bestellingen(self, gewijzigd_na: str) -> list[dict]:
-        return await self.alle_paginas("wc/v3/orders", {
-            "status": ",".join(BETAALDE_STATUSSEN), "modified_after": gewijzigd_na,
-            "dates_are_gmt": "true", "orderby": "modified", "order": "asc"})
+        """Betaalde bestellingen die sinds `gewijzigd_na` (UTC, zonder zone) veranderden.
+
+        OUDE WINKELS (gemeten 09-10-2026: 5 van de 44 leadwinkels met een zichtbare
+        versie draaien ouder dan 9, eentje 3.5). modified_after en dates_are_gmt
+        bestaan pas sinds WooCommerce 5.8, en een lijst statussen in één veld ook
+        niet overal; een oude winkel negeert wat hij niet kent en geeft dan ÁLLE
+        bestellingen ooit. Daarom: nieuwste eerst, zelf op tijd en status filteren,
+        en stoppen zodra een hele pagina van vóór het merkteken is."""
+        sinds = gewijzigd_na.replace("Z", "")
+        uit: list[dict] = []
+
+        def _tijd(o: dict) -> str:
+            return max(str(o.get("date_modified_gmt") or ""), str(o.get("date_created_gmt") or ""))
+
+        import httpx
+        async with httpx.AsyncClient(timeout=httpx.Timeout(90.0, connect=15.0),
+                                     follow_redirects=False, headers={"User-Agent": UA}) as c:
+            for pagina in range(1, MAX_PAGINAS + 1):
+                _, data, _ = await self.verzoek("GET", "wc/v3/orders", {
+                    "modified_after": gewijzigd_na, "dates_are_gmt": "true",
+                    "orderby": "date", "order": "desc",
+                    "per_page": PER_PAGINA, "page": pagina}, client=c)
+                if not isinstance(data, list):
+                    break
+                recent = [o for o in data if _tijd(o) >= sinds]
+                uit += [o for o in recent if o.get("status") in BETAALDE_STATUSSEN]
+                if len(data) < PER_PAGINA or not recent:
+                    break
+                await asyncio.sleep(PAUZE_S)
+        return uit
 
 
 # Een bestelling in deze stand heeft de voorraad al verlaagd: het stuk is weg.
