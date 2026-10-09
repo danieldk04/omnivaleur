@@ -678,7 +678,7 @@
       "pillar": "B",
       "format": "strategy",
       "slug": "relisting-vs-bumping-second-hand",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "opnieuw-plaatsen-of-omhoogbellen",
       "priority": 80
     }
@@ -1399,6 +1399,16 @@
       "action": "created",
       "url_path": "/reseller-tools/second-hand-sales-tax-belgium",
       "published_at": "2026-10-08T15:08:30.331916+00:00"
+    },
+    {
+      "keyword": "relisting vs bumping second hand",
+      "slug": "relisting-vs-bumping-second-hand",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "action": "created",
+      "url_path": "/reseller-tools/relisting-vs-bumping-second-hand",
+      "published_at": "2026-10-09T14:49:30.569340+00:00"
     }
   ]
 }
