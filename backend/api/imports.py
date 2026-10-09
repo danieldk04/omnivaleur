@@ -2201,11 +2201,18 @@ def _twijfelreden(cand: dict, item_id: str | None, reden: str | None,
     # Alleen bij een gedeeld NUMMER zegt de winkel zelf dat het één stuk is. Is
     # alleen de titel gelijk, dan zijn het meestal twee stukken (Janneke 09-10:
     # 526 kinderschoenen en truien met dezelfde titel kregen "zelfde nummer,
-    # verwijder het extra product in Shopify"). Dat valt hieronder onder
-    # second_advert: blijft een vraag, met de uitleg die klopt.
+    # verwijder het extra product in Shopify"). Sinds de middag van 09-10 is
+    # dat geen vraag meer maar een eigen stuk, zie hieronder.
     if (cand.get("platform") == "shopify" and reden != "same_title"
             and shopify_van_item.get(item_id, set()) - {str(cand.get("platform_listing_id"))}):
         return "shopify_duplicate"
+    # Twee Shopify-producten met alleen dezelfde titel zijn twee stukken: de
+    # winkel zelf telt ze als twee producten (Daniel, 09-10-2026: Janneke kreeg
+    # 291 keer "alleen de titel komt overeen" voor kinderschoenen in elke maat).
+    # Geen vraag meer; "Import all" maakt er een eigen item van via
+    # _tweede_advertentie, precies wat "Ander stuk, toevoegen" deed.
+    if _ander_shopify_product(cand, item_id, reden, listings_by_id):
+        return None
     if item_id in verkocht:
         return "sold_match"
     if reden == "same_title" and listings_by_id:
@@ -2214,6 +2221,17 @@ def _twijfelreden(cand: dict, item_id: str | None, reden: str | None,
                for (pf, pid), iid in listings_by_id.items()):
             return "second_advert"
     return None
+
+
+def _ander_shopify_product(cand: dict, item_id: str | None, reden: str | None,
+                           listings_by_id: dict | None) -> bool:
+    """Is dit een Shopify-product dat alleen in titel lijkt op een item dat al
+    aan een ÁNDER Shopify-product hangt? Dan is het een eigen stuk."""
+    if cand.get("platform") != "shopify" or not item_id or reden != "same_title":
+        return False
+    eigen = str(cand.get("platform_listing_id"))
+    return any(pf == "shopify" and iid == item_id and pid != eigen
+               for (pf, pid), iid in (listings_by_id or {}).items())
 
 
 def _tweede_advertentie(db, item_id: str, platform: str, listing_id) -> bool:
@@ -2683,6 +2701,10 @@ async def list_import_candidates(platform: str = None, status: str = "pending", 
         unmatched = []
         for c in candidates:
             item_id, reason = _match_candidate(c, items, listings_by_id, merken, verkocht)
+            if _ander_shopify_product(c, item_id, reason, listings_by_id):
+                # Wordt bij importeren een eigen item; toon het ook als nieuw,
+                # anders koppelt de knop per rij het aan het voorgestelde item.
+                item_id, reason = None, None
             reason = _twijfelreden(c, item_id, reason, verkocht, shopify_van_item, listings_by_id) or reason
             c["suggested_item_id"] = item_id
             c["match_reason"] = reason
