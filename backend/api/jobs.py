@@ -545,6 +545,90 @@ def _recover_stale_claims(db, user_id: str, platform: str, now_dt: datetime) -> 
 
 
 
+def _titel_sleutel(titel) -> str:
+    """Dezelfde vergelijking als de extensie (resolveCreatedVintedItem in
+    content/vinted.js): kleine letters, alleen letters en cijfers."""
+    return re.sub(r"[^a-z0-9]", "", str(titel or "").lower())
+
+
+def _vinted_titelgenoten_meegeven(db, user_id: str, jobs: list) -> int:
+    """Geef bij een Vinted-plaatsing mee welke Vinted-advertenties al bij een
+    ánder artikel met dezelfde titel horen.
+
+    WAAROM (09-10-2026, Janneke 31d28378). Vóór elke Vinted-plaatsing kijkt de
+    extensie of het artikel al online staat: een advertentie in de eigen kast
+    met precies dezelfde titel geldt als "door de verkoper zelf geplaatst" en
+    wordt gekoppeld in plaats van geplaatst. Twee stukken met dezelfde titel
+    (haar rode en haar bruine "Tussenjas Name it maat 128") zijn dan niet uit
+    elkaar te houden: de bruine kreeg de advertentie van de rode en is nooit op
+    Vinted gezet. Bij haar hebben 2.316 van de 3.219 artikelen een titelgenoot.
+
+    De extensie slaat sinds 1.0.376 alles in `_vinted_bezet` over. Oudere
+    kopieën slaan alleen `platform_listing_id` over (bedoeld voor de oude
+    advertentie bij herplaatsen); daar zetten we de nieuwste titelgenoot in,
+    zodat ook de kopie die de verkoper vandaag draait het meest voorkomende
+    geval goed doet. Zijn het er meer, dan houdt _advertentie_van_ander_artikel
+    bij het afmelden de verkeerde koppeling tegen.
+    """
+    vinted = [j for j in jobs
+              if j.get("platform") == "vinted" and j.get("action") == "create"
+              and isinstance(j.get("payload"), dict) and j.get("item_id")
+              and _titel_sleutel(j["payload"].get("title"))]
+    if not vinted:
+        return 0
+    gezet = 0
+    try:
+        per_titel: dict[str, list[dict]] = {}
+        for titel in {j["payload"]["title"] for j in vinted}:
+            artikelen = (db.table("items").select("id,title")
+                         .eq("user_id", user_id).eq("title", titel)
+                         .execute().data or [])
+            ids = [a["id"] for a in artikelen]
+            if len(ids) < 2:
+                per_titel[titel] = []
+                continue
+            per_titel[titel] = (db.table("listings")
+                                .select("item_id,platform_listing_id,created_at")
+                                .eq("platform", "vinted").in_("item_id", ids)
+                                .execute().data or [])
+        for j in vinted:
+            p = j["payload"]
+            genoten = sorted(
+                (r for r in per_titel.get(p["title"], [])
+                 if r.get("item_id") != j["item_id"] and r.get("platform_listing_id")),
+                key=lambda r: r.get("created_at") or "", reverse=True)
+            bezet = list(dict.fromkeys(str(r["platform_listing_id"]) for r in genoten))
+            if not bezet:
+                continue
+            p["_vinted_bezet"] = bezet
+            if not p.get("platform_listing_id"):
+                p["platform_listing_id"] = bezet[0]
+            gezet += 1
+    except Exception as e:  # noqa: BLE001
+        # Lukt het niet, dan gaat de opdracht zonder lijst de deur uit; de
+        # controle bij het afmelden vangt een verkeerde koppeling dan alsnog.
+        logger.warning("Vinted-titelgenoten niet meegegeven (%s)", e)
+    return gezet
+
+
+def _advertentie_van_ander_artikel(db, job: dict, body: dict) -> str | None:
+    """Hoort het advertentienummer dat de extensie meldt al bij een ánder
+    artikel van deze verkoper? Dan is het niet de advertentie van deze opdracht
+    maar die van een titelgenoot (zie _vinted_titelgenoten_meegeven), en geeft
+    deze functie de titel van dat andere artikel terug."""
+    lid = body.get("platform_listing_id")
+    if not lid or not job.get("item_id"):
+        return None
+    rijen = (db.table("listings").select("item_id")
+             .eq("platform", job["platform"]).eq("platform_listing_id", str(lid))
+             .neq("item_id", job["item_id"]).execute().data or [])
+    if not rijen:
+        return None
+    ander = (db.table("items").select("id,title")
+             .in_("id", list({r["item_id"] for r in rijen}))
+             .eq("user_id", job["user_id"]).limit(1).execute().data or [])
+    return (ander[0].get("title") or "another item") if ander else None
+
 
 def _zet_kleur_goed(jobs: list) -> int:
     """Zet de kleur in elke uitgaande opdracht om naar de naam die Marktplaats
