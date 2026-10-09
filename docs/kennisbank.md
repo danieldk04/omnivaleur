@@ -29,6 +29,8 @@ Wat je moet weten om het niet stuk te maken:
 - Eén klik: /wc-auth/v1/authorize (zonder mooie permalinks ?wc-auth-version=1&wc-auth-route=authorize). WooCommerce 11.2 POST de sleutel als JSON naar onze callback, eist https, en wist de sleutel als het antwoord geen 200 is. De callback is openbaar; wie het is staat in een getekende staat (lees_staat), anders 403.
 - Nooit een product wissen: elders verkocht = op uitverkocht (stock 0 of outofstock).
 - Geen webhooks: WooCommerce zet ze stil uit na >5 mislukte afleveringen. Bestellingen elke 5 min zelf ophalen (processing, completed, on-hold) met modified_after en dates_are_gmt.
+- Oude winkels: 5 van 44 leadwinkels draaien < 9 (eentje 3.5). modified_after/dates_are_gmt bestaan pas sinds 5.8 en worden anders stil genegeerd: altijd zelf nafilteren op date_modified_gmt en stoppen met bladeren. PHP-waarschuwingen staan soms vóór de JSON (lees_json).
+- Nooit een POST blind herhalen: WooCommerce 5.1 crashte NA het opslaan, de oude code maakte 4 bestellingen uit één verzoek. Bij een fout eerst op SKU zoeken; elk aangemaakt product krijgt een SKU (OMNI-...).
 - Credentials: access_token = consumer key, refresh_token = consumer secret, extra_data.api_root.
 
 **Why:** Daniel wilde het "in één keer 100% voor iedereen"; elke winkel is anders, dus robuustheid zit in terugvallen en meten, niet in aannames.
