@@ -292,6 +292,9 @@ def _kies(bron_js: str, cat: str, gender: str, hints: list[str],
         const hints = {json.dumps(hints)};
         const wantMen = gender === "heren" || gender === "men";
         const wantWomen = gender === "dames" || gender === "women";
+        // Zelfde regel als content/vinted.js (sinds 1.0.373, kinderschoenen).
+        const wantKids = /^(kinderen|kids|jongens|meisjes|baby|peuter)/.test(gender)
+          || /^(kinderen|jongens|meisjes|tieners|baby|peuter)/.test(cat);
         console.warn = () => {{}};
         {bron_js}
         const keuzes = {json.dumps(rijen)}.map((text) => ({{ text, row: null, radio: null }}));

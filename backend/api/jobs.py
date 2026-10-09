@@ -6459,7 +6459,16 @@ def stop_platform(body: dict, request: Request, user_id: str = Depends(get_curre
 
 # Een "je bent niet ingelogd" dat de extensie meestuurt is een oordeel uit haar
 # eigen achtergrond, en dat oordeel is aantoonbaar fout geweest.
-_CLAIM_NIET_INGELOGD = re.compile(r"you are not signed in to|je bent niet ingelogd", re.I)
+# OOK DE SPRONG NAAR DE INLOGPAGINA IS EEN INLOGVERWIJT (09-10-2026, Goudlief).
+# De extensie meldt een werktabblad dat op /identity/v2/login uitkomt met haar
+# eigen zin ("that tab was sent to the ... login page", of "showed a login page
+# instead"). Die zin viel buiten dit patroon, dus ging hij langs de pauze heen
+# naar _stop_wachtrij: om 10:39 UTC verdwenen in één klap 337 Marktplaats- en
+# 342 2dehands-plaatsingen. Precies wat "tabblad-op-de-inlogpagina" in de
+# kennisbank verbiedt: zo'n waarneming wist nooit een wachtrij.
+_CLAIM_NIET_INGELOGD = re.compile(
+    r"you are not signed in to|je bent niet ingelogd"
+    r"|sent to the .{0,60}login page|showed a login page", re.I)
 
 # EEN INLOGVERWIJT WIST NOOIT MEER EEN WACHTRIJ.
 #

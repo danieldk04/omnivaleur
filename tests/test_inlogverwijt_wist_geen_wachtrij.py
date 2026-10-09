@@ -187,3 +187,59 @@ def test_de_pauze_kost_een_opdracht_in_totaal_en_niet_een_per_ronde(monkeypatch)
     assert sum(1 for j in jobs if j["status"] == "pending") == 4
     assert uitleg["done_at"] != eerste_stempel, "de pauze schuift op met een nieuw tijdstempel"
     assert _dt.fromisoformat(uitleg["done_at"]) > _dt.fromisoformat(eerste_stempel)
+
+
+# De zin die extensie 1.0.374 meestuurt als het werktabblad op de inlogpagina
+# uitkomt (background.js, adresbewaking). Letterlijk zoals hij op 09-10-2026 bij
+# Goudlief binnenkwam, vlak voor 679 plaatsingen in één klap verdwenen.
+INLOGPAGINA = (
+    "The 2dehands (2dehands.be) listing form never opened: that tab was sent to the "
+    "2dehands (2dehands.be) login page, so nothing was filled in and nothing was "
+    "published. 2dehands (2dehands.be) and the other Marktplaats-family sites have "
+    "separate logins, so being signed in to one does not sign you in here. Open "
+    "2dehands (2dehands.be), sign in, and publish again. "
+    "[tabblad kwam uit op https://www.2dehands.be/identity/v2/login]"
+)
+VOOR_INLOGPAGINA = "429793f7"   # laatste versie die de hele rij nog wiste
+
+
+def _module_op(commit, naam):
+    bron = subprocess.run(["git", "show", f"{commit}:backend/api/jobs.py"],
+                          cwd=ROOT, capture_output=True, text=True, check=True).stdout
+    assert "sent to the .{0,60}login page" not in bron, "verkeerd commitnummer gepind"
+    with tempfile.TemporaryDirectory() as map_:
+        pad = Path(map_) / f"{naam}.py"
+        pad.write_text(bron)
+        spec = importlib.util.spec_from_file_location(naam, pad)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+    return mod
+
+
+def test_tabblad_op_de_inlogpagina_wist_de_rij_niet(monkeypatch):
+    jobs = _rij(5)
+    uit = _stop(J, _DB(jobs), monkeypatch, reden=INLOGPAGINA)
+    assert uit.get("paused") is True and uit["cancelled"] == 1
+    assert sum(1 for j in jobs if j["status"] == "pending") == 4
+
+    # De andere zin uit dezelfde extensie (het tabblad toonde een inlogpagina).
+    jobs2 = _rij(3)
+    uit2 = _stop(J, _DB(jobs2), monkeypatch, reden=(
+        "The 2dehands (2dehands.be) listing form never opened: that browser tab "
+        "showed a login page instead."))
+    assert uit2.get("paused") is True
+    assert sum(1 for j in jobs2 if j["status"] == "pending") == 2
+
+    # Zoals het was: alle vijf weg, net als Goudliefs 679.
+    oud = _module_op(VOOR_INLOGPAGINA, "oude_jobs_inlogpagina")
+    oude_jobs = _rij(5)
+    _stop(oud, _DB(oude_jobs), monkeypatch, reden=INLOGPAGINA)
+    assert all(j["status"] == "cancelled" for j in oude_jobs), (
+        "de oude versie ruimde de hele wachtrij op")
+
+
+def test_een_pagina_die_niets_terugmeldde_is_geen_inlogverwijt():
+    assert not J._CLAIM_NIET_INGELOGD.search(
+        "The 2dehands (2dehands.be) listing form never opened: the page never reported "
+        "back, so nothing was filled in and nothing was published. We could not tell "
+        "from here whether that page was a login screen or something else")
