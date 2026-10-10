@@ -1,7 +1,7 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends
 from backend.services.kleur import canonieke_kleur
 from backend.database import (get_db, fetch_all, fetch_all_in, naast_de_lus,
-                               execute_with_retry, eerste_rij)
+                               execute_with_retry, eerste_rij, kolom_bestaat)
 from backend.services.light import LIGHT_LIMIET_MELDING, ruimte_over
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.models import ItemCreate
@@ -1971,7 +1971,7 @@ def _item_data_from_candidate(cand: dict, body: dict | None = None,
 
     volle_titel = (pick("title") or "Untitled").strip() or "Untitled"
     titel = _titel_ingekort(volle_titel)
-    return {
+    rij = {
         "title": titel,
         "price": body.get("price") if body.get("price") is not None else (cand.get("price") or 0),
         "photo_urls": body.get("photo_urls") or _photos_from_candidate(cand),
@@ -2007,6 +2007,10 @@ def _item_data_from_candidate(cand: dict, body: dict | None = None,
         "price_ebay": body.get("price_ebay"),
         "price_shopify": body.get("price_shopify"),
     }
+    # Kolom komt pas na de handmatige migratie; zonder waarde of kolom laten we hem weg.
+    if body.get("price_woocommerce") is not None and kolom_bestaat("items", "price_woocommerce"):
+        rij["price_woocommerce"] = body.get("price_woocommerce")
+    return rij
 
 
 def _is_empty(v) -> bool:

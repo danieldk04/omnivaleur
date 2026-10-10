@@ -22,7 +22,7 @@ router = APIRouter(prefix="/items", tags=["items"])
 # Zolang dat niet is gebeurd horen ze uit élke opslagactie: anders breekt niet
 # alleen de nieuwe functie maar ook het gewoon bewaren van een artikel, met
 # "column items.x does not exist".
-_MIGRATIE_KOLOMMEN = ("price_type",)
+_MIGRATIE_KOLOMMEN = ("price_type", "price_woocommerce")
 
 
 def _strip_missing(data: dict) -> dict:
@@ -768,7 +768,7 @@ async def update_item(item_id: str, updates: dict, user_id: str = Depends(get_cu
     # at the old one — which made the whole Stale stock "Apply" flow pointless.
     prior = None
     price_fields = {"price", "price_marktplaats", "price_2dehands",
-                    "price_vinted", "price_ebay", "price_shopify"}
+                    "price_vinted", "price_ebay", "price_shopify", "price_woocommerce"}
     if price_fields & set(clean):
         prior = (await _exec(db.table("items").select("*").eq("id", item_id).eq("user_id", user_id))).data
         prior = prior[0] if prior else None

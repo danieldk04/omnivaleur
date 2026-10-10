@@ -33,6 +33,7 @@ class ItemCreate(BaseModel):
     price_vinted: Optional[float] = None
     price_ebay: Optional[float] = None
     price_shopify: Optional[float] = None
+    price_woocommerce: Optional[float] = None
     ebay_category_id: Optional[str] = None
 
 

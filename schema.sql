@@ -116,6 +116,7 @@ ALTER TABLE listings ADD COLUMN IF NOT EXISTS platform_offer_id VARCHAR(100);
 -- price_marktplaats/price_2dehands/price_vinted columns).
 ALTER TABLE items ADD COLUMN IF NOT EXISTS price_ebay NUMERIC(10,2);
 ALTER TABLE items ADD COLUMN IF NOT EXISTS price_shopify NUMERIC(10,2);
+ALTER TABLE items ADD COLUMN IF NOT EXISTS price_woocommerce NUMERIC(10,2);
 
 -- Listing refresh ("bump" old listings): tracked per-listing so we can enforce
 -- a cooldown and expose "last refreshed" in the dashboard.

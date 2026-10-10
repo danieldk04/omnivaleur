@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=232f92f03c"></script>
+<script src="/i18n.js?v=2474da11f0"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -2355,6 +2355,10 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <div class="form-group" style="margin:0">
             <label style="font-size:10px"><img src="https://www.google.com/s2/favicons?sz=64&domain=shopify.com" style="width:11px;height:11px;border-radius:2px;vertical-align:-1px" onerror="this.outerHTML='🏪'"> Shopify (€)</label>
             <input id="f-price-shopify" type="number" step="0.01" min="0" placeholder="same as base">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label style="font-size:10px"><img src="https://www.google.com/s2/favicons?sz=64&domain=woocommerce.com" style="width:11px;height:11px;border-radius:2px;vertical-align:-1px" onerror="this.outerHTML='🛍️'"> WooCommerce (€)</label>
+            <input id="f-price-woocommerce" type="number" step="0.01" min="0" placeholder="same as base">
           </div>
         </div>
       </div>
@@ -7858,6 +7862,7 @@ function leesItemFormulier() {
     price_vinted: parseFloat(document.getElementById('f-price-vinted').value) || null,
     price_ebay: parseFloat(document.getElementById('f-price-ebay').value) || null,
     price_shopify: parseFloat(document.getElementById('f-price-shopify').value) || null,
+    price_woocommerce: parseFloat(document.getElementById('f-price-woocommerce').value) || null,
     brand: document.getElementById('f-brand').value.trim(),
     size: document.getElementById('f-size').value,
     color: document.getElementById('f-color').value.trim(),
@@ -7940,7 +7945,8 @@ function editItem(id) {
   document.getElementById('f-price-vinted').value = item.price_vinted || '';
   document.getElementById('f-price-ebay').value = item.price_ebay || '';
   document.getElementById('f-price-shopify').value = item.price_shopify || '';
-  const hasPlatformPrices = !!(item.price_marktplaats || item.price_2dehands || item.price_vinted || item.price_ebay || item.price_shopify);
+  document.getElementById('f-price-woocommerce').value = item.price_woocommerce || '';
+  const hasPlatformPrices = !!(item.price_marktplaats || item.price_2dehands || item.price_vinted || item.price_ebay || item.price_shopify || item.price_woocommerce);
   document.getElementById('f-platform-price-enabled').checked = hasPlatformPrices;
   document.getElementById('platform-price-fields').style.display = hasPlatformPrices ? 'grid' : 'none';
   document.getElementById('f-bid-enabled').checked = !!item.bid_percentage;
@@ -8008,7 +8014,7 @@ function leesBedrag(raw) {
 // wordt met de tekst in het veld bij openen, niet met het getal: stond er al
 // 1,36 en typt hij opnieuw "1.360", dan is het getal gelijk maar de tekst niet.
 const BEDRAGVELDEN = ['f-price', 'f-compare', 'f-purchase', 'f-price-mp', 'f-price-2dh',
-  'f-price-vinted', 'f-price-ebay', 'f-price-shopify'];
+  'f-price-vinted', 'f-price-ebay', 'f-price-shopify', 'f-price-woocommerce'];
 let _bedragBegin = null;
 function ruweBedragen() {
   const uit = {};
@@ -8094,7 +8100,7 @@ async function saveItem() {
           compare_at_price: data.compare_at_price,
           price_marktplaats: data.price_marktplaats, price_2dehands: data.price_2dehands,
           price_vinted: data.price_vinted, price_ebay: data.price_ebay,
-          price_shopify: data.price_shopify,
+          price_shopify: data.price_shopify, price_woocommerce: data.price_woocommerce,
         }),
       });
       await requireOk(r, 'Import failed');

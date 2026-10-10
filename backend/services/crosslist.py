@@ -1625,6 +1625,7 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
         "vinted": "price_vinted",
         "ebay": "price_ebay",
         "shopify": "price_shopify",
+        "woocommerce": "price_woocommerce",
     }
 
     # De vaste tekst van deze verkoper, onder élke advertentie op élk kanaal.
@@ -3473,6 +3474,7 @@ _PLATFORM_PRICE_FIELD_GLOBAL = {
     "vinted": "price_vinted",
     "ebay": "price_ebay",
     "shopify": "price_shopify",
+    "woocommerce": "price_woocommerce",
 }
 
 
