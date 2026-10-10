@@ -173,3 +173,4 @@ input[name="bulk-verzending"]:checked
 #rondleiding-stappen > section[data-tour="{0}"] > div
 #upd-filters .upd-chip
 #upd-lijst .upd
+X-Woo-Via-Browser

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=c07006d24d"></script>
+<script src="/i18n.js?v=9b92beddb5"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -7609,6 +7609,7 @@ async function startWooKnop() {
   knop.textContent = 'Looking up your shop…';
   try {
     const r = await apiFetch(`${API}/api/platforms/woocommerce/auth-url?store=${encodeURIComponent(adres)}`);
+    if (r.status === 409 && r.headers.get('X-Woo-Via-Browser')) { await _wooKnopViaBrowser(adres); return; }
     const data = await parseJsonSafe(r);
     if (!r.ok || !data?.url) {
       _wooMsg((data && data.detail) || `Could not find your shop (HTTP ${r.status}).`, 'fout');
@@ -7634,10 +7635,21 @@ async function submitWooKeys() {
   knop.disabled = true;
   knop.textContent = 'Checking with your shop…';
   try {
-    const r = await apiFetch(`${API}/api/platforms/woocommerce/connect-keys`, {
+    let r = await apiFetch(`${API}/api/platforms/woocommerce/connect-keys`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ store: adres, consumer_key: ck, consumer_secret: cs }),
     });
+    if (r.status === 409 && r.headers.get('X-Woo-Via-Browser')) {
+      // De winkel laat onze server niet binnen: dezelfde sleutel via deze browser.
+      _wooMsg('Your host blocks our server, so we connect through this browser instead…', 'let');
+      const root = await wooZoekApiInBrowser(adres);
+      if (!root) { _wooMsg(WOO_NIET_GEVONDEN, 'fout'); return; }
+      wooDoorgeefStart();
+      r = await apiFetch(`${API}/api/platforms/woocommerce/connect-keys`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ store: adres, api_root: root, consumer_key: ck, consumer_secret: cs }),
+      });
+    }
     const data = await parseJsonSafe(r);
     if (!r.ok) { _wooMsg((data && data.detail) || `Your shop refused the key (HTTP ${r.status}).`, 'fout'); return; }
     document.getElementById('woo-cs-input').value = '';
@@ -7660,6 +7672,119 @@ function _wooGekoppeld(site) {
   setTimeout(closeWooConnect, 1800);
 }
 
+// ── WooCommerce via deze browser ──────────────────────────────────────────
+// WAAROM (10-10-2026, De Juiste Toon). Sommige hosting (SiteGround) laat onze
+// server niet in de winkel: hij krijgt een botcontrole (HTTP 202). De klant zelf
+// komt er wel in, en WordPress staat verzoeken vanaf omnivaleur.com toe. Dus
+// doet dit dashboard de verzoeken aan de winkel en geeft het het antwoord door
+// aan de server (backend/services/woocommerce_browser.py). Geen cookies mee:
+// alleen de sleutel van de koppeling telt, nooit een WordPress-inlog.
+const WOO_NIET_GEVONDEN = "We couldn't find WooCommerce on this address from your browser either. Check the address of your shop.";
+const WOO_DOORGEEF = { aan: false };
+
+function wooDoorgeefStart() {
+  if (WOO_DOORGEEF.aan) return;
+  WOO_DOORGEEF.aan = true;
+  (async () => {
+    let fouten = 0;
+    while (WOO_DOORGEEF.aan) {
+      try {
+        const r = await apiFetch(`${API}/api/platforms/woocommerce/browser/opdrachten`);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const d = await r.json();
+        fouten = 0;
+        for (const o of (d.opdrachten || [])) _wooVoerUit(o);
+      } catch (_) {
+        fouten++;
+        await new Promise(res => setTimeout(res, Math.min(30000, 2000 * fouten)));
+      }
+    }
+  })();
+}
+
+async function _wooVoerUit(o) {
+  let antwoord;
+  try {
+    const res = await fetch(o.url, {
+      method: o.methode, headers: o.kopregels || {}, body: o.inhoud == null ? undefined : o.inhoud,
+      credentials: 'omit', redirect: 'manual', cache: 'no-store', referrerPolicy: 'no-referrer',
+    });
+    const kop = {};
+    for (const k of ['content-type', 'x-wp-total', 'x-wp-totalpages', 'link', 'retry-after']) {
+      const v = res.headers.get(k);
+      if (v !== null) kop[k] = v;
+    }
+    const omleiding = res.type === 'opaqueredirect';
+    antwoord = { id: o.id, status: omleiding ? 302 : res.status, kopregels: kop,
+                 tekst: omleiding ? '' : await res.text() };
+  } catch (e) {
+    antwoord = { id: o.id, fout: String((e && e.message) || e) };
+  }
+  for (let i = 0; i < 3; i++) {
+    try {
+      const r = await apiFetch(`${API}/api/platforms/woocommerce/browser/antwoord`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(antwoord),
+      });
+      if (r.ok) return;
+    } catch (_) { /* opnieuw */ }
+    await new Promise(res => setTimeout(res, 1000 * (i + 1)));
+  }
+}
+
+// Het API-adres van de winkel, gezocht vanuit deze browser. WordPress' eigen
+// overzicht (/wp-json/) mag omnivaleur.com lezen; de gewone pagina niet.
+async function wooZoekApiInBrowser(adres) {
+  for (const pad of ['/wp-json/', '/?rest_route=/']) {
+    try {
+      const r = await fetch(adres + pad, { credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer' });
+      if (!r.ok) continue;
+      const d = await r.json();
+      if (d && Array.isArray(d.namespaces) && d.namespaces.includes('wc/v3')) return r.url.split('#')[0];
+    } catch (_) { /* volgende vorm */ }
+  }
+  return null;
+}
+
+async function _wooKnopViaBrowser(adres) {
+  _wooMsg('Your host blocks our server, so we connect through this browser instead…', 'let');
+  const root = await wooZoekApiInBrowser(adres);
+  if (!root) { _wooMsg(WOO_NIET_GEVONDEN, 'fout'); _wooToonSleutels(); return; }
+  const r = await apiFetch(`${API}/api/platforms/woocommerce/auth-url?store=${encodeURIComponent(adres)}&api_root=${encodeURIComponent(root)}`);
+  const data = await parseJsonSafe(r);
+  if (!r.ok || !data?.url) {
+    _wooMsg((data && data.detail) || `Could not find your shop (HTTP ${r.status}).`, 'fout');
+    _wooToonSleutels();
+    return;
+  }
+  try { localStorage.setItem('wooKoppelAdres', adres); } catch (_) {}
+  window.location.href = data.url;
+}
+
+async function _wooControleerViaBrowser() {
+  wooDoorgeefStart();
+  try {
+    const r = await apiFetch(`${API}/api/platforms/woocommerce/browser-controle`, { method: 'POST' });
+    const d = await parseJsonSafe(r);
+    if (r.ok) { _wooGekoppeld(d.site); return; }
+    connectWooCommerce();
+    _wooMsg((d && d.detail) || `Your shop refused the key (HTTP ${r.status}).`, 'fout');
+  } catch (e) {
+    connectWooCommerce();
+    _wooMsg('Could not reach Omnivaleur: ' + e.message, 'fout');
+  }
+}
+
+// Bij het openen van het dashboard: loopt de winkel via de browser, dan meteen
+// doorgeven, zodat verkopen elders ook in de winkel op uitverkocht gaan.
+async function wooBrowserOpstart() {
+  if (!(state.connected || []).includes('woocommerce')) return;
+  try {
+    const r = await apiFetch(`${API}/api/platforms/woocommerce/info`);
+    const d = await parseJsonSafe(r);
+    if (r.ok && d?.via_browser) wooDoorgeefStart();
+  } catch (_) { /* volgende keer */ }
+}
+
 async function laadWooInfo() {
   const box = document.getElementById('woo-info');
   if (!box) return;
@@ -7669,7 +7794,11 @@ async function laadWooInfo() {
     if (!r.ok || !d) return;
     const fout = d.verkoop_fout;
     const winkel = String(d.site || '').replace(/^https?:\/\//, '');
+    if (d.via_browser) wooDoorgeefStart();
+    const wacht = Number(d.wacht_op_browser || 0);
     box.innerHTML = (winkel ? `<div>${esc(winkel)}</div>` : '')
+      + (d.via_browser ? `<div style="margin-top:4px">Your host blocks our server, so Omnivaleur reaches your shop through this browser. Sales in your shop come in by themselves. Marking items that sold elsewhere as out of stock in your shop happens while Omnivaleur is open in a browser.</div>` : '')
+      + (wacht ? `<div style="color:#b45309;margin-top:4px">Products waiting to be marked out of stock in your shop: ${wacht}. Keep this page open for a moment.</div>` : '')
       + (fout ? `<div style="color:#b45309;margin-top:4px">⚠️ We can't reach your shop since ${esc(new Date(fout.sinds).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}: ${esc(fout.reden || '')} Sales in your shop are not removed from other channels until this works again.</div>` : '');
   } catch (_) { /* alleen een melding */ }
 }
@@ -7688,6 +7817,7 @@ async function wooNaTerugkeer() {
     try {
       const r = await apiFetch(`${API}/api/platforms/woocommerce/info`);
       const d = await parseJsonSafe(r);
+      if (r.ok && d?.connected && d.via_browser) { await _wooControleerViaBrowser(); return; }
       if (r.ok && d?.connected) { _wooGekoppeld(d.site); return; }
       if (r.ok && d?.mislukt) {
         connectWooCommerce();
@@ -12904,7 +13034,7 @@ if (_urlParams.get('billing') === 'success' || _urlParams.get('billing') === 'ca
   // De importherinnering linkt hierheen: meteen bij "Alles importeren".
   showView('import');
 }
-loadAll().then(() => { if (window.location.hash === '#platforms') renderPlatforms(); wooNaTerugkeer(); });
+loadAll().then(() => { if (window.location.hash === '#platforms') renderPlatforms(); wooNaTerugkeer(); wooBrowserOpstart(); });
 loadBillingStatus();
 // De verwijskaart hoort meteen op het dashboard te staan, niet pas nadat
 // iemand toevallig op het verwijsscherm is geweest.

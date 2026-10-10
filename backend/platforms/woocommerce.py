@@ -395,10 +395,13 @@ def _lees_fout(r) -> WooFout:
 class WooClient:
     """Eén winkel. `modus` komt uit de koppeling (zie controleer_sleutels)."""
 
-    def __init__(self, api_root: str, ck: str, cs: str, modus: str = "basic"):
+    def __init__(self, api_root: str, ck: str, cs: str, modus: str = "basic", transport=None):
         self.api_root = api_root
         self.ck, self.cs, self.modus = ck, cs, modus
         self.modus_gewijzigd = False
+        # Bij een winkel die onze server niet binnenlaat: de browser van de klant
+        # doet het verzoek (services/woocommerce_browser.py).
+        self.transport = transport
 
     async def verzoek(self, methode: str, route: str, params: dict | None = None,
                       body: dict | None = None, timeout: float = 60.0, client=None):
@@ -407,7 +410,8 @@ class WooClient:
 
         eigen = client is None
         client = client or httpx.AsyncClient(timeout=httpx.Timeout(timeout, connect=15.0),
-                                             follow_redirects=False, headers={"User-Agent": UA})
+                                             follow_redirects=False, headers={"User-Agent": UA},
+                                             transport=self.transport)
         laatste: Exception | None = None
         try:
             for poging in range(POGINGEN):
@@ -486,7 +490,8 @@ class WooClient:
 
         uit: list[dict] = []
         async with httpx.AsyncClient(timeout=httpx.Timeout(90.0, connect=15.0),
-                                     follow_redirects=False, headers={"User-Agent": UA}) as c:
+                                     follow_redirects=False, headers={"User-Agent": UA},
+                                     transport=self.transport) as c:
             for pagina in range(1, MAX_PAGINAS + 1):
                 _, data, kop = await self.verzoek("GET", route, {**(params or {}),
                                                   "per_page": PER_PAGINA, "page": pagina}, client=c)
@@ -562,7 +567,8 @@ class WooClient:
 
         import httpx
         async with httpx.AsyncClient(timeout=httpx.Timeout(90.0, connect=15.0),
-                                     follow_redirects=False, headers={"User-Agent": UA}) as c:
+                                     follow_redirects=False, headers={"User-Agent": UA},
+                                     transport=self.transport) as c:
             for pagina in range(1, MAX_PAGINAS + 1):
                 _, data, _ = await self.verzoek("GET", "wc/v3/orders", {
                     "modified_after": gewijzigd_na, "dates_are_gmt": "true",
@@ -585,7 +591,7 @@ class WooClient:
 BETAALDE_STATUSSEN = ("processing", "completed", "on-hold")
 
 
-async def controleer_sleutels(adres_of_api: str, ck: str, cs: str) -> dict:
+async def controleer_sleutels(adres_of_api: str, ck: str, cs: str, transport=None) -> dict:
     """Werkt deze sleutel, en op welke manier? Geeft api_root, site, modus, schrijven.
 
     Probeert de inlogmodi op volgorde: een 401 met correcte sleutel is bij veel
@@ -603,7 +609,7 @@ async def controleer_sleutels(adres_of_api: str, ck: str, cs: str) -> dict:
         api_root = await ontdek_api(adres)
     laatste: WooFout | None = None
     for modus in modi_voor(api_root):
-        client = WooClient(api_root, ck, cs, modus)
+        client = WooClient(api_root, ck, cs, modus, transport)
         try:
             _, data, kop = await client.verzoek(
                 "GET", "wc/v3/products", {"per_page": 1, "status": "any"}, timeout=30.0)
@@ -625,14 +631,16 @@ def _geheim() -> bytes:
     return hashlib.sha256(("woo-koppel:" + sleutel).encode()).digest()
 
 
-def maak_staat(user_id: str, api_root: str, nu: int | None = None) -> str:
+def maak_staat(user_id: str, api_root: str, nu: int | None = None, browser: bool = False) -> str:
     """Wat we als user_id aan WooCommerce meegeven: wie, welke winkel, wanneer, getekend.
 
     WooCommerce stuurt dit ongewijzigd terug naar onze callback. Die callback is
     openbaar (de WINKEL roept hem aan, niet de verkoper), dus zonder handtekening
     zou iedereen sleutels aan andermans account kunnen hangen."""
-    inhoud = json.dumps({"u": user_id, "a": api_root, "t": nu or int(time.time())},
-                        separators=(",", ":")).encode()
+    velden = {"u": user_id, "a": api_root, "t": nu or int(time.time())}
+    if browser:
+        velden["b"] = 1     # de winkel laat onze server niet binnen: via de browser
+    inhoud = json.dumps(velden, separators=(",", ":")).encode()
     deel = base64.urlsafe_b64encode(inhoud).decode().rstrip("=")
     sig = hmac.new(_geheim(), deel.encode(), hashlib.sha256).hexdigest()[:32]
     return f"{deel}.{sig}"
@@ -679,7 +687,11 @@ def client_uit(credentials: dict) -> WooClient | None:
     api_root = extra.get("api_root")
     if not (ck and cs and api_root):
         return None
-    return WooClient(api_root, ck, cs, extra.get("modus") or modi_voor(api_root)[0])
+    transport = None
+    if extra.get("via_browser") and credentials.get("user_id"):
+        from backend.services.woocommerce_browser import BrowserTransport
+        transport = BrowserTransport(str(credentials["user_id"]))
+    return WooClient(api_root, ck, cs, extra.get("modus") or modi_voor(api_root)[0], transport)
 
 
 def platte_tekst(html_tekst: str | None) -> str:
@@ -768,7 +780,18 @@ class WooCommercePlatform(PlatformBase):
         if not platform_listing_id:
             raise RuntimeError("This WooCommerce listing has no product number. Link it again "
                                "with its product URL.")
-        product = await c.product(platform_listing_id)
+        try:
+            product = await c.product(platform_listing_id)
+        except WooFout as e:
+            if e.soort != "geen_browser":
+                raise
+            # De winkel laat alleen de browser van de klant binnen, en die is nu
+            # dicht. Niet laten vallen: dan blijft het stuk in de winkel te koop
+            # en wordt het twee keer verkocht. Het gebeurt zodra er een browser is.
+            from backend.database import get_db
+            from backend.services.woocommerce_browser import onthoud_uitverkocht
+            await onthoud_uitverkocht(get_db(), str(credentials.get("user_id")), platform_listing_id)
+            return True
         if product is None or product.get("status") == "trash":
             return True     # al weg: "zorg dat het er niet staat" is gelukt
         if product.get("type") == "variable":
@@ -799,6 +822,10 @@ class WooCommercePlatform(PlatformBase):
         c = client_uit(credentials)
         if not c:
             return "error"
+        if c.transport is not None:
+            # Via de browser van de klant: niet per advertentie zijn browser
+            # belasten voor een controle die toch nooit een verkoop vaststelt.
+            return "active"
         try:
             p = await c.product(platform_listing_id)
         except WooFout:

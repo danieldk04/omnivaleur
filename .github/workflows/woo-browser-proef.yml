@@ -1,0 +1,77 @@
+# TIJDELIJK (10-10-2026): proef van WooCommerce via de browser tegen een echte
+# WooCommerce (WordPress Playground) en een echte Chromium. Gaat niet mee naar main.
+name: woo-browser-proef
+on:
+  push:
+    branches: [woo-via-browser]
+jobs:
+  proef:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - name: Python en Chromium
+        run: |
+          pip install -q -r requirements.txt pytest "playwright==1.56.0"
+          python -m playwright install --with-deps chromium
+      - name: WordPress met WooCommerce
+        run: |
+          cat > /tmp/bp.json <<'BP'
+          {
+            "preferredVersions": {"php": "8.3", "wp": "latest"},
+            "features": {"networking": true},
+            "steps": [
+              {"step": "setSiteOptions", "options": {"permalink_structure": "/%postname%/"}},
+              {"step": "installPlugin", "pluginData": {"resource": "wordpress.org/plugins", "slug": "woocommerce"}, "options": {"activate": true}},
+              {"step": "writeFile", "path": "/wordpress/wp-content/mu-plugins/https.php", "data": "<?php $_SERVER['HTTPS'] = 'on';"},
+              {"step": "runPHP", "code": "<?php require_once '/wordpress/wp-load.php'; global $wpdb; $ck = 'ck_' . str_repeat('a', 40); $cs = 'cs_' . str_repeat('b', 40); $wpdb->insert($wpdb->prefix . 'woocommerce_api_keys', array('user_id' => 1, 'description' => 'proef', 'permissions' => 'read_write', 'consumer_key' => wc_api_hash($ck), 'consumer_secret' => $cs, 'truncated_key' => substr($ck, -7))); echo 'sleutel ' . $wpdb->insert_id;"}
+            ]
+          }
+          BP
+          nohup npx -y @wp-playground/cli@latest server --port=9400 --blueprint=/tmp/bp.json > /tmp/wp.log 2>&1 &
+          for i in $(seq 1 120); do
+            curl -s -m 5 http://127.0.0.1:9400/wp-json/ | grep -q '"wc/v3"' && break
+            sleep 3
+          done
+          tail -5 /tmp/wp.log
+          curl -s -m 10 http://127.0.0.1:9400/wp-json/ | head -c 300; echo
+      - name: Twee proefproducten
+        run: |
+          A="ck_$(printf 'a%.0s' $(seq 1 40)):cs_$(printf 'b%.0s' $(seq 1 40))"
+          for n in 1 2; do
+            id=$(curl -s -u "$A" -H 'Content-Type: application/json' -X POST http://127.0.0.1:9400/wp-json/wc/v3/products \
+              -d "{\"name\":\"Kelim $n\",\"regular_price\":\"95\",\"manage_stock\":true,\"stock_quantity\":1}" | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
+            echo "WOO_E2E_PRODUCT_$n=$id" >> $GITHUB_ENV
+            echo "product $n: $id"
+          done
+          curl -s -i -X OPTIONS -H "Origin: http://127.0.0.1:5000" -H "Access-Control-Request-Method: GET" -H "Access-Control-Request-Headers: authorization" http://127.0.0.1:9400/wp-json/wc/v3/products | grep -i "^access-control\|^HTTP"
+      - name: Proef via een echte browser tegen een echte WooCommerce
+        env:
+          WOO_E2E_WINKEL: http://127.0.0.1:9400
+        run: python -m pytest -q -p no:cacheprovider tests/test_woocommerce_browser_e2e.py tests/test_woocommerce_browser.py tests/test_woocommerce_ontdekken.py tests/test_woocommerce_koppelen.py -x -rA 2>&1 | tail -40
+      - name: Echte Chromium bij dejuistetoon.eu (zonder sleutel)
+        run: |
+          cat > /tmp/djt.py <<'PY'
+          import re, json
+          from playwright.sync_api import sync_playwright
+          bron = open("frontend/app.html").read()
+          fn = re.search(r"^async function wooZoekApiInBrowser\(.*?^\}$", bron, re.M | re.S).group(0)
+          with sync_playwright() as p:
+              b = p.chromium.launch(); pg = b.new_page()
+              pg.goto("https://example.com/")
+              pg.add_script_tag(content=fn)
+              print("gevonden API:", pg.evaluate("wooZoekApiInBrowser('https://dejuistetoon.eu')"))
+              uit = pg.evaluate("""async () => {
+                const r = await fetch('https://dejuistetoon.eu/wp-json/wc/v3/products?per_page=1', {
+                  headers: {Authorization: 'Basic ' + btoa('ck_proef:cs_proef')}, credentials: 'omit', redirect: 'manual'});
+                return {status: r.status, total: r.headers.get('x-wp-total'), tekst: (await r.text()).slice(0, 160)};
+              }""")
+              print("producten met een nepsleutel:", json.dumps(uit))
+              b.close()
+          PY
+          python /tmp/djt.py
+          echo "server (python) zonder browser:"; curl -s -o /dev/null -w "%{http_code}\n" -A "Omnivaleur/1.0 (+https://omnivaleur.com)" https://dejuistetoon.eu/wp-json/
