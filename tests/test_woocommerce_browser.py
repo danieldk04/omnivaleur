@@ -464,3 +464,32 @@ def test_wachtrij_blijft_niet_liggen_als_het_terugkomen_samenvalt_met_onderhoud(
     k.laatst, k.onderhoud = time.time(), time.time()   # online, webhook net nagekeken
     asyncio.run(wb.haal_opdrachten("u1", wacht_s=0))
     assert gestart == ["u1"], "de volgende vraag van de browser moet de ronde starten"
+
+
+def test_tabblad_gaat_dicht_na_ophalen_niet_minutenlang_hangen(monkeypatch):
+    """Gezien op GitHub tegen een echte WooCommerce: het tabblad ging dicht net nadat
+    het een verzoek had opgehaald. De server wachtte de volle leestijd (60 + 20 s)
+    en daarna nog eens per herhaalpoging; alles daarachter liep vast. Nu: binnen
+    enkele seconden mislukt, en een afmelding gaat in de wachtrij."""
+    db, naast = _db_met()
+    monkeypatch.setattr(database, "naast_de_lus", naast)
+    monkeypatch.setattr(database, "get_db", lambda: db)
+    monkeypatch.setattr(wb, "ONLINE_S", 1)
+    rij = db.t["platform_credentials"][0]
+
+    async def go():
+        wb._klanten.clear()
+
+        async def tabblad_dat_dichtgaat():
+            while True:                         # haalt op en antwoordt nooit meer
+                if await wb.haal_opdrachten("u1", wacht_s=0.2):
+                    return
+        taak = asyncio.create_task(tabblad_dat_dichtgaat())
+        await asyncio.sleep(0.05)
+        begin = time.monotonic()
+        ok = await w.WooCommercePlatform().delete_listing("2", rij)
+        await taak
+        return ok, time.monotonic() - begin
+    ok, duur = asyncio.run(go())
+    assert ok is True and rij["extra_data"][wb.WACHTRIJ] == ["2"]
+    assert duur < 10, f"hing {duur:.0f} s"

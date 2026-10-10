@@ -44,8 +44,8 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-ONLINE_S = 45           # zo lang na de laatste vraag van de browser telt hij als open
 WACHT_S = 25            # hoe lang één vraag van de browser hooguit openstaat
+ONLINE_S = 15           # marge: een levende browser stelt binnen WACHT_S + dit een nieuwe vraag
 MAX_PER_KEER = 4        # zoveel verzoeken krijgt de browser tegelijk
 EXTRA_WACHT_S = 20      # bovenop de leestijd van het verzoek zelf
 WACHTRIJ = "wacht_op_browser"
@@ -92,9 +92,15 @@ def _klant(user_id: str) -> _Klant:
 
 
 def online(user_id: str) -> bool:
-    """Is er nu een dashboard van deze klant dat verzoeken doorgeeft?"""
+    """Is er nu een dashboard van deze klant dat verzoeken doorgeeft?
+
+    Een levend dashboard vraagt meteen opnieuw zodra een vraag terugkomt, en een
+    vraag duurt hooguit WACHT_S. Is er langer dan dat (plus marge) niets
+    begonnen of geëindigd, dan is het tabblad dicht. Niet kijken naar een vraag
+    die nog openstaat: die van een dichtgeklapt tabblad blijft hier gewoon
+    wachten tot WACHT_S om is (gezien op GitHub, 10-10-2026)."""
     k = _klanten.get(user_id)
-    return bool(k) and (k.luistert > 0 or time.time() - k.laatst < ONLINE_S)
+    return bool(k) and time.time() - k.laatst < WACHT_S + ONLINE_S
 
 
 async def wacht_op_browser(user_id: str, seconden: float = 8.0) -> bool:
@@ -122,6 +128,7 @@ async def haal_opdrachten(user_id: str, wacht_s: float | None = None) -> list[di
     k = _klant(user_id)
     was_weg = not online(user_id)
     k.luistert += 1
+    k.laatst = time.time()
     try:
         if was_weg or k.wachtrij or time.time() - k.onderhoud > ONDERHOUD_S:
             _start_onderhoud(user_id)
@@ -187,10 +194,21 @@ class BrowserTransport(httpx.AsyncBaseTransport):
                 if time.monotonic() >= eind:
                     raise WooFout(GEEN_BROWSER_MELDING, "geen_browser")
                 await asyncio.sleep(0.2)
-            try:
-                antwoord = await asyncio.wait_for(asyncio.shield(o.toekomst), timeout=tijd + EXTRA_WACHT_S)
-            except asyncio.TimeoutError:
-                raise httpx.ReadTimeout("the browser did not answer in time", request=request) from None
+            # Dan: komt het antwoord? Ging het tabblad dicht nadat het dit
+            # verzoek had opgehaald, dan komt er nooit iets. Niet de volle
+            # leestijd wachten (en daarna nog eens per herhaalpoging): zodra de
+            # browser weg is, is dit verzoek mislukt.
+            eind = time.monotonic() + tijd + EXTRA_WACHT_S
+            while not o.toekomst.done():
+                if time.monotonic() >= eind:
+                    raise httpx.ReadTimeout("the browser did not answer in time", request=request)
+                if not online(self.user_id):
+                    raise httpx.ReadError("the browser went away before answering", request=request)
+                try:
+                    await asyncio.wait_for(asyncio.shield(o.toekomst), timeout=1.0)
+                except asyncio.TimeoutError:
+                    pass
+            antwoord = o.toekomst.result()
         finally:
             k.opdrachten.pop(o.id, None)
         if antwoord.get("fout"):

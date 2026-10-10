@@ -16813,4 +16813,8 @@ Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het d
   terugval BLIJFT geldt); de advertentiecontrole (get_listing_status) belast de browser niet.
 - Getest: 16 proeven met nagebootste winkel en browser, een proef in een echte Chromium tegen een https-winkel
   met WordPress-CORS en SiteGround-nabootsing (zonder CORS-toestemming faalt hij, zoals hoort), en dezelfde
-  proef op GitHub tegen een echte WooCommerce (WordPress Playground) achter dezelfde nabootsing.
+  proef op GitHub tegen een echte WooCommerce (WordPress Playground) achter dezelfde nabootsing, vier keer
+  achter elkaar. Onderweg gevonden: kwam de browser terug terwijl er nog een onderhoudsronde liep, dan bleef
+  de wachtrij een kwartier liggen; nu wordt die gemiste aanleiding onthouden (_Klant.wachtrij).
+- De proef-workflow staat alleen op branch woo-via-browser (.github/workflows/woo-browser-proef.yml), niet op
+  main; draai hem daar opnieuw bij een wijziging aan deze route.
