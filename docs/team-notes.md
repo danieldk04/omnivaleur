@@ -16746,3 +16746,8 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   tekst (1/39 naar EN, nu afgekeurd en tweede poging), max_tokens 4000 omdat denken meetelt, afgekapt = mislukt.
 - Proeven: 4 nieuwe in tests/test_vertaalvangnet_gemini.py falen op de oude code; volledige reeks voor en na
   gelijk (5 bekende fouten test_korte_kledingvraag). backend/scheduler.py (onaf, andere sessie) niet meegenomen.
+
+## 10-10-2026 11:05: Onboarding nieuwe klanten (ochtend, tweede start)
+- Tweede start van de ochtendtaak, 1,5 uur na de eerste. Geen nieuwe aanmeldingen; alle zes klanten ongewijzigd
+  sinds 09:30. Janneke: 140 Shopify-producten nog pending, zoals verwacht tot de achterstandsronde (~15:00 UTC).
+  Web Store levert nog 1.0.376, upload van 1.0.377 staat open. Niets gerepareerd, geen mailtjes.
