@@ -3691,5 +3691,7 @@
  "on this computer and keep Chrome open:": "op deze computer en laat Chrome openstaan:",
  "on this computer and keep Chrome open: the queue picks up by itself. Nothing is lost while it waits.": "op deze computer en laat Chrome openstaan: de wachtrij gaat dan vanzelf lopen. Er gaat niets verloren terwijl hij wacht.",
  "the queue picks up by itself. Nothing is lost while it waits.": "de wachtrij gaat dan vanzelf lopen. Er gaat niets verloren terwijl hij wacht.",
- "{0} job{1} queued — you are in {2}, publishing runs in Chrome": "{0} {1|opdracht|opdrachten} in de wachtrij: je zit in {2}, plaatsen gebeurt in Chrome"
+ "{0} job{1} queued — you are in {2}, publishing runs in Chrome": "{0} {1|opdracht|opdrachten} in de wachtrij: je zit in {2}, plaatsen gebeurt in Chrome",
+ ". Chrome installs it by itself within a few hours. Want it now? Close Chrome completely (on a Mac: Cmd+Q) and open it again, or go to": ". Chrome zet hem binnen een paar uur zelf neer. Wil je hem meteen? Sluit Chrome helemaal af (op een Mac: Cmd+Q) en open hem opnieuw, of ga naar",
+ ", switch on Developer mode at the top right and click Update.": ", zet rechtsboven Ontwikkelaarsmodus aan en klik op Updaten."
 }

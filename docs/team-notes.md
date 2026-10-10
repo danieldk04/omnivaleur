@@ -16854,3 +16854,21 @@ Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het d
 - 1.0.378: het slot vervalt na 5 minuten, alleen de eigen ronde geeft het vrij, en de /pending-vraag heeft een
   tijdslimiet van 30 s. Proef tests/pollronde-hangt-niet-voor-altijd-test.js faalt op 1.0.377. wakker-houden-test
   kreeg AbortSignal in zijn nep-omgeving. Daniel moet dist/omnivaleur-extension-1.0.378.zip uploaden (vervangt 377).
+
+## 10-10-2026 (21:30): Janneke gemeten, het hele plaatje
+
+- Daniels SQL (extension_stiltes): haar extensie meldde zich als **1.0.374**, terwijl de Web Store 1.0.376 had
+  (zijbalk: "v1.0.374, v1.0.376 available"). Stilte 09-10 22:30 tot 10-10 18:08 UTC = Chrome/Mac uit of in slaap
+  (Chrome is daarna niet herstart: "Update afronden" staat nog in haar Chrome). Op 09-10 tussen 19:58 en 22:27 UTC
+  telkens 10 tot 17 minuten stil; niet verklaard, wel precies het moment van haar klacht van 22:39.
+- Waarom 1.0.374 bleef staan: elke mislukte Vinted-plaatsing laat een "maak hem zelf af"-tabblad open met een
+  controle-wekker van een half uur, en magNuHerstarten weigerde de update zolang er zo'n wekker stond. Nieuwe
+  mislukking, nieuwe wekker. Gevolg: 1.0.375 (Vinted-kleur), 1.0.376 (twee stukken met dezelfde titel, juist haar
+  Noppies-jassen) en 1.0.377 (Vinted-inlog) zijn nooit bij haar aangekomen.
+- 1.0.378 (bovenop de pollronde-reparatie): zelf-afmaken-tabbladen houden de update niet meer tegen; maximaal
+  uitstel 2 uur in plaats van 24. Proef tests/update-niet-geblokkeerd-door-zelf-afmaken-test.js faalt op oud.
+  De updatebalk in het dashboard zei "je hoeft niets te doen"; zegt nu hoe het meteen kan (Cmd+Q, of
+  chrome://extensions > Ontwikkelaarsmodus > Updaten).
+- Open: "Vinted accepteerde deze velden niet: price (50)" op 1.0.374. De prijscode is sinds 1.0.374 niet
+  veranderd, dus dit kan op 1.0.378 terugkomen. Zonder te zien wat het formulier op dat moment toont is het niet
+  blind te repareren. Eerst updaten, dan één Vinted-plaatsing bekijken.
