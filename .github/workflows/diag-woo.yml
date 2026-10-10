@@ -6,68 +6,11 @@ jobs:
   meet:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - run: pip install -q httpx
-      - name: matrix
-        run: |
-          pip install -q "httpx[http2]==0.27.2" requests
-          UA="Omnivaleur/1.0 (+https://omnivaleur.com)"
-          c() { echo -n "$1: "; shift; curl -sS -m 25 -o /dev/null -w "%{http_code} http%{http_version}\n" "$@"; }
-          echo "IP: $(curl -s https://api.ipify.org)"
-          c "curl GET h2 UA"        -A "$UA" https://dejuistetoon.eu/
-          c "curl GET h1.1 UA"      --http1.1 -A "$UA" https://dejuistetoon.eu/
-          c "curl HEAD h2 UA"       -I -A "$UA" https://dejuistetoon.eu/
-          c "curl HEAD h1.1 UA"     -I --http1.1 -A "$UA" https://dejuistetoon.eu/
-          c "curl GET wp-json h1.1" --http1.1 -A "$UA" https://dejuistetoon.eu/wp-json/
-          c "curl GET h1.1 httpxkoppen" --http1.1 -A "$UA" -H "Accept: */*" -H "Accept-Encoding: gzip, deflate" -H "Connection: keep-alive" https://dejuistetoon.eu/
-          cat > /tmp/m.py <<'PY2'
-          import httpx, requests, asyncio
-          UA = "Omnivaleur/1.0 (+https://omnivaleur.com)"
-          U = "https://dejuistetoon.eu/"
-          def toon(n, r): print(f"{n}: {r.status_code} {getattr(r,'http_version','')} sg={r.headers.get('sg-captcha')}")
-          toon("httpx GET h1.1", httpx.get(U, headers={"User-Agent": UA}))
-          toon("httpx GET h2", httpx.Client(http2=True, headers={"User-Agent": UA}).get(U))
-          toon("httpx HEAD h1.1", httpx.head(U, headers={"User-Agent": UA}))
-          toon("httpx GET h1.1 zonder Accept-Encoding", httpx.get(U, headers={"User-Agent": UA, "Accept-Encoding": "identity"}))
-          toon("requests GET", requests.get(U, headers={"User-Agent": UA}))
-          toon("httpx GET wp-json h2", httpx.Client(http2=True, headers={"User-Agent": UA}).get(U + "wp-json/"))
-          toon("httpx GET wc/v3 h2", httpx.Client(http2=True, headers={"User-Agent": UA}).get(U + "wp-json/wc/v3/products"))
-          PY2
-          python /tmp/m.py
-          c "curl GET h2 UA (na python)" -A "$UA" https://dejuistetoon.eu/
-          c "curl GET h1.1 UA (na python)" --http1.1 -A "$UA" https://dejuistetoon.eu/
-      - name: dns
-        run: |
-          for h in dejuistetoon.eu www.dejuistetoon.eu; do echo "== $h"; getent hosts $h || echo GEEN DNS; done
-      - name: curl
-        run: |
-          for UA in "Omnivaleur/1.0 (+https://omnivaleur.com)" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36"; do
-          for u in https://dejuistetoon.eu/ https://www.dejuistetoon.eu/ https://dejuistetoon.eu/wp-json/ "https://dejuistetoon.eu/?rest_route=/" https://dejuistetoon.eu/wp-json/wc/v3/products "https://dejuistetoon.eu/?rest_route=/wc/v3/products" https://dejuistetoon.eu/wc-auth/v1/authorize; do
-            echo "######## UA=$UA  URL=$u"
-            curl -sS -m 25 -L -A "$UA" -D - -o body.txt -w "\nFINAL %{http_code} %{url_effective}\n" "$u" | grep -i -E "^HTTP|^location|^link|^server|^content-type|^cf-|^x-|^set-cookie|^FINAL" || true
-            echo "-- body (eerste 600 tekens):"; head -c 600 body.txt | tr '\n' ' '; echo
-            echo "-- api.w.org/wp-content/woocommerce in html:"; grep -o -i -E "rel=.https://api.w.org/.[^>]*|wp-content/plugins/[a-z0-9_-]+|generator[^>]*|woocommerce[a-z_-]*" body.txt | sort | uniq -c | head -40
-          done; done
-      - name: onze code (nieuw en oud)
-        run: |
-          pip install -q pydantic-settings python-dotenv
-          git fetch -q --depth=5 origin main
-          git show origin/main:backend/platforms/woocommerce.py > /tmp/oud_woo.py
-          cat > /tmp/proef.py <<'PY2'
-          import asyncio, importlib.util, sys
-          sys.path.insert(0, ".")
-          def laad(pad, naam):
-              spec = importlib.util.spec_from_file_location(naam, pad)
-              m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m); return m
-          async def main():
-              for label, pad in (("NIEUW", "backend/platforms/woocommerce.py"), ("OUD", "/tmp/oud_woo.py")):
-                  w = laad(pad, "woo_" + label)
-                  for a in ["https://dejuistetoon.eu", "https://www.dejuistetoon.eu", "dejuistetoon.eu/winkel/"]:
-                      adres = w.normaliseer_adres(a)
-                      try: print(label, a, "->", await w.ontdek_api(adres))
-                      except Exception as e: print(label, a, "FOUT", type(e).__name__, getattr(e, "soort", ""), e, "\n", getattr(e, "detail", ""))
-          asyncio.run(main())
-          PY2
-          python /tmp/proef.py
+      - run: |
+          for i in $(seq 1 20); do
+            c=$(curl -s -m 20 https://omnivaleur.com/health | python3 -c "import sys,json; print(json.load(sys.stdin).get('commit'))" 2>/dev/null)
+            echo "$(date -u +%T) commit=$c"
+            case "$c" in b620b12*|3d350b7*) echo LIVE; exit 0;; esac
+            sleep 30
+          done
+          exit 1
