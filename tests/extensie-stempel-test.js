@@ -59,7 +59,7 @@ function bouwScherm(stempel) {
     extState: { status: "checking", version: "", email: "" },
   };
   vm.createContext(sandbox);
-  for (const naam of ["_opTelefoon", "extStempel", "_extGeefOp", "renderExtSetup", "renderExtStatus",
+  for (const naam of ["_opTelefoon", "_andereBrowser", "extStempel", "_extGeefOp", "renderExtSetup", "renderExtStatus",
                       "extVersionIsOld", "extVersionAchter", "versieLager",
                       "versieAchterstand", "extVersionStaatStil"]) {
     vm.runInContext(functieUit(naam), sandbox);

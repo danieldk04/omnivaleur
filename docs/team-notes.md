@@ -16821,3 +16821,20 @@ Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het d
   zo'n verzoek meteen (afmelding naar de wachtrij).
 - De proef-workflow staat alleen op branch woo-via-browser (.github/workflows/woo-browser-proef.yml), niet op
   main; draai hem daar opnieuw bij een wijziging aan deze route.
+
+## 10-10-2026 (avond): Janneke keek in Safari, wachtrij stond stil
+
+- Janneke 20:05: "Ik krijg die jas maar niet geplaatst. Er is een wachtrij, maar gebeurt niks. En continu
+  foutmeldingen." Op haar schermfoto is het dashboard open in Safari (macOS), de extensie had zich 19 uur niet
+  gemeld en zijbalk zei "Extensie niet gevonden". Elke melding stuurde haar naar chrome://extensions; geen
+  enkele zei dat het aan de browser lag. De winterjas had verder een Vinted-tijdsoverschrijding van eerder,
+  in het Engels.
+- Dashboard: `_andereBrowser()` herkent Safari en Firefox op een computer (niet op een telefoon, niet in
+  Chrome/Edge/Brave). Dan zeggen wachtrijbalk, statusregel en zijbalk dat plaatsen alleen in Chrome werkt en
+  dat ze omnivaleur.com/app in Chrome moet openen; het installatievenster komt daar niet meer. Alleen als er
+  nergens een extensie leeft: draait Chrome elders wel, dan geen verwijt.
+- "Extension timed out waiting for this ... job" heet nu "Plaatsen duurde te lang en is gestopt", met uitleg en
+  de technische tekst ingeklapt. Geen automatische herkansing: een half geplaatste Vinted-advertentie opnieuw
+  uitdelen kan een dubbele geven.
+- Proef in tests/wachtrijbalk-eerlijk-test.js (faalt op de oude app.html); herkenning nagelopen in Chromium met
+  de user-agent van Safari, Firefox, Chrome, Edge en iPhone.

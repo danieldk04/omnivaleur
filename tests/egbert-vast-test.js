@@ -321,6 +321,8 @@ const meta = { jobId: "j1", serverUrl: "https://omnivaleur.com", platform: "2deh
   const bouw = new Function(
     "esc", "PLATFORM_ICONS", "PLATFORM_LABELS", "document", "state",
     functieUit(APP, "zelfdeFout") + "\n" +
+    APP.match(/const _FOUT_TE_LANG = .*;/)[0] + "\n" +
+    functieUit(APP, "leesbareFout") + "\n" +
     functieUit(APP, "showPublishError") + "\n" +
     "return { zelfdeFout, showPublishError };");
 
