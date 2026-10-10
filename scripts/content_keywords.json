@@ -681,6 +681,66 @@
       "status": "published",
       "nl_slug": "opnieuw-plaatsen-of-omhoogbellen",
       "priority": 80
+    },
+    {
+      "keyword": "how to delete listings on 2dehands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "how-to-delete-listings-on-2dehands",
+      "status": "published",
+      "nl_slug": "hoe-verwijder-je-een-advertentie-op-2dehands",
+      "priority": 81
+    },
+    {
+      "keyword": "best flyp alternative for crosslisting",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "slug": "best-flyp-alternative-for-crosslisting",
+      "status": "pending",
+      "nl_slug": "beste-flyp-alternatief-voor-crosslisting",
+      "priority": 82
+    },
+    {
+      "keyword": "how to change shipping options on vinted",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "how-to-change-shipping-options-on-vinted",
+      "status": "pending",
+      "nl_slug": "verzendopties-wijzigen-op-vinted",
+      "priority": 83
+    },
+    {
+      "keyword": "belgian tax rules for selling on vinted",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "slug": "belgian-tax-rules-for-selling-on-vinted",
+      "status": "pending",
+      "nl_slug": "belastingen-bij-verkoop-op-vinted-belgi",
+      "priority": 84
+    },
+    {
+      "keyword": "where to source items for second hand reselling",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "slug": "where-to-source-items-for-second-hand-reselling",
+      "status": "pending",
+      "nl_slug": "waar-inkopen-doen-voor-tweedehands-doorverkopen",
+      "priority": 85
+    },
+    {
+      "keyword": "cross list from marktplaats to etsy",
+      "region": "nl",
+      "pillar": "A",
+      "format": "combo",
+      "slug": "cross-list-from-marktplaats-to-etsy",
+      "status": "pending",
+      "nl_slug": "marktplaats-naar-etsy-crosslisten",
+      "priority": 86
     }
   ],
   "published": [
@@ -1409,6 +1469,16 @@
       "action": "created",
       "url_path": "/reseller-tools/relisting-vs-bumping-second-hand",
       "published_at": "2026-10-09T14:49:30.569340+00:00"
+    },
+    {
+      "keyword": "how to delete listings on 2dehands",
+      "slug": "how-to-delete-listings-on-2dehands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-delete-listings-on-2dehands",
+      "published_at": "2026-10-10T14:15:52.650931+00:00"
     }
   ]
 }
