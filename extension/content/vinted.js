@@ -2023,6 +2023,55 @@
     return gevuld;
   }
 
+  // TE VEEL HOOFDLETTERS IN DE TITEL (10-10-2026, Daniel).
+  //
+  // "Vermarc Cycling Kit Men XL - Shanks Group ATM REYM Jersey" kwam terug met
+  // "Title contains too many capital letters, try using lowercase letters" en
+  // het formulier bleef open staan. Vinted controleert dat pas op de server,
+  // bij het plaatsen, en de grens is geen vast percentage: een live titel met
+  // 44% hoofdletters stond er gewoon. Raden vooraf kan dus niet; we lezen de
+  // klacht na het plaatsen en schrijven de titel dan rustig: kleine letters,
+  // alleen het eerste woord en de woorden van het merk met een hoofdletter.
+  const HOOFDLETTER_KLACHT_RE =
+    /too many capital|te veel hoofdletters|trop de majuscules|zu viele gro(ß|ss)buchstaben|demasiadas may[uú]sculas|troppe (lettere )?maiuscole|zbyt wiele wielkich/i;
+
+  function hoofdletterKlachtVinted() {
+    return HOOFDLETTER_KLACHT_RE.test((document.body && document.body.innerText) || "");
+  }
+
+  function rustigeTitelVinted(titel, merk) {
+    const merkWoorden = new Set(String(merk || "").toLocaleLowerCase().split(/\s+/).filter((w) => w.length > 1));
+    let eerste = true;
+    return String(titel || "").replace(/\p{L}[\p{L}\p{M}'’]*/gu, (woord) => {
+      const laag = woord.toLocaleLowerCase();
+      const hoofd = eerste || merkWoorden.has(laag);
+      eerste = false;
+      return hoofd ? laag.charAt(0).toLocaleUpperCase() + laag.slice(1) : laag;
+    });
+  }
+
+  async function plaatsMetRustigeTitelVinted(item) {
+    const titleEl = qs('input[data-testid="title--input"]');
+    const oud = titleEl ? titleEl.value : (item.title || "");
+    const rustig = rustigeTitelVinted(oud, item.brand).slice(0, 100);
+    if (!titleEl || rustig === oud) {
+      throw new Error(`Vinted rejected the title for too many capital letters: "${oud}". ` +
+        "Nothing was published. Change the title in the dashboard and publish again.");
+    }
+    clog(`plaatsen: Vinted vond de titel te schreeuwerig, opnieuw met "${rustig}"`);
+    fillInput(titleEl, rustig);
+    await sleep(600);
+    try {
+      return await submitListing(/\/items\/(\d+)/);
+    } catch (e) {
+      if (hoofdletterKlachtVinted()) {
+        throw new Error(`Vinted still found too many capital letters, even in "${rustig}". ` +
+          "Nothing was published. Change the title in the dashboard and publish again.");
+      }
+      throw e;
+    }
+  }
+
   // Waar klaagt het formulier over, in Vinted's eigen woorden?
   function formErrorsVinted() {
     const gezien = new Set();
