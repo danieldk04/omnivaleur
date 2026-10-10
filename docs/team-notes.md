@@ -16762,3 +16762,6 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
 - Niet gemeten: of er tussen 10:07 en nu nog "couldn't translate" (HTTP 500) bij het plaatsen viel; dat staat alleen
   in de Railway-logs. /health-tellers zijn leeg door de deploy van 11:51.
 - Klein, niet gerepareerd: de 2dehands-koppeling van dat kelim-item staat bij ons nog op actief.
+
+## 10-10-2026: WooCommerce overal zichtbaar, zelfde als Shopify
+Daniel: WooCommerce moet overal staan waar de andere kanalen staan. Nu altijd zichtbaar (ook zonder koppeling, dan grijs met "Not connected"): plaatsvakjes, kanaaliconen (Shopify heet daar Shpfy, Woo heet Woo), importkanalen, filter, marge, eigen prijs per platform (kolom items.price_woocommerce, migratie scripts/sql/price_woocommerce.sql door Daniel gedraaid). Bewust Shopify-only gebleven: Shopify-titel en vergelijkingsprijs (WooCommerce gebruikt de hoofdtitel en wist een actieprijs bij prijswijziging). WooCommerce-tekst wordt niet vertaald, de winkelier bepaalt de taal.
