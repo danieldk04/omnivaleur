@@ -48,7 +48,7 @@ class LegeRekening(Exception):
 
 def claude_die_werkt(antwoord: str):
     def maak(**kw):
-        return SimpleNamespace(content=[SimpleNamespace(text=antwoord)])
+        return SimpleNamespace(content=[SimpleNamespace(type="text", text=antwoord)])
     return SimpleNamespace(messages=SimpleNamespace(create=maak))
 
 
@@ -332,3 +332,68 @@ def test_een_leeg_tegoed_krijgt_geen_tweede_ronde(gemini):
 
     assert gv.vertaal("vertaal dit") is None
     assert len(gevraagd) == 1
+
+
+# ── 6. Haiku 5.5: een denkblok vóór het antwoord ─────────────────────────────
+#
+# Gemeten 10-10-2026 bij de overstap naar Haiku 5.5: het model denkt uit zichzelf
+# na en zet dan een leeg denkblok vóór de tekst. De oude code las content[0].text
+# en faalde zo op 11 van 199 echte vertalingen ('ThinkingBlock' object has no
+# attribute 'text'), en dan wacht de advertentie terwijl er gewoon een goede
+# vertaling lag.
+
+def test_denkblok_voor_het_antwoord_breekt_de_vertaling_niet(monkeypatch, vangnet):
+    gevraagd = {}
+
+    def maak(**kw):
+        gevraagd.update(kw)
+        return SimpleNamespace(content=[
+            SimpleNamespace(type="thinking", thinking="", signature="x"),
+            SimpleNamespace(type="text", text=NEDERLANDS),
+        ])
+    monkeypatch.setattr(cl, "_claude_client",
+                        lambda: SimpleNamespace(messages=SimpleNamespace(create=maak)))
+    vangnet(None)
+
+    assert _vertaal(ENGELS, "nl") == NEDERLANDS
+    assert gevraagd["model"] == cl.VERTAAL_MODEL == "claude-haiku-5-5"
+    # Het denken telt mee in max_tokens; 1024 was te krap voor een lange tekst.
+    assert gevraagd["max_tokens"] >= 4000
+
+
+def _claude_met_antwoorden(antwoorden: list, stop="end_turn"):
+    def maak(**kw):
+        t = antwoorden.pop(0)
+        return SimpleNamespace(stop_reason=stop if t == "AFGEKAPT" else "end_turn",
+                               content=[SimpleNamespace(type="text", text=t)])
+    return SimpleNamespace(messages=SimpleNamespace(create=maak))
+
+
+ZELFCORRECTIE = ("Beige Polo Bear Ralph Lauren Sweater - M - Nieuw\n\n"
+                 "Wait, that was not a translation. Here is the corrected translation:\n\n"
+                 "Beige Polo Bear Ralph Lauren Sweater - M - New")
+
+
+def test_zelfcorrectie_van_het_model_gaat_nooit_de_advertentie_in(monkeypatch, vangnet):
+    # Echt gemeten 10-10-2026: Haiku 5.5 echode de Nederlandse tekst, verbeterde
+    # zichzelf hardop en gaf dan pas het Engels. Dat moet de tweede poging krijgen.
+    client = _claude_met_antwoorden([ZELFCORRECTIE, ENGELS])
+    monkeypatch.setattr(cl, "_claude_client", lambda: client)
+    vangnet(None)
+    assert _vertaal(NEDERLANDS, "en") == ENGELS
+
+
+def test_twee_keer_zelfcorrectie_dan_wacht_de_advertentie(monkeypatch, vangnet):
+    client = _claude_met_antwoorden([ZELFCORRECTIE, ZELFCORRECTIE])
+    monkeypatch.setattr(cl, "_claude_client", lambda: client)
+    vangnet(None)
+    # Geen bruikbare vertaling: de advertentie wacht, net als bij een storing.
+    with pytest.raises(VertalingOnbeschikbaar):
+        _vertaal(NEDERLANDS, "en")
+
+
+def test_afgekapte_vertaling_gaat_nooit_online(monkeypatch, vangnet):
+    client = _claude_met_antwoorden(["AFGEKAPT", NEDERLANDS], stop="max_tokens")
+    monkeypatch.setattr(cl, "_claude_client", lambda: client)
+    vangnet(None)
+    assert _vertaal(ENGELS, "nl") == NEDERLANDS

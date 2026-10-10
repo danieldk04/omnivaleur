@@ -17,6 +17,34 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## haiku-5-5-vertalen
+
+*10-10-2026 — "10-10-2026 vertaalreserve naar Haiku 5.5; denkblok vóór de tekst, zelfcorrectie in het antwoord, denken telt mee in max_tokens"*
+
+Sinds 10-10-2026 vertaalt de Claude-reserve in crosslist.py (`VERTAAL_MODEL`) met
+claude-haiku-5-5 in plaats van Haiku 4.5: tien keer goedkoper ($0,10/$0,50 per
+miljoen tokens). Proef op 199 echte teksten met een blinde beoordelaar (Sonnet 5.5):
+publiceerbaar 151 tegen 105, beter 126 keer, slechter 31.
+
+Drie valkuilen bij Haiku 5.5, alle drie gemeten:
+- Het denkt uit zichzelf na en zet een leeg denkblok vóór de tekst: `content[0].text`
+  faalde op 11 van 199. Lees alleen blokken met type "text".
+- Denken telt mee in max_tokens: 1024 is te krap, nu 4000, en stop_reason
+  "max_tokens" geldt als mislukt (nooit een halve omschrijving online).
+- Het verbetert zichzelf hardop ("Wait, that was not a translation. Here is the
+  corrected translation:"): 1 van 39 bij Nederlands naar Engels. `_ZELFCORRECTIE` in
+  `_deugt` keurt dat af.
+Denken uitzetten (thinking disabled) was slechter: 3 onvertaalde titels, 1 keer
+het artikelnummer "(1351)" kwijt.
+
+**Why:** de vertaling viel stil door een leeg tegoed plus een overbelaste gratis
+Google-sleutel; Daniel koos Claude bijvullen en het goedkoopste model.
+**How to apply:** zet je een ander taalmodel in, meet met een blinde A/B op echte
+teksten en tel apart: getal kwijt, commentaar, onvertaald, wacht. Zie
+"anthropic-sdk-pin-valstrik" en "gemini-tegoed-op".
+
+---
+
 ## dashboard-opruimronde-09-10
 
 *09-10-2026 — "Opruimronde dashboard 09-10-2026: menu 14 naar 11, tabbladen, \"Niet geplaatst\" telde verkochte mee, Bescherming vol jargon en foute feiten"*

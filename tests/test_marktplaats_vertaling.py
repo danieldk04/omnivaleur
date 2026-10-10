@@ -437,7 +437,7 @@ class _NepModel:
             antwoord = bron                       # onvertaald terug
         else:
             antwoord = _NEDERLANDS_STUK.replace("\n", " §BR§ ")
-        return type("R", (), {"content": [type("C", (), {"text": antwoord})()]})()
+        return type("R", (), {"content": [type("C", (), {"type": "text", "text": antwoord})()]})()
 
 
 def test_model_dat_de_engelse_tekst_teruggeeft_krijgt_een_tweede_kans(monkeypatch):

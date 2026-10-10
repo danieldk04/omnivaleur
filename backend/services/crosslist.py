@@ -244,6 +244,12 @@ async def _exec(query, dubbel_is_ok: bool = False):
 # die opzet-tijd. De client is draadveilig, dus to_thread mag hem delen.
 _CLAUDE_CLIENT = None
 
+# Het reservemodel voor vertalingen. Haiku 5.5 sinds 10-10-2026 (Daniel): tien
+# keer goedkoper dan Haiku 4.5 ($0,10/$0,50 tegen $1/$5 per miljoen tokens) en
+# actief tot ten minste oktober 2027. Overgezet na een voor-en-naproef op echte
+# advertenties, zie team-notes 10-10-2026.
+VERTAAL_MODEL = "claude-haiku-5-5"
+
 
 def _claude_client():
     global _CLAUDE_CLIENT
@@ -406,6 +412,12 @@ def leest_als_andere_taal(text: str, doeltaal: str) -> bool:
     return ander >= _ANDERE_TAAL_VLOER and ander >= doel
 
 
+_ZELFCORRECTIE = re.compile(
+    r"here(?: is|'s) (?:the |my )?(?:corrected |correct |proper |actual )?translation"
+    r"|corrected translation|(?:was|is) not a translation|i need to correct"
+    r"|(?:^|\n)\s*wait[,.!]", re.IGNORECASE)
+
+
 def _vertaal(text: str, target_lang: str, brand: str | None = None) -> str:
     """Translate text using Claude, met Gemini als vangnet. Preserves brand names,
     formatting and paragraph structure.
@@ -488,13 +500,25 @@ def _vertaal(text: str, target_lang: str, brand: str | None = None) -> str:
             if "claude" not in plat:
                 try:
                     response = _claude_client().messages.create(
-                        model="claude-haiku-4-5-20251001",
-                        max_tokens=1024,
+                        model=VERTAAL_MODEL,
+                        # Haiku 5.5 denkt uit zichzelf na, en dat denken telt mee
+                        # in max_tokens. Gemeten 10-10-2026 op 199 echte teksten:
+                        # met denken 0 onvertaalde titels en 0 weggevallen
+                        # artikelnummers, zonder denken 3 en 1. Ruimte genoeg dus,
+                        # zodat een lange omschrijving niet halverwege afbreekt.
+                        max_tokens=4000,
                         messages=[{"role": "user", "content": opdracht}],
                     )
-                    logger.info("Vertaling naar %s kwam van de reserve (Claude)", target_lang)
                     laatste["model"] = "claude"
-                    return _strip_text_tags(response.content[0].text)
+                    if getattr(response, "stop_reason", None) == "max_tokens":
+                        # Afgekapt: een halve omschrijving mag nooit online.
+                        logger.warning("Vertaling naar %s afgekapt (max_tokens)", target_lang)
+                        return ""
+                    logger.info("Vertaling naar %s kwam van de reserve (Claude)", target_lang)
+                    # Het antwoord begint met een denkblok, niet met de tekst
+                    # (11 van 199 faalden op content[0].text, 10-10-2026).
+                    return _strip_text_tags("".join(
+                        b.text for b in response.content if b.type == "text"))
                 except Exception as e:  # noqa: BLE001
                     plat["claude"] = e
                     logger.warning("Vertalen via Claude lukte ook niet (%s: %s)",
@@ -504,6 +528,15 @@ def _vertaal(text: str, target_lang: str, brand: str | None = None) -> str:
         def _deugt(antwoord: str):
             """Het antwoord terug, of None als het niet te vertrouwen is."""
             if not antwoord:
+                return None
+            # HET MODEL VERBETERT ZICHZELF MIDDEN IN HET ANTWOORD (10-10-2026).
+            # Haiku 5.5 gaf bij 1 van de 39 Nederlandse teksten naar het Engels
+            # eerst de brontekst terug, dan "Wait, that was not a translation.
+            # Here is the corrected translation:" en dan pas het Engels. Dat
+            # ging zo door alle controles hieronder en had zo de advertentie in
+            # gestaan. Afkeuren betekent: de strengere tweede poging.
+            if _ZELFCORRECTIE.search(antwoord) and not _ZELFCORRECTIE.search(text):
+                logger.warning("Vertaling naar %s bevat commentaar van het model", target_lang)
                 return None
             if has_breaks:
                 if "§BR§" in antwoord:

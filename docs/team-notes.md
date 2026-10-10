@@ -16733,3 +16733,16 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
 - Logs: laatste verzoeken ~22 uur geleden (09-10 rond 12:00 lokaal, dus vóór de rem van ~13:00), nog volle rubriekvragen van 8.939 invoertokens. Daarna niets meer, ook geen verzoeken met 8.9k tokens na de rem. Dat is consistent met een leeg tegoed vanaf ~12:00 UTC+2.
 - /health: taalmodel_sinds_start leeg ({} en {}), server net herstart (commit f51ef90c), dus geen tellerbewijs.
 - Oordeel: niet te bewijzen. Rem is pas aantoonbaar zodra het tegoed is aangevuld en een dag draait. Geen code gewijzigd. Aanvullen blijft nodig voor vertalen en plaatsen (zie vorige entry).
+
+## 10-10-2026 10:45: Vertaalreserve naar Haiku 5.5 (Daniel: "ja, Haiku 5.5, test met 1000% zekerheid")
+- Daniel vulde het Anthropic-tegoed aan rond 10:07; plaatsen werkt sindsdien weer.
+- Besluit: vertalen via Claude met claude-haiku-5-5 (tien keer goedkoper dan Haiku 4.5). Google blijft gratis;
+  betaald maken zou ook alle rubriekvragen gaan betalen (07-10: 5.703 vragen, ~$35 alleen invoer).
+- Proef op 199 echte teksten van Daniels account (160 naar NL, 39 naar EN, incl. de Atelier Munro-blazer), echte
+  _vertaal met Gemini uit, blind beoordeeld door Sonnet 5.5: publiceerbaar oud 105, nieuw 151; nieuw beter 126,
+  oud beter 31, gelijk 42. Ernstige fouten eindcode: 0 getallen kwijt, 0 commentaar, 0 onvertaald, 0 wachtend.
+  Mediaan 1,2 s tegen 1,4 s.
+- Onderweg gevonden en gerepareerd: denkblok vóór de tekst (11/199 faalden), zelfcorrectie van het model in de
+  tekst (1/39 naar EN, nu afgekeurd en tweede poging), max_tokens 4000 omdat denken meetelt, afgekapt = mislukt.
+- Proeven: 4 nieuwe in tests/test_vertaalvangnet_gemini.py falen op de oude code; volledige reeks voor en na
+  gelijk (5 bekende fouten test_korte_kledingvraag). backend/scheduler.py (onaf, andere sessie) niet meegenomen.
