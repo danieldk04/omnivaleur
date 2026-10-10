@@ -595,6 +595,9 @@
   const VIDEOS = [
     { titel: "Connect Shopify to Omnivaleur", tekst: "How to create the small app in your Shopify admin and link it, step by step with screen recordings.",
       talen: { EN: "shopify-koppelen-en", NL: "shopify-koppelen-nl" } },
+    // Alleen in het Nederlands opgenomen, dus alleen voor wie het dashboard in het Nederlands heeft.
+    { titel: "From Shopify to Marktplaats, Vinted and 2dehands", tekst: "How to read in your Shopify store, import your products and list them on the other marketplaces.",
+      youtube: "-0JlNQPHsxU", alleenNL: true },
   ];
   OB.videoTaal = function (knop, taal, basis) {
     const kaart = knop.closest("[data-video]");
@@ -607,7 +610,13 @@
   };
   function videosHtml() {
     const nl = (document.documentElement.lang || "").toLowerCase().startsWith("nl");
-    return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px">${VIDEOS.map((v) => {
+    return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px">${VIDEOS.filter((v) => nl || !v.alleenNL).map((v) => {
+      if (v.youtube) {
+        return `<div data-video><div style="position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#0f172a"><iframe src="https://www.youtube-nocookie.com/embed/${v.youtube}?rel=0&playsinline=1" title="${esc(v.titel)}" loading="lazy" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0 2px"><div style="font-weight:700;font-size:13.5px">${esc(v.titel)}</div>
+      <div style="display:flex;gap:4px" translate="no"><span class="ob-taal ob-taal-aan">NL</span></div></div>
+      <div style="font-size:12.5px;color:var(--muted,#64748b);line-height:1.5">${esc(v.tekst)}</div></div>`;
+      }
       const start = nl && v.talen.NL ? "NL" : "EN";
       const basis = v.talen[start];
       return `<div data-video><video controls preload="none" playsinline poster="/assets/videos/${basis}.jpg" style="width:100%;border-radius:12px;background:#0f172a;display:block"><source src="/assets/videos/${basis}.mp4" type="video/mp4"></video>
