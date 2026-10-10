@@ -16772,7 +16772,7 @@ Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het d
 ## 10-10-2026 16:30: WooCommerce koppelen bij De Juiste Toon: SiteGround-botcontrole, niet "geen WordPress"
 - Melding 15:52: djt@dejuistetoon.eu kreeg "doesn't look like a WordPress site". Zijn winkel is WordPress +
   WooCommerce op SiteGround (namespace sg-security/v1, wc/v3 aanwezig, WooCommerce-401 op /wp-json/wc/v3/products).
-- GEMETEN via een tijdelijke GitHub-workflow (branch weer verwijderd): vanaf IP 20.169.53.54 gaf elke aanvraag
+- GEMETEN via een tijdelijke GitHub-workflow (branch diag-woo-dejuistetoon; verwijderen werd hier geweigerd, onschadelijk: hij draait alleen bij een push naar die branch): vanaf IP 20.169.53.54 gaf elke aanvraag
   HTTP 202 met kopregel sg-captcha: challenge en een doorverwijzing naar /.well-known/sgcaptcha/ (ook /wp-json/);
   de oude code las dat als "geen WordPress" en faalde precies zoals bij Toon. Vanaf 20.171.4.211 kreeg alles
   netjes antwoord, oude en nieuwe code, curl, httpx, requests, HEAD en GET. Het hangt dus aan het IP-adres,
