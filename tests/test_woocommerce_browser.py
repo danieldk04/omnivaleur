@@ -31,7 +31,17 @@ from backend.api.deps import get_current_user  # noqa: E402
 from backend.platforms import woocommerce as w  # noqa: E402
 from backend.services import woocommerce_browser as wb  # noqa: E402
 from backend.services import woocommerce_orders as wo  # noqa: E402
-from tests.test_woocommerce import _DB  # noqa: E402
+def _laad_proef(naam):
+    """Een andere proef laden via zijn pad: op GitHub staat er een pakket 'tests'
+    in site-packages (meegeleverd door een afhankelijkheid) dat voorgaat."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(f"_proef_{naam}", ROOT / "tests" / f"{naam}.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+_DB = _laad_proef("test_woocommerce")._DB
 
 ROOT_API = "https://dejuistetoon.eu/wp-json/"
 CK, CS = "ck_" + "a" * 40, "cs_" + "b" * 40

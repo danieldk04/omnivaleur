@@ -42,8 +42,19 @@ from backend.api import platforms as api  # noqa: E402
 from backend.api.deps import get_current_user  # noqa: E402
 from backend.platforms import woocommerce as w  # noqa: E402
 from backend.services import woocommerce_browser as wb  # noqa: E402
-from tests.test_woocommerce import _DB  # noqa: E402
-from tests.test_woocommerce_browser import CK, CS, _Winkel  # noqa: E402
+def _laad_proef(naam):
+    """Een andere proef laden via zijn pad: op GitHub staat er een pakket 'tests'
+    in site-packages (meegeleverd door een afhankelijkheid) dat voorgaat."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(f"_proef_{naam}", ROOT / "tests" / f"{naam}.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+_DB = _laad_proef("test_woocommerce")._DB
+_hulp = _laad_proef("test_woocommerce_browser")
+CK, CS, _Winkel = _hulp.CK, _hulp.CS, _hulp._Winkel
 
 ECHT = os.environ.get("WOO_E2E_WINKEL")          # een echte WooCommerce erachter
 ECHT_CK = os.environ.get("WOO_E2E_CK") or CK

@@ -52,7 +52,8 @@ jobs:
       - name: Proef via een echte browser tegen een echte WooCommerce
         env:
           WOO_E2E_WINKEL: http://127.0.0.1:9400
-        run: python -m pytest -q -p no:cacheprovider tests/test_woocommerce_browser_e2e.py tests/test_woocommerce_browser.py tests/test_woocommerce_ontdekken.py tests/test_woocommerce_koppelen.py -x -rA 2>&1 | tail -40
+        run: |
+          python -m pytest -q -p no:cacheprovider tests/test_woocommerce_browser_e2e.py tests/test_woocommerce_browser.py tests/test_woocommerce_ontdekken.py -x -rA
       - name: Echte Chromium bij dejuistetoon.eu (zonder sleutel)
         run: |
           cat > /tmp/djt.py <<'PY'
