@@ -16671,3 +16671,17 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   = weet niet; alleen een ja wordt onthouden. Proef tests/vinted-inlog-verlopen-koekje-test.js (faalt op de oude
   code); vinted-inlogdomein en inlogverwijt-proef kregen een stub voor de nieuwe functie.
 - Daniel moet dist/omnivaleur-extension-1.0.377.zip in de Web Store zetten.
+
+## 10-10-2026: Dagelijkse klantfouten
+- Rustige nacht: 16 mislukte opdrachten in 24 uur bij 4 klanten, geen fout in onze code gevonden.
+- Goudlief 5aae4954: 6 verfartikelen (Boonstoppel, Cetabever, Wijzonol) in de juiste rubriek "Verf, beits en lak",
+  die rubriek kost geld op Marktplaats en 2dehands. Niets besteld. Plus 2 opdrachten op de inlogpagina (uitgelogd).
+- Janneke 31d28378, bruine jas 2997321d staat nog steeds niet op Vinted. efe38617 (18:38) faalde omdat haar extensie
+  1.0.374 via de oude achtergrondzoeker toch de rode jas vond; de server weigerde die koppeling, precies zoals a9327da6
+  bedoelt. Daarna 20:26 uitgelogd op Vinted, en 20:53 reageerde de kleurtegel "Brown" niet (enige kleurfout op Vinted
+  in 7 dagen naast één bij 1ba42900 op 01-10). Niet na te bootsen zonder haar browser, open als onbekend.
+- Geen extensie op 1.0.376 of nieuwer gezien in de hartslagen (hoogste 1.0.375): titelgenotenreparatie bereikt klanten
+  pas na de upload naar de Web Store.
+- Wachtende werk (0b28c1ce 151, bcdf9aa4 80, 26cf5471 128, 96e30080 76) staat bij klanten van wie de extensie stil is;
+  offline-mails zijn verstuurd. Goudlief-wachtrij niet opnieuw leeggeveegd sinds 566f44c2.
+- Wachter: 5 open soorten beoordeeld (3 klant, 1 gerepareerd, 1 onbekend).
