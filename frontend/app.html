@@ -5666,6 +5666,8 @@ function renderUpdates() {
     const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('zichtbaar'); io.unobserve(e.target); } }), { threshold: .12 });
     arts.forEach(a => { a.classList.remove('zichtbaar'); io.observe(a); });
   } else arts.forEach(a => a.classList.add('zichtbaar'));
+  // Vangnet: een tabblad op de achtergrond tekent niet, en dan komt de waarnemer niet.
+  setTimeout(() => arts.forEach(a => a.classList.add('zichtbaar')), 2500);
 }
 function filterUpdates(cat) {
   document.querySelectorAll('#upd-filters .upd-chip').forEach(c => c.classList.toggle('on', c.dataset.cat === cat));
