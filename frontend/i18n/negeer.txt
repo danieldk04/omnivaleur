@@ -170,3 +170,6 @@ input[name="bulk-verzending"]:checked
 #rondleiding .rl-gat
 (max-width: 768px)
 (hover: none) and (pointer: coarse)
+#rondleiding-stappen > section[data-tour="{0}"] > div
+#upd-filters .upd-chip
+#upd-lijst .upd

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=06bd079a97"></script>
+<script src="/i18n.js?v=15800cc9cb"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -294,6 +294,48 @@ textarea { resize: vertical; min-height: 80px; }
 .platform-checkbox span { font-size: 13px; font-weight: 600; }
 .platform-checkbox-disabled { cursor: not-allowed; opacity: .6; flex-wrap: wrap; }
 .platform-checkbox-disabled:hover { border-color: var(--border); background: none; }
+
+/* ── Wat is er nieuw: tijdlijn ─────────────────────────────────── */
+.upd-hero{position:relative;overflow:hidden;border-radius:18px;padding:26px 28px;color:#fff;background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 55%,#34d399 130%);box-shadow:0 10px 30px rgba(37,99,235,.25)}
+.upd-hero::after{content:'';position:absolute;right:-70px;top:-70px;width:240px;height:240px;border-radius:50%;background:rgba(255,255,255,.1)}
+.upd-hero h2{margin:0 0 4px;font-size:24px;font-weight:900;letter-spacing:-.4px;position:relative}
+.upd-hero p{margin:0 0 18px;font-size:13.5px;opacity:.85;position:relative;max-width:520px;line-height:1.5}
+.upd-tegels{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;position:relative}
+.upd-tegel{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:12px 14px;backdrop-filter:blur(2px)}
+.upd-tegel b{display:block;font-size:26px;font-weight:900;letter-spacing:-.5px;line-height:1.1}
+.upd-tegel span{font-size:11.5px;opacity:.85}
+.upd-tempo{margin-top:16px;position:relative}
+.upd-tempo-kop{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;opacity:.8;margin-bottom:8px}
+.upd-balken{display:flex;align-items:flex-end;gap:8px;height:64px}
+.upd-balk{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%}
+.upd-balk i{display:block;width:100%;max-width:46px;border-radius:6px 6px 2px 2px;background:linear-gradient(180deg,#fff,rgba(255,255,255,.55));transform-origin:bottom;animation:upd-groei .7s cubic-bezier(.2,.8,.2,1) both}
+.upd-balk small{font-size:10.5px;opacity:.85;font-weight:700;text-transform:capitalize}
+.upd-balk em{font-style:normal;font-size:10.5px;font-weight:800}
+@keyframes upd-groei{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.upd-filters{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 6px}
+.upd-chip{border:1.5px solid var(--border);background:#fff;border-radius:100px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)}
+.upd-chip.on{background:var(--text);border-color:var(--text);color:#fff}
+.upd-lijst{position:relative;margin:14px 0 0 20px;padding-left:34px;border-left:2px solid #bfdbfe}
+.upd{position:relative;background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:16px;box-shadow:var(--shadow-sm);opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
+.upd.zichtbaar{opacity:1;transform:none}
+.upd[hidden]{display:none}
+.upd-punt{position:absolute;left:-54px;top:14px;width:38px;height:38px;border-radius:50%;background:#fff;border:2px solid #93c5fd;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 0 5px var(--bg)}
+.upd-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px;font-size:11.5px;font-weight:700;color:var(--muted)}
+.upd-cat{background:#eff6ff;color:var(--blue);border-radius:100px;padding:2px 9px;font-size:10.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase}
+.upd[data-cat=automation] .upd-cat{background:#ecfdf5;color:#047857}
+.upd[data-cat=dashboard] .upd-cat{background:#f5f3ff;color:#6d28d9}
+.upd[data-cat=plans] .upd-cat{background:#fff7ed;color:#c2410c}
+.upd h3{margin:0 0 4px;font-size:16px;font-weight:900;letter-spacing:-.2px}
+.upd p{margin:0;font-size:13.5px;line-height:1.6;color:#334155}
+.upd-acties{margin-top:10px}
+.upd-nieuw{border:2px solid transparent;background:linear-gradient(#fff,#fff) padding-box,linear-gradient(135deg,#7f54b3,#2563eb,#34d399) border-box;box-shadow:0 8px 28px rgba(127,84,179,.18)}
+.upd-nieuw .upd-punt{border-color:#7f54b3;animation:upd-puls 2s infinite}
+.upd-badge{background:linear-gradient(135deg,#7f54b3,#2563eb);color:#fff;border-radius:100px;padding:2px 9px;font-size:10px;font-weight:900;letter-spacing:.6px}
+@keyframes upd-puls{0%{box-shadow:0 0 0 5px var(--bg),0 0 0 5px rgba(127,84,179,.5)}70%{box-shadow:0 0 0 5px var(--bg),0 0 0 14px rgba(127,84,179,0)}100%{box-shadow:0 0 0 5px var(--bg),0 0 0 5px rgba(127,84,179,0)}}
+.upd-voet{font-size:12.5px;color:var(--muted);text-align:center;margin:8px 0 28px}
+.nav-badge-nieuw{display:none;margin-left:auto;background:linear-gradient(135deg,#7f54b3,#2563eb);color:#fff;font-size:9px;font-weight:900;letter-spacing:.5px;padding:2px 7px;border-radius:9px}
+@media (max-width:640px){.upd-tegels{grid-template-columns:1fr 1fr 1fr;gap:6px}.upd-tegel{padding:9px 10px}.upd-tegel b{font-size:20px}.upd-lijst{margin-left:14px;padding-left:28px}.upd-punt{left:-47px;width:32px;height:32px;font-size:15px}}
+@media (prefers-reduced-motion:reduce){.upd{opacity:1;transform:none;transition:none}.upd-balk i,.upd-nieuw .upd-punt{animation:none}}
 .pm-cb-missing { flex-basis: 100%; font-size: 10.5px; font-weight: 600; color: #b45309; }
 
 /* ── Photo upload ───────────────────────────────────────────────── */
@@ -824,6 +866,12 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       <span id="nav-referral-badge" style="display:none;margin-left:auto;background:var(--mint);color:#053b2c;font-size:10px;font-weight:800;min-width:18px;height:18px;padding:0 5px;border-radius:9px;align-items:center;justify-content:center"></span>
     </div>
 
+    <div class="nav-item" data-view="nieuw" onclick="showView('nieuw')">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1.5l1.9 4.6 4.6 1.9-4.6 1.9L10 14.5l-1.9-4.6L3.5 8l4.6-1.9L10 1.5zM15.5 12l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1z"/></svg>
+      <span>What's new</span>
+      <span id="nav-nieuw-badge" class="nav-badge-nieuw">NEW</span>
+    </div>
+
     <div class="nav-item" data-view="help" onclick="showView('help')">
       <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a3 3 0 00-2.83 2 1 1 0 001.885.666A1 1 0 1110 8a1 1 0 00-1 1v1a1 1 0 102 0 3 3 0 00-1-5.83z" clip-rule="evenodd"/></svg>
       <span>Help</span>
@@ -836,7 +884,6 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       <span id="ext-label">Loading...</span>
     </div>
     <div data-taalkeuze style="color:rgba(255,255,255,.55);font-size:11px;margin-top:8px"></div>
-    <button id="nieuws-knop" onclick="toonNieuws(true)" style="background:transparent;border:none;color:rgba(255,255,255,.45);font-size:11px;cursor:pointer;padding:4px 0;margin-top:4px;text-align:left;display:block">What's new</button>
     <button id="logout-btn" onclick="SESSIE.wisAlles(); window.location.href='/'" style="background:transparent;border:none;color:rgba(255,255,255,.3);font-size:11px;cursor:pointer;padding:4px 0;margin-top:6px;text-align:left;width:100%;">← Log out</button>
   </div>
 </div>
@@ -889,34 +936,36 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
        Daniel, 09-10-2026: elke grote wijziging in het dashboard krijgt een
        melding voor de klant, zodat niemand in de war raakt. Nieuw bericht?
        Vervang de inhoud hieronder en geef NIEUWS_ID een nieuwe waarde (en
-       NIEUWS_SINDS de datum van de wijziging). Elke klant die al artikelen had
+       NIEUWS_SINDS de datum van de wijziging). Zet daarna ook een nieuw
+       bericht BOVENAAN de tijdlijn (#view-nieuw) met dezelfde id. Elke klant die al artikelen had
        vóór die datum ziet hem één keer; wie later begon kent het oude niet. -->
   <div id="nieuws-venster" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:900;align-items:center;justify-content:center;padding:16px">
-    <div role="dialog" aria-labelledby="nieuws-titel" style="background:#fff;border-radius:18px;padding:28px 28px 22px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow:auto">
-      <div style="font-size:12px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--blue);margin-bottom:6px">What's new</div>
-      <div id="nieuws-titel" style="font-size:20px;font-weight:900;letter-spacing:-.3px;margin-bottom:8px">A tidier dashboard</div>
-      <div style="font-size:13.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">We made the dashboard clearer, based on the questions sellers asked us. Nothing has been removed.</div>
-      <div style="font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text);margin:0 0 4px">Moved</div>
-      <ul style="font-size:13.5px;line-height:1.6;margin:0 0 12px;padding-left:20px">
-        <li><b>Stale stock</b> is now a tab under <b>Refresh</b>.</li>
-        <li><b>Margin calculator</b> is now a tab under <b>Analytics</b>.</li>
-        <li><b>Automatic protections</b> is now a tab under <b>Preferences</b>.</li>
-        <li><b>Earn 1 month free</b> moved to the bottom of the menu, above Help.</li>
-      </ul>
-      <div style="font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text);margin:0 0 4px">New</div>
-      <ul style="font-size:13.5px;line-height:1.6;margin:0 0 14px;padding-left:20px">
-        <li>Click a green icon on an item to open your advert on that marketplace.</li>
-        <li>The bar at the top shows how many adverts are waiting, per marketplace.</li>
-        <li>Under Items, the first filter has "Not on 2dehands yet", and the same for every marketplace.</li>
-        <li>"To list" on the dashboard now only counts items that are not online anywhere yet.</li>
-        <li>Help answers the questions we get most, like "Where is my advert?" and "What is Calm mode?".</li>
-        <li>Clearer texts everywhere, in plain words.</li>
-      </ul>
-      <div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:16px">You can read this again via "What's new" at the bottom of the menu.</div>
-      <!-- Knoppen blijven onderin staan, ook als de lijst op een telefoon moet scrollen. -->
-      <div style="position:sticky;bottom:-22px;background:#fff;padding:10px 0 4px;margin-bottom:-4px">
-        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="startRondleiding()">Show me in my dashboard</button>
-        <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:6px" onclick="sluitNieuws()">Got it, no tour</button>
+    <div role="dialog" aria-labelledby="nieuws-titel" style="background:#fff;border-radius:20px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:92vh;overflow:auto">
+      <div style="position:relative;overflow:hidden;padding:26px 28px 22px;color:#fff;background:linear-gradient(135deg,#7f54b3 0%,#5b3a9e 55%,#2563eb 130%)">
+        <div style="position:absolute;right:-50px;top:-50px;width:190px;height:190px;border-radius:50%;background:rgba(255,255,255,.12)"></div>
+        <div style="display:flex;align-items:center;gap:14px;position:relative">
+          <div style="width:58px;height:58px;border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.25)"><img src="/assets/logos/woocommerce.svg" alt="WooCommerce" style="width:38px;height:38px"></div>
+          <div>
+            <div style="font-size:11px;font-weight:900;letter-spacing:.8px;text-transform:uppercase;opacity:.85">What's new</div>
+            <div id="nieuws-titel" style="font-size:24px;font-weight:900;letter-spacing:-.4px;line-height:1.15">WooCommerce is live</div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:20px 28px 22px">
+        <div style="font-size:14px;color:#334155;line-height:1.6;margin-bottom:14px">Your WooCommerce shop is now a channel, right next to Marktplaats, 2dehands, Vinted, eBay and Shopify.</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px">🔗</span><div style="font-size:13.5px;line-height:1.5"><b>Connect with one click.</b> Approve it in your own shop, nothing to copy.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px">📥</span><div style="font-size:13.5px;line-height:1.5"><b>Bring your products in</b> and put them on the marketplaces, or the other way around.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px">🔄</span><div style="font-size:13.5px;line-height:1.5"><b>Sold anywhere?</b> The product in your shop is set to out of stock. A sale in your shop takes it off the marketplaces.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px">💶</span><div style="font-size:13.5px;line-height:1.5"><b>Your own price for WooCommerce</b>, a filter and a margin calculator, like every other channel.</div></div>
+        </div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:16px">Curious what else we built, and how fast? Open <a href="#" onclick="sluitNieuws();showView('nieuw');return false">What's new</a> in the menu for the full timeline.</div>
+        <!-- Knoppen blijven onderin staan, ook als de lijst op een telefoon moet scrollen. -->
+        <div style="position:sticky;bottom:-22px;background:#fff;padding:10px 0 4px;margin-bottom:-4px">
+          <button class="btn btn-primary" style="width:100%;justify-content:center;background:linear-gradient(135deg,#7f54b3,#5b3a9e)" onclick="sluitNieuws();showView('platforms');connectWooCommerce()">Connect WooCommerce</button>
+          <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:6px" onclick="startRondleiding()">Show me in my dashboard</button>
+          <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:6px" onclick="sluitNieuws()">Maybe later</button>
+        </div>
       </div>
     </div>
   </div>
@@ -929,6 +978,14 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
        waarvan het doel niet in beeld is (telefoon, lege lijst) wordt overgeslagen.
        De teksten staan hier als HTML, zodat de vertaallaag ze vindt. -->
   <div id="rondleiding-stappen" hidden>
+    <section data-tour="woocommerce">
+    <div data-view="platforms" data-doel="[data-plat='woocommerce']"><b>WooCommerce</b> sits here, next to eBay and Shopify. Press Connect, approve it in your own shop, done.</div>
+    <div data-view="items" data-doel="#items-body .pm-dot:last-child">Every item now has a <b>Woo</b> icon. Grey means it is not in your shop yet. Click it to publish.</div>
+    <div data-view="items" data-doel="#filter-platform">Filter on WooCommerce, or on items that are <b>not on WooCommerce yet</b>.</div>
+    <div data-view="import" data-doel=".imp-chip[onclick*='woocommerce']">Already have products in your shop? Tick <b>WooCommerce</b> and press Import to bring them in.</div>
+    <div data-view="dashboard" data-doel=".nav-item[data-view='nieuw']">All our updates live here, newest first. Come back any time.</div>
+    </section>
+    <section data-tour="dashboard-opgeruimd">
     <div data-view="refresh" data-doel="#view-refresh .subtab[data-sub='stale']"><b>Stale stock</b> is now a tab here, under Refresh. It shows items that have been online a long time without selling.</div>
     <div data-view="analytics" data-doel="#view-analytics .subtab[data-sub='calculator']"><b>Margin calculator</b> is now a tab here, under Analytics.</div>
     <div data-view="preferences" data-doel="#view-preferences .subtab[data-sub='protections']"><b>Automatic protections</b> is now a tab here, under Preferences.</div>
@@ -938,7 +995,20 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     <div data-view="dashboard" data-doel="#ext-activity-bar">This bar shows what is waiting, per marketplace: new adverts, renewals and removals.</div>
     <div data-view="items" data-doel="#filter-platform">New in this filter: <b>Not on 2dehands yet</b>, and the same for every marketplace. Handy to see what still has to go there.</div>
     <div data-view="help" data-doel=".nav-item[data-view='help']"><b>Help</b> now answers the questions we get most, like "Where is my advert?" and "What is Calm mode?".</div>
-    <div data-view="dashboard" data-doel="#nieuws-knop">Want to see this again later? Click <b>What's new</b>.</div>
+    <div data-view="dashboard" data-doel=".nav-item[data-view='nieuw']">Want to see this again later? Click <b>What's new</b> in the menu.</div>
+    </section>
+    <section data-tour="nederlands">
+    <div data-view="dashboard" data-doel=".sidebar-bottom [data-taalkeuze]">Switch the whole dashboard between English and Dutch here.</div>
+    </section>
+    <section data-tour="import">
+    <div data-view="import" data-doel="#import-scan-grid">Tick the channels you sell on and import them all with one button.</div>
+    </section>
+    <section data-tour="help">
+    <div data-view="help" data-doel=".nav-item[data-view='help']"><b>Get started</b> and <b>Help</b> walk you through each channel and answer the questions we get most.</div>
+    </section>
+    <section data-tour="analytics">
+    <div data-view="analytics" data-doel="#an-period-tabs">Pick a period and Analytics compares it with the one before.</div>
+    </section>
   </div>
   <div id="rondleiding" hidden>
     <div class="rl-blok"></div>
@@ -2248,6 +2318,153 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     </div><!-- /view-referral -->
 
     <!-- ── HELP VIEW ──────────────────────────────────────────────── -->
+    <div id="view-nieuw" class="view">
+      <!-- DE UPDATELOG (Daniel, 10-10-2026). Alleen GROTE ontwikkelingen, nieuwste
+           bovenaan. Elke grote wijziging krijgt hier een bericht, naast de melding
+           (#nieuws-venster) en de rondleiding (#rondleiding-stappen, data-tour).
+           tests/test_updates_log.py bewaakt dat het bovenste bericht dezelfde id
+           heeft als NIEUWS_ID. -->
+      <div style="max-width:820px;margin:0 auto">
+        <div class="upd-hero">
+          <h2>What's new</h2>
+          <p>Every big step since Omnivaleur started, newest first. Small fixes are not listed here.</p>
+          <div class="upd-tegels">
+            <div class="upd-tegel"><b id="upd-aantal">0</b><span>big updates</span></div>
+            <div class="upd-tegel"><b id="upd-dagen">0</b><span>days of building</span></div>
+            <div class="upd-tegel"><b id="upd-tempo">0</b><span>days per big update</span></div>
+          </div>
+          <div class="upd-tempo">
+            <div class="upd-tempo-kop">Updates per month</div>
+            <div class="upd-balken" id="upd-balken"></div>
+          </div>
+        </div>
+        <div class="upd-filters" id="upd-filters">
+          <button class="upd-chip on" data-cat="all" onclick="filterUpdates('all')">All</button>
+          <button class="upd-chip" data-cat="channels" onclick="filterUpdates('channels')">Channels</button>
+          <button class="upd-chip" data-cat="dashboard" onclick="filterUpdates('dashboard')">Dashboard</button>
+          <button class="upd-chip" data-cat="automation" onclick="filterUpdates('automation')">Automation</button>
+          <button class="upd-chip" data-cat="plans" onclick="filterUpdates('plans')">Plans</button>
+        </div>
+        <div class="upd-lijst" id="upd-lijst">
+        <article class="upd upd-nieuw" data-id="2026-10-woocommerce" data-datum="2026-10-09" data-cat="channels">
+          <div class="upd-punt">🛍️</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Channels</span> <span class="upd-badge">NEW</span></div>
+          <h3>WooCommerce is live</h3>
+          <p>Connect your WooCommerce shop with one click, bring your products in and publish to it like to any other channel. Sold elsewhere? The product in your shop is set to out of stock. It has its own price per platform, a filter and a margin line.</p>
+          <div class="upd-acties"><button class="btn btn-sm btn-ghost" onclick="startRondleiding('woocommerce')">Show me in my dashboard</button></div>
+        </article>
+        <article class="upd" data-id="2026-10-dashboard-opgeruimd" data-datum="2026-10-09" data-cat="dashboard">
+          <div class="upd-punt">🧭</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Dashboard</span></div>
+          <h3>A tidier dashboard</h3>
+          <p>The menu went from 14 to 11 items. Stale stock, the margin calculator and the automatic protections became tabs. New: a filter for items that are not on a channel yet, and green icons that open your advert.</p>
+          <div class="upd-acties"><button class="btn btn-sm btn-ghost" onclick="startRondleiding('dashboard-opgeruimd')">Show me in my dashboard</button></div>
+        </article>
+        <article class="upd" data-id="2026-10-vinted-eigen-tekst" data-datum="2026-10-09" data-cat="channels">
+          <div class="upd-punt">🟩</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Channels</span></div>
+          <h3>Vinted gets your own words</h3>
+          <p>Vinted adverts now go out exactly as you typed them. We only translate to English if you switch that on yourself.</p>
+        </article>
+        <article class="upd" data-id="2026-10-shopify-vanzelf" data-datum="2026-10-08" data-cat="automation">
+          <div class="upd-punt">⚡</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Automation</span></div>
+          <h3>New Shopify products arrive by themselves</h3>
+          <p>We check your Shopify store every hour and bring new products in. Switch it on under Import. A sale elsewhere sets the product in your shop to out of stock, it is never deleted.</p>
+        </article>
+        <article class="upd" data-id="2026-10-analyse-periode" data-datum="2026-10-07" data-cat="dashboard">
+          <div class="upd-punt">📈</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Dashboard</span></div>
+          <h3>Analytics compares periods</h3>
+          <p>Pick a period and see how it compares with the one before.</p>
+          <div class="upd-acties"><button class="btn btn-sm btn-ghost" onclick="startRondleiding('analytics')">Show me in my dashboard</button></div>
+        </article>
+        <article class="upd" data-id="2026-09-light" data-datum="2026-09-30" data-cat="plans">
+          <div class="upd-punt">🌱</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Plans</span></div>
+          <h3>Omnivaleur Light</h3>
+          <p>A cheaper plan for private sellers: 9.99 euro a month including VAT, up to 20 active items. It works the same as Pro.</p>
+        </article>
+        <article class="upd" data-id="2026-09-verzendkosten" data-datum="2026-09-27" data-cat="channels">
+          <div class="upd-punt">📦</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Channels</span></div>
+          <h3>2dehands shipping, your choice</h3>
+          <p>Choose your own shipping on 2dehands: standard, a rule, or everything. You can also set it per item.</p>
+        </article>
+        <article class="upd" data-id="2026-09-nederlands" data-datum="2026-09-24" data-cat="dashboard">
+          <div class="upd-punt">🇳🇱</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Dashboard</span></div>
+          <h3>The dashboard speaks Dutch</h3>
+          <p>The whole dashboard is now available in Dutch. Switch with EN · NL at the bottom of the menu.</p>
+          <div class="upd-acties"><button class="btn btn-sm btn-ghost" onclick="startRondleiding('nederlands')">Show me in my dashboard</button></div>
+        </article>
+        <article class="upd" data-id="2026-09-import" data-datum="2026-09-24" data-cat="automation">
+          <div class="upd-punt">📥</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Automation</span></div>
+          <h3>A new import page</h3>
+          <p>Tick the channels you sell on and press one button. More categories on every channel, including games, phones and audio, tv and photo.</p>
+          <div class="upd-acties"><button class="btn btn-sm btn-ghost" onclick="startRondleiding('import')">Show me in my dashboard</button></div>
+        </article>
+        <article class="upd" data-id="2026-09-shopify-inlezen" data-datum="2026-09-23" data-cat="channels">
+          <div class="upd-punt">🏪</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Channels</span></div>
+          <h3>Import your Shopify store</h3>
+          <p>Read in the products from your Shopify store and put them on the marketplaces.</p>
+        </article>
+        <article class="upd" data-id="2026-09-help" data-datum="2026-09-17" data-cat="dashboard">
+          <div class="upd-punt">🎓</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Dashboard</span></div>
+          <h3>Get started and Help, rewritten</h3>
+          <p>A checklist that ticks off by what really happened, and a Help page with what you need per channel and the questions we get most.</p>
+          <div class="upd-acties"><button class="btn btn-sm btn-ghost" onclick="startRondleiding('help')">Show me in my dashboard</button></div>
+        </article>
+        <article class="upd" data-id="2026-09-ebay" data-datum="2026-09-15" data-cat="channels">
+          <div class="upd-punt">🛒</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Channels</span></div>
+          <h3>eBay, proven end to end</h3>
+          <p>eBay adverts go out in Dutch, with a fixed category, tested on a real account.</p>
+        </article>
+        <article class="upd" data-id="2026-09-wakker" data-datum="2026-09-13" data-cat="automation">
+          <div class="upd-punt">💤</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Automation</span></div>
+          <h3>Publishing keeps going</h3>
+          <p>While Omnivaleur publishes, your computer stays awake. It keeps going with Chrome minimised.</p>
+        </article>
+        <article class="upd" data-id="2026-09-zelf-bijwerken" data-datum="2026-09-05" data-cat="automation">
+          <div class="upd-punt">🔄</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Automation</span></div>
+          <h3>The extension updates itself</h3>
+          <p>You no longer have to update the Chrome extension by hand. It does it by itself.</p>
+        </article>
+        <article class="upd" data-id="2026-08-shopify-sleutel" data-datum="2026-08-28" data-cat="channels">
+          <div class="upd-punt">🔑</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Channels</span></div>
+          <h3>Shopify connects with your own key</h3>
+          <p>Shopify changed its rules, so you now connect with a small key from your own Shopify. The screen walks you through it in three steps, with videos.</p>
+        </article>
+        <article class="upd" data-id="2026-08-calm" data-datum="2026-08-16" data-cat="automation">
+          <div class="upd-punt">🐢</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Automation</span></div>
+          <h3>Calm mode</h3>
+          <p>Adverts are published a few minutes apart and sold-checks run once an hour. The marketplaces see a person, not a robot.</p>
+        </article>
+        <article class="upd" data-id="2026-07-facebook" data-datum="2026-07-18" data-cat="channels">
+          <div class="upd-punt">📘</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Channels</span></div>
+          <h3>Facebook Marketplace (beta)</h3>
+          <p>Publish to Facebook Marketplace too, in a test phase and at your own risk.</p>
+        </article>
+        <article class="upd" data-id="2026-06-start" data-datum="2026-06-29" data-cat="channels">
+          <div class="upd-punt">🚀</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Channels</span></div>
+          <h3>Omnivaleur starts</h3>
+          <p>The first line of code is written: one place to list your second-hand items and publish them on the marketplaces.</p>
+        </article>
+        </div>
+        <div class="upd-voet">That is how it started. More to come.</div>
+      </div>
+    </div>
+
     <div id="view-help" class="view">
       <!-- De hulp wordt getekend door frontend/onboarding.js (OB.renderHelp):
            schema, iconen, per kanaal wat je nodig hebt, en de vragen die het vaakst
@@ -3882,7 +4099,7 @@ function showView(name) {
   const navName = NAV_PARENT[name] || name;
   document.querySelector('.nav-item[data-view="' + navName + '"]')?.classList.add('active');
   target.querySelectorAll('.subtab').forEach(b => b.classList.toggle('active', b.dataset.sub === name));
-  const titles = { dashboard: 'Dashboard', items: 'Items', analytics: 'Analytics', berichten: 'Messages', calculator: 'Margin calculator', refresh: 'Refresh', import: 'Import listings', stale: 'Stale stock', help: 'Help', platforms: 'Platforms', preferences: 'Preferences', protections: 'Protections', prijs: 'Account', referral: 'Earn 1 month free' };
+  const titles = { dashboard: 'Dashboard', items: 'Items', analytics: 'Analytics', berichten: 'Messages', calculator: 'Margin calculator', refresh: 'Refresh', import: 'Import listings', stale: 'Stale stock', help: 'Help', platforms: 'Platforms', preferences: 'Preferences', protections: 'Protections', prijs: 'Account', referral: 'Earn 1 month free', nieuw: "What's new" };
   document.getElementById('topbar-title').textContent = titles[name] || name;
   // The view is already on screen at this point, so a failing renderer can only
   // leave that one screen incomplete — never blank the app. Report it plainly
@@ -3900,6 +4117,7 @@ function showView(name) {
     if (name === 'import') { renderImportScanButtons(); loadImportCandidates(); }
     if (name === 'stale') { clearSelection(); renderStaleStock(); }
     if (name === 'referral') { loadReferral(!_referral || !!_referral.compact); }
+    if (name === 'nieuw') { renderUpdates(); markeerNieuwsGezien(); }
   } catch (e) {
     console.error('showView(' + name + ') render failed:', e);
     showToast('Something went wrong loading this screen — try refreshing the page.');
@@ -5242,7 +5460,8 @@ async function toonImportSeintje() {
 // nieuws_gezien, dus ook op een andere computer) én in deze browser (voor als
 // de server even niet bereikbaar is). Nooit tonen zolang de instellingen niet
 // binnen zijn: dan weten we niet of hij hem al zag.
-const NIEUWS_ID = '2026-10-dashboard-opgeruimd';
+const NIEUWS_ID = '2026-10-woocommerce';
+const NIEUWS_TOUR = 'woocommerce';
 const NIEUWS_SINDS = '2026-10-10';
 let _nieuwsGetoond = false;
 function _nieuwsAlGezien() {
@@ -5252,6 +5471,7 @@ function _nieuwsAlGezien() {
 function toonNieuws(opVerzoek) {
   const venster = document.getElementById('nieuws-venster');
   if (!venster) return;
+  updateNieuwsBadge();
   if (!opVerzoek) {
     if (_nieuwsGetoond || !state.settings || !('relist_dagen' in state.settings)) return;
     if (_nieuwsAlGezien()) return;
@@ -5292,10 +5512,10 @@ function _rlBestaat(st) {
   const r = el.getBoundingClientRect();
   return r.width >= 4 && r.height >= 4 && r.right > 0 && r.left < innerWidth;
 }
-function startRondleiding() {
+function startRondleiding(tour) {
   sluitNieuws();
   closeSidebar();
-  _rl.stappen = [...document.querySelectorAll('#rondleiding-stappen > div')].map(d => ({
+  _rl.stappen = [...document.querySelectorAll(`#rondleiding-stappen > section[data-tour="${tour || NIEUWS_TOUR}"] > div`)].map(d => ({
     view: d.dataset.view, doel: d.dataset.doel, html: d.innerHTML }));
   _rl.i = -1;
   document.getElementById('rondleiding').hidden = false;
@@ -5396,7 +5616,17 @@ function stopRondleiding() {
 
 function sluitNieuws() {
   document.getElementById('nieuws-venster').style.display = 'none';
+  markeerNieuwsGezien();
+}
+function updateNieuwsBadge() {
+  const b = document.getElementById('nav-nieuw-badge');
+  if (!b || !state.settings || !('relist_dagen' in state.settings)) return;
+  b.style.display = _nieuwsAlGezien() ? 'none' : 'inline-block';
+}
+function markeerNieuwsGezien() {
   try { localStorage.setItem('omni_nieuws_gezien', NIEUWS_ID); } catch (e) {}
+  const b = document.getElementById('nav-nieuw-badge');
+  if (b) b.style.display = 'none';
   if ((state.settings || {}).nieuws_gezien === NIEUWS_ID) return;
   apiFetch(`${API}/api/items/settings`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -5404,6 +5634,42 @@ function sluitNieuws() {
   }).then(r => r.ok ? r.json() : null).then(d => {
     if (d && !('detail' in d)) state.settings = { ...(state.settings || {}), ...d };
   }).catch(() => {});
+}
+
+// ── De updatelog (#view-nieuw) ────────────────────────────────────
+// Datums, tellers en de maandbalken komen uit de berichten zelf: wie een bericht
+// toevoegt hoeft hier niets bij te werken.
+function renderUpdates() {
+  const lijst = document.getElementById('upd-lijst');
+  if (!lijst) return;
+  const taal = document.documentElement.lang === 'nl' ? 'nl-NL' : 'en-GB';
+  const arts = [...lijst.querySelectorAll('.upd')];
+  arts.forEach(a => {
+    const d = new Date(a.dataset.datum + 'T12:00:00');
+    a.querySelector('.upd-datum').textContent = d.toLocaleDateString(taal, { day: 'numeric', month: 'long', year: 'numeric' });
+  });
+  const datums = arts.map(a => new Date(a.dataset.datum + 'T12:00:00')).sort((x, y) => x - y);
+  const dagen = Math.max(1, Math.round((Date.now() - datums[0]) / 864e5));
+  document.getElementById('upd-aantal').textContent = arts.length;
+  document.getElementById('upd-dagen').textContent = dagen;
+  document.getElementById('upd-tempo').textContent = (dagen / arts.length).toFixed(1).replace(/\.0$/, '');
+  const perMaand = {};
+  datums.forEach(d => { const k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); perMaand[k] = (perMaand[k] || 0) + 1; });
+  const hoogste = Math.max(...Object.values(perMaand));
+  document.getElementById('upd-balken').innerHTML = Object.keys(perMaand).sort().map(k => {
+    const [j, m] = k.split('-');
+    const naam = new Date(+j, +m - 1, 1).toLocaleDateString(taal, { month: 'short' });
+    return `<div class="upd-balk"><em>${perMaand[k]}</em><i style="height:${Math.max(8, Math.round(perMaand[k] / hoogste * 40))}px"></i><small>${naam}</small></div>`;
+  }).join('');
+  // Berichten schuiven één voor één in beeld.
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('zichtbaar'); io.unobserve(e.target); } }), { threshold: .12 });
+    arts.forEach(a => { a.classList.remove('zichtbaar'); io.observe(a); });
+  } else arts.forEach(a => a.classList.add('zichtbaar'));
+}
+function filterUpdates(cat) {
+  document.querySelectorAll('#upd-filters .upd-chip').forEach(c => c.classList.toggle('on', c.dataset.cat === cat));
+  document.querySelectorAll('#upd-lijst .upd').forEach(a => { a.hidden = !(cat === 'all' || a.dataset.cat === cat); });
 }
 
 function renderListingBadges(itemId) {
@@ -6953,7 +7219,7 @@ function renderPlatforms() {
     } else if (p.id === 'ebay' && !ok) {
       extra = `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border,#e5e7eb);font-size:11px;color:var(--muted)">Requires a category per item — set it under "eBay category" when creating or editing an item.</div>`;
     }
-    return `<div class="card" style="padding:16px 18px">
+    return `<div class="card" data-plat="${p.id}" style="padding:16px 18px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
         <div style="display:flex;align-items:center;gap:12px">
           <span style="font-size:22px">${p.icon}</span>
