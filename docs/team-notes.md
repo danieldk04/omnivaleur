@@ -16751,3 +16751,14 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
 - Tweede start van de ochtendtaak, 1,5 uur na de eerste. Geen nieuwe aanmeldingen; alle zes klanten ongewijzigd
   sinds 09:30. Janneke: 140 Shopify-producten nog pending, zoals verwacht tot de achterstandsronde (~15:00 UTC).
   Web Store levert nog 1.0.376, upload van 1.0.377 staat open. Niets gerepareerd, geen mailtjes.
+
+## 10-10-2026 11:55: Dagelijkse klantfouten (tweede ochtendstart)
+- Sinds de ronde van 08:54 vijf mislukte opdrachten, geen fout in onze code. 26cf5471: vier Vinted-scans "niet
+  ingelogd" (klant, al afgehandeld). 96e30080: verlengen van m2250784414 (Kelim met foam mat) mislukte; de openbare
+  pagina geeft 410, de advertentie is echt weg. Wachter: die soort als klant beoordeeld, 0 open.
+- Plaatsen loopt weer na het aangevulde tegoed: sinds 08:50 UTC 67 Marktplaats- en 5 2dehands-plaatsingen klaar,
+  0 geannuleerd, 0 hangend op claimed. bcdf9aa4 klikte om 09:21 UTC 104 2dehands-plaatsingen, de eerste ging om 09:53
+  uit; geen vastloper. 0b28c1ce (151) en 1ba42900 (10) wachten bij een extensie die al ruim een dag stil is.
+- Niet gemeten: of er tussen 10:07 en nu nog "couldn't translate" (HTTP 500) bij het plaatsen viel; dat staat alleen
+  in de Railway-logs. /health-tellers zijn leeg door de deploy van 11:51.
+- Klein, niet gerepareerd: de 2dehands-koppeling van dat kelim-item staat bij ons nog op actief.
