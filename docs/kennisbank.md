@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## versie-url-niet-pollen-voor-deploy
+
+*10-10-2026 — Een ?v=-adres opvragen voordat Railway klaar is zet de OUDE inhoud 4 uur vast in Cloudflare onder de nieuwe sleutel*
+
+10-10-2026: na een push vroeg ik `/onboarding.js?v=20261010` elke 15 sec op om te zien of hij live was. Het eerste verzoek kwam vóór de deploy; Cloudflare bewaarde de oude inhoud onder die nieuwe sleutel (cache-control max-age=14400, cf-cache-status HIT). Klanten hadden 4 uur de oude Help gekregen. Opgelost met v=20261010b.
+
+**Why:** het versienummer is juist bedoeld als verse sleutel; wie hem te vroeg opvraagt bederft hem voor iedereen.
+
+**How to apply:** wacht op de app-pagina zelf (`/app?n=willekeurig`, niet lang gecachet) tot die het nieuwe `?v=` noemt, en vraag pas dan het bestand met versienummer één keer op. Zie "deploy-pipeline" en "onboarding-afvinken-op-feiten".
+
+---
+
 ## haiku-5-5-vertalen
 
 *10-10-2026 — "10-10-2026 vertaalreserve naar Haiku 5.5; denkblok vóór de tekst, zelfcorrectie in het antwoord, denken telt mee in max_tokens"*
