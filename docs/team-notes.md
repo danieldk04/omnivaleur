@@ -16727,3 +16727,9 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   minuutgrens is. Twee antwoorden in een kwartier wijst op het dagmaximum.
 - Oplossing ligt bij Daniel: Anthropic-tegoed aanvullen (vertalen is Haiku, fracties van een cent per advertentie;
   rubriekvragen mogen sinds 09-10 niet naar Claude, overige taalvragen max 300 per dag). Niets aan code gewijzigd.
+
+## 10-10-2026 10:05: Kostencheck Anthropic (Chrome verbonden, gemeten)
+- Dagkosten (UTC): 07-10 $6,18, 08-10 $18,00, 09-10 $2,00 (alles Haiku), 10-10 $0. Het saldo staat op -$0,05 ("unpaid balance, add funds"), dus 10-10 is $0 omdat de API dicht zit, niet omdat de rem bewezen werkt.
+- Logs: laatste verzoeken ~22 uur geleden (09-10 rond 12:00 lokaal, dus vóór de rem van ~13:00), nog volle rubriekvragen van 8.939 invoertokens. Daarna niets meer, ook geen verzoeken met 8.9k tokens na de rem. Dat is consistent met een leeg tegoed vanaf ~12:00 UTC+2.
+- /health: taalmodel_sinds_start leeg ({} en {}), server net herstart (commit f51ef90c), dus geen tellerbewijs.
+- Oordeel: niet te bewijzen. Rem is pas aantoonbaar zodra het tegoed is aangevuld en een dag draait. Geen code gewijzigd. Aanvullen blijft nodig voor vertalen en plaatsen (zie vorige entry).
