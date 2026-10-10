@@ -1881,6 +1881,7 @@
         if (!recovered) throw submitErr;
         id = recovered.id;
         console.log(`[Omnivaleur] Vinted create: recovered id ${id} via wardrobe after delayed redirect${recovered.processing ? " (still in Vinted review)" : ""}`);
+        }
       }
       // Use the origin we actually ended up on (Vinted redirects to the
       // account's country domain), so the stored URL is the real one this
