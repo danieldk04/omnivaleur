@@ -1872,15 +1872,15 @@
         if (hoofdletterKlachtVinted()) {
           id = await plaatsMetRustigeTitelVinted(item);
         } else {
-        // Vinted's post-upload "check in progress" review can delay the
-        // /items/{id} redirect past submitListing's wait, so a timeout here does
-        // NOT mean the listing failed. Confirm via the wardrobe before giving up:
-        // the item appears there (as is_processing) within a minute or two, and
-        // we recover its real id. Only if it never shows up is it a real failure.
-        const recovered = await resolveCreatedVintedItem(item, item.platform_listing_id, 90000).catch(() => null);
-        if (!recovered) throw submitErr;
-        id = recovered.id;
-        console.log(`[Omnivaleur] Vinted create: recovered id ${id} via wardrobe after delayed redirect${recovered.processing ? " (still in Vinted review)" : ""}`);
+          // Vinted's post-upload "check in progress" review can delay the
+          // /items/{id} redirect past submitListing's wait, so a timeout here does
+          // NOT mean the listing failed. Confirm via the wardrobe before giving up:
+          // the item appears there (as is_processing) within a minute or two, and
+          // we recover its real id. Only if it never shows up is it a real failure.
+          const recovered = await resolveCreatedVintedItem(item, item.platform_listing_id, 90000).catch(() => null);
+          if (!recovered) throw submitErr;
+          id = recovered.id;
+          console.log(`[Omnivaleur] Vinted create: recovered id ${id} via wardrobe after delayed redirect${recovered.processing ? " (still in Vinted review)" : ""}`);
         }
       }
       // Use the origin we actually ended up on (Vinted redirects to the
