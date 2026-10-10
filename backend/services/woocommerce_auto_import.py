@@ -146,6 +146,10 @@ async def importeer_nieuwe_producten(user_id: str) -> dict:
     client = client_uit(rij[0]) if rij else None
     if not client:
         return {"overgeslagen": "niet gekoppeld"}
+    from backend.services.woocommerce_browser import bereikbaar
+    if not bereikbaar(rij[0]):
+        # Alleen via de browser van de klant, en die is dicht: volgend uur weer.
+        return {"overgeslagen": "wacht op browser"}
 
     nu = datetime.now(timezone.utc)
     stand = inst.get(STAND) or {}

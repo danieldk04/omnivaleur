@@ -16794,3 +16794,30 @@ Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het d
   Railway-klanten, dus SiteGround kan ze ook wantrouwen; toelaten door SiteGround-support blijft nodig.
 - Alternatief: WooCommerce-verkeer via de extensie op de computer van de klant (zijn eigen IP). Veel werk en een
   nieuwe extensieversie. Besluit ligt bij Daniel.
+
+## 10-10-2026 17:45: WooCommerce via de browser van de klant (Daniel: "optie 1, geen extra kosten")
+- Waarom: SiteGround geeft ons Railway-IP een captcha (gemeten 16:30). Vast IP = Railway Pro, wilde Daniel niet.
+- Hoe: het dashboard is een doorgeefluik (backend/services/woocommerce_browser.py). De server zet een verzoek
+  klaar, het dashboard voert het uit met fetch (zonder cookies) en geeft het antwoord terug. Het is een
+  httpx-transport, dus WooClient en alles erboven werkt ongewijzigd. Gemeten op dejuistetoon.eu: WordPress
+  staat omnivaleur.com toe (CORS, Authorization mag mee), en een echte Chromium vond de API en kreeg de
+  WooCommerce-401 netjes te lezen.
+- Koppelen: server zegt 409 + kopregel X-Woo-Via-Browser; het dashboard zoekt /wp-json/ zelf en koppelt via
+  de knop of de sleutel. extra_data.via_browser = true.
+- Verkopen in de winkel: WooCommerce-webhook (order.created/updated) naar /api/platforms/woocommerce/webhook/
+  <token>, met handtekening; aangemaakt via de browser en bij elke browserronde (hooguit elk kwartier)
+  nagekeken en weer aangezet als WooCommerce hem uitzette.
+- Elders verkocht zonder open dashboard: extra_data.wacht_op_browser; gaat op uitverkocht zodra er een
+  browser is. Bestellingenronde en auto-import slaan zo'n winkel over zonder storing te melden.
+- Bewust niet: voorraadwinkels met meerdere stuks krijgen zonder browser geen "één stuk eraf" (de bestaande
+  terugval BLIJFT geldt); de advertentiecontrole (get_listing_status) belast de browser niet.
+- Getest: 16 proeven met nagebootste winkel en browser, een proef in een echte Chromium tegen een https-winkel
+  met WordPress-CORS en SiteGround-nabootsing (zonder CORS-toestemming faalt hij, zoals hoort), en dezelfde
+  proef op GitHub tegen een echte WooCommerce (WordPress Playground) achter dezelfde nabootsing, vier keer
+  achter elkaar. Onderweg gevonden: kwam de browser terug terwijl er nog een onderhoudsronde liep, dan bleef
+  de wachtrij een kwartier liggen; nu wordt die gemiste aanleiding onthouden (_Klant.wachtrij). En: ging
+  een tabblad dicht net nadat het een verzoek had opgehaald, dan wachtte de server 80 s per poging op een
+  antwoord dat nooit kwam. Nu telt een browser als weg zodra hij WACHT_S + 15 s niets vroeg, en mislukt
+  zo'n verzoek meteen (afmelding naar de wachtrij).
+- De proef-workflow staat alleen op branch woo-via-browser (.github/workflows/woo-browser-proef.yml), niet op
+  main; draai hem daar opnieuw bij een wijziging aan deze route.

@@ -40,7 +40,9 @@ def _post(client, staat, ck="ck_" + "a" * 40, cs="cs_" + "b" * 40):
 def test_geldige_staat_geeft_200_en_controleert_de_sleutel(monkeypatch):
     gezien = []
 
-    async def _controle(user_id, api_root, ck, cs): gezien.append((user_id, api_root, ck[:3], cs[:3]))
+    async def _controle(user_id, api_root, ck, cs, via_browser=False):
+        gezien.append((user_id, api_root, ck[:3], cs[:3]))
+        assert via_browser is False, "een gewone staat is geen browserkoppeling"
     monkeypatch.setattr(api, "_woo_controleer_en_bewaar", _controle)
     r = _post(_app(), w.maak_staat("user-1", API_ROOT))
     assert r.status_code == 200

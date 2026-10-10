@@ -78,9 +78,35 @@ def _besteldatum(order: dict) -> str | None:
     return (d + "Z") if d and not d.endswith("Z") else d
 
 
+async def verwerk_bestelling(db, user_id: str, order: dict) -> int:
+    """Eén betaalde bestelling afhandelen: de verkochte artikelen elders weghalen.
+
+    Gedeeld door de ronde hieronder en de webhook (winkels die alleen via de
+    browser van de klant bereikbaar zijn, services/woocommerce_browser.py)."""
+    from backend.platforms.woocommerce import BETAALDE_STATUSSEN
+    from backend.services.crosslist import BEWIJS_BESTELLING, handle_item_sold
+
+    if order.get("status") not in BETAALDE_STATUSSEN:
+        return 0
+    verwerkt = 0
+    gezien: set[str] = set()
+    for ref in regels_uit_bestelling(order):
+        try:
+            item_id = await match_verkoop(db, user_id, ref)
+            if not item_id or item_id in gezien:
+                continue
+            gezien.add(item_id)
+            await handle_item_sold(item_id, PLATFORM, sold_price=ref.get("price"),
+                                   sold_at=_besteldatum(order), bewijs=BEWIJS_BESTELLING)
+            verwerkt += 1
+        except Exception as e:  # noqa: BLE001
+            logger.warning("woocommerce-verkoopcontrole: %s / bestelling %s regel %s: %s",
+                           user_id[:8], order.get("id"), ref.get("product_id") or ref.get("sku"), e)
+    return verwerkt
+
+
 async def controleer_winkel(db, rij: dict, nu: datetime) -> int:
     """Eén winkel nalopen. Geeft het aantal afgehandelde verkopen."""
-    from backend.services.crosslist import BEWIJS_BESTELLING, handle_item_sold
     from backend.services.woocommerce_scan import bewaar_modus
 
     user_id = rij["user_id"]
@@ -100,19 +126,7 @@ async def controleer_winkel(db, rij: dict, nu: datetime) -> int:
 
     verwerkt = 0
     for order in orders:
-        gezien: set[str] = set()
-        for ref in regels_uit_bestelling(order):
-            try:
-                item_id = await match_verkoop(db, user_id, ref)
-                if not item_id or item_id in gezien:
-                    continue
-                gezien.add(item_id)
-                await handle_item_sold(item_id, PLATFORM, sold_price=ref.get("price"),
-                                       sold_at=_besteldatum(order), bewijs=BEWIJS_BESTELLING)
-                verwerkt += 1
-            except Exception as e:  # noqa: BLE001
-                logger.warning("woocommerce-verkoopcontrole: %s / bestelling %s regel %s: %s",
-                               user_id[:8], order.get("id"), ref.get("product_id") or ref.get("sku"), e)
+        verwerkt += await verwerk_bestelling(db, user_id, order)
 
     # Merkteken pas na een geslaagde ronde. Opnieuw lezen: andere routines
     # schrijven ook in extra_data (voorraadvlag, inlogmodus).
@@ -162,7 +176,13 @@ async def controleer_woocommerce_verkopen() -> dict:
 
     nu = datetime.now(timezone.utc)
     verwerkt = 0
+    from backend.services.woocommerce_browser import bereikbaar
     for rij in winkels:
+        if not bereikbaar(rij):
+            # Alleen via de browser van de klant bereikbaar en die is dicht. Geen
+            # storing: verkopen komen via de webhook, en deze ronde haalt de rest
+            # in zodra er weer een browser is (het merkteken blijft staan).
+            continue
         try:
             verwerkt += await controleer_winkel(db, rij, nu)
         except WooFout as e:

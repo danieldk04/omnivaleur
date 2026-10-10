@@ -693,7 +693,8 @@ WOO_RETURN_URL = "https://omnivaleur.com/app#platforms"
 WOO_CALLBACK_URL = "https://omnivaleur.com/api/platforms/woocommerce/callback"
 
 
-def _bewaar_woo(user_id: str, ck: str, cs: str, gegevens: dict, hoe: str) -> None:
+def _bewaar_woo(user_id: str, ck: str, cs: str, gegevens: dict, hoe: str,
+                via_browser: bool = False) -> None:
     from backend.platforms.woocommerce import PLATFORM
     db = get_db()
     # De voorraadvlag en het merkteken van de bestellingen blijven staan bij
@@ -706,18 +707,54 @@ def _bewaar_woo(user_id: str, ck: str, cs: str, gegevens: dict, hoe: str) -> Non
              "modus": gegevens["modus"], "koppeling": hoe}
     extra.pop("verkoop_fout", None)
     extra.pop("koppeling_kapot", None)
+    if via_browser:
+        extra["via_browser"] = True
+    else:
+        extra.pop("via_browser", None)
     _save_credentials(user_id, PLATFORM, {"access_token": ck, "refresh_token": cs,
                                           "extra_data": extra})
 
 
+# Kopregel bij een 409: de winkel laat onze server niet binnen, het dashboard
+# moet het via de browser van de klant doen (services/woocommerce_browser.py).
+# Een kopregel en geen 200 met een vlag: een oude, gecachete app.html las een
+# 200 als "gekoppeld".
+VIA_BROWSER_KOP = "X-Woo-Via-Browser"
+
+
+def _browser_api_root(adres: str, api_root: str | None) -> str | None:
+    """Het API-adres dat de browser vond, als het bij deze winkel hoort."""
+    from urllib.parse import urlsplit
+    if not api_root:
+        return None
+    a, w = urlsplit(adres), urlsplit(api_root)
+    kaal = lambda h: (h or "").lower().removeprefix("www.")  # noqa: E731
+    if w.scheme != "https" or kaal(w.hostname) != kaal(a.hostname):
+        return None
+    if "/wp-json" not in w.path and "rest_route=" not in w.query:
+        return None
+    return api_root
+
+
 @router.get("/woocommerce/auth-url")
-async def woocommerce_auth_url(store: str, user_id: str = Depends(get_current_user)):
+async def woocommerce_auth_url(store: str, api_root: str | None = None,
+                               user_id: str = Depends(get_current_user)):
+    """Het toestemmingsadres in de winkel. Met `api_root`: dat vond de browser
+    zelf, omdat de winkel onze server niet binnenlaat (409 hieronder)."""
     from backend.platforms.woocommerce import (WooFout, koppel_url, maak_staat,
                                                normaliseer_adres, ontdek_api)
     adres = normaliseer_adres(store)
     if not adres:
         raise HTTPException(status_code=400,
                             detail="Enter your shop's address, for example yourshop.nl.")
+    if api_root:
+        gevonden = _browser_api_root(adres, api_root)
+        if not gevonden:
+            raise HTTPException(status_code=400,
+                                detail="Enter your shop's address, for example yourshop.nl.")
+        return {"url": koppel_url(gevonden, maak_staat(user_id, gevonden, browser=True),
+                                  WOO_RETURN_URL, WOO_CALLBACK_URL),
+                "site": gevonden, "via_browser": True}
     try:
         api_root = await ontdek_api(adres)
     except WooFout as e:
@@ -728,6 +765,8 @@ async def woocommerce_auth_url(store: str, user_id: str = Depends(get_current_us
                                                      user_id, adres, e), timeout=10)
         except Exception:  # noqa: BLE001 — de mail mag de melding niet tegenhouden
             pass
+        if e.soort == "geblokkeerd":
+            raise HTTPException(status_code=409, detail=str(e), headers={VIA_BROWSER_KOP: "1"})
         raise HTTPException(status_code=400, detail=str(e))
     if not api_root.lower().startswith("https://"):
         # WooCommerce stuurt de sleutel alleen naar een https-adres, en over http
@@ -760,12 +799,26 @@ async def woocommerce_callback(request: Request, background_tasks: BackgroundTas
         logger.warning("woocommerce-callback geweigerd: staat %s, sleutel %s",
                        "geldig" if staat else "ongeldig", "ja" if ck else "nee")
         raise HTTPException(status_code=403, detail="invalid state")
-    background_tasks.add_task(_woo_controleer_en_bewaar, staat["u"], staat["a"], ck, cs)
+    background_tasks.add_task(_woo_controleer_en_bewaar, staat["u"], staat["a"], ck, cs,
+                              bool(staat.get("b")))
     return {"ok": True}
 
 
-async def _woo_controleer_en_bewaar(user_id: str, api_root: str, ck: str, cs: str) -> None:
-    from backend.platforms.woocommerce import WooFout, controleer_sleutels
+async def _woo_controleer_en_bewaar(user_id: str, api_root: str, ck: str, cs: str,
+                                    via_browser: bool = False) -> None:
+    from backend.platforms.woocommerce import WooFout, controleer_sleutels, site_van_api
+    if via_browser:
+        # De winkel laat onze server niet binnen, dus hier niet controleren. De
+        # sleutel komt van de winkel zelf, na Approve, met onze getekende staat:
+        # die is echt. Het dashboard controleert hem via de browser zodra de
+        # klant terug is (/woocommerce/browser-controle).
+        await naast_de_lus(lambda: _bewaar_woo(user_id, ck, cs, {
+            "api_root": api_root, "site": site_van_api(api_root), "modus": "basic"},
+            "knop", via_browser=True))
+        _woo_mislukt.pop(user_id, None)
+        logger.info("woocommerce: %s gekoppeld via de knop, via de browser (%s)",
+                    user_id[:8], api_root)
+        return
     try:
         gegevens = await controleer_sleutels(api_root, ck, cs)
     except WooFout as e:
@@ -796,21 +849,37 @@ _woo_mislukt: dict[str, str] = {}
 async def woocommerce_connect_keys(body: dict, user_id: str = Depends(get_current_user)):
     """Koppelen met een sleutel die de verkoper zelf in WooCommerce aanmaakte.
 
-    Body: {"store": "mijnwinkel.nl", "consumer_key": "ck_...", "consumer_secret": "cs_..."}"""
-    from backend.platforms.woocommerce import WooFout, controleer_sleutels
+    Body: {"store": "mijnwinkel.nl", "consumer_key": "ck_...", "consumer_secret": "cs_..."}
+    Met "api_root" erbij (wat de browser vond): de winkel laat onze server niet
+    binnen en de sleutel wordt via de browser van de klant gecontroleerd."""
+    from backend.platforms.woocommerce import WooFout, controleer_sleutels, normaliseer_adres
+    from backend.services import woocommerce_browser as wb
     store = str(body.get("store") or "").strip()
+    browser_root = _browser_api_root(normaliseer_adres(store), str(body.get("api_root") or "")) \
+        if body.get("api_root") else None
+    if body.get("api_root") and not browser_root:
+        raise HTTPException(status_code=400, detail="Enter your shop's address, for example yourshop.nl.")
+    if browser_root and not await wb.wacht_op_browser(user_id):
+        raise HTTPException(status_code=409, detail=wb.GEEN_BROWSER_MELDING)
     try:
-        gegevens = await controleer_sleutels(store, str(body.get("consumer_key") or ""),
-                                             str(body.get("consumer_secret") or ""))
+        gegevens = await controleer_sleutels(
+            browser_root or store, str(body.get("consumer_key") or ""),
+            str(body.get("consumer_secret") or ""),
+            transport=wb.BrowserTransport(user_id) if browser_root else None)
     except WooFout as e:
         try:
             await asyncio.wait_for(asyncio.to_thread(_meld_mislukte_woo_koppeling,
                                                      user_id, store, e), timeout=10)
         except Exception:  # noqa: BLE001 — de mail mag de melding niet tegenhouden
             pass
+        if e.soort == "geblokkeerd" and not browser_root:
+            raise HTTPException(status_code=409, detail=str(e), headers={VIA_BROWSER_KOP: "1"})
         raise HTTPException(status_code=400, detail=str(e))
     await naast_de_lus(lambda: _bewaar_woo(user_id, str(body["consumer_key"]).strip(),
-                                           str(body["consumer_secret"]).strip(), gegevens, "sleutel"))
+                                           str(body["consumer_secret"]).strip(), gegevens, "sleutel",
+                                           via_browser=bool(browser_root)))
+    if browser_root:
+        await _woo_webhook_op_achtergrond(user_id)
     return {"status": "connected", "platform": "woocommerce", "site": gegevens["site"],
             "producten": gegevens.get("producten")}
 
@@ -822,9 +891,106 @@ def woocommerce_info(user_id: str = Depends(get_current_user)):
     rij = (get_db().table("platform_credentials").select("extra_data").eq("user_id", user_id)
            .eq("platform", PLATFORM).limit(1).execute().data or [])
     extra = (rij[0].get("extra_data") if rij else None) or {}
+    from backend.services.woocommerce_browser import WACHTRIJ
     return {"connected": bool(rij), "site": extra.get("site"),
             "verkoop_fout": extra.get("verkoop_fout"),
+            "via_browser": bool(extra.get("via_browser")),
+            "wacht_op_browser": len(extra.get(WACHTRIJ) or []),
             "mislukt": None if rij else _woo_mislukt.get(user_id)}
+
+
+# ── Via de browser van de klant (services/woocommerce_browser.py) ────────
+
+async def _woo_webhook_op_achtergrond(user_id: str) -> None:
+    """Webhook regelen zonder het koppelen op te houden of te laten mislukken."""
+    from backend.services.woocommerce_browser import houd_vast, zorg_voor_webhook
+
+    async def _doe():
+        try:
+            uit = await zorg_voor_webhook(get_db(), user_id)
+            logger.info("woocommerce: webhook voor %s: %s", user_id[:8], uit)
+        except Exception as e:  # noqa: BLE001 — bij de volgende browserronde opnieuw
+            logger.warning("woocommerce: webhook voor %s niet geregeld: %s", user_id[:8], e)
+    houd_vast(asyncio.get_running_loop().create_task(_doe()))
+
+
+@router.get("/woocommerce/browser/opdrachten")
+async def woocommerce_browser_opdrachten(user_id: str = Depends(get_current_user)):
+    """Het dashboard vraagt: moet ik iets bij de winkel doen? Wacht hooguit 25 s."""
+    from backend.services.woocommerce_browser import haal_opdrachten
+    return {"opdrachten": await haal_opdrachten(user_id)}
+
+
+@router.post("/woocommerce/browser/antwoord")
+async def woocommerce_browser_antwoord(body: dict, user_id: str = Depends(get_current_user)):
+    from backend.services.woocommerce_browser import lever_antwoord
+    return {"ok": lever_antwoord(user_id, str(body.get("id") or ""), body)}
+
+
+@router.post("/woocommerce/browser-controle")
+async def woocommerce_browser_controle(user_id: str = Depends(get_current_user)):
+    """Na koppelen met de knop: werkt de sleutel via de browser? Regelt ook de webhook."""
+    from backend.platforms.woocommerce import PLATFORM, WooFout, controleer_sleutels
+    from backend.services import woocommerce_browser as wb
+    rij = ((await naast_de_lus(lambda: get_db().table("platform_credentials").select("*")
+            .eq("user_id", user_id).eq("platform", PLATFORM).limit(1).execute())).data or [])
+    if not rij or not wb.via_browser(rij[0]):
+        raise HTTPException(status_code=404, detail="Your WooCommerce shop isn't connected yet. "
+                                                    "Connect it under Platforms first.")
+    extra = rij[0].get("extra_data") or {}
+    if not await wb.wacht_op_browser(user_id):
+        raise HTTPException(status_code=409, detail=wb.GEEN_BROWSER_MELDING)
+    try:
+        gegevens = await controleer_sleutels(extra["api_root"], rij[0]["access_token"],
+                                             rij[0]["refresh_token"],
+                                             transport=wb.BrowserTransport(user_id))
+    except WooFout as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    await _woo_webhook_op_achtergrond(user_id)
+    return {"ok": True, "site": gegevens["site"], "producten": gegevens.get("producten")}
+
+
+@router.post("/woocommerce/webhook/{token}")
+async def woocommerce_webhook(token: str, request: Request, background_tasks: BackgroundTasks):
+    """Hier meldt de WINKEL zelf een bestelling (alleen bij winkels via de browser).
+
+    Openbaar: de winkel roept dit aan. Wie het is zegt het token in het adres,
+    dat het echt de winkel is zegt de handtekening (geheim bij het aanmaken).
+    Altijd snel 200 bij een geldig token: WooCommerce zet de webhook anders na
+    vijf mislukte afleveringen stil uit."""
+    from backend.platforms.woocommerce import PLATFORM
+    from backend.services.woocommerce_browser import handtekening_klopt
+    from backend.services.woocommerce_orders import verwerk_bestelling
+    if not re.fullmatch(r"[0-9a-f]{32}", token or ""):
+        raise HTTPException(status_code=404, detail="unknown")
+    rijen = ((await naast_de_lus(lambda: get_db().table("platform_credentials")
+              .select("user_id,extra_data").eq("platform", PLATFORM).limit(1000).execute())).data or [])
+    rij = next((r for r in rijen if (r.get("extra_data") or {}).get("webhook_token") == token), None)
+    if not rij:
+        raise HTTPException(status_code=404, detail="unknown")
+    inhoud = await request.body()
+    if inhoud.startswith(b"webhook_id="):
+        return {"ok": True}     # de proefmelding bij het aanmaken
+    if not handtekening_klopt((rij.get("extra_data") or {}).get("webhook_geheim") or "", inhoud,
+                              request.headers.get("x-wc-webhook-signature")):
+        logger.warning("woocommerce-webhook: handtekening klopt niet voor %s", rij["user_id"][:8])
+        raise HTTPException(status_code=401, detail="bad signature")
+    try:
+        import json
+        order = json.loads(inhoud)
+    except ValueError:
+        return {"ok": True}
+    if isinstance(order, dict) and order.get("line_items") is not None:
+        async def _verwerk():
+            try:
+                n = await verwerk_bestelling(get_db(), rij["user_id"], order)
+                if n:
+                    logger.info("woocommerce-webhook: %s bestelling %s, %d verkoop/verkopen",
+                                rij["user_id"][:8], order.get("id"), n)
+            except Exception:  # noqa: BLE001
+                logger.exception("woocommerce-webhook: bestelling %s niet verwerkt", order.get("id"))
+        background_tasks.add_task(_verwerk)
+    return {"ok": True}
 
 
 _WOO_ALARM_SINDS: dict = {}
