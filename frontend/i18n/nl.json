@@ -3595,5 +3595,6 @@
  "Not on WooCommerce yet": "Nog niet op WooCommerce",
  "WooCommerce — no commission (your payment provider charges its own fee)": "WooCommerce: geen commissie (je betaalprovider rekent wel zijn eigen kosten)",
  "Which platform did \"{0}\" sell on? (marktplaats, 2dehands, vinted, ebay, shopify, woocommerce)": "Op welk platform is \"{0}\" verkocht? (marktplaats, 2dehands, vinted, ebay, shopify, woocommerce)",
- "WooCommerce (€)": "WooCommerce (€)"
+ "WooCommerce (€)": "WooCommerce (€)",
+ "Shpfy": "Shpfy"
 }
