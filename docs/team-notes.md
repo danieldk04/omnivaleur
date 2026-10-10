@@ -16717,3 +16717,13 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
 - Janneke verder: proef loopt af 11-10 21:06 zonder betaalmethode; Vinted-fouten wachten op extensie 1.0.377.
 - Amanda 8f91a370: ongewijzigd sinds de klantfoutenronde, extensie stil sinds 09-10 14:43, call ma 12-10.
 - robbertbolier, partablecs, winterhome, amhin: ongewijzigd, nul artikelen, al gemaild. Geen mailtjes vandaag.
+
+## 10-10-2026 10:00: Plaatsen naar Marktplaats/2dehands geblokkeerd, beide vertaaldiensten plat (Daniel zag het zelf)
+- Melding bij plaatsen: "Publishing is on hold: we couldn't translate this listing" (HTTP 500), item (665) Ralph Lauren.
+- Gemeten: Anthropic-sleutel geeft 400 "credit balance is too low" (proefvraag 09:59). Gratis Google-sleutel ddf59aed
+  op de server: sinds de herstart van 09:44 642x HTTP 429 tegen 2x 200, 76 vragen zonder antwoord, en het loopt door
+  (~4 vragen per minuut, 89 keer 429 in 3 minuten). Dus elke vertaling faalt, voor elke klant met Engelse tekst.
+- Niet gemeten: wie die ~4 vragen per minuut stelt (Railway-logs niet bereikbaar) en of de 429 het dagmaximum of een
+  minuutgrens is. Twee antwoorden in een kwartier wijst op het dagmaximum.
+- Oplossing ligt bij Daniel: Anthropic-tegoed aanvullen (vertalen is Haiku, fracties van een cent per advertentie;
+  rubriekvragen mogen sinds 09-10 niet naar Claude, overige taalvragen max 300 per dag). Niets aan code gewijzigd.
