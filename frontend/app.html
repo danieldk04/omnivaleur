@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=89e8896ac5"></script>
+<script src="/i18n.js?v=232f92f03c"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -3544,7 +3544,7 @@ async function apiFetchRetry(url, opts = {}, tries = 3) {
 // Etsy is not built yet (shown as "Coming soon" on the Platforms page only) — it
 // must never appear as a publishable target in item rows, the crosslist picker,
 // analytics or the calculator, so it's deliberately left out of this list.
-const PLATFORMS = ['marktplaats', '2dehands', 'vinted', 'facebook', 'ebay', 'shopify'];
+const PLATFORMS = ['marktplaats', '2dehands', 'vinted', 'facebook', 'ebay', 'shopify', 'woocommerce'];
 // Publish server-side via official API — must be connected before they can be selected.
 const API_PLATFORMS_FE = new Set(['ebay', 'shopify', 'woocommerce']);
 // Scans die de server zelf doet met de sleutel van de winkel; de extensie doet hier niets.
@@ -5095,9 +5095,6 @@ async function _loadAllNu(opties = {}) {
   if (platformsRes.status === 'fulfilled' && Array.isArray(platformsRes.value?.connected)) {
     state.connected = platformsRes.value.connected;
     state.opnieuwKoppelen = platformsRes.value.opnieuw_koppelen || [];
-    // WooCommerce staat alleen in de rij kanaaliconen bij wie hem gekoppeld
-    // heeft; bij iedereen anders zou het een grijs icoon zijn dat niets doet.
-    if (state.connected.includes('woocommerce') && !PLATFORMS.includes('woocommerce')) PLATFORMS.push('woocommerce');
   }
   // De eigen voorkeur moet binnen zijn vóór er iets wordt ingedeeld, anders
   // oordeelt het scherm even met een lege instelling en ziet hij artikelen die
@@ -8391,7 +8388,7 @@ async function markSoldItem(itemId, title) {
   let platform;
   if (platforms.length === 0) {
     // No tracked live listing — still let the user record the sale, ask where.
-    platform = prompt(`Which platform did "${title}" sell on?\n(marktplaats, 2dehands, vinted, ebay, shopify)`);
+    platform = prompt(`Which platform did "${title}" sell on?\n(marktplaats, 2dehands, vinted, ebay, shopify, woocommerce)`);
     if (!platform) return;
     platform = platform.trim().toLowerCase();
     if (!PLATFORM_LABELS[platform]) return alert('Unknown platform: ' + platform);
@@ -14329,7 +14326,7 @@ function renderAnalytics(force) {
     byPlatform[p].count++;
   }
   const maxRev = Math.max(...Object.values(byPlatform).map(v => v.rev), 1);
-  const platColors = { marktplaats: '#e63946', '2dehands': '#e63946', vinted: '#09b7a4', ebay: '#e53238', etsy: '#f1641e', shopify: '#96bf48' };
+  const platColors = { marktplaats: '#e63946', '2dehands': '#e63946', vinted: '#09b7a4', ebay: '#e53238', etsy: '#f1641e', shopify: '#96bf48', woocommerce: '#7f54b3' };
 
   const platList = document.getElementById('an-platform-list');
   if (!Object.keys(byPlatform).length) {

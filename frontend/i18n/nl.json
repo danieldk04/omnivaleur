@@ -2751,7 +2751,6 @@
  "Where your listings say you are": "Waar je advertenties zeggen dat je bent",
  "Which channel did it actually sell on? This listing is gone from {0}, but the sale may have happened elsewhere — the revenue is recorded on the channel you name here. Type one of: {1}": "Op welk kanaal is het echt verkocht?\n\nDeze advertentie is weg van {0}, maar de verkoop kan elders gebeurd zijn; de omzet wordt geboekt op het kanaal dat je hier noemt.\n\nTyp een van deze: {1}",
  "Which language should I write in?": "In welke taal moet ik schrijven?",
- "Which platform did \"{0}\" sell on? (marktplaats, 2dehands, vinted, ebay, shopify)": "Op welk platform is \"{0}\" verkocht? (marktplaats, 2dehands, vinted, ebay, shopify)",
  "Which platform did \"{0}\" sell on? Live on: {1} Type one of: {2}": "Op welk platform is \"{0}\" verkocht?\nLive op: {1}\n\nTyp een van deze: {2}",
  "while": "terwijl",
  "While adverts are being placed, yes: the work runs in your own Chrome. Once everything is out you can switch it off. If your computer is off while work is waiting, you'll get an email.": "Zolang er advertenties geplaatst worden, ja: het werk draait in je eigen Chrome. Is alles online, dan kun je hem uitzetten. Staat je computer uit terwijl er werk wacht, dan krijg je een e-mail.",
@@ -3594,5 +3593,6 @@
  "From Shopify to Marktplaats, Vinted and 2dehands": "Van Shopify naar Marktplaats, Vinted en 2dehands",
  "How to read in your Shopify store, import your products and list them on the other marketplaces.": "Hoe je je Shopify-winkel inleest, je producten importeert en ze op de andere marktplaatsen zet.",
  "Not on WooCommerce yet": "Nog niet op WooCommerce",
- "WooCommerce — no commission (your payment provider charges its own fee)": "WooCommerce: geen commissie (je betaalprovider rekent wel zijn eigen kosten)"
+ "WooCommerce — no commission (your payment provider charges its own fee)": "WooCommerce: geen commissie (je betaalprovider rekent wel zijn eigen kosten)",
+ "Which platform did \"{0}\" sell on? (marktplaats, 2dehands, vinted, ebay, shopify, woocommerce)": "Op welk platform is \"{0}\" verkocht? (marktplaats, 2dehands, vinted, ebay, shopify, woocommerce)"
 }

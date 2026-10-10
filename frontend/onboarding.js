@@ -47,7 +47,7 @@
   const g = (naam) => { try { return GLOBAAL[naam](); } catch (e) { return undefined; } };
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const EMOJI = { marktplaats: "🟧", "2dehands": "🟦", vinted: "🟩", facebook: "📘", ebay: "🛒", shopify: "🛍️" };
+  const EMOJI = { marktplaats: "🟧", "2dehands": "🟦", vinted: "🟩", facebook: "📘", ebay: "🛒", shopify: "🛍️", woocommerce: "🛍️" };
   function logo(p, size) {
     const f = g("platIcon");
     return typeof f === "function" ? f(p, size || 16) : (EMOJI[p] || "🏪");
