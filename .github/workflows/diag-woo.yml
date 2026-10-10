@@ -7,10 +7,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          for u in https://dejuistetoon.eu/wp-json/wc/v3/products "https://dejuistetoon.eu/?rest_route=/wc/v3/products"; do
-          echo "######## OPTIONS $u"
-          curl -sS -m 20 -X OPTIONS -D - -o /dev/null -H "Origin: https://omnivaleur.com" -H "Access-Control-Request-Method: GET" -H "Access-Control-Request-Headers: authorization" "$u" | grep -i -E "^HTTP|^access-control|^sg-captcha|^vary"
-          echo "######## GET $u (Origin, Basic met onzin-sleutel)"
-          curl -sS -m 20 -D - -o b.txt -H "Origin: https://omnivaleur.com" -u "ck_test:cs_test" "$u" | grep -i -E "^HTTP|^access-control|^sg-captcha"
-          head -c 200 b.txt; echo
+          for i in $(seq 1 30); do
+            c=$(curl -s -m 20 https://omnivaleur.com/health | python3 -c "import sys,json; print(json.load(sys.stdin).get('commit'))" 2>/dev/null)
+            echo "$(date -u +%T) commit=$c"
+            case "$c" in eae7352*) echo LIVE; break;; esac
+            sleep 30
           done
+          echo "webhook (onbekend token):"; curl -s -X POST -d '{}' https://omnivaleur.com/api/platforms/woocommerce/webhook/00000000000000000000000000000000; echo
+          echo "opdrachten zonder inlog:"; curl -s -o /dev/null -w "%{http_code}\n" https://omnivaleur.com/api/platforms/woocommerce/browser/opdrachten
+          echo "app.html bevat het doorgeefluik:"; curl -s https://omnivaleur.com/app | grep -c "function wooDoorgeefStart"
+          echo "nl.json bevat de vertaling:"; curl -s "https://omnivaleur.com/i18n/nl.json" | grep -c "we koppelen via deze browser"
+          case "$c" in eae7352*) exit 0;; esac
+          exit 1
