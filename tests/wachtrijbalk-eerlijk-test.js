@@ -54,7 +54,7 @@ function nepScherm() {
   return { knopen, getElementById: (id) => knopen[id] || null };
 }
 
-function draai({ queued, pace, online, kanalen, per_soort }) {
+function draai({ queued, pace, online, kanalen, per_soort, browser }) {
   const scherm = nepScherm();
   const bron = [
     constanteUit("KANAAL_SITE"),
@@ -63,6 +63,7 @@ function draai({ queued, pace, online, kanalen, per_soort }) {
     constanteUit("WACHT_NAAMWOORD"),
     "const PLATFORM_LABELS = { marktplaats: 'Marktplaats', '2dehands': '2dehands', vinted: 'Vinted' };",
     "const esc = (s) => String(s);",
+    `const _andereBrowser = () => ${JSON.stringify(browser || null)};`,
     functieUit("wachtrijOverzicht"),
     functieUit("renderActivityBar"),
     "renderActivityBar();",
@@ -105,6 +106,19 @@ check("zegt dat er niets loopt", /nothing is running/i.test(stil.titel));
 check("belooft geen 15 seconden aan een stille extensie", !/15 seconds/.test(stil.tekst), stil.tekst.slice(0, 120));
 check("wijst naar chrome://extensions", /chrome:\/\/extensions/.test(stil.tekst));
 check("stelt gerust dat er niets verloren gaat", /Nothing is lost/.test(stil.tekst));
+
+// 10-10-2026, Janneke: "Er is een wachtrij, maar gebeurt niks." Ze keek in
+// Safari, waar de extensie niet bestaat, en de balk stuurde haar naar
+// chrome://extensions. Op de oude app.html faalt dit blok.
+console.log("In Safari zegt de balk dat het aan de browser ligt");
+for (const online of [false, null]) {
+  const safari = draai({ queued: VIJFTIG.slice(0, 2), pace: null, online, browser: "Safari" });
+  check(`noemt Safari in de titel (online=${online})`, /you are in Safari/.test(safari.titel), safari.titel);
+  check(`stuurt naar Chrome (online=${online})`, /omnivaleur\.com\/app in Google Chrome/.test(safari.tekst), safari.tekst.slice(0, 160));
+  check(`belooft geen start binnen 15 seconden (online=${online})`, !/15 seconds/.test(safari.tekst));
+}
+const safariLevend = draai({ queued: VIJFTIG.slice(0, 2), pace: null, online: true, browser: "Safari" });
+check("draait Chrome ergens wel, dan geen Safari-verwijt", !/Safari/.test(safariLevend.titel + safariLevend.tekst));
 
 console.log("Weten we het tempo niet, dan doen we geen bewering");
 const onbekend = draai({ queued: VIJFTIG, pace: { calm: false, seconds_between: null, samples: 0 }, online: null });
