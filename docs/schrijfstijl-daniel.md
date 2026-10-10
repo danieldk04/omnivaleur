@@ -28,7 +28,7 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
   helemaal weg: direct "Zelf kost je dat geen tijd...", "Fijn dat het filter staat."
 - Bij klanten in een lopend gesprek is "Hoi Voornaam," de gewone aanhef (02-10: ruim de
   helft van de mails), "Hi Voornaam," vooral bij nieuwe of zakelijke contacten.
-- Soms staat er een punt achter de naam: "Daniel." Beide vormen komen voor (08-10: 2x, 09-10: 1x, steeds bij een nee-mail).
+- Soms staat er een punt achter de naam: "Daniel." Beide vormen komen voor (08-10: 2x, 09-10: 1x, 10-10: 2x, vooral bij een nee-mail en een kort afspraakmailtje). Soms ook geen lege regel tussen "Groetjes," en "Daniel" (10-10: 2x), dus laat dat zoals het in zijn eigen mails staat.
 - Aanhef met voornaam in een lopend gesprek schrapt hij vaak: mijn "Hoi Egbert," werd 2x niets, en
   "Hi Martijn," bleef staan. Bij een antwoord op een vraag zet hij liever "Hi," of niets.
 
@@ -76,7 +76,7 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 
 - Video aanbieden of sturen: altijd de korte link https://omnivaleur.com/mp (stuurt door naar de
   leadpagina en zet de herkomst voor Analytics; de lange /mp-video telt als "direct"), met "duurt 2 minuutjes".
-- Videomail (3 van 5 recente mails): "Dank voor je reactie. Via deze link kan je de video bekijken: <link> ." dan "Ik ben benieuwd wat je ervan vindt! Laat gerust weten als je naar aanleiding van de video nog vragen hebt." Link staat los met spatie voor de punt. Mag met "Hi,", "Hoi Voornaam," of "Goedemorgen Voornaam,".
+- Videomail (3 van 5 recente mails): "Dank voor je reactie. Via deze link kan je de video bekijken: <link> ." dan "Ik ben benieuwd wat je ervan vindt! Laat gerust weten als je naar aanleiding van de video nog vragen hebt." Link staat los met spatie voor de punt. Mag met "Hi,", "Hoi Voornaam," of "Goedemorgen Voornaam,". Mijn concept zonder die opening ("Via deze link...") vult hij aan met "Dank voor je (enthousiaste) reactie!" (10-10); een lege videomail begint dus nooit direct met de link.
 - Kanalen opsommen: altijd de volledige lijst, dus Marktplaats, 2dehands, Vinted, eBay, FB
   Marketplace en Shopify. Mijn concepten lieten FB Marketplace weg, hij zet het er 3x bij.
 - Bij een fout of storing van ons is hij korter dan mijn concept: geen openingszin als "Dank voor de
@@ -87,10 +87,12 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - Geen jargon naar klanten. Technische oorzaken in één zin, de nadruk op wat de
   klant nu merkt en wat hij moet doen (bijvoorbeeld "ververs de pagina met Command Shift R").
 
-- Bij een fout van ons verzacht hij soms "lag voor een deel aan ons" naar "lag aan een instelling" en "opgelost" naar "rechtgezet" (1x, 09-10). Nog te weinig voor een regel.
-- Na een gesprek of toezegging voegt hij een eigen losse slotzin toe ("Graag gedaan, laat gerust weten als je verder ergens tegenaanloopt", 09-10) en zet hij zijn voorstelzin erin ("Ik ben Daniel, oprichter van Omnivaleur") ook als mijn concept die miste.
+- Bij een fout van ons verzacht hij de schuldzin: "lag voor een deel aan ons" werd "lag aan een instelling" (09-10), en "Het lag aan ons, niet aan jou" werd een luchtige opening ("Zeker! Ontwikkeling van Omnivaleur heeft niet stil gezeten :)") waarna hij direct de uitleg geeft (10-10). 2x, dus liever geen "het lag aan ons" in de openingszin. Een excuus aan het eind ("Excuus voor het extra werk") laat hij staan; een los excuus voor een eerder genoemd aantal ("meer dan de 100 die ik noemde, excuus daarvoor") schrapte hij.
+- Na een gesprek of toezegging voegt hij een eigen losse slotzin toe ("Graag gedaan, laat gerust weten als je verder ergens tegenaanloopt", 09-10; "hoop dat ik je hiermee duidelijkheid gegeven heb, laat gerust weten als dit niet zo is", 10-10) en zet hij zijn voorstelzin erin ("Ik ben Daniel, oprichter van Omnivaleur") ook als mijn concept die miste.
 
 ## Nog te leren (invullen zodra er vergelijkingen zijn)
+
+- 10-10, elk 1x: genummerde stappen (1. 2. 3.) maakt hij losse alinea's zonder nummers (past bij platte tekst); "exclusief btw" bij de prijs schrapt hij ("Pro nu 19,99 euro per maand"); bij een klant met veel vragen zet hij een tweede contactroute (chat) onder de mail en verklaart "ik vond dit zelf net wat makkelijker via de mail :)"; mijn tijdswoord "Morgen" werd "Vandaag"; hij opent een opvolging met "En even als opvolging op je laatste mail" in plaats van "Hi,".
 
 - Nee-mail aan een bedrijf ("jullie"): 2x zonder waarom-vraag, alleen "Dank voor jullie reactie. Ik zal jullie hier niet meer over benaderen. Veel succes met de verkoop!" Nog uitzoeken wanneer wel/niet de waarom-vraag.
 - Bij een lange uitleg na een telefoongesprek opent hij met "Even resumé en antwoord op je vragen:". Nog 1x gezien.
@@ -108,3 +110,4 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - 07-10-2026: Gekeken: 125 mails in Verzonden (3 dagen), 19 van Daniel, 0 al verwerkt; 19 nieuw, 12 met concept (maar bij 5 hoorde het concept bij een eerdere mail in dezelfde draad, dus echte vergelijking ca. 7). Nieuw: lege regel voor "Daniel", ":)" als standaard smiley, waarom-vraag bij een nee, volledige kanalenlijst, kortere foutmails.
 - 08-10-2026: Gekeken: 150 mails in Verzonden (3 dagen), 26 van Daniel, 17 al verwerkt; 9 nieuw, 6 met concept. Nieuw: hij schrapt erkennende openingszinnen (3x), voegt ":)" aan het slot toe (2x), schrapt persoonlijk aanbod, nee-mail zonder waarom-vraag (2x).
 - 09-10-2026: Gekeken: 112 mails in Verzonden (3 dagen), 20 van Daniel, 15 al verwerkt; 5 nieuw, 3 met concept. Nieuw: hij voegt ":)" aan mijn slotzin toe (3x, nu een regel), eigen slotzin erbij, "Daniel." met punt bij nee-mail, zachtere schuldtoon (1x).
+- 10-10-2026: Gekeken: 106 mails in Verzonden (3 dagen), 22 van Daniel, 14 al verwerkt; 8 nieuw, 6 met concept. Nieuw: schuldzin in de opening verzacht (2e keer, nu een regel), eigen slotzin erbij (2e keer), videomail krijgt altijd "Dank voor je reactie", "Daniel." met punt (nu 5x), genummerde stappen en "excl. btw" geschrapt (1x).
