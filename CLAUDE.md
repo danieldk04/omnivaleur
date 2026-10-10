@@ -162,6 +162,19 @@ voor je hem live zet.
 Noem in je rapport aan Daniel welke melding klanten krijgen. Kleine reparaties zonder
 zichtbare verandering hoeven niet.
 
+**De updatelog (Daniel, 10-10-2026).** Elke GROTE ontwikkeling, ook buiten het dashboard
+(een nieuw kanaal, een nieuw abonnement, iets wat klanten merken in snelheid of
+betrouwbaarheid), krijgt een bericht BOVENAAN de tijdlijn `#view-nieuw` in
+`frontend/app.html` (de "What's new"-pagina in het menu). Herken je zelf dat iets groot is,
+doe het dan zonder dat Daniel erom vraagt, in dezelfde beurt als de wijziging. Grote
+bugfixes tellen alleen als klanten er iets van merken; kleine reparaties nooit. Een
+bericht heeft `data-id`, `data-datum` (de echte datum), `data-cat` (channels, dashboard,
+automation of plans), een icoon, titel, twee zinnen en eventueel een rondleiding
+(`<section data-tour>` in `#rondleiding-stappen`, knop `startRondleiding('naam')`). Wil je
+ook de popup, zet dan `NIEUWS_ID` (en `NIEUWS_TOUR`) op dezelfde id als het bovenste
+bericht. `tests/test_updates_log.py` faalt als die twee uit elkaar lopen. Tweetalig via
+`i18n_extract.py`, zoals alle klanttekst.
+
 ## Tekst in het dashboard: ook in het Nederlands
 
 Het dashboard is Engels geschreven en wordt op het scherm vertaald door

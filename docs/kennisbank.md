@@ -17,6 +17,19 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## updatelog-grote-ontwikkelingen
+
+*10-10-2026 — sinds 10-10 houdt het dashboard een tijdlijn "What's new" bij; elke grote ontwikkeling krijgt daar een bericht, zonder dat Daniel erom vraagt*
+
+Daniel (10-10-2026): "elke keer als er een grote update is, dat wist je al dat er een melding komt... en ook dat je dat gaat bijhouden in een log... en dat je dat gewoon automatisch gaat triggeren op het moment dat je iets herkent van, hé, dit is best een grote verandering."
+
+Wat er staat: `#view-nieuw` in frontend/app.html (menu "What's new", badge NEW zolang ongezien), 18 berichten met terugwerkende kracht tot 29-06-2026, tegels met aantal en tempo, balkjes per maand, filter op categorie, per bericht eventueel een rondleiding (`<section data-tour>`). De popup (`#nieuws-venster`, NIEUWS_ID, NIEUWS_TOUR) hoort bij het bovenste bericht; tests/test_updates_log.py bewaakt dat.
+
+**Why:** Daniel wil dat klanten de snelheid van ontwikkeling zien en niemand in de war raakt door nieuwe dingen.
+**How to apply:** herken je zelf een grote ontwikkeling (nieuw kanaal, abonnement, merkbare snelheid of betrouwbaarheid, grote bugfix die klanten merken), zet dan in dezelfde beurt een bericht bovenaan, zet zo nodig popup en rondleiding erbij en vertaal naar Nederlands. Kleine reparaties nooit. Zie "dashboardwijziging-krijgt-klantmelding".
+
+---
+
 ## versie-url-niet-pollen-voor-deploy
 
 *10-10-2026 — Een ?v=-adres opvragen voordat Railway klaar is zet de OUDE inhoud 4 uur vast in Cloudflare onder de nieuwe sleutel*

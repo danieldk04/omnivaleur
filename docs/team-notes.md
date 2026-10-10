@@ -16765,3 +16765,6 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
 
 ## 10-10-2026: WooCommerce overal zichtbaar, zelfde als Shopify
 Daniel: WooCommerce moet overal staan waar de andere kanalen staan. Nu altijd zichtbaar (ook zonder koppeling, dan grijs met "Not connected"): plaatsvakjes, kanaaliconen (Shopify heet daar Shpfy, Woo heet Woo), importkanalen, filter, marge, eigen prijs per platform (kolom items.price_woocommerce, migratie scripts/sql/price_woocommerce.sql door Daniel gedraaid). Bewust Shopify-only gebleven: Shopify-titel en vergelijkingsprijs (WooCommerce gebruikt de hoofdtitel en wist een actieprijs bij prijswijziging). WooCommerce-tekst wordt niet vertaald, de winkelier bepaalt de taal.
+
+## 10-10-2026: updatelog "What's new" met terugwerkende kracht
+Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het dashboardmenu (#view-nieuw): tijdlijn met 18 grote ontwikkelingen sinds 29-06-2026, tegels, balkjes per maand, filter en rondleidingen per bericht. De WooCommerce-melding is de nieuwe popup. Regel voor elke sessie staat in CLAUDE.md: een grote ontwikkeling zelf herkennen en in dezelfde beurt een bericht bovenaan zetten. tests/test_updates_log.py bewaakt dat popup en bovenste bericht dezelfde id hebben. Datums komen uit git en team-notes; de teksten zijn voor klanten, niet voor techneuten.
