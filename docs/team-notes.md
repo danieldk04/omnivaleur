@@ -16685,3 +16685,13 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
 - Wachtende werk (0b28c1ce 151, bcdf9aa4 80, 26cf5471 128, 96e30080 76) staat bij klanten van wie de extensie stil is;
   offline-mails zijn verstuurd. Goudlief-wachtrij niet opnieuw leeggeveegd sinds 566f44c2.
 - Wachter: 5 open soorten beoordeeld (3 klant, 1 gerepareerd, 1 onbekend).
+
+## 10-10-2026 Kostencheck Anthropic (automatische ronde)
+- NIET gemeten: Claude in Chrome was niet verbonden, dus platform.claude.com/cost en /logs zijn niet gelezen.
+  Dagkosten 09-10 en 10-10 en de vraag of er na 09-10 13:00 nog verzoeken van ~8.900 invoertokens zijn: onbekend.
+- /health (commit 565a578f): taalmodel_sinds_start leeg (antwoord_door {} en google_codes {}), dus sinds de laatste
+  deploy nog geen taalmodelvraag gedaan. Dat bewijst de rem niet, het zegt alleen dat er nu niets loopt.
+- Code: buiten taalmodel.py en imports.py staan nog directe Claude-aanroepen in crosslist.py (vertaalreserve,
+  Haiku, max 1024 tokens, pas na Gemini-falen), content/generator.py en keyword_planner.py (blog), ai_listing.py
+  (Sonnet) en scripts/leadgen_mail.py. Geen daarvan stuurt de lange rubriekvraag. Niets gewijzigd.
+- Oordeel: nog niet vast te stellen. Volgende ronde of Daniel: kijk naar de dagkosten van 10-10 (doel onder ~$1).
