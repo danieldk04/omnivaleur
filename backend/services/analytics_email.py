@@ -46,7 +46,7 @@ def _periode(this_s: str, this_e: str) -> str:
 
 # Merknamen schrijven zichzelf niet goed vanuit een url-slug.
 _MERKEN = {"ebay": "eBay", "2dehands": "2dehands", "marktplaats": "Marktplaats",
-           "vinted": "Vinted", "etsy": "Etsy", "shopify": "Shopify",
+           "vinted": "Vinted", "etsy": "Etsy", "shopify": "Shopify", "woocommerce": "WooCommerce",
            "oneshop": "OneShop", "vendoo": "Vendoo", "crosslist": "Crosslist",
            "omnivaleur": "Omnivaleur", "facebook": "Facebook"}
 

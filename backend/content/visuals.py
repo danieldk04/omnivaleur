@@ -29,7 +29,7 @@ from backend.content.figures import spread_figures
 logger = logging.getLogger(__name__)
 
 MARKER = 'class="info-kaart'
-PLATFORMS = ["Marktplaats", "2dehands", "Vinted", "eBay", "Etsy", "Shopify"]
+PLATFORMS = ["Marktplaats", "2dehands", "Vinted", "eBay", "Etsy", "Shopify", "WooCommerce"]
 STATUS = {"live", "publishing", "sold", "queued"}
 _STATUS_TEKST = {
     "en": {"live": "Live", "publishing": "Publishing", "sold": "Sold", "queued": "Queued"},

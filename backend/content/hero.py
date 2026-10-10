@@ -71,7 +71,7 @@ PALETTES = {
     "C": [((67, 56, 202), (139, 92, 246)), ((79, 70, 229), (167, 139, 250))],   # indigo/paars
 }
 
-PLATFORM_WORDS = ["Marktplaats", "2dehands", "Vinted", "eBay", "Etsy", "Shopify"]
+PLATFORM_WORDS = ["Marktplaats", "2dehands", "Vinted", "eBay", "Etsy", "Shopify", "WooCommerce"]
 
 
 def _slug_seed(slug: str) -> int:

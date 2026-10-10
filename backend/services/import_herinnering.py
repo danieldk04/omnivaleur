@@ -39,7 +39,7 @@ NL = ZoneInfo("Europe/Amsterdam")
 LEVENDE_ABONNEMENTEN = ("trialing", "active")
 IMPORT_LINK = "https://omnivaleur.com/app#import"
 KANAALNAMEN = {"marktplaats": "Marktplaats", "2dehands": "2dehands", "vinted": "Vinted",
-               "ebay": "eBay", "shopify": "Shopify", "etsy": "Etsy", "facebook": "Facebook"}
+               "ebay": "eBay", "shopify": "Shopify", "woocommerce": "WooCommerce", "etsy": "Etsy", "facebook": "Facebook"}
 
 _gemaild_uit_geheugen: set[str] = set()
 

@@ -21,7 +21,8 @@ logger = logging.getLogger("omnivaleur.sold")
 router = APIRouter(prefix="/listings", tags=["listings"])
 
 _KANAALNAAM = {"marktplaats": "Marktplaats", "2dehands": "2dehands", "vinted": "Vinted",
-               "facebook": "Facebook Marketplace", "ebay": "eBay", "shopify": "Shopify"}
+               "facebook": "Facebook Marketplace", "ebay": "eBay", "shopify": "Shopify",
+               "woocommerce": "WooCommerce"}
 # Statussen die bewijzen dat er een plaatsing is geprobeerd of loopt; zie mark_listing_active.
 _PLAATSING_BEZIG = {"pending", "queued", "error", "relisting"}
 # Een rijstatus die alleen ontstaat nadat een poging echt liep: mislukt, of een

@@ -51,7 +51,7 @@ def _word_count(body_html: str) -> int:
 STATIC_LINK_CANDIDATES = [
     {"intent_key": "static:home", "title": "Omnivaleur", "url_path": "/", "link_terms": ["Omnivaleur"]},
     {"intent_key": "static:register", "title": "Start gratis", "url_path": "/register", "link_terms": ["crosslist-tool", "cross-listing tool"]},
-    {"intent_key": "static:marketplaces", "title": "Ondersteunde platforms", "url_path": "/marketplaces", "link_terms": ["Marktplaats", "Vinted", "eBay", "Etsy", "Shopify"]},
+    {"intent_key": "static:marketplaces", "title": "Ondersteunde platforms", "url_path": "/marketplaces", "link_terms": ["Marktplaats", "Vinted", "eBay", "Etsy", "Shopify", "WooCommerce"]},
 ]
 
 
@@ -199,7 +199,7 @@ def _save_page_row(
             "name": "Daniel de Koning",
             "jobTitle": "Founder, Omnivaleur",
             "url": SITE_URL,
-            "knowsAbout": ["cross-listing", "reselling", "Marktplaats", "Vinted", "eBay", "Etsy", "Shopify"],
+            "knowsAbout": ["cross-listing", "reselling", "Marktplaats", "Vinted", "eBay", "Etsy", "Shopify", "WooCommerce"],
         },
         "publisher": {
             "@type": "Organization",

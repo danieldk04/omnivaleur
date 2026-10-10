@@ -37,7 +37,7 @@ MODEL = "claude-haiku-4-5-20251001"
 
 # The only platforms Omnivaleur actually supports — keeps suggestions grounded,
 # never invents a "Wallapop" or "Facebook Marketplace" combo we can't back up.
-PLATFORMS = ["Marktplaats", "2dehands", "Vinted", "eBay", "Etsy", "Shopify"]
+PLATFORMS = ["Marktplaats", "2dehands", "Vinted", "eBay", "Etsy", "Shopify", "WooCommerce"]
 NL_PLATFORM_TERMS = ("marktplaats", "2dehands")
 
 # Real competing cross-listing tools — used only for honest comparison pages.

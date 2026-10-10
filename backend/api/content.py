@@ -370,7 +370,7 @@ def _reading_minutes(words: int) -> int:
 BLOG_INDEX_COPY = {
     "en": {
         "title": "Blog — Omnivaleur",
-        "meta": "Guides on cross-listing across Marktplaats, 2dehands, Vinted, eBay, Etsy and Shopify.",
+        "meta": "Guides on cross-listing across Marktplaats, 2dehands, Vinted, eBay, Etsy, Shopify and WooCommerce.",
         "h1": "Cross-listing guides",
         "subtitle": "Platform comparisons, DAC7 rules and reselling tips — updated for 2026.",
         "filters": {"all": "All guides", "A": "Platform comparisons", "B": "Reseller guides", "C": "Vs. competitors"},
@@ -382,7 +382,7 @@ BLOG_INDEX_COPY = {
     },
     "nl": {
         "title": "Blog — Omnivaleur",
-        "meta": "Gidsen over crosslisten naar Marktplaats, 2dehands, Vinted, eBay, Etsy en Shopify.",
+        "meta": "Gidsen over crosslisten naar Marktplaats, 2dehands, Vinted, eBay, Etsy, Shopify en WooCommerce.",
         "h1": "Crosslist-gidsen",
         "subtitle": "Platformvergelijkingen, DAC7-regels en verkooptips — bijgewerkt voor 2026.",
         "filters": {"all": "Alle gidsen", "A": "Platformvergelijkingen", "B": "Verkopersgidsen", "C": "Vs. concurrenten"},
@@ -573,7 +573,7 @@ def merk_json_ld() -> dict:
         "logo": f"{SITE_URL}/logo.png",
         "description": (
             "Omnivaleur cross-lists second-hand items to Marktplaats, 2dehands, "
-            "Vinted, eBay and Shopify from one dashboard, each in the right language."
+            "Vinted, eBay, Shopify and WooCommerce from one dashboard, each in the right language."
         ),
         "email": "info@revaleur.com",
         "vatID": "NL004117227B97",
