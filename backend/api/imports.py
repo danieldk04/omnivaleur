@@ -2201,9 +2201,17 @@ def _match_candidate(cand: dict, items: list[dict], listings_by_id: dict,
     # Shopify: het artikelnummer staat op de variant, niet in de titel. De scan
     # heeft er al op gekoppeld (jobs._store_scan_results, row["sku"]) en die
     # keuze als suggested_item_id bewaard; hier is het nummer zelf niet meer.
-    if cand.get("platform") in ("shopify", "woocommerce") and cand.get("suggested_item_id") \
-            and any(it["id"] == cand["suggested_item_id"] for it in items):
-        return cand["suggested_item_id"], "same_code"
+    # Maar de scan koppelt ook op een unieke gelijke titel. Draagt het item geen
+    # eigen nummer van de verkoper (alleen ons imp-/rev-nummer), dan kan de
+    # suggestie niet op een nummer berusten: dan is het een titelmatch (Janneke
+    # 10-10: 140 producten heetten "zelfde nummer" zonder dat er één gelijk was).
+    if cand.get("platform") in ("shopify", "woocommerce") and cand.get("suggested_item_id"):
+        item = next((it for it in items if it["id"] == cand["suggested_item_id"]), None)
+        if item:
+            sku = str(item.get("sku") or "").strip().lower()
+            eigen = advertentiecode(item.get("title")) or (
+                sku if sku and not re.match(r"^(imp|rev)-", sku) else "")
+            return item["id"], "same_code" if eigen else "same_title"
     return None, None
 
 
