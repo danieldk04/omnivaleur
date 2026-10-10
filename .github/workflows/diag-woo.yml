@@ -1,0 +1,35 @@
+name: diag-woo
+on:
+  push:
+    branches: [diag-woo-dejuistetoon]
+jobs:
+  meet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -q httpx
+      - name: dns
+        run: |
+          for h in dejuistetoon.eu www.dejuistetoon.eu; do echo "== $h"; getent hosts $h || echo GEEN DNS; done
+      - name: curl
+        run: |
+          for UA in "Omnivaleur/1.0 (+https://omnivaleur.com)" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36"; do
+          for u in https://dejuistetoon.eu/ https://www.dejuistetoon.eu/ https://dejuistetoon.eu/wp-json/ "https://dejuistetoon.eu/?rest_route=/" https://dejuistetoon.eu/wp-json/wc/v3/products "https://dejuistetoon.eu/?rest_route=/wc/v3/products" https://dejuistetoon.eu/wc-auth/v1/authorize; do
+            echo "######## UA=$UA  URL=$u"
+            curl -sS -m 25 -L -A "$UA" -D - -o body.txt -w "\nFINAL %{http_code} %{url_effective}\n" "$u" | grep -i -E "^HTTP|^location|^link|^server|^content-type|^cf-|^x-|^set-cookie|^FINAL" || true
+            echo "-- body (eerste 600 tekens):"; head -c 600 body.txt | tr '\n' ' '; echo
+            echo "-- api.w.org/wp-content/woocommerce in html:"; grep -o -i -E "rel=.https://api.w.org/.[^>]*|wp-content/plugins/[a-z0-9_-]+|generator[^>]*|woocommerce[a-z_-]*" body.txt | sort | uniq -c | head -40
+          done; done
+      - name: onze code
+        run: |
+          python - <<'PY'
+          import asyncio
+          from backend.platforms import woocommerce as w
+          async def main():
+              for a in ["https://dejuistetoon.eu", "https://www.dejuistetoon.eu"]:
+                  try: print(a, "->", await w.ontdek_api(a))
+                  except Exception as e: print(a, "FOUT", type(e).__name__, getattr(e,"soort",""), e)
+          asyncio.run(main())
+          PY
