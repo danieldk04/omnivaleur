@@ -16784,3 +16784,13 @@ Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het d
 - Open, besluit Daniel: als Railway geblokkeerd blijft, kan Toon pas koppelen met een vast uitgaand IP van
   onze server (Railway Static Outbound IPs, betaald plan) dat SiteGround-support voor zijn site toelaat, of
   door WooCommerce-verkeer via de extensie op zijn eigen computer te laten lopen (groot werk).
+
+## 10-10-2026 16:30: Bewezen: SiteGround houdt onze Railway-server tegen (De Juiste Toon)
+- Daniel probeerde dejuistetoon.eu te koppelen vanaf zijn telefoon (live versie 3d350b70): de nieuwe melding
+  "Je hostingbedrijf SiteGround hield onze server tegen met zijn botcontrole (HTTP 202)". Daarmee is gemeten dat
+  ons Railway-IP een SiteGround-captcha krijgt; met code is dat niet op te lossen.
+- Railway draait op Hobby (kostensheet 04-10: USD 11,87). Static Outbound IPs kan alleen op Pro (USD 20 per maand,
+  inclusief USD 20 gebruik, dus ongeveer USD 8 per maand extra). Let op: die IP's zijn gedeeld met andere
+  Railway-klanten, dus SiteGround kan ze ook wantrouwen; toelaten door SiteGround-support blijft nodig.
+- Alternatief: WooCommerce-verkeer via de extensie op de computer van de klant (zijn eigen IP). Veel werk en een
+  nieuwe extensieversie. Besluit ligt bij Daniel.
