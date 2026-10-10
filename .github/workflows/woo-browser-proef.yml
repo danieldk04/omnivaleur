@@ -16,7 +16,7 @@ jobs:
         with: { node-version: "22" }
       - name: Python en Chromium
         run: |
-          pip install -q -r requirements.txt pytest "playwright==1.56.0"
+          pip install -q -r requirements.txt pytest
           python -m playwright install --with-deps chromium
       - name: WordPress met WooCommerce
         run: |
