@@ -1983,6 +1983,22 @@ function meldStapAanServer(tabId, tekst) {
 // erna.
 let _pollLoopt = false;
 let _pollNogmaals = false;
+// EEN RONDE DIE BLIJFT HANGEN MAG DE WACHTRIJ NIET STILLEGGEN (10-10-2026, Janneke).
+//
+// Haar extensie had zich 19 uur niet gemeld terwijl Chrome openstond en het
+// dashboard haar versie (1.0.376) gewoon zag. De hartslag komt alleen uit deze
+// ronde (de /pending-vraag). Blijft één await hierin hangen, bijvoorbeeld een
+// fetch zonder antwoord na het slapen van de Mac, dan bleef _pollLoopt voor
+// altijd true; de wekker houdt de service worker elke halve minuut wakker, dus
+// er kwam ook geen herstart die het geheugen wiste. Elke volgende tik zei dan
+// "er loopt al een ronde" en deed niets. Nu: een ronde die langer dan
+// POLL_RONDE_MAX_MS bezig is, telt niet meer als lopend. Dubbel werk kan daarna
+// niet: de server geeft een opdracht maar één keer uit, en schrijvende
+// opdrachten houden hun eigen rem per kanaal (_lopendePublicaties).
+const POLL_RONDE_MAX_MS = 5 * 60 * 1000;
+const POLL_FETCH_MAX_MS = 30 * 1000;
+let _pollSinds = 0;
+let _pollRondeNr = 0;
 // Welke platforms op dit moment een scan draaien. Zonder deze rem zou elke
 // pollronde er nóg één starten, want een scan blokkeert de wachtrij niet meer.
 const _lopendeScans = new Set();
@@ -2039,8 +2055,11 @@ async function reconcileOrphanJobTabs() {
 }
 
 async function pollJobs() {
-  if (_pollLoopt) { _pollNogmaals = true; return; }
+  if (_pollLoopt && Date.now() - _pollSinds < POLL_RONDE_MAX_MS) { _pollNogmaals = true; return; }
+  if (_pollLoopt) console.warn(`[Omnivaleur] Pollronde hing al ${Math.round((Date.now() - _pollSinds) / 1000)}s; nieuwe ronde.`);
   _pollLoopt = true;
+  _pollSinds = Date.now();
+  const mijnRonde = ++_pollRondeNr;
   try {
     await reconcileOrphanJobTabs();
     // Bovengrens puur als noodrem: blijft de server werk aanbieden dat nooit
@@ -2051,7 +2070,9 @@ async function pollJobs() {
       if (!verzet && !_pollNogmaals) break;
     }
   } finally {
-    _pollLoopt = false;
+    // Alleen de eigen ronde geeft het slot vrij: een hangende ronde die toch nog
+    // afloopt, mag de ronde die het van haar overnam niet openzetten.
+    if (mijnRonde === _pollRondeNr) _pollLoopt = false;
   }
 }
 
@@ -2148,7 +2169,7 @@ async function pollJobsEenRonde() {
     // gedaan — en bij vier kanalen elke ronde is dat zonde.
     if (_lopendePublicaties.has(platform)) continue;
     try {
-      const res = await fetch(`${serverUrl}/api/jobs/pending?platform=${platform}`, { headers });
+      const res = await fetch(`${serverUrl}/api/jobs/pending?platform=${platform}`, { headers, signal: AbortSignal.timeout(POLL_FETCH_MAX_MS) });
       if (!res.ok) continue;
       const jobs = await res.json();
       if (Array.isArray(jobs) && jobs.length) werkKlaar = true;
