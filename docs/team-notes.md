@@ -16838,3 +16838,19 @@ Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het d
   uitdelen kan een dubbele geven.
 - Proef in tests/wachtrijbalk-eerlijk-test.js (faalt op de oude app.html); herkenning nagelopen in Chromium met
   de user-agent van Safari, Firefox, Chrome, Edge en iPhone.
+
+## 10-10-2026 (later): correctie, Janneke zat ook in Chrome; extensie 1.0.378
+
+- Janneke 21:00: "Ik zit wel in Chrome hoor. Kijk hier open ik Safari over Chrome heen", met een foto van Chrome
+  op omnivaleur.com/app (versie 1.0.376 in de zijbalk, gele foutopsporingsbalk = extensie aan het werk, melding
+  "Gemarkeerd als geplaatst op Vinted"). Mijn eerdere oordeel ("het ligt aan Safari") was te snel: de eerste foto
+  was wél Safari, maar ze had Chrome er ook open. De Safari-melding uit PR 32 blijft kloppen (komt alleen als er
+  nergens een extensie leeft), maar was niet het antwoord.
+- Het echte raadsel: Chrome open, extensie zichtbaar voor de pagina, en toch 19 uur geen hartslag. De hartslag
+  komt alleen uit pollJobs; die had een slot (_pollLoopt) zonder vervaltijd. Hangt één await in een ronde (een
+  fetch zonder antwoord, bijvoorbeeld na het slapen van de Mac), dan blijft het slot dicht, en de wekker van 30 s
+  houdt de service worker in leven zodat er ook geen herstart komt. Niet bewezen dat het bij haar zo ging (geen
+  databasetoegang hier); wel aangetoond dat het kon.
+- 1.0.378: het slot vervalt na 5 minuten, alleen de eigen ronde geeft het vrij, en de /pending-vraag heeft een
+  tijdslimiet van 30 s. Proef tests/pollronde-hangt-niet-voor-altijd-test.js faalt op 1.0.377. wakker-houden-test
+  kreeg AbortSignal in zijn nep-omgeving. Daniel moet dist/omnivaleur-extension-1.0.378.zip uploaden (vervangt 377).

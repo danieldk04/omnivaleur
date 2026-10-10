@@ -109,7 +109,7 @@ async function ronde(jobsPerPlatform) {
     chrome: bouwChrome(power),
     console: process.argv.includes("--praat") ? console : { log() {}, warn() {}, error() {}, info() {}, debug() {} },
     setTimeout, clearTimeout, setInterval, clearInterval,
-    URL, URLSearchParams, TextEncoder, TextDecoder, Blob, FormData, AbortController,
+    URL, URLSearchParams, TextEncoder, TextDecoder, Blob, FormData, AbortController, AbortSignal,
     Date, Math, JSON, Promise, fetch: async (url) => {
       gevraagd.push(String(url));
       const m = String(url).match(/\/api\/jobs\/pending\?platform=([a-z]+)/);
