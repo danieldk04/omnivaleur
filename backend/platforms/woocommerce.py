@@ -139,11 +139,11 @@ def _botcheck(r) -> str | None:
 
     GEMETEN 10-10-2026 (De Juiste Toon, dejuistetoon.eu). De winkel draait op
     SiteGround (plugin sg-security, kopregels x-proxy-cache en x-httpd-modphp).
-    Vanaf GitHub gaf hij gewoon de Link-kop en /wp-json/ met wc/v3, maar onze
-    server kreeg "doesn't look like a WordPress site". SiteGround's anti-bot geeft
-    een verdacht IP geen 403 maar HTTP 202 met kopregel sg-captcha en een pagina
-    die doorverwijst naar /.well-known/sgcaptcha/. Die 202 is geen fout (< 400),
-    heeft geen Link-kop en geen JSON: de oude code las dat als "geen WordPress"."""
+    Vanaf één GitHub-machine kreeg elk verzoek HTTP 202 met kopregel sg-captcha
+    en een pagina die doorverwijst naar /.well-known/sgcaptcha/; vanaf een andere
+    kreeg dezelfde code gewoon de site. Het hangt dus aan het IP-adres, niet aan
+    de code. Die 202 is geen fout (< 400), heeft geen Link-kop en geen JSON: de
+    oude code las dat als "geen WordPress", en dat zag Toon ook."""
     kop = r.headers
     server = (kop.get("server") or "").lower()
     try:
@@ -167,9 +167,11 @@ def _botcheck(r) -> str | None:
     return None
 
 
+# Geen "vraag SiteGround om ons toe te laten": zonder vast IP-adres van onze
+# server weet de klant niet wat hij moet vragen. Daniel krijgt de mail.
 SITEGROUND_MELDING = ("Your host SiteGround stopped our server with its bot check (HTTP 202), "
-                      "so we can't reach your shop. Ask SiteGround support to allow Omnivaleur's "
-                      "requests to /wp-json/ on your site, then try again.")
+                      "so we can't reach your shop. You didn't do anything wrong: mail "
+                      "info@omnivaleur.com and we'll sort it out with you.")
 
 
 def _kort(methode: str, url: str, r) -> str:

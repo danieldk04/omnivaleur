@@ -16768,3 +16768,19 @@ Daniel: WooCommerce moet overal staan waar de andere kanalen staan. Nu altijd zi
 
 ## 10-10-2026: updatelog "What's new" met terugwerkende kracht
 Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het dashboardmenu (#view-nieuw): tijdlijn met 18 grote ontwikkelingen sinds 29-06-2026, tegels, balkjes per maand, filter en rondleidingen per bericht. De WooCommerce-melding is de nieuwe popup. Regel voor elke sessie staat in CLAUDE.md: een grote ontwikkeling zelf herkennen en in dezelfde beurt een bericht bovenaan zetten. tests/test_updates_log.py bewaakt dat popup en bovenste bericht dezelfde id hebben. Datums komen uit git en team-notes; de teksten zijn voor klanten, niet voor techneuten.
+
+## 10-10-2026 16:30: WooCommerce koppelen bij De Juiste Toon: SiteGround-botcontrole, niet "geen WordPress"
+- Melding 15:52: djt@dejuistetoon.eu kreeg "doesn't look like a WordPress site". Zijn winkel is WordPress +
+  WooCommerce op SiteGround (namespace sg-security/v1, wc/v3 aanwezig, WooCommerce-401 op /wp-json/wc/v3/products).
+- GEMETEN via een tijdelijke GitHub-workflow (branch weer verwijderd): vanaf IP 20.169.53.54 gaf elke aanvraag
+  HTTP 202 met kopregel sg-captcha: challenge en een doorverwijzing naar /.well-known/sgcaptcha/ (ook /wp-json/);
+  de oude code las dat als "geen WordPress" en faalde precies zoals bij Toon. Vanaf 20.171.4.211 kreeg alles
+  netjes antwoord, oude en nieuwe code, curl, httpx, requests, HEAD en GET. Het hangt dus aan het IP-adres,
+  niet aan onze code of user-agent. Wat onze Railway-server zag is NIET gemeten (geen logs hier); de mail die
+  bij de volgende poging komt toont het (nieuw: "Wat de winkel onze server antwoordde").
+- Gerepareerd: ontdek_api herkent SiteGround/Cloudflare/Sucuri/Imunify360 en zegt dat eerlijk, probeert een
+  storing opnieuw, leest het API-adres ook uit de HTML en uit een dichtgezette /wp-json/. WooClient.verzoek
+  noemt een 202-captcha "geblokkeerd". De een-klik-route mailt Daniel nu ook bij een mislukte koppeling.
+- Open, besluit Daniel: als Railway geblokkeerd blijft, kan Toon pas koppelen met een vast uitgaand IP van
+  onze server (Railway Static Outbound IPs, betaald plan) dat SiteGround-support voor zijn site toelaat, of
+  door WooCommerce-verkeer via de extensie op zijn eigen computer te laten lopen (groot werk).
