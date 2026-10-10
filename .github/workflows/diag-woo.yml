@@ -22,14 +22,24 @@ jobs:
             echo "-- body (eerste 600 tekens):"; head -c 600 body.txt | tr '\n' ' '; echo
             echo "-- api.w.org/wp-content/woocommerce in html:"; grep -o -i -E "rel=.https://api.w.org/.[^>]*|wp-content/plugins/[a-z0-9_-]+|generator[^>]*|woocommerce[a-z_-]*" body.txt | sort | uniq -c | head -40
           done; done
-      - name: onze code
+      - name: onze code (nieuw en oud)
         run: |
-          python - <<'PY'
-          import asyncio
-          from backend.platforms import woocommerce as w
+          pip install -q pydantic-settings python-dotenv
+          git fetch -q --depth=5 origin main
+          git show origin/main:backend/platforms/woocommerce.py > /tmp/oud_woo.py
+          cat > /tmp/proef.py <<'PY2'
+          import asyncio, importlib.util, sys
+          sys.path.insert(0, ".")
+          def laad(pad, naam):
+              spec = importlib.util.spec_from_file_location(naam, pad)
+              m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m); return m
           async def main():
-              for a in ["https://dejuistetoon.eu", "https://www.dejuistetoon.eu"]:
-                  try: print(a, "->", await w.ontdek_api(a))
-                  except Exception as e: print(a, "FOUT", type(e).__name__, getattr(e,"soort",""), e)
+              for label, pad in (("NIEUW", "backend/platforms/woocommerce.py"), ("OUD", "/tmp/oud_woo.py")):
+                  w = laad(pad, "woo_" + label)
+                  for a in ["https://dejuistetoon.eu", "https://www.dejuistetoon.eu", "dejuistetoon.eu/winkel/"]:
+                      adres = w.normaliseer_adres(a)
+                      try: print(label, a, "->", await w.ontdek_api(adres))
+                      except Exception as e: print(label, a, "FOUT", type(e).__name__, getattr(e, "soort", ""), e, "\n", getattr(e, "detail", ""))
           asyncio.run(main())
-          PY
+          PY2
+          python /tmp/proef.py
