@@ -1867,6 +1867,11 @@
         // De garderobe afzoeken kost dan anderhalve minuut om te bevestigen wat
         // we al weten, en houdt ondertussen de hele wachtrij bezet.
         if (submitErr && submitErr.blokkade) throw submitErr;
+        // Weigerde Vinted de titel om de hoofdletters, dan staat er zeker niets
+        // online: rustiger schrijven en één keer opnieuw plaatsen.
+        if (hoofdletterKlachtVinted()) {
+          id = await plaatsMetRustigeTitelVinted(item);
+        } else {
         // Vinted's post-upload "check in progress" review can delay the
         // /items/{id} redirect past submitListing's wait, so a timeout here does
         // NOT mean the listing failed. Confirm via the wardrobe before giving up:
