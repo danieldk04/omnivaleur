@@ -74,6 +74,11 @@ class _Klant:
     luistert: int = 0
     laatst: float = 0.0
     onderhoud: float = 0.0
+    # Er staat iets in de wachtrij dat nog niet is geprobeerd. Los van "de
+    # browser kwam terug": die overgang kan samenvallen met een onderhoudsronde
+    # die nog loopt, en dan bleef de wachtrij liggen (gezien op GitHub tegen een
+    # echte WooCommerce, 10-10-2026).
+    wachtrij: bool = False
 
 
 _klanten: dict[str, _Klant] = {}
@@ -118,7 +123,7 @@ async def haal_opdrachten(user_id: str, wacht_s: float | None = None) -> list[di
     was_weg = not online(user_id)
     k.luistert += 1
     try:
-        if was_weg or time.time() - k.onderhoud > ONDERHOUD_S:
+        if was_weg or k.wachtrij or time.time() - k.onderhoud > ONDERHOUD_S:
             _start_onderhoud(user_id)
         eind = time.monotonic() + wacht_s
         while True:
@@ -288,6 +293,7 @@ async def onthoud_uitverkocht(db, user_id: str, product_id: str) -> None:
         extra[WACHTRIJ] = lijst + [str(product_id)]
         return extra
     await _schrijf_extra(db, user_id, _erbij)
+    _klant(user_id).wachtrij = True
     logger.info("woocommerce-browser: %s product %s wacht op een browser om uitverkocht te gaan",
                 user_id[:8], product_id)
 
@@ -312,6 +318,8 @@ async def werk_wachtrij_af(db, user_id: str) -> int:
                            user_id[:8], pid, e)
             if not online(user_id):
                 break
+    if len(gelukt) < len(lijst):
+        _klant(user_id).wachtrij = True     # volgende ronde van de browser opnieuw
     if gelukt:
         await _schrijf_extra(db, user_id, lambda extra: {
             **extra, WACHTRIJ: [p for p in (extra.get(WACHTRIJ) or []) if p not in gelukt]})
@@ -327,6 +335,7 @@ def _start_onderhoud(user_id: str) -> None:
     """De browser is er (weer): wachtrij afwerken en webhook nakijken, op de achtergrond."""
     k = _klant(user_id)
     if user_id in _onderhoud_bezig:
+        k.wachtrij = True       # deze aanleiding niet kwijtraken: volgende ronde opnieuw
         return
     _onderhoud_bezig.add(user_id)
 
@@ -335,6 +344,7 @@ def _start_onderhoud(user_id: str) -> None:
         try:
             await asyncio.sleep(1)      # de browser moet eerst echt luisteren
             db = get_db()
+            k.wachtrij = False
             rij = await _lees_rij(db, user_id)
             if not via_browser(rij):
                 return

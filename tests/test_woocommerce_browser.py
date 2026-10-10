@@ -14,6 +14,7 @@ import hashlib
 import hmac
 import json
 import sys
+import time
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
@@ -44,6 +45,7 @@ def _laad_proef(naam):
 _DB = _laad_proef("test_woocommerce")._DB
 
 ROOT_API = "https://dejuistetoon.eu/wp-json/"
+_ECHT_ONDERHOUD = wb._start_onderhoud
 CK, CS = "ck_" + "a" * 40, "cs_" + "b" * 40
 # Wat een browser van een antwoord van een andere site mag lezen: de veilige
 # kopregels plus wat WordPress zelf vrijgeeft (gemeten op dejuistetoon.eu:
@@ -438,3 +440,27 @@ def test_browser_valt_weg_tijdens_afmelden_gaat_in_de_wachtrij(monkeypatch):
     assert rij["extra_data"][wb.WACHTRIJ] == ["2"], "mislukt is niet gelukt"
     assert _met_browser("u1", winkel, lambda: wb.werk_wachtrij_af(db, "u1")) == 1
     assert rij["extra_data"][wb.WACHTRIJ] == [] and winkel.producten[2]["stock_status"] == "outofstock"
+
+
+def test_wachtrij_blijft_niet_liggen_als_het_terugkomen_samenvalt_met_onderhoud(monkeypatch):
+    """Gezien op GitHub tegen een echte WooCommerce: de browser kwam terug terwijl er
+    nog een onderhoudsronde liep. Die aanleiding ging verloren en de wachtrij bleef
+    liggen tot het volgende kwartier. Nu wordt een gemiste aanleiding onthouden en
+    start de eerstvolgende vraag van de browser de ronde opnieuw."""
+    db, naast = _db_met()
+    monkeypatch.setattr(database, "naast_de_lus", naast)
+    asyncio.run(wb.onthoud_uitverkocht(db, "u1", "3"))
+    assert wb._klant("u1").wachtrij is True, "iets in de wachtrij is een aanleiding"
+
+    wb._klant("u1").wachtrij = False
+    wb._onderhoud_bezig.add("u1")
+    _ECHT_ONDERHOUD("u1")                       # komt terug terwijl er een ronde loopt
+    assert wb._klant("u1").wachtrij is True, "de gemiste aanleiding moet onthouden worden"
+    wb._onderhoud_bezig.discard("u1")
+
+    gestart = []
+    monkeypatch.setattr(wb, "_start_onderhoud", gestart.append)
+    k = wb._klant("u1")
+    k.laatst, k.onderhoud = time.time(), time.time()   # online, webhook net nagekeken
+    asyncio.run(wb.haal_opdrachten("u1", wacht_s=0))
+    assert gestart == ["u1"], "de volgende vraag van de browser moet de ronde starten"
