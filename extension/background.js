@@ -10835,7 +10835,12 @@ const UPDATE_CHECK_MINUTEN = 60;
 // Blijft er na een dag nog steeds werk hangen, dan is dát het probleem en
 // herstarten we alsnog: een vastgelopen wachtrij mag geen oude versie
 // conserveren.
-const UPDATE_UITSTEL_MAX_MS = 24 * 60 * 60 * 1000;
+// Was 24 uur. Janneke (10-10-2026) draaide 1.0.374 terwijl 1.0.376 klaarstond:
+// haar mislukte Vinted-plaatsingen lieten elk een tabblad open voor "maak hem
+// zelf af", met een controle-wekker van een half uur, en zolang er zo'n wekker
+// stond mocht de extensie niet herstarten. Een nieuwe mislukking zette een
+// nieuwe wekker, dus de oude versie (met de fout) hield zichzelf in stand.
+const UPDATE_UITSTEL_MAX_MS = 2 * 60 * 60 * 1000;
 let _updateWachtSinds = 0;
 
 // Herstarten mag NOOIT midden in een klus. Een tabblad dat halverwege een
@@ -10847,7 +10852,16 @@ async function magNuHerstarten() {
     const alarmen = await chrome.alarms.getAll();
     // Elk lopend job-tabblad heeft een waakhond-alarm. Staat er één, dan is er
     // werk onderweg.
-    if (alarmen.some((a) => a.name.startsWith(JOB_WATCHDOG_PREFIX))) return false;
+    // Een tabblad dat al aan de verkoper is teruggegeven ("maak hem zelf af")
+    // telt niet als lopend werk: zijn opdracht is al als fout gemeld, en het
+    // tabblad zelf blijft gewoon open staan na de herstart.
+    const wekkers = alarmen.filter((a) => a.name.startsWith(JOB_WATCHDOG_PREFIX));
+    const opslag = wekkers.length ? await chrome.storage.local.get(null) : {};
+    const lopend = wekkers.some((a) => {
+      const meta = opslag[`jobtab_${a.name.slice(JOB_WATCHDOG_PREFIX.length)}`];
+      return !(meta && meta.awaitingManualFinish);
+    });
+    if (lopend) return false;
   } catch (_) { return false; }
   return true;
 }
