@@ -16872,3 +16872,15 @@ Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het d
 - Open: "Vinted accepteerde deze velden niet: price (50)" op 1.0.374. De prijscode is sinds 1.0.374 niet
   veranderd, dus dit kan op 1.0.378 terugkomen. Zonder te zien wat het formulier op dat moment toont is het niet
   blind te repareren. Eerst updaten, dan één Vinted-plaatsing bekijken.
+
+## 10-10-2026 (22:00): Janneke, prijs op Vinted; extensie 1.0.379
+
+- Daniels SQL: geen enkele Vinted-advertentie van Janneke hangt aan meer dan één artikel. 1.0.374 heeft haar
+  gelijknamige jassen dus niet verkeerd gekoppeld.
+- "Vinted accepteerde deze velden niet: price (50)" zonder klacht van Vinted onder het veld. De eindcontrole
+  stopte op wat het React-formulier zei (prijsIsGeaccepteerd), en wat er op dat moment te zien was werd nergens
+  bewaard. 1.0.379: `prijsBesluit` in content/vinted.js. Toont het veld precies de gewenste prijs en klaagt Vinted
+  niet, dan gaat de plaatsing door en beslist Vinted zelf (een prijs onder 1 neemt Vinted niet aan, dus er komt
+  niets met een verkeerde prijs online). Anders stoppen zoals voorheen, nu met "the field showed ..., Vinted's form
+  held ..." in de melding, en bij een mislukte plaatsing na zo'n twijfel staat dat er ook bij. Proef
+  tests/vinted-prijs-laat-vinted-beslissen-test.js.

@@ -1605,6 +1605,7 @@
   // niet meer voor (zie de eindcontrole), maar als het plaatsen daarna alsnog
   // misgaat, hoort die melding in de foutmelding te staan.
   let prijsKlachtBijPlaatsen = null;
+  let prijsTwijfel = null;
 
   // LET OP — deze twee blokken staan hier bewust, vóór `await getJob()`.
   // Een const wordt pas aangemaakt op het moment dat de uitvoering die regel
@@ -1822,7 +1823,26 @@
       // De melding gaat één op één naar het dashboard, en dat is Engels. Half
       // Nederlands, half Engels leest als een storing in plaats van als uitleg.
       if (!(await prijsIsGeaccepteerd())) {
-        gaps.push(`price (${item.price}${prijsFout ? " — Vinted says: " + prijsFout : ""})`);
+        // HET VELD TOONT DE GOEDE PRIJS EN VINTED KLAAGT NIET (Janneke, 10-10-2026).
+        //
+        // Zes van haar Vinted-plaatsingen stopten hier met "price (50)", zonder
+        // dat Vinted iets onder het prijsveld zei. Wat het formulier op dat
+        // moment vasthield werd nergens bewaard, dus niemand kon zien of de
+        // prijs er echt niet in stond. Toont het veld precies de prijs en klaagt
+        // Vinted niet, dan laten we Vinted bij het plaatsen zelf beslissen: een
+        // prijs onder 1 neemt Vinted daar niet aan, dus er kan niets met een
+        // verkeerde prijs online komen. In alle andere gevallen stoppen we zoals
+        // voorheen, nu met wat er te zien was.
+        const meting = await prijsVolgensFormulier();
+        const veld = qs('input[data-testid="price-input--input"]');
+        const besluit = prijsBesluit(item.price, veld ? veld.value : null,
+                                     meting && meting.form != null ? meting.form : null, prijsFout);
+        if (besluit.door) {
+          prijsTwijfel = besluit.twijfel;
+          clog(`prijs: ${prijsTwijfel} — Vinted beslist bij het plaatsen`);
+        } else {
+          gaps.push(besluit.gat);
+        }
       } else if (prijsFout) {
         prijsKlachtBijPlaatsen = prijsFout;
         clog(`Vinted toont nog "${prijsFout}", maar het formulier houdt de prijs vast — toch plaatsen`);
@@ -1867,7 +1887,8 @@
     // hoort dat in de melding, anders is niet te zien of de prijs er iets mee te
     // maken had.
     const extra = prijsKlachtBijPlaatsen && !/price/i.test(String(e))
-      ? ` (Vinted also showed under the price: ${prijsKlachtBijPlaatsen})` : "";
+      ? ` (Vinted also showed under the price: ${prijsKlachtBijPlaatsen})`
+      : prijsTwijfel ? ` (before publishing, ${prijsTwijfel})` : "";
     send("JOB_ERROR", null, String(e) + extra);
   }
 
@@ -2634,6 +2655,22 @@
       }
     }
     return false;
+  }
+
+  // Het formulier zegt dat er geen prijs in staat. Mag Vinted toch zelf beslissen?
+  // Alleen als het veld precies de gewenste prijs toont en Vinted er niet over
+  // klaagt; zie de eindcontrole bij het plaatsen (Janneke, 10-10-2026).
+  function prijsBesluit(gewenst, veldWaarde, vastgehouden, klacht) {
+    const toont = veldWaarde == null ? NaN : _num(veldWaarde);
+    const form = vastgehouden == null ? "?" : vastgehouden;
+    if (!klacht && isFinite(toont) && Math.abs(toont - _num(gewenst)) < 0.01) {
+      return { door: true, twijfel: `the price field showed ${veldWaarde}, Vinted's form held ${form}` };
+    }
+    return {
+      door: false,
+      gat: `price (${gewenst}; the field showed "${veldWaarde == null ? "no field" : veldWaarde}", Vinted's form held ${form}`
+        + `${klacht ? " — Vinted says: " + klacht : ""})`,
+    };
   }
 
   // Parse a displayed price ("€12,50", "12.50", "") to a Number (NaN if none).
