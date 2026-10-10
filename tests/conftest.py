@@ -23,6 +23,46 @@ zo gewoon werken.
 import pytest
 
 
+# GEEN ECHT STRIPE IN EEN TEST.
+#
+# backend/api/billing.py zet bij het laden `stripe.api_key` uit de lokale .env,
+# dus de echte sleutel. De afreken-tests geven een verzonnen klantnummer mee
+# ("cus_1"); `_levende_klant` vroeg daar bij Stripe zelf naar, kreeg "No such
+# customer" en maakte dan een nieuwe klant aan met het testadres. Elke
+# testronde zette zo klant@example.nl, vriend@example.nl en los@example.nl in
+# het echte Stripe-dashboard (gemeten 10-10-2026: 28 klanten, 22 nep).
+# Zonder sleutel weigert de Stripe-bibliotheek vóór er iets over het netwerk
+# gaat. Tests die Stripe nodig hebben zetten hun eigen nep-klasse neer.
+@pytest.fixture(autouse=True)
+def _geen_echt_stripe_in_tests(monkeypatch):
+    try:
+        import stripe
+    except Exception:  # noqa: BLE001 — een test die Stripe niet nodig heeft
+        yield
+        return
+    try:
+        # billing zet de sleutel bij het LADEN; laad hem dus eerst, anders zet de
+        # eerste test die hem importeert de echte sleutel er na onze blokkade in.
+        import backend.api.billing  # noqa: F401
+    except Exception:  # noqa: BLE001
+        pass
+    monkeypatch.setattr(stripe, "api_key", None, raising=False)
+
+    class _GeenNetwerk:
+        name = "geen-netwerk-in-tests"
+
+        def request(self, *a, **k):
+            raise RuntimeError("Een test mag Stripe niet echt aanroepen: zet een nep-klasse neer")
+
+        request_with_retries = request
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(stripe, "default_http_client", _GeenNetwerk(), raising=False)
+    yield
+
+
 @pytest.fixture(autouse=True)
 def _geen_webstore_vraag_in_tests():
     try:
