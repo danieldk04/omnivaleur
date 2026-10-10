@@ -721,6 +721,13 @@ async def woocommerce_auth_url(store: str, user_id: str = Depends(get_current_us
     try:
         api_root = await ontdek_api(adres)
     except WooFout as e:
+        # Ook hier mailen: De Juiste Toon (10-10-2026) liep op deze stap vast en
+        # zonder mail had niemand gezien wat de winkel ons werkelijk antwoordde.
+        try:
+            await asyncio.wait_for(asyncio.to_thread(_meld_mislukte_woo_koppeling,
+                                                     user_id, adres, e), timeout=10)
+        except Exception:  # noqa: BLE001 — de mail mag de melding niet tegenhouden
+            pass
         raise HTTPException(status_code=400, detail=str(e))
     if not api_root.lower().startswith("https://"):
         # WooCommerce stuurt de sleutel alleen naar een https-adres, en over http
@@ -841,4 +848,6 @@ def _meld_mislukte_woo_koppeling(user_id: str, winkel: str, fout: Exception) -> 
              f"Winkel: {winkel or '(leeg)'}\n"
              f"Soort fout: {getattr(fout, 'soort', type(fout).__name__)}\n"
              f"Dit zag de klant op het scherm:\n{fout}\n")
+    if getattr(fout, "detail", ""):
+        tekst += f"\nWat de winkel onze server antwoordde:\n{fout.detail}\n"
     return bool(send_email(subject=f"WooCommerce koppelen mislukt: {adres}", body=tekst))

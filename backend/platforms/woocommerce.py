@@ -59,10 +59,12 @@ UA = "Omnivaleur/1.0 (+https://omnivaleur.com)"
 class WooFout(RuntimeError):
     """Een fout die de winkelier kan lezen. `soort` zegt de code welke het is."""
 
-    def __init__(self, melding: str, soort: str = "onbekend", status: int | None = None):
+    def __init__(self, melding: str, soort: str = "onbekend", status: int | None = None,
+                 detail: str = ""):
         super().__init__(melding)
         self.soort = soort
         self.status = status
+        self.detail = detail    # wat de winkel precies antwoordde; alleen voor Daniel
 
 
 # ── Winkeladres ──────────────────────────────────────────────────────────
@@ -119,43 +121,172 @@ def _link_api_root(link_kop: str | None) -> str | None:
     return None
 
 
+def _html_api_root(tekst: str | None) -> str | None:
+    """Hetzelfde adres uit de <head>: <link rel="https://api.w.org/" href="...">.
+
+    Een cache of CDN haalt soms de Link-kop weg, maar laat de pagina zelf staan."""
+    for m in re.finditer(r"<link\b[^>]*>", (tekst or "")[:200_000], re.I):
+        tag = m.group(0)
+        if re.search(r"""rel\s*=\s*["']https://api\.w\.org/["']""", tag, re.I):
+            h = re.search(r"""href\s*=\s*["']([^"']+)["']""", tag, re.I)
+            if h:
+                return html.unescape(h.group(1))
+    return None
+
+
+def _botcheck(r) -> str | None:
+    """Wie ons tegenhield, als dit antwoord een botcontrole is in plaats van de site.
+
+    GEMETEN 10-10-2026 (De Juiste Toon, dejuistetoon.eu). De winkel draait op
+    SiteGround (plugin sg-security, kopregels x-proxy-cache en x-httpd-modphp).
+    Vanaf GitHub gaf hij gewoon de Link-kop en /wp-json/ met wc/v3, maar onze
+    server kreeg "doesn't look like a WordPress site". SiteGround's anti-bot geeft
+    een verdacht IP geen 403 maar HTTP 202 met kopregel sg-captcha en een pagina
+    die doorverwijst naar /.well-known/sgcaptcha/. Die 202 is geen fout (< 400),
+    heeft geen Link-kop en geen JSON: de oude code las dat als "geen WordPress"."""
+    kop = r.headers
+    server = (kop.get("server") or "").lower()
+    try:
+        tekst = (r.text or "")[:4000].lower()
+    except Exception:  # noqa: BLE001 — een HEAD heeft geen inhoud
+        tekst = ""
+    if kop.get("sg-captcha") or "sgcaptcha" in tekst:
+        return "SiteGround"
+    if (kop.get("cf-mitigated") or "").lower() == "challenge" or (
+            ("cloudflare" in server or kop.get("cf-ray"))
+            and (r.status_code in (403, 429, 503) or "just a moment" in tekst
+                 or "challenge-platform" in tekst)):
+        return "Cloudflare"
+    if r.status_code in (403, 406, 429, 503) and (
+            "sucuri" in server or kop.get("x-sucuri-id") or "sucuri" in tekst):
+        return "Sucuri"
+    if "imunify360" in tekst or "bot-protection" in server:
+        return "Imunify360"
+    if r.status_code in (202, 403, 406, 429) and "json" not in (kop.get("content-type") or "").lower():
+        return "?"
+    return None
+
+
+SITEGROUND_MELDING = ("Your host SiteGround stopped our server with its bot check (HTTP 202), "
+                      "so we can't reach your shop. Ask SiteGround support to allow Omnivaleur's "
+                      "requests to /wp-json/ on your site, then try again.")
+
+
+def _kort(methode: str, url: str, r) -> str:
+    """Eén regel over een antwoord, voor de mail aan Daniel."""
+    kop = r.headers
+    try:
+        begin = re.sub(r"\s+", " ", (r.text or "")[:160])
+    except Exception:  # noqa: BLE001
+        begin = ""
+    extra = "".join(f" {k}={kop.get(k)}" for k in ("server", "content-type", "sg-captcha",
+                                                     "cf-mitigated", "x-proxy-cache")
+                    if kop.get(k))
+    return f"{methode} {url} -> {r.status_code}{extra} | {begin}"
+
+
+def _is_wordpress_json(r) -> bool:
+    """Komt dit antwoord van WordPress' eigen REST API?
+
+    Ook een weigering telt: een plugin die de API voor bezoekers dichtzet geeft
+    401/403 met code rest_..., en met een WooCommerce-sleutel kan het dan toch."""
+    if r.status_code == 200 and "namespaces" in (r.text or "")[:20000]:
+        return True
+    if "json" not in (r.headers.get("content-type") or "").lower():
+        return False
+    try:
+        data = lees_json(r.text or "")
+    except ValueError:
+        return False
+    return isinstance(data, dict) and (
+        "namespaces" in data or str(data.get("code") or "").startswith(("rest_", "woocommerce_rest")))
+
+
 async def ontdek_api(adres: str, client=None) -> str:
     """De API-wortel van deze WordPress-site, of WooFout als het geen WordPress is.
 
     WordPress zet het adres in een Link-kop op elke pagina. Zo werkt het ook bij
-    een site in een submap en bij een site zonder mooie permalinks."""
+    een site in een submap en bij een site zonder mooie permalinks.
+
+    "Geen WordPress" zeggen we alleen als de site gewoon antwoordde en nergens
+    WordPress in zat. Een botcontrole, een storing of een dichtgezette API is
+    iets anders, en de winkelier moet dan iets anders doen."""
     import httpx
 
     eigen = client is None
     client = client or httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=10.0),
                                          follow_redirects=True, headers={"User-Agent": UA})
+    gezien: list[str] = []     # wat er terugkwam, voor de mail aan Daniel
+    antwoorden = []
     try:
-        kandidaten = []
-        for poging in range(2):
+        thuis = None
+        for poging in range(3):
             try:
                 r = await client.head(adres + "/")
-                if r.status_code >= 400 or not _link_api_root(r.headers.get("link")):
-                    r = await client.get(adres + "/")
-                gevonden = _link_api_root(r.headers.get("link"))
+                gezien.append(_kort("HEAD", adres + "/", r))
+                gevonden = _link_api_root(r.headers.get("link")) if r.status_code < 300 else None
                 if gevonden:
                     return gevonden
-                kandidaten.append(str(r.url))
+                r = await client.get(adres + "/")
+                gezien.append(_kort("GET", adres + "/", r))
+                antwoorden.append(r)
+                gevonden = _link_api_root(r.headers.get("link")) or _html_api_root(r.text)
+                if gevonden:
+                    return gevonden
+                thuis = r
+                # Een storing of drukte gaat vaak vanzelf over; een botcontrole niet.
+                if (r.status_code in (429, 500, 502, 503, 504) and not _botcheck(r)
+                        and poging < 2):
+                    await asyncio.sleep(2 + 3 * poging)
+                    continue
                 break
-            except (httpx.TransportError,) as e:
-                if poging:
+            except httpx.TransportError as e:
+                gezien.append(f"GET {adres}/ -> {type(e).__name__}")
+                if poging == 2:
                     raise WooFout(f"Could not reach {adres}. Check the address and try again.",
-                                  "onbereikbaar") from e
+                                  "onbereikbaar", detail="\n".join(gezien)) from e
                 await asyncio.sleep(2)
         # Geen Link-kop (sommige caches halen hem weg): de gewone plek proberen.
         for root in (adres + "/wp-json/", adres + "/?rest_route=/"):
             try:
                 r = await client.get(root)
-                if r.status_code == 200 and "namespaces" in (r.text or "")[:5000]:
-                    return root
-            except httpx.TransportError:
+            except httpx.TransportError as e:
+                gezien.append(f"GET {root} -> {type(e).__name__}")
                 continue
-        raise WooFout(f"{adres} doesn't look like a WordPress site. Enter the address of your "
-                      f"WooCommerce shop, for example yourshop.nl.", "geen_wordpress")
+            gezien.append(_kort("GET", root, r))
+            antwoorden.append(r)
+            gevonden = _link_api_root(r.headers.get("link"))
+            if gevonden and r.status_code < 300:
+                return gevonden
+            if _is_wordpress_json(r):
+                return root
+        detail = "\n".join(gezien)
+
+        def _tegengehouden(r) -> WooFout:
+            if _botcheck(r) == "SiteGround":
+                return WooFout(SITEGROUND_MELDING, "geblokkeerd", r.status_code, detail=detail)
+            door = "Cloudflare" if _botcheck(r) == "Cloudflare" else "a firewall or security plugin"
+            return WooFout(f"Your shop's {door} blocked our request (HTTP {r.status_code}). "
+                           f"Allow requests to /wp-json/wc/v3 from Omnivaleur, or ask your "
+                           f"host to.", "geblokkeerd", r.status_code, detail=detail)
+
+        if thuis is not None and _botcheck(thuis):
+            raise _tegengehouden(thuis)
+        if thuis is not None and not 200 <= thuis.status_code < 300:
+            raise WooFout(f"Your shop answered HTTP {thuis.status_code}. Try again in a moment.",
+                          "serverfout", thuis.status_code, detail=detail)
+        tekst = (thuis.text if thuis is not None else "") or ""
+        if not re.search(r"/wp-content/|/wp-includes/|woocommerce", tekst[:300_000], re.I):
+            raise WooFout(f"{adres} doesn't look like a WordPress site. Enter the address of "
+                          f"your WooCommerce shop, for example yourshop.nl.", "geen_wordpress",
+                          detail=detail)
+        # Wel WordPress, maar de API-adressen zelf werden tegengehouden.
+        for r in antwoorden:
+            if r is not thuis and _botcheck(r):
+                raise _tegengehouden(r)
+        raise WooFout("Your site answers, but the WooCommerce API is switched off or hidden. "
+                      "Check that WooCommerce is active and that no security plugin blocks "
+                      "the REST API (/wp-json/wc/v3).", "geen_woo_api", detail=detail)
     finally:
         if eigen:
             await client.aclose()
@@ -331,6 +462,10 @@ class WooClient:
                         self.modus_gewijzigd = True
                         continue
                     raise fout
+                if _botcheck(r) == "SiteGround":
+                    # HTTP 202 is geen fout, maar ook geen antwoord (zie _botcheck).
+                    raise WooFout(SITEGROUND_MELDING, "geblokkeerd", r.status_code,
+                                  detail=_kort(methode, url.split("?")[0], r))
                 try:
                     data = lees_json(r.text)
                 except ValueError as e:
