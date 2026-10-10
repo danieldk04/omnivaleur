@@ -54,6 +54,15 @@ jobs:
           WOO_E2E_WINKEL: http://127.0.0.1:9400
         run: |
           python -m pytest -q -p no:cacheprovider tests/test_woocommerce_browser_e2e.py tests/test_woocommerce_browser.py tests/test_woocommerce_ontdekken.py -x -rA
+          for i in 1 2 3; do
+            echo "== herhaling $i"
+            A="ck_$(printf 'a%.0s' $(seq 1 40)):cs_$(printf 'b%.0s' $(seq 1 40))"
+            for pid in $WOO_E2E_PRODUCT_1 $WOO_E2E_PRODUCT_2; do
+              curl -s -o /dev/null -u "$A" -H 'Content-Type: application/json' -X PUT http://127.0.0.1:9400/wp-json/wc/v3/products/$pid -d '{"stock_quantity":1}'
+            done
+            curl -s -u "$A" "http://127.0.0.1:9400/wp-json/wc/v3/webhooks?per_page=100" | python -c "import sys,json; [print('webhook', h['id'], h['topic'], h['status']) for h in json.load(sys.stdin)]"
+            python -m pytest -q -p no:cacheprovider tests/test_woocommerce_browser_e2e.py -x
+          done
       - name: Echte Chromium bij dejuistetoon.eu (zonder sleutel)
         run: |
           cat > /tmp/djt.py <<'PY'
