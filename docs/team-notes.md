@@ -16695,3 +16695,25 @@ tekst om iets te crosslisten", wens "gebruiksvriendelijker". Warme lead; proef t
   Haiku, max 1024 tokens, pas na Gemini-falen), content/generator.py en keyword_planner.py (blog), ai_listing.py
   (Sonnet) en scripts/leadgen_mail.py. Geen daarvan stuurt de lange rubriekvraag. Niets gewijzigd.
 - Oordeel: nog niet vast te stellen. Volgende ronde of Daniel: kijk naar de dagkosten van 10-10 (doel onder ~$1).
+
+## 10-10-2026: Onboarding nieuwe klanten (ochtend)
+
+- Geen nieuwe aanmeldingen; zes bekende klanten in hun eerste week. Stap 1b was 09-10 al gedaan.
+- Janneke 31d28378: 140 Shopify-producten (27 keer "* Jas", 47 keer "* Set", Hip Shoestyle, Noppies) stonden nog
+  als "zelfde nummer als een product in je winkel" in Te controleren, alle 140 actief te koop in haar winkel.
+  Gemeten in haar winkel: geen van de 140 deelt een artikelnummer met het product dat al aan het item hangt.
+  Oorzaak (bewezen): de scan bewaart een unieke titelmatch als suggested_item_id; kwamen er later meer items met
+  die titel bij, dan viel _match_candidate terug op die suggestie met reden same_code, dus shopify_duplicate, dus
+  de dagelijkse achterstandsronde liet ze liggen. Gerepareerd 803f1da2 (auto-push): draagt het item geen eigen
+  nummer van de verkoper (alleen IMP-/REV-), dan heet het same_title en wordt het een eigen stuk zoals Daniel
+  09-10 besloot. Proef tests/test_shopify_suggestie_zonder_nummer.py faalt 2 van 3 op de oude code; 118
+  importproeven groen; volledige reeks 5 fouten, allemaal de bekende test_korte_kledingvraag. Echte data
+  nagebootst: voor 140 shopify_duplicate, na 140 eigen stuk zonder vraag. De achterstandsronde (rond 15:00 UTC)
+  importeert ze vanzelf; na te kijken door de middagronde of de klantfoutenronde van 11-10.
+- Open, Janneke: 17 items hangen aan samen 84 verschillende Shopify-producten (20 jassen op één item "* Jas",
+  geen gedeeld nummer). Waarschijnlijk via dezelfde valse "zelfde nummer"-route gekoppeld; een verkoop van één
+  jas kan het item als verkocht melden terwijl er nog 19 te koop staan. Niet zelf gesplitst (klantdata, geen
+  bewezen veilige splitsing); hoort bij een volgende ronde met een eigen meting.
+- Janneke verder: proef loopt af 11-10 21:06 zonder betaalmethode; Vinted-fouten wachten op extensie 1.0.377.
+- Amanda 8f91a370: ongewijzigd sinds de klantfoutenronde, extensie stil sinds 09-10 14:43, call ma 12-10.
+- robbertbolier, partablecs, winterhome, amhin: ongewijzigd, nul artikelen, al gemaild. Geen mailtjes vandaag.
