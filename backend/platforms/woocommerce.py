@@ -781,27 +781,18 @@ class WooCommercePlatform(PlatformBase):
             raise RuntimeError("This WooCommerce listing has no product number. Link it again "
                                "with its product URL.")
         try:
-            product = await c.product(platform_listing_id)
+            return await zet_uitverkocht(c, platform_listing_id)
         except WooFout as e:
-            if e.soort != "geen_browser":
+            if c.transport is None or e.soort not in ("geen_browser", "onbereikbaar"):
                 raise
-            # De winkel laat alleen de browser van de klant binnen, en die is nu
-            # dicht. Niet laten vallen: dan blijft het stuk in de winkel te koop
-            # en wordt het twee keer verkocht. Het gebeurt zodra er een browser is.
+            # De winkel laat alleen de browser van de klant binnen, en die is
+            # dicht of viel weg. Niet laten vallen: dan blijft het stuk in de
+            # winkel te koop en wordt het twee keer verkocht. Het gebeurt zodra
+            # er weer een browser is (services/woocommerce_browser.py).
             from backend.database import get_db
             from backend.services.woocommerce_browser import onthoud_uitverkocht
             await onthoud_uitverkocht(get_db(), str(credentials.get("user_id")), platform_listing_id)
             return True
-        if product is None or product.get("status") == "trash":
-            return True     # al weg: "zorg dat het er niet staat" is gelukt
-        if product.get("type") == "variable":
-            for v in await c.variaties(platform_listing_id):
-                if v.get("stock_status") != "outofstock":
-                    await c.werk_bij(platform_listing_id, _uitverkocht(v), variatie=str(v["id"]))
-            return True
-        if product.get("stock_status") != "outofstock" or (product.get("stock_quantity") or 0) > 0:
-            await c.werk_bij(platform_listing_id, _uitverkocht(product))
-        return True
 
     async def update_listing_price(self, platform_listing_id: str, price: float, credentials: dict) -> bool:
         c = self._eis(credentials)
@@ -839,6 +830,21 @@ class WooCommercePlatform(PlatformBase):
 
     async def refresh_credentials(self, credentials: dict) -> dict:
         return credentials      # WooCommerce-sleutels verlopen niet
+
+
+async def zet_uitverkocht(c: WooClient, product_id: str) -> bool:
+    """Het product (of elke maat ervan) op uitverkocht. Gooit bij een fout."""
+    product = await c.product(product_id)
+    if product is None or product.get("status") == "trash":
+        return True     # al weg: "zorg dat het er niet staat" is gelukt
+    if product.get("type") == "variable":
+        for v in await c.variaties(product_id):
+            if v.get("stock_status") != "outofstock":
+                await c.werk_bij(product_id, _uitverkocht(v), variatie=str(v["id"]))
+        return True
+    if product.get("stock_status") != "outofstock" or (product.get("stock_quantity") or 0) > 0:
+        await c.werk_bij(product_id, _uitverkocht(product))
+    return True
 
 
 def _uitverkocht(p: dict) -> dict:

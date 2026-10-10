@@ -294,13 +294,18 @@ async def onthoud_uitverkocht(db, user_id: str, product_id: str) -> None:
 
 async def werk_wachtrij_af(db, user_id: str) -> int:
     """De uitgestelde 'op uitverkocht' uitvoeren. Geeft hoeveel er lukten."""
-    from backend.platforms.woocommerce import WooCommercePlatform
+    from backend.platforms.woocommerce import client_uit, zet_uitverkocht
     rij = await _lees_rij(db, user_id)
     lijst = list(((rij or {}).get("extra_data") or {}).get(WACHTRIJ) or [])
+    client = client_uit(rij) if rij else None
+    if not client:
+        return 0
     gelukt = []
     for pid in lijst:
         try:
-            await WooCommercePlatform().delete_listing(pid, rij)
+            # Rechtstreeks, niet via delete_listing: die zou een mislukking weer
+            # in de wachtrij zetten en hier als gelukt tellen.
+            await zet_uitverkocht(client, pid)
             gelukt.append(pid)
         except Exception as e:  # noqa: BLE001 — volgende keer opnieuw
             logger.warning("woocommerce-browser: uitgesteld uitverkocht %s/%s mislukt: %s",
@@ -343,4 +348,14 @@ def _start_onderhoud(user_id: str) -> None:
         finally:
             _onderhoud_bezig.discard(user_id)
 
-    asyncio.get_running_loop().create_task(_doe())
+    houd_vast(asyncio.get_running_loop().create_task(_doe()))
+
+
+_taken: set = set()
+
+
+def houd_vast(taak: asyncio.Task) -> None:
+    """Een achtergrondtaak waar niemand op wacht moet ergens bewaard worden,
+    anders kan Python hem halverwege opruimen (asyncio.create_task, documentatie)."""
+    _taken.add(taak)
+    taak.add_done_callback(_taken.discard)

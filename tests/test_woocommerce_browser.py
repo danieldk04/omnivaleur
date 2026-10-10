@@ -422,3 +422,19 @@ def _met_browser_in_app(client, user_id, winkel, werk):
 async def _via_app(client, methode, pad):
     r = await asyncio.to_thread(getattr(client, methode), pad)
     return r.json().get("opdrachten", [])
+
+
+def test_browser_valt_weg_tijdens_afmelden_gaat_in_de_wachtrij(monkeypatch):
+    """Online, maar het verzoek mislukt in de browser: niet kwijt, maar wachtrij.
+    En een mislukte wachtrijronde laat het product in de wachtrij staan."""
+    winkel = _Winkel()
+    db, naast = _db_met()
+    monkeypatch.setattr(database, "naast_de_lus", naast)
+    monkeypatch.setattr(database, "get_db", lambda: db)
+    rij = db.t["platform_credentials"][0]
+    assert _met_browser("u1", winkel, lambda: w.WooCommercePlatform().delete_listing("2", rij), kapot=True)
+    assert rij["extra_data"][wb.WACHTRIJ] == ["2"]
+    assert _met_browser("u1", winkel, lambda: wb.werk_wachtrij_af(db, "u1"), kapot=True) == 0
+    assert rij["extra_data"][wb.WACHTRIJ] == ["2"], "mislukt is niet gelukt"
+    assert _met_browser("u1", winkel, lambda: wb.werk_wachtrij_af(db, "u1")) == 1
+    assert rij["extra_data"][wb.WACHTRIJ] == [] and winkel.producten[2]["stock_status"] == "outofstock"

@@ -903,7 +903,7 @@ def woocommerce_info(user_id: str = Depends(get_current_user)):
 
 async def _woo_webhook_op_achtergrond(user_id: str) -> None:
     """Webhook regelen zonder het koppelen op te houden of te laten mislukken."""
-    from backend.services.woocommerce_browser import zorg_voor_webhook
+    from backend.services.woocommerce_browser import houd_vast, zorg_voor_webhook
 
     async def _doe():
         try:
@@ -911,7 +911,7 @@ async def _woo_webhook_op_achtergrond(user_id: str) -> None:
             logger.info("woocommerce: webhook voor %s: %s", user_id[:8], uit)
         except Exception as e:  # noqa: BLE001 — bij de volgende browserronde opnieuw
             logger.warning("woocommerce: webhook voor %s niet geregeld: %s", user_id[:8], e)
-    asyncio.get_running_loop().create_task(_doe())
+    houd_vast(asyncio.get_running_loop().create_task(_doe()))
 
 
 @router.get("/woocommerce/browser/opdrachten")
