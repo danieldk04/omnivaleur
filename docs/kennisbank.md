@@ -17,6 +17,20 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-titel-te-veel-hoofdletters
+
+*10-10-2026 — Vinted weigert titels met "too many capital letters" pas op de server bij plaatsen; geen vaste grens; extensie 1.0.380 schrijft rustig en plaatst één keer opnieuw. Nooit proefplaatsen op Daniels account.*
+
+10-10-2026: "Vermarc Cycling Kit Men XL - Shanks Group ATM REYM Jersey" werd door Vinted geweigerd met "Title contains too many capital letters, try using lowercase letters". De controle zit op de server (POST /api/v2/item_upload/items), niet in Vinteds JavaScript. De grens is geen percentage: een live titel met 44% hoofdletters staat gewoon online. Vooraf raden kan dus niet.
+
+Sinds extensie 1.0.380: na een mislukte plaatsing kijkt vinted.js rond het titelvak naar die melding (EN/NL/FR/DE/ES/IT/PL), schrijft de titel in kleine letters met alleen het eerste woord en de merkwoorden met hoofdletter, en plaatst één keer opnieuw. Proef: tests/vinted-hoofdletters-titel-test.js (oud e496aa40 faalt, nieuw plaatst).
+
+**Why:** proefklikken op Upload in Daniels Chrome (ook zonder foto's) gaf na een paar keer 403 op item_upload en daarna Vinteds schuifcontrole (bot-verificatie). Alles na de eerste 403 was een lege, onbetrouwbare meting.
+
+**How to apply:** meet Vinted-servergrenzen nooit door herhaald in te dienen op Daniels account; hooguit één poging, en wantrouw elke "geen melding" na een 403. Zie "omnivaleur-altijd-bewijzen".
+
+---
+
 ## updatelog-grote-ontwikkelingen
 
 *10-10-2026 — sinds 10-10 houdt het dashboard een tijdlijn "What's new" bij; elke grote ontwikkeling krijgt daar een bericht, zonder dat Daniel erom vraagt*

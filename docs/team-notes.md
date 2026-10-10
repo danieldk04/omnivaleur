@@ -16884,3 +16884,10 @@ Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het d
   niets met een verkeerde prijs online). Anders stoppen zoals voorheen, nu met "the field showed ..., Vinted's form
   held ..." in de melding, en bij een mislukte plaatsing na zo'n twijfel staat dat er ook bij. Proef
   tests/vinted-prijs-laat-vinted-beslissen-test.js.
+
+## 10-10-2026 22:45: Vinted weigert titels met te veel hoofdletters (extensie 1.0.380)
+- Daniel zag bij het plaatsen "Title contains too many capital letters" onder de titel "Vermarc Cycling Kit Men XL - Shanks Group ATM REYM Jersey"; het formulier bleef open staan.
+- Gemeten: Vinted controleert dit op de server bij het plaatsen, zonder vast percentage (live titel met 44% hoofdletters staat online). Vooraf voorkomen kan daarom niet zeker.
+- Reparatie: na een geweigerde plaatsing leest de extensie de melding bij het titelvak, schrijft de titel rustig (kleine letters, eerste woord en merk met hoofdletter) en plaatst één keer opnieuw. Voor-en-na-proef: tests/vinted-hoofdletters-titel-test.js.
+- Let op: mijn proefklikken in Daniels Chrome triggerden na een paar keer Vinteds bot-verificatie (schuifcontrole). Daniel moet die één keer zelf doorschuiven. Nooit grenzen meten door herhaald in te dienen.
+- Uitbrengen: dist/omnivaleur-extension-1.0.380.zip moet nog naar de Web Store.

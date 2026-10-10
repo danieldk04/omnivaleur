@@ -47,7 +47,9 @@ const TITEL = "Vermarc Cycling Kit Men XL - Shanks Group ATM REYM Jersey";
 const KLACHT = "Title contains too many capital letters, try using lowercase letters";
 
 async function draai(bron) {
-  const titleEl = { value: TITEL };
+  // Het titelvak met zijn omhullende blok, waar Vinted de melding onder zet.
+  const blok = { innerText: "", parentElement: null };
+  const titleEl = { value: TITEL, innerText: "", parentElement: blok };
   const pogingen = [];
   const ctx = {
     document: { body: { innerText: "" } },
@@ -62,10 +64,10 @@ async function draai(bron) {
       pogingen.push(titleEl.value);
       const hoofd = (titleEl.value.match(/\p{Lu}/gu) || []).length;
       if (hoofd > 1) {
-        ctx.document.body.innerText = "Upload\n" + KLACHT;
+        blok.innerText = "Title\n" + KLACHT;
         throw new Error("Clicked publish but no listing appeared");
       }
-      ctx.document.body.innerText = "";
+      blok.innerText = "Title";
       return "12345";
     },
     // De kast: daar staat niets, want Vinted plaatste niets.
@@ -105,6 +107,7 @@ async function draai(bron) {
   check("cijfers en leestekens blijven staan", r("NIKE AIR MAX 90 - Maat 42,5 (Wit)", "Nike") === "Nike air max 90 - maat 42,5 (wit)", r("NIKE AIR MAX 90 - Maat 42,5 (Wit)", "Nike"));
   const klacht = (t) => vm.runInContext(`HOOFDLETTER_KLACHT_RE.test(${JSON.stringify(t)})`, ctx);
   check("klacht herkend in het Engels", klacht(KLACHT));
+  check("klacht herkend in het Nederlands en Frans", klacht("Titel bevat te veel hoofdletters") && klacht("Le titre contient trop de majuscules"));
   check("geen klacht bij een andere melding", !klacht("Please upload at least 1 photo"));
 
   console.log(mislukt ? `\n${mislukt} fout(en)` : "\nAlles goed");

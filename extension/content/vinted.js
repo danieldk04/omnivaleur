@@ -2033,10 +2033,16 @@
   // klacht na het plaatsen en schrijven de titel dan rustig: kleine letters,
   // alleen het eerste woord en de woorden van het merk met een hoofdletter.
   const HOOFDLETTER_KLACHT_RE =
-    /too many capital|te veel hoofdletters|trop de majuscules|zu viele gro(ß|ss)buchstaben|demasiadas may[uú]sculas|troppe (lettere )?maiuscole|zbyt wiele wielkich/i;
+    /too many capital|hoofdletter|majuscule|gro(ß|ss)buchstabe|may[uú]scula|maiuscol|wielkich liter/i;
 
+  // Alleen rond het titelvak kijken: de melding staat er direct onder, en zo
+  // telt een woord als "hoofdletter" in de omschrijving nooit mee.
   function hoofdletterKlachtVinted() {
-    return HOOFDLETTER_KLACHT_RE.test((document.body && document.body.innerText) || "");
+    let n = qs('input[data-testid="title--input"]');
+    for (let i = 0; i < 5 && n; i++, n = n.parentElement) {
+      if (HOOFDLETTER_KLACHT_RE.test(n.innerText || "")) return true;
+    }
+    return false;
   }
 
   function rustigeTitelVinted(titel, merk) {
