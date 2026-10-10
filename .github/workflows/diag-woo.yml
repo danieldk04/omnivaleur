@@ -10,6 +10,34 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install -q httpx
+      - name: matrix
+        run: |
+          pip install -q "httpx[http2]==0.27.2" requests
+          UA="Omnivaleur/1.0 (+https://omnivaleur.com)"
+          c() { echo -n "$1: "; shift; curl -sS -m 25 -o /dev/null -w "%{http_code} http%{http_version}\n" "$@"; }
+          echo "IP: $(curl -s https://api.ipify.org)"
+          c "curl GET h2 UA"        -A "$UA" https://dejuistetoon.eu/
+          c "curl GET h1.1 UA"      --http1.1 -A "$UA" https://dejuistetoon.eu/
+          c "curl HEAD h2 UA"       -I -A "$UA" https://dejuistetoon.eu/
+          c "curl HEAD h1.1 UA"     -I --http1.1 -A "$UA" https://dejuistetoon.eu/
+          c "curl GET wp-json h1.1" --http1.1 -A "$UA" https://dejuistetoon.eu/wp-json/
+          c "curl GET h1.1 httpxkoppen" --http1.1 -A "$UA" -H "Accept: */*" -H "Accept-Encoding: gzip, deflate" -H "Connection: keep-alive" https://dejuistetoon.eu/
+          cat > /tmp/m.py <<'PY2'
+          import httpx, requests, asyncio
+          UA = "Omnivaleur/1.0 (+https://omnivaleur.com)"
+          U = "https://dejuistetoon.eu/"
+          def toon(n, r): print(f"{n}: {r.status_code} {getattr(r,'http_version','')} sg={r.headers.get('sg-captcha')}")
+          toon("httpx GET h1.1", httpx.get(U, headers={"User-Agent": UA}))
+          toon("httpx GET h2", httpx.Client(http2=True, headers={"User-Agent": UA}).get(U))
+          toon("httpx HEAD h1.1", httpx.head(U, headers={"User-Agent": UA}))
+          toon("httpx GET h1.1 zonder Accept-Encoding", httpx.get(U, headers={"User-Agent": UA, "Accept-Encoding": "identity"}))
+          toon("requests GET", requests.get(U, headers={"User-Agent": UA}))
+          toon("httpx GET wp-json h2", httpx.Client(http2=True, headers={"User-Agent": UA}).get(U + "wp-json/"))
+          toon("httpx GET wc/v3 h2", httpx.Client(http2=True, headers={"User-Agent": UA}).get(U + "wp-json/wc/v3/products"))
+          PY2
+          python /tmp/m.py
+          c "curl GET h2 UA (na python)" -A "$UA" https://dejuistetoon.eu/
+          c "curl GET h1.1 UA (na python)" --http1.1 -A "$UA" https://dejuistetoon.eu/
       - name: dns
         run: |
           for h in dejuistetoon.eu www.dejuistetoon.eu; do echo "== $h"; getent hosts $h || echo GEEN DNS; done
