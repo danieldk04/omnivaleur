@@ -16940,3 +16940,24 @@ Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het d
   verzoeken; een verzoek kost daar 0,2 tot 0,5 s. Niet gemeten: de echte tijd per verlenging bij Egbert, kan pas als
   1.0.382 bij hem draait. Verwachting: de helft van de 78 s eraf. De 12 tot 18 s tussen opdrachten is niet onderzocht.
 - Daniel moet dist/omnivaleur-extension-1.0.382.zip in de Web Store zetten. Mailconcept bewaard.
+
+## 11-10-2026 (vervolg): de 12 tot 18 s tussen twee opdrachten, uitgezocht
+
+- Gemeten in de Railway-verzoeklog (`npx -y @railway/cli logs <deployment-id> --http --json --since/--until`, Egberts
+  IP via zijn claim-paden): de /pending die een opdracht uitgaf duurde 10,2 tot 10,9 s, een lege poll 0,85 s.
+- Oorzaak 1 (server): de verkoopcontrole in get_pending_jobs vroeg voor elke wachtende plaatsing het artikel en zijn
+  tweelingen los op. Bij 24 wachtende plaatsingen 48 vragen, ook als er alleen een verlenging uitging. Nu gebundeld
+  (familie_ids_veel, items in één .in_()). Na de uitrol 08:33 UTC gemeten bij Egbert: uitgifte 2,6 s in plaats van
+  10,5 s; gaten tussen opdrachten van 11 tot 18 s naar 3 tot 4 s (behalve tussen verlengingen, zie 2).
+  Gelijkwaardigheid: 705 echte artikelen plus alle 64 accounts met tweelingen (2 families) gaven precies dezelfde
+  families; tests/test_tweelingen_gebundeld.py (ook _-joker, volle bundel, database weg).
+- Oorzaak 2 (extensie): na een opdracht schuift de beurt een kanaal op, dus vroeg hij eerst Vinted, Facebook en
+  Marktplaats (elk ~1 s, leeg) voor 2dehands weer aan bod kwam. Kanalen die bij de vorige vraag leeg waren komen nu
+  achteraan in de ronde, maar worden nog steeds elke ronde gevraagd. Proef tests/lege-kanalen-achteraan-test.js:
+  oud 3 lege vragen voor elke verlenging, nieuw 0. Zit in 1.0.382.
+- Bijvangst: tests/opdrachten-om-de-beurt-test.js was sinds 1fb8d5ec (10-10) stil kapot (kende POLL_FETCH_MAX_MS en
+  _wachtrijStand niet, alles faalde). Proef gerepareerd, groen op oud en nieuw.
+- Echte verlenging met de 1.0.382-code op Revaleur (m2431571489, met Daniels ja): +28 dagen, lezen voor 0,3 s en na
+  1,1 s, 1 verzoek elk; volgorde na verlengen ongewijzigd.
+- Bewust gelaten: de vaste pauze van 4 s tussen twee opdrachten (MIN_GAP_MS, tegen wegflitsend scherm) en het werk bij
+  het uitgeven van een nieuwe plaatsing (Marktplaats-rubriek en verzending opzoeken, 6 tot 11 s, echt werk).

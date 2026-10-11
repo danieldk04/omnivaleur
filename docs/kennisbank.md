@@ -17,6 +17,31 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## gat-tussen-opdrachten-meten
+
+*11-10-2026 — Tijd tussen twee opdrachten meet je in de Railway-verzoeklog per klant; 11-10 zat 10 s in de verkoopcontrole van /pending en 3 s in lege kanalen vóór 2dehands*
+
+11-10-2026, Egbert (bcdf9aa4): 12 tot 18 s tussen elke opdracht. De database (claimed_at/done_at) laat alleen
+het gat zien, niet waar het zit. De Railway-verzoeklog wel: `npx -y @railway/cli deployment list --json`, dan
+`npx -y @railway/cli logs <deployment-id> --http --json --since <iso> --until <iso>` in vensters van 5 min
+(bash, niet zsh). Zoek het IP van de klant via de paden /api/jobs/<zijn job-id>/claim en lees zijn tijdlijn;
+totalDuration staat per verzoek, de timestamp is ongeveer het einde. `-n` zonder deployment-id geeft alleen de
+laatste deploy, en de auto-push-hook maakt bij elke Edit een nieuwe deploy.
+
+Wat het was: (1) get_pending_jobs deed de verkoopcontrole per wachtende plaatsing met twee losse vragen, 48 vragen
+en 10 s bij 24 plaatsingen, ook als er een verlenging uitging. Nu familie_ids_veel, 2,6 s. (2) De extensie draait
+de beurt na elke opdracht een kanaal door en vroeg drie lege kanalen af vóór 2dehands; lege kanalen nu achteraan
+(1.0.382). Lokaal profileren kan read-only: schrijvende postgrest-methodes vervangen door een lege stub,
+_record_extension_heartbeat en _recover_stale_claims uitzetten, STALE_CLAIM_MINUTES negatief om een lopende
+opdracht te negeren.
+
+**Why:** een "nog steeds traag" na een snelheidsreparatie zat hier in twee lagen die geen van beide in de
+extensie-opdracht zelf zichtbaar waren.
+**How to apply:** bij elke klacht over tempo eerst de verzoeklog van die klant lezen voor je iets aanneemt.
+Hoort bij "2dehands-verlengen-niet-herplaatsen" en "meten-op-de-productiedatabase".
+
+---
+
 ## 2dehands-verlengen-niet-herplaatsen
 
 *11-10-2026 — "2dehands heeft een gratis verlengknop; bijna verlopen zoekertjes verleng je, je haalt ze niet weg en plaatst ze niet opnieuw"*
