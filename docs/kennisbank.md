@@ -17,6 +17,60 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## 2dehands-verlengen-niet-herplaatsen
+
+*11-10-2026 — "2dehands heeft een gratis verlengknop; bijna verlopen zoekertjes verleng je, je haalt ze niet weg en plaatst ze niet opnieuw"*
+
+Sinds 10-09-2026 heeft Omnivaleur een eigen opdrachtsoort `extend` voor 2dehands,
+naast create/delete/content_refresh/scan. Een 2dehands-zoekertje is 4 weken
+zichtbaar en kan daarna GRATIS verlengd worden; opnieuw plaatsen kost in een
+betalende rubriek geld of eet het gratis tegoed op. Dus verlengen, nooit het
+Marktplaats-pad (weghalen + opnieuw plaatsen) kopiëren. Er mag bij een `extend`
+nooit iets op 'relisting' of 'delisted', alleen `listed_at` opschuiven, en alleen
+met bewijs.
+
+Gemeten op account Revaleur:
+- overzicht-API: `/my-account/sell/api/listings?batchNumber=1&batchSize=200` geeft
+  per ad `{itemId, status, closeDate, reserved}`. `status:"EXPIRING"` ⟺ er staat
+  een verlengknop.
+- knop: `a[href="#verlengen"][data-ad-id="m…"]`. Klik verlengt meteen, geen
+  bevestiging; daarna een venster met een BETAALDE knop "Plaats bovenaan" (€0,24)
+  die je nooit aanraakt.
+- na verlengen: `closeDate` exact +28 dagen, status ACTIVE.
+- endpoint `POST /my-account/sell/extend.json {"itemId":"m…"}` bestaat maar geeft
+  403 bij een kale fetch (CSRF/WAF) — daarom de DOM-klik.
+
+Code: `extend_expiring_2dehands()` in `backend/services/crosslist.py`,
+`bgExtend2dh` in `extension/background.js` (1.0.318+), `complete_job`-tak in
+`backend/api/jobs.py`, test `tests/verlengen-2dehands-test.js`.
+
+Zie "eerst-recente-wijzigingen-lezen", "always-push-to-live",
+"extension-release-bump-version".
+
+**Groot overzicht (03-10-2026):** de knop staat alleen in de DOM als de rij is
+opengeklapt. `expandMp2dhOverview` stopte na 40 klikken (2.050 rijen); klant
+bcdf9aa4 heeft 2.437 zoekertjes en de verlopende zijn de oudste, dus onderaan:
+"Verlengen button could not be found". Nu 400 klikken (1.0.365). Dezelfde
+functie voedt de verwijdercontrole, die een afwezige rij als "weg" kan lezen.
+Proef: `tests/verlengen-2dehands-groot-overzicht-test.js`.
+
+**Filter "Loopt af" (07-10-2026, 1.0.371):** het overzicht heeft `select#Dropdown-filterOpStatus` met waarde
+`expiring`; de pagina vraagt dan `/my-account/sell/api/listings?...&inExpirationWindow=true` en toont alleen de
+zoekertjes met verlengknop. `expandMp2dhOverview(tabId, {verlengId})` zet dat filter, klapt alleen open tot de knop
+er staat, en valt pas terug op het hele overzicht als de API hem aflopend noemt. Zonder dit kostte elke verlenging
+bij 2.437 zoekertjes ~5 min (Egbert). De API kent ook `query=` en `categoryId=`. Proef:
+`tests/verlengen-2dehands-filter-test.js`.
+
+**Lezen, niet alleen klikken (11-10-2026, 1.0.382):** na 1.0.371 duurde een verlenging bij Egbert nog 73-84 s,
+terwijl de knop in seconden stond. Het lezen vóór en na de klik bladerde de API van voren af aan (nieuwste eerst,
+de aflopende achteraan): 25 bladzijden, twee keer, ~50 verzoeken. Nu eerst `inExpirationWindow=true`, dan halveren
+op itemId (de lijst loopt van hoog naar laag, nagemeten op Revaleur), en alleen als dat niet klopt de oude volledige
+lezing. "Niet gevonden" komt nog steeds alleen uit een volledige lezing. Proef:
+`tests/verlengen-2dehands-gericht-lezen-test.js` (oud 50 verzoeken, nieuw 7). Les: na een snelheidsreparatie
+meten waar de rest van de tijd zit; een klacht "nog steeds traag" is vaak een tweede, kleinere rem achter de eerste.
+
+---
+
 ## vinted-titel-te-veel-hoofdletters
 
 *10-10-2026 — Vinted weigert titels met "too many capital letters" pas op de server bij plaatsen; geen vaste grens; extensie 1.0.380 schrijft rustig en plaatst één keer opnieuw. Nooit proefplaatsen op Daniels account.*
@@ -412,52 +466,6 @@ over conversie en meetbaarheid.
 naar de leadpagina (22-08-2026). Bij het schrijven van nieuwe mailteksten of
 templates: gebruik altijd die `VIDEO`-constante, nooit een los ingetypte
 YouTube-URL. Zie ook "mailagent-slimme-antwoorden" en "koude-mail-autonoom".
-
----
-
-## 2dehands-verlengen-niet-herplaatsen
-
-*07-10-2026 — "2dehands heeft een gratis verlengknop; bijna verlopen zoekertjes verleng je, je haalt ze niet weg en plaatst ze niet opnieuw"*
-
-Sinds 10-09-2026 heeft Omnivaleur een eigen opdrachtsoort `extend` voor 2dehands,
-naast create/delete/content_refresh/scan. Een 2dehands-zoekertje is 4 weken
-zichtbaar en kan daarna GRATIS verlengd worden; opnieuw plaatsen kost in een
-betalende rubriek geld of eet het gratis tegoed op. Dus verlengen, nooit het
-Marktplaats-pad (weghalen + opnieuw plaatsen) kopiëren. Er mag bij een `extend`
-nooit iets op 'relisting' of 'delisted', alleen `listed_at` opschuiven, en alleen
-met bewijs.
-
-Gemeten op account Revaleur:
-- overzicht-API: `/my-account/sell/api/listings?batchNumber=1&batchSize=200` geeft
-  per ad `{itemId, status, closeDate, reserved}`. `status:"EXPIRING"` ⟺ er staat
-  een verlengknop.
-- knop: `a[href="#verlengen"][data-ad-id="m…"]`. Klik verlengt meteen, geen
-  bevestiging; daarna een venster met een BETAALDE knop "Plaats bovenaan" (€0,24)
-  die je nooit aanraakt.
-- na verlengen: `closeDate` exact +28 dagen, status ACTIVE.
-- endpoint `POST /my-account/sell/extend.json {"itemId":"m…"}` bestaat maar geeft
-  403 bij een kale fetch (CSRF/WAF) — daarom de DOM-klik.
-
-Code: `extend_expiring_2dehands()` in `backend/services/crosslist.py`,
-`bgExtend2dh` in `extension/background.js` (1.0.318+), `complete_job`-tak in
-`backend/api/jobs.py`, test `tests/verlengen-2dehands-test.js`.
-
-Zie "eerst-recente-wijzigingen-lezen", "always-push-to-live",
-"extension-release-bump-version".
-
-**Groot overzicht (03-10-2026):** de knop staat alleen in de DOM als de rij is
-opengeklapt. `expandMp2dhOverview` stopte na 40 klikken (2.050 rijen); klant
-bcdf9aa4 heeft 2.437 zoekertjes en de verlopende zijn de oudste, dus onderaan:
-"Verlengen button could not be found". Nu 400 klikken (1.0.365). Dezelfde
-functie voedt de verwijdercontrole, die een afwezige rij als "weg" kan lezen.
-Proef: `tests/verlengen-2dehands-groot-overzicht-test.js`.
-
-**Filter "Loopt af" (07-10-2026, 1.0.371):** het overzicht heeft `select#Dropdown-filterOpStatus` met waarde
-`expiring`; de pagina vraagt dan `/my-account/sell/api/listings?...&inExpirationWindow=true` en toont alleen de
-zoekertjes met verlengknop. `expandMp2dhOverview(tabId, {verlengId})` zet dat filter, klapt alleen open tot de knop
-er staat, en valt pas terug op het hele overzicht als de API hem aflopend noemt. Zonder dit kostte elke verlenging
-bij 2.437 zoekertjes ~5 min (Egbert). De API kent ook `query=` en `categoryId=`. Proef:
-`tests/verlengen-2dehands-filter-test.js`.
 
 ---
 

@@ -16924,3 +16924,19 @@ Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het d
   530.280 tokens erin en 326.971 eruit, en 0 op alle andere dagen. Dat is de blinde beoordelaar (Sonnet 5.5) van de vertaalproef op 199 teksten
   bij de overstap naar Haiku 5.5 (commit 1d37ce86, kennisbank). Eenmalige proef, geen lopende lus. Sonnet 5.5 staat daarom niet in de code.
 - Zonder die proef was 10-10 ongeveer $1,75; de rem werkt, de $6 was een eenmalige meting. Console-tip: Usage heeft Group by API key, Cost niet.
+
+## 11-10-2026: Egbert (bcdf9aa4): verlengen nog steeds traag na 1.0.371
+
+- Zijn mail: vinden gaat nu snel, maar na elke verlenging duurt het lang voor de volgende begint. Gemeten in zijn
+  opdrachten van vanochtend (extensie 1.0.376): 25 verlengingen, elk 73 tot 84 s van oppakken tot klaar, en 12 tot 18 s
+  tussen twee opdrachten (dat laatste geldt voor alle opdrachtsoorten en zat er op 07-10 ook al). Calm mode staat niet aan.
+- Oorzaak: bgExtend2dh las vóór en na de klik de overzicht-API van voren af aan. Nieuwste eerst, de aflopende achteraan:
+  bij 2.437 zoekertjes twee keer 25 bladzijden met een pauze ertussen, ~50 verzoeken per verlenging.
+- Gerepareerd (extensie 1.0.382): eerst de lijst "Loopt af" (inExpirationWindow=true), dan halveren op itemId, en alleen
+  als de volgorde niet klopt het oude pad. "Niet gevonden" komt nog steeds alleen uit een volledige lezing.
+- Bewijs: proef tests/verlengen-2dehands-gericht-lezen-test.js, oud (6279f2b8) 50 verzoeken, nieuw 7, alle 40 aflopende
+  verlengd met bewijs, randgevallen (niet in venster, al verlengd, weg, andere volgorde) groen. Op de echte 2dehands
+  (Revaleur, alleen lezend, bladzijden van 5 om 21 bladzijden na te bootsen): 101 van 101 juist gevonden, hooguit 6
+  verzoeken; een verzoek kost daar 0,2 tot 0,5 s. Niet gemeten: de echte tijd per verlenging bij Egbert, kan pas als
+  1.0.382 bij hem draait. Verwachting: de helft van de 78 s eraf. De 12 tot 18 s tussen opdrachten is niet onderzocht.
+- Daniel moet dist/omnivaleur-extension-1.0.382.zip in de Web Store zetten. Mailconcept bewaard.
