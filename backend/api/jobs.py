@@ -2396,14 +2396,24 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                   if j["action"] == "create" and j.get("item_id")]
     if te_toetsen:
         try:
-            from backend.services.tweelingen import familie_ids
+            # GEBUNDELD (11-10-2026, Egbert bcdf9aa4): eerst per wachtende
+            # plaatsing twee losse vragen, bij 24 in de rij 48 vragen en 10 s
+            # wachten bij elke uitgifte. Nu het artikel en zijn tweelingen voor
+            # de hele rij tegelijk; zelfde uitkomst, zie familie_ids_veel.
+            from backend.services.tweelingen import familie_ids_veel
             familie_van: dict[str, list[str]] = {}
             gemaakt_op: dict[str, str] = {}
             alle_ids: list[str] = []
-            for iid in dict.fromkeys(te_toetsen):
-                rij = (db.table("items").select("id,user_id,title,sku,brand,created_at")
-                       .eq("id", iid).limit(1).execute().data or [None])[0]
-                fam = familie_ids(db, rij) if rij else [iid]
+            unieke = list(dict.fromkeys(te_toetsen))
+            rij_van: dict[str, dict] = {}
+            for i in range(0, len(unieke), 200):
+                for rij in (db.table("items").select("id,user_id,title,sku,brand,created_at")
+                            .in_("id", unieke[i:i + 200]).execute().data or []):
+                    rij_van[rij["id"]] = rij
+            families = familie_ids_veel(db, list(rij_van.values()))
+            for iid in unieke:
+                rij = rij_van.get(iid)
+                fam = families.get(iid) or [iid] if rij else [iid]
                 familie_van[iid] = fam
                 if rij and rij.get("created_at"):
                     gemaakt_op[iid] = rij["created_at"]
