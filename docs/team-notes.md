@@ -16961,3 +16961,21 @@ Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het d
   1,1 s, 1 verzoek elk; volgorde na verlengen ongewijzigd.
 - Bewust gelaten: de vaste pauze van 4 s tussen twee opdrachten (MIN_GAP_MS, tegen wegflitsend scherm) en het werk bij
   het uitgeven van een nieuwe plaatsing (Marktplaats-rubriek en verzending opzoeken, 6 tot 11 s, echt werk).
+
+## 11-10-2026: Onboarding nieuwe klanten (ochtend)
+- Geen nieuwe aanmeldingen; zes bekende klanten in hun eerste week. Stap 1b gold alleen 09-10.
+- Janneke 31d28378: de 140 Shopify-producten van 10-10 zijn geimporteerd (0 pending). Het open punt van 10-10 opgelost:
+  17 items hingen aan samen 84 Shopify-producten (20 jassen op "* Jas"); 17 kandidaten imported, 67 linked, geen ander
+  kanaal op die items. Mechanisme bewezen in handle_item_sold/_write_sold: een verkoop van een van de 20 boekt een
+  willekeurige rij als verkocht en zet de andere 19 op delisted, dus latere verkopen worden niet meer gezien.
+  Gerepareerd (klantdata): elk van de 67 linked producten kreeg een eigen item via dezelfde helpers als de bulkimport
+  (_item_data_from_candidate, merk uit titel, foto's gespiegeld, staat volgens haar import_staat), de bestaande
+  advertentierij verhuisde naar het nieuwe item, niets verwijderd. Voor: 17 items met >1 product, 84 producten,
+  3359 items. Na: 0 items met >1 product, 0 producten op twee rijen, 3426 items. /health 200. Rubriek kwam uit de
+  woordenlijst (Claude voor rubriek uit, Gemini 402), zelfde als de gewone import nu doet.
+- Janneke verder: proef loopt vandaag 21:06 af zonder betaalmethode; extensie 1.0.377, Web Store 1.0.380. Haar
+  Vinted-fouten van 10-10 avond zijn al behandeld (1.0.378 tot 1.0.380). Vinted-scan van 05:05 UTC wacht op haar
+  extensie (laatst gezien 01:34), geen fout van ons.
+- Amanda 8f91a370: actief vanochtend, geen nieuwe fouten. Call ma 12-10 12:00 (agenda), briefing voor Daniel.
+- robbertbolier, partablecs, winterhome, amhin: ongewijzigd, nul artikelen, al gemaild. Proef van partablecs en
+  winterhome loopt 12-10 af. Geen mailtjes vandaag.
