@@ -5417,7 +5417,7 @@ async function bgExtend2dh(job, serverUrl) {
         } catch (e) { return { fetchError: String(e && e.message || e) }; }
       };
 
-      const before = await readOne();
+      const before = await readOne(true);
       if (before.httpError) return { step: "read", httpError: before.httpError };
       if (before.fetchError) return { step: "read", fetchError: before.fetchError };
       // Leeg overzicht bewijst niets (uitgelogd? markup veranderd?). Nooit
