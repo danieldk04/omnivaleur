@@ -2163,7 +2163,22 @@ async function pollJobsEenRonde() {
   // pending work — otherwise the backend hands us back a job we already did.
   await flushFinaliseQueue();
   const headers = await getAuthHeaders();
-  for (const platform of await platformsOpBeurt()) {
+  // LEGE KANALEN ACHTERAAN IN DE RONDE (11-10-2026, Egbert bcdf9aa4).
+  //
+  // Na elke verlenging schoof de beurt naar Vinted, dan Facebook, dan
+  // Marktplaats: drie vragen aan de server van ~1 s, alle drie leeg, voordat
+  // 2dehands weer aan bod kwam (Railway-verzoeklog). Een kanaal dat bij de vorige
+  // vraag niets had, komt nu na de kanalen met werk. Het wordt in dezelfde
+  // ronde nog steeds gevraagd, dus nieuw werk daar blijft niet liggen, en tussen
+  // kanalen MET werk blijft de beurt precies zoals hij was. Na een herstart van
+  // de service worker weten we niets en geldt de gewone volgorde.
+  const bekendLeeg = (p) => {
+    const stand = _wachtrijStand[p];
+    return !!stand && Object.keys(stand).length === 0;
+  };
+  const opBeurt = await platformsOpBeurt();
+  const volgorde = opBeurt.filter((p) => !bekendLeeg(p)).concat(opBeurt.filter(bekendLeeg));
+  for (const platform of volgorde) {
     // Op dit kanaal staat al een formulier open: niets vragen. De server weigert
     // het ook (zie MAX_PARALLELLE_PUBLICATIES), maar dan hebben we het verzoek al
     // gedaan — en bij vier kanalen elke ronde is dat zonde.
