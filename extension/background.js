@@ -5325,7 +5325,75 @@ async function bgExtend2dh(job, serverUrl) {
       // 28-09-2026 bij een klant met 625 zoekertjes 40 keer "not in your
       // overview" voor advertenties die gewoon live stonden. batchNumber is
       // 1-based (zie de import hieronder, die hetzelfde overzicht leest).
-      const readOne = async () => {
+      //
+      // NIET DE HELE LIJST, TWEE KEER PER VERLENGING. (11-10-2026, Egbert bcdf9aa4)
+      //
+      // Dat lezen (vóór de klik en erna, als bewijs) bladerde van voren af aan
+      // door alle zoekertjes. De lijst staat nieuwste eerst, dus de zoekertjes
+      // die verlopen staan achteraan: bij 2.437 zoekertjes 25 bladzijden, twee
+      // keer. Gemeten in zijn opdrachten op 1.0.376: elke verlenging 73 tot 84 s,
+      // terwijl het filter de knop al in een paar seconden vond. Nu eerst de
+      // korte lijst "Loopt af" (vóór de klik staat hij daar), dan gericht naar
+      // de juiste bladzijde: de lijst loopt op itemId van hoog naar laag
+      // (nagemeten op Revaleur, 101 van 101), dus halveren vindt hem in een
+      // paar stappen. Klopt die volgorde ergens niet, of vinden we hem zo niet,
+      // dan het oude pad: alles lezen. "Niet gevonden" komt dus nog steeds
+      // alleen uit een volledige lezing.
+      const haal = async (batch, extra = "") => {
+        const r = await fetch(`/my-account/sell/api/listings?batchNumber=${batch}&batchSize=100${extra}`,
+          { headers: { Accept: "application/json" }, credentials: "include" });
+        if (!r.ok) return { httpError: r.status };
+        return { d: await r.json() };
+      };
+      const nr = (id) => Number(String(id).replace(/^m/, ""));
+      const zoekGericht = async (eerstAflopend) => {
+        if (eerstAflopend) {
+          for (let batch = 1; batch <= 20; batch++) {
+            const x = await haal(batch, "&inExpirationWindow=true");
+            if (x.httpError) break;
+            const ads = x.d.ads || [];
+            const ad = ads.find((a) => String(a.itemId) === wantId);
+            if (ad) return { total: x.d.totalNumberOfResults || ads.length, ad };
+            if (ads.length < 100) break;
+          }
+        }
+        const doel = nr(wantId);
+        if (!Number.isFinite(doel)) return null;
+        const eerste = await haal(1);
+        if (eerste.httpError) return null;
+        const totaal = eerste.d.totalNumberOfResults;
+        if (typeof totaal !== "number" || totaal < 1) return null;
+        const bekijk = (d) => {
+          const ads = d.ads || [];
+          const ids = ads.map((a) => nr(a.itemId));
+          if (!ads.length || ids.some((v, i) => !Number.isFinite(v) || (i > 0 && ids[i - 1] <= v))) return { mis: true };
+          const ad = ads.find((a) => String(a.itemId) === wantId);
+          if (ad) return { ad };
+          if (doel > ids[0]) return { eerder: true };
+          if (doel < ids[ids.length - 1]) return { later: true };
+          return { mis: true };                 // binnen deze bladzijde, toch niet gevonden
+        };
+        let b = bekijk(eerste.d);
+        if (b.ad) return { total: totaal, ad: b.ad };
+        if (!b.later) return null;
+        let lo = 2, hi = Math.ceil(totaal / 100);
+        for (let stap = 0; stap < 20 && lo <= hi; stap++) {
+          const mid = Math.floor((lo + hi) / 2);
+          const x = await haal(mid);
+          if (x.httpError) return null;
+          b = bekijk(x.d);
+          if (b.ad) return { total: totaal, ad: b.ad };
+          if (b.mis) return null;
+          if (b.eerder) hi = mid - 1; else lo = mid + 1;
+          await nap(150);
+        }
+        return null;
+      };
+      const readOne = async (eerstAflopend) => {
+        try {
+          const snel = await zoekGericht(eerstAflopend);
+          if (snel) return snel;
+        } catch (e) { /* dan het oude pad hieronder */ }
         try {
           const gezien = new Set();
           for (let batch = 1; batch <= 50; batch++) {
