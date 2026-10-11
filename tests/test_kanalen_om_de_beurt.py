@@ -107,8 +107,11 @@ def _bouw_db(wachtrij, laatst_bediend, laatst_geleden_sec=30, bezig=()):
                         rijen = [j for j in rijen if j["action"] in self.filters["action"]]
                     data = sorted(rijen, key=lambda j: j["created_at"])
             elif self.tabel == "items":
-                data = [{"id": self.filters.get("id", "x"), "user_id": "u1",
-                         "title": "t", "sku": None, "brand": None, "price": 20}]
+                # .in_("id", [...]) geeft één rij per id, zoals de echte database.
+                ids = self.filters.get("id", "x")
+                data = [{"id": i, "user_id": "u1", "title": "t", "sku": None,
+                         "brand": None, "price": 20}
+                        for i in (ids if isinstance(ids, list) else [ids])]
             elif self.tabel == "listings":
                 data = []
             return type("R", (), {"data": data})()
