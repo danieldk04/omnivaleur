@@ -2413,7 +2413,7 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             families = familie_ids_veel(db, list(rij_van.values()))
             for iid in unieke:
                 rij = rij_van.get(iid)
-                fam = families.get(iid) or [iid] if rij else [iid]
+                fam = (families.get(iid) or [iid]) if rij else [iid]
                 familie_van[iid] = fam
                 if rij and rij.get("created_at"):
                     gemaakt_op[iid] = rij["created_at"]
