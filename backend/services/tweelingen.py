@@ -83,6 +83,11 @@ def familie_ids(db, item: dict) -> list[str]:
         logger.warning("tweelingen: kon familie van %s niet lezen: %s", eigen, e)
         return [eigen]
 
+    return _familie_uit_rijen(item, rijen)
+
+
+def _familie_uit_rijen(item: dict, rijen: list[dict]) -> list[str]:
+    eigen = (item or {}).get("id")
     # Zelfde nummer is een sterk signaal, maar niet genoeg om een advertentie op
     # weg te halen: een verkoper kan een nummer hergebruiken. Staat er een merk
     # bij, dan moet dat overeenkomen. Titels vergelijken heeft hier geen zin —
