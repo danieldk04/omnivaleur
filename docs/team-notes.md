@@ -16997,3 +16997,16 @@ Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het d
   zelf" 3 minuten stilvielen. Lynn: tapijt Baluchi niet van Marktplaats af, controle kreeg 6x 403 (afknijpen); de
   herplaatsing wachtte daarom terecht.
 - backend/scheduler.py heeft nog steeds de niet-gecommitte wijziging van een andere sessie (rubriekherstel 09:30).
+
+## 11-10-2026: 2dehands verlengt op aanwijzing van 2dehands zelf (extensie 1.0.383)
+
+Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klantfoutenronde van vandaag (Lynn).
+- Extensie 1.0.383: elke verlenging stuurt de lijst "Loopt af" van 2dehands mee (inExpirationWindow=true, met
+  closeDate), en bij "nog niet aan de beurt" het echte einde van dat zoekertje.
+- Server (live): voor elk aflopend zoekertje meteen een verlenging; listed_at = echt einde min 28 dagen, zodat het
+  venster klopt ook bij geimporteerde zoekertjes. Eén peiling per dag per verkoper zodra die op 1.0.383+ draait.
+  Oudere extensies: gedrag ongewijzigd, plus de opruiming van verlopen rijen van vanochtend (3f8a42c5).
+- Proeven: tests/verlengen-2dehands-loopt-af-test.js en tests/test_2dehands_loopt_af.py, beide falen op 3f8a42c5.
+- Werkt pas bij klanten na upload van dist/omnivaleur-extension-1.0.383.zip naar de Web Store.
+- Volledige proefreeks: 8 rode proeven die ook zonder deze wijziging rood zijn (korte kledingvraag, vinted-categorieen,
+  WooCommerce-browserproef); niet van deze wijziging.

@@ -17,6 +17,25 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## 2dehands-importdatum-is-geen-plaatsingsdatum
+
+*11-10-2026 — listed_at van een geimporteerd 2dehands-zoekertje is de importdatum; verlengvenster daarop kwam te laat. Sinds 1.0.383 beslist de lijst "Loopt af" van 2dehands*
+
+11-10-2026, Lynn (96e30080): tien rode "Listing m... is not in your 2dehands overview" bij verlengen. Alle tien gaven
+publiek 410 "Dit zoekertje is helaas verlopen", bij ons stonden ze 'active' (714 actief tegen 664 in haar overzicht).
+Oorzaak: de 2dehands-scan levert geen plaatsingsdatum, dus listed_at = importmoment; extend_expiring_2dehands plant op
+dag 22-45 na listed_at, en een zoekertje dat bij import al oud was verliep daarvoor. Steekproef: 4 van 11 oude rijen
+verlopen. Het publieke `stats.since` is GEEN bruikbaar begin (een zoekertje van april stond nog live): alleen de
+closeDate uit /my-account/sell/api/listings telt, en `inExpirationWindow=true` geeft precies de zoekertjes met knop.
+
+**Why:** gokken op een datum mist zoekertjes; 2dehands zelf weet wat afloopt.
+**How to apply:** extensie 1.0.383 stuurt bij elke extend `aflopend` (id + close) en bij not_in_extend_window `close`
+mee; server (crosslist.verleng_aflopende_2dehands, lijn_looptijd_uit) plant meteen verlengingen en zet listed_at =
+einde - 28 d; _peil_aflopende_2dehands zet 1 peiling per dag per verkoper op >= 1.0.383. De verlopen-controle ruimt
+rijen op waarvan de verlenging "not in your overview" gaf en de pagina verlopen zegt. Zie "verlengen-overleeft-verversing".
+
+---
+
 ## gat-tussen-opdrachten-meten
 
 *11-10-2026 — Tijd tussen twee opdrachten meet je in de Railway-verzoeklog per klant; 11-10 zat 10 s in de verkoopcontrole van /pending en 3 s in lege kanalen vóór 2dehands*

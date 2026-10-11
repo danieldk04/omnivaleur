@@ -4126,10 +4126,24 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
             (await naast_de_lus(_schuif))
             logger.info("[extend] 2dehands zoekertje %s verlengd tot %s — listed_at bijgezet",
                         job["item_id"], body.get("new_close"))
+        elif body.get("note") == "not_in_extend_window" and body.get("close"):
+            # Nog niet aan de beurt, maar nu weten we het echte einde: listed_at
+            # volgt de looptijd, zodat het venster op de goede dag opengaat.
+            from backend.services.crosslist import lijn_looptijd_uit
+            rid = (job.get("payload") or {}).get("_listing_row_id")
+            await naast_de_lus(lambda: lijn_looptijd_uit(rid, body.get("close")))
         else:
             logger.warning("[extend] job %s meldde klaar zonder bewijs dat de "
                            "vervaldatum opschoof (%s) — listed_at ongemoeid",
                            job_id, body.get("note"))
+        # De lijst "Loopt af" van 2dehands zelf (extensie 1.0.383+).
+        if isinstance(body.get("aflopend"), list):
+            from backend.services.crosslist import verleng_aflopende_2dehands
+            try:
+                await naast_de_lus(lambda: verleng_aflopende_2dehands(
+                    job.get("user_id"), body["aflopend"], job.get("item_id")))
+            except Exception as e:  # noqa: BLE001 — de verlenging zelf is al geboekt
+                logger.warning("[extend] aflopende zoekertjes van job %s niet ingepland: %s", job_id, e)
 
     elif job["action"] == "scan":
         # De kandidaten zijn hierboven al opgeslagen (vóór 'done'). Wat hier

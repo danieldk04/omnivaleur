@@ -3023,6 +3023,147 @@ _EXTEND_VERVALT_NA_DAGEN = 28
 _EXTEND_HERKANS_NA_DAGEN = 3      # niet elke 6-uursronde opnieuw inplannen vóór het venster
 
 
+# WAT 2DEHANDS ZELF "LOOPT AF" NOEMT (11-10-2026, Lynn 96e30080).
+#
+# listed_at is bij een geimporteerd zoekertje de importdatum, niet de echte
+# plaatsing. Het venster hieronder (dag 22 tot 45) kwam dan te laat: bij Lynn
+# waren 4 van 11 oude rijen al verlopen en gaf verlengen tien rode fouten. Sinds
+# extensie 1.0.383 stuurt elke verlenging de lijst "Loopt af" van 2dehands mee,
+# met per zoekertje de echte einddatum. Daaruit: listed_at = einde - 28 dagen,
+# en voor elk aflopend zoekertje meteen een verlenging. Eén peiling per dag per
+# verkoper zorgt dat die lijst er ook komt als wij zelf niets in het venster
+# zagen. Oudere extensies sturen niets mee en krijgen geen peiling.
+_EXTEND_PEILING_VANAF = (1, 0, 383)
+
+
+def _start_uit_einde(close) -> str | None:
+    """De begindatum van de huidige looptijd, uit de einddatum van 2dehands."""
+    try:
+        dt = datetime.fromisoformat(str(close).strip().replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return (dt - timedelta(days=_EXTEND_VERVALT_NA_DAGEN)).isoformat()
+
+
+def lijn_looptijd_uit(listing_row_id: str | None, close) -> bool:
+    """listed_at gelijkzetten aan de echte looptijd. Alleen met een einddatum."""
+    start = _start_uit_einde(close) if close else None
+    if not (listing_row_id and start):
+        return False
+    get_db().table("listings").update({"listed_at": start}).eq("id", listing_row_id).execute()
+    return True
+
+
+def verleng_aflopende_2dehands(user_id: str, aflopend, eigen_item_id: str | None = None) -> int:
+    """Voor elk zoekertje dat 2dehands 'loopt af' noemt een verlenging klaarzetten.
+
+    Alleen actieve rijen van deze verkoper, niet verkocht, zonder lopende
+    verlenging. Geeft het aantal nieuwe opdrachten terug."""
+    import random
+    per_id = {}
+    for a in (aflopend or []):
+        i = str((a or {}).get("id") or "").strip()
+        if re.match(r"^m\d{6,}$", i):
+            per_id[i] = a
+    if not (user_id and per_id):
+        return 0
+    db = get_db()
+    ids = sorted(per_id)
+    rijen = []
+    for i in range(0, len(ids), 50):
+        rijen += (db.table("listings")
+                  .select("id,item_id,platform_listing_id,platform_listing_url,items!inner(user_id)")
+                  .eq("platform", "2dehands").eq("status", "active")
+                  .eq("items.user_id", user_id)
+                  .in_("platform_listing_id", ids[i:i + 50])
+                  .execute().data or [])
+    if not rijen:
+        return 0
+    lopend = {r["item_id"] for r in (db.table("jobs").select("item_id")
+              .eq("user_id", user_id).eq("platform", "2dehands").eq("action", "extend")
+              .in_("status", ["pending", "claimed", "running"]).execute().data or [])}
+    nu = datetime.now(timezone.utc)
+    n = 0
+    for r in rijen:
+        lijn_looptijd_uit(r["id"], per_id[r["platform_listing_id"]].get("close"))
+        if r["item_id"] == eigen_item_id or r["item_id"] in lopend:
+            continue
+        verkocht = (db.table("listings").select("platform").eq("item_id", r["item_id"])
+                    .in_("status", ["sold", "sold_unconfirmed"]).limit(1).execute().data or [])
+        if verkocht:
+            continue
+        db.table("jobs").insert({
+            "user_id": user_id,
+            "item_id": r["item_id"],
+            "platform": "2dehands",
+            "action": "extend",
+            "status": "pending",
+            "scheduled_for": (nu + timedelta(minutes=n * random.randint(2, 4))).isoformat(),
+            "payload": {
+                "platform_listing_id": r["platform_listing_id"],
+                "platform_listing_url": r.get("platform_listing_url"),
+                "_listing_row_id": r["id"],
+            },
+        }).execute()
+        lopend.add(r["item_id"])
+        n += 1
+    if n:
+        logger.info("[extend] %s aflopende 2dehands-zoekertjes van %s ingepland op aanwijzing van 2dehands",
+                    n, user_id)
+    return n
+
+
+def _peil_aflopende_2dehands() -> int:
+    """Eén verlenging per dag per verkoper met een nieuwe extensie, ook als wij
+    zelf niets in het venster zien: die brengt de lijst 'Loopt af' mee."""
+    from backend.services.instellingen import lees as _lees_instellingen
+    db = get_db()
+    nu = datetime.now(timezone.utc)
+    vandaag = nu.date().isoformat()
+    recent = (nu - timedelta(days=2)).isoformat()
+    n = 0
+    for hb in (db.table("extension_heartbeat").select("user_id,ext_version,last_seen")
+               .gte("last_seen", recent).execute().data or []):
+        m = re.fullmatch(r"\s*(\d{1,3})\.(\d{1,3})\.(\d{1,4})\s*", str(hb.get("ext_version") or ""))
+        if not m or tuple(int(x) for x in m.groups()) < _EXTEND_PEILING_VANAF:
+            continue
+        uid = hb["user_id"]
+        try:
+            if not _lees_instellingen(uid).get("auto_relist", True) or not _mag_nog_werken(uid):
+                continue
+            if (db.table("jobs").select("id").eq("user_id", uid).eq("platform", "2dehands")
+                    .eq("action", "extend").gte("created_at", vandaag).limit(1).execute().data):
+                continue
+            rij = next((r for r in (db.table("listings")
+                        .select("id,item_id,platform_listing_id,platform_listing_url,items!inner(user_id)")
+                        .eq("platform", "2dehands").eq("status", "active")
+                        .eq("items.user_id", uid)
+                        .order("listed_at", desc=False).limit(10).execute().data or [])
+                        if re.match(r"^m\d{6,}$", str(r.get("platform_listing_id") or ""))), None)
+            if not rij:
+                continue
+            db.table("jobs").insert({
+                "user_id": uid,
+                "item_id": rij["item_id"],
+                "platform": "2dehands",
+                "action": "extend",
+                "status": "pending",
+                "scheduled_for": nu.isoformat(),
+                "payload": {
+                    "platform_listing_id": rij["platform_listing_id"],
+                    "platform_listing_url": rij.get("platform_listing_url"),
+                    "_listing_row_id": rij["id"],
+                    "_peiling": True,
+                },
+            }).execute()
+            n += 1
+        except Exception as e:  # noqa: BLE001 — één verkoper mag de ronde niet stoppen
+            logger.warning("[extend] peiling voor %s niet gelukt: %s", uid, e)
+    return n
+
+
 async def extend_expiring_2dehands():
     """Zet een 'extend'-opdracht klaar voor elk 2dehands-zoekertje dat bijna
     afloopt. Verlengen, niet herplaatsen: er wordt niets weggehaald, de
@@ -3031,6 +3172,11 @@ async def extend_expiring_2dehands():
     import random
     db = get_db()
     from backend.services.instellingen import lees as _lees_instellingen
+
+    try:
+        await naast_de_lus(_peil_aflopende_2dehands)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("[extend] peiling 'Loopt af' mislukt: %s", e)
 
     nu = datetime.now(timezone.utc)
     ondergrens = (nu - timedelta(days=_EXTEND_MAX_LEEFTIJD_DAGEN)).isoformat()

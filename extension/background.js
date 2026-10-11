@@ -5317,6 +5317,38 @@ async function bgExtend2dh(job, serverUrl) {
     )
   );
 
+  // WELKE ZOEKERTJES LOPEN AF, VOLGENS 2DEHANDS ZELF. (11-10-2026, Lynn 96e30080)
+  //
+  // De server raadde het venster uit listed_at. Bij een geimporteerd zoekertje is
+  // dat de importdatum, niet de dag waarop het echt geplaatst is: het venster
+  // kwam te laat en het zoekertje verliep (gemeten bij Lynn: 4 van 11 oude rijen
+  // verlopen, tien rode verlengfouten). 2dehands weet het precies: de lijst
+  // "Loopt af" (inExpirationWindow=true) met per zoekertje de closeDate. Elke
+  // verlengopdracht stuurt die lijst mee; de server zet er meteen opdrachten
+  // voor klaar. null = niet gelezen, en dan beslist de server niets.
+  async function leesAflopende2dh(tabId) {
+    return execInTab(tabId, async () => {
+      const uit = [];
+      for (let b = 1; b <= 20; b++) {
+        const r = await fetch(`/my-account/sell/api/listings?batchNumber=${b}&batchSize=100&inExpirationWindow=true`,
+          { headers: { Accept: "application/json" }, credentials: "include" });
+        if (!r.ok) return null;
+        const ads = (await r.json()).ads || [];
+        for (const a of ads) {
+          if (a && a.itemId) uit.push({ id: String(a.itemId), close: a.closeDate || null, status: a.status || null });
+        }
+        if (ads.length < 100) return uit;
+      }
+      return uit;
+    }).catch(() => null);
+  }
+
+  // Elke afgeronde verlenging neemt de lijst "Loopt af" mee (zie leesAflopende2dh).
+  const klaar = async (body) => {
+    const aflopend = await leesAflopende2dh(tabId);
+    await finaliseJob(serverUrl, job.id, "complete", aflopend ? { ...body, aflopend } : body);
+  };
+
   // DE PAGINA MAG ONDER ONS VERVERSEN. (04-10-2026, Egbert bcdf9aa4)
   //
   // Bij 2.437 zoekertjes duurt openklappen plus lezen minuten. Ververst het
@@ -5504,7 +5536,7 @@ async function bgExtend2dh(job, serverUrl) {
       );
     }
     if (uit && uit.reserved) {
-      await finaliseJob(serverUrl, job.id, "complete", { note: "reserved_not_extended" });
+      await klaar({ note: "reserved_not_extended" });
       return;
     }
     // Al verlengd: deze opdracht geldt alleen voor zoekertjes van 22+ dagen oud,
@@ -5515,14 +5547,13 @@ async function bgExtend2dh(job, serverUrl) {
     const dagenTeGaan = uit && uit.closeDate
       ? (new Date(uit.closeDate) - Date.now()) / 86400000 : null;
     if (uit && uit.notExpiring && dagenTeGaan != null && dagenTeGaan >= 21) {
-      await finaliseJob(serverUrl, job.id, "complete", {
+      await klaar({
         verlengd: true, note: "already_extended", new_close: uit.closeDate, status: uit.status || null,
       });
       return;
     }
     if (uit && uit.notExpiring) {
-      await finaliseJob(serverUrl, job.id, "complete",
-        { note: "not_in_extend_window", status: uit.status || null });
+      await klaar({ note: "not_in_extend_window", status: uit.status || null, close: uit.closeDate || null });
       return;
     }
     if (uit && uit.noButton) {
@@ -5548,7 +5579,7 @@ async function bgExtend2dh(job, serverUrl) {
     }
 
     console.log(`[Omnivaleur] bgExtend2dh: ${itemId} verlengd ${uit.closeBefore} -> ${uit.closeAfter} (+${uit.shiftDays}d)`);
-    await finaliseJob(serverUrl, job.id, "complete", {
+    await klaar({
       verlengd: true, note: "extended",
       old_close: uit.closeBefore, new_close: uit.closeAfter, shift_days: uit.shiftDays,
     });
