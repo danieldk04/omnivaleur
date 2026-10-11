@@ -16904,3 +16904,16 @@ Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het d
   scroll 3 (2). Dus 75% startte de video en 37% maakte hem af.
 - Niet uitgesplitst: cta_location (maar 1 klik) en apparaat (te klein). Verkeersacquisitie-rapport met landingspaginafilter gaf leeg, niet vertrouwd; bron gemeten via paginarapport.
 - Nogmaals meten bij ruim 30 bezoekers.
+
+## 11-10-2026: Kostencheck Anthropic na de rem van 09-10 (automatische routine)
+
+- Dagkosten volgens de Console (UTC, alle sleutels): 07-10 $6,18, 08-10 $18,00, 09-10 $2,00, 10-10 $6,07, 11-10 $0,01 (ochtend).
+- 10-10 uitgesplitst: Haiku 4.5 $1,02, Sonnet 4.6 $0,32, Sonnet 5 $0,29 (blog), Haiku 5.5 $0,12 (vertalen), en Sonnet 5.5 $4,33.
+  Sonnet 5.5 komt nergens in onze code voor (backend, scripts, .github hebben alleen Haiku 4.5, Haiku 5.5, Sonnet 4.6 en Sonnet 5).
+  Wie dat gebruikte is niet bewezen; de Console-sleutel "ANTHROPIC_API_KEY" is het niet (nul kosten). De organisatie heeft meer sleutels
+  (Blog Automatie, Blog-Reviewer, Meta Ads Analyser, enz.), dus het kan een ander project of een eigen sessie zijn. Openstaand.
+- Zonder Sonnet 5.5 is 10-10 ongeveer $1,75, waarvan Haiku 4.5 $1,02: dat is de korte kledingvraag en ligt net boven de grens van $1.
+- Logs: de laatste 20 verzoeken (ongeveer 4 uur oud) hebben allemaal minder dan 1.500 invoertokens, dus geen volledige rubriekvraag van ~8.900 meer
+  gezien. Alleen die 20 zijn bekeken; een volledige telling na 09-10 13:00 is niet gedaan.
+- /health taalmodel_sinds_start was leeg (teller begint bij de laatste deploy), dus daar viel niets uit te lezen.
+- Oordeel: de rem werkt aantoonbaar voor wat we zagen (daling van $17 naar ~$1 Haiku), maar niet volledig geslaagd verklaard door de onverklaarde Sonnet 5.5.
