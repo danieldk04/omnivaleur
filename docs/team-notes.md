@@ -16917,3 +16917,10 @@ Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het d
   gezien. Alleen die 20 zijn bekeken; een volledige telling na 09-10 13:00 is niet gedaan.
 - /health taalmodel_sinds_start was leeg (teller begint bij de laatste deploy), dus daar viel niets uit te lezen.
 - Oordeel: de rem werkt aantoonbaar voor wat we zagen (daling van $17 naar ~$1 Haiku), maar niet volledig geslaagd verklaard door de onverklaarde Sonnet 5.5.
+
+## 11-10-2026: Sonnet 5.5 van 10-10 ($4,33) herleid, aanvulling op de kostencheck
+
+- Console Usage, gefilterd op claude-sonnet-5-5 en gegroepeerd op sleutel: alleen sleutel "crosslisteu" (de Omnivaleur-sleutel), alleen 10-10,
+  530.280 tokens erin en 326.971 eruit, en 0 op alle andere dagen. Dat is de blinde beoordelaar (Sonnet 5.5) van de vertaalproef op 199 teksten
+  bij de overstap naar Haiku 5.5 (commit 1d37ce86, kennisbank). Eenmalige proef, geen lopende lus. Sonnet 5.5 staat daarom niet in de code.
+- Zonder die proef was 10-10 ongeveer $1,75; de rem werkt, de $6 was een eenmalige meting. Console-tip: Usage heeft Group by API key, Cost niet.
