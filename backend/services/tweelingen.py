@@ -119,6 +119,66 @@ def _familie_uit_rijen(item: dict, rijen: list[dict]) -> list[str]:
     return list(dict.fromkeys([eigen, *ids]))
 
 
+def _ilike(patroon: str, tekst: str) -> bool:
+    """Wat PostgREST's ilike doet, in Python: % is alles, _ is één teken."""
+    rx = "".join(".*" if c == "%" else "." if c == "_" else re.escape(c) for c in patroon)
+    return re.fullmatch(rx, tekst or "", re.IGNORECASE | re.DOTALL) is not None
+
+
+def familie_ids_veel(db, items: list[dict]) -> dict[str, list[str]]:
+    """familie_ids voor een hele rij artikelen, in één databasevraag per 40 nummers.
+
+    WAAROM (11-10-2026, Egbert bcdf9aa4). De uitdeelronde riep familie_ids aan
+    voor elke wachtende plaatsing apart. Met 24 plaatsingen in de rij waren dat,
+    samen met het artikel zelf, 48 vragen achter elkaar: 10 tot 11 seconden op
+    de server, bij ELKE opdracht die uitging, ook een verlenging. Gemeten in de
+    verzoeklog van Railway: /pending duurde 10,2 tot 10,9 s, de rest 0,85 s.
+
+    Zelfde uitkomst als familie_ids per artikel: dezelfde zoekvoorwaarde
+    (sku gelijk of titel ilike "(nummer)%"), hooguit 50 rijen per nummer, en
+    daarna dezelfde merk- en sku-zeef. Lukt de gebundelde vraag niet, of komt
+    hij vol terug, dan per artikel zoals vroeger.
+    """
+    uit: dict[str, list[str]] = {}
+    per_gebruiker: dict[str, dict[str, list[dict]]] = {}
+    for item in items:
+        eigen = (item or {}).get("id")
+        if not eigen:
+            continue
+        nummer = nummer_van(item)
+        user_id = item.get("user_id")
+        if not (nummer and user_id):
+            uit[eigen] = [eigen]
+            continue
+        per_gebruiker.setdefault(user_id, {}).setdefault(nummer, []).append(item)
+
+    for user_id, per_nummer in per_gebruiker.items():
+        nummers = list(per_nummer)
+        for i in range(0, len(nummers), 40):
+            stuk = nummers[i:i + 40]
+            grens = 50 * len(stuk)
+            try:
+                voorwaarden = ",".join(f'sku.eq.{n},title.ilike."({n})%"' for n in stuk)
+                rijen = (db.table("items").select("id,brand,title,sku")
+                         .eq("user_id", user_id).or_(voorwaarden)
+                         .limit(grens).execute().data or [])
+                if len(rijen) >= grens:
+                    raise RuntimeError("gebundelde vraag kwam vol terug")
+            except Exception as e:  # noqa: BLE001 — dan per artikel, zoals vroeger
+                logger.info("tweelingen: gebundeld lezen lukte niet (%s), per artikel", e)
+                for n in stuk:
+                    for item in per_nummer[n]:
+                        uit[item["id"]] = familie_ids(db, item)
+                continue
+            for n in stuk:
+                patroon = f"({n})%"
+                eigen_rijen = [r for r in rijen
+                               if r.get("sku") == n or _ilike(patroon, str(r.get("title") or ""))][:50]
+                for item in per_nummer[n]:
+                    uit[item["id"]] = _familie_uit_rijen(item, eigen_rijen)
+    return uit
+
+
 # Een prijsverschil van meer dan dit is nooit hetzelfde voorwerp.
 _TWIN_PRICE_FACTOR = 2.5
 
