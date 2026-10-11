@@ -5443,7 +5443,7 @@ async function bgExtend2dh(job, serverUrl) {
       link.click();
       await nap(3500);
 
-      const after = await readOne();
+      const after = await readOne(false);
       const closeAfter = (after && after.ad && after.ad.closeDate) || null;
       let shiftDays = null;
       if (closeBefore && closeAfter) {
