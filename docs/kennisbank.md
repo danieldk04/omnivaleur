@@ -17,6 +17,31 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## icloud-parkeert-de-repo
+
+*11-10-2026 — 11-10: iCloud "Opslagruimte optimaliseren" haalde 4.926 repobestanden weg, ook .git/HEAD en .env; git en Python faalden met "Resource deadlock avoided"*
+
+Op 11-10-2026 (klantfoutenronde 20:35) stond ~/Documents/omnivaleur half in iCloud-parkeerstand:
+4.926 bestanden "dataless", waaronder .git/HEAD, .git/objects, .env en backend/*.py. Elk
+git-commando gaf "fatal: not a git repository" of "mmap failed: Resource deadlock avoided",
+elke Python-import "OSError [Errno 11] Resource deadlock avoided".
+
+Herkennen: `ls -lO <bestand>` toont `dataless`; tellen met `find . -flags +dataless | wc -l`.
+
+Wat werkt: `brctl download <map>` (per map, of `.` voor alles) haalt ze terug, maar traag
+(minuten). Voor werk dat niet kan wachten: verse kopie buiten iCloud,
+`git clone --filter=blob:none https://github.com/danieldk04/omnivaleur.git ~/omnivaleur-klantfouten`,
+code daar draaien en de instellingen met `load_dotenv('/Users/Danie/Documents/omnivaleur/.env')`
+inlezen zodra die ene .env terug is (`brctl download .env`). Kopieren van .env is geweigerd door
+een deny-regel, inlezen niet.
+
+**Why:** de geplande routines en de auto-push-hook draaien vanuit deze map; een geparkeerde repo
+laat ze stil falen, zoals de mailmachine in augustus ("koude-mail-autonoom").
+**How to apply:** "not a git repository" of "deadlock avoided" in deze map = iCloud, niet kapot.
+Niet `git init` of iets herstellen; eerst `brctl download`, anders verse kopie.
+
+---
+
 ## 2dehands-importdatum-is-geen-plaatsingsdatum
 
 *11-10-2026 — listed_at van een geimporteerd 2dehands-zoekertje is de importdatum; verlengvenster daarop kwam te laat. Sinds 1.0.383 beslist de lijst "Loopt af" van 2dehands*

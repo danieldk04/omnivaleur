@@ -17010,3 +17010,18 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Werkt pas bij klanten na upload van dist/omnivaleur-extension-1.0.383.zip naar de Web Store.
 - Volledige proefreeks: 8 rode proeven die ook zonder deze wijziging rood zijn (korte kledingvraag, vinted-categorieen,
   WooCommerce-browserproef); niet van deze wijziging.
+
+## 11-10-2026 (20:35, automatisch): Klantfouten
+
+- Vier foutsoorten, geen reparatie nodig in de code; geen commit behalve deze notitie.
+- Marktplaats verwijderen (1ba42900, deurbel m2446349383): de vraag "Direct of Automatisch verwijderen". Al gerepareerd
+  in 1.0.381 (6279f2b8, proef groen), maar de Web Store staat nog op 1.0.380 (gemeten 20:50) en de klant draait 1.0.380.
+  Daardoor viel ook de herplaatsing terecht weg. Werkt pas na upload van dist/omnivaleur-extension-1.0.383.zip.
+- Marktplaats plaatsen, tijdsoverschrijding (b60bd6fd, Level Ball Pokémonkaart): klik op plaatsen om 17:01, daarna
+  40 minuten niets; de 3-minutenwekker ging pas om 17:41 af en de volgende opdracht liep meteen. Tweede gat 18:04 tot
+  18:41. Dat is een stilgezette computer of browser (Edge op Windows), geen code. Openbare verkoperslijst (24595712,
+  43 advertenties) nagekeken: de kaart staat niet online, dus geen dubbele. Klant.
+- Marktplaats en 2dehands betaalmuur (5aae4954, verf in "Klussen verf beits en lak", cadeautas in "Wonen overige huis
+  en inrichting"): de sites rekenen geld in die rubrieken; niets betaald, rest van die rubriek netjes teruggenomen. Klant.
+- Let op: de repo in ~/Documents stond half in iCloud-parkeerstand (4.926 bestanden weg, ook .git en .env); git en
+  Python faalden. Deze ronde gewerkt vanuit een verse kopie. Zie kennisbank icloud-parkeert-de-repo.
