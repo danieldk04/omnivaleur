@@ -16891,3 +16891,10 @@ Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het d
 - Reparatie: na een geweigerde plaatsing leest de extensie de melding bij het titelvak, schrijft de titel rustig (kleine letters, eerste woord en merk met hoofdletter) en plaatst één keer opnieuw. Voor-en-na-proef: tests/vinted-hoofdletters-titel-test.js.
 - Let op: mijn proefklikken in Daniels Chrome triggerden na een paar keer Vinteds bot-verificatie (schuifcontrole). Daniel moet die één keer zelf doorschuiven. Nooit grenzen meten door herhaald in te dienen.
 - Uitbrengen: dist/omnivaleur-extension-1.0.380.zip moet nog naar de Web Store.
+
+## 11-10-2026: Videometing /mp-video week 1, niet gemeten
+
+- De geplande meting kon niet draaien: Claude in Chrome was niet verbonden (geen enkele browser gekoppeld), en de
+  GA4-sleutels staan niet op de Mac. Er zijn dus geen cijfers. Basislijn blijft die van 04-10 (30 dagen: 21 bezoekers,
+  54 weergaven, 4 cta_click, 0 koude-mail).
+- Opnieuw doen zodra Chrome open staat met de extensie ingelogd, periode 04-10 t/m gisteren.
