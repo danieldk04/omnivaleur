@@ -16892,27 +16892,15 @@ Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het d
 - Let op: mijn proefklikken in Daniels Chrome triggerden na een paar keer Vinteds bot-verificatie (schuifcontrole). Daniel moet die één keer zelf doorschuiven. Nooit grenzen meten door herhaald in te dienen.
 - Uitbrengen: dist/omnivaleur-extension-1.0.380.zip moet nog naar de Web Store.
 
-## 11-10-2026: Videometing /mp-video week 1, niet gemeten
+## 11-10-2026: Videometing /mp-video week 1 (04-10 t/m 10-10, GA4 via Chrome)
 
-- De geplande meting kon niet draaien: Claude in Chrome was niet verbonden (geen enkele browser gekoppeld), en de
-  GA4-sleutels staan niet op de Mac. Er zijn dus geen cijfers. Basislijn blijft die van 04-10 (30 dagen: 21 bezoekers,
-  54 weergaven, 4 cta_click, 0 koude-mail).
-- Opnieuw doen zodra Chrome open staat met de extensie ingelogd, periode 04-10 t/m gisteren.
-
-## 11-10-2026: Dagelijkse klantfouten (ochtendronde)
-
-- Gemeten 24 uur tot 07:22 UTC: 1.003 opdrachten klaar, 44 mislukt bij 7 klanten. Geen vastgelopen opdrachten (0 op claimed).
-- Onze code, gerepareerd: Marktplaats stelt bij verwijderen soms een extra vraag "direct verwijderen, of pas na de huidige
-  periode?" met de knoppen Direct en Automatisch. De extensie herkende geen van beide en klikte niets, dus de advertentie
-  bleef staan en de herplaatsing stopte (1ba42900, drie deurbellen, 10-10 17:36). Extensie 1.0.381 klikt Direct. Proef in
-  tests/mp-bevestigvenster-test.js faalt op f395cb89. dist/omnivaleur-extension-1.0.381.zip moet naar de Web Store
-  (bevat ook 1.0.380, die nog niet geupload was).
-- Klant-eigen: Vinted uitgelogd (26cf5471, f8c0cce9, 18 scans), maat "Universeel" bij een jas (96e30080), 0b28c1ce extensie
-  sinds 01-10 stil met 150 wachtende Marktplaats-opdrachten.
-- Al eerder gerepareerd, wacht op de Web Store: Janneke (31d28378) Vinted-tijdsoverschrijdingen en kleur, nu op 1.0.377.
-- Open: (1) merk "Handgemaakt" bij een tafellamp bleef leeg en hield plaatsing op MP en 2dehands tegen (96e30080); de
-  terugval naar "Overige merken" werkt alleen bij een keuzelijst, formulier niet gezien. (2) Oosters tapijt van 96e30080
-  niet te verwijderen op 2dehands (geen advertentienummer) en MP (frame verdwenen). Deze klant draait 1.0.372 en 1.0.376
-  naast elkaar, twee Chrome-kopieen. (3) tests/zakelijk-verwijderen-leeg-overzicht-test.mjs faalt al sinds 1.0.368
-  (04-10): de nagebouwde omgeving kent zetWerkStatus niet. Geen klantprobleem, wel een blinde proef.
-- Niet van deze ronde: backend/scheduler.py had een niet-gecommitte wijziging (rubriekherstel 05:00 naar 09:30); niet aangeraakt.
+- Eerste poging eerder die dag mislukte (Chrome niet verbonden); daarna gemeten. Meting klopt: datumbereik 4 okt tot 10 okt
+  bevestigd op het scherm, filter op paginapad bevat mp-video, events bestaan.
+- Bezoekers 8 (26 weergaven), dus onder de ~10: niets te concluderen, geen wijzigingen voorgesteld. Daniels eigen bezoek
+  en het testbezoek van 04-10 zitten erin.
+- Bron per sessie (weergaven): direct/none 11, koude-mail/email 9 (4 gebruikers), google/organic 5. De korte link /mp werkt
+  dus: koude-mail komt nu binnen (basislijn 0). Er is nog steeds directverkeer; of het Gemini-brein opnieuw geplakt is blijft onbekend.
+- Events (aantal events, gebruikers van 8): video_start 12 (6), video_progress 25 (4), video_complete 6 (3), cta_click 1 (1),
+  scroll 3 (2). Dus 75% startte de video en 37% maakte hem af.
+- Niet uitgesplitst: cta_location (maar 1 klik) en apparaat (te klein). Verkeersacquisitie-rapport met landingspaginafilter gaf leeg, niet vertrouwd; bron gemeten via paginarapport.
+- Nogmaals meten bij ruim 30 bezoekers.
