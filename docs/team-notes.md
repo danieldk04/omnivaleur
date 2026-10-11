@@ -16979,3 +16979,21 @@ Daniel wil dat klanten de snelheid van ontwikkeling zien. Nieuwe pagina in het d
 - Amanda 8f91a370: actief vanochtend, geen nieuwe fouten. Call ma 12-10 12:00 (agenda), briefing voor Daniel.
 - robbertbolier, partablecs, winterhome, amhin: ongewijzigd, nul artikelen, al gemaild. Proef van partablecs en
   winterhome loopt 12-10 af. Geen mailtjes vandaag.
+
+## 11-10-2026: Dagelijkse klantfouten (ochtendronde, tweede meting 14:10 UTC)
+
+- Sinds de vorige ronde (07:22 UTC): 15 mislukte opdrachten bij 2 klanten, niets hangt op claimed.
+- Onze code, gerepareerd: Lynn (96e30080) kreeg 10 rode "Listing m... is not in your 2dehands overview (664
+  listings read)". Alle tien gaven op 2dehands 410 "Dit zoekertje is helaas verlopen", bij ons stonden ze nog actief
+  (714 actief tegen 664 in haar overzicht). Oorzaak: bij een geimporteerd zoekertje is listed_at de importdatum, dus
+  het verlengvenster komt te laat en de rij blijft actief, met om de drie dagen een kansloze verlenging. De
+  verlopen-controle (elk half uur) kijkt nu ook actieve rijen na waarvan de verlenging die fout gaf, op hun eigen
+  pagina; alleen het verlopen-blok telt, dan archief met de verlopen-reden. Eenmalig echt gedraaid: 10 van 10 naar het
+  archief. Proeven in tests/test_verlopen_is_geen_verkoop.py falen op de oude code.
+- Steekproef bij Lynn: van 11 actieve 2dehands-rijen ouder dan 28 dagen (sinds import) waren er 4 verlopen, 7 leefden.
+  De importdatum als plaatsingsdatum blijft de onderliggende oorzaak; niet aangepakt (2dehands-scan levert geen
+  plaatsingsdatum, de closeDate uit het overzicht zou het kunnen). Open punt.
+- Open, onbekend: Amanda (8f91a370, extensie 1.0.374) drie Vinted-prijswijzigingen die na "prijs gezet via de pagina
+  zelf" 3 minuten stilvielen. Lynn: tapijt Baluchi niet van Marktplaats af, controle kreeg 6x 403 (afknijpen); de
+  herplaatsing wachtte daarom terecht.
+- backend/scheduler.py heeft nog steeds de niet-gecommitte wijziging van een andere sessie (rubriekherstel 09:30).

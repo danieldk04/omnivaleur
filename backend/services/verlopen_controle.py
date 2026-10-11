@@ -98,6 +98,100 @@ async def _pagina_zegt_verlopen(client, url: str) -> bool | None:
 
 
 async def controleer_verlopen_verkoopvragen() -> dict:
+    """De ronde van elk half uur: eerst de verkoopvragen, dan de verlengingen."""
+    uit = await _verkoopvragen()
+    try:
+        uit["verlengingen_verlopen"] = await controleer_mislukte_verlengingen()
+    except Exception as e:                       # noqa: BLE001 — mag de ronde niet stoppen
+        logger.warning("verlopen-controle: mislukte verlengingen niet nagekeken: %s", e)
+    return uit
+
+
+# VERLENGEN OP EEN VERLOPEN ZOEKERTJE (11-10-2026, Lynn van De Juiste Toon).
+#
+# De nachtronde zet een verlenging klaar voor 2dehands-zoekertjes van 22 tot 45
+# dagen oud. Bij een geimporteerd zoekertje is dat de importdatum, niet de dag
+# waarop het echt geplaatst is; was het al ouder, dan is het bij ons nog
+# 'active' terwijl 2dehands het allang heeft laten verlopen. De extensie leest
+# dan het hele overzicht en meldt terecht "is not in your 2dehands overview".
+# Gemeten op 11-10: tien zulke fouten bij Lynn, alle tien gaven 410 met
+# "Dit zoekertje is helaas verlopen"; haar overzicht telde 664, wij 714 actief.
+# Zonder dit blijft de rij actief, staat hij in het dashboard als online en
+# komt er om de drie dagen weer een kansloze verlenging met een rode fout bij.
+# Zelfde rem als hierboven: alleen het verlopen-blok op de pagina telt.
+VERLENG_FOUT = "is not in your 2dehands overview"
+MAX_VERLENGINGEN_PER_RONDE = 10
+
+
+async def controleer_mislukte_verlengingen() -> int:
+    """Actieve 2dehands-rijen waarvan de laatste verlenging 'niet in het
+    overzicht' zei, nakijken op hun eigen pagina. Bewezen verlopen gaat naar het
+    archief met de verlopen-reden; al het andere blijft zoals het is."""
+    import httpx
+    from datetime import timedelta
+    from backend.api.listings import VERDENKING_REDENEN
+
+    db = get_db()
+    nu_dt = datetime.now(timezone.utc)
+    sinds = (nu_dt - timedelta(days=7)).isoformat()
+    fouten = ((await naast_de_lus(lambda: db.table("jobs")
+              .select("payload,fout:result->>error")
+              .eq("platform", "2dehands").eq("action", "extend").eq("status", "error")
+              .gte("done_at", sinds)
+              .limit(1000)
+              .execute())).data or [])
+    rij_ids = sorted({str((f.get("payload") or {}).get("_listing_row_id"))
+                      for f in fouten
+                      if VERLENG_FOUT in str(f.get("fout") or "")
+                      and (f.get("payload") or {}).get("_listing_row_id")})
+    if not rij_ids:
+        return 0
+
+    kandidaten = []
+    for i in range(0, len(rij_ids), 50):
+        kandidaten += ((await naast_de_lus(lambda b=rij_ids[i:i + 50]: db.table("listings")
+                       .select("id,platform_listing_id,platform_listing_url")
+                       .eq("status", "active").eq("platform", "2dehands")
+                       .in_("id", b)
+                       .execute())).data or [])
+    kandidaten = [r for r in kandidaten if (r.get("platform_listing_url") or "").strip()]
+    if not kandidaten:
+        return 0
+
+    reden = VERDENKING_REDENEN["verlopen"]
+    nu = nu_dt.isoformat()
+    nagekeken = gearchiveerd = zonder_uitspraak = 0
+    async with httpx.AsyncClient(timeout=30, headers={"User-Agent": UA,
+                                                      "Accept-Language": "nl-NL,nl;q=0.9"}) as client:
+        for rij in kandidaten[:MAX_VERLENGINGEN_PER_RONDE]:
+            if nagekeken:
+                await asyncio.sleep(PAUZE_SECONDEN)
+            uitkomst = await _pagina_zegt_verlopen(client, str(rij["platform_listing_url"]).split("?")[0])
+            nagekeken += 1
+            if uitkomst is None:
+                zonder_uitspraak += 1
+                if nagekeken >= 5 and zonder_uitspraak == nagekeken:
+                    break
+                continue
+            if uitkomst is not True:
+                continue
+            try:
+                (await naast_de_lus(lambda r=rij: db.table("listings").update({
+                    "status": "delisted",
+                    "error_message": reden,
+                    "last_checked": nu,
+                }).eq("id", r["id"]).eq("status", "active").execute()))
+                gearchiveerd += 1
+                logger.info("verlopen-controle: 2dehands %s was verlopen, verlenging kansloos — "
+                            "naar het archief", rij["platform_listing_id"])
+            except Exception as e:                # noqa: BLE001
+                logger.warning("verlopen-controle: %s niet bijgewerkt: %s", rij["id"], e)
+    logger.info("verlopen-controle: %s mislukte verlengingen nagekeken, %s verlopen, %s zonder uitspraak",
+                nagekeken, gearchiveerd, zonder_uitspraak)
+    return gearchiveerd
+
+
+async def _verkoopvragen() -> dict:
     """Openstaande verkoopvragen natrekken op de advertentiepagina zelf.
 
     Een advertentie die zelf zegt dat hij verlopen is, gaat naar het archief met

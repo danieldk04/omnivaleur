@@ -251,3 +251,84 @@ def test_een_403_wordt_beleefd_herkanst(monkeypatch):
     assert client.n == 3, "twee keer afgekapt, de derde keer wel antwoord"
     assert uit["verlopen"] == 1
     assert db.listings[0]["status"] == "delisted"
+
+
+# ── Verlengen op een verlopen zoekertje (11-10-2026, Lynn) ──────────────────
+
+class _QJ(_Q):
+    def gte(self, *_a, **_k): return self
+
+    def execute(self):
+        if self.tabel == "jobs":
+            rijen = [r for r in self.db.jobs
+                     if all(r.get(k) == v for k, v in self.filters.items())]
+            return type("R", (), {"data": list(rijen)})()
+        return super().execute()
+
+
+class _DBJ(_DB):
+    def __init__(self, items, listings, jobs):
+        super().__init__(items, listings)
+        self.jobs = jobs
+
+    def table(self, naam):
+        return _QJ(self, naam)
+
+
+def _actieve_rij(nummer, url):
+    return {"id": f"l-{nummer}", "item_id": "it1", "platform": "2dehands",
+            "platform_listing_id": nummer, "platform_listing_url": url,
+            "status": "active", "error_message": None}
+
+
+def _verlengfout(nummer, fout=None):
+    return {"platform": "2dehands", "action": "extend", "status": "error",
+            "payload": {"_listing_row_id": f"l-{nummer}"},
+            "fout": fout or (f"Error: Listing {nummer} is not in your 2dehands overview "
+                             "(664 listings read). Nothing was changed")}
+
+
+def _draai_verleng(monkeypatch, listings, jobs, per_url):
+    import asyncio
+    import httpx
+    db = _DBJ([{"id": "it1", "user_id": "u1", "title": "t"}], listings, jobs)
+    client = _Client(per_url)
+    monkeypatch.setattr(vc, "get_db", lambda: db)
+    monkeypatch.setattr(vc, "PAUZE_SECONDEN", 0)
+    monkeypatch.setattr(vc, "HERKANSING_SECONDEN", 0)
+
+    async def _direct(fn):
+        return fn()
+    monkeypatch.setattr(vc, "naast_de_lus", _direct)
+    monkeypatch.setattr(httpx, "AsyncClient", lambda *a, **k: client)
+    return db, asyncio.run(vc.controleer_verlopen_verkoopvragen()), client
+
+
+def test_verlopen_zoekertje_na_mislukte_verlenging_gaat_naar_archief(monkeypatch):
+    """Gemeten: tien 'not in your overview'-fouten bij Lynn, alle tien 410 verlopen."""
+    url = "https://www.2dehands.be/v/x/m2229805595"
+    db, uit, _ = _draai_verleng(monkeypatch, [_actieve_rij("m2229805595", url)],
+                                [_verlengfout("m2229805595")],
+                                {url: _Antwoord(410, VERLOPEN_PAGINA)})
+    assert uit["verlengingen_verlopen"] == 1
+    assert db.listings[0]["status"] == "delisted"
+    assert "verlopen" in db.listings[0]["error_message"].lower()
+
+
+def test_levend_zoekertje_na_mislukte_verlenging_blijft_staan(monkeypatch):
+    url = "https://www.2dehands.be/v/x/m2227982223"
+    db, uit, _ = _draai_verleng(monkeypatch, [_actieve_rij("m2227982223", url)],
+                                [_verlengfout("m2227982223")],
+                                {url: _Antwoord(200, LEVENDE_PAGINA)})
+    assert uit["verlengingen_verlopen"] == 0
+    assert db.listings[0]["status"] == "active"
+
+
+def test_andere_verlengfout_wordt_niet_nagekeken(monkeypatch):
+    """Een haperend tabblad zegt niets over de advertentie zelf."""
+    url = "https://www.2dehands.be/v/x/m1"
+    db, uit, client = _draai_verleng(monkeypatch, [_actieve_rij("m1", url)],
+                                     [_verlengfout("m1", "Error: No tab with id: 991614874")],
+                                     {url: _Antwoord(410, VERLOPEN_PAGINA)})
+    assert client.gevraagd == []
+    assert db.listings[0]["status"] == "active"
