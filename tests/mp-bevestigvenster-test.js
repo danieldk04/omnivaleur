@@ -146,6 +146,23 @@ const oud = oudeKiezer(OUD);
     eis(res2.clicked === false, "nieuw: bij een verkoopvraag wordt niets gegokt");
   }
 
+  console.log("\nDIRECT OF AUTOMATISCH VERWIJDEREN (10-10-2026, drie deurbellen)");
+  {
+    // Exact wat de diagnostiek van de klant terugstuurde, stap 1 na 'niet verkocht'.
+    const spec = {
+      knoppen: ["Close", "Direct", "Automatisch"],
+      venstertekst: "Advertentie verwijderen Wil je jouw advertentie direct verwijderen, of pas verwijderen na de huidige periode?Je advertentie blijft dan actief tot 22 oktober 2026, en wordt daarna automatisch verwijderd.",
+    };
+    const voor = nieuweKiezer(execSync("git show f395cb89:extension/background.js", { cwd: WORTEL, maxBuffer: 64 * 1024 * 1024 }).toString());
+    const a = maakPagina(spec);
+    const res = voor(a.document)();
+    eis(res.clicked === false && a.geklikt.length === 0, "oud (f395cb89): klikt niets, advertentie blijft staan");
+    const b = maakPagina(spec);
+    const res2 = nieuw(b.document)();
+    eis(res2.picked === "Direct", `nieuw: klikt "Direct" (gekregen: ${JSON.stringify(res2.picked)})`);
+    eis(b.geklikt.join() === "Direct", "nieuw: Automatisch en Close blijven onaangeroerd");
+  }
+
   console.log("\nGEEN VENSTER = NIETS TE BEVESTIGEN");
   {
     const document = { querySelectorAll: () => [] };

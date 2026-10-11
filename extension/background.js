@@ -4936,6 +4936,16 @@ function _bevestigInVenster(jaBron, neeBron) {
     // 1. De verkoopvraag ("Heb je dit verkocht via Marktplaats?") krijgt altijd
     //    het antwoord NEE: ja klikken boekt een verkoop die er niet was.
     knoppen.find((b) => /niet\s+verkocht/i.test(naam(b)))
+    // 1b. "Wil je jouw advertentie direct verwijderen, of pas verwijderen na de
+    //    huidige periode?" met de knoppen "Direct" en "Automatisch" (gemeten
+    //    10-10-2026 in de diagnostiek van drie deurbellen die niet weg gingen).
+    //    Geen van beide woorden stond in JA, en met twee knoppen over greep
+    //    regel 3 ook niet: het venster bleef staan, de herplaatsing stopte.
+    //    Altijd "Direct": wij verwijderen omdat het elders verkocht is of
+    //    opnieuw geplaatst wordt, en "Automatisch" laat de advertentie nog
+    //    weken online staan.
+    || (/direct\s+verwijder/i.test(venstertekst)
+        ? knoppen.find((b) => /^direct( verwijderen)?$/i.test(naam(b))) : null)
     // 2. De gewone bevestiging. Nooit een knop die annuleert, sluit of teruggaat.
     || knoppen.find((b) => JA.test(naam(b)) && !NEE.test(naam(b)))
     // 3. Laatste redmiddel: blijft er precies één knop over die niet annuleert,
