@@ -17093,3 +17093,13 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   Wat via Omnivaleur geplaatst is gaat wel vanzelf (voorraad_meerdere staat aan: 1 stuk eraf, product blijft).
 - Volgende stap: Janneke herstart Chrome (Cmd+Q), dan een babyjas opnieuw; voortgang van die opdracht nalezen
   (versie en klok in result._progress).
+
+## 12-10-2026: statement timeout bij verwijderen proefitem e92e6c8e
+
+- Oorzaak (uit schema, niet op productie gemeten): jobs.item_id en import_candidates.suggested_item_id verwijzen naar
+  items zonder index, dus elk verwijderd artikel leest beide tabellen helemaal (~27.000 en ~36.000 rijen). De
+  verwijderknop in het dashboard loopt via precies die route. Migratie: scripts/sql/index_verwijzingen_naar_items.sql,
+  door Daniel in de Supabase SQL Editor te draaien, regel voor regel. Proef: tests/test_index_op_verwijzingen.py.
+- Proefitem e92e6c8e NIET via de verwijderknop opruimen: het gebruikt Jannekes foto (map 31d28378) en _release_photos
+  kijkt alleen naar Revaleurs eigen artikelen, dus wist die foto uit R2. Stap 5 van het sql-bestand ruimt het op zonder
+  de opslag te raken.
