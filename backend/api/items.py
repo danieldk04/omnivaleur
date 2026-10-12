@@ -837,15 +837,24 @@ def _release_photos(db, user_id: str, photo_urls: list) -> None:
     therefore checked against everything that could still reference it, and
     anything we cannot prove is orphaned is left in the bucket.
 
+    Only objects in this user's own folder are ever touched. Every writer
+    (uploads, the mirror, the R2 migration) stores under "<user_id>/", but an
+    item can still point at a photo in someone else's folder: on 12-10-2026 a
+    test item on Revaleur used a photo from Janneke's folder, and deleting it
+    would have wiped her photo, because the in-use check below only sees this
+    user's rows.
+
     Never raises: a failed cleanup costs storage, a failed delete costs the user
     their item.
     """
     from backend.services.image_upload import delete_objects, locate_object
 
     try:
-        candidates = {ref for ref in (locate_object(u) for u in photo_urls) if ref}
+        own_folder = f"{user_id}/"
+        candidates = {ref for ref in (locate_object(u) for u in photo_urls)
+                      if ref and user_id and ref[1].startswith(own_folder)}
         if not candidates:
-            return  # nothing of ours to clean up (marketplace CDN urls)
+            return  # nothing of ours to clean up (marketplace CDN urls, other folders)
 
         # Compare on PATH, never on the url string. The stored urls are not
         # byte-identical across versions of the Supabase client — older ones
