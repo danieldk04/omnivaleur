@@ -17056,3 +17056,14 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   staat al op Marktplaats (openbare lijst verkoper 52029522, 3.805 advertenties).
 - Let op: proef liep af 11-10 16:58 UTC, geen Stripe. evaluate_access: slot 13-10 16:58 UTC (18:58 NL), daarna 402 op
   /pending en stopt het plaatsen. Beslissing bij Daniel (verlengen of laten betalen). Extensie staat op 1.0.374.
+
+## 12-10-2026: kostencheck Anthropic na de rem van 09-10
+
+- Gemeten in de Console (UTC): 09-10 ongeveer $2 (Haiku 4.5), 10-10 $6,07, 11-10 $0,37. Vergelijk 07-10 ~$6 en 08-10 ~$17,5.
+- 10-10 was $4,33 Sonnet 5.5 en $0,29 Sonnet 5: in de app staat nergens een Sonnet-model (grep op backend, scripts, .github),
+  dus dat is ontwikkelwerk (vertaalproeven en sessies), geen klantverkeer. Haiku 4.5 van de app was die dag $1,02.
+- Logs (laatste 20 verzoeken, ruim 24 uur): grootste Haiku-invoer 4.573 tokens, niets in de buurt van 8.900. De volledige
+  rubriekvraag komt dus niet meer naar Claude.
+- /health taalmodel_sinds_start: antwoord_door gemini 3, google 429 x9, 200 x5, 503 x1. Gemini draait weer; de 429's vallen
+  nu op de rem in plaats van op een Claude-stroom.
+- Oordeel: geslaagd. App-kosten onder $1 per dag sinds 11-10. Let op: Gemini-dagtegoed raakt nog steeds op (9 keer 429).
