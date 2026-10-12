@@ -7628,7 +7628,10 @@ async function submitShopifyToken() {
 function connectWooCommerce() {
   document.getElementById('woo-connect-msg').style.display = 'none';
   document.getElementById('woo-connect-overlay').style.display = 'flex';
-  setTimeout(() => document.getElementById('woo-store-input').focus(), 50);
+  // Eerder ingevuld of uit een koppellink: niet opnieuw laten typen (Toon zag een leeg veld).
+  const veld = document.getElementById('woo-store-input');
+  try { if (!veld.value) veld.value = localStorage.getItem('wooKoppelAdres') || ''; } catch (_) {}
+  setTimeout(() => veld.focus(), 50);
 }
 
 function closeWooConnect() {
