@@ -50,7 +50,7 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - Wensen aan het eind passen bij de klant: "Succes met de verkoop!", "Fijne vakantie!".
 
 - Openingszin van erkenning ("Goed gezien, en je hebt gelijk.", "Goed punt.", "Goed idee, en") schrapt hij
-  (08-10: 3 van 3 concepten; 09-10 bleef "Nee, die advertentie komt niet terug." juist staan omdat het het antwoord zelf is); hij begint met de inhoud ("Ik ben er al mee aan de slag", "Nu loopt alles...").
+  (08-10: 3 van 3 concepten; 11-10: ook "Je hebt gelijk, ik heb het nagemeten." weg, de uitleg begint direct; 09-10 bleef "Nee, die advertentie komt niet terug." juist staan omdat het het antwoord zelf is); hij begint met de inhoud ("Ik ben er al mee aan de slag", "Nu loopt alles...").
   Een kort "Thanks voor je tip." mag wel. Dit sluit aan op de regel over foutmails hieronder.
 - Slot: ":)" voegt hij aan mijn laatste zin toe (09-10: 3 van 3 concepten, ook midden in de slotzin: "Maandag lopen we de rest samen door :)."). ":)" erbij als hij zijn eigen slotzin schrijft ("...laat ik het weten :)"). Mijn slot
   "Laat me weten als het anders loopt" en "Dank voor het meedenken :)" laat hij soms weg of verving hij door
@@ -113,3 +113,4 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - 09-10-2026: Gekeken: 112 mails in Verzonden (3 dagen), 20 van Daniel, 15 al verwerkt; 5 nieuw, 3 met concept. Nieuw: hij voegt ":)" aan mijn slotzin toe (3x, nu een regel), eigen slotzin erbij, "Daniel." met punt bij nee-mail, zachtere schuldtoon (1x).
 - 10-10-2026: Gekeken: 106 mails in Verzonden (3 dagen), 22 van Daniel, 14 al verwerkt; 8 nieuw, 6 met concept. Nieuw: schuldzin in de opening verzacht (2e keer, nu een regel), eigen slotzin erbij (2e keer), videomail krijgt altijd "Dank voor je reactie", "Daniel." met punt (nu 5x), genummerde stappen en "excl. btw" geschrapt (1x).
 - 11-10-2026: Gekeken: 122 mails in Verzonden (3 dagen), 15 van Daniel, 13 al verwerkt; 2 nieuw, 0 met concept. Nieuw: update-mail over WooCommerce-koppeling (2x identiek, nu een regel onder Inhoud).
+- 12-10-2026: Gekeken: 168 mails in Verzonden (3 dagen), 11 van Daniel, 10 al verwerkt; 1 nieuw, 1 met concept. Nieuw: opnieuw schrapt hij de erkennende openingszin ("Je hebt gelijk, ik heb het nagemeten"), rest van de uitleg ongewijzigd.
