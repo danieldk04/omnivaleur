@@ -10634,12 +10634,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   // Prijs zetten vanuit de pagina zelf (zie _mwSetVintedPrice).
   if (msg.type === "SET_PRICE_MAIN") {
+    // NOOIT ONBEPERKT WACHTEN (12-10-2026, Janneke). Elke automatische
+    // Vinted-plaatsing die bij haar mislukte (11 keer sinds 10-10, extensie
+    // 1.0.374 tot 1.0.383, Chrome 128) stopte precies hier: laatste regel
+    // "stap category: ok", daarna drie minuten niets en een concept van EUR 0
+    // op Vinted. Deze vraag was de enige naar de pagina zonder tijdslimiet. Nu
+    // antwoordt de achtergrond zelf na twintig seconden, op zijn eigen klok die
+    // niet van de pagina afhangt, en neemt het invulscript de gewone typroute.
+    let beantwoord = false;
+    const antwoord = (r) => { if (beantwoord) return; beantwoord = true; sendResponse(r); };
+    setTimeout(() => antwoord({ ok: false, reason: "geen antwoord van de pagina binnen 20 s" }), 20000);
     chrome.scripting.executeScript({
       target: { tabId: sender.tab.id },
       world: "MAIN",
       func: _mwSetVintedPrice,
       args: [msg.selector, msg.values],
     }, (results) => {
+      const sendResponse = antwoord;
       if (chrome.runtime.lastError) {
         console.error("[Omnivaleur] SET_PRICE_MAIN failed:", chrome.runtime.lastError.message);
         sendResponse({ ok: false, reason: chrome.runtime.lastError.message });
