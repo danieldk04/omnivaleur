@@ -203,6 +203,7 @@ CREATE TABLE IF NOT EXISTS import_candidates (
     UNIQUE(user_id, platform, platform_listing_id)
 );
 CREATE INDEX IF NOT EXISTS idx_import_candidates_user_platform ON import_candidates(user_id, platform, status);
+CREATE INDEX IF NOT EXISTS idx_import_candidates_suggested_item_id ON import_candidates(suggested_item_id);
 ALTER TABLE import_candidates ADD COLUMN IF NOT EXISTS platform_listed_at TIMESTAMPTZ;
 -- Full listing snapshot captured during scan so an import carries EVERYTHING
 -- (all photos, description, attributes) into the dashboard instead of just the
