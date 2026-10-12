@@ -3272,7 +3272,8 @@ try {
   const woo = new URLSearchParams(location.search).get('woo') || '';
   if (/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(woo)) {
     localStorage.setItem('wooKoppelAdres', woo);
-    sessionStorage.setItem('wooKoppellink', '1');
+    // localStorage, niet sessionStorage: dat overleefde de omweg via het inloggen niet.
+    localStorage.setItem('wooKoppellink', String(Date.now()));
   }
 } catch (e) {}
 
@@ -7863,9 +7864,13 @@ async function laadWooInfo() {
 
 // Binnen via een koppellink (zie boven, bij het inloggen): venster open, adres erin.
 function wooKoppellink() {
+  // Niet ingelogd: de pagina gaat zo naar het inlogscherm, maar dit script loopt
+  // nog door. Het seintje dan laten staan voor na het inloggen.
+  if (!SESSIE.lees('cl_auth')) return;
   try {
-    if (!sessionStorage.getItem('wooKoppellink')) return;
-    sessionStorage.removeItem('wooKoppellink');
+    const sinds = Number(localStorage.getItem('wooKoppellink') || 0);
+    localStorage.removeItem('wooKoppellink');
+    if (!sinds || Date.now() - sinds > 30 * 60 * 1000) return;
   } catch (_) { return; }
   history.replaceState({}, '', window.location.pathname + window.location.hash);
   showView('platforms');
