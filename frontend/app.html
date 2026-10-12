@@ -3265,6 +3265,17 @@ try {
   });
 } catch (e) {}
 
+// Een koppellink (/app?woo=winkel.nl#platforms, 12-10-2026, De Juiste Toon) opent
+// het WooCommerce-venster met het adres al ingevuld, ook na eerst inloggen. Niet
+// zelf doorklikken naar de winkel: een link mag niemand ongevraagd ergens heen sturen.
+try {
+  const woo = new URLSearchParams(location.search).get('woo') || '';
+  if (/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(woo)) {
+    localStorage.setItem('wooKoppelAdres', woo);
+    sessionStorage.setItem('wooKoppellink', '1');
+  }
+} catch (e) {}
+
 // Een link naar een scherm (/app#import uit de importherinnering) moet ook na het
 // inloggen op dat scherm uitkomen; anders landt de klant op het dashboard.
 if (!SESSIE.lees('cl_auth')) {
