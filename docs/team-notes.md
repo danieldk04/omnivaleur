@@ -17140,3 +17140,8 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   niet ingelogd (via inlogscherm), al ingelogd, en een herlaadbeurt opent het venster niet opnieuw.
   Valkuil onderweg: het script loopt na location.href naar het inlogscherm nog door, en las het seintje dan al op.
 - Meegenomen: drie Vinted-hoofdletterzinnen uit 1.0.384 hadden geen Nederlandse vertaling (vertaaltest stond rood).
+- 12-10 middag: Toon stuurde een schermfoto met een LEEG adresveld ("Vul eerst het adres van je webshop in"). Via de
+  link staat het adres er wel (nagelopen in het Nederlands met volledig geladen dashboard), dus hij opende het venster
+  zelf. Het venster vult nu altijd het laatst bekende adres in. Gemeten vanaf omnivaleur.com tegen dejuistetoon.eu:
+  /wp-json/ gevonden, sleutelproef geeft een leesbare WooCommerce-401 (geen CORS-fout), callback antwoordt 403
+  "invalid state" op een nepverzoek (bereikbaar, geen Cloudflare-blokkade). Niet te meten zonder Toon: Approve zelf.
