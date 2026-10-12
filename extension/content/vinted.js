@@ -2837,6 +2837,9 @@
     // aparte wereld) is die tracker onzichtbaar, en dan toont het veld wel de
     // prijs maar houdt Vinted vast aan zijn lege interne waarde — de melding
     // "Price must be greater than or equal to 1.0" bij een ingevulde €14,99.
+    // Eerst melden dat we de pagina om de prijs vragen: blijft het daarna stil,
+    // dan staat in de voortgang precies waar.
+    clog(`prijs: de pagina zelf vragen (${variants.join(" / ")})`);
     try {
       const res = await new Promise((resolve) => {
         chrome.runtime.sendMessage(
