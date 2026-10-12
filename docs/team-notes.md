@@ -17145,3 +17145,24 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   zelf. Het venster vult nu altijd het laatst bekende adres in. Gemeten vanaf omnivaleur.com tegen dejuistetoon.eu:
   /wp-json/ gevonden, sleutelproef geeft een leesbare WooCommerce-401 (geen CORS-fout), callback antwoordt 403
   "invalid state" op een nepverzoek (bereikbaar, geen Cloudflare-blokkade). Niet te meten zonder Toon: Approve zelf.
+
+## 12-10-2026 (avond): Janneke (31d28378), Vinted blijft hangen na de rubriek, "Bestemd voor: jongen" op Marktplaats
+
+- Gemeten: haar extensie is 1.0.383 (opnieuw geinstalleerd vanuit de Web Store), maar Chrome staat nog steeds op 128,
+  ook na haar "bijwerken". Elke automatische Vinted-mislukking sinds 10-10 (11 keer, 1.0.374 tot 1.0.383) stopt op
+  precies dezelfde plek: laatste regel "stap category: ok", daarna drie minuten niets. De stap daarna is de prijsvraag
+  aan de pagina (SET_PRICE_MAIN), de enige zonder tijdslimiet. Amanda (Chrome 154) liep er op 12-10 een keer in vast.
+  Twee herkansingen van haar lukten vanmiddag wel vanzelf (f778b492, 40925d2d), de mislukte laten een concept van
+  EUR 0 achter op Vinted.
+- Ook gemeten op Chrome 127: de pauzeteller in een Worker wordt daar geweigerd (SecurityError), dus op oude Chrome
+  lopen alle pauzes op de klok van de pagina. Focus-emulatie houdt die klok op 127 wel op vol tempo (klokproef 3 min).
+- Waarom de pagina bij haar niet antwoordt is NIET bewezen (niet na te doen zonder haar Mac). Wel gerepareerd dat
+  het nooit meer eindeloos wacht: 1.0.385 antwoordt na 20 s zelf en neemt dan de gewone typroute, en schrijft eerst
+  "prijs: de pagina zelf vragen" in de voortgang. Proef tests/vinted-prijsvraag-tijdslimiet-test.js, faalt op oud.
+- Bestemd voor: het babyformulier van Marktplaats heeft "Jongetje / Meisje / Jongetje of Meisje" en zet zelf al
+  "Jongetje" klaar (gezien op /plaats/565/573). Wij zochten "Jongen of Meisje", vonden niets, en de voorselectie
+  bleef staan. Peuter- en kinderkleding gingen wel goed (gemeten op haar echte advertenties). 1.0.385 kiest op
+  betekenis. Proef tests/bestemd-voor-baby-test.js, faalt op oud. Vijf actieve babyadvertenties van haar op
+  Marktplaats staan nog op "Jongetje"; die past ze zelf aan of ze gaan mee bij een volgende bewerking.
+- Uitbrengen: dist/omnivaleur-extension-1.0.385.zip moet naar de Web Store (bevat ook de 1.0.384-reparatie voor
+  HOOFDLETTER_KLACHT_RE, waar zij vanmiddag nog een keer op stuitte).

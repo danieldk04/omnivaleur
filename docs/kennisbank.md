@@ -17,6 +17,30 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## bestemd-voor-baby-jongetje
+
+*12-10-2026 — Marktplaats-babykleding heeft Jongetje/Meisje/Jongetje of Meisje en zet zelf Jongetje klaar; wie letterlijk "Jongen of Meisje" zoekt laat elke babyjas als jongensjas online (12-10-2026, 1.0.385)*
+
+Janneke: "overal bestemd voor jongen, ook bij de meidenjassen". Gemeten op haar advertenties: babykleding (cat 573 e.a.) stond op "Jongetje", peuter- en kinderkleding klopte. Het babyformulier (/plaats/565/573) heeft een voorselectie, dus een keuze die niets vindt laat geen leeg veld achter maar een verkeerde waarde, en verifyMpGroupFields merkt niets.
+
+**Why:** een voorgeselecteerde lijst maakt een mislukte keuze onzichtbaar.
+
+**How to apply:** kies uit de opties die er echt staan, op betekenis (selectIntendedFor in shared.js). Bij een nieuwe keuzelijst eerst op het echte formulier kijken of er een voorselectie staat. Proef: tests/bestemd-voor-baby-test.js. Zie "verzonnen-standaard-is-erger-dan-leeg".
+
+---
+
+## paginavraag-zonder-tijdslimiet
+
+*12-10-2026 — Elke vraag van het invulscript aan de pagina (executeScript MAIN) heeft een tijdslimiet nodig; SET_PRICE_MAIN had die niet en liet Vinted na de rubriek eindeloos hangen (12-10-2026, 1.0.385)*
+
+Janneke (Chrome 128): 11 automatische Vinted-mislukkingen, allemaal met laatste stap "stap category: ok" en dan drie minuten niets; op Vinted bleef een concept van EUR 0 achter. De stap erna was SET_PRICE_MAIN, de enige paginavraag zonder tijdslimiet (runInMainWorld heeft er wel een van 8 s). Waarom de pagina bij haar niet antwoordde is niet bewezen; de reparatie zorgt dat het nooit meer eindeloos wacht (achtergrond antwoordt na 20 s, eigen klok).
+
+**Why:** een wachter zonder limiet maakt van elke haperende pagina een stille vastloper zonder spoor.
+
+**How to apply:** nieuwe chrome.runtime.sendMessage naar een MAIN-functie altijd met tijdslimiet aan de achtergrondkant, en log vóór de vraag een regel zodat de voortgang laat zien waar het stilviel. Let op: op Chrome 127/128 weigert Chrome de timer-Worker (SecurityError), daar lopen alle pauzes op de paginaklok. Zie "geen-klokje-in-de-hoofdwereld", "vinted-tabblad-klok-stilstand". Proef: tests/vinted-prijsvraag-tijdslimiet-test.js.
+
+---
+
 ## extensie-const-na-await-valstrik
 
 *12-10-2026 — "In de content-scripts moet elke const/let bóven `await getJob()` staan, anders valt de invulstap stil om"*

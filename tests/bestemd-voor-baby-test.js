@@ -77,7 +77,7 @@ const KIND = ["Jongen", "Meisje", "Jongen of Meisje"];
 const BABYJAS = { title: "Jas Babyface maat 80*", category: "babykleding", description: "Nieuw met labels." };
 
 const bronNu = fs.readFileSync(path.join(WORTEL, "extension/content/shared.js"), "utf8");
-const bronOud = execSync("git show HEAD:extension/content/shared.js", { cwd: WORTEL, maxBuffer: 1 << 24 }).toString();
+const bronOud = execSync("git show 418249e8:extension/content/shared.js", { cwd: WORTEL, maxBuffer: 1 << 24 }).toString();
 
 console.log("VOOR de reparatie");
 check("de oude code liet 'Jongetje' staan bij een babyjas zonder geslacht",
