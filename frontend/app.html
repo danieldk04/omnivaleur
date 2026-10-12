@@ -7861,6 +7861,18 @@ async function laadWooInfo() {
   } catch (_) { /* alleen een melding */ }
 }
 
+// Binnen via een koppellink (zie boven, bij het inloggen): venster open, adres erin.
+function wooKoppellink() {
+  try {
+    if (!sessionStorage.getItem('wooKoppellink')) return;
+    sessionStorage.removeItem('wooKoppellink');
+  } catch (_) { return; }
+  history.replaceState({}, '', window.location.pathname + window.location.hash);
+  showView('platforms');
+  connectWooCommerce();
+  try { document.getElementById('woo-store-input').value = localStorage.getItem('wooKoppelAdres') || ''; } catch (_) {}
+}
+
 // Terug uit WooCommerce: ?success=1 of 0 staat in het adres.
 async function wooNaTerugkeer() {
   const q = new URLSearchParams(window.location.search);
