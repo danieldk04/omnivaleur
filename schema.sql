@@ -74,6 +74,10 @@ CREATE INDEX IF NOT EXISTS idx_jobs_status_platform ON jobs(status, platform);
 
 -- Indexes for common query patterns
 CREATE INDEX IF NOT EXISTS idx_listings_item_id ON listings(item_id);
+-- Elke kolom die naar items verwijst krijgt een index, anders leest een
+-- artikel verwijderen de hele tabel (57014 op 12-10-2026).
+-- Zie scripts/sql/index_verwijzingen_naar_items.sql; tests/test_index_op_verwijzingen.py.
+CREATE INDEX IF NOT EXISTS idx_jobs_item_id ON jobs(item_id);
 CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);
 CREATE INDEX IF NOT EXISTS idx_listings_platform ON listings(platform);
 CREATE INDEX IF NOT EXISTS idx_sync_events_listing_id ON sync_events(listing_id);
