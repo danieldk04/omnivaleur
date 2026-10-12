@@ -17104,3 +17104,17 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   kijkt alleen naar Revaleurs eigen artikelen, dus wist die foto uit R2. Stap 5 van het sql-bestand ruimt het op zonder
   de opslag te raken.
 - Gedraaid door Daniel (12-10): indexen staan, proefitem e92e6c8e is weg. Zoeken in jobs op item_id 0,16 s, /health 200.
+
+
+## 12-10-2026: Onboarding nieuwe klanten (ochtend)
+- Nieuw: Anton (b60bd6fd, antonmahrous@hotmail.com), aangemeld 11-10 18:45. Pokémon, Topps en Panini kaarten, 48 artikelen
+  (2 tot 80 euro). 48 actief op Vinted (geïmporteerd), 43 actief op Marktplaats binnen 10 minuten na aanmelding.
+  Eén MP-fout (Level Ball) al beoordeeld als klant (computer stil, 11-10 20:35). Latios CGC 8.5 staat op sold_unconfirmed:
+  weg van zijn MP-lijst, wacht op "Ja, verkocht" in zijn dashboard, dan gaat hij van Vinted af. Eén MP-kandidaat pending
+  is zijn "Pokémon kaarten gezocht"-advertentie, geen voorraad. Vinted-scan wacht op zijn extensie (1.0.380, laatst 11-10 21:14).
+  Geen duplicaten: MP-scan van 16:51 vond niets eigens, de 43 gekoppelde zijn onze eigen plaatsingen. Mailtje klaargezet.
+- Amanda (8f91a370): 219 artikelen, actief op MP 145, Vinted 138, 2dehands 98, eBay 79. Mailt vanochtend met Daniel over het
+  proefeinde (13-10 12:22), call vandaag 12:00. Haar Vinted-fouten zijn in de klantfoutenronde van vanochtend behandeld
+  (1.0.384, nog niet in de Web Store; zij draait 1.0.380). Briefing, geen mailtje.
+- robbertbolier, partablecs, winterhome: ongewijzigd, nul artikelen, al gemaild. Proef van partablecs en winterhome loopt
+  vandaag af. Geen mailtjes. Niets gerepareerd in code of data deze ronde.
