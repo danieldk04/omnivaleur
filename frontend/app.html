@@ -13122,6 +13122,7 @@ if (_urlParams.get('billing') === 'success' || _urlParams.get('billing') === 'ca
   // De importherinnering linkt hierheen: meteen bij "Alles importeren".
   showView('import');
 }
+wooKoppellink();
 loadAll().then(() => { if (window.location.hash === '#platforms') renderPlatforms(); wooNaTerugkeer(); wooBrowserOpstart(); });
 loadBillingStatus();
 // De verwijskaart hoort meteen op het dashboard te staan, niet pas nadat
