@@ -17073,3 +17073,23 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   claude-sonnet-5 in backend/content/generator.py (blog) en in scripts (blog_repair_afgekapt, leadgen_creators_openers,
   social_trends_rapport). Sonnet 5.5 staat nergens in de code, dus die $4,33 van 10-10 is wel ontwikkelwerk. De ~$0,28 per dag
   Sonnet 4.6 is waarschijnlijk ai_listing en dus app, niet ontwikkelwerk. Dagkosten app dus ~$0,36 (Haiku $0,08 + Sonnet 4.6 $0,28).
+
+## 12-10-2026: Janneke (31d28378), proef verlengd en Vinted-babyjassen nagedaan
+
+- Proef met 5 dagen verlengd op Daniels verzoek: trialing tot 17-10 08:31 UTC (liep 11-10 19:06 af).
+- Vinted: sinds 10-10 ~18:00 geen enkele Vinted-plaatsing meer vanzelf gelukt bij haar. Babyjassen (maat 74/86) stoppen
+  6 keer met "timed out", laatste stap "stap category: ok"; haar Vinted-scan toont 4 concepten van die jassen met
+  prijs 0, dus het tabblad bleef tussen rubriek en prijs stilstaan.
+- Nagedaan met Daniels toestemming: precies haar item (Tussenjas Noppies 74, eigen foto, babykleding, 21,50) als echte
+  opdracht op Revaleur, extensie 1.0.384 in Daniels Chrome. Ging in een keer door: prijs na 4 s, geplaatst als
+  10344741522 ("klok aan, ontdooid 3x"), daarna via de gewone verwijderroute weer weg (openbare pagina 404).
+  Revaleur-abonnement daarna teruggezet op trial_expired zoals het was. Proefitem e92e6c8e staat nog offline bij
+  Revaleur: verwijderen gaf een statement timeout (niet herhaald, /health 200).
+- fillCategoryVinted, fillPriceVinted en _mwSetVintedPrice zijn tussen 1.0.377 en 1.0.384 letterlijk gelijk. Wat bij
+  haar anders is: Chrome 128 (update wacht op herstart) en extensie 1.0.377, die zijn eigen update tegenhoudt
+  (gerepareerd in 1.0.378, maar dat bereikt haar pas na een herstart). Niet bewezen op haar eigen Mac.
+- Verkocht op Vinted: Vinted toont 13 gesloten advertenties, Omnivaleur kent er 1 (Gattino); de rest is nooit aan
+  Omnivaleur gekoppeld (zelf geplaatst of afgemaakt), dus daar verlaagt Omnivaleur de Shopify-voorraad niet.
+  Wat via Omnivaleur geplaatst is gaat wel vanzelf (voorraad_meerdere staat aan: 1 stuk eraf, product blijft).
+- Volgende stap: Janneke herstart Chrome (Cmd+Q), dan een babyjas opnieuw; voortgang van die opdracht nalezen
+  (versie en klok in result._progress).
