@@ -17044,3 +17044,15 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   vijf keer op 10-10. 26cf5471 Marktplaats-verwijdering 07:13 "Frame with ID 0 was removed", de bijbehorende
   herplaatsing sloeg terecht over. Amanda (8f91a370) sinds gisteren geen nieuwe Vinted-stilval.
 - Werkt bij klanten pas na upload van dist/omnivaleur-extension-1.0.384.zip naar de Web Store.
+
+## 12-10-2026: Goudlief 5aae4954, WhatsApp-vraag "Sluiten en doorgaan en meteen nieuwe 50?"
+
+- Antwoord: ja. Het venster "Plaatsen x / 50" zet alleen in de wachtrij; de lus loopt door zolang het tabblad open
+  is, en een tweede keer hetzelfde artikel kiezen hergebruikt de open opdracht (crosslist.py, geen tweede advertentie).
+  Enige bijwerking: als de eerste ronde klaar is wist die de selectie en laadt de lijst opnieuw. Tip gegeven:
+  "Alles selecteren ... die bij het filter passen" in plaats van per 50.
+- Gemeten: wachtrij 324 Marktplaats + 324 2dehands, tempo 11-10 76 per kanaal in 57 minuten. Geen dubbelen: van de 151
+  plaatsingen sinds 11-10 staat elke titel precies zo vaak online als wij plaatsten, en geen van de 324 wachtende titels
+  staat al op Marktplaats (openbare lijst verkoper 52029522, 3.805 advertenties).
+- Let op: proef liep af 11-10 16:58 UTC, geen Stripe. evaluate_access: slot 13-10 16:58 UTC (18:58 NL), daarna 402 op
+  /pending en stopt het plaatsen. Beslissing bij Daniel (verlengen of laten betalen). Extensie staat op 1.0.374.
