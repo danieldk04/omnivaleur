@@ -17127,3 +17127,16 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   Jannekes foto) kan die foto dus niet meer wissen. Proef in tests/test_foto_opslag.py, faalt op de oude code.
 - Wat nog open is: een foto in je EIGEN map die een andere klant via een gekopieerd artikel gebruikt, wordt nog wel
   gewist als jij je artikel verwijdert. Komt alleen voor bij handmatig gekopieerde rijen, niet via de app.
+
+## 12-10-2026: WooCommerce bij De Juiste Toon, koppellink
+- Toon (96e30080, djt@dejuistetoon.eu) vroeg of wij WooCommerce voor hem konden "installeren". Er staat nog geen
+  WooCommerce-koppeling op zijn account. Zijn winkel dejuistetoon.eu (SiteGround) is vanaf een gewone computer
+  bereikbaar: /wp-json/ 200, wc/v3 aanwezig, CORS staat omnivaleur.com toe, /wc-auth/v1/authorize stuurt netjes door
+  naar de WordPress-inlog. De koppeling loopt dus via de browserroute van 10-10. Zelf koppelen kunnen wij niet: dat
+  vraagt zijn WordPress-inlog en zijn klik op Approve.
+- Nieuw: koppellink https://omnivaleur.com/app?woo=<winkeladres>#platforms. Opent het WooCommerce-venster met het
+  adres ingevuld, ook als de klant eerst moet inloggen (adres en seintje in localStorage, half uur geldig). Klikt
+  bewust niet zelf door naar de winkel: een link mag niemand ongevraagd ergens heen sturen. Nagelopen in Chromium:
+  niet ingelogd (via inlogscherm), al ingelogd, en een herlaadbeurt opent het venster niet opnieuw.
+  Valkuil onderweg: het script loopt na location.href naar het inlogscherm nog door, en las het seintje dan al op.
+- Meegenomen: drie Vinted-hoofdletterzinnen uit 1.0.384 hadden geen Nederlandse vertaling (vertaaltest stond rood).
