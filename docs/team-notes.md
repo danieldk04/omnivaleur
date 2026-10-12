@@ -17118,3 +17118,12 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   (1.0.384, nog niet in de Web Store; zij draait 1.0.380). Briefing, geen mailtje.
 - robbertbolier, partablecs, winterhome: ongewijzigd, nul artikelen, al gemaild. Proef van partablecs en winterhome loopt
   vandaag af. Geen mailtjes. Niets gerepareerd in code of data deze ronde.
+
+## 12-10-2026: verwijderknop wist nooit meer foto's buiten de eigen map
+
+- _release_photos (backend/api/items.py) ruimt nu alleen objecten op waarvan het pad met "<user_id>/" begint. Alle
+  schrijvers (uploads, spiegeling, R2-verhuizing, backfill) schrijven sinds hun eerste versie onder die map, dus er
+  blijft geen eigen foto ten onrechte staan. Een artikel met een foto uit andermans map (zoals proefitem e92e6c8e met
+  Jannekes foto) kan die foto dus niet meer wissen. Proef in tests/test_foto_opslag.py, faalt op de oude code.
+- Wat nog open is: een foto in je EIGEN map die een andere klant via een gekopieerd artikel gebruikt, wordt nog wel
+  gewist als jij je artikel verwijdert. Komt alleen voor bij handmatig gekopieerde rijen, niet via de app.
