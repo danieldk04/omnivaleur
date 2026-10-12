@@ -17103,3 +17103,4 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Proefitem e92e6c8e NIET via de verwijderknop opruimen: het gebruikt Jannekes foto (map 31d28378) en _release_photos
   kijkt alleen naar Revaleurs eigen artikelen, dus wist die foto uit R2. Stap 5 van het sql-bestand ruimt het op zonder
   de opslag te raken.
+- Gedraaid door Daniel (12-10): indexen staan, proefitem e92e6c8e is weg. Zoeken in jobs op item_id 0,16 s, /health 200.
