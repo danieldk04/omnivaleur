@@ -1380,11 +1380,20 @@ window.CL = (() => {
     const opties = [...el.options].map((o) => o.text.trim());
     const hay = `${item.title || ""} ${item.category || ""} ${item.description || ""}`.toLowerCase();
 
-    if (opties.some((o) => /^Jongen|^Meisje/.test(o))) {
-      const boy = /jongen|boys?\b|garçon/.test(hay);
+    // Babykleding heet het "Jongetje", "Meisje" en "Jongetje of Meisje", en
+    // Marktplaats zet daar zelf al "Jongetje" klaar (gemeten 12-10-2026 op
+    // /plaats/565/573). We zochten letterlijk "Jongen of Meisje", vonden niets,
+    // en dan bleef "Jongetje" staan: elke babyjas van Janneke stond als
+    // jongensjas online, ook de meisjesjassen. Daarom kiezen we op betekenis
+    // uit de opties die er echt staan.
+    if (opties.some((o) => /^(Jongen|Jongetje|Meisje)/i.test(o))) {
+      const boy = /jongen|jongetje|boys?\b|garçon/.test(hay);
       const girl = /meisje|girls?\b|fille/.test(hay);
-      const want = boy && !girl ? "Jongen" : girl && !boy ? "Meisje" : "Jongen of Meisje";
-      return fillNativeSelect(el, want);
+      const neutraal = opties.find((o) => /\bof\b/i.test(o) && /jonge/i.test(o) && /meisje/i.test(o));
+      const jongen = opties.find((o) => /^jonge(n|tje)s?$/i.test(o));
+      const meisje = opties.find((o) => /^meisjes?$/i.test(o));
+      const want = boy && !girl ? jongen : girl && !boy ? meisje : neutraal;
+      return want ? fillNativeSelect(el, want) : false;
     }
 
     // Sieraden (Ringen): "Dame", "Heer" of "Dame of Heer", op Marktplaats én
