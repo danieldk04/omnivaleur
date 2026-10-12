@@ -1749,6 +1749,12 @@
   // heeft de foto's gezien. Zie walkVintedCategoryPath.
   let bladReden = null;
 
+  // Herkent Vinted's klacht "te veel hoofdletters" in de titel (zie
+  // hoofdletterKlachtVinted). Stond tot 12-10-2026 onder de hoofdstroom en
+  // bestond daardoor nog niet: elke geweigerde titel gaf een ReferenceError.
+  const HOOFDLETTER_KLACHT_RE =
+    /too many capital|hoofdletter|majuscule|gro(ß|ss)buchstabe|may[uú]scula|maiuscol|wielkich liter/i;
+
   const job = await getJob();
   if (!job) return;
   const { id: jobId, serverUrl, payload: item } = job;
@@ -2032,8 +2038,7 @@
   // 44% hoofdletters stond er gewoon. Raden vooraf kan dus niet; we lezen de
   // klacht na het plaatsen en schrijven de titel dan rustig: kleine letters,
   // alleen het eerste woord en de woorden van het merk met een hoofdletter.
-  const HOOFDLETTER_KLACHT_RE =
-    /too many capital|hoofdletter|majuscule|gro(ß|ss)buchstabe|may[uú]scula|maiuscol|wielkich liter/i;
+  // HOOFDLETTER_KLACHT_RE staat boven `await getJob()`, zie daar.
 
   // Alleen rond het titelvak kijken: de melding staat er direct onder, en zo
   // telt een woord als "hoofdletter" in de omschrijving nooit mee.

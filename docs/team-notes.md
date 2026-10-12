@@ -17025,3 +17025,22 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   en inrichting"): de sites rekenen geld in die rubrieken; niets betaald, rest van die rubriek netjes teruggenomen. Klant.
 - Let op: de repo in ~/Documents stond half in iCloud-parkeerstand (4.926 bestanden weg, ook .git en .env); git en
   Python faalden. Deze ronde gewerkt vanuit een verse kopie. Zie kennisbank icloud-parkeert-de-repo.
+
+## 12-10-2026: Dagelijkse klantfouten (ochtendronde)
+
+- 24 uur: 2.380 opdrachten aangemaakt, 14 daarvan fout bij 5 klanten (plus één oudere verwijdering). Niets hangt vast bij klanten met een draaiende extensie; het grote
+  wachtende werk (5aae4954 650, 0b28c1ce 117) staat bij klanten van wie de extensie sinds 11-10 19:26 en 09-10 niet
+  meer aan is. 26cf5471 (96) en bcdf9aa4 (Egbert, 157) lopen hun herplaatsingen gewoon af.
+- Onze code, gerepareerd (extensie 1.0.384): "Cannot access 'HOOFDLETTER_KLACHT_RE' before initialization" bij een
+  Vinted-plaatsing. De hoofdletterreparatie van 10-10 zette haar constante onder `await getJob()`, dus juist een
+  titel die Vinted om de hoofdletters weigerde liep op een harde fout in plaats van op de rustige titel. Voor de
+  vijfde keer dezelfde valstrik (kennisbank: extensie-const-na-await-valstrik). De bewakingsproef
+  test_geen_hulpwaarden_na_de_hoofdstroom stond sinds 10-10 rood en werd op 11-10 als "ook zonder deze wijziging
+  rood" weggezet. tests/vinted-hoofdletters-titel-test.js knipte de stukken los en zag de volgorde niet; die kijkt nu
+  ook naar de volgorde en faalt op 1.0.383.
+- Klant-eigen: 26cf5471 Vinted-scan 4x niet ingelogd; 5aae4954 betaalde rubrieken op MP/2dehands en daarna tabblad
+  dicht.
+- Open, onbekend: 31d28378 (extensie 1.0.377) Vinted-plaatsing 07:26 viel na 3 minuten stil, zelfde patroon als
+  vijf keer op 10-10. 26cf5471 Marktplaats-verwijdering 07:13 "Frame with ID 0 was removed", de bijbehorende
+  herplaatsing sloeg terecht over. Amanda (8f91a370) sinds gisteren geen nieuwe Vinted-stilval.
+- Werkt bij klanten pas na upload van dist/omnivaleur-extension-1.0.384.zip naar de Web Store.

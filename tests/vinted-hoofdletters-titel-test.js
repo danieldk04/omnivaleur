@@ -37,10 +37,24 @@ function plaatsStuk(bron) {
 }
 
 // De hulpfuncties rond de hoofdletters (alleen in de nieuwe versie).
+// Sinds 12-10-2026 staat de constante boven `await getJob()` en de functies
+// verderop; beide stukken apart knippen.
 function hulpStuk(bron) {
-  const begin = bron.indexOf("  const HOOFDLETTER_KLACHT_RE");
+  const c = bron.match(/  const HOOFDLETTER_KLACHT_RE =\n.*\n/);
+  const begin = bron.indexOf("  function hoofdletterKlachtVinted");
   const eind = bron.indexOf("  // Waar klaagt het formulier over", begin);
-  return begin < 0 ? "" : bron.slice(begin, eind);
+  return !c || begin < 0 ? "" : c[0] + bron.slice(begin, eind);
+}
+
+// De sandbox hierboven draait de stukken los en ziet dus niet in welke
+// volgorde ze in het echte script staan. Het script is één async functie die
+// bij `await getJob()` blijft wachten tot het werk klaar is: een const die
+// daaronder staat bestaat tijdens het plaatsen nog niet (ReferenceError bij
+// een klant op 11-10-2026, 1.0.383).
+function constVoorDeHoofdstroom(bron) {
+  const c = bron.indexOf("  const HOOFDLETTER_KLACHT_RE");
+  const job = bron.indexOf("  const job = await getJob();");
+  return c >= 0 && job >= 0 && c < job;
 }
 
 const TITEL = "Vermarc Cycling Kit Men XL - Shanks Group ATM REYM Jersey";
@@ -88,6 +102,11 @@ async function draai(bron) {
   const oud = await draai(OUD);
   check("oude versie faalt op de schreeuwerige titel", !!oud.fout && !oud.id, JSON.stringify(oud));
   check("oude versie probeert het maar één keer", oud.pogingen.length === 1, JSON.stringify(oud.pogingen));
+
+  console.log("Volgorde in het echte script:");
+  const op383 = execSync("git show dcf147ab:extension/content/vinted.js", { cwd: WORTEL }).toString();
+  check("1.0.383 had de constante te laat (de klantfout)", !constVoorDeHoofdstroom(op383));
+  check("constante staat nu boven await getJob()", constVoorDeHoofdstroom(NIEUW));
 
   console.log("Na de reparatie:");
   const nieuw = await draai(NIEUW);

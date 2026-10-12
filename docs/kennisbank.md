@@ -17,6 +17,41 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## extensie-const-na-await-valstrik
+
+*12-10-2026 — "In de content-scripts moet elke const/let bóven `await getJob()` staan, anders valt de invulstap stil om"*
+
+De content-scripts van de extensie (o.a. `extension/content/vinted.js`) zijn één
+grote async functie. Zodra de code bij `const job = await getJob();` wacht, zijn
+de regels daarónder nog niet uitgevoerd. Een `const` die verderop staat bestaat op
+dat moment dus niet, en elke functie die hem gebruikt stopt met een harde fout op
+het moment dat hij aangeroepen wordt.
+
+**Dit is al vijf keer misgegaan** (de vijfde: `HOOFDLETTER_KLACHT_RE`, 10-10 tot 12-10-2026, extensie 1.0.384): de kleurstap, de categoriekeuze (`V_KLEDING`),
+de prijscontrole (`PRICE_ERR_RE`) en op 27-08-2026 `BLAD_VOORKEUR`/`enkelvoud`.
+
+Wat het zo verraderlijk maakt: `step()` in `extension/content/shared.js` vangt de
+fout op, logt "stap X: FOUT" en gaat gewoon door. Het publiceren stopt dus niet —
+de advertentie gaat zonder categorie de deur uit. Je ziet geen crash, alleen een
+advertentie die niet klopt.
+
+**Een rode bewakingsproef is nooit "bestaand rood".** Op 11-10-2026 stond
+`test_geen_hulpwaarden_na_de_hoofdstroom` rood en werd weggezet als "ook zonder deze
+wijziging rood"; een dag later kreeg een klant precies die fout. Rood op de proef
+die deze valstrik bewaakt = eerst repareren. Een sandboxproef die stukken los uit
+vinted.js knipt ziet de volgorde niet; toets die apart.
+
+**Hoe toe te passen:**
+- Nieuwe hulpwaarden altijd boven `const job = await getJob();` zetten, bij de
+  andere constanten. Er staat een waarschuwingsblok in vinted.js op die plek.
+- `tests/test_vinted_categories.py::test_geen_hulpwaarden_na_de_hoofdstroom`
+  bewaakt dit. Die test faalde maandenlang zonder dat iemand keek — zie
+  "eerst-recente-wijzigingen-lezen".
+- Elke wijziging in `extension/` vereist een versiebump, zie
+  "extension-release-bump-version".
+
+---
+
 ## icloud-parkeert-de-repo
 
 *11-10-2026 — 11-10: iCloud "Opslagruimte optimaliseren" haalde 4.926 repobestanden weg, ook .git/HEAD en .env; git en Python faalden met "Resource deadlock avoided"*
@@ -9481,35 +9516,6 @@ de gebruiker móet merken dat hij hem mist. Elke wijziging in `extension/` vraag
 verder een versiebump plus `scripts/build-extension.sh` — zie
 "extension-release-bump-version". Let bij klachten altijd eerst op de versie:
 zie ook "tweede-extensiekopie".
-
----
-
-## extensie-const-na-await-valstrik
-
-*27-08-2026 — "In de content-scripts moet elke const/let bóven `await getJob()` staan, anders valt de invulstap stil om"*
-
-De content-scripts van de extensie (o.a. `extension/content/vinted.js`) zijn één
-grote async functie. Zodra de code bij `const job = await getJob();` wacht, zijn
-de regels daarónder nog niet uitgevoerd. Een `const` die verderop staat bestaat op
-dat moment dus niet, en elke functie die hem gebruikt stopt met een harde fout op
-het moment dat hij aangeroepen wordt.
-
-**Dit is al vier keer misgegaan:** de kleurstap, de categoriekeuze (`V_KLEDING`),
-de prijscontrole (`PRICE_ERR_RE`) en op 27-08-2026 `BLAD_VOORKEUR`/`enkelvoud`.
-
-Wat het zo verraderlijk maakt: `step()` in `extension/content/shared.js` vangt de
-fout op, logt "stap X: FOUT" en gaat gewoon door. Het publiceren stopt dus niet —
-de advertentie gaat zonder categorie de deur uit. Je ziet geen crash, alleen een
-advertentie die niet klopt.
-
-**Hoe toe te passen:**
-- Nieuwe hulpwaarden altijd boven `const job = await getJob();` zetten, bij de
-  andere constanten. Er staat een waarschuwingsblok in vinted.js op die plek.
-- `tests/test_vinted_categories.py::test_geen_hulpwaarden_na_de_hoofdstroom`
-  bewaakt dit. Die test faalde maandenlang zonder dat iemand keek — zie
-  "eerst-recente-wijzigingen-lezen".
-- Elke wijziging in `extension/` vereist een versiebump, zie
-  "extension-release-bump-version".
 
 ---
 
