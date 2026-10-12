@@ -698,7 +698,7 @@
       "pillar": "C",
       "format": "competitor",
       "slug": "best-flyp-alternative-for-crosslisting",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "beste-flyp-alternatief-voor-crosslisting",
       "priority": 82
     },
@@ -1479,6 +1479,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-delete-listings-on-2dehands",
       "published_at": "2026-10-10T14:15:52.650931+00:00"
+    },
+    {
+      "keyword": "best flyp alternative for crosslisting",
+      "slug": "best-flyp-alternative-for-crosslisting",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "action": "created",
+      "url_path": "/vs/best-flyp-alternative-for-crosslisting",
+      "published_at": "2026-10-12T17:13:57.743496+00:00"
     }
   ]
 }
