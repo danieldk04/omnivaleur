@@ -17067,3 +17067,9 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - /health taalmodel_sinds_start: antwoord_door gemini 3, google 429 x9, 200 x5, 503 x1. Gemini draait weer; de 429's vallen
   nu op de rem in plaats van op een Claude-stroom.
 - Oordeel: geslaagd. App-kosten onder $1 per dag sinds 11-10. Let op: Gemini-dagtegoed raakt nog steeds op (9 keer 429).
+
+- Correctie op de regel hierboven (12-10): "in de app staat nergens een Sonnet-model" klopte niet. Mijn eerste zoekopdracht gaf leeg
+  terug en ik vertrouwde die lege uitkomst. Wel in de code: claude-sonnet-4-6 in backend/services/ai_listing.py (klantfunctie),
+  claude-sonnet-5 in backend/content/generator.py (blog) en in scripts (blog_repair_afgekapt, leadgen_creators_openers,
+  social_trends_rapport). Sonnet 5.5 staat nergens in de code, dus die $4,33 van 10-10 is wel ontwikkelwerk. De ~$0,28 per dag
+  Sonnet 4.6 is waarschijnlijk ai_listing en dus app, niet ontwikkelwerk. Dagkosten app dus ~$0,36 (Haiku $0,08 + Sonnet 4.6 $0,28).
