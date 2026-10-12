@@ -221,6 +221,25 @@ def test_foto_van_een_importkandidaat_blijft_staan(gewist):
     assert gewist == []
 
 
+def test_foto_uit_de_map_van_een_andere_klant_blijft_staan(gewist, r2_aan):
+    """12-10-2026: een proefitem op Revaleur gebruikte een foto uit Jannekes
+    map. De controle 'nog in gebruik' kijkt alleen naar de eigen artikelen, dus
+    verwijderen wiste haar foto. Alleen de eigen map mag worden opgeruimd."""
+    from backend.api.items import _release_photos
+    db = _DB(items=[], kandidaten=[])
+    _release_photos(db, "3bfbed2c", [R2_URL + "31d28378/aaa.jpg",
+                                     BUCKET_URL + "31d28378/imported/bbb.jpg",
+                                     R2_URL + "3bfbed2c-x/ccc.jpg",   # andere klant met zelfde begin
+                                     R2_URL + "3bfbed2c/ddd.jpg"])
+    assert gewist == [("r2", "3bfbed2c/ddd.jpg")]
+
+
+def test_lege_gebruiker_wist_nooit_iets(gewist, r2_aan):
+    from backend.api.items import _release_photos
+    _release_photos(_DB(items=[], kandidaten=[]), "", [R2_URL + "/aaa.jpg", R2_URL + "x/aaa.jpg"])
+    assert gewist == []
+
+
 def test_databasefout_wist_nooit_iets(gewist):
     """Als de database niet antwoordt weten we niet wat nog in gebruik is.
     Dan hoort er niets weg te gaan — en het verwijderen van het item zelf,
