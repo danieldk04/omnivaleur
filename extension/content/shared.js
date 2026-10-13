@@ -18,32 +18,33 @@ try {
 } catch (_) { /* liever geen stempel dan een kapotte pagina */ }
 
 window.CL = (() => {
-  // Pauzes lopen via een Web Worker, niet via setTimeout op de pagina zelf.
+  // PAUZES LOPEN OP DE WEKKER VAN DE ACHTERGROND, NIET OP DIE VAN DE PAGINA.
   //
   // Chrome knijpt setTimeout in een tabblad dat niet zichtbaar is: eerst tot
-  // 1 seconde, en zodra het tabblad 5 minuten verborgen is tot één keer per
-  // minuut ("intensive throttling"). Een Vinted-klus duurt langer dan dat en
-  // bestaat uit tientallen korte pauzes, dus die viel volledig stil zodra de
-  // verkoper naar een ander tabblad ging — hij liep alleen door als je hem
-  // op de voorgrond hield. Een timer die IN een Worker draait valt niet onder
-  // die intensive throttling. Lukt de Worker niet (CSP, oude browser), dan valt
-  // sleep gewoon terug op setTimeout.
-  let _timerWorker = null;      // null = nog niet geprobeerd, false = mislukt
-  let _timerSeq = 0;
-  const _timerWaiters = new Map();
-  function _getTimerWorker() {
-    if (_timerWorker !== null) return _timerWorker;
+  // 1 seconde, daarna tot één keer per minuut, en soms ligt het tabblad helemaal
+  // stil. Een Vinted-klus bestaat uit tientallen korte pauzes, dus die viel stil
+  // zodra Chrome het tabblad afkneep.
+  //
+  // Hier stond een Web Worker als wekker. Gemeten op 13-10-2026 (Janneke): Chrome
+  // weigert die Worker in een invulscript ALTIJD, op 127, 128 én 149 ("Script at
+  // chrome-extension://... cannot be accessed from origin"). Elke pauze liep dus
+  // al die tijd op de klok van de pagina, bij iedereen. Nu stuurt elke pauze een
+  // briefje naar de achtergrond (de service worker), die geen tabblad is en niet
+  // wordt afgeknepen. De gewone setTimeout loopt ernaast: wie het eerst komt.
+  // Valt de achtergrond weg, dan is het dus nooit slechter dan vroeger.
+  // Langer dan 25 s niet via de achtergrond: Chrome mag een stille service
+  // worker na 30 s opruimen, en dan komt het antwoord nooit.
+  let _wekkerStuk = false;
+  function _achtergrondWekker(ms, af) {
+    if (_wekkerStuk || ms > 25000) return;
     try {
-      _timerWorker = new Worker(chrome.runtime.getURL("content/timer-worker.js"));
-      _timerWorker.onmessage = (e) => {
-        const done = _timerWaiters.get(e.data);
-        if (done) { _timerWaiters.delete(e.data); done(); }
-      };
-      _timerWorker.onerror = () => { _timerWorker = false; };
+      chrome.runtime.sendMessage({ type: "OV_WEKKER", ms }, () => {
+        if (chrome.runtime.lastError) return;   // dan neemt de paginaklok het over
+        af();
+      });
     } catch (_) {
-      _timerWorker = false;
+      _wekkerStuk = true;                       // extensie herladen: alleen nog de paginaklok
     }
-    return _timerWorker;
   }
   // Hoeveel langer duurde de laatste pauze dan gevraagd? Dat is de tweede maat
   // naast de klokteller hieronder, en samen geven ze antwoord op de vraag waar

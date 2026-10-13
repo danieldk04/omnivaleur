@@ -17166,3 +17166,25 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   Marktplaats staan nog op "Jongetje"; die past ze zelf aan of ze gaan mee bij een volgende bewerking.
 - Uitbrengen: dist/omnivaleur-extension-1.0.385.zip moet naar de Web Store (bevat ook de 1.0.384-reparatie voor
   HOOFDLETTER_KLACHT_RE, waar zij vanmiddag nog een keer op stuitte).
+
+## 13-10-2026: Dagelijkse klantfouten (ochtendronde)
+
+- 24 uur: 2.247 opdrachten, 46 fout bij 7 klanten, plus 23 oudere die in dit venster afliepen. Geen nieuwe fout in
+  onze code met een aantoonbare oorzaak; geen codewijziging, alleen deze notitie.
+- Opgelost en nagemeten: Lynn (96e30080) kreeg 12-10 weer 12 rode "not in your 2dehands overview (682)". Het vangnet
+  van 11-10 deed zijn werk: alle 14 rijen stonden binnen 30 minuten in het archief als verlopen. De rode melding zelf
+  blijft komen zolang de importdatum als plaatsingsdatum telt (open punt van 11-10).
+- HOOFDLETTER_KLACHT_RE (Amanda 2x, Janneke 1x) waren allemaal voor 1.0.384. De Web Store staat nu op 1.0.384;
+  Amanda draait nog 1.0.383 (heartbeat 08:02 UTC), Janneke 1.0.384.
+- Vinted drie-minuten-stilval: Amanda 7x (create en prijswijziging), Janneke 4x. Precies wat 1.0.385 begrenst, maar
+  1.0.385 staat nog NIET in de Web Store (gemeten 08:05 UTC). Werkt pas na upload van
+  dist/omnivaleur-extension-1.0.385.zip.
+- Klant-eigen: 26cf5471 Vinted-scan 15x niet ingelogd (al afgehandeld), f8c0cce9 uitgelogd op 2dehands (401) en Vinted,
+  betaalde rubrieken op Marktplaats, Toon WooCommerce nog niet gekoppeld, tabblad weg (No tab with id).
+- Wachtrijen: Egbert (bcdf9aa4) 568 wachtend, loopt (97 plaatsingen tussen 07 en 08 UTC); d8a7c0dc 87, loopt.
+  5aae4954 (650) en 0b28c1ce (149) staan stil omdat hun extensie uit is. 26cf5471 heeft een Marktplaats-plaatsing op
+  claimed sinds 06:45 UTC, zijn extensie is sindsdien stil (computer uit).
+- Open, onbekend: losse gevallen (2dehands verwijderen niet te controleren 2x, titelveld time-out bij Egbert 1x,
+  Vinted prijsveld leeg en tussenjas niet gevonden bij Janneke).
+- backend/scheduler.py heeft nog steeds de niet-gecommitte wijziging van een andere sessie (rubriekherstel 09:30);
+  niet aangeraakt.
