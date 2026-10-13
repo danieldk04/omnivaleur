@@ -174,6 +174,33 @@ SITEGROUND_MELDING = ("Your host SiteGround stopped our server with its bot chec
                       "info@omnivaleur.com and we'll sort it out with you.")
 
 
+# Websitebouwers zonder WooCommerce. Blackbird Guitars (12-10-2026) typte zijn
+# JouwWeb-adres in, kreeg "lijkt geen WordPress" met daaronder de sleutelvelden
+# open, en plakte daar iets anders in. Wie zo'n site heeft kan hier niets
+# koppelen en moet dat horen, niet een volgende stap.
+def herken_bouwer(r) -> str | None:
+    """Wix of JouwWeb, als dit antwoord van zo'n site komt."""
+    if r is None:
+        return None
+    try:
+        tekst = (r.text or "")[:300_000]
+    except Exception:  # noqa: BLE001
+        tekst = ""
+    if r.headers.get("x-wix-request-id") or re.search(
+            r"Wix\.com Website Builder|static\.(?:wixstatic|parastorage)\.com", tekst):
+        return "Wix"
+    koekjes = " ".join(r.headers.get_list("set-cookie")) if hasattr(r.headers, "get_list") else ""
+    if "JWSESSION=" in koekjes or re.search(r"\bJOUWWEB\.|jouwweb\.(?:nl|be)\b", tekst, re.I):
+        return "JouwWeb"
+    return None
+
+
+def bouwer_melding(bouwer: str) -> str:
+    return (f"Your website is made with {bouwer}, not with WooCommerce, so there is nothing to "
+            f"connect here. You don't need to do anything: your listings on the other channels "
+            f"keep running as usual.")
+
+
 def _kort(methode: str, url: str, r) -> str:
     """Eén regel over een antwoord, voor de mail aan Daniel."""
     kop = r.headers
