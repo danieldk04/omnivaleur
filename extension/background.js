@@ -10650,6 +10650,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   // Prijs zetten vanuit de pagina zelf (zie _mwSetVintedPrice).
+  // De wekker voor sleep() in de invulscripts (zie shared.js): een service
+  // worker is geen tabblad en wordt dus niet afgeknepen.
+  if (msg.type === "OV_WEKKER") {
+    setTimeout(() => { try { sendResponse(true); } catch (_) {} },
+      Math.max(0, Math.min(Number(msg.ms) || 0, 25000)));
+    return true;
+  }
   if (msg.type === "SET_PRICE_MAIN") {
     // NOOIT ONBEPERKT WACHTEN (12-10-2026, Janneke). Elke automatische
     // Vinted-plaatsing die bij haar mislukte (11 keer sinds 10-10, extensie
