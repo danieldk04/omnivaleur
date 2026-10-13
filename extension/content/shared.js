@@ -50,18 +50,20 @@ window.CL = (() => {
   // naast de klokteller hieronder, en samen geven ze antwoord op de vraag waar
   // een vastloper vandaan komt. Wordt alleen de klok van de pagina afgeknepen,
   // dan blijft deze afwijking klein. Staat de pagina zélf vol werk (of ligt ze
-  // stil), dan loopt ook deze op, want het antwoord van de Worker moet nog
+  // stil), dan loopt ook deze op, want het antwoord van de achtergrond moet nog
   // steeds door de pagina worden afgehandeld.
   let _sleepAfwijking = 0;
   const sleep = (ms) => new Promise((r) => {
     const begin = Date.now();
-    const klaar = () => { _sleepAfwijking = Date.now() - begin - ms; r(); };
-    const w = _getTimerWorker();
-    if (!w) { setTimeout(klaar, ms); return; }
-    const id = ++_timerSeq;
-    _timerWaiters.set(id, klaar);
-    try { w.postMessage({ id, ms }); }
-    catch (_) { _timerWaiters.delete(id); setTimeout(klaar, ms); }
+    let klaar = false;
+    const af = () => {
+      if (klaar) return;
+      klaar = true;
+      _sleepAfwijking = Date.now() - begin - ms;
+      r();
+    };
+    setTimeout(af, ms);
+    _achtergrondWekker(ms, af);
   });
   // EEN METER OP DE KLOK VAN DE PAGINA (15-09-2026).
   //
