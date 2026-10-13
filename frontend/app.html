@@ -102,7 +102,10 @@ a { color: inherit; text-decoration: none; }
 .topbar-left { display: flex; align-items: center; gap: 12px; }
 .topbar-title { font-weight: 700; font-size: 15px; color: var(--text); }
 .topbar-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #eff6ff; color: var(--blue); border: 1px solid #bfdbfe; }
-.content { padding: 24px 28px; flex: 1; }
+/* Ruimte onderaan zodat de "Talk to the founder"-knop rechtsonder (vast, ~76px hoog)
+   nooit over de laatste regel valt: op 1024px breed lag hij op "Next ›" van de
+   artikellijst (Egbert, 13-10-2026). */
+.content { padding: 24px 28px 104px; flex: 1; }
 
 /* ── Buttons ────────────────────────────────────────────────────── */
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: 100px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .18s; white-space: nowrap; }
@@ -644,7 +647,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
   .topbar-title { font-size: 14px; }
 
   /* Content */
-  .content { padding: 14px; }
+  .content { padding: 14px 14px 88px; }
 
   /* Stats: 2 columns on small screens, 1 on very small */
   .stats { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }

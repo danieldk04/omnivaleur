@@ -17188,3 +17188,14 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   Vinted prijsveld leeg en tussenjas niet gevonden bij Janneke).
 - backend/scheduler.py heeft nog steeds de niet-gecommitte wijziging van een andere sessie (rubriekherstel 09:30);
   niet aangeraakt.
+
+## 13-10-2026: Egbert, paginaknoppen onder de founder-knop
+
+- Egbert (bcdf9aa4) kon in de artikellijst geregeld een pagina niet aanklikken: de vaste knop "Talk to the founder"
+  rechtsonder lag over de paginaknoppen. Nagemeten in de browser met de echte app.html: op 1024 px breed lag hij
+  op "Next ›", op een telefoon op 7, 8, laatste pagina en Next. Ook de eenmalige taalwijzer (EN · NL) linksonder
+  kon over "‹ Prev" vallen.
+- Reparatie: extra ruimte onder de inhoud (.content 104 px, telefoon 88 px), zodat de laatste regel van elke pagina
+  altijd boven die vaste knoppen uit te scrollen is. Voor en na gemeten op 1024x700, 1280x600 en 375x700: oud
+  geblokkeerd, nieuw geen enkele knop bedekt.
+- De repo stond weer in iCloud-parkeerstand (git hing, auto-push pushte niets); gepusht vanuit een verse kopie.
