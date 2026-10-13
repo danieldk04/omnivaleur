@@ -9929,7 +9929,24 @@ function _mwNudgeDescription(selector) {
 // het plaatsen blokkeerde. Hier zetten we de waarde vanuit de pagina zelf, met
 // de tracker gereset, zodat React de nieuwe prijs echt overneemt.
 async function _mwSetVintedPrice(selector, values) {
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  // GEEN PAGINAKLOK (13-10-2026, Janneke). Deze functie draait IN de pagina en
+  // had zes pauzes via setTimeout. Zet Chrome het tabblad stil (één tik per
+  // minuut), dan duurde de prijs zes minuten en liep de klus na drie minuten af,
+  // elf keer op rij net na de rubriek. Een berichtje via MessageChannel wordt
+  // niet afgeknepen; daarmee kijken we telkens of de tijd om is. setTimeout
+  // loopt ernaast voor als dat ooit anders wordt.
+  const sleep = (ms) => new Promise((r) => {
+    const tot = Date.now() + ms;
+    let klaar = false;
+    const af = () => { if (!klaar) { klaar = true; r(); } };
+    setTimeout(af, ms);
+    const kanaal = new MessageChannel();
+    kanaal.port1.onmessage = () => {
+      if (klaar || Date.now() >= tot) { kanaal.port1.close(); af(); return; }
+      kanaal.port2.postMessage(0);
+    };
+    kanaal.port2.postMessage(0);
+  });
   const el = document.querySelector(selector);
   if (!el) return { ok: false, reason: "field-not-found" };
   const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
