@@ -40,10 +40,88 @@ een deny-regel, inlezen niet.
 Wat wel werkte: `git clone --depth 1 <origin>` naar de scratchpad, de bewerkte bestanden erin
 kopieren (die zijn net geschreven, dus niet geparkeerd), daar testen, committen en pushen.
 
+13-10 avond, blijvende maatregel: de map staat nu op "Altijd bewaren" (Finder: Houd gedownload). Gezet met
+`xattr -w 'com.apple.fileprovider.pinned#PX' 1 ~/Documents/omnivaleur` (Finders rechtermuismenu was niet
+bereikbaar terwijl Daniel schermvullend werkte). Controleren met `fileproviderctl evaluate <map>`: isKeepDownloaded = 1,
+geldt ook voor .git eronder. `brctl download` bestaat op macOS 26 niet meer. Terughalen ging traag maar zeker:
+10.750 geparkeerde bestanden, na 10 min 10.240 (eerst ~1 per minuut, daarna ~100). Een los bestand openen duurde 7 min.
+Waarschijnlijke oorzaak van het parkeren: de schijf zat op 98% (6 GB vrij); macOS ruimt dan op.
+
 **Why:** de geplande routines en de auto-push-hook draaien vanuit deze map; een geparkeerde repo
 laat ze stil falen, zoals de mailmachine in augustus ("koude-mail-autonoom").
 **How to apply:** "not a git repository" of "deadlock avoided" in deze map = iCloud, niet kapot.
 Niet `git init` of iets herstellen; eerst `brctl download`, anders verse kopie.
+
+---
+
+## nep-database-geeft-alle-kolommen
+
+*13-10-2026 — "13-10: fail_job las de opdracht zonder created_at; de proef gaf de hele rij terug en zag niets. Sinds 03-09 bleef elke mislukte herplaatsing stil"*
+
+Op 13-10-2026 (klant 26cf5471, zilveren ring) bleef een mislukte herplaatsing op Marktplaats
+'delisted' zonder melding: oude advertentie weg, nieuwe niet geplaatst, niets op het scherm.
+Precies het gat dat op 03-09 voor Amanda gedicht leek.
+
+Oorzaak: `fail_job` las de opdracht met `select("item_id,platform,action,payload")`, en
+`_meld_mislukte_herplaatsing` zoekt de verwijdering van vóór deze plaatsing op
+`job["created_at"]`. KeyError, opgevangen als "niet te melden", en er gebeurde niets. Bij
+elke mislukte herplaatsing sinds 03-09. Wat soms toch rood werd, kwam van de opruimer van
+vastgelopen opdrachten, niet van deze regel.
+
+De proeven zagen het niet omdat de nep-database bij een select de HELE rij teruggaf, en de
+proef de opdracht met created_at erin rechtstreeks aan de hulpfunctie gaf.
+
+**Why:** een hulpfunctie die klopt maar via een aanroeper met te weinig kolommen wordt gevoed,
+faalt stil zodra er `except Exception` omheen staat.
+**How to apply:** proef de echte aanroeper (hier `fail_job`) met een nep-database die alleen de
+gevraagde kolommen teruggeeft (`_KolomDB` in tests/test_mislukte_herplaatsing_zichtbaar.py).
+Leest een helper een veld uit een rij, kijk dan in de select van ELKE aanroeper of het erin
+zit. Zie ook "extensie-stempel-test-loopt-achter-op-het-scherm".
+
+---
+
+## paginavraag-zonder-tijdslimiet
+
+*13-10-2026 — Elke vraag van het invulscript aan de pagina (executeScript MAIN) heeft een tijdslimiet nodig; SET_PRICE_MAIN had die niet en liet Vinted na de rubriek eindeloos hangen (12-10-2026, 1.0.385)*
+
+Janneke (Chrome 128): 11 automatische Vinted-mislukkingen, allemaal met laatste stap "stap category: ok" en dan drie minuten niets; op Vinted bleef een concept van EUR 0 achter. De stap erna was SET_PRICE_MAIN, de enige paginavraag zonder tijdslimiet (runInMainWorld heeft er wel een van 8 s). Waarom de pagina bij haar niet antwoordde is niet bewezen; de reparatie zorgt dat het nooit meer eindeloos wacht (achtergrond antwoordt na 20 s, eigen klok).
+
+**Why:** een wachter zonder limiet maakt van elke haperende pagina een stille vastloper zonder spoor.
+
+**How to apply:** nieuwe chrome.runtime.sendMessage naar een MAIN-functie altijd met tijdslimiet aan de achtergrondkant, en log vóór de vraag een regel zodat de voortgang laat zien waar het stilviel. Vervolg 13-10 (1.0.386): de Worker wordt op ELKE Chrome geweigerd (127, 128, 149 gemeten), dus het was geen kwestie van een oude Mac. De echte reparatie: geen enkele pauze meer op de paginaklok (sleep via de achtergrond, prijs in de pagina via MessageChannel). "klok nog niet gemeten" in de fout zegt niets: de categorie is na ~14 s klaar en de eerste hartslag komt pas na 15 s. Zie "geen-klokje-in-de-hoofdwereld", "vinted-tabblad-klok-stilstand". Proef: tests/vinted-prijsvraag-tijdslimiet-test.js.
+
+---
+
+## verborgen-tabblad-worker-timer
+
+*13-10-2026 — sleep() in de invulscripts loopt sinds 1.0.386 op een wekker in de achtergrond; de Web Worker (1.0.309) werd door Chrome altijd geweigerd*
+
+Chrome knijpt `setTimeout` op de main thread van een niet-zichtbaar tabblad af:
+eerst ~1s, en na 5 minuten verborgen zwaar ("intensive throttling", richting
+1x/minuut, oplopend). Gemeten in een echt verborgen tabblad, 367s: Worker-timer
+205ms/tick, pagina-timer ~750ms/tick en verslechterend. Vinted-klussen bestaan
+uit tientallen naakte `await sleep()`-pauzes en langer dan 5 min, dus die
+stalden volledig zodra de verkoper wegklikte. MP/2dehands hadden er minder last
+van doordat ze `waitUntil` op een MutationObserver gebruiken en hun klus ruim
+binnen vijf minuten klaar is.
+
+**Correctie 15-09-2026:** hier stond dat MP minder last had omdat de debugger
+aangehecht is ("throttling uit, net als open DevTools"). Dat is gemeten en het
+klopt niet: kaal aanhechten laat de klok op 0 tot 1 tik per 15 seconden staan.
+Wat de rem wél lost is `Emulation.setFocusEmulationEnabled` over die koppeling.
+Zie "vinted-tabblad-klok-stilstand".
+
+Fix (1.0.309): `sleep()` in `content/shared.js` draait via
+`content/timer-worker.js` (Worker-timers vallen niet onder intensive
+throttling), met terugval op `setTimeout`. Worker staat in
+`web_accessible_resources`. Werk-tabblad krijgt `autoDiscardable:false` tegen
+Memory Saver / discard. Zie ook "verborgen-tabblad-vertraagt-wachttijden".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "verborgen-tabblad-vertraagt-wachttijden" — Chrome maakt van elke korte pauze 1 seconde
+- "klokjes-in-verborgen-tab-injectie" — geïnjecteerde functies missen de Worker-timer; wacht op de pagina, niet op de klok
+
+**Correctie 13-10-2026 (1.0.386):** de Worker heeft in een invulscript NOOIT gewerkt. Gemeten in Chrome 127, 128 en 149 met een kale testextensie: `new Worker(chrome.runtime.getURL(...))` gooit SecurityError ("cannot be accessed from origin"), ook met web_accessible_resources. De meting van 1.0.309 (205 ms/tick) liep in een testpagina, niet in een invulscript. Elke pauze liep dus al die tijd op de paginaklok. Nu: `sleep()` stuurt `OV_WEKKER` naar de service worker (setTimeout daar, max 25 s) en racet met de gewone setTimeout; timer-worker.js is weg. Main-world-functies (zoals _mwSetVintedPrice) wachten via een MessageChannel-lus. Zie "paginavraag-zonder-tijdslimiet".
 
 ---
 
@@ -56,18 +134,6 @@ Janneke: "overal bestemd voor jongen, ook bij de meidenjassen". Gemeten op haar 
 **Why:** een voorgeselecteerde lijst maakt een mislukte keuze onzichtbaar.
 
 **How to apply:** kies uit de opties die er echt staan, op betekenis (selectIntendedFor in shared.js). Bij een nieuwe keuzelijst eerst op het echte formulier kijken of er een voorselectie staat. Proef: tests/bestemd-voor-baby-test.js. Zie "verzonnen-standaard-is-erger-dan-leeg".
-
----
-
-## paginavraag-zonder-tijdslimiet
-
-*12-10-2026 — Elke vraag van het invulscript aan de pagina (executeScript MAIN) heeft een tijdslimiet nodig; SET_PRICE_MAIN had die niet en liet Vinted na de rubriek eindeloos hangen (12-10-2026, 1.0.385)*
-
-Janneke (Chrome 128): 11 automatische Vinted-mislukkingen, allemaal met laatste stap "stap category: ok" en dan drie minuten niets; op Vinted bleef een concept van EUR 0 achter. De stap erna was SET_PRICE_MAIN, de enige paginavraag zonder tijdslimiet (runInMainWorld heeft er wel een van 8 s). Waarom de pagina bij haar niet antwoordde is niet bewezen; de reparatie zorgt dat het nooit meer eindeloos wacht (achtergrond antwoordt na 20 s, eigen klok).
-
-**Why:** een wachter zonder limiet maakt van elke haperende pagina een stille vastloper zonder spoor.
-
-**How to apply:** nieuwe chrome.runtime.sendMessage naar een MAIN-functie altijd met tijdslimiet aan de achtergrondkant, en log vóór de vraag een regel zodat de voortgang laat zien waar het stilviel. Let op: op Chrome 127/128 weigert Chrome de timer-Worker (SecurityError), daar lopen alle pauzes op de paginaklok. Zie "geen-klokje-in-de-hoofdwereld", "vinted-tabblad-klok-stilstand". Proef: tests/vinted-prijsvraag-tijdslimiet-test.js.
 
 ---
 
@@ -4995,37 +5061,6 @@ mag blijven publiceren.
 Zie "tabblad-op-de-inlogpagina", "storing-mag-nooit-als-antwoord-tellen",
 "beloofd-tempo-moet-gemeten-tempo-zijn" en
 "aanwezigheid-niet-vragen-maar-stempelen".
-
----
-
-## verborgen-tabblad-worker-timer
-
-*15-09-2026 — sleep() in de extensie draait via een Web Worker omdat Chrome setTimeout in een verborgen tabblad afknijpt tot stilstand*
-
-Chrome knijpt `setTimeout` op de main thread van een niet-zichtbaar tabblad af:
-eerst ~1s, en na 5 minuten verborgen zwaar ("intensive throttling", richting
-1x/minuut, oplopend). Gemeten in een echt verborgen tabblad, 367s: Worker-timer
-205ms/tick, pagina-timer ~750ms/tick en verslechterend. Vinted-klussen bestaan
-uit tientallen naakte `await sleep()`-pauzes en langer dan 5 min, dus die
-stalden volledig zodra de verkoper wegklikte. MP/2dehands hadden er minder last
-van doordat ze `waitUntil` op een MutationObserver gebruiken en hun klus ruim
-binnen vijf minuten klaar is.
-
-**Correctie 15-09-2026:** hier stond dat MP minder last had omdat de debugger
-aangehecht is ("throttling uit, net als open DevTools"). Dat is gemeten en het
-klopt niet: kaal aanhechten laat de klok op 0 tot 1 tik per 15 seconden staan.
-Wat de rem wél lost is `Emulation.setFocusEmulationEnabled` over die koppeling.
-Zie "vinted-tabblad-klok-stilstand".
-
-Fix (1.0.309): `sleep()` in `content/shared.js` draait via
-`content/timer-worker.js` (Worker-timers vallen niet onder intensive
-throttling), met terugval op `setTimeout`. Worker staat in
-`web_accessible_resources`. Werk-tabblad krijgt `autoDiscardable:false` tegen
-Memory Saver / discard. Zie ook "verborgen-tabblad-vertraagt-wachttijden".
-
-**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
-- "verborgen-tabblad-vertraagt-wachttijden" — Chrome maakt van elke korte pauze 1 seconde
-- "klokjes-in-verborgen-tab-injectie" — geïnjecteerde functies missen de Worker-timer; wacht op de pagina, niet op de klok
 
 ---
 
