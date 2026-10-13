@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=f19fc093c4"></script>
+<script src="/i18n.js?v=b9b8a844ee"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -7663,6 +7663,17 @@ function _wooToonSleutels() {
   document.getElementById('woo-keys').open = true;
 }
 
+// Een JouwWeb- of Wix-site heeft geen WooCommerce. Geen sleutelvelden openen:
+// Blackbird Guitars (12-10-2026) plakte daar toen iets anders in. Gewoon zeggen
+// dat er niets te doen is.
+function _wooAndereBouwer(r, data) {
+  if (r.ok || r.headers.get('X-Woo-Soort') !== 'andere_bouwer') return false;
+  document.getElementById('woo-keys').open = false;
+  document.getElementById('woo-cs-input').value = '';
+  _wooMsg((data && data.detail) || '', 'let');
+  return true;
+}
+
 async function startWooKnop() {
   const adres = _wooAdres();
   if (!adres) { _wooMsg('Fill in your shop address first.', 'fout'); return; }
@@ -7673,6 +7684,7 @@ async function startWooKnop() {
     const r = await apiFetch(`${API}/api/platforms/woocommerce/auth-url?store=${encodeURIComponent(adres)}`);
     if (r.status === 409 && r.headers.get('X-Woo-Via-Browser')) { await _wooKnopViaBrowser(adres); return; }
     const data = await parseJsonSafe(r);
+    if (_wooAndereBouwer(r, data)) return;
     if (!r.ok || !data?.url) {
       _wooMsg((data && data.detail) || `Could not find your shop (HTTP ${r.status}).`, 'fout');
       _wooToonSleutels();
@@ -7713,6 +7725,7 @@ async function submitWooKeys() {
       });
     }
     const data = await parseJsonSafe(r);
+    if (_wooAndereBouwer(r, data)) return;
     if (!r.ok) { _wooMsg((data && data.detail) || `Your shop refused the key (HTTP ${r.status}).`, 'fout'); return; }
     document.getElementById('woo-cs-input').value = '';
     _wooGekoppeld(data.site);

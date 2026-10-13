@@ -174,3 +174,4 @@ input[name="bulk-verzending"]:checked
 #upd-filters .upd-chip
 #upd-lijst .upd
 X-Woo-Via-Browser
+X-Woo-Soort

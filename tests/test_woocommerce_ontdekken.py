@@ -192,3 +192,49 @@ def test_mail_aan_daniel_bevat_wat_de_winkel_antwoordde(monkeypatch):
     assert api._meld_mislukte_woo_koppeling("u1", DJT, fout)
     assert "Soort fout: geblokkeerd" in verstuurd["b"]
     assert "sg-captcha=challenge" in verstuurd["b"]
+
+
+# Blackbird Guitars (12-10-2026): een JouwWeb-site. Zo antwoordde hij echt.
+JOUWWEB_HTML = ('<!DOCTYPE html><html lang="nl"><head><meta property="og:title" content="Blackbird">'
+                "<script>JOUWWEB.application = {};JOUWWEB.brand = 'jouwweb';</script></head></html>")
+
+
+def test_jouwweb_site_heet_andere_bouwer():
+    def h(req):
+        if req.url.path == "/":
+            return httpx.Response(200, headers={"content-type": "text/html; charset=UTF-8",
+                                                "set-cookie": "JWSESSION=abc; path=/"},
+                                  text="" if req.method == "HEAD" else JOUWWEB_HTML)
+        return httpx.Response(404, headers={"content-type": "text/html"}, text=JOUWWEB_HTML)
+    with pytest.raises(w.WooFout) as e:
+        _ontdek(h, "https://www.blackbirdguitars.nl")
+    assert e.value.soort == "andere_bouwer"
+    assert "JouwWeb" in str(e.value) and "don't need to do anything" in str(e.value)
+
+
+def test_wix_site_heet_andere_bouwer():
+    def h(req):
+        return httpx.Response(200, headers={"content-type": "text/html", "server": "Pepyaka",
+                                            "x-wix-request-id": "1791879495.9"},
+                              text='<meta name="generator" content="Wix.com Website Builder"/>')
+    with pytest.raises(w.WooFout) as e:
+        _ontdek(h, "https://eenwixsite.nl")
+    assert e.value.soort == "andere_bouwer" and "Wix" in str(e.value)
+
+
+def test_wordpress_met_jouwweb_in_een_blogtekst_blijft_wordpress():
+    def h(req):
+        if req.url.path == "/":
+            return httpx.Response(200, headers={**SG_KOP, "link": LINK},
+                                  text="" if req.method == "HEAD" else WP_HTML + "jouwweb.nl")
+        return httpx.Response(404)
+    assert _ontdek(h) == "https://dejuistetoon.eu/wp-json/"
+
+
+def test_verkeerde_sleutel_op_jouwweb_zegt_jouwweb_niet_sleutelvorm(monkeypatch):
+    async def _jouwweb(adres, client=None):
+        raise w.WooFout(w.bouwer_melding("JouwWeb"), "andere_bouwer")
+    monkeypatch.setattr(w, "ontdek_api", _jouwweb)
+    with pytest.raises(w.WooFout) as e:
+        asyncio.run(w.controleer_sleutels("www.blackbirdguitars.nl", "iets", "anders"))
+    assert e.value.soort == "andere_bouwer"

@@ -17,6 +17,36 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## icloud-parkeert-de-repo
+
+*13-10-2026 — 11-10: iCloud "Opslagruimte optimaliseren" haalde 4.926 repobestanden weg, ook .git/HEAD en .env; git en Python faalden met "Resource deadlock avoided"*
+
+Op 11-10-2026 (klantfoutenronde 20:35) stond ~/Documents/omnivaleur half in iCloud-parkeerstand:
+4.926 bestanden "dataless", waaronder .git/HEAD, .git/objects, .env en backend/*.py. Elk
+git-commando gaf "fatal: not a git repository" of "mmap failed: Resource deadlock avoided",
+elke Python-import "OSError [Errno 11] Resource deadlock avoided".
+
+Herkennen: `ls -lO <bestand>` toont `dataless`; tellen met `find . -flags +dataless | wc -l`.
+
+Wat werkt: `brctl download <map>` (per map, of `.` voor alles) haalt ze terug, maar traag
+(minuten). Voor werk dat niet kan wachten: verse kopie buiten iCloud,
+`git clone --filter=blob:none https://github.com/danieldk04/omnivaleur.git ~/omnivaleur-klantfouten`,
+code daar draaien en de instellingen met `load_dotenv('/Users/Danie/Documents/omnivaleur/.env')`
+inlezen zodra die ene .env terug is (`brctl download .env`). Kopieren van .env is geweigerd door
+een deny-regel, inlezen niet.
+
+13-10: weer zo, en nu hielp `brctl download` niet (aantal dataless liep zelfs op), een lokale
+`git clone .` liep vast op geparkeerde .git/objects, en de auto-push-hook pushte stil niets.
+Wat wel werkte: `git clone --depth 1 <origin>` naar de scratchpad, de bewerkte bestanden erin
+kopieren (die zijn net geschreven, dus niet geparkeerd), daar testen, committen en pushen.
+
+**Why:** de geplande routines en de auto-push-hook draaien vanuit deze map; een geparkeerde repo
+laat ze stil falen, zoals de mailmachine in augustus ("koude-mail-autonoom").
+**How to apply:** "not a git repository" of "deadlock avoided" in deze map = iCloud, niet kapot.
+Niet `git init` of iets herstellen; eerst `brctl download`, anders verse kopie.
+
+---
+
 ## bestemd-voor-baby-jongetje
 
 *12-10-2026 — Marktplaats-babykleding heeft Jongetje/Meisje/Jongetje of Meisje en zet zelf Jongetje klaar; wie letterlijk "Jongen of Meisje" zoekt laat elke babyjas als jongensjas online (12-10-2026, 1.0.385)*
@@ -73,31 +103,6 @@ vinted.js knipt ziet de volgorde niet; toets die apart.
   "eerst-recente-wijzigingen-lezen".
 - Elke wijziging in `extension/` vereist een versiebump, zie
   "extension-release-bump-version".
-
----
-
-## icloud-parkeert-de-repo
-
-*11-10-2026 — 11-10: iCloud "Opslagruimte optimaliseren" haalde 4.926 repobestanden weg, ook .git/HEAD en .env; git en Python faalden met "Resource deadlock avoided"*
-
-Op 11-10-2026 (klantfoutenronde 20:35) stond ~/Documents/omnivaleur half in iCloud-parkeerstand:
-4.926 bestanden "dataless", waaronder .git/HEAD, .git/objects, .env en backend/*.py. Elk
-git-commando gaf "fatal: not a git repository" of "mmap failed: Resource deadlock avoided",
-elke Python-import "OSError [Errno 11] Resource deadlock avoided".
-
-Herkennen: `ls -lO <bestand>` toont `dataless`; tellen met `find . -flags +dataless | wc -l`.
-
-Wat werkt: `brctl download <map>` (per map, of `.` voor alles) haalt ze terug, maar traag
-(minuten). Voor werk dat niet kan wachten: verse kopie buiten iCloud,
-`git clone --filter=blob:none https://github.com/danieldk04/omnivaleur.git ~/omnivaleur-klantfouten`,
-code daar draaien en de instellingen met `load_dotenv('/Users/Danie/Documents/omnivaleur/.env')`
-inlezen zodra die ene .env terug is (`brctl download .env`). Kopieren van .env is geweigerd door
-een deny-regel, inlezen niet.
-
-**Why:** de geplande routines en de auto-push-hook draaien vanuit deze map; een geparkeerde repo
-laat ze stil falen, zoals de mailmachine in augustus ("koude-mail-autonoom").
-**How to apply:** "not a git repository" of "deadlock avoided" in deze map = iCloud, niet kapot.
-Niet `git init` of iets herstellen; eerst `brctl download`, anders verse kopie.
 
 ---
 

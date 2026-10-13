@@ -299,6 +299,11 @@ async def ontdek_api(adres: str, client=None) -> str:
                            f"Allow requests to /wp-json/wc/v3 from Omnivaleur, or ask your "
                            f"host to.", "geblokkeerd", r.status_code, detail=detail)
 
+        for r in antwoorden:
+            bouwer = herken_bouwer(r)
+            if bouwer:
+                raise WooFout(bouwer_melding(bouwer), "andere_bouwer", r.status_code,
+                              detail=detail)
         if thuis is not None and _botcheck(thuis):
             raise _tegengehouden(thuis)
         if thuis is not None and not 200 <= thuis.status_code < 300:
@@ -624,9 +629,8 @@ async def controleer_sleutels(adres_of_api: str, ck: str, cs: str, transport=Non
     Probeert de inlogmodi op volgorde: een 401 met correcte sleutel is bij veel
     hosts een weggegooide kopregel, en dan werkt de sleutel in het adres wel."""
     ck, cs = (ck or "").strip(), (cs or "").strip()
-    if not (ck.startswith("ck_") and cs.startswith("cs_")):
-        raise WooFout("A WooCommerce key starts with ck_ and the secret with cs_. Copy both "
-                      "from WooCommerce → Settings → Advanced → REST API.", "sleutelvorm")
+    # Eerst de winkel, dan de sleutelvorm: wie geen WooCommerce heeft (Blackbird
+    # Guitars, JouwWeb) plakt van alles, en moet horen dat er niets te koppelen valt.
     if "/wp-json" in adres_of_api or "rest_route=" in adres_of_api:
         api_root = adres_of_api
     else:
@@ -634,6 +638,9 @@ async def controleer_sleutels(adres_of_api: str, ck: str, cs: str, transport=Non
         if not adres:
             raise WooFout("Enter your shop's address, for example yourshop.nl.", "adres")
         api_root = await ontdek_api(adres)
+    if not (ck.startswith("ck_") and cs.startswith("cs_")):
+        raise WooFout("A WooCommerce key starts with ck_ and the secret with cs_. Copy both "
+                      "from WooCommerce → Settings → Advanced → REST API.", "sleutelvorm")
     laatste: WooFout | None = None
     for modus in modi_voor(api_root):
         client = WooClient(api_root, ck, cs, modus, transport)

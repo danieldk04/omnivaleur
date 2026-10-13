@@ -3426,6 +3426,7 @@
  "to": "op",
  "your shop": "je webshop",
  "{0} doesn't look like a WordPress site. Enter the address of your WooCommerce shop, for example yourshop.nl.": "{0} lijkt geen WordPress-site. Vul het adres van je WooCommerce-webshop in, bijvoorbeeld jouwwebshop.nl.",
+ "Your website is made with {0}, not with WooCommerce, so there is nothing to connect here. You don't need to do anything: your listings on the other channels keep running as usual.": "Je website is gemaakt met {0}, niet met WooCommerce, dus hier valt niets te koppelen. Je hoeft niets te doen: je advertenties op de andere kanalen lopen gewoon door.",
  "⚠️ We can't reach your shop since {0}: {1} Sales in your shop are not removed from other channels until this works again.": "⚠️ We kunnen je webshop niet bereiken sinds {0}: {1} Verkopen in je webshop worden pas weer van de andere kanalen gehaald als dit weer werkt.",
  "Marktplaats, 2dehands, Vinted and Facebook work through your own login in Chrome: sign in to each one there, in the Chrome with the extension. eBay, Shopify and WooCommerce you connect once, below.": "Marktplaats, 2dehands, Vinted en Facebook werken via je eigen login in Chrome: log daar op elk ervan in, in de Chrome met de extensie. eBay, Shopify en WooCommerce koppel je één keer, hieronder.",
  "{0} WooCommerce": "{0} WooCommerce",

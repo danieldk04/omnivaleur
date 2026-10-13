@@ -720,6 +720,8 @@ def _bewaar_woo(user_id: str, ck: str, cs: str, gegevens: dict, hoe: str,
 # Een kopregel en geen 200 met een vlag: een oude, gecachete app.html las een
 # 200 als "gekoppeld".
 VIA_BROWSER_KOP = "X-Woo-Via-Browser"
+# Welke fout het was, zodat het scherm bij een JouwWeb- of Wix-site geen sleutelvelden opent.
+SOORT_KOP = "X-Woo-Soort"
 
 
 def _browser_api_root(adres: str, api_root: str | None) -> str | None:
@@ -767,7 +769,7 @@ async def woocommerce_auth_url(store: str, api_root: str | None = None,
             pass
         if e.soort == "geblokkeerd":
             raise HTTPException(status_code=409, detail=str(e), headers={VIA_BROWSER_KOP: "1"})
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e), headers={SOORT_KOP: e.soort})
     if not api_root.lower().startswith("https://"):
         # WooCommerce stuurt de sleutel alleen naar een https-adres, en over http
         # werkt de knop-route in de praktijk niet. Plakken kan wel.
@@ -874,7 +876,7 @@ async def woocommerce_connect_keys(body: dict, user_id: str = Depends(get_curren
             pass
         if e.soort == "geblokkeerd" and not browser_root:
             raise HTTPException(status_code=409, detail=str(e), headers={VIA_BROWSER_KOP: "1"})
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e), headers={SOORT_KOP: e.soort})
     await naast_de_lus(lambda: _bewaar_woo(user_id, str(body["consumer_key"]).strip(),
                                            str(body["consumer_secret"]).strip(), gegevens, "sleutel",
                                            via_browser=bool(browser_root)))
@@ -1014,6 +1016,9 @@ def _meld_mislukte_woo_koppeling(user_id: str, winkel: str, fout: Exception) -> 
              f"Winkel: {winkel or '(leeg)'}\n"
              f"Soort fout: {getattr(fout, 'soort', type(fout).__name__)}\n"
              f"Dit zag de klant op het scherm:\n{fout}\n")
+    if getattr(fout, "soort", "") == "andere_bouwer":
+        tekst += ("\nDe site is geen WooCommerce maar een websitebouwer. De klant kreeg te zien "
+                  "dat er niets te koppelen valt en niets hoeft te doen. Jij ook niet.\n")
     if getattr(fout, "detail", ""):
         tekst += f"\nWat de winkel onze server antwoordde:\n{fout.detail}\n"
     return bool(send_email(subject=f"WooCommerce koppelen mislukt: {adres}", body=tekst))

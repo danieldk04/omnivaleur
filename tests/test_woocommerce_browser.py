@@ -493,3 +493,20 @@ def test_tabblad_gaat_dicht_na_ophalen_niet_minutenlang_hangen(monkeypatch):
     ok, duur = asyncio.run(go())
     assert ok is True and rij["extra_data"][wb.WACHTRIJ] == ["2"]
     assert duur < 10, f"hing {duur:.0f} s"
+
+
+def test_jouwweb_site_zegt_niets_te_doen_met_soort_in_de_kopregel(monkeypatch):
+    # Blackbird Guitars (12-10-2026): het scherm moet de sleutelvelden dicht laten.
+    db, _ = _db_met()
+    db.t["platform_credentials"] = []
+    c = _app(monkeypatch, db)
+
+    async def _jouwweb(*_a, **_k): raise w.WooFout(w.bouwer_melding("JouwWeb"), "andere_bouwer")
+    monkeypatch.setattr(w, "ontdek_api", _jouwweb)
+    monkeypatch.setattr(api, "_meld_mislukte_woo_koppeling", lambda *_a: True)
+    r = c.get("/api/platforms/woocommerce/auth-url", params={"store": "www.blackbirdguitars.nl"})
+    assert r.status_code == 400 and r.headers.get(api.SOORT_KOP) == "andere_bouwer"
+    assert "JouwWeb" in r.json()["detail"]
+    r = c.post("/api/platforms/woocommerce/connect-keys",
+               json={"store": "www.blackbirdguitars.nl", "consumer_key": "iets", "consumer_secret": "anders"})
+    assert r.status_code == 400 and r.headers.get(api.SOORT_KOP) == "andere_bouwer"
