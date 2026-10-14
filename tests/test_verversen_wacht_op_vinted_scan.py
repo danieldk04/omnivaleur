@@ -131,7 +131,7 @@ def _uitgifte(monkeypatch, db):
     monkeypatch.setattr(J, "_zet_taal_goed", lambda db, rijen: rijen)
     monkeypatch.setattr(J, "_herplaatsing_kansloos", lambda *a, **kw: None)
     return J.get_pending_jobs(
-        request=type("R", (), {"headers": {"x-omnivaleur-ext": "1.0.306"}})(),
+        request=type("R", (), {"headers": {"x-omnivaleur-ext": "1.0.386"}})(),
         platform="vinted", user_id="u1")
 
 
@@ -190,6 +190,6 @@ def test_marktplaats_verversen_blijft_ongemoeid(monkeypatch):
     monkeypatch.setattr(J, "_zet_taal_goed", lambda db, rijen: rijen)
     monkeypatch.setattr(J, "_herplaatsing_kansloos", lambda *a, **kw: None)
     uit = J.get_pending_jobs(
-        request=type("R", (), {"headers": {"x-omnivaleur-ext": "1.0.306"}})(),
+        request=type("R", (), {"headers": {"x-omnivaleur-ext": "1.0.386"}})(),
         platform="marktplaats", user_id="u1")
     assert uit and uit[0]["id"] == "delmp", f"Marktplaats hoort door te gaan: {uit}"

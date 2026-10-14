@@ -83,6 +83,13 @@ MINIMALE_NIEUWE_TAKKEN_VERSIE = (1, 0, 351)
 # kopie kent geen wijzigadres voor 2dehands en zou de opdracht als mislukt
 # melden. Het werk blijft 'pending' tot een bijgewerkte kopie polt.
 MINIMALE_2DH_BIJWERK_VERSIE = (1, 0, 354)
+# Een Vinted-plaatsing gaat alleen naar 1.0.386 of nieuwer (15-10-2026, Janneke
+# 31d28378 en Amanda). Daaronder wacht de prijsstap op Chrome 128 zonder grens
+# of geeft hij het na 20 s op; gemeten duurt de eerste prijsvraag daar 12 tot
+# 33 s. Elke poging van een oude kopie wordt een mislukking plus een leeg
+# concept op Vinted. Een oude kopie werkt zichzelf binnen ~2 uur bij
+# (controleerOpNieuweVersie, elk uur), dus het werk blijft zo lang 'pending'.
+MINIMALE_VINTED_PLAATS_VERSIE = (1, 0, 386)
 _NIEUWE_TAK_VOORVOEGSELS = ("boeken ", "speelgoed ", "fietsen ", "sportartikelen ",
                             "witgoed ", "klussen ", "computers ")
 _NIEUW_IN_BESTAANDE_TAK = frozenset([
@@ -2532,6 +2539,13 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                 logger.info("Extend %s niet uitgedeeld: kopie %s kent 'extend' nog niet",
                             j["id"], versie_van_de_kopie)
                 continue
+        if (platform is not None and j.get("platform") == "vinted"
+                and j.get("action") in ("create", "content_refresh")
+                and (versie_van_de_kopie is None or versie_van_de_kopie < MINIMALE_VINTED_PLAATS_VERSIE)):
+            logger.info("Vinted-%s %s niet uitgedeeld: kopie %s is ouder dan %s",
+                        j["action"], j["id"], versie_van_de_kopie,
+                        ".".join(map(str, MINIMALE_VINTED_PLAATS_VERSIE)))
+            continue
         # Alleen plaatsen kiest een rubriek; verwijderen (na een verkoop) of
         # verlengen mag nooit wachten op een update.
         if (platform is not None and j.get("action") == "create" and _vraagt_nieuwe_takken(j)

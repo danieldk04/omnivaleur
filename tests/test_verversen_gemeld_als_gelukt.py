@@ -203,7 +203,7 @@ def _uitgifte(monkeypatch, delete_status, teruggedraaid):
     monkeypatch.setattr(R, "rollback_refresh", lambda rb, uid: teruggedraaid.append(rb))
 
     class _Verzoek:
-        headers = {"x-omnivaleur-ext": "1.0.268", "user-agent": "test"}
+        headers = {"x-omnivaleur-ext": "1.0.386", "user-agent": "test"}
 
     uit = J.get_pending_jobs(_Verzoek(), platform=PLAT, user_id=USER)
     return db, uit

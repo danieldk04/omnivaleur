@@ -162,7 +162,9 @@ import pytest  # noqa: E402
 from backend.api import jobs as jobsapi  # noqa: E402
 
 
-def _uitgedeeld(monkeypatch, versie, actie, categorie, platform="vinted"):
+def _uitgedeeld(monkeypatch, versie, actie, categorie, platform="marktplaats"):
+    # Marktplaats: op Vinted wacht elke plaatsing sinds 15-10-2026 sowieso op
+    # 1.0.386 (MINIMALE_VINTED_PLAATS_VERSIE), en dan meet deze proef iets anders.
     import sys
     sys.path.insert(0, str(ROOT / "tests"))
     from test_verlengen_2dehands_backend import _pending_db, _oud
