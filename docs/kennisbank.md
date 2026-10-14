@@ -17,6 +17,29 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## webshopfotos-nagemaakte-browserkop
+
+*14-10-2026 — "14-10: Toons SiteGround-webshop gaf 403 op onze nagemaakte Chrome-UA, dus 274 WooCommerce-artikelen hielden bron-url's die de extensie niet kan ophalen; na ~25 artikelen ook een captcha (202)"*
+
+14-10-2026, De Juiste Toon (96e30080): "None of the 7 photo(s) could be downloaded" op alle kanalen. photo_mirror
+kopieert importfoto's naar onze opslag met een nagemaakte Chrome-UA (nodig voor Vinted). Zijn hosting (SiteGround,
+nginx) weigert juist die kop met 403 en geeft zonder UA de foto. Mislukte kopie = stil de bron-url houden, en die
+kan de extensie niet lezen: content-script fetch draagt de origin van marktplaats.nl en de webshop stuurt geen
+CORS-kop; de service worker heeft geen hosttoestemming voor willekeurige webshops. Nu: na 401/403 één keer zonder
+browserkop (68fe1ce5).
+
+Tweede valkuil: SiteGround zet na een stoot verzoeken (~25 artikelen, 3 tegelijk) een captcha: HTTP 202 met een
+meta-refresh naar /.well-known/sgcaptcha. Het IP blijft daarna minutenlang geblokkeerd. Herstel van bestaande
+artikelen dus langzaam (1 foto per 5 s, bij 202 10 min wachten).
+
+**Why:** een import "lukt" met groene vinkjes terwijl elk artikel onplaatsbaar is; dat merkt de klant pas bij de
+eerste plaatsing, dagen later.
+**How to apply:** bij een fotodownloadfout eerst kijken of de artikel-url's op img.omnivaleur.com staan
+(`is_mirrored`); zo niet, de bron zelf met httpx en met/zonder UA proberen. Nooit een herstelronde in volle vaart op
+een kleine webshop. Hoort bij "omnivaleur-r2-fotoopslag" en "woocommerce-koppeling".
+
+---
+
 ## ebay-token-nooit-lokaal-verversen
 
 *14-10-2026 — 14-10-2026 een eBay-proef vanaf de Mac zette bij Toon koppeling_kapot in de database; lokale eBay-appsleutel wordt door eBay geweigerd*
