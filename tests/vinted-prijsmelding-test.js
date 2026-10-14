@@ -36,7 +36,9 @@ const { execFileSync } = require("child_process");
 
 const WORTEL = path.join(__dirname, "..");
 const VINTED = fs.readFileSync(path.join(WORTEL, "extension", "content", "vinted.js"), "utf8");
-const BACKGROUND = fs.readFileSync(path.join(WORTEL, "extension", "background.js"), "utf8");
+// Sinds 1.0.386 staat _mwSetVintedPrice in content/vinted_prijs_main.js (ook in de pagina zelf).
+const BACKGROUND = fs.readFileSync(path.join(WORTEL, "extension", "background.js"), "utf8")
+  + "\n" + fs.readFileSync(path.join(WORTEL, "extension", "content", "vinted_prijs_main.js"), "utf8");
 // De voor-en-na-proef vergelijkt met de versie van vóór deze reparatie. Dat is
 // met opzet een vaste commit en niet HEAD: de auto-push-hook commit werk in
 // uitvoering onder de titel "auto: update …", dus HEAD bevat de nieuwe code al
@@ -253,7 +255,7 @@ function maakWereld({ startKlacht = true, reactLeesbaar = true } = {}) {
   zand.navigator = { language: "nl-NL" };
   vm.createContext(zand);
   const stukken = ["_num", "priceErrorVinted", "priceErrorAfterSettle", "_vintedLocaleIsComma",
-                   "_typePriceVariant", "_hertypLaatsteTeken", "fillPriceVinted"]
+                   "_typePriceVariant", "_hertypLaatsteTeken", "_prijsViaPaginaScript", "fillPriceVinted"]
     .filter((n) => new RegExp(`function ${n}\\s*\\(`).test(bron))
     .map((n) => functieUit(bron, n));
   vm.runInContext(stukken.join("\n"), zand, { filename: "vinted.js" });

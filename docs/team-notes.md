@@ -17233,3 +17233,10 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   m1847286246 en m1857411281: beide op 2dehands zelf verlopen, het vangnet zette ze al in het archief.
 - Volle testsuite: 2473 groen, 7 rood die ook zonder deze wijziging rood zijn (korte kledingvraag 5x,
   publish_quality prijs in paginacontext, WooCommerce-browserproef). Niet aangeraakt, open punt.
+
+## 14-10-2026: Janneke (31d28378), Vinted-prijs op Chrome 128, gewiste webshopproducten, titels met een sterretje (extensie 1.0.386)
+
+- Vinted: elke mislukte poging stopte bij de prijs. Gemeten op Chrome 127/128/149: de timer-Worker uit 1.0.309 werd in een invulscript altijd geweigerd, dus alle pauzes liepen op de paginaklok. Op Chrome 128 (haar Intel-Mac kan niet verder) duurt de eerste prijsvraag na het laden 12 tot 33 s, ook met het tabblad in beeld; op 149 2 s. Reparatie: pauzes via de achtergrond, prijsfunctie vanaf het laden in de pagina (content/vinted_prijs_main.js), 45 s ruimte, bewaker verlengt zolang er vooruitgang is. Bewezen dat de prijs op 128 nu elke keer lukt; een volledige Vinted-plaatsing op haar eigen Mac is niet gemeten.
+- Webshop: haar Shopify-logboek toont dat Omnivaleur op 12-10 om 16:19 en 16:26 twee niet verkochte jassen wiste ("Tussenjas Name it maat 128", producten 16134692176197 en 16134748340549), tijdens Delist plus opnieuw plaatsen. De knop Delist laat nu producten die al in de eigen winkel stonden vóór de import staan. Die twee producten zijn niet automatisch terug te zetten; de gegevens staan nog in Omnivaleur.
+- "Vest Dirkje maat 86*": dezelfde oorzaak als in de ochtendronde hierboven gerepareerd; extra proef tests/test_vinted_titelgenoot_met_teken.py.
+- Al stuk op main, niet door deze wijziging: tests/vinted-prijsmelding-test.js (eindcontrole-regex), 12 Python-proeven rond afrekenen/kledingvraag/woocommerce-e2e.

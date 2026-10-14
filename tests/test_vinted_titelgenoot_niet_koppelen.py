@@ -85,6 +85,7 @@ class _Q:
     def execute(self):
         rijen = self.db.tabellen.setdefault(self.tabel, [])
         if self.actie == "insert":
+            self.data = {"id": f"nieuw{len(rijen)}", **self.data}
             rijen.append(dict(self.data))
             return type("R", (), {"data": [self.data]})()
         hits = [r for r in rijen if all(f(r) for f in self.filters)]

@@ -888,7 +888,7 @@ async def delist_item(item_id: str, user_id: str = Depends(get_current_user)):
     if not item.data:
         raise HTTPException(status_code=404, detail="Item not found")
     from backend.services.crosslist import delist_all_platforms
-    results = await delist_all_platforms(item_id, user_id)
+    results = await delist_all_platforms(item_id, user_id, bronwinkel_sparen=True)
     return {"item_id": item_id, "results": results}
 
 

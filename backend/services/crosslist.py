@@ -1961,7 +1961,8 @@ def _last_listed_title(db, item_id: str, platform: str, fallback: str) -> str:
 
 
 async def delist_all_platforms(item_id: str, user_id: str,
-                               alleen_platforms: set[str] | None = None) -> list[dict]:
+                               alleen_platforms: set[str] | None = None,
+                               bronwinkel_sparen: bool = False) -> list[dict]:
     """Delist an item from every platform it is currently active on.
 
     `alleen_platforms` beperkt de ronde tot die kanalen. Alleen het vangnet in
@@ -2038,6 +2039,34 @@ async def delist_all_platforms(item_id: str, user_id: str,
 
     active_listings = list(seen_ads.values())
 
+    # DE EIGEN WEBSHOP IS DE BRON, NIET EEN KANAAL (14-10-2026, Janneke).
+    #
+    # De knop Delist wiste ook het Shopify-product. Bij een verkoper die vanuit
+    # haar eigen webshop werkt, is dat product de bron: Omnivaleur heeft het daar
+    # ingelezen, niet geplaatst. Gemeten in haar Shopify-logboek: op 12-10 om
+    # 16:19 en 16:26 verwijderde "Omnivaleur" twee jassen die niet verkocht
+    # waren, tijdens weghalen en opnieuw plaatsen op Marktplaats en Vinted. Een
+    # gewist product is niet terug te halen. Stond het product al in de winkel
+    # voordat het artikel in Omnivaleur bestond, dan blijft het staan. Alleen bij
+    # de knop (bronwinkel_sparen): na een echte verkoop moet het vangnet een uniek
+    # stuk wél uit de winkel kunnen halen, anders kan het twee keer verkocht worden.
+    gespaard: list[dict] = []
+    if bronwinkel_sparen and any(l["platform"] in ("shopify", "woocommerce") for l in active_listings):
+        bron = eerste_rij(await naast_de_lus(lambda: db.table("items").select("created_at")
+                          .eq("id", item_id).limit(1).execute()))
+        aangemaakt = str((bron or {}).get("created_at") or "")
+        def _uit_de_winkel(l: dict) -> bool:
+            gezet = str(l.get("listed_at") or "")
+            return (l["platform"] in ("shopify", "woocommerce") and bool(gezet) and bool(aangemaakt)
+                    and gezet[:19] < aangemaakt[:19])
+        gespaard = [l for l in active_listings if _uit_de_winkel(l)]
+        active_listings = [l for l in active_listings if not _uit_de_winkel(l)]
+    skipped_shop = [
+        {"platform": l["platform"], "status": "kept_in_shop",
+         "message": "This item comes from your own webshop, so it was left there."}
+        for l in gespaard
+    ]
+
     skipped_sold = [
         {"platform": p, "status": "already_sold",
          "message": "Sold on this platform — left alone on purpose."}
@@ -2045,7 +2074,7 @@ async def delist_all_platforms(item_id: str, user_id: str,
     ]
 
     if not active_listings:
-        return skipped_sold or [{"status": "nothing_to_delist", "message": "No active listings found"}]
+        return (skipped_sold + skipped_shop) or [{"status": "nothing_to_delist", "message": "No active listings found"}]
 
     item = eerste_rij(await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).limit(1).execute()))
 
@@ -2196,6 +2225,7 @@ async def delist_all_platforms(item_id: str, user_id: str,
 
     results.extend(needs_link)
     results.extend(skipped_sold)
+    results.extend(skipped_shop)
     return results
 
 

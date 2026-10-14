@@ -46,10 +46,14 @@ def test_payload_is_stripped_before_publishing():
 def test_price_is_set_in_the_page_context():
     """Alleen daar is React's waarde-tracker bereikbaar."""
     bg = (ROOT / "extension/background.js").read_text(encoding="utf-8")
-    assert "async function _mwSetVintedPrice(" in bg
-    assert '_valueTracker' in bg
+    # Sinds 1.0.386 staat de functie in een eigen bestand, dat de achtergrond
+    # inlaadt en dat ook vanaf het laden in de Vinted-pagina zelf staat.
+    pagina = (ROOT / "extension/content/vinted_prijs_main.js").read_text(encoding="utf-8")
+    assert "async function _mwSetVintedPrice(" in pagina
+    assert '_valueTracker' in pagina
+    assert 'importScripts("analytics.js", "content/vinted_prijs_main.js")' in bg
     assert 'msg.type === "SET_PRICE_MAIN"' in bg
-    assert 'world: "MAIN"' in bg.split('msg.type === "SET_PRICE_MAIN"')[1][:400]
+    assert 'world: "MAIN"' in bg.split('msg.type === "SET_PRICE_MAIN"')[1][:2500]
 
     vinted = (ROOT / "extension/content/vinted.js").read_text(encoding="utf-8")
     fill = vinted.split("async function fillPriceVinted(price) {")[1].split("\n  }")[0]

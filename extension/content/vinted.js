@@ -2816,6 +2816,37 @@
   // stick, fall back to execCommand("insertText") (the same pipeline real typing
   // uses, which masked inputs honour). Returns true only if the field ends up
   // holding a valid (>= 1) price. Async so callers can await the verification.
+  // De prijs laten zetten door vinted_prijs_main.js, dat vanaf het laden in de
+  // pagina zelf staat, zonder executeScript. Geeft het antwoord terug, of null
+  // als het script er niet is of na 45 s niets zei. Waarom 45: gemeten op
+  // Chrome 128 (Janneke, 14-10-2026) duurt de EERSTE prijsvraag na het laden
+  // van de pagina 12 tot 20 s (daarna 1 tot 3 s), en haar Mac is trager dan de
+  // proefmachine. De bewaker van 3 minuten verlengt zolang er vooruitgang is.
+  async function _prijsViaPaginaScript(values) {
+    if (document.documentElement.getAttribute("data-ov-prijs-main") !== "1") {
+      clog("prijs: paginascript niet aanwezig, via de achtergrond");
+      return null;
+    }
+    const id = `p${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
+    let antwoord = null;
+    const luister = (e) => {
+      try {
+        const d = JSON.parse(e.detail);
+        if (d && d.id === id) antwoord = d.r || { ok: false, reason: "leeg antwoord" };
+      } catch (_) {}
+    };
+    document.addEventListener("ov-prijs-antwoord", luister);
+    try {
+      document.dispatchEvent(new CustomEvent("ov-prijs-vraag", { detail: JSON.stringify(
+        { id, selector: 'input[data-testid="price-input--input"]', values }) }));
+      for (let i = 0; i < 225 && !antwoord; i++) await sleep(200);
+    } finally {
+      document.removeEventListener("ov-prijs-antwoord", luister);
+    }
+    if (!antwoord) clog("prijs: paginascript gaf binnen 45 s geen antwoord, via de achtergrond");
+    return antwoord;
+  }
+
   async function fillPriceVinted(price) {
     const el = qs('input[data-testid="price-input--input"]');
     if (!el) return false;
@@ -2841,7 +2872,9 @@
     // dan staat in de voortgang precies waar.
     clog(`prijs: de pagina zelf vragen (${variants.join(" / ")})`);
     try {
-      const res = await new Promise((resolve) => {
+      // Eerst via het stuk dat al in de pagina klaarstaat (vinted_prijs_main.js);
+      // alleen als dat er niet is of niet antwoordt nog via de achtergrond.
+      const res = (await _prijsViaPaginaScript(variants)) || await new Promise((resolve) => {
         chrome.runtime.sendMessage(
           { type: "SET_PRICE_MAIN", selector: 'input[data-testid="price-input--input"]', values: variants },
           (r) => resolve(r || null),

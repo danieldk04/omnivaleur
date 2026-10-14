@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=b9b8a844ee"></script>
+<script src="/i18n.js?v=885f4477b1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -8859,6 +8859,7 @@ async function delistItem(itemId, title) {
     if (byStatus.error)      summary.push(`✗ Error: ${byStatus.error.join(', ')}`);
     if (byStatus.needs_link) summary.push(`🔗 Still listed (couldn't link): ${byStatus.needs_link.join(', ')}`);
     if (byStatus.already_sold) summary.push(`💰 Already sold — left alone: ${byStatus.already_sold.join(', ')}`);
+    if (byStatus.kept_in_shop) summary.push(`🏪 Comes from your own webshop, left there: ${byStatus.kept_in_shop.join(', ')}`);
     alert(summary.join('\n') || 'Done.');
     if (byStatus.queued) nudgeExtension();
     await loadAll();

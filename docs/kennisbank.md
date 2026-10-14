@@ -17,6 +17,34 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## paginavraag-zonder-tijdslimiet
+
+*14-10-2026 — Elke vraag van het invulscript aan de pagina (executeScript MAIN) heeft een tijdslimiet nodig; SET_PRICE_MAIN had die niet en liet Vinted na de rubriek eindeloos hangen (12-10-2026, 1.0.385)*
+
+Janneke (Chrome 128): 11 automatische Vinted-mislukkingen, allemaal met laatste stap "stap category: ok" en dan drie minuten niets; op Vinted bleef een concept van EUR 0 achter. De stap erna was SET_PRICE_MAIN, de enige paginavraag zonder tijdslimiet (runInMainWorld heeft er wel een van 8 s). Waarom de pagina bij haar niet antwoordde is niet bewezen; de reparatie zorgt dat het nooit meer eindeloos wacht (achtergrond antwoordt na 20 s, eigen klok).
+
+**Why:** een wachter zonder limiet maakt van elke haperende pagina een stille vastloper zonder spoor.
+
+**How to apply:** nieuwe chrome.runtime.sendMessage naar een MAIN-functie altijd met tijdslimiet aan de achtergrondkant, en log vóór de vraag een regel zodat de voortgang laat zien waar het stilviel. Vervolg 13-10 (1.0.386): de Worker wordt op ELKE Chrome geweigerd (127, 128, 149 gemeten), dus het was geen kwestie van een oude Mac. De echte reparatie: geen enkele pauze meer op de paginaklok (sleep via de achtergrond, prijs in de pagina via MessageChannel). "klok nog niet gemeten" in de fout zegt niets: de categorie is na ~14 s klaar en de eerste hartslag komt pas na 15 s. Zie "geen-klokje-in-de-hoofdwereld", "vinted-tabblad-klok-stilstand". Proef: tests/vinted-prijsvraag-tijdslimiet-test.js.
+
+**Vervolg 14-10-2026 (1.0.386), gemeten op Chrome 128 en 149 met focus-emulatie:** op 128 duurt de EERSTE prijsvraag na het laden van de pagina 12 tot 33 s (pauzes van 200 ms lopen uit tot seconden), daarna 1 tot 3 s; op 149 steeds ongeveer 2 s. Bij de oude grens van 20 s viel 128 dus soms af, en zonder grens (1.0.384) bleef het bij haar trage Intel-Mac hangen tot de bewaker van 3 minuten. Nu: de prijsfunctie staat vanaf het laden in de pagina (content/vinted_prijs_main.js, world MAIN, ook ingeladen door background.js), vinted.js vraagt via een CustomEvent en wacht 45 s, dan SET_PRICE_MAIN, dan typen; de bewaker verlengt 3x 2 min zolang er in de laatste 90 s een stap gemeld is.
+
+---
+
+## delist-wist-de-bronwinkel
+
+*14-10-2026 — De knop Delist wiste Shopify-producten uit de eigen webshop van de verkoper (Janneke, 12-10-2026); sinds 14-10 blijft een product dat er al stond voor de import staan*
+
+Janneke (31d28378) meldde een jas die "spoorloos uit de webshop" verdween. Bewijs uit haar eigen Shopify-logboek (`/admin/api/.../events.json?filter=Product&verb=destroy`, auteur "Omnivaleur"): op 12-10 om 16:19 en 16:26 wiste Omnivaleur twee niet verkochte jassen, precies toen ze via Delist van Marktplaats/Vinted werden gehaald en opnieuw geplaatst. `delist_all_platforms` behandelde Shopify als kanaal en riep `delete_product` aan.
+
+Nu: `delist_all_platforms(..., bronwinkel_sparen=True)` vanuit de knop slaat Shopify/WooCommerce-rijen over waarvan `listed_at` vóór `items.created_at` ligt (het product stond er al vóór de import). Resultaat `kept_in_shop`, tweetalige melding. Het verkoopvangnet (verkoop_reconciliatie) en handle_item_sold houden het oude gedrag: een uniek stuk moet na een verkoop wel uit de winkel. Proef: tests/test_delist_spaart_eigen_webshop.py (oud wist, nieuw spaart).
+
+**Why:** een gewist product is niet terug te halen; voor een webshopverkoper is de winkel de bron, geen kanaal.
+
+**How to apply:** vraag bij "verdwenen uit de webshop" eerst het events-logboek van de winkel op; dat zegt wie en wanneer. Zie "shopify-voorraad-als-baas".
+
+---
+
 ## titelgenoot-krijgt-andermans-advertentie
 
 *14-10-2026 — "Vinted \"staat al online\"-controle zoekt op titel; twee stukken met één titel kregen één advertentie (Janneke 09-10-2026)"*
@@ -110,18 +138,6 @@ faalt stil zodra er `except Exception` omheen staat.
 gevraagde kolommen teruggeeft (`_KolomDB` in tests/test_mislukte_herplaatsing_zichtbaar.py).
 Leest een helper een veld uit een rij, kijk dan in de select van ELKE aanroeper of het erin
 zit. Zie ook "extensie-stempel-test-loopt-achter-op-het-scherm".
-
----
-
-## paginavraag-zonder-tijdslimiet
-
-*13-10-2026 — Elke vraag van het invulscript aan de pagina (executeScript MAIN) heeft een tijdslimiet nodig; SET_PRICE_MAIN had die niet en liet Vinted na de rubriek eindeloos hangen (12-10-2026, 1.0.385)*
-
-Janneke (Chrome 128): 11 automatische Vinted-mislukkingen, allemaal met laatste stap "stap category: ok" en dan drie minuten niets; op Vinted bleef een concept van EUR 0 achter. De stap erna was SET_PRICE_MAIN, de enige paginavraag zonder tijdslimiet (runInMainWorld heeft er wel een van 8 s). Waarom de pagina bij haar niet antwoordde is niet bewezen; de reparatie zorgt dat het nooit meer eindeloos wacht (achtergrond antwoordt na 20 s, eigen klok).
-
-**Why:** een wachter zonder limiet maakt van elke haperende pagina een stille vastloper zonder spoor.
-
-**How to apply:** nieuwe chrome.runtime.sendMessage naar een MAIN-functie altijd met tijdslimiet aan de achtergrondkant, en log vóór de vraag een regel zodat de voortgang laat zien waar het stilviel. Vervolg 13-10 (1.0.386): de Worker wordt op ELKE Chrome geweigerd (127, 128, 149 gemeten), dus het was geen kwestie van een oude Mac. De echte reparatie: geen enkele pauze meer op de paginaklok (sleep via de achtergrond, prijs in de pagina via MessageChannel). "klok nog niet gemeten" in de fout zegt niets: de categorie is na ~14 s klaar en de eerste hartslag komt pas na 15 s. Zie "geen-klokje-in-de-hoofdwereld", "vinted-tabblad-klok-stilstand". Proef: tests/vinted-prijsvraag-tijdslimiet-test.js.
 
 ---
 
