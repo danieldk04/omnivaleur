@@ -632,10 +632,12 @@ def _vinted_titelgenoten_meegeven(db, user_id: str, jobs: list) -> int:
             if len(ids) < 2:
                 per_titel[sleutel] = []
                 continue
-            per_titel[sleutel] = (db.table("listings")
-                                  .select("item_id,platform_listing_id,created_at")
-                                  .eq("platform", "vinted").in_("item_id", ids)
-                                  .execute().data or [])
+            # In brokken: bij een korte titel ("Trui") kunnen het honderden zijn.
+            per_titel[sleutel] = [r for i in range(0, len(ids), 100)
+                                  for r in (db.table("listings")
+                                            .select("item_id,platform_listing_id,created_at")
+                                            .eq("platform", "vinted").in_("item_id", ids[i:i + 100])
+                                            .execute().data or [])]
         for j in vinted:
             p = j["payload"]
             genoten = sorted(

@@ -17430,3 +17430,18 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Server: MINIMALE_VINTED_PLAATS_VERSIE = 1.0.386 (b86a6fb5). Vinted create en content_refresh gaan alleen nog naar 1.0.386+, een oudere kopie laat ze 'pending'. Marktplaats en 2dehands gaan gewoon door.
 - Haar zes mislukte Vinted-plaatsingen opnieuw klaargezet via publish_to_platforms (81fb2e90, 68a0c9c1, 0d82b904, b4ddd227, 090f1663, a7ef3eb0); ze lopen vanzelf zodra 1.0.386 bij haar draait.
 - Merk ingevuld bij 1.517 van haar 2.008 artikelen zonder merk, uit het vaste titelpatroon "Soort Merk maat ..." (43 merken, schrijfwijzen gelijkgetrokken). 491 titels zonder merk erin blijven leeg.
+
+## 14-10-2026 (22:15, automatisch): Klantfouten
+
+- Gerepareerd (5296656d, server): fout-vinted-create-cf92b6e4, Janneke (31d28378), 1x om 20:06 UTC. "Trui Lyle &
+  Scott maat 110-116 (donkerblauw)" werd geweigerd met "belongs to Trui Lyle & Scott maat 110-116". Ze heeft zeven
+  truien met die kortere titel; twee stonden net op Vinted (10380266841 om 19:58, 10380316482 om 20:04). Na een
+  trage plaatsing zoekt de extensie in de kast met "de ene titel bevat de andere", nieuwste eerst
+  (resolveCreatedVintedItem), en vond zo de trui van 20:04. De server gaf alleen advertenties van precies gelijke
+  titels als bezet mee, dus de opdracht kreeg niets (`_vinted_bezet` leeg, gemeten in de payload). De server
+  weigerde de koppeling terecht. Nu telt een titel die binnen de andere valt ook als titelgenoot. Op haar echte
+  data nagemeten: de donkerblauwe trui krijgt nu 3 bezette advertenties mee (0,5 s). Proef
+  tests/test_vinted_titelgenoot_binnen_titel.py faalt op 60d0cc9a. Werkt ook met 1.0.384, maar sinds b86a6fb5 krijgt zij pas weer Vinted-opdrachten op 1.0.386. Volle suite: 2507 groen, 6 rood die al rood waren (korte kledingvraag 5x, WooCommerce-browserproef).
+- Open: de extensie zocht in de kast omdat Vinted na Upload niet doorstuurde. Of de donkerblauwe trui toch op Vinted
+  is gekomen, is niet te zien. Plaatst ze hem opnieuw, dan koppelt de controle vooraf (exacte titel) een bestaande
+  advertentie in plaats van een tweede te maken.

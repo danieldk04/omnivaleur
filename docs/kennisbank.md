@@ -17,6 +17,41 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## titelgenoot-krijgt-andermans-advertentie
+
+*14-10-2026 — "Vinted \"staat al online\"-controle zoekt op titel; twee stukken met één titel kregen één advertentie (Janneke 09-10-2026); server moet dezelfde vergelijking gebruiken als de extensie, ook \"bevat\" (14-10)"*
+
+Elke Vinted-plaatsing begint met een controle "staat hij al online?" op exacte titel in de eigen kast
+(resolveCreatedVintedItem in content/vinted.js); de achtergrond doet hetzelfde bij watchdog en tabblad-weg
+(bgVindVintedAdvertentie). Twee echte stukken met dezelfde titel (Janneke: rode en bruine "Tussenjas Name it
+maat 128") waren niet uit elkaar te houden: de bruine kreeg de advertentie van de rode, stond niet op Vinted, en
+het dashboard toonde "Gedeelde advertentie". Gerepareerd 09-10-2026 (a9327da6): uitgifte geeft `_vinted_bezet`
+mee (en voor oude extensies de nieuwste titelgenoot in `platform_listing_id`, dat ze al oversloegen), de server
+weigert bij afmelden een advertentie die bij een ander artikel van dezelfde verkoper hoort, extensie 1.0.376
+slaat alle titelgenoten over.
+
+14-10-2026: het gat zat in de server. `_vinted_titelgenoten_meegeven` zocht titelgenoten met een letterlijke
+`.eq("title")`, de extensie vergelijkt op kleine letters en alleen letters en cijfers. Janneke's "Vest Dirkje maat
+86*" en "Vest Dirkje maat 86" waren voor de extensie gelijk, voor de server niet: geen `_vinted_bezet`, de extensie
+koppelde het andere vest, de server weigerde ("belongs to another item"), en elke herhaling liep identiek af. Nu
+zoekt de server met ilike op de woorden en filtert op dezelfde sleutel als de extensie (ook zonder "(1327) "-nummer).
+Zoek je ooit titelgenoten: altijd dezelfde normalisatie als de kant die vergelijkt.
+
+14-10-2026 avond, tweede gat: niet alleen de normalisatie maar ook de VERGELIJKING moet gelijk zijn. Na een
+trage plaatsing (geen doorsturen na Upload) zoekt de extensie met "de ene titel bevat de andere", nieuwste eerst.
+"Trui Lyle & Scott maat 110-116 (donkerblauw)" kreeg zo de advertentie van een van zeven "Trui Lyle & Scott maat
+110-116"; de server zocht alleen gelijke titels. Nu telt een titel die in de andere valt (of andersom) ook als
+titelgenoot (proef tests/test_vinted_titelgenoot_binnen_titel.py, faalt op 60d0cc9a).
+
+**Why:** sinds Shopify-producten met dezelfde titel als twee stukken gelden (09-10) zijn titelgenoten gewoon;
+bij Janneke 2.316 van 3.219 artikelen.
+
+**How to apply:** elke koppeling op titel (scan, herstel, "al geplaatst") moet advertenties uitsluiten die al
+bij een ander artikel horen. Een advertentienummer hoort bij één artikel; zie ook "dubbele-advertentie-titel-en-foto"
+en "titel-op-het-kanaal-is-niet-de-brontitel".
+
+---
+
 ## vinted-eigendom-alleen-eerste-pagina
 
 *14-10-2026 — 14-10: Vinted-eigendomscontrole las alleen 50 nieuwste; oude eigen advertentie gold als "nog niet geregistreerd" en werd aan een andere opdracht gekoppeld (Amanda); nu nummer-ondergrens (1.0.387)*
@@ -135,35 +170,6 @@ Nu: `delist_all_platforms(..., bronwinkel_sparen=True)` vanuit de knop slaat Sho
 **Why:** een gewist product is niet terug te halen; voor een webshopverkoper is de winkel de bron, geen kanaal.
 
 **How to apply:** vraag bij "verdwenen uit de webshop" eerst het events-logboek van de winkel op; dat zegt wie en wanneer. Zie "shopify-voorraad-als-baas".
-
----
-
-## titelgenoot-krijgt-andermans-advertentie
-
-*14-10-2026 — "Vinted \"staat al online\"-controle zoekt op titel; twee stukken met één titel kregen één advertentie (Janneke 09-10-2026)"*
-
-Elke Vinted-plaatsing begint met een controle "staat hij al online?" op exacte titel in de eigen kast
-(resolveCreatedVintedItem in content/vinted.js); de achtergrond doet hetzelfde bij watchdog en tabblad-weg
-(bgVindVintedAdvertentie). Twee echte stukken met dezelfde titel (Janneke: rode en bruine "Tussenjas Name it
-maat 128") waren niet uit elkaar te houden: de bruine kreeg de advertentie van de rode, stond niet op Vinted, en
-het dashboard toonde "Gedeelde advertentie". Gerepareerd 09-10-2026 (a9327da6): uitgifte geeft `_vinted_bezet`
-mee (en voor oude extensies de nieuwste titelgenoot in `platform_listing_id`, dat ze al oversloegen), de server
-weigert bij afmelden een advertentie die bij een ander artikel van dezelfde verkoper hoort, extensie 1.0.376
-slaat alle titelgenoten over.
-
-14-10-2026: het gat zat in de server. `_vinted_titelgenoten_meegeven` zocht titelgenoten met een letterlijke
-`.eq("title")`, de extensie vergelijkt op kleine letters en alleen letters en cijfers. Janneke's "Vest Dirkje maat
-86*" en "Vest Dirkje maat 86" waren voor de extensie gelijk, voor de server niet: geen `_vinted_bezet`, de extensie
-koppelde het andere vest, de server weigerde ("belongs to another item"), en elke herhaling liep identiek af. Nu
-zoekt de server met ilike op de woorden en filtert op dezelfde sleutel als de extensie (ook zonder "(1327) "-nummer).
-Zoek je ooit titelgenoten: altijd dezelfde normalisatie als de kant die vergelijkt.
-
-**Why:** sinds Shopify-producten met dezelfde titel als twee stukken gelden (09-10) zijn titelgenoten gewoon;
-bij Janneke 2.316 van 3.219 artikelen.
-
-**How to apply:** elke koppeling op titel (scan, herstel, "al geplaatst") moet advertenties uitsluiten die al
-bij een ander artikel horen. Een advertentienummer hoort bij één artikel; zie ook "dubbele-advertentie-titel-en-foto"
-en "titel-op-het-kanaal-is-niet-de-brontitel".
 
 ---
 
