@@ -2099,6 +2099,23 @@ async def delist_all_platforms(item_id: str, user_id: str,
                     .eq("user_id", user_id).eq("item_id", item_id).eq("action", "delete")
                     .in_("status", ["pending", "claimed"]).limit(50).execute())).data or []
 
+    # Een plaatsing die nog in de wachtrij staat, gaat niet meer door: Delist
+    # betekent "weg van dit kanaal". Janneke (14-10-2026) haalde de donkerblauwe
+    # trui twee keer van Vinted, en de plaatsing die al klaarstond (df4fafbb)
+    # zou hem bij de eerstvolgende ronde weer online hebben gezet. Alleen
+    # 'pending': een opgepakte plaatsing loopt al en de verwijdering ruimt op.
+    ext_platforms = sorted({l["platform"] for l in active_listings if l["platform"] in EXTENSION_PLATFORMS})
+    if ext_platforms:
+        try:
+            await naast_de_lus(lambda: db.table("jobs").update({
+                "status": "cancelled",
+                "result": {"cancelled": "You delisted this item, so it is no longer published here."},
+                "done_at": datetime.now(timezone.utc).isoformat(),
+            }).eq("user_id", user_id).eq("item_id", item_id).eq("action", "create")
+              .eq("status", "pending").in_("platform", ext_platforms).execute())
+        except Exception as e:  # noqa: BLE001 — de verwijdering zelf gaat voor
+            logger.warning("Wachtende plaatsing van %s niet geannuleerd: %s", item_id, e)
+
     def _al_in_wachtrij(platform: str, ad_id):
         for j in open_deletes:
             if j.get("platform") != platform:
