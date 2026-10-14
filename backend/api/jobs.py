@@ -594,6 +594,14 @@ def _vinted_titelgenoten_meegeven(db, user_id: str, jobs: list) -> int:
         # .eq("title") niet. Ze kreeg geen _vinted_bezet, de extensie pakte de
         # advertentie van het andere vest, de server weigerde die, en elke
         # nieuwe poging liep precies zo af.
+        #
+        # En een titel die BINNEN de andere valt telt ook (Janneke, 14-10-2026).
+        # Na een trage plaatsing zoekt de extensie in de kast met "de ene titel
+        # bevat de andere" (resolveCreatedVintedItem, content/vinted.js). Voor
+        # "Trui Lyle & Scott maat 110-116 (donkerblauw)" pakte ze daarmee de
+        # advertentie van een van haar zeven "Trui Lyle & Scott maat 110-116",
+        # want die bevat ze. De server keek alleen naar gelijke titels en gaf
+        # die advertenties dus niet als bezet mee.
         per_titel: dict[str, list[dict]] = {}
         for sleutel, titel in {_titel_zonder_sku(j["payload"]["title"]): j["payload"]["title"]
                                for j in vinted}.items():
@@ -601,8 +609,19 @@ def _vinted_titelgenoten_meegeven(db, user_id: str, jobs: list) -> int:
             artikelen = (db.table("items").select("id,title")
                          .eq("user_id", user_id).ilike("title", "%" + "%".join(woorden) + "%")
                          .execute().data or [])
-            ids = [a["id"] for a in artikelen
-                   if _titel_zonder_sku(a.get("title")) == sleutel]
+            # Kortere titels die in de onze vallen: die beginnen in de praktijk
+            # met hetzelfde woord (de rest is een kleur of toevoeging erachter).
+            if len(woorden) > 1:
+                artikelen += (db.table("items").select("id,title")
+                              .eq("user_id", user_id).ilike("title", "%" + woorden[0] + "%")
+                              .execute().data or [])
+            ons = (sleutel, _titel_sleutel(titel))
+
+            def _genoot(ander) -> bool:
+                hun = (_titel_zonder_sku(ander), _titel_sleutel(ander))
+                return any(a and b and (a in b or b in a) for a, b in zip(ons, hun))
+
+            ids = list(dict.fromkeys(a["id"] for a in artikelen if _genoot(a.get("title"))))
             if len(ids) < 2:
                 per_titel[sleutel] = []
                 continue
