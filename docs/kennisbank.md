@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-staat-alleen-engels
+
+*14-10-2026 — Vinted-staat werd op een Nederlandstalige Vinted nooit gekozen; CONDITION_MAP is Engels; sinds 1.0.388 op naam in vijf talen plus vaste volgorde (Janneke, 15-10-2026)*
+
+fillAttributeVinted zocht de Engelse naam ("New without tags") tussen Nederlandse opties ("Nieuw zonder prijskaartje", "Heel goed", "Goed", "Redelijk"). Niets gevonden, stap meldde toch ok, Vinted weigerde met "Vul je staat in om verder te gaan". Nu: exacte naam in NL/EN/DE/FR/ES, anders de vaste volgorde van de vijf staten, en daarna controleren dat het veld gevuld is. Proef: tests/vinted-staat-in-elke-taal-test.js.
+
+**Why:** een stap die "ok" meldt zonder te controleren verplaatst de fout naar het eind van het formulier, waar hij niet meer te herleiden is.
+
+**How to apply:** elke Vinted-keuze op tekst moet tegen de taal van de verkoper werken (Vinted volgt het account, niet het domein); controleer na een klik of het veld de waarde echt toont. Zie "paginavraag-zonder-tijdslimiet".
+
+---
+
 ## titelgenoot-krijgt-andermans-advertentie
 
 *14-10-2026 — "Vinted \"staat al online\"-controle zoekt op titel; twee stukken met één titel kregen één advertentie (Janneke 09-10-2026); server moet dezelfde vergelijking gebruiken als de extensie, ook \"bevat\" (14-10)"*
