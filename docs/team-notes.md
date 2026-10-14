@@ -17332,3 +17332,25 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   Of zijn eBay-account zelf klaar is (registratie, limiet) is niet gemeten: dat kan alleen op de server.
 - Fout van mij, hersteld: een gereedheidsproef vanaf de Mac zette `koppeling_kapot` op zijn eBay-rij (lokale
   eBay-appsleutel geweigerd). Na 1 minuut teruggezet naar leeg. Les in de kennisbank.
+
+## 14-10-2026 (20:10): Dagelijkse klantfouten (avondronde, ochtendtaak liep laat)
+
+- 24 uur: 1130 opdrachten, 48 fout bij 7 klanten. Bijna alles al bekend uit de ronde van 10:40 (Vinted niet
+  ingelogd: 26cf5471 17x, Amanda 8f91a370 9x, Janneke 2x; Janneke's Vinted-fouten van 13-10 avond, gerepareerd in
+  1.0.386). Na 12:40 geen enkele nieuwe Vinted-fout meer.
+- Nieuw en gerepareerd (68fe1ce5, server): Toon (96e30080) kreeg om 17:07 drie keer "None of the 7 photo(s) could be
+  downloaded" (Marktplaats, 2dehands, Vinted) voor "Strandstoel / tuinstoel met koeienhuid". Oorzaak bewezen: de
+  WooCommerce-import van 12-10 en 13-10 kon zijn foto's niet naar onze opslag kopiëren, want zijn hosting
+  (SiteGround, nginx) geeft op onze nagemaakte Chrome-UA een 403-pagina en zonder UA gewoon de foto (gemeten met
+  httpx: 403 tegen 200). Het artikel hield dus dejuistetoon.eu-adressen, en daar kan de extensie niet bij (geen
+  CORS-kop, geen hosttoestemming). 274 van zijn artikelen hadden zulke foto's. photo_mirror vraagt na een 401/403 nu
+  nog één keer zonder browserkop. Proef tests/test_foto_kopie_bron_weigert_browserkop.py faalt op de oude code.
+- Tweede rem bij dezelfde winkel: na ~25 artikelen achter elkaar zet SiteGround een captcha (HTTP 202 met
+  /.well-known/sgcaptcha). Mijn herstelronde vanaf de Mac liep daar op vast; 25 artikelen volledig hersteld, 2 deels.
+  De rest loopt nu langzaam (1 foto per 5 s, bij captcha 10 min wachten, hooguit 6 uur) vanaf Daniels Mac. Een grote
+  eerste WooCommerce-import op SiteGround kan op de server dus nog steeds halverwege op die captcha stuiten: open punt.
+- Klant-eigen of eenmalig: f8c0cce9 2dehands uitgelogd (401) en 1x Vinted-scan leeg; Egbert 1x tabblad dicht;
+  eac0cccc WooCommerce-scan zonder koppeling; Toon 1x maat "Overige" die Marktplaats niet kent (oordeel onbekend).
+- Wachtrij: 0b28c1ce 50 wachtend, extensie uit en proef verlopen (zoals gisteren).
+- Niet gemeten: Railway-logs van de import op 12-10 (alleen de laatste 20 deploys staan nog in de CLI), dus of de
+  server toen 403 of al 202 kreeg is niet vastgesteld; beide eindigen in dezelfde bron-url.
