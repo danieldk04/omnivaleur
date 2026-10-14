@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=885f4477b1"></script>
+<script src="/i18n.js?v=94918f4a00"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1363,7 +1363,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <option value="price-desc">Price: high to low</option>
             <option value="price-asc">Price: low to high</option>
           </select>
-          <input type="text" id="filter-search" placeholder="Search title, brand or description…" title='Tip: put a word in quotes, like "bag", to only find titles with exactly that word (so not handbag or bags).' oninput="applyFilters()" style="min-width:200px">
+          <input type="text" id="filter-search" placeholder="Search title, brand, SKU or description…" title='Tip: put a word in quotes, like "bag", to only find titles with exactly that word (so not handbag or bags).' oninput="applyFilters()" style="min-width:200px">
         </div>
         <div class="bulk-bar" id="bulk-bar">
           <strong id="bulk-count">0</strong> selected
@@ -6109,8 +6109,9 @@ function applyFilters(resetPage) {
     // Elk woord los, in elke volgorde (Janneke, 08-10-2026): "winterjas noppies"
     // zocht die twee woorden aaneen en vond dus niets, terwijl ze haar
     // Noppies-winterjassen zocht. De maat telt mee, zodat "winterjas 104" werkt.
+    // Het artikelnummer ook: Toon (14-10-2026) zoekt zijn kleden op "kh15".
     if (search) {
-      const hooi = `${item.title || ''} ${item.brand || ''} ${item.size || ''} ${item.description || ''}`.toLowerCase();
+      const hooi = `${item.title || ''} ${item.brand || ''} ${item.size || ''} ${item.sku || ''} ${item.description || ''}`.toLowerCase();
       if (!search.split(' ').every(w => hooi.includes(w))) return false;
     }
     if (exacteWoorden.length && !exacteWoorden.every(w => w.test(item.title || ''))) return false;
@@ -6798,7 +6799,7 @@ function renderItemsTable(items) {
       <td class="col-check"><input type="checkbox" class="row-check" ${checked} onchange="toggleRowSelect('${item.id}',this.checked)"></td>
       <td><div class="item-info">
         <div class="item-photo">${itemPhotoThumb(item)}</div>
-        <div><div class="item-title">${esc(item.title)}${(item.sku || '').startsWith('IMP-') ? ` <span class="badge" style="background:#eef2ff;color:#4f46e5;font-size:10px;vertical-align:middle" title="Created by importing an existing platform listing">↓ Imported</span>` : ''}${publishingPill}${soldMaybe}${sharedBadge}</div><div class="item-meta">${item.brand || '—'}${item.size ? ' · ' + item.size : ''}</div>${errorBadge}${missingBadge}</div>
+        <div><div class="item-title">${esc(item.title)}${(item.sku || '').startsWith('IMP-') ? ` <span class="badge" style="background:#eef2ff;color:#4f46e5;font-size:10px;vertical-align:middle" title="Created by importing an existing platform listing">↓ Imported</span>` : ''}${publishingPill}${soldMaybe}${sharedBadge}</div><div class="item-meta">${item.brand || '—'}${item.size ? ' · ' + item.size : ''}${item.sku && !/^(IMP|REV)-/i.test(item.sku) ? ' · ' + esc(item.sku) : ''}</div>${errorBadge}${missingBadge}</div>
       </div></td>
       <td>${priceCell(item)}</td>
       <td class="hide-mobile">${conditionLabel(item.condition)}</td>

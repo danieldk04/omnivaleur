@@ -19,6 +19,7 @@ from __future__ import annotations
 import html
 import logging
 import re
+from collections import Counter
 from datetime import datetime, timezone
 
 from backend.platforms.woocommerce import PLATFORM, WooFout, client_uit, platte_tekst
@@ -166,6 +167,74 @@ async def markeer_als_voorraadwinkel(db, user_id: str, producten: list[dict]) ->
     await zet_vlag(db, user_id)
 
 
+# Kanalen die een advertentie op het artikelnummer van het artikel terugvinden.
+# Staat een artikel daar al, dan blijft zijn nummer staan: eBay zoekt zijn
+# aanbod op dat nummer, een ander nummer maakt het daar onvindbaar.
+_NUMMER_IS_SLEUTEL = {"ebay", "shopify"}
+
+
+def winkelnummers_overnemen(db, user_id: str, regels: list[dict]) -> int:
+    """Geef artikelen uit de winkel het artikelnummer (SKU) dat de verkoper in
+    WooCommerce gaf, in plaats van ons eigen IMP-/REV-nummer.
+
+    Toon (dejuistetoon), 14-10-2026: zijn producten heten in WooCommerce "kh15"
+    of "wk011*", maar in Omnivaleur kregen ze IMP-C3626C97; zoeken op zijn eigen
+    nummer vond niets. De scan las het nummer wel, maar de importkandidaat heeft
+    er geen kolom voor, dus het viel weg.
+
+    Alleen een artikel dat aantoonbaar bij dit product hoort (de koppeling in
+    `listings`), alleen als het nog ons eigen nummer draagt, en nooit een nummer
+    dat in de winkel of bij de verkoper al bij een ander artikel hoort. Geeft
+    het aantal aangepaste artikelen."""
+    from backend.database import fetch_all, fetch_all_in
+
+    per_product = {str(r["platform_listing_id"]): str(r.get("sku") or "").strip() for r in regels}
+    per_product = {pid: n for pid, n in per_product.items() if n and len(n) <= 50}
+    telling = Counter(n.lower() for n in per_product.values())
+    per_product = {pid: n for pid, n in per_product.items() if telling[n.lower()] == 1}
+    if not per_product:
+        return 0
+
+    koppelingen = fetch_all_in(
+        lambda: db.table("listings").select("id,item_id,platform_listing_id")
+        .eq("platform", PLATFORM), "platform_listing_id", list(per_product))
+    items = {i["id"]: i for i in fetch_all(
+        lambda: db.table("items").select("id,sku").eq("user_id", user_id))}
+    in_gebruik = {str(i.get("sku") or "").strip().lower() for i in items.values()}
+    doel: dict[str, str] = {}
+    for k in koppelingen:
+        item = items.get(k.get("item_id"))  # alleen artikelen van deze verkoper
+        if not item:
+            continue
+        huidig = str(item.get("sku") or "").strip()
+        nummer = per_product.get(str(k.get("platform_listing_id")))
+        if not nummer or (huidig and not re.match(r"^(imp|rev)-", huidig, re.I)):
+            continue
+        if nummer.lower() in in_gebruik or item["id"] in doel:
+            continue
+        doel[item["id"]] = nummer
+    if not doel:
+        return 0
+
+    elders = fetch_all_in(
+        lambda: db.table("listings").select("id,item_id,platform"), "item_id", list(doel))
+    for l in elders:
+        if l.get("platform") in _NUMMER_IS_SLEUTEL:
+            doel.pop(l.get("item_id"), None)
+
+    aangepast = 0
+    for item_id, nummer in doel.items():
+        try:
+            db.table("items").update({"sku": nummer}).eq("id", item_id).eq("user_id", user_id).execute()
+            aangepast += 1
+        except Exception as e:  # noqa: BLE001 — één botsing mag de rest niet tegenhouden
+            logger.warning("woocommerce: artikelnummer %s niet overgenomen voor %s: %s",
+                           nummer, item_id, e)
+    if aangepast:
+        logger.info("woocommerce %s: %d artikelnummers uit de winkel overgenomen", user_id[:8], aangepast)
+    return aangepast
+
+
 async def lees_winkel(cred: dict) -> tuple[list[dict], object]:
     """Alle gepubliceerde producten. Geeft (producten, client)."""
     c = client_uit(cred)
@@ -239,6 +308,10 @@ async def scan_winkel(user_id: str, job_id: str) -> None:
                                             "message": f"Saving {len(regels)} products to your dashboard…"}}})
         job = {"id": job_id, "user_id": user_id, "platform": PLATFORM}
         await naast_de_lus(lambda: _store_scan_results(db, job, regels))
+        try:
+            await naast_de_lus(lambda: winkelnummers_overnemen(db, user_id, regels))
+        except Exception:  # noqa: BLE001 — de scan gaat voor
+            logger.exception("woocommerce-scan: artikelnummers niet overgenomen voor %s", user_id)
 
         concepten = await client.tel("draft")
         te_koop = [r for r in regels if not r["is_closed"]]

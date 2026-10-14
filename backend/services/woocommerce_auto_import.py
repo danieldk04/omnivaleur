@@ -129,7 +129,7 @@ async def importeer_nieuwe_producten(user_id: str) -> dict:
     from backend.api.jobs import _store_scan_results
     from backend.services import instellingen
     from backend.services.woocommerce_scan import (bewaar_modus, markeer_als_voorraadwinkel,
-                                                   naar_scanregel)
+                                                   naar_scanregel, winkelnummers_overnemen)
 
     db = get_db()
     inst = await naast_de_lus(lambda: instellingen.lees(user_id))
@@ -167,7 +167,17 @@ async def importeer_nieuwe_producten(user_id: str) -> dict:
     nieuw = nieuwe_producten(producten, bekend, nu)
     achterstand_ids = (await naast_de_lus(lambda: _achterstand(db, user_id, producten))
                        if achterstand_nu else [])
+    async def nummers_overnemen() -> None:
+        # Ook voor wat eerder met de hand werd geïmporteerd: de kandidaat kent
+        # het artikelnummer niet, het product wel. Zie winkelnummers_overnemen.
+        try:
+            regels = [naar_scanregel(p) for p in producten]
+            await naast_de_lus(lambda: winkelnummers_overnemen(db, user_id, regels))
+        except Exception:  # noqa: BLE001 — de import gaat voor
+            logger.exception("woocommerce-auto-import: artikelnummers niet overgenomen voor %s", user_id)
+
     if not nieuw and not achterstand_ids:
+        await nummers_overnemen()
         velden = {"gecontroleerd": nu.isoformat(), "fout": None}
         if achterstand_nu:
             velden["achterstand_om"] = nu.isoformat()
@@ -213,6 +223,7 @@ async def importeer_nieuwe_producten(user_id: str) -> dict:
                     break
     finally:
         _BULK_IMPORT_CACHE.pop(user_id, None)
+    await nummers_overnemen()
 
     nieuwe_stand = {"gecontroleerd": nu.isoformat(), "fout": None,
                     "laatst_nieuw": toegevoegd + gekoppeld, "te_controleren": te_controleren}

@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## ebay-token-nooit-lokaal-verversen
+
+*14-10-2026 — 14-10-2026 een eBay-proef vanaf de Mac zette bij Toon koppeling_kapot in de database; lokale eBay-appsleutel wordt door eBay geweigerd*
+
+Roep voor een klant nooit `EbayPlatform._ensure_fresh_token` / `refresh_credentials` (of iets wat ze aanroept, zoals de gereedheidscontrole) vanaf de Mac aan. De eBay-appsleutel in de lokale .env wordt door eBay geweigerd ("401 client authentication failed"), en een mislukte vernieuwing schrijft `extra_data.koppeling_kapot` op de rij van de klant. Dan toont zijn dashboard eBay als ontkoppeld en vraagt het hem opnieuw te koppelen, terwijl er niets mis is. Gebeurd bij Toon (96e30080) op 14-10-2026 om 17:53 UTC; meteen teruggezet.
+
+**Why:** de meting zelf maakte de klantdata kapot; de fout zat in onze sleutel, niet in zijn koppeling.
+
+**How to apply:** eBay-status van een klant alleen-lezen beoordelen: `platform_credentials` (tokens aanwezig, `extra_data.verzending`, `ship_from`, `ebay_beleid`, `koppeling_kapot`) en zijn eBay-jobs. Live bij eBay navragen kan alleen op de server. Toch per ongeluk gebeurd: `koppeling_kapot` weer uit `extra_data` halen. Zie "railway-blokkeert-smtp" voor andere verschillen tussen lokaal en Railway.
+
+---
+
 ## achtergrond-sluit-marktplaats-voor-de-wachtrij
 
 *14-10-2026 — "14-10: fotocontrole en uurronde vroegen ~75 pagina's/min bij Marktplaats; 403 sloot ons serveradres ~12 min en daarmee de rubriekopzoeking, dus de 2dehands-wachtrij stond stil. Nu marktplaats_rem."*

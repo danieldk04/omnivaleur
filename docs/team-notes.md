@@ -17314,3 +17314,21 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   echte stappen waarbij je pas verder kunt na de vorige stap, Depop als kanaal. Zoekbalk bij Items had ze gemist.
 - Marketingtip van haar: kleine creators een maand gratis geven in ruil voor een video; resellers via Instagram
   benaderen na een paar weken volgen.
+
+## 14-10-2026: Toon (96e30080, dejuistetoon), WooCommerce-artikelnummers en eBay
+
+- Vraag 1, "25 advertenties van zaterdag op de Woo, waar vind ik die": alle 26 producten van za 10-10 (koeienhuiden,
+  granny-dekens, wandkleed) zijn op ma 12-10 16:46 bij het koppelen geïmporteerd en staan actief in zijn overzicht.
+- Vraag 2, zoeken op SKU: de WooCommerce-scan las het artikelnummer wel, maar de importkandidaat heeft er geen kolom
+  voor, dus elk artikel kreeg IMP-xxxx. Nu neemt de scan en de uurlijkse automatische import het nummer uit de winkel
+  over (`winkelnummers_overnemen` in services/woocommerce_scan.py), alleen bij een artikel dat via `listings` aan dat
+  product hangt, alleen over IMP-/REV-, nooit bij een dubbel nummer en nooit als het artikel al op eBay of Shopify
+  staat (die vinden hun aanbod op het nummer). Zoekbalk zoekt nu ook op artikelnummer, de lijst toont een eigen
+  nummer naast merk en maat. Bij Toon direct uitgevoerd met de nummers uit zijn openbare winkel: 811 van 1606
+  artikelen dragen nu zijn eigen nummer (kh15, GR43, wk011*); 830 van zijn 898 producten hebben er een, de rest
+  hangt nog niet aan een artikel. Proef: tests/test_woocommerce_artikelnummer_overnemen.py.
+- eBay (gekoppeld 14-10 11:51): tokens staan er, nog geen enkele eBay-opdracht. Verzendkosten/retour en
+  verzendadres zijn niet ingevuld; zonder die weigert elke eBay-plaatsing ("Set your eBay shipping costs first").
+  Of zijn eBay-account zelf klaar is (registratie, limiet) is niet gemeten: dat kan alleen op de server.
+- Fout van mij, hersteld: een gereedheidsproef vanaf de Mac zette `koppeling_kapot` op zijn eBay-rij (lokale
+  eBay-appsleutel geweigerd). Na 1 minuut teruggezet naar leeg. Les in de kennisbank.
