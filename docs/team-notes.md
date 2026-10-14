@@ -17240,3 +17240,4 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Webshop: haar Shopify-logboek toont dat Omnivaleur op 12-10 om 16:19 en 16:26 twee niet verkochte jassen wiste ("Tussenjas Name it maat 128", producten 16134692176197 en 16134748340549), tijdens Delist plus opnieuw plaatsen. De knop Delist laat nu producten die al in de eigen winkel stonden vóór de import staan. Die twee producten zijn niet automatisch terug te zetten; de gegevens staan nog in Omnivaleur.
 - "Vest Dirkje maat 86*": dezelfde oorzaak als in de ochtendronde hierboven gerepareerd; extra proef tests/test_vinted_titelgenoot_met_teken.py.
 - Al stuk op main, niet door deze wijziging: tests/vinted-prijsmelding-test.js (eindcontrole-regex), 12 Python-proeven rond afrekenen/kledingvraag/woocommerce-e2e.
+
