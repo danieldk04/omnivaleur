@@ -17199,3 +17199,19 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   altijd boven die vaste knoppen uit te scrollen is. Voor en na gemeten op 1024x700, 1280x600 en 375x700: oud
   geblokkeerd, nieuw geen enkele knop bedekt.
 - De repo stond weer in iCloud-parkeerstand (git hing, auto-push pushte niets); gepusht vanuit een verse kopie.
+
+## 14-10-2026: Dagelijkse klantfouten (ochtendronde)
+
+- 24 uur: 951 opdrachten aangemaakt, 36 fout bij 7 klanten (gisteren 46). Geen nieuwe fout in onze code gevonden
+  buiten wat de automatische wachtersessie van 10:28 al oppakt (Janneke 31d28378, Vinted titelgenoot met "*" in de
+  titel, commits a91e11e en 46f72ef); die heb ik niet dubbel gedaan.
+- Opgelost en nagemeten: de Vinted drie-minuten-stilval van gisteren (Amanda 7x, Janneke 4x) is nu 1x (Janneke).
+  1.0.385 draait bij Lynn, Egbert, Janneke en 26cf5471, staat dus in de Web Store; Amanda (8f91a370) nog op 1.0.383.
+- Lynn (96e30080): 6x "not in your 2dehands overview"; alle 6 staan inmiddels op delisted, het vangnet werkt.
+- Klant-eigen: 26cf5471 Vinted-scan 17x niet ingelogd, extensie stil sinds 07:40 UTC met 76 wachtend; f8c0cce9
+  uitgelogd op 2dehands (401); Egbert 1x tabblad gesloten; 8f91a370 en 3bfbed2c Vinted niet ingelogd.
+- Wachtrijen: Egbert 82 wachtend, loopt (95 plaatsingen in 3 uur); Lynn 80 (Marktplaats-herplaatsing van de nacht),
+  loopt. 5aae4954 (650) en 0b28c1ce (199) stil, extensie uit en proef verlopen.
+- Niet gemeten: Railway-serverlogs (geen railway-CLI op deze Mac); /health is ok op commit 46f72ef9.
+- De repo staat ondanks "Houd gedownload" nog half geparkeerd: 19 bestanden in .git/objects/pack zijn dataless en elk
+  git-commando in ~/Documents/omnivaleur hangt. Deze notitie is gepusht vanuit een verse kopie.
