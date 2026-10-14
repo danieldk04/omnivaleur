@@ -19,9 +19,11 @@ from backend.services import marktplaats_rem as rem
 def schone_rem(monkeypatch):
     monkeypatch.setattr(rem, "ACHTERGROND_TUSSENPOOS", 0.2)
     monkeypatch.setattr(rem, "TUSSENPOOS_NAAST_KLANT", 0.5)
-    rem._staat.update({"dicht_tot": 0.0, "volgende": 0.0, "klant": float("-inf"), "gemeld": 0.0})
+    rem._staat.update({"dicht_tot": 0.0, "volgende": 0.0, "klant": float("-inf"), "gemeld": 0.0,
+                       "geweigerd": float("-inf")})
     yield
-    rem._staat.update({"dicht_tot": 0.0, "volgende": 0.0, "klant": float("-inf"), "gemeld": 0.0})
+    rem._staat.update({"dicht_tot": 0.0, "volgende": 0.0, "klant": float("-inf"), "gemeld": 0.0,
+                       "geweigerd": float("-inf")})
 
 
 def _nep_marktplaats(status=200):
@@ -128,3 +130,30 @@ def test_planner_markeert_zijn_klussen_als_achtergrond():
     asyncio.run(_off_the_request_loop(klus)())
     assert gezien["achtergrond"] is True
     assert rem.is_achtergrond() is False   # de webserver zelf blijft klant
+
+
+def test_een_klantknop_vraagt_na_een_weigering_niet_door(monkeypatch):
+    """14-10-2026 16:33 UTC: "Fill from Marktplaats" zocht het verkopersnummer op
+    25 titels en vroeg na de eerste 403 alle 24 andere ook nog (22 weigeringen in
+    twee seconden). Nu gaat er na een weigering 30 s niets meer uit, ook niet voor
+    een klant. Daarna wel weer: de rubriekopzoeking probeert het na 3 minuten."""
+    transport, verzoeken = _nep_marktplaats(status=lambda n: 403)
+
+    async def knop():
+        async with httpx.AsyncClient(transport=transport) as c:
+            for _ in range(25):
+                try:
+                    (await c.get("https://www.marktplaats.nl/lrp/api/search")).raise_for_status()
+                except Exception:          # noqa: BLE001 — zo vangt zoek_verkoper_id het op
+                    pass
+    asyncio.run(knop())
+    assert len(verzoeken) == 1
+
+    rem._staat["geweigerd"] -= rem.KLANT_STIL_NA_403 + 1
+    asyncio.run(_een_klantvraag(transport))
+    assert len(verzoeken) == 2, "na de korte pauze vraagt een klant gewoon weer"
+
+
+async def _een_klantvraag(transport):
+    async with httpx.AsyncClient(transport=transport) as c:
+        await c.get("https://www.marktplaats.nl/lrp/api/search")

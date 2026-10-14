@@ -17394,3 +17394,13 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Klant-eigen: f8c0cce9, fout-2dehands-delete-f33f9873. Verwijderen van "Bronzen Beeldje Golfer" gaf HTTP 401 op
   het overzicht én op de advertentie zelf; ook de verlengingen van 13-10 en 14-10 gaven 401. Uitgelogd op 2dehands
   (stond al in de ronde van 20:10). Er is niets verwijderd; opnieuw inloggen en nogmaals verwijderen.
+
+## 14-10-2026 (21:45): eerste avond na de Marktplaats-rem
+
+- Sinds 09:25 UTC 2.047 zoekverzoeken naar Marktplaats/2dehands in de log, 7 fotocontroles. Twee keer kreeg de
+  fotocontrole één 403 (13:59, 14:51 UTC) en stopte meteen: 1 weigering in plaats van 111 of 185.
+- Eén keer 22 weigeringen (16:33 UTC): een klant klikte drie keer op "Fill from Marktplaats"; de zoektocht naar het
+  verkopersnummer (25 titels) vroeg na de eerste 403 gewoon door, want klantverzoeken liet de rem altijd door. Nu gaat in
+  de 30 s na een weigering ook een klantverzoek niet de deur uit (KLANT_STIL_NA_403). Voor en na getest: 25 tegen 1.
+- Egberts 2dehands-rij is sinds ~10:00 UTC leeg op één onvindbaar artikel na, dus "geen pauzes meer onder volle rij" is
+  nog niet gezien. Opnieuw meten zodra hij een volle rij heeft.

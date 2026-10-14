@@ -28,7 +28,11 @@ DE REGELS
    niets meer. Wie dan toch vraagt krijgt meteen MarktplaatsDicht, zonder dat er
    een verzoek de deur uit gaat. Elke beller vangt dat al op als "geen uitspraak".
 3. Wat een klant nu nodig heeft (de rubriek vlak voor uitgifte, een knop in het
-   dashboard) gaat nooit in de rij en wordt nooit tegengehouden.
+   dashboard) gaat nooit in de rij. Alleen in de KLANT_STIL_NA_403 seconden na een
+   weigering gaat ook een klantverzoek niet de deur uit: dat mislukt dan toch, en
+   een knop die in die seconden doorvraagt houdt het adres voor iedereen dicht.
+   Gemeten 14-10-2026 16:33 UTC: drie keer "Fill from Marktplaats" achter elkaar,
+   daarna 22 geweigerde vragen in twee seconden (25 titels voor het verkopersnummer).
 
 Het zit op httpx.AsyncClient.send en httpx.Client.send, dus elke plek die deze
 twee sites vraagt valt eronder, ook een die later wordt toegevoegd.
@@ -52,11 +56,13 @@ ACHTERGROND_TUSSENPOOS = 4.0        # 15 per minuut
 TUSSENPOOS_NAAST_KLANT = 10.0       # 6 per minuut zolang een klant zelf vraagt
 KLANT_ACTIEF = 120.0                # zo lang na een klantverzoek geldt dat
 DICHT_RUST = 15 * 60.0              # gemeten: het adres bleef ~12 minuten dicht
+KLANT_STIL_NA_403 = 30.0            # korter dan de 3 min rust van de rubriekopzoeking
 
 _achtergrond: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "marktplaats_achtergrond", default=False)
 _slot = threading.Lock()
-_staat = {"dicht_tot": 0.0, "volgende": 0.0, "klant": float("-inf"), "gemeld": 0.0}
+_staat = {"dicht_tot": 0.0, "volgende": 0.0, "klant": float("-inf"), "gemeld": 0.0,
+          "geweigerd": float("-inf")}
 
 
 class MarktplaatsDicht(httpx.RequestError):
@@ -99,6 +105,7 @@ def _na_verzoek(request: httpx.Request, status: int | None) -> None:
         if status not in (403, 429):
             return
         _staat["dicht_tot"] = nu + DICHT_RUST
+        _staat["geweigerd"] = nu
         melden = nu - _staat["gemeld"] > 60
         if melden:
             _staat["gemeld"] = nu
@@ -112,6 +119,11 @@ def _geldt(request: httpx.Request) -> bool:
     return request.url.host in HOSTS
 
 
+def _klant_net_geweigerd() -> None:
+    if time.monotonic() - _staat["geweigerd"] < KLANT_STIL_NA_403:
+        raise MarktplaatsDicht("Marktplaats/2dehands weigerde ons zojuist; even niet vragen")
+
+
 _ORIGINEEL_ASYNC_SEND = httpx.AsyncClient.send
 _ORIGINEEL_SYNC_SEND = httpx.Client.send
 
@@ -119,7 +131,9 @@ _ORIGINEEL_SYNC_SEND = httpx.Client.send
 async def _async_send(self, request, *args, **kwargs):
     if not _geldt(request):
         return await _ORIGINEEL_ASYNC_SEND(self, request, *args, **kwargs)
-    if is_achtergrond():
+    if not is_achtergrond():
+        _klant_net_geweigerd()
+    else:
         wacht = _reserveer()
         if wacht > 0:
             await asyncio.sleep(wacht)
@@ -133,7 +147,9 @@ async def _async_send(self, request, *args, **kwargs):
 def _sync_send(self, request, *args, **kwargs):
     if not _geldt(request):
         return _ORIGINEEL_SYNC_SEND(self, request, *args, **kwargs)
-    if is_achtergrond():
+    if not is_achtergrond():
+        _klant_net_geweigerd()
+    else:
         wacht = _reserveer()
         if wacht > 0:
             time.sleep(wacht)
