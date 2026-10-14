@@ -17354,3 +17354,16 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Wachtrij: 0b28c1ce 50 wachtend, extensie uit en proef verlopen (zoals gisteren).
 - Niet gemeten: Railway-logs van de import op 12-10 (alleen de laatste 20 deploys staan nog in de CLI), dus of de
   server toen 403 of al 202 kreeg is niet vastgesteld; beide eindigen in dezelfde bron-url.
+
+## 14-10-2026: Onboarding nieuwe klanten (ochtend, liep om 20:20)
+
+- Nieuw: Delftsblaeu (eac0cccc, info@delftsblaeu.nl, Aad), aangemeld 14-10 13:11 na de koude mail (antwoordde 03-10
+  "stuur dat filmje maar eens", Daniel antwoordde 10-10). Antieke kaarten, prenten en boeken, WooCommerce gekoppeld,
+  601 artikelen ingelezen, 573 met foto op img.omnivaleur.com. Nog geen enkele plaatsopdracht. De 28 zonder foto hebben
+  in zijn eigen winkel ook geen foto (Store API product 9277: images leeg); 8 zonder prijs. 141 zonder rubriek: lokaal
+  niet na te bootsen (lokale Gemini-sleutel geeft 402, Claude staat voor de rubriekvraag uit), Railway-logs niet
+  bekeken (geen CLI op de Mac). Open: nameten of dat getal zakt. Eén WooCommerce-scanfout van vóór het koppelen
+  (oordeel klant). Mailtje klaargezet, aansluitend op de koude mail.
+- Gerepareerd (beheeroverzicht): rubrieken "kunst ..." telden als Kleding (278 van Aads etsen). Nu groep Kunst.
+  Proef tests/test_categoriegroep_kunst.py, faalt op de oude code.
+- rambene, mickeyamg, quintblok, Anton: ongewijzigd sinds de ochtendronde van 14-10, geen nieuw mailtje.

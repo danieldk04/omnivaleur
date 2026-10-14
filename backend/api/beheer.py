@@ -232,6 +232,8 @@ def _categoriegroep(categorie: str | None) -> str:
     c = categorie.lower()
     if c.startswith("antiek"):
         return "Antiek"
+    if c.startswith("kunst"):
+        return "Kunst"
     if c.startswith("muziek"):
         return "Muziek"
     if c.startswith("sieraden"):
