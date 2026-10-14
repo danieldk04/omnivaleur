@@ -99,6 +99,7 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - Nee-mail aan een bedrijf ("jullie"): 2x zonder waarom-vraag, alleen "Dank voor jullie reactie. Ik zal jullie hier niet meer over benaderen. Veel succes met de verkoop!" Nog uitzoeken wanneer wel/niet de waarom-vraag.
 - Bij een lange uitleg na een telefoongesprek opent hij met "Even resumé en antwoord op je vragen:". Nog 1x gezien.
 - Wat Daniel in mijn concepten steeds schrapt of toevoegt. Nog 1x gezien (07-10): hij schrapt verkoopzinnen (gratis proef, videolink) bij een klant die al meedenkt; hij verzacht "Beloven kan ik het nog niet" met "denk graag met jullie mee :)"; hij noemt installatietijd optimistischer ("meestal binnen een paar uur"). Eerdere signalen (03-10): hij schrapte in een storingsmail de opening "Dank voor je bericht, en excuus voor het gedoe. Het lag aan ons" en begon direct met de feiten, en hij zette "Hi," in plaats van mijn "Hoi Voornaam,"; bij een vraag om referenties voegde hij een tweede bewijs (Trustpilot-link) toe en haalde de gratis proef naar een eigen alinea.
+- 14-10, 1x: bij een korte reparatiemelding (knop lag over paginaknoppen) liet hij mijn slotzin "Laat me weten als je er nog ergens tegenaan loopt :)" helemaal weg; de mail eindigt na "Ververs het dashboard..." direct op de groet. Tekst verder ongewijzigd, aanhef "Hi," bleef. Past bij korter zijn bij fouten van ons.
 - Of hij bij technische mails liever kort of liever volledig is.
 - Welke woorden hij nooit gebruikt.
 
@@ -116,3 +117,4 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - 11-10-2026: Gekeken: 122 mails in Verzonden (3 dagen), 15 van Daniel, 13 al verwerkt; 2 nieuw, 0 met concept. Nieuw: update-mail over WooCommerce-koppeling (2x identiek, nu een regel onder Inhoud).
 - 12-10-2026: Gekeken: 168 mails in Verzonden (3 dagen), 11 van Daniel, 10 al verwerkt; 1 nieuw, 1 met concept. Nieuw: opnieuw schrapt hij de erkennende openingszin ("Je hebt gelijk, ik heb het nagemeten"), rest van de uitleg ongewijzigd.
 - 13-10-2026: Gekeken: 132 mails in Verzonden (3 dagen), 6 van Daniel, 3 al verwerkt; 3 nieuw, 3 met concept (alle drie hetzelfde oude concept, niet vergelijkbaar). Nieuw: Engelstalige klant krijgt korte Engelse afspraakmails met "Best regards," (onder Nog te leren).
+- 14-10-2026: Gekeken: 88 mails in Verzonden (3 dagen), 5 van Daniel, 4 al verwerkt; 1 nieuw, 1 met concept. Nieuw: hij schrapt mijn slotzin met ":)" bij een korte reparatiemelding (1x, onder Nog te leren).
