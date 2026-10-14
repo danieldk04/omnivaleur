@@ -50,6 +50,14 @@ _HEADERS = {
     "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
 }
 
+# GEMETEN 14-10-2026, De Juiste Toon: zijn WordPress-hosting (nginx) geeft op
+# precies die nagemaakte Chrome-UA een 403-pagina, en zonder UA gewoon de foto.
+# Elke foto uit zijn WooCommerce-import bleef zo op dejuistetoon.eu staan, en
+# daar kan de extensie niet bij (geen CORS-kop, geen hosttoestemming): "None of
+# the 7 photo(s) could be downloaded" op alle drie de kanalen. Weigert een bron
+# de browserkop, dan nog één keer eerlijk vragen.
+_EERLIJKE_HEADERS = {"Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8"}
+
 
 def is_mirrored(url: str) -> bool:
     if not isinstance(url, str):
