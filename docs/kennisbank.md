@@ -39,7 +39,8 @@ wachten nooit. Teksten aanvullen kreeg 600 s budget op de achtergrond.
 
 Tweede rem (zelfde dag): een artikel dat niet terug te vinden is terwijl de eigen lijst wel terugkomt zette de hele
 verkoper 3 min op _RUBRIEK_STORING-rust (1 plaatsing per 3 min). Nu _NIET_GEVONDEN_RUST 30 s via uitleg["zoekfunctie_werkt"];
-lege lijst of fout houdt 3 min (lege lijst = mogelijk afgeknepen, les 14-09).
+lege lijst of fout houdt 3 min (lege lijst = mogelijk afgeknepen, les 14-09). Hetzelfde onvindbare artikel zelf pas na
+3 min opnieuw (_RUBRIEK_NIET_GEVONDEN, in het geheugen), anders vraagt één achterblijver elke halve minuut vijf keer.
 
 **Why:** een tempoklacht kan veroorzaakt worden door iets wat niets met die klant te maken heeft; het serveradres is
 gedeeld, en de wachtrij hangt aan een externe opzoeking.
