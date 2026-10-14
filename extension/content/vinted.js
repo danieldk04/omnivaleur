@@ -2375,7 +2375,12 @@
             // exact: alleen een volledig gelijke titel telt. Gebruikt door de
             // controle vooraf, waar een losse gelijkenis het verkeerde item aan
             // de advertentie zou kunnen koppelen.
-            return opts.exact ? t === target : (t.includes(target) || target.includes(t));
+            // Anders: gelijk, of de onze ingekort (we typen hooguit 100 tekens).
+            // Nooit een LANGERE titel: die is van een ander stuk. Janneke
+            // (14-10-2026): "Trui Lyle & Scott maat 110-116" pakte zo de net
+            // geplaatste "... (donkerblauw)", en Delist op de groene trui haalde
+            // daarna de donkerblauwe van Vinted.
+            return opts.exact ? t === target : target.includes(t);
           });
           if (hit) return { id: String(hit.id), processing: !!hit.is_processing };
         }
