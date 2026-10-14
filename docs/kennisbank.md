@@ -19,7 +19,7 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ## icloud-parkeert-de-repo
 
-*13-10-2026 — 11-10: iCloud "Opslagruimte optimaliseren" haalde 4.926 repobestanden weg, ook .git/HEAD en .env; git en Python faalden met "Resource deadlock avoided"*
+*14-10-2026 — 11-10: iCloud "Opslagruimte optimaliseren" haalde 4.926 repobestanden weg, ook .git/HEAD en .env; git en Python faalden met "Resource deadlock avoided"*
 
 Op 11-10-2026 (klantfoutenronde 20:35) stond ~/Documents/omnivaleur half in iCloud-parkeerstand:
 4.926 bestanden "dataless", waaronder .git/HEAD, .git/objects, .env en backend/*.py. Elk
@@ -46,6 +46,10 @@ bereikbaar terwijl Daniel schermvullend werkte). Controleren met `fileproviderct
 geldt ook voor .git eronder. `brctl download` bestaat op macOS 26 niet meer. Terughalen ging traag maar zeker:
 10.750 geparkeerde bestanden, na 10 min 10.240 (eerst ~1 per minuut, daarna ~100). Een los bestand openen duurde 7 min.
 Waarschijnlijke oorzaak van het parkeren: de schijf zat op 98% (6 GB vrij); macOS ruimt dan op.
+
+14-10 ochtend: ondanks isKeepDownloaded = 1 nog 19 bestanden in .git/objects/pack dataless; elk git-commando in de map
+hing (ook git log). Python en backend/ werkten wel. Vastpinnen haalt oude geparkeerde bestanden dus niet vanzelf terug.
+Werkwijze die werkte: `git clone --shallow-since=<datum>` van origin naar de scratchpad, daar lezen, committen en pushen.
 
 **Why:** de geplande routines en de auto-push-hook draaien vanuit deze map; een geparkeerde repo
 laat ze stil falen, zoals de mailmachine in augustus ("koude-mail-autonoom").
