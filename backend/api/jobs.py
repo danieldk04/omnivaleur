@@ -551,6 +551,16 @@ def _titel_sleutel(titel) -> str:
     return re.sub(r"[^a-z0-9]", "", str(titel or "").lower())
 
 
+def _zonder_sku(titel) -> str:
+    """Titel zonder voorloopnummer als "(1327) ", zoals _vintedTitelZonderSku
+    in extension/background.js."""
+    return re.sub(r"^\s*\([^)]{1,24}\)\s*", "", str(titel or ""))
+
+
+def _titel_zonder_sku(titel) -> str:
+    return _titel_sleutel(_zonder_sku(titel))
+
+
 def _vinted_titelgenoten_meegeven(db, user_id: str, jobs: list) -> int:
     """Geef bij een Vinted-plaatsing mee welke Vinted-advertenties al bij een
     ánder artikel met dezelfde titel horen.
