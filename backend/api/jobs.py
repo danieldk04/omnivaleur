@@ -966,6 +966,16 @@ _RUBRIEK_ZOEK_GEDULD = timedelta(hours=6)
 # wachtende opdracht gewoon wachten, zonder één verzoek naar buiten.
 _RUBRIEK_STORING_RUST = timedelta(minutes=3)
 _RUBRIEK_STORING: dict[str, datetime] = {}
+# MAAR EEN ARTIKEL DAT NIET TERUG TE VINDEN IS, IS GEEN STORING (14-10-2026, Egbert).
+# "Darkthrone - Fuck Off..." en twee V-Picks-plectrums vonden we niet op titel en
+# niet bij zijn honderd nieuwste advertenties, terwijl die lijst gewoon terugkwam.
+# Toch ging de hele verkoper drie minuten op rust: van 09:28 tot 09:38 UTC ging er
+# daardoor één plaatsing per drie minuten uit in plaats van elke halve minuut.
+# Dit artikel wacht nog steeds (zie hieronder), de rest van de rij nu een halve
+# minuut: ongeveer het tempo waarin zijn plaatsingen toch al uitgaan. Hooguit één
+# zo'n opzoeking per halve minuut (vijf vragen), zodat een reeks onvindbare
+# artikelen zelf nooit het salvo wordt waar Marktplaats op dichtklapt.
+_NIET_GEVONDEN_RUST = timedelta(seconds=30)
 # En pas na zoveel ECHTE mislukte opzoekingen voor deze opdracht zelf, elk na de
 # rust hierboven. WAAROM (27-09-2026, Egbert): het geduld telde alleen kloktijd.
 # 24 nummerplaten wachtten sinds 26-09 14:40 op hun rubriek terwijl zijn computer
@@ -1163,13 +1173,17 @@ def _zet_rubriek_van_marktplaats(db, user_id: str, job: dict) -> bool:
         # resultaten, en nul leest als een storing. Het zoekertje op 2dehands
         # bleef daardoor staan tot het geduld van zes uur op was.
         titels = [pl.get("title"), (rij.get("items") or {}).get("title")]
+        uitleg: dict = {}
         try:
             rubriek = _draai_los(rubriek_van_eigen_advertentie(
-                db, user_id, titels, rij["platform_listing_id"]))
+                db, user_id, titels, rij["platform_listing_id"], uitleg=uitleg))
         except Exception as e:  # noqa: BLE001
             logger.warning("job %s: rubriek opvragen mislukt: %s", job.get("id"), e)
             rubriek = None
-        if rubriek is None:
+        if rubriek is None and uitleg.get("zoekfunctie_werkt"):
+            # Rust die over _NIET_GEVONDEN_RUST afloopt in plaats van over drie minuten.
+            _RUBRIEK_STORING[user_id] = nu - _RUBRIEK_STORING_RUST + _NIET_GEVONDEN_RUST
+        elif rubriek is None:
             _RUBRIEK_STORING[user_id] = nu
         else:
             _RUBRIEK_STORING.pop(user_id, None)

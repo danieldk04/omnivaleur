@@ -574,3 +574,92 @@ def test_de_jas_gaat_nu_meteen_de_deur_uit_in_plaats_van_zes_uur_te_wachten(monk
     oud_db = _DB([dict(opdracht)], op_marktplaats={JAS_ITEM: JAS_NUMMER}, items_titel=EN_TITEL)
     assert _uitgifte(oud_j, monkeypatch, oud_db) == [], \
         "de oude versie hield deze opdracht juist vast"
+
+
+VOOR_NIET_GEVONDEN = "77e96c29"   # vast nummer: HEAD vergelijkt zichzelf na de commit
+
+
+class _EigenLijstZonderDitArtikel:
+    """14-10-2026, Egbert: op titel niets, zijn eigen lijst komt wel terug, alleen
+    zonder dit artikel ("Darkthrone - Fuck Off...", V-Picks)."""
+
+    def __init__(self):
+        self.vragen = []
+
+    async def get(self, url, params=None, headers=None):
+        self.vragen.append(params)
+        if (params or {}).get("query"):
+            return _Antwoord({"listings": [], "facets": []})
+        return _Antwoord(ECHT_ANTWOORD)          # zijn advertenties, andere nummers
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *_a):
+        return False
+
+
+def test_een_onvindbaar_artikel_zet_de_rest_van_de_rij_niet_drie_minuten_stil(monkeypatch):
+    """Van 09:28 tot 09:38 UTC ging er bij hem één plaatsing per drie minuten uit:
+    elk onvindbaar artikel zette de hele verkoper op storingsrust. Voor en na: het
+    volgende artikel, een halve minuut later, wordt nu gewoon opgezocht."""
+    oud_j = _oude_module("backend/api/jobs.py", VOOR_NIET_GEVONDEN, "oude_jobs_niet_gevonden",
+                         moet_bevatten=("_RUBRIEK_STORING_RUST",),
+                         moet_missen=("_NIET_GEVONDEN_RUST",))
+    for module, nu_gezocht in ((J, True), (oud_j, False)):
+        module._RUBRIEK_STORING.clear()
+        _zet_marktplaats_nep(monkeypatch, _EigenLijstZonderDitArtikel())
+        onvindbaar = _echte_opdracht(jid="0c1d2e3f-0000-4000-8000-000000000001",
+                                     item="0c1d2e3f-0000-4000-8000-0000000000aa")
+        db = _DB([onvindbaar], op_marktplaats={onvindbaar["item_id"]: "1499999999"})
+        assert module._zet_rubriek_van_marktplaats(db, USER, onvindbaar) is False
+        assert onvindbaar["payload"].get("_rubriek_zoeken_sinds"), "dit artikel wacht nog steeds"
+        assert not onvindbaar["payload"].get("_rubriek_niet_op_marktplaats"), (
+            "niet gevonden in de nieuwste honderd is geen bewijs dat hij niet op Marktplaats staat")
+
+        module._RUBRIEK_STORING[USER] -= timedelta(seconds=31)   # een halve minuut later
+        volgende_client = _Client()
+        _zet_marktplaats_nep(monkeypatch, volgende_client)
+        volgende = _echte_opdracht()
+        db2 = _DB([volgende], op_marktplaats={volgende["item_id"]: NUMMER})
+        uit = module._zet_rubriek_van_marktplaats(db2, USER, volgende)
+        assert bool(volgende_client.vragen) is nu_gezocht and uit is nu_gezocht, (
+            "nu: opgezocht en uitgedeeld" if module is J else "vroeger: drie minuten rust")
+    J._RUBRIEK_STORING.clear()
+
+
+def test_een_echte_storing_houdt_de_drie_minuten_rust(monkeypatch):
+    """Lege eigen lijst of een fout: dan weten we niet of de zoekfunctie werkt, en
+    blijft het salvo-gevaar. Daar verandert niets aan."""
+    for client in (_Client(fout=True), _Client(data={"listings": [], "facets": []})):
+        J._RUBRIEK_STORING.clear()
+        _zet_marktplaats_nep(monkeypatch, client)
+        job = _echte_opdracht()
+        assert J._zet_rubriek_van_marktplaats(
+            _DB([job], op_marktplaats={job["item_id"]: NUMMER}), USER, job) is False
+        J._RUBRIEK_STORING[USER] -= timedelta(seconds=31)
+        stil = _Client()
+        _zet_marktplaats_nep(monkeypatch, stil)
+        andere = _echte_opdracht(jid="0c1d2e3f-0000-4000-8000-000000000002",
+                                 item="0c1d2e3f-0000-4000-8000-0000000000bb")
+        assert J._zet_rubriek_van_marktplaats(
+            _DB([andere], op_marktplaats={andere["item_id"]: NUMMER}), USER, andere) is False
+        assert stil.vragen == []
+    J._RUBRIEK_STORING.clear()
+
+
+def test_binnen_de_halve_minuut_na_een_onvindbaar_artikel_geen_nieuwe_opzoeking(monkeypatch):
+    """De korte rust is er wel: in dezelfde ronde gaat er geen tweede salvo uit."""
+    J._RUBRIEK_STORING.clear()
+    _zet_marktplaats_nep(monkeypatch, _EigenLijstZonderDitArtikel())
+    eerste = _echte_opdracht(jid="0c1d2e3f-0000-4000-8000-000000000003",
+                             item="0c1d2e3f-0000-4000-8000-0000000000cc")
+    J._zet_rubriek_van_marktplaats(_DB([eerste], op_marktplaats={eerste["item_id"]: "1499999998"}),
+                                   USER, eerste)
+    stil = _Client()
+    _zet_marktplaats_nep(monkeypatch, stil)
+    tweede = _echte_opdracht()
+    assert J._zet_rubriek_van_marktplaats(
+        _DB([tweede], op_marktplaats={tweede["item_id"]: NUMMER}), USER, tweede) is False
+    assert stil.vragen == []
+    J._RUBRIEK_STORING.clear()

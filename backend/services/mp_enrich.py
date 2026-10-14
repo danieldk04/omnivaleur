@@ -808,7 +808,8 @@ def _rubriek_uit_zoekantwoord(data: dict, doel: str) -> dict | None:
 
 
 async def rubriek_op_advertentienummer(client: httpx.AsyncClient, verkoper_id: int,
-                                      titel, nummer, zoek_url: str = ZOEK) -> dict:
+                                      titel, nummer, zoek_url: str = ZOEK,
+                                      uitleg: dict | None = None) -> dict:
     """De rubriek waar deze verkoper deze advertentie ZELF in heeft gezet.
 
     WAAROM DIT ER IS (13-09-2026, Egbert Brouwer / Papa's Plectrums). Hij zette
@@ -896,10 +897,18 @@ async def rubriek_op_advertentienummer(client: httpx.AsyncClient, verkoper_id: i
             logger.info("mp_enrich: rubriek van %s gevonden in de eigen lijst, "
                         "niet op titel", doel)
             return uit
+        # Zijn eigen advertenties kwamen gewoon terug, alleen deze zat er niet
+        # bij. Dat is geen uitspraak over het artikel (dus nog steeds None), maar
+        # wel over de zoekfunctie: die werkt. De aanroeper hoeft dan niet de hele
+        # wachtrij van deze verkoper op storingsrust te zetten (jobs.py,
+        # _NIET_GEVONDEN_RUST). Een lege lijst telt hier niet: zie 14-09 hierboven.
+        if uitleg is not None and data.get("listings"):
+            uitleg["zoekfunctie_werkt"] = True
     return {} if iets_gezien else None
 
 
-async def rubriek_van_eigen_advertentie(db, user_id: str, titel, nummer) -> dict | None:
+async def rubriek_van_eigen_advertentie(db, user_id: str, titel, nummer,
+                                        uitleg: dict | None = None) -> dict | None:
     """`rubriek_op_advertentienummer` voor een verkoper van wie we het
     verkopersnummer nog moeten achterhalen. None als er niet gezocht kon worden.
 
@@ -920,7 +929,8 @@ async def rubriek_van_eigen_advertentie(db, user_id: str, titel, nummer) -> dict
                 _VERKOPERNUMMERS[(user_id, "marktplaats")] = (
                     None, time.monotonic() - _NUMMER_GELDIG + 120)
                 return None
-            return await rubriek_op_advertentienummer(client, verkoper, titel, nummer, zoek_url)
+            return await rubriek_op_advertentienummer(client, verkoper, titel, nummer, zoek_url,
+                                                      uitleg=uitleg)
     except Exception as e:  # noqa: BLE001 — een gemiste rubriek mag nooit iets breken
         logger.warning("mp_enrich: rubriek van advertentie %s niet opgehaald: %s", nummer, e)
         return None

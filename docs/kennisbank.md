@@ -37,6 +37,10 @@ Reparatie: backend/services/marktplaats_rem.py zit op httpx.AsyncClient.send/Cli
 10 s zolang er een klantverzoek liep, en 15 min niets na een 403 (MarktplaatsDicht, zonder verzoek). Klantverzoeken
 wachten nooit. Teksten aanvullen kreeg 600 s budget op de achtergrond.
 
+Tweede rem (zelfde dag): een artikel dat niet terug te vinden is terwijl de eigen lijst wel terugkomt zette de hele
+verkoper 3 min op _RUBRIEK_STORING-rust (1 plaatsing per 3 min). Nu _NIET_GEVONDEN_RUST 30 s via uitleg["zoekfunctie_werkt"];
+lege lijst of fout houdt 3 min (lege lijst = mogelijk afgeknepen, les 14-09).
+
 **Why:** een tempoklacht kan veroorzaakt worden door iets wat niets met die klant te maken heeft; het serveradres is
 gedeeld, en de wachtrij hangt aan een externe opzoeking.
 **How to apply:** bij "het staat stil" eerst gaten meten in jobs (claimed_at), dan de verzoeklog (antwoord leeg of niet),

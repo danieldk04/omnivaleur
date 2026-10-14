@@ -17288,3 +17288,10 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   Teksten aanvullen kreeg op de achtergrond 600 s in plaats van 75 s, anders komt het bij grote winkels niet meer rond.
 - Open: of Marktplaats bij 15 per minuut echt nooit dichtgaat is niet te meten zonder het productieadres te riskeren.
   Nameten: morgen de gaten in Egberts opdrachten en de 403's in de serverlog.
+- Live nagemeten na de deploy (fotocontrole 09:35:50 UTC): 5 tot 13 verzoeken per minuut naar Marktplaats/2dehands
+  (was ~80), nul 403's.
+- Tweede rem gevonden in dezelfde meting: een artikel dat bij Marktplaats niet terug te vinden is (op titel niet, en niet
+  bij zijn honderd nieuwste advertenties, bijvoorbeeld "Darkthrone - Fuck Off" en twee V-Picks) zette de hele verkoper
+  drie minuten op storingsrust, terwijl de zoekfunctie gewoon antwoordde. 09:28 tot 09:38 UTC: één plaatsing per drie
+  minuten. Nu wacht alleen dat artikel; de rest van de rij een halve minuut (_NIET_GEVONDEN_RUST). Een lege lijst of een
+  fout blijft drie minuten rust.
