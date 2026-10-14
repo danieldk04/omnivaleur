@@ -578,23 +578,32 @@ def _vinted_titelgenoten_meegeven(db, user_id: str, jobs: list) -> int:
         return 0
     gezet = 0
     try:
+        # Titelgenoot is wat de EXTENSIE als dezelfde titel ziet, niet alleen
+        # een letterlijk gelijke titel. Janneke (13-10-2026): "Vest Dirkje maat
+        # 86*" en "Vest Dirkje maat 86" zijn voor de extensie gelijk, voor een
+        # .eq("title") niet. Ze kreeg geen _vinted_bezet, de extensie pakte de
+        # advertentie van het andere vest, de server weigerde die, en elke
+        # nieuwe poging liep precies zo af.
         per_titel: dict[str, list[dict]] = {}
-        for titel in {j["payload"]["title"] for j in vinted}:
+        for sleutel, titel in {_titel_zonder_sku(j["payload"]["title"]): j["payload"]["title"]
+                               for j in vinted}.items():
+            woorden = re.findall(r"[a-z0-9]+", _zonder_sku(titel).lower())
             artikelen = (db.table("items").select("id,title")
-                         .eq("user_id", user_id).eq("title", titel)
+                         .eq("user_id", user_id).ilike("title", "%" + "%".join(woorden) + "%")
                          .execute().data or [])
-            ids = [a["id"] for a in artikelen]
+            ids = [a["id"] for a in artikelen
+                   if _titel_zonder_sku(a.get("title")) == sleutel]
             if len(ids) < 2:
-                per_titel[titel] = []
+                per_titel[sleutel] = []
                 continue
-            per_titel[titel] = (db.table("listings")
-                                .select("item_id,platform_listing_id,created_at")
-                                .eq("platform", "vinted").in_("item_id", ids)
-                                .execute().data or [])
+            per_titel[sleutel] = (db.table("listings")
+                                  .select("item_id,platform_listing_id,created_at")
+                                  .eq("platform", "vinted").in_("item_id", ids)
+                                  .execute().data or [])
         for j in vinted:
             p = j["payload"]
             genoten = sorted(
-                (r for r in per_titel.get(p["title"], [])
+                (r for r in per_titel.get(_titel_zonder_sku(p["title"]), [])
                  if r.get("item_id") != j["item_id"] and r.get("platform_listing_id")),
                 key=lambda r: r.get("created_at") or "", reverse=True)
             bezet = list(dict.fromkeys(str(r["platform_listing_id"]) for r in genoten))
