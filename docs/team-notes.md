@@ -17445,3 +17445,10 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Open: de extensie zocht in de kast omdat Vinted na Upload niet doorstuurde. Of de donkerblauwe trui toch op Vinted
   is gekomen, is niet te zien. Plaatst ze hem opnieuw, dan koppelt de controle vooraf (exacte titel) een bestaande
   advertentie in plaats van een tweede te maken.
+
+## 15-10-2026 (nacht): Janneke, Vinted-staat werd nooit ingevuld (extensie 1.0.388)
+
+- Na de prijsreparatie liep haar Vinted door tot "Vul je staat in om verder te gaan". CONDITION_MAP geeft de Engelse naam ("New without tags"), haar Vinted is Nederlands ("Nieuw zonder prijskaartje"); de woordvergelijking vond niets en de stap meldde toch ok. Gezien op vinted.nl/de: "Nieuw zonder prijskaartje", "Heel goed", "Goed"; "Neu, mit Etikett", "Sehr gut", "Gut".
+- 1.0.388: staat op naam in NL/EN/DE/FR/ES, anders op de vaste volgorde van de vijf staten; daarna nagaan dat het veld echt gevuld is. Proef: tests/vinted-staat-in-elke-taal-test.js (oud kiest niets, nieuw 20 van 20).
+- Data: 2.124 van haar artikelen zeiden "Nieuw met labels" in de tekst maar stonden op new (zonder labels); nu new_with_tags, ook in 4 wachtende Vinted-opdrachten.
+- Open: Daniel uploadt 1.0.388; haar kopie werkt zichzelf bij. De server-ondergrens voor Vinted blijft 1.0.386, zodat haar plaatsingen niet dagen stilliggen op de goedkeuring.

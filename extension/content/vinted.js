@@ -4293,7 +4293,42 @@
     };
 
     let best = null, bestScore = 0;
-    for (const el of allTitles) {
+
+    // DE STAAT IN ELKE TAAL (15-10-2026, Janneke).
+    //
+    // CONDITION_MAP levert de ENGELSE naam ("New without tags"). Op een Vinted
+    // in het Nederlands heten de opties "Nieuw zonder prijskaartje", "Heel goed",
+    // "Goed"; in het Duits "Neu, mit Etikett", "Sehr gut", "Gut". De woord-
+    // vergelijking hieronder vond dan niets, de stap meldde toch "ok", en Vinted
+    // weigerde het plaatsen met "Vul je staat in om verder te gaan". Hier eerst
+    // precies op naam in vijf talen; staat er geen bekende naam, dan op plaats:
+    // Vinted toont de vijf staten altijd in dezelfde volgorde.
+    const isStaat = keys.includes("condition") || keys.includes("status");
+    if (isStaat) {
+      const STATEN = [
+        ["new with tags", "nieuw met prijskaartje", "nieuw met label", "neu mit etikett", "neu, mit etikett",
+         "neuf avec etiquette", "nuevo con etiquetas"],
+        ["new without tags", "nieuw zonder prijskaartje", "nieuw zonder label", "neu ohne etikett",
+         "neu, ohne etikett", "neuf sans etiquette", "nuevo sin etiquetas"],
+        ["very good", "heel goed", "zeer goed", "sehr gut", "tres bon etat", "muy bueno"],
+        ["good", "goed", "gut", "bon etat", "bueno"],
+        ["satisfactory", "redelijk", "zufriedenstellend", "satisfaisant", "satisfactorio"],
+      ];
+      const kaal = (t) => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ").trim();
+      const plek = STATEN.findIndex((namen) => namen.includes(kaal(value)));
+      if (plek >= 0) {
+        best = allTitles.find((e) => STATEN[plek].includes(kaal(e.textContent))) || null;
+        if (!best) {
+          const opStaat = allTitles.filter((e) => STATEN.some((n) => n.includes(kaal(e.textContent))));
+          const rij = opStaat.length === 5 ? opStaat : (allTitles.length === 5 ? allTitles : null);
+          if (rij) best = rij[plek];
+        }
+        if (best) bestScore = 4;
+      }
+    }
+
+    if (!best) for (const el of allTitles) {
       const s = fuzzyScore(el.textContent, value);
       if (s > bestScore) { best = el; bestScore = s; }
     }
@@ -4316,6 +4351,16 @@
       realClickEl(cell);
     }
     await sleep(400);
+    // Bij de staat nagaan of hij er echt in staat: het veld toont na de keuze de
+    // naam. Een "ok" zonder ingevulde staat liet Vinted pas bij het plaatsen
+    // weigeren, en dan was de herstelronde de enige kans.
+    if (isStaat) {
+      await waitUntil(() => !!(triggerEl.value || "").trim(), 1500);
+      if (!(triggerEl.value || "").trim()) {
+        console.warn("[Omnivaleur] Vinted staat niet blijven staan:", value, "| gekozen:", best.textContent.trim());
+        return false;
+      }
+    }
     // Do NOT send Escape here — Escape reverts colour checkboxes. The value is already
     // committed to React state the moment the checkbox/radio is clicked. Inline accordion
     // panels can stay open; the next step opening its own panel causes no interference
