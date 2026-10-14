@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-eigendom-alleen-eerste-pagina
+
+*14-10-2026 — 14-10: Vinted-eigendomscontrole las alleen 50 nieuwste; oude eigen advertentie gold als "nog niet geregistreerd" en werd aan een andere opdracht gekoppeld (Amanda); nu nummer-ondergrens (1.0.387)*
+
+bgVintedEigenAdvertentie (extension/background.js) leest alleen de eerste kastpagina (50 nieuwste). Een advertentie die daar niet op staat gold als "nog niet geregistreerd" en werd doorgelaten. Bij Amanda (8f91a370, 240 advertenties) werd zo een jurk-opdracht van 12-10 op 14-10 afgemeld met het nummer van haar spijkerbroek van 20-08 (plek 117). De servercontrole _advertentie_van_ander_artikel ving het op, maar alleen omdat die advertentie al aan een ander artikel hing; een niet-geïmporteerde oude advertentie was gewoon gekoppeld.
+
+**Why:** "niet gevonden op pagina 1" betekent bij een grote kast niet "net geplaatst". Vinted-nummers lopen op (240 advertenties, 8 kleine afwijkingen op de datum uit foto's).
+
+**How to apply:** sinds 1.0.387: nummer lager dan het laagste van een volle eerste pagina = false. Zie ook "storing-mag-nooit-als-antwoord-tellen" en "titel-op-het-kanaal-is-niet-de-brontitel".
+
+---
+
 ## webshopfotos-nagemaakte-browserkop
 
 *14-10-2026 — "14-10: Toons SiteGround-webshop gaf 403 op onze nagemaakte Chrome-UA, dus 274 WooCommerce-artikelen hielden bron-url's die de extensie niet kan ophalen; na ~25 artikelen ook een captcha (202)"*

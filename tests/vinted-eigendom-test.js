@@ -124,6 +124,19 @@ const INGELOGD = { status: 200, body: { user: { id: 42 } } };
      (await bgVintedEigenAdvertentie(O, 555)) === null,
      await bgVintedEigenAdvertentie(O, 555));
 
+  // AMANDA (14-10-2026): een oude advertentie van haarzelf, ver voorbij de
+  // eerste pagina van 50, werd als "nog niet geregistreerd" doorgelaten en aan
+  // een jurk-opdracht gekoppeld. Haar echte nummers: de 50e nieuwste was
+  // 9978800100, de spijkerbroek 9722809182.
+  const VOL = Array.from({ length: 50 }, (_, i) => ({ id: 10357823607 - i * 7600000, title: "x" }));
+  VOL[49].id = 9978800100;
+  antwoorden = { "users/current": INGELOGD, "wardrobe": KAST(VOL, 5) };
+  ok("oude eigen advertentie voorbij de eerste pagina = false",
+     (await bgVintedEigenAdvertentie(O, 9722809182, { title: "ONLY CARMAKOMA jurk, maat 46 (XL), groen" })) === false,
+     await bgVintedEigenAdvertentie(O, 9722809182, { title: "ONLY CARMAKOMA jurk, maat 46 (XL), groen" }));
+  ok("een nieuwer nummer bij een volle pagina = nog steeds onbekend (net geplaatst)",
+     (await bgVintedEigenAdvertentie(O, 10400000000, CARDIGAN)) === null);
+
   antwoorden = { "users/current": INGELOGD, "wardrobe": KAST([]) };
   ok("lege kast bij een ingelogde verkoper = onbekend, niet false",
      (await bgVintedEigenAdvertentie(O, 222)) === null);

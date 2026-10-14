@@ -17378,3 +17378,19 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   4 plaatsingen) faalden op "niet ingelogd op Vinted", dus ook zonder slaap was deze scan mislukt. Oordeel klant,
   geen codewijziging. Open voor haar: inloggen op Vinted in de Chrome waar de extensie draait (stond al in Daniels
   conceptmail na de call).
+
+## 14-10-2026 (21:30, automatisch): Klantfouten
+
+- Gerepareerd (extensie 1.0.387): Amanda (8f91a370), fout-vinted-create-01e60d3e. Een Vinted-plaatsing van 12-10
+  voor "ONLY CARMAKOMA jurk" werd op 14-10 om 19:09 afgemeld met advertentie 9722809182, de PME-spijkerbroek van
+  20-08. De server weigerde die koppeling terecht. Mechanisme bewezen: de eigendomscontrole van de extensie
+  (bgVintedEigenAdvertentie) leest alleen de 50 nieuwste advertenties in haar kast; de spijkerbroek staat op plek
+  117 van 240 (gemeten in haar scan van 19:09), dus "niet gevonden" gold als "nog niet geregistreerd" en liet het
+  door. Nu: een nummer lager dan het laagste van een volle eerste pagina is een oude advertentie en wordt nooit
+  meer afgemeld. Proef tests/vinted-eigendom-test.js faalt op de oude code. Niet bewezen is wélk tabblad die
+  advertentiepagina opende (vermoedelijk het werktabblad van 12-10 dat open bleef); daar hangt de reparatie niet
+  van af. De jurk staat niet op Vinted; opnieuw plaatsen werkt gewoon. Zipje dist/omnivaleur-extension-1.0.387.zip
+  moet nog naar de Web Store; tot dan houdt de servercontrole dit tegen zolang de oude advertentie gekoppeld is.
+- Klant-eigen: f8c0cce9, fout-2dehands-delete-f33f9873. Verwijderen van "Bronzen Beeldje Golfer" gaf HTTP 401 op
+  het overzicht én op de advertentie zelf; ook de verlengingen van 13-10 en 14-10 gaven 401. Uitgelogd op 2dehands
+  (stond al in de ronde van 20:10). Er is niets verwijderd; opnieuw inloggen en nogmaals verwijderen.

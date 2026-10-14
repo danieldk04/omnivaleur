@@ -4217,6 +4217,17 @@ async function bgVintedEigenAdvertentie(origin, listingId, item) {
     if (!res.ok) return null;
     const items = (await res.json())?.items || [];
     const gevonden = items.find((it) => String(it.id) === want);
+    // OUDER DAN DE HELE EERSTE PAGINA? DAN IS HIJ NIET ZOJUIST GEPLAATST
+    // (14-10-2026, Amanda 8f91a370). We lezen alleen de 50 nieuwste, dus een
+    // oude advertentie van haarzelf viel hier als "nog niet geregistreerd"
+    // door. Een Vinted-opdracht van 12-10 voor een ONLY-jurk werd zo afgemeld
+    // met het nummer van haar PME-spijkerbroek van 20-08 (plek 117 in haar
+    // kast van 240). Vinted-nummers lopen op: een nummer onder het laagste van
+    // een volle pagina is ouder dan haar 50 nieuwste advertenties.
+    if (!gevonden && items.length >= 50) {
+      const laagste = Math.min(...items.map((it) => Number(it.id)).filter(Number.isFinite));
+      if (Number.isFinite(laagste) && Number(want) < laagste) return false;
+    }
     if (!gevonden) return null;                 // nog niet geregistreerd: laat door
     if (!item) return true;                     // niets om mee te vergelijken
     return vintedTitelHoortBij(gevonden.title, item) ? true : false;
