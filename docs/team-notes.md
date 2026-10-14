@@ -17367,3 +17367,14 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Gerepareerd (beheeroverzicht): rubrieken "kunst ..." telden als Kleding (278 van Aads etsen). Nu groep Kunst.
   Proef tests/test_categoriegroep_kunst.py, faalt op de oude code.
 - rambene, mickeyamg, quintblok, Anton: ongewijzigd sinds de ochtendronde van 14-10, geen nieuw mailtje.
+
+## 14-10-2026 (20:45, automatisch): Klantfouten
+
+- fout-vinted-scan-0eaa1dd0, Amanda (8f91a370), 1x "Frame with ID 0 is showing error page" (Chrome's eigen melding:
+  het tabblad toonde een netwerkfoutpagina). Gemeten: de scan werd om 12:45 aangemaakt, om 13:18 opgepakt en pas om
+  18:39:25 afgemeld. Tussen 13:18 en 18:39 deed haar extensie niets (geen enkele opdracht opgepakt); om 18:39:34 maakte
+  ze zelf delist-opdrachten aan die meteen liepen. De computer sliep dus vijf uur en had bij het wakker worden nog
+  geen netwerk, waardoor Vinted op een foutpagina opende. Daarbij: alle andere Vinted-opdrachten van vandaag (4 scans,
+  4 plaatsingen) faalden op "niet ingelogd op Vinted", dus ook zonder slaap was deze scan mislukt. Oordeel klant,
+  geen codewijziging. Open voor haar: inloggen op Vinted in de Chrome waar de extensie draait (stond al in Daniels
+  conceptmail na de call).
