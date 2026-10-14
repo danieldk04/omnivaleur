@@ -122,6 +122,8 @@ async def mirror_photos(urls: list[str] | None, user_id: str, _sem=None) -> list
         async with sem:
             try:
                 resp = await fetch_with_retry(client, url)
+                if resp.status_code in (401, 403):
+                    resp = await client.get(url, headers=_EERLIJKE_HEADERS, follow_redirects=True)
                 if resp.status_code != 200:
                     logger.warning("photo mirror: %s returned HTTP %s", url[:120], resp.status_code)
                     return url
