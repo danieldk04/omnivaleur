@@ -17298,3 +17298,19 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Live na de tweede deploy (fotocontrole 10:03 UTC): 3 tot 18 verzoeken per minuut, nul 403's; Egberts opzoekingen elke
   30 tot 45 s in plaats van elke 3 min. Zijn 2dehands-rij was toen leeg op één onvindbaar artikel na, dat elke halve
   minuut opnieuw werd opgezocht. Hetzelfde artikel wacht nu weer 3 min (_NIET_GEVONDEN_OPNIEUW), andere artikelen niet.
+
+## 14-10-2026: Call Daniel met Amanda (8f91a370, amandaonline001), 11:00
+
+- Wie: Nederlandstalig (mailde Engels omdat de site Engels is), wil voortaan in het Nederlands. Sinds 3 maanden
+  reseller, vooral herenkleding (PME Legend, Cast Iron, jacht/outdoor), deels dameskleding uit eigen kast.
+  Betaalt sinds het proefeinde (13-10). Vond ons via ChatGPT/Google AI na zoeken naar een EU-crosslister.
+  Grootste kanalen voor haar: Vinted en Marktplaats; eBay verkoopt niets, Depop 1 stuk.
+- Daniel beloofde: nakijken waarom een deel van haar Vinted-artikelen niet geplaatst wordt, en laten weten of het
+  bij haar of bij ons ligt. Gemeten: sinds 12-10 7 Vinted-plaatsingen fout, meestal hangen na de rubriekstap (de
+  prijsvraag, zie Janneke hierboven en 13-10). Tijdens de call 2 Vinted-scans fout op "niet ingelogd". Extensie na
+  de call 1.0.384. Conceptmail klaargezet (schrijfstijl-concept 20261014).
+- Haar wensen: melding bij dubbele artikelen (Vinted straft dubbel plaatsen; titels uit MP en Vinted verschillen,
+  dus nu geen match), top 5 best verkochte merken per maand in Analytics, beschikbaar inkoopbudget, onboarding als
+  echte stappen waarbij je pas verder kunt na de vorige stap, Depop als kanaal. Zoekbalk bij Items had ze gemist.
+- Marketingtip van haar: kleine creators een maand gratis geven in ruil voor een video; resellers via Instagram
+  benaderen na een paar weken volgen.
