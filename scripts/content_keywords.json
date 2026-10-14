@@ -718,7 +718,7 @@
       "pillar": "B",
       "format": "money_rules",
       "slug": "belgian-tax-rules-for-selling-on-vinted",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "belastingen-bij-verkoop-op-vinted-belgi",
       "priority": 84
     },
@@ -1499,6 +1499,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-change-shipping-options-on-vinted",
       "published_at": "2026-10-13T15:31:44.994656+00:00"
+    },
+    {
+      "keyword": "belgian tax rules for selling on vinted",
+      "slug": "belgian-tax-rules-for-selling-on-vinted",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "action": "created",
+      "url_path": "/reseller-tools/belgian-tax-rules-for-selling-on-vinted",
+      "published_at": "2026-10-14T13:16:20.145582+00:00"
     }
   ]
 }
