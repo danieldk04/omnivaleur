@@ -17241,3 +17241,12 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - "Vest Dirkje maat 86*": dezelfde oorzaak als in de ochtendronde hierboven gerepareerd; extra proef tests/test_vinted_titelgenoot_met_teken.py.
 - Al stuk op main, niet door deze wijziging: tests/vinted-prijsmelding-test.js (eindcontrole-regex), 12 Python-proeven rond afrekenen/kledingvraag/woocommerce-e2e.
 
+
+## 14-10-2026 (11:30, automatisch): Kostencheck Gemini en Claude
+- Gemeten in de Anthropic-console (UTC, sleutel crosslisteu = Omnivaleur): 11-10 $0,09, 12-10 $0,75, 13-10 $0,36, 14-10 $0,03 (halve dag). Haiku 4.5: 0,08 / 0,22 / 0,36 / 0,02. Haiku 5.5: 0,01 / 0 / 0,02 / 0,01. Niet Omnivaleur: revaleur-blog ~$0,2 tot 0,3 per dag (Sonnet 4.6), nexus-trading-bot centen, blogs-zenbtw $0,05 op 12-10.
+- 12-10 bevat ~$0,55 Sonnet 5 die de code niet kiest; herkomst niet uitgezocht.
+- De "~$1 Haiku 4.5 per dag" klopt niet meer: sinds de rem $0,08 tot $0,36 per dag.
+- /health (commit 279dd839): taalmodel_sinds_start leeg, zegt niets (teller begint bij de deploy, hoe lang die draait is niet gemeten).
+- Dagmaximum 300: eerst Gemini, dan TaalmodelOnbeschikbaar; _haiku_classificatie probeert 3x en valt terug op de woordenlijst. Geen crash, geen foutmelding aan de klant, de verkoper kiest zelf een rubriek. tests/test_claude_kostenrem.py 3 van 3 geslaagd.
+- Oordeel: geen echte fout bewezen, niets veranderd. Aanbeveling: laten staan; de zwakke plek is het Gemini-quotum (gratis sleutel gaf eerder veel HTTP 429), niet Claude.
+- Open: /health na een dag zonder deploy bekijken (claude_dagmaximum, google_codes); Sonnet 5-kosten van 12-10 uitzoeken. backend/scheduler.py niet aangeraakt.
