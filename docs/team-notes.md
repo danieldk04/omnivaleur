@@ -17423,3 +17423,10 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   stilval. Nalopen op een echte Vinted-pagina zodra er na 1.0.385 een nieuwe fout met die rubriek binnenkomt.
 - Opdracht 262cf815 (Vinted-scan) staat sinds 19:43 op opgepakt; haar laatste hartslag 19:45, dus computer
   waarschijnlijk dicht. Niet aangeraakt.
+
+## 14-10-2026 (avond): Janneke (31d28378), nog steeds 1.0.384; Vinted wacht nu op 1.0.386
+
+- De Web Store bood 1.0.386 al aan (updatecheck bij Google: version="1.0.386"), haar extensie draaide om 21:55 nog 1.0.384. Haar kopie werkt zichzelf elk uur bij zodra er geen klus loopt (controleerOpNieuweVersie), dus ze hoeft niets met de hand te doen.
+- Server: MINIMALE_VINTED_PLAATS_VERSIE = 1.0.386 (b86a6fb5). Vinted create en content_refresh gaan alleen nog naar 1.0.386+, een oudere kopie laat ze 'pending'. Marktplaats en 2dehands gaan gewoon door.
+- Haar zes mislukte Vinted-plaatsingen opnieuw klaargezet via publish_to_platforms (81fb2e90, 68a0c9c1, 0d82b904, b4ddd227, 090f1663, a7ef3eb0); ze lopen vanzelf zodra 1.0.386 bij haar draait.
+- Merk ingevuld bij 1.517 van haar 2.008 artikelen zonder merk, uit het vaste titelpatroon "Soort Merk maat ..." (43 merken, schrijfwijzen gelijkgetrokken). 491 titels zonder merk erin blijven leeg.
