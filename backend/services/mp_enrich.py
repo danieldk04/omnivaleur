@@ -33,6 +33,8 @@ import unicodedata
 
 import httpx
 from backend.database import naast_de_lus, fetch_all, IN_BROK
+# Rem op alle verzoeken naar Marktplaats/2dehands; installeert zich bij import.
+from backend.services import marktplaats_rem  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -1224,7 +1226,8 @@ async def kanaal_met_meeste_gaten(db, user_id: str) -> str:
 
 async def verrijk(db, user_id: str, schrijf: bool = True,
                  maximaal: int = 0, melden=None,
-                 platform: str = STANDAARD_KANAAL) -> dict:
+                 platform: str = STANDAARD_KANAAL,
+                 budget_seconden: float = BUDGET_SECONDEN) -> dict:
     """Vul prijs en omschrijving aan voor items die ze missen.
 
     Overschrijft nooit: een prijs of tekst die de verkoper zelf heeft ingevuld
@@ -1242,7 +1245,7 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
     deze functie net zo vaak aan tot alles gedaan is.
     """
     start = time.monotonic()
-    deadline = start + BUDGET_SECONDEN
+    deadline = start + budget_seconden
     zoek_url, basis = ZOEK_PER_PLATFORM.get(platform, ZOEK_PER_PLATFORM[STANDAARD_KANAAL])
     # De startplek van de vorige ronde is per kanaal, anders schuift de ene
     # ronde de teller op voor de andere. Voor het standaardkanaal blijft de
@@ -1407,7 +1410,7 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
             # hieronder nul items haalde — drie weken lang bij Papa's Plectrums.
             # `rest` staat op dringendheid gesorteerd, dus de items zonder
             # omschrijving worden sowieso als eerste opgezocht.
-            zoek_deadline = min(deadline, time.monotonic() + BUDGET_SECONDEN * 0.5)
+            zoek_deadline = min(deadline, time.monotonic() + budget_seconden * 0.5)
             gevonden_rest, _ = await _in_batches(rest, zoek, zoek_deadline)
             for item, a in gevonden_rest:
                 if a:
@@ -1512,6 +1515,13 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
 # Beleefd blijven bij Marktplaats: één verkoper per ronde, hooguit 150 items, en
 # hetzelfde tijdsbudget als de knop. De volgende ronde is de volgende verkoper.
 AANVUL_PER_VERKOPER = 150
+# Maar NIET hetzelfde tijdsbudget meer (14-10-2026). Op de achtergrond krijgt elk
+# verzoek naar Marktplaats een vaste beurt (marktplaats_rem), en in 75 seconden
+# passen er dan zo'n achttien: bij een winkel als Egberts niet eens zijn eigen
+# advertentielijst. De Cloudflare-grens waar BUDGET_SECONDEN voor is geldt hier
+# niet, want er wacht geen browser. De planner draait deze ronde elk kwartier en
+# start geen tweede zolang de eerste loopt.
+AANVUL_BUDGET_SECONDEN = 600
 
 # Het demo-account staat vol nepadvertenties die niet op Marktplaats bestaan.
 # Daarvoor zoeken is puur belasting bij Marktplaats zonder dat er iets te vinden
@@ -1591,7 +1601,7 @@ async def vul_ontbrekende_teksten_aan() -> dict:
 
     kanaal = await kanaal_met_meeste_gaten(db, user_id)
     uit = await verrijk(db, user_id, schrijf=True, maximaal=AANVUL_PER_VERKOPER,
-                        platform=kanaal)
+                        platform=kanaal, budget_seconden=AANVUL_BUDGET_SECONDEN)
     logger.info("mp_enrich automatisch: %s op %s -> %s teksten, %s prijzen (van %s open)",
                 user_id, kanaal, uit.get("omschrijving"), uit.get("prijs"),
                 uit.get("te_doen"))

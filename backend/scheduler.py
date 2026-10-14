@@ -37,6 +37,12 @@ def _off_the_request_loop(coro_fn):
         klaar = asyncio.get_running_loop().create_future()
 
         def werk():
+            # Alles wat de planner draait is achtergrond: het krijgt bij
+            # Marktplaats en 2dehands een rustig tempo en zwijgt na een 403,
+            # zodat de rubriekopzoeking voor de wachtrij van klanten blijft
+            # werken. Zie backend/services/marktplaats_rem.py (Egbert, 14-10-2026).
+            from backend.services import marktplaats_rem
+            marktplaats_rem.markeer_achtergrond()
             try:
                 asyncio.run(coro_fn())
                 klaar.get_loop().call_soon_threadsafe(klaar.set_result, None)

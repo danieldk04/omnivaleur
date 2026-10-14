@@ -55,6 +55,7 @@ import re
 from datetime import datetime, timedelta, timezone
 
 from backend.database import get_db, fetch_all, naast_de_lus
+from backend.services import marktplaats_rem
 
 logger = logging.getLogger(__name__)
 
@@ -350,6 +351,12 @@ async def controleer_fotos_op_advertenties():
         async with httpx.AsyncClient(base_url=basis, headers={"User-Agent": UA},
                                      timeout=30, follow_redirects=True) as client:
             for user_id, onze in per_verkoper.items():
+                # Weigert Marktplaats/2dehands ons, dan stopt de ronde. Doorvragen
+                # houdt het serveradres dicht, en daarmee de rubriekopzoeking waar
+                # de 2dehands-wachtrij van elke klant op wacht (marktplaats_rem).
+                if marktplaats_rem.dicht():
+                    logger.info("fotocontrole: %s weigert ons, ronde gestopt", platform)
+                    break
                 verkoper_id = await _verkopersnummer(client, zoek_url, onze)
                 if not verkoper_id:
                     logger.info("fotocontrole: %s op %s — verkopersnummer niet te "

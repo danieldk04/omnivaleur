@@ -190,10 +190,15 @@ async def controleer_gereserveerd() -> int:
     import httpx
     from backend.services.foto_controle import _verkoperslijst
     from backend.services.mp_enrich import ZOEK_PER_PLATFORM, UA
+    from backend.services import marktplaats_rem
 
     db = get_db()
     gevraagd = 0
     for (user_id, platform), verkoper_id in list(_verkopers.items()):
+        if marktplaats_rem.dicht():
+            # Zie foto_controle: na een weigering niet doorvragen.
+            logger.info("gereserveerd: Marktplaats/2dehands weigert ons, ronde gestopt")
+            break
         zoek_url, basis = ZOEK_PER_PLATFORM[platform]
         try:
             async with httpx.AsyncClient(base_url=basis, headers={"User-Agent": UA},

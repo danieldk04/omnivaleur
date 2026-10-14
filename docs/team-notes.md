@@ -17268,3 +17268,23 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Anton (b60bd6fd): ongewijzigd, computer stil sinds 12-10 12:51, 2 MP-advertenties wachten op "Ja, verkocht". Postvak
   toont geen verstuurde mail van 12-10; kort vervolgmailtje klaargezet.
 - robbertbolier: ongewijzigd nul, proef loopt vanavond af, al gemaild 08-10. Geen mailtje.
+
+## 14-10-2026: Egbert, "na inloggen duurt het lang": Marktplaats sloot ons serveradres
+
+- Klacht: na (opnieuw) inloggen duurt het soms lang voor er iets gebeurt, terwijl er een lijst klaarstaat.
+- Gemeten (alleen zijn user_id, 07-10 tot 14-10): het inloggen zelf klopt niet. Na elke terugkomst van zijn computer ging
+  de eerste opdracht binnen 15 s (7 van 7 sinds 11-10). Wel echt: 18 gaten van 4 tot 12,5 min zonder plaatsing terwijl
+  er tot 614 klaarstonden en zijn extensie elke 15 s vroeg. Vaak kort na het opstarten, dus voor hem voelt het als "na
+  het inloggen".
+- Oorzaak (Railway-verzoeklog en serverlog, 5 van 5 gaten nagekeken): de server gaf `[]` omdat elke 2dehands-plaatsing
+  op de echte Marktplaats-rubriek wacht en die opzoeking 403 kreeg. Die 403 kwam van onze eigen achtergrondklussen:
+  fotocontrole (10 min na elke deploy, daarna elke 6 uur) en de uurronde rond :23 (gereserveerd, teksten aanvullen).
+  Ruim 1 pagina per seconde, en na een 403 gingen ze door. Marktplaats sloot ons adres dan ~12 minuten.
+- Voor iedereen: in de gaten werden alleen Egberts opdrachten tegengehouden (222 van 222); hij is de enige met een grote
+  2dehands-rij van Marktplaats-artikelen. De blokkades zelf raakten ook de rest: verzendkosten, verlopen-controle en de
+  knop "Fill from Marktplaats" kregen in die minuten geen antwoord.
+- Reparatie: backend/services/marktplaats_rem.py. Alles wat de planner draait krijgt bij Marktplaats/2dehands 1 verzoek
+  per 4 s (10 s zolang er een klantverzoek liep) en vraagt 15 min niets na een 403. Klantverzoeken wachten nooit.
+  Teksten aanvullen kreeg op de achtergrond 600 s in plaats van 75 s, anders komt het bij grote winkels niet meer rond.
+- Open: of Marktplaats bij 15 per minuut echt nooit dichtgaat is niet te meten zonder het productieadres te riskeren.
+  Nameten: morgen de gaten in Egberts opdrachten en de 403's in de serverlog.

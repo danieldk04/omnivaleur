@@ -17,6 +17,35 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## achtergrond-sluit-marktplaats-voor-de-wachtrij
+
+*14-10-2026 — "14-10: fotocontrole en uurronde vroegen ~75 pagina's/min bij Marktplaats; 403 sloot ons serveradres ~12 min en daarmee de rubriekopzoeking, dus de 2dehands-wachtrij stond stil. Nu marktplaats_rem."*
+
+Egbert (bcdf9aa4) 14-10-2026: "na opnieuw inloggen duurt het lang voor er iets gebeurt". Het inloggen zelf klopte niet:
+na elke terugkomst van zijn computer (7 keer, 11 tot 14-10) ging de eerste opdracht binnen 15 s. Wat wél klopte: gaten van
+10 tot 12,5 minuut zonder plaatsing, met honderden klaar en zijn extensie die elke 15 s vroeg (Railway-verzoeklog: 2dehands
+/pending 4,5 s, antwoord `[]`). Serverlog: "rubriek nog niet op te vragen, blijft wachten" met Marktplaats-zoek 403.
+
+Oorzaak: achtergrondklussen op dezelfde server (fotocontrole 10 min na elke deploy en elke 6 uur; rond :23 elk uur
+gereserveerd en teksten aanvullen) vroegen ruim 1 pagina/s op en gingen na een 403 door (111 en 185 weigeringen in een
+seconde). Marktplaats sloot het adres ~12 minuten; elke 2dehands-plaatsing van een artikel dat op Marktplaats staat wacht
+op die opzoeking (_zet_rubriek_van_marktplaats), dus de hele rij stond stil. 5 van 5 onderzochte gaten begonnen binnen
+3 min na zo'n klus.
+
+Reparatie: backend/services/marktplaats_rem.py zit op httpx.AsyncClient.send/Client.send voor marktplaats.nl en
+2dehands.be. Alles wat de planner draait is achtergrond (scheduler._off_the_request_loop markeert het): 1 verzoek per 4 s,
+10 s zolang er een klantverzoek liep, en 15 min niets na een 403 (MarktplaatsDicht, zonder verzoek). Klantverzoeken
+wachten nooit. Teksten aanvullen kreeg 600 s budget op de achtergrond.
+
+**Why:** een tempoklacht kan veroorzaakt worden door iets wat niets met die klant te maken heeft; het serveradres is
+gedeeld, en de wachtrij hangt aan een externe opzoeking.
+**How to apply:** bij "het staat stil" eerst gaten meten in jobs (claimed_at), dan de verzoeklog (antwoord leeg of niet),
+dan de serverlog rond het begin van het gat op "Running job" en "403". Nieuwe server-code die Marktplaats/2dehands vraagt
+valt vanzelf onder de rem; geen eigen salvo's bouwen. Hoort bij "gat-tussen-opdrachten-meten" en
+"rubriekwachters-vulden-de-kop".
+
+---
+
 ## gezocht-advertentie-is-geen-voorraad
 
 *14-10-2026 — 14-10-2026: MP/2dehands-scan haalde "Gezocht"-advertenties binnen als voorraad (Anton, rambene); sinds faaea16 beginnen ze als genegeerd*
