@@ -17404,3 +17404,22 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   de 30 s na een weigering ook een klantverzoek niet de deur uit (KLANT_STIL_NA_403). Voor en na getest: 25 tegen 1.
 - Egberts 2dehands-rij is sinds ~10:00 UTC leeg op één onvindbaar artikel na, dus "geen pauzes meer onder volle rij" is
   nog niet gezien. Opnieuw meten zodra hij een volle rij heeft.
+
+## 14-10-2026 (22:00, automatisch): Klantfouten
+
+- fout-vinted-create-aba1cdb6, Amanda (8f91a370), 2x om 19:21 en 19:42 UTC: de twee polo's met lange mouw (Cast Iron
+  a88cecd0, Pme Legend 2b955478) die om 12:40 nog op "niet ingelogd" faalden. Ze is nu dus wél ingelogd. Beide met
+  laatste stap "stap category: NIET gelukt" en daarna drie minuten niets; ook 12-10 en 13-10 vier keer zo, na
+  "category: ok" én na "NIET gelukt". Mechanisme: haar extensie is nog 1.0.384 (hartslag 19:45, Chrome 154 op
+  Windows). Daar komt na de categorie de prijsstap, en die vraagt de pagina via SET_PRICE_MAIN zonder tijdslimiet
+  (kennisbank paginavraag-zonder-tijdslimiet, dezelfde vastloper als bij Janneke). Voor-en-na-proef:
+  tests/vinted-prijsvraag-tijdslimiet-test.js tegen 5df30048 (precies 1.0.384) wacht eindeloos, de huidige code
+  antwoordt na 20 s. Al gerepareerd in 1.0.385 (staat in de Web Store, gemeten 22:00 via de updatedienst) en
+  1.0.386; geen nieuwe codewijziging. Haar Chrome heeft de update nog niet opgehaald.
+- Open, onbekend: bij haar faalt de Vinted-categorie voor "heren overhemden" vaak (3 van de 5 gemeten keren
+  "NIET gelukt"; 8 van haar 9 overhemd-plaatsingen sinds 01-10 mislukten, geen andere klant had die rubriek).
+  Niet te zien welk stapje van de boom (Men > Clothing > Tops & t-shirts > Shirts) ontbrak: die regels gaan niet
+  naar de server. Na de update krijgt ze daardoor waarschijnlijk een melding "vul categorie in" in plaats van een
+  stilval. Nalopen op een echte Vinted-pagina zodra er na 1.0.385 een nieuwe fout met die rubriek binnenkomt.
+- Opdracht 262cf815 (Vinted-scan) staat sinds 19:43 op opgepakt; haar laatste hartslag 19:45, dus computer
+  waarschijnlijk dicht. Niet aangeraakt.
