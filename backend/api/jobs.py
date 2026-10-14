@@ -4602,6 +4602,27 @@ def _alleen_barcode(platform: str, titel: str, fotos: list) -> bool:
             and bool(_BARCODE.fullmatch((titel or "").strip())))
 
 
+_GEZOCHT_VOOR = re.compile(r"^\W*(gezocht|gevraagd|wanted)\b", re.IGNORECASE)
+_GEZOCHT_ACHTER = re.compile(r"(?<!veel )(?<!zeer )(?<!erg )(?<!super )(?<!vaak )"
+                             r"\bgezocht\s*(?:$|[|:,!.()\[\]–—-])", re.IGNORECASE)
+
+
+def _zoekertje(platform: str, titel: str) -> bool:
+    """Een Marktplaats- of 2dehands-advertentie voor iets wat de verkoper ZOEKT.
+
+    WAAROM (14-10-2026, onboarding): Anton had "Pokémon kaarten gezocht" en
+    rambene "gezocht penplotter" en "Gezocht: XY-penplotter" tussen hun
+    voorraad staan; "Import all" maakte er artikelen van die daarna als te koop
+    naar Vinted zouden gaan. "Zeer gezocht" of "veel gezocht model" is
+    verkooptaal en blijft gewoon staan. Genegeerd, niet weg: "Show the ignored
+    again" haalt hem terug.
+    """
+    if platform not in ("marktplaats", "2dehands"):
+        return False
+    t = (titel or "").strip()
+    return bool(_GEZOCHT_VOOR.search(t) or _GEZOCHT_ACHTER.search(t))
+
+
 def _store_scan_results(db, job, scraped: list[dict]):
     """
     Persist scraped "my listings" cards as import_candidates for manual review.
@@ -4836,6 +4857,7 @@ def _store_scan_results(db, job, scraped: list[dict]):
                 if prior_status.get(str(platform_listing_id), "pending") != "pending"
                 else "linked" if listings_by_id.get((job["platform"], str(platform_listing_id)))
                 else "ignored" if _alleen_barcode(job["platform"], title, photo_urls)
+                else "ignored" if _zoekertje(job["platform"], title)
                 else "pending"),
         }
         # Full snapshot columns — only present once the schema migration has run.
