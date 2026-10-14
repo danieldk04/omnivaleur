@@ -17215,3 +17215,21 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Niet gemeten: Railway-serverlogs (geen railway-CLI op deze Mac); /health is ok op commit 46f72ef9.
 - De repo staat ondanks "Houd gedownload" nog half geparkeerd: 19 bestanden in .git/objects/pack zijn dataless en elk
   git-commando in ~/Documents/omnivaleur hangt. Deze notitie is gepusht vanuit een verse kopie.
+
+## 14-10-2026 (10:40, automatisch): Klantfouten
+
+- Gerepareerd (46f72ef9, server): Janneke (31d28378) kon "Vest Dirkje maat 86*" niet op Vinted krijgen; twee keer
+  "belongs to another item". Haar ander vest heet "Vest Dirkje maat 86" (zonder ster). De extensie ziet die titels
+  als gelijk, de server zocht titelgenoten letterlijk en gaf dus geen `_vinted_bezet` mee; de extensie pakte de
+  advertentie van het andere vest (10366429698), de server weigerde terecht, en elke herhaling liep net zo af. Nu
+  zoekt de server titelgenoten met dezelfde sleutel als de extensie. Op haar echte data nagemeten: de opdracht krijgt
+  nu 10366429698 als bezet mee. Proef in tests/test_vinted_titelgenoot_niet_koppelen.py, faalt op de oude code.
+  Opnieuw plaatsen van het vest werkt nu, ook met haar 1.0.384.
+- Janneke, overige Vinted-fouten 13-10 19:00 tot 19:35 (prijsveld "no field", staat en verzending leeg, drie
+  minuten stil na de rubriek): allemaal op 1.0.384 en Chrome 128, dezelfde plek als de open stilval van 12-10.
+  1.0.385 (begrenst die wachttijd) staat sinds vandaag in de Web Store (gemeten 1.0.385 via de updatedienst); zij
+  draaide hem nog niet (laatste hartslag 13-10 20:05). Waarom de pagina na de rubriek niet antwoordt blijft onbewezen.
+- Klant-eigen: Janneke twee keer uitgelogd op Vinted (inlogpagina in het tabblad). Lynn (96e30080) 2dehands-verlengen
+  m1847286246 en m1857411281: beide op 2dehands zelf verlopen, het vangnet zette ze al in het archief.
+- Volle testsuite: 2473 groen, 7 rood die ook zonder deze wijziging rood zijn (korte kledingvraag 5x,
+  publish_quality prijs in paginacontext, WooCommerce-browserproef). Niet aangeraakt, open punt.

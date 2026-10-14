@@ -65,6 +65,12 @@ class _Q:
         self.filters.append(lambda r: r.get(k) != v)
         return self
 
+    def ilike(self, k, patroon):
+        rx = re.compile("^" + ".*".join(re.escape(d) for d in patroon.split("%")) + "$",
+                        re.IGNORECASE | re.DOTALL)
+        self.filters.append(lambda r: bool(rx.match(str(r.get(k) or ""))))
+        return self
+
     def in_(self, k, vs):
         vs = list(vs)
         self.filters.append(lambda r: r.get(k) in vs)
@@ -146,6 +152,35 @@ def test_zonder_titelgenoot_verandert_er_niets():
     job = _bruine_opdracht()
     assert J._vinted_titelgenoten_meegeven(db, "u1", [job]) == 0
     assert job["payload"] == {"title": TITEL, "price": 29.5}
+
+
+def test_titelgenoot_met_een_leesteken_meer_telt_ook():
+    """Janneke, 13-10-2026: "Vest Dirkje maat 86*" naast "Vest Dirkje maat 86".
+    Voor de extensie dezelfde titel, voor een letterlijke vergelijking niet; ze
+    kreeg geen _vinted_bezet en elke poging eindigde in "belongs to another item"."""
+    db = _DB(items=[{"id": "vest", "user_id": "u1", "title": "Vest Dirkje maat 86"},
+                    {"id": "vest*", "user_id": "u1", "title": "Vest Dirkje maat 86*"},
+                    {"id": "set", "user_id": "u1", "title": "Set Dirkje maat 86"}],
+             listings=[{"item_id": "vest", "platform": "vinted", "platform_listing_id": "10366429698",
+                        "status": "active", "created_at": "2026-10-13T18:50:57"},
+                       {"item_id": "set", "platform": "vinted", "platform_listing_id": "999",
+                        "status": "active", "created_at": "2026-10-13T18:00:00"}])
+    job = {"id": "j9", "user_id": "u1", "item_id": "vest*", "platform": "vinted",
+           "action": "create", "status": "claimed",
+           "payload": {"title": "Vest Dirkje maat 86*", "price": 25}}
+    assert J._vinted_titelgenoten_meegeven(db, "u1", [job]) == 1
+    assert job["payload"]["_vinted_bezet"] == ["10366429698"]
+
+
+def test_titelgenoot_met_en_zonder_voorloopnummer():
+    db = _DB(items=[{"id": "a", "user_id": "u1", "title": "(1327) Jas Name it"},
+                    {"id": "b", "user_id": "u1", "title": "Jas Name it"}],
+             listings=[{"item_id": "a", "platform": "vinted", "platform_listing_id": "42",
+                        "status": "active", "created_at": "2026-10-13T18:00:00"}])
+    job = {"id": "j8", "user_id": "u1", "item_id": "b", "platform": "vinted",
+           "action": "create", "status": "claimed", "payload": {"title": "Jas Name it"}}
+    assert J._vinted_titelgenoten_meegeven(db, "u1", [job]) == 1
+    assert job["payload"]["_vinted_bezet"] == ["42"]
 
 
 def test_nieuwste_titelgenoot_eerst():

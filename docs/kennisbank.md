@@ -17,6 +17,35 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## titelgenoot-krijgt-andermans-advertentie
+
+*14-10-2026 — "Vinted \"staat al online\"-controle zoekt op titel; twee stukken met één titel kregen één advertentie (Janneke 09-10-2026)"*
+
+Elke Vinted-plaatsing begint met een controle "staat hij al online?" op exacte titel in de eigen kast
+(resolveCreatedVintedItem in content/vinted.js); de achtergrond doet hetzelfde bij watchdog en tabblad-weg
+(bgVindVintedAdvertentie). Twee echte stukken met dezelfde titel (Janneke: rode en bruine "Tussenjas Name it
+maat 128") waren niet uit elkaar te houden: de bruine kreeg de advertentie van de rode, stond niet op Vinted, en
+het dashboard toonde "Gedeelde advertentie". Gerepareerd 09-10-2026 (a9327da6): uitgifte geeft `_vinted_bezet`
+mee (en voor oude extensies de nieuwste titelgenoot in `platform_listing_id`, dat ze al oversloegen), de server
+weigert bij afmelden een advertentie die bij een ander artikel van dezelfde verkoper hoort, extensie 1.0.376
+slaat alle titelgenoten over.
+
+14-10-2026: het gat zat in de server. `_vinted_titelgenoten_meegeven` zocht titelgenoten met een letterlijke
+`.eq("title")`, de extensie vergelijkt op kleine letters en alleen letters en cijfers. Janneke's "Vest Dirkje maat
+86*" en "Vest Dirkje maat 86" waren voor de extensie gelijk, voor de server niet: geen `_vinted_bezet`, de extensie
+koppelde het andere vest, de server weigerde ("belongs to another item"), en elke herhaling liep identiek af. Nu
+zoekt de server met ilike op de woorden en filtert op dezelfde sleutel als de extensie (ook zonder "(1327) "-nummer).
+Zoek je ooit titelgenoten: altijd dezelfde normalisatie als de kant die vergelijkt.
+
+**Why:** sinds Shopify-producten met dezelfde titel als twee stukken gelden (09-10) zijn titelgenoten gewoon;
+bij Janneke 2.316 van 3.219 artikelen.
+
+**How to apply:** elke koppeling op titel (scan, herstel, "al geplaatst") moet advertenties uitsluiten die al
+bij een ander artikel horen. Een advertentienummer hoort bij één artikel; zie ook "dubbele-advertentie-titel-en-foto"
+en "titel-op-het-kanaal-is-niet-de-brontitel".
+
+---
+
 ## icloud-parkeert-de-repo
 
 *14-10-2026 — 11-10: iCloud "Opslagruimte optimaliseren" haalde 4.926 repobestanden weg, ook .git/HEAD en .env; git en Python faalden met "Resource deadlock avoided"*
@@ -423,28 +452,6 @@ Klantpost lezen (09-10-2026): de klantmails staan vooral in de map "Beantwoord" 
 (46, vooral leads en spam). Alleen-lezen via IMAP met MAIL_USER/MAIL_PASS/IMAP_HOST uit .env (zoals
 scripts/schrijfstijl_leren.py), BODY.PEEK zodat niets als gelezen wordt gemarkeerd. Filter niet op onderwerp: Egberts
 63 mails hangen onder de oude leaddraad "Vraagje over jullie Marktplaats-aanbod".
-
----
-
-## titelgenoot-krijgt-andermans-advertentie
-
-*09-10-2026 — "Vinted \"staat al online\"-controle zoekt op titel; twee stukken met één titel kregen één advertentie (Janneke 09-10-2026)"*
-
-Elke Vinted-plaatsing begint met een controle "staat hij al online?" op exacte titel in de eigen kast
-(resolveCreatedVintedItem in content/vinted.js); de achtergrond doet hetzelfde bij watchdog en tabblad-weg
-(bgVindVintedAdvertentie). Twee echte stukken met dezelfde titel (Janneke: rode en bruine "Tussenjas Name it
-maat 128") waren niet uit elkaar te houden: de bruine kreeg de advertentie van de rode, stond niet op Vinted, en
-het dashboard toonde "Gedeelde advertentie". Gerepareerd 09-10-2026 (a9327da6): uitgifte geeft `_vinted_bezet`
-mee (en voor oude extensies de nieuwste titelgenoot in `platform_listing_id`, dat ze al oversloegen), de server
-weigert bij afmelden een advertentie die bij een ander artikel van dezelfde verkoper hoort, extensie 1.0.376
-slaat alle titelgenoten over.
-
-**Why:** sinds Shopify-producten met dezelfde titel als twee stukken gelden (09-10) zijn titelgenoten gewoon;
-bij Janneke 2.316 van 3.219 artikelen.
-
-**How to apply:** elke koppeling op titel (scan, herstel, "al geplaatst") moet advertenties uitsluiten die al
-bij een ander artikel horen. Een advertentienummer hoort bij één artikel; zie ook "dubbele-advertentie-titel-en-foto"
-en "titel-op-het-kanaal-is-niet-de-brontitel".
 
 ---
 
