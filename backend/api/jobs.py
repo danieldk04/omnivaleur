@@ -976,6 +976,11 @@ _RUBRIEK_STORING: dict[str, datetime] = {}
 # zo'n opzoeking per halve minuut (vijf vragen), zodat een reeks onvindbare
 # artikelen zelf nooit het salvo wordt waar Marktplaats op dichtklapt.
 _NIET_GEVONDEN_RUST = timedelta(seconds=30)
+# Hetzelfde onvindbare artikel zelf pas na drie minuten opnieuw, zoals vroeger: anders
+# vraagt één achterblijver elke halve minuut vijf keer bij Marktplaats (gemeten
+# 14-10, 09:53 tot 10:09 UTC, toen het zijn laatste wachtende zoekertje was).
+_NIET_GEVONDEN_OPNIEUW = timedelta(minutes=3)
+_RUBRIEK_NIET_GEVONDEN: dict[tuple[str, str], datetime] = {}
 # En pas na zoveel ECHTE mislukte opzoekingen voor deze opdracht zelf, elk na de
 # rust hierboven. WAAROM (27-09-2026, Egbert): het geduld telde alleen kloktijd.
 # 24 nummerplaten wachtten sinds 26-09 14:40 op hun rubriek terwijl zijn computer
@@ -1154,11 +1159,16 @@ def _zet_rubriek_van_marktplaats(db, user_id: str, job: dict) -> bool:
     nu = datetime.now(timezone.utc)
     rubriek = _rubriek_uit_eerdere_opdracht(db, user_id, job.get("item_id"))
     rust = _RUBRIEK_STORING.get(user_id)
+    artikel = (user_id, str(job.get("item_id")))
+    net_niet_gevonden = _RUBRIEK_NIET_GEVONDEN.get(artikel)
     geprobeerd = False
     if rubriek:
         pass
     elif rust and nu - rust < _RUBRIEK_STORING_RUST:
         # De vorige opzoeking liep stuk. Wachten zonder te bellen.
+        rubriek = None
+    elif net_niet_gevonden and nu - net_niet_gevonden < _NIET_GEVONDEN_OPNIEUW:
+        # Dit artikel vonden we zojuist niet terug: niet opnieuw bellen.
         rubriek = None
     else:
         geprobeerd = True
@@ -1183,6 +1193,9 @@ def _zet_rubriek_van_marktplaats(db, user_id: str, job: dict) -> bool:
         if rubriek is None and uitleg.get("zoekfunctie_werkt"):
             # Rust die over _NIET_GEVONDEN_RUST afloopt in plaats van over drie minuten.
             _RUBRIEK_STORING[user_id] = nu - _RUBRIEK_STORING_RUST + _NIET_GEVONDEN_RUST
+            if len(_RUBRIEK_NIET_GEVONDEN) > 5000:
+                _RUBRIEK_NIET_GEVONDEN.clear()
+            _RUBRIEK_NIET_GEVONDEN[artikel] = nu
         elif rubriek is None:
             _RUBRIEK_STORING[user_id] = nu
         else:

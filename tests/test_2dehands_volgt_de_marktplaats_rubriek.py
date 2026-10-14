@@ -663,3 +663,32 @@ def test_binnen_de_halve_minuut_na_een_onvindbaar_artikel_geen_nieuwe_opzoeking(
         _DB([tweede], op_marktplaats={tweede["item_id"]: NUMMER}), USER, tweede) is False
     assert stil.vragen == []
     J._RUBRIEK_STORING.clear()
+
+
+def test_hetzelfde_onvindbare_artikel_pas_na_drie_minuten_opnieuw(monkeypatch):
+    """Gemeten 14-10, 09:53 tot 10:09 UTC: zijn laatste wachtende zoekertje werd elke
+    halve minuut opnieuw opgezocht. Dat artikel zelf wacht weer drie minuten; een
+    ander artikel niet."""
+    J._RUBRIEK_STORING.clear()
+    J._RUBRIEK_NIET_GEVONDEN.clear()
+    _zet_marktplaats_nep(monkeypatch, _EigenLijstZonderDitArtikel())
+    job = _echte_opdracht(jid="0c1d2e3f-0000-4000-8000-000000000004",
+                          item="0c1d2e3f-0000-4000-8000-0000000000dd")
+    db = _DB([job], op_marktplaats={job["item_id"]: "1499999997"})
+    J._zet_rubriek_van_marktplaats(db, USER, job)
+    J._RUBRIEK_STORING[USER] -= timedelta(seconds=31)
+    sleutel = (USER, job["item_id"])
+    J._RUBRIEK_NIET_GEVONDEN[sleutel] -= timedelta(seconds=31)
+
+    stil = _Client()
+    _zet_marktplaats_nep(monkeypatch, stil)
+    assert J._zet_rubriek_van_marktplaats(db, USER, job) is False
+    assert stil.vragen == [], "hetzelfde artikel binnen drie minuten: niet bellen"
+
+    J._RUBRIEK_NIET_GEVONDEN[sleutel] -= timedelta(minutes=3)
+    weer = _EigenLijstZonderDitArtikel()
+    _zet_marktplaats_nep(monkeypatch, weer)
+    J._zet_rubriek_van_marktplaats(db, USER, job)
+    assert weer.vragen, "na drie minuten wel opnieuw"
+    J._RUBRIEK_STORING.clear()
+    J._RUBRIEK_NIET_GEVONDEN.clear()

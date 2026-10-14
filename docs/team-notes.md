@@ -17295,3 +17295,6 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   drie minuten op storingsrust, terwijl de zoekfunctie gewoon antwoordde. 09:28 tot 09:38 UTC: één plaatsing per drie
   minuten. Nu wacht alleen dat artikel; de rest van de rij een halve minuut (_NIET_GEVONDEN_RUST). Een lege lijst of een
   fout blijft drie minuten rust.
+- Live na de tweede deploy (fotocontrole 10:03 UTC): 3 tot 18 verzoeken per minuut, nul 403's; Egberts opzoekingen elke
+  30 tot 45 s in plaats van elke 3 min. Zijn 2dehands-rij was toen leeg op één onvindbaar artikel na, dat elke halve
+  minuut opnieuw werd opgezocht. Hetzelfde artikel wacht nu weer 3 min (_NIET_GEVONDEN_OPNIEUW), andere artikelen niet.
