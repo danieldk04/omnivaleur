@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## gezocht-advertentie-is-geen-voorraad
+
+*14-10-2026 — 14-10-2026: MP/2dehands-scan haalde "Gezocht"-advertenties binnen als voorraad (Anton, rambene); sinds faaea16 beginnen ze als genegeerd*
+
+Op Marktplaats en 2dehands kan een verkoper ook een advertentie zetten voor iets wat hij ZOEKT ("Pokémon Kaarten Gezocht | Inkoop 75–85%", "gezocht penplotter"). De scan zag die als gewone advertentie en "Import all" maakte er artikelen van, die daarna als te koop naar Vinted zouden gaan. Sinds faaea16 zet `_zoekertje` in backend/api/jobs.py zo'n kandidaat bij de scan op 'ignored' (zelfde route als `_alleen_barcode`). "Zeer/veel gezocht" is verkooptaal en blijft staan. Proef: tests/test_gezocht_advertentie_niet_importeren.py.
+
+**Why:** een gezochte spullen-advertentie als voorraad crosslisten zet iets te koop wat de klant niet heeft.
+
+**How to apply:** zie je bij een nieuwe klant vreemde kandidaten, kijk eerst of het zoekertjes zijn; bestaande pending rijen alleen per user_id omzetten.
+
+---
+
 ## paginavraag-zonder-tijdslimiet
 
 *14-10-2026 — Elke vraag van het invulscript aan de pagina (executeScript MAIN) heeft een tijdslimiet nodig; SET_PRICE_MAIN had die niet en liet Vinted na de rubriek eindeloos hangen (12-10-2026, 1.0.385)*

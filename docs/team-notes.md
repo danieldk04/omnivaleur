@@ -17250,3 +17250,21 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Dagmaximum 300: eerst Gemini, dan TaalmodelOnbeschikbaar; _haiku_classificatie probeert 3x en valt terug op de woordenlijst. Geen crash, geen foutmelding aan de klant, de verkoper kiest zelf een rubriek. tests/test_claude_kostenrem.py 3 van 3 geslaagd.
 - Oordeel: geen echte fout bewezen, niets veranderd. Aanbeveling: laten staan; de zwakke plek is het Gemini-quotum (gratis sleutel gaf eerder veel HTTP 429), niet Claude.
 - Open: /health na een dag zonder deploy bekijken (claude_dagmaximum, google_codes); Sonnet 5-kosten van 12-10 uitzoeken. backend/scheduler.py niet aangeraakt.
+
+## 14-10-2026: Onboarding nieuwe klanten (ochtend)
+
+- Gerepareerd (faaea16, server): de Marktplaats/2dehands-scan haalde "Gezocht"-advertenties binnen als voorraad, en
+  "Import all" maakte er artikelen van. Gezien bij Anton ("Pokémon Kaarten Gezocht | Inkoop 75–85%") en rambene
+  ("gezocht penplotter", "Gezocht: XY-penplotter"). Zo'n kandidaat begint nu als genegeerd ("zeer/veel gezocht" blijft
+  staan). Proef tests/test_gezocht_advertentie_niet_importeren.py, faalt op de oude code. Antons ene wachtende
+  zoekertje-kandidaat (bff0f8e7) van pending naar ignored gezet; voor 1 pending, na 0.
+- rambene (3ca7d523, rambene+omnivaleur@gmail.com), nieuw 13-10 13:59: 2dehands gescand, 24 advertenties ingelezen
+  (vespa-onderdelen, babyspullen, elektronica), daarna nul artikelen over en geen opdrachten aan artikelen. Het enige
+  pad dat artikelen en hun opdrachten allebei weghaalt is de verwijderknop in het dashboard, dus vrijwel zeker zelf
+  gewist; Railway-logs niet bekeken (geen CLI hier). Extensie 1.0.384, laatst 13-10 14:08. Mailtje klaargezet.
+- mickeyamg (52c017fb), nieuw 13-10 08:44: twee keer ingelogd, extensie nooit gemeld, nul artikelen. Mailtje klaargezet.
+- quintblok (d8a7c0dc), nieuw 13-10 08:34: herenkleding (Nike, Champion, adidas), 107 artikelen, 104 actief op Marktplaats
+  en Vinted, eerste plaatsing na 1,1 uur. Vinted-scan: niet ingelogd (klant). Mailtje klaargezet.
+- Anton (b60bd6fd): ongewijzigd, computer stil sinds 12-10 12:51, 2 MP-advertenties wachten op "Ja, verkocht". Postvak
+  toont geen verstuurde mail van 12-10; kort vervolgmailtje klaargezet.
+- robbertbolier: ongewijzigd nul, proef loopt vanavond af, al gemaild 08-10. Geen mailtje.
