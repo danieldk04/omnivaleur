@@ -3159,7 +3159,160 @@
       .filter((e) => e.offsetParent !== null);
   }
   function catTitel(e) {
+    const en = typeof catEngels === "function" ? catEngels(e) : null;
+    if (en) return en.titel;
     return (e.querySelector('[class*="Cell__title"]')?.textContent || e.textContent || "").trim();
+  }
+
+  // VINTED IN ELKE TAAL (15-10-2026, Janneke).
+  //
+  // Alles hieronder en hierboven kiest op ENGELSE namen: "Kids", "Girls
+  // clothing", hints als "girls clothing", bladen als "Jackets". Daniels Vinted
+  // staat in het Engels (html lang="en-NL"), dus daar klopte het. Janneke's
+  // Vinted staat in het Nederlands: "Kinderen", "Meisjeskleding", "Jacks". Dan
+  // raakte geen enkele regel een hint, meldde de stap "category: NIET gelukt",
+  // en koos Vinted zelf uit de foto. Gemeten op haar 29 geplaatste jassen en
+  // truien: meisjesjassen bij Jongenskleding, en bij tienermaten (152) gokte
+  // Vinted een damescategorie, waarna het formulier weigerde met "Kies een
+  // subcategorie" of "Vul je maat in".
+  //
+  // Elke regel in de kiezer draagt een vast nummer: id="catalog-1195" in de
+  // boom, "catalog-search-2548-result" in de zoekresultaten. Dat nummer is in
+  // elke taal hetzelfde (nagemeten: 2905 van 2905 nummers gelijk tussen
+  // vinted.nl en vinted.de). De achtergrond haalt de boom op in het Engels en in
+  // de taal van de pagina (VINTED_CATALOGUS); daarmee lezen we elke regel als
+  // Engelse regel, en zoeken we in de taal van de pagina.
+  let _catEn = null, _catLok = null, _catLokPad = null;
+  const _kaalCat = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
+  function _catPad(boom, id) {
+    const delen = [];
+    let n = boom && boom[id];
+    for (let i = 0; n && i < 10; i++) { delen.unshift(n[0]); n = boom[n[1]]; }
+    return delen;
+  }
+  function _vraagCatalogus(taal) {
+    return new Promise((klaar) => {
+      try {
+        chrome.runtime.sendMessage({ type: "VINTED_CATALOGUS", origin: location.origin, taal }, (a) => {
+          void chrome.runtime.lastError;
+          klaar(a && typeof a === "object" ? a : null);
+        });
+      } catch (_) { klaar(null); }
+    });
+  }
+  async function laadCatalogus() {
+    if (_catEn) return true;
+    const taal = (String(document.documentElement.lang || "en").split("-")[0] || "en").toLowerCase();
+    const [en, lok] = await Promise.race([
+      Promise.all([_vraagCatalogus("en"), taal === "en" ? null : _vraagCatalogus(taal)]),
+      sleep(15000).then(() => [null, null]),
+    ]);
+    if (!en) {
+      clog("Vinted-categorie: categorieboom niet op te halen, alleen de zichtbare tekst");
+      return false;
+    }
+    _catEn = en;
+    _catLok = lok || en;
+    _catLokPad = new Map();
+    for (const id of Object.keys(_catLok)) _catLokPad.set(_catPad(_catLok, id).map(_kaalCat).join(">"), id);
+    return true;
+  }
+  // Het nummer van een regel: op de regel zelf of een paar lagen erboven (een
+  // label of radio binnen de regel), of op de enige regel erbinnen.
+  function catIdVan(el) {
+    const NR = /catalog-(?:[a-z]+-)*(\d+)/;
+    let e = el;
+    for (let i = 0; e && i < 4; e = e.parentElement, i++) {
+      const m = NR.exec(typeof e.id === "string" ? e.id : "");
+      if (m) return m[1];
+    }
+    const binnen = el && el.querySelectorAll ? el.querySelectorAll('[id*="catalog-"]') : [];
+    if (binnen.length === 1) {
+      const m = NR.exec(binnen[0].id || "");
+      if (m) return m[1];
+    }
+    return null;
+  }
+  // Een regel in het Engels: { id, titel, pad }. Zonder nummer lukt het ook op
+  // naam plus kruimelpad in de taal van de pagina. null als het niet kan.
+  function catEngels(el, naam, kruimel) {
+    if (!_catEn) return null;
+    let id = el ? catIdVan(el) : null;
+    if ((!id || !_catEn[id]) && naam && kruimel && _catLokPad) {
+      const delen = String(kruimel).split(/[>›]/).map(_kaalCat).filter(Boolean);
+      id = _catLokPad.get([...delen, _kaalCat(naam)].join(">")) || null;
+    }
+    if (!id || !_catEn[id]) return null;
+    const pad = _catPad(_catEn, id);
+    return { id, titel: pad[pad.length - 1], pad: pad.slice(0, -1) };
+  }
+  // Engelse naam ("girls clothing") → de naam in de taal van de pagina, om in
+  // Vinted's zoekvak te typen. null als die naam niet in de boom staat.
+  function catLokaalVoor(enNaam) {
+    if (!_catEn || !_catLok) return null;
+    const doel = _kaalCat(enNaam);
+    for (const id of Object.keys(_catEn)) {
+      if (_kaalCat(_catEn[id][0]) === doel && _catLok[id]) return _catLok[id][0];
+    }
+    return null;
+  }
+
+  // KINDERKLEDING LOOPT VIA DE BOOM, OP JONGEN OF MEISJE.
+  //
+  // Voor kinderen bestond geen vast pad, alles ging via zoeken op "girls
+  // clothing" en Vinted's fotovoorstellen. Nu: Kids, dan Girls clothing of Boys
+  // clothing (uit de rubriek, anders uit de tekst), en daaronder Vinted's eigen
+  // voorstel of de soort kledingstuk uit de titel. Zegt niets of het een jongen
+  // of meisje is, dan alleen Kids, en dan beslist Vinted's voorstel over de tak.
+  const KIND_KLEDING = /^(babykleding|peuterkleding|jongens kleding|meisjes kleding|tieners jongens|tieners meisjes)$/;
+  function kinderPad(cat, item) {
+    if (!KIND_KLEDING.test(cat)) return null;
+    if (/meisjes/.test(cat)) return ["Kids", "Girls clothing"];
+    if (/jongens/.test(cat)) return ["Kids", "Boys clothing"];
+    const t = `${item?.title || ""} ${item?.description || ""} ${item?.title_en || ""}`.toLowerCase();
+    const meisje = /\b(meisjes?|girls?|dochter)\b/.test(t), jongen = /\b(jongens?|boys?|zoon)\b/.test(t);
+    if (meisje && !jongen) return ["Kids", "Girls clothing"];
+    if (jongen && !meisje) return ["Kids", "Boys clothing"];
+    return ["Kids"];
+  }
+  // Welk kledingstuk is het? Alleen voor kinderkleding, op Vinted's Engelse
+  // namen van de lagen onder Girls/Boys clothing. Een winterjas krijgt hier
+  // bewust geen blad (Coats of Puffer jackets): dat ziet Vinted op de foto beter.
+  const KIND_VOORKEUR = [
+    [/\b(meisjes?|girls?|dochter)\b/i, /^girls clothing$/i],
+    [/\b(jongens?|boys?|zoon)\b/i, /^boys clothing$/i],
+    [/jas\b|jasje|jassen|[a-z]jack\b|\bjackets?\b|\bcoats?\b|\bparka|\bmantel\b|bodywarmer|\bgilet/i, /^outerwear$/i],
+    [/bodywarmer|\bgilet/i, /^gilets/i],
+    [/regenjas|regenpak|\brain/i, /^rain/i],
+    [/skijas|skibroek|skipak|sneeuwpak|\bsnow/i, /^snow/i],
+    [/\bparka|\bmantel\b|duffel|trenchcoat|peacoat|\bcoats?\b/i, /^coats$/i],
+    [/jas\b|jasje|jassen|[a-z]jack\b|\bjackets?\b/i, /^jackets$/i],
+    [/gewatteerd|puffer|donsjas/i, /^puffer/i],
+    [/fleece/i, /^fleece/i],
+    [/spijkerjas|spijkerjack|jeansjas|\bdenim/i, /^denim/i],
+    [/bomber/i, /^bomber/i],
+    [/blazer|colbert/i, /^blazers/i],
+    [/\btrui|sweater|jumper|pullover|hoodie|sweatshirt|\bvest\b|vestje|cardigan/i, /^jumpers/i],
+    [/\bvest\b|vestje|cardigan/i, /^cardigans/i],
+    [/\bjurk|\bdress/i, /^dresses/i],
+    [/\brok\b|rokje|skirt/i, /^skirts/i],
+    [/broek|jeans|legging|\bshorts?\b|trousers/i, /^trousers/i],
+    [/shirt|blouse|\btop\b|topje|\bpolo/i, /^tops/i],
+  ];
+  function kiesBladKind(namen, tekst) {
+    for (const [inTekst, inNaam] of KIND_VOORKEUR) {
+      if (!inTekst.test(tekst)) continue;
+      const i = namen.findIndex((n) => inNaam.test(n));
+      if (i >= 0) { bladReden = "voorkeur"; return i; }
+    }
+    const i = kiesBlad(namen, tekst);
+    // Onder Jackets staat geen "Other …"; zonder enig houvast is een lichte jas
+    // (Windbreakers) de keuze zonder aanname, niet de eerste regel (Blazers).
+    if (bladReden === "neutraal" && !/^other\b/i.test(namen[i] || "")) {
+      const w = namen.findIndex((n) => /^windbreakers?$/i.test(n));
+      if (w >= 0) return w;
+    }
+    return i;
   }
 
   // KLIK DOOR TOT ER ECHT EEN CATEGORIE STAAT (05-09-2026, Amanda Haas).
