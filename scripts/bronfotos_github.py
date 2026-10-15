@@ -46,7 +46,11 @@ def _server(pad: str, body=None) -> dict:
     data = None if body is None else json.dumps(body).encode()
     req = urllib.request.Request(SERVER + pad, data=data, method="GET" if data is None else "POST",
                                  headers={"Authorization": "Bearer " + _bewijs(),
-                                          "Content-Type": "application/json"})
+                                          "Content-Type": "application/json",
+                                          # Cloudflare weigert de standaardnaam "Python-urllib" met
+                                          # foutcode 1010 nog voor onze server het verzoek ziet
+                                          # (gemeten 15-10-2026, eerste ronde gaf daardoor 403).
+                                          "User-Agent": "omnivaleur-bronfotos/1.0 (+https://omnivaleur.com)"})
     with urllib.request.urlopen(req, timeout=180) as r:
         return json.load(r)
 
