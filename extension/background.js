@@ -10910,7 +10910,7 @@ async function herstartAlsHetKan(reden) {
 async function controleerOpNieuweVersie() {
   // Staat er al een update klaar die we alleen niet konden installeren omdat er
   // werk liep, dan is opnieuw vragen zinloos: gewoon nog eens proberen.
-  if (_updateWachtSinds) { await herstartAlsHetKan("wachtend"); return; }
+  if (await updateWachtSinds()) { await herstartAlsHetKan("wachtend"); return; }
   try {
     const { status } = await chrome.runtime.requestUpdateCheck();
     if (status === "update_available") await herstartAlsHetKan("gevonden");
