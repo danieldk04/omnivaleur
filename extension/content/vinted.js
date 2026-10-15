@@ -3411,6 +3411,12 @@
     if (voorstelPaden.length) {
       clog(`Vinted stelt zelf voor: ${voorstelPaden.map((p) => p.join(" > ")).join(", ")}`);
     }
+    // Alleen "Kids" (jongen of meisje onbekend) en Vinted stelt niets onder
+    // Girls/Boys clothing voor: dan weten we de tak niet. Liever zoeken dan gokken.
+    if (kind && pad.length === 1 && !voorstelPaden.some((v) => /^(girls|boys) clothing$/i.test(v[0] || ""))) {
+      clog("Vinted-categorie: kinderkleding zonder jongen/meisje en zonder voorstel van Vinted — via zoeken");
+      return false;
+    }
 
     for (const stap of pad) {
       if (!(await klik(stap))) {
