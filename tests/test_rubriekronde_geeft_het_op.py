@@ -30,6 +30,7 @@ from datetime import datetime, timezone
 import pytest
 
 from backend.services import categorie_herstel as ch
+from backend.services import taalmodel
 
 
 class _Antwoord:
@@ -162,6 +163,9 @@ def _draai(monkeypatch, db, antwoorden):
 
     async def _nep_model(titel, omschrijving, merk=None):
         gevraagd.append(titel)
+        # Het nepmodel antwoordt echt (ook als dat antwoord "past nergens" is),
+        # dus het staat in het antwoordspoor van taalmodel.
+        taalmodel._beantwoord("nep")
         return antwoorden.get(titel) or {}
 
     import backend.api.imports as imports_mod
@@ -379,3 +383,34 @@ def test_de_taxonomie_kent_geen_rubriek_voor_auto_onderdelen():
     for woord in ("autoband", "sneeuwketting", "velgen", "dvd film", "blu-ray film"):
         assert not any(woord in c for c in alle), (
             f'er bestaat nu wél een rubriek met "{woord}" erin')
+
+
+def test_een_vraag_zonder_antwoord_kost_geen_kans(monkeypatch):
+    """15-10-2026, Delftsblaeu: 137 antieke prenten verloren een kans in een nacht
+    waarin Google 99% HTTP 429 gaf. Er lukte wel iets (een jas), dus de
+    storingsrem sloeg niet aan. Hier loopt de echte keten tot aan Gemini:
+    de jas krijgt antwoord, de prent krijgt 429 (vraag geeft niets terug)."""
+    from backend.services import gemini_vertaling
+    import backend.api.imports as imports_mod
+
+    def _nep_gemini(opdracht, **_kw):
+        if "winterjas" in opdracht:
+            return '{"gender":"dames","category":"jassen","confidence":"high"}'
+        return None                       # zo komt een 429 terug uit gemini_vertaling
+
+    monkeypatch.setattr(gemini_vertaling, "beschikbaar", lambda: True)
+    monkeypatch.setattr(gemini_vertaling, "vraag", _nep_gemini)
+    monkeypatch.setattr(taalmodel.settings, "anthropic_api_key", None, raising=False)
+    monkeypatch.setattr(imports_mod, "_CLASSIFY_WACHT_S", (0.0, 0.0))
+    db = _DB([
+        _artikel("prent", "Rotterdam. The Annual Fair. 1868."),
+        _artikel("jas", "Wollen winterjas dames maat M"),
+    ], NIEUWE_KOLOMMEN)
+    monkeypatch.setattr(ch, "get_db", lambda: db)
+
+    uit = asyncio.run(ch.herstel_rubrieken())
+
+    assert uit["gevuld"] == 1, uit
+    assert db.rijen[1]["category"] == "jassen"
+    assert db.rijen[0]["rubriek_pogingen"] == 0, (
+        "de prent verloor een kans terwijl het model hem nooit beantwoordde")

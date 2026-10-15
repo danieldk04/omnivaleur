@@ -231,6 +231,7 @@ async def herstel_rubrieken(limiet: int = STANDAARD_LIMIET,
                             user_id: str | None = None) -> dict:
     """Vul de rubriek van artikelen die er geen hebben. Geeft de telling terug."""
     from backend.api.imports import _infer_attributes_smart
+    from backend.services import taalmodel
 
     db = get_db()
     velden = "id,title,description,brand,category,gender,color"
@@ -274,8 +275,9 @@ async def herstel_rubrieken(limiet: int = STANDAARD_LIMIET,
     zonder_uitkomst: dict[int, list[dict]] = {}
     for item in items:
         try:
-            uitkomst = await _infer_attributes_smart(
-                item.get("title"), item.get("description"), item.get("brand")) or {}
+            with taalmodel.volg_antwoorden() as antwoorden:
+                uitkomst = await _infer_attributes_smart(
+                    item.get("title"), item.get("description"), item.get("brand")) or {}
         except Exception as e:
             logger.warning(f"Rubriekherstel mislukt voor {item.get('id')}: {e}")
             mislukt += 1
@@ -288,6 +290,16 @@ async def herstel_rubrieken(limiet: int = STANDAARD_LIMIET,
         }
         if not patch.get("category"):
             leeg += 1
+            # GEEN ANTWOORD IS GEEN UITKOMST (15-10-2026, Delftsblaeu). De regel
+            # hieronder ("gevuld > 0") vangt alleen een ronde waarin niets lukte.
+            # In de nacht van 15-10 gaf Google 99% HTTP 429; de woordenlijst en
+            # een handvol antwoorden vulden er een paar, en daardoor verloren
+            # 137 antieke prenten een kans waar het model nooit naar had
+            # gekeken. Na drie zulke nachten staan ze voorgoed zonder rubriek,
+            # en zonder rubriek gaat elk kanaal op slot. Nu telt een kans
+            # alleen als het model voor dít artikel echt antwoordde.
+            if not antwoorden:
+                continue
             stand = int(item.get(_TELLER) or 0) + 1
             zonder_uitkomst.setdefault(min(stand, MAX_POGINGEN), []).append(item)
             continue
