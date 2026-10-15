@@ -3784,8 +3784,14 @@
       if (c.radio && !c.radio.checked) { c.radio.click(); await sleep(150); }
       await sleep(400);
       // Some flows need a leaf "Select"/confirm step.
-      const confirm = [...document.querySelectorAll('button, [role="option"]')]
-        .find((b) => b.offsetParent !== null && /^(select|kies|done|opslaan|save)$/i.test(b.textContent.trim()));
+      // ALLEEN BINNEN DE KIEZER (15-10-2026, live op een Nederlandse Vinted).
+      // Dit zocht over de hele pagina, ook naar "opslaan|save". Op een Nederlandse
+      // Vinted heet de conceptknop onderaan het formulier precies "Opslaan": elke
+      // gezochte categorie bewaarde het artikel als concept en Vinted sprong naar
+      // het profiel, midden in het plaatsen. De kiezer zelf heeft geen bevestigknop.
+      const kiezer = c.row?.closest?.('[data-testid="catalog-select-dropdown-content"]');
+      const confirm = kiezer && [...kiezer.querySelectorAll('button, [role="option"]')]
+        .find((b) => b.offsetParent !== null && /^(select|kies|done|klaar)$/i.test(b.textContent.trim()));
       if (confirm) { confirm.click(); await sleep(300); }
     };
 
