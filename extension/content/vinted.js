@@ -3356,7 +3356,8 @@
     const cellen = () => [...document.querySelectorAll('[class*="Cell__clickable"]')]
       .filter((e) => e.offsetParent !== null);
     // Engels via het regelnummer (zie "VINTED IN ELKE TAAL"), anders de tekst.
-    const titel = catTitel;
+    const titel = (e) => (typeof catEngels === "function" ? catEngels(e) : null)?.titel
+      || (e.querySelector('[class*="Cell__title"]')?.textContent || e.textContent || "").trim();
     const klik = async (label) => {
       const c = cellen().find((e) => titel(e).toLowerCase() === label.toLowerCase());
       if (!c) return false;
@@ -3488,6 +3489,9 @@
     const gender = (item.gender || "").toLowerCase().trim(); // "heren"/"dames" if present
     const inp = qs('input[data-testid="catalog-select-dropdown-input"]');
     if (!inp) return false;
+    // De boom met regelnummers, zodat een Vinted in elke taal werkt (zie
+    // "VINTED IN ELKE TAAL"). Lukt dat niet, dan gaat alles zoals vroeger.
+    await laadCatalogus();
 
     // Vinted heeft voor deze rubriek geen plek (V_PAD null). Niet zoeken en een
     // naastgelegen blad pakken, maar stoppen met een reden die de verkoper snapt.
@@ -3591,6 +3595,9 @@
       const rowText = (row) => {
         const titel = row.querySelector?.('[class*="Cell__title"]')?.textContent || "";
         const pad = row.querySelector?.('[class*="Cell__body"]')?.textContent || "";
+        // Een regel in een andere taal lezen we in het Engels, via zijn nummer.
+        const en = catEngels(row, titel.trim(), pad.trim());
+        if (en) return (en.pad.length ? `${en.titel} | ${en.pad.join(" > ")}` : en.titel).toLowerCase();
         const ruw = (titel && pad) ? `${titel} | ${pad}` : (row.textContent || "");
         return ruw
           .replace(/([a-z0-9&\]])([A-Z])/g, "$1 $2")  // "jerseysWomen" → "jerseys Women"
@@ -3822,7 +3829,8 @@
     //    surfaces a usable option (the captured-category hint is tried too).
     if (!choice && hints.length) {
       for (const h of hints) {
-        typeSearch(h);
+        // In Vinted's zoekvak in de taal van de pagina ("Meisjeskleding").
+        typeSearch(catLokaalVoor(h) || h);
         const deadline = Date.now() + 3500;
         while (Date.now() < deadline && !choice) {
           await sleep(250);
@@ -3849,7 +3857,15 @@
       || document.querySelector('[data-testid="catalog-select-dropdown"]')?.textContent
       || "").toLowerCase();
     if (!display) return false;
-    const hintOk = hints.length === 0 || hints.some((h) => display.includes(h));
+    // In een andere taal toont het veld "Jacks": ook de Engelse paden van
+    // regels met die naam meewegen (zie "VINTED IN ELKE TAAL").
+    let tekst = display;
+    if (typeof _catLok !== "undefined" && _catLok && _catEn) {
+      for (const id of Object.keys(_catLok)) {
+        if (_kaalCat(_catLok[id][0]) === _kaalCat(display)) tekst += " " + _catPad(_catEn, id).join(" > ").toLowerCase();
+      }
+    }
+    const hintOk = hints.length === 0 || hints.some((h) => tekst.includes(h));
     if (!hintOk) console.warn("[Omnivaleur] Vinted category may not match item:", display, "expected one of", hints);
     return hintOk;
   }
