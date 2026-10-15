@@ -175,3 +175,4 @@ input[name="bulk-verzending"]:checked
 #upd-lijst .upd
 X-Woo-Via-Browser
 X-Woo-Soort
+#modal-account-wissen .modal

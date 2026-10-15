@@ -17475,3 +17475,12 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Correctie op de nachtnotitie: de 2.124 artikelen die ik op new_with_tags had gezet, stonden bewust op new. Janneke: te veel "nieuw met prijskaartje" maakt haar verdacht bij Vinted. Teruggezet, ook in de wachtende Vinted-opdrachten. Er is in de tussentijd niets met de verkeerde staat geplaatst.
 - Nu 3.580 new en 5 new_with_tags (was 3.574 en 11). Zes van haar eigen "met labels"-artikelen waren niet meer te onderscheiden en staan nu op zonder labels, wat ze zelf zegt te willen.
 - Afspraak (Daniel): geen klantgegevens op eigen initiatief wijzigen. Alleen wat gevraagd is; zie kennisbank "klantdata-niet-op-eigen-initiatief".
+
+## 15-10-2026: Benedikt, account wissen en gegevens downloaden (AVG)
+
+- Testklant Benedikt: geen knop om je account te wissen, onduidelijk waar de data staat. Daniel wil het AVG-conform.
+- Gebouwd: kaart "Privacy & your data" onder Account (waar staat mijn data, Download, Delete account met wachtwoord). Server: `/api/account/export` en `/api/account/delete` (backend/api/account.py). Proef: tests/test_account_wissen_en_download.py (twee klanten, de ander blijft intact; Stripe stuk = niets gewist; fout wachtwoord = niets gewist).
+- Privacyverklaring bijgewerkt (15-10): Cloudflare R2, Resend, Zoho, Google en Anthropic als verwerkers, bewaartermijnen kloppen met de knop, en Google Analytics wordt nu eerlijk genoemd.
+- Open, niet gemeten of beslist: (1) de site laadt Google Analytics op elke pagina zonder toestemmingsbanner; volgens de AP heeft dat toestemming nodig. Banner bouwen of GA uit is Daniels beslissing. (2) Railway-regio onbekend, dus de verklaring noemt die niet. (3) Of met alle verwerkers een verwerkersovereenkomst is afgesloten, is niet nagekeken. (4) Het wissen is alleen getest op een nagemaakte database, nog niet op een echt testaccount.
+- Geen klantmelding/popup: een nieuwe kaart in Account is geen grote verandering.
+

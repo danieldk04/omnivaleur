@@ -30,8 +30,12 @@ class Zoek:
     def __init__(self, db, tabel):
         self.db, self.tabel = db, tabel
         self.filters, self.actie, self.bereik = [], "select", None
+        self.kolommen = None
 
-    def select(self, *_a, **_k): return self
+    def select(self, kolommen="*", *_a, **_k):
+        # Net als de echte database: alleen de gevraagde kolommen komen terug.
+        self.kolommen = None if kolommen == "*" else [k.strip() for k in kolommen.split(",")]
+        return self
     def order(self, *_a, **_k): return self
     def limit(self, n): self.bereik = (0, n - 1); return self
     def range(self, a, b): self.bereik = (a, b); return self
@@ -47,6 +51,8 @@ class Zoek:
             return SimpleNamespace(data=raak)
         if self.bereik:
             raak = raak[self.bereik[0]:self.bereik[1] + 1]
+        if self.kolommen:
+            return SimpleNamespace(data=[{k: r.get(k) for k in self.kolommen} for r in raak])
         return SimpleNamespace(data=[dict(r) for r in raak])
 
 
@@ -193,6 +199,6 @@ def test_download_bevat_alleen_eigen_gegevens_en_geen_sleutels(wereld):
     assert all(a["user_id"] == A for a in data["artikelen"])
     assert "b-i" not in tekst and "b-l" not in tekst
     assert "GEHEIM" not in tekst and "cus_a" not in tekst and "sub_a" not in tekst
-    assert data["gekoppelde_platforms"] == [{"platform": "vinted"}] or \
-        [p.get("platform") for p in data["gekoppelde_platforms"]] == ["vinted"]
+    assert [p["platform"] for p in data["gekoppelde_platforms"]] == ["vinted"]
+    assert all("result" not in j for j in data["opdrachten"])
     assert data["account"]["email"] == "a@example.nl"

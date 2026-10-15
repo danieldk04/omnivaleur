@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=94918f4a00"></script>
+<script src="/i18n.js?v=14f7e032d4"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -2171,6 +2171,34 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           </div>
         </div>
 
+        <!-- Privacy & gegevens (15-10-2026, Benedikt): waar staat mijn data, download, account wissen -->
+        <div class="card" id="privacy-kaart" style="margin-bottom:20px">
+          <div class="card-header"><h2>Privacy &amp; your data</h2></div>
+          <div style="padding:6px 22px 8px">
+            <div style="padding:14px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:16px">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Where your data is stored</div>
+                <div style="font-size:12px;color:var(--muted);line-height:1.5">Your account, items and listings are stored in the EU (Supabase, Ireland). Photos are stored with Cloudflare, payments are handled by Stripe. Your marketplace logins never leave your own browser.</div>
+              </div>
+              <a href="/privacy" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="flex-shrink:0;text-decoration:none">Privacy policy</a>
+            </div>
+            <div style="padding:14px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:16px">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Download your data</div>
+                <div style="font-size:12px;color:var(--muted);line-height:1.5">Everything we hold about you, as one file you can keep.</div>
+              </div>
+              <button id="download-data-btn" onclick="downloadMijnGegevens(this)" class="btn btn-outline btn-sm" style="flex-shrink:0">Download</button>
+            </div>
+            <div style="padding:14px 0;display:flex;align-items:center;justify-content:space-between;gap:16px">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Delete account</div>
+                <div style="font-size:12px;color:var(--muted);line-height:1.5">Permanently removes your account, items, photos and subscription.</div>
+              </div>
+              <button onclick="openAccountWissen()" class="btn btn-danger btn-sm" style="flex-shrink:0">Delete account</button>
+            </div>
+          </div>
+        </div>
+
         <!-- Owner-only: verstuurt de proefherinnering naar het eigen adres -->
         <div class="card" id="owner-tools" style="display:none">
           <div class="card-header"><h2>Owner tools</h2></div>
@@ -2757,6 +2785,31 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
 </div>
 
 <!-- BULK Omnivaleur MODAL -->
+<div id="modal-account-wissen" class="modal-overlay" style="display:none" onclick="closeOnOverlay(event,'modal-account-wissen')">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Delete your account</h3>
+      <button class="close-btn" onclick="closeModal('modal-account-wissen')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--text);margin-bottom:12px;line-height:1.5">This cannot be undone. We will:</p>
+      <ul style="font-size:13px;color:var(--muted);line-height:1.7;margin:0 0 16px 18px;padding:0">
+        <li>stop your subscription right away</li>
+        <li>delete your items, listings and photos</li>
+        <li>delete your login, so you can no longer sign in</li>
+      </ul>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5">Your ads on Vinted, Marktplaats and other sites stay online. Remove them there yourself if you want them gone. Invoices are kept for 7 years because tax law requires it. <a href="#" onclick="closeModal('modal-account-wissen');downloadMijnGegevens(document.getElementById('download-data-btn'));return false">Download your data first</a>.</p>
+      <label for="wis-wachtwoord" style="font-size:12px;font-weight:600;display:block;margin-bottom:6px">Enter your password to confirm</label>
+      <input id="wis-wachtwoord" type="password" autocomplete="current-password" oninput="document.getElementById('wis-bevestig').disabled = !this.value" onkeydown="if(event.key==='Enter'&&this.value)doAccountWissen()" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;background:var(--surface);color:var(--text)">
+      <div id="wis-fout" style="display:none;margin-top:10px;font-size:12px;font-weight:600;color:var(--red)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-account-wissen')">Cancel</button>
+      <button id="wis-bevestig" class="btn btn-danger" disabled onclick="doAccountWissen()">Delete permanently</button>
+    </div>
+  </div>
+</div>
+
 <div id="modal-bulk-crosslist" class="modal-overlay" style="display:none" onclick="closeOnOverlay(event,'modal-bulk-crosslist')">
   <div class="modal">
     <div class="modal-header">
@@ -12586,6 +12639,67 @@ function updatePhotoUploadGate() {
 }
 
 // ── Utils ────────────────────────────────────────────────────────
+// ── Privacy: eigen gegevens downloaden en het account wissen ──────────────────
+async function downloadMijnGegevens(knop) {
+  const oud = knop ? knop.textContent : '';
+  if (knop) { knop.disabled = true; knop.textContent = 'Preparing…'; }
+  try {
+    const r = await apiFetch(`${API}/api/account/export`);
+    if (!r.ok) throw new Error('export ' + r.status);
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'omnivaleur-mijn-gegevens.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    showToast('Your data has been downloaded');
+  } catch (e) {
+    showToast('Could not prepare your download. Please try again.');
+  } finally {
+    if (knop) { knop.disabled = false; knop.textContent = oud; }
+  }
+}
+
+function openAccountWissen() {
+  const veld = document.getElementById('wis-wachtwoord');
+  veld.value = '';
+  document.getElementById('wis-bevestig').disabled = true;
+  document.getElementById('wis-fout').style.display = 'none';
+  document.getElementById('modal-account-wissen').style.display = 'flex';
+  setTimeout(() => veld.focus(), 50);
+}
+
+async function doAccountWissen() {
+  const knop = document.getElementById('wis-bevestig');
+  const fout = document.getElementById('wis-fout');
+  const wachtwoord = document.getElementById('wis-wachtwoord').value;
+  if (!wachtwoord || knop.disabled) return;
+  knop.disabled = true; knop.textContent = 'Deleting…';
+  fout.style.display = 'none';
+  try {
+    const r = await apiFetch(`${API}/api/account/delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: wachtwoord }),
+    });
+    if (r.ok) {
+      SESSIE.wisAlles();
+      const modal = document.querySelector('#modal-account-wissen .modal');
+      modal.innerHTML = '<div class="modal-body" style="padding:36px 26px;text-align:center"><div style="font-size:16px;font-weight:700;margin-bottom:8px">Your account has been deleted</div><div style="font-size:13px;color:var(--muted)">Thank you for trying Omnivaleur. Take care.</div></div>';
+      setTimeout(() => { location.href = '/'; }, 3000);
+      return;
+    }
+    let tekst = 'Something went wrong. Please try again.';
+    try { const j = await r.json(); if (typeof j.detail === 'string') tekst = j.detail; } catch (_) {}
+    if (r.status === 401) tekst = 'That password is not correct.';
+    fout.textContent = tekst; fout.style.display = 'block';
+  } catch (e) {
+    fout.textContent = 'No connection. Nothing was deleted, please try again.'; fout.style.display = 'block';
+  }
+  knop.textContent = 'Delete permanently';
+  knop.disabled = !document.getElementById('wis-wachtwoord').value;
+}
+
 function closeModal(id){document.getElementById(id).style.display='none';}
 function closeOnOverlay(e,id){if(e.target.id===id)closeModal(id);}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}

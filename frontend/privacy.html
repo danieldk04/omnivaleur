@@ -99,7 +99,7 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
 <div class="legal-wrap">
   <div class="legal-label">Legal</div>
   <h1>Privacy Policy</h1>
-  <p class="meta">Last updated: 29 June 2026 &nbsp;·&nbsp; Effective: 29 June 2026</p>
+  <p class="meta">Last updated: 15 October 2026 &nbsp;·&nbsp; Effective: 15 October 2026</p>
 
   <div class="info-box">
     <p><strong>Controller:</strong> Revaleur, Kleine Melanen 5, 4614RG Bergen op Zoom, the Netherlands · KVK 86792423 · VAT NL004117227B97 · <a href="mailto:info@omnivaleur.com">info@omnivaleur.com</a></p>
@@ -114,7 +114,9 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
   <ul>
     <li><strong>Account data:</strong> email address and password (hashed) when you create an account via Supabase Auth.</li>
     <li><strong>Billing data:</strong> payment method details are processed directly by Stripe. We store only your Stripe customer ID and subscription status — we never see or store your full card number.</li>
-    <li><strong>Listing data:</strong> item titles, descriptions, photos, prices and other product information you enter to crosslist.</li>
+    <li><strong>Listing data:</strong> item titles, descriptions, photos, prices and other product information you enter to crosslist. Photos are stored in our own storage bucket at Cloudflare (R2) and served from img.omnivaleur.com.</li>
+    <li><strong>Automated text help:</strong> when Omnivaleur suggests a category, translates a title or description, or writes a listing text from your photos, the text (and, for the photo feature, the photos) of that one item is sent to an AI provider (see section 5). We do not send your email address or account details.</li>
+    <li><strong>Emails we send you:</strong> your email address, the messages we send (such as trial reminders and product updates) and whether they were delivered. You can unsubscribe from non-essential emails at any time.</li>
     <li><strong>WooCommerce connection:</strong> the REST API key your shop gives Omnivaleur when you approve the connection (or that you paste yourself) is stored on our servers. It is used only to read your products and orders and to update products and stock in your shop. You can revoke it at any time in WooCommerce under Settings, Advanced, REST API.</li>
     <li><strong>Platform session data:</strong> session cookies for connected marketplaces (Marktplaats, 2dehands, Vinted, Facebook Marketplace, Shopify) are stored locally in your Chrome extension and are never transmitted to our servers in readable form.</li>
     <li><strong>Usage data:</strong> server access logs (IP address, browser type, pages visited, timestamps) for security and debugging.</li>
@@ -129,10 +131,11 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
 
   <h2>4. How long we keep your data</h2>
   <ul>
-    <li>Account data: retained for as long as your account is active, and up to 30 days after deletion upon request.</li>
-    <li>Billing / invoice records: 7 years (Dutch fiscal retention requirement).</li>
+    <li>Account data: retained for as long as your account is active. When you use <strong>Delete account</strong> in the dashboard, your login, items, listings, photos, connections and subscription are deleted immediately and your subscription is stopped. If you ask us by email instead, we do it within 30 days.</li>
+    <li>Billing / invoice records: 7 years (Dutch fiscal retention requirement). These stay with Stripe and in our administration after you delete your account.</li>
+    <li>If you unsubscribed from our emails, we keep your email address on a suppression list so we do not email you again. This is the only thing we keep beyond the above.</li>
     <li>Server logs: maximum 90 days.</li>
-    <li>Listing and item data: deleted within 30 days of account deletion.</li>
+    <li>Photos on third-party platforms and the ads you published there are not deleted by us. They sit in your own account at those platforms.</li>
   </ul>
 
   <h2>5. Who we share your data with</h2>
@@ -141,11 +144,15 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
     <li><strong>Supabase Inc.</strong> (database and authentication) — servers in the EU (AWS eu-west-1).</li>
     <li><strong>Stripe Inc.</strong> (payment processing) — Stripe is certified PCI-DSS Level 1 and compliant with EU data transfer rules.</li>
     <li><strong>Railway Corp.</strong> (hosting) — our backend runs on Railway infrastructure.</li>
+    <li><strong>Cloudflare, Inc.</strong> (photo storage and delivery, DNS and security) — your listing photos are stored in Cloudflare R2.</li>
+    <li><strong>Resend</strong> and <strong>Zoho</strong> (email delivery and our mailbox) — your email address and the emails we exchange with you.</li>
+    <li><strong>Google LLC</strong> (Gemini) and <strong>Anthropic PBC</strong> (Claude) — AI providers used for category suggestions, translations and listing texts, as described in section 2. Only the content of the item involved is sent.</li>
+    <li><strong>Google LLC</strong> (Google Analytics) — statistics about how our website and app are used, see section 8.</li>
   </ul>
   <p>When you list items on third-party platforms (Marktplaats, 2dehands, Vinted, Facebook Marketplace, Shopify, WooCommerce), your listing content is transmitted to those platforms under their own terms and privacy policies.</p>
 
   <h2>6. International data transfers</h2>
-  <p>Our primary processors (Supabase, Stripe) process data within the European Economic Area or under Standard Contractual Clauses (SCCs) approved by the European Commission, ensuring an equivalent level of protection to that provided under GDPR.</p>
+  <p>Supabase stores your account and listing data in the EU. Some of our other processors (for example Stripe, Cloudflare, Google, Anthropic, Resend and Zoho) may process data outside the European Economic Area. Where they do, this happens under Standard Contractual Clauses (SCCs) approved by the European Commission or an equivalent safeguard, ensuring an equivalent level of protection to that provided under GDPR.</p>
 
   <h2>7. Your rights under GDPR</h2>
   <p>As a data subject within the EU/EEA, you have the right to:</p>
@@ -158,10 +165,10 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
     <li><strong>Object</strong> to processing based on legitimate interests (Art. 21).</li>
     <li><strong>Lodge a complaint</strong> with the Dutch Data Protection Authority (Autoriteit Persoonsgegevens) at <a href="https://autoriteitpersoonsgegevens.nl" target="_blank" rel="noopener">autoriteitpersoonsgegevens.nl</a>.</li>
   </ul>
-  <p>To exercise any of these rights, email <a href="mailto:info@omnivaleur.com">info@omnivaleur.com</a>. We will respond within 30 days.</p>
+  <p>You can use most of these rights yourself in the dashboard, under <strong>Account</strong>, <strong>Privacy &amp; your data</strong>: download everything we hold about you (access and portability) or delete your account (erasure). For anything else, or if you prefer, email <a href="mailto:info@omnivaleur.com">info@omnivaleur.com</a>. We will respond within 30 days.</p>
 
   <h2>8. Cookies</h2>
-  <p>The Omnivaleur web app uses only functional cookies required to maintain your login session. We do not use tracking, advertising or analytics cookies. The Chrome extension stores marketplace session data in Chrome's local extension storage — this never leaves your device and is not accessible to us.</p>
+  <p>The Omnivaleur web app uses functional cookies and browser storage required to maintain your login session. Our website and web app also load Google Analytics (GA4), which sets analytics cookies to measure how pages are used. We do not use advertising cookies. The Chrome extension stores marketplace session data in Chrome's local extension storage — this never leaves your device and is not accessible to us.</p>
 
   <h2>9. Security</h2>
   <p>We protect your data using industry-standard measures: HTTPS encryption for all data in transit, hashed passwords (bcrypt via Supabase Auth), and access controls limiting who within Revaleur can access production data. We perform regular security reviews.</p>

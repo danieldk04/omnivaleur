@@ -17,6 +17,21 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## account-wissen-en-gegevens-download
+
+*15-10-2026 — 15-10 Benedikt: klant kan zelf account wissen en gegevens downloaden (Account, Privacy en je gegevens); wat blijft staan en waarom*
+
+Sinds 15-10-2026 staan in het dashboard onder Account de kaart "Privacy & your data": waar staat mijn data, Download (JSON), Delete account (wachtwoord). Code: backend/api/account.py (`/api/account/export`, `/api/account/delete`), proef tests/test_account_wissen_en_download.py.
+
+Volgorde bij wissen: wachtwoord, Stripe stopzetten (faalt dat, dan blijft ALLES staan), foto's onder `<user_id>/` in R2 en Supabase Storage, rijen in brokken (sync_events heeft geen cascade op listings), inlogaccount als laatste zodat een halve poging herhaalbaar is.
+
+Blijft bewust staan: Stripe-klant met facturen (7 jaar bewaarplicht) en mail_unsubscribed (afmelding onthouden). Advertenties bij Vinted/Marktplaats raken we niet aan.
+
+**Why:** Benedikt (testklant) miste een wisknop en wist niet waar zijn data staat; Daniel wil AVG-conform (art. 15, 17, 20).
+**How to apply:** komt er een nieuwe tabel met klantdata bij, zet hem in `_WIS_PER_GEBRUIKER` in account.py en in de download. Privacyverklaring (frontend/privacy.html) bijwerken bij elke nieuwe verwerker. Zie "rapportage-in-gewone-taal".
+
+---
+
 ## klantdata-niet-op-eigen-initiatief
 
 *15-10-2026 — "Nooit klantgegevens (staat, prijs, titel, merk) massaal aanpassen op eigen redenering; Janneke zette bewust \"nieuw zonder labels\" en ik zette 2.124 artikelen om"*
