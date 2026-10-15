@@ -17540,3 +17540,9 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Janneke (31d28378) draait nu 1.0.388; sinds 11:07 UTC vier Vinted-plaatsingen en een Marktplaats-plaatsing gelukt, de donkerblauwe trui (01ae2415) is klaar.
 - Rest klant: 26cf5471 vier keer niet ingelogd op Vinted (scan), f8c0cce9 een Vinted-bijwerking zonder antwoord na 3 min (eenmalig).
 - Wachtrij ongewijzigd: Goudlief 214, 0b28c1ce 191 (extensie stil sinds 01-10, betalend). Geen codewijziging.
+
+## 15-10-2026 (avond): Toon, foto's van SiteGround: server haalde 1 artikel binnen, daarna stil
+
+- Gemeten na de uurronde (bronfotos_inhalen, 14426ba0): 242 naar 241 artikelen met bronfoto's. TK47 kreeg om 15:59 UTC zijn 7 foto's in onze opslag, dus de server kwam toen wel bij de bron. Daarna geen daling meer (twee uurrondes), consistent met een captcha-blokkade na enkele foto's. Niet vastgesteld: of dat zo is, want de Railway-logs zijn niet in te zien.
+- Mijn eigen herstelronde vanaf de Mac is om 19:12 gestopt: elk uur wachten op een captcha en elke controle opnieuw een verzoek verlengt de blokkade mogelijk; 0 artikelen hersteld.
+- Open: plaatsen bij Toon werkt pas als SiteGround ons niet blokkeert. Oplossing buiten onze code: Toon laat ons IP toe of vraagt SiteGround de Anti-Bot-blokkade voor zijn wp-content/uploads uit te zetten. Een captcha omzeilen doen we niet.
