@@ -3394,10 +3394,13 @@
       // Een omhulsel met meerdere voorstellen erin zou naam en kruimelpad van
       // twee verschillende regels aan elkaar knopen. Alleen de regel zelf telt.
       if (cel.querySelectorAll('[class*="Cell__title"]').length !== 1) continue;
-      const naam = (cel.querySelector('[class*="Cell__title"]')?.textContent || "").trim();
+      let naam = (cel.querySelector('[class*="Cell__title"]')?.textContent || "").trim();
       const kruimel = (cel.querySelector('[class*="Cell__body"]')?.textContent || "").trim();
       if (!naam || !/[>›]/.test(kruimel)) continue;
-      const delen = kruimel.split(/[>›]/).map((s) => s.trim()).filter(Boolean);
+      let delen = kruimel.split(/[>›]/).map((s) => s.trim()).filter(Boolean);
+      // In het Engels, net als ons pad (zie "VINTED IN ELKE TAAL").
+      const en = typeof catEngels === "function" ? catEngels(cel, naam, kruimel) : null;
+      if (en && en.pad.length) { naam = en.titel; delen = en.pad; }
       const sleutel = `${delen.join(">")}>${naam}`;
       if (gezienVoorstel.has(sleutel)) continue;
       gezienVoorstel.add(sleutel);
