@@ -3433,10 +3433,10 @@
     // woorden in enkelvoud in plaats van teken voor teken.
     const kaal = (s) => s.toLowerCase().replace(/&/g, " ").split(/[^a-z0-9-]+/)
       .filter(Boolean).map(enkelvoud).join(" ");
-    for (let i = 0; i < 3 && cellen().length; i++) {
+    for (let i = 0; i < (kind ? 4 : 3) && cellen().length; i++) {
       const opties = cellen();
       const namen = opties.map(titel);
-      const idx = kiesBlad(namen, tekst);
+      const idx = kind ? kiesBladKind(namen, tekst) : kiesBlad(namen, tekst);
       let keuze = idx != null ? opties[idx] : opties[0];
       let waarom = idx != null ? bladReden : "eerste";
       // VINTED'S EIGEN VOORSTEL GAAT VOOR, MAAR NIET BLIND (05-09-2026).
