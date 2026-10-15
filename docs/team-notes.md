@@ -17504,3 +17504,5 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Oordeel fout-vinted-delete-99feea20 (Janneke, 2x op 14-10): afmelden van de donkerblauwe trui terwijl er geen Vinted-advertentie aan gekoppeld was; de plaatsing was terecht geweigerd (5296656d). Klant, geen codefout.
 - Wachtrij: 0b28c1ce heeft 141 Marktplaats-opdrachten sinds 12-10 open staan; abonnement actief tot 05-11, extensie laatst gezien 01-10 (1.0.363), offlinemail 13-10 verstuurd. Betalende klant die al twee weken niets doet; eerdere notities noemden "proef verlopen", dat klopt niet. Goudlief 214 en Janneke 7 (op 1.0.384, wacht op 1.0.386) zoals gemeld.
 - Geen codewijziging.
+- 15-10 (avond): Daniel zette Railway op EU West (Amsterdam) en deployde zelf. Verklaring weer bijgewerkt (Nederland). Meting 14 minuten erna: /health 0,17 tot 0,29 s (voorheen 0,31 tot 0,56 s), extensies gezien 5 naar 6, opdrachten klaar 22 naar 47, geen mislukte opdrachten. Niet gemeten: of Marktplaats of Vinted het nieuwe uitgaande adres van de server anders behandelt (403 in de Railway-logs); kijk daarnaar in de eerstvolgende klantfoutenronde.
+
