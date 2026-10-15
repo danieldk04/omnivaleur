@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import asyncio
 import collections
+import contextlib
+import contextvars
 import logging
 
 from backend.config import settings
@@ -96,7 +98,7 @@ def vraag(opdracht: str, *, max_tokens: int = 1024, claude_model: str = HAIKU,
         antwoord = gemini_vertaling.vraag(opdracht, max_tokens=max_tokens,
                                           tijdslimiet=tijdslimiet, denken=denken)
         if antwoord:
-            TELLER["gemini"] += 1
+            _beantwoord("gemini")
             return antwoord
         logger.warning("%s: Gemini gaf niets bruikbaars, Claude als reserve", wat)
 
@@ -119,7 +121,7 @@ def vraag(opdracht: str, *, max_tokens: int = 1024, claude_model: str = HAIKU,
             tekst = "".join(getattr(b, "text", "") or ""
                             for b in (bericht.content or [])).strip()
             if tekst:
-                TELLER["claude"] += 1
+                _beantwoord("claude")
                 return tekst
             reden = "leeg Claude-antwoord"
         except TaalmodelOnbeschikbaar:
