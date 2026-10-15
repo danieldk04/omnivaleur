@@ -133,7 +133,11 @@ function maakKiezer(taal, voorstelIds) {
     },
   };
   const kiezer = {
-    veld, zoekvak, gekozenId: () => gekozen, open: false, geklikt: [],
+    veld, zoekvak, gekozenId: () => gekozen, open: false, geklikt: [], opgeslagen: 0,
+    // De conceptknop onderaan het formulier, BUITEN de kiezer. Op een Nederlandse
+    // Vinted heet hij precies "Opslaan"; een klik bewaart een concept en Vinted
+    // springt naar het profiel (live gezien 15-10-2026).
+    knop: { textContent: taal === "nl" ? "Opslaan" : "Save draft", offsetParent: {}, click() { kiezer.opgeslagen++; } },
     open() {
       kiezer.isOpen = true;
       zicht = [...voorstelIds.map((id) => cel(id, "voorstel")), ...(KINDEREN["0"] || []).map((id) => cel(id, "boom"))];
@@ -151,6 +155,7 @@ function maakKiezer(taal, voorstelIds) {
       dispatchEvent() {},
       querySelector: (sel) => (/catalog-select-dropdown-input/.test(sel) ? veld : null),
       querySelectorAll(sel) {
+        if (/^button/.test(sel)) return [kiezer.knop];
         if (/input\[type="text"\]/.test(sel)) return kiezer.isOpen ? [veld, zoekvak] : [veld];
         if (/input\[type="radio"\]/.test(sel)) return zicht.map((e) => e._radio).filter(Boolean);
         if (/Cell__body|Cell__title|Cell__heading/.test(sel)) return [];
@@ -202,7 +207,8 @@ function draai(bron, kiezer, item) {
   ].join("\n"), s);
   // De zoekvak-setter in typeSearch gaat via window.HTMLInputElement.
   Object.setPrototypeOf(kiezer.zoekvak, HTMLInputElement.prototype);
-  return s.__vul(item).then((ok) => ({ ok, id: kiezer.gekozenId() }), (e) => ({ ok: false, fout: String(e) }));
+  return s.__vul(item).then((ok) => ({ ok, id: kiezer.gekozenId(), opgeslagen: kiezer.opgeslagen }),
+    (e) => ({ ok: false, fout: String(e), opgeslagen: kiezer.opgeslagen }));
 }
 
 const engels = (id) => (id ? padVan(BOOM.en, id).join(" > ") : "(niets gekozen)");
@@ -244,6 +250,13 @@ const isBlad = (id) => !!id && !(KINDEREN[id] || []).length;
               category: "meisjes kleding", gender: "kinderen" },
       voorstel: [MEISJES_FLEECE], verwachtBegin: "Kids > Girls clothing > Outerwear > Jackets > Fleece jackets",
     },
+    {
+      // Live op een Nederlandse Vinted (15-10-2026): dit geval loopt via zoeken.
+      naam: "babykleding zonder jongen/meisje en zonder voorstel (via zoeken)",
+      item: { title: "Tussenjas Noppies maat 68", description: "", title_en: "Transitional jacket Noppies size 68",
+              category: "babykleding", gender: "kinderen" },
+      voorstel: [], verwachtBegin: "Kids > Boys clothing > Outerwear > Jackets",
+    },
   ];
 
   for (const taal of ["nl", "en"]) {
@@ -254,18 +267,22 @@ const isBlad = (id) => !!id && !(KINDEREN[id] || []).length;
       check(`nieuw: ${g.naam} → ${pad}`,
             isBlad(nieuw.id) && pad.startsWith(g.verwachtBegin),
             `verwacht een blad onder ${g.verwachtBegin}${nieuw.fout ? `, fout ${nieuw.fout}` : ""}`);
+      check(`nieuw: ${g.naam}: niet op de conceptknop gedrukt`, nieuw.opgeslagen === 0, `${nieuw.opgeslagen}x`);
     }
   }
 
   console.log(`\nOude code (${VOOR}) op Janneke's Nederlandse Vinted: moet falen`);
-  let oudGoed = 0;
+  let oudGoed = 0, oudOpgeslagen = 0;
   for (const g of gevallen) {
     const oud = await draai(OUD, maakKiezer("nl", g.voorstel), { ...g.item });
     const pad = engels(oud.id);
     const goed = isBlad(oud.id) && pad.startsWith(g.verwachtBegin);
     if (goed) oudGoed++;
-    console.log(`  oud: ${g.naam} → ${pad}${oud.fout ? ` (${oud.fout})` : ""}`);
+    oudOpgeslagen += oud.opgeslagen;
+    console.log(`  oud: ${g.naam} → ${pad}${oud.opgeslagen ? ` en ${oud.opgeslagen}x op "Opslaan" gedrukt` : ""}${oud.fout ? ` (${oud.fout})` : ""}`);
   }
+  // 12 van Janneke's 13 plaatsingen die na 3 minuten stilvielen waren babykleding.
+  check("de oude code drukt op de Nederlandse conceptknop", oudOpgeslagen > 0, "nooit");
   check("de oude code zet geen enkel geval goed", oudGoed === 0, `${oudGoed} goed`);
 
   console.log(mislukt ? `\n${mislukt} fout(en)` : "\nalles goed");

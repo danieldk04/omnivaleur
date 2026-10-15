@@ -25,7 +25,9 @@ De categoriecode in extension/content/vinted.js kiest op Engelse namen ("Kids", 
 
 **Why:** een proef op het eigen account bewijst alleen de taal van dat account. Elke tekstvergelijking met een kanaal (staat, kleur, categorie) faalt stil in een andere taal; zie ook "vinted-staat-alleen-engels".
 
-**How to apply:** kies op iets wat niet vertaalt. Elke regel in Vinted's kiezer heeft id="catalog-<nr>" (zoekresultaat "catalog-search-<nr>-result"); de boom met nummers is zonder inlog op te halen via /api/v2/item_upload/catalogs?locale=en (nummers gelijk tussen vinted.nl en .de). Nooit ?locale= via de sessie van de verkoper: dat zet haar Vinted-sessie op die taal (gemeten). Proef met de echte boom: tests/vinted-elke-taal-test.js. Nederlandse UI zelf is niet live nagelopen (geen NL-account). Zie "omnivaleur-altijd-bewijzen".
+**How to apply:** kies op iets wat niet vertaalt. Elke regel in Vinted's kiezer heeft id="catalog-<nr>" (zoekresultaat "catalog-search-<nr>-result"); de boom met nummers is zonder inlog op te halen via /api/v2/item_upload/catalogs?locale=en (nummers gelijk tussen vinted.nl en .de). Nooit ?locale= via de sessie van de verkoper: dat zet haar Vinted-sessie op die taal (gemeten). Proef met de echte boom: tests/vinted-elke-taal-test.js. Live nagelopen op Daniels Vinted in het Nederlands (15-10 avond, 1.0.391). Zie "omnivaleur-altijd-bewijzen".
+
+**Valkuil "Opslaan" (15-10, 1.0.391):** de zoekroute van fillCategoryVinted klikte na een keuze op elke zichtbare knop die "select|kies|done|opslaan|save" heette, over de hele pagina. Op een Nederlandse Vinted is "Opslaan" de conceptknop van het formulier: concept bewaard, Vinted springt naar het profiel, de opdracht valt stil tot de bewaker van 3 minuten. Bij Janneke waren 12 van haar 13 vastlopers babykleding (de enige rubriek waarvan de hint "baby" in het Nederlands iets vond). Live nagedaan: 4 lege concepten op Daniels account. Nu alleen binnen [data-testid="catalog-select-dropdown-content"] (heeft geen bevestigknop). Algemeen: zoek knoppen nooit op tekst over de hele pagina; een woord dat in het Engels niet bestaat kan in een andere taal precies de verkeerde knop zijn.
 
 ---
 

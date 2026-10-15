@@ -3348,7 +3348,7 @@
   }
 
   async function walkVintedCategoryPath(item, cat, gender) {
-    const pad = (typeof kinderPad === "function" && kinderPad(cat, item)) || vintedPathFor(cat, gender);
+    let pad = (typeof kinderPad === "function" && kinderPad(cat, item)) || vintedPathFor(cat, gender);
     if (!pad) return false;
     const kind = pad[0] === "Kids";
     const inp = qs('input[data-testid="catalog-select-dropdown-input"]');
@@ -3418,10 +3418,10 @@
     // Nederlandse Vinted gaf "baby" babyfoons, babyschoenen en badspeelgoed, en
     // live landde een babyjas in "Anders" (15-10-2026). Vinted eist hoe dan ook
     // jongen of meisje; met foto's volgt hij hierboven Vinteds eigen keuze.
-    if (kind && pad.length === 1) {
-      const tak = voorstelPaden.find((v) => /^(girls|boys) clothing$/i.test(v[0] || ""))?.[0] || "Boys clothing";
-      if (!voorstelPaden.length) clog("Vinted-categorie: jongen of meisje onbekend en geen voorstel van Vinted — Boys clothing");
-      pad = [...pad, tak];
+    if (kind && pad.length === 1 && !voorstelPaden.some((v) => /^(girls|boys) clothing$/i.test(v[0] || ""))) {
+      clog("Vinted-categorie: jongen of meisje onbekend en geen voorstel van Vinted onder Girls/Boys clothing — Boys clothing");
+      pad = [...pad, "Boys clothing"];
+      voorstelPaden.length = 0;   // die lagen niet onder deze tak
     }
 
     for (const stap of pad) {
