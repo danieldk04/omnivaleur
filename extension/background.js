@@ -10842,6 +10842,32 @@ const UPDATE_CHECK_MINUTEN = 60;
 // nieuwe wekker, dus de oude versie (met de fout) hield zichzelf in stand.
 const UPDATE_UITSTEL_MAX_MS = 2 * 60 * 60 * 1000;
 let _updateWachtSinds = 0;
+// Het wachten staat ook in de opslag. Alleen in het geheugen ging het bij elke
+// herstart van de service worker verloren, en dan begon de twee uur opnieuw
+// (Janneke, 15-10-2026: haar motor viel elk kwartier even stil).
+const UPDATE_WACHT_SLEUTEL = "updateWachtSinds";
+
+async function updateWachtSinds() {
+  if (_updateWachtSinds) return _updateWachtSinds;
+  try {
+    const { [UPDATE_WACHT_SLEUTEL]: w } = await chrome.storage.local.get(UPDATE_WACHT_SLEUTEL);
+    const nu = chrome.runtime.getManifest().version;
+    // Vastgelegd door een oudere versie: die update is dus binnen. Of we
+    // herstartten al en draaien nog steeds dezelfde versie: dan stond er toch
+    // niets klaar, en vragen we het Chrome gewoon opnieuw.
+    if (w && w.versie === nu && !w.herstart) _updateWachtSinds = w.sinds;
+    else if (w) await chrome.storage.local.remove(UPDATE_WACHT_SLEUTEL);
+  } catch (_) { /* dan wachten we vanaf nu */ }
+  return _updateWachtSinds;
+}
+
+async function legUpdateWachtenVast(extra) {
+  try {
+    await chrome.storage.local.set({ [UPDATE_WACHT_SLEUTEL]: {
+      sinds: _updateWachtSinds, versie: chrome.runtime.getManifest().version, ...extra,
+    } });
+  } catch (_) { /* het geheugen heeft hem nog */ }
+}
 
 // Herstarten mag NOOIT midden in een klus. Een tabblad dat halverwege een
 // plaatsing wordt losgelaten kost een advertentie, en die fout kennen we al
