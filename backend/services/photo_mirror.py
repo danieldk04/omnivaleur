@@ -232,3 +232,38 @@ async def ontdubbel_bestaande_fotolijsten() -> dict:
         logger.info("ontdubbelen: %d artikelen opgeschoond, %d dubbele foto's weg",
                     hersteld, weg)
     return {"bekeken": len(rijen), "hersteld": hersteld, "verwijderd": weg}
+
+
+def _heeft_bronfoto(urls) -> bool:
+    return any(isinstance(u, str) and u.startswith(("http://", "https://")) and not is_mirrored(u)
+               for u in (urls or []))
+
+
+async def bronfotos_inhalen(user_id: str, max_artikelen: int = 8) -> dict:
+    """Haal per uur een paar artikelen met foto's op de bronwinkel binnen.
+
+    De Juiste Toon, 15-10-2026: 239 artikelen hielden foto-adressen op zijn eigen
+    webshop omdat SiteGround bij de eerste import een captcha gaf na ~25 artikelen.
+    Plaatsen kopieert ze nu ook zelf (services/crosslist._kopieer_bronfotos), maar
+    dit loopt de achterstand rustig weg, onder de grens waar de bron dichtgaat. Bij
+    de eerste foto die niet lukt stopt de ronde: harder aandringen maakt het erger.
+    """
+    from backend.database import fetch_all, get_db, naast_de_lus
+    db = get_db()
+    rijen = await naast_de_lus(lambda: fetch_all(
+        lambda: db.table("items").select("id,photo_urls").eq("user_id", user_id)))
+    todo = [r for r in rijen if _heeft_bronfoto(r.get("photo_urls"))]
+    uit = {"achterstand": len(todo), "hersteld": 0, "gestopt": False}
+    for r in todo[:max_artikelen]:
+        oud = list(r["photo_urls"])
+        nieuw = await mirror_photos(oud, user_id)
+        if _heeft_bronfoto(nieuw):
+            uit["gestopt"] = True
+            logger.warning("bronfotos_inhalen %s: artikel %s niet af, ronde gestopt", user_id, r["id"])
+            break
+        if nieuw and nieuw != oud:
+            await naast_de_lus(lambda: db.table("items").update({"photo_urls": nieuw})
+                               .eq("id", r["id"]).eq("user_id", user_id).execute())
+            uit["hersteld"] += 1
+    logger.info("bronfotos_inhalen %s: %s", user_id, uit)
+    return uit

@@ -252,4 +252,9 @@ async def importeer_alle_winkels() -> dict:
             totaal["gekoppeld"] += uit.get("gekoppeld", 0)
         except Exception:  # noqa: BLE001 — één winkel mag de rest niet blokkeren
             logger.exception("woocommerce-auto-import mislukt voor %s", rij["user_id"])
+        try:
+            from backend.services.photo_mirror import bronfotos_inhalen
+            await bronfotos_inhalen(rij["user_id"])
+        except Exception:  # noqa: BLE001 — foto's inhalen mag de rest nooit blokkeren
+            logger.exception("woocommerce-auto-import: bronfoto's niet ingehaald voor %s", rij["user_id"])
     return totaal
