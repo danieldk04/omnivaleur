@@ -3425,8 +3425,9 @@
       }
     }
 
-    // Nog dieper? Dan zelf een verstandig blad kiezen (max 3 niveaus).
-    const tekst = `${item.title || ""} ${item.description || ""}`.toLowerCase();
+    // Nog dieper? Dan zelf een verstandig blad kiezen (max 3 niveaus, bij
+    // kinderkleding 4: Kids > Boys clothing > Outerwear > Jackets > blad).
+    const tekst = `${item.title || ""} ${item.description || ""} ${item.title_en || ""}`.toLowerCase();
     // "Chinos" en "Chino" zijn hetzelfde blad. Vinted spelt zijn voorstellen niet
     // altijd letterlijk zoals de regels in de boom, dus vergelijken we op de kale
     // woorden in enkelvoud in plaats van teken voor teken.
