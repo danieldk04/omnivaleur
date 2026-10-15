@@ -17532,3 +17532,11 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Gevonden: 239 van zijn 1606 artikelen (bij een nieuwe telling 295 met minstens een bronfoto) houden foto-adressen op dejuistetoon.eu. Vandaag 09:57 tot 10:08 mislukten 6+ plaatsingen op Marktplaats, 2dehands en Vinted met "None of the 7 photo(s) could be downloaded". De herstelronde van 14-10 vanaf de Mac liep niet meer (SiteGround-captcha, HTTP 202; ook nu nog op Daniels IP).
 - Gerepareerd (7d50c2d0): publish_to_platforms kopieert bronfoto's nu eerst naar onze opslag en bewaart ze op het artikel (_kopieer_bronfotos in services/crosslist.py). Proef tests/test_foto_bronwinkel_kopieren_bij_plaatsen.py faalt op de oude code (4) en slaagt nu.
 - Niet gemeten: of het Railway-IP (nu Amsterdam) bij SiteGround wel 200 krijgt. Pas na een echte klik van Toon op Plaatsen is dat bekend. Achtergrondherstel van de 295 loopt op Daniels Mac (wacht op captcha, 10 min per keer); oude fotolijsten staan in de scratchpad (toon_fotos_voor.json).
+
+## 15-10-2026 (middag, 14:10): Dagelijkse klantfouten
+
+- Sinds 08:30 UTC 665 opdrachten afgerond: 632 klaar, 27 fout, 6 geannuleerd. `klantfouten.py`: 16 soorten, 0 open. Niets langer dan 30 min opgepakt. /health 200 in 0,17 s, commit f82133aa.
+- Van de 27 fouten zijn er 22 van Toon (96e30080) tussen 09:58 en 10:18 UTC: de bronfoto's op dejuistetoon.eu, plus twee keer een gesloten tabblad en een afmelding van "Grote maat heren lederhosen" die niet in zijn overzicht stond. Allemaal vóór de uitrol van 7d50c2d0 (10:27 UTC). Daarna 57 opdrachten bij hem, allemaal klaar, 0 fout; de 27 plaatsingen na de uitrol hebben geen bronfoto meer. Niet gemeten: of daar een artikel tussen zat dat vóór de klik nog een bronfoto had; 242 van zijn 1609 artikelen houden er nog een.
+- Janneke (31d28378) draait nu 1.0.388; sinds 11:07 UTC vier Vinted-plaatsingen en een Marktplaats-plaatsing gelukt, de donkerblauwe trui (01ae2415) is klaar.
+- Rest klant: 26cf5471 vier keer niet ingelogd op Vinted (scan), f8c0cce9 een Vinted-bijwerking zonder antwoord na 3 min (eenmalig).
+- Wachtrij ongewijzigd: Goudlief 214, 0b28c1ce 191 (extensie stil sinds 01-10, betalend). Geen codewijziging.
