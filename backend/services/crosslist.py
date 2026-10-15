@@ -1419,6 +1419,28 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
             # met één foto is beter dan geen advertentie.
             logger.warning("Kon item %s niet aanvullen uit de advertentiepagina: %s", item_id, e)
 
+    # FOTO'S DIE NOG OP DE BRONWINKEL STAAN, KOPIËREN WE NU ALSNOG.
+    #
+    # De extensie haalt foto's op vanaf de pagina van het kanaal en kan niet bij
+    # andermans webshop (geen CORS-kop). Een artikel waarvan de kopie bij het
+    # inlezen mislukte (De Juiste Toon, 15-10-2026: 239 van 1606, SiteGround gaf
+    # 403 en daarna een captcha) hield dus bronadressen, en elke plaatsing op
+    # Marktplaats, 2dehands en Vinted eindigde in "None of the 7 photo(s) could be
+    # downloaded". Op het moment van plaatsen zijn het er hooguit een paar, dus
+    # gaat de bron niet op slot. Lukt het niet, dan verandert er niets.
+    try:
+        from backend.services.photo_mirror import mirror_photos, is_mirrored
+        foto_s = list(item.get("photo_urls") or [])
+        if any(isinstance(u, str) and u.startswith(("http://", "https://"))
+               and not is_mirrored(u) for u in foto_s):
+            nieuw = await mirror_photos(foto_s, user_id)
+            if nieuw and nieuw != foto_s:
+                await _exec(db.table("items").update({"photo_urls": nieuw})
+                            .eq("id", item_id).eq("user_id", user_id))
+                item["photo_urls"] = nieuw
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Kon foto's van item %s niet kopiëren voor het plaatsen: %s", item_id, e)
+
     # STAAT ER GEEN PRIJS, KIJK DAN EERST WAT DE ADVERTENTIE ZELF IS.
     #
     # Een Admarkt-import levert nooit een prijs mee, en een bied- of "zie
