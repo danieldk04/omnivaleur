@@ -3413,10 +3413,15 @@
       clog(`Vinted stelt zelf voor: ${voorstelPaden.map((p) => p.join(" > ")).join(", ")}`);
     }
     // Alleen "Kids" (jongen of meisje onbekend) en Vinted stelt niets onder
-    // Girls/Boys clothing voor: dan weten we de tak niet. Liever zoeken dan gokken.
-    if (kind && pad.length === 1 && !voorstelPaden.some((v) => /^(girls|boys) clothing$/i.test(v[0] || ""))) {
-      clog("Vinted-categorie: kinderkleding zonder jongen/meisje en zonder voorstel van Vinted — via zoeken");
-      return false;
+    // Girls/Boys clothing voor: dan Boys clothing, met daaronder het juiste stuk.
+    // Eerst stond hier "liever zoeken dan gokken", maar zoeken gokte erger: op een
+    // Nederlandse Vinted gaf "baby" babyfoons, babyschoenen en badspeelgoed, en
+    // live landde een babyjas in "Anders" (15-10-2026). Vinted eist hoe dan ook
+    // jongen of meisje; met foto's volgt hij hierboven Vinteds eigen keuze.
+    if (kind && pad.length === 1) {
+      const tak = voorstelPaden.find((v) => /^(girls|boys) clothing$/i.test(v[0] || ""))?.[0] || "Boys clothing";
+      if (!voorstelPaden.length) clog("Vinted-categorie: jongen of meisje onbekend en geen voorstel van Vinted — Boys clothing");
+      pad = [...pad, tak];
     }
 
     for (const stap of pad) {
