@@ -10893,7 +10893,10 @@ async function magNuHerstarten() {
 }
 
 async function herstartAlsHetKan(reden) {
-  if (!_updateWachtSinds) _updateWachtSinds = Date.now();
+  if (!(await updateWachtSinds())) {
+    _updateWachtSinds = Date.now();
+    await legUpdateWachtenVast();
+  }
   const tochMaar = (Date.now() - _updateWachtSinds) > UPDATE_UITSTEL_MAX_MS;
   if (!(await magNuHerstarten()) && !tochMaar) {
     console.log(`[Omnivaleur] nieuwe versie klaar (${reden}), maar er loopt werk — later opnieuw`);
