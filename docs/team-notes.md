@@ -17506,3 +17506,10 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Geen codewijziging.
 - 15-10 (avond): Daniel zette Railway op EU West (Amsterdam) en deployde zelf. Verklaring weer bijgewerkt (Nederland). Meting 14 minuten erna: /health 0,17 tot 0,29 s (voorheen 0,31 tot 0,56 s), extensies gezien 5 naar 6, opdrachten klaar 22 naar 47, geen mislukte opdrachten. Niet gemeten: of Marktplaats of Vinted het nieuwe uitgaande adres van de server anders behandelt (403 in de Railway-logs); kijk daarnaar in de eerstvolgende klantfoutenronde.
 
+
+## 15-10-2026 (middag, 10:30): Dagelijkse klantfouten
+
+- Liep direct na de tweede ochtendronde. Laatste 2 uur: 101 opdrachten afgerond, 98 klaar, 3 fout: dezelfde drie die de ronde van 10:25 al als klant beoordeelde (26cf5471 niet ingelogd op Vinted, f8c0cce9 uitgelogd op 2dehands, HTTP 401). `klantfouten.py`: 18 soorten, 0 open.
+- Na de verhuizing van Railway naar Amsterdam: tussen 08:00 en 08:30 UTC 80 opdrachten klaar (2dehands plaatsen 50, Marktplaats plaatsen 20 en afmelden 21), geen enkele mislukking door een weigering van Marktplaats of 2dehands. Niets langer dan 30 min opgepakt. Zes extensies actief, vijf op 1.0.388, Amanda (8f91a370) op 1.0.385. /health 200 in 0,19 s.
+- Niet gemeten: Railway-logs op 403 van het nieuwe uitgaande adres; de opdrachten zelf laten geen blokkade zien, maar het venster is pas een half uur.
+- Geen codewijziging.
