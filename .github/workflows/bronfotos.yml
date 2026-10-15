@@ -14,7 +14,10 @@ name: Bronfoto's
 
 on:
   schedule:
-    - cron: "23 */2 * * *"
+    # Elk uur. Eerste echte ronde 15-10 20:00 UTC: 40 artikelen, 242 foto's,
+    # geen captcha bij 1,5 s per foto. Zonder achterstand is een ronde in
+    # seconden klaar.
+    - cron: "23 * * * *"
   workflow_dispatch:
 
 permissions:
