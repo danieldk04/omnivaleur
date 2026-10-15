@@ -1348,6 +1348,25 @@ async def _wachtrij_klaarzetten(db, item_id: str, platform: str, rijen: list[dic
         }))
 
 
+async def _kopieer_bronfotos(db, item: dict, item_id: str, user_id: str) -> dict:
+    """Zet foto's die nog op een bronwinkel staan alsnog in onze opslag.
+
+    Verandert niets (en gooit nooit) als het kopiëren niet lukt."""
+    try:
+        from backend.services.photo_mirror import mirror_photos, is_mirrored
+        foto_s = list(item.get("photo_urls") or [])
+        if any(isinstance(u, str) and u.startswith(("http://", "https://"))
+               and not is_mirrored(u) for u in foto_s):
+            nieuw = await mirror_photos(foto_s, user_id)
+            if nieuw and nieuw != foto_s:
+                await _exec(db.table("items").update({"photo_urls": nieuw})
+                            .eq("id", item_id).eq("user_id", user_id))
+                item["photo_urls"] = nieuw
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Kon foto's van item %s niet kopiëren voor het plaatsen: %s", item_id, e)
+    return item
+
+
 async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str) -> list[dict]:
     """
     Route each platform to the right handler:
@@ -1428,18 +1447,7 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     # Marktplaats, 2dehands en Vinted eindigde in "None of the 7 photo(s) could be
     # downloaded". Op het moment van plaatsen zijn het er hooguit een paar, dus
     # gaat de bron niet op slot. Lukt het niet, dan verandert er niets.
-    try:
-        from backend.services.photo_mirror import mirror_photos, is_mirrored
-        foto_s = list(item.get("photo_urls") or [])
-        if any(isinstance(u, str) and u.startswith(("http://", "https://"))
-               and not is_mirrored(u) for u in foto_s):
-            nieuw = await mirror_photos(foto_s, user_id)
-            if nieuw and nieuw != foto_s:
-                await _exec(db.table("items").update({"photo_urls": nieuw})
-                            .eq("id", item_id).eq("user_id", user_id))
-                item["photo_urls"] = nieuw
-    except Exception as e:  # noqa: BLE001
-        logger.warning("Kon foto's van item %s niet kopiëren voor het plaatsen: %s", item_id, e)
+    item = await _kopieer_bronfotos(db, item, item_id, user_id)
 
     # STAAT ER GEEN PRIJS, KIJK DAN EERST WAT DE ADVERTENTIE ZELF IS.
     #
