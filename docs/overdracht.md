@@ -4,6 +4,8 @@
 
 **Toon (De Juiste Toon, user 96e30080-ab81-47ac-8626-e8637f1e2a9e) kan niet plaatsen op Marktplaats, 2dehands en Vinted.** Dit gaat voor de routines hieronder.
 
+**STAND 15-10 avond (sessie op Daniels account): de foto's zijn opgelost, stappen 1 en 2 hieronder zijn gedaan.** Gemeten vanaf een GitHub-machine: SiteGround geeft dezelfde foto daar gewoon (200), en de foto's hebben geen CORS-kop (wel /wp-json/), dus ook Toons eigen browser kon ze nooit ophalen. Nu haalt `.github/workflows/bronfotos.yml` (elke 2 uur, 40 artikelen per ronde, stopt bij de eerste captcha) ze op en levert ze af bij `/api/intern/bronfotos`; de server controleert GitHub's ondertekende id-token, geen secrets (7ebc39dc, c4b67800). Eerste ronde 15-10 ±20:00 UTC. Jouw werk: elke ochtend `met bronfoto` tellen (doel 0) en kijken of de laatste run van "Bronfoto's" groen is; daarna stap 4. Oude fotolijsten: Daniels Mac, `~/omnivaleur-backups/toon_fotos_voor_github_15-10.json`.
+
 Wat vaststaat (gemeten 15-10, details in `docs/team-notes.md` onder "Toon (96e30080), plaatsen mislukte" en "SiteGround blokkeert foto's"):
 - 241 van zijn 1606 artikelen houden foto-adressen op dejuistetoon.eu. De extensie kan daar niet bij (geen CORS, geen hosttoestemming), dus elke plaatsing faalt met "None of the N photo(s) could be downloaded". Marktplaats lukte bij ~50 per nacht alleen voor artikelen waarvan de kopie wel slaagde.
 - Zijn hosting (SiteGround) geeft ons een captcha (HTTP 202 naar /.well-known/sgcaptcha/) na enkele foto's, vanaf Daniels IP al uren. Het Railway-IP (Amsterdam sinds 15-10) haalde om 15:59 UTC nog 1 artikel (TK47) binnen, daarna niets meer; waarschijnlijk dezelfde blokkade, niet bewezen (geen toegang tot Railway-logs).
