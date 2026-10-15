@@ -59,13 +59,25 @@ const stuur = (method, params = {}, sessionId) => new Promise((res) => {
 });
 const pauze = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function vindWorker(extId, nietDeze) {
+async function vindWorker(extId) {
   for (let i = 0; i < 150; i++) {
     const t = await stuur("Target.getTargets", { filter: [{}] });
-    const w = t.result.targetInfos.find((x) => x.type === "service_worker"
-      && x.url.includes(extId) && x.targetId !== nietDeze);
+    const w = t.result.targetInfos.find((x) => x.type === "service_worker" && x.url.includes(extId));
     if (w) return w;
     await pauze(400);
+  }
+  return null;
+}
+// Een opnieuw opgestarte worker kan hetzelfde targetId krijgen; het merkteken
+// op self overleeft een herstart niet, dus daaraan zie je dat het een verse is.
+async function vindVerseWorker(extId) {
+  for (let i = 0; i < 40; i++) {
+    const w = await vindWorker(extId);
+    if (w) {
+      const doe = await koppel(w);
+      if (await doe("typeof chrome === 'object' && self.__proefMerk !== 1")) return doe;
+    }
+    await pauze(2000);
   }
   return null;
 }
@@ -90,25 +102,43 @@ try {
   check("de achtergrondmotor draait", !!eerste);
   if (!eerste) throw new Error("geen service worker");
   let doe = await koppel(eerste);
+  for (let i = 0; i < 20 && (await doe("typeof chrome")) !== "object"; i++) await pauze(300);
+  await doe("self.__proefMerk = 1");
   console.log("\nExtensieversie:", await doe("chrome.runtime.getManifest().version"));
   await pauze(1500);   // laat de opstartcode uitlopen
   const voor = await doe(wekkerTijd);
   console.log("       updatecontrole gaat af om", voor && new Date(voor).toISOString());
   check("er staat een uurlijkse updatecontrole", typeof voor === "number");
 
+  // Een update die wacht op het einde van een klus: het wachten moet de
+  // herstart overleven, anders begint de grens van twee uur telkens opnieuw.
+  const wachtSinds = Date.now() - 90 * 60 * 1000;
+  console.log("       wachten vastleggen:", await doe(`typeof legUpdateWachtenVast === "function"
+    ? (_updateWachtSinds = ${wachtSinds}, legUpdateWachtenVast().then(() => "ja")) : "bestaat niet"`));
+
   // Even wachten, zodat een nieuw gezette wekker aantoonbaar later uitkomt.
   await pauze(8000);
   console.log("\nChrome legt de achtergrondmotor stil en wekt hem weer:");
   await stuur("Target.closeTarget", { targetId: eerste.targetId });
-  const tweede = await vindWorker(extId, eerste.targetId);
-  check("de achtergrondmotor is opnieuw opgestart", !!tweede);
-  if (!tweede) throw new Error("geen nieuwe service worker");
-  doe = await koppel(tweede);
+  doe = await vindVerseWorker(extId);
+  check("de achtergrondmotor is opnieuw opgestart", !!doe);
+  if (!doe) throw new Error("geen nieuwe service worker");
   await pauze(1500);
   const na = await doe(wekkerTijd);
   console.log("       updatecontrole gaat af om", na && new Date(na).toISOString());
   check("de updatecontrole is niet vooruitgeschoven", na === voor,
     `${Math.round((na - voor) / 1000)} s later dan voor de herstart`);
+  const nogSteeds = await doe(`typeof updateWachtSinds === "function" ? updateWachtSinds() : null`);
+  check("een wachtende update is na de herstart niet vergeten", nogSteeds === wachtSinds,
+    `na de herstart: ${nogSteeds}`);
+  // Herstartten we al voor een update en draait nog dezelfde versie, dan stond
+  // er niets klaar: niet elk uur blijven herstarten, maar opnieuw vragen.
+  const leeg = await doe(`typeof updateWachtSinds === "function" ? (async () => {
+      _updateWachtSinds = 0; await legUpdateWachtenVast({ herstart: true });
+      _updateWachtSinds = 0; const w = await updateWachtSinds();
+      const o = await chrome.storage.local.get(UPDATE_WACHT_SLEUTEL);
+      return w === 0 && !o[UPDATE_WACHT_SLEUTEL]; })() : false`);
+  check("na een herstart zonder nieuwe versie blijft hij niet herstarten", leeg === true);
 } finally {
   chrome.kill();
   await pauze(1500);

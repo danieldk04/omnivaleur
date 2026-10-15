@@ -47,7 +47,14 @@ async function ronde({ status, pollLoopt = false, scans = 0, alarmen = [],
     Date: { now: () => nu },
     chrome: {
       alarms: { getAll: async () => alarmen.map((n) => ({ name: n })) },
+      storage: { local: {
+        _d: {},
+        async get(k) { return k in this._d ? { [k]: this._d[k] } : {}; },
+        async set(o) { Object.assign(this._d, o); },
+        async remove(k) { delete this._d[k]; },
+      } },
       runtime: {
+        getManifest: () => ({ version: "1.0.389" }),
         requestUpdateCheck: async () => { gedaan.gevraagd++; return { status }; },
         reload: () => { gedaan.herstart++; },
       },
@@ -57,10 +64,14 @@ async function ronde({ status, pollLoopt = false, scans = 0, alarmen = [],
     _lopendeScans: new Set(Array.from({ length: scans }, (_, i) => "p" + i)),
     _updateWachtSinds: wachtSinds,
     UPDATE_UITSTEL_MAX_MS: 24 * 60 * 60 * 1000,
+    UPDATE_WACHT_SLEUTEL: "updateWachtSinds",
   };
   vm.createContext(omgeving);
   vm.runInContext(
-    [stuk("magNuHerstarten"), stuk("herstartAlsHetKan"), stuk("controleerOpNieuweVersie")].join("\n"),
+    // updateWachtSinds en legUpdateWachtenVast bestaan sinds 1.0.389 (het wachten
+    // staat in de opslag); oudere code heeft ze niet.
+    ["updateWachtSinds", "legUpdateWachtenVast", "magNuHerstarten", "herstartAlsHetKan",
+     "controleerOpNieuweVersie"].filter((n) => BG.includes(`function ${n}(`)).map(stuk).join("\n"),
     omgeving);
   await vm.runInContext("controleerOpNieuweVersie()", omgeving);
   return { ...gedaan, wachtSinds: omgeving._updateWachtSinds };

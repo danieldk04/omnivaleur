@@ -17,6 +17,24 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## wekker-bovenin-schuift-bij-elke-start-op
+
+*15-10-2026 — chrome.alarms.create bovenin background.js vervangt de wekker bij elke start van de service worker; een uurwekker gaat dan nooit af (Janneke 3 dagen op 1.0.384)*
+
+`chrome.alarms.create(naam, { periodInMinutes: 60 })` bovenin background.js draait bij ELKE start van de service worker, en een bestaande wekker met die naam wordt vervangen: het eerste afgaan schuift weer een volle periode op. Start de motor vaker dan eens per periode, dan gaat de wekker nooit af. Gemeten in een echte Chrome (tests/update-wekker-echt-test.mjs): na een herstart 15 tot 18 s later, precies de tijd die verstreek.
+
+**Why:** Janneke (15-10-2026) draaide 1.0.384 terwijl de Web Store 1.0.388 aan haar Chrome 128 aanbood (zelf nagevraagd bij clients2.google.com met prodversion=128). Haar extensie viel elk kwartier even stil (extension_stiltes), dus de uurlijkse updatecontrole kwam nooit aan de beurt. Haar Chrome herstart ook nooit (macOS 10.15 krijgt geen Chrome-updates meer), terwijl ALLE andere klanten alleen bijwerkten na een nacht stilte, dus na een herstart van Chrome. Het wachten op "geen werk" stond bovendien alleen in het geheugen en begon na elke herstart opnieuw.
+
+**How to apply:**
+- Periodieke wekkers bovenin: eerst `chrome.alarms.get(naam)`, alleen zetten als hij ontbreekt. Sinds 1.0.389 zo voor update-check. Dezelfde vorm staat nog bij vinted-auto-scan (60), sold-check (10) en notif-scan: die hebben hetzelfde risico, niet nagemeten.
+- Toestand die een herstart van de service worker moet overleven hoort in chrome.storage, niet in een `let`.
+- Achterlopende versie bij een klant: kijk in extension_stiltes wanneer de versie wisselde. Wissel alleen na een lange stilte = alleen bij herstart van Chrome.
+- Wie al vastzit op een oude versie komt er alleen uit via Chrome helemaal herstarten of chrome://extensions, Ontwikkelaarsmodus, Updaten. Een herstart installeert soms een eerder binnengehaalde tussenversie (Amanda 384 naar 385 terwijl 388 er was); Updaten haalt altijd de nieuwste.
+
+Zie ook "extension-release-bump-version" en "extensiekopie-die-niet-meebeweegt".
+
+---
+
 ## account-wissen-en-gegevens-download
 
 *15-10-2026 — 15-10 Benedikt: klant kan zelf account wissen en gegevens downloaden (Account, Privacy en je gegevens); wat blijft staan en waarom*
