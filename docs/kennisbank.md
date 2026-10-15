@@ -17,6 +17,23 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## klantdata-niet-op-eigen-initiatief
+
+*15-10-2026 — "Nooit klantgegevens (staat, prijs, titel, merk) massaal aanpassen op eigen redenering; Janneke zette bewust \"nieuw zonder labels\" en ik zette 2.124 artikelen om"*
+
+Pas nooit uit eigen beweging gegevens van een klant aan die zij zelf kiest (staat, prijs, titel, omschrijving, merk, rubriek), ook niet als haar eigen tekst iets anders lijkt te zeggen. Repareer wat gevraagd is; zie je iets wat "niet klopt" in haar keuzes, vraag het dan via Daniel.
+
+**Waarom:** 14-10-2026 zette ik bij Janneke 2.124 artikelen van "nieuw zonder labels" op "nieuw met labels", omdat haar omschrijving "Nieuw met labels" zei. Dat was bewust zo: Vinted vindt het verdacht als een verkoper te veel nieuwe artikelen verkoopt. Daniel (15-10): "leer hier ook van, dat je niet meer dingen uit eigen initiatief gaat doen, maar fix wel met 100% zekerheid."
+
+**How to apply:**
+- Datareparaties alleen op wat de klant of Daniel vroeg. Iets anders opgemerkt: noemen als vraag, niet uitvoeren.
+- Moet je toch massaal iets wijzigen: sla eerst de oude waarde per rij op (bestand in de scratchpad), anders is terugzetten giswerk. Supabase PATCH verhoogt `updated_at` niet en bewerkte wachtende opdrachten vervuilen de "laatst bekende staat" uit jobs.
+- Terugzetten 15-10: 2.130 terug, 6 van haar 11 eigen "met labels" waren niet meer te onderscheiden en staan nu ook op zonder labels.
+
+Zie ook "vinted-staat-alleen-engels" en "omnivaleur-altijd-bewijzen".
+
+---
+
 ## vinted-staat-alleen-engels
 
 *14-10-2026 — Vinted-staat werd op een Nederlandstalige Vinted nooit gekozen; CONDITION_MAP is Engels; sinds 1.0.388 op naam in vijf talen plus vaste volgorde (Janneke, 15-10-2026)*

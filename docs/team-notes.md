@@ -17469,3 +17469,9 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
   vertalen vallen terug op de woordenlijst of de verkoper. Verklaart waarschijnlijk de 141 artikelen zonder rubriek bij
   Delftsblaeu. Wie de ~65 vragen per uur stelt is niet gemeten (Railway-logs niet bekeken).
 - Geen codewijziging.
+
+## 15-10-2026: Janneke, staat teruggezet naar "nieuw zonder labels"
+
+- Correctie op de nachtnotitie: de 2.124 artikelen die ik op new_with_tags had gezet, stonden bewust op new. Janneke: te veel "nieuw met prijskaartje" maakt haar verdacht bij Vinted. Teruggezet, ook in de wachtende Vinted-opdrachten. Er is in de tussentijd niets met de verkeerde staat geplaatst.
+- Nu 3.580 new en 5 new_with_tags (was 3.574 en 11). Zes van haar eigen "met labels"-artikelen waren niet meer te onderscheiden en staan nu op zonder labels, wat ze zelf zegt te willen.
+- Afspraak (Daniel): geen klantgegevens op eigen initiatief wijzigen. Alleen wat gevraagd is; zie kennisbank "klantdata-niet-op-eigen-initiatief".
