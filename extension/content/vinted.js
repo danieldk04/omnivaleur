@@ -3348,14 +3348,15 @@
   }
 
   async function walkVintedCategoryPath(item, cat, gender) {
-    const pad = vintedPathFor(cat, gender);
+    const pad = (typeof kinderPad === "function" && kinderPad(cat, item)) || vintedPathFor(cat, gender);
     if (!pad) return false;
+    const kind = pad[0] === "Kids";
     const inp = qs('input[data-testid="catalog-select-dropdown-input"]');
     if (!inp) return false;
     const cellen = () => [...document.querySelectorAll('[class*="Cell__clickable"]')]
       .filter((e) => e.offsetParent !== null);
-    const titel = (e) =>
-      (e.querySelector('[class*="Cell__title"]')?.textContent || e.textContent || "").trim();
+    // Engels via het regelnummer (zie "VINTED IN ELKE TAAL"), anders de tekst.
+    const titel = catTitel;
     const klik = async (label) => {
       const c = cellen().find((e) => titel(e).toLowerCase() === label.toLowerCase());
       if (!c) return false;
