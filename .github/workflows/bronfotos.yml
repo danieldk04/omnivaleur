@@ -1,0 +1,34 @@
+# Foto's van webshops die onze server tegenhouden, rustig binnenhalen.
+#
+# De Juiste Toon, 15-10-2026: SiteGround gaf onze Railway-server en Daniels Mac
+# een captcha op elke foto, een GitHub-machine kreeg dezelfde foto gewoon. Elk
+# nieuw product uit zijn webshop bleef daardoor met foto's op dejuistetoon.eu
+# staan, en dan kan geen kanaal hem plaatsen ("None of the 7 photo(s) could be
+# downloaded"). Deze taak haalt ze op en levert ze af bij de server.
+#
+# Geen secrets: de server controleert GitHub's eigen ondertekende bewijs
+# (id-token) op deze repo, main en precies dit bestand. Het logboek is openbaar,
+# dus het script drukt alleen aantallen af.
+
+name: Bronfoto's
+
+on:
+  schedule:
+    - cron: "23 */2 * * *"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: bronfotos
+  cancel-in-progress: false
+
+jobs:
+  ophalen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/bronfotos_github.py
