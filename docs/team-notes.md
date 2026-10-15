@@ -17452,3 +17452,20 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - 1.0.388: staat op naam in NL/EN/DE/FR/ES, anders op de vaste volgorde van de vijf staten; daarna nagaan dat het veld echt gevuld is. Proef: tests/vinted-staat-in-elke-taal-test.js (oud kiest niets, nieuw 20 van 20).
 - Data: 2.124 van haar artikelen zeiden "Nieuw met labels" in de tekst maar stonden op new (zonder labels); nu new_with_tags, ook in 4 wachtende Vinted-opdrachten.
 - Open: Daniel uploadt 1.0.388; haar kopie werkt zichzelf bij. De server-ondergrens voor Vinted blijft 1.0.386, zodat haar plaatsingen niet dagen stilliggen op de goedkeuring.
+
+## 15-10-2026: Dagelijkse klantfouten (ochtendronde, 09:30)
+
+- 24 uur: 936 opdrachten, 41 fout bij 8 klanten, allemaal al behandeld in de rondes van 14-10 (Vinted niet ingelogd
+  26cf5471 14x en Amanda 8f91a370; Toon's foto's, gerepareerd 68fe1ce5; Janneke's trui, 5296656d; f8c0cce9 uitgelogd
+  op 2dehands). Na 21:20 UTC geen enkele nieuwe fout uit een echte poging.
+- Wel: om 02:42 UTC sloot de drie-dagenopruimer 440+ opdrachten van Goudlief (5aae4954) af, 327 op 2dehands en 114 op
+  Marktplaats, allemaal klaargezet op 11-10. Gemeten: proef verlopen 11-10 16:58, geen Stripe-abonnement,
+  evaluate_access allowed=False, extensie sinds 11-10 19:26 stil. De fouttekst "je abonnement liep niet meer" klopt.
+  Oordeel klant. Er staan nog 214 Marktplaats-opdrachten van 11-10 te wachten; die gaan morgen op dezelfde manier dicht.
+- Opgelost sinds gisteren: geen nieuwe Vinted-stilval bij Amanda of Janneke (beiden nog niet op 1.0.386 gezien:
+  Janneke laatste hartslag 22:46, Amanda 19:45). Haar Vinted-scan 262cf815 staat nog op opgepakt, niet aangeraakt.
+- Open, niet onze code: /health (deploy c2fbc797, sinds ~22:40) telt 595 taalmodelvragen, 590 zonder antwoord, Google
+  5.077x HTTP 429 tegen 5x 200. De gratis Google-sleutel ddf59aed zit dus de hele nacht vol; rubrieken raden en
+  vertalen vallen terug op de woordenlijst of de verkoper. Verklaart waarschijnlijk de 141 artikelen zonder rubriek bij
+  Delftsblaeu. Wie de ~65 vragen per uur stelt is niet gemeten (Railway-logs niet bekeken).
+- Geen codewijziging.
