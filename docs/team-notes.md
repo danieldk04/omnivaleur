@@ -17513,3 +17513,7 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Na de verhuizing van Railway naar Amsterdam: tussen 08:00 en 08:30 UTC 80 opdrachten klaar (2dehands plaatsen 50, Marktplaats plaatsen 20 en afmelden 21), geen enkele mislukking door een weigering van Marktplaats of 2dehands. Niets langer dan 30 min opgepakt. Zes extensies actief, vijf op 1.0.388, Amanda (8f91a370) op 1.0.385. /health 200 in 0,19 s.
 - Niet gemeten: Railway-logs op 403 van het nieuwe uitgaande adres; de opdrachten zelf laten geen blokkade zien, maar het venster is pas een half uur.
 - Geen codewijziging.
+
+## 15-10-2026: Onboarding nieuwe klanten (ochtend, tweede keer om 11:00)
+
+- De geplande ochtendtaak liep een tweede keer, ruim twee uur na de ronde van 08:20 UTC. Zes klanten in hun eerste week, niemand nieuw. Alleen kilofog140 (d3d125f3) bewoog: extensie tot 10:34 actief, nog steeds nul artikelen. Alle zes ongewijzigd ten opzichte van de ochtendronde; alle foutsoorten al afgehandeld (klantfouten.py: 0 open). Geen codewijziging, geen klantdata aangeraakt, geen mailtjes.
