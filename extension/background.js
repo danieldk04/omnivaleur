@@ -10924,7 +10924,14 @@ async function controleerOpNieuweVersie() {
 // browser opnieuw start — bij iemand die Chrome nooit afsluit is dat nooit.
 chrome.runtime.onUpdateAvailable.addListener(() => { herstartAlsHetKan("gemeld"); });
 
-chrome.alarms.create("update-check", { periodInMinutes: UPDATE_CHECK_MINUTEN });
+// Alleen zetten als hij er nog niet staat. Deze regel draait bij elke start van
+// de service worker, en chrome.alarms.create met een bestaande naam vervangt de
+// wekker: het eerste afgaan schoof dan telkens een uur op. Janneke (15-10-2026)
+// zat zo drie dagen op 1.0.384; haar motor herstartte elk kwartier, dus de
+// controle ging nooit af. Proef: tests/update-wekker-echt-test.mjs.
+chrome.alarms.get("update-check").then((a) => {
+  if (!a) chrome.alarms.create("update-check", { periodInMinutes: UPDATE_CHECK_MINUTEN });
+}).catch(() => {});
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "update-check") controleerOpNieuweVersie();
 });
