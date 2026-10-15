@@ -4262,6 +4262,60 @@ function vintedTitelHoortBij(vintedTitel, item) {
   return false;
 }
 
+// VINTED'S CATEGORIEBOOM, PER TAAL (15-10-2026, Janneke).
+//
+// Het invulscript kiest de categorie op Engelse namen ("Kids", "Girls
+// clothing"). Op een Vinted in het Nederlands heten die regels "Kinderen" en
+// "Meisjeskleding", en dan koos het script nooit iets: Vinted gokte de
+// categorie zelf uit de foto, en bij tienermaten gokte het "Dames". Gevolg:
+// "Kies een subcategorie" of "Vul je maat in", en een meisjesjas bij de
+// jongenskleding. Elke regel in de kiezer draagt wel een vast nummer
+// (id="catalog-1195"), in elke taal hetzelfde. Hier halen we de boom op met
+// die nummers, zodat het script een Nederlandse regel als Engelse kan lezen.
+//
+// ZONDER INLOG, MET OPZET. ?locale=en via de sessie van de verkoper zet haar
+// Vinted-sessie op Engels (gemeten: de volgende vraag zonder locale kwam daarna
+// ook in het Engels terug). credentials "omit" geeft een eigen, lege sessie.
+// Vorm: { id: [naam, ouder-id] }.
+const _vintedCatalogusGeheugen = new Map();
+async function vintedCatalogus(origin, taal) {
+  if (!/^https:\/\/www\.vinted\.[a-z.]{2,6}$/.test(String(origin || ""))) return null;
+  taal = String(taal || "en").toLowerCase().replace(/[^a-z]/g, "").slice(0, 5) || "en";
+  const sleutel = `vinted_catalogus_${origin}_${taal}`;
+  const vers = (x) => x && x.boom && Date.now() - x.at < 24 * 3600 * 1000;
+  if (vers(_vintedCatalogusGeheugen.get(sleutel))) return _vintedCatalogusGeheugen.get(sleutel).boom;
+  try {
+    const s = await chrome.storage.session.get(sleutel);
+    if (vers(s[sleutel])) { _vintedCatalogusGeheugen.set(sleutel, s[sleutel]); return s[sleutel].boom; }
+  } catch (_) {}
+  const stop = new AbortController();
+  const klok = setTimeout(() => stop.abort(), 12000);
+  try {
+    const r = await fetch(`${origin}/api/v2/item_upload/catalogs?locale=${taal}`, {
+      credentials: "omit", headers: { Accept: "application/json" }, signal: stop.signal,
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    const boom = {};
+    const loop = (lijst, ouder) => {
+      for (const c of lijst || []) {
+        if (c && c.id != null) { boom[c.id] = [String(c.title || ""), ouder]; loop(c.catalogs, c.id); }
+      }
+    };
+    loop(d && d.catalogs, 0);
+    if (Object.keys(boom).length < 100) return null;   // geen echte boom
+    const rij = { at: Date.now(), boom };
+    _vintedCatalogusGeheugen.set(sleutel, rij);
+    try { await chrome.storage.session.set({ [sleutel]: rij }); } catch (_) {}
+    return boom;
+  } catch (e) {
+    console.warn("[Omnivaleur] Vinted-catalogus niet op te halen:", e?.message || e);
+    return null;
+  } finally {
+    clearTimeout(klok);
+  }
+}
+
 async function bgVindVintedAdvertentie(item) {
   const titel = _vintedTitelSleutel(item?.title);
   if (!titel) return null;
