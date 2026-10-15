@@ -10903,6 +10903,7 @@ async function herstartAlsHetKan(reden) {
     return;
   }
   console.log(`[Omnivaleur] nieuwe versie klaar (${reden}) — extensie herstart zichzelf`);
+  await legUpdateWachtenVast({ herstart: true });
   try { chrome.runtime.reload(); } catch (_) { /* dan bij de volgende ronde */ }
 }
 
