@@ -28,6 +28,33 @@ logger = logging.getLogger(__name__)
 # buitenaf te zien hoeveel werk er naar het betaalde Claude gaat.
 TELLER: collections.Counter = collections.Counter()
 
+# WIE WIL WETEN OF ZIJN EIGEN VRAAG ANTWOORD KREEG (15-10-2026, Delftsblaeu).
+# De TELLER hierboven is van het hele proces; daar is niet aan te zien of déze
+# vraag beantwoord werd of die van een import ernaast. De rubriekronde moet dat
+# per artikel weten: in de nacht van 15-10 gaf Google 99% HTTP 429, toch vulde de
+# ronde er een paar, en daarom telde voor 137 antieke prenten een kans mee die
+# het model nooit had gezien. volg_antwoorden() zet een lijstje in de context;
+# vraag() schrijft er bij elk echt antwoord in. asyncio.to_thread neemt de
+# context mee, dus het werkt ook vanuit vraag_async.
+_SPOOR: contextvars.ContextVar = contextvars.ContextVar("taalmodel_spoor", default=None)
+
+
+@contextlib.contextmanager
+def volg_antwoorden():
+    spoor: list = []
+    token = _SPOOR.set(spoor)
+    try:
+        yield spoor
+    finally:
+        _SPOOR.reset(token)
+
+
+def _beantwoord(wie: str) -> None:
+    TELLER[wie] += 1
+    spoor = _SPOOR.get()
+    if spoor is not None:
+        spoor.append(wie)
+
 HAIKU = "claude-haiku-4-5-20251001"
 
 
