@@ -1,5 +1,23 @@
 # Overdracht: lees dit als eerste
 
+## EERSTE OPDRACHT, vóór al het andere (Daniel, 15-10-2026)
+
+**Toon (De Juiste Toon, user 96e30080-ab81-47ac-8626-e8637f1e2a9e) kan niet plaatsen op Marktplaats, 2dehands en Vinted.** Dit gaat voor de routines hieronder.
+
+Wat vaststaat (gemeten 15-10, details in `docs/team-notes.md` onder "Toon (96e30080), plaatsen mislukte" en "SiteGround blokkeert foto's"):
+- 241 van zijn 1606 artikelen houden foto-adressen op dejuistetoon.eu. De extensie kan daar niet bij (geen CORS, geen hosttoestemming), dus elke plaatsing faalt met "None of the N photo(s) could be downloaded". Marktplaats lukte bij ~50 per nacht alleen voor artikelen waarvan de kopie wel slaagde.
+- Zijn hosting (SiteGround) geeft ons een captcha (HTTP 202 naar /.well-known/sgcaptcha/) na enkele foto's, vanaf Daniels IP al uren. Het Railway-IP (Amsterdam sinds 15-10) haalde om 15:59 UTC nog 1 artikel (TK47) binnen, daarna niets meer; waarschijnlijk dezelfde blokkade, niet bewezen (geen toegang tot Railway-logs).
+- Al live: `crosslist._kopieer_bronfotos` (kopieert bij plaatsen, 7d50c2d0) en `photo_mirror.bronfotos_inhalen` (8 artikelen per uur in de WooCommerce-uurronde, stopt bij de eerste mislukking, 14426ba0). Proeven: tests/test_foto_bronwinkel_kopieren_bij_plaatsen.py en tests/test_bronfotos_inhalen_per_uur.py.
+
+Wat jij doet:
+1. Meet eerst: `python3 -c` met `get_db()`, tel Toons items met `dejuistetoon.eu` in `photo_urls` (nu 241). Daalt het, dan komt de server er wel door; ga dan alleen de uurronde bewaken. Blijft het 241, dan blokkeert SiteGround ons.
+2. Bij blokkade: Daniel vraagt Toon bij SiteGround (Site Tools, Security, Anti-Bot AI / Blocked traffic) de blokkade voor wp-content/uploads uit te zetten. Wacht daar niet op: kies een route die niet van zijn IP-reputatie afhangt. Optie A: een knop in de extensie die de foto's vanuit Toons eigen browser ophaalt en naar ons uploadt (vraagt een optionele hosttoestemming; controleer eerst met Chrome zelf of de nieuwe permissie een waarschuwing draagt, zie kennisbank "chrome-ruimt-profiel-op"). Optie B: een eigen uitgaand IP voor de server. Een captcha omzeilen doen we niet.
+3. Raak geen klantdata aan buiten wat nodig is: alleen `photo_urls` van Toons artikelen, oude waarde eerst bewaren (kennisbank "klantdata-niet-op-eigen-initiatief").
+4. Nog open voor Toon, na de foto's: Vinted plaatste sinds 12-10 nooit (14-10 stond hij uitgelogd, daarna de foto's); of de Marktplaats- en 2dehands-rubrieken kloppen is niet gemeten (vraagt zijn inlog). Vraag hem 3 advertenties na te kijken.
+5. Meld resultaat in `docs/team-notes.md` en verwijder dit blok pas als Toon bevestigt dat plaatsen lukt.
+
+Rest van deze pagina is de standaardoverdracht van 05-10-2026.
+
 Bijgewerkt 05-10-2026 door de sessie op Daniels account, op zijn verzoek, voordat de
 tweede ontwikkelaar een tijd het werk overneemt. Doel: jij hebt direct het huidige beeld,
 doet geen dubbel werk en zet de vaste routines zelf aan zonder dat Daniel erom hoeft te
