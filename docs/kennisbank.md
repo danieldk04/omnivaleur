@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-categorie-in-elke-taal
+
+*15-10-2026 — 15-10-2026 — Vinted-categoriekeuze werkte alleen op een Engelse Vinted; op een Nederlandse koos Vinted zelf (tienermaten → dames → "Kies een subcategorie"); nu via regelnummers catalog-N (1.0.390)*
+
+De categoriecode in extension/content/vinted.js kiest op Engelse namen ("Kids", "Girls clothing", hints als "girls clothing"). Daniels eigen Vinted staat in het Engels (html lang="en-NL"), dus elke proef op zijn account slaagde. Janneke's Vinted staat in het Nederlands: elke plaatsing meldde "stap category: NIET gelukt", Vinted gokte zelf uit de foto, meisjesjassen kwamen bij Jongenskleding en tienermaat 152 bij Dames, waarna "Kies een subcategorie" of "Vul je maat in".
+
+**Why:** een proef op het eigen account bewijst alleen de taal van dat account. Elke tekstvergelijking met een kanaal (staat, kleur, categorie) faalt stil in een andere taal; zie ook "vinted-staat-alleen-engels".
+
+**How to apply:** kies op iets wat niet vertaalt. Elke regel in Vinted's kiezer heeft id="catalog-<nr>" (zoekresultaat "catalog-search-<nr>-result"); de boom met nummers is zonder inlog op te halen via /api/v2/item_upload/catalogs?locale=en (nummers gelijk tussen vinted.nl en .de). Nooit ?locale= via de sessie van de verkoper: dat zet haar Vinted-sessie op die taal (gemeten). Proef met de echte boom: tests/vinted-elke-taal-test.js. Nederlandse UI zelf is niet live nagelopen (geen NL-account). Zie "omnivaleur-altijd-bewijzen".
+
+---
+
 ## bronfotos-via-github-taak
 
 *15-10-2026 — "15-10: webshopfoto's die onze server niet krijgt (SiteGround-captcha) komen via de GitHub-taak bronfotos.yml binnen; Cloudflare weigert de standaard Python-UA (1010)"*
