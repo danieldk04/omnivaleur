@@ -3491,7 +3491,7 @@
     if (!inp) return false;
     // De boom met regelnummers, zodat een Vinted in elke taal werkt (zie
     // "VINTED IN ELKE TAAL"). Lukt dat niet, dan gaat alles zoals vroeger.
-    await laadCatalogus();
+    if (typeof laadCatalogus === "function") await laadCatalogus();
 
     // Vinted heeft voor deze rubriek geen plek (V_PAD null). Niet zoeken en een
     // naastgelegen blad pakken, maar stoppen met een reden die de verkoper snapt.
@@ -3596,7 +3596,7 @@
         const titel = row.querySelector?.('[class*="Cell__title"]')?.textContent || "";
         const pad = row.querySelector?.('[class*="Cell__body"]')?.textContent || "";
         // Een regel in een andere taal lezen we in het Engels, via zijn nummer.
-        const en = catEngels(row, titel.trim(), pad.trim());
+        const en = typeof catEngels === "function" ? catEngels(row, titel.trim(), pad.trim()) : null;
         if (en) return (en.pad.length ? `${en.titel} | ${en.pad.join(" > ")}` : en.titel).toLowerCase();
         const ruw = (titel && pad) ? `${titel} | ${pad}` : (row.textContent || "");
         return ruw
@@ -3830,7 +3830,7 @@
     if (!choice && hints.length) {
       for (const h of hints) {
         // In Vinted's zoekvak in de taal van de pagina ("Meisjeskleding").
-        typeSearch(catLokaalVoor(h) || h);
+        typeSearch((typeof catLokaalVoor === "function" && catLokaalVoor(h)) || h);
         const deadline = Date.now() + 3500;
         while (Date.now() < deadline && !choice) {
           await sleep(250);

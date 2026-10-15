@@ -21,7 +21,7 @@ VOOR = "ef85fbd3"
 
 
 def _met_rust(monkeypatch, aan):
-    monkeypatch.setattr(instellingen, "webshop_met_rust", lambda _u: aan)
+    monkeypatch.setattr(instellingen, "webshop_met_rust", lambda _u, _db=None: aan)
 
 
 def test_uniek_stuk_verkocht_op_vinted_blijft_in_de_webshop(monkeypatch):
@@ -73,6 +73,14 @@ def test_de_oude_code_wiste_het_product_wel(monkeypatch):
     _met_rust(monkeypatch, True)
     db, winkel = _situatie(1, vlag=False)
     assert _verkoop(oud, monkeypatch, db, winkel, "vinted")["shopify_gewist"]
+
+
+def test_instelling_gelezen_uit_de_eigen_rij():
+    from tests.test_voorraadwinkel_verkoop import _DB
+    db = _DB(platform_credentials=[{"user_id": "u1", "platform": "_settings",
+                                    "extra_data": {instellingen.WEBSHOP_MET_RUST: True}}])
+    assert instellingen.webshop_met_rust("u1", db) is True
+    assert instellingen.webshop_met_rust("u2", db) is False
 
 
 def test_instelling_wordt_bewaard_als_ja_of_nee():

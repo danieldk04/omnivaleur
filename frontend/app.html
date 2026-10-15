@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=c3d3883c7a"></script>
+<script src="/i18n.js?v=cc6a36f258"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1912,6 +1912,22 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <span>Ask me before anything counts as sold</span>
         </label>
         <div style="margin-top:10px"><span id="verkoopvraag-status" style="font-size:12px;color:var(--muted)"></span></div>
+      </div>
+      <!-- De eigen webshop met rust laten na een verkoop elders (15-10-2026,
+           Janneke). Zie WEBSHOP_MET_RUST in backend/services/instellingen.py. -->
+      <div style="background:var(--card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:4px">Your webshop after a sale elsewhere</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          When an item sells on Vinted, Marktplaats or 2dehands, Omnivaleur normally lowers the stock in your Shopify or
+          WooCommerce shop by one, or removes a one-off item from the shop. Turn this on if you prefer to update your
+          webshop yourself: your webshop is then left untouched, and the item still goes offline on your other channels.
+          A sale in your webshop still takes the item off everywhere else.
+        </div>
+        <label class="vg-chip" style="max-width:420px">
+          <input type="checkbox" id="webshop-met-rust" onchange="saveWebshopMetRust()">
+          <span>I update my webshop stock myself</span>
+        </label>
+        <div style="margin-top:10px"><span id="webshop-met-rust-status" style="font-size:12px;color:var(--muted)"></span></div>
       </div>
       <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:26px 0 10px;font-weight:800">What goes where</h2>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px">
@@ -13648,6 +13664,11 @@ async function loadRelistDagen() {
       vraagSchakel.checked = data.verkoopvraag !== false;
       vraagSchakel.closest('.vg-chip').classList.toggle('on', vraagSchakel.checked);
     }
+    const winkelSchakel = document.getElementById('webshop-met-rust');
+    if (winkelSchakel) {
+      winkelSchakel.checked = data.webshop_met_rust === true;
+      winkelSchakel.closest('.vg-chip').classList.toggle('on', winkelSchakel.checked);
+    }
     state.settings = { ...state.settings, ...data };
     toonFabrikant(data);
     toonLocatie(data);
@@ -14151,6 +14172,30 @@ async function saveVerkoopvraag() {
       ? 'Saved — we keep asking before an item counts as sold.'
       : 'Saved — no more questions. A listing that disappears is archived and nothing is removed elsewhere.';
     if (!schakel.checked && typeof loadAll === 'function') loadAll();
+  } catch (e) {
+    if (melding) melding.textContent = `Could not save: ${e.message}`;
+  }
+}
+
+async function saveWebshopMetRust() {
+  const schakel = document.getElementById('webshop-met-rust');
+  const melding = document.getElementById('webshop-met-rust-status');
+  if (!schakel) return;
+  schakel.closest('.vg-chip').classList.toggle('on', schakel.checked);
+  if (melding) melding.textContent = 'Saving…';
+  try {
+    const r = await apiFetchRetry(`${API}/api/items/settings`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ webshop_met_rust: schakel.checked }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+    state.settings = { ...state.settings, ...data };
+    schakel.checked = data.webshop_met_rust === true;
+    schakel.closest('.vg-chip').classList.toggle('on', schakel.checked);
+    if (melding) melding.textContent = schakel.checked
+      ? 'Saved — after a sale elsewhere we leave your webshop alone. Update the stock there yourself.'
+      : 'Saved — after a sale elsewhere we update your webshop stock again.';
   } catch (e) {
     if (melding) melding.textContent = `Could not save: ${e.message}`;
   }

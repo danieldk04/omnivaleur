@@ -146,6 +146,19 @@ SLOTTEKST_MAX = 4000
 # een ander kanaal af, er komt geen vraag op het dashboard en geen mail.
 VERKOOPVRAAG = "verkoopvraag"
 
+# DE EIGEN WEBSHOP MET RUST LATEN BIJ EEN VERKOOP ELDERS (15-10-2026, Janneke).
+#
+# Verkocht een artikel op Vinted, Marktplaats of 2dehands, dan haalde Omnivaleur
+# een stuk van de Shopify-voorraad af, of wiste het product uit de webshop als het
+# een uniek stuk was (gemeten in haar Shopify-logboek: 08-10 en 12-10 wiste
+# "Omnivaleur" twee jassen die op Vinted verkocht waren). Janneke: "Ik denk dat
+# ik sowieso liever zelf de aantallen terugzet in de webshop. Voelt wat veiliger."
+# Staat dit aan, dan blijft de webshop (Shopify en WooCommerce) na een verkoop
+# elders onaangeroerd: geen stuk eraf, niets gewist. De andere verkoopkanalen
+# gaan wel gewoon offline. Een verkoop IN de webshop haalt nog steeds alles
+# elders weg. Standaard uit: dan blijft alles zoals het was.
+WEBSHOP_MET_RUST = "webshop_met_rust"
+
 # WELKE ARTIKELEN OP 2DEHANDS ZIJN EIGEN MARKTPLAATS-VERZENDBEDRAG KRIJGEN
 # (26-09-2026, Egbert van papas-plectrums.nl).
 #
@@ -213,7 +226,7 @@ NIEUWS_GEZIEN = "nieuws_gezien"
 STATEN = ("new_with_tags", "new", "good", "fair", "poor")
 
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
-             "auto_relist": True, "vinted_herplaatsen": False, VERKOOPVRAAG: True, VERZENDING_2DH_WOORDEN: [],
+             "auto_relist": True, "vinted_herplaatsen": False, VERKOOPVRAAG: True, WEBSHOP_MET_RUST: False, VERZENDING_2DH_WOORDEN: [],
              VERZENDING_2DH_BRIEF_ONDER: 0, VERZENDING_2DH_MODUS: "standaard",
              "fabrikant_naam": "", "fabrikant_adres": "", "fabrikant_email": "",
              FABRIKANT_MEESTUREN: True,
@@ -257,6 +270,8 @@ def _schoon(rauw: dict | None) -> dict:
         uit["vinted_taal"] = "en"
     if VERKOOPVRAAG in rauw:
         uit[VERKOOPVRAAG] = bool(rauw.get(VERKOOPVRAAG))
+    if WEBSHOP_MET_RUST in rauw:
+        uit[WEBSHOP_MET_RUST] = bool(rauw.get(WEBSHOP_MET_RUST))
     if SHOPIFY_AUTO_IMPORT in rauw:
         keuze = rauw.get(SHOPIFY_AUTO_IMPORT)
         uit[SHOPIFY_AUTO_IMPORT] = None if keuze is None else bool(keuze)
@@ -370,6 +385,17 @@ def verkoopvraag_aan(user_id: str) -> bool:
     except Exception as e:  # noqa: BLE001
         logger.warning("verkoopvraag-instelling niet gelezen voor %s: %s", user_id, e)
         return True
+
+def webshop_met_rust(user_id: str, db=None) -> bool:
+    """Wil deze verkoper zelf de voorraad in zijn webshop bijhouden? Zie
+    WEBSHOP_MET_RUST. Bij een hik in de instellingen: nee, het oude gedrag."""
+    try:
+        rij = ((db or get_db()).table("platform_credentials").select("extra_data")
+               .eq("user_id", user_id).eq("platform", RIJ).limit(1).execute().data or [])
+        return bool(_schoon(rij[0].get("extra_data") if rij else None).get(WEBSHOP_MET_RUST, False))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("webshop-instelling niet gelezen voor %s: %s", user_id, e)
+        return False
 
 def verzending_2dh_regel(user_id: str, db=None) -> dict | None:
     """Wanneer 2dehands het Marktplaats-bedrag van deze verkoper overneemt:

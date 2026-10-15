@@ -2437,14 +2437,26 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
     # één stuk van de Shopify-voorraad af in plaats van het product te wissen.
     # Zie backend/services/shopify_voorraad.py.
     from backend.services import shopify_voorraad
-    try:
-        voorraad = await shopify_voorraad.na_verkoop(db, item_id, sold_on_platform)
-    except Exception as e:  # noqa: BLE001 — dan geldt het oude gedrag
-        logger.warning("[sold] voorraadcontrole mislukt voor %s: %s", item_id, e)
-        voorraad = None
+    # Wil de verkoper zijn webshop zelf bijhouden (instellingen.WEBSHOP_MET_RUST,
+    # 15-10-2026, Janneke), dan geen stuk eraf en niets wissen na een verkoop
+    # elders. De andere kanalen gaan hieronder wel gewoon offline.
+    winkel_met_rust = False
+    if sold_on_platform not in ("shopify", "woocommerce"):
+        eigenaar = eerste_rij(await naast_de_lus(lambda: db.table("items").select("user_id")
+                              .eq("id", item_id).limit(1).execute()))
+        if eigenaar and eigenaar.get("user_id"):
+            from backend.services.instellingen import webshop_met_rust
+            winkel_met_rust = await naast_de_lus(lambda: webshop_met_rust(eigenaar["user_id"], db))
+    voorraad = None
+    if not winkel_met_rust:
+        try:
+            voorraad = await shopify_voorraad.na_verkoop(db, item_id, sold_on_platform)
+        except Exception as e:  # noqa: BLE001 — dan geldt het oude gedrag
+            logger.warning("[sold] voorraadcontrole mislukt voor %s: %s", item_id, e)
+            voorraad = None
     # Hetzelfde voor een WooCommerce-winkel met voorraad (09-10-2026). Geeft None
     # als het artikel geen WooCommerce-product heeft; dan geldt wat hierboven kwam.
-    if voorraad is None:
+    if voorraad is None and not winkel_met_rust:
         from backend.services import woocommerce_voorraad
         try:
             voorraad = await woocommerce_voorraad.na_verkoop(db, item_id, sold_on_platform)
@@ -2604,6 +2616,8 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
         # Voorraad op bij een voorraadwinkel: het Shopify-product blijft staan
         # (Shopify toont het als uitverkocht) zodat het aangevuld kan worden.
         and not (voorraad == shopify_voorraad.OP and l["platform"] in ("shopify", "woocommerce"))
+        # De verkoper houdt zijn webshop zelf bij: daar blijft alles staan.
+        and not (winkel_met_rust and l["platform"] in ("shopify", "woocommerce"))
     ]
 
     logger.info(
