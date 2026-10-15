@@ -17,6 +17,22 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## bronfotos-via-github-taak
+
+*15-10-2026 — "15-10: webshopfoto's die onze server niet krijgt (SiteGround-captcha) komen via de GitHub-taak bronfotos.yml binnen; Cloudflare weigert de standaard Python-UA (1010)"*
+
+De Juiste Toon (96e30080), 15-10-2026: 241 artikelen hielden foto's op dejuistetoon.eu, en sinds 13-10 elk nieuw product (13 van 17). Plaatsen faalde met "None of the N photo(s) could be downloaded".
+
+Gemeten mechanisme: SiteGround geeft het Railway-IP en Daniels Mac een captcha (202, sg-captcha), een GitHub-machine krijgt dezelfde foto met 200. En wp-content/uploads heeft GEEN CORS-kop (wel /wp-json/, die laat omnivaleur.com toe), dus ook de extensie in Toons eigen browser kon de foto nooit ophalen: daar was nooit een IP-probleem, het was CORS.
+
+Oplossing: `.github/workflows/bronfotos.yml` (elke 2 uur, 40 artikelen, 1,5 s per foto, stopt bij de eerste captcha) haalt op en levert af bij `/api/intern/bronfotos`. De server controleert GitHub's OIDC-token (repo, main, precies dit workflowbestand, schedule/workflow_dispatch) in `services/github_oidc.py`: geen secrets. Opslaan gaat via mirror_photos met een MockTransport, dus dezelfde weg als elke kopie.
+
+**Why:** Railway Pro voor een vast IP wilde Daniel niet; een captcha omzeilen doen we niet; dit is een ander uitgaand IP zonder kosten.
+
+**How to apply:** blijft een webshopklant met bronfoto's hangen, kijk eerst of de laatste run van "Bronfoto's" groen is. Een script dat vanaf GitHub omnivaleur.com aanroept moet een eigen User-Agent sturen: Cloudflare weigert "Python-urllib" met foutcode 1010 en dat ziet eruit als een 403 van onze server. Het logboek van de repo is openbaar: druk geen adressen of klant-id's af. Zie "webshopfotos-nagemaakte-browserkop" en "woocommerce-koppeling".
+
+---
+
 ## wekker-bovenin-schuift-bij-elke-start-op
 
 *15-10-2026 — chrome.alarms.create bovenin background.js vervangt de wekker bij elke start van de service worker; een uurwekker gaat dan nooit af (Janneke 3 dagen op 1.0.384)*
