@@ -10490,6 +10490,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  // Vinted's categorieboom in een bepaalde taal, voor het invulscript. Zie
+  // vintedCatalogus hieronder en "VINTED IN ELKE TAAL" in content/vinted.js.
+  if (msg.type === "VINTED_CATALOGUS") {
+    vintedCatalogus(msg.origin, msg.taal).then(sendResponse, () => sendResponse(null));
+    return true;
+  }
+
   // Prijs zetten vanuit de pagina zelf (zie _mwSetVintedPrice).
   // De wekker voor sleep() in de invulscripts (zie shared.js): een service
   // worker is geen tabblad en wordt dus niet afgeknepen.
