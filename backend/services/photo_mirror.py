@@ -80,7 +80,7 @@ async def mirror_photos_bulk(url_lists: list[list[str] | None], user_id: str) ->
     return list(await _asyncio.gather(*(mirror_photos(u, user_id, _sem=sem) for u in url_lists)))
 
 
-async def mirror_photos(urls: list[str] | None, user_id: str, _sem=None) -> list[str]:
+async def mirror_photos(urls: list[str] | None, user_id: str, _sem=None, _transport=None) -> list[str]:
     """Copy every remote photo into our bucket. Returns the urls to store.
 
     Order is preserved — the first photo is the listing's main image on several
@@ -160,7 +160,7 @@ async def mirror_photos(urls: list[str] | None, user_id: str, _sem=None) -> list
     # fresh connection per request, which is what exhausted local sockets on a
     # multi-photo item.
     limits = httpx.Limits(max_connections=MAX_CONCURRENCY, max_keepalive_connections=MAX_CONCURRENCY)
-    async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT, limits=limits) as client:
+    async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT, limits=limits, transport=_transport) as client:
         return ontdubbel(list(await asyncio.gather(*(one(client, u) for u in urls))))
 
 
@@ -267,3 +267,69 @@ async def bronfotos_inhalen(user_id: str, max_artikelen: int = 8) -> dict:
             uit["hersteld"] += 1
     logger.info("bronfotos_inhalen %s: %s", user_id, uit)
     return uit
+
+
+# BRONFOTO'S VIA EEN ANDERE MACHINE (De Juiste Toon, 15-10-2026).
+#
+# GEMETEN: SiteGround geeft het IP van onze server en dat van Daniels Mac een
+# captcha (HTTP 202, sg-captcha) op elke foto; een GitHub-machine kreeg dezelfde
+# foto gewoon (200). En de extensie kan er in de browser van de klant ook niet
+# bij, want de foto's hebben geen CORS-kop (wel /wp-json/, niet wp-content).
+# Daarom haalt .github/workflows/bronfotos.yml ze rustig op (scripts/
+# bronfotos_github.py) en levert ze hier af. Geen sleutel nodig: de server
+# controleert GitHub's eigen handtekening (services/github_oidc.py).
+
+async def bronfotos_wachtrij(max_artikelen: int = 40) -> list[dict]:
+    """Artikelen van webshopklanten met foto's die nog niet in onze opslag staan."""
+    import random
+    from backend.database import fetch_all, get_db, naast_de_lus
+    db = get_db()
+    winkels = (await naast_de_lus(lambda: db.table("platform_credentials").select("user_id")
+                                  .eq("platform", "woocommerce").execute())).data or []
+    uit: list[dict] = []
+    for uid in sorted({w["user_id"] for w in winkels if w.get("user_id")}):
+        rijen = await naast_de_lus(lambda uid=uid: fetch_all(
+            lambda: db.table("items").select("id,photo_urls").eq("user_id", uid)))
+        for r in rijen:
+            urls = [u for u in (r.get("photo_urls") or []) if isinstance(u, str)
+                    and u.startswith(("http://", "https://")) and not is_mirrored(u)]
+            if urls:
+                uit.append({"item_id": r["id"], "user_id": uid, "urls": urls})
+    # Door elkaar: een foto die nooit meer lukt mag niet elke ronde vooraan staan.
+    random.shuffle(uit)
+    return uit[:max_artikelen]
+
+
+async def aangeleverde_fotos_opslaan(user_id: str, item_id: str, fotos: dict) -> dict:
+    """Zet foto's die elders zijn opgehaald in onze opslag en op het artikel.
+
+    `fotos` is {bron-url: (bytes, content-type)}. Loopt door precies dezelfde
+    weg als een gewone kopie (mirror_photos: verkleinen, naam op inhoud,
+    ontdubbelen), alleen komen de bytes uit `fotos` in plaats van van de bron.
+    Alleen adressen die nu nog op het artikel staan worden vervangen; de rest
+    van het artikel blijft zoals het is."""
+    import httpx
+    from backend.database import get_db, naast_de_lus
+    db = get_db()
+    rij = (await naast_de_lus(lambda: db.table("items").select("id,photo_urls")
+                              .eq("id", item_id).eq("user_id", user_id).limit(1).execute())).data
+    if not rij:
+        return {"vervangen": 0, "over": 0, "reden": "artikel niet gevonden"}
+    oud = list(rij[0].get("photo_urls") or [])
+    aanbod = {str(httpx.URL(u)): v for u, v in fotos.items()}
+
+    def antwoord(verzoek: "httpx.Request") -> "httpx.Response":
+        f = aanbod.get(str(verzoek.url))
+        if not f:
+            return httpx.Response(404)
+        return httpx.Response(200, content=f[0], headers={"content-type": f[1]})
+
+    nieuw = await mirror_photos(oud, user_id, _transport=httpx.MockTransport(antwoord))
+    vervangen = sum(1 for u in oud if u in fotos and u not in nieuw)
+    if nieuw and nieuw != oud:
+        await naast_de_lus(lambda: db.table("items").update({"photo_urls": nieuw})
+                           .eq("id", item_id).eq("user_id", user_id).execute())
+        logger.info("bronfoto's aangeleverd %s/%s: %s vervangen, oud=%s", user_id, item_id, vervangen, oud)
+    over = sum(1 for u in nieuw if isinstance(u, str) and u.startswith(("http://", "https://"))
+               and not is_mirrored(u))
+    return {"vervangen": vervangen, "over": over}
