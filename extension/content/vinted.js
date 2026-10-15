@@ -3330,13 +3330,15 @@
   async function kiesRestSubcategorie(item, maxNiveaus = 3) {
     const inp = qs('input[data-testid="catalog-select-dropdown-input"]');
     if (!inp) return false;
-    const tekst = `${item.title || ""} ${item.description || ""}`.toLowerCase();
+    const tekst = `${item.title || ""} ${item.description || ""} ${item.title_en || ""}`.toLowerCase();
+    const kind = typeof KIND_KLEDING !== "undefined"
+      && KIND_KLEDING.test(String(item.category || "").toLowerCase().trim());
     for (let i = 0; i < maxNiveaus; i++) {
       if ((inp.value || "").trim()) return true;   // Vinted heeft het vastgelegd
       const opties = catCellen();
       if (!opties.length) break;
       const namen = opties.map(catTitel);
-      const idx = kiesBlad(namen, tekst);
+      const idx = kind ? kiesBladKind(namen, tekst) : kiesBlad(namen, tekst);
       const keuze = idx != null ? opties[idx] : opties[0];
       clog(`Vinted-categorie: subcategorie nodig → "${catTitel(keuze)}" (${idx != null ? bladReden : "eerste"})`);
       realClickEl(keuze);
