@@ -7,15 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          for i in $(seq 1 30); do
-            c=$(curl -s -m 20 https://omnivaleur.com/health | python3 -c "import sys,json; print(json.load(sys.stdin).get('commit'))" 2>/dev/null)
-            echo "$(date -u +%T) commit=$c"
-            case "$c" in eae7352*) echo LIVE; break;; esac
-            sleep 30
+          echo "ip: $(curl -s https://api.ipify.org)"
+          UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36"
+          for u in https://dejuistetoon.eu/wp-content/uploads/2025/12/1763469899-2.jpg https://dejuistetoon.eu/wp-json/; do
+            echo "== GET $u met Origin omnivaleur.com"
+            curl -s -o /dev/null -D - -m 20 -A "$UA" -H "Origin: https://omnivaleur.com" "$u" | grep -iE "^HTTP|access-control|sg-captcha|content-type|content-length"
+            echo "== OPTIONS $u"
+            curl -s -o /dev/null -D - -m 20 -X OPTIONS -A "$UA" -H "Origin: https://omnivaleur.com" -H "Access-Control-Request-Method: GET" "$u" | grep -iE "^HTTP|access-control|sg-captcha"
           done
-          echo "webhook (onbekend token):"; curl -s -X POST -d '{}' https://omnivaleur.com/api/platforms/woocommerce/webhook/00000000000000000000000000000000; echo
-          echo "opdrachten zonder inlog:"; curl -s -o /dev/null -w "%{http_code}\n" https://omnivaleur.com/api/platforms/woocommerce/browser/opdrachten
-          echo "app.html bevat het doorgeefluik:"; curl -s https://omnivaleur.com/app | grep -c "function wooDoorgeefStart"
-          echo "nl.json bevat de vertaling:"; curl -s "https://omnivaleur.com/i18n/nl.json" | grep -c "we koppelen via deze browser"
-          case "$c" in eae7352*) exit 0;; esac
-          exit 1
