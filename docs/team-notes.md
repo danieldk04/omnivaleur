@@ -17485,4 +17485,5 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Geen klantmelding/popup: een nieuwe kaart in Account is geen grote verandering.
 
 - 15-10 (later): Daniel houdt Google Analytics aan, bewust zonder toestemmingsbanner; de verklaring noemt het, geeft een opt-out en legt het vast als gerechtvaardigd belang. Risico (AP: analytische cookies vragen toestemming) is door hem aanvaard. Daniel bevestigt dat alle verwerkersovereenkomsten zijn geaccepteerd. Railway-regio blijft in de verklaring weggelaten tot nagekeken in het Railway-dashboard (Daniel denkt Nederland; de edge-kop zegt osl1, dat is de rand, niet de rekenregio).
+- 15-10 (avond): Railway-regio nagekeken via Daniels schermafdruk: US West (California), 1 replica. De verklaring (sectie 5 en 6) zegt dat nu eerlijk. Opslag blijft EU (Supabase Ierland), maar de backend verwerkt in de VS. Voorstel aan Daniel: regio naar EU West (Amsterdam) zetten, ook sneller richting Supabase; nog niet gedaan (productiewijziging, mogelijk ander uitgaand IP voor Marktplaats).
 
