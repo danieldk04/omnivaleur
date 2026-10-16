@@ -3453,7 +3453,8 @@
   }
 
   async function walkVintedCategoryPath(item, cat, gender) {
-    let pad = (typeof kinderPad === "function" && kinderPad(cat, item)) || vintedPathFor(cat, gender);
+    let pad = (typeof kinderPad === "function" && kinderPad(cat, item))
+      || (typeof textielPad === "function" && textielPad(cat, item)) || vintedPathFor(cat, gender);
     if (!pad) return false;
     const kind = pad[0] === "Kids";
     const inp = qs('input[data-testid="catalog-select-dropdown-input"]');
