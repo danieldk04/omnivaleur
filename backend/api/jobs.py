@@ -1979,6 +1979,9 @@ def _wachtrij_volgorde(licht: list[dict], now_dt: datetime) -> list[dict]:
         sinds = _parse_ts(j.get("rubriek_sinds"))
         if actie == "create" and sinds and now_dt - sinds < _RUBRIEK_ZOEK_GEDULD:
             return 5
+        # Wie op zijn foto's wacht, net zo (zie _wacht_op_fotos).
+        if _wacht_op_fotos(j, now_dt):
+            return 5
         sleutel = (j.get("item_id"), j.get("platform"))
         if actie == "create" and j.get("scheduled_for"):
             return 3 if sleutel in open_verwijderingen else 0
