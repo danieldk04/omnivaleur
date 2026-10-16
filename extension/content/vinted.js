@@ -1557,6 +1557,18 @@
     "electronics zenders en ontvangers": null,
     "electronics carkits": null,
     "electronics overige telecommunicatie": null,
+
+    // WOONTEXTIEL (16-10-2026, De Juiste Toon). Ruim 900 van zijn artikelen zijn
+    // kleden, dekens en tafelkleden, en die liepen via het zoekvak met Engelse
+    // trefwoorden ("blanket") op een Vinted in het Nederlands. Dan koos Vinted
+    // zelf uit de foto's: "Kies een subcategorie", of een rubriek met een
+    // maatveld. Geen enkele Vinted-plaatsing van hem lukte. Elk pad hieronder is
+    // op 16-10 met de hand afgeklikt op vinted.nl (regelnummers 1918 > 1919 > …).
+    "wonen plaids en woondekens": ["Home", "Textiles", "Blankets"],
+    "wonen tapijten en kleden": ["Home", "Textiles", "Rugs & mats", "Rugs"],
+    "wonen vachten": ["Home", "Textiles", "Rugs & mats", "Rugs"],
+    "wonen tafelkleden": ["Home", "Textiles", "Table linen", "Tablecloths"],
+    "wonen kussens": ["Home", "Textiles", "Cushions"],
   };
 
   // Accessory nouns → the Vinted leaves they belong to. Used only when the
