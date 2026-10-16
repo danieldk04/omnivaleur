@@ -2474,6 +2474,7 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                 # bij f8c0cce9 stonden 14 zulke zoekertjes vooraan en lagen zijn
                 # 13 Vinted-plaatsingen er uren achter stil, terwijl Chrome aan stond.
                 anderen = [j for j in anderen if not _wacht_op_rubriek(j, now_dt)
+                           and not _wacht_op_fotos(j, now_dt)
                            and not bijwerking_moet_wachten(j)]
                 if anderen:
                     logger.info("Beurt doorgegeven aan %s: %s had de vorige "
