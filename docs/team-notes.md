@@ -17607,3 +17607,10 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Server (ac6ab077): een plaatsing van een Woo-klant met foto's die nog op de webshop staan krijgt een stempel, wacht hooguit 2 uur achteraan de rij en gaat met de foto's uit onze opslag zodra die er zijn (uitgifte ververst photo_urls, aflevering door de fototaak werkt wachtende opdrachten bij). Het dashboard telt ze gewoon mee. Fototaak elk kwartier (7,22,37,52). Proef tests/test_plaatsing_wacht_op_webshopfotos.py, ook tegen de oude jobs.py.
 - Marktplaats bij Toon: 209 geplaatst sinds 12-10; fouten alleen foto's (11) en bewust overgeslagen dubbele herplaatsingen (19). 2dehands: 10 van 12 fouten foto's. De zeven artikelen die op foto's vastliepen hebben ze nu, maar zijn nog niet opnieuw geplaatst.
 - Open: tests/test_kanalen_om_de_beurt.py::test_wachtende_2dehands_rij_legt_vinted_niet_stil was al rood vóór vandaag (e1040865). Daniel uploadt dist/omnivaleur-extension-1.0.392.zip. eBay: Toon moet opnieuw koppelen.
+
+## 16-10-2026: Onboarding nieuwe klanten (ochtend, liep om 11:00)
+
+- Zes klanten in hun eerste week, niemand nieuw, niemand actief sinds de vorige ronde. Geen gesprekken in Daniels agenda (hij zit tot 26-10 in Noorwegen). Alle foutsoorten afgehandeld (klantfouten.py: 23 soorten, 0 open). Geen codewijziging, geen klantdata aangeraakt.
+- Delftsblaeu (eac0cccc): zonder rubriek van 137 naar 20 (12 met 0 pogingen, 8 met 1). De nachtelijke rubriekronde vult zijn prenten dus weer in. Nog steeds geen plaatsopdracht, extensie stil sinds 14-10.
+- kilofog140 (d3d125f3): nul artikelen, extensie stil sinds 15-10 10:34. Wegwerpadres, geen mailtje.
+- rambene, mickeyamg, quintblok, Anton: ongewijzigd. De mailtjes die de ronde van 14-10 klaarzette staan niet in het postvak (script leest het postvak wel: bij Aad ziet het Daniels mails). Proef loopt af: Anton 18-10, de andere drie 20-10. Geen nieuw mailtje geschreven, zie het rapport van 14-10.
