@@ -2835,7 +2835,7 @@
       console.warn("[Omnivaleur] Vinted size still empty after retries:", item.size);
       return false;
     });
-    await step("brand",       () => item.brand && fillAttributeVinted(["brand"], item.brand));
+    await step("brand",       () => item.brand ? fillAttributeVinted(["brand"], item.brand) : geenMerkVinted(item));
     await step("colour",      () => fillColourVinted(item));
     // Colour accordion only commits when another attribute trigger is realClicked.
     // Always open the material trigger to commit the colour selection.
