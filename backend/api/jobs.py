@@ -2853,6 +2853,12 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # de rubriek even niet op te vragen is de hele rij achter zich tegen, want er
     # worden er maar vijf per ronde bekeken.
     if is_extension_dispatch:
+        # Alleen de extensie wacht; het dashboard telt ze gewoon als wachtrij.
+        wachten = [j for j in ready if _wacht_op_fotos(j, now_dt)]
+        if wachten:
+            logger.info("%s plaatsing(en) wachten op foto's uit de webshop (gebruiker %s)",
+                        len(wachten), user_id)
+            ready = [j for j in ready if j not in wachten]
         ready.sort(key=lambda j: (
             1 if (isinstance(j.get("payload"), dict)
                   and j["payload"].get("_rubriek_zoeken_sinds")) else 0,
