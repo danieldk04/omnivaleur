@@ -2791,7 +2791,7 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
         try:
             for i in range(0, len(te_verversen), 200):
                 for rij in (db.table("items")
-                            .select("id," + ",".join(_UIT_HET_ARTIKEL))
+                            .select("id,photo_urls," + ",".join(_UIT_HET_ARTIKEL))
                             .in_("id", te_verversen[i:i + 200]).execute().data or []):
                     verse_items[rij["id"]] = rij
         except Exception as e:  # noqa: BLE001
