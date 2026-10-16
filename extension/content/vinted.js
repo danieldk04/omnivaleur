@@ -2724,7 +2724,11 @@
   // Zijn advertentie 10397089556 staat zo live met merk IKEA. Vinted biedt zelf
   // "Geen merk" aan zodra een zoekterm geen merk vindt; dat kiezen we. Een gok die
   // letterlijk in de titel of tekst staat ("IKEA kussen") laten we staan.
-  const GEEN_MERK = /^(geen merk|no brand|ohne marke|sans marque|sin marca|senza marca|bez marki)$/i;
+  // Een functie en geen const: fillForm draait vóór de regels onder
+  // `await getJob()` bestaan (zie extensie-const-na-await-valstrik).
+  function isGeenMerk(t) {
+    return /^(geen merk|no brand|ohne marke|sans marque|sin marca|senza marca|bez marki)$/i.test(String(t || "").trim());
+  }
   function merkStaatInTekst(merk, item) {
     const m = String(merk || "").trim().toLowerCase();
     if (m.length < 2) return false;
@@ -2738,7 +2742,7 @@
     const el = veld();
     if (!el) return true; // deze rubriek heeft geen merkveld
     const gok = (el.value || "").trim();
-    if (GEEN_MERK.test(gok)) return true;
+    if (isGeenMerk(gok)) return true;
     if (gok && merkStaatInTekst(gok, item)) {
       clog(`Vinted merk: "${gok}" staat in de titel of tekst, blijft staan`);
       return true;
@@ -2758,7 +2762,7 @@
     fillInput(z, "qqzzx");
     const cel = () => {
       const t = [...document.querySelectorAll('[class*="web_ui__Cell__title"]')]
-        .find((e) => e.offsetParent && GEEN_MERK.test(e.textContent.trim()));
+        .find((e) => e.offsetParent && isGeenMerk(e.textContent.trim()));
       return t ? (t.closest('[class*="web_ui__Cell__cell"]') || t) : null;
     };
     await waitUntil(() => !!cel(), 3000);
@@ -2769,10 +2773,10 @@
       return false;
     }
     realClickEl(c);
-    await waitUntil(() => GEEN_MERK.test((veld()?.value || "").trim()), 2000);
+    await waitUntil(() => isGeenMerk((veld()?.value || "").trim()), 2000);
     const nu = (veld()?.value || "").trim();
     clog(`Vinted merk: ${gok ? `Vinteds gok "${gok}" vervangen door` : "gezet op"} "${nu}"`);
-    return GEEN_MERK.test(nu);
+    return isGeenMerk(nu);
   }
 
   async function fillForm(item) {
