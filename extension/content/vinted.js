@@ -2667,7 +2667,15 @@
     // it takes (grid or dropdown) depends on that category — so one attempt was
     // regularly too early and the listing came out with "Fill in size to continue".
     await step("size", async () => {
-      if (!item.size) return false;
+      if (!item.size) {
+        // Geen maat, maar wel een maatveld: woontextiel vraagt een afmeting.
+        for (let attempt = 0; attempt < 3 && !sizeIsFilledVinted(); attempt++) {
+          if (!qs('input[data-testid="category-size-single-grid-input"]')) { await sleep(800); continue; }
+          if (await fillAfmetingMaatVinted(item)) return true;
+          await sleep(800);
+        }
+        return sizeIsFilledVinted();
+      }
       for (let attempt = 0; attempt < 3; attempt++) {
         if (sizeIsFilledVinted()) return true;
         await fillAttributeVinted(["size"], String(item.size));
