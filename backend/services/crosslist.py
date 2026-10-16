@@ -1709,21 +1709,7 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     # De wachtrij vullen is alleen een paar databaseregels wegschrijven, dus dat
     # is altijd binnen een oogwenk klaar. Wat daarna misgaat kan de extensie niet
     # meer treffen.
-    # Staan er na _kopieer_bronfotos nog foto's op een gekoppelde webshop, dan
-    # haalt de GitHub-taak bronfotos.yml ze binnen. Tot die tijd wacht de opdracht
-    # in plaats van op elk kanaal te mislukken (zie _wacht_op_fotos in jobs.py).
-    # Alleen bij een WooCommerce-koppeling: alleen die foto's haalt de taak op.
-    fotos_wachten_sinds = None
-    try:
-        from backend.services.photo_mirror import is_mirrored
-        if ext_platforms and any(isinstance(u, str) and u.startswith(("http://", "https://"))
-                                 and not is_mirrored(u) for u in (item.get("photo_urls") or [])):
-            woo = (await _exec(db.table("platform_credentials").select("user_id")
-                               .eq("user_id", user_id).eq("platform", "woocommerce").limit(1))).data
-            if woo:
-                fotos_wachten_sinds = datetime.now(timezone.utc).isoformat()
-    except Exception as e:  # noqa: BLE001 — dan gaat de opdracht zoals vroeger
-        logger.warning("Fotowacht niet bepaald voor %s: %s", item_id, e)
+    fotos_wachten_sinds = (await _fotos_wachten_stempel(db, item, user_id)) if ext_platforms else None
 
     for platform in ext_platforms:
         # Elk kanaal apart afgeschermd. Ging er onderweg iets mis — een
