@@ -3733,5 +3733,15 @@
  "Saved — after a sale elsewhere we leave your webshop alone. Update the stock there yourself.": "Opgeslagen. Na een verkoop elders laten we je webshop met rust. Werk de voorraad daar zelf bij.",
  "Saved — after a sale elsewhere we update your webshop stock again.": "Opgeslagen. Na een verkoop elders werken we de voorraad in je webshop weer bij.",
  "When an item sells on Vinted, Marktplaats or 2dehands, Omnivaleur normally lowers the stock in your Shopify or WooCommerce shop by one, or removes a one-off item from the shop. Turn this on if you prefer to update your webshop yourself: your webshop is then left untouched, and the item still goes offline on your other channels. A sale in your webshop still takes the item off everywhere else.": "Verkoopt een artikel op Vinted, Marktplaats of 2dehands, dan verlaagt Omnivaleur normaal de voorraad in je Shopify- of WooCommerce-winkel met één, of haalt een uniek stuk uit de winkel. Zet dit aan als je je webshop liever zelf bijwerkt: je webshop blijft dan onaangeroerd, en het artikel gaat op je andere kanalen wel offline. Een verkoop in je webshop haalt het artikel nog steeds overal anders weg.",
- "Your webshop after a sale elsewhere": "Je webshop na een verkoop elders"
+ "Your webshop after a sale elsewhere": "Je webshop na een verkoop elders",
+ "Same as the item": "Zelfde als het artikel",
+ "Always: New with tags": "Altijd: Nieuw met prijskaartje",
+ "Always: New without tags": "Altijd: Nieuw zonder prijskaartje",
+ "Always: Very good": "Altijd: Heel goed",
+ "Always: Good": "Altijd: Goed",
+ "Always: Satisfactory": "Altijd: Redelijk",
+ "Pick one condition for every new Vinted listing, whatever the item says. Your items themselves stay as they are, and Marktplaats and 2dehands keep using the item's own condition.": "Kies één staat voor elke nieuwe Vinted-advertentie, wat er ook bij het artikel staat. Je artikelen zelf blijven zoals ze zijn, en Marktplaats en 2dehands houden de staat van het artikel aan.",
+ "Saved — new Vinted listings all get this condition.": "Opgeslagen. Nieuwe Vinted-advertenties krijgen allemaal deze staat.",
+ "Saved — new Vinted listings get the condition of the item.": "Opgeslagen. Nieuwe Vinted-advertenties krijgen de staat van het artikel.",
+ "Condition on Vinted": "Staat op Vinted"
 }

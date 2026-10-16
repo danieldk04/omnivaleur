@@ -2824,6 +2824,24 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                 and _onbereikbare_fotos(verse_fotos) < _onbereikbare_fotos(oude_fotos)):
             j["payload"]["photo_urls"] = verse_fotos
 
+    # EEN VASTE STAAT OP VINTED, ALS DE VERKOPER DAT WIL (16-10-2026, Toon).
+    # Na het verversen hierboven, anders zet de staat van het artikel hem terug.
+    # Hier en niet in de extensie: dan werkt het bij de eerstvolgende opdracht,
+    # ook op de kopie die hij vandaag draait. Zie instellingen.VINTED_STAAT.
+    if any(j["action"] == "create" and j.get("platform") == "vinted"
+           and isinstance(j.get("payload"), dict) for j in ready):
+        try:
+            from backend.services.instellingen import VINTED_STAAT, lees as _lees_instellingen
+            vaste_staat = _lees_instellingen(user_id).get(VINTED_STAAT)
+        except Exception as e:  # noqa: BLE001 — dan de staat van het artikel
+            logger.warning("Vaste Vinted-staat niet gelezen (%s)", e)
+            vaste_staat = None
+        if vaste_staat:
+            for j in ready:
+                if (j["action"] == "create" and j.get("platform") == "vinted"
+                        and isinstance(j.get("payload"), dict)):
+                    j["payload"]["condition"] = vaste_staat
+
     # DE KLEUR GOEDZETTEN VLAK VOOR UITGIFTE.
     #
     # Marktplaats en 2dehands bieden alleen kale kleurnamen aan (Bruin, Rood,

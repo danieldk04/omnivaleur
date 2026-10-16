@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=cc6a36f258"></script>
+<script src="/i18n.js?v=b3c232a02d"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1886,6 +1886,21 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           Off by default: your title and description go to Vinted exactly as you wrote them.
           Switch it on to have them translated into English, for buyers across Europe. Applies to new listings.
           Marktplaats and 2dehands always get Dutch.
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+          <label for="vinted-staat" style="font-size:13px">Condition on Vinted</label>
+          <select id="vinted-staat" onchange="saveVintedStaat()" style="max-width:260px">
+            <option value="">Same as the item</option>
+            <option value="new_with_tags">Always: New with tags</option>
+            <option value="new">Always: New without tags</option>
+            <option value="good">Always: Very good</option>
+            <option value="fair">Always: Good</option>
+            <option value="poor">Always: Satisfactory</option>
+          </select>
+        </div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          Pick one condition for every new Vinted listing, whatever the item says. Your items themselves stay as they are,
+          and Marktplaats and 2dehands keep using the item's own condition.
         </div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <label for="relist-dagen" style="font-size:13px">Relist after</label>
@@ -13659,6 +13674,8 @@ async function loadRelistDagen() {
       taalSchakel.checked = data.vinted_taal === 'en';
       taalSchakel.closest('.vg-chip').classList.toggle('on', taalSchakel.checked);
     }
+    const staatKeuze = document.getElementById('vinted-staat');
+    if (staatKeuze) staatKeuze.value = data.vinted_staat || '';
     const vraagSchakel = document.getElementById('verkoopvraag-aan');
     if (vraagSchakel) {
       vraagSchakel.checked = data.verkoopvraag !== false;
@@ -14121,6 +14138,30 @@ async function saveVintedTaal() {
     melding.textContent = schakel.checked
       ? 'Saved — new Vinted listings are translated into English.'
       : 'Saved — new Vinted listings go out exactly as you wrote them.';
+  } catch (e) {
+    melding.textContent = `Could not save: ${e.message}`;
+  }
+}
+
+// Eén vaste staat voor elke nieuwe Vinted-advertentie (Toon, 16-10-2026). De
+// server zet hem vlak voor het plaatsen, zie instellingen.VINTED_STAAT.
+async function saveVintedStaat() {
+  const keuze = document.getElementById('vinted-staat');
+  const melding = document.getElementById('relist-dagen-status');
+  if (!keuze) return;
+  melding.textContent = 'Saving…';
+  try {
+    const r = await apiFetchRetry(`${API}/api/items/settings`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vinted_staat: keuze.value }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+    state.settings = { ...state.settings, ...data };
+    keuze.value = data.vinted_staat || '';
+    melding.textContent = keuze.value
+      ? 'Saved — new Vinted listings all get this condition.'
+      : 'Saved — new Vinted listings get the condition of the item.';
   } catch (e) {
     melding.textContent = `Could not save: ${e.message}`;
   }

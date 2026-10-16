@@ -223,6 +223,16 @@ IMPORT_STAAT = "import_staat"
 # (NIEUWS_ID in frontend/app.html). Op de server en niet alleen in de browser:
 # anders krijgt hij hetzelfde bericht op elke computer opnieuw (09-10-2026).
 NIEUWS_GEZIEN = "nieuws_gezien"
+
+# De staat die ELKE Vinted-advertentie van deze verkoper krijgt, wat er ook bij
+# het artikel staat. Leeg = de staat van het artikel volgen. De Juiste Toon,
+# 16-10-2026: "Ik wil graag automatisch alles bij status GOED". Zijn artikelen
+# staan op "Zo goed als nieuw" (de importstand), en dat wordt op Vinted terecht
+# "Heel goed"; voor zijn tweedehands kleden wil hij overal "Goed". Op het
+# artikel zelf blijft alles staan, Marktplaats en 2dehands merken er niets van.
+# De waarde is een artikelstaat (zelfde sleutels als STATEN): "fair" wordt op
+# Vinted "Goed", zie CONDITION_MAP in extension/content/vinted.js.
+VINTED_STAAT = "vinted_staat"
 STATEN = ("new_with_tags", "new", "good", "fair", "poor")
 
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
@@ -234,7 +244,7 @@ STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "levering": "beide", "pakket_grens": 0, "slottekst": "",
              SHOPIFY_AUTO_IMPORT: None, SHOPIFY_AUTO_IMPORT_STAND: {}, "vinted_taal": "zelf",
              WOO_AUTO_IMPORT: None, WOO_AUTO_IMPORT_STAND: {}, IMPORT_STAAT: None,
-             NIEUWS_GEZIEN: None}
+             NIEUWS_GEZIEN: None, VINTED_STAAT: None}
 
 
 def _schoon(rauw: dict | None) -> dict:
@@ -264,6 +274,8 @@ def _schoon(rauw: dict | None) -> dict:
         uit[NIEUWS_GEZIEN] = gezien.strip()
     if rauw.get(IMPORT_STAAT) in STATEN:
         uit[IMPORT_STAAT] = rauw[IMPORT_STAAT]
+    if rauw.get(VINTED_STAAT) in STATEN:
+        uit[VINTED_STAAT] = rauw[VINTED_STAAT]
     # Vinted: standaard exact de tekst van de verkoper ("zelf"). Alleen wie zelf
     # kiest voor "en" krijgt een vertaling naar het Engels (Daniel, 09-10-2026).
     if str(rauw.get("vinted_taal") or "").strip().lower() == "en":

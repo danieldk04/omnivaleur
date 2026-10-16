@@ -43,6 +43,8 @@ def _v_pad():
     src = _lees("extension/content/vinted.js")
     blok = src[src.index("  const V_PAD = {") + len("  const V_PAD = "):]
     blok = blok[:blok.index("\n  };") + len("\n  }")]
+    # Uitlegregels (// …) tussen de paden zijn gewoon JavaScript, geen JSON.
+    blok = re.sub(r"^\s*//.*$", "", blok, flags=re.M)
     return json.loads(re.sub(r",\s*\}$", "}", blok.strip()))
 
 
@@ -81,6 +83,17 @@ def test_betaalde_rubrieken_zitten_er_niet_in():
 
 def test_vinted_paden_bestaan_in_vinteds_eigen_boom():
     nagelopen = set(_fixture("vinted_paden_24-09-2026.json")["paden"])
+    # Plus Vinteds volledige Engelse boom van 15-10-2026 (id -> [naam, ouder]):
+    # daar staat ook woontextiel in (Home > Textiles > Blankets, 16-10-2026).
+    boom = _fixture("vinted_catalogus_en_15-10-2026.json")["boom"]
+    def _pad(i):
+        uit = []
+        while str(i) in boom and str(i) != "0":
+            naam, ouder = boom[str(i)][:2]
+            uit.insert(0, naam)
+            i = ouder
+        return ">".join(uit)
+    nagelopen |= {_pad(i) for i in boom}
     for sleutel, pad in _v_pad().items():
         if pad is not None:
             assert ">".join(pad) in nagelopen, f"{sleutel}: {pad} is niet nagelopen"
