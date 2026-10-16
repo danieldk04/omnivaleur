@@ -1734,6 +1734,8 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
         # ene kanaal zijn eigen fout en gaan de andere gewoon door.
         try:
             payload = dict(_pick(platform))
+            if fotos_wachten_sinds:
+                payload["_fotos_wachten_sinds"] = fotos_wachten_sinds
             # Marktplaats en 2dehands vragen om de verantwoordelijke partij; de
             # extensie vult die drie velden in als ze in de opdracht staan.
             if platform in ("marktplaats", "2dehands"):
