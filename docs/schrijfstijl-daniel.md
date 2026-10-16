@@ -120,3 +120,4 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - 13-10-2026: Gekeken: 132 mails in Verzonden (3 dagen), 6 van Daniel, 3 al verwerkt; 3 nieuw, 3 met concept (alle drie hetzelfde oude concept, niet vergelijkbaar). Nieuw: Engelstalige klant krijgt korte Engelse afspraakmails met "Best regards," (onder Nog te leren).
 - 14-10-2026: Gekeken: 88 mails in Verzonden (3 dagen), 5 van Daniel, 4 al verwerkt; 1 nieuw, 1 met concept. Nieuw: hij schrapt mijn slotzin met ":)" bij een korte reparatiemelding (1x, onder Nog te leren).
 - 15-10-2026: Gekeken: 48 mails in Verzonden (3 dagen), 7 van Daniel, 4 al verwerkt; 3 nieuw, 3 met concept (1 niet vergelijkbaar, 2 vrijwel woordelijk overgenomen). Nieuw: alleen tijdswoorden aangepast ("vanochtend", "Morgen" in plaats van datum), onder Nog te leren.
+- 16-10-2026: Gekeken: 46 mails in Verzonden (3 dagen), 4 van Daniel, 4 al verwerkt; 0 nieuw, 0 met concept. Niets te leren.
