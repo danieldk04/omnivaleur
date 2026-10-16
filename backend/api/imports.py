@@ -2201,6 +2201,16 @@ def _match_candidate(cand: dict, items: list[dict], listings_by_id: dict,
 
     title_match = _best_match(cand.get("title"), items)
     if title_match:
+        # ALLEEN DE TITEL IS GEEN BEWIJS (16-10-2026, Janneke 31d28378). Haar
+        # oude eigen Vinted-advertenties (15 euro, andere tekst, ander stuk)
+        # werden zo stil gekoppeld aan Shopify-artikelen van 25 tot 30 euro met
+        # dezelfde titel; bij een verkoop ging daarna het verkeerde stuk van de
+        # andere kanalen af. Spreken prijs, kleur, maat of merk elkaar tegen,
+        # dan beslist de verkoper (likely_same: "Import all" slaat hem over).
+        item = next((it for it in items if it["id"] == title_match), {})
+        if (prijs_wijkt_af(cand.get("price"), item.get("price"))
+                or plausibel(cand, item, bekende_merken or set()) is not None):
+            return title_match, "likely_same"
         return title_match, "same_title"
     # Shopify: het artikelnummer staat op de variant, niet in de titel. De scan
     # heeft er al op gekoppeld (jobs._store_scan_results, row["sku"]) en die
@@ -2292,6 +2302,9 @@ def _twijfelreden(cand: dict, item_id: str | None, reden: str | None,
     """
     if not item_id or reden == "same_listing":
         return None
+    # Al twijfel uit _match_candidate zelf (alleen de titel gelijk, de prijs niet).
+    if reden in TWIJFEL_REDENEN:
+        return reden
     # Alleen bij een gedeeld NUMMER zegt de winkel zelf dat het één stuk is. Is
     # alleen de titel gelijk, dan zijn het meestal twee stukken (Janneke 09-10:
     # 526 kinderschoenen en truien met dezelfde titel kregen "zelfde nummer,
@@ -2410,7 +2423,7 @@ def _twin_pool(platform: str, items: list[dict], platforms_by_item: dict) -> lis
 # omdat het publiceren dezelfde controle nodig heeft: zonder die controle zette
 # "Publish" een artikel dat al op een kanaal stond er voor de tweede keer op.
 from backend.services.tweelingen import (          # noqa: E402
-    advertentiecode, plausibel, bekende_merken_van,
+    advertentiecode, plausibel, prijs_wijkt_af, bekende_merken_van,
     plausibel as _twin_plausible,
     kleuren as _canon_colors,
     maten as _sizes,

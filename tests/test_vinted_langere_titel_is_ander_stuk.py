@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT))
 
 from backend.services import crosslist as cl  # noqa: E402
 from tests.test_vinted_titelgenoot_niet_koppelen import _DB, _functie, _vinted_js  # noqa: E402
-from tests.test_delist_spaart_eigen_webshop import _draai  # noqa: E402
+from tests.test_delist_spaart_eigen_webshop import JAS, _draai  # noqa: E402
 
 VOOR_DE_REPARATIE = "409cccc7"
 NODE = shutil.which("node")
@@ -38,7 +38,7 @@ KAST = [
 ]
 
 
-def _na_trage_plaatsing(commit, payload, kast):
+def _na_trage_plaatsing(commit, payload, kast, opts=None):
     """Het zoeken na een plaatsing die niet doorstuurde, zoals vinted.js het aanroept."""
     if NODE is None:
         pytest.skip("node is niet geïnstalleerd")
@@ -48,7 +48,7 @@ const getVintedUserId = async () => "1";
 const fetch = async () => ({{ ok: true, json: async () => ({{ items: {json.dumps(kast)} }}) }});
 {_functie(_vinted_js(commit), "resolveCreatedVintedItem")}
 const item = {json.dumps(payload)};
-resolveCreatedVintedItem(item, item.platform_listing_id, 5).then((r) => console.log(JSON.stringify(r)));
+resolveCreatedVintedItem(item, item.platform_listing_id, 5, {json.dumps(opts or {})}).then((r) => console.log(JSON.stringify(r)));
 """
     r = subprocess.run([NODE, "-e", driver], capture_output=True, text=True, timeout=30)
     assert r.returncode == 0, r.stderr
@@ -65,8 +65,10 @@ def test_nieuw_pakt_geen_langere_titel():
 
 
 def test_nieuw_vindt_nog_steeds_de_eigen_advertentie():
+    # Sinds 16-10 met titelgenoten alleen wat ná de eigen klik verscheen (het
+    # hoogste nummer in de kast vlak ervoor), zie test_vinted_titelgenoten_hard_bewijs.
     kast = [{"id": 10380424025, "title": GROEN["title"], "is_closed": False, "is_draft": False}] + KAST
-    assert _na_trage_plaatsing(None, GROEN, kast) == "10380424025"
+    assert _na_trage_plaatsing(None, GROEN, kast, {"naId": 10380360699}) == "10380424025"
 
 
 def test_nieuw_vindt_een_op_100_tekens_afgekapte_titel():

@@ -92,13 +92,10 @@ def _kast(*advertenties):
 def _zoek(commit, payload, kast, timeout, opts):
     """resolveCreatedVintedItem uit de echte vinted.js, met een nagemaakte kast."""
     bron = _bron("extension/content/vinted.js", commit)
-    hulp = (_stuk(bron, "  function vintedPrijsKlopt(", "\n  }\n")
-            if "function vintedPrijsKlopt(" in bron else "")
     return _node(f"""
 const sleep = async () => {{}};
 const getVintedUserId = async () => "1";
 const fetch = async () => ({{ ok: true, json: async () => ({{ items: {json.dumps(kast)} }}) }});
-{hulp}
 {_stuk(bron, "  async function resolveCreatedVintedItem(", "\n  }\n")}
 const item = {json.dumps(payload)};
 resolveCreatedVintedItem(item, item.platform_listing_id, {timeout}, {json.dumps(opts)})
@@ -325,7 +322,7 @@ def _afmelden(monkeypatch, mod, items):
     monkeypatch.setattr(mod, "_verzending_alsnog_bijwerken", lambda *a, **k: None)
     uit = asyncio.run(mod.complete_job("j1", {"platform_listing_id": "10392587289",
                                               "note": "already_published_manually"}, user_id="u1"))
-    return uit["status"], gekoppeld, gemeld.get("error", "")
+    return uit.get("status"), gekoppeld, gemeld.get("error", "")
 
 
 TWEE_JASSEN = [{"id": "fleece", "user_id": "u1", "title": TITEL},

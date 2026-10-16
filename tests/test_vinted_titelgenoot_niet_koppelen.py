@@ -248,13 +248,17 @@ def test_nieuwe_extensie_slaat_alle_titelgenoten_over():
     assert _al_online(None, job["payload"], kast) is None
 
 
-def test_nieuwe_extensie_koppelt_nog_steeds_een_echt_zelf_geplaatste():
-    """Waar de controle voor is: hing de plaatsing en zette ze hem zelf online,
-    dan koppelen en niet nog een keer plaatsen."""
+def test_nieuwe_extensie_koppelt_bij_een_titelgenoot_ook_een_zelf_geplaatste_niet():
+    """Tot 16-10 koppelde de controle vooraf hier de nieuwste advertentie met
+    deze titel. Bij titelgenoten is dat geen bewijs: op 15-10 kreeg de fleece zo
+    de advertentie van de groene jas. Nu liever een tweede advertentie dan een
+    verkeerde koppeling. Een enig stuk koppelt nog wel, zie
+    test_vinted_titelgenoten_hard_bewijs."""
     job = _bruine_opdracht()
     J._vinted_titelgenoten_meegeven(_janneke(), "u1", [job])
     kast = [{"id": 10399999999, "title": TITEL, "is_closed": False, "is_draft": False}] + KAST
-    assert _al_online(None, job["payload"], kast) == "10399999999"
+    assert _al_online(VOOR_DE_REPARATIE, job["payload"], kast) == "10399999999"
+    assert _al_online(None, job["payload"], kast) is None
 
 
 def test_achtergrond_zoekt_ook_niet_bij_een_titelgenoot():

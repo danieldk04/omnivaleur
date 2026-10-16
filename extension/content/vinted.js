@@ -2401,6 +2401,16 @@
     // minder erg dan een verkeerde koppeling.
     const serverGenoten = Number(item._vinted_titelgenoten || 0) > 0 || bezet.size > 0;
     const naId = opts.naId != null && Number.isFinite(Number(opts.naId)) ? Number(opts.naId) : null;
+    // De prijs van een kastadvertentie tegen die van het artikel. Onbekend aan
+    // een van beide kanten telt niet als tegenspraak; een cent verschil wel.
+    const prijsKlopt = (it) => {
+      const ruw = it && (it.price && typeof it.price === "object" ? it.price.amount : it.price);
+      const hun = Number(String(ruw ?? "").replace(",", "."));
+      const onze = Number(String(item.price != null ? item.price : "").replace(",", "."));
+      if (ruw == null || ruw === "" || !Number.isFinite(hun) || hun <= 0) return true;
+      if (!Number.isFinite(onze) || onze <= 0) return true;
+      return Math.abs(hun - onze) < 0.01;
+    };
     const userId = await getVintedUserId();
     if (!userId) return null;
 
@@ -2451,7 +2461,7 @@
             // Pas na onze klik verschenen: Vinted-nummers lopen op.
             if (naId != null && !(Number(it.id) > naId)) return false;
             // Een andere prijs is een ander stuk.
-            if (!vintedPrijsKlopt(it, item)) return false;
+            if (!prijsKlopt(it)) return false;
             return titelPast(it);
           });
           // newest_first: zonder titelgenoten is de eerste de onze (een
@@ -2465,17 +2475,6 @@
       await sleep(3000);
     }
     return null;
-  }
-
-  // De prijs van een kastadvertentie tegen die van het artikel. Onbekend aan een
-  // van beide kanten telt niet als tegenspraak; een cent verschil wel.
-  function vintedPrijsKlopt(it, item) {
-    const ruw = it && (it.price && typeof it.price === "object" ? it.price.amount : it.price);
-    const hun = Number(String(ruw ?? "").replace(",", "."));
-    const onze = Number(String(item && item.price != null ? item.price : "").replace(",", "."));
-    if (ruw == null || ruw === "" || !Number.isFinite(hun) || hun <= 0) return true;
-    if (!Number.isFinite(onze) || onze <= 0) return true;
-    return Math.abs(hun - onze) < 0.01;
   }
 
   // Hoogste advertentienummer in de eigen kast (alle soorten), of null.

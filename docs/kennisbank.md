@@ -17,6 +17,20 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-koppeling-titelgenoten
+
+*16-10-2026 — Gelijke titels (Janneke: 7x "Tussenjas Name it maat 128") koppelen Vinted-advertenties aan het verkeerde artikel; een verkoop haalt dan het verkeerde stuk van Marktplaats*
+
+16-10-2026, Janneke: groene jas verkocht op Vinted, maar de advertentie hing aan een blauwe fleece met dezelfde titel. Omnivaleur boekte de fleece als verkocht en haalde de fleece van Marktplaats; de verkochte jas bleef staan. In haar account hingen 9 van 193 Vinted-rijen aan het verkeerde stuk.
+
+Drie routes: (1) overlappende Vinted-plaatsingen; een "mislukte" plaatsing staat toch online en het volgende artikel met dezelfde titel pikt hem op als already_published_manually of via resolveCreatedVintedItem; (2) de Vinted-import koppelt op unieke gelijke titel (same_title) zonder prijs of tekst te vergelijken; (3) alles wat een losse advertentie op titel zoekt.
+
+**Why:** generieke titels (merk + soort + maat) zijn bij kinderkleding en voorraadwinkels de regel, niet de uitzondering.
+
+**How to apply:** bij "verkeerde advertentie eraf" of "verkocht maar blijft staan": leg de foto van de Vinted-advertentie (laatste scan, result.listings[].photo_url) naast items.photo_urls; prijs en omschrijving vergelijken vangt de meeste. Losgekoppelde rij = status delisted en platform_listing_id leeg, dan raakt de verkoopcontrole hem niet. **Gerepareerd 16-10 (extensie 1.0.394 + server):** het mechanisme was de bewaker: na 3 min "timed out" liet de extensie het tabblad doorwerken terwijl de server Vinted vrijgaf (serverlog: A opgegeven 20:03:52, B uitgegeven 20:04:15, A meldde zich 20:07:15 met een advertentie die op titel in de kast was gevonden). Nu: Vinted blijft 8 min bezet na zo'n time-out (_vinted_tabblad_werkt_nog); "already_published_manually" bij titelgenoten koppelt de server niet; de extensie koppelt vooraf nooit bij titelgenoten, en na de klik alleen een advertentie boven het hoogste kastnummer van vlak ervoor met dezelfde prijs (precies één); de bewaker koppelt bij titelgenoten niet; import en scan maken van "zelfde titel, prijs >5% anders" twijfel (likely_same). Railway-deploylogs van een dag oud zijn nog te lezen per deployment (zsh: ${=ids} om te splitsen). Zie "delist-wist-de-bronwinkel", "titel-op-het-kanaal-is-niet-de-brontitel".
+
+---
+
 ## vinted-gokt-merk-na-fotos
 
 *16-10-2026 — "16-10: Vinted vult na de foto's zelf een merk in (IKEA bij Toons wandkleed); zonder merk bij het artikel liet de extensie die gok staan. Nu Vinteds eigen 'Geen merk'"*
@@ -32,20 +46,6 @@ Reparatie in vinted.js: geenMerkVinted (en een tweede keer vlak voor de eindcont
 Niet gemeten: of Vinted "Geen merk" ook bij het echte plaatsen aanneemt. Daarvoor is een klik op Toevoegen nodig, en dat mag alleen met Daniels ja.
 
 Zelfde dag liep ik opnieuw in "extensie-const-na-await-valstrik": een `const GEEN_MERK` boven fillForm gaf "Cannot access before initialization". Alleen de echte draai op Vinted ving het.
-
----
-
-## vinted-koppeling-titelgenoten
-
-*16-10-2026 — Gelijke titels (Janneke: 7x "Tussenjas Name it maat 128") koppelen Vinted-advertenties aan het verkeerde artikel; een verkoop haalt dan het verkeerde stuk van Marktplaats*
-
-16-10-2026, Janneke: groene jas verkocht op Vinted, maar de advertentie hing aan een blauwe fleece met dezelfde titel. Omnivaleur boekte de fleece als verkocht en haalde de fleece van Marktplaats; de verkochte jas bleef staan. In haar account hingen 9 van 193 Vinted-rijen aan het verkeerde stuk.
-
-Drie routes: (1) overlappende Vinted-plaatsingen; een "mislukte" plaatsing staat toch online en het volgende artikel met dezelfde titel pikt hem op als already_published_manually of via resolveCreatedVintedItem; (2) de Vinted-import koppelt op unieke gelijke titel (same_title) zonder prijs of tekst te vergelijken; (3) alles wat een losse advertentie op titel zoekt.
-
-**Why:** generieke titels (merk + soort + maat) zijn bij kinderkleding en voorraadwinkels de regel, niet de uitzondering.
-
-**How to apply:** bij "verkeerde advertentie eraf" of "verkocht maar blijft staan": leg de foto van de Vinted-advertentie (laatste scan, result.listings[].photo_url) naast items.photo_urls; prijs en omschrijving vergelijken vangt de meeste. Losgekoppelde rij = status delisted en platform_listing_id leeg, dan raakt de verkoopcontrole hem niet. Zie "delist-wist-de-bronwinkel", "titel-op-het-kanaal-is-niet-de-brontitel".
 
 ---
 

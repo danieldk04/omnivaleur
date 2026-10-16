@@ -295,6 +295,21 @@ def _eigen_sku(sku) -> str:
     return "" if not s or _AUTO_SKU.match(s) else s
 
 
+# Hoeveel twee prijzen mogen schelen voor een koppeling die ALLEEN op de titel
+# rust. Een advertentie die wij plaatsten draagt precies de prijs van het
+# artikel; 5% laat een afronding of een kleine bijstelling toe. De ruime factor
+# hierboven is voor tweelingen met een nummer, niet voor een kale titel.
+_TITEL_PRIJS_MARGE = 0.05
+
+
+def prijs_wijkt_af(a, b) -> bool:
+    """Spreken twee prijzen elkaar tegen? Ontbreekt er een, dan niet."""
+    pa, pb = _prijs(a), _prijs(b)
+    if not pa or not pb or pa <= 0 or pb <= 0:
+        return False
+    return abs(pa - pb) / max(pa, pb) > _TITEL_PRIJS_MARGE
+
+
 def plausibel(a: dict, b: dict, bekende_merken: set | None = None) -> str | None:
     """
     Harde controles waar geen taalmodel en geen nummer omheen praat. Geeft de

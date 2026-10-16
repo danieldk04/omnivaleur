@@ -568,6 +568,53 @@ def _titel_zonder_sku(titel) -> str:
     return _titel_sleutel(_zonder_sku(titel))
 
 
+# EEN OPGEGEVEN VINTED-TABBLAD WERKT NOG DOOR (16-10-2026, Janneke 31d28378).
+#
+# Na drie minuten zonder antwoord meldt de bewaker van de extensie een Vinted-
+# plaatsing als "timed out" en laat het tabblad open, zodat de verkoper hem kan
+# afmaken. Het invulscript in dat tabblad loopt intussen gewoon door: het klikt
+# op Plaatsen en zoekt daarna zijn advertentie in de kast. Voor de server was
+# het kanaal op dat moment vrij, dus ging de volgende plaatsing al de deur uit.
+# Gemeten in de serverlog van 15-10: jas A opgegeven om 20:03:52, jas B
+# uitgegeven om 20:04:15, A meldde zich om 20:07:15 alsnog met een advertentie.
+# Drie gelijknamige jassen liepen zo door elkaar heen, en de advertenties die
+# ze in de kast vonden waren van elkaar. Daarom blijft Vinted na zo'n melding
+# nog even bezet, tot het tabblad zich alsnog meldt of de naloop voorbij is.
+_VINTED_NALOOP = timedelta(minutes=8)
+
+
+def _vinted_tabblad_werkt_nog(db, user_id: str, now_dt: datetime) -> bool:
+    """Is er net een Vinted-plaatsing opgegeven op tijd, waarvan het tabblad
+    nog bezig kan zijn? Dan geen tweede Vinted-plaatsing ernaast."""
+    try:
+        rijen = (db.table("jobs").select("result,done_at")
+                 .eq("user_id", user_id).eq("platform", "vinted").eq("action", "create")
+                 .eq("status", "error")
+                 .gte("done_at", (now_dt - _VINTED_NALOOP).isoformat())
+                 .limit(10).execute().data or [])
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Vinted-naloop niet te lezen (%s)", e)
+        return False
+    return any(isinstance(r.get("result"), dict)
+               and _TIJDSOVERSCHRIJDING.search(str(r["result"].get("error") or ""))
+               for r in rijen)
+
+
+def _heeft_titelgenoot(db, job: dict) -> bool:
+    """Heeft deze verkoper nog een ánder artikel met dezelfde titel (zoals de
+    extensie titels vergelijkt, zonder nummer vooraan)?"""
+    titel = (job.get("payload") or {}).get("title") if isinstance(job.get("payload"), dict) else None
+    sleutel = _titel_zonder_sku(titel)
+    if not sleutel or not job.get("item_id"):
+        return False
+    woorden = re.findall(r"[a-z0-9]+", _zonder_sku(titel).lower())
+    artikelen = (db.table("items").select("id,title")
+                 .eq("user_id", job["user_id"]).ilike("title", "%" + "%".join(woorden) + "%")
+                 .execute().data or [])
+    return any(a.get("id") != job["item_id"] and _titel_zonder_sku(a.get("title")) == sleutel
+               for a in artikelen)
+
+
 def _vinted_titelgenoten_meegeven(db, user_id: str, jobs: list) -> int:
     """Geef bij een Vinted-plaatsing mee welke Vinted-advertenties al bij een
     ánder artikel met dezelfde titel horen.
@@ -610,6 +657,7 @@ def _vinted_titelgenoten_meegeven(db, user_id: str, jobs: list) -> int:
         # want die bevat ze. De server keek alleen naar gelijke titels en gaf
         # die advertenties dus niet als bezet mee.
         per_titel: dict[str, list[dict]] = {}
+        aantal: dict[str, set] = {}
         for sleutel, titel in {_titel_zonder_sku(j["payload"]["title"]): j["payload"]["title"]
                                for j in vinted}.items():
             woorden = re.findall(r"[a-z0-9]+", _zonder_sku(titel).lower())
@@ -629,6 +677,7 @@ def _vinted_titelgenoten_meegeven(db, user_id: str, jobs: list) -> int:
                 return any(a and b and (a in b or b in a) for a, b in zip(ons, hun))
 
             ids = list(dict.fromkeys(a["id"] for a in artikelen if _genoot(a.get("title"))))
+            aantal[sleutel] = set(ids)
             if len(ids) < 2:
                 per_titel[sleutel] = []
                 continue
@@ -640,6 +689,13 @@ def _vinted_titelgenoten_meegeven(db, user_id: str, jobs: list) -> int:
                                             .execute().data or [])]
         for j in vinted:
             p = j["payload"]
+            # Hoeveel ándere artikelen deze titel dragen, ook als die nog nergens
+            # op Vinted staan. Een titelgenoot zonder koppeling kan toch een
+            # advertentie in de kast hebben (een "mislukte" plaatsing die wel
+            # online kwam); de extensie koppelt dan alleen op hard bewijs.
+            n = len(aantal.get(_titel_zonder_sku(p["title"]), set()) - {j["item_id"]})
+            if n:
+                p["_vinted_titelgenoten"] = n
             genoten = sorted(
                 (r for r in per_titel.get(_titel_zonder_sku(p["title"]), [])
                  if r.get("item_id") != j["item_id"] and r.get("platform_listing_id")),
@@ -2411,6 +2467,10 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             ct = _parse_ts(c.get("claimed_at"))
             if ct and ct >= now_dt - timedelta(minutes=STALE_CLAIM_MINUTES):
                 bezette_kanalen.add(c.get("platform"))
+        # Een Vinted-tabblad dat net op tijd is opgegeven kan nog plaatsen; zie
+        # _vinted_tabblad_werkt_nog. Geldt ook voor de beurtverdeling hieronder.
+        if "vinted" not in bezette_kanalen and _vinted_tabblad_werkt_nog(db, user_id, now_dt):
+            bezette_kanalen.add("vinted")
         # NOOIT TWEE TABBLADEN OP HETZELFDE KANAAL. Dat blijft de harde regel:
         # twee formulieren van dezelfde site tegelijk is waar de gegevens door
         # elkaar konden lopen, en het is ook precies wat een platform als
@@ -4107,6 +4167,30 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
                 f"Publish this item again to give it its own advert.")}, user_id=user_id))
             return {"ok": True, "status": "advert_belongs_to_other_item"}
 
+    # "STAAT AL ONLINE" BIJ TITELGENOTEN IS GEEN BEWIJS (16-10-2026, Janneke).
+    #
+    # De controle vooraf in de extensie koppelt een advertentie met precies
+    # dezelfde titel als "door de verkoper zelf geplaatst". Heeft de verkoper
+    # meer stukken met die titel, dan kan het net zo goed de advertentie van een
+    # ander stuk zijn waarvan de plaatsing "mislukte" maar die toch online kwam:
+    # zo hing de verkochte groene jas aan de blauwe fleece, en ging bij de
+    # verkoop de fleece van Marktplaats af. Een advertentie die nog bij niemand
+    # hoort vangt _advertentie_van_ander_artikel niet. Sinds 1.0.394 doet de
+    # extensie dit zelf niet meer bij titelgenoten; dit vangt de oudere kopieën.
+    # Een dubbele advertentie is te herstellen, een verkeerde koppeling haalt
+    # later het verkeerde stuk weg.
+    if (job["action"] == "create" and job["platform"] == "vinted"
+            and body.get("note") == "already_published_manually"
+            and await naast_de_lus(lambda: _heeft_titelgenoot(db, job))):
+        logger.warning("job %s: Vinted-advertentie %s niet gekoppeld, artikel heeft titelgenoten",
+                       job_id, body.get("platform_listing_id"))
+        await naast_de_lus(lambda: fail_job(job_id, {"error": (
+            "Not placed on Vinted: an advert with exactly this title is already on Vinted, "
+            "but you have more items with this title, so we can't tell whose advert it is "
+            "and did not link it. If it is this item's advert, mark it as listed with the "
+            "Vinted icon in the dashboard; otherwise publish again.")}, user_id=user_id))
+        return {"ok": True, "status": "title_twin_not_linked"}
+
     oud_progress = (job.get("result") or {}).get("_progress") if isinstance(job.get("result"), dict) else None
     nieuw_result = {**body} if isinstance(body, dict) else {"result": body}
     if oud_progress and "_progress" not in nieuw_result:
@@ -4768,11 +4852,12 @@ def _store_scan_results(db, job, scraped: list[dict]):
     if not scraped:
         return
     from backend.api.imports import BACKFILL_FIELDS, _backfill_patch
+    from backend.services.tweelingen import prijs_wijkt_af
 
     # Read the items ONCE, with every field the backfill needs. This used to be a
     # select per candidate inside the loop below, so a 500-listing wardrobe meant
     # ~1000 round-trips and "Saving to your dashboard…" sat there for minutes.
-    items = fetch_all(lambda: db.table("items").select(BACKFILL_FIELDS + ",title,sku").eq("user_id", job["user_id"]))
+    items = fetch_all(lambda: db.table("items").select(BACKFILL_FIELDS + ",title,sku,price").eq("user_id", job["user_id"]))
     items_by_id = {it["id"]: it for it in items}
     # Extra koppelsleutels: het SKU-nummer vooraan de titel en de titel zonder
     # leestekens/accenten. Die overleven een vertaling of een kleine handmatige
@@ -4909,6 +4994,15 @@ def _store_scan_results(db, job, scraped: list[dict]):
             # weggehaald worden. Dubbel voorkomende sleutels tellen niet mee, dus
             # liever geen koppeling dan de verkeerde.
             best_id = _sku_index.get(_scan_sku(title)) or _norm_title_index.get(_scan_norm_title(title))
+        # ALLEEN DE TITEL GELIJK EN DE PRIJS NIET? DAN IS HET EEN ANDER STUK
+        # (16-10-2026, Janneke). Haar eigen oude Vinted-advertenties van 15 euro
+        # met een andere tekst hingen zo aan Shopify-artikelen van 25 tot 30 euro
+        # met dezelfde titel; vijf van de vijf hadden een andere prijs. Een
+        # nummer of hetzelfde advertentienummer weegt zwaarder en blijft staan.
+        if (best_id and not listings_by_id.get((job["platform"], str(platform_listing_id)))
+                and _sku_index.get(_scan_sku(title)) != best_id
+                and prijs_wijkt_af(row.get("price"), (items_by_id.get(best_id) or {}).get("price"))):
+            best_id = None
         eigen_nummer = str(row.get("sku") or "").strip().lower()
         if eigen_nummer and not listings_by_id.get((job["platform"], str(platform_listing_id))):
             # Shopify geeft het artikelnummer los mee (services/shopify_scan.py);

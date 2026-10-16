@@ -3455,6 +3455,7 @@
  "description": "omschrijving",
  "price": "prijs",
  "Not placed on {0}: the advert we found there belongs to \"{1}\", another item with the same title, so it was not linked to this one. Publish this item again to give it its own advert.": "Niet geplaatst op {0}: de advertentie die we daar vonden hoort bij \"{1}\", een ander item met dezelfde titel, dus die is niet aan dit item gekoppeld. Publiceer dit item opnieuw, dan krijgt het een eigen advertentie.",
+ "Not placed on Vinted: an advert with exactly this title is already on Vinted, but you have more items with this title, so we can't tell whose advert it is and did not link it. If it is this item's advert, mark it as listed with the Vinted icon in the dashboard; otherwise publish again.": "Niet geplaatst op Vinted: er staat al een advertentie met precies deze titel op Vinted, maar je hebt meer items met deze titel. We kunnen niet zien bij welk item die advertentie hoort en hebben hem dus niet gekoppeld. Is het de advertentie van dit item, markeer hem dan als geplaatst via het Vinted-icoon in het dashboard; anders publiceer je opnieuw.",
  "What's new": "Wat is er nieuw",
  "A tidier dashboard": "Een overzichtelijker dashboard",
  "We cleaned up the menu, based on the questions we got from sellers. Nothing has been removed; a few things moved:": "We hebben het menu opgeruimd, op basis van de vragen die we van verkopers kregen. Er is niets weggehaald; een paar dingen staan op een andere plek:",

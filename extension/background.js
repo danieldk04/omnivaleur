@@ -4325,6 +4325,18 @@ async function vintedCatalogus(origin, taal) {
   }
 }
 
+// Prijs van een kastadvertentie tegen die van het artikel; onbekend is geen
+// tegenspraak, een cent verschil wel. Zelfde regel als vintedPrijsKlopt in
+// content/vinted.js.
+function _vintedPrijsKlopt(it, item) {
+  const ruw = it && (it.price && typeof it.price === "object" ? it.price.amount : it.price);
+  const hun = Number(String(ruw ?? "").replace(",", "."));
+  const onze = Number(String(item && item.price != null ? item.price : "").replace(",", "."));
+  if (ruw == null || ruw === "" || !Number.isFinite(hun) || hun <= 0) return true;
+  if (!Number.isFinite(onze) || onze <= 0) return true;
+  return Math.abs(hun - onze) < 0.01;
+}
+
 async function bgVindVintedAdvertentie(item) {
   const titel = _vintedTitelSleutel(item?.title);
   if (!titel) return null;
@@ -4346,7 +4358,17 @@ async function bgVindVintedAdvertentie(item) {
       // Niet die van een ánder artikel met dezelfde titel: zie
       // _vinted_titelgenoten_meegeven in backend/api/jobs.py (Janneke, 09-10-2026).
       const bezet = new Set((item?._vinted_bezet || []).map(String));
-      const levend = items.filter((it) => !it.is_closed && !it.is_draft && !bezet.has(String(it.id)));
+      // TITELGENOTEN: heeft de verkoper meer stukken met deze titel, dan zegt een
+      // gelijke titel niet wiens advertentie het is. Een "mislukte" plaatsing van
+      // een ander stuk kan gewoon online staan, en die hing dan aan dit artikel
+      // (Janneke, 15-10-2026: de verkochte groene jas hing aan de blauwe fleece,
+      // de fleece ging van Marktplaats af). Hier is geen hard bewijs te halen,
+      // dus niet koppelen; de verkoper kan hem zelf als geplaatst aanvinken.
+      const genoten = Number(item?._vinted_titelgenoten || 0) > 0 || bezet.size > 0
+        || items.filter((it) => _vintedTitelZonderSku(it.title) === titelKaal).length > 1;
+      if (genoten) return null;
+      const levend = items.filter((it) => !it.is_closed && !it.is_draft && !bezet.has(String(it.id))
+                                         && _vintedPrijsKlopt(it, item));
       // Streng naar soepel, en elke stap moet PRECIES EEN kandidaat opleveren.
       // Bij twijfel liever niets koppelen dan de verkeerde advertentie: een
       // verkeerde koppeling betekent later de verkeerde advertentie weghalen.
