@@ -17,6 +17,24 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## bronfotos-via-github-taak
+
+*16-10-2026 — "15-10: webshopfoto's die onze server niet krijgt (SiteGround-captcha) komen via de GitHub-taak bronfotos.yml binnen; Cloudflare weigert de standaard Python-UA (1010)"*
+
+De Juiste Toon (96e30080), 15-10-2026: 241 artikelen hielden foto's op dejuistetoon.eu, en sinds 13-10 elk nieuw product (13 van 17). Plaatsen faalde met "None of the N photo(s) could be downloaded".
+
+Gemeten mechanisme: SiteGround geeft het Railway-IP en Daniels Mac een captcha (202, sg-captcha), een GitHub-machine krijgt dezelfde foto met 200. En wp-content/uploads heeft GEEN CORS-kop (wel /wp-json/, die laat omnivaleur.com toe), dus ook de extensie in Toons eigen browser kon de foto nooit ophalen: daar was nooit een IP-probleem, het was CORS.
+
+Oplossing: `.github/workflows/bronfotos.yml` (elke 2 uur, 40 artikelen, 1,5 s per foto, stopt bij de eerste captcha) haalt op en levert af bij `/api/intern/bronfotos`. De server controleert GitHub's OIDC-token (repo, main, precies dit workflowbestand, schedule/workflow_dispatch) in `services/github_oidc.py`: geen secrets. Opslaan gaat via mirror_photos met een MockTransport, dus dezelfde weg als elke kopie.
+
+**Why:** Railway Pro voor een vast IP wilde Daniel niet; een captcha omzeilen doen we niet; dit is een ander uitgaand IP zonder kosten.
+
+**How to apply:** blijft een webshopklant met bronfoto's hangen, kijk eerst of de laatste run van "Bronfoto's" groen is. Een script dat vanaf GitHub omnivaleur.com aanroept moet een eigen User-Agent sturen: Cloudflare weigert "Python-urllib" met foutcode 1010 en dat ziet eruit als een 403 van onze server. Het logboek van de repo is openbaar: druk geen adressen of klant-id's af. Zie "webshopfotos-nagemaakte-browserkop" en "woocommerce-koppeling".
+
+16-10: GitHub's "elk uur" draaide 's nachts maar 3 keer (23:06, 01:28, 07:19 UTC), en de wachtrij koos 40 van ~200 op goed geluk. Toons drie artikelen waar hij 15-10 en 16-10 op Plaatsen klikte zaten er nooit bij en faalden twee dagen. Sinds 92f566e2 gaan artikelen met een openstaande of mislukte plaatsing (laatste 3 dagen) voor. Het logboek noemt nu de HTTP-code van een weigering (ronde van 08:16 stopte meteen, reden onbekend; ronde daarna 35 van 40 klaar). Een gecancelde schedule-ronde is dus normaal: tel 'met bronfoto' en klik bij haast workflow_dispatch.
+
+---
+
 ## vinted-woontextiel-maat-in-cm
 
 *16-10-2026 — "16-10: Vinted Dekens en Kussens hebben een verplichte maat in cm (of Overige); woontextiel zonder vast pad werd kinderslaapzak of Rugby"*
@@ -42,22 +60,6 @@ De categoriecode in extension/content/vinted.js kiest op Engelse namen ("Kids", 
 **How to apply:** kies op iets wat niet vertaalt. Elke regel in Vinted's kiezer heeft id="catalog-<nr>" (zoekresultaat "catalog-search-<nr>-result"); de boom met nummers is zonder inlog op te halen via /api/v2/item_upload/catalogs?locale=en (nummers gelijk tussen vinted.nl en .de). Nooit ?locale= via de sessie van de verkoper: dat zet haar Vinted-sessie op die taal (gemeten). Proef met de echte boom: tests/vinted-elke-taal-test.js. Live nagelopen op Daniels Vinted in het Nederlands (15-10 avond, 1.0.391). Zie "omnivaleur-altijd-bewijzen".
 
 **Valkuil "Opslaan" (15-10, 1.0.391):** de zoekroute van fillCategoryVinted klikte na een keuze op elke zichtbare knop die "select|kies|done|opslaan|save" heette, over de hele pagina. Op een Nederlandse Vinted is "Opslaan" de conceptknop van het formulier: concept bewaard, Vinted springt naar het profiel, de opdracht valt stil tot de bewaker van 3 minuten. Bij Janneke waren 12 van haar 13 vastlopers babykleding (de enige rubriek waarvan de hint "baby" in het Nederlands iets vond). Live nagedaan: 4 lege concepten op Daniels account. Nu alleen binnen [data-testid="catalog-select-dropdown-content"] (heeft geen bevestigknop). Algemeen: zoek knoppen nooit op tekst over de hele pagina; een woord dat in het Engels niet bestaat kan in een andere taal precies de verkeerde knop zijn.
-
----
-
-## bronfotos-via-github-taak
-
-*15-10-2026 — "15-10: webshopfoto's die onze server niet krijgt (SiteGround-captcha) komen via de GitHub-taak bronfotos.yml binnen; Cloudflare weigert de standaard Python-UA (1010)"*
-
-De Juiste Toon (96e30080), 15-10-2026: 241 artikelen hielden foto's op dejuistetoon.eu, en sinds 13-10 elk nieuw product (13 van 17). Plaatsen faalde met "None of the N photo(s) could be downloaded".
-
-Gemeten mechanisme: SiteGround geeft het Railway-IP en Daniels Mac een captcha (202, sg-captcha), een GitHub-machine krijgt dezelfde foto met 200. En wp-content/uploads heeft GEEN CORS-kop (wel /wp-json/, die laat omnivaleur.com toe), dus ook de extensie in Toons eigen browser kon de foto nooit ophalen: daar was nooit een IP-probleem, het was CORS.
-
-Oplossing: `.github/workflows/bronfotos.yml` (elke 2 uur, 40 artikelen, 1,5 s per foto, stopt bij de eerste captcha) haalt op en levert af bij `/api/intern/bronfotos`. De server controleert GitHub's OIDC-token (repo, main, precies dit workflowbestand, schedule/workflow_dispatch) in `services/github_oidc.py`: geen secrets. Opslaan gaat via mirror_photos met een MockTransport, dus dezelfde weg als elke kopie.
-
-**Why:** Railway Pro voor een vast IP wilde Daniel niet; een captcha omzeilen doen we niet; dit is een ander uitgaand IP zonder kosten.
-
-**How to apply:** blijft een webshopklant met bronfoto's hangen, kijk eerst of de laatste run van "Bronfoto's" groen is. Een script dat vanaf GitHub omnivaleur.com aanroept moet een eigen User-Agent sturen: Cloudflare weigert "Python-urllib" met foutcode 1010 en dat ziet eruit als een 403 van onze server. Het logboek van de repo is openbaar: druk geen adressen of klant-id's af. Zie "webshopfotos-nagemaakte-browserkop" en "woocommerce-koppeling".
 
 ---
 
