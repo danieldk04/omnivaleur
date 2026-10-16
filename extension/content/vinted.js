@@ -2576,6 +2576,56 @@
     return !!(el && (el.value || "").trim());
   }
 
+  // MAAT UIT DE AFMETING (16-10-2026, De Juiste Toon).
+  //
+  // Dekens en kussens hebben op Vinted een verplichte maat, en die maat is een
+  // afmeting: "70 x 90 cm" … "150 x 200 cm" en "Overige" (gemeten op vinted.nl,
+  // Dekens en Decoratieve kussens). Bij ons heeft een deken geen maat, wel een
+  // afmeting in de titel ("Zigzag Granny Deken 180/125"), en dus weigerde
+  // Vinted met "size (empty)". Biedt Vinted precies die afmeting aan, in welke
+  // volgorde ook, dan die; anders de keuze zonder getal, Overige. Nooit de
+  // dichtstbijzijnde: dan staat er een maat in de advertentie die niet klopt.
+  function afmetingUitTekst(item) {
+    const re = /(\d{2,3})\s*(?:x|×|\*|\/|bij)\s*(\d{2,3})(?!\d)/i;
+    const m = String(item.title || "").match(re) || String(item.description || "").match(re);
+    return m ? [parseInt(m[1], 10), parseInt(m[2], 10)] : null;
+  }
+  function kiesAfmetingOptie(labels, afm) {
+    const maten = labels.map((l) => {
+      const m = String(l).match(/(\d{2,3})\s*[x×]\s*(\d{2,3})\s*cm/i);
+      return m ? [parseInt(m[1], 10), parseInt(m[2], 10)] : null;
+    });
+    if (maten.filter(Boolean).length < 2) return -1;   // geen afmetingsraster (kleding)
+    if (afm) {
+      const i = maten.findIndex((m) => m && ((m[0] === afm[0] && m[1] === afm[1]) || (m[0] === afm[1] && m[1] === afm[0])));
+      if (i >= 0) return i;
+    }
+    const zonderGetal = labels.map((l, i) => [String(l), i]).filter(([l]) => l.trim() && !/\d/.test(l));
+    return zonderGetal.length === 1 ? zonderGetal[0][1] : -1;
+  }
+  async function fillAfmetingMaatVinted(item) {
+    const trigger = qs('input[data-testid="category-size-single-grid-input"]');
+    if (!trigger) return false;
+    const opties = () => {
+      const scope = document.querySelector('[data-testid="category-size-single-grid-content"]');
+      return scope ? [...scope.querySelectorAll('[data-testid*="-grid-option-"]')] : [];
+    };
+    if (!(await openDropdownVinted(trigger, () => opties().length > 0))) return false;
+    const els = opties();
+    const i = kiesAfmetingOptie(els.map((e) => (e.textContent || "").trim()), afmetingUitTekst(item));
+    if (i < 0) {
+      const buiten = qs('input[data-testid="title--input"]');
+      if (buiten) { realClickEl(buiten); await sleep(400); }
+      return false;
+    }
+    clog(`maat uit de afmeting: "${(els[i].textContent || "").trim()}"`);
+    els[i].scrollIntoView({ block: "center" });
+    await sleep(150);
+    realClickEl(els[i]);
+    await sleep(600);
+    return sizeIsFilledVinted();
+  }
+
   async function fillForm(item) {
     await waitForEl('input[data-testid="title--input"]', 20000);
     // Vanaf hier pas tellen: de tijd dáárvoor is het laden van Vinted zelf, en
