@@ -17,6 +17,20 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-koppeling-titelgenoten
+
+*16-10-2026 — Gelijke titels (Janneke: 7x "Tussenjas Name it maat 128") koppelen Vinted-advertenties aan het verkeerde artikel; een verkoop haalt dan het verkeerde stuk van Marktplaats*
+
+16-10-2026, Janneke: groene jas verkocht op Vinted, maar de advertentie hing aan een blauwe fleece met dezelfde titel. Omnivaleur boekte de fleece als verkocht en haalde de fleece van Marktplaats; de verkochte jas bleef staan. In haar account hingen 9 van 193 Vinted-rijen aan het verkeerde stuk.
+
+Drie routes: (1) overlappende Vinted-plaatsingen; een "mislukte" plaatsing staat toch online en het volgende artikel met dezelfde titel pikt hem op als already_published_manually of via resolveCreatedVintedItem; (2) de Vinted-import koppelt op unieke gelijke titel (same_title) zonder prijs of tekst te vergelijken; (3) alles wat een losse advertentie op titel zoekt.
+
+**Why:** generieke titels (merk + soort + maat) zijn bij kinderkleding en voorraadwinkels de regel, niet de uitzondering.
+
+**How to apply:** bij "verkeerde advertentie eraf" of "verkocht maar blijft staan": leg de foto van de Vinted-advertentie (laatste scan, result.listings[].photo_url) naast items.photo_urls; prijs en omschrijving vergelijken vangt de meeste. Losgekoppelde rij = status delisted en platform_listing_id leeg, dan raakt de verkoopcontrole hem niet. Zie "delist-wist-de-bronwinkel", "titel-op-het-kanaal-is-niet-de-brontitel".
+
+---
+
 ## mp-verwijderen-zonder-klok-houdt-kanaal-bezet
 
 *16-10-2026 — "16-10: Zilverwebsite 26cf5471, 85 herplaatsingen stil; bgDeleteMp2dh opende zonder klokVast, hing 81 min na wakker worden en hield Marktplaats bezet. Teruggezette claim wist claimed_at (1.0.393)"*
