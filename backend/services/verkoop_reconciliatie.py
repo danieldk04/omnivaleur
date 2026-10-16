@@ -119,6 +119,17 @@ async def reconcileer_verkochte_artikelen() -> dict:
         for row in rows:
             rijen_per_item.setdefault(row["item_id"], []).append(row)
 
+    # De webshop die handle_item_sold bewust liet staan, blijft ook hier staan.
+    # Zie _winkels_die_blijven.
+    winkel_items = [iid for iid, rows in rijen_per_item.items()
+                    if any(r["platform"] in _WINKELS and r.get("status") in _NOG_LEVEND
+                           for r in rows)]
+    if winkel_items:
+        sparen = await _winkels_die_blijven(db, winkel_items)
+        for iid in winkel_items:
+            rijen_per_item[iid] = [r for r in rijen_per_item[iid]
+                                   if (iid, r["platform"]) not in sparen]
+
     # Kandidaten: verkocht op kanaal A, nog levend (of nog onbevestigd) op kanaal
     # B, verkoop oud genoeg.
     kandidaten: list[tuple[str, str]] = []  # (sold_at, item_id) voor sortering
