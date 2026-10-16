@@ -728,7 +728,7 @@
       "pillar": "B",
       "format": "strategy",
       "slug": "where-to-source-items-for-second-hand-reselling",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "waar-inkopen-doen-voor-tweedehands-doorverkopen",
       "priority": 85
     },
@@ -1509,6 +1509,16 @@
       "action": "created",
       "url_path": "/reseller-tools/belgian-tax-rules-for-selling-on-vinted",
       "published_at": "2026-10-14T13:16:20.145582+00:00"
+    },
+    {
+      "keyword": "where to source items for second hand reselling",
+      "slug": "where-to-source-items-for-second-hand-reselling",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "action": "created",
+      "url_path": "/reseller-tools/where-to-source-items-for-second-hand-reselling",
+      "published_at": "2026-10-16T12:53:10.986935+00:00"
     }
   ]
 }
