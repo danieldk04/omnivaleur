@@ -57,25 +57,27 @@ def _server(pad: str, body=None) -> dict:
 
 def _foto(url: str):
     """(bytes, type) of None als deze ene foto niet bestaat. Gooit Dicht bij een captcha."""
+    laatste = "geweigerd"
     for kop in ({"Accept": ACCEPT}, {"Accept": ACCEPT, "User-Agent": CHROME}):
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers=kop), timeout=30) as r:
                 if r.status != 200 or r.headers.get("sg-captcha"):
-                    raise Dicht()
+                    raise Dicht(f"HTTP {r.status}" + (" sg-captcha" if r.headers.get("sg-captcha") else ""))
                 soort = (r.headers.get("content-type") or "").split(";")[0].strip().lower()
                 data = r.read()
                 if not soort.startswith("image/"):
-                    raise Dicht()
+                    raise Dicht(f"geen foto maar {soort or 'onbekend'}")
                 return data, soort
         except urllib.error.HTTPError as e:
             if e.code in (401, 403):
+                laatste = f"HTTP {e.code}"
                 continue            # sommige hosts weigeren een van de twee koppen
             if e.code == 429 or e.code >= 500:
-                raise Dicht() from e
+                raise Dicht(f"HTTP {e.code}") from e
             return None             # 404 en dergelijke: deze foto bestaat niet meer
         except (urllib.error.URLError, TimeoutError) as e:
-            raise Dicht() from e
-    raise Dicht()
+            raise Dicht(f"netwerk: {type(e).__name__}") from e
+    raise Dicht(laatste)
 
 
 def _kenmerken_van_het_bewijs() -> dict:
@@ -110,8 +112,9 @@ def main() -> int:
                 uit = _server(f"/api/intern/bronfotos/{a['item_id']}", {"user_id": a["user_id"], "fotos": fotos})
                 fotos_tel += uit.get("vervangen", 0)
                 klaar += 1 if not uit.get("over") else 0
-    except Dicht:
-        reden = "bron zette een captcha of blokkade op, gestopt"
+    except Dicht as e:
+        # Alleen de soort weigering (HTTP-code), nooit het adres: dit logboek is openbaar.
+        reden = f"bron zette een captcha of blokkade op ({e}), gestopt"
     print(f"artikelen klaar: {klaar}, foto's in onze opslag: {fotos_tel}, {reden}")
     return 0
 
