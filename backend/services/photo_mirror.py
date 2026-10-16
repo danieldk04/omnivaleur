@@ -349,4 +349,32 @@ async def aangeleverde_fotos_opslaan(user_id: str, item_id: str, fotos: dict) ->
         logger.info("bronfoto's aangeleverd %s/%s: %s vervangen, oud=%s", user_id, item_id, vervangen, oud)
     over = sum(1 for u in nieuw if isinstance(u, str) and u.startswith(("http://", "https://"))
                and not is_mirrored(u))
+    if vervangen:
+        await _wachtende_plaatsingen_bijwerken(db, user_id, item_id, oud, nieuw, over)
     return {"vervangen": vervangen, "over": over}
+
+
+async def _wachtende_plaatsingen_bijwerken(db, user_id, item_id, oud, nieuw, over) -> None:
+    """Plaatsingen die op deze foto's wachtten krijgen ze meteen mee.
+
+    De opdracht draagt een kopie van het artikel van het moment van klikken, met
+    de bronadressen. Zonder dit zou ze na afloop van haar wachttijd alsnog met
+    die adressen de deur uit gaan. Zijn alle foto's binnen, dan vervalt ook het
+    wachtstempel en schuift ze weer gewoon in de rij (zie _wacht_op_fotos)."""
+    from backend.database import naast_de_lus
+    try:
+        rijen = (await naast_de_lus(lambda: db.table("jobs").select("id,payload")
+                                    .eq("user_id", user_id).eq("item_id", item_id)
+                                    .eq("action", "create").eq("status", "pending")
+                                    .execute())).data or []
+        for r in rijen:
+            pl = r.get("payload")
+            if not isinstance(pl, dict) or list(pl.get("photo_urls") or []) != oud:
+                continue
+            pl = {**pl, "photo_urls": nieuw}
+            if not over:
+                pl.pop("_fotos_wachten_sinds", None)
+            await naast_de_lus(lambda: db.table("jobs").update({"payload": pl})
+                               .eq("id", r["id"]).eq("status", "pending").execute())
+    except Exception as e:  # noqa: BLE001 — de uitgifte ververst de foto's ook zelf
+        logger.warning("Wachtende plaatsingen van %s niet bijgewerkt: %s", item_id, e)
