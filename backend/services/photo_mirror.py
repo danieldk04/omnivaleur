@@ -280,24 +280,41 @@ async def bronfotos_inhalen(user_id: str, max_artikelen: int = 8) -> dict:
 # controleert GitHub's eigen handtekening (services/github_oidc.py).
 
 async def bronfotos_wachtrij(max_artikelen: int = 40) -> list[dict]:
-    """Artikelen van webshopklanten met foto's die nog niet in onze opslag staan."""
+    """Artikelen van webshopklanten met foto's die nog niet in onze opslag staan.
+
+    Wat de klant net wilde plaatsen gaat voor (De Juiste Toon, 16-10-2026): de
+    wachtrij koos 40 van ~200 artikelen op goed geluk en GitHub draaide 's nachts
+    maar drie keer, dus de drie artikelen waar hij op 15-10 én 16-10 op Plaatsen
+    klikte zaten er nooit bij en faalden twee dagen op alle kanalen."""
+    import datetime as _dt
     import random
     from backend.database import fetch_all, get_db, naast_de_lus
     db = get_db()
     winkels = (await naast_de_lus(lambda: db.table("platform_credentials").select("user_id")
                                   .eq("platform", "woocommerce").execute())).data or []
+    sinds = (_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=3)).isoformat()
+    voor: list[dict] = []
     uit: list[dict] = []
     for uid in sorted({w["user_id"] for w in winkels if w.get("user_id")}):
         rijen = await naast_de_lus(lambda uid=uid: fetch_all(
             lambda: db.table("items").select("id,photo_urls").eq("user_id", uid)))
+        try:
+            gewild = {j.get("item_id") for j in (await naast_de_lus(lambda uid=uid: db.table("jobs")
+                      .select("item_id").eq("user_id", uid).eq("action", "create")
+                      .in_("status", ["pending", "claimed", "error"]).gte("created_at", sinds)
+                      .execute())).data or []}
+        except Exception as e:  # zonder deze voorrang werkt de wachtrij gewoon als vroeger
+            logger.warning("bronfotos_wachtrij: plaatsingen van %s niet gelezen: %s", uid, e)
+            gewild = set()
         for r in rijen:
             urls = [u for u in (r.get("photo_urls") or []) if isinstance(u, str)
                     and u.startswith(("http://", "https://")) and not is_mirrored(u)]
             if urls:
-                uit.append({"item_id": r["id"], "user_id": uid, "urls": urls})
+                (voor if r["id"] in gewild else uit).append({"item_id": r["id"], "user_id": uid, "urls": urls})
     # Door elkaar: een foto die nooit meer lukt mag niet elke ronde vooraan staan.
+    random.shuffle(voor)
     random.shuffle(uit)
-    return uit[:max_artikelen]
+    return (voor + uit)[:max_artikelen]
 
 
 async def aangeleverde_fotos_opslaan(user_id: str, item_id: str, fotos: dict) -> dict:

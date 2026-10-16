@@ -118,8 +118,8 @@ def test_echte_taak_mag_afleveren(github, monkeypatch):
 
 
 class _Db:
-    def __init__(self, items, winkels=()):
-        self.items, self.winkels, self.updates = items, list(winkels), []
+    def __init__(self, items, winkels=(), jobs=()):
+        self.items, self.winkels, self.jobs, self.updates = items, list(winkels), list(jobs), []
 
     def table(self, naam): return _T(self, naam)
 
@@ -129,6 +129,8 @@ class _T:
     def select(self, *a): return self
     def limit(self, *a): return self
     def eq(self, k, v): self.f[k] = v; return self
+    def in_(self, k, v): self.f[k] = ("in", tuple(v)); return self
+    def gte(self, k, v): return self
     def update(self, d): self.d = d; return self
 
     def execute(self):
@@ -137,7 +139,9 @@ class _T:
             return type("R", (), {"data": []})()
         if self.naam == "platform_credentials":
             return type("R", (), {"data": self.db.winkels})()
-        rijen = [r for r in self.db.items if all(r.get(k) == v for k, v in self.f.items())]
+        bron = self.db.jobs if self.naam == "jobs" else self.db.items
+        rijen = [r for r in bron if all(r.get(k) in v[1] if isinstance(v, tuple) else r.get(k) == v
+                                       for k, v in self.f.items())]
         return type("R", (), {"data": rijen})()
 
 
@@ -190,3 +194,17 @@ def test_wachtrij_noemt_alleen_bronfotos_van_webshopklanten(monkeypatch):
     ], winkels=[{"user_id": "u1"}])
     _zet(monkeypatch, db)
     assert asyncio.run(pm.bronfotos_wachtrij()) == [{"item_id": "i1", "user_id": "u1", "urls": [BRON.format("a")]}]
+
+
+def test_wat_de_klant_net_wilde_plaatsen_gaat_voor(monkeypatch):
+    """Toon, 16-10-2026: drie artikelen faalden twee dagen omdat de wachtrij 40 van
+    ~200 op goed geluk koos. Een artikel met een openstaande of mislukte plaatsing
+    staat nu altijd in de eerste ronde."""
+    items = [{"id": f"i{n}", "user_id": "u1", "photo_urls": [BRON.format(n)]} for n in range(200)]
+    jobs = [{"item_id": "i7", "user_id": "u1", "action": "create", "status": "error"},
+            {"item_id": "i150", "user_id": "u1", "action": "create", "status": "pending"},
+            {"item_id": "i3", "user_id": "u1", "action": "create", "status": "done"}]
+    _zet(monkeypatch, _Db(items, winkels=[{"user_id": "u1"}], jobs=jobs))
+    for _ in range(20):
+        eerste = [a["item_id"] for a in asyncio.run(pm.bronfotos_wachtrij(5))]
+        assert set(eerste[:2]) == {"i7", "i150"}
