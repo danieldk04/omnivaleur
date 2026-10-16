@@ -68,6 +68,63 @@ MAX_POGINGEN = 4
 # foutmelding, dus het staat in het dashboard en de verkoper kan zelf herkansen.
 WACHT_UREN = (0, 1, 4, 24)
 
+# DE EIGEN WEBSHOP VAN EEN VOORRAADWINKEL BLIJFT STAAN (16-10-2026, Janneke).
+#
+# GEMETEN in haar Shopify-logboek: "Tussenjas Noppies maat 134" verkocht op
+# Vinted om 21:09:49 UTC. handle_item_sold haalde volgens de regel één stuk van
+# de voorraad af en liet het product staan (shopify_voorraad.OP). Om 21:42:25
+# wiste "Omnivaleur" het product toch: deze ronde zag een verkochte Vinted-rij
+# naast een levende Shopify-rij, las dat als "nog niet afgemeld" en riep
+# delist_all_platforms aan, dat het product wist. Zo ook 08-10 (Name it 128,
+# 32 min na de verkoop) en 12-10 (Noppies 140, 40 min). Haar tweede jas van
+# hetzelfde soort verdween daarmee uit de winkel.
+#
+# Bij een winkel met de voorraadvlag, of een verkoper die zijn webshop zelf
+# bijhoudt (instellingen.WEBSHOP_MET_RUST), wist handle_item_sold het product
+# nooit. Dit vangnet maakt alleen af wat daar had moeten gebeuren, dus raakt het
+# die winkel ook niet aan. Kunnen we het niet nagaan, dan blijft hij staan: een
+# product te lang laten staan is te herstellen, een gewist product niet.
+_WINKELS = ("shopify", "woocommerce")
+
+
+async def _winkels_die_blijven(db, item_ids: list[str]) -> set[tuple[str, str]]:
+    """(item_id, kanaal) van de webshops die dit vangnet niet mag afmelden."""
+    from backend.services.instellingen import RIJ, WEBSHOP_MET_RUST, _schoon
+    from backend.services.shopify_voorraad import VLAG
+
+    alles = {(iid, p) for iid in item_ids for p in _WINKELS}
+    try:
+        eigenaar: dict[str, str] = {}
+        for i in range(0, len(item_ids), IN_BROK):
+            brok = item_ids[i:i + IN_BROK]
+            for row in ((await naast_de_lus(
+                    lambda b=brok: db.table("items").select("id,user_id").in_("id", b).execute(),
+                    herkans=True)).data or []):
+                eigenaar[row["id"]] = row["user_id"]
+        uids = sorted({u for u in eigenaar.values() if u})
+        voorraad: set[tuple[str, str]] = set()
+        met_rust: set[str] = set()
+        for i in range(0, len(uids), IN_BROK):
+            brok = uids[i:i + IN_BROK]
+            for c in ((await naast_de_lus(
+                    lambda b=brok: db.table("platform_credentials")
+                    .select("user_id,platform,extra_data").in_("user_id", b)
+                    .in_("platform", [*_WINKELS, RIJ]).execute(),
+                    herkans=True)).data or []):
+                extra = c.get("extra_data") if isinstance(c.get("extra_data"), dict) else {}
+                if c.get("platform") == RIJ:
+                    if _schoon(extra).get(WEBSHOP_MET_RUST):
+                        met_rust.add(c["user_id"])
+                elif extra.get(VLAG):
+                    voorraad.add((c["user_id"], c["platform"]))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("verkoop-reconciliatie: kon de webshops niet nagaan, %d artikel(en) "
+                       "blijven deze ronde in hun webshop staan: %s", len(item_ids), e)
+        return alles
+    return {(iid, p) for iid, p in alles
+            if not eigenaar.get(iid) or eigenaar[iid] in met_rust
+            or (eigenaar[iid], p) in voorraad}
+
 
 async def reconcileer_verkochte_artikelen() -> dict:
     db = get_db()
