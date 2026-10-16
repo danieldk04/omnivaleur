@@ -2873,6 +2873,8 @@
       fillInput(titleEl, wantTitle);
     }
 
+    // Nog een keer na het merk: Vinted kan bij een latere wijziging opnieuw gokken.
+    if (!item.brand) await geenMerkVinted(item);
     await repairEmptyFieldsVinted(item, wantTitle);
   }
 
