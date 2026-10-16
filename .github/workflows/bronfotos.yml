@@ -14,10 +14,12 @@ name: Bronfoto's
 
 on:
   schedule:
-    # Elk uur. Eerste echte ronde 15-10 20:00 UTC: 40 artikelen, 242 foto's,
-    # geen captcha bij 1,5 s per foto. Zonder achterstand is een ronde in
-    # seconden klaar.
-    - cron: "23 * * * *"
+    # Elk kwartier, niet op het hele uur (dan slaat GitHub geplande taken het
+    # vaakst over: op 15/16-10 draaide "elk uur" 's nachts maar drie keer). Een
+    # nieuwe plaatsing uit de webshop wacht op deze foto's (_wacht_op_fotos in
+    # backend/api/jobs.py), dus elke ronde die uitvalt is wachttijd voor de
+    # klant. Zonder achterstand is een ronde in seconden klaar.
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
 
 permissions:
