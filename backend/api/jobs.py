@@ -1929,7 +1929,8 @@ WACHTRIJ_MAX = 500
 # payload alleen het ene tijdstip dat zegt of een plaatsing op zijn rubriek wacht.
 _LICHTE_VELDEN = ("id,action,platform,item_id,created_at,scheduled_for,"
                   "rubriek_sinds:payload->>_rubriek_zoeken_sinds,"
-                  "rubriek_pogingen:payload->>_rubriek_pogingen")
+                  "rubriek_pogingen:payload->>_rubriek_pogingen,"
+                  "fotos_sinds:payload->>_fotos_wachten_sinds")
 
 
 def _rubriek_mislukt(j: dict) -> int:
