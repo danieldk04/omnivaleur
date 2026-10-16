@@ -17,6 +17,24 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-gokt-merk-na-fotos
+
+*16-10-2026 — "16-10: Vinted vult na de foto's zelf een merk in (IKEA bij Toons wandkleed); zonder merk bij het artikel liet de extensie die gok staan. Nu Vinteds eigen 'Geen merk'"*
+
+De Juiste Toon, 16-10-2026: "word als merk IKEA ingevuld". Zijn live advertentie 10397089556 (wandkleed, payload brand leeg) had merk IKEA.
+
+Gemeten op vinted.nl met de echte 1.0.391 (lader uit "echte-extensiecode-op-vinted-draaien"): het merkveld springt binnen een seconde na het uploaden van de foto's op IKEA, zonder één klik van ons. Alleen foto's, of alleen titel en tekst via de API, gaven `prefill_brand: null`; het gebeurt pas met titel, tekst en foto's samen. IKEA staat ook bovenaan Vinteds lijst voor woonrubrieken. De merkstap was `item.brand && ...`, dus zonder merk bleef Vinteds gok staan.
+
+Vinted kent zelf "Geen merk": zoek een term die geen merk is en de lijst toont "Merk niet gevonden / Geen merk / "x" als merk gebruiken". Klik met de volledige muisreeks (realClickEl) en het veld toont "Geen merk". Let op: in een smal venster tekent Vinted het formulier als telefoon (isPhone, knop Opslaan) en gedraagt de keuze zich anders; meet op computerbreedte (resize_window 1400).
+
+Reparatie in vinted.js: geenMerkVinted (en een tweede keer vlak voor de eindcontrole). Een gok die letterlijk in titel of tekst staat blijft staan. Proef: tests/vinted-geen-merk-test.js.
+
+Niet gemeten: of Vinted "Geen merk" ook bij het echte plaatsen aanneemt. Daarvoor is een klik op Toevoegen nodig, en dat mag alleen met Daniels ja.
+
+Zelfde dag liep ik opnieuw in "extensie-const-na-await-valstrik": een `const GEEN_MERK` boven fillForm gaf "Cannot access before initialization". Alleen de echte draai op Vinted ving het.
+
+---
+
 ## vinted-koppeling-titelgenoten
 
 *16-10-2026 — Gelijke titels (Janneke: 7x "Tussenjas Name it maat 128") koppelen Vinted-advertenties aan het verkeerde artikel; een verkoop haalt dan het verkeerde stuk van Marktplaats*
