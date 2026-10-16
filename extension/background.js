@@ -1428,6 +1428,9 @@ async function ontdooiWerkTabbladen() {
       .map((k) => Number(k.slice("jobtab_".length)))
       .filter((n) => Number.isFinite(n));
   } catch (_) { return; }
+  // Ook de verwijder- en verlengtabbladen (zie bgDeleteMp2dh): die hebben geen
+  // jobtab_-gegevens, maar bevriezen net zo goed.
+  for (const t of _klokTabbladen) if (!tabIds.includes(t)) tabIds.push(t);
   for (const tabId of tabIds) {
     // Geen koppeling meer? Dan is de klok ook weg. Dat gebeurt als de verkoper op
     // "Annuleren" drukt in Chrome's gele balk, of als Chrome de service worker
@@ -1469,7 +1472,8 @@ function startOntdooiTeller() {
   if (_ontdooiTeller != null) return;
   _ontdooiTeller = setInterval(() => {
     chrome.storage.local.get(null).then((alles) => {
-      const heeftWerk = Object.keys(alles).some((k) => k.startsWith("jobtab_"));
+      const heeftWerk = _klokTabbladen.size > 0
+        || Object.keys(alles).some((k) => k.startsWith("jobtab_"));
       if (!heeftWerk) { clearInterval(_ontdooiTeller); _ontdooiTeller = null; return; }
       ontdooiWerkTabbladen();
     }).catch(() => {});
@@ -2734,6 +2738,11 @@ async function stuurWerkTabbladNaar(tabId, url) {
 
 // Tabbladen waar we al aan gekoppeld zijn (zie koppelVroeg).
 const _vroegGekoppeld = new Set();
+// Werk-tabbladen zonder jobtab_-gegevens (de achtergrondklussen verwijderen en
+// verlengen) die tóch de hele klus een lopende klok nodig hebben. Zie
+// bgDeleteMp2dh, en verzekerKlok die hier na elke paginawissel naar kijkt.
+const _klokTabbladen = new Set();
+chrome.tabs.onRemoved.addListener((tabId) => _klokTabbladen.delete(tabId));
 
 // KOPPELEN TERWIJL HET TABBLAD NOG LEEG IS.
 //
@@ -2982,7 +2991,7 @@ async function verzekerKlok(tabId) {
   try {
     const sleutel = `jobtab_${tabId}`;
     const { [sleutel]: meta } = await chrome.storage.local.get(sleutel);
-    if (!meta || !meta.klokVast) return;
+    if (!(meta && meta.klokVast) && !_klokTabbladen.has(tabId)) return;
     if (!_vroegGekoppeld.has(tabId)) {
       if (!(await heeftDebugger())) return;
       const gelukt = await new Promise((res) => {
@@ -5391,11 +5400,15 @@ async function bgExtend2dh(job, serverUrl) {
     throw new Error(`No 2dehands listing id on this extend job (got "${itemId}") — nothing to extend.`);
   }
 
+  // Klok vast, om dezelfde reden als bij bgDeleteMp2dh: ook verlengen wacht op
+  // stukjes code in de pagina en houdt zolang het kanaal bezet.
   const tabId = await new Promise((res, rej) =>
     openWorkerTab(overviewUrl, t =>
-      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true }
+      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true, klokVast: true }
     )
   );
+  _klokTabbladen.add(tabId);
+  startOntdooiTeller();
 
   // WELKE ZOEKERTJES LOPEN AF, VOLGENS 2DEHANDS ZELF. (11-10-2026, Lynn 96e30080)
   //
@@ -5692,11 +5705,27 @@ async function bgDeleteMp2dh(job, serverUrl) {
   const startUrl = /^https:\/\/(?:www\.)?(?:marktplaats\.nl|2dehands\.be)\/v\//.test(adUrl)
     ? adUrl : overviewUrl;
 
+  // DE KLOK MOET OOK BIJ HET VERWIJDEREN AAN (16-10-2026, klant 26cf5471).
+  //
+  // Dit tabblad werkt via stukjes code ín de pagina (miniaturen tellen,
+  // "Toon 50 volgende", het bevestigvenster, de controle of hij weg is), en die
+  // wachten op de klok van de pagina. Zonder focus-emulatie staat die klok in een
+  // tabblad dat niet in beeld is na anderhalve minuut op 0,0 tikken per seconde
+  // (tests/klok-varianten-echt-test.mjs), en dan wacht execInTab tot iemand het
+  // venster in beeld haalt. Bij deze klant bleef zo het eerste verwijderen na het
+  // wakker worden van de computer 81 minuten hangen, en zolang dat duurde vroeg de
+  // extensie Marktplaats niets meer (_lopendePublicaties): 85 herplaatsingen
+  // stonden stil. Plaatsingen in datzelfde venster hadden de klok wél en liepen
+  // binnen een halve minuut na het wakker worden door. Zelfde reparatie als bij
+  // het Vinted-verwijderen op 21-09-2026: klokVast, en na elke paginawissel
+  // opnieuw zetten (verzekerKlok via _klokTabbladen).
   const tabId = await new Promise((res, rej) =>
     openWorkerTab(startUrl, t =>
-      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true }
+      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true, klokVast: true }
     )
   );
+  _klokTabbladen.add(tabId);
+  startOntdooiTeller();
 
   let snapshot = {};
   try {

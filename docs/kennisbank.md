@@ -17,6 +17,22 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## mp-verwijderen-zonder-klok-houdt-kanaal-bezet
+
+*16-10-2026 — "16-10: Zilverwebsite 26cf5471, 85 herplaatsingen stil; bgDeleteMp2dh opende zonder klokVast, hing 81 min na wakker worden en hield Marktplaats bezet. Teruggezette claim wist claimed_at (1.0.393)"*
+
+16-10-2026, Zilverwebsite (26cf5471, extensie 1.0.388): 85 Marktplaats-herplaatsparen stonden sinds 15-10 11:56 UTC stil terwijl de server gewoon een verwijdering uitdeelde (nagedraaid: 2 s, antwoord delete) en de hartslag liep.
+
+Wat het leek: "de extensie pakt niets op". Wat het was: de verwijdering 66ece583 wérd opgepakt (na 08:35), hing, en _recover_stale_claims zette hem om 09:03 terug op pending met claimed_at leeg. Het enige spoor is `result._reclaims` / `_last_reclaim` op de wachtende rij. Kijk daar eerst naar voor je "nooit opgepakt" concludeert.
+
+Mechanisme: bgDeleteMp2dh (en bgExtend2dh) opende zijn tabblad met alleen `{ silent: true }`, zonder klokVast. Het werk gebeurt via execInTab met fetch/setTimeout ín de pagina; in een tabblad dat niet in beeld is staat die klok na ~90 s stil en bevriest Chrome het. execInTab wacht dan tot iemand het venster in beeld haalt, en zolang staat "marktplaats" in _lopendePublicaties, dus de extensie vraagt dat kanaal niets meer. Bewijs in zijn eigen rij: 15-10 verwijdering 10:35:40 tot 11:56:34 (81 min), de volgende opdracht ging 5 s later uit (MIN_GAP 4 s); plaatsingen (wél klokVast) liepen na het wakker worden binnen 30 à 45 s door. Ook de MP-scan van 14-10 hing 79 min (scans bewust nog zonder klok).
+
+Reparatie 1.0.393: klokVast + `_klokTabbladen` (verzekerKlok na elke paginawissel, ontdooi-teller). Proeven: tests/mp-verwijderklok-test.js (--oud faalt), tests/mp-verwijderklok-echt-test.mjs (echte Chrome).
+
+**How to apply:** elk werk-tabblad dat in de pagina wacht hoort klokVast te hebben, ook als het "maar" verwijdert; zelfde les als het Vinted-verwijderen van 21-09. Zie "verborgen-tabblad-worker-timer", "vinted-tabblad-klok-stilstand", "job-dispatch-serialisation".
+
+---
+
 ## echte-extensiecode-op-vinted-draaien
 
 *16-10-2026 — "16-10: de echte vinted.js van een commit op Daniels vinted.nl/items/new draaien tot vlak vóór plaatsen; vond een fout die alle nagebouwde proeven misten"*
