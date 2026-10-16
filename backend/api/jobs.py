@@ -1024,6 +1024,43 @@ _VERZENDING_STORING_RUST = timedelta(minutes=3)
 _VERZENDING_STORING: dict[str, datetime] = {}
 
 
+# WACHTEN OP FOTO'S UIT EEN WEBSHOP DIE ONS TEGENHOUDT (16-10-2026, De Juiste Toon).
+#
+# SiteGround geeft onze server een captcha op Toons productfoto's, en zijn browser
+# mag ze niet ophalen (geen CORS-kop). Ze komen binnen via de GitHub-taak
+# bronfotos.yml, maar die draait niet op de minuut. Plaatste hij een vers product
+# uit zijn webshop voordat de taak langs was geweest, dan mislukte het op elk
+# kanaal met "None of the 7 photo(s) could be downloaded". Zo'n plaatsing krijgt
+# bij het aanmaken een stempel (_fotos_wachten_sinds, zie crosslist.py), wacht
+# hooguit _FOTO_GEDULD achteraan in de rij, en gaat met de foto's uit onze opslag
+# de deur uit zodra die er zijn. Daarna gaat hij hoe dan ook, met een eerlijke
+# melding als het dan nog niet kan.
+_FOTO_GEDULD = timedelta(hours=2)
+
+
+def _onbereikbare_fotos(urls) -> int:
+    """Hoeveel foto's nog op de bron staan in plaats van in onze opslag."""
+    from backend.services.photo_mirror import is_mirrored
+    return sum(1 for u in (urls or []) if isinstance(u, str)
+               and u.startswith(("http://", "https://")) and not is_mirrored(u))
+
+
+def _wacht_op_fotos(job: dict, nu: datetime) -> bool:
+    """Wordt deze plaatsing nu teruggehouden tot haar foto's binnen zijn?"""
+    if job.get("action") != "create":
+        return False
+    pl = job.get("payload")
+    ruw = job.get("fotos_sinds")
+    if ruw is None and isinstance(pl, dict):
+        ruw = pl.get("_fotos_wachten_sinds")
+    sinds = _parse_ts(ruw)
+    if not sinds or nu - sinds >= _FOTO_GEDULD:
+        return False
+    # Een lichte rij (volgorde) kent alleen het stempel; een volle rij weet ook of
+    # de foto's er intussen zijn.
+    return _onbereikbare_fotos(pl.get("photo_urls")) > 0 if isinstance(pl, dict) else True
+
+
 def _wacht_op_rubriek(job: dict, nu: datetime) -> bool:
     """Wordt deze 2dehands-plaatsing nu teruggehouden tot zijn rubriek bekend is?"""
     pl = job.get("payload")
