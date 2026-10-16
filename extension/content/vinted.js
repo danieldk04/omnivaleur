@@ -1767,6 +1767,38 @@
   const HOOFDLETTER_KLACHT_RE =
     /too many capital|hoofdletter|majuscule|gro(ß|ss)buchstabe|may[uú]scula|maiuscol|wielkich liter/i;
 
+  // VERPLAATST NAAR HIER (16-10-2026, De Juiste Toon). Deze vier stonden ruim
+  // vijftienhonderd regels lager en bestonden daardoor nog niet toen het
+  // formulier werd ingevuld: sinds 1.0.390 stopte de categoriestap bij élke
+  // Vinted-plaatsing met "Cannot access '_catEn' before initialization", en dan
+  // koos Vinted zelf een rubriek uit de foto (een deken werd een kinderslaapzak).
+  // tests/test_vinted_categories.py::test_geen_hulpwaarden_na_de_hoofdstroom
+  // stond daarom rood. Nieuwe const/let horen hier, niet verderop.
+  let _catEn = null, _catLok = null, _catLokPad = null;
+  const _kaalCat = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
+  const KIND_KLEDING = /^(babykleding|peuterkleding|jongens kleding|meisjes kleding|tieners jongens|tieners meisjes)$/;
+  const KIND_VOORKEUR = [
+    [/\b(meisjes?|girls?|dochter)\b/i, /^girls clothing$/i],
+    [/\b(jongens?|boys?|zoon)\b/i, /^boys clothing$/i],
+    [/jas\b|jasje|jassen|[a-z]jack\b|\bjackets?\b|\bcoats?\b|\bparka|\bmantel\b|bodywarmer|\bgilet/i, /^outerwear$/i],
+    [/bodywarmer|\bgilet/i, /^gilets/i],
+    [/regenjas|regenpak|\brain/i, /^rain/i],
+    [/skijas|skibroek|skipak|sneeuwpak|\bsnow/i, /^snow/i],
+    [/\bparka|\bmantel\b|duffel|trenchcoat|peacoat|\bcoats?\b/i, /^coats$/i],
+    [/jas\b|jasje|jassen|[a-z]jack\b|\bjackets?\b/i, /^jackets$/i],
+    [/gewatteerd|puffer|donsjas/i, /^puffer/i],
+    [/fleece/i, /^fleece/i],
+    [/spijkerjas|spijkerjack|jeansjas|\bdenim/i, /^denim/i],
+    [/bomber/i, /^bomber/i],
+    [/blazer|colbert/i, /^blazers/i],
+    [/\btrui|sweater|jumper|pullover|hoodie|sweatshirt|\bvest\b|vestje|cardigan/i, /^jumpers/i],
+    [/\bvest\b|vestje|cardigan/i, /^cardigans/i],
+    [/\bjurk|\bdress/i, /^dresses/i],
+    [/\brok\b|rokje|skirt/i, /^skirts/i],
+    [/broek|jeans|legging|\bshorts?\b|trousers/i, /^trousers/i],
+    [/shirt|blouse|\btop\b|topje|\bpolo/i, /^tops/i],
+  ];
+
   const job = await getJob();
   if (!job) return;
   const { id: jobId, serverUrl, payload: item } = job;
@@ -3252,8 +3284,7 @@
   // vinted.nl en vinted.de). De achtergrond haalt de boom op in het Engels en in
   // de taal van de pagina (VINTED_CATALOGUS); daarmee lezen we elke regel als
   // Engelse regel, en zoeken we in de taal van de pagina.
-  let _catEn = null, _catLok = null, _catLokPad = null;
-  const _kaalCat = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
+  // (_catEn/_kaalCat staat boven `await getJob()`, zie daar.)
   function _catPad(boom, id) {
     const delen = [];
     let n = boom && boom[id];
@@ -3334,7 +3365,7 @@
   // clothing (uit de rubriek, anders uit de tekst), en daaronder Vinted's eigen
   // voorstel of de soort kledingstuk uit de titel. Zegt niets of het een jongen
   // of meisje is, dan alleen Kids, en dan beslist Vinted's voorstel over de tak.
-  const KIND_KLEDING = /^(babykleding|peuterkleding|jongens kleding|meisjes kleding|tieners jongens|tieners meisjes)$/;
+  // (KIND_KLEDING staat boven `await getJob()`, zie daar.)
   function kinderPad(cat, item) {
     if (!KIND_KLEDING.test(cat)) return null;
     if (/meisjes/.test(cat)) return ["Kids", "Girls clothing"];
@@ -3348,27 +3379,7 @@
   // Welk kledingstuk is het? Alleen voor kinderkleding, op Vinted's Engelse
   // namen van de lagen onder Girls/Boys clothing. Een winterjas krijgt hier
   // bewust geen blad (Coats of Puffer jackets): dat ziet Vinted op de foto beter.
-  const KIND_VOORKEUR = [
-    [/\b(meisjes?|girls?|dochter)\b/i, /^girls clothing$/i],
-    [/\b(jongens?|boys?|zoon)\b/i, /^boys clothing$/i],
-    [/jas\b|jasje|jassen|[a-z]jack\b|\bjackets?\b|\bcoats?\b|\bparka|\bmantel\b|bodywarmer|\bgilet/i, /^outerwear$/i],
-    [/bodywarmer|\bgilet/i, /^gilets/i],
-    [/regenjas|regenpak|\brain/i, /^rain/i],
-    [/skijas|skibroek|skipak|sneeuwpak|\bsnow/i, /^snow/i],
-    [/\bparka|\bmantel\b|duffel|trenchcoat|peacoat|\bcoats?\b/i, /^coats$/i],
-    [/jas\b|jasje|jassen|[a-z]jack\b|\bjackets?\b/i, /^jackets$/i],
-    [/gewatteerd|puffer|donsjas/i, /^puffer/i],
-    [/fleece/i, /^fleece/i],
-    [/spijkerjas|spijkerjack|jeansjas|\bdenim/i, /^denim/i],
-    [/bomber/i, /^bomber/i],
-    [/blazer|colbert/i, /^blazers/i],
-    [/\btrui|sweater|jumper|pullover|hoodie|sweatshirt|\bvest\b|vestje|cardigan/i, /^jumpers/i],
-    [/\bvest\b|vestje|cardigan/i, /^cardigans/i],
-    [/\bjurk|\bdress/i, /^dresses/i],
-    [/\brok\b|rokje|skirt/i, /^skirts/i],
-    [/broek|jeans|legging|\bshorts?\b|trousers/i, /^trousers/i],
-    [/shirt|blouse|\btop\b|topje|\bpolo/i, /^tops/i],
-  ];
+  // (KIND_VOORKEUR staat boven `await getJob()`, zie daar.)
   function kiesBladKind(namen, tekst) {
     for (const [inTekst, inNaam] of KIND_VOORKEUR) {
       if (!inTekst.test(tekst)) continue;

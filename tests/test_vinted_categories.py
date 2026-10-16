@@ -113,7 +113,7 @@ def test_er_wordt_in_het_echte_zoekvak_getypt():
 def test_naam_en_kruimelpad_worden_gescheiden():
     """Anders matcht \\bwomen\\b niet in 'jerseysWomen' en valt de genderweging weg."""
     assert "const rowText = (row) =>" in VINTED
-    blok = VINTED.split("const rowText = (row) =>")[1][:600]
+    blok = VINTED.split("const rowText = (row) =>")[1][:900]
     assert "Cell__title" in blok and "Cell__body" in blok
     assert "([a-z0-9&\\]])([A-Z])" in blok
 
