@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import backend.api.jobs as J  # noqa: E402
-from tests.test_kanalen_om_de_beurt import NU, _bouw_db, _job, _uitgifte_op  # noqa: E402
+from tests.test_kanalen_om_de_beurt import NU, _bouw_db, _job  # noqa: E402
 
 VOOR = "4645c4bd"   # jobs.py van vóór deze reparatie
 BRON = [f"https://dejuistetoon.eu/wp-content/uploads/2026/10/1103{i}.jpg" for i in range(3)]
@@ -77,7 +77,14 @@ def _plaatsing(minuten_geleden=5, gestempeld_minuten=5, fotos=BRON):
 
 
 def _ext(module, monkeypatch, db):
-    return _uitgifte_op(module, monkeypatch, db, "marktplaats")
+    monkeypatch.setattr(module, "get_db", lambda: db)
+    monkeypatch.setattr(module, "_record_extension_heartbeat", lambda *a, **kw: None)
+    monkeypatch.setattr(module, "_recover_stale_claims", lambda *a, **kw: None)
+    monkeypatch.setattr(module, "execute_with_retry", lambda q, *a, **k: q.execute())
+    monkeypatch.setattr(module, "_zet_kleur_goed", lambda rijen: None)
+    return module.get_pending_jobs(
+        request=type("R", (), {"headers": {"x-omnivaleur-ext": "1.0.392"}})(),
+        platform="marktplaats", user_id="u1")
 
 
 def test_wacht_zolang_de_fotos_nog_op_de_webshop_staan(monkeypatch):
@@ -138,3 +145,46 @@ def test_wachtrij_volgorde_zet_wachters_achteraan():
         {"id": "n", "action": "create", "platform": "vinted", "created_at": "2026-10-16T08:00:00+00:00"},
     ]
     assert [j["id"] for j in J._wachtrij_volgorde(licht, NU)] == ["n", "w"]
+
+
+# ── Het stempel bij het plaatsen, en het bijwerken bij aflevering ─────────────
+import asyncio  # noqa: E402
+
+from backend.services import crosslist as cl  # noqa: E402
+from backend.services import photo_mirror as pm  # noqa: E402
+
+
+class _Rij:
+    def __init__(self, data, log=None): self.data_, self.log = data, log
+    def __getattr__(self, n): return lambda *a, **k: (self.log.append((n, a)) if self.log is not None and n == "update" else None) or self
+    def execute(self): return type("R", (), {"data": self.data_})()
+
+
+def _stempel(fotos, woo):
+    async def _exec(q): return q.execute()
+    cl_exec, cl._exec = cl._exec, _exec
+    try:
+        db = type("D", (), {"table": lambda s, n: _Rij([{"user_id": "u1"}] if woo else [])})()
+        return asyncio.run(cl._fotos_wachten_stempel(db, {"id": "i1", "photo_urls": fotos}, "u1"))
+    finally:
+        cl._exec = cl_exec
+
+
+def test_stempel_alleen_bij_woo_met_bronfotos():
+    assert _stempel(BRON, woo=True), "Woo-klant met bronfoto's: wachten"
+    assert _stempel(BRON, woo=False) is None, "zonder Woo-koppeling haalt de taak niets op"
+    assert _stempel(ONS, woo=True) is None, "foto's al bij ons: niets te wachten"
+
+
+def test_aflevering_werkt_de_wachtende_plaatsing_bij(monkeypatch):
+    bijgewerkt = []
+    wachtend = {"id": "j1", "payload": {"price": 20, "photo_urls": list(BRON),
+                                        "_fotos_wachten_sinds": NU.isoformat()}}
+
+    class _Db:
+        def table(self, n):
+            return _Rij([wachtend] if n == "jobs" else [], bijgewerkt)
+    asyncio.run(pm._wachtende_plaatsingen_bijwerken(_Db(), "u1", "i1", list(BRON), list(ONS), 0))
+    assert bijgewerkt, "de wachtende opdracht hoort de nieuwe foto's te krijgen"
+    nieuw = bijgewerkt[0][1][0]["payload"]
+    assert nieuw["photo_urls"] == ONS and "_fotos_wachten_sinds" not in nieuw
