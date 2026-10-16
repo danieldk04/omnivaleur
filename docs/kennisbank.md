@@ -17,6 +17,55 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## echte-extensiecode-op-vinted-draaien
+
+*16-10-2026 — "16-10: de echte vinted.js van een commit op Daniels vinted.nl/items/new draaien tot vlak vóór plaatsen; vond een fout die alle nagebouwde proeven misten"*
+
+Methode (16-10-2026, Toon): in Daniels Chrome (Claude in Chrome) op vinted.nl/items/new een lader draaien die shared.js, vinted.js, background.js en vinted_prijs_main.js van een vaste commit van raw.githubusercontent.com haalt (repo is openbaar, Vinted laat eval en die fetch toe). background.js in een Function met een nep-chrome (Proxy die alles slikt, `then` geeft nooit antwoord) levert de `_mw*`-functies; berichten (FILL_DESC, SET_PRICE_MAIN, FETCH_PHOTO, VINTED_CATALOGUS uit tests/fixtures, GET_JOB met een echte payload) handelt de lader zelf af. Veiligheid: in shared.js precies één regel `btn.click();\n    clog("plaatsen: op de knop geklikt` vervangen door een throw (anders niet draaien), KLIK_ECHT op submit weigeren, en een XHR/fetch-slot dat alleen GET plus photos, item_upload/(attributes|suggestions|colors|brands|catalogs), shipping-estimation/external/package_sizes doorlaat. Vinted praat via XHR (axios), dus het prototype-slot vangt alles.
+
+Valkuilen: de achtergrond-`setTimeout` niet stilzetten (dan antwoorden de _mw-functies nooit); het pakketformaat komt van een POST naar shipping-estimation (blokkeer je die, dan lijkt de extensie het formaat te vergeten); Vinted kiest tijdens het uploaden zelf al een rubriek uit de foto's. Opruimen: localStorage-sleutels weg, tabblad dicht. Nooit zonder Daniels ja op Toevoegen drukken.
+
+Zie "extensie-const-na-await-valstrik" en "vinted-woontextiel-maat-in-cm".
+
+---
+
+## extensie-const-na-await-valstrik
+
+*16-10-2026 — "In de content-scripts moet elke const/let bóven `await getJob()` staan, anders valt de invulstap stil om"*
+
+De content-scripts van de extensie (o.a. `extension/content/vinted.js`) zijn één
+grote async functie. Zodra de code bij `const job = await getJob();` wacht, zijn
+de regels daarónder nog niet uitgevoerd. Een `const` die verderop staat bestaat op
+dat moment dus niet, en elke functie die hem gebruikt stopt met een harde fout op
+het moment dat hij aangeroepen wordt.
+
+**Dit is al vijf keer misgegaan** (de vijfde: `HOOFDLETTER_KLACHT_RE`, 10-10 tot 12-10-2026, extensie 1.0.384): de kleurstap, de categoriekeuze (`V_KLEDING`),
+de prijscontrole (`PRICE_ERR_RE`) en op 27-08-2026 `BLAD_VOORKEUR`/`enkelvoud`.
+
+Wat het zo verraderlijk maakt: `step()` in `extension/content/shared.js` vangt de
+fout op, logt "stap X: FOUT" en gaat gewoon door. Het publiceren stopt dus niet —
+de advertentie gaat zonder categorie de deur uit. Je ziet geen crash, alleen een
+advertentie die niet klopt.
+
+**Een rode bewakingsproef is nooit "bestaand rood".** Op 11-10-2026 stond
+`test_geen_hulpwaarden_na_de_hoofdstroom` rood en werd weggezet als "ook zonder deze
+wijziging rood"; een dag later kreeg een klant precies die fout. Rood op de proef
+die deze valstrik bewaakt = eerst repareren. Een sandboxproef die stukken los uit
+vinted.js knipt ziet de volgorde niet; toets die apart.
+
+**Hoe toe te passen:**
+- Nieuwe hulpwaarden altijd boven `const job = await getJob();` zetten, bij de
+  andere constanten. Er staat een waarschuwingsblok in vinted.js op die plek.
+- `tests/test_vinted_categories.py::test_geen_hulpwaarden_na_de_hoofdstroom`
+  bewaakt dit. Die test faalde maandenlang zonder dat iemand keek — zie
+  "eerst-recente-wijzigingen-lezen".
+- Elke wijziging in `extension/` vereist een versiebump, zie
+  "extension-release-bump-version".
+
+**Weer gebeurd, 16-10-2026 (1.0.390/391).** `_catEn`, `_kaalCat`, `KIND_KLEDING`, `KIND_VOORKEUR` stonden na `await getJob()`: de Vinted-categoriestap faalde bij elke plaatsing ("Cannot access '_catEn' before initialization") en Vinted koos zelf uit de foto. De bewaakproef `tests/test_vinted_categories.py::test_geen_hulpwaarden_na_de_hoofdstroom` stond ROOD en is toch uitgebracht; de node-harnassen (blokUit/regio) knippen blokken los en zien dit nooit. Draai vóór elke extensie-uitgave die pytest-proef, en meet het liefst met de echte code op de echte pagina, zie "echte-extensiecode-op-vinted-draaien".
+
+---
+
 ## delist-wist-de-bronwinkel
 
 *16-10-2026 — Twee routes wisten Shopify-producten uit Janneke's webshop: de knop Delist (gerepareerd 14-10) en het verkoopvangnet 20-40 min na een verkoop elders (gerepareerd 16-10)*
@@ -392,41 +441,6 @@ Janneke: "overal bestemd voor jongen, ook bij de meidenjassen". Gemeten op haar 
 **Why:** een voorgeselecteerde lijst maakt een mislukte keuze onzichtbaar.
 
 **How to apply:** kies uit de opties die er echt staan, op betekenis (selectIntendedFor in shared.js). Bij een nieuwe keuzelijst eerst op het echte formulier kijken of er een voorselectie staat. Proef: tests/bestemd-voor-baby-test.js. Zie "verzonnen-standaard-is-erger-dan-leeg".
-
----
-
-## extensie-const-na-await-valstrik
-
-*12-10-2026 — "In de content-scripts moet elke const/let bóven `await getJob()` staan, anders valt de invulstap stil om"*
-
-De content-scripts van de extensie (o.a. `extension/content/vinted.js`) zijn één
-grote async functie. Zodra de code bij `const job = await getJob();` wacht, zijn
-de regels daarónder nog niet uitgevoerd. Een `const` die verderop staat bestaat op
-dat moment dus niet, en elke functie die hem gebruikt stopt met een harde fout op
-het moment dat hij aangeroepen wordt.
-
-**Dit is al vijf keer misgegaan** (de vijfde: `HOOFDLETTER_KLACHT_RE`, 10-10 tot 12-10-2026, extensie 1.0.384): de kleurstap, de categoriekeuze (`V_KLEDING`),
-de prijscontrole (`PRICE_ERR_RE`) en op 27-08-2026 `BLAD_VOORKEUR`/`enkelvoud`.
-
-Wat het zo verraderlijk maakt: `step()` in `extension/content/shared.js` vangt de
-fout op, logt "stap X: FOUT" en gaat gewoon door. Het publiceren stopt dus niet —
-de advertentie gaat zonder categorie de deur uit. Je ziet geen crash, alleen een
-advertentie die niet klopt.
-
-**Een rode bewakingsproef is nooit "bestaand rood".** Op 11-10-2026 stond
-`test_geen_hulpwaarden_na_de_hoofdstroom` rood en werd weggezet als "ook zonder deze
-wijziging rood"; een dag later kreeg een klant precies die fout. Rood op de proef
-die deze valstrik bewaakt = eerst repareren. Een sandboxproef die stukken los uit
-vinted.js knipt ziet de volgorde niet; toets die apart.
-
-**Hoe toe te passen:**
-- Nieuwe hulpwaarden altijd boven `const job = await getJob();` zetten, bij de
-  andere constanten. Er staat een waarschuwingsblok in vinted.js op die plek.
-- `tests/test_vinted_categories.py::test_geen_hulpwaarden_na_de_hoofdstroom`
-  bewaakt dit. Die test faalde maandenlang zonder dat iemand keek — zie
-  "eerst-recente-wijzigingen-lezen".
-- Elke wijziging in `extension/` vereist een versiebump, zie
-  "extension-release-bump-version".
 
 ---
 
