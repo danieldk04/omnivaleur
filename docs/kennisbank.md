@@ -17,6 +17,20 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-woontextiel-maat-in-cm
+
+*16-10-2026 — "16-10: Vinted Dekens en Kussens hebben een verplichte maat in cm (of Overige); woontextiel zonder vast pad werd kinderslaapzak of Rugby"*
+
+De Juiste Toon (96e30080), 16-10-2026: 19 van 19 Vinted-plaatsingen mislukt ("Kies een subcategorie", "size (empty)"). Woontextiel stond niet in V_PAD, dus zocht de extensie op het Engelse "blanket" op een Nederlandse Vinted en koos Vinted uit de foto: deken werd Kids > Sleep sacks (vraagt maat), vloerkleed Sports > Rugby.
+
+Gemeten op vinted.nl: Home > Textiles > Blankets (1925) en Cushions (1974) hebben een VERPLICHT maatraster "70 x 90 cm … 150 x 200 cm | Overige"; Rugs (1954), Tablecloths (3873) en Tapestries (1929) hebben geen maatveld.
+
+**Why:** een rubriek kiezen is niet genoeg; de goede rubriek kan zelf een veld eisen dat wij niet hebben.
+
+**How to apply:** nieuwe niet-kledingrubriek op Vinted? Klik hem af op /items/new (velden lezen met data-testid, niets plaatsen) en zet een vast pad in V_PAD. Maat uit de afmeting: exact of Overige, nooit de dichtstbijzijnde (1.0.392, tests/vinted-woontextiel-test.js). Zie "vinted-staat-alleen-engels" en "bronfotos-via-github-taak".
+
+---
+
 ## vinted-categorie-in-elke-taal
 
 *15-10-2026 — 15-10-2026 — Vinted-categoriekeuze werkte alleen op een Engelse Vinted; op een Nederlandse koos Vinted zelf (tienermaten → dames → "Kies een subcategorie"); nu via regelnummers catalog-N (1.0.390)*
