@@ -1825,7 +1825,7 @@
       // keer plaatsen (dubbele advertentie), maar de bestaande koppelen en de
       // opdracht netjes afsluiten — daarmee verdwijnt ook het "Publishing now…"
       // kaartje dat anders eeuwig bleef staan.
-      const already = await resolveCreatedVintedItem(item, item.platform_listing_id, 2500, { exact: true })
+      const already = await resolveCreatedVintedItem(item, item.platform_listing_id, 2500, { exact: true, vooraf: true })
         .catch(() => null);
       if (already) {
         console.log(`[Omnivaleur] Vinted create: "${item.title}" staat al online (${already.id}) — koppelen in plaats van opnieuw plaatsen`);
@@ -1909,6 +1909,11 @@
                         ". The tab is left open — fill them in yourself and click Upload, " +
                         "and this listing is marked as published automatically.");
       }
+      // Het hoogste advertentienummer in de kast vlak vóór onze klik. Vinted-
+      // nummers lopen op, dus alleen een advertentie daarboven kan de onze zijn.
+      // Zonder dit pakte het zoeken na een trage plaatsing de advertentie van
+      // een gelijknamig ander stuk (Janneke, 15-10-2026).
+      const hoogwater = await vintedHoogwater().catch(() => null);
       let id;
       try {
         id = await submitListing(/\/items\/(\d+)/);
@@ -1927,7 +1932,7 @@
           // NOT mean the listing failed. Confirm via the wardrobe before giving up:
           // the item appears there (as is_processing) within a minute or two, and
           // we recover its real id. Only if it never shows up is it a real failure.
-          const recovered = await resolveCreatedVintedItem(item, item.platform_listing_id, 90000).catch(() => null);
+          const recovered = await resolveCreatedVintedItem(item, item.platform_listing_id, 90000, { naId: hoogwater }).catch(() => null);
           if (!recovered) throw submitErr;
           id = recovered.id;
           console.log(`[Omnivaleur] Vinted create: recovered id ${id} via wardrobe after delayed redirect${recovered.processing ? " (still in Vinted review)" : ""}`);
@@ -2388,6 +2393,14 @@
     if (!target) return null;
 
     const bezet = new Set((item._vinted_bezet || []).map(String));
+    // TITELGENOTEN: andere artikelen van deze verkoper met dezelfde titel (de
+    // server telt ze, zie _vinted_titelgenoten_meegeven in jobs.py). Dan zegt
+    // een gelijke titel niet meer wiens advertentie het is. Janneke, 15-10-2026:
+    // de groene jas kreeg zo de advertentie van een andere jas, en bij de
+    // verkoop ging de verkeerde van Marktplaats af. Een dubbele advertentie is
+    // minder erg dan een verkeerde koppeling.
+    const serverGenoten = Number(item._vinted_titelgenoten || 0) > 0 || bezet.size > 0;
+    const naId = opts.naId != null && Number.isFinite(Number(opts.naId)) ? Number(opts.naId) : null;
     const userId = await getVintedUserId();
     if (!userId) return null;
 
@@ -2402,18 +2415,7 @@
         if (res.ok) {
           const data = await res.json();
           const items = (data && data.items) || [];
-          // newest_first → the first title match that isn't the old listing is
-          // the one we just created (a relist posts exactly one new item).
-          const hit = items.find((it) => {
-            if (String(it.id) === String(excludeId)) return false;
-            // Advertenties van een ánder artikel met dezelfde titel (de server
-            // geeft ze mee, zie _vinted_titelgenoten_meegeven in jobs.py). Twee
-            // stukken met één titel zijn anders niet uit elkaar te houden: de
-            // tweede jas kreeg de advertentie van de eerste (Janneke, 09-10-2026).
-            if (bezet.has(String(it.id))) return false;
-            // Verkochte, beëindigde en concept-advertenties tellen niet mee: die
-            // staan wel in de garderobe maar zijn niet "het item staat online".
-            if (it.is_closed || it.is_draft) return false;
+          const titelPast = (it) => {
             const t = norm(it.title);
             if (!t) return false;
             // exact: alleen een volledig gelijke titel telt. Gebruikt door de
@@ -2425,14 +2427,69 @@
             // geplaatste "... (donkerblauw)", en Delist op de groene trui haalde
             // daarna de donkerblauwe van Vinted.
             return opts.exact ? t === target : target.includes(t);
+          };
+          // Staan er in de kast zelf al twee met deze titel (ook verkochte of
+          // die van een ander artikel), dan zijn het titelgenoten, ook als de
+          // server dat niet wist.
+          const genoten = serverGenoten || items.filter(titelPast).length > 1;
+          // Vooraf ("staat hij al online?") is er geen bewijs dat een advertentie
+          // van DIT stuk is: bij titelgenoten nooit koppelen, gewoon plaatsen.
+          if (opts.vooraf && genoten) return null;
+          // Na de klik: zonder het hoogwater van vlak ervoor is er bij
+          // titelgenoten geen bewijs dat de advertentie van ons komt.
+          if (genoten && naId == null) return null;
+          const kandidaten = items.filter((it) => {
+            if (String(it.id) === String(excludeId)) return false;
+            // Advertenties van een ánder artikel met dezelfde titel (de server
+            // geeft ze mee, zie _vinted_titelgenoten_meegeven in jobs.py). Twee
+            // stukken met één titel zijn anders niet uit elkaar te houden: de
+            // tweede jas kreeg de advertentie van de eerste (Janneke, 09-10-2026).
+            if (bezet.has(String(it.id))) return false;
+            // Verkochte, beëindigde en concept-advertenties tellen niet mee: die
+            // staan wel in de garderobe maar zijn niet "het item staat online".
+            if (it.is_closed || it.is_draft) return false;
+            // Pas na onze klik verschenen: Vinted-nummers lopen op.
+            if (naId != null && !(Number(it.id) > naId)) return false;
+            // Een andere prijs is een ander stuk.
+            if (!vintedPrijsKlopt(it, item)) return false;
+            return titelPast(it);
           });
+          // newest_first: zonder titelgenoten is de eerste de onze (een
+          // herplaatsing zet er precies één nieuwe bij). Met titelgenoten moet
+          // het er precies één zijn, anders weten we niet welke.
+          const hit = genoten ? (kandidaten.length === 1 ? kandidaten[0] : null) : kandidaten[0];
           if (hit) return { id: String(hit.id), processing: !!hit.is_processing };
+          if (genoten && kandidaten.length > 1) return null;
         }
       } catch (_) { /* transient — keep polling */ }
       await sleep(3000);
     }
     return null;
   }
+
+  // De prijs van een kastadvertentie tegen die van het artikel. Onbekend aan een
+  // van beide kanten telt niet als tegenspraak; een cent verschil wel.
+  function vintedPrijsKlopt(it, item) {
+    const ruw = it && (it.price && typeof it.price === "object" ? it.price.amount : it.price);
+    const hun = Number(String(ruw ?? "").replace(",", "."));
+    const onze = Number(String(item && item.price != null ? item.price : "").replace(",", "."));
+    if (ruw == null || ruw === "" || !Number.isFinite(hun) || hun <= 0) return true;
+    if (!Number.isFinite(onze) || onze <= 0) return true;
+    return Math.abs(hun - onze) < 0.01;
+  }
+
+  // Hoogste advertentienummer in de eigen kast (alle soorten), of null.
+  async function vintedHoogwater() {
+    const userId = await getVintedUserId();
+    if (!userId) return null;
+    const res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=1&per_page=50`,
+                            { headers: { Accept: "application/json" } });
+    if (!res.ok) return null;
+    const items = ((await res.json()) || {}).items || [];
+    const nrs = items.map((it) => Number(it.id)).filter(Number.isFinite);
+    return nrs.length ? Math.max(...nrs) : 0;
+  }
+
 
   async function deleteListingVinted(listingId) {
     // We're on the item page on its real country origin (e.g. vinted.nl) —
@@ -2656,6 +2713,66 @@
     realClickEl(els[i]);
     await sleep(600);
     return sizeIsFilledVinted();
+  }
+
+  // GEEN MERK BIJ HET ARTIKEL, DAN "GEEN MERK" OP VINTED (16-10-2026, Toon).
+  //
+  // "word als merk IKEA ingevuld terwijl dat niet in de advertentie staat". Gemeten
+  // op vinted.nl met de echte 1.0.391 en zijn wandkleed: Vinted vult na het
+  // uploaden van de foto's zelf een merk in (IKEA, binnen een seconde, zonder één
+  // klik van ons), en de merkstap deed niets omdat het artikel geen merk heeft.
+  // Zijn advertentie 10397089556 staat zo live met merk IKEA. Vinted biedt zelf
+  // "Geen merk" aan zodra een zoekterm geen merk vindt; dat kiezen we. Een gok die
+  // letterlijk in de titel of tekst staat ("IKEA kussen") laten we staan.
+  const GEEN_MERK = /^(geen merk|no brand|ohne marke|sans marque|sin marca|senza marca|bez marki)$/i;
+  function merkStaatInTekst(merk, item) {
+    const m = String(merk || "").trim().toLowerCase();
+    if (m.length < 2) return false;
+    const tekst = `${item.title || ""} ${item.description || ""}`.toLowerCase();
+    const esc = m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(^|[^\\p{L}\\p{N}])${esc}($|[^\\p{L}\\p{N}])`, "u").test(tekst);
+  }
+  async function geenMerkVinted(item) {
+    const veld = () => qs('input[data-testid="brand-select-dropdown-input"]');
+    await waitUntil(() => !!veld(), 3000);
+    const el = veld();
+    if (!el) return true; // deze rubriek heeft geen merkveld
+    const gok = (el.value || "").trim();
+    if (GEEN_MERK.test(gok)) return true;
+    if (gok && merkStaatInTekst(gok, item)) {
+      clog(`Vinted merk: "${gok}" staat in de titel of tekst, blijft staan`);
+      return true;
+    }
+    const zoekveld = () => {
+      const z = document.querySelector('input[data-testid="brand-search--input"]');
+      return z && z.offsetParent ? z : null;
+    };
+    if (!zoekveld()) {
+      el.scrollIntoView({ block: "center" });
+      realClickEl(el);
+      await waitUntil(() => !!zoekveld(), 2500);
+    }
+    const z = zoekveld();
+    if (!z) { clog("Vinted merk: merkpaneel ging niet open"); return false; }
+    // Een zoekterm die geen merk is: dan toont Vinted "Geen merk" als keuze.
+    fillInput(z, "qqzzx");
+    const cel = () => {
+      const t = [...document.querySelectorAll('[class*="web_ui__Cell__title"]')]
+        .find((e) => e.offsetParent && GEEN_MERK.test(e.textContent.trim()));
+      return t ? (t.closest('[class*="web_ui__Cell__cell"]') || t) : null;
+    };
+    await waitUntil(() => !!cel(), 3000);
+    const c = cel();
+    if (!c) {
+      clog("Vinted merk: geen keuze 'Geen merk' gevonden" + (gok ? `, Vinteds gok "${gok}" blijft` : ""));
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      return false;
+    }
+    realClickEl(c);
+    await waitUntil(() => GEEN_MERK.test((veld()?.value || "").trim()), 2000);
+    const nu = (veld()?.value || "").trim();
+    clog(`Vinted merk: ${gok ? `Vinteds gok "${gok}" vervangen door` : "gezet op"} "${nu}"`);
+    return GEEN_MERK.test(nu);
   }
 
   async function fillForm(item) {
