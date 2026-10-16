@@ -3366,6 +3366,30 @@
   // voorstel of de soort kledingstuk uit de titel. Zegt niets of het een jongen
   // of meisje is, dan alleen Kids, en dan beslist Vinted's voorstel over de tak.
   // (KIND_KLEDING staat boven `await getJob()`, zie daar.)
+  // TEXTIEL DAT PAS AAN DE TITEL TE HERKENNEN IS (16-10-2026, De Juiste Toon).
+  //
+  // "antiek kleden en textiel" is bij hem een mengsel (48 keer tapijt, 14
+  // wandkleed, 11 tafelkleed, 7 foulard) en "wonen wanddecoraties" zijn bijna
+  // allemaal wandkleden (44 van 52). Eén vast pad zou de helft verkeerd zetten;
+  // het zoekvak met een Engels woord op een Nederlandse Vinted liet Vinted kiezen.
+  // Hier op het soort woord in de titel, nagelopen op vinted.nl (geen van deze
+  // bladen vraagt een maat). Herkennen we niets, dan gewoon de oude weg.
+  // De lijst staat IN de functie: een const op dit niveau bestaat tijdens het
+  // invullen nog niet (zie "VERPLAATST NAAR HIER").
+  function textielPad(cat, item) {
+    if (!/^(antiek kleden en textiel|wonen wanddecoraties)$/.test(cat || "")) return null;
+    const t = `${item?.title || ""}`.toLowerCase();
+    const SOORTEN = [
+      [/wandkleed|wandtapijt|gobelin/, ["Home", "Textiles", "Tapestries"]],
+      [/tafelloper/, ["Home", "Textiles", "Table linen", "Table runners"]],
+      [/tafelkleed|tafellaken|kleedje|dekje|doily/, ["Home", "Textiles", "Table linen", "Tablecloths"]],
+      [/tapijt|vloerkleed|kelim|karpet|\bloper\b/, ["Home", "Textiles", "Rugs & mats", "Rugs"]],
+      [/plaid|deken/, ["Home", "Textiles", "Blankets"]],
+    ];
+    const hit = SOORTEN.find(([re]) => re.test(t));
+    return hit ? hit[1] : null;
+  }
+
   function kinderPad(cat, item) {
     if (!KIND_KLEDING.test(cat)) return null;
     if (/meisjes/.test(cat)) return ["Kids", "Girls clothing"];
