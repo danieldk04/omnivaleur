@@ -202,6 +202,12 @@ function draai(bron, kiezer, item) {
     blokUit(bron, "const V_KLEDING = {"),
     blokUit(bron, "const BLAD_VOORKEUR = ["),
     "const enkelvoud = (w) => (w.length > 4 && /s$/.test(w) && !/ss$/.test(w) ? w.slice(0, -1) : w);",
+    // Sinds 16-10 staan _catEn, _kaalCat en KIND_* boven `await getJob()` (in de
+    // oude versie stonden ze nog in de regio hieronder, en bestonden ze in het
+    // echte bestand tijdens het invullen niet; zie tests/test_vinted_categories.py).
+    bron.includes("  // VERPLAATST NAAR HIER (16-10-2026")
+      ? bron.slice(bron.indexOf("  // VERPLAATST NAAR HIER (16-10-2026"), bron.indexOf("  const job = await getJob();"))
+      : "",
     regio(bron),
     "globalThis.__vul = fillCategoryVinted;",
   ].join("\n"), s);
