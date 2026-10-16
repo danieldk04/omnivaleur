@@ -63,6 +63,12 @@ function maatKiezer(bron) {
     ["wonen vachten", "Koeienhuid vacht 210/190", "Home > Textiles > Rugs & mats > Rugs"],
     ["wonen tafelkleden", "Elegant gehaakt kleed 100/100", "Home > Textiles > Table linen > Tablecloths"],
     ["wonen kussens", "Gehaakt kussen 45/45", "Home > Textiles > Cushions"],
+    // Gemengde rubrieken: op het soort woord in Toons eigen titels.
+    ["antiek kleden en textiel", "Perzisch handgeknoopt tapijt 135/85m", "Home > Textiles > Rugs & mats > Rugs"],
+    ["antiek kleden en textiel", "Vintage wollen Smyrna wandkleed 36/26 cm", "Home > Textiles > Tapestries"],
+    ["antiek kleden en textiel", "Vintage brocante tafelkleed antiek bloemen pa", "Home > Textiles > Table linen > Tablecloths"],
+    ["wonen wanddecoraties", "Leuk wandkleed met franjes 147/77 cm", "Home > Textiles > Tapestries"],
+    ["wonen wanddecoraties", "Rode Handgeweven Kelim - Wandkleed / Tafellop", "Home > Textiles > Tapestries"],
   ];
   console.log("Categorie op een Nederlandse Vinted, Vinted raadt een kinderslaapzak:");
   for (const [cat, titel, verwacht] of gevallen) {
