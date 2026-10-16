@@ -1367,6 +1367,27 @@ async def _kopieer_bronfotos(db, item: dict, item_id: str, user_id: str) -> dict
     return item
 
 
+async def _fotos_wachten_stempel(db, item: dict, user_id: str) -> str | None:
+    """Het tijdstip waarop de opdracht op haar foto's begint te wachten, of None.
+
+    Staan er na _kopieer_bronfotos nog foto's op een gekoppelde webshop, dan
+    haalt de GitHub-taak bronfotos.yml ze binnen. Tot die tijd wacht de opdracht
+    in plaats van op elk kanaal te mislukken (zie _wacht_op_fotos in jobs.py).
+    Alleen bij een WooCommerce-koppeling: alleen die foto's haalt de taak op, en
+    elders kan de extensie een foto die wij niet kregen vaak zelf wel ophalen."""
+    try:
+        from backend.services.photo_mirror import is_mirrored
+        if not any(isinstance(u, str) and u.startswith(("http://", "https://"))
+                   and not is_mirrored(u) for u in (item.get("photo_urls") or [])):
+            return None
+        woo = (await _exec(db.table("platform_credentials").select("user_id")
+                           .eq("user_id", user_id).eq("platform", "woocommerce").limit(1))).data
+        return datetime.now(timezone.utc).isoformat() if woo else None
+    except Exception as e:  # noqa: BLE001 — dan gaat de opdracht zoals vroeger
+        logger.warning("Fotowacht niet bepaald voor %s: %s", item.get("id"), e)
+        return None
+
+
 async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str) -> list[dict]:
     """
     Route each platform to the right handler:
