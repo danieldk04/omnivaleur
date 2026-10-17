@@ -17667,3 +17667,11 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Rugtasjes Teddy (3 stuks): geblokkeerd door haar eigen instelling "Vinted alleen kinderen", omdat ze als "sieraden rugtassen" (volwassen tas) zijn ingedeeld. Het zijn kinderrugzakjes. Omnivaleur heeft geen categorie kindertassen; Vinted wel (Kids > Girls/Boys clothing > Bags & backpacks). Open, aparte taak.
 - Open: waarom de extensie om 22:26 geen inlog meestuurde bij /error (vijf keer 422).
 - Concept-antwoord voor Janneke bewaard (schrijfstijl), nog niet verstuurd.
+
+## 17-10-2026 (ochtend): kindertassen als eigen rubriek (Janneke, rugtasjes)
+
+- Nieuwe rubriek "kinderen tassen" (cf894c1d): dashboard (Kinderen > Bags & backpacks, NL "Tassen en rugzakken"), import herkent tas/rugzak in de titel van een kinderartikel (een kledingwoord in de titel wint), AI-regel, eBay, geen maat. Marktplaats: Kinderen en Baby's | Kindermode-accessoires (565/427/3136), gemeten in het plaatsformulier; Tassen | Rugtassen is de volwassen tak. Vinted: Kids > Girls clothing > Bags & backpacks (1258), Boys (1257) alleen als de tekst jongens/boys/zoon zegt.
+- Extensie 1.0.395 (bevat ook 1.0.394, die nog niet in de Web Store stond). De server geeft plaatswerk in deze rubriek pas aan 1.0.395+; een oudere kopie wacht.
+- Bewezen op het echte Vinted-formulier (ingebouwde browser, echte bestanden van de commit, gestopt na de rubriekstap, schrijvende verzoeken geblokkeerd): oud b8222968 met "sieraden rugtassen" koos Dames > Tassen > Rugzakken (157); oud met "kinderen tassen" liet de rubriek leeg; nieuw cf894c1d koos 1258, met jongenstitel 1257. Geen maatveld bij 1258. Niet geplaatst; foto's en het verplicht-zijn van "Labels en waarschuwingen" niet gemeten.
+- Klantdata: alleen 84b416d8, 5064a9d7, 3e50ab8d van "sieraden rugtassen"/"sieraden" naar "kinderen tassen"/"kinderen". Back-up: backup-rugtasjes-voor-kinderen-tassen.json in de notitiemap van de sessiegroep; de lader staat daar ook (vinted-lader-rubriekproef.js).
+- Concept voor Janneke bewaard (schrijfstijl), versturen na de Web Store-upload van 1.0.395.
