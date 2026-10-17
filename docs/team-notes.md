@@ -17675,3 +17675,10 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Bewezen op het echte Vinted-formulier (ingebouwde browser, echte bestanden van de commit, gestopt na de rubriekstap, schrijvende verzoeken geblokkeerd): oud b8222968 met "sieraden rugtassen" koos Dames > Tassen > Rugzakken (157); oud met "kinderen tassen" liet de rubriek leeg; nieuw cf894c1d koos 1258, met jongenstitel 1257. Geen maatveld bij 1258. Niet geplaatst; foto's en het verplicht-zijn van "Labels en waarschuwingen" niet gemeten.
 - Klantdata: alleen 84b416d8, 5064a9d7, 3e50ab8d van "sieraden rugtassen"/"sieraden" naar "kinderen tassen"/"kinderen". Back-up: backup-rugtasjes-voor-kinderen-tassen.json in de notitiemap van de sessiegroep; de lader staat daar ook (vinted-lader-rubriekproef.js).
 - Concept voor Janneke bewaard (schrijfstijl), versturen na de Web Store-upload van 1.0.395.
+
+## 17-10-2026: Janneke, stand na het herstel (bericht voor Daniel)
+
+- Gemeten: groene jas cace9e18 om 16-10 21:38 van Marktplaats; blauwe fleece 4b6dcf79 en rood/zwarte fleece 62921089 weer op MP en Vinted; d51b7dc6 en 651b85e9 op Vinted. Alle vier de nieuwe Vinted-advertenties foto naast foto nagekeken: juist gekoppeld.
+- De drie mislukte Vinted-plaatsingen (708379a4, b2276aff, bcc93e5c) opnieuw klaargezet; vooraf nagekeken dat er geen losse advertentie met die titels op Vinted staat, dus geen verkeerde koppeling of dubbele advertentie mogelijk.
+- Web Store: 1.0.394 live, 1.0.395 (kindertassen) nog niet. Janneke draait nog 1.0.391, laatst gezien 16-10 21:13 UTC.
+- Haar vraag van 15-10 22:39 (waar staan mislukte plaatsingen): een artikel dat elders al live staat, staat onder Live met een rood label "Vinted mislukt, wat nu?", niet onder Te plaatsen.
