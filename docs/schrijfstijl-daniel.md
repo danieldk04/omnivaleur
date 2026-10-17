@@ -78,7 +78,7 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
   leadpagina en zet de herkomst voor Analytics; de lange /mp-video telt als "direct"), met "duurt 2 minuutjes".
 - Videomail (3 van 5 recente mails): "Dank voor je reactie. Via deze link kan je de video bekijken: <link> ." dan "Ik ben benieuwd wat je ervan vindt! Laat gerust weten als je naar aanleiding van de video nog vragen hebt." Link staat los met spatie voor de punt. Mag met "Hi,", "Hoi Voornaam," of "Goedemorgen Voornaam,". Mijn concept zonder die opening ("Via deze link...") vult hij aan met "Dank voor je (enthousiaste) reactie!" (10-10); een lege videomail begint dus nooit direct met de link.
 - Kanalen opsommen: altijd de volledige lijst, dus Marktplaats, 2dehands, Vinted, eBay, FB
-  Marketplace en Shopify. Mijn concepten lieten FB Marketplace weg, hij zet het er 3x bij.
+  Marketplace, Shopify en sinds oktober WooCommerce (17-10: zo in zijn eigen mail). Mijn concepten lieten FB Marketplace weg, hij zet het er 3x bij.
 - Bij een fout of storing van ons is hij korter dan mijn concept: geen openingszin als "Dank voor de
   video, nu zie ik precies wat je bedoelt", geen uitleg wie het had moeten zien, direct de
   feiten en het nieuwe versienummer. "Excuus voor ..." in één zin is genoeg (3x gezien).
@@ -121,3 +121,4 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - 14-10-2026: Gekeken: 88 mails in Verzonden (3 dagen), 5 van Daniel, 4 al verwerkt; 1 nieuw, 1 met concept. Nieuw: hij schrapt mijn slotzin met ":)" bij een korte reparatiemelding (1x, onder Nog te leren).
 - 15-10-2026: Gekeken: 48 mails in Verzonden (3 dagen), 7 van Daniel, 4 al verwerkt; 3 nieuw, 3 met concept (1 niet vergelijkbaar, 2 vrijwel woordelijk overgenomen). Nieuw: alleen tijdswoorden aangepast ("vanochtend", "Morgen" in plaats van datum), onder Nog te leren.
 - 16-10-2026: Gekeken: 46 mails in Verzonden (3 dagen), 4 van Daniel, 4 al verwerkt; 0 nieuw, 0 met concept. Niets te leren.
+- 17-10-2026: Gekeken: 49 mails in Verzonden (3 dagen), 6 van Daniel, 3 al verwerkt; 3 nieuw, 0 met concept. Alleen bevestigd: "Daniel." met punt (2 van 3), lege regel voor de naam, links los met spatie voor de punt, proef-uitnodiging met registerlink en "7 dagen volledig kosteloos".
