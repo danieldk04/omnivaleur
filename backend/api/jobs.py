@@ -581,6 +581,14 @@ def _titel_zonder_sku(titel) -> str:
 # ze in de kast vonden waren van elkaar. Daarom blijft Vinted na zo'n melding
 # nog even bezet, tot het tabblad zich alsnog meldt of de naloop voorbij is.
 _VINTED_NALOOP = timedelta(minutes=8)
+# Welke afsluitingen een tabblad achterlaten dat nog kan plaatsen. Naast de
+# melding van de bewaker ook de opruiming door de server zelf: lukt het de
+# extensie niet haar "timed out" af te leveren (Janneke, 16-10 22:26: vijf keer
+# 422, geen inlog meegestuurd), dan zet _recover_stale_claims de opdracht na vijf
+# minuten op "interrupted". Om 22:30:26 gebeurde dat, om 22:30:29 ging de
+# volgende Vinted-plaatsing al uit, en het eerste tabblad plaatste om 22:39.
+_TABBLAD_KAN_DOORWERKEN = re.compile(
+    r"timed out waiting for this .* job to finish|Publishing was interrupted", re.I)
 
 
 def _vinted_tabblad_werkt_nog(db, user_id: str, now_dt: datetime) -> bool:
@@ -596,7 +604,7 @@ def _vinted_tabblad_werkt_nog(db, user_id: str, now_dt: datetime) -> bool:
         logger.warning("Vinted-naloop niet te lezen (%s)", e)
         return False
     return any(isinstance(r.get("result"), dict)
-               and _TIJDSOVERSCHRIJDING.search(str(r["result"].get("error") or ""))
+               and _TABBLAD_KAN_DOORWERKEN.search(str(r["result"].get("error") or ""))
                for r in rijen)
 
 

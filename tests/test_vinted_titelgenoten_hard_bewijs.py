@@ -56,17 +56,17 @@ def _bron(pad: str, commit: str | None) -> str:
 _OUD: dict = {}
 
 
-def _oude_module(pad: str):
+def _oude_module(pad: str, commit: str = VOOR):
     """De module zoals hij vóór de reparatie was, naast de huidige geladen."""
-    if pad not in _OUD:
+    if (pad, commit) not in _OUD:
         map_ = Path(tempfile.mkdtemp())
-        naam = "oud_" + Path(pad).stem
-        (map_ / f"{naam}.py").write_text(_bron(pad, VOOR))
+        naam = f"oud_{commit}_" + Path(pad).stem
+        (map_ / f"{naam}.py").write_text(_bron(pad, commit))
         spec = importlib.util.spec_from_file_location(naam, map_ / f"{naam}.py")
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
-        _OUD[pad] = mod
-    return _OUD[pad]
+        _OUD[(pad, commit)] = mod
+    return _OUD[(pad, commit)]
 
 
 def _stuk(bron: str, kop: str, eind: str) -> str:
@@ -296,6 +296,24 @@ def test_nieuw_houdt_vinted_bezet_zolang_het_tabblad_kan_doorwerken(monkeypatch)
 
 def test_nieuw_geeft_vinted_weer_vrij_na_de_naloop(monkeypatch):
     assert _uitgifte(monkeypatch, J, 9 * 60) == ["56ded954"]
+
+
+# De opruiming door de server zelf, als de "timed out" van de extensie nooit
+# aankwam (Janneke, 16-10 22:26-22:30: vijf keer 422 op /error).
+ONDERBROKEN = ("Publishing was interrupted (Chrome likely closed mid-run) and couldn't be "
+               "verified either way — check whether it actually listed before publishing again "
+               "to avoid a duplicate.")
+EERSTE_REPARATIE = "a5466632"
+
+
+def test_eerste_reparatie_liet_na_de_opruiming_de_volgende_toch_uit(monkeypatch):
+    mod = _oude_module("backend/api/jobs.py", EERSTE_REPARATIE)
+    assert _uitgifte(monkeypatch, mod, 3, ONDERBROKEN) == ["56ded954"]
+
+
+def test_nieuw_houdt_vinted_ook_bezet_na_de_opruiming_door_de_server(monkeypatch):
+    assert _uitgifte(monkeypatch, J, 3, ONDERBROKEN) == []
+    assert _uitgifte(monkeypatch, J, 9 * 60, ONDERBROKEN) == ["56ded954"]
 
 
 def test_nieuw_een_andere_fout_houdt_niets_bezet(monkeypatch):
