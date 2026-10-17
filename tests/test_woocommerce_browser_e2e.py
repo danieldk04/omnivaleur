@@ -61,7 +61,8 @@ ECHT_CK = os.environ.get("WOO_E2E_CK") or CK
 ECHT_CS = os.environ.get("WOO_E2E_CS") or CS
 
 FUNCTIES = ["_wooAdres", "startWooKnop", "submitWooKeys", "wooDoorgeefStart", "_wooVoerUit",
-            "wooZoekApiInBrowser", "_wooKnopViaBrowser", "_wooControleerViaBrowser"]
+            "wooZoekApiInBrowser", "_wooKnopViaBrowser", "_wooControleerViaBrowser",
+            "_wooAndereBouwer"]
 
 
 def _vrije_poort():

@@ -122,14 +122,14 @@ def _bouw_db(wachtrij, laatst_bediend, laatst_geleden_sec=30, bezig=()):
     return _Db()
 
 
-def _uitgifte(monkeypatch, db, platform):
+def _uitgifte(monkeypatch, db, platform, versie="1.0.305"):
     monkeypatch.setattr(J, "get_db", lambda: db)
     monkeypatch.setattr(J, "_record_extension_heartbeat", lambda *a, **kw: None)
     monkeypatch.setattr(J, "_recover_stale_claims", lambda *a, **kw: None)
     monkeypatch.setattr(J, "execute_with_retry", lambda q, *a, **k: q.execute())
     monkeypatch.setattr(J, "_zet_kleur_goed", lambda rijen: None)
     return J.get_pending_jobs(
-        request=type("R", (), {"headers": {"x-omnivaleur-ext": "1.0.305"}})(),
+        request=type("R", (), {"headers": {"x-omnivaleur-ext": versie}})(),
         platform=platform, user_id="u1")
 
 
@@ -307,7 +307,9 @@ def _rubriek_onbekend(module, monkeypatch):
 def test_wachtende_2dehands_rij_legt_vinted_niet_stil(monkeypatch):
     _rubriek_onbekend(J, monkeypatch)
     db = _bouw_db(_wacht_wachtrij(), laatst_bediend="vinted")
-    uit = _uitgifte(monkeypatch, db, "vinted")
+    # Een Vinted-plaatsing gaat sinds 15-10-2026 alleen naar 1.0.386 of nieuwer
+    # (MINIMALE_VINTED_PLAATS_VERSIE); met 1.0.305 meet deze proef die rem.
+    uit = _uitgifte(monkeypatch, db, "vinted", versie="1.0.395")
     assert uit and uit[0]["id"] == "vi0", (
         f"2dehands wacht op zijn rubriek, dus Vinted doet zijn eigen werk: {uit}")
 

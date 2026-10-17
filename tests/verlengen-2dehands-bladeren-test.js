@@ -77,6 +77,9 @@ function maakZand(bron, ads) {
   zand.execInTab = async (_t, fn, args = []) => fn(...args);
   zand.finaliseJob = async (_s, _i, kind, body) => { zand.finalise.push({ kind, body }); };
   zand.reportError = async (_i, _s, msg) => { zand.fouten.push(String(msg)); };
+  // Sinds 1.0.393 zet verlengen de klok vast (_klokTabbladen, startOntdooiTeller).
+  zand._klokTabbladen = new Set();
+  zand.startOntdooiTeller = () => {};
   vm.createContext(zand);
   vm.runInContext(functieUit(bron, "bgExtend2dh"), zand);
   return zand;

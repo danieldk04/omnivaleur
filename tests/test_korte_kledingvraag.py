@@ -17,7 +17,7 @@ def vragen(monkeypatch):
     gesteld = []
     antwoorden = []
 
-    async def nep(client, prompt):
+    async def nep(client, prompt, claude_ok=False):
         gesteld.append(prompt)
         return antwoorden.pop(0)
 
@@ -77,7 +77,7 @@ def test_twijfel_of_rubriek_buiten_kleding_telt_niet(vragen):
 def test_een_storing_in_de_korte_vraag_valt_terug_op_de_volledige(vragen, monkeypatch):
     gesteld = []
 
-    async def nep(client, prompt):
+    async def nep(client, prompt, claude_ok=False):
         gesteld.append(prompt)
         if len(gesteld) == 1:
             raise RuntimeError("429")
