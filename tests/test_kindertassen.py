@@ -46,7 +46,10 @@ def test_rubriek_staat_op_elke_plek():
 
 def test_marktplaats_is_de_gemeten_kinderrubriek():
     # /plaats/565/3136?bucketId=427 -> "Kinderen en Baby's | Kindermode-accessoires"
-    assert _mp_categorieen()["kinderen tassen"] == (565, 3136, 427)
+    src = (ROOT / "extension/background.js").read_text(encoding="utf-8")
+    regel = re.search(r'^\s*"kinderen tassen":\s*\{([^}]*)\}', src, re.M).group(1)
+    velden = dict(re.findall(r"(\w+):\s*(\d+)", regel))
+    assert velden == {"cat1": "565", "bucketId": "427", "cat3": "3136"}
 
 
 def test_vinted_pad_is_kids_bags_and_backpacks_in_vinteds_boom():
