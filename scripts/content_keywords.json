@@ -738,7 +738,7 @@
       "pillar": "A",
       "format": "combo",
       "slug": "cross-list-from-marktplaats-to-etsy",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "marktplaats-naar-etsy-crosslisten",
       "priority": 86
     }
@@ -1519,6 +1519,16 @@
       "action": "created",
       "url_path": "/reseller-tools/where-to-source-items-for-second-hand-reselling",
       "published_at": "2026-10-16T12:53:10.986935+00:00"
+    },
+    {
+      "keyword": "cross list from marktplaats to etsy",
+      "slug": "cross-list-from-marktplaats-to-etsy",
+      "region": "nl",
+      "pillar": "A",
+      "format": "combo",
+      "action": "created",
+      "url_path": "/crosslisting/cross-list-from-marktplaats-to-etsy",
+      "published_at": "2026-10-17T11:55:00.478759+00:00"
     }
   ]
 }
