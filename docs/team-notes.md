@@ -17658,3 +17658,12 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Janneke (31d28378, 7): 3x de nieuwe eerlijke titelgenotenmelding (zo bedoeld), 1x Failed to fetch en 1x formulier niet geopend in dezelfde minuut (19:08), 1x lege scan. De vier klaargezette Vinted-plaatsingen liepen 20:17 tot 20:30 na elkaar (geen overlap) en kregen elk een eigen nieuwe advertentie (10404476081, 10404509698, 10404681762, 10404658158). Foto's niet naast elkaar gelegd. De groene jas cace9e18 ging om 19:38 van MP af.
 - 0b28c1ce: 151 MP-opdrachten ouder dan 6 uur, abonnement loopt niet, extensie stil sinds 01-10; klant-eigen.
 - Geen codewijziging nodig, geen klantdata aangeraakt. klantfouten.py: 23 soorten, 0 open.
+
+## 17-10-2026 (ochtend): Janneke, vervolg titelgenoten en rugtasjes
+
+- Gisteravond 22:44 en 22:46 (lokaal) weigerde de server twee keer "Winterjas Name it maat 128" (708379a4, 30 euro): haar extensie 1.0.391 vond advertentie 10404064952, en die is van de olijfgroene winterjas adb47369 (35 euro, foto's naast elkaar). De weigering was terecht. De drie klaargezette jassen (62921089, d51b7dc6, 651b85e9) kregen een eigen nieuwe advertentie.
+- Klantdata (back-ups in de notitiemap van de sessiegroep): adb47369 hing aan 10403865606 (groen/zwart, 27,50) en hoort bij 10404064952; 10403865606 is van 062923cd; c0bb94 (beige Dirkje 116) hing samen met 509f92 aan 10403977106 en hoort bij 10404071636; d8619ced (rode jas) hing aan een blauw gestreept jasje van een ander stuk, losgekoppeld. Gevonden met een prijsvergelijking over alle 195 Vinted-koppelingen plus foto's.
+- Rem bijgesteld (1b3f0f98): om 22:26 kwam de "timed out" van haar extensie vijf keer niet aan (422, geen inlog meegestuurd), de server ruimde de opdracht om 22:30:26 op als "interrupted", en 3 s later ging de volgende Vinted-plaatsing uit terwijl het eerste tabblad om 22:39 nog plaatste. Die tekst houdt Vinted nu ook 8 minuten bezet.
+- Rugtasjes Teddy (3 stuks): geblokkeerd door haar eigen instelling "Vinted alleen kinderen", omdat ze als "sieraden rugtassen" (volwassen tas) zijn ingedeeld. Het zijn kinderrugzakjes. Omnivaleur heeft geen categorie kindertassen; Vinted wel (Kids > Girls/Boys clothing > Bags & backpacks). Open, aparte taak.
+- Open: waarom de extensie om 22:26 geen inlog meestuurde bij /error (vijf keer 422).
+- Concept-antwoord voor Janneke bewaard (schrijfstijl), nog niet verstuurd.
