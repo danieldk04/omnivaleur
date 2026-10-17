@@ -181,6 +181,11 @@ const MP_CATEGORIES = {
   "kinderen schoenen":      { cat1: 565, bucketId: 153, cat3: 598 },
   // Mode-accessoires (bucketId 427) has exactly two types: baby and kind.
   "kinderen accessoires":   { cat1: 565, bucketId: 427, cat3: 3136 },
+  // Kindertassen en -rugzakjes: Marktplaats heeft geen eigen kindertassenrubriek;
+  // gemeten 17-10-2026 in het plaatsformulier (/plaats/565/3136?bucketId=427 =
+  // "Kinderen en Baby's | Kindermode-accessoires", niet betaald). De andere optie,
+  // Tassen | Rugtassen (1826), is de volwassen tak.
+  "kinderen tassen":        { cat1: 565, bucketId: 427, cat3: 3136 },
 
   // === SIERADEN, TASSEN EN UITERLIJK (cat1=1826) ===
   // Non-clothing, same prefix scheme as "games "/"electronics ". Exists because a

@@ -926,7 +926,8 @@ _NON_CLOTHING_PREFIXES = ("games ", "electronics ", "sieraden ", "muziek ",
 # wat hij "gaten in mijn listings" noemt, en het is de tweede keer: op
 # 03-09-2026 is dezelfde fout al uit de knopteller gehaald (zie _mist_iets in
 # mp_enrich.py), maar niet uit de eis zelf.
-_GEEN_MAAT_CATEGORIEEN = ("unisex accessoires", "accessoires dames", "kinderen accessoires")
+_GEEN_MAAT_CATEGORIEEN = ("unisex accessoires", "accessoires dames", "kinderen accessoires",
+                          "kinderen tassen")
 _NON_CLOTHING_PLATFORM_REQUIRED = ["category"]
 
 

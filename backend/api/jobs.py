@@ -90,6 +90,14 @@ MINIMALE_2DH_BIJWERK_VERSIE = (1, 0, 354)
 # concept op Vinted. Een oude kopie werkt zichzelf binnen ~2 uur bij
 # (controleerOpNieuweVersie, elk uur), dus het werk blijft zo lang 'pending'.
 MINIMALE_VINTED_PLAATS_VERSIE = (1, 0, 386)
+# "kinderen tassen" (kinderrugzakjes en -tassen) bestaat in de extensie pas vanaf
+# 1.0.395 (17-10-2026, Janneke 31d28378: teddyrugzakjes stonden als volwassen
+# rugtas en haar eigen instelling "Vinted alleen kinderen" hield ze tegen). Een
+# oudere kopie kent de rubriek niet: op Marktplaats stopt ze, op Vinted zoekt ze
+# en pakt ze een willekeurig blad. Het werk blijft 'pending' tot een bijgewerkte
+# kopie polt.
+MINIMALE_KINDERTASSEN_VERSIE = (1, 0, 395)
+_RUBRIEK_VANAF_VERSIE = {"kinderen tassen": MINIMALE_KINDERTASSEN_VERSIE}
 _NIEUWE_TAK_VOORVOEGSELS = ("boeken ", "speelgoed ", "fietsen ", "sportartikelen ",
                             "witgoed ", "klussen ", "computers ")
 _NIEUW_IN_BESTAANDE_TAK = frozenset([
@@ -142,6 +150,14 @@ def _vraagt_nieuwe_takken(job: dict) -> bool:
     """Gaat deze opdracht over een rubriek die pas in 1.0.351 bestaat?"""
     cat = str(((job.get("payload") or {}).get("category")) or "").strip().lower()
     return cat.startswith(_NIEUWE_TAK_VOORVOEGSELS) or cat in _NIEUW_IN_BESTAANDE_TAK
+
+
+def _minimale_versie_voor_rubriek(job: dict) -> tuple | None:
+    """Vanaf welke extensieversie bestaat de rubriek van deze opdracht? None = altijd."""
+    if _vraagt_nieuwe_takken(job):
+        return MINIMALE_NIEUWE_TAKKEN_VERSIE
+    cat = str(((job.get("payload") or {}).get("category")) or "").strip().lower()
+    return _RUBRIEK_VANAF_VERSIE.get(cat)
 # Hoe vaak een scan die door een te oude kopie is opgepakt terug in de wachtrij
 # mag. Twee: genoeg om de bijgewerkte kopie een kans te geven, te weinig om te
 # blijven rondzingen bij iemand die alleen die oude kopie heeft.
@@ -2660,9 +2676,9 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             continue
         # Alleen plaatsen kiest een rubriek; verwijderen (na een verkoop) of
         # verlengen mag nooit wachten op een update.
-        if (platform is not None and j.get("action") == "create" and _vraagt_nieuwe_takken(j)
-                and (versie_van_de_kopie is None
-                     or versie_van_de_kopie < MINIMALE_NIEUWE_TAKKEN_VERSIE)):
+        rubriek_vanaf = _minimale_versie_voor_rubriek(j) if j.get("action") == "create" else None
+        if (platform is not None and rubriek_vanaf is not None
+                and (versie_van_de_kopie is None or versie_van_de_kopie < rubriek_vanaf)):
             logger.info("%s %s niet uitgedeeld: kopie %s kent de rubriek %r nog niet",
                         j["action"], j["id"], versie_van_de_kopie,
                         (j.get("payload") or {}).get("category"))

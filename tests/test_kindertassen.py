@@ -19,7 +19,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tests"))
 
-from test_nieuwe_takken import _mp_categorieen, _v_pad, _dashboard, _uitgedeeld  # noqa: E402
+from test_nieuwe_takken import _v_pad, _dashboard, _uitgedeeld  # noqa: E402
 
 
 def test_vinted_alleen_kinderen_laat_de_kindertas_door_en_de_volwassen_tas_niet():

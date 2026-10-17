@@ -263,7 +263,7 @@ _TAXONOMY = {
         "babykleding", "peuterkleding", "jongens kleding", "meisjes kleding",
         "tieners jongens", "tieners meisjes", "kinderen sportkleding",
         "kinderen schoenen", "kinderen wielrenkleding", "kinderen voetbalkleding",
-        "kinderen zwemkleding", "kinderen accessoires",
+        "kinderen zwemkleding", "kinderen accessoires", "kinderen tassen",
     ],
     "unisex": [
         "unisex truien", "unisex jassen", "unisex sportkleding",
@@ -1190,6 +1190,9 @@ def _kledingprompt(title: str | None, description: str | None, brand: str | None
         "- Children's and baby clothing and shoes go in the kinderen branch. Baby sizes\n"
         "  (44 to 86) are babykleding, toddler sizes (92 to 104) peuterkleding, shoe\n"
         '  sizes under 34 "kinderen schoenen".\n'
+        "- Children's bags and backpacks (kids' or toddler backpacks, school bags,\n"
+        "  plush or animal-shaped backpacks with ears, bags in a kids' print) are\n"
+        '  "kinderen tassen" with gender "kinderen", never a "sieraden" bag.\n'
         "- If gender is not stated or implied, use unisex where a sensible unisex\n"
         "  category exists; otherwise pick the most likely gender.\n"
         "- Costumes, fancy dress and folk dress (lederhosen, dirndl, carnival,\n"
@@ -1725,7 +1728,20 @@ def _infer_attributes(title: str | None, description: str | None = None) -> dict
     if gender == "kinderen":
         # Kids' taxonomy is age/gender-based, not garment-based: a "Boys XL vest"
         # is simply "jongens kleding". Shoes/sportswear are the only garment splits.
-        if (any(_garment_in(k) for k in ("shoe", "sneaker", "boot", "trainer"))
+        # Een tas of rugzak is geen kleding (Janneke 31d28378, 17-10-2026: haar
+        # teddyrugzakjes stonden als volwassen rugtas en "Vinted alleen kinderen"
+        # hield ze tegen). Eerst, want "rugzak" is nooit een schoen of shirt. Alleen
+        # de titel, en niet als er ook een kledingstuk in staat: "jurk met tasje"
+        # blijft een jurk.
+        titel_l = (title or "").lower()
+        if (any(re.search(r"\b" + k + r"s?\b", titel_l)
+                for k in ("bag", "backpack", "tas", "rugtas", "rugzak", "schooltas",
+                          "rugzakje", "tasje", "rugtasje"))
+                and not re.search(r"\b(jurk|broek|shirt|t-shirt|jas|trui|rok|vest|pak|set|"
+                                  r"legging|body|pyjama|schoen|laars|sneaker|dress|jacket|"
+                                  r"coat|shoe|boot)", titel_l)):
+            out["category"] = "kinderen tassen"
+        elif (any(_garment_in(k) for k in ("shoe", "sneaker", "boot", "trainer"))
                 or any(_word_in(w, text) for w in _SCHOEN_WOORDEN)):
             out["category"] = "kinderen schoenen"
         elif any(_garment_in(k) for k in ("cycling", "wielren", "wielrenshirt", "fietsshirt")):
