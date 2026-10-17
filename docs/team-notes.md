@@ -17682,3 +17682,9 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - De drie mislukte Vinted-plaatsingen (708379a4, b2276aff, bcc93e5c) opnieuw klaargezet; vooraf nagekeken dat er geen losse advertentie met die titels op Vinted staat, dus geen verkeerde koppeling of dubbele advertentie mogelijk.
 - Web Store: 1.0.394 live, 1.0.395 (kindertassen) nog niet. Janneke draait nog 1.0.391, laatst gezien 16-10 21:13 UTC.
 - Haar vraag van 15-10 22:39 (waar staan mislukte plaatsingen): een artikel dat elders al live staat, staat onder Live met een rood label "Vinted mislukt, wat nu?", niet onder Te plaatsen.
+
+## 17-10-2026: Onboarding nieuwe klanten (ochtend)
+
+- Zeven klanten in hun eerste week, één nieuw. Geen gesprekken met deze klanten in Daniels agenda (Noorwegen tot 26-10). Geen codewijziging, geen klantdata aangeraakt.
+- e6e43952 (hbm789@icloud.com, nieuw, 16-10 13:28 UTC): e-mail nooit bevestigd, nooit ingelogd, dus geen proef. Resend-webhook (mail_events): bevestigingsmail 13:28 verstuurd, iCloud meldde vertraging, afgeleverd pas 14:37 UTC. Geen productfout: een verlopen link en inloggen zonder bevestiging geven allebei een duidelijke melding met een route naar een nieuwe link. Mailtje met tip klaargezet.
+- kilofog140, Delftsblaeu, rambene, mickeyamg, quintblok, Anton: ongewijzigd ten opzichte van 16-10, niemand actief. Antons proef loopt 18-10 18:46 af, de andere vier 20-10 en Aad 21-10. Geen nieuwe mailtjes.
