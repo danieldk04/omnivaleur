@@ -17648,3 +17648,13 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - Proef: tests/test_vinted_titelgenoten_hard_bewijs.py, oude code (8a07b59d) faalt op elke laag met de echte gegevens van 15-10, nieuwe niet.
 - Klantdata: één koppeling gelegd. Losse advertentie 10392223725 (beige gewatteerde jas, 25 euro) hoort bij e9cae0ec (foto, prijs, haar eigen plaatsing van 15-10 19:14 die met de hand is afgemaakt), niet bij 651b85e9 (geruit jasje) waar het importscherm hem nog voorstelde. Back-up van de oude stand in de notitiemap van deze sessiegroep. Zonder die koppeling had de wachtende Vinted-plaatsing van 651b85e9 met haar huidige extensie de beige advertentie gepakt.
 - Vier klaargezette Vinted-plaatsingen (4b6dcf79, 62921089, d51b7dc6, 651b85e9) stonden om 22:00 nog op wachtend; foto's van alle actieve gelijknamige advertenties passen bij hun artikel en geen van de vier heeft al een advertentie in de kast. Links nakijken zodra ze gelopen hebben.
+
+## 17-10-2026: Dagelijkse klantfouten (ochtend)
+
+- Laatste 24 uur 673 opdrachten: 315 klaar, 52 fout, 293 wachtend, 13 geannuleerd. /health 200 op a5466632. Web Store staat sinds vannacht op 1.0.394, dus 1.0.392 (woontextiel, categoriestap), 1.0.393 (MP-verwijderklok) en 1.0.394 (titelgenoten, Geen merk) zijn uit. Alle actieve extensies draaien nog 1.0.391 (3bfbed2c 1.0.388); ze krijgen de update vanzelf.
+- Toon (96e30080, 20 fouten): fotofouten 07:47 (vóór 92f566e2), daarna Vinted "Kies een subcategorie", "size (empty)" en 2x "Vul je merk in" op 1.0.391. Alles gerepareerd in 1.0.392 tot 1.0.394. Computer sinds 16-10 15:49 uit, 52 MP-paren wachten.
+- 8f91a370 (14): uitgelogd op Vinted (scan en verwijderen, 's middags; om 21:01 lukte Vinted weer). 2x "size (W29)": artikel bb1c7f90 heet polo maat M maar heeft maat W29 en rubriek heren jeans, klantdata. 1x hoodie zonder foto's en subcategorie op 1.0.388, onbekend.
+- Zilverwebsite (26cf5471, 11): Vinted-scans, niet ingelogd. MP: om 07:22 vandaag pakte zijn 1.0.391 weer een verwijdering op en die was binnen 2 minuten klaar, de volgende liep meteen. 138 MP-opdrachten wachten nog.
+- Janneke (31d28378, 7): 3x de nieuwe eerlijke titelgenotenmelding (zo bedoeld), 1x Failed to fetch en 1x formulier niet geopend in dezelfde minuut (19:08), 1x lege scan. De vier klaargezette Vinted-plaatsingen liepen 20:17 tot 20:30 na elkaar (geen overlap) en kregen elk een eigen nieuwe advertentie (10404476081, 10404509698, 10404681762, 10404658158). Foto's niet naast elkaar gelegd. De groene jas cace9e18 ging om 19:38 van MP af.
+- 0b28c1ce: 151 MP-opdrachten ouder dan 6 uur, abonnement loopt niet, extensie stil sinds 01-10; klant-eigen.
+- Geen codewijziging nodig, geen klantdata aangeraakt. klantfouten.py: 23 soorten, 0 open.
