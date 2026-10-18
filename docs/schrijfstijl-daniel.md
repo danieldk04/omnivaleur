@@ -122,3 +122,4 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - 15-10-2026: Gekeken: 48 mails in Verzonden (3 dagen), 7 van Daniel, 4 al verwerkt; 3 nieuw, 3 met concept (1 niet vergelijkbaar, 2 vrijwel woordelijk overgenomen). Nieuw: alleen tijdswoorden aangepast ("vanochtend", "Morgen" in plaats van datum), onder Nog te leren.
 - 16-10-2026: Gekeken: 46 mails in Verzonden (3 dagen), 4 van Daniel, 4 al verwerkt; 0 nieuw, 0 met concept. Niets te leren.
 - 17-10-2026: Gekeken: 49 mails in Verzonden (3 dagen), 6 van Daniel, 3 al verwerkt; 3 nieuw, 0 met concept. Alleen bevestigd: "Daniel." met punt (2 van 3), lege regel voor de naam, links los met spatie voor de punt, proef-uitnodiging met registerlink en "7 dagen volledig kosteloos".
+- 18-10-2026: Gekeken: 38 mails in Verzonden (3 dagen), 3 van Daniel, 3 al verwerkt; 0 nieuw, 0 met concept. Niets te leren.
