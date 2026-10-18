@@ -10554,6 +10554,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // "Er is op Plaatsen/Upload geklikt." Vanaf dat moment is elk advertentie-adres
   // in dit tabblad een echte, geplaatste advertentie — ook zonder de nette naam
   // in de URL. Zie de toelichting bij de klik zelf in shared.js.
+  // Hoogste Vinted-advertentienummer vlak vóór de plaatsklik (zie vinted.js en
+  // bgVindVintedAdvertentie): het bewijs dat een advertentie van déze klik komt.
+  if (msg.type === "VINTED_HOOGWATER") {
+    const key = `jobtab_${sender.tab?.id}`;
+    const naId = Number(msg.naId);
+    chrome.storage.local.get(key, (s) => {
+      const meta = s[key];
+      if (meta && msg.naId != null && Number.isFinite(naId)) {
+        chrome.storage.local.set({ [key]: { ...meta, vintedNaId: naId } });
+      }
+      sendResponse(true);
+    });
+    return true;
+  }
   if (msg.type === "SUBMIT_CLICKED") {
     const key = `jobtab_${sender.tab?.id}`;
     chrome.storage.local.get(key, (s) => {
