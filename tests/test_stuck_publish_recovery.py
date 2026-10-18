@@ -143,10 +143,13 @@ def test_vinted_wordt_bij_twijfel_op_het_platform_zelf_nagekeken():
     betekent later de verkeerde advertentie weghalen.
     """
     src = _background_js()
-    assert "async function bgVindVintedAdvertentie(item)" in src
+    # Sinds 1.0.396 krijgt de functie ook het hoogwater van vlak voor de klik
+    # mee (zie tests/test_vinted_bewaker_hoogwater.py).
+    kop = "async function bgVindVintedAdvertentie(item, naId = null)"
+    assert kop in src
     # zowel bij een vastgelopen opdracht als bij een verdwenen tabblad
-    assert src.count("bgVindVintedAdvertentie(meta.payload || meta)") >= 2
-    zoek = src.split("async function bgVindVintedAdvertentie(item)")[1].split("\n}")[0]
+    assert src.count("bgVindVintedAdvertentie(meta.payload || meta, meta.vintedNaId)") >= 2
+    zoek = src.split(kop)[1].split("\n}")[0]
     assert "is_closed" in zoek and "is_draft" in zoek, \
         "verkochte of concept-advertenties tellen niet"
     # De uitsluiting moet vóór het koppelen gebeuren, niet erna.
