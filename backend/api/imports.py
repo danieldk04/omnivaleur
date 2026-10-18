@@ -1782,6 +1782,12 @@ def _infer_attributes(title: str | None, description: str | None = None,
     if not gender and not volwassen and (kindermaat or is_baby
                                          or any(_word_in(w, text) for w in _KINDERMERKEN)):
         gender = "kinderen"
+    # Het label van de winkel zegt jongen of meisje: een kledingstuk is dan voor
+    # een kind, ook als de titel dat niet zegt ("Schoenen Hip schoenmaat 37"
+    # stond bij Janneke als damesschoen, met label "jongen").
+    if (geslacht in ("jongen", "meisje") and not gender and not volwassen
+            and _KLEDINGSTUK_RE.search((title or "").lower())):
+        gender = "kinderen"
     # "women"/"womens" also contain "men" as a substring, but whole-word matching
     # keeps them distinct, so the order above is safe.
     if gender:
