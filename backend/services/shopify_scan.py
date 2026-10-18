@@ -115,6 +115,8 @@ def naar_scanregel(product: dict, shop: str, winkelnaam: str | None = None) -> d
         "size": basis.get("size"),
         "color": basis.get("color"),
         "material": materiaal,
+        "gender": kind.get("gender"),
+        "category": kind.get("category"),
         "is_closed": uitverkocht(product),
         # Het artikelnummer van de winkelier. Bij Shopify staat dat niet in de
         # titel ("(694) Grey…") maar op de variant, dus zonder dit veld zag de
