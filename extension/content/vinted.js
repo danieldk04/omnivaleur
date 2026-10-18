@@ -302,6 +302,10 @@
     // ── Kinderen ───────────────────────────────────────────────────
     "babykleding":            ["baby", "baby clothing", "newborn"],
     "peuterkleding":          ["toddler", "kids clothing"],
+    "babykleding jongens":    ["boys clothing", "baby"],
+    "babykleding meisjes":    ["girls clothing", "baby"],
+    "peuterkleding jongens":  ["boys clothing"],
+    "peuterkleding meisjes":  ["girls clothing"],
     "jongens kleding":        ["boys clothing"],
     "meisjes kleding":        ["girls clothing"],
     "tieners jongens":        ["boys clothing"],
@@ -1780,7 +1784,7 @@
   // stond daarom rood. Nieuwe const/let horen hier, niet verderop.
   let _catEn = null, _catLok = null, _catLokPad = null;
   const _kaalCat = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
-  const KIND_KLEDING = /^(babykleding|peuterkleding|jongens kleding|meisjes kleding|tieners jongens|tieners meisjes)$/;
+  const KIND_KLEDING = /^((baby|peuter)kleding( jongens| meisjes)?|jongens kleding|meisjes kleding|tieners jongens|tieners meisjes)$/;
   const KIND_VOORKEUR = [
     [/\b(meisjes?|girls?|dochter)\b/i, /^girls clothing$/i],
     [/\b(jongens?|boys?|zoon)\b/i, /^boys clothing$/i],

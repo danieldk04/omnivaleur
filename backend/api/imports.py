@@ -1061,6 +1061,15 @@ _ALL_CATEGORIES = {c for cats in _TAXONOMY.values() for c in cats}
 # Elke rubriek hoort bij precies één tak (gemeten: 247 rubrieken, 247 keer
 # uniek), dus de tak is uit de rubriek zelf af te leiden.
 _TAK_VAN_RUBRIEK = {c: g for g, cats in _TAXONOMY.items() for c in cats}
+# Rubrieken met jongen of meisje bij baby en peuter komen alleen uit het label van
+# de winkel (zie geslacht_uit_labels), nooit uit de rubriekvraag: het model zou
+# daar raden, en dat raden zette bij Janneke 140 van 474 artikelen verkeerd om.
+_ALLEEN_UIT_LABEL = frozenset({"babykleding jongens", "babykleding meisjes",
+                               "peuterkleding jongens", "peuterkleding meisjes"})
+
+
+def _rubrieken_voor_de_vraag(cats) -> str:
+    return ", ".join(c for c in cats if c not in _ALLEEN_UIT_LABEL)
 
 
 # HOEVEEL CLASSIFICATIES TEGELIJK, EN WAAROM DAT EEN REM NODIG HEEFT.
@@ -1167,7 +1176,7 @@ def _alleen_kledingtakken(title: str | None, description: str | None) -> bool:
 
 def _kledingprompt(title: str | None, description: str | None, brand: str | None) -> str:
     """De rubriekvraag met alleen de kledingtakken en hun regels."""
-    lijnen = "\n".join(f"  {g}: {', '.join(_TAXONOMY[g])}" for g in _KLEDINGTAKKEN)
+    lijnen = "\n".join(f"  {g}: {_rubrieken_voor_de_vraag(_TAXONOMY[g])}" for g in _KLEDINGTAKKEN)
     return (
         "You categorise second-hand listings for a Dutch marketplace. This one looks\n"
         "like clothing, footwear, jewellery or an accessory.\n\n"
@@ -1250,7 +1259,7 @@ async def _classify_with_claude(title: str | None, description: str | None,
         client = None
 
         taxonomy_lines = "\n".join(
-            f"  {g}: {', '.join(cats)}" for g, cats in _TAXONOMY.items()
+            f"  {g}: {_rubrieken_voor_de_vraag(cats)}" for g, cats in _TAXONOMY.items()
         )
         prompt = (
             "You categorise second-hand listings for a Dutch marketplace. Most are"
@@ -1683,18 +1692,25 @@ def merk_uit_titel(title: str | None, eigen_merken: dict, gender: str | None = N
 _LABEL_JONGEN = frozenset({"jongen", "jongens", "boy", "boys"})
 _LABEL_MEISJE = frozenset({"meisje", "meisjes", "girl", "girls"})
 
-# Een kledingstuk of schoen in de titel. Alleen nodig als de titel zelf niets
-# over kinderen zegt: dan maakt het label het tot kinderartikel, maar alleen als
-# het ook echt kleding is (een "jongen"-label op speelgoed blijft van het model).
-# Zonder \b vooraan, want samenstellingen tellen mee: winterjas, huissokken.
-_KLEDINGSTUK_RE = re.compile(
-    r"trui|broek|shirt|longsleeve|jurk|\brok\b|rokje|\bvest|blouse|maillot|\btop\b|"
-    r"topje|legging|tregging|jegging|jas\b|jasje|jack\b|gilet|overgooier|jumpsuit|"
-    r"playsuit|pyjama|\bmuts|sokken|sokjes|kousen|panty|poncho|salopette|onesie|"
-    r"pakje|\bset\b|setje|hoed\b|handschoen|want(en|jes)\b|sjaal|bodywarmer|hoodie|"
-    r"sweater|jeans|\bshort|\bpolo|\bbody|romper|schoen|laars|laarzen|sandaal|"
-    r"sandalen|sneaker|boots?\b|slipper|badpak|bikini|zwembroek|skipak|skibroek|"
+# Een kledingstuk in de titel. Alleen nodig als de titel zelf niets over kinderen
+# zegt: dan maakt het label het tot kinderartikel, maar alleen als het ook echt
+# kleding is (een "jongen"-label op speelgoed blijft van het model). Zonder \b
+# vooraan, want samenstellingen tellen mee: winterjas, tuinbroek.
+#
+# _KLEDING_RE mag ook de rubriek jongens- of meisjeskleding geven. Sokken,
+# schoenen, mutsen en maillots niet: die horen op Marktplaats bij "Schoenen en
+# Sokken" of accessoires, en daar beslist de import zoals altijd (gemeten bij
+# Janneke: 80 paar Ewers-sokken werden anders meisjeskleding).
+_KLEDING_RE = re.compile(
+    r"trui|broek|shirt|longsleeve|jurk|\brok\b|rokje|\bvest|blouse|\btop\b|topje|"
+    r"legging|tregging|jegging|jas\b|jasje|jack\b|gilet|overgooier|jumpsuit|playsuit|"
+    r"pyjama|poncho|salopette|onesie|pakje|\bset\b|setje|bodywarmer|hoodie|sweater|"
+    r"jeans|\bshort|\bpolo|\bbody|romper|badpak|bikini|zwembroek|skipak|skibroek|"
     r"slaapzak|tuniek|tanktop|kleding")
+_KLEDINGSTUK_RE = re.compile(
+    _KLEDING_RE.pattern + r"|maillot|\bmuts|sokken|sokjes|kousen|panty|hoed\b|"
+    r"handschoen|want(en|jes)\b|sjaal|schoen|laars|laarzen|sandaal|sandalen|sneaker|"
+    r"boots?\b|slipper")
 
 
 def geslacht_uit_labels(labels, product_type: str | None = None) -> str | None:
@@ -1802,6 +1818,13 @@ def _infer_attributes(title: str | None, description: str | None = None,
         return re.search(r"\b" + re.escape(k) + r"s?\b", text) is not None
 
     if gender == "kinderen":
+        # Staat al vast dat het voor een kind is, dan is ook een losse maat 50, 56
+        # of 62 een babymaat ("Longsleeve Noppies maat 56"); _kindermaat telt die
+        # alleen dubbel, omdat het bij volwassenen colbertmaten zijn. Zonder dit
+        # werd zo'n babyshirt met het label "meisje" (18-10-2026) meisjeskleding
+        # voor 4 tot 12 jaar.
+        _los = _kindermaat_uit_titel(title)
+        leeftijdsmaat = kindermaat if kindermaat is not None else (int(_los) if _los else None)
         # Kids' taxonomy is age/gender-based, not garment-based: a "Boys XL vest"
         # is simply "jongens kleding". Shoes/sportswear are the only garment splits.
         # Een tas of rugzak is geen kleding (Janneke 31d28378, 17-10-2026: haar
@@ -1838,18 +1861,21 @@ def _infer_attributes(title: str | None, description: str | None = None,
         # Zonder jongen of meisje in de titel: leeftijd uit maat of babywoord,
         # anders een jurk of rok als meisjeskleding. Wat daarna nog over is
         # blijft leeg; liever geen rubriek dan jongen en meisje omdraaien.
-        elif is_baby or (kindermaat is not None and kindermaat <= 86):
+        elif is_baby or (leeftijdsmaat is not None and leeftijdsmaat <= 86):
             out["category"] = "babykleding"
-        elif kindermaat is not None and kindermaat <= 104:
+        elif leeftijdsmaat is not None and leeftijdsmaat <= 104:
             out["category"] = "peuterkleding"
         elif _MEISJES_RE.search(text):
             out["category"] = "meisjes kleding"
-        # Het label van de winkel wint van een gok uit "jurk", niet van een tekst
-        # die met zoveel woorden het andere geslacht noemt.
-        if geslacht in ("jongen", "meisje") and not any(_word_in(w, text) for w in (
-                ("meisje", "meisjes", "girl", "girls") if geslacht == "jongen"
-                else ("jongen", "jongens", "boy", "boys"))):
-            out["category"] = kinderrubriek_met_geslacht(out.get("category"), geslacht)
+        # Het label van de winkel wint van een gok uit "jurk" en van de
+        # omschrijving ("meisjesjas, kan ook voor jongens"), niet van een TITEL
+        # die het andere geslacht noemt ("SALEtas: meisje maat 128" met label
+        # jongen). Los "boy" telt niet: dat is bij haar het merk Sissy-Boy.
+        if geslacht in ("jongen", "meisje") and not any(_word_in(w, titel_l) for w in (
+                ("meisje", "meisjes", "girls") if geslacht == "jongen"
+                else ("jongen", "jongens", "boys"))):
+            if out.get("category") or _KLEDING_RE.search(titel_l):
+                out["category"] = kinderrubriek_met_geslacht(out.get("category"), geslacht)
     elif not gender and _is_grand_foulard(title, description):
         # Zie _is_grand_foulard: de combinatie "grand foulard" is woontextiel.
         out["gender"] = "wonen"

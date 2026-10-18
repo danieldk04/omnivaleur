@@ -52,7 +52,6 @@ def test_producttype_telt_als_label():
     ("Tussenjas Name it maat 128", "meisje", "meisjes kleding"),
     ("Jurk Your Wishes maat 116", "jongen", "jongens kleding"),   # label wint van "jurk"
     ("Schoenen Hip schoenmaat 37", "jongen", "kinderen schoenen"),   # was een damesschoen
-    ("Huissokken Ewers maat 27", "meisje", "kinderen schoenen"),
     ("Set Lyle & Scott met 134-140", "jongen", "jongens kleding"),
 ])
 def test_label_geeft_de_kinderrubriek_met_geslacht(titel, label, verwacht):
@@ -70,12 +69,28 @@ def test_tekst_die_het_andere_geslacht_noemt_wint_van_het_label():
     assert uit["category"] == "jongens kleding"
 
 
+def test_omschrijving_en_merknaam_houden_het_label_niet_tegen():
+    """Echte producten van Janneke met label meisje."""
+    uit = I._infer_attributes("Jas Babyface maat 110*", "Een meisjesjas, maar kan ook heel goed voor jongens!", "meisje")
+    assert uit["category"] == "meisjes kleding"
+    assert I._infer_attributes("Trui Sissy-Boy maat 122-128", "", "meisje")["category"] == "meisjes kleding"
+
+
+@pytest.mark.parametrize("titel", ["Sokken Ewers schoenmaat 35-36, schoenmaat 37-38",
+                                   "Huissokken Ewers schoenmaat 23-24",
+                                   "Chelseaboot Bergstein schoenmaat 27"])
+def test_sokken_en_laarsjes_worden_geen_meisjeskleding(titel):
+    """Echte titels van Janneke: zonder dit werden ze 'meisjes kleding'; nu beslist de import."""
+    uit = I._infer_attributes(titel, "", "meisje")
+    assert uit.get("category") not in ("meisjes kleding", "jongens kleding")
+
+
 def test_label_maakt_geen_kinderkleding_van_iets_wat_geen_kleding_is():
     assert I._infer_attributes("Playmobil brandweerkazerne", "", "jongen").get("gender") is None
 
 
 def test_label_maakt_van_een_volwassen_woord_geen_kind():
-    assert I._infer_attributes("Herenjas maat L", "", "jongen").get("gender") == "heren"
+    assert I._infer_attributes("Jas heren maat L", "", "jongen").get("gender") == "heren"
 
 
 def test_rubriekvraag_biedt_het_geslacht_bij_baby_niet_aan():

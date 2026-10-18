@@ -1390,8 +1390,13 @@ window.CL = (() => {
     // jongensjas online, ook de meisjesjassen. Daarom kiezen we op betekenis
     // uit de opties die er echt staan.
     if (opties.some((o) => /^(Jongen|Jongetje|Meisje)/i.test(o))) {
-      const boy = /jongen|jongetje|boys?\b|garçon/.test(hay);
-      const girl = /meisje|girls?\b|fille/.test(hay);
+      // Een rubriek met jongens of meisjes erin beslist; die komt uit het label
+      // van de winkel (18-10-2026, Janneke: haar titels zeggen het nooit, en een
+      // omschrijving met "jongens en meisjes" maakte er dan "of" van).
+      const cat = String(item.category || "").toLowerCase();
+      const catJ = /\bjongens\b/.test(cat), catM = /\bmeisjes\b/.test(cat);
+      const boy = catJ || (!catM && /jongen|jongetje|boys?\b|garçon/.test(hay));
+      const girl = catM || (!catJ && /meisje|girls?\b|fille/.test(hay));
       const neutraal = opties.find((o) => /\bof\b/i.test(o) && /jonge/i.test(o) && /meisje/i.test(o));
       const jongen = opties.find((o) => /^jonge(n|tje)s?$/i.test(o));
       const meisje = opties.find((o) => /^meisjes?$/i.test(o));

@@ -98,6 +98,35 @@ MINIMALE_VINTED_PLAATS_VERSIE = (1, 0, 386)
 # kopie polt.
 MINIMALE_KINDERTASSEN_VERSIE = (1, 0, 395)
 _RUBRIEK_VANAF_VERSIE = {"kinderen tassen": MINIMALE_KINDERTASSEN_VERSIE}
+# Jongen of meisje bij baby en peuter ("babykleding jongens", "peuterkleding
+# meisjes") kent de extensie pas vanaf 1.0.397 (18-10-2026, Janneke 31d28378: haar
+# geslacht staat alleen in haar Shopify-labels). Anders dan bij de kindertassen
+# hierboven hoeft het werk niet te wachten: een oudere kopie krijgt de rubriek
+# zonder geslacht, precies zoals vóór die datum. Dan kiest het kanaal zelf jongen
+# of meisje, maar staat haar nieuwe babykleding niet stil tot de Web Store de
+# nieuwe versie doorgeeft. Alleen in de uitgaande opdracht, nooit in de database.
+MINIMALE_KIND_GESLACHT_VERSIE = (1, 0, 397)
+_KIND_GESLACHT_TERUGVAL = {
+    "babykleding jongens": "babykleding", "babykleding meisjes": "babykleding",
+    "peuterkleding jongens": "peuterkleding", "peuterkleding meisjes": "peuterkleding",
+}
+
+
+def _rubriek_voor_de_kopie(jobs: list, versie) -> int:
+    """Geef een kopie van voor 1.0.397 de rubriek zonder geslacht. Geeft terug
+    hoeveel opdrachten zijn aangepast."""
+    if versie is not None and versie >= MINIMALE_KIND_GESLACHT_VERSIE:
+        return 0
+    aangepast = 0
+    for j in jobs or []:
+        pl = j.get("payload")
+        if not isinstance(pl, dict):
+            continue
+        terug = _KIND_GESLACHT_TERUGVAL.get(str(pl.get("category") or "").strip().lower())
+        if terug:
+            j["payload"] = {**pl, "category": terug}
+            aangepast += 1
+    return aangepast
 _NIEUWE_TAK_VOORVOEGSELS = ("boeken ", "speelgoed ", "fietsen ", "sportartikelen ",
                             "witgoed ", "klussen ", "computers ")
 _NIEUW_IN_BESTAANDE_TAK = frozenset([
@@ -3007,6 +3036,9 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             _haal_links_eruit(db, uit)
             _mp_titel_binnen_grens(db, uit)
             _vinted_tekst_binnen_grens(db, uit)
+            # Als laatste: de stappen hierboven schrijven de opdracht terug in de
+            # database, en de rubriek met geslacht moet daar blijven staan.
+            _rubriek_voor_de_kopie(uit, versie_van_de_kopie)
             return uit
     return []
 

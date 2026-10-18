@@ -1122,6 +1122,8 @@ _EBAY_CATEGORY_HINTS = {
     "kinderen schoenen": "kids shoes", "kinderen sportkleding": "kids sportswear",
     "jongens kleding": "boys clothing", "meisjes kleding": "girls clothing",
     "babykleding": "baby clothing", "peuterkleding": "toddler clothing",
+    "babykleding jongens": "baby boys clothing", "babykleding meisjes": "baby girls clothing",
+    "peuterkleding jongens": "toddler boys clothing", "peuterkleding meisjes": "toddler girls clothing",
     "tieners jongens": "boys clothing", "tieners meisjes": "girls clothing",
     # ── Non-clothing: games, consoles, phones. eBay's Taxonomy API resolves
     # these well from the title alone; the hint sharpens the product type.

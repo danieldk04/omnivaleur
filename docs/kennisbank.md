@@ -17,6 +17,23 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## geslacht-uit-shopify-labels
+
+*18-10-2026 — "18-10: kinderwinkels zetten jongen/meisje in Shopify-labels, niet in de titel; vier rubrieken baby/peuter jongens/meisjes, alleen uit label; oude extensie krijgt terugval"*
+
+Janneke (31d28378) noemt in geen enkele titel jongen of meisje; haar Shopify-tags wel ("meisje", "jongen", "unisex"). Wij lazen tags niet, dus baby/peuter bleef geslachtsloos en jongens/meisjes kleding was een gok van het model (140 van 474 verkeerd om). Sinds 18-10-2026 leest `naar_scanregel` de tags via `geslacht_uit_labels` (imports.py) en zet de kinderrubriek met geslacht in de kandidaat, die bij importeren van de rubriekvraag wint.
+
+**Why:** zonder geslacht kiest Vinted vast Boys clothing en Marktplaats "Jongetje of Meisje"; een gok van het model is erger dan geen keuze.
+
+**How to apply:**
+- De rubrieken `babykleding jongens/meisjes` en `peuterkleding jongens/meisjes` komen ALLEEN uit een label (`_ALLEEN_UIT_LABEL`), nooit uit de rubriekvraag: anders gaat het model weer raden.
+- Een nieuwe rubriek die een oude extensie niet kent: liever terugvallen op de oude sleutel in de uitgaande opdracht (`_rubriek_voor_de_kopie` in jobs.py) dan laten wachten tot de Web Store bijwerkt. Nooit in de database terugschrijven, en als laatste stap, want de zeven ervoor schrijven de payload terug.
+- Label zonder kinderwoord in de titel maakt alleen een kledingstuk tot kinderartikel; sokken, schoenen en laarsjes krijgen uit het label geen kledingrubriek (80 Ewers-sokken werden anders meisjeskleding). Altijd de nieuwe regel eerst op alle echte producten van de klant draaien en de overgangen per soort tellen, zie "klantdata-niet-op-eigen-initiatief".
+- Een losse maat 50/56/62 bij een al bekend kinderartikel is een babymaat (leeftijdsmaat in `_infer_attributes`).
+- Open: kinderschoenen/sport/zwem/voetbal hebben geen geslachtsrubriek; WooCommerce-tags worden niet gelezen.
+
+---
+
 ## vinted-plaatsing-alleen-via-bewaker
 
 *18-10-2026 — "18-10: het invulscript ziet een Vinted-plaatsing na de klik nooit; elke geslaagde wordt ~181 s later door de bewaker op titel gevonden. Bij titelgenoten koppelde die niets (1.0.394), dus \"mislukt\" terwijl online"*

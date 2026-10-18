@@ -98,5 +98,14 @@ check("kind zonder geslacht -> Jongen of Meisje", kies(bronNu, KIND, { title: "J
 check("kind meisjes kleding -> Meisje", kies(bronNu, KIND, { title: "Winterjas Noppies maat 128", category: "meisjes kleding" }) === "Meisje");
 check("kind jongens kleding -> Jongen", kies(bronNu, KIND, { title: "Tussenjas Name it maat 128", category: "jongens kleding" }) === "Jongen");
 
+// Janneke 18-10-2026: het geslacht komt uit haar Shopify-label en staat in de
+// rubriek. Een omschrijving die beide noemt mag dat niet terugdraaien.
+console.log("\nRubriek met geslacht beslist (18-10-2026)");
+const BEIDE = { title: "Jasje maat 74", category: "babykleding meisjes", description: "Leuk voor jongens en meisjes." };
+const bronVoor = execSync("git show 735ee620:extension/content/shared.js", { cwd: WORTEL, maxBuffer: 1 << 24 }).toString();
+check("voor: omschrijving met beide gaf 'Jongetje of Meisje'", kies(bronVoor, BABY, BEIDE, "Jongetje") === "Jongetje of Meisje");
+check("na: babykleding meisjes -> Meisje", kies(bronNu, BABY, BEIDE, "Jongetje") === "Meisje");
+check("na: peuterkleding jongens -> Jongen", kies(bronNu, KIND, { title: "Trui maat 92", category: "peuterkleding jongens", description: "voor meisjes en jongens" }) === "Jongen");
+
 console.log(mislukt ? `\n${mislukt} FOUT` : "\nalles goed");
 process.exit(mislukt ? 1 : 0);

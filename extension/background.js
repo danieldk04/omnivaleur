@@ -167,8 +167,14 @@ const MP_CATEGORIES = {
   // no size or an unrecognised one.
   // -- Babykleding (bucketId 150): maten 50-86
   "babykleding":            { cat1: 565, bucketId: 150, cat3: 575, sizeMap: MP_BABY_SIZES },
+  // Met jongen of meisje uit het label van de winkel (18-10-2026, Janneke): zelfde
+  // rubriek, "Bestemd voor" volgt het woord in de sleutel (selectIntendedFor).
+  "babykleding jongens":    { cat1: 565, bucketId: 150, cat3: 575, sizeMap: MP_BABY_SIZES },
+  "babykleding meisjes":    { cat1: 565, bucketId: 150, cat3: 575, sizeMap: MP_BABY_SIZES },
   // -- Kinderkleding (bucketId 153): maten 92-176
   "peuterkleding":          { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  "peuterkleding jongens":  { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  "peuterkleding meisjes":  { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
   "jongens kleding":        { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
   "meisjes kleding":        { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
   "tieners jongens":        { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
