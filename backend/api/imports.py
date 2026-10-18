@@ -1670,10 +1670,78 @@ def merk_uit_titel(title: str | None, eigen_merken: dict, gender: str | None = N
     return namen.pop() if len(namen) == 1 else None
 
 
-def _infer_attributes(title: str | None, description: str | None = None) -> dict:
+# JONGEN OF MEISJE UIT DE LABELS VAN DE WINKEL (18-10-2026, Janneke 31d28378).
+#
+# Haar titels noemen nooit een geslacht ("Longsleeve Noppies maat 56"), haar
+# Shopify-labels wel: van 17.839 producten 8.648 alleen "meisje", 5.413 alleen
+# "jongen", 1.787 beide of "unisex". Wij lazen die labels niet, dus haar
+# babykleding stond geslachtsloos (Vinted koos dan Boys clothing, Marktplaats
+# "Jongetje") en wat de rubriek wél een geslacht gaf was een gok uit "jurk" of
+# van het model: 140 van 474 verkeerd om. Beide geslachten of unisex = geen keuze.
+_LABEL_JONGEN = frozenset({"jongen", "jongens", "boy", "boys"})
+_LABEL_MEISJE = frozenset({"meisje", "meisjes", "girl", "girls"})
+
+# Een kledingstuk of schoen in de titel. Alleen nodig als de titel zelf niets
+# over kinderen zegt: dan maakt het label het tot kinderartikel, maar alleen als
+# het ook echt kleding is (een "jongen"-label op speelgoed blijft van het model).
+# Zonder \b vooraan, want samenstellingen tellen mee: winterjas, huissokken.
+_KLEDINGSTUK_RE = re.compile(
+    r"trui|broek|shirt|longsleeve|jurk|\brok\b|rokje|\bvest|blouse|maillot|\btop\b|"
+    r"topje|legging|tregging|jegging|jas\b|jasje|jack\b|gilet|overgooier|jumpsuit|"
+    r"playsuit|pyjama|\bmuts|sokken|sokjes|kousen|panty|poncho|salopette|onesie|"
+    r"pakje|\bset\b|setje|hoed\b|handschoen|want(en|jes)\b|sjaal|bodywarmer|hoodie|"
+    r"sweater|jeans|\bshort|\bpolo|\bbody|romper|schoen|laars|laarzen|sandaal|"
+    r"sandalen|sneaker|boots?\b|slipper|badpak|bikini|zwembroek|skipak|skibroek|"
+    r"slaapzak|tuniek|tanktop|kleding")
+
+
+def geslacht_uit_labels(labels, product_type: str | None = None) -> str | None:
+    """'jongen', 'meisje' of None uit de labels (Shopify-tags) van een product.
+
+    `labels` is Shopify's tekst met komma's of een lijst. Alleen hele labels
+    tellen ("Sissy-Boy" of "maat 116" niet). Beide, of "unisex": None.
+    """
+    if isinstance(labels, str):
+        labels = labels.split(",")
+    alle = {str(t).strip().lower() for t in (labels or []) if str(t).strip()}
+    if product_type and str(product_type).strip():
+        alle.add(str(product_type).strip().lower())
+    jongen, meisje = bool(alle & _LABEL_JONGEN), bool(alle & _LABEL_MEISJE)
+    if "unisex" in alle or jongen == meisje:
+        return None
+    return "jongen" if jongen else "meisje"
+
+
+def kinderrubriek_met_geslacht(category: str | None, geslacht: str | None) -> str | None:
+    """De kinderrubriek met het bekende geslacht erin, de leeftijd blijft.
+
+    babykleding -> babykleding jongens, peuterkleding -> peuterkleding meisjes,
+    tieners en jongens/meisjes kleding naar het label. Schoenen, sport, tassen en
+    accessoires hebben geen jongens- of meisjesrubriek: die blijven zoals ze zijn.
+    """
+    if geslacht not in ("jongen", "meisje"):
+        return category
+    g = "jongens" if geslacht == "jongen" else "meisjes"
+    cat = (category or "").strip().lower()
+    if not cat or cat in ("jongens kleding", "meisjes kleding"):
+        return f"{g} kleding"
+    for leeftijd in ("babykleding", "peuterkleding"):
+        if cat in (leeftijd, f"{leeftijd} jongens", f"{leeftijd} meisjes"):
+            return f"{leeftijd} {g}"
+    if cat in ("tieners jongens", "tieners meisjes"):
+        return f"tieners {g}"
+    return category
+
+
+def _infer_attributes(title: str | None, description: str | None = None,
+                      geslacht: str | None = None) -> dict:
     """Best-effort colour / gender / category from the listing text. Conservative:
     only returns a value when confident, so callers can fill empty fields without
-    ever writing a wrong guess (worst case a field just stays empty, as before)."""
+    ever writing a wrong guess (worst case a field just stays empty, as before).
+
+    `geslacht` ('jongen'/'meisje') komt uit de labels van de winkel, zie
+    geslacht_uit_labels. Het maakt een kledingstuk zonder volwassen woord in de
+    tekst tot kinderartikel en zet jongen of meisje in de kinderrubriek."""
     text = f"{title or ''} {description or ''}".lower()
     out = {}
 
