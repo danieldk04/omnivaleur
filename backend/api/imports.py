@@ -261,6 +261,8 @@ _TAXONOMY = {
     ],
     "kinderen": [
         "babykleding", "peuterkleding", "jongens kleding", "meisjes kleding",
+        "babykleding jongens", "babykleding meisjes",
+        "peuterkleding jongens", "peuterkleding meisjes",
         "tieners jongens", "tieners meisjes", "kinderen sportkleding",
         "kinderen schoenen", "kinderen wielrenkleding", "kinderen voetbalkleding",
         "kinderen zwemkleding", "kinderen accessoires", "kinderen tassen",
