@@ -4342,7 +4342,10 @@ function _vintedPrijsKlopt(it, item) {
   return Math.abs(hun - onze) < 0.01;
 }
 
-async function bgVindVintedAdvertentie(item) {
+// naId: het hoogste advertentienummer in de kast vlak vóór onze plaatsklik
+// (VINTED_HOOGWATER). Alleen een advertentie daarboven kan van die klik komen.
+async function bgVindVintedAdvertentie(item, naId = null) {
+  const hoogwater = naId != null && Number.isFinite(Number(naId)) ? Number(naId) : null;
   const titel = _vintedTitelSleutel(item?.title);
   if (!titel) return null;
   const titelKaal = _vintedTitelZonderSku(item?.title);
