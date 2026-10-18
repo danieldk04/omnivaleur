@@ -1848,6 +1848,22 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
         <textarea id="slottekst" rows="6" maxlength="4000" placeholder="Wordt zorgvuldig ingepakt en GRATIS verzonden.&#10;&#10;Kijkt u ook eens bij onze andere advertenties…"
           style="width:100%;padding:10px 12px;border:1px solid var(--border,#e5e7eb);border-radius:8px;font:inherit;font-size:13px;line-height:1.6;resize:vertical"></textarea>
+        <!-- Een eigen tekst op Vinted (Lynn van De Juiste Toon, 18-10-2026): hun
+             vaste tekst noemt de webshop en een telefoonnummer, en dat staat Vinted
+             niet toe. Op Marktplaats en 2dehands blijft de tekst hierboven staan. -->
+        <div style="margin-top:14px">
+          <label for="slottekst-vinted-keuze" style="font-weight:600;font-size:13px;display:block;margin-bottom:6px">On Vinted</label>
+          <select id="slottekst-vinted-keuze" onchange="toonSlottekstVinted()"
+            style="padding:8px 10px;border:1px solid var(--border,#e5e7eb);border-radius:8px;font:inherit;font-size:13px">
+            <option value="zelfde">Add the same text</option>
+            <option value="geen">Add no text</option>
+            <option value="eigen">Add a different text</option>
+          </select>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:6px">
+            Vinted does not allow a link to your own website or a phone number in a listing. Pick another text here and Vinted gets that one, while every other channel keeps the text above.
+          </div>
+          <textarea id="slottekst-vinted" rows="4" maxlength="4000" style="display:none;width:100%;margin-top:8px;padding:10px 12px;border:1px solid var(--border,#e5e7eb);border-radius:8px;font:inherit;font-size:13px;line-height:1.6;resize:vertical"></textarea>
+        </div>
         <div style="display:flex;gap:10px;align-items:center;margin-top:10px">
           <button class="btn btn-sm btn-primary" onclick="saveSlottekst()">Save</button>
           <span id="slottekst-status" style="font-size:12px;color:var(--muted)"></span>
