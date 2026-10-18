@@ -86,9 +86,14 @@ class _NepDb:
 def _publiceer(monkeypatch, beschrijving, kanalen):
     artikel = {"id": "i1", "user_id": "96e30080", "title": "Kanga blauw geel",
                "description": beschrijving, "photo_urls": ["https://x/1.jpg"],
-               "category": "wonen", "price": 25, "condition": "good"}
+               "category": "wonen vachten", "price": 25, "condition": "good"}
     db = _NepDb({"items": [artikel], "listings": [], "jobs": []})
     monkeypatch.setattr(cl, "get_db", lambda: db)
+    import backend.database as bd
+    import backend.services.photo_mirror as pm
+    monkeypatch.setattr(bd, "get_db", lambda: db)
+    monkeypatch.setattr(cl, "publicatie_geblokkeerd", lambda *a, **k: None)
+    monkeypatch.setattr(pm, "is_mirrored", lambda _u: True)
 
     async def _exec(vraag, *a, **k):
         return vraag.execute()
@@ -118,7 +123,7 @@ def test_publiceren_vinted_krijgt_niet_de_webshoptekst(monkeypatch, keuze):
     else:
         assert uit["vinted"] == KANGA
     for kanaal in ("marktplaats", "2dehands"):
-        assert uit[kanaal].endswith(TOON.replace("Dejuistetoon", "Dejuistetoon")), (kanaal, uit[kanaal])
+        assert uit[kanaal].endswith(TOON), (kanaal, uit[kanaal])
         assert NUMMER in uit[kanaal]
 
 
@@ -153,10 +158,6 @@ def test_eigen_vinted_tekst_komt_nooit_op_marktplaats():
     uit = cl.omschrijving_met_slot(KANGA + "\n\n" + VINTED_EIGEN, "marktplaats", TOON, VINTED_EIGEN)
     assert "via Vinted" not in uit
     assert uit.endswith(TOON)
-
-
-def test_ebay_krijgt_geen_van_beide():
-    pass  # zie test_publiceren_ebay hieronder; eBay liep al zonder slottekst
 
 
 # ── De herplaatsing (zelfde regels als publiceren) ──────────────────────────

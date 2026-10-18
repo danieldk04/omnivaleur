@@ -151,7 +151,7 @@ def opzet(monkeypatch):
         monkeypatch.setattr(module, "_met_fabrikant", lambda item, platform, uid: dict(item))
         monkeypatch.setattr(crosslist, "localize_item_for_platform",
                             lambda item, platform: _klaar(_nep_vertaling(item, platform)))
-        monkeypatch.setattr(crosslist, "slottekst_van", lambda uid: SLOTTEKST)
+        monkeypatch.setattr(crosslist, "slotteksten_van", lambda uid: (SLOTTEKST, SLOTTEKST))
         return db
     return maak
 

@@ -68,7 +68,7 @@ def test_de_slottekst_hangt_aan_elke_opdracht_en_niet_aan_een_platform():
     het soort verschil waar niemand achter komt."""
     bron = (ROOT / "backend/services/crosslist.py").read_text(encoding="utf-8")
     pick = bron.split("def _pick(platform: str) -> dict:")[1].split("\n    # Eerst de extensieplatforms")[0]
-    assert "beschrijving = _met_slot(" in pick
+    assert "beschrijving = omschrijving_met_slot(" in pick
     assert 'return {**base, "title": titel, "description": beschrijving}' in pick
 
 

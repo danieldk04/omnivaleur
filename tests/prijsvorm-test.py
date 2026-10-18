@@ -123,7 +123,7 @@ async def publiceer(artikel, listings=None):
     inst.fabrikant_verplicht = lambda uid: False
     inst.verzendkeuzes = lambda uid, prijs=None: {}
     inst.locatie = lambda uid: {}
-    cl.slottekst_van = lambda uid: ""
+    cl.slotteksten_van = lambda uid: ("", "")
     await cl.publish_to_platforms(artikel["id"], ["marktplaats"], artikel["user_id"])
     return db
 

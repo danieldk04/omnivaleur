@@ -1040,12 +1040,56 @@ def _missing_fields_per_platform(item: dict, platforms: list[str]) -> dict[str, 
 
 def slottekst_van(user_id: str) -> str:
     """De vaste tekst die deze verkoper onder élke advertentie wil hebben."""
+    return slotteksten_van(user_id)[0]
+
+
+def slotteksten_van(user_id: str) -> tuple[str, str]:
+    """(gewone slottekst, slottekst op Vinted), met één keer lezen.
+
+    Op Vinted kan de verkoper een andere of geen tekst kiezen (Lynn van De Juiste
+    Toon, 18-10-2026: webshoplink en telefoonnummer mogen daar niet). Zie
+    instellingen.VINTED_SLOT; standaard zijn de twee gelijk.
+    """
     try:
-        from backend.services.instellingen import lees as _lees_instellingen
-        return (_lees_instellingen(user_id) or {}).get("slottekst") or ""
+        from backend.services.instellingen import lees as _lees_instellingen, vinted_slot_uit
+        inst = _lees_instellingen(user_id) or {}
+        return inst.get("slottekst") or "", vinted_slot_uit(inst)
     except Exception as e:  # noqa: BLE001 — geen slottekst is vervelend, niet fataal
         logger.warning("Kon de vaste slottekst niet lezen voor %s: %s", user_id, e)
-        return ""
+        return "", ""
+
+
+def omschrijving_met_slot(tekst: str, platform: str, standaard: str, vinted: str) -> str:
+    """De omschrijving met de vaste tekst die op dít kanaal hoort.
+
+    Verschillen de gewone en de Vinted-tekst, dan gaat de tekst van het ándere
+    kanaal er eerst af. Een omschrijving die bij een scan van Marktplaats is
+    ingelezen draagt de gewone slottekst al, en die moet op Vinted juist weg.
+    Zijn ze gelijk (de standaard), dan is dit precies _met_slot.
+    """
+    eigen = (vinted if platform == "vinted" else standaard) or ""
+    ander = (standaard if platform == "vinted" else vinted) or ""
+    if ander.strip() and ander.strip() != eigen.strip():
+        tekst = _zonder_slot_ook_ingelezen(tekst, ander)
+    return _met_slot(tekst, eigen)
+
+
+def _zonder_slot_ook_ingelezen(tekst: str, slot: str) -> str:
+    """De omschrijving zonder deze slottekst, ook als hij er niet letter voor
+    letter in staat (opmaakcodes, andere witregels, een ingelezen kopie).
+
+    Eerst de letterlijke tekst eraf. Staat hij er daarna volgens
+    _slot_al_aanwezig nog in, dan per regel: elke regel van de platte tekst die
+    gelijk is aan een regel van de slottekst gaat eruit. Dat levert platte tekst
+    op, wat de extensie op Vinted toch al van een omschrijving maakt.
+    """
+    schoon = _zonder_slot(tekst, slot)
+    if not slot.strip() or not _slot_al_aanwezig(schoon, slot):
+        return schoon
+    weg = {r.casefold() for r in _als_platte_regels(slot)}
+    regels = [r for r in _naar_platte_tekst(schoon).splitlines()
+              if " ".join(r.split()).casefold() not in weg]
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(regels)).strip()
 
 
 def _met_slot(tekst: str, slot: str) -> str:
@@ -1078,6 +1122,11 @@ def _met_slot(tekst: str, slot: str) -> str:
 def _als_platte_regels(tekst: str) -> list[str]:
     """De tekst zoals de koper hem leest: zonder opmaakcodes, per regel, met
     gewone spaties. Zelfde omzetting als platteTekst in de extensie."""
+    return [r for r in (" ".join(regel.split()) for regel in _naar_platte_tekst(tekst).splitlines()) if r]
+
+
+def _naar_platte_tekst(tekst: str) -> str:
+    """De tekst zonder opmaakcodes, met de regels en witregels nog erin."""
     import html as _html
     s = str(tekst or "")
     if re.search(r"[<&]", s):
@@ -1086,7 +1135,7 @@ def _als_platte_regels(tekst: str) -> list[str]:
         s = re.sub(r"<[^>]+>", "", s)
         s = _html.unescape(s)
     s = s.replace(" ", " ")
-    return [r for r in (" ".join(regel.split()) for regel in s.splitlines()) if r]
+    return s
 
 
 def _slot_al_aanwezig(tekst: str, slot: str) -> bool:
@@ -1682,7 +1731,8 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
 
     # De vaste tekst van deze verkoper, onder élke advertentie op élk kanaal.
     # Zie instellingen.SLOTTEKST_MAX voor het waarom.
-    _slot = slottekst_van(user_id)
+    # Op Vinted kan dat een andere of geen tekst zijn, zie slotteksten_van.
+    _slot, _slot_vinted = slotteksten_van(user_id)
 
     def _pick(platform: str) -> dict:
         if _taal_van.get(platform) == "en" and english_item:
@@ -1707,11 +1757,12 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
             # zulke advertenties weg. Een slottekst is precies dat: bij De Juiste
             # Toon een telefoonnummer, een adres en "kijk op onze webshop". Op eBay
             # dus zonder slottekst en zonder webadressen.
-            beschrijving = _zonder_links(_zonder_slot(
-                _strip_text_tags(base.get("description") or ""), _slot))
+            beschrijving = _zonder_links(_zonder_slot(_zonder_slot(
+                _strip_text_tags(base.get("description") or ""), _slot), _slot_vinted))
             titel = _zonder_links(titel)
             return {**base, "title": titel, "description": beschrijving}
-        beschrijving = _met_slot(_strip_text_tags(base.get("description") or ""), _slot)
+        beschrijving = omschrijving_met_slot(_strip_text_tags(base.get("description") or ""),
+                                             platform, _slot, _slot_vinted)
         # Marktplaats en 2dehands rekenen voor een advertentie met een webadres
         # erin. Zie _zonder_links: dat kostte Egbert Brouwer drie weken en een
         # winkelmandje van EUR 153,00 aan advertenties die nooit online kwamen.

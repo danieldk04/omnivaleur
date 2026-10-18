@@ -250,16 +250,16 @@ def test_reddingsronde_helpt_een_echt_vastgelopen_herplaatsing_nog_steeds():
     async def _lok(item, platform):
         return dict(item)
     import backend.services.crosslist as cl
-    oude_lok, oude_slot, oude_met = cl.localize_item_for_platform, cl.slottekst_van, cl._met_slot
+    oude_lok, oude_slot, oude_met = cl.localize_item_for_platform, cl.slotteksten_van, cl._met_slot
     cl.localize_item_for_platform = _lok
-    cl.slottekst_van = lambda _u: ""
+    cl.slotteksten_van = lambda _u: ("", "")
     cl._met_slot = lambda tekst, _s: tekst
     try:
         uit = asyncio.run(rl.herstel_vastgelopen_werk())
     finally:
         bd.get_db = oude
         cl.localize_item_for_platform = oude_lok
-        cl.slottekst_van = oude_slot
+        cl.slotteksten_van = oude_slot
         cl._met_slot = oude_met
 
     plaatsingen = [j for j in db.jobs if j.get("action") == "create"]

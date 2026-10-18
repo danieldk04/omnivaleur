@@ -62,16 +62,16 @@ def _met_slottekst(gelokaliseerd: dict, platform: str, user_id: str) -> dict:
     zonder webadressen, Marktplaats en 2dehands met slottekst maar zonder
     webadressen (dat kost EUR 9,00), de rest met slottekst.
     """
-    from backend.services.crosslist import (slottekst_van, _met_slot, _zonder_slot,
-                                            _zonder_links)
-    slot = slottekst_van(user_id)
+    from backend.services.crosslist import (slotteksten_van, omschrijving_met_slot,
+                                            _zonder_slot, _zonder_links)
+    slot, slot_vinted = slotteksten_van(user_id)
     beschrijving = str(gelokaliseerd.get("description") or "")
     titel = str(gelokaliseerd.get("title") or "")
     if platform == "ebay":
-        beschrijving = _zonder_links(_zonder_slot(beschrijving, slot))
+        beschrijving = _zonder_links(_zonder_slot(_zonder_slot(beschrijving, slot), slot_vinted))
         titel = _zonder_links(titel)
     else:
-        beschrijving = _met_slot(beschrijving, slot)
+        beschrijving = omschrijving_met_slot(beschrijving, platform, slot, slot_vinted)
         if platform in ("marktplaats", "2dehands"):
             beschrijving = _zonder_links(beschrijving)
             titel = _zonder_links(titel)
@@ -345,10 +345,11 @@ async def herstel_vastgelopen_werk() -> dict:
             # gaan. Zie ook _zet_taal_goed in backend/api/jobs.py: dat is het
             # vangnet voor het geval er ooit nog zo'n pad bijkomt.
             from backend.services.crosslist import (localize_item_for_platform,
-                                                    slottekst_van, _met_slot, _zonder_links)
+                                                    slotteksten_van, omschrijving_met_slot,
+                                                    _zonder_links)
             gelokaliseerd = await localize_item_for_platform(item, rij["platform"])
-            beschrijving = _met_slot(gelokaliseerd.get("description") or "",
-                                     slottekst_van(item["user_id"]))
+            beschrijving = omschrijving_met_slot(gelokaliseerd.get("description") or "",
+                                                 rij["platform"], *slotteksten_van(item["user_id"]))
             titel = gelokaliseerd.get("title") or ""
             # Ook hier geen webadres in de tekst: op Marktplaats en 2dehands is
             # dat EUR 9,00 per plaatsing in plaats van een advertentie. Zie

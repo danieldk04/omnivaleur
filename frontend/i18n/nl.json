@@ -3745,5 +3745,9 @@
  "Pick one condition for every new Vinted listing, whatever the item says. Your items themselves stay as they are, and Marktplaats and 2dehands keep using the item's own condition.": "Kies één staat voor elke nieuwe Vinted-advertentie, wat er ook bij het artikel staat. Je artikelen zelf blijven zoals ze zijn, en Marktplaats en 2dehands houden de staat van het artikel aan.",
  "Saved — new Vinted listings all get this condition.": "Opgeslagen. Nieuwe Vinted-advertenties krijgen allemaal deze staat.",
  "Saved — new Vinted listings get the condition of the item.": "Opgeslagen. Nieuwe Vinted-advertenties krijgen de staat van het artikel.",
- "Condition on Vinted": "Staat op Vinted"
+ "Condition on Vinted": "Staat op Vinted",
+ "Add a different text": "Een andere tekst toevoegen",
+ "Add no text": "Geen tekst toevoegen",
+ "Add the same text": "Dezelfde tekst toevoegen",
+ "Vinted does not allow a link to your own website or a phone number in a listing. Pick another text here and Vinted gets that one, while every other channel keeps the text above.": "Vinted staat geen link naar je eigen website of een telefoonnummer in een advertentie toe. Kies hier een andere tekst, dan krijgt Vinted die en houden alle andere kanalen de tekst hierboven."
 }

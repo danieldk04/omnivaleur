@@ -1024,13 +1024,19 @@ def _vinted_tekst_binnen_grens(db, jobs: list) -> int:
         pl = j.get("payload")
         if not isinstance(pl, dict) or not isinstance(pl.get("description"), str):
             continue
-        slot = ""
+        slot, tekst = "", pl["description"]
         try:
-            from backend.services.crosslist import slottekst_van
-            slot = slottekst_van(j.get("user_id") or "")
+            from backend.services.crosslist import slotteksten_van, omschrijving_met_slot
+            standaard, slot = slotteksten_van(j.get("user_id") or "")
+            # Koos de verkoper op Vinted een andere of geen vaste tekst (Lynn van
+            # De Juiste Toon, 18-10-2026), dan hier nog eens de juiste eronder:
+            # ook een opdracht die vóór die keuze, of langs een pad dat de
+            # Vinted-tekst niet kent, klaargezet werd. Zelfde tekst = niets doen.
+            if slot.strip() != standaard.strip():
+                tekst = omschrijving_met_slot(tekst, "vinted", standaard, slot)
         except Exception:  # noqa: BLE001 — zonder slottekst gewoon inkorten
             pass
-        kort = vinted_omschrijving(pl["description"], slot)
+        kort = vinted_omschrijving(tekst, slot)
         if kort == pl["description"]:
             continue
         logger.info("job %s: Vinted-omschrijving ingekort van %d naar %d tekens",

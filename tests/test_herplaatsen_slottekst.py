@@ -64,7 +64,7 @@ def opzet(monkeypatch):
     async def vertaling(item, platform):
         return dict(item)
     monkeypatch.setattr(crosslist, "localize_item_for_platform", vertaling)
-    monkeypatch.setattr(crosslist, "slottekst_van", lambda uid: SLOT)
+    monkeypatch.setattr(crosslist, "slotteksten_van", lambda uid: (SLOT, SLOT))
 
     def maak(item=None):
         db = _DB(dict(item or ITEM))
@@ -143,7 +143,7 @@ def _als_html(tekst: str) -> str:
 
 @pytest.fixture
 def jaap(opzet, monkeypatch):
-    monkeypatch.setattr(crosslist, "slottekst_van", lambda uid: JAAP_SLOT)
+    monkeypatch.setattr(crosslist, "slotteksten_van", lambda uid: (JAAP_SLOT, JAAP_SLOT))
     return opzet
 
 

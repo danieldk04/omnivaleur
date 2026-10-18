@@ -235,6 +235,15 @@ NIEUWS_GEZIEN = "nieuws_gezien"
 VINTED_STAAT = "vinted_staat"
 STATEN = ("new_with_tags", "new", "good", "fair", "poor")
 
+# EEN EIGEN VASTE TEKST OP VINTED (18-10-2026, Lynn van De Juiste Toon). Hun vaste
+# tekst onder elke advertentie verwijst naar de webshop en noemt een
+# telefoonnummer; op Marktplaats en 2dehands willen ze hem houden, maar Vinted
+# staat dat niet toe. "zelfde" = de gewone slottekst (zoals het altijd was),
+# "geen" = op Vinted niets eronder, "eigen" = op Vinted slottekst_vinted.
+VINTED_SLOT = "vinted_slot"
+VINTED_SLOT_KEUZES = ("zelfde", "geen", "eigen")
+SLOTTEKST_VINTED = "slottekst_vinted"
+
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "auto_relist": True, "vinted_herplaatsen": False, VERKOOPVRAAG: True, WEBSHOP_MET_RUST: False, VERZENDING_2DH_WOORDEN: [],
              VERZENDING_2DH_BRIEF_ONDER: 0, VERZENDING_2DH_MODUS: "standaard",
@@ -244,7 +253,8 @@ STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "levering": "beide", "pakket_grens": 0, "slottekst": "",
              SHOPIFY_AUTO_IMPORT: None, SHOPIFY_AUTO_IMPORT_STAND: {}, "vinted_taal": "zelf",
              WOO_AUTO_IMPORT: None, WOO_AUTO_IMPORT_STAND: {}, IMPORT_STAAT: None,
-             NIEUWS_GEZIEN: None, VINTED_STAAT: None}
+             NIEUWS_GEZIEN: None, VINTED_STAAT: None,
+             VINTED_SLOT: "zelfde", SLOTTEKST_VINTED: ""}
 
 
 def _schoon(rauw: dict | None) -> dict:
@@ -312,6 +322,10 @@ def _schoon(rauw: dict | None) -> dict:
             uit[veld] = str(rauw.get(veld) or "").strip()[:100]
     if "slottekst" in rauw:
         uit["slottekst"] = str(rauw.get("slottekst") or "").strip()[:SLOTTEKST_MAX]
+    if rauw.get(VINTED_SLOT) in VINTED_SLOT_KEUZES:
+        uit[VINTED_SLOT] = rauw[VINTED_SLOT]
+    if SLOTTEKST_VINTED in rauw:
+        uit[SLOTTEKST_VINTED] = str(rauw.get(SLOTTEKST_VINTED) or "").strip()[:SLOTTEKST_MAX]
     lev = str(rauw.get("levering") or "").strip().lower()
     if lev in LEVERING_GELDIG:
         uit["levering"] = lev
@@ -342,6 +356,17 @@ def _schoon(rauw: dict | None) -> dict:
                                  dict.fromkeys(str(x).strip().lower() for x in groepen)
                                  if g in VINTED_GROEPEN_GELDIG]
     return uit
+
+
+def vinted_slot_uit(inst: dict) -> str:
+    """De vaste tekst die op Vinted onder de advertentie komt, zie VINTED_SLOT."""
+    inst = inst or {}
+    modus = inst.get(VINTED_SLOT)
+    if modus == "geen":
+        return ""
+    if modus == "eigen":
+        return inst.get(SLOTTEKST_VINTED) or ""
+    return inst.get("slottekst") or ""
 
 
 def lees(user_id: str) -> dict:

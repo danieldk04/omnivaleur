@@ -78,7 +78,7 @@ class _DB:
 
 def test_alleen_vinted_opdrachten_worden_ingekort_en_opgeslagen(monkeypatch):
     import backend.services.crosslist as C
-    monkeypatch.setattr(C, "slottekst_van", lambda _u: "")
+    monkeypatch.setattr(C, "slotteksten_van", lambda _u: ("", ""))
     lang = _lang(120)
     jobs = [{"id": "v", "platform": "vinted", "action": "create", "user_id": "u", "payload": {"description": lang}},
             {"id": "m", "platform": "marktplaats", "action": "create", "user_id": "u", "payload": {"description": lang}}]
