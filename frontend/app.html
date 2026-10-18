@@ -13968,6 +13968,18 @@ async function doBulkVerzending2dh() {
   }
 }
 
+// Zonder data: alleen het tekstveld tonen of verbergen bij een andere keuze.
+function toonSlottekstVinted(data) {
+  const keuze = document.getElementById('slottekst-vinted-keuze');
+  const veld = document.getElementById('slottekst-vinted');
+  if (!keuze || !veld) return;
+  if (data) {
+    keuze.value = data.vinted_slot || 'zelfde';
+    veld.value = data.slottekst_vinted || '';
+  }
+  veld.style.display = keuze.value === 'eigen' ? '' : 'none';
+}
+
 async function saveSlottekst() {
   const melding = document.getElementById('slottekst-status');
   melding.textContent = 'Saving…';
