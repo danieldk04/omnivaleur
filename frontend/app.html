@@ -13974,15 +13974,22 @@ async function saveSlottekst() {
   try {
     const r = await apiFetchRetry(`${API}/api/items/settings`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slottekst: document.getElementById('slottekst').value }),
+      body: JSON.stringify({
+        slottekst: document.getElementById('slottekst').value,
+        vinted_slot: document.getElementById('slottekst-vinted-keuze').value,
+        slottekst_vinted: document.getElementById('slottekst-vinted').value,
+      }),
     });
     const data = await parseJsonSafe(r);
     if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
     state.settings = { ...state.settings, ...data };
     document.getElementById('slottekst').value = data.slottekst || '';
+    toonSlottekstVinted(data);
     melding.textContent = data.slottekst
       ? `Saved — ${data.slottekst.length} characters go under every new listing.`
       : 'Saved — nothing is added.';
+    if (data.vinted_slot === 'geen') melding.textContent += ' Nothing is added on Vinted.';
+    else if (data.vinted_slot === 'eigen') melding.textContent += ' Vinted gets its own text.';
   } catch (e) {
     melding.textContent = `Could not save: ${e.message}`;
   }
