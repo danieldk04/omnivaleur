@@ -1918,6 +1918,12 @@
       // Zonder dit pakte het zoeken na een trage plaatsing de advertentie van
       // een gelijknamig ander stuk (Janneke, 15-10-2026).
       const hoogwater = await vintedHoogwater().catch(() => null);
+      // Ook de bewaker in de achtergrond moet dit getal kennen. Na de plaatsklik
+      // sterft dit script vaak (Vinted gooit de pagina om), en dan vindt alleen de
+      // bewaker de advertentie nog terug. Zonder het hoogwater koppelt hij bij
+      // titelgenoten niets, en kreeg Janneke (17-10-2026) bij 17 jassen die gewoon
+      // online stonden "Vinted mislukt".
+      try { chrome.runtime.sendMessage({ type: "VINTED_HOOGWATER", naId: hoogwater }, () => chrome.runtime.lastError); } catch (_) {}
       let id;
       try {
         id = await submitListing(/\/items\/(\d+)/);
