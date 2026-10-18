@@ -4374,9 +4374,17 @@ async function bgVindVintedAdvertentie(item, naId = null) {
       // dus niet koppelen; de verkoper kan hem zelf als geplaatst aanvinken.
       const genoten = Number(item?._vinted_titelgenoten || 0) > 0 || bezet.size > 0
         || items.filter((it) => _vintedTitelZonderSku(it.title) === titelKaal).length > 1;
-      if (genoten) return null;
+      // MET HET HOOGWATER IS ER WEL HARD BEWIJS (18-10-2026, Janneke).
+      // Vinted-nummers lopen op. Een advertentie met deze titel en prijs die pas
+      // ná onze klik verscheen, en de enige is, komt van die klik. Zonder deze
+      // regel kreeg elke plaatsing van een stuk met een titelgenoot "mislukt",
+      // want het invulscript ziet de advertentie na de klik nooit zelf (het
+      // sterft als Vinted de pagina omgooit) en deze bewaker koppelde dan niets.
+      // Gemeten: 17 jassen stonden online, alle 17 rood in het dashboard.
+      if (genoten && hoogwater == null) return null;
       const levend = items.filter((it) => !it.is_closed && !it.is_draft && !bezet.has(String(it.id))
-                                         && _vintedPrijsKlopt(it, item));
+                                         && _vintedPrijsKlopt(it, item)
+                                         && (hoogwater == null || Number(it.id) > hoogwater));
       // Streng naar soepel, en elke stap moet PRECIES EEN kandidaat opleveren.
       // Bij twijfel liever niets koppelen dan de verkeerde advertentie: een
       // verkeerde koppeling betekent later de verkeerde advertentie weghalen.
