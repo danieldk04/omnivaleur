@@ -1842,6 +1842,9 @@ def _infer_attributes(title: str | None, description: str | None = None,
             out["category"] = "peuterkleding"
         elif _MEISJES_RE.search(text):
             out["category"] = "meisjes kleding"
+        # Het label van de winkel wint van een gok uit "jurk" of de tekst.
+        if geslacht in ("jongen", "meisje"):
+            out["category"] = kinderrubriek_met_geslacht(out.get("category"), geslacht)
     elif not gender and _is_grand_foulard(title, description):
         # Zie _is_grand_foulard: de combinatie "grand foulard" is woontextiel.
         out["gender"] = "wonen"
