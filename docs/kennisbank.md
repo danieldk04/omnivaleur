@@ -17,6 +17,20 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-plaatsing-alleen-via-bewaker
+
+*18-10-2026 — "18-10: het invulscript ziet een Vinted-plaatsing na de klik nooit; elke geslaagde wordt ~181 s later door de bewaker op titel gevonden. Bij titelgenoten koppelde die niets (1.0.394), dus \"mislukt\" terwijl online"*
+
+Gemeten 18-10-2026 bij Janneke, Toon en 8f91a370 (1.0.388 tot 1.0.395): na "plaatsen: op de knop geklikt" komt er van het Vinted-invulscript nooit meer iets. Elke geslaagde Vinted-plaatsing werd ~181 s na de laatste stap afgemeld door de bewaker in background.js (bgVindVintedAdvertentie), die de kast op titel afzoekt. Waar Vinted na de klik heen springt is niet gemeten (geen echte plaatsing gedaan).
+
+Gevolg sinds 1.0.394 (bewaker koppelt niet bij titelgenoten): Janneke kreeg bij 17 jassen "timed out" terwijl alle 17 online stonden, en de server hield Vinted daarna telkens 8 minuten bezet, dus één tabblad per 12 minuten. Hersteld in 1.0.396: hoogwater van vlak voor de klik gaat mee naar de bewaker (VINTED_HOOGWATER), die bij titelgenoten de enige nieuwere advertentie met dezelfde titel en prijs koppelt.
+
+**Why:** een "timed out" met laatste stap "op de knop geklikt" betekent bij Vinted meestal dat hij WEL online staat. Opnieuw plaatsen geeft een dubbele advertentie.
+
+**How to apply:** bij Vinted-fouten met die laatste stap eerst het openbare profiel bekijken (vinted.nl/member/<id>, kaartjes data-testid product-item-id-*, alt-tekst bevat titel en prijs; de API geeft 403 zonder inlog) en koppelen op tijdstip van de claim plus prijs. Elke Vinted-plaatsing kost ~3,5 min zolang het invulscript het resultaat niet zelf ziet; dat is de volgende winst. Zie "vinted-koppeling-titelgenoten" en "echte-extensiecode-op-vinted-draaien".
+
+---
+
 ## vinted-koppeling-titelgenoten
 
 *17-10-2026 — Gelijke titels (Janneke: 7x "Tussenjas Name it maat 128") koppelen Vinted-advertenties aan het verkeerde artikel; een verkoop haalt dan het verkeerde stuk van Marktplaats*
