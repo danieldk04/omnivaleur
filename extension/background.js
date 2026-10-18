@@ -4422,7 +4422,7 @@ async function fireJobWatchdog(tabId) {
   // overdracht bedoeld is — dus juist hier hoort de controle thuis.
   if (meta.awaitingManualFinish) {
     if (meta.platform === "vinted" && (meta.action || "create") === "create") {
-      const zelfGedaan = await bgVindVintedAdvertentie(meta.payload || meta).catch(() => null);
+      const zelfGedaan = await bgVindVintedAdvertentie(meta.payload || meta, meta.vintedNaId).catch(() => null);
       if (zelfGedaan) {
         console.log(`[Omnivaleur] "${(meta.payload || meta).title}" is door de verkoper zelf afgemaakt op Vinted (${zelfGedaan.id}) — alsnog als geplaatst afgemeld.`);
         await finaliseJob(meta.serverUrl, meta.jobId, "complete", {
@@ -4470,7 +4470,7 @@ async function fireJobWatchdog(tabId) {
   // Eerst kijken of het misschien gewoon gelukt is. Niets is verwarrender dan een
   // rode melding bij een advertentie die gewoon online staat.
   if (meta.platform === "vinted" && (meta.action || "create") === "create") {
-    const gevonden = await bgVindVintedAdvertentie(meta.payload || meta).catch(() => null);
+    const gevonden = await bgVindVintedAdvertentie(meta.payload || meta, meta.vintedNaId).catch(() => null);
     if (gevonden) {
       console.log(`[Omnivaleur] Watchdog: "${(meta.payload || meta).title}" staat wél op Vinted (${gevonden.id}) — als geplaatst afgemeld.`);
       await finaliseJob(meta.serverUrl, meta.jobId, "complete", {
@@ -8448,7 +8448,7 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     // eerst of de advertentie er gewoon staat, vóór we een fout melden.
     (async () => {
       if (meta.platform === "vinted" && (meta.action || "create") === "create") {
-        const gevonden = await bgVindVintedAdvertentie(meta.payload || meta).catch(() => null);
+        const gevonden = await bgVindVintedAdvertentie(meta.payload || meta, meta.vintedNaId).catch(() => null);
         if (gevonden) {
           console.log(`[Omnivaleur] Tabblad weg, maar de advertentie staat op Vinted (${gevonden.id}) — als geplaatst afgemeld.`);
           await finaliseJob(meta.serverUrl, meta.jobId, "complete", {
@@ -8607,7 +8607,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   // verkeerde advertentie weghalen.
   if (meta.platform === "vinted" && meta.awaitingManualFinish
       && /\/member\/\d+/.test(url)) {
-    const zelfGedaan = await bgVindVintedAdvertentie(meta.payload || meta).catch(() => null);
+    const zelfGedaan = await bgVindVintedAdvertentie(meta.payload || meta, meta.vintedNaId).catch(() => null);
     if (!zelfGedaan) return;   // niets gevonden: laat de opdracht met rust
     console.log(`[Omnivaleur] Handmatig geplaatst op Vinted (${zelfGedaan.id}) — alsnog als geplaatst afgemeld.`);
     clearJobWatchdog(tabId);
