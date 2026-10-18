@@ -91,6 +91,17 @@ def naar_scanregel(product: dict, shop: str, winkelnaam: str | None = None) -> d
         materiaal = m.group(1).strip().rstrip(".")
     elif materiaal and len(materiaal) > 40:
         materiaal = None     # liever leeg dan een halve zin als materiaal
+    # Jongen of meisje staat bij veel winkels alleen in de labels (Janneke,
+    # 18-10-2026: "meisje", "jongen", "unisex"; haar titels zeggen het nooit). Een
+    # kinderrubriek die zo vaststaat gaat mee in de kandidaat, en wint bij het
+    # importeren van de rubriekvraag (_item_data_from_candidate). Zonder label, of
+    # zonder kinderrubriek: leeg, dan beslist de import zoals altijd.
+    from backend.api.imports import _infer_attributes, geslacht_uit_labels
+    geslacht = geslacht_uit_labels(product.get("tags"), product.get("product_type"))
+    kind = (_infer_attributes(basis.get("title"), basis.get("description"), geslacht)
+            if geslacht else {})
+    if kind.get("gender") != "kinderen" or not kind.get("category"):
+        kind = {}
     return {
         "platform_listing_id": str(product["id"]),
         "platform_listing_url": f"https://{shop}/products/{handle}" if handle else None,
