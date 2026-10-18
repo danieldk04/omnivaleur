@@ -13999,10 +13999,7 @@ async function saveSlottekst() {
     toonSlottekstVinted(data);
     melding.textContent = data.slottekst
       ? `Saved — ${data.slottekst.length} characters go under every new listing.`
-      : 'Saved — nothing is added.';
-    if (data.vinted_slot === 'geen') melding.textContent += ' Nothing is added on Vinted.';
-    else if (data.vinted_slot === 'eigen') melding.textContent += ' Vinted gets its own text.';
-  } catch (e) {
+      : 'Saved — nothing is added.';  } catch (e) {
     melding.textContent = `Could not save: ${e.message}`;
   }
 }
