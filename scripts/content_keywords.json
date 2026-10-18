@@ -741,6 +741,66 @@
       "status": "published",
       "nl_slug": "marktplaats-naar-etsy-crosslisten",
       "priority": 86
+    },
+    {
+      "keyword": "how to print shipping labels on marktplaats",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "how-to-print-shipping-labels-on-marktplaats",
+      "status": "published",
+      "nl_slug": "verzendlabel-marktplaats-printen",
+      "priority": 87
+    },
+    {
+      "keyword": "omnivaleur vs sellraze",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "slug": "omnivaleur-vs-sellraze",
+      "status": "pending",
+      "nl_slug": "omnivaleur-vs-sellraze",
+      "priority": 88
+    },
+    {
+      "keyword": "how to create bundles on vinted",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "how-to-create-bundles-on-vinted",
+      "status": "pending",
+      "nl_slug": "bundel-maken-op-vinted",
+      "priority": 89
+    },
+    {
+      "keyword": "margin scheme vat second hand goods",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "slug": "margin-scheme-vat-second-hand-goods",
+      "status": "pending",
+      "nl_slug": "btw-margeregeling-tweedehands",
+      "priority": 90
+    },
+    {
+      "keyword": "how to organize inventory for reselling",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "slug": "how-to-organize-inventory-for-reselling",
+      "status": "pending",
+      "nl_slug": "reseller-voorraad-organiseren",
+      "priority": 91
+    },
+    {
+      "keyword": "lego reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "format": "niche",
+      "slug": "lego-reselling-automation",
+      "status": "pending",
+      "nl_slug": "lego-doorverkopen-software",
+      "priority": 92
     }
   ],
   "published": [
@@ -1529,6 +1589,16 @@
       "action": "created",
       "url_path": "/crosslisting/cross-list-from-marktplaats-to-etsy",
       "published_at": "2026-10-17T11:55:00.478759+00:00"
+    },
+    {
+      "keyword": "how to print shipping labels on marktplaats",
+      "slug": "how-to-print-shipping-labels-on-marktplaats",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-print-shipping-labels-on-marktplaats",
+      "published_at": "2026-10-18T12:19:39.710182+00:00"
     }
   ]
 }
