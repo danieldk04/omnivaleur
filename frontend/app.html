@@ -13713,6 +13713,7 @@ async function loadRelistDagen() {
     if (grens) grens.value = data.pakket_grens != null ? data.pakket_grens : 0;
     const slot = document.getElementById('slottekst');
     if (slot) slot.value = data.slottekst || '';
+    toonSlottekstVinted(data);
     if (data.relist_dagen_min != null) veld.min = data.relist_dagen_min;
     if (data.relist_dagen_max != null) veld.max = data.relist_dagen_max;
   } catch (e) {
