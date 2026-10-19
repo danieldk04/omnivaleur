@@ -97,7 +97,11 @@ MINIMALE_VINTED_PLAATS_VERSIE = (1, 0, 386)
 # en pakt ze een willekeurig blad. Het werk blijft 'pending' tot een bijgewerkte
 # kopie polt.
 MINIMALE_KINDERTASSEN_VERSIE = (1, 0, 395)
-_RUBRIEK_VANAF_VERSIE = {"kinderen tassen": MINIMALE_KINDERTASSEN_VERSIE}
+# "kinderen luiertassen" (luiertassen en mombags) bestaat in de extensie pas vanaf
+# 1.0.398 (19-10-2026, Janneke 31d28378). Zelfde reden als de kindertassen.
+MINIMALE_LUIERTASSEN_VERSIE = (1, 0, 398)
+_RUBRIEK_VANAF_VERSIE = {"kinderen tassen": MINIMALE_KINDERTASSEN_VERSIE,
+                         "kinderen luiertassen": MINIMALE_LUIERTASSEN_VERSIE}
 # Jongen of meisje bij baby en peuter ("babykleding jongens", "peuterkleding
 # meisjes") kent de extensie pas vanaf 1.0.397 (18-10-2026, Janneke 31d28378: haar
 # geslacht staat alleen in haar Shopify-labels). Anders dan bij de kindertassen
@@ -2038,6 +2042,25 @@ NACHTRONDE_GEDULD = timedelta(hours=6)
 # niets extra's aan dataverkeer.
 WACHTRIJ_KOP = 25
 WACHTRIJ_MAX = 500
+# EEN VERKOOPCONTROLE DIE TE LANG WACHT, GAAT VOOR (19-10-2026, Janneke 31d28378).
+#
+# "De jas van Dirkje is gisteren verkocht via Vinted, maar niet uit Marktplaats
+# gehaald." Gemeten: haar Vinted-scan werd op 17-10 om 18:39 klaargezet en pas op
+# 18-10 om 19:25 opgepakt, ruim 24 uur later; twee minuten daarna was de verkoop
+# gezien en de jas van Marktplaats gehaald. In die 24 uur stond haar Vinted-rij vol
+# plaatsingen. Een scan kwam achter elke plaatsing (groep 4), en zolang er een
+# Vinted-plaatsing liep gaf de uitgifte voor Vinted helemaal niets (ook geen scan).
+# Een scan schrijft niets en de extensie draait hem naast de plaatsingen (zie
+# pollJobsEenRonde), dus wachten had nergens voor nodig. Vanaf hier gaat een scan
+# die zo lang wacht voor alles, ook als het kanaal bezig is.
+SCAN_VOORRANG_NA = timedelta(minutes=20)
+
+
+def _scan_achterstallig(j: dict, now_dt: datetime) -> bool:
+    if j.get("action") != "scan":
+        return False
+    gemaakt = _parse_ts(j.get("created_at"))
+    return bool(gemaakt and now_dt - gemaakt >= SCAN_VOORRANG_NA)
 
 
 # De lichte velden waarmee de volgorde over de hele wachtrij bepaald wordt. Uit de
@@ -2076,6 +2099,8 @@ def _wachtrij_volgorde(licht: list[dict], now_dt: datetime) -> list[dict]:
 
     def groep(j: dict) -> int:
         actie = j.get("action")
+        if _scan_achterstallig(j, now_dt):
+            return -1
         if actie not in SCHRIJVEND:
             return 4
         # Verzendkosten bijwerken is onderhoud, net als de nachtronde (28-09-2026,
@@ -2534,10 +2559,15 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
         # twee formulieren van dezelfde site tegelijk is waar de gegevens door
         # elkaar konden lopen, en het is ook precies wat een platform als
         # geautomatiseerd ritme leest.
-        if platform in bezette_kanalen:
-            return []
         # Maar wél naast elkaar op VERSCHILLENDE kanalen, tot de bovengrens.
-        if len(bezette_kanalen) >= MAX_PARALLELLE_PUBLICATIES:
+        if platform in bezette_kanalen or len(bezette_kanalen) >= MAX_PARALLELLE_PUBLICATIES:
+            # Behalve een verkoopcontrole die al te lang wacht: die loopt naast de
+            # plaatsing (zie SCAN_VOORRANG_NA). Hooguit één scan tegelijk.
+            if not vinted_scan_bezig:
+                scan = next((j for j in result.data if j.get("platform") == platform
+                             and _scan_achterstallig(j, now_dt)), None)
+                if scan:
+                    return [scan]
             return []
 
     # ── OM DE BEURT TUSSEN DE KANALEN ─────────────────────────────────────────
@@ -3001,7 +3031,7 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                   and j["payload"].get("_rubriek_zoeken_sinds")) else 0,
             _rubriek_mislukt(j) if (isinstance(j.get("payload"), dict)
                                     and j["payload"].get("_rubriek_zoeken_sinds")) else 0,
-            0 if j.get("action") in SCHRIJVEND else 1))
+            -1 if _scan_achterstallig(j, now_dt) else 0 if j.get("action") in SCHRIJVEND else 1))
 
     # Extension: exactly one job at a time. Dashboard: the whole queue, to count.
     if not is_extension_dispatch:

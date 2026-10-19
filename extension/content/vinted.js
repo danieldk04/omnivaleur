@@ -317,6 +317,7 @@
     "kinderen schoenen":      ["shoes", "kids shoes"],
     "kinderen accessoires":   ["accessories"],
     "kinderen tassen":        ["bags & backpacks", "backpacks", "bags"],
+    "kinderen luiertassen":   ["baby changing bags", "changing bags"],
     // ── Unisex ─────────────────────────────────────────────────────
     // Vinted heeft geen eigen carnavalstak; "Other clothing" is de bladnaam waar
     // verkleedkleding en klederdracht daar terechtkomen.
@@ -1096,6 +1097,9 @@
     // Kinderrugzakjes en -tassen (17-10-2026, Janneke). Meisjes is de standaard;
     // jongens alleen als de tekst dat zegt (zie kinderPad).
     "kinderen tassen": ["Kids", "Girls clothing", "Bags & backpacks"],
+    // Luiertassen en mombags (19-10-2026, Janneke): Kids > Bathing & changing >
+    // Baby changing bags (3394), nagelopen in Vinteds boom op vinted.nl en .co.uk.
+    "kinderen luiertassen": ["Kids", "Bathing & changing", "Baby changing bags"],
     "boeken gezondheid en voeding": ["Books & Media", "Books", "Non-fiction"],
     "boeken kookboeken": ["Books & Media", "Books", "Non-fiction"],
     "boeken geschiedenis regio": ["Books & Media", "Books", "Non-fiction"],

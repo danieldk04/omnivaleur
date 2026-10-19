@@ -17,6 +17,34 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-plaatsing-alleen-via-bewaker
+
+*19-10-2026 — "18-10: het invulscript ziet een Vinted-plaatsing na de klik nooit; elke geslaagde wordt ~181 s later door de bewaker op titel gevonden. Bij titelgenoten koppelde die niets (1.0.394), dus \"mislukt\" terwijl online"*
+
+Gemeten 18-10-2026 bij Janneke, Toon en 8f91a370 (1.0.388 tot 1.0.395): na "plaatsen: op de knop geklikt" komt er van het Vinted-invulscript nooit meer iets. Elke geslaagde Vinted-plaatsing werd ~181 s na de laatste stap afgemeld door de bewaker in background.js (bgVindVintedAdvertentie), die de kast op titel afzoekt. Waar Vinted na de klik heen springt is niet gemeten (geen echte plaatsing gedaan).
+
+Gevolg sinds 1.0.394 (bewaker koppelt niet bij titelgenoten): Janneke kreeg bij 17 jassen "timed out" terwijl alle 17 online stonden, en de server hield Vinted daarna telkens 8 minuten bezet, dus één tabblad per 12 minuten. Hersteld in 1.0.396: hoogwater van vlak voor de klik gaat mee naar de bewaker (VINTED_HOOGWATER), die bij titelgenoten de enige nieuwere advertentie met dezelfde titel en prijs koppelt.
+
+**Why:** een "timed out" met laatste stap "op de knop geklikt" betekent bij Vinted meestal dat hij WEL online staat. Opnieuw plaatsen geeft een dubbele advertentie.
+
+**How to apply:** bij Vinted-fouten met die laatste stap eerst het openbare profiel bekijken (vinted.nl/member/<id>, kaartjes data-testid product-item-id-*, alt-tekst bevat titel en prijs; de API geeft 403 zonder inlog) en koppelen op tijdstip van de claim plus prijs. Sinds 1.0.398 (19-10) kijkt de achtergrond vanaf de klik elke 6 s zelf in de kast (vintedNaKlikZoeken, alleen met hoogwater) en sluit het tabblad zodra hij er staat; Janneke sloot ze anders zelf, en dan werd het "tab closed" terwijl hij online stond (26 stuks op 18-10). Zie "vinted-koppeling-titelgenoten" en "echte-extensiecode-op-vinted-draaien".
+
+---
+
+## scan-achter-plaatsingen-verhongert
+
+*19-10-2026 — 19-10 Janneke: Vinted-scan (verkoopcontrole) wachtte 24 uur achter een volle plaatsingsrij; verkoop niet van MP. Nu gaat een scan na 20 min voor, ook als het kanaal bezig is*
+
+Gemeten 19-10-2026 bij Janneke (31d28378): de Vinted-scan van 17-10 18:39 werd pas 18-10 19:25 opgepakt; twee minuten later was de Dirkje-verkoop gezien en de jas van Marktplaats gehaald. Oorzaak in get_pending_jobs: scans sorteerden achter elke schrijvende opdracht, en `if platform in bezette_kanalen: return []` gaf ook geen scan zolang er een plaatsing liep. Met een volle Vinted-rij (één plaatsing per ~12 min) kwam de scan nooit aan bod.
+
+Nu: SCAN_VOORRANG_NA (20 min) in backend/api/jobs.py, en VINTED_SCAN_NA_UREN = 1 in polling.py.
+
+**Why:** een Vinted-verkoop is alleen via de scan te zien bij titelgenoten (de bestellingenpagina koppelt alleen unieke titels); elke vertraging is een kans op dubbele verkoop.
+
+**How to apply:** "verkocht maar niet van het andere kanaal" eerst de scanopdrachten van die klant bekijken (created_at tegen claimed_at). Zie "vinted-plaatsing-alleen-via-bewaker" en "kanalen-om-de-beurt".
+
+---
+
 ## geslacht-uit-shopify-labels
 
 *18-10-2026 — "18-10: kinderwinkels zetten jongen/meisje in Shopify-labels, niet in de titel; vier rubrieken baby/peuter jongens/meisjes, alleen uit label; oude extensie krijgt terugval"*
@@ -31,20 +59,6 @@ Janneke (31d28378) noemt in geen enkele titel jongen of meisje; haar Shopify-tag
 - Label zonder kinderwoord in de titel maakt alleen een kledingstuk tot kinderartikel; sokken, schoenen en laarsjes krijgen uit het label geen kledingrubriek (80 Ewers-sokken werden anders meisjeskleding). Altijd de nieuwe regel eerst op alle echte producten van de klant draaien en de overgangen per soort tellen, zie "klantdata-niet-op-eigen-initiatief".
 - Een losse maat 50/56/62 bij een al bekend kinderartikel is een babymaat (leeftijdsmaat in `_infer_attributes`).
 - Open: kinderschoenen/sport/zwem/voetbal hebben geen geslachtsrubriek; WooCommerce-tags worden niet gelezen.
-
----
-
-## vinted-plaatsing-alleen-via-bewaker
-
-*18-10-2026 — "18-10: het invulscript ziet een Vinted-plaatsing na de klik nooit; elke geslaagde wordt ~181 s later door de bewaker op titel gevonden. Bij titelgenoten koppelde die niets (1.0.394), dus \"mislukt\" terwijl online"*
-
-Gemeten 18-10-2026 bij Janneke, Toon en 8f91a370 (1.0.388 tot 1.0.395): na "plaatsen: op de knop geklikt" komt er van het Vinted-invulscript nooit meer iets. Elke geslaagde Vinted-plaatsing werd ~181 s na de laatste stap afgemeld door de bewaker in background.js (bgVindVintedAdvertentie), die de kast op titel afzoekt. Waar Vinted na de klik heen springt is niet gemeten (geen echte plaatsing gedaan).
-
-Gevolg sinds 1.0.394 (bewaker koppelt niet bij titelgenoten): Janneke kreeg bij 17 jassen "timed out" terwijl alle 17 online stonden, en de server hield Vinted daarna telkens 8 minuten bezet, dus één tabblad per 12 minuten. Hersteld in 1.0.396: hoogwater van vlak voor de klik gaat mee naar de bewaker (VINTED_HOOGWATER), die bij titelgenoten de enige nieuwere advertentie met dezelfde titel en prijs koppelt.
-
-**Why:** een "timed out" met laatste stap "op de knop geklikt" betekent bij Vinted meestal dat hij WEL online staat. Opnieuw plaatsen geeft een dubbele advertentie.
-
-**How to apply:** bij Vinted-fouten met die laatste stap eerst het openbare profiel bekijken (vinted.nl/member/<id>, kaartjes data-testid product-item-id-*, alt-tekst bevat titel en prijs; de API geeft 403 zonder inlog) en koppelen op tijdstip van de claim plus prijs. Elke Vinted-plaatsing kost ~3,5 min zolang het invulscript het resultaat niet zelf ziet; dat is de volgende winst. Zie "vinted-koppeling-titelgenoten" en "echte-extensiecode-op-vinted-draaien".
 
 ---
 

@@ -1104,6 +1104,7 @@ _EBAY_CATEGORY_HINTS = {
     "heren zwembroeken": "swim shorts trunks", "heren ondergoed": "underwear socks",
     "kinderen zwemkleding": "kids swimwear", "kinderen accessoires": "kids accessories",
     "kinderen tassen": "kids backpack bag",
+    "kinderen luiertassen": "baby changing bag diaper bag",
     "rokken": "skirt", "jurken casual": "dress", "jurken feest": "party dress",
     "blouses": "blouse", "tops": "top t-shirt", "heren t-shirts": "t-shirt",
     "heren polo's": "polo shirt", "heren overhemden": "shirt",

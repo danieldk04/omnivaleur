@@ -192,6 +192,11 @@ const MP_CATEGORIES = {
   // "Kinderen en Baby's | Kindermode-accessoires", niet betaald). De andere optie,
   // Tassen | Rugtassen (1826), is de volwassen tak.
   "kinderen tassen":        { cat1: 565, bucketId: 427, cat3: 3136 },
+  // Luiertassen en mombags (19-10-2026, Janneke). Marktplaats heeft een eigen
+  // rubriek Kinderen en Baby's > Luiertassen (3138 in de zoekboom), maar de
+  // groeps-id van het plaatsformulier is alleen ingelogd te lezen en nog niet
+  // gemeten. Tot dan de gemeten kinderrubriek van de kindertassen hierboven.
+  "kinderen luiertassen":   { cat1: 565, bucketId: 427, cat3: 3136 },
 
   // === SIERADEN, TASSEN EN UITERLIJK (cat1=1826) ===
   // Non-clothing, same prefix scheme as "games "/"electronics ". Exists because a
@@ -4409,6 +4414,51 @@ async function bgVindVintedAdvertentie(item, naId = null) {
     } catch (_) { /* volgende domein */ }
   }
   return null;
+}
+
+// NA DE KLIK ZELF IN DE KAST KIJKEN, NIET DRIE MINUTEN WACHTEN (19-10-2026, Janneke).
+//
+// "Er pas een nieuw tabblad opent als ik de vorige handmatig gesloten heb."
+// Gemeten in haar opdrachten (1.0.388 tot 1.0.395): na "plaatsen: op de knop
+// geklikt" meldde het invulscript nooit meer iets, en van 110 geslaagde
+// Vinted-plaatsingen werden er 88 pas na 170 s of later afgemeld, door de bewaker
+// hierboven. Al die tijd stond het tabblad stil op het scherm en gaf de server
+// geen volgende Vinted-opdracht uit. Sloot zij het tabblad, dan kwam de volgende
+// binnen een halve minuut. Zelfde snelheid nu zonder haar: vanaf de klik elke paar
+// seconden de kast bekijken. Alleen met het hoogwater van vlak voor de klik
+// (VINTED_HOOGWATER): dan kan alleen een advertentie van déze klik matchen, ook
+// als er al een oudere met dezelfde titel online staat. Zonder hoogwater doet
+// dit niets en beslist de bewaker zoals vroeger.
+const NA_KLIK_INTERVAL_MS = 6000;
+const NA_KLIK_MAX_MS = 150000;   // daarna neemt de bewaker het over
+
+async function vintedNaKlikZoeken(tabId) {
+  const key = `jobtab_${tabId}`;
+  const einde = Date.now() + NA_KLIK_MAX_MS;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  await sleep(4000);
+  while (Date.now() < einde) {
+    const { [key]: meta } = await chrome.storage.local.get(key);
+    // Al afgemeld (adres, bewaker, gesloten tabblad) of aan de verkoper gegeven.
+    if (!meta || !meta.submitClicked || meta.awaitingManualFinish) return;
+    if (meta.vintedNaId != null) {
+      const gevonden = await bgVindVintedAdvertentie(meta.payload || meta, meta.vintedNaId).catch(() => null);
+      if (gevonden) {
+        // Opnieuw kijken: misschien was iemand anders ons net voor.
+        const { [key]: nog } = await chrome.storage.local.get(key);
+        if (!nog || nog.jobId !== meta.jobId || nog.awaitingManualFinish) return;
+        console.log(`[Omnivaleur] Vinted: advertentie ${gevonden.id} staat online, ${Math.round((NA_KLIK_MAX_MS - (einde - Date.now())) / 1000)} s na de klik — afgemeld.`);
+        clearJobWatchdog(tabId);
+        await chrome.storage.local.remove([key, `job_${meta.platform}`]);
+        await finaliseJob(meta.serverUrl, meta.jobId, "complete", {
+          platform_listing_id: gevonden.id, platform_listing_url: gevonden.url,
+        }).catch(() => {});
+        sluitWerkTabblad(tabId, 1500);
+        return;
+      }
+    }
+    await sleep(NA_KLIK_INTERVAL_MS);
+  }
 }
 
 async function fireJobWatchdog(tabId) {
@@ -10591,6 +10641,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const meta = s[key];
       if (meta) chrome.storage.local.set({ [key]: { ...meta, submitClicked: true } });
       sendResponse(true);
+      if (meta && meta.platform === "vinted" && (meta.action || "create") === "create") {
+        vintedNaKlikZoeken(sender.tab.id).catch(() => {});
+      }
     });
     return true;
   }

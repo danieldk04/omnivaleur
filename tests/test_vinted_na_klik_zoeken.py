@@ -79,7 +79,7 @@ vintedNaKlikZoeken(7).then(() => console.log(JSON.stringify(uit)));
 """
     r = subprocess.run([NODE, "-e", js], capture_output=True, text=True, timeout=30)
     assert r.returncode == 0, r.stderr
-    return json.loads(r.stdout.strip())
+    return json.loads(r.stdout.strip().splitlines()[-1])
 
 
 def _adv(i, prijs):

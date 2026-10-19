@@ -91,11 +91,15 @@ def test_de_nachtronde_wordt_niet_vergeten():
         "wie het langst wacht komt als eerste van de nachtronde aan de beurt")
 
 
-def test_lezen_gaat_nooit_voor_publiceren():
-    scan = _job(700, "scan", item=None)
+def test_lezen_gaat_niet_voor_publiceren_tot_hij_te_lang_wacht():
+    # Een verse scan wacht achter de klik. Een scan die al 20 minuten of langer
+    # wacht gaat sinds 19-10-2026 wel voor: hij draait naast de plaatsing, en zonder
+    # dat bleef Jannekes verkoopcontrole een hele dag liggen (zie test_scan_voorrang).
     klik = _job(1, "create", item="eigen")
-    volgorde = J._wachtrij_volgorde([scan, klik], NU)
-    assert volgorde[0] is klik, "een scan leest alleen; publiceren gaat voor"
+    vers = _job(5, "scan", item=None)
+    assert J._wachtrij_volgorde([vers, klik], NU)[0] is klik, "een verse scan wacht"
+    oud = _job(700, "scan", item=None)
+    assert J._wachtrij_volgorde([oud, klik], NU)[0] is oud
 
 
 # ── 2. Dubbele scans ─────────────────────────────────────────────────────────

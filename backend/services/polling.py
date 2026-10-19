@@ -271,7 +271,7 @@ async def _check_one(listing: dict, credentials: dict):
 # server kan het werk net zo goed klaarzetten: de extensie haalt elke 15
 # seconden zijn opdrachten op, dus een scanopdracht die hier klaargezet wordt
 # loopt vanzelf zodra de browser aanstaat. Geen nieuwe extensie nodig.
-VINTED_SCAN_NA_UREN = 4        # zo lang mag de laatste voltooide scan geleden zijn
+VINTED_SCAN_NA_UREN = 1        # zo lang mag de laatste voltooide scan geleden zijn (was 4; Janneke 19-10-2026)
 VINTED_HEARTBEAT_DAGEN = 3     # browsers die zo lang niet zijn gezien slaan we over
 
 

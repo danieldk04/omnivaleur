@@ -266,6 +266,7 @@ _TAXONOMY = {
         "tieners jongens", "tieners meisjes", "kinderen sportkleding",
         "kinderen schoenen", "kinderen wielrenkleding", "kinderen voetbalkleding",
         "kinderen zwemkleding", "kinderen accessoires", "kinderen tassen",
+        "kinderen luiertassen",
     ],
     "unisex": [
         "unisex truien", "unisex jassen", "unisex sportkleding",
@@ -1204,6 +1205,8 @@ def _kledingprompt(title: str | None, description: str | None, brand: str | None
         "- Children's bags and backpacks (kids' or toddler backpacks, school bags,\n"
         "  plush or animal-shaped backpacks with ears, bags in a kids' print) are\n"
         '  "kinderen tassen" with gender "kinderen", never a "sieraden" bag.\n'
+        "- Diaper bags, changing bags and mom bags (luiertas, verzorgingstas, mombag)\n"
+        '  are "kinderen luiertassen" with gender "kinderen".\n'
         "- If gender is not stated or implied, use unisex where a sensible unisex\n"
         "  category exists; otherwise pick the most likely gender.\n"
         "- Costumes, fancy dress and folk dress (lederhosen, dirndl, carnival,\n"
@@ -1751,6 +1754,22 @@ def kinderrubriek_met_geslacht(category: str | None, geslacht: str | None) -> st
     return category
 
 
+# LUIERTASSEN (19-10-2026, Janneke 31d28378: "Ik wilde 2 mombags plaatsen, maar
+# dat kan niet"). Haar "Mombag onesize" van Your Wishes is een luiertas, maar
+# stond als "sieraden schoudertassen", en haar eigen instelling "Vinted alleen
+# kinderen" hield hem daardoor tegen. Vinted heeft er een kinderrubriek voor
+# (Kids > Bathing & changing > Baby changing bags, 3394) en Marktplaats ook
+# (Kinderen en Baby's > Luiertassen). Alleen de titel telt: "tas met
+# verschoonmatje" in een omschrijving maakt een damestas nog geen luiertas.
+_LUIERTAS_RE = re.compile(
+    r"\b(luier(?:tas|tasje|tassen|rugzak|rugtas)\w*|verzorgingstas\w*|verschoontas\w*|"
+    r"mom ?bags?|diaper ?bags?|nappy ?bags?|changing ?bags?|wickeltasche\w*)\b", re.I)
+
+
+def _is_luiertas(title: str | None) -> bool:
+    return bool(_LUIERTAS_RE.search(title or ""))
+
+
 def _infer_attributes(title: str | None, description: str | None = None,
                       geslacht: str | None = None) -> dict:
     """Best-effort colour / gender / category from the listing text. Conservative:
@@ -1929,6 +1948,9 @@ def _infer_attributes(title: str | None, description: str | None = None,
                     out["category"] = key
                 break
 
+    if _is_luiertas(title):
+        out["gender"] = "kinderen"
+        out["category"] = "kinderen luiertassen"
     return out
 
 
@@ -1982,6 +2004,11 @@ async def _infer_attributes_smart(title: str | None, description: str | None,
     elif _is_footwear_category(merged.get("category")) and keyword_out.get("category"):
         # The mirror image: footwear picked with nothing in the text supporting it.
         merged["category"] = keyword_out["category"]
+
+    # Een luiertas is kinderspul, wat het model ook zegt (zie _LUIERTAS_RE).
+    if _is_luiertas(title):
+        merged["gender"] = "kinderen"
+        merged["category"] = "kinderen luiertassen"
 
     # EEN GRAND FOULARD IS GEEN SJAAL — zie _is_grand_foulard.
     #

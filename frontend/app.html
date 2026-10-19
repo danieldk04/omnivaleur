@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=346ccacec6"></script>
+<script src="/i18n.js?v=15a83fb199"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -11827,7 +11827,7 @@ const CATEGORIES = {
     ["kinderen sportkleding","Sportswear"],["kinderen wielrenkleding","Cycling Wear"],
     ["kinderen voetbalkleding","Football Kit"],["kinderen zwemkleding","Swimwear"],
     ["kinderen schoenen","Shoes"],["kinderen accessoires","Accessories"],
-    ["kinderen tassen","Bags & backpacks"],
+    ["kinderen tassen","Bags & backpacks"],["kinderen luiertassen","Changing bags"],
   ],
   unisex: [
     ["unisex truien","Jumpers / Hoodies"],["unisex jassen","Jackets / Coats"],
@@ -12493,7 +12493,7 @@ const NON_CLOTHING_PREFIXES = { 'games ': 'games', 'electronics ': 'electronics'
 // niet te publiceren. Spiegelt _GEEN_MAAT_CATEGORIEEN in crosslist.py.
 // Bewust NIET in NON_CLOTHING_PREFIXES: die map bepaalt óók het soort in het
 // bewerkscherm, en daar hoort een accessoire wel degelijk bij kleding.
-const GEEN_MAAT_CATEGORIEEN = new Set(['unisex accessoires', 'accessoires dames', 'kinderen accessoires', 'kinderen tassen']);
+const GEEN_MAAT_CATEGORIEEN = new Set(['unisex accessoires', 'accessoires dames', 'kinderen accessoires', 'kinderen tassen', 'kinderen luiertassen']);
 function isNonClothingItem(item) {
   const cat = String(item?.category || '').trim().toLowerCase();
   return Object.keys(NON_CLOTHING_PREFIXES).some(p => cat.startsWith(p))

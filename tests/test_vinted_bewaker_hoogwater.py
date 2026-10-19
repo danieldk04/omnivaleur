@@ -104,4 +104,4 @@ def test_invulscript_geeft_het_hoogwater_door_voor_de_klik():
     assert bericht < bron.index("submitListing(", hoog)
     achter = _bron("extension/background.js", None)
     assert 'msg.type === "VINTED_HOOGWATER"' in achter
-    assert achter.count("bgVindVintedAdvertentie(meta.payload || meta, meta.vintedNaId)") == 4
+    assert achter.count("bgVindVintedAdvertentie(meta.payload || meta, meta.vintedNaId)") == 5

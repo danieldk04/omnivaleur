@@ -38,6 +38,11 @@ def _oud():
     return mod
 
 
+def _volgorde(mod, rij):
+    from datetime import datetime, timezone
+    return [j["id"] for j in mod._wachtrij_volgorde(rij, datetime.now(timezone.utc))]
+
+
 def _janneke(scan_minuten_geleden):
     # Haar rij op 18-10: tientallen Vinted-plaatsingen van de avond ervoor, en de
     # scan die daarna klaargezet werd.
@@ -50,9 +55,8 @@ def test_oud_kreeg_de_scan_nooit_terwijl_er_een_plaatsing_liep(monkeypatch):
     oud = _oud()
     assert _uitgifte_op(oud, monkeypatch, _bouw_db(_janneke(1440), None, bezig=["vinted"]),
                         "vinted") == []
-    # En met het kanaal vrij ging de plaatsing voor, ook na een dag wachten.
-    uit = _uitgifte_op(oud, monkeypatch, _bouw_db(_janneke(1440), None), "vinted")
-    assert uit and uit[0]["action"] == "create"
+    # En met het kanaal vrij stond de scan achter alle dertig plaatsingen.
+    assert _volgorde(oud, _janneke(1440))[-1] == "scan"
 
 
 def test_nieuw_een_dag_oude_scan_naast_de_lopende_plaatsing(monkeypatch):
@@ -60,15 +64,15 @@ def test_nieuw_een_dag_oude_scan_naast_de_lopende_plaatsing(monkeypatch):
     assert [j["id"] for j in uit] == ["scan"]
 
 
-def test_nieuw_de_scan_gaat_ook_voor_als_het_kanaal_vrij_is(monkeypatch):
-    uit = _uitgifte(monkeypatch, _bouw_db(_janneke(25), None), "vinted")
-    assert uit and uit[0]["id"] == "scan"
+def test_nieuw_de_scan_gaat_ook_voor_als_het_kanaal_vrij_is():
+    import backend.api.jobs as J
+    assert _volgorde(J, _janneke(25))[0] == "scan"
 
 
 def test_een_verse_scan_wacht_gewoon_achter_de_plaatsingen(monkeypatch):
     # Pas na 20 minuten: een scan die net klaarstaat, loopt niet voor een klik uit.
-    uit = _uitgifte(monkeypatch, _bouw_db(_janneke(5), None), "vinted")
-    assert uit and uit[0]["action"] == "create"
+    import backend.api.jobs as J
+    assert _volgorde(J, _janneke(5))[-1] == "scan"
     assert _uitgifte(monkeypatch, _bouw_db(_janneke(5), None, bezig=["vinted"]), "vinted") == []
 
 
