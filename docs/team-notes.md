@@ -17754,3 +17754,10 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - Wat ze willen: product op Shopify zetten en dat het dan vanzelf ook op Marktplaats en Etsy komt. Daniel legde uit: de import draait elk uur (shopify_auto_import), maar daarna doorplaatsen is een eigen klik; zijn advies is plaatsen vanuit Omnivaleur. Verkoop meldt zich vanzelf bij Shopify, dat heeft hij bevestigd.
 - Wat Daniel toezegde of liet doorschemeren: (1) Etsy "staat op de lijst, binnen afzienbare tijd"; in de code staat alleen een kale aanzet uit juli (backend/platforms/etsy.py, geen inlogkoppeling), niet bruikbaar. (2) Herplaatsen op een vaste dag en tijd ("zo ingebouwd als je dat wilt"); nu bestaat alleen het aantal dagen. (3) Nog niet alle Shopify-tags komen mee, SKU wel; hij is ermee bezig.
 - Stand: ze overleggen intern en komen "in de komende maanden" terug. Ze maakte toch vandaag om 16:45 een account aan en liet haar Marktplaats inlezen (856 stuks, ze importeert zelf).
+
+## 19-10-2026: herplaatsen op vaste dagen en een vast uur (3d2e1f15), toezegging aan Voordeelsieraden
+
+- Daniel beloofde Mieneke in het gesprek dat herplaatsen op dag en tijd "zo ingebouwd" is; Daniel vroeg het na het gesprek te bouwen.
+- Voorkeuren > Automatic relisting on Marktplaats > "When should they go back online?": Any time (standaard, zoals altijd) of dagen plus een uur (Nederlandse tijd). Instelling `relist_moment` in de _settings-rij, geen databasewijziging nodig.
+- Server: de zesuursronde slaat wie een moment koos over; `relist_op_vast_moment` draait elk kwartier en zet alleen binnen het gekozen uur klaar. Op een gekozen dag mag het werk van alle dagen tot de volgende gekozen dag (dagelijkse grens x dagen), anders verlopen advertenties bij een wekelijkse keuze alsnog. Ze gaan daarna een voor een online, niet in dezelfde minuut.
+- Klanten krijgen de "What's new"-melding (NIEUWS_ID 2026-10-herplaatsmoment) met rondleiding van vier stappen. Getest in een losse Chrome met nagebootste gegevens, Engels en Nederlands, computer en telefoonbreedte; niet getest: een echte herplaatsronde op een gekozen uur.
