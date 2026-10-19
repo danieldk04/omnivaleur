@@ -10629,7 +10629,11 @@ function renderRefreshView() {
         : `Automatic relisting: your setting is ${relistDagen} days. ${mpActief.filter(l => (now - new Date(l.listed_at)) / 864e5 >= relistDagen).length} listing(s) are due and are being handled a batch a day.`;
       const rm = state.settings && state.settings.relist_moment;
       if (rm && rm.dagen && rm.dagen.length) {
-        lijn.textContent += ` They go back online only on ${relistDagenTekst(rm.dagen)} from ${String(rm.uur).padStart(2, '0')}:00 (your choice in Preferences).`;
+        // Een eigen tekstknoop: aan de zin ervoor vastgeplakt vertaalde de
+        // vertaallaag de hele regel niet meer (gemeten 19-10-2026).
+        const extra = document.createElement('span');
+        extra.textContent = `They go back online only on ${relistDagenTekst(rm.dagen)} from ${String(rm.uur).padStart(2, '0')}:00 (your choice in Preferences).`;
+        lijn.append(' ', extra);
       }
     }
   }
