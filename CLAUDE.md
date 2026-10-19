@@ -221,3 +221,10 @@ Daniel, 19-10-2026. Alles wat klanten vragen of wat we later willen bouwen staat
 - Bouw je iets uit de lijst: status naar Klaar met datum, bij de wijziging zelf.
 - Begin je aan nieuw werk of vraagt Daniel "wat staat er open", lees dan eerst dit bestand.
 - Commit en push het bestand zoals een codewijziging, zodat de tweede ontwikkelaar het ziet.
+
+**Vanzelf bijhouden, nooit wachten op een verzoek (Daniel, 19-10-2026).** Bijwerken van
+`docs/te-bouwen.md` hoort bij elke beurt, net als team-notes: voor je je antwoord afrondt
+vraag je jezelf of er iets is gevraagd, besloten, gebouwd of uitgesteld dat in de lijst
+hoort, en zo ja zet je het er meteen in. Dat geldt ook voor de dagelijkse routines. De
+lijst moet kloppen met de werkelijkheid: staat er "Gepland" bij iets wat al live staat,
+dan is dat een fout van jou. Daniel hoeft er nooit om te vragen.

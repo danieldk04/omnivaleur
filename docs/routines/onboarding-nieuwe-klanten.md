@@ -226,3 +226,9 @@ nieuwe klanten of problemen: twee zinnen.
 
 Meld eerlijk wat je niet kon zien: fouten die alleen in de browser van de klant staan en
 nooit naar de server gaan, en alles wat de Web Store nog niet heeft uitgeleverd.
+
+## Laatste stap: de centrale lijst bijwerken
+
+Heeft een klant vandaag iets gevraagd wat we niet hebben, of is er iets gebouwd of besloten
+uit `docs/te-bouwen.md`, werk dan dat bestand bij (teller omhoog, status, klantnaam) en
+commit het mee. Niets nieuws: niets doen.

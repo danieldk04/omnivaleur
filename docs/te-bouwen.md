@@ -4,7 +4,7 @@ Eén plek voor alles wat klanten vragen of wat we zelf willen bouwen. Daniel, Cl
 tweede ontwikkelaar kijken hier eerst. Daniel mag overal in schrijven, Claude werkt het
 bij in dezelfde beurt als er iets nieuws binnenkomt.
 
-Laatst bijgewerkt: 19-10-2026. De eerste vulling komt uit team-notes en overdracht; wat daar
+Laatst bijgewerkt: 19-10-2026 (Goudlief-punt erbij). De eerste vulling komt uit team-notes en overdracht; wat daar
 niet in staat, ontbreekt hier ook. Vul gerust aan.
 
 ## Hoe je dit leest
@@ -23,6 +23,7 @@ klantnaam erbij. Zo zie je wat het vaakst terugkomt.
 | Wat | Status | Prio | Keer gevraagd | Wie vroeg erom | Bron en opmerking |
 |---|---|---|---|---|---|
 | Etsy als kanaal (echte koppeling met inlog) | Gepland | Hoog | 1 | Voordeelsieraden | Daniel zei 19-10 "binnen afzienbare tijd" toe. In de code staat alleen een kale aanzet uit juli (`backend/platforms/etsy.py`), niet bruikbaar. Etsy is voor hen de plek voor de duurdere stukken. |
+| Marktplaats-advertenties koppelen aan bestaande Shopify-artikelen op titel en foto (in plaats van nieuwe artikelen te maken) | Overwegen | Hoog | 1 | Goudlief | Zijn Marktplaats-import (3.476 kandidaten) staat sinds 09-10 gepauzeerd, 45 van 125 nieuwe artikelen waren dubbel. Blokkeert dat hij zijn ~3.500 Marktplaats-advertenties kan beheren. |
 | Alle Shopify-tags meenemen bij import | Bezig | Midden | 2 | Voordeelsieraden, Janneke | SKU komt al mee. Tags deels, zie ook geslacht uit labels. |
 | Doorplaatsen vanuit Shopify zonder eigen klik | Overwegen | Midden | 2 | Voordeelsieraden, Toon | Nu draait de import elk uur, plaatsen is een eigen klik. Daniels advies aan klanten is plaatsen vanuit Omnivaleur. |
 | AI-titels voor Marktplaats en 2dehands (titels boven 60 tekens) | Uitgesteld | Midden | 1 | Goudlief | Module `backend/services/titel_ai.py` is gebouwd en getest, niet aangesloten. Kost ~0,2 cent per 15 titels. Detail in team-notes 07-10-2026. |

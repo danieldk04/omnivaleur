@@ -30,3 +30,9 @@ STAP 5, vastleggen. Voeg onderaan docs/team-notes.md een kort kopje toe "## DD-M
 STAP 6, rapport aan Daniel in de vier blokjes. Verandert er niets en is alles rustig, zeg dat in twee zinnen. Geen extra controlerondes, geen subagents, batch je opdrachten, lees gericht.
 
 Zichtbare grenzen: meld eerlijk wat je niet kon meten (bijv. fouten die alleen in de browser van de klant staan en nergens naar de server gaan).
+
+## Laatste stap: de centrale lijst bijwerken
+
+Heeft een klant vandaag iets gevraagd wat we niet hebben, of is er iets gebouwd of besloten
+uit `docs/te-bouwen.md`, werk dan dat bestand bij (teller omhoog, status, klantnaam) en
+commit het mee. Niets nieuws: niets doen.
