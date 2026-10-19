@@ -17761,3 +17761,9 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - Voorkeuren > Automatic relisting on Marktplaats > "When should they go back online?": Any time (standaard, zoals altijd) of dagen plus een uur (Nederlandse tijd). Instelling `relist_moment` in de _settings-rij, geen databasewijziging nodig.
 - Server: de zesuursronde slaat wie een moment koos over; `relist_op_vast_moment` draait elk kwartier en zet alleen binnen het gekozen uur klaar. Op een gekozen dag mag het werk van alle dagen tot de volgende gekozen dag (dagelijkse grens x dagen), anders verlopen advertenties bij een wekelijkse keuze alsnog. Ze gaan daarna een voor een online, niet in dezelfde minuut.
 - Klanten krijgen de "What's new"-melding (NIEUWS_ID 2026-10-herplaatsmoment) met rondleiding van vier stappen. Getest in een losse Chrome met nagebootste gegevens, Engels en Nederlands, computer en telefoonbreedte; niet getest: een echte herplaatsronde op een gekozen uur.
+
+## 19-10-2026: centrale lijst te-bouwen, en de opdracht aan de tweede ontwikkelaar
+
+- Daniel wil één plek met alles wat klanten vragen of we later willen bouwen, met prioriteit en hoe vaak iets gevraagd is. Eerste vulling staat in `docs/te-bouwen.md` (uit team-notes en overdracht). Elke sessie en elke routine werkt hem zelf bij; regels in CLAUDE.md en in de routines klantfouten en onboarding.
+- Drive was op Daniels Mac niet bereikbaar. Besluit: de tweede ontwikkelaar zet de lijst als eerste klus als Google Sheet in Drive (stappen bovenaan `docs/overdracht.md`), deelt hem met de leadmachine-sleutel, en wijst daarna CLAUDE.md naar de sheet. Tot dan is het bestand in de repo de bron.
+- Goudlief (5aae4954): proef afgelopen 11-10, geen abonnement, extensie sinds 11-10 stil, account op slot. Daniel stuurde Dahli op 19-10 een persoonlijk bericht via WhatsApp met de vraag of ze wil doorgaan.

@@ -25,6 +25,27 @@ tweede ontwikkelaar een tijd het werk overneemt. Doel: jij hebt direct het huidi
 doet geen dubbel werk en zet de vaste routines zelf aan zonder dat Daniel erom hoeft te
 vragen.
 
+## EERSTE KLUS voor de tweede ontwikkelaar: de to-build-lijst naar Drive (Daniel, 19-10-2026)
+
+Daniel wil dat de lijst `docs/te-bouwen.md` (alles wat klanten vragen of we later willen
+bouwen) als Google Sheet in Drive staat, zodat hij hem zelf kan lezen en aanpassen. Jij hebt
+daar toegang toe, de sessies op Daniels Mac op dit moment niet. Doe dit in je eerste sessie,
+vóór je eigen opdracht:
+
+1. Maak in Drive, map Omnivaleur, een Google Sheet "Omnivaleur te bouwen" met vier tabbladen:
+   Planning, Meest gevraagd, Klaar, Nee bewust niet. Zet de inhoud van `docs/te-bouwen.md` erin,
+   met dezelfde kolommen (wat, status, prioriteit, keer gevraagd, wie, opmerking).
+2. Deel de sheet met bewerkrechten met
+   `omnivaleur-leadmachine@advance-casing-508610-t9.iam.gserviceaccount.com`, zodat de
+   Sheets-klasse in `scripts/leadgen_sheets.py` erin kan lezen en schrijven (zelfde manier
+   als de kostensheet, zie `docs/routines/kosten-bijhouden.md`).
+3. Vervang de inhoud van `docs/te-bouwen.md` door een korte verwijzing met de sheet-link en
+   het bestand-id, en pas de sectie "De centrale lijst" in `CLAUDE.md` aan zodat die naar de
+   sheet wijst. Vanaf dan is de sheet de bron: Daniel past hem daar aan, alle sessies lezen en
+   schrijven er dezelfde dag in (regels uit CLAUDE.md blijven gelden).
+4. Zet een regel in `docs/team-notes.md` met datum en de link, commit en push.
+5. Meld Daniel de link in de vier blokjes.
+
 ## Wat je in je EERSTE sessie zelf doet, zonder te vragen
 
 1. `git pull`. Lees daarna deze pagina, de onderkant van `docs/team-notes.md` (laatste
