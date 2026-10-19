@@ -758,7 +758,7 @@
       "pillar": "C",
       "format": "competitor",
       "slug": "omnivaleur-vs-sellraze",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "omnivaleur-vs-sellraze",
       "priority": 88
     },
@@ -1599,6 +1599,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-print-shipping-labels-on-marktplaats",
       "published_at": "2026-10-18T12:19:39.710182+00:00"
+    },
+    {
+      "keyword": "omnivaleur vs sellraze",
+      "slug": "omnivaleur-vs-sellraze",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "action": "created",
+      "url_path": "/vs/omnivaleur-vs-sellraze",
+      "published_at": "2026-10-19T15:09:34.622535+00:00"
     }
   ]
 }
