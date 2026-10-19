@@ -17729,3 +17729,9 @@ Daniel: "doe wat je aanraadt, zodat hij geen fouten krijgt". Vervolg op de klant
 - 8f91a370: Vanguard-jeans verkocht op Vinted, verwijderen van Marktplaats vond hem niet; m2453944908 geeft 410 (verlopen). Niets meer online, klant/kanaal.
 - Doorstroming: 26cf5471 loopt (33 klaar in 6 uur), bcdf9aa4 liep tot de computer om 11:03 uitging (296 verlengingen wachten), 0b28c1ce sinds 01-10 stil. Geen rem gevonden.
 - Open: of 1.0.396/1.0.397 Jannekes Vinted-plaatsingen echt goed afmeldt is pas te meten als haar Chrome bijwerkt; de rest van de klanten plaatste deze 24 uur geen Vinted.
+
+## 19-10-2026: Onboarding nieuwe klanten (middag, liep om 17:10)
+
+- Zeven klanten in hun eerste week, één nieuw. Geen codewijziging, geen klantdata aangeraakt.
+- 09e089ec (info@voordeelsieraden.nl, Mieneke Post, familie van Jaap/Zilverwebsite): aangemeld 19-10 16:45 na Daniels Meet-gesprek van 11:00. Extensie 1.0.397. Marktplaats-scan 15:09 tot 15:14 UTC: 856 advertenties, allemaal met prijs (125 tot 4.450, mediaan 475) en foto, geen dubbele; antieke sieraden 455, ringen 155, kettinghangers 81, rest kettingen/oorbellen/armbanden. Ze importeert zelf (40 om 17:20, alle 40 gekoppeld aan hun live MP-advertentie, foto's al in onze opslag). Helft van de omschrijvingen draagt HTML (<u><strong><br/>); platteTekst in shared.js haalt precies die tags weg voor het typen. Geen fouten. Briefing voor Daniel, geen mailtje.
+- hbm789, kilofog140, Delftsblaeu, rambene, mickeyamg, quintblok: ongewijzigd sinds 17-10, niemand actief. Proef loopt af: quintblok 20-10 08:35, rambene 20-10 14:00, mickeyamg 20-10 21:49, Delftsblaeu 21-10 13:17. Geen nieuwe mailtjes.
