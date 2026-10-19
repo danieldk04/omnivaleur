@@ -206,3 +206,18 @@ missing context a session on another account already has.
 When you make or learn a decision of that kind, append a dated entry to
 `docs/team-notes.md` and push it — the same way a code change gets pushed.
 Do not let it live only in memory or only in chat.
+
+## De centrale lijst: docs/te-bouwen.md
+
+Daniel, 19-10-2026. Alles wat klanten vragen of wat we later willen bouwen staat in
+[docs/te-bouwen.md](docs/te-bouwen.md). Daniel leest en bewerkt het zelf; jij werkt het bij.
+
+- Vraagt een klant om iets wat we niet hebben (via Daniel, een klantmail of een routine),
+  zoek het eerst in dat bestand. Staat het er al: teller "Keer gevraagd" omhoog en de klant
+  erbij. Staat het er niet: nieuwe regel, status Overwegen. Doe dit in dezelfde beurt, ook
+  als niemand erom vraagt.
+- Zegt Daniel "later", "gaan we ooit doen" of "zet op de planning": status Uitgesteld, niet
+  zelf oppakken. Besluit hij niet te bouwen: naar "Nee, bewust niet", met de reden.
+- Bouw je iets uit de lijst: status naar Klaar met datum, bij de wijziging zelf.
+- Begin je aan nieuw werk of vraagt Daniel "wat staat er open", lees dan eerst dit bestand.
+- Commit en push het bestand zoals een codewijziging, zodat de tweede ontwikkelaar het ziet.
