@@ -2928,14 +2928,39 @@ def _mag_nog_werken(uid: str) -> bool:
         return True
 
 
-async def relist_expiring_marktplaats():
+async def relist_op_vast_moment():
+    """De ronde voor verkopers die een vaste dag en een vast uur kozen.
+
+    Draait elk kwartier, maar doet alleen iets binnen het gekozen uur van een
+    verkoper; daarbuiten stopt hij voordat er ook maar één advertentie gelezen
+    wordt. Vier keer per uur en niet één keer: een deploy op het hele uur mag
+    iemands zondagavond niet laten overslaan. Dubbel klaarzetten kan niet: een
+    klaargezette advertentie staat op 'relisting' en de dagtelling loopt mee.
+    Zie RELIST_MOMENT in backend/services/instellingen.py.
+    """
+    await relist_expiring_marktplaats(alleen_vast_moment=True)
+
+
+async def relist_expiring_marktplaats(alleen_vast_moment: bool = False):
     """
     Queue a new 'create' job for every Marktplaats listing that has been
     active for >= MARKTPLAATS_EXPIRY_DAYS days and hasn't been re-queued yet.
     Marks the old listing 'relisting' so this function won't double-trigger.
+
+    Verkopers met een vast herplaatsmoment slaat de gewone ronde over; die
+    komen alleen aan de beurt in relist_op_vast_moment, binnen hun eigen uur.
     """
     from datetime import datetime, timezone, timedelta
+    from backend.services.instellingen import (alle_relist_momenten, dagen_per_moment,
+                                               moment_staat_open)
     db = get_db()
+    nu = datetime.now(timezone.utc)
+    momenten = alle_relist_momenten()
+    nu_open: set[str] = set()
+    if alleen_vast_moment:
+        nu_open = {uid for uid, m in momenten.items() if moment_staat_open(m, nu)}
+        if not nu_open:
+            return
 
     # Elke verkoper stelt zelf in na hoeveel dagen een advertentie opnieuw
     # geplaatst wordt. Hier wordt met de RUIMSTE instelling opgehaald — anders
@@ -2945,7 +2970,10 @@ async def relist_expiring_marktplaats():
                                                RELIST_DAGEN_STANDAARD,
                                                alle_relist_dagen)
     dagen_per_verkoper = alle_relist_dagen()
-    await _echte_datums_ophalen(db)
+    if not alleen_vast_moment:
+        # Zwaar (loopt langs alle actieve advertenties) en het kan wachten: de
+        # gewone ronde doet het elke zes uur ook voor de verkopers met een moment.
+        await _echte_datums_ophalen(db)
     from backend.services.instellingen import lees as _lees_instellingen
     _auto_aan: dict[str, bool] = {}
 
@@ -2964,7 +2992,6 @@ async def relist_expiring_marktplaats():
     ruimste = min([RELIST_DAGEN_STANDAARD, *dagen_per_verkoper.values()] or
                   [RELIST_DAGEN_STANDAARD])
     ruimste = max(RELIST_DAGEN_MIN, ruimste)
-    nu = datetime.now(timezone.utc)
     cutoff = (nu - timedelta(days=ruimste)).isoformat()
     # ALLE ADVERTENTIES DIE AAN DE BEURT ZIJN, NIET DE OUDSTE 1.000.
     #
@@ -2982,11 +3009,22 @@ async def relist_expiring_marktplaats():
     # rijen over), en daarna zelf op leeftijd sorteren. Alleen de kolommen die
     # hieronder nodig zijn, want het zijn er duizenden.
     from backend.database import fetch_all_in
-    listings = (await naast_de_lus(lambda: fetch_all(lambda: db.table("listings")
-                .select("id,item_id,listed_at,platform_listing_url")
-                .eq("platform", "marktplaats")
-                .eq("status", "active")
-                .lt("listed_at", cutoff)))) or []
+    if alleen_vast_moment:
+        # Alleen de advertenties van wie nu zijn uur heeft, niet alle duizenden.
+        eigen_items = [r["id"] for r in ((await naast_de_lus(
+            lambda: fetch_all_in(lambda: db.table("items").select("id"),
+                                 "user_id", sorted(nu_open)))) or [])]
+        listings = (await naast_de_lus(lambda: fetch_all_in(lambda: db.table("listings")
+                    .select("id,item_id,listed_at,platform_listing_url")
+                    .eq("platform", "marktplaats")
+                    .eq("status", "active")
+                    .lt("listed_at", cutoff), "item_id", eigen_items))) or []
+    else:
+        listings = (await naast_de_lus(lambda: fetch_all(lambda: db.table("listings")
+                    .select("id,item_id,listed_at,platform_listing_url")
+                    .eq("platform", "marktplaats")
+                    .eq("status", "active")
+                    .lt("listed_at", cutoff)))) or []
     if not listings:
         return
     # Oudste eerst. Wie het langst wacht is het dichtst bij de 30 dagen
@@ -3034,6 +3072,13 @@ async def relist_expiring_marktplaats():
         try:
             eigenaar = eigenaar_van.get(listing["item_id"])
             if not eigenaar:
+                continue
+
+            # Een vast moment gekozen: dan alleen binnen dat uur, nooit tussendoor.
+            if alleen_vast_moment:
+                if eigenaar not in nu_open:
+                    continue
+            elif eigenaar in momenten:
                 continue
 
             # Advertenties uit Admarkt (zakelijk Marktplaats) hebben geen eigen
@@ -3117,7 +3162,15 @@ async def relist_expiring_marktplaats():
                     pass
 
             if eigenaar not in grens_per_verkoper:
-                grens_per_verkoper[eigenaar] = _dagelijkse_relist_grens(db, eigenaar)
+                grens = _dagelijkse_relist_grens(db, eigenaar)
+                if eigenaar in momenten:
+                    # Op een gekozen dag komt het werk van de dagen tot de
+                    # volgende gekozen dag samen; zie dagen_per_moment.
+                    from zoneinfo import ZoneInfo
+                    from backend.services.instellingen import RELIST_TIJDZONE
+                    weekdag = nu.astimezone(ZoneInfo(RELIST_TIJDZONE)).weekday()
+                    grens *= dagen_per_moment(momenten[eigenaar], weekdag)
+                grens_per_verkoper[eigenaar] = grens
             if per_verkoper.get(eigenaar, 0) >= grens_per_verkoper[eigenaar]:
                 # Morgen weer. De advertentie blijft op 'active' staan, dus hij
                 # komt de volgende ronde vanzelf opnieuw langs — en omdat we op

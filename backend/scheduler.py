@@ -57,7 +57,8 @@ def _off_the_request_loop(coro_fn):
 def start_scheduler():
     global _scheduler
     from backend.services.polling import poll_platform_statuses, plan_vinted_scans
-    from backend.services.crosslist import relist_expiring_marktplaats, extend_expiring_2dehands
+    from backend.services.crosslist import (relist_expiring_marktplaats, relist_op_vast_moment,
+                                            extend_expiring_2dehands)
     from backend.services.relist import herstel_vastgelopen_werk
     from backend.services.mp_enrich import vul_ontbrekende_teksten_aan
     from backend.services.shopify_orders import controleer_shopify_verkopen
@@ -116,6 +117,19 @@ def start_scheduler():
         hours=6,
         id="relist_marktplaats",
         replace_existing=True,
+    )
+    # Wie een vaste dag en een vast uur koos (Instellingen > Upkeep), krijgt zijn
+    # herplaatsingen alleen binnen dat uur. Elk kwartier kijken, zodat een deploy
+    # op het hele uur het moment niet laat overslaan; buiten iemands uur stopt de
+    # ronde voordat er een advertentie gelezen wordt.
+    _scheduler.add_job(
+        _off_the_request_loop(relist_op_vast_moment),
+        "interval",
+        minutes=15,
+        id="relist_marktplaats_vast_moment",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
     )
     # 2dehands: bijna verlopen zoekertjes GRATIS verlengen (niet herplaatsen).
     # Zie extend_expiring_2dehands — er wordt niets weggehaald, alleen de

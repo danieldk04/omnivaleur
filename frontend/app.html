@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=15a83fb199"></script>
+<script src="/i18n.js?v=7ba73387e2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -284,6 +284,17 @@ textarea { resize: vertical; min-height: 80px; }
 .vg-chip:hover { border-color: var(--blue); }
 .vg-chip input { width: 16px; height: 16px; flex: 0 0 16px; margin: 0; padding: 0; accent-color: var(--blue); cursor: pointer; }
 .vg-chip.on { border-color: var(--blue); background: rgba(37,99,235,.06); }
+/* Herplaatsmoment: twee keuzes als kaartjes, dagen als knoppen. */
+.rm-keuzes { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin: 8px 0 12px; }
+.rm-keuze { align-items: flex-start; flex-direction: row; font-weight: 400; padding: 12px 14px; }
+.rm-keuze input { margin-top: 2px; }
+.rm-keuze b { display: block; font-size: 13.5px; margin-bottom: 3px; }
+.rm-keuze small { display: block; font-size: 12px; color: var(--muted); line-height: 1.5; font-weight: 400; }
+.rm-dagen { display: flex; flex-wrap: wrap; gap: 6px; }
+.rm-dag { min-width: 46px; padding: 8px 10px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: border-color .12s, background .12s; }
+.rm-dag:hover { border-color: var(--blue); }
+.rm-dag[aria-pressed="true"] { border-color: var(--blue); background: var(--blue); color: #fff; }
+.rm-samenvatting { margin-top: 12px; padding: 10px 12px; border-radius: var(--radius-sm); background: rgba(37,99,235,.06); font-size: 12.5px; line-height: 1.6; }
 .vz-keuze { align-items: flex-start; }
 .vz-keuze input { margin-top: 2px; }
 .vz-uitleg { display: block; font-weight: 400; font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
@@ -944,29 +955,27 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
        vóór die datum ziet hem één keer; wie later begon kent het oude niet. -->
   <div id="nieuws-venster" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:900;align-items:center;justify-content:center;padding:16px">
     <div role="dialog" aria-labelledby="nieuws-titel" style="background:#fff;border-radius:20px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:92vh;overflow:auto">
-      <div style="position:relative;overflow:hidden;padding:26px 28px 22px;color:#fff;background:linear-gradient(135deg,#7f54b3 0%,#5b3a9e 55%,#2563eb 130%)">
+      <div style="position:relative;overflow:hidden;padding:26px 28px 22px;color:#fff;background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 55%,#0f766e 130%)">
         <div style="position:absolute;right:-50px;top:-50px;width:190px;height:190px;border-radius:50%;background:rgba(255,255,255,.12)"></div>
         <div style="display:flex;align-items:center;gap:14px;position:relative">
-          <div style="width:58px;height:58px;border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.25)"><img src="/assets/logos/woocommerce.svg" alt="WooCommerce" style="width:38px;height:38px"></div>
+          <div style="width:58px;height:58px;border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.25);font-size:32px">⏰</div>
           <div>
             <div style="font-size:11px;font-weight:900;letter-spacing:.8px;text-transform:uppercase;opacity:.85">What's new</div>
-            <div id="nieuws-titel" style="font-size:24px;font-weight:900;letter-spacing:-.4px;line-height:1.15">WooCommerce is live</div>
+            <div id="nieuws-titel" style="font-size:24px;font-weight:900;letter-spacing:-.4px;line-height:1.15">Relist at your best moment</div>
           </div>
         </div>
       </div>
       <div style="padding:20px 28px 22px">
-        <div style="font-size:14px;color:#334155;line-height:1.6;margin-bottom:14px">Your WooCommerce shop is now a channel, right next to Marktplaats, 2dehands, Vinted, eBay and Shopify.</div>
+        <div style="font-size:14px;color:#334155;line-height:1.6;margin-bottom:14px">You now choose on which days and at what time your Marktplaats listings come back online.</div>
         <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
-          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px">🔗</span><div style="font-size:13.5px;line-height:1.5"><b>Connect with one click.</b> Approve it in your own shop, nothing to copy.</div></div>
-          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px">📥</span><div style="font-size:13.5px;line-height:1.5"><b>Bring your products in</b> and put them on the marketplaces, or the other way around.</div></div>
-          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px">🔄</span><div style="font-size:13.5px;line-height:1.5"><b>Sold anywhere?</b> The product in your shop is set to out of stock. A sale in your shop takes it off the marketplaces.</div></div>
-          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px">💶</span><div style="font-size:13.5px;line-height:1.5"><b>Your own price for WooCommerce</b>, a filter and a margin calculator, like every other channel.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px">📅</span><div style="font-size:13.5px;line-height:1.5"><b>Pick your days and an hour</b>, for example Sunday from 20:00.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px">🔝</span><div style="font-size:13.5px;line-height:1.5"><b>On top of "Newest"</b> exactly when your buyers are looking.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px">✋</span><div style="font-size:13.5px;line-height:1.5"><b>Nothing changes unless you choose.</b> Without a choice, relisting goes on as before.</div></div>
         </div>
         <div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:16px">Curious what else we built, and how fast? Open <a href="#" onclick="sluitNieuws();showView('nieuw');return false">What's new</a> in the menu for the full timeline.</div>
         <!-- Knoppen blijven onderin staan, ook als de lijst op een telefoon moet scrollen. -->
         <div style="position:sticky;bottom:-22px;background:#fff;padding:10px 0 4px;margin-bottom:-4px">
-          <button class="btn btn-primary" style="width:100%;justify-content:center;background:linear-gradient(135deg,#7f54b3,#5b3a9e)" onclick="sluitNieuws();showView('platforms');connectWooCommerce()">Connect WooCommerce</button>
-          <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:6px" onclick="startRondleiding()">Show me in my dashboard</button>
+          <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="sluitNieuws();startRondleiding()">Show me where to choose</button>
           <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:6px" onclick="sluitNieuws()">Maybe later</button>
         </div>
       </div>
@@ -981,6 +990,12 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
        waarvan het doel niet in beeld is (telefoon, lege lijst) wordt overgeslagen.
        De teksten staan hier als HTML, zodat de vertaallaag ze vindt. -->
   <div id="rondleiding-stappen" hidden>
+    <section data-tour="herplaatsmoment">
+    <div data-view="preferences" data-doel="#relist-moment-blok">New, under <b>Automatic relisting on Marktplaats</b>: choose when your listings come back online.</div>
+    <div data-view="preferences" data-doel="#rm-keuze-vast">Pick <b>On days and at a time I choose</b>, then the days and the hour. Press Save.</div>
+    <div data-view="preferences" data-doel="#relist-moment-uitleg">Here you see when the next moment is and how many listings go back online then.</div>
+    <div data-view="dashboard" data-doel=".nav-item[data-view='nieuw']">All our updates live here, newest first. Come back any time.</div>
+    </section>
     <section data-tour="woocommerce">
     <div data-view="platforms" data-doel="[data-plat='woocommerce']"><b>WooCommerce</b> sits here, next to eBay and Shopify. Press Connect, approve it in your own shop, done.</div>
     <div data-view="items" data-doel="#items-body .pm-dot:last-child">Every item now has a <b>Woo</b> icon. Grey means it is not in your shop yet. Click it to publish.</div>
@@ -1925,6 +1940,47 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <button class="btn btn-sm btn-primary" onclick="saveRelistDagen()">Save</button>
           <span id="relist-dagen-status" style="font-size:12px;color:var(--muted)"></span>
         </div>
+        <!-- Herplaatsmoment (19-10-2026, Voordeelsieraden): wanneer een advertentie
+             die aan de beurt is weer online komt. Zie RELIST_MOMENT in
+             backend/services/instellingen.py. -->
+        <div id="relist-moment-blok" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border,#e5e7eb)">
+          <div style="font-weight:700;margin-bottom:4px">When should they go back online?</div>
+          <div style="font-size:12.5px;color:var(--muted);line-height:1.6">
+            A relisted ad lands at the top of "Newest" on Marktplaats. Choose when that happens.
+          </div>
+          <div class="rm-keuzes" role="radiogroup">
+            <label class="vg-chip rm-keuze" id="rm-keuze-altijd">
+              <input type="radio" name="relist-moment" value="altijd" onchange="kiesRelistMoment('altijd')">
+              <span><b>Any time</b><small>As soon as a listing is due, spread over the day. You don't need to do anything.</small></span>
+            </label>
+            <label class="vg-chip rm-keuze" id="rm-keuze-vast">
+              <input type="radio" name="relist-moment" value="vast" onchange="kiesRelistMoment('vast')">
+              <span><b>On days and at a time I choose</b><small>Due listings wait for your moment, so they are new exactly when your buyers are looking.</small></span>
+            </label>
+          </div>
+          <div id="relist-moment-keuze" style="display:none">
+            <div style="font-size:13px;font-weight:600;margin-bottom:6px">Days</div>
+            <div class="rm-dagen" id="relist-moment-dagen">
+              <button type="button" class="rm-dag" data-dag="0" aria-pressed="false" onclick="wisselRelistDag(this)">Mon</button>
+              <button type="button" class="rm-dag" data-dag="1" aria-pressed="false" onclick="wisselRelistDag(this)">Tue</button>
+              <button type="button" class="rm-dag" data-dag="2" aria-pressed="false" onclick="wisselRelistDag(this)">Wed</button>
+              <button type="button" class="rm-dag" data-dag="3" aria-pressed="false" onclick="wisselRelistDag(this)">Thu</button>
+              <button type="button" class="rm-dag" data-dag="4" aria-pressed="false" onclick="wisselRelistDag(this)">Fri</button>
+              <button type="button" class="rm-dag" data-dag="5" aria-pressed="false" onclick="wisselRelistDag(this)">Sat</button>
+              <button type="button" class="rm-dag" data-dag="6" aria-pressed="false" onclick="wisselRelistDag(this)">Sun</button>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px">
+              <label for="relist-moment-uur" style="font-size:13px;font-weight:600">From</label>
+              <select id="relist-moment-uur" onchange="toonRelistMomentUitleg()" style="max-width:120px" translate="no"></select>
+              <span style="font-size:12.5px;color:var(--muted)">Dutch time</span>
+            </div>
+          </div>
+          <div class="rm-samenvatting" id="relist-moment-uitleg"></div>
+          <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
+            <button class="btn btn-sm btn-primary" onclick="saveRelistMoment()">Save</button>
+            <span id="relist-moment-status" style="font-size:12px;color:var(--muted)"></span>
+          </div>
+        </div>
       </div>
       <!-- De verkoopvraag. Wie nieuwe voorraad verkoopt heeft er tien van en
            haalt zijn advertentie zelf weg als de voorraad op is; voor hem is
@@ -2426,9 +2482,16 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <button class="upd-chip" data-cat="plans" onclick="filterUpdates('plans')">Plans</button>
         </div>
         <div class="upd-lijst" id="upd-lijst">
-        <article class="upd upd-nieuw" data-id="2026-10-woocommerce" data-datum="2026-10-09" data-cat="channels">
+        <article class="upd upd-nieuw" data-id="2026-10-herplaatsmoment" data-datum="2026-10-19" data-cat="automation">
+          <div class="upd-punt">⏰</div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Automation</span> <span class="upd-badge">NEW</span></div>
+          <h3>Relist at your best moment</h3>
+          <p>Choose on which days and from what time your Marktplaats listings come back online, so they are on top of "Newest" when your buyers are looking. Without a choice nothing changes.</p>
+          <div class="upd-acties"><button class="btn btn-sm btn-ghost" onclick="startRondleiding('herplaatsmoment')">Show me in my dashboard</button></div>
+        </article>
+        <article class="upd" data-id="2026-10-woocommerce" data-datum="2026-10-09" data-cat="channels">
           <div class="upd-punt">🛍️</div>
-          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Channels</span> <span class="upd-badge">NEW</span></div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Channels</span></div>
           <h3>WooCommerce is live</h3>
           <p>Connect your WooCommerce shop with one click, bring your products in and publish to it like to any other channel. Sold elsewhere? The product in your shop is set to out of stock. It has its own price per platform, a filter and a margin line.</p>
           <div class="upd-acties"><button class="btn btn-sm btn-ghost" onclick="startRondleiding('woocommerce')">Show me in my dashboard</button></div>
@@ -5623,9 +5686,9 @@ async function toonImportSeintje() {
 // nieuws_gezien, dus ook op een andere computer) én in deze browser (voor als
 // de server even niet bereikbaar is). Nooit tonen zolang de instellingen niet
 // binnen zijn: dan weten we niet of hij hem al zag.
-const NIEUWS_ID = '2026-10-woocommerce';
-const NIEUWS_TOUR = 'woocommerce';
-const NIEUWS_SINDS = '2026-10-10';
+const NIEUWS_ID = '2026-10-herplaatsmoment';
+const NIEUWS_TOUR = 'herplaatsmoment';
+const NIEUWS_SINDS = '2026-10-19';
 let _nieuwsGetoond = false;
 function _nieuwsAlGezien() {
   if ((state.settings || {}).nieuws_gezien === NIEUWS_ID) return true;
@@ -10564,6 +10627,10 @@ function renderRefreshView() {
       lijn.textContent = dagen > 0
         ? `Automatic relisting: your setting is ${relistDagen} days, counted from the day a listing was published or imported. The first ones are due on ${datum} (in ${dagen} day${dagen === 1 ? '' : 's'}) — nothing runs before then.`
         : `Automatic relisting: your setting is ${relistDagen} days. ${mpActief.filter(l => (now - new Date(l.listed_at)) / 864e5 >= relistDagen).length} listing(s) are due and are being handled a batch a day.`;
+      const rm = state.settings && state.settings.relist_moment;
+      if (rm && rm.dagen && rm.dagen.length) {
+        lijn.textContent += ` They go back online only on ${relistDagenTekst(rm.dagen)} from ${String(rm.uur).padStart(2, '0')}:00 (your choice in Preferences).`;
+      }
     }
   }
 
@@ -13718,6 +13785,7 @@ async function loadRelistDagen() {
     toonSlottekstVinted(data);
     if (data.relist_dagen_min != null) veld.min = data.relist_dagen_min;
     if (data.relist_dagen_max != null) veld.max = data.relist_dagen_max;
+    toonRelistMoment(data.relist_moment || null);
   } catch (e) {
     // Een instelling die niet laadt mag de pagina niet blokkeren.
   }
@@ -14275,6 +14343,167 @@ async function saveWebshopMetRust() {
       : 'Saved — after a sale elsewhere we update your webshop stock again.';
   } catch (e) {
     if (melding) melding.textContent = `Could not save: ${e.message}`;
+  }
+}
+
+// ── Herplaatsmoment: wanneer komt een advertentie die aan de beurt is weer online.
+// null = op elk moment (zoals altijd). Anders { dagen: [0..6], uur: 0..23 },
+// maandag is 0, Nederlandse tijd. De server bewaakt het; zie RELIST_MOMENT.
+const RELIST_DAG_NAMEN = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const RELIST_DAG_NAMEN_NL = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'];
+
+// "Wednesday and Sunday" / "woensdag en zondag": de dagen zelf al in de taal van
+// het scherm, want een opsomming als invulling vertaalt de vertaallaag niet.
+function relistDagenTekst(dagen) {
+  const nl = !!(window.OmniI18n && OmniI18n.taal === 'nl');
+  const namen = dagen.map(d => (nl ? RELIST_DAG_NAMEN_NL : RELIST_DAG_NAMEN)[d]);
+  if (namen.length < 2) return namen.join('');
+  return `${namen.slice(0, -1).join(', ')} ${nl ? 'en' : 'and'} ${namen[namen.length - 1]}`;
+}
+
+function _relistMomentKeuze() {
+  const vast = document.querySelector('input[name="relist-moment"][value="vast"]');
+  if (!vast || !vast.checked) return null;
+  const dagen = [...document.querySelectorAll('#relist-moment-dagen .rm-dag[aria-pressed="true"]')]
+    .map(b => parseInt(b.dataset.dag, 10));
+  const uur = parseInt((document.getElementById('relist-moment-uur') || {}).value, 10);
+  return { dagen, uur: Number.isFinite(uur) ? uur : 20 };
+}
+
+function toonRelistMoment(moment) {
+  const uurVeld = document.getElementById('relist-moment-uur');
+  if (!uurVeld) return;
+  if (!uurVeld.options.length) {
+    for (let u = 0; u < 24; u++) {
+      const o = document.createElement('option');
+      o.value = String(u);
+      o.textContent = `${String(u).padStart(2, '0')}:00`;
+      uurVeld.appendChild(o);
+    }
+  }
+  const vast = !!(moment && moment.dagen && moment.dagen.length);
+  document.querySelectorAll('input[name="relist-moment"]').forEach(r => {
+    r.checked = r.value === (vast ? 'vast' : 'altijd');
+  });
+  document.querySelectorAll('#relist-moment-dagen .rm-dag').forEach(b => {
+    const aan = vast && moment.dagen.includes(parseInt(b.dataset.dag, 10));
+    b.setAttribute('aria-pressed', aan ? 'true' : 'false');
+  });
+  uurVeld.value = String(vast ? moment.uur : 20);
+  _toonRelistKeuzeKaartjes();
+  toonRelistMomentUitleg();
+}
+
+function _toonRelistKeuzeKaartjes() {
+  const vast = !!document.querySelector('input[name="relist-moment"][value="vast"]:checked');
+  const a = document.getElementById('rm-keuze-altijd');
+  const v = document.getElementById('rm-keuze-vast');
+  if (a) a.classList.toggle('on', !vast);
+  if (v) v.classList.toggle('on', vast);
+  const keuze = document.getElementById('relist-moment-keuze');
+  if (keuze) keuze.style.display = vast ? '' : 'none';
+}
+
+function kiesRelistMoment(soort) {
+  // Wie "vaste dagen" kiest en nog niets aangeklikt heeft, krijgt een
+  // voorbeeld om mee te beginnen in plaats van een leeg rijtje.
+  if (soort === 'vast' && !document.querySelector('#relist-moment-dagen .rm-dag[aria-pressed="true"]')) {
+    const zondag = document.querySelector('#relist-moment-dagen .rm-dag[data-dag="6"]');
+    if (zondag) zondag.setAttribute('aria-pressed', 'true');
+  }
+  _toonRelistKeuzeKaartjes();
+  toonRelistMomentUitleg();
+  const melding = document.getElementById('relist-moment-status');
+  if (melding) melding.textContent = 'Not saved yet.';
+}
+
+function wisselRelistDag(knop) {
+  knop.setAttribute('aria-pressed', knop.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+  toonRelistMomentUitleg();
+  const melding = document.getElementById('relist-moment-status');
+  if (melding) melding.textContent = 'Not saved yet.';
+}
+
+// Eerstvolgend moment in Nederlandse tijd, als Date. Rekent in Amsterdam, niet
+// in de tijdzone van de browser: de server doet dat ook.
+function _volgendRelistMoment(moment) {
+  const nu = new Date();
+  for (let i = 0; i < 8 * 24; i++) {
+    const t = new Date(nu.getTime() + i * 3600e3);
+    // Alleen getallen uit Intl halen: dagnamen hangen af van de taal van het
+    // scherm (in het Nederlands kwam hier "wo" terug en vond hij nooit iets).
+    const delen = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Amsterdam', year: 'numeric', month: 'numeric', day: 'numeric',
+      hour: 'numeric', hourCycle: 'h23',
+    }).formatToParts(t).map(p => [p.type, p.value]));
+    const dag = (new Date(Date.UTC(+delen.year, +delen.month - 1, +delen.day)).getUTCDay() + 6) % 7;
+    if (moment.dagen.includes(dag) && parseInt(delen.hour, 10) === moment.uur) return { dag };
+  }
+  return null;
+}
+
+function toonRelistMomentUitleg() {
+  const uitleg = document.getElementById('relist-moment-uitleg');
+  if (!uitleg) return;
+  const moment = _relistMomentKeuze();
+  if (state.settings && state.settings.auto_relist === false) {
+    uitleg.textContent = 'Automatic relisting is switched off above, so nothing is relisted at any moment until you switch it back on.';
+    return;
+  }
+  if (!moment) {
+    uitleg.textContent = 'Listings that are due go back online during the day, a few at a time.';
+    return;
+  }
+  if (!moment.dagen.length) {
+    uitleg.textContent = 'Pick at least one day.';
+    return;
+  }
+  const tijd = `${String(moment.uur).padStart(2, '0')}:00`;
+  const dagen = relistDagenTekst(moment.dagen);
+  // Zelfde rekensom als de server (_dagelijkse_relist_grens): de voorraad over
+  // twintig dagen verdeeld, minstens 25 en hoogstens 100 per dag, en op een
+  // gekozen dag het werk van alle dagen tot de volgende gekozen dag.
+  const actief = (state.listings || []).filter(l => l.platform === 'marktplaats'
+    && l.status === 'active' && (l.platform_listing_url || '').trim()).length;
+  const perDag = actief ? Math.max(25, Math.min(Math.ceil(actief / 20), 100)) : 0;
+  const langsteGat = Math.max(...moment.dagen.map((d, i, a) =>
+    (i + 1 < a.length ? a[i + 1] : a[0] + 7) - d));
+  const hoogstens = Math.min(perDag * langsteGat, actief);
+  const volgend = _volgendRelistMoment(moment);
+  // Elke zin een eigen tekstknoop: dan vertaalt de vertaallaag ze los en valt
+  // er geen Engels stuk tussendoor als één zin een getal of naam draagt.
+  const zinnen = [`Due listings go back online every ${dagen} from ${tijd}.`];
+  if (volgend) zinnen.push(`Next time: ${relistDagenTekst([volgend.dag])} at ${tijd}.`);
+  if (hoogstens) zinnen.push(`With your ${actief} Marktplaats listings that is at most ${hoogstens} at a time; they go out one after another from ${tijd}, not all in the same minute.`);
+  if (langsteGat >= 5 && actief >= 300) zinnen.push('Tip: pick a second day, so each moment stays smaller.');
+  zinnen.push('Keep your computer on with Chrome open around that time. If it is off, they go out as soon as it is back on.');
+  uitleg.replaceChildren(...zinnen.flatMap((z, i) => {
+    const el = document.createElement('span');
+    el.textContent = z;
+    return i ? [document.createTextNode(' '), el] : [el];
+  }));
+}
+
+async function saveRelistMoment() {
+  const melding = document.getElementById('relist-moment-status');
+  const moment = _relistMomentKeuze();
+  if (moment && !moment.dagen.length) { melding.textContent = 'Pick at least one day.'; return; }
+  melding.textContent = 'Saving…';
+  try {
+    const r = await apiFetchRetry(`${API}/api/items/settings`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ relist_moment: moment }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+    state.settings = { ...state.settings, ...data };
+    toonRelistMoment(data.relist_moment || null);
+    melding.textContent = data.relist_moment
+      ? 'Saved — relisting now only happens at your chosen moment.'
+      : 'Saved — listings are relisted any time they are due.';
+    if (typeof renderRefreshView === 'function') { try { renderRefreshView(); } catch (_) {} }
+  } catch (e) {
+    melding.textContent = `Could not save: ${e.message}`;
   }
 }
 

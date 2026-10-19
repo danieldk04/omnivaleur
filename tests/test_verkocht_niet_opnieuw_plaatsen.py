@@ -90,7 +90,7 @@ def test_publicatie_van_een_verkocht_artikel_wordt_geannuleerd(monkeypatch):
 def test_de_verversronde_slaat_verkochte_artikelen_over():
     bron = (WORTEL / "backend/services/crosslist.py").read_text()
     kop = bron.index("async def relist_expiring_marktplaats")
-    blok = bron[kop:kop + 12000]
+    blok = bron[kop:kop + 16000]
     assert '.eq("status", "sold")' in blok
 
 

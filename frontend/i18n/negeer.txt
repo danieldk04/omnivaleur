@@ -176,3 +176,10 @@ input[name="bulk-verzending"]:checked
 X-Woo-Via-Browser
 X-Woo-Soort
 #modal-account-wissen .modal
+input[name="relist-moment"][value="vast"]
+#relist-moment-dagen .rm-dag[aria-pressed="true"]
+input[name="relist-moment"]
+#relist-moment-dagen .rm-dag
+input[name="relist-moment"][value="vast"]:checked
+#relist-moment-dagen .rm-dag[data-dag="6"]
+Europe/Amsterdam

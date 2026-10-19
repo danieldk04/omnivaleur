@@ -14,7 +14,7 @@ from tests.test_herplaatsronde_ziet_alles import _DB, _advertentie
 ZONDAG_20 = {"dagen": [6], "uur": 20}
 
 
-def _draai(monkeypatch, *, vast_moment, open_nu=True, aantal=5, grens=25):
+def _draai(monkeypatch, *, vast_moment, open_nu=True, aantal=5, grens=25, dagen_samen=1):
     nu = datetime.now(timezone.utc)
     paren = ([_advertentie(i, "mieneke", 35, nu) for i in range(aantal)] +
              [_advertentie(5000 + i, "jaap", 35, nu) for i in range(3)])
@@ -28,6 +28,7 @@ def _draai(monkeypatch, *, vast_moment, open_nu=True, aantal=5, grens=25):
     monkeypatch.setattr(instellingen, "alle_relist_dagen", lambda: {"mieneke": 30, "jaap": 30})
     monkeypatch.setattr(instellingen, "alle_relist_momenten", lambda: {"mieneke": ZONDAG_20})
     monkeypatch.setattr(instellingen, "moment_staat_open", lambda m, _nu: open_nu)
+    monkeypatch.setattr(instellingen, "dagen_per_moment", lambda _m, _w: dagen_samen)
     monkeypatch.setattr(instellingen, "lees", lambda u: {"auto_relist": True, "relist_dagen": 30})
     klaargezet = []
 
@@ -58,13 +59,13 @@ def test_buiten_het_uur_gebeurt_niets(monkeypatch):
 
 
 def test_een_keer_per_week_krijgt_het_werk_van_zeven_dagen(monkeypatch):
-    # Grens 25 per dag, alleen zondag: 175 op zondag, niet 25.
-    klaargezet = _draai(monkeypatch, vast_moment=True, aantal=200, grens=25)
+    # Grens 25 per dag, alleen zondag (zeven dagen samen): 175, niet 25.
+    klaargezet = _draai(monkeypatch, vast_moment=True, aantal=200, grens=25, dagen_samen=7)
     assert klaargezet.count("mieneke") == 175
 
 
 def test_moment_valt_in_nederlandse_tijd():
-    # Zondag 19-10... is maandag; neem zondag 18-10-2026 20:30 in Amsterdam (CEST, UTC+2).
+    # Zondag 18-10-2026 20:30 in Amsterdam (zomertijd, UTC+2).
     zondag_avond = datetime(2026, 10, 18, 18, 30, tzinfo=timezone.utc)
     assert instellingen.moment_staat_open(ZONDAG_20, zondag_avond)
     assert not instellingen.moment_staat_open(ZONDAG_20, zondag_avond - timedelta(hours=1))

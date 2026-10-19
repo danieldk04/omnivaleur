@@ -31,6 +31,22 @@ RELIST_DAGEN_STANDAARD = 27
 RELIST_DAGEN_MIN = 7
 RELIST_DAGEN_MAX = 85
 
+# OP EEN VASTE DAG EN EEN VAST UUR HERPLAATSEN (19-10-2026, Voordeelsieraden).
+#
+# Mieneke vroeg in het gesprek met Daniel of ze kan kiezen op welke dag en welk
+# uur haar advertenties opnieuw online komen: een advertentie die net geplaatst
+# is staat bovenaan "Nieuwste", en dat wil je op het moment dat er gekeken
+# wordt. Tot nu toe ging dat de hele dag door, wanneer de ronde van zes uur
+# toevallig langskwam.
+#
+# None = zoals altijd: op elk moment, verspreid over de dag. Anders
+# {"dagen": [0..6], "uur": 0..23}, maandag is 0, Nederlandse tijd. Een
+# advertentie die aan de beurt is wacht dan tot de eerstvolgende gekozen dag en
+# gaat vanaf dat uur weer online. Het aantal dagen hierboven blijft gewoon
+# gelden: dit kiest alleen WANNEER, niet hoe vaak.
+RELIST_MOMENT = "relist_moment"
+RELIST_TIJDZONE = "Europe/Amsterdam"
+
 # Welke categoriegroepen deze verkoper op Vinted wil hebben. Leeg = alles wat
 # Vinted zelf toestaat. Dit is een VOORKEUR, geen platformregel: Jaap
 # Zilverwebsite wil er alleen sieraden op, maar zijn buurman mag daar prima
@@ -245,7 +261,7 @@ VINTED_SLOT_KEUZES = ("zelfde", "geen", "eigen")
 SLOTTEKST_VINTED = "slottekst_vinted"
 
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
-             "auto_relist": True, "vinted_herplaatsen": False, VERKOOPVRAAG: True, WEBSHOP_MET_RUST: False, VERZENDING_2DH_WOORDEN: [],
+             "auto_relist": True, RELIST_MOMENT: None, "vinted_herplaatsen": False, VERKOOPVRAAG: True, WEBSHOP_MET_RUST: False, VERZENDING_2DH_WOORDEN: [],
              VERZENDING_2DH_BRIEF_ONDER: 0, VERZENDING_2DH_MODUS: "standaard",
              "fabrikant_naam": "", "fabrikant_adres": "", "fabrikant_email": "",
              FABRIKANT_MEESTUREN: True,
@@ -274,6 +290,7 @@ def _schoon(rauw: dict | None) -> dict:
     # listen op marktplaats" is een terechte klacht als je die knop niet hebt.
     if "auto_relist" in rauw:
         uit["auto_relist"] = bool(rauw.get("auto_relist"))
+    uit[RELIST_MOMENT] = schoon_moment(rauw.get(RELIST_MOMENT))
     # Vinted verbiedt sinds 05-10-2026 (voorwaarden par. 6) externe software en
     # het herhaaldelijk verwijderen en opnieuw plaatsen van hetzelfde artikel.
     # Daarom staat herplaatsen op Vinted standaard UIT en kost het een bewuste klik.
@@ -355,6 +372,61 @@ def _schoon(rauw: dict | None) -> dict:
         uit["vinted_groepen"] = [g for g in
                                  dict.fromkeys(str(x).strip().lower() for x in groepen)
                                  if g in VINTED_GROEPEN_GELDIG]
+    return uit
+
+
+def schoon_moment(rauw) -> dict | None:
+    """Een geldig herplaatsmoment, of None (= op elk moment, zoals altijd).
+
+    Alles wat niet klopt wordt None en niet een gok. Een lege dagenlijst zou
+    anders betekenen dat er nooit meer iets herplaatst wordt, en dat is precies
+    het stille stilvallen waar een verkoper niets van merkt tot zijn
+    advertenties weg zijn."""
+    if not isinstance(rauw, dict):
+        return None
+    try:
+        dagen = sorted({int(d) for d in (rauw.get("dagen") or []) if 0 <= int(d) <= 6})
+        uur = int(rauw.get("uur"))
+    except (TypeError, ValueError):
+        return None
+    if not dagen or not 0 <= uur <= 23:
+        return None
+    return {"dagen": dagen, "uur": uur}
+
+
+def moment_staat_open(moment: dict | None, nu_utc) -> bool:
+    """Is het nu (Nederlandse tijd) een gekozen dag en het gekozen uur?"""
+    if not moment:
+        return False
+    from zoneinfo import ZoneInfo
+    lokaal = nu_utc.astimezone(ZoneInfo(RELIST_TIJDZONE))
+    return lokaal.weekday() in moment["dagen"] and lokaal.hour == moment["uur"]
+
+
+def dagen_per_moment(moment: dict, weekdag: int) -> int:
+    """Hoeveel dagen herplaatswerk er op deze gekozen dag samenkomt.
+
+    Wie alleen op zondag kiest, krijgt op zondag het werk van zeven dagen. De
+    dagelijkse grens per verkoper is zo berekend dat de hele voorraad binnen
+    twintig dagen rond is; zonder deze vermenigvuldiging zou een wekelijkse
+    keuze maar een zevende daarvan halen en verlopen de advertenties alsnog."""
+    dagen = moment["dagen"]
+    volgende = [d for d in dagen if d > weekdag]
+    tot = (volgende[0] if volgende else dagen[0] + 7) - weekdag
+    return max(1, tot)
+
+
+def alle_relist_momenten() -> dict[str, dict]:
+    """Per verkoper die een vast moment koos: dat moment. Eén aanroep."""
+    uit: dict[str, dict] = {}
+    try:
+        for rij in fetch_all(lambda: get_db().table("platform_credentials")
+                             .select("user_id,extra_data").eq("platform", RIJ)):
+            moment = schoon_moment((rij.get("extra_data") or {}).get(RELIST_MOMENT))
+            if moment:
+                uit[rij["user_id"]] = moment
+    except Exception as e:  # noqa: BLE001
+        logger.warning("herplaatsmomenten niet gelezen: %s", e)
     return uit
 
 
