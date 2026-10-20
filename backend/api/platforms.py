@@ -314,6 +314,25 @@ async def ebay_verzenddiensten(marktplaats: str = "EBAY_BE", user_id: str = Depe
             "fout": None if blokken else resp.text[:600]}
 
 
+@router.get("/ebay/proef-offer")
+async def ebay_proef_offer(offer_id: str, user_id: str = Depends(get_current_user)):
+    """Laat eBay een nog niet gepubliceerd offer nakijken zonder te publiceren
+    (get_listing_fees). Toont de site, de rubriek en wat eBay ervan vindt."""
+    import httpx
+    from backend.platforms.ebay import INVENTORY_API
+    rij = await naast_de_lus(lambda: _ebay_rij(user_id))
+    platform = EbayPlatform()
+    credentials = await platform._ensure_fresh_token(rij)
+    kop = platform._auth_headers(credentials, write=True)
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        offer = await client.get(f"{INVENTORY_API}/offer/{offer_id}", headers=kop)
+        fees = await client.post(f"{INVENTORY_API}/offer/get_listing_fees",
+                                 json={"offers": [{"offerId": offer_id}]}, headers=kop)
+    o = offer.json() if offer.is_success else {}
+    return {"offer": {k: o.get(k) for k in ("marketplaceId", "categoryId", "status", "listingPolicies", "merchantLocationKey")},
+            "fees_status": fees.status_code, "fees": fees.text[:1500]}
+
+
 @router.get("/ebay/ship-from")
 def ebay_get_ship_from(user_id: str = Depends(get_current_user)):
     """Return the user's saved eBay ship-from address (used for their merchant
