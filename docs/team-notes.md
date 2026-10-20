@@ -17788,3 +17788,8 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - 26cf5471: zeven Vinted-scans "niet ingelogd" (al afgehandeld), Vinted-sessie van de klant.
 - Doorstroming: bcdf9aa4 loopt (60 verlengingen in 8 uur, 1.0.398, nu aan); 5 verzendkostbijwerkingen wachten achter 226 verlengingen, laatste bijwerking geslaagd, geen rem. 96e30080: 53 herplaatsparen sinds 03:09, computer sinds 19-10 13:43 uit. 0b28c1ce sinds 01-10 stil. 1ba42900 nog op 1.0.395, sinds 19-10 01:52 uit.
 - Open: niets nieuws van de vorige ronde; de armband moet de klant zelf opnieuw plaatsen of als niet verkocht aanmerken.
+
+## 20-10-2026: Dagelijkse klantfouten (ochtend, liep om 09:34, vlak na de middagronde)
+
+- De middagronde liep om 09:21 al over dezelfde 24 uur. Nagemeten: 368 opdrachten, 10 fouten bij 3 klanten, geen enkele fout in de laatste 3 uur, niets hangt op claimed. /health ok op 5b210c0a. Geen codewijziging, geen klantdata aangeraakt.
+- Wachtrijen zoals in de middagronde beschreven (bcdf9aa4 verlengingen, 96e30080 en 0b28c1ce computer uit, 1ba42900 uit op 1.0.395). Open: niets nieuws.
