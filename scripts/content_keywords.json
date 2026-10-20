@@ -768,7 +768,7 @@
       "pillar": "B",
       "format": "howto",
       "slug": "how-to-create-bundles-on-vinted",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "bundel-maken-op-vinted",
       "priority": 89
     },
@@ -1609,6 +1609,16 @@
       "action": "created",
       "url_path": "/vs/omnivaleur-vs-sellraze",
       "published_at": "2026-10-19T15:09:34.622535+00:00"
+    },
+    {
+      "keyword": "how to create bundles on vinted",
+      "slug": "how-to-create-bundles-on-vinted",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-create-bundles-on-vinted",
+      "published_at": "2026-10-20T13:15:19.567269+00:00"
     }
   ]
 }
