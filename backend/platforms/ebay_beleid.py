@@ -41,10 +41,13 @@ _CATEGORIE = [{"name": "ALL_EXCLUDING_MOTORS_VEHICLES"}]
 
 # Binnenlandse standaardverzending per marktplaats. Gemeten met GeteBayDetails
 # op site 146 (ebay.nl): NL_StandardDelivery heet daar "Standaardverzending".
-_VERZENDDIENST = {"EBAY_NL": "NL_StandardDelivery", "EBAY_BE": "BE_StandardDelivery"}
+_OPHALEN = {"EBAY_NL": "NL_PickUp", "EBAY_BE": "BENL_Pickup"}
+_VERZENDDIENST = {"EBAY_NL": "NL_StandardDelivery", "EBAY_BE": "BENL_DePostStandardShipping"}
 
 # Welke eBay-sites een klant mag kiezen (extra_data.ebay_marktplaats). Zonder keuze
 # geldt settings.ebay_marketplace_id (EBAY_NL), dus bestaande klanten merken niets.
+# De verzenddienstcodes staan per site anders: gemeten 20-10-2026 met GeteBayDetails op
+# site 123 (ebay.be Nederlands). "BE_StandardDelivery" werd door eBay geweigerd (LSAS).
 # EBAY_BE sinds 20-10-2026: ebay.be is Nederlandstalig, de advertentietekst blijft gelijk.
 TOEGESTANE_MARKTPLAATSEN = ("EBAY_NL", "EBAY_BE")
 
@@ -106,7 +109,7 @@ def _verzend_beleid(inst: dict, marktplaats: str) -> dict:
         "shippingCost": {"value": f"{kosten:.2f}", "currency": "EUR"},
         "freeShipping": kosten == 0,
     }]
-    if inst.get("ophalen") and marktplaats == "EBAY_NL":  # NL_PickUp alleen gemeten op ebay.nl
+    if inst.get("ophalen") and marktplaats in _OPHALEN:
         # OPHALEN IS OP EBAY.NL EEN VERZENDDIENST, GEEN VINKJE (15-09-2026).
         # Gemeten op het eigenaarsaccount: localPickup true gaf "Ongeldige
         # aanvraag", met of zonder extra dienst. NL_PickUp ("Ophalen bij de
@@ -114,7 +117,7 @@ def _verzend_beleid(inst: dict, marktplaats: str) -> dict:
         # geaccepteerd.
         diensten.append({
             "sortOrder": 2,
-            "shippingServiceCode": "NL_PickUp",
+            "shippingServiceCode": _OPHALEN[marktplaats],
             "shippingCost": {"value": "0.00", "currency": "EUR"},
             "freeShipping": False,
         })

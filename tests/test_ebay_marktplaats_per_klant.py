@@ -84,7 +84,7 @@ def test_belgie_gebruikt_ebay_be_overal(opname):
     fulf = nep.beleid["fulfillment"]
     assert fulf["marketplaceId"] == "EBAY_BE"
     diensten = fulf["shippingOptions"][0]["shippingServices"]
-    assert [d["shippingServiceCode"] for d in diensten] == ["BE_StandardDelivery"], "geen NL_PickUp op ebay.be"
+    assert [d["shippingServiceCode"] for d in diensten] == ["BENL_DePostStandardShipping", "BENL_Pickup"], "ophalen met de Belgische code, nooit NL_PickUp"
     assert offer["categoryId"] == "99999" and gekozen == ["EBAY_BE"], \
         "de ebay.nl-rubriek van het artikel mag niet naar ebay.be"
 
