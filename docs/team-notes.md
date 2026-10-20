@@ -17818,3 +17818,11 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - Daniel vroeg op 20-10 de eerste klus uit `docs/overdracht.md` (to-build naar Drive) uit te voeren. Gedaan vanaf Daniels account: sheet "Omnivaleur te bouwen" in de map Omnivaleur, bewust één tabblad (Daniel: "minimalistisch en clean", dus geen vier tabbladen), alles op een rij gesorteerd op status. Link: https://docs.google.com/spreadsheets/d/1tsuITAh4E5WQbb-OoEsiH7tBmU2Mno8Hm0utM5buXXQ/edit
 - Gedeeld met bewerkrechten met omnivaleur-leadmachine@advance-casing-508610-t9.iam.gserviceaccount.com. Nieuw hulpscript `scripts/te_bouwen.py` (lijst, voeg, wijzig). `docs/te-bouwen.md` is nu een verwijzing, CLAUDE.md wijst naar de sheet.
 - Nieuwe regel erbij: eBay in andere EU-landen (BE, DE, FR, ES, IT); Daniel heeft geen eBay-testaccount in die landen. Besluit over beginnen met België nog open.
+
+## 20-10-2026: eBay België, eerste stap (eBay-site per klant)
+
+- Daniel: platform is op de EU gericht, begin met ebay.be. Geen eBay-account buiten ebay.nl, dus de proef loopt via zijn eigen account (dkresellacademy) op ebay.nl, grensoverschrijdend.
+- Gebouwd (commits d1961442 en daarna): `extra_data.ebay_marktplaats` (EBAY_NL of EBAY_BE) bepaalt per klant offer-site, taal (nl-BE), domein, rubrieken-boom, beleidsregels en welke sleutel de beleidsnummers krijgen (`ebay_beleid` voor NL zoals altijd, `ebay_beleid_EBAY_BE` voor België). Wie niets koos blijft op EBAY_NL. Route `GET/POST /api/platforms/ebay/marktplaats`.
+- Bewust anders op ebay.be: de vaste rubrieken en de bewaarde eBay-rubriek van een artikel (ebay.nl-nummers) worden niet gebruikt, eBay kiest uit zijn eigen BE-boom; geen NL_PickUp bij ophalen; verzenddienst `BE_StandardDelivery`.
+- NIET bewezen: dat eBay `BE_StandardDelivery` en de rubrieken op ebay.be accepteert, en dat Daniels account grensoverschrijdend mag verkopen. Lokaal meten kan niet (eBay-sleutel werkt alleen op de server). Eerst een echte proefadvertentie, dan pas een klant erop zetten.
+- Proef: 4 nieuwe tests tegen de nep-eBay, volledige reeks 2725 geslaagd; de nieuwe tests falen op de oude code.
