@@ -315,7 +315,7 @@ async def ebay_verzenddiensten(marktplaats: str = "EBAY_BE", user_id: str = Depe
 
 
 @router.get("/ebay/proef-offer")
-async def ebay_proef_offer(offer_id: str, user_id: str = Depends(get_current_user)):
+async def ebay_proef_offer(sku: str, user_id: str = Depends(get_current_user)):
     """Laat eBay een nog niet gepubliceerd offer nakijken zonder te publiceren
     (get_listing_fees). Toont de site, de rubriek en wat eBay ervan vindt."""
     import httpx
@@ -325,6 +325,11 @@ async def ebay_proef_offer(offer_id: str, user_id: str = Depends(get_current_use
     credentials = await platform._ensure_fresh_token(rij)
     kop = platform._auth_headers(credentials, write=True)
     async with httpx.AsyncClient(timeout=30.0) as client:
+        lijst = await client.get(f"{INVENTORY_API}/offer", params={"sku": sku}, headers=kop)
+        offers = (lijst.json().get("offers") or []) if lijst.is_success else []
+        if not offers:
+            return {"fout": "geen offer voor deze sku", "status": lijst.status_code, "tekst": lijst.text[:300]}
+        offer_id = offers[0]["offerId"]
         offer = await client.get(f"{INVENTORY_API}/offer/{offer_id}", headers=kop)
         fees = await client.post(f"{INVENTORY_API}/offer/get_listing_fees",
                                  json={"offers": [{"offerId": offer_id}]}, headers=kop)
