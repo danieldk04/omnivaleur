@@ -183,3 +183,5 @@ input[name="relist-moment"]
 input[name="relist-moment"][value="vast"]:checked
 #relist-moment-dagen .rm-dag[data-dag="6"]
 Europe/Amsterdam
+Choose one of:
+Unknown eBay site
