@@ -4353,6 +4353,41 @@ function _vintedPrijsKlopt(it, item) {
   return Math.abs(hun - onze) < 0.01;
 }
 
+// DE PRIJS DIE VINTED NU ZELF TOONT VOOR DEZE ADVERTENTIE (20-10-2026).
+//
+// Geen enkele Vinted-prijswijziging is sinds augustus als gelukt geboekt: 42
+// opdrachten, alle 42 "timed out" met als laatste stap "prijs gezet", terwijl
+// de prijs op Vinted wél veranderde (klant 8f91a370: doel 29,97, openbare
+// pagina toonde 29,97). De opslagklik stuurt het tabblad weg, het invulscript
+// sterft, en de adresbewaking in onUpdated herkende de landing nooit. Hier
+// kijken we niet naar een adres maar naar het resultaat: de openbare pagina
+// draagt een Product-blok (ld+json) met offers.price. Gemeten op
+// vinted.nl/items/10424476795: precies één zo'n blok, prijs als getal.
+// Alleen het blok van DEZE advertentie telt (de url noemt het nummer); niets
+// gevonden of niet te lezen = null, en dan blijft het een mislukking.
+async function bgVintedPrijsOpPagina(payload) {
+  const lid = String(payload?.platform_listing_id || "").trim();
+  if (!/^\d+$/.test(lid)) return null;
+  let origin = VINTED_ORIGINS[0];
+  try { origin = new URL(payload.platform_listing_url).origin; } catch (_) {}
+  if (!/^https:\/\/www\.vinted\.[a-z.]+$/.test(origin)) return null;
+  const r = await fetch(`${origin}/items/${lid}`, { credentials: "include", redirect: "follow" });
+  if (!r.ok) return null;
+  const html = await r.text();
+  const blok = /<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi;
+  for (let m; (m = blok.exec(html));) {
+    let d;
+    try { d = JSON.parse(m[1]); } catch (_) { continue; }
+    for (const p of Array.isArray(d) ? d : [d]) {
+      const o = p && p.offers;
+      if (!o || !new RegExp(`/items/${lid}(?:\\D|$)`).test(String(o.url || p.url || ""))) continue;
+      const prijs = Number(String(o.price ?? "").replace(",", "."));
+      if (Number.isFinite(prijs) && prijs > 0) return prijs;
+    }
+  }
+  return null;
+}
+
 // naId: het hoogste advertentienummer in de kast vlak vóór onze plaatsklik
 // (VINTED_HOOGWATER). Alleen een advertentie daarboven kan van die klik komen.
 async function bgVindVintedAdvertentie(item, naId = null) {
