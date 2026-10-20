@@ -17793,3 +17793,9 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 
 - De middagronde liep om 09:21 al over dezelfde 24 uur. Nagemeten: 368 opdrachten, 10 fouten bij 3 klanten, geen enkele fout in de laatste 3 uur, niets hangt op claimed. /health ok op 5b210c0a. Geen codewijziging, geen klantdata aangeraakt.
 - Wachtrijen zoals in de middagronde beschreven (bcdf9aa4 verlengingen, 96e30080 en 0b28c1ce computer uit, 1ba42900 uit op 1.0.395). Open: niets nieuws.
+
+## 20-10-2026: Kostencheck Anthropic, week 12 t/m 18 okt
+
+- Gemeten in de Console (tabel per dag, UTC). App (Haiku 4.5 plus Haiku 5.5) per dag: 12-10 $0,22, 13-10 $0,38, 14-10 $0,11, 15-10 $0,03, 16-10 $0,03, 17-10 $0,01, 18-10 $0,01. Gemiddeld $0,11 per dag, duurste dag 13-10 met $0,38. Geen dag boven $3, dus geen oorzaakonderzoek nodig. 19-10 was $0,44 Haiku 4.5, ook ruim eronder.
+- De verwachting van $0,40 per dag voor de app was te hoog: echt is ~$0,11. Totaal per dag incl. Sonnet 4.6 (steeds $0,24 tot $0,44, geen app-code, vermoedelijk ontwikkelwerk of een routine) en Sonnet 5 ($0,55 op 12-10, $0,30 op 14-10): gemiddeld $0,55 per dag, 30 dagen totaal $51,50.
+- Logs: de laatste 20 verzoeken zijn allemaal Haiku 5.5 met 170 tot 390 invoertokens, geen enkel verzoek met ~8.900 (de volle rubriekvraag). Alleen de eerste pagina bekeken. /health config.taalmodel_sinds_start was leeg (geen Claude-vragen sinds de laatste start). Geen codewijziging.
