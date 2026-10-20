@@ -41,7 +41,24 @@ _CATEGORIE = [{"name": "ALL_EXCLUDING_MOTORS_VEHICLES"}]
 
 # Binnenlandse standaardverzending per marktplaats. Gemeten met GeteBayDetails
 # op site 146 (ebay.nl): NL_StandardDelivery heet daar "Standaardverzending".
-_VERZENDDIENST = {"EBAY_NL": "NL_StandardDelivery"}
+_VERZENDDIENST = {"EBAY_NL": "NL_StandardDelivery", "EBAY_BE": "BE_StandardDelivery"}
+
+# Welke eBay-sites een klant mag kiezen (extra_data.ebay_marktplaats). Zonder keuze
+# geldt settings.ebay_marketplace_id (EBAY_NL), dus bestaande klanten merken niets.
+# EBAY_BE sinds 20-10-2026: ebay.be is Nederlandstalig, de advertentietekst blijft gelijk.
+TOEGESTANE_MARKTPLAATSEN = ("EBAY_NL", "EBAY_BE")
+
+
+def marktplaats_van(credentials: dict | None) -> str:
+    gekozen = ((credentials or {}).get("extra_data") or {}).get("ebay_marktplaats")
+    return gekozen if gekozen in TOEGESTANE_MARKTPLAATSEN else settings.ebay_marketplace_id
+
+
+def beleid_sleutel(marktplaats: str) -> str:
+    """Beleidsnummers zijn per eBay-site. De standaardsite houdt de oude sleutel."""
+    if marktplaats == settings.ebay_marketplace_id:
+        return "ebay_beleid"
+    return f"ebay_beleid_{marktplaats}"
 
 # eBay kent voor verzendtijd alleen deze waarden.
 TOEGESTANE_VERZENDDAGEN = (1, 2, 3, 4, 5, 10, 15, 20, 30)
@@ -89,7 +106,7 @@ def _verzend_beleid(inst: dict, marktplaats: str) -> dict:
         "shippingCost": {"value": f"{kosten:.2f}", "currency": "EUR"},
         "freeShipping": kosten == 0,
     }]
-    if inst.get("ophalen"):
+    if inst.get("ophalen") and marktplaats == "EBAY_NL":  # NL_PickUp alleen gemeten op ebay.nl
         # OPHALEN IS OP EBAY.NL EEN VERZENDDIENST, GEEN VINKJE (15-09-2026).
         # Gemeten op het eigenaarsaccount: localPickup true gaf "Ongeldige
         # aanvraag", met of zonder extra dienst. NL_PickUp ("Ophalen bij de
@@ -300,7 +317,9 @@ async def beleid_voor_plaatsing(headers: dict, credentials: dict) -> dict:
     geprobeerd: zo gaat plaatsen vanzelf werken zodra eBay klaar is, zonder dat
     de verkoper het formulier nog eens hoeft op te slaan."""
     extra = credentials.get("extra_data") or {}
-    beleid = extra.get("ebay_beleid") or {}
+    marktplaats = marktplaats_van(credentials)
+    sleutel = beleid_sleutel(marktplaats)
+    beleid = extra.get(sleutel) or {}
     if all(beleid.get(s) for s in _SOORTEN):
         return als_listing_policies(beleid)
     inst = extra.get("verzending")
@@ -309,7 +328,7 @@ async def beleid_voor_plaatsing(headers: dict, credentials: dict) -> dict:
             "Set your eBay shipping costs first: open Platforms, and fill in "
             "'Shipping & returns' under eBay. Without it eBay lists your item as "
             "pickup only, so nobody can order it with delivery.")
-    uitkomst = await richt_in(headers, inst)
+    uitkomst = await richt_in(headers, inst, marktplaats)
     if uitkomst["status"] != "klaar":
         raise EbayVerzendingNietKlaar(
             "eBay is still switching on your shipping settings. This can take up "
@@ -317,7 +336,7 @@ async def beleid_voor_plaatsing(headers: dict, credentials: dict) -> dict:
             "as eBay is done. Try again later.")
     if credentials.get("user_id"):
         await asyncio.to_thread(bewaar_extra, credentials["user_id"],
-                                {"ebay_beleid": uitkomst["beleid"]})
+                                {sleutel: uitkomst["beleid"]})
     return als_listing_policies(uitkomst["beleid"])
 
 
@@ -379,7 +398,7 @@ async def hang_beleid_aan_live_advertenties(platform, user_id: str) -> dict:
     if not creds:
         return {"bijgewerkt": 0, "mislukt": 0}
     credentials = await platform._ensure_fresh_token(creds[0])
-    beleid = (credentials.get("extra_data") or {}).get("ebay_beleid") or {}
+    beleid = (credentials.get("extra_data") or {}).get(beleid_sleutel(marktplaats_van(credentials))) or {}
     if not all(beleid.get(s) for s in _SOORTEN):
         return {"bijgewerkt": 0, "mislukt": 0}
     gewenst = als_listing_policies(beleid)

@@ -245,13 +245,17 @@ async def ebay_zet_verzending(body: dict, background_tasks: BackgroundTasks,
     credentials = await platform._ensure_fresh_token(rij)
     # Eerst bewaren, en oude beleidsnummers wissen: de volgende plaatsing moet de
     # nieuwe kosten gebruiken, ook als eBay nu nog niet klaar is.
-    await naast_de_lus(lambda: ebay_beleid.bewaar_extra(user_id, {"verzending": inst, "ebay_beleid": None}))
+    await naast_de_lus(lambda: ebay_beleid.bewaar_extra(
+        user_id, {"verzending": inst, **{ebay_beleid.beleid_sleutel(m): None
+                                         for m in ebay_beleid.TOEGESTANE_MARKTPLAATSEN}}))
     try:
-        uitkomst = await ebay_beleid.richt_in(platform._auth_headers(credentials, write=True), inst)
+        marktplaats = ebay_beleid.marktplaats_van(credentials)
+        uitkomst = await ebay_beleid.richt_in(platform._auth_headers(credentials, write=True), inst, marktplaats)
     except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"Saved, but eBay did not accept it: {e}")
     if uitkomst["status"] == "klaar":
-        await naast_de_lus(lambda: ebay_beleid.bewaar_extra(user_id, {"ebay_beleid": uitkomst["beleid"]}))
+        await naast_de_lus(lambda: ebay_beleid.bewaar_extra(
+            user_id, {ebay_beleid.beleid_sleutel(marktplaats): uitkomst["beleid"]}))
         background_tasks.add_task(ebay_beleid.hang_beleid_aan_live_advertenties, platform, user_id)
     return {"status": uitkomst["status"], "instellingen": inst}
 

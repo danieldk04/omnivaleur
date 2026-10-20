@@ -217,7 +217,7 @@ class EbayPlatform(PlatformBase):
         # Write-calls (inventory_item PUT, offer POST) eisen een Content-Language;
         # eBay weigert ze anders met "Invalid value for header Content-Language".
         if write:
-            headers["Content-Language"] = _content_language()
+            headers["Content-Language"] = _content_language(_marktplaats(credentials))
         return headers
 
     async def _ensure_fresh_token(self, credentials: dict) -> dict:
@@ -341,13 +341,18 @@ class EbayPlatform(PlatformBase):
         # Categorie-keten: 1) expliciet op het item, 2) auto-resolutie via de
         # Taxonomy API op basis van de titel (gegarandeerd geldige leaf), 3) het
         # geconfigureerde EBAY_DEFAULT_CATEGORY_ID als laatste backstop.
-        category_id = _VASTE_RUBRIEK.get((item.get("category") or "").lower().strip()) \
-            or item.get("ebay_category_id")
+        # De vaste tabel en de bewaarde rubriek komen uit de ebay.nl-boom. Op een andere
+        # eBay-site (EBAY_BE) zijn die nummers niet nagelopen: daar kiest eBay zelf uit
+        # zijn eigen boom, via resolve_category_id hieronder.
+        mp = _marktplaats(credentials)
+        category_id = None if mp != settings.ebay_marketplace_id else (
+            _VASTE_RUBRIEK.get((item.get("category") or "").lower().strip())
+            or item.get("ebay_category_id"))
         if not category_id:
             try:
                 category_id = await resolve_category_id(
                     item.get("title", ""), item.get("brand"),
-                    item.get("category"), item.get("gender"),
+                    item.get("category"), item.get("gender"), mp,
                 )
                 if category_id:
                     logger.info(f"eBay-categorie automatisch bepaald voor '{item.get('title', sku)}': {category_id}")
@@ -377,7 +382,7 @@ class EbayPlatform(PlatformBase):
         # for this category and auto-fill any we're still missing, so publishing
         # never fails on a "specification X is missing" error. Best-effort.
         try:
-            required = await _get_required_aspects(category_id)
+            required = await _get_required_aspects(category_id, _marktplaats(credentials))
             _fill_required_aspects(aspects, item, required)
         except Exception as e:
             logger.warning(f"eBay required-aspect enrichment mislukt (niet-blokkerend): {e}")
@@ -430,7 +435,7 @@ class EbayPlatform(PlatformBase):
             # Step 2: Create offer
             offer_payload = {
                 "sku": sku,
-                "marketplaceId": settings.ebay_marketplace_id,
+                "marketplaceId": _marktplaats(credentials),
                 "format": "FIXED_PRICE",
                 "pricingSummary": {
                     "price": {"value": str(item["price"]), "currency": "EUR"}
@@ -446,7 +451,7 @@ class EbayPlatform(PlatformBase):
                 json=offer_payload,
                 headers=self._auth_headers(credentials, write=True),
             )
-            domain = _MARKETPLACE_DOMAINS.get(settings.ebay_marketplace_id, "ebay.com")
+            domain = _MARKETPLACE_DOMAINS.get(_marktplaats(credentials), "ebay.com")
             if offer_resp.is_success:
                 offer_id = offer_resp.json()["offerId"]
             else:
@@ -627,7 +632,7 @@ class EbayPlatform(PlatformBase):
             )
             _raise_with_ebay_error(resp, "relisting ended offer")
             listing_id = resp.json().get("listingId", offer_id)
-        domain = _MARKETPLACE_DOMAINS.get(settings.ebay_marketplace_id, "ebay.com")
+        domain = _MARKETPLACE_DOMAINS.get(_marktplaats(credentials), "ebay.com")
         return {
             "platform_listing_id": listing_id,
             "platform_listing_url": f"https://www.{domain}/itm/{listing_id}",
@@ -641,7 +646,7 @@ class EbayPlatform(PlatformBase):
         if not resp.is_success:
             return None
         offers = [o for o in (resp.json().get("offers") or [])
-                  if o.get("marketplaceId") in (None, settings.ebay_marketplace_id)]
+                  if o.get("marketplaceId") in (None, _marktplaats(credentials))]
         if not offers:
             return None
         return next((o for o in offers if str(o.get("status", "")).upper() == "PUBLISHED"),
@@ -694,8 +699,14 @@ _MARKETPLACE_LANGUAGES = {
 }
 
 
-def _content_language() -> str:
-    return _MARKETPLACE_LANGUAGES.get(settings.ebay_marketplace_id, "en-US")
+def _marktplaats(credentials: dict | None = None) -> str:
+    """De eBay-site van deze klant (NL tenzij hij een andere koos)."""
+    from backend.platforms.ebay_beleid import marktplaats_van
+    return marktplaats_van(credentials)
+
+
+def _content_language(marktplaats: str | None = None) -> str:
+    return _MARKETPLACE_LANGUAGES.get(marktplaats or settings.ebay_marketplace_id, "en-US")
 
 
 def _status_uit_offer(offer: dict) -> str:
@@ -784,7 +795,7 @@ def _raise_with_ebay_error(resp: httpx.Response, action: str) -> None:
 
 
 _app_token_cache: dict = {"token": None, "expires_at": 0}
-_category_tree_cache: dict = {"tree_id": None}
+_category_tree_cache: dict = {}
 
 
 def _basic_auth_header() -> str:
@@ -817,34 +828,38 @@ async def _get_app_token() -> str:
     return _app_token_cache["token"]
 
 
-async def _get_category_tree_id() -> str:
-    if _category_tree_cache["tree_id"]:
-        return _category_tree_cache["tree_id"]
+async def _get_category_tree_id(marktplaats: str | None = None) -> str:
+    marktplaats = marktplaats or settings.ebay_marketplace_id
+    if _category_tree_cache.get(marktplaats):
+        return _category_tree_cache[marktplaats]
     token = await _get_app_token()
     async with httpx.AsyncClient(timeout=_EBAY_TIMEOUT) as client:
         resp = await client.get(
             f"{TAXONOMY_API}/get_default_category_tree_id",
-            params={"marketplace_id": settings.ebay_marketplace_id},
+            params={"marketplace_id": marktplaats},
             headers={"Authorization": f"Bearer {token}"},
         )
         resp.raise_for_status()
         tree_id = resp.json()["categoryTreeId"]
-    _category_tree_cache["tree_id"] = tree_id
+    _category_tree_cache[marktplaats] = tree_id
     return tree_id
 
 
 _required_aspects_cache: dict = {}
 
 
-async def _get_required_aspects(category_id: str) -> list[dict]:
+async def _get_required_aspects(category_id: str, marktplaats: str | None = None) -> list[dict]:
     """Required item specifics for a category, via the Taxonomy API. Each entry is
     {name, values}: `values` is the closed list of allowed values (empty = free
     text). Cached per category — the taxonomy rarely changes. Never raises."""
-    if category_id in _required_aspects_cache:
-        return _required_aspects_cache[category_id]
+    marktplaats = marktplaats or settings.ebay_marketplace_id
+    # De standaardsite houdt de oude cachesleutel (alleen het rubrieknummer).
+    cache_sleutel = category_id if marktplaats == settings.ebay_marketplace_id else (marktplaats, category_id)
+    if cache_sleutel in _required_aspects_cache:
+        return _required_aspects_cache[cache_sleutel]
     try:
         token = await _get_app_token()
-        tree_id = await _get_category_tree_id()
+        tree_id = await _get_category_tree_id(marktplaats)
         async with httpx.AsyncClient(timeout=_EBAY_TIMEOUT) as client:
             resp = await client.get(
                 f"{TAXONOMY_API}/category_tree/{tree_id}/get_item_aspects_for_category",
@@ -865,7 +880,7 @@ async def _get_required_aspects(category_id: str) -> list[dict]:
         # we zelf een eerlijke waarde invullen in plaats van de eerste suggestie.
         vrij = a.get("aspectConstraint", {}).get("aspectMode") == "FREE_TEXT"
         out.append({"name": a.get("localizedAspectName"), "values": values, "vrij": vrij})
-    _required_aspects_cache[category_id] = out
+    _required_aspects_cache[cache_sleutel] = out
     return out
 
 
@@ -1879,11 +1894,11 @@ async def suggest_categories(query: str, brand: str | None = None,
     return await _translate_category_names(results)
 
 
-async def _raw_category_suggestions(search_text: str) -> list[dict]:
+async def _raw_category_suggestions(search_text: str, marktplaats: str | None = None) -> list[dict]:
     """Ruwe Taxonomy-suggesties [{category_id, name}, ...] zonder vertaling —
     gedeeld door de UI-suggestie en de listing-tijd fallback-resolver."""
     token = await _get_app_token()
-    tree_id = await _get_category_tree_id()
+    tree_id = await _get_category_tree_id(marktplaats)
     async with httpx.AsyncClient(timeout=_EBAY_TIMEOUT) as client:
         resp = await client.get(
             f"{TAXONOMY_API}/category_tree/{tree_id}/get_category_suggestions",
@@ -1903,20 +1918,24 @@ async def _raw_category_suggestions(search_text: str) -> list[dict]:
 
 async def resolve_category_id(query: str, brand: str | None = None,
                               category: str | None = None,
-                              gender: str | None = None) -> str | None:
+                              gender: str | None = None,
+                              marktplaats: str | None = None) -> str | None:
     """Beste-gok eBay-categorie-ID voor een item op basis van de titel, gebruikt
     als fallback bij het plaatsen wanneer het item zelf geen ebay_category_id heeft.
     Geeft een gegarandeerd geldige leaf-categorie terug (of None)."""
     if not settings.ebay_app_id or not query or not query.strip():
         return None
     search_text = _build_ebay_query(query, brand, category, gender)
-    results = await _raw_category_suggestions(search_text)
-    tak = _EBAY_TAK.get((gender or "").lower().strip())
+    # De takken hieronder zijn nummers uit de ebay.nl-boom; op een andere site niet filteren.
+    nl = not marktplaats or marktplaats == settings.ebay_marketplace_id
+    results = await (_raw_category_suggestions(search_text) if nl
+                     else _raw_category_suggestions(search_text, marktplaats))
+    tak = _EBAY_TAK.get((gender or "").lower().strip()) if nl else None
     if tak:
         # Alleen een gok binnen de eigen tak: liever geen rubriek (dan vraagt het
         # scherm erom) dan een kinderlederhose tussen de boeken.
         results = [r for r in results if set(tak) & set(r.get("voorouders") or ())]
-    rubriektak = _tak_voor_rubriek(category)
+    rubriektak = _tak_voor_rubriek(category) if nl else None
     if rubriektak:
         toegestaan = {rubriektak} if isinstance(rubriektak, str) else set(rubriektak)
         results = [r for r in results if toegestaan & set(r.get("voorouders") or ())]
