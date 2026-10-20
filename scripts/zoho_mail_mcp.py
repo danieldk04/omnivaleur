@@ -304,7 +304,7 @@ def _server():
     @mcp.tool()
     def mail_zoek(map: str = "INBOX", zoek: str = "", van: str = "", aan: str = "",
                   onderwerp: str = "", sinds: str = "", tot: str = "",
-                  alleen_ongelezen: bool = False, max: int = 20) -> list[dict]:
+                  alleen_ongelezen: bool = False, aantal: int = 20) -> list[dict]:
         """Zoek berichten in één map en geef kopjes terug, nieuwste eerst. Alle filters zijn
         optioneel en worden gecombineerd. `zoek` zoekt in tekst en kopjes. Datums als
         JJJJ-MM-DD (sinds is inclusief, tot niet). Lezen zet een bericht niet op gelezen."""
@@ -315,7 +315,7 @@ def _server():
             if typ != "OK":
                 raise RuntimeError(f"Zoeken mislukte: {d}")
             uids = (d[0].decode().split() if d and d[0] else [])
-            return haal_kopjes(imap, uids[-max(1, min(max, 100)):])
+            return haal_kopjes(imap, uids[-max(1, min(aantal, 100)):])
 
     @mcp.tool()
     def mail_lees(uid: str, map: str = "INBOX", markeer_gelezen: bool = False) -> dict:

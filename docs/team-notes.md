@@ -17840,3 +17840,10 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - 09e089ec (Voordeelsieraden) bloedkoraal-armband: eerste verwijderpoging vond geen knop, de herhaling om 14:11 lukte. De foutmelding droeg de diagnostiek van de vórige verwijdering; begint nu leeg (zelfde release).
 - 96e30080: sprei als babykleding met maat One size (Vinted kent die maat daar niet, klant); omschrijving niet in de 2dehands-editor, eenmalig.
 - Open: de server draait nog op 96ecd769; de drie eBay-commits van 19:31 tot 19:50 kregen geen Railway-deploy. Raakt geen klant (alleen eBay-diagnoseroutes).
+
+## 20-10-2026: Zoho Mail als koppeling voor Claude
+- Daniel wilde dat Claude de mailbox kan gebruiken zoals hij zelf doet. Er bestaat geen Zoho Mail MCP in de catalogus (wel CRM, Desk, Books, Projects), dus gebouwd: `scripts/zoho_mail_mcp.py` (IMAP en SMTP, stdio-server, `uv run`). Tools: mail_mappen, mail_zoek, mail_lees, mail_markeer, mail_verplaats, mail_concept, mail_verstuur.
+- Inlog komt uit dezelfde .env-sleutels als `mail_analyse.py` (IMAP_HOST, MAIL_USER, MAIL_PASS, daniel@omnivaleur.nl op imap.zoho.eu) of uit `~/.omnivaleur/zoho-mail.json`. Geen nieuw wachtwoord nodig.
+- Spelregels in de code: nooit definitief wissen (verwijderen = naar Afval), `mail_verstuur` weigert zonder `bevestigd=True` en dat zet Claude alleen na een uitdrukkelijk ja van Daniel in de chat. Concepten komen in de map Concept. Mails van Daniel volgen `docs/schrijfstijl-daniel.md` en worden ook met `schrijfstijl_leren.py concept` bewaard.
+- Geregistreerd als gebruikers-MCP `zoho-mail` op Daniels Mac (`claude mcp add --scope user`). Een tweede ontwikkelaar krijgt dit bewust niet vanzelf: dat is Daniels mailbox.
+- Valkuilen: `mcp` 2.x heet anders (FastMCP is MCPServer), daarom vastgezet op `mcp>=1.2,<2`. Zoho's zoekindex loopt een paar seconden achter op net binnengekomen of net aangemaakte mail.
