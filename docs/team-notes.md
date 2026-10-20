@@ -17826,3 +17826,9 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - Bewust anders op ebay.be: de vaste rubrieken en de bewaarde eBay-rubriek van een artikel (ebay.nl-nummers) worden niet gebruikt, eBay kiest uit zijn eigen BE-boom; geen NL_PickUp bij ophalen; verzenddienst `BE_StandardDelivery`.
 - NIET bewezen: dat eBay `BE_StandardDelivery` en de rubrieken op ebay.be accepteert, en dat Daniels account grensoverschrijdend mag verkopen. Lokaal meten kan niet (eBay-sleutel werkt alleen op de server). Eerst een echte proefadvertentie, dan pas een klant erop zetten.
 - Proef: 4 nieuwe tests tegen de nep-eBay, volledige reeks 2725 geslaagd; de nieuwe tests falen op de oude code.
+
+## 20-10-2026 middag: eBay België, proef op dkresellacademy
+
+- Echte proef via Daniels ingelogde Chrome (account dkresellacademy, Ralph Lauren polo, 19,99). Eerste poging: eBay weigerde `BE_StandardDelivery` ("LSAS-validatie mislukt"). Gemeten met nieuwe route `GET /api/platforms/ebay/verzenddiensten?marktplaats=EBAY_BE` (GeteBayDetails, site 123): de codes heten `BENL_DePostStandardShipping` en `BENL_Pickup`. Aangepast en gepusht (eaabe1cc).
+- Tweede poging: verzend-, betaal- en retourbeleid voor EBAY_BE en de offer zijn door eBay geaccepteerd; alleen publiceren werd geweigerd met de bekende verificatiemelding (identiteit en bankgegevens, "Accountgegevens bijwerken" op ebay.nl/sellerhub). Dat is het account, niet de code, en geldt ook op ebay.nl.
+- Open: pas na verificatie bewijst een publicatie dat de BE-rubriek en de rest kloppen. Daniels account is teruggezet op EBAY_NL; opnieuw proberen = POST /api/platforms/ebay/marktplaats {"marktplaats":"EBAY_BE"} vanuit zijn ingelogde dashboard, publiceren, en terugzetten.
