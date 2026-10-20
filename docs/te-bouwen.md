@@ -4,7 +4,7 @@ Eén plek voor alles wat klanten vragen of wat we zelf willen bouwen. Daniel, Cl
 tweede ontwikkelaar kijken hier eerst. Daniel mag overal in schrijven, Claude werkt het
 bij in dezelfde beurt als er iets nieuws binnenkomt.
 
-Laatst bijgewerkt: 19-10-2026 (Goudlief-punt erbij). De eerste vulling komt uit team-notes en overdracht; wat daar
+Laatst bijgewerkt: 20-10-2026 (eBay buiten Nederland erbij; eerder: Goudlief-punt). De eerste vulling komt uit team-notes en overdracht; wat daar
 niet in staat, ontbreekt hier ook. Vul gerust aan.
 
 ## Hoe je dit leest
@@ -23,6 +23,7 @@ klantnaam erbij. Zo zie je wat het vaakst terugkomt.
 | Wat | Status | Prio | Keer gevraagd | Wie vroeg erom | Bron en opmerking |
 |---|---|---|---|---|---|
 | Etsy als kanaal (echte koppeling met inlog) | Gepland | Hoog | 1 | Voordeelsieraden | Daniel zei 19-10 "binnen afzienbare tijd" toe. In de code staat alleen een kale aanzet uit juli (`backend/platforms/etsy.py`), niet bruikbaar. Etsy is voor hen de plek voor de duurdere stukken. |
+| eBay buiten Nederland (ebay.co.uk en andere eBay-sites, verzenden naar het buitenland) | Overwegen | Laag | 1 | Squirrel Vintage Centre (VK) | 20-10: klant meldde zich aan, vond het misleidend dat eBay op de site staat terwijl wij alleen op ebay.nl plaatsen en binnen Nederland verzenden. Site en mails noemen eBay zonder die beperking. |
 | Marktplaats-advertenties koppelen aan bestaande Shopify-artikelen op titel en foto (in plaats van nieuwe artikelen te maken) | Overwegen | Hoog | 1 | Goudlief | Zijn Marktplaats-import (3.476 kandidaten) staat sinds 09-10 gepauzeerd, 45 van 125 nieuwe artikelen waren dubbel. Blokkeert dat hij zijn ~3.500 Marktplaats-advertenties kan beheren. |
 | Plaatsen zonder dat Chrome open moet blijven | Overwegen | Laag | 2 | Goudlief (11-10, 19-10) | Plaatsen gaat via de eigen browser van de klant, dus Chrome moet aan en de laptop wakker. Technisch geen simpele oplossing, wel een terugkerende ergernis. |
 | Alle Shopify-tags meenemen bij import | Bezig | Midden | 2 | Voordeelsieraden, Janneke | SKU komt al mee. Tags deels, zie ook geslacht uit labels. |
