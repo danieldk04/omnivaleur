@@ -5205,6 +5205,10 @@ function _bevestigInVenster(jaBron, neeBron) {
 
 async function verwijderViaAdvertentiepagina(tabId, adUrl, platform) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
+  // Leeg beginnen: de vroege uitgang hieronder (geen verwijderknop) zet geen
+  // eigen diagnostiek, en dan reisde die van de vórige verwijdering mee in de
+  // foutmelding (20-10-2026, 09e089ec: een 410 van een ander artikel).
+  _laatsteVerwijderDiag = [];
   try {
     await stuurWerkTabbladNaar(tabId, adUrl);
     await waitForTabLoad(tabId);
