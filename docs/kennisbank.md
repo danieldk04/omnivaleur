@@ -28,6 +28,8 @@ Inlog: IMAP_HOST/MAIL_USER/MAIL_PASS uit .env (daniel@omnivaleur.nl, imap.zoho.e
 **Why:** Daniel wilde dat ik de mailbox volledig kan gebruiken zoals hij, in plaats van klantmails bij me te brengen.
 **How to apply:** Versturen alleen na uitdrukkelijk ja van Daniel in de chat (bevestigd=True), anders mail_concept. Nooit definitief wissen, alleen naar Afval. Antwoorden schrijven volgens docs/schrijfstijl-daniel.md en het concept bewaren met schrijfstijl_leren.py. Zoho's zoekindex loopt seconden achter op verse mail. mcp 2.x breekt FastMCP, pin mcp<2. Zie "mailbox-eigenaarschap" en "mail-omnivaleur-in-zoho".
 
+**Antwoord = echte reply (20-10):** een concept moet altijd een antwoord op haar laatste mail zijn: `antwoord_op_uid` meegeven, dan staan In-Reply-To/References erin en citeert `geciteerd()` het origineel onder de tekst ("Op di 20 okt 2026 om 10:12 schreef ...:" met "> "). Zonder dat zag het in Zoho eruit als een nieuwe mail vanaf nul (Daniel zag dat op het scherm). Een lopende MCP-server laadt de nieuwe code pas na herstart; nieuwe sessie nodig.
+
 ---
 
 ## vinted-opslaan-doodt-het-script

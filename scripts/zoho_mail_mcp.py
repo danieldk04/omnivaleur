@@ -269,8 +269,27 @@ def bouw_bericht(van: str, aan: str, onderwerp: str, tekst: str, cc: str = "",
         if mid:
             m["In-Reply-To"] = mid
             m["References"] = (kop_tekst(antwoord_op, "References") + " " + mid).strip()
+    if antwoord_op is not None:
+        tekst = tekst.rstrip() + "\n\n" + geciteerd(antwoord_op)
     m.set_content(tekst)  # platte tekst: geen opmaaktekens in klantmail
     return m
+
+
+_DAGEN = ["ma", "di", "wo", "do", "vr", "za", "zo"]
+_MAANDEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"]
+
+
+def geciteerd(orig) -> str:
+    """Het origineel onder het antwoord, zoals een gewone mail-reply: 'Op ... schreef ...:'
+    gevolgd door elke regel met '> ' ervoor, zodat de draad zichtbaar blijft."""
+    try:
+        d = email.utils.parsedate_to_datetime(kop_tekst(orig, "Date")).astimezone()
+        wanneer = f"{_DAGEN[d.weekday()]} {d.day} {_MAANDEN[d.month - 1]} {d.year} om {d:%H:%M}"
+    except Exception:
+        wanneer = kop_tekst(orig, "Date")
+    regels = mail_tekst(orig).replace("\r\n", "\n").split("\n")
+    return f"Op {wanneer} schreef {kop_tekst(orig, 'From')}:\n\n" + "\n".join(
+        ("> " + r).rstrip() for r in regels)
 
 
 def antwoord_onderwerp(origineel: str, nieuw: str) -> str:

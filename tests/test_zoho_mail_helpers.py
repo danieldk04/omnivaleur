@@ -61,3 +61,14 @@ def test_html_wordt_leesbare_tekst():
     msg = email.message_from_string(raw, policy=email.policy.default)
     tekst = Z.mail_tekst(msg)
     assert "Eerste" in tekst and "Tweede regel" in tekst and "<" not in tekst
+
+
+def test_antwoord_citeert_het_origineel_onder_de_tekst():
+    orig = email.message_from_string(
+        "From: Klant <k@x.nl>\nDate: Tue, 20 Oct 2026 10:12:37 +0200\n"
+        "Message-ID: <abc@x.nl>\nSubject: Vraag\n\nregel een\nregel twee",
+        policy=email.policy.default)
+    m = Z.bouw_bericht("daniel@omnivaleur.nl", "k@x.nl", "Re: Vraag", "Hallo", antwoord_op=orig)
+    tekst = m.get_content()
+    assert tekst.startswith("Hallo\n\nOp ") and "schreef Klant <k@x.nl>:" in tekst
+    assert "> regel een" in tekst and "> regel twee" in tekst
