@@ -17,6 +17,19 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## zoho-mail-koppeling
+
+*20-10-2026 — "20-10-2026 eigen MCP voor Zoho Mail (IMAP/SMTP); tools, spelregels voor versturen, valkuilen"*
+
+Er bestaat geen Zoho Mail MCP, dus `scripts/zoho_mail_mcp.py` gebouwd (stdio, `uv run`). Als gebruikers-MCP `zoho-mail` geregistreerd op Daniels Mac; laadt vanaf een nieuwe sessie. Tools: mail_mappen, mail_zoek, mail_lees, mail_markeer, mail_verplaats, mail_concept, mail_verstuur.
+
+Inlog: IMAP_HOST/MAIL_USER/MAIL_PASS uit .env (daniel@omnivaleur.nl, imap.zoho.eu), of ~/.omnivaleur/zoho-mail.json. Mappen heten Nederlands: Concept, Verzonden, Afval, Klanten.
+
+**Why:** Daniel wilde dat ik de mailbox volledig kan gebruiken zoals hij, in plaats van klantmails bij me te brengen.
+**How to apply:** Versturen alleen na uitdrukkelijk ja van Daniel in de chat (bevestigd=True), anders mail_concept. Nooit definitief wissen, alleen naar Afval. Antwoorden schrijven volgens docs/schrijfstijl-daniel.md en het concept bewaren met schrijfstijl_leren.py. Zoho's zoekindex loopt seconden achter op verse mail. mcp 2.x breekt FastMCP, pin mcp<2. Zie "mailbox-eigenaarschap" en "mail-omnivaleur-in-zoho".
+
+---
+
 ## vinted-opslaan-doodt-het-script
 
 *20-10-2026 — Vinted-bewerking (content_refresh) die wél opsloeg werd "timed out after 3 minutes": de opslagklik stuurt het tabblad weg en het script sterft voor JOB_DONE*
