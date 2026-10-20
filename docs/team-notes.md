@@ -17779,3 +17779,12 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - 09e089ec (Voordeelsieraden): alle 856 sieraden geïmporteerd. 44 staan als "mogelijk verkocht": de gereserveerd-ronde zag ze 19-10 tussen 19:25 en 21:35 op Marktplaats als gereserveerd; nagemeten op twee advertentiepagina's, `isReserved: true`. Werkt zoals bedoeld, geen fout. Nog niets geplaatst (ze overleggen intern), extensie 1.0.397. Briefing, geen mailtje.
 - hbm789, kilofog140, Delftsblaeu, rambene: ongewijzigd, niemand actief. Proef rambene loopt vandaag 14:00 af, Delftsblaeu morgen 13:17, allebei zonder betaalmethode. Geen nieuwe mailtjes.
 - Niet kunnen kijken: Daniels agenda (Google-koppeling niet bereikbaar).
+
+## 20-10-2026 (middag): Dagelijkse klantfouten
+
+- Gemeten 24 uur: 370 opdrachten aangemaakt, 15 fouten bij 5 klanten. Geen codewijziging, geen klantdata aangeraakt. /health ok op e5131ab1.
+- 26cf5471, armband "6 guldens van Juliana" (herplaatsing 19-10): verwijderen klikte "Niet verkocht", het venster ging dicht, maar de controle daarna kreeg zes keer 403 van Marktplaats (afgeknepen), dus "niet gelukt" en de nieuwe plaatsing werd terecht overgeslagen. De advertentie m2443844732 geeft nu 410 (weg). Gevolg: de armband staat niet meer op Marktplaats en de koppeling staat op "mogelijk verkocht". Zeldzaam: bij de actieve klanten sinds 01-10 verder alleen 3 keer bij 96e30080. Niet gerepareerd: of het venster dicht genoeg bewijs is zonder controle, is niet zeker genoeg om de dubbelplaatsingsrem op te versoepelen.
+- 31d28378 (Janneke): Vinted-scan 18:44 kreeg 401, de volgende scan van 18:47 liep goed (klaar 20:01). Eenmalig, klant/kanaal.
+- 26cf5471: zeven Vinted-scans "niet ingelogd" (al afgehandeld), Vinted-sessie van de klant.
+- Doorstroming: bcdf9aa4 loopt (60 verlengingen in 8 uur, 1.0.398, nu aan); 5 verzendkostbijwerkingen wachten achter 226 verlengingen, laatste bijwerking geslaagd, geen rem. 96e30080: 53 herplaatsparen sinds 03:09, computer sinds 19-10 13:43 uit. 0b28c1ce sinds 01-10 stil. 1ba42900 nog op 1.0.395, sinds 19-10 01:52 uit.
+- Open: niets nieuws van de vorige ronde; de armband moet de klant zelf opnieuw plaatsen of als niet verkocht aanmerken.
