@@ -17812,3 +17812,9 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - Zes klanten in hun eerste week, geen nieuwe. Geen codewijziging, geen klantdata aangeraakt.
 - 09e089ec (Voordeelsieraden): eerste plaatsingen gelukt, 10 sieraden op 2dehands actief sinds 09:59 (10 create en 10 content_refresh klaar, nul fouten). Extensie nu 1.0.398, ook de Web Store-versie. Marktplaats: 812 actief, 43 verkocht. Briefing, geen mailtje (gesprek 19-10).
 - b3cac009 (hjscholing@duck.com): nog steeds geen extensie en nul artikelen; het mailtje van de middagronde staat nog. hbm789, kilofog140, Delftsblaeu, rambene: ongewijzigd. Proef rambene loopt vandaag 14:00 af, Delftsblaeu morgen 13:17, kilofog140 op 22-10, alle drie zonder betaalmethode.
+
+## 20-10-2026: te-bouwen-lijst staat in Google Sheets
+
+- Daniel vroeg op 20-10 de eerste klus uit `docs/overdracht.md` (to-build naar Drive) uit te voeren. Gedaan vanaf Daniels account: sheet "Omnivaleur te bouwen" in de map Omnivaleur, bewust één tabblad (Daniel: "minimalistisch en clean", dus geen vier tabbladen), alles op een rij gesorteerd op status. Link: https://docs.google.com/spreadsheets/d/1tsuITAh4E5WQbb-OoEsiH7tBmU2Mno8Hm0utM5buXXQ/edit
+- Gedeeld met bewerkrechten met omnivaleur-leadmachine@advance-casing-508610-t9.iam.gserviceaccount.com. Nieuw hulpscript `scripts/te_bouwen.py` (lijst, voeg, wijzig). `docs/te-bouwen.md` is nu een verwijzing, CLAUDE.md wijst naar de sheet.
+- Nieuwe regel erbij: eBay in andere EU-landen (BE, DE, FR, ES, IT); Daniel heeft geen eBay-testaccount in die landen. Besluit over beginnen met België nog open.

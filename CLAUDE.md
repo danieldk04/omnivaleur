@@ -207,24 +207,26 @@ When you make or learn a decision of that kind, append a dated entry to
 `docs/team-notes.md` and push it — the same way a code change gets pushed.
 Do not let it live only in memory or only in chat.
 
-## De centrale lijst: docs/te-bouwen.md
+## De centrale lijst: Google Sheet "Omnivaleur te bouwen"
 
-Daniel, 19-10-2026. Alles wat klanten vragen of wat we later willen bouwen staat in
-[docs/te-bouwen.md](docs/te-bouwen.md). Daniel leest en bewerkt het zelf; jij werkt het bij.
+Daniel, 19-10-2026, verhuisd naar Drive op 20-10-2026. Alles wat klanten vragen of wat we
+later willen bouwen staat in https://docs.google.com/spreadsheets/d/1tsuITAh4E5WQbb-OoEsiH7tBmU2Mno8Hm0utM5buXXQ/edit
+(één tabblad, kolommen Wat, Status, Prio, Keer gevraagd, Wie vroeg erom, Opmerking).
+Daniel leest en bewerkt het zelf; jij werkt het bij met `scripts/te_bouwen.py`
+(`lijst`, `voeg`, `wijzig`; python 3.13, sleutel in ~/.omnivaleur/sheets-sleutel.json).
+`docs/te-bouwen.md` is nog alleen een verwijzing.
 
 - Vraagt een klant om iets wat we niet hebben (via Daniel, een klantmail of een routine),
-  zoek het eerst in dat bestand. Staat het er al: teller "Keer gevraagd" omhoog en de klant
-  erbij. Staat het er niet: nieuwe regel, status Overwegen. Doe dit in dezelfde beurt, ook
-  als niemand erom vraagt.
+  zoek het eerst in de lijst. Staat het er al: teller omhoog en de klant erbij. Staat het er
+  niet: nieuwe regel, status Overwegen. Doe dit in dezelfde beurt, ook als niemand erom vraagt.
 - Zegt Daniel "later", "gaan we ooit doen" of "zet op de planning": status Uitgesteld, niet
-  zelf oppakken. Besluit hij niet te bouwen: naar "Nee, bewust niet", met de reden.
-- Bouw je iets uit de lijst: status naar Klaar met datum, bij de wijziging zelf.
-- Begin je aan nieuw werk of vraagt Daniel "wat staat er open", lees dan eerst dit bestand.
-- Commit en push het bestand zoals een codewijziging, zodat de tweede ontwikkelaar het ziet.
+  zelf oppakken. Besluit hij niet te bouwen: status "Nee, bewust niet", met de reden.
+- Bouw je iets uit de lijst: status Klaar met datum in de opmerking, bij de wijziging zelf.
+- Begin je aan nieuw werk of vraagt Daniel "wat staat er open", lees dan eerst de lijst.
 
-**Vanzelf bijhouden, nooit wachten op een verzoek (Daniel, 19-10-2026).** Bijwerken van
-`docs/te-bouwen.md` hoort bij elke beurt, net als team-notes: voor je je antwoord afrondt
-vraag je jezelf of er iets is gevraagd, besloten, gebouwd of uitgesteld dat in de lijst
-hoort, en zo ja zet je het er meteen in. Dat geldt ook voor de dagelijkse routines. De
-lijst moet kloppen met de werkelijkheid: staat er "Gepland" bij iets wat al live staat,
-dan is dat een fout van jou. Daniel hoeft er nooit om te vragen.
+**Vanzelf bijhouden, nooit wachten op een verzoek (Daniel, 19-10-2026 en 20-10-2026).**
+Voor je je antwoord afrondt vraag je jezelf of er iets is gevraagd, besloten, gebouwd of
+uitgesteld dat in de lijst hoort, en zo ja zet je het er meteen in. Dat geldt ook voor de
+dagelijkse routines en voor wat je in de mailbox leest: klantantwoorden met een wens of
+bezwaar tellen mee. De lijst moet kloppen met de werkelijkheid: staat er "Gepland" bij iets
+wat al live staat, dan is dat een fout van jou. Daniel hoeft er nooit om te vragen.
