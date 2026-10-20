@@ -17771,3 +17771,11 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 ## 20-10-2026: Goudlief (Dahli) reageert, was op vakantie
 
 - Reactie op Daniels bericht van 19-10: ze kijkt deze week naar de herstart. Ze vroeg of de extensie niet aan hoeft te staan om ze live te zetten; antwoord: Chrome met de extensie moet aan blijven, het plaatsen loopt via haar browser. Abonnement is nodig (proef afgelopen 11-10). Ze meldt 220 live, haar Marktplaats-app toont 244 actief en 7.810 concepten (herkomst concepten niet uitgezocht).
+
+## 20-10-2026: Onboarding nieuwe klanten (middag, liep om 09:15)
+
+- Zes klanten in hun eerste week, één nieuw. Geen codewijziging, geen klantdata aangeraakt.
+- b3cac009 (hjscholing@duck.com): aangemeld 20-10 05:22, betaalmethode ingesteld, proef tot 27-10. Geen extensie, nul artikelen, Preferences nooit opgeslagen. Nooit contact gehad. Mailtje klaargezet voor Daniel.
+- 09e089ec (Voordeelsieraden): alle 856 sieraden geïmporteerd. 44 staan als "mogelijk verkocht": de gereserveerd-ronde zag ze 19-10 tussen 19:25 en 21:35 op Marktplaats als gereserveerd; nagemeten op twee advertentiepagina's, `isReserved: true`. Werkt zoals bedoeld, geen fout. Nog niets geplaatst (ze overleggen intern), extensie 1.0.397. Briefing, geen mailtje.
+- hbm789, kilofog140, Delftsblaeu, rambene: ongewijzigd, niemand actief. Proef rambene loopt vandaag 14:00 af, Delftsblaeu morgen 13:17, allebei zonder betaalmethode. Geen nieuwe mailtjes.
+- Niet kunnen kijken: Daniels agenda (Google-koppeling niet bereikbaar).
