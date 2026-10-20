@@ -260,6 +260,28 @@ async def ebay_zet_verzending(body: dict, background_tasks: BackgroundTasks,
     return {"status": uitkomst["status"], "instellingen": inst}
 
 
+@router.get("/ebay/marktplaats")
+async def ebay_get_marktplaats(user_id: str = Depends(get_current_user)):
+    """Op welke eBay-site plaatst deze klant (standaard ebay.nl)?"""
+    from backend.platforms import ebay_beleid
+    rij = await naast_de_lus(lambda: _ebay_rij(user_id))
+    return {"marktplaats": ebay_beleid.marktplaats_van(rij),
+            "mogelijk": list(ebay_beleid.TOEGESTANE_MARKTPLAATSEN)}
+
+
+@router.post("/ebay/marktplaats")
+async def ebay_zet_marktplaats(body: dict, user_id: str = Depends(get_current_user)):
+    """Kies de eBay-site. Body: {marktplaats: "EBAY_NL" | "EBAY_BE"}. Beleid en rubrieken
+    zijn per site; ze worden bij de eerstvolgende plaatsing voor die site klaargezet."""
+    from backend.platforms import ebay_beleid
+    keuze = str(body.get("marktplaats") or "").strip().upper()
+    if keuze not in ebay_beleid.TOEGESTANE_MARKTPLAATSEN:
+        raise HTTPException(status_code=400, detail="Choose one of: " + ", ".join(ebay_beleid.TOEGESTANE_MARKTPLAATSEN))
+    await naast_de_lus(lambda: _ebay_rij(user_id))
+    await naast_de_lus(lambda: ebay_beleid.bewaar_extra(user_id, {"ebay_marktplaats": keuze}))
+    return {"marktplaats": keuze}
+
+
 @router.get("/ebay/ship-from")
 def ebay_get_ship_from(user_id: str = Depends(get_current_user)):
     """Return the user's saved eBay ship-from address (used for their merchant
