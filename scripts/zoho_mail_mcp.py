@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.10"
-# dependencies = ["mcp"]
+# dependencies = ["mcp>=1.2,<2"]
 # ///
 """Zoho Mail als koppeling voor Claude: lezen, zoeken, ordenen, concepten en versturen.
 
