@@ -282,6 +282,38 @@ async def ebay_zet_marktplaats(body: dict, user_id: str = Depends(get_current_us
     return {"marktplaats": keuze}
 
 
+_EBAY_SITE_ID = {"EBAY_NL": "146", "EBAY_BE": "123"}  # 123 = Belgie, Nederlandstalig
+
+
+@router.get("/ebay/verzenddiensten")
+async def ebay_verzenddiensten(marktplaats: str = "EBAY_BE", user_id: str = Depends(get_current_user)):
+    """De verzenddiensten die eBay op deze site kent (Trading API GeteBayDetails), om de
+    juiste code voor het verzendbeleid te vinden. Alleen lezen."""
+    import re
+    import httpx
+    if marktplaats not in _EBAY_SITE_ID:
+        raise HTTPException(status_code=400, detail="Unknown eBay site")
+    rij = await naast_de_lus(lambda: _ebay_rij(user_id))
+    credentials = await EbayPlatform()._ensure_fresh_token(rij)
+    xml = ('<?xml version="1.0" encoding="utf-8"?><GeteBayDetailsRequest xmlns="urn:ebay:apis:eBLBaseComponents">'
+           '<DetailName>ShippingServiceDetails</DetailName></GeteBayDetailsRequest>')
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post("https://api.ebay.com/ws/api.dll", content=xml.encode(), headers={
+            "X-EBAY-API-COMPATIBILITY-LEVEL": "1193", "X-EBAY-API-CALL-NAME": "GeteBayDetails",
+            "X-EBAY-API-SITEID": _EBAY_SITE_ID[marktplaats],
+            "X-EBAY-API-IAF-TOKEN": credentials["access_token"], "Content-Type": "text/xml"})
+    blokken = re.findall(r"<ShippingServiceDetails>(.*?)</ShippingServiceDetails>", resp.text, re.S)
+    def veld(b, n):
+        m = re.search(rf"<{n}>(.*?)</{n}>", b, re.S)
+        return m.group(1) if m else None
+    diensten = [{"code": veld(b, "ShippingService"), "omschrijving": veld(b, "Description"),
+                 "geldig": veld(b, "ValidForSellingFlow"), "soort": veld(b, "ServiceType"),
+                 "internationaal": veld(b, "InternationalService")} for b in blokken]
+    return {"status": resp.status_code, "aantal": len(diensten),
+            "diensten": [d for d in diensten if d["geldig"] == "true" and d["internationaal"] != "true"],
+            "fout": None if blokken else resp.text[:600]}
+
+
 @router.get("/ebay/ship-from")
 def ebay_get_ship_from(user_id: str = Depends(get_current_user)):
     """Return the user's saved eBay ship-from address (used for their merchant
