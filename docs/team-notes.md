@@ -17767,3 +17767,7 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - Daniel wil één plek met alles wat klanten vragen of we later willen bouwen, met prioriteit en hoe vaak iets gevraagd is. Eerste vulling staat in `docs/te-bouwen.md` (uit team-notes en overdracht). Elke sessie en elke routine werkt hem zelf bij; regels in CLAUDE.md en in de routines klantfouten en onboarding.
 - Drive was op Daniels Mac niet bereikbaar. Besluit: de tweede ontwikkelaar zet de lijst als eerste klus als Google Sheet in Drive (stappen bovenaan `docs/overdracht.md`), deelt hem met de leadmachine-sleutel, en wijst daarna CLAUDE.md naar de sheet. Tot dan is het bestand in de repo de bron.
 - Goudlief (5aae4954): proef afgelopen 11-10, geen abonnement, extensie sinds 11-10 stil, account op slot. Daniel stuurde Dahli op 19-10 een persoonlijk bericht via WhatsApp met de vraag of ze wil doorgaan.
+
+## 20-10-2026: Goudlief (Dahli) reageert, was op vakantie
+
+- Reactie op Daniels bericht van 19-10: ze kijkt deze week naar de herstart. Ze vroeg of de extensie niet aan hoeft te staan om ze live te zetten; antwoord: Chrome met de extensie moet aan blijven, het plaatsen loopt via haar browser. Abonnement is nodig (proef afgelopen 11-10). Ze meldt 220 live, haar Marktplaats-app toont 244 actief en 7.810 concepten (herkomst concepten niet uitgezocht).
