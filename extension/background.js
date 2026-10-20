@@ -4572,6 +4572,19 @@ async function fireJobWatchdog(tabId) {
       return;
     }
   }
+  // Een Vinted-prijswijziging: staat de nieuwe prijs er? Zie bgVintedPrijsOpPagina.
+  if (meta.platform === "vinted" && meta.action === "content_refresh"
+      && meta.payload && meta.payload._price_update) {
+    const doel = Number(String(meta.payload.price ?? "").replace(",", "."));
+    const nu = await bgVintedPrijsOpPagina(meta.payload).catch(() => null);
+    if (nu != null && Number.isFinite(doel) && Math.abs(nu - doel) < 0.01) {
+      console.log(`[Omnivaleur] Watchdog: Vinted toont de nieuwe prijs ${nu} voor ${meta.payload.platform_listing_id} — als gelukt afgemeld.`);
+      await finaliseJob(meta.serverUrl, meta.jobId, "complete", { note: "price_seen_on_vinted" }).catch(() => {});
+      await chrome.storage.local.remove(key);
+      sluitWerkTabblad(tabId);
+      return;
+    }
+  }
   // WAT STOND ER OP HET TABBLAD OP HET MOMENT VAN AFBREKEN? (07-09-2026)
   //
   // scriptSeen zegt alleen dat ons script óóit is geladen, niet dat het formulier
