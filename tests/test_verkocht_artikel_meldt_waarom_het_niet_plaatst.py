@@ -58,7 +58,7 @@ def test_verkocht_artikel_krijgt_een_uitleg_en_geen_opdracht(monkeypatch):
                  ["vinted", "marktplaats"])
     assert [u["status"] for u in uit] == ["blocked", "blocked"]
     assert "already sold on Vinted" in uit[0]["error"]
-    assert "Not sold" in uit[0]["error"]
+    assert "Relist on the Sold tab" in uit[0]["error"] and "Not sold" in uit[0]["error"]
 
 
 def test_artikel_dat_niet_verkocht_is_gaat_door_de_controle(monkeypatch):

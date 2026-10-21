@@ -1531,7 +1531,8 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
                                 for r in sorted(verkocht, key=lambda r: r["platform"]))
             results.extend({"platform": p, "status": "blocked", "error": (
                 f"This item already sold on {kanalen}, so it isn't published again. "
-                f"Still have it? Open Analytics, click Not sold on that sale, then publish again.")}
+                f"Have another one? Use Relist on the Sold tab. Not actually sold? "
+                f"Open Analytics and click Not sold.")}
                 for p in te_controleren)
             platforms = [p for p in platforms if p not in te_controleren]
             if not platforms:
