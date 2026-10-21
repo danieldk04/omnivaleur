@@ -17874,3 +17874,7 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - NIET bewezen: de allerlaatste stap (publiceren en de advertentie echt online zien). eBay geeft op Daniels account overal foutcode 25019 (identiteit en bankgegevens niet bevestigd), ook voor de kostenberekening. Alleen een volledig geverifieerd eBay-account kan dat bewijzen. Daniel kan zijn verificatie al tijden niet afronden.
 - Daniels account staat op EBAY_NL; het offer blijft ongepubliceerd bij eBay staan (onzichtbaar voor kopers).
 - Er is nog geen knop in het dashboard om de eBay-site te kiezen; alleen de route. Pas bouwen na een bewezen echte plaatsing.
+
+## 21-10-2026: Onboarding nieuwe klanten (ochtend, tweede keer om 11:55)
+
+- Geplande taak vuurde opnieuw, twee uur na de ronde van 09:55. Alle zes klanten ongewijzigd, geen nieuwe aanmeldingen. Daniel verstuurde om 10:17 het mailtje aan imavocado en om 10:19 het antwoord aan Mieneke (Voordeelsieraden). Geen reparaties, geen nieuwe mailtjes.
