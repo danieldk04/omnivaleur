@@ -96,8 +96,8 @@ MINIMALE_VINTED_PLAATS_VERSIE = (1, 0, 386)
 # Gemeten bij Voordeelsieraden (09e089ec) op 1.0.398: 2dehands sinds 12:00 UTC 90
 # van 90 mislukt, Marktplaats 16:00 tot 18:00 UTC 26 van 26. Elke poging van een
 # oude kopie is dus een zekere mislukking; het werk blijft 'pending' tot een
-# bijgewerkte kopie polt. Verwijderen en verlengen vullen geen beschrijving in en
-# gaan gewoon door.
+# bijgewerkte kopie polt. Verwijderen, verlengen en de verzendkosten bijwerken op
+# 2dehands vullen geen beschrijving in en gaan gewoon door.
 MINIMALE_MP_BESCHRIJVING_VERSIE = (1, 0, 400)
 # "kinderen tassen" (kinderrugzakjes en -tassen) bestaat in de extensie pas vanaf
 # 1.0.395 (17-10-2026, Janneke 31d28378: teddyrugzakjes stonden als volwassen
