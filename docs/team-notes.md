@@ -17885,3 +17885,9 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - Gerepareerd in 9103b6d7, extensie 1.0.400 (dist/omnivaleur-extension-1.0.400.zip): marktplaats.js, tweedehands.js en vier plekken in background.js kennen beide vormen. Proef tests/test_mp_beschrijving_nieuwe_editor.py faalt op de oude code. Daniel moet 1.0.400 in de Web Store zetten; 1.0.399 (Vinted-prijswijziging) zit er al in.
 - Overig bij Toon, niet gerepareerd: Vinted weigert 7x "colour empty" bij tapijten/foulards zonder kleur in titel of veld (bewuste weigering om niet te raden; beslissing aan Daniel: Meerkleurig als vangnet voor woontextiel?); 4x Vinted "Not published", geen veld rood, oorzaak niet bewezen; Marktplaats-verwijderen "cannot be found" laat de gekoppelde plaatsing overslaan. Toon draait nog 1.0.395 in Edge.
 - Klantdata niet aangeraakt.
+
+## 21-10-2026: Egbert, nieuwe Marktplaats-advertenties bleven zonder prijs en tekst
+
+- Oorzaak: Marktplaats geeft het advertentienummer als "a1532806073", wij bewaren "1532806073". De eigen-nummerroute van 4f92ee33 (vandaag) vergeleek die twee en vond dus nooit iets; titelgenoten bleven liggen. De test gebruikte nummers zonder letter en zag het niet. Nu alleen cijfers (25ab83f0), test met echte vorm: faalde voor, slaagt na. Gemeten tegen echte Marktplaats-data: alle vier de Metallica-artikelen matchen op nummer.
+- Data: de drie nieuwe King Nothing-artikelen (Patch, Pin, Sleutelhanger) handmatig aangevuld met prijs en omschrijving, alleen lege velden. Foto's: de advertenties hebben er één. Rubriek ontbreekt nog bij Patch en twee Load-artikelen; die vult deze ronde niet aan.
+- Magento-vraag van Egbert: zie lijst Omnivaleur te bouwen.
