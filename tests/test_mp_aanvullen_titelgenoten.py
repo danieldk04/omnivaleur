@@ -71,7 +71,7 @@ def _advertentie(item_id, prijs):
 
 def _draai(monkeypatch, items, listings):
     db = _DB(items, listings)
-    advertenties = [_advertentie("m1", 295), _advertentie("m2", 795)]
+    advertenties = [_advertentie("a1", 295), _advertentie("a2", 795)]
 
     async def _json(_client, _url, params=None):
         if (params or {}).get("offset", 0) > 0:
@@ -109,12 +109,12 @@ def _items():
 
 
 def test_elke_ketting_krijgt_zijn_eigen_advertentie(monkeypatch):
-    listings = [{"item_id": "A", "platform": "marktplaats", "platform_listing_id": "m1"},
-                {"item_id": "B", "platform": "marktplaats", "platform_listing_id": "m2"}]
+    listings = [{"item_id": "A", "platform": "marktplaats", "platform_listing_id": "1"},
+                {"item_id": "B", "platform": "marktplaats", "platform_listing_id": "2"}]
     updates = _draai(monkeypatch, _items(), listings)
-    assert updates["A"]["description"] == "tekst van m1"
-    assert updates["B"]["description"] == "tekst van m2"
-    assert updates["B"]["photo_urls"] == ["m2-a", "m2-b"]
+    assert updates["A"]["description"] == "tekst van a1"
+    assert updates["B"]["description"] == "tekst van a2"
+    assert updates["B"]["photo_urls"] == ["a2-a", "a2-b"]
 
 
 def test_zonder_eigen_nummer_wordt_er_niet_geraden(monkeypatch):

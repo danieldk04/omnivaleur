@@ -258,7 +258,10 @@ def _naar_advertentie(l: dict, basis: str = BASIS) -> dict:
     soort = ((l.get("priceInfo") or {}).get("priceType") or "")
     vip = l.get("vipUrl") or ""
     return {
-        "item_id": l.get("itemId"),
+        # Marktplaats levert "a1532806073", wij bewaren "1532806073". Zonder de
+        # letter weg te halen vond de eigen-nummerroute nooit iets (21-10-2026,
+        # Egbert: drie nieuwe advertenties bleven zonder prijs en tekst).
+        "item_id": re.sub(r"\D", "", str(l.get("itemId") or "")) or None,
         # Alleen een echte vraagprijs overnemen. "Bieden", "Gereserveerd" en
         # "Op aanvraag" komen als 0 of 1 cent binnen en zijn geen prijs.
         #
@@ -323,7 +326,7 @@ async def zoek_een_titel(client: httpx.AsyncClient, verkoper_id: int,
             gelijk.append(l)
     if eigen_ids:
         for l in gelijk:
-            if str(l.get("itemId") or "") in eigen_ids:
+            if re.sub(r"\D", "", str(l.get("itemId") or "")) in eigen_ids:
                 return _naar_advertentie(l, basis)
     if len(gelijk) == 1:
         return _naar_advertentie(gelijk[0], basis)
