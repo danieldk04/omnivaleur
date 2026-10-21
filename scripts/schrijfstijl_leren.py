@@ -68,7 +68,13 @@ def cmd_concept(a) -> None:
     if not tekst:
         sys.exit("Geen conceptttekst via stdin ontvangen.")
     nu = datetime.now(timezone.utc)
+    # Twee concepten in dezelfde seconde overschreven elkaar (21-10-2026: het
+    # onboardingconcept van de ene klant verdween onder dat van de volgende).
     pad = CONCEPTEN / f"{nu:%Y%m%d-%H%M%S}.json"
+    volgnr = 2
+    while pad.exists():
+        pad = CONCEPTEN / f"{nu:%Y%m%d-%H%M%S}-{volgnr}.json"
+        volgnr += 1
     pad.write_text(json.dumps({
         "aan": a.aan.strip().lower(), "onderwerp": a.onderwerp or "",
         "gemaakt": nu.isoformat(), "tekst": tekst}, ensure_ascii=False, indent=1))
