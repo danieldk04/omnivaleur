@@ -90,6 +90,15 @@ MINIMALE_2DH_BIJWERK_VERSIE = (1, 0, 354)
 # concept op Vinted. Een oude kopie werkt zichzelf binnen ~2 uur bij
 # (controleerOpNieuweVersie, elk uur), dus het werk blijft zo lang 'pending'.
 MINIMALE_VINTED_PLAATS_VERSIE = (1, 0, 386)
+# Plaatsen en bijwerken op Marktplaats en 2dehands gaat alleen naar 1.0.400 of
+# nieuwer (21-10-2026). Vanaf 12:30 UTC gaf Marktplaats de beschrijvingseditor een
+# ander kenmerk (id DescriptionEditor_nl-NL); een oudere kopie vindt het veld niet.
+# Gemeten bij Voordeelsieraden (09e089ec) op 1.0.398: 2dehands sinds 12:00 UTC 90
+# van 90 mislukt, Marktplaats 16:00 tot 18:00 UTC 26 van 26. Elke poging van een
+# oude kopie is dus een zekere mislukking; het werk blijft 'pending' tot een
+# bijgewerkte kopie polt. Verwijderen en verlengen vullen geen beschrijving in en
+# gaan gewoon door.
+MINIMALE_MP_BESCHRIJVING_VERSIE = (1, 0, 400)
 # "kinderen tassen" (kinderrugzakjes en -tassen) bestaat in de extensie pas vanaf
 # 1.0.395 (17-10-2026, Janneke 31d28378: teddyrugzakjes stonden als volwassen
 # rugtas en haar eigen instelling "Vinted alleen kinderen" hield ze tegen). Een
