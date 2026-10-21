@@ -17926,3 +17926,10 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - a45020c9, b3cac009, hbm789, kilofog140: ongewijzigd, geen mailtjes. Proef kilofog140 loopt morgen 09:44 af.
 - LET OP: de server draait nog 01d19123 (20-10 22:40). Railway startte sinds dan geen enkele uitrol (deployment list), GitHub-proeven groen. Daniel: Railway heeft een storing. Dus niets van 21-10 staat live: titelgenoten (4f92ee33), Egbert (25ab83f0), Janneke (b49f9357), deze versiegrens. Na de storing nakijken met /health of main live staat.
 - Testreeks: 2754 groen; rood zijn de drie veger-proeven (al sinds vanochtend) en vier in test_vinted_eigen_slottekst.py, die horen bij de dierenhuid-wijziging van 21:10 (andere sessie).
+
+## 21-10-2026: rode storingsmelding in het dashboard (Railway-storing)
+
+- Daniel vroeg om een rode melding dat verbeteringen nu niet doorkomen, die vanzelf weggaat. Het dashboard komt van Railway en Railway rolt niets uit (status.railway.com: builds paused), dus via app.html kan het niet live. Gebouwd als Cloudflare Worker: scripts/cloudflare/railway-storing-melding.js, route omnivaleur.com/app*.
+- Werkt zo: zolang /health commit 01d19123 noemt, zet de Worker een rode melding bovenaan elk scherm (tweetalig, volgt de EN/NL-knop, translate="no"). Andere commit = pagina onveranderd. Een open tabblad kijkt elke 5 min en haalt hem zelf weg.
+- Getest met wrangler dev tegen de echte site: alleen /app krijgt de melding, de rest van de pagina is gelijk aan live; met een andere commit geen melding; in de browser EN, NL, ander scherm, telefoonbreedte zonder zijwaarts scrollen, en weghalen in een open tabblad. Niet ingelogd bekeken (geen klantaccount gebruikt).
+- Staat nog NIET live: aanzetten vraagt het Cloudflare-dashboard van Daniel. Na de storing Worker en route weghalen.

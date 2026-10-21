@@ -32,7 +32,7 @@ async function serverDraaitNogOud(origin) {
   return health.commit === OUDE_COMMIT;
 }
 
-export const MELDING = `
+const MELDING = `
 <div id="railway-storing" role="alert" translate="no" style="display:flex;gap:12px;align-items:flex-start;background:#fee2e2;border:1px solid #fca5a5;border-left:4px solid #dc2626;color:#7f1d1d;border-radius:10px;padding:14px 18px;margin:0 0 20px;font-size:13px;line-height:1.55">
   <svg width="18" height="18" viewBox="0 0 20 20" fill="#dc2626" aria-hidden="true" style="flex-shrink:0;margin-top:1px"><path fill-rule="evenodd" d="M8.26 3.1c.77-1.33 2.7-1.33 3.47 0l6.02 10.42c.77 1.33-.19 3-1.73 3H3.97c-1.54 0-2.5-1.67-1.73-3L8.26 3.1zM10 7a1 1 0 00-1 1v3a1 1 0 102 0V8a1 1 0 00-1-1zm0 8a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" clip-rule="evenodd"/></svg>
   <div>
