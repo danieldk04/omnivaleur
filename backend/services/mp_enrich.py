@@ -177,7 +177,8 @@ async def zoek_verkoper_id(client: httpx.AsyncClient, titels: list[str],
 async def haal_advertenties(client: httpx.AsyncClient, verkoper_id: int,
                             deadline: float | None = None,
                             zoek_url: str = ZOEK,
-                            basis: str = BASIS) -> dict[str, dict]:
+                            basis: str = BASIS,
+                            per_id: dict | None = None) -> dict[str, dict]:
     """Alle advertenties van deze verkoper, op genormaliseerde titel.
 
     Komt een titel twee keer voor, dan houden we de eerste aan. Dat is bij één
@@ -221,6 +222,8 @@ async def haal_advertenties(client: httpx.AsyncClient, verkoper_id: int,
                 if not s:
                     continue
                 nieuw = _naar_advertentie(l, basis)
+                if per_id is not None and nieuw.get("item_id"):
+                    per_id[str(nieuw["item_id"])] = nieuw
                 if s in per_titel:
                     if per_titel[s]["price"] != nieuw["price"]:
                         botsing.add(s)
@@ -279,7 +282,8 @@ def _naar_advertentie(l: dict, basis: str = BASIS) -> dict:
 
 async def zoek_een_titel(client: httpx.AsyncClient, verkoper_id: int,
                          titel: str, zoek_url: str = ZOEK,
-                         basis: str = BASIS) -> dict | None:
+                         basis: str = BASIS,
+                         eigen_ids: set | None = None) -> dict | None:
     """Eén advertentie opzoeken op titel, binnen het aanbod van deze verkoper.
 
     Nodig omdat de verkoperslijst bij 5.000 advertenties ophoudt terwijl iemand
@@ -305,10 +309,24 @@ async def zoek_een_titel(client: httpx.AsyncClient, verkoper_id: int,
     except Exception as e:  # noqa: BLE001
         logger.warning("mp_enrich: zoeken op '%s' mislukt: %s", schoon[:40], e)
         return None
+    # TITELGENOTEN (21-10-2026, Voordeelsieraden 09e089ec). Hier stond "de
+    # eerste met dezelfde titel". Een sieradenverkoper heeft vier kettingen die
+    # allemaal "Bloedkoraal antieke ketting fraai 14k slot goud dame vintage"
+    # heten, van 295 tot 795 euro: elk van de vier kreeg zo de foto's en tekst
+    # van dezelfde ene advertentie. Gemeten bij haar: 11 van 856 sieraden droegen
+    # de foto's van een ander stuk. Nu: kennen we het eigen advertentienummer,
+    # dan alleen die; anders alleen als er precies één advertentie zo heet.
+    gelijk = []
     for l in (data.get("listings") or []):
         sid = ((l.get("sellerInformation") or {}).get("sellerId"))
         if sid and int(sid) == int(verkoper_id) and _sleutel(l.get("title")) == doel:
-            return _naar_advertentie(l, basis)
+            gelijk.append(l)
+    if eigen_ids:
+        for l in gelijk:
+            if str(l.get("itemId") or "") in eigen_ids:
+                return _naar_advertentie(l, basis)
+    if len(gelijk) == 1:
+        return _naar_advertentie(gelijk[0], basis)
     return None
 
 
@@ -1202,6 +1220,29 @@ async def _kanaal_per_item(db, ids: list[str]) -> dict[str, set[str]] | None:
     return uit
 
 
+async def _eigen_advertenties(db, ids: list[str], platform: str) -> dict[str, set[str]]:
+    """item_id -> de advertentienummers die dit artikel zelf op `platform` heeft.
+
+    Daarmee vinden we bij titelgenoten (twee sieraden met dezelfde titel) de
+    advertentie van het artikel zelf terug in plaats van die van zijn tweeling.
+    Leesfout: leeg, dan valt de ronde terug op de strenge titelregel."""
+    uit: dict[str, set[str]] = {}
+    for i in range(0, len(ids), IN_BROK):
+        stuk = ids[i:i + IN_BROK]
+        try:
+            gehaald = await naast_de_lus(
+                lambda s=stuk: db.table("listings")
+                .select("item_id,platform,platform_listing_id")
+                .in_("item_id", s).execute())
+        except Exception as e:  # noqa: BLE001
+            logger.warning("mp_enrich: eigen advertentienummers niet gelezen: %s", e)
+            continue
+        for r in (gehaald.data or []):
+            if r.get("platform") == platform and r.get("item_id") and r.get("platform_listing_id"):
+                uit.setdefault(r["item_id"], set()).add(str(r["platform_listing_id"]))
+    return uit
+
+
 async def kanaal_met_meeste_gaten(db, user_id: str) -> str:
     """Welk kanaal moet deze beurt aan de beurt komen?
 
@@ -1391,13 +1432,29 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
             return uit
         zeg(f"verkoper {vid} gevonden, advertenties ophalen")
 
+        per_id: dict = {}
         adv = await haal_advertenties(client, vid, deadline=deadline,
-                                      zoek_url=zoek_url, basis=basis)
+                                      zoek_url=zoek_url, basis=basis, per_id=per_id)
         zeg(f"{len(adv)} advertenties met een unieke titel")
 
-        koppels = [(r, adv[_sleutel(r["title"])]) for r in open_
-                   if _sleutel(r["title"]) in adv]
-        rest = [r for r in open_ if _sleutel(r["title"]) not in adv]
+        # Eerst het eigen advertentienummer, dan pas de titel, en de titel alleen
+        # als geen ander artikel van deze verkoper zo heet (zie zoek_een_titel:
+        # titelgenoten kregen elkaars foto's en tekst).
+        eigen = await _eigen_advertenties(db, [r["id"] for r in open_], platform)
+        titels_bij_ons: dict[str, int] = {}
+        for r in rijen:
+            k = _sleutel(r.get("title"))
+            titels_bij_ons[k] = titels_bij_ons.get(k, 0) + 1
+        koppels, rest = [], []
+        for r in open_:
+            eigen_id = next((i for i in sorted(eigen.get(r["id"], ())) if i in per_id), None)
+            k = _sleutel(r["title"])
+            if eigen_id:
+                koppels.append((r, per_id[eigen_id]))
+            elif k in adv and titels_bij_ons.get(k, 0) <= 1:
+                koppels.append((r, adv[k]))
+            else:
+                rest.append(r)
         zeg(f"{len(koppels)} van {len(open_)} direct teruggevonden, "
             f"{len(rest)} worden apart opgezocht")
 
@@ -1409,7 +1466,12 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
         if rest:
             async def zoek(item):
                 a = await zoek_een_titel(client, vid, item["title"],
-                                         zoek_url=zoek_url, basis=basis)
+                                         zoek_url=zoek_url, basis=basis,
+                                         eigen_ids=eigen.get(item["id"]))
+                if a and not (eigen.get(item["id"]) and str(a.get("item_id")) in eigen[item["id"]]) \
+                        and titels_bij_ons.get(_sleutel(item["title"]), 0) > 1:
+                    # Een titelgenoot bij ons en niet zijn eigen nummer: niet raden.
+                    a = None
                 await asyncio.sleep(0.25)
                 return item, a
 
