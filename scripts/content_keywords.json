@@ -778,7 +778,7 @@
       "pillar": "B",
       "format": "money_rules",
       "slug": "margin-scheme-vat-second-hand-goods",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "btw-margeregeling-tweedehands",
       "priority": 90
     },
@@ -1619,6 +1619,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-create-bundles-on-vinted",
       "published_at": "2026-10-20T13:15:19.567269+00:00"
+    },
+    {
+      "keyword": "margin scheme vat second hand goods",
+      "slug": "margin-scheme-vat-second-hand-goods",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "action": "created",
+      "url_path": "/reseller-tools/margin-scheme-vat-second-hand-goods",
+      "published_at": "2026-10-21T13:21:25.851572+00:00"
     }
   ]
 }
