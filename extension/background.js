@@ -9768,7 +9768,7 @@ async function typEchteToets(tabId, tekst) {
         const r = e.getBoundingClientRect();
         return { x: Math.round(r.left + Math.min(r.width - 8, 40)), y: Math.round(r.top + r.height - 12) };
       },
-      args: ['[data-testid="text-editor-input_nl-NL"], [data-testid="text-editor-input_nl-BE"], [contenteditable="true"]'],
+      args: ['[data-testid="text-editor-input_nl-NL"], [data-testid="text-editor-input_nl-BE"], [id^="DescriptionEditor"], [contenteditable="true"]'],
     });
     if (!result) return "veld niet gevonden";
     for (const type of ["mousePressed", "mouseReleased"]) {
@@ -10025,7 +10025,7 @@ function _mwEnforceDescription(descText, durationMs) {
 function _mwZetFormulierBeschrijving(descText) {
   const _vind = () => {
     const starts = [
-      document.querySelector('[data-testid^="text-editor-input"]'),
+      document.querySelector('[data-testid^="text-editor-input"], [id^="DescriptionEditor"]'),
       document.querySelector('input[name^="title_"]'),
       document.querySelector("form"),
     ].filter(Boolean);
@@ -10065,7 +10065,7 @@ function _mwZetFormulierBeschrijving(descText) {
 function _mwLeesFormulierBeschrijving() {
   const _vind = () => {
     const starts = [
-      document.querySelector('[data-testid^="text-editor-input"]'),
+      document.querySelector('[data-testid^="text-editor-input"], [id^="DescriptionEditor"]'),
       document.querySelector('input[name^="title_"]'),
       document.querySelector("form"),
     ].filter(Boolean);
@@ -10099,7 +10099,7 @@ function _mwLeesFormulierBeschrijving() {
 function _mwBewaakFormulierBeschrijving(descText, durationMs) {
   const _vind = () => {
     const starts = [
-      document.querySelector('[data-testid^="text-editor-input"]'),
+      document.querySelector('[data-testid^="text-editor-input"], [id^="DescriptionEditor"]'),
       document.querySelector('input[name^="title_"]'),
       document.querySelector("form"),
     ].filter(Boolean);

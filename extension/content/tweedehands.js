@@ -169,7 +169,7 @@
     // nudge: ook 2dehands rekent de tekst pas mee na een echte toetsaanslag.
     let descError = null;
     try {
-      await fillDescription(['[data-testid="text-editor-input_nl-BE"]', '[data-testid="text-editor-input_nl-NL"]'], sanitize2dh(item.description), { nudge: true });
+      await fillDescription(['[data-testid="text-editor-input_nl-BE"]', '[data-testid="text-editor-input_nl-NL"]', '#DescriptionEditor_nl-BE', '#DescriptionEditor_nl-NL', '[id^="DescriptionEditor"]'], sanitize2dh(item.description), { nudge: true });
       // Nu pas echt typen: alleen wat er echt getypt is telt mee bij het plaatsen.
       await step("echte tekst", () => typBeschrijvingEcht(sanitize2dh(item.description)));
     } catch (e) { descError = e; clog(`beschrijving: FOUT — ${e && e.message ? e.message : e}`); }

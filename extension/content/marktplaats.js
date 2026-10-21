@@ -282,7 +282,7 @@
     // nudge: Marktplaats accepteert de tekst pas na een echte toetsaanslag.
     let descError = null;
     try {
-      await fillDescription(['[data-testid="text-editor-input_nl-NL"]'], item.description, { nudge: true });
+      await fillDescription(['[data-testid="text-editor-input_nl-NL"]', '#DescriptionEditor_nl-NL', '[id^="DescriptionEditor"]'], item.description, { nudge: true });
       // Nu pas echt typen: alleen dan telt de tekst mee bij het plaatsen.
       await step("echte tekst", () => typBeschrijvingEcht(item.description));
     } catch (e) { descError = e; clog(`beschrijving: FOUT — ${e && e.message ? e.message : e}`); }
