@@ -17866,3 +17866,11 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - b3cac009, hbm789, kilofog140, Delftsblaeu: ongewijzigd, geen nieuwe mailtjes. Proef Delftsblaeu loopt vandaag 13:17 af, kilofog140 morgen 09:44, allebei zonder betaalmethode.
 - Ook: `schrijfstijl_leren.py concept` overschreef een concept als er twee in dezelfde seconde werden bewaard (vandaag gebeurd); nu volgnummer erachter.
 - Open: tests/test_veger_geeft_de_echte_reden.py faalt drie keer, ook zonder deze wijziging (verwacht "Aan jou lag het niet", krijgt de abonnementstekst). Niet van deze ronde.
+
+## 21-10-2026: eBay België, wat bewezen is en wat niet
+
+- Railway-bouwstoring (20-10 17:03 tot ver in de avond) hield de nakijkroute tegen; 21-10 staat alles live.
+- Nakijkroute `GET /api/platforms/ebay/proef-offer?sku=...` op Daniels offer (polo, IMP-08A0752C): het offer staat bij eBay op EBAY_BE, met rubriek 185101 uit eBay's eigen Belgische boom en alle drie de beleidsregels (verzend, betaal, retour) van ebay.be. Dus: site, rubriek en beleid kloppen aan de kant van eBay.
+- NIET bewezen: de allerlaatste stap (publiceren en de advertentie echt online zien). eBay geeft op Daniels account overal foutcode 25019 (identiteit en bankgegevens niet bevestigd), ook voor de kostenberekening. Alleen een volledig geverifieerd eBay-account kan dat bewijzen. Daniel kan zijn verificatie al tijden niet afronden.
+- Daniels account staat op EBAY_NL; het offer blijft ongepubliceerd bij eBay staan (onzichtbaar voor kopers).
+- Er is nog geen knop in het dashboard om de eBay-site te kiezen; alleen de route. Pas bouwen na een bewezen echte plaatsing.
