@@ -829,6 +829,9 @@ async def localize_item_for_platform(item: dict, platform: str) -> dict:
 # obfuscates its form markup and actively detects automation, so this path is
 # best-effort and carries an account-ban risk — surfaced to the user in the UI.
 EXTENSION_PLATFORMS = {"marktplaats", "2dehands", "vinted", "facebook"}
+_KANAALNAAM_VERKOCHT = {"marktplaats": "Marktplaats", "2dehands": "2dehands", "vinted": "Vinted",
+                        "facebook": "Facebook", "ebay": "eBay", "shopify": "Shopify",
+                        "woocommerce": "WooCommerce"}
 # Platforms handled server-side via official API
 API_PLATFORMS = {"ebay", "shopify", "woocommerce"}
 # Built in the backend but NOT yet released — surfaced as "Coming soon" in the UI
