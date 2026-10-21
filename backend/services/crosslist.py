@@ -1441,6 +1441,31 @@ async def _fotos_wachten_stempel(db, item: dict, user_id: str) -> str | None:
         return None
 
 
+VINTED_DIERENHUID = (
+    "Real animal skin and fur items (sheepskins, cowhide) are not published on Vinted: "
+    "Vinted treats them as prohibited and can block your account. They stay on "
+    "your other channels.")
+
+_DIERENHUID = re.compile(
+    r"\b(?:\w*vacht(?:je)?s?|\w*vachten|\w*huid(?:je|jes|en)?"
+    r"|(?:schapen|lams|kalfs|koeien|geiten|rendier|ezels|dieren)vel(?:len|letje)?)\b", re.I)
+
+
+def is_dierenhuid_woonartikel(item: dict) -> bool:
+    """Echte vacht of huid in een woonartikel (rubriek wonen of antiek).
+
+    Kleding blijft erbuiten. Het losse woord 'bont' staat er bewust niet in: in
+    een titel betekent het meestal veelkleurig ('bont patroon')."""
+    cat = str(item.get("category") or "").lower()
+    if not cat.startswith(("wonen", "antiek")):
+        return False
+    tekst = str(item.get("title") or "")
+    if cat == "wonen vachten":
+        return True
+    return bool(_DIERENHUID.search(tekst))
+
+
+
 async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str) -> list[dict]:
     """
     Route each platform to the right handler:
@@ -1511,6 +1536,19 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
             platforms = [p for p in platforms if p not in te_controleren]
             if not platforms:
                 return results
+
+    # ECHTE DIERENHUID EN VACHT GAAT NIET NAAR VINTED (21-10-2026, Toon).
+    #
+    # Toon meldde dat Vinted zijn vachten en koeienhuid-kleden als verboden item
+    # aangeeft (andere kopers melden ze) en dat zijn account daarop even stilgelegd
+    # wordt. Een stilgelegd account raakt al zijn Vinted-advertenties, dus we
+    # plaatsen deze soort er niet meer. Alleen woonartikelen: kleding van
+    # lamsvacht valt niet onder deze regel.
+    if "vinted" in platforms and is_dierenhuid_woonartikel(item):
+        results.append({"platform": "vinted", "status": "blocked", "error": VINTED_DIERENHUID})
+        platforms = [p for p in platforms if p != "vinted"]
+        if not platforms:
+            return results
 
     # Vul lege kleur/gender/categorie alsnog uit de titel voordat we valideren.
     # Zonder deze stap stond de kolom leeg, sloeg de extensie het veld over en

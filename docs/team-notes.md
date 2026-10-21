@@ -17903,3 +17903,8 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 
 - Toon meldde dat klanten verkeerde maten zien. Bewezen op de echte advertenties: "Grand Foulard Okergeel 228/134 cm" (m2456233839) staat live in Kleding Dames > Blouses en Tunieken met "Maat 34 (XS) of kleiner", conditie Gedragen; "Retro kleedje" (m2456000650, gordijnstof) staat in Kleding Dames > Jurken met "Maat 46/48 (XL) of groter".
 - Oorzaak: oude artikelrijen van augustus (voor de grand-foulard-correctie van 05-09 in imports.py) dragen nog rubriek accessoires dames, unisex accessoires of jurken casual. Ongeveer 36 artikelen, 33 met actieve plaatsing. Nieuwe imports zijn goed. Nog niet gerepareerd: klantdata, wacht op Daniels ja; oude waarden eerst bewaren.
+
+## 21-10-2026: Toon, Vinted-vachten en WooCommerce-doorvoer
+
+- Vinted: Toon meldde dat kopers zijn vachten als verboden item rapporteren en dat zijn account daarop even stilgelegd wordt. Nu plaatst de server geen dierenhuid-woonartikelen (vacht, huid, vel; rubriek wonen of antiek) meer op Vinted (`is_dierenhuid_woonartikel`, proef tests/test_vinted_geen_dierenhuid.py). 21 actieve Vinted-advertenties van dat soort staan er nog, niet aangeraakt; Toon moet ze zelf weghalen of Daniel besluit.
+- WooCommerce: Toon vroeg "geen doorvoer van de Woo" (hij moet eerst oude producten op voorraad 0 verwijderen, anders komen ze ook binnen). `woocommerce_auto_import` stond voor hem op True (178 toegevoegd). Op 21-10 uitgezet via instellingen.schrijf; oude waarde was True. Zet terug als hij klaar is met opruimen.

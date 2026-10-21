@@ -17,6 +17,17 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-geen-dierenhuid
+
+*21-10-2026 — 21-10-2026 Toon: Vinted ziet echte vachten en koeienhuid-woonartikelen als verboden en legt het account stil; server plaatst ze niet meer op Vinted*
+
+Toon (96e30080) meldde 21-10 dat kopers zijn vachten op Vinted rapporteren als verboden item en dat zijn account dan meteen even stil ligt. 21 actieve Vinted-advertenties van dierenhuid-woonartikelen stonden er nog. Sinds de commit van 21-10 blokkeert `publish_to_platforms` (crosslist.py, `is_dierenhuid_woonartikel`) Vinted voor woon- en antiekartikelen met vacht, huid of vel in de titel of rubriek "wonen vachten". Kleding van lamsvacht valt erbuiten; het losse woord "bont" telt niet (betekent veelkleurig).
+
+**Why:** een stilgelegd account raakt alle Vinted-advertenties van de klant. De 21 bestaande advertenties zijn niet aangeraakt (klantdata, Daniels besluit).
+**How to apply:** meldt een klant "verboden item" op een kanaal, kijk eerst of de soort artikel daar niet mag. Zie "klantdata-niet-op-eigen-initiatief".
+
+---
+
 ## concepten-in-de-chat
 
 *21-10-2026 — "Klantmail-concepten altijd als tekst in de chat geven, niet in Zoho of de schrijfstijl-map zetten"*
