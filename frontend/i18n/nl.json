@@ -2931,6 +2931,7 @@
  "{0} has no price-edit automation yet — change it there by hand": "{0} kan prijzen nog niet automatisch wijzigen; pas het daar met de hand aan",
  "{0} hidden on the platform. They land under the": "{0} verborgen op het platform. Ze komen onder het tabblad",
  "{0} is coming soon — you can't publish to it yet.": "{0} komt binnenkort; je kunt er nog niet op plaatsen.",
+ "This item already sold on {0}, so it isn't published again. Still have it? Open Analytics, click Not sold on that sale, then publish again.": "Dit artikel is al verkocht op {0}, dus het wordt niet opnieuw geplaatst. Heb je het toch nog? Open Analyse, klik bij die verkoop op Niet verkocht en plaats het daarna opnieuw.",
  "{0} isn't connected to Omnivaleur yet, so nothing can be listed there.": "{0} is nog niet aan Omnivaleur gekoppeld, dus daar kan niets geplaatst worden.",
  "{0} isn't connected to Omnivaleur, so nothing can be listed or tracked there. Connect {1} under Platforms first.": "{0} is niet aan Omnivaleur gekoppeld, dus daar kan niets geplaatst of gevolgd worden. Koppel eerst {1} onder Platforms.",
  "{0} item is selected on this page. OK = apply to ALL {1} items in your dashboard Cancel = apply to the {2} selected only": "{0} item is geselecteerd op deze pagina.\n\nOK = toepassen op ALLE {1} items in je dashboard\nAnnuleren = alleen toepassen op de {2} geselecteerde",

@@ -1504,10 +1504,10 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
         if verkocht:
             kanalen = ", ".join(_KANAALNAAM_VERKOCHT.get(r["platform"], r["platform"])
                                 for r in sorted(verkocht, key=lambda r: r["platform"]))
-            reden = (f"This item already sold on {kanalen}, so it isn't published again. "
-                     f"Still have it? Open Analytics, click Not sold on that sale, then publish again.")
-            results.extend({"platform": p, "status": "blocked", "error": reden}
-                           for p in te_controleren)
+            results.extend({"platform": p, "status": "blocked", "error": (
+                f"This item already sold on {kanalen}, so it isn't published again. "
+                f"Still have it? Open Analytics, click Not sold on that sale, then publish again.")}
+                for p in te_controleren)
             platforms = [p for p in platforms if p not in te_controleren]
             if not platforms:
                 return results

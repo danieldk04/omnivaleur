@@ -17891,3 +17891,10 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - Oorzaak: Marktplaats geeft het advertentienummer als "a1532806073", wij bewaren "1532806073". De eigen-nummerroute van 4f92ee33 (vandaag) vergeleek die twee en vond dus nooit iets; titelgenoten bleven liggen. De test gebruikte nummers zonder letter en zag het niet. Nu alleen cijfers (25ab83f0), test met echte vorm: faalde voor, slaagt na. Gemeten tegen echte Marktplaats-data: alle vier de Metallica-artikelen matchen op nummer.
 - Data: de drie nieuwe King Nothing-artikelen (Patch, Pin, Sleutelhanger) handmatig aangevuld met prijs en omschrijving, alleen lege velden. Foto's: de advertenties hebben er één. Rubriek ontbreekt nog bij Patch en twee Load-artikelen; die vult deze ronde niet aan.
 - Magento-vraag van Egbert: zie lijst Omnivaleur te bouwen.
+
+## 21-10-2026: Janneke (31d28378), "er opent geen tabblad" bij herplaatsen van een verkocht product
+
+- Gemeten: haar twee pogingen van 20:33 en 20:36 (18:33 en 18:36 UTC) voor Winterjas Noppies 128 (ba6c3123) en Tussenjas Noppies 128 (5ae3f054) werden binnen een halve seconde geannuleerd met "Item already sold on vinted". Beide staan op Vinted echt als "Verkocht" (openbare pagina gecontroleerd; de jas van 16-10 en die van vandaag 18:16 UTC). De uitgifte deed dus wat hij hoort, maar het scherm zei "Queued" en zweeg.
+- Gerepareerd: Publish op een artikel met een eigen verkochte rij op een extensiekanaal geeft nu meteen een melding met de reden en de weg terug (Analyse, Niet verkocht). Proef tests/test_verkocht_artikel_meldt_waarom_het_niet_plaatst.py faalt op de oude code. Tweetalig.
+- Los daarvan: haar eerste plaatsing van die avond (Winterjas 122) lukte op Vinted en faalde op Marktplaats met de oude beschrijvingseditor; ze draait 1.0.398. Lost op zodra 1.0.400 in de Web Store staat.
+- Klantdata niet aangeraakt.
