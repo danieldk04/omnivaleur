@@ -17,6 +17,20 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## melding-tijdens-railway-storing-via-cloudflare
+
+*21-10-2026 — "21-10: Railway rolde niets uit (builds paused); een dashboardmelding kan dan alleen via een Cloudflare Worker op omnivaleur.com/app*"*
+
+21-10-2026: Railway had een grote storing, "builds paused", sinds 20-10 22:40 geen uitrol. Het dashboard komt van Railway, dus een wijziging in app.html komt dan niet live. Werkt wel: Cloudflare Worker `railway-storing-melding` (code in scripts/cloudflare/railway-storing-melding.js) op route omnivaleur.com/app*, fail open. Hij zet de melding erin zolang /health commit 01d19123 noemt en zwijgt daarna vanzelf.
+
+Valkuilen bij het neerzetten: een Worker mag alleen handlers exporteren (een `export const` liet hem niet starten); de API-aanroep vanuit het dashboard (PUT script) blokkeert Cloudflare met "Attention Required", dus via de knoppen en plakken in de editor; `pbcopy` zonder `LANG=en_US.UTF-8` verminkt accenten. Na het plakken de opgeslagen code teruglezen (GET .../content/v2) en regel voor regel vergelijken.
+
+Eerst kijken: status.railway.com. /health "commit" laat zien wat er echt draait. Zie "deploy-pipeline".
+
+Opruimen na de storing: Worker plus route weghalen in Cloudflare (Workers & Pages).
+
+---
+
 ## vinted-geen-dierenhuid
 
 *21-10-2026 — 21-10-2026 Toon: Vinted ziet echte vachten en koeienhuid-woonartikelen als verboden en legt het account stil; server plaatst ze niet meer op Vinted*
