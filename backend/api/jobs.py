@@ -2750,7 +2750,7 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             continue
         # content_refresh alleen op Marktplaats: daar vult de kopie het hele
         # formulier opnieuw in; op 2dehands raakt hij alleen de verzendkosten.
-        if (platform is not None
+        if (platform is not None and MINIMALE_MP_BESCHRIJVING_VERSIE is not None
                 and (j.get("action") == "create" and j.get("platform") in ("marktplaats", "2dehands")
                      or j.get("action") == "content_refresh" and j.get("platform") == "marktplaats")
                 and (versie_van_de_kopie is None or versie_van_de_kopie < MINIMALE_MP_BESCHRIJVING_VERSIE)):
