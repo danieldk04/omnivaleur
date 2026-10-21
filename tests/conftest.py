@@ -96,3 +96,20 @@ def _geen_echte_taalmodellen_in_tests(monkeypatch):
     monkeypatch.setattr(settings, "google_api_key", "")
     if not settings.anthropic_api_key:
         monkeypatch.setattr(settings, "anthropic_api_key", "test-sleutel")
+
+
+@pytest.fixture(autouse=True)
+def _mp_editorgrens_alleen_in_zijn_eigen_proef(request, monkeypatch):
+    # De grens van 1.0.400 (nieuwe Marktplaats-editor, 21-10-2026) staat in veel
+    # oudere proeven die met een oud versienummer een ándere regel meten. Daar
+    # staat hij uit; tests/test_mp_plaatsing_wacht_op_1_0_400.py meet hem zelf.
+    if request.node.fspath.basename == "test_mp_plaatsing_wacht_op_1_0_400.py":
+        yield
+        return
+    try:
+        from backend.api import jobs
+    except Exception:  # noqa: BLE001
+        yield
+        return
+    monkeypatch.setattr(jobs, "MINIMALE_MP_BESCHRIJVING_VERSIE", None, raising=False)
+    yield
