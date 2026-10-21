@@ -17,6 +17,29 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## concepten-in-de-chat
+
+*21-10-2026 — "Klantmail-concepten altijd als tekst in de chat geven, niet in Zoho of de schrijfstijl-map zetten"*
+
+Concepten voor klantmails (en chatberichten aan klanten) geef je altijd als tekst in de chat. Niet als concept in Zoho zetten, tenzij Daniel er in dat bericht om vraagt.
+
+**Why:** Daniel, 21-10-2026. Ik zette een concept voor Janneke in Zoho; daardoor stonden er twee verouderde concepten in zijn map die ik niet kon weghalen, en hij kopieert de tekst toch zelf. De chat is waar hij leest en nakijkt.
+
+**How to apply:** de stijl uit docs/schrijfstijl-daniel.md blijft gelden. Het concept bewaren met `schrijfstijl_leren.py concept` (voor de leerroutine) mag nog wel, met het echte adres van de klant als dat bekend is. Zie "schrijfstijl-leren-uit-verzonden-mail" en "zoho-mail-koppeling".
+
+---
+
+## mails-in-de-chat-tonen
+
+*21-10-2026 — Daniel wil klantmails volledig in de chat zien, als platte tekst, niet alleen als bewaard concept*
+
+Zet elke mail die Daniel moet versturen (klantreactie, antwoord) voortaan gewoon in de chat, als platte tekst klaar om te kopiëren. Zeg niet alleen "concept staat klaar".
+
+**Why:** 21-10-2026: ik bewaarde het Toon-mailtje alleen via schrijfstijl_leren.py, dus Daniel kon het niet lezen.
+**How to apply:** tekst in de chat tonen, daarnaast het concept nog bewaren voor de stijlroutine ("schrijfstijl-leren-uit-verzonden-mail"). Nooit opmaaktekens in de mail zelf.
+
+---
+
 ## marktplaats-editor-kreeg-ander-kenmerk
 
 *21-10-2026 — 21-10-2026 12:30 UTC liet Marktplaats het testid van de beschrijvingseditor vallen (nu id DescriptionEditor_nl-NL); alle MP-plaatsingen van alle klanten faalden tot extensie 1.0.400*
