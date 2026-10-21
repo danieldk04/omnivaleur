@@ -17,6 +17,17 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## marktplaats-editor-kreeg-ander-kenmerk
+
+*21-10-2026 — 21-10-2026 12:30 UTC liet Marktplaats het testid van de beschrijvingseditor vallen (nu id DescriptionEditor_nl-NL); alle MP-plaatsingen van alle klanten faalden tot extensie 1.0.400*
+
+21-10-2026 vanaf 12:30 UTC: "The description field could not be found on the page ([data-testid=text-editor-input_nl-NL])" bij 4 klanten (09e089ec, 26cf5471, 96e30080, 1ba42900), ruim 60 plaatsingen, nog om 18:09 aan de gang. Marktplaats rolt gefaseerd uit: sommige plaatsingen (polo's, armbanden) lukten tot 16:00 nog. De editor heeft nu `id="DescriptionEditor_nl-NL"` (div.hz-RichTextEditor-input, contenteditable) en géén data-testid meer. Bewezen op het echte formulier met /plaats/1/2614 in Daniels ingelogde Chrome.
+
+**Why:** de extensie zocht alleen op het testid; veld-vind-fouten komen van een pagina-aanpassing van het platform, niet van ons.
+**How to apply:** komt "field could not be found" bij meerdere klanten tegelijk, open dan meteen het echte formulier (Chrome MCP, /plaats/{cat1}/{cat3}) en lees de nieuwe kenmerken. Selectors in marktplaats.js, tweedehands.js en vier plekken in background.js. Fix: extensie 1.0.400, upload door Daniel. Zie "extension-release-bump-version".
+
+---
+
 ## zoho-mail-koppeling
 
 *20-10-2026 — "20-10-2026 eigen MCP voor Zoho Mail (IMAP/SMTP); tools, spelregels voor versturen, valkuilen"*

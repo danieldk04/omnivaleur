@@ -17878,3 +17878,10 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 ## 21-10-2026: Onboarding nieuwe klanten (ochtend, tweede keer om 11:55)
 
 - Geplande taak vuurde opnieuw, twee uur na de ronde van 09:55. Alle zes klanten ongewijzigd, geen nieuwe aanmeldingen. Daniel verstuurde om 10:17 het mailtje aan imavocado en om 10:19 het antwoord aan Mieneke (Voordeelsieraden). Geen reparaties, geen nieuwe mailtjes.
+
+## 21-10-2026: Marktplaats veranderde de beschrijvingseditor, alle plaatsingen faalden (Toon meldde het)
+
+- Toon (96e30080) zag 11 mislukte plaatsingen. Oorzaak voor de Marktplaats-kant: vanaf 12:30 UTC gaf Marktplaats de editor een ander kenmerk (data-testid weg, nu id DescriptionEditor_nl-NL). Gemeten: 62 mislukkingen bij vier klanten (09e089ec, 26cf5471, 96e30080, 1ba42900), nog om 18:09. Gefaseerde uitrol: tot 16:00 lukte een deel nog. Bewezen op het echte formulier in Daniels Chrome.
+- Gerepareerd in 9103b6d7, extensie 1.0.400 (dist/omnivaleur-extension-1.0.400.zip): marktplaats.js, tweedehands.js en vier plekken in background.js kennen beide vormen. Proef tests/test_mp_beschrijving_nieuwe_editor.py faalt op de oude code. Daniel moet 1.0.400 in de Web Store zetten; 1.0.399 (Vinted-prijswijziging) zit er al in.
+- Overig bij Toon, niet gerepareerd: Vinted weigert 7x "colour empty" bij tapijten/foulards zonder kleur in titel of veld (bewuste weigering om niet te raden; beslissing aan Daniel: Meerkleurig als vangnet voor woontextiel?); 4x Vinted "Not published", geen veld rood, oorzaak niet bewezen; Marktplaats-verwijderen "cannot be found" laat de gekoppelde plaatsing overslaan. Toon draait nog 1.0.395 in Edge.
+- Klantdata niet aangeraakt.
