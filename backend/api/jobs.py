@@ -2748,6 +2748,12 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                         j["action"], j["id"], versie_van_de_kopie,
                         ".".join(map(str, MINIMALE_VINTED_PLAATS_VERSIE)))
             continue
+        if (platform is not None and j.get("platform") in ("marktplaats", "2dehands")
+                and j.get("action") in ("create", "content_refresh")
+                and (versie_van_de_kopie is None or versie_van_de_kopie < MINIMALE_MP_BESCHRIJVING_VERSIE)):
+            logger.info("%s-%s %s niet uitgedeeld: kopie %s kent de nieuwe beschrijvingseditor niet",
+                        j["platform"], j["action"], j["id"], versie_van_de_kopie)
+            continue
         # Alleen plaatsen kiest een rubriek; verwijderen (na een verkoop) of
         # verlengen mag nooit wachten op een update.
         rubriek_vanaf = _minimale_versie_voor_rubriek(j) if j.get("action") == "create" else None
