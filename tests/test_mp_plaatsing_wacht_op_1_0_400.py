@@ -46,6 +46,12 @@ def test_plaatsing_alleen_naar_1_0_400_of_nieuwer(monkeypatch, platform, versie,
     assert bool(uit) == uitgedeeld, f"{platform} {versie}: {uit}"
 
 
+def test_verzendkosten_bijwerken_op_2dehands_gaat_door(monkeypatch):
+    bijwerking = {**_plaatsing_in_de_rij(platform="2dehands"), "action": "content_refresh"}
+    uit = _uitgifte(monkeypatch, _db([bijwerking]), "1.0.398", platform="2dehands")
+    assert uit
+
+
 def test_verwijderen_gaat_gewoon_door_op_de_oude_kopie(monkeypatch):
     verwijdering = {**_plaatsing_in_de_rij(platform="marktplaats"), "action": "delete"}
     uit = _uitgifte(monkeypatch, _db([verwijdering]), "1.0.398", platform="marktplaats")
