@@ -47,6 +47,6 @@ def test_plaatsing_alleen_naar_1_0_400_of_nieuwer(monkeypatch, platform, versie,
 
 
 def test_verwijderen_gaat_gewoon_door_op_de_oude_kopie(monkeypatch):
-    uit = _uitgifte(monkeypatch, _db([_plaatsing_in_de_rij(platform="marktplaats", action="delete")]),
-                    "1.0.398", platform="marktplaats")
+    verwijdering = {**_plaatsing_in_de_rij(platform="marktplaats"), "action": "delete"}
+    uit = _uitgifte(monkeypatch, _db([verwijdering]), "1.0.398", platform="marktplaats")
     assert uit
