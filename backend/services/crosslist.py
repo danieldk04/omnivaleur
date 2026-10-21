@@ -1474,6 +1474,41 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     ]
     platforms = [p for p in platforms if p not in NOT_YET_AVAILABLE]
 
+    # EEN VERKOCHT ARTIKEL WORDT NIET OPNIEUW GEPLAATST, EN DAT MOET DE VERKOPER
+    # NU ZIEN (21-10-2026, Janneke).
+    #
+    # De uitgifte (get_pending_jobs) annuleert een plaatsing van een artikel dat
+    # al ergens verkocht is, en dat is goed: anders staat het op twee kanalen te
+    # koop. Maar die annulering gebeurt na het klikken op Publish, een halve
+    # seconde nadat de opdracht er was. Het scherm zei "Queued", er opende nooit
+    # een tabblad, en Janneke keek vijf minuten naar niets met twee verkochte
+    # Noppies-jassen (Vinted toont ze als "Verkocht"). Dezelfde val als bij
+    # 'already_live': de verkoper hoort te lezen waarom er niets gebeurt, en wat
+    # hij kan doen als het artikel toch nog bij hem ligt.
+    #
+    # Alleen de EIGEN verkoop telt, zoals in de uitgifte. Alleen kanalen waar de
+    # extensie voor plaatst: dáár gebeurt de annulering.
+    te_controleren = [p for p in platforms if p in EXTENSION_PLATFORMS]
+    if te_controleren:
+        try:
+            verkocht = (await _exec(
+                db.table("listings").select("platform")
+                .eq("item_id", item_id).eq("status", "sold")
+            )).data or []
+        except Exception as e:  # noqa: BLE001 — de uitgifte controleert het nog eens
+            logger.warning("Verkoopcontrole vóór publiceren van %s mislukt: %s", item_id, e)
+            verkocht = []
+        if verkocht:
+            kanalen = ", ".join(_KANAALNAAM_VERKOCHT.get(r["platform"], r["platform"])
+                                for r in sorted(verkocht, key=lambda r: r["platform"]))
+            reden = (f"This item already sold on {kanalen}, so it isn't published again. "
+                     f"Still have it? Open Analytics, click Not sold on that sale, then publish again.")
+            results.extend({"platform": p, "status": "blocked", "error": reden}
+                           for p in te_controleren)
+            platforms = [p for p in platforms if p not in te_controleren]
+            if not platforms:
+                return results
+
     # Vul lege kleur/gender/categorie alsnog uit de titel voordat we valideren.
     # Zonder deze stap stond de kolom leeg, sloeg de extensie het veld over en
     # moest de gebruiker kleur en maat zelf in het Vinted-formulier typen.
