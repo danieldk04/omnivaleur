@@ -2748,8 +2748,11 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                         j["action"], j["id"], versie_van_de_kopie,
                         ".".join(map(str, MINIMALE_VINTED_PLAATS_VERSIE)))
             continue
-        if (platform is not None and j.get("platform") in ("marktplaats", "2dehands")
-                and j.get("action") in ("create", "content_refresh")
+        # content_refresh alleen op Marktplaats: daar vult de kopie het hele
+        # formulier opnieuw in; op 2dehands raakt hij alleen de verzendkosten.
+        if (platform is not None
+                and (j.get("action") == "create" and j.get("platform") in ("marktplaats", "2dehands")
+                     or j.get("action") == "content_refresh" and j.get("platform") == "marktplaats")
                 and (versie_van_de_kopie is None or versie_van_de_kopie < MINIMALE_MP_BESCHRIJVING_VERSIE)):
             logger.info("%s-%s %s niet uitgedeeld: kopie %s kent de nieuwe beschrijvingseditor niet",
                         j["platform"], j["action"], j["id"], versie_van_de_kopie)
