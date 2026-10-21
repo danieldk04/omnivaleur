@@ -334,7 +334,17 @@ async def ebay_proef_offer(sku: str, user_id: str = Depends(get_current_user)):
         fees = await client.post(f"{INVENTORY_API}/offer/get_listing_fees",
                                  json={"offers": [{"offerId": offer_id}]}, headers=kop)
     o = offer.json() if offer.is_success else {}
-    return {"offer": {k: o.get(k) for k in ("marketplaceId", "categoryId", "status", "listingPolicies", "merchantLocationKey")},
+    # Ook: wat staat er als kenmerken op het artikel, en welke kenmerken eist eBay in deze
+    # rubriek op deze site? Zo zie je of "verplicht" gevuld is zonder te publiceren.
+    from backend.platforms.ebay import _get_required_aspects
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        inv = await client.get(f"{INVENTORY_API}/inventory_item/{sku}", headers=kop)
+    gevuld = ((inv.json().get("product") or {}).get("aspects") or {}) if inv.is_success else {}
+    eisen = await _get_required_aspects(str(o.get("categoryId") or ""), o.get("marketplaceId"))
+    ontbreekt = [e["name"] for e in eisen if e["name"] not in gevuld]
+    return {"gevuld": {k: v for k, v in gevuld.items()}, "verplicht": [e["name"] for e in eisen],
+            "ontbreekt": ontbreekt,
+            "offer": {k: o.get(k) for k in ("marketplaceId", "categoryId", "status", "listingPolicies", "merchantLocationKey")},
             "fees_status": fees.status_code, "fees": fees.text[:1500]}
 
 
