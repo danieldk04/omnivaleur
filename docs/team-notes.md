@@ -17898,3 +17898,8 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - Gerepareerd: Publish op een artikel met een eigen verkochte rij op een extensiekanaal geeft nu meteen een melding met de reden en de weg terug (Analyse, Niet verkocht). Proef tests/test_verkocht_artikel_meldt_waarom_het_niet_plaatst.py faalt op de oude code. Tweetalig.
 - Los daarvan: haar eerste plaatsing van die avond (Winterjas 122) lukte op Vinted en faalde op Marktplaats met de oude beschrijvingseditor; ze draait 1.0.398. Lost op zodra 1.0.400 in de Web Store staat.
 - Klantdata niet aangeraakt.
+
+## 21-10-2026: Toon, verkeerde maten op Marktplaats bewezen
+
+- Toon meldde dat klanten verkeerde maten zien. Bewezen op de echte advertenties: "Grand Foulard Okergeel 228/134 cm" (m2456233839) staat live in Kleding Dames > Blouses en Tunieken met "Maat 34 (XS) of kleiner", conditie Gedragen; "Retro kleedje" (m2456000650, gordijnstof) staat in Kleding Dames > Jurken met "Maat 46/48 (XL) of groter".
+- Oorzaak: oude artikelrijen van augustus (voor de grand-foulard-correctie van 05-09 in imports.py) dragen nog rubriek accessoires dames, unisex accessoires of jurken casual. Ongeveer 36 artikelen, 33 met actieve plaatsing. Nieuwe imports zijn goed. Nog niet gerepareerd: klantdata, wacht op Daniels ja; oude waarden eerst bewaren.
