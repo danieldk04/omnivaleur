@@ -17847,3 +17847,11 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - Spelregels in de code: nooit definitief wissen (verwijderen = naar Afval), `mail_verstuur` weigert zonder `bevestigd=True` en dat zet Claude alleen na een uitdrukkelijk ja van Daniel in de chat. Concepten komen in de map Concept. Mails van Daniel volgen `docs/schrijfstijl-daniel.md` en worden ook met `schrijfstijl_leren.py concept` bewaard.
 - Geregistreerd als gebruikers-MCP `zoho-mail` op Daniels Mac (`claude mcp add --scope user`). Een tweede ontwikkelaar krijgt dit bewust niet vanzelf: dat is Daniels mailbox.
 - Valkuilen: `mcp` 2.x heet anders (FastMCP is MCPServer), daarom vastgezet op `mcp>=1.2,<2`. Zoho's zoekindex loopt een paar seconden achter op net binnengekomen of net aangemaakte mail.
+
+## 21-10-2026: Dagelijkse klantfouten (ochtend, liep om ~08:00)
+
+- Gemeten 24 uur: 885 afgeronde opdrachten bij 8 klanten, 35 fouten bij 7 klanten. 18 daarvan Vinted-scans van 26cf5471 (niet ingelogd op Vinted, loopt sinds 20-10 09:36 door) en 2 lege scans van 3bfbed2c, al afgehandeld. Niets hangt op claimed. Server draait op 01d19123: de gemiste deploy van gisteravond is weg.
+- Toon (96e30080, Edge) draait nog extensie 1.0.395; alle Chrome-klanten staan op 1.0.398. Daardoor mist hij de Vinted-bewaker van 1.0.396/1.0.398: twee tapijten kregen "timed out" maar staan gewoon online (vinted 10463669542 en 10463515763, gecontroleerd op zijn openbare profiel). In onze lijst staan ze op error; niet zelf omgezet (klantdata). De Granny-deken (434a373b) is echt niet geplaatst.
+- Verder bij Toon, allemaal eenmalig of eigen keuze: foulard in MP-rubriek Blouses en Tunieken, waardoor 2dehands een kledingmaat eist; omschrijving 3x niet in de editor tijdens een avondrush (4x in 21 dagen over alle klanten, fout draagt geen diagnose); fotodownload van img.omnivaleur.com mislukte eenmalig, adres geeft nu 200.
+- 0b28c1ce: 100 opdrachten geannuleerd (opruiming, klant sinds 01-10 stil). 96e30080 heeft 128 wachtende opdrachten, Edge sinds 20-10 22:24 uit.
+- Open: 1.0.399 (Vinted-prijswijziging) staat klaar in dist/ maar nog niet in de Web Store. Geen codewijziging deze ronde.
