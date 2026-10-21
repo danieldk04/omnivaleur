@@ -881,6 +881,76 @@ def _release_photos(db, user_id: str, photo_urls: list) -> None:
         logger.warning("photo cleanup skipped for user %s", user_id, exc_info=True)
 
 
+# Wat een kopie van een verkocht artikel NIET erft: alles wat bij dit ene stuk
+# hoort (nummer, tijdstippen) en de teller van de rubriekvraag.
+_KOPIE_NIET_ERVEN = {"id", "user_id", "sku", "created_at", "updated_at",
+                     "rubriek_pogingen", "rubriek_gepoogd_op", "rubriek_gevraagd_over"}
+
+
+@router.post("/{item_id}/relist-copy")
+async def relist_copy(item_id: str, user_id: str = Depends(get_current_user)):
+    """Nog een stuk van een verkocht artikel te koop zetten (21-10-2026, Janneke).
+
+    Een verkocht artikel wordt bewust nergens opnieuw geplaatst: het stuk is weg.
+    Heeft de verkoper er meer van (Janneke plaatst na een verkoop zelf het volgende
+    exemplaar), dan is dat nieuwe voorraad en dus een nieuwe rij, zoals Daniel op
+    18-09-2026 al deed met een opnieuw ingekocht artikel. De oude rij en zijn
+    verkoop blijven ongemoeid, dus Analytics houdt de verkoop.
+
+    Een kopie die nog nergens staat wordt hergebruikt: twee keer klikken (of een
+    tweede tabblad) maakt dus geen tweede kopie. Is het artikel niet verkocht, dan
+    is er niets te kopiëren en geeft dit het artikel zelf terug.
+    """
+    db = get_db()
+    gevonden = (await _exec(db.table("items").select("*").eq("id", item_id)
+                            .eq("user_id", user_id).limit(1))).data
+    if not gevonden:
+        raise HTTPException(status_code=404, detail="Item not found")
+    origineel = gevonden[0]
+
+    rijen = (await _exec(db.table("listings").select("platform,status,sold_at")
+                         .eq("item_id", item_id))).data or []
+    verkocht = [r for r in rijen if r.get("status") == "sold"]
+    if not verkocht:
+        return {"item": origineel, "copy_made": False, "reused": False}
+
+    # Een kopie telt alleen als nieuwe voorraad als hij NA de verkoop is gemaakt
+    # (zie _is_nieuwe_voorraad in jobs.py). Daarom hergebruiken we alleen een kopie
+    # van na die verkoop.
+    laatste_verkoop = max([r.get("sold_at") or "" for r in verkocht] or [""]) \
+        or origineel.get("created_at") or ""
+    kandidaten = (await _exec(
+        db.table("items").select("*").eq("user_id", user_id)
+        .eq("title", origineel.get("title")).neq("id", item_id)
+        .gt("created_at", laatste_verkoop).order("created_at", desc=True)
+    )).data or []
+    kandidaten = [k for k in kandidaten
+                  if (k.get("photo_urls") or []) == (origineel.get("photo_urls") or [])]
+    if kandidaten:
+        bezet = {r["item_id"] for r in (await _exec(
+            db.table("listings").select("item_id")
+            .in_("item_id", [k["id"] for k in kandidaten]))).data or []}
+        for k in kandidaten:
+            if k["id"] not in bezet:
+                return {"item": k, "copy_made": False, "reused": True}
+
+    kopie = {k: v for k, v in origineel.items() if k not in _KOPIE_NIET_ERVEN}
+    kopie["id"] = str(uuid.uuid4())
+    kopie["user_id"] = user_id
+    kopie["sku"] = f"REV-{kopie['id'][:8].upper()}"
+    try:
+        result = await asyncio.to_thread(
+            execute_with_retry, db.table("items").insert(_strip_missing(kopie)), 3, True)
+    except Exception as e:  # noqa: BLE001
+        logger.exception("Kopie van verkocht item %s mislukt voor %s", item_id, user_id)
+        raise HTTPException(status_code=500, detail=f"Could not make the copy: {e}")
+    if result is not None and not result.data:
+        raise HTTPException(status_code=500, detail="The copy was not saved, please try again.")
+    logger.info("Kopie %s gemaakt van verkocht item %s (user %s)", kopie["id"], item_id, user_id)
+    return {"item": (result.data[0] if result is not None else kopie),
+            "copy_made": True, "reused": False}
+
+
 @router.post("/{item_id}/delist")
 async def delist_item(item_id: str, user_id: str = Depends(get_current_user)):
     db = get_db()
