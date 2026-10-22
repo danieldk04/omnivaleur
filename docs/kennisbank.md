@@ -17,6 +17,37 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## 403-na-verwijderen-is-blokkade
+
+*22-10-2026 — "Een 403 bij het nakijken van een verwijdering is een blokkade van Marktplaats/2dehands, geen bewijs dat de advertentie er nog staat; na een echte verwijdering geeft /seller/view 410"*
+
+Na een verwijdering geeft `/seller/view/{id}` op Marktplaats en 2dehands normaal 410
+(30 dagen gemeten: 16 keer 410, nooit 403). Een 403 is een blokkade omdat er net
+veel verzoeken waren, en geldt tegelijk op marktplaats.nl en 2dehands.be.
+
+**Why:** 27-09-2026 werden bij 3bfbed2c drie gelukte verwijderingen geboekt als
+"Nothing was removed" na drie keer 403 met twee seconden ertussen. De openbare
+verkoperslijst bewees dat ze weg waren. Zonder inlog geeft dezelfde pagina 401, dus
+van buitenaf is dit niet na te bootsen; de verkoperslijst is de meting.
+
+**How to apply:** sinds extensie 1.0.355 wacht `verwijderViaAdvertentiepagina` bij
+403/429 10 tot 25 s en kijkt tot zes keer. Wachttijden in de achtergrond onder 30 s
+houden. Wil je weten of een "mislukte" verwijdering toch lukte: zoek het
+verkopersnummer via een eigen titel en haal de hele `sellerIds[]`-lijst op, met een
+controle dat bekende actieve advertenties er wel in staan. Zie
+"storing-mag-nooit-als-antwoord-tellen", "marktplaats-advertentiepagina-url" en
+"openbare-lijst-toont-ook-verlopen".
+
+**22-10-2026, gemeten over 15 t/m 22 oktober:** elf Marktplaats-verwijderingen waar het
+venster beantwoord werd ("Niet verkocht via Marktplaats", venster dicht) en daarna alle
+zes controles 403 gaven (ook met de langere wachttijden van 1.0.355): alle elf geven nu
+410 op link.marktplaats.nl/m.... Ze werden als mislukt geboekt, en bij een herplaatsing
+sloeg de server de nieuwe plaatsing daarom over ("paired delist failed"). Gevolg: het
+artikel staat nergens meer op Marktplaats. Bij een "mislukte" verwijdering met 403 in de
+diagnose dus eerst de openbare link nakijken voor je iets concludeert.
+
+---
+
 ## melding-tijdens-railway-storing-via-cloudflare
 
 *21-10-2026 — "21-10: Railway rolde niets uit (builds paused); een dashboardmelding kan dan alleen via een Cloudflare Worker op omnivaleur.com/app*"*
@@ -2287,29 +2318,6 @@ terwijl de grootste lek na de aanmelding zit: wie niets inleest betaalt nooit.
 voorraad inlas maar afhaakte, voor je een nieuwe leadbron gaat bouwen. Zie
 "leadbronnen-gemeten-26-09", "koude-mail-winkels-en-webshops",
 "leadgen-op-conversie-niet-volume".
-
----
-
-## 403-na-verwijderen-is-blokkade
-
-*27-09-2026 — "Een 403 bij het nakijken van een verwijdering is een blokkade van Marktplaats/2dehands, geen bewijs dat de advertentie er nog staat; na een echte verwijdering geeft /seller/view 410"*
-
-Na een verwijdering geeft `/seller/view/{id}` op Marktplaats en 2dehands normaal 410
-(30 dagen gemeten: 16 keer 410, nooit 403). Een 403 is een blokkade omdat er net
-veel verzoeken waren, en geldt tegelijk op marktplaats.nl en 2dehands.be.
-
-**Why:** 27-09-2026 werden bij 3bfbed2c drie gelukte verwijderingen geboekt als
-"Nothing was removed" na drie keer 403 met twee seconden ertussen. De openbare
-verkoperslijst bewees dat ze weg waren. Zonder inlog geeft dezelfde pagina 401, dus
-van buitenaf is dit niet na te bootsen; de verkoperslijst is de meting.
-
-**How to apply:** sinds extensie 1.0.355 wacht `verwijderViaAdvertentiepagina` bij
-403/429 10 tot 25 s en kijkt tot zes keer. Wachttijden in de achtergrond onder 30 s
-houden. Wil je weten of een "mislukte" verwijdering toch lukte: zoek het
-verkopersnummer via een eigen titel en haal de hele `sellerIds[]`-lijst op, met een
-controle dat bekende actieve advertenties er wel in staan. Zie
-"storing-mag-nooit-als-antwoord-tellen", "marktplaats-advertentiepagina-url" en
-"openbare-lijst-toont-ook-verlopen".
 
 ---
 
