@@ -17956,3 +17956,12 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - 09e089ec: één Marktplaats-verwijdering faalde omdat ze even uitgelogd was (HTTP 401), niets verwijderd. Klant-eigen.
 - Geen codewijziging.
 - 10:55 (NL): Toon herstartte Chrome (foto van Daniel), maar bleef op 1.0.398. Er gingen nog twee advertenties verloren: Lederhosen heren en Grand foulard 148/126, samen nu 6. Zijn extensie werkt zichzelf elk uur bij, maar alleen als er geen werk loopt (hoogstens 2 uur uitstel), en zijn wachtrij liep aan één stuk door. Met Daniels akkoord ("kan jij niet meer voor hem doen") zijn zijn 86 wachtende Marktplaats-opdrachten (43 verwijderingen plus 43 plaatsingen) uitgesteld: scheduled_for gezet op 23-10 06:00 UTC (verwijderingen) en 06:05 UTC (plaatsingen). Er is niets gewist. De oude waarden staan in ~/.omnivaleur/herstel-toon-22-10.json op Daniels Mac. Gemeten: 0 nog uitgeefbaar. Ochtendronde 23-10: staat hij dan nog op 1.0.398, het uitstel verlengen. Draait hij 1.0.400, dan mag het uitstel eraf en zet je de 6 verloren advertenties terug (Daniel beloofde dat in de app).
+
+## 22-10-2026: Onboarding nieuwe klanten (ochtend, liep om 11:05)
+
+- Nieuw: c184e384 (gbyte2855@gmail.com), aangemeld 10:54, extensie 1.0.400, nog niets ingelezen. Welkomstmailtje klaargezet.
+- Nieuw: 8adaff42 (omerfurkanerasmus@gmail.com), aangemeld 10:05, extensie 1.0.400, ingelogd op Vinted, Marktplaats en 2dehands; alle scans gezond en leeg (MP leeg_account, api 200; Vinted total_entries 0). Hij heeft nergens advertenties. Welkomstmailtje met tip New item.
+- 45f9caba (ffpd7n2): 89 artikelen, 87 actief op Vinted en 34 op Marktplaats. Nog 1.0.399, computer uit sinds 21-10 23:54; 1 MP-plaatsing en 1 Vinted-scan wachten. Mailtje van gisteren (nooit verstuurd) vervangen door een nieuw met de echte cijfers.
+- 09e089ec (Voordeelsieraden): draait nu 1.0.400. Van gisteren: 41 Marktplaats-artikelen waarvan de oude advertentie bij het herplaatsen weg is maar de nieuwe niet kwam (24 mislukt op de oude editor, 14 door haarzelf geannuleerd om 07:04 UTC, rest overgeslagen of gestopt), en 90 2dehands-plaatsingen mislukt op de oude editor. Niet opnieuw klaargezet: ze annuleerde vanochtend zelf, en op 2dehands is nog bij niemand een plaatsing op 1.0.400 gezien. Briefing voor Daniel, beslissing bij hem.
+- a45020c9, b3cac009, hbm789: ongewijzigd, geen mailtjes.
+- Server draait nog 01d19123. Klantdata en code niet aangeraakt.
