@@ -78,7 +78,7 @@ def test_nieuw_vindt_een_op_100_tekens_afgekapte_titel():
 
 
 # ── Delist schrapt de plaatsing die nog klaarstaat ──────────────────────────
-TRUI = "81fb2e90"
+TRUI = JAS  # _draai roept de functie met dit artikel aan
 
 
 def _db():
@@ -88,7 +88,14 @@ def _db():
         listings=[{"id": "l-v", "item_id": TRUI, "platform": "vinted", "status": "pending",
                    "platform_listing_id": None, "platform_listing_url": None, "platform_offer_id": None,
                    "listed_at": None}],
-        jobs=[{"id": "df4fafbb", "user_id": "u1", "item_id": TRUI, "platform": "vinted",
+        # Zoals in het echt (gemeten 22-10): om 20:05 liep er al een Vinted-plaatsing
+        # die op een fout eindigde maar de trui wél online zette. Zonder die
+        # eerdere plaatsing stond er niets, en dan hoort Delist niets te verwijderen
+        # (test_delist_nooit_geplaatst).
+        jobs=[{"id": "eerder", "user_id": "u1", "item_id": TRUI, "platform": "vinted",
+               "action": "create", "status": "error", "claimed_at": "2026-10-14T20:05:33+00:00",
+               "payload": {}},
+              {"id": "df4fafbb", "user_id": "u1", "item_id": TRUI, "platform": "vinted",
                "action": "create", "status": "pending", "payload": {}},
               {"id": "loopt", "user_id": "u1", "item_id": TRUI, "platform": "marktplaats",
                "action": "create", "status": "claimed", "payload": {}}],
