@@ -17970,3 +17970,9 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 
 - c184e384 (gbyte2855): sinds de vorige ronde 2 artikelen van Marktplaats ingelezen (elektronica, 64 en 100 euro), beide actief op Marktplaats. Scanfouten op Shopify, WooCommerce (niet gekoppeld) en 2dehands (leeg account) zijn klant-eigen. Het welkomstmailtje van 11:05 ("nog niets ingelezen") vervangen door een versie met de echte stand.
 - Overige zes klanten ongewijzigd ten opzichte van 11:05; Voordeelsieraden blijft een beslissing van Daniel. Code en klantdata niet aangeraakt.
+
+## 22-10-2026: Voordeelsieraden denkt aan een hack via Omnivaleur, wachtwoord-eindpunten weg
+
+- Klant (Mieneke Post, 09e089ec) meldde haar Marktplaats-account gehackt en geblokkeerd, met vreemde berichten naar haar klanten. Nagemeten: er staat geen Marktplaats- of 2dehands-inlog van haar in platform_credentials; de extensie heeft geen cookierechten, slaat geen wachtwoord op en verstuurt of leest geen berichten (telt alleen). Haar laatste geslaagde Marktplaats-scan was 21-10 17:54 UTC (ingelogd, api 200), de eerste 401 op 22-10 07:03 UTC. Zij is de enige van negen Marktplaats-klanten die dit meldt. Hoe de hacker erin kwam is vanaf onze kant niet te bewijzen (phishing of gestolen sessie op haar pc ligt voor de hand).
+- Gevonden: de server had vijf eindpunten die een kanaalwachtwoord aannamen en opsloegen (marktplaats, 2dehands en vinted bootstrap, marktplaats en 2dehands sync-chrome-session). Dashboard en extensie hebben ze nooit aangeroepen. Verwijderd in e2dcd5dd, met tests/test_geen_wachtwoord_opslaan.py die faalt zodra ze terugkomen (bewezen tegen de oude versie).
+- Open: één testrij voor het nepaccount 00000000 in platform_credentials (2dehands) bevat nog een wachtwoord; niet aangeraakt. De interne vernieuwpaden in backend/platforms/marktplaats.py en vinted.py lezen een opgeslagen wachtwoord nog, maar er is nu niets meer dat er een schrijft.
