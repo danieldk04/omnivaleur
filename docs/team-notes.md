@@ -17948,3 +17948,10 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - Railway meldde dat omgevingsvariabelen van klanten gelezen konden zijn. Alle sleutels moeten vernieuwd (volgorde: Supabase, Stripe, Anthropic, Google, Resend, dan de rest). Railway-API-tokens zijn door Railway zelf ongeldig gemaakt.
 - Supabase: de nieuwe sb_secret_-sleutel werd door supabase==2.7.4 geweigerd ("Invalid API key", gemeten). 2.16.0 accepteert hem en past bij de pydantic-pin; 2.17+ botst. Bewezen met de echte database (lezen, tellen, auth.admin, storage) en de testreeks: oude en nieuwe bibliotheek gaven allebei 7 rood, 2753 groen. Niet bewezen: inloggen, wachtwoord zetten, schrijven. De oude service_role-sleutel pas intrekken NA een gelukte uitrol (/health toont een nieuwe commit).
 - Railway Deploy met de nieuwe sleutel mag pas na deze bibliotheek-upgrade, anders start de server niet.
+
+## 22-10-2026: Klantfouten, tweede ochtendvuring (08:40 UTC)
+
+- Sinds de ronde van 07:45 UTC: 69 afgeronde opdrachten, 5 fouten. Geen opdrachten die hangen.
+- DRINGEND, Toon (96e30080): zijn Chrome draait weer sinds ~08:18 UTC, maar op een extensie van voor 1.0.400 (foutteksten zonder versielabel). Zijn herplaatsingen verwijderen de oude Marktplaats-advertentie wel en de nieuwe plaatsing faalt dan op de oude beschrijvingseditor. Zo zijn er nu 4 van Marktplaats verdwenen: Vintage handgeknoopt tapijt 142/86 (f3ac025a), Schapenvacht kleed 156/92 (aa18f1f2), Mooie kinder lederhosen (3beedfd9), Lederhosen Beige kort model (3b47b537). In de wachtrij staan nog 46 verwijderingen plus 46 plaatsingen op Marktplaats: elk paar dat zo loopt kost een advertentie. De versiegrens op de server (c776add2) zou dit tegenhouden, maar Railway draait nog 01d19123. Niet zelf de wachtrij aangeraakt (klantdata). Uitweg: Toon werkt de extensie bij (Chrome herstarten of chrome://extensions, Bijwerken), daarna de mislukte plaatsingen opnieuw.
+- 09e089ec: één Marktplaats-verwijdering faalde omdat ze even uitgelogd was (HTTP 401), niets verwijderd. Klant-eigen.
+- Geen codewijziging.
