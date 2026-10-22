@@ -2283,6 +2283,43 @@ async def delist_all_platforms(item_id: str, user_id: str,
                     .eq("user_id", user_id).eq("item_id", item_id).eq("action", "delete")
                     .in_("status", ["pending", "claimed"]).limit(50).execute())).data or []
 
+    # NOOIT GEPLAATST IS NIETS OM WEG TE HALEN (22-10-2026, c184e384). Een rij op
+    # 'pending' zonder advertentienummer telt hierboven als "misschien live",
+    # want een plaatsing die halverwege stopte kan er wél staan. Maar liep er op
+    # dat kanaal nog nooit een plaatsing (geen enkele opgepakt, alle nog in de
+    # wachtrij of geannuleerd voor ze begon), dan staat er gegarandeerd niets.
+    # Hij klikte Delist op tientallen opladers: de server annuleerde de wachtende
+    # plaatsingen op Marktplaats en Vinted en zette er tóch verwijderingen voor
+    # klaar. Die vonden niets en kwamen terug als 136 keer "verwijderen mislukt,
+    # kijk het zelf na", en bij een tweede klik nog eens.
+    if any(l["status"] == "pending" and not l.get("platform_listing_id") for l in ext_active):
+        try:
+            plaatsingen = (await naast_de_lus(lambda: db.table("jobs")
+                           .select("platform,status,claimed_at,created_at,result")
+                           .eq("user_id", user_id).eq("item_id", item_id).eq("action", "create")
+                           .limit(200).execute())).data or []
+        except Exception as e:  # noqa: BLE001 — bij twijfel gewoon verwijderen
+            logger.warning("Plaatsingen van %s niet te lezen: %s", item_id, e)
+            plaatsingen = None
+
+        def _nooit_geplaatst(l: dict) -> bool:
+            if plaatsingen is None or l["status"] != "pending" or l.get("platform_listing_id"):
+                return False
+            eigen = [j for j in plaatsingen if j.get("platform") == l["platform"]]
+            def _kan_gelopen_hebben(j: dict) -> bool:
+                return (bool(j.get("claimed_at"))
+                        or j.get("status") not in ("pending", "cancelled")
+                        or "_reclaims" in (j.get("result") or {}))
+            return bool(eigen) and not any(_kan_gelopen_hebben(j) for j in eigen)
+
+        nooit = [l for l in ext_active if _nooit_geplaatst(l)]
+        if nooit:
+            ext_active = [l for l in ext_active if l not in nooit]
+            results.extend({
+                "platform": l["platform"], "status": "not_published",
+                "message": "This item was never published here, so there was nothing to remove.",
+            } for l in nooit)
+
     # Een plaatsing die nog in de wachtrij staat, gaat niet meer door: Delist
     # betekent "weg van dit kanaal". Janneke (14-10-2026) haalde de donkerblauwe
     # trui twee keer van Vinted, en de plaatsing die al klaarstond (df4fafbb)
