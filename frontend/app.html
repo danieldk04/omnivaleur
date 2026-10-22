@@ -9086,6 +9086,7 @@ async function delistItem(itemId, title) {
     if (byStatus.needs_link) summary.push(`🔗 Still listed (couldn't link): ${byStatus.needs_link.join(', ')}`);
     if (byStatus.already_sold) summary.push(`💰 Already sold — left alone: ${byStatus.already_sold.join(', ')}`);
     if (byStatus.kept_in_shop) summary.push(`🏪 Comes from your own webshop, left there: ${byStatus.kept_in_shop.join(', ')}`);
+    if (byStatus.not_published) summary.push(`Never published here, publish cancelled: ${byStatus.not_published.join(', ')}`);
     alert(summary.join('\n') || 'Done.');
     if (byStatus.queued) nudgeExtension();
     await loadAll();
