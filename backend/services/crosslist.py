@@ -2284,15 +2284,16 @@ async def delist_all_platforms(item_id: str, user_id: str,
                     .in_("status", ["pending", "claimed"]).limit(50).execute())).data or []
 
     # NOOIT GEPLAATST IS NIETS OM WEG TE HALEN (22-10-2026, c184e384). Een rij op
-    # 'pending' zonder advertentienummer telt hierboven als "misschien live",
+    # 'pending' of 'error' zonder advertentienummer telt hierboven als "misschien live",
     # want een plaatsing die halverwege stopte kan er wél staan. Maar liep er op
     # dat kanaal nog nooit een plaatsing (geen enkele opgepakt, alle nog in de
     # wachtrij of geannuleerd voor ze begon), dan staat er gegarandeerd niets.
     # Hij klikte Delist op tientallen opladers: de server annuleerde de wachtende
     # plaatsingen op Marktplaats en Vinted en zette er tóch verwijderingen voor
     # klaar. Die vonden niets en kwamen terug als 136 keer "verwijderen mislukt,
-    # kijk het zelf na", en bij een tweede klik nog eens.
-    if any(l["status"] == "pending" and not l.get("platform_listing_id") for l in ext_active):
+    # kijk het zelf na", en bij een tweede klik nog eens. Op 2dehands stond de rij
+    # op 'error' (plaatsing geweigerd want geen adres, nooit opgepakt): 27 keer.
+    if any(l["status"] in ("pending", "error") and not l.get("platform_listing_id") for l in ext_active):
         try:
             plaatsingen = (await naast_de_lus(lambda: db.table("jobs")
                            .select("platform,status,claimed_at,created_at,result")
@@ -2303,7 +2304,7 @@ async def delist_all_platforms(item_id: str, user_id: str,
             plaatsingen = None
 
         def _nooit_geplaatst(l: dict) -> bool:
-            if plaatsingen is None or l["status"] != "pending" or l.get("platform_listing_id"):
+            if plaatsingen is None or l["status"] not in ("pending", "error") or l.get("platform_listing_id"):
                 return False
             eigen = [j for j in plaatsingen if j.get("platform") == l["platform"]]
             def _kan_gelopen_hebben(j: dict) -> bool:

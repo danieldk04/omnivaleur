@@ -92,3 +92,21 @@ def test_tweede_klik_na_annuleren_ook_niet():
 def test_opgepakte_plaatsing_kan_iets_online_gezet_hebben():
     verwijderingen, _ = _draai(cl.delist_all_platforms, _db(mp_opgepakt="2026-10-22T10:50:00+00:00"))
     assert "marktplaats" in verwijderingen
+
+
+def test_foutrij_van_een_plaatsing_die_nooit_begon():
+    # 2dehands weigerde de plaatsing vooraf (geen adres): rij 'error', opdracht nooit opgepakt
+    db = _db()
+    db.tabellen["listings"][2].update({"status": "error", "platform_listing_id": None})
+    db.tabellen["jobs"][2].update({"status": "cancelled", "claimed_at": None,
+                                   "result": {"error": "Er stond geen adres op het formulier"}})
+    verwijderingen, _ = _draai(cl.delist_all_platforms, db)
+    assert verwijderingen == []
+
+
+def test_foutrij_na_een_plaatsing_die_wel_liep():
+    db = _db()
+    db.tabellen["listings"][2].update({"status": "error", "platform_listing_id": None})
+    db.tabellen["jobs"][2].update({"status": "error", "result": {"error": "The tab was closed"}})
+    verwijderingen, _ = _draai(cl.delist_all_platforms, db)
+    assert verwijderingen == ["2dehands"]
