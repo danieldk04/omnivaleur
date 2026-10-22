@@ -21,52 +21,6 @@ _HERPLAATS_GRENS = 50
 router = APIRouter(prefix="/platforms", tags=["platforms"])
 
 
-@router.post("/marktplaats/bootstrap")
-async def marktplaats_bootstrap(body: dict, user_id: str = Depends(get_current_user)):
-    """Bootstrap Marktplaats session via Playwright. Body: {email, password}"""
-    try:
-        session = await MarktplaatsPlatform().bootstrap_session(body["email"], body["password"])
-        _save_credentials(user_id, "marktplaats", {
-            "access_token": "session",
-            "extra_data": {
-                "cookies": session["cookies"],
-                "user_agent": session["user_agent"],
-                "email": body["email"],
-                "password": body["password"],
-            },
-        })
-        return {
-            "status": "connected",
-            "platform": "marktplaats",
-            "cookies_captured": len(session["cookies"]),
-        }
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=str(e))
-
-
-@router.post("/2dehands/bootstrap")
-async def tweedehands_bootstrap(body: dict, user_id: str = Depends(get_current_user)):
-    """Bootstrap 2dehands session via Playwright. Body: {email, password}"""
-    try:
-        session = await TweedehandsPlatform().bootstrap_session(body["email"], body["password"])
-        _save_credentials(user_id, "2dehands", {
-            "access_token": "session",
-            "extra_data": {
-                "cookies": session["cookies"],
-                "user_agent": session["user_agent"],
-                "email": body["email"],
-                "password": body["password"],
-            },
-        })
-        return {
-            "status": "connected",
-            "platform": "2dehands",
-            "cookies_captured": len(session["cookies"]),
-        }
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=str(e))
-
-
 @router.get("/ebay/auth-url")
 async def ebay_auth_url():
     try:
@@ -580,28 +534,6 @@ async def shopify_connect_token(body: dict, background_tasks: BackgroundTasks,
     }
 
 
-@router.post("/vinted/bootstrap")
-async def vinted_bootstrap(body: dict, user_id: str = Depends(get_current_user)):
-    """
-    Bootstrap a Vinted session via Playwright Stealth.
-    Body: {"email": "...", "password": "..."}
-    Stores session cookies in platform_credentials.
-    """
-    from backend.platforms.vinted import VintedPlatform
-    platform = VintedPlatform()
-    session = await platform.bootstrap_session(body["email"], body["password"])
-    _save_credentials(user_id, "vinted", {
-        "access_token": "session",
-        "extra_data": {
-            "cookies": session["cookies"],
-            "user_agent": session["user_agent"],
-            "email": body["email"],
-            "password": body["password"],  # stored encrypted in prod
-        }
-    })
-    return {"status": "connected", "platform": "vinted"}
-
-
 @router.get("/marktplaats/debug")
 async def marktplaats_debug(user_id: str = Depends(get_current_user)):
     """Navigate SYI form with stored session and capture the submit API call."""
@@ -677,46 +609,6 @@ async def marktplaats_debug(user_id: str = Depends(get_current_user)):
         "post_requests": post_requests[:10],
         "api_requests": [r for r in all_requests if any(x in r["url"] for x in ["api", "graphql", "/v1", "/v2"])][:20],
     }
-
-
-@router.post("/marktplaats/sync-chrome-session")
-async def marktplaats_sync_chrome(body: dict, user_id: str = Depends(get_current_user)):
-    """
-    Save Marktplaats session cookies extracted from a real Chrome browser.
-    Body: {"cookies": {"__mpx": "...", "MpSession": "...", "aws-waf-token": "...", ...}, "email": "...", "password": "..."}
-    Call this when headless bootstrap fails due to AWS WAF.
-    """
-    cookies = body.get("cookies", {})
-    if not cookies:
-        raise HTTPException(status_code=400, detail="No cookies provided")
-    _save_credentials(user_id, "marktplaats", {
-        "access_token": "session",
-        "extra_data": {
-            "cookies": cookies,
-            "user_agent": body.get("user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"),
-            "email": body.get("email", ""),
-            "password": body.get("password", ""),
-        },
-    })
-    return {"status": "synced", "platform": "marktplaats", "cookies_saved": len(cookies)}
-
-
-@router.post("/2dehands/sync-chrome-session")
-async def tweedehands_sync_chrome(body: dict, user_id: str = Depends(get_current_user)):
-    """Save 2dehands session cookies from Chrome browser."""
-    cookies = body.get("cookies", {})
-    if not cookies:
-        raise HTTPException(status_code=400, detail="No cookies provided")
-    _save_credentials(user_id, "2dehands", {
-        "access_token": "session",
-        "extra_data": {
-            "cookies": cookies,
-            "user_agent": body.get("user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"),
-            "email": body.get("email", ""),
-            "password": body.get("password", ""),
-        },
-    })
-    return {"status": "synced", "platform": "2dehands", "cookies_saved": len(cookies)}
 
 
 @router.get("/status")
