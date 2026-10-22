@@ -17965,3 +17965,8 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - 09e089ec (Voordeelsieraden): draait nu 1.0.400. Van gisteren: 41 Marktplaats-artikelen waarvan de oude advertentie bij het herplaatsen weg is maar de nieuwe niet kwam (24 mislukt op de oude editor, 14 door haarzelf geannuleerd om 07:04 UTC, rest overgeslagen of gestopt), en 90 2dehands-plaatsingen mislukt op de oude editor. Niet opnieuw klaargezet: ze annuleerde vanochtend zelf, en op 2dehands is nog bij niemand een plaatsing op 1.0.400 gezien. Briefing voor Daniel, beslissing bij hem.
 - a45020c9, b3cac009, hbm789: ongewijzigd, geen mailtjes.
 - Server draait nog 01d19123. Klantdata en code niet aangeraakt.
+
+## 22-10-2026: Onboarding nieuwe klanten (ochtend, tweede vuring om 11:37)
+
+- c184e384 (gbyte2855): sinds de vorige ronde 2 artikelen van Marktplaats ingelezen (elektronica, 64 en 100 euro), beide actief op Marktplaats. Scanfouten op Shopify, WooCommerce (niet gekoppeld) en 2dehands (leeg account) zijn klant-eigen. Het welkomstmailtje van 11:05 ("nog niets ingelezen") vervangen door een versie met de echte stand.
+- Overige zes klanten ongewijzigd ten opzichte van 11:05; Voordeelsieraden blijft een beslissing van Daniel. Code en klantdata niet aangeraakt.
