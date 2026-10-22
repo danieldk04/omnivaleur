@@ -788,7 +788,7 @@
       "pillar": "B",
       "format": "strategy",
       "slug": "how-to-organize-inventory-for-reselling",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "reseller-voorraad-organiseren",
       "priority": 91
     },
@@ -1629,6 +1629,16 @@
       "action": "created",
       "url_path": "/reseller-tools/margin-scheme-vat-second-hand-goods",
       "published_at": "2026-10-21T13:21:25.851572+00:00"
+    },
+    {
+      "keyword": "how to organize inventory for reselling",
+      "slug": "how-to-organize-inventory-for-reselling",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-organize-inventory-for-reselling",
+      "published_at": "2026-10-22T13:23:36.088632+00:00"
     }
   ]
 }
