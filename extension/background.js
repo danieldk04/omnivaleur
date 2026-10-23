@@ -5590,8 +5590,13 @@ async function bgExtend2dh(job, serverUrl, keten = null) {
   }
 
   // Elke afgeronde verlenging neemt de lijst "Loopt af" mee (zie leesAflopende2dh).
+  //
+  // In een keten maar eens per vijf minuten: de lijst lezen kost bij een groot
+  // account negen verzoeken, en de server heeft hem niet bij elke verlenging nodig.
   const klaar = async (body) => {
-    const aflopend = await leesAflopende2dh(tabId);
+    const teVers = keten && keten.aflopendOm && Date.now() - keten.aflopendOm < 5 * 60 * 1000;
+    const aflopend = teVers ? null : await leesAflopende2dh(tabId);
+    if (keten && aflopend) keten.aflopendOm = Date.now();
     await finaliseJob(serverUrl, job.id, "complete", aflopend ? { ...body, aflopend } : body);
   };
 
