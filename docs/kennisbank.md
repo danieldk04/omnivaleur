@@ -17,6 +17,17 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## chrome-vertaalt-de-kanaalpagina
+
+*23-10-2026 — "23-10: Chrome vertaalde Marktplaats naar Engels bij twee klanten; knoptekst \"Not sold via Marktplaats\" en vertaalde titels braken verwijderen (1.0.402)"*
+
+Op 23-10-2026 bleek bij 45f9caba en 12fc61d0 dat Chrome de Marktplaats-pagina automatisch naar het Engels vertaalt, inclusief advertentietitels ("Asbak" werd "Ashtray"). Het verwijdervenster toonde "Not sold via Marktplaats" en de extensie zocht alleen "niet verkocht", dus klikte niets; een op Vinted verkochte hoodie bleef op Marktplaats staan. Ook het zoeken op titel in het overzicht faalt dan.
+
+**Why:** alles wat in de extensie op zichtbare tekst matcht kan door Chrome-vertaling stuk gaan, zonder dat het kanaal iets veranderde. De diagnostiek (labels + venstertekst) liet het zien.
+**How to apply:** bij een "geen knop herkend"-fout eerst de venstertekst lezen op een andere taal. Tekstmatches altijd ook in het Engels; liever op kenmerken (id, data-testid, nummer) dan op tekst. Zie "vinted-staat-alleen-engels" en "extension-release-bump-version".
+
+---
+
 ## verlengen-direct-api-en-keten
 
 *23-10-2026 — 23-10: 2dehands-verlengen is POST /my-account/sell/extend.json met x-mp-xsrf; extensie 1.0.401 verlengt in een keten; wachtrij op einddatum (_sluit)*
