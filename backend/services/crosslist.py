@@ -3452,6 +3452,7 @@ def verleng_aflopende_2dehands(user_id: str, aflopend, eigen_item_id: str | None
                 "platform_listing_id": r["platform_listing_id"],
                 "platform_listing_url": r.get("platform_listing_url"),
                 "_listing_row_id": r["id"],
+                "_sluit": _sluit_iso(per_id[r["platform_listing_id"]].get("close")),
             },
         }).execute()
         lopend.add(r["item_id"])
