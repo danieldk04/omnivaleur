@@ -3289,7 +3289,7 @@ async function processJob(job, serverUrl) {
   // net als delete/scan.
   if (job.action === "extend" && job.platform === "2dehands") {
     try {
-      await bgExtend2dh(job, serverUrl);
+      await bgExtendKeten(job, serverUrl);
     } catch (e) {
       await reportError(job.id, serverUrl, String(e));
     }
