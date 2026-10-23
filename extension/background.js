@@ -5778,6 +5778,45 @@ async function bgExtend2dh(job, serverUrl, keten = null) {
         return { notExpiring: true, status: ad.status, closeDate: closeBefore };
       }
 
+      if (directMag) {
+        // Dezelfde aanroep als de knop, zonder de knop. Alleen het eigen verlengen:
+        // de betaalde "Plaats bovenaan" bestaat hier niet. Het bewijs blijft de
+        // nieuwe einddatum; die schuift een halve seconde na het antwoord op.
+        let sleutel = null;
+        try { sleutel = window.__ENV_CONFIG__ && window.__ENV_CONFIG__.xsrfToken; } catch (e) { /* hieronder */ }
+        if (!sleutel) {
+          const m = [...document.scripts].map((s) => s.textContent || "").join("\n")
+            .match(/"xsrfToken"\s*:\s*"([^"]+)"/);
+          sleutel = m && m[1];
+        }
+        if (!sleutel) return { step: "extend", httpError: "no_token" };
+        const r = await fetch("/my-account/sell/extend.json", {
+          method: "POST", credentials: "same-origin",
+          headers: { "Content-Type": "application/json", "x-mp-xsrf": sleutel },
+          body: JSON.stringify({ itemId: wantId }),
+        });
+        const tekst = await r.text();
+        if (!r.ok) return { step: "extend", httpError: r.status, body: tekst.slice(0, 120) };
+        let antwoord = null;
+        try { antwoord = JSON.parse(tekst); } catch (e) { /* zonder antwoord geen betaling te zien */ }
+        // Zou 2dehands om geld vragen, dan stoppen we hier. Niets betaalds, nooit.
+        if (antwoord && antwoord.paymentRequired) return { step: "extend", paymentRequired: true };
+        cache.map && cache.map.delete(wantId);
+        let closeAfter = null;
+        for (let poging = 0; poging < 10; poging++) {
+          await nap(600);
+          const na = await readOne(false);
+          closeAfter = (na && na.ad && na.ad.closeDate) || null;
+          if (closeBefore && closeAfter &&
+              (new Date(closeAfter) - new Date(closeBefore)) / 86400000 >= 21) break;
+        }
+        let shiftDays = null;
+        if (closeBefore && closeAfter) {
+          shiftDays = Math.round((new Date(closeAfter) - new Date(closeBefore)) / 86400000);
+        }
+        return { clicked: true, viaApi: true, closeBefore, closeAfter, shiftDays, statusAfter: null };
+      }
+
       // Alleen de verlengknop van DIT zoekertje (data-ad-id), en verder niets —
       // zeker niet de betaalde knop in het venster dat daarna opent.
       const link = document.querySelector(`a[href="#verlengen"][data-ad-id="${wantId}"]`);
