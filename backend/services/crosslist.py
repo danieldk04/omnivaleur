@@ -3456,7 +3456,11 @@ def verleng_aflopende_2dehands(user_id: str, aflopend, eigen_item_id: str | None
             "platform": "2dehands",
             "action": "extend",
             "status": "pending",
-            "scheduled_for": (nu + timedelta(minutes=n * random.randint(2, 4))).isoformat(),
+            # Seconden, geen minuten (23-10-2026): sinds 1.0.401 verlengt de extensie
+            # achter elkaar in één tabblad, met zelf 6 tot 12 s tussen twee stuks.
+            # Met 2 tot 4 minuten per opdracht stond bij 800 aflopende de laatste
+            # ruim 40 uur verder en kon de keten niets vinden dat aan de beurt was.
+            "scheduled_for": (nu + timedelta(seconds=n * random.randint(6, 12))).isoformat(),
             "payload": {
                 "platform_listing_id": r["platform_listing_id"],
                 "platform_listing_url": r.get("platform_listing_url"),
