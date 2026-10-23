@@ -2077,7 +2077,8 @@ def _scan_achterstallig(j: dict, now_dt: datetime) -> bool:
 _LICHTE_VELDEN = ("id,action,platform,item_id,created_at,scheduled_for,"
                   "rubriek_sinds:payload->>_rubriek_zoeken_sinds,"
                   "rubriek_pogingen:payload->>_rubriek_pogingen,"
-                  "fotos_sinds:payload->>_fotos_wachten_sinds")
+                  "fotos_sinds:payload->>_fotos_wachten_sinds,"
+                  "sluit:payload->>_sluit")
 
 
 def _rubriek_mislukt(j: dict) -> int:
