@@ -5835,26 +5835,41 @@ async function bgExtend2dh(job, serverUrl, keten = null) {
         clicked: true, closeBefore, closeAfter, shiftDays,
         statusAfter: (after && after.ad && after.ad.status) || null,
       };
-    }, [itemId]);
+    }, [itemId, heeftSleutel]);
   };
 
   try {
     let uit;
+    // In een keten staat de pagina er al; na een verversing of een hapering niet.
+    let laden = !(keten && keten.geladen);
     for (let poging = 1; ; poging++) {
       try {
-        uit = await meet();
+        uit = await meet(laden);
       } catch (e) {
         if (poging >= 3 || !/frame with id \d+ was removed|frame was removed/i.test(String(e?.message || e))) throw e;
         console.log(`[Omnivaleur] bgExtend2dh: overzicht ververste tijdens het meten van ${itemId}, opnieuw (${poging})`);
         await sleep(5000);
+        laden = true;
         continue;
       }
       if (poging < 3 && uit && uit.step === "read" && uit.fetchError) {
         await sleep(5000);
         await stuurWerkTabbladNaar(tabId, overviewUrl).catch(() => {});
+        laden = true;
         continue;
       }
       break;
+    }
+    if (keten) keten.geladen = true;
+
+    if (uit && uit.step === "extend") {
+      if (uit.paymentRequired) {
+        throw new Error(`2dehands asked for payment to extend ${itemId}. Nothing was paid or changed.`);
+      }
+      throw new Error(
+        `2dehands refused to extend ${itemId} (HTTP ${uit.httpError}${uit.body ? ": " + uit.body : ""}). ` +
+        `Nothing was changed — try again later.`
+      );
     }
 
     if (uit && uit.step === "read" && (uit.empty || uit.httpError || uit.fetchError)) {
