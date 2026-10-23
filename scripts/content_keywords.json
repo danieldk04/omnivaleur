@@ -798,7 +798,7 @@
       "pillar": "B",
       "format": "niche",
       "slug": "lego-reselling-automation",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "lego-doorverkopen-software",
       "priority": 92
     }
@@ -1639,6 +1639,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-organize-inventory-for-reselling",
       "published_at": "2026-10-22T13:23:36.088632+00:00"
+    },
+    {
+      "keyword": "lego reselling automation",
+      "slug": "lego-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "format": "niche",
+      "action": "created",
+      "url_path": "/reseller-tools/lego-reselling-automation",
+      "published_at": "2026-10-23T12:59:08.222601+00:00"
     }
   ]
 }
