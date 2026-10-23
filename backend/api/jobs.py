@@ -2146,8 +2146,25 @@ def _wachtrij_volgorde(licht: list[dict], now_dt: datetime) -> list[dict]:
     # minuten) stond als oudste vooraan. Elke ronde werd alleen die geprobeerd, de
     # opzoeking mislukte, en de rust van drie minuten hield de 24 andere tegen: die
     # werden nooit geprobeerd, terwijl lokaal twee van de drie wel lukten.
-    return sorted(licht, key=lambda j: (
+    volgorde = sorted(licht, key=lambda j: (
         groep(j), _rubriek_mislukt(j) if groep(j) == 5 else 0, j.get("created_at") or ""))
+
+    # VERLENGINGEN OP URGENTIE (23-10-2026, Egbert bcdf9aa4). 824 verlengingen
+    # stonden op aanmaakvolgorde; gemeten 112 keer stond een zoekertje met meer
+    # dagen te gaan vóór een dringender. Alleen de verlengingen die nu aan de
+    # beurt zijn wisselen onderling van plek, op einddatum (payload._sluit); alles
+    # anders blijft precies waar het stond. Eén met een tijdstip in de toekomst
+    # blijft staan: de uitgifte slaat hem over en de kop zou leeg uitkomen.
+    nu_iso = now_dt.isoformat()
+    plekken = [i for i, j in enumerate(volgorde)
+               if j.get("action") == "extend" and j.get("sluit")
+               and (not j.get("scheduled_for") or j["scheduled_for"] <= nu_iso)]
+    if len(plekken) > 1:
+        dringend = sorted((volgorde[i] for i in plekken),
+                          key=lambda j: (j["sluit"], j.get("created_at") or ""))
+        for plek, j in zip(plekken, dringend):
+            volgorde[plek] = j
+    return volgorde
 
 
 def _ruim_dubbele_scans_op(db, licht: list[dict], now: str) -> list[dict]:
