@@ -5193,8 +5193,8 @@ function _bevestigInVenster(jaBron, neeBron) {
     //    Altijd "Direct": wij verwijderen omdat het elders verkocht is of
     //    opnieuw geplaatst wordt, en "Automatisch" laat de advertentie nog
     //    weken online staan.
-    || (/direct\s+verwijder/i.test(venstertekst)
-        ? knoppen.find((b) => /^direct( verwijderen)?$/i.test(naam(b))) : null)
+    || (/direct\s+verwijder|(delete|remove)\s+(your\s+)?(ad|advertisement|listing)\s+(immediately|directly)/i.test(venstertekst)
+        ? knoppen.find((b) => /^(direct|immediately|directly)( verwijderen)?$/i.test(naam(b))) : null)
     // 2. De gewone bevestiging. Nooit een knop die annuleert, sluit of teruggaat.
     || knoppen.find((b) => JA.test(naam(b)) && !NEE.test(naam(b)))
     // 3. Laatste redmiddel: blijft er precies één knop over die niet annuleert,
