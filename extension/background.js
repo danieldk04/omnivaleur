@@ -5934,7 +5934,64 @@ async function bgExtend2dh(job, serverUrl, keten = null) {
       old_close: uit.closeBefore, new_close: uit.closeAfter, shift_days: uit.shiftDays,
     });
   } finally {
-    sluitWerkTabblad(tabId, 2500);
+    if (!keten) sluitWerkTabblad(tabId, 2500);
+  }
+}
+
+// VERLENGINGEN ACHTER ELKAAR IN HETZELFDE TABBLAD (23-10-2026, Egbert bcdf9aa4).
+//
+// Gemeten in zijn opdrachten (3 dagen, 417 verlengingen): 42 s werk plus 38 s
+// pauze per zoekertje, ruim 40 per uur en alleen de uren dat zijn computer aan
+// staat (zo'n 7). Dat is ~230 per dag; er komen er 260 tot 650 per dag bij, en
+// over een week of twee een golf van ~340 per dag. Het tabblad sluiten, een
+// nieuw openen, de pagina laden en wachten op de volgende ronde is het grootste
+// deel van die tijd. Nu blijft het tabblad open en vraagt de keten zelf de
+// volgende verlenging. Het tempo blijft bewust menselijk: 6 tot 12 s tussen twee
+// zoekertjes. Een keten stopt na 40 stuks of 12 minuten, bij Calm mode, bij de
+// eerste fout en zodra er iets anders vooraan staat (bijvoorbeeld een plaatsing
+// waar de verkoper net op klikte): die gaat dan gewoon voor.
+const KETEN_MAX_OPDRACHTEN = 40;
+const KETEN_MAX_MS = 12 * 60 * 1000;
+const KETEN_PAUZE_MS = [6000, 12000];
+
+async function haalVolgendeVerlenging(serverUrl) {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${serverUrl}/api/jobs/pending?platform=2dehands`,
+      { headers, signal: AbortSignal.timeout(POLL_FETCH_MAX_MS) });
+    if (!res.ok) return null;
+    const jobs = await res.json();
+    const j = Array.isArray(jobs) ? jobs[0] : null;
+    if (!j || j.action !== "extend" || j.platform !== "2dehands") return null;
+    const claim = await fetch(`${serverUrl}/api/jobs/${j.id}/claim`, { method: "POST", headers });
+    return claim.ok ? j : null;
+  } catch (_) { return null; }
+}
+
+async function bgExtendKeten(eerste, serverUrl) {
+  const keten = { tabId: null, geladen: false, aflopendOm: 0, n: 0 };
+  const begin = Date.now();
+  let job = eerste;
+  try {
+    for (;;) {
+      try {
+        await bgExtend2dh(job, serverUrl, keten);
+      } catch (e) {
+        await reportError(job.id, serverUrl, String(e));
+        return;
+      }
+      keten.n++;
+      if (keten.n >= KETEN_MAX_OPDRACHTEN || Date.now() - begin > KETEN_MAX_MS) return;
+      if (await calmAan()) return;
+      const [min, max] = KETEN_PAUZE_MS;
+      await new Promise((r) => setTimeout(r, min + Math.floor(Math.random() * (max - min))));
+      const volgende = await haalVolgendeVerlenging(serverUrl);
+      if (!volgende) return;
+      gaEvent("job_started", { action: volgende.action, platform: volgende.platform });
+      job = volgende;
+    }
+  } finally {
+    if (keten.tabId != null) sluitWerkTabblad(keten.tabId, 2500);
   }
 }
 
