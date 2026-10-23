@@ -5536,7 +5536,7 @@ async function mpAdvertentieSnapshot(tabId) {
 // NOOIT weghalen, nooit opnieuw plaatsen (zie "herplaatsen-verliest-advertenties"
 // en docs/team-notes.md 10-09-2026). Het bewijs dat telt is de nieuwe closeDate,
 // niet "geen foutmelding" (zie "succes-nooit-uit-uitsluitingslijst").
-async function bgExtend2dh(job, serverUrl) {
+async function bgExtend2dh(job, serverUrl, keten = null) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const payload = job.payload || {};
   const itemId = String(payload.platform_listing_id || "").trim();
@@ -5548,13 +5548,20 @@ async function bgExtend2dh(job, serverUrl) {
 
   // Klok vast, om dezelfde reden als bij bgDeleteMp2dh: ook verlengen wacht op
   // stukjes code in de pagina en houdt zolang het kanaal bezet.
-  const tabId = await new Promise((res, rej) =>
+  //
+  // In een keten (bgExtendKeten) blijft het tabblad open voor de volgende
+  // verlenging: geen nieuw tabblad, geen nieuwe lading, geen nieuwe pauze.
+  const hergebruikt = !!(keten && keten.tabId != null);
+  const tabId = hergebruikt ? keten.tabId : await new Promise((res, rej) =>
     openWorkerTab(overviewUrl, t =>
       t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true, klokVast: true }
     )
   );
-  _klokTabbladen.add(tabId);
-  startOntdooiTeller();
+  if (keten) keten.tabId = tabId;
+  if (!hergebruikt) {
+    _klokTabbladen.add(tabId);
+    startOntdooiTeller();
+  }
 
   // WELKE ZOEKERTJES LOPEN AF, VOLGENS 2DEHANDS ZELF. (11-10-2026, Lynn 96e30080)
   //
