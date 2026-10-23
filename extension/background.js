@@ -5731,7 +5731,36 @@ async function bgExtend2dh(job, serverUrl, keten = null) {
         } catch (e) { return { fetchError: String(e && e.message || e) }; }
       };
 
-      const before = await readOne(true);
+      // Met de sleutel: de hele lijst "Loopt af" één keer in het geheugen van de
+      // pagina (negen verzoeken bij 800 aflopende), en daarna per zoekertje
+      // opzoeken in plaats van elke keer opnieuw bladeren. Staat hij er niet in,
+      // of is de einddatum onwaarschijnlijk ver weg (verouderd), dan het gewone pad.
+      const cache = (window.__omniAflopend = window.__omniAflopend || { t: 0, map: null });
+      const uitCache = async () => {
+        if (!cache.map || Date.now() - cache.t > 90000) {
+          const m = new Map();
+          for (let batch = 1; batch <= 40; batch++) {
+            const x = await haal(batch, "&inExpirationWindow=true");
+            if (x.httpError) return null;
+            const ads = x.d.ads || [];
+            for (const a of ads) m.set(String(a.itemId), a);
+            if (ads.length < 100) break;
+            await nap(120);
+          }
+          cache.map = m;
+          cache.t = Date.now();
+        }
+        const a = cache.map.get(wantId);
+        if (!a || a.status !== "EXPIRING") return null;
+        const dagen = (new Date(a.closeDate) - Date.now()) / 86400000;
+        if (!(dagen < 9)) return null;
+        return { total: cache.map.size, ad: a };
+      };
+      let before = null;
+      if (directMag) {
+        try { before = await uitCache(); } catch (e) { before = null; }
+      }
+      if (!before) before = await readOne(true);
       if (before.httpError) return { step: "read", httpError: before.httpError };
       if (before.fetchError) return { step: "read", fetchError: before.fetchError };
       // Leeg overzicht bewijst niets (uitgelogd? markup veranderd?). Nooit
