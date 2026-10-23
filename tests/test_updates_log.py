@@ -16,7 +16,9 @@ def _berichten():
 
 def test_bovenste_bericht_is_de_melding():
     nieuws_id = re.search(r"const NIEUWS_ID = '([^']+)'", HTML).group(1)
-    assert _berichten()[0][0] == nieuws_id, (
+    # Een bericht zonder melding (zoals een snelheidswinst) staat bovenaan zonder
+    # dat NIEUWS_ID meeverhuist; de melding zelf moet wel in de tijdlijn staan.
+    assert nieuws_id in [i for i, _, _ in _berichten()], (
         "Zet een nieuw bericht BOVENAAN de tijdlijn met dezelfde id als NIEUWS_ID "
         "(of laat NIEUWS_ID staan als je geen nieuwe melding wilt).")
 
