@@ -3667,7 +3667,12 @@ async def extend_expiring_2dehands():
             # één dag passen. Het blijft gespreid en de extensie doet er één
             # tegelijk (gemeten ~72 s per verlenging).
             stap = (2, 4) if grens > _EXTEND_MAX_PER_VERKOPER_PER_DAG else (5, 9)
-            scheduled_for = (nu + timedelta(minutes=n * random.randint(*stap))).isoformat()
+            # Grote partij: seconden (de extensie verlengt in een keten, zie
+            # verleng_aflopende_2dehands); kleine partij blijft op minuten.
+            eenheid = "seconds" if grens > _EXTEND_MAX_PER_VERKOPER_PER_DAG else "minutes"
+            if eenheid == "seconds":
+                stap = (6, 12)
+            scheduled_for = (nu + timedelta(**{eenheid: n * random.randint(*stap)})).isoformat()
 
             payload = {
                 "platform_listing_id": listing.get("platform_listing_id"),
