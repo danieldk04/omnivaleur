@@ -3660,6 +3660,7 @@ async def extend_expiring_2dehands():
                 "platform_listing_id": listing.get("platform_listing_id"),
                 "platform_listing_url": listing.get("platform_listing_url"),
                 "_listing_row_id": listing["id"],
+                "_sluit": _sluit_iso(_einde_uit_start(listing.get("listed_at"))),
             }
             (await naast_de_lus(lambda p=payload, s=scheduled_for, u=eigenaar, it=listing["item_id"]:
                 db.table("jobs").insert({
