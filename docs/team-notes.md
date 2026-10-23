@@ -18018,3 +18018,6 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - 45f9caba: 102 Vinted, 102 Marktplaats, eerste 10 op 2dehands. Mailtje met de hoodie die hij zelf van Marktplaats moet halen.
 - c184e384: sinds de uitrol van 785ef18a geen nieuwe fouten. 8adaff42 heeft dezelfde voorraad (zelfde opladers, zelfde prijzen), vermoedelijk dezelfde verkoper met een tweede account; ongewijzigd, geen mailtje. a45020c9, b3cac009 ongewijzigd. 09e089ec: Marktplaats nog geblokkeerd, beslissing blijft bij Daniel.
 - Volle testsuite: 2766 groen, 7 rood (test_veger_geeft_de_echte_reden, test_vinted_eigen_slottekst), die ook op a7315250 al rood zijn.
+
+## 23-10-2026: Onboarding nieuwe klanten (ochtend, tweede vuring om 20:51)
+- Liep 18 minuten na de ronde van 20:20. Geen nieuwe klanten (8 in hun eerste week, alle al bekeken), geen fouten of vastgelopen opdrachten van na 20:33. Niets gerepareerd, geen nieuwe mailtjes; die van de vorige ronde blijven staan. Web Store levert nog 1.0.400, 1.0.402 wacht.
