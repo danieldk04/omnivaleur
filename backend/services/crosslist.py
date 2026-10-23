@@ -3394,6 +3394,15 @@ def _sluit_iso(close) -> str | None:
     return dt.astimezone(timezone.utc).isoformat()
 
 
+def _einde_uit_start(listed_at) -> str | None:
+    """De einddatum die bij een begindatum hoort (28 dagen later)."""
+    try:
+        dt = datetime.fromisoformat(str(listed_at).strip().replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    return (dt + timedelta(days=_EXTEND_VERVALT_NA_DAGEN)).isoformat()
+
+
 def lijn_looptijd_uit(listing_row_id: str | None, close) -> bool:
     """listed_at gelijkzetten aan de echte looptijd. Alleen met een einddatum."""
     start = _start_uit_einde(close) if close else None
