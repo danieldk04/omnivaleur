@@ -17,6 +17,19 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## verlengen-direct-api-en-keten
+
+*23-10-2026 — 23-10: 2dehands-verlengen is POST /my-account/sell/extend.json met x-mp-xsrf; extensie 1.0.401 verlengt in een keten; wachtrij op einddatum (_sluit)*
+
+23-10-2026, Egbert (bcdf9aa4, 5.510 zoekertjes): 830 wachtende verlengingen, uitstroom ~230 per dag (42 s werk plus 38 s pauze per stuk, computer ~7 u/dag aan), instroom 259-651. De knop Verlengen doet POST /my-account/sell/extend.json {itemId} met header x-mp-xsrf (window.__ENV_CONFIG__.xsrfToken); zonder die header 403. Antwoord 200, einddatum schuift pas na ~0,5 s, dus bewijs = pollen tot +28 dagen.
+
+Gebouwd: wachtrij sorteert verlengingen op payload._sluit (jobs._wachtrij_volgorde), spreiding 6-12 s, extensie 1.0.401 met bgExtendKeten (tabblad blijft open, max 40 stuks of 12 min, stopt bij fout/Calm/ander werk). Valt terug op de knop zonder sleutel.
+
+**Why:** capaciteit van het oude systeem was ~9.000 zoekertjes bij 7 uur aan; Egbert krijgt over 8-15 dagen een golf van ~340 per dag.
+**How to apply:** meet eerst in de opdrachten (claimed_at/done_at per user) voor je een tempo belooft; test pagina-code echt op Daniels Revaleur-account via Claude in Chrome (zijn eigen verlengingen zijn gratis). Nooit het betaalde 'Plaats bovenaan' aanraken. Zie "verlengen-overleeft-verversing" en "auto-push-zet-tussenstand-live".
+
+---
+
 ## 403-na-verwijderen-is-blokkade
 
 *22-10-2026 — "Een 403 bij het nakijken van een verwijdering is een blokkade van Marktplaats/2dehands, geen bewijs dat de advertentie er nog staat; na een echte verwijdering geeft /seller/view 410"*
