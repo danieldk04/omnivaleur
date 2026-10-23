@@ -5735,7 +5735,8 @@ async function bgExtend2dh(job, serverUrl, keten = null) {
       // pagina (negen verzoeken bij 800 aflopende), en daarna per zoekertje
       // opzoeken in plaats van elke keer opnieuw bladeren. Staat hij er niet in,
       // of is de einddatum onwaarschijnlijk ver weg (verouderd), dan het gewone pad.
-      const cache = (window.__omniAflopend = window.__omniAflopend || { t: 0, map: null });
+      const cache = directMag
+        ? (window.__omniAflopend = window.__omniAflopend || { t: 0, map: null }) : null;
       const uitCache = async () => {
         if (!cache.map || Date.now() - cache.t > 90000) {
           const m = new Map();
