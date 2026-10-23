@@ -18021,3 +18021,11 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 
 ## 23-10-2026: Onboarding nieuwe klanten (ochtend, tweede vuring om 20:51)
 - Liep 18 minuten na de ronde van 20:20. Geen nieuwe klanten (8 in hun eerste week, alle al bekeken), geen fouten of vastgelopen opdrachten van na 20:33. Niets gerepareerd, geen nieuwe mailtjes; die van de vorige ronde blijven staan. Web Store levert nog 1.0.400, 1.0.402 wacht.
+
+## 23-10-2026: Dagelijkse klantfouten (ochtendronde, tweede vuring om 21:10)
+- Gemeten sinds 12:00 UTC: 351 afgeronde opdrachten, 66 fouten bij 8 klanten. Geen codewijziging: niets met een bewezen oorzaak in onze code dat niet al gerepareerd is.
+- 09e089ec 42 van de 66 (Marktplaats geblokkeerd, verwijderen op leeg overzicht, herplaatsing terecht overgeslagen); haar extensie viel om 16:25 UTC stil midden in een verwijdering (082c42f5 staat nog op claimed). 26cf5471 en 3bfbed2c niet ingelogd op Vinted.
+- Chrome-vertaling van het MP-verwijdervenster nog 2x (45f9caba hoodie, 12fc61d0 asbak): gerepareerd in 1.0.402, die nog op de Web Store wacht.
+- Egbert (bcdf9aa4) "m2447286531 is not in your 2dehands overview": gemeten in de browser, het zoekertje is op 2dehands echt verlopen. Extensie had gelijk. De servercontrole die zulke rijen archiveert kan hem niet nakijken omdat zijn opgeslagen link /seller/view/ is (vraagt inlog, 401); de andere 31 van de laatste twee weken hadden een /v/-link en zijn wel gearchiveerd. Eén rij, geen wijziging. Bijvangst: de volledige overzichtslezer bij verlengen stopt bij 5000 zoekertjes (batch <= 50) en Egbert heeft er ~5.500; hier niet de oorzaak, maar "niet gevonden" uit een onvolledige lezing kan later wel een keer onterecht zijn.
+- Toon (96e30080) Lammycoat: na "Niet verkocht" 6x 403 bij het nakijken, gemeld als mislukt, herplaatsing overgeslagen; de advertentie is nu weg (404) en de rij staat op mogelijk verkocht. Toon ziet dus de vraag "verkocht?" bij een jas die niet verkocht is. 1x, niet aangeraakt.
+- Losse rest: 12fc61d0 lampenkap met Vinted-fotolinks die 404 geven (1 van 416 artikelen niet gespiegeld), Toon sjaal maat Overige en pakketgrootte niet gekozen, 31d28378 Vinted-formulier half geladen. Alle foutsoorten in klantfouten.py beoordeeld, 0 open.
