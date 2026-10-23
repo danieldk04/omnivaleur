@@ -5609,15 +5609,31 @@ async function bgExtend2dh(job, serverUrl, keten = null) {
   // ze niets over het zoekertje. Dus: pagina opnieuw laten laden en opnieuw
   // meten. Een klik die vóór het verversen al werkte zien we dan terug als een
   // vervaldatum ver in de toekomst (zie alVerlengd hieronder).
-  const meet = async () => {
-    await waitForTabLoad(tabId);
-    await sleep(3000);                 // let React render the list
+  const meet = async (laden = true) => {
+    if (laden) {
+      await waitForTabLoad(tabId);
+      await sleep(3000);                 // let React render the list
+    }
     await zetWerkStatus(tabId,
       `Zoekertje verlengen (${wachtendAantal("2dehands", "extend")} verlengopdrachten in de wachtrij)`);
+    // DIRECT VERLENGEN (23-10-2026, Egbert bcdf9aa4). De knop "Verlengen" doet
+    // niets anders dan POST /my-account/sell/extend.json {itemId} met de
+    // beveiligingssleutel van de pagina (x-mp-xsrf, ook in window.__ENV_CONFIG__).
+    // Nagemeten op Revaleur: 200 in 0,3 s, einddatum precies 28 dagen verder. Dus
+    // geen overzicht openklappen en geen knop zoeken. Staat de sleutel er niet
+    // (markup veranderd), dan het oude pad met de knop, ongewijzigd.
+    const heeftSleutel = (await execInTab(tabId, () => {
+      try {
+        if (window.__ENV_CONFIG__ && window.__ENV_CONFIG__.xsrfToken) return true;
+        const m = [...(document.scripts || [])].map((s) => s.textContent || "").join("\n")
+          .match(/"xsrfToken"\s*:\s*"([^"]+)"/);
+        return !!m;
+      } catch (e) { return false; }
+    }).catch(() => false)) === true;
     // Alleen de aflopende zoekertjes, tot de knop van dit zoekertje er staat.
-    await expandMp2dhOverview(tabId, { verlengId: itemId });
+    if (!heeftSleutel) await expandMp2dhOverview(tabId, { verlengId: itemId });
     await zetWerkStatus(tabId, null, "Het juiste zoekertje zoeken en verlengen");
-    return execInTab(tabId, async (wantId) => {
+    return execInTab(tabId, async (wantId, directMag) => {
       const nap = ms => new Promise(r => setTimeout(r, ms));
       // Bladeren tot het zoekertje er is. Alleen de eerste 200 lezen gaf op
       // 28-09-2026 bij een klant met 625 zoekertjes 40 keer "not in your
