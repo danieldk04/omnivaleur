@@ -17984,3 +17984,13 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - Klant-eigen: 09e089ec 34 MP-verwijderingen op een leeg overzicht en 9 overgeslagen plaatsingen, haar Marktplaats-account is geblokkeerd (zie de hack-melding hierboven). 26cf5471 nog steeds niet ingelogd op Vinted (16 scans). c184e384 foto g88-1_main.jpg bestaat niet meer in zijn Shopify (404), 2dehands-plaatsingen geweigerd omdat er geen adres in zijn voorkeuren staat.
 - Toon (96e30080) draait sinds vanmiddag 1.0.400 (hartslag 14:48 UTC). Zijn 86 uitgestelde MP-opdrachten starten vanzelf op 23-10 06:00 UTC; de 6 verloren advertenties terugzetten blijft voor de ronde van 23-10.
 - Open, losse gevallen zonder bewezen oorzaak: Vinted "still in wardrobe" (96e30080, 1x), "No tab with id" (1.0.398, 2x), Vinted-formulier laadde niet (1x), about:blank bij 2dehands (1x).
+
+## 23-10-2026: Dagelijkse klantfouten (ochtendronde, liep om 14:10)
+
+- Server draait nu 785ef18a: Railway rolt weer uit, dus de versiegrens (c776add2) en de Delist-reparatie van gisteren staan live. Sinds de uitrol geen nieuwe valse verwijderingen bij c184e384; zijn laatste drie fouten waren opdrachten van vóór de uitrol.
+- Gemeten 24 uur: 1.069 afgeronde opdrachten, 89 fouten bij 7 klanten. Geen opdrachten die hangen op claimed.
+- Toon (96e30080) op 1.0.400: zijn uitgestelde Marktplaats-opdrachten lopen sinds 06:00 UTC zonder één fout (59 verwijderd, 57 geplaatst, 38 wachten nog). Opgelost.
+- Open, beslissing Daniel: de 6 verloren advertenties van Toon staan nog steeds nergens op Marktplaats (8e8d42b4 Grand foulard 148/126, f3ac025a tapijt 142/86, aa18f1f2 Schapenvacht 156/92, 42b94588 Lederhosen heren, 3beedfd9 kinder lederhosen, 3b47b537 Lederhosen Beige). Niet zelf geplaatst: een geplande ronde zet geen advertenties in een klantaccount zonder Daniels ja in deze sessie.
+- Klant-eigen: 09e089ec 24 herplaatsingen mislukt, haar Marktplaats-overzicht is leeg (account geblokkeerd na de hack); verwijderen faalt en de plaatsing wordt dan terecht overgeslagen, niets verloren. 26cf5471 derde dag niet ingelogd op Vinted (26 scans). 45f9caba en c184e384 Vinted zonder kleur. Vinted "still in wardrobe" bij Toon 2x: één lukte een uur later, de ander was verkocht.
+- Geen probleem: bcdf9aa4 heeft 836 wachtende 2dehands-verlengingen, alle 836 zoekertjes jonger dan 27 dagen, 313 verlengd in 24 uur. 0b28c1ce 108 wachtend, klant stil sinds 01-10.
+- Losse rest zonder bewezen oorzaak: twee artikelen staan op 'actief' zonder advertentienummer terwijl de plaatsing nooit lukte (c184e384 HP-oplader op 2dehands, 31d28378 Trui Lyle & Scott op Marktplaats). Geen codewijziging.
