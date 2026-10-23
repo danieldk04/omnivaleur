@@ -5181,7 +5181,10 @@ function _bevestigInVenster(jaBron, neeBron) {
   const kies =
     // 1. De verkoopvraag ("Heb je dit verkocht via Marktplaats?") krijgt altijd
     //    het antwoord NEE: ja klikken boekt een verkoop die er niet was.
-    knoppen.find((b) => /niet\s+verkocht/i.test(naam(b)))
+    //    Ook als Chrome de pagina vertaalt: bij 45f9caba en 12fc61d0 (23-10-2026)
+    //    stond er "Not sold via Marktplaats" en klikte de extensie niets, terwijl
+    //    de hoodie op Vinted al verkocht was en op Marktplaats bleef staan.
+    knoppen.find((b) => /niet\s+verkocht|not\s+sold|nicht\s+verkauft|(pas|non)\s+vendu/i.test(naam(b)))
     // 1b. "Wil je jouw advertentie direct verwijderen, of pas verwijderen na de
     //    huidige periode?" met de knoppen "Direct" en "Automatisch" (gemeten
     //    10-10-2026 in de diagnostiek van drie deurbellen die niet weg gingen).
