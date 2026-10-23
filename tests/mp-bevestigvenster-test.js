@@ -163,6 +163,25 @@ const oud = oudeKiezer(OUD);
     eis(b.geklikt.join() === "Direct", "nieuw: Automatisch en Close blijven onaangeroerd");
   }
 
+  console.log("\nCHROME VERTAALT DE PAGINA (23-10-2026, 45f9caba en 12fc61d0)");
+  {
+    // Exact de diagnostiek van de klant: Chrome had het venster naar het Engels vertaald.
+    const spec = {
+      knoppen: ["Close", "Not sold via Marktplaats", "Sold via Marktplaats"],
+      venstertekst: "Remove advertisement Did you sell the \"Pacific Republic hoodie with 'Alternative Culture' print\" on Marktplaats? Not sold via Marktplaats Sold via Marktplaats",
+    };
+    const voor = nieuweKiezer(execSync("git show a7315250:extension/background.js", { cwd: WORTEL, maxBuffer: 64 * 1024 * 1024 }).toString());
+    const a = maakPagina(spec);
+    const res = voor(a.document)();
+    eis(res.clicked === false && a.geklikt.length === 0, "oud (a7315250): klikt niets, advertentie blijft op Marktplaats staan");
+    const b = maakPagina(spec);
+    const res2 = nieuw(b.document)();
+    eis(res2.picked === "Not sold via Marktplaats", `nieuw: klikt "Not sold" (gekregen: ${JSON.stringify(res2.picked)})`);
+    eis(!b.geklikt.includes("Sold via Marktplaats"), "nieuw: boekt geen valse verkoop");
+    const c = maakPagina({ knoppen: ["Nicht verkauft über Marktplaats", "Verkauft über Marktplaats"], venstertekst: "Hast du das über Marktplaats verkauft?" });
+    eis(nieuw(c.document)().picked === "Nicht verkauft über Marktplaats", "nieuw: ook in het Duits 'niet verkocht'");
+  }
+
   console.log("\nGEEN VENSTER = NIETS TE BEVESTIGEN");
   {
     const document = { querySelectorAll: () => [] };
