@@ -2797,6 +2797,29 @@
     return isGeenMerk(nu);
   }
 
+  // Het pakketformaat verschijnt pas na de categorie, en Vinted zet zijn eigen
+  // aanbeveling er een paar seconden later bij (een POST naar shipping-estimation).
+  // Eerst die aanbeveling afwachten, anders zet Vinted Middel daarna weer terug.
+  // Gemeten op vinted.nl/items/new (24-10-2026): radio package_type_selector_N--input,
+  // 1 = Klein, 2 = Middel (schoenendoos), 3 = Groot.
+  async function kiesPakketMiddelVinted() {
+    const radio = () => document.querySelector('input[data-testid="package_type_selector_2--input"]');
+    const gekozen = () => !!(radio() && radio().checked);
+    await waitUntil(() => !!radio(), 6000);
+    if (!radio()) { console.warn("[Omnivaleur] Vinted pakketformaat niet gevonden"); return false; }
+    // Vinted zijn eigen keuze eerst laten landen (hoogstens 6 s).
+    await waitUntil(() => [...document.querySelectorAll('input[data-testid^="package_type_selector_"]')].some((r) => r.checked), 6000);
+    for (let poging = 0; poging < 4; poging++) {
+      if (gekozen()) { await sleep(1500); if (gekozen()) return true; }
+      const cel = document.querySelector('[data-testid="2-package-size--cell"]') || radio();
+      cel.scrollIntoView({ block: "center" });
+      await sleep(250);
+      realClickEl(cel);
+      await sleep(900);
+    }
+    return gekozen();
+  }
+
   async function fillForm(item) {
     await waitForEl('input[data-testid="title--input"]', 20000);
     // Vanaf hier pas tellen: de tijd dáárvoor is het laden van Vinted zelf, en
@@ -2887,6 +2910,12 @@
       realClickEl(matTriggerEl);
       await sleep(500);
     }
+
+    // VAST PAKKETFORMAAT (24-10-2026, Janneke): Vinted beveelt zelf een formaat aan
+    // (bij kinderschoenen steeds Groot, terwijl een schoenendoos Middel is). Staat
+    // er `package_size: "middel"` in de opdracht (instelling van de verkoper, de
+    // server laat bundels weg), dan kiezen we Middel. Zonder die sleutel verandert er niets.
+    if (item.package_size === "middel") await step("package", () => kiesPakketMiddelVinted());
 
     // Final guard: re-assert title in case any attribute step touched it.
     const titleEl = qs('input[data-testid="title--input"]');

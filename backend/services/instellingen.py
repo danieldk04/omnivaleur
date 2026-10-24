@@ -249,6 +249,13 @@ NIEUWS_GEZIEN = "nieuws_gezien"
 # De waarde is een artikelstaat (zelfde sleutels als STATEN): "fair" wordt op
 # Vinted "Goed", zie CONDITION_MAP in extension/content/vinted.js.
 VINTED_STAAT = "vinted_staat"
+
+# EEN VAST PAKKETFORMAAT OP VINTED (24-10-2026, Janneke). Vinted kiest zelf een
+# formaat ("Aanbevolen"), en dat was bij haar kinderschoenen steeds Groot terwijl
+# een schoenendoos Middel is. None = Vinted beslist (zoals altijd); "middel" =
+# op elke Vinted-plaatsing Middel, behalve bundels (zie vinted_pakket_voor).
+VINTED_PAKKET = "vinted_pakket"
+VINTED_PAKKET_KEUZES = ("middel",)
 STATEN = ("new_with_tags", "new", "good", "fair", "poor")
 
 # EEN EIGEN VASTE TEKST OP VINTED (18-10-2026, Lynn van De Juiste Toon). Hun vaste
@@ -269,7 +276,7 @@ STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "levering": "beide", "pakket_grens": 0, "slottekst": "",
              SHOPIFY_AUTO_IMPORT: None, SHOPIFY_AUTO_IMPORT_STAND: {}, "vinted_taal": "zelf",
              WOO_AUTO_IMPORT: None, WOO_AUTO_IMPORT_STAND: {}, IMPORT_STAAT: None,
-             NIEUWS_GEZIEN: None, VINTED_STAAT: None,
+             NIEUWS_GEZIEN: None, VINTED_STAAT: None, VINTED_PAKKET: None,
              VINTED_SLOT: "zelfde", SLOTTEKST_VINTED: ""}
 
 
@@ -303,6 +310,8 @@ def _schoon(rauw: dict | None) -> dict:
         uit[IMPORT_STAAT] = rauw[IMPORT_STAAT]
     if rauw.get(VINTED_STAAT) in STATEN:
         uit[VINTED_STAAT] = rauw[VINTED_STAAT]
+    if rauw.get(VINTED_PAKKET) in VINTED_PAKKET_KEUZES:
+        uit[VINTED_PAKKET] = rauw[VINTED_PAKKET]
     # Vinted: standaard exact de tekst van de verkoper ("zelf"). Alleen wie zelf
     # kiest voor "en" krijgt een vertaling naar het Engels (Daniel, 09-10-2026).
     if str(rauw.get("vinted_taal") or "").strip().lower() == "en":

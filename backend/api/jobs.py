@@ -2408,6 +2408,22 @@ def _is_verversing(job: dict) -> bool:
     return False
 
 
+_BUNDEL = re.compile(r"bundel|bundle|kavel", re.IGNORECASE)
+
+
+def _vinted_pakket_voor(payload: dict, keuze) -> dict:
+    """Zet het gekozen pakketformaat in de opdracht, behalve bij een bundel.
+
+    De extensie klikt het formaat alleen aan als `package_size` er staat; zonder
+    blijft het bij wat Vinted zelf aanbeveelt."""
+    if keuze != "middel":
+        return payload
+    tekst = f"{payload.get('title') or ''} {payload.get('category') or ''}"
+    if _BUNDEL.search(tekst):
+        return payload
+    return {**payload, "package_size": "middel"}
+
+
 _KINDERSCHOEN_MAAT = re.compile(r"^\s*(\d{2}(?:[.,]5)?)\s*$")
 
 
@@ -3028,12 +3044,20 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # ook op de kopie die hij vandaag draait. Zie instellingen.VINTED_STAAT.
     if any(j["action"] == "create" and j.get("platform") == "vinted"
            and isinstance(j.get("payload"), dict) for j in ready):
+        vast_pakket = None
         try:
-            from backend.services.instellingen import VINTED_STAAT, lees as _lees_instellingen
-            vaste_staat = _lees_instellingen(user_id).get(VINTED_STAAT)
+            from backend.services.instellingen import VINTED_STAAT, VINTED_PAKKET, lees as _lees_instellingen
+            _inst = _lees_instellingen(user_id)
+            vaste_staat = _inst.get(VINTED_STAAT)
+            vast_pakket = _inst.get(VINTED_PAKKET)
         except Exception as e:  # noqa: BLE001 — dan de staat van het artikel
             logger.warning("Vaste Vinted-staat niet gelezen (%s)", e)
             vaste_staat = None
+        if vast_pakket:
+            for j in ready:
+                if (j["action"] == "create" and j.get("platform") == "vinted"
+                        and isinstance(j.get("payload"), dict)):
+                    j["payload"] = _vinted_pakket_voor(j["payload"], vast_pakket)
         if vaste_staat:
             for j in ready:
                 if (j["action"] == "create" and j.get("platform") == "vinted"
