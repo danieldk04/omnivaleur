@@ -801,6 +801,66 @@
       "status": "published",
       "nl_slug": "lego-doorverkopen-software",
       "priority": 92
+    },
+    {
+      "keyword": "how to clear drafts on marktplaats",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "how-to-clear-drafts-on-marktplaats",
+      "status": "published",
+      "nl_slug": "marktplaats-concepten-verwijderen",
+      "priority": 93
+    },
+    {
+      "keyword": "best resylr alternative",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "slug": "best-resylr-alternative",
+      "status": "pending",
+      "nl_slug": "resylr-alternatief",
+      "priority": 94
+    },
+    {
+      "keyword": "how to change language on 2dehands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "how-to-change-language-on-2dehands",
+      "status": "pending",
+      "nl_slug": "2dehands-taal-wijzigen",
+      "priority": 95
+    },
+    {
+      "keyword": "belastingdienst second hand selling rules netherlands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "slug": "belastingdienst-second-hand-selling-rules-netherlands",
+      "status": "pending",
+      "nl_slug": "belastingdienst-regels-tweedehands-verkopen",
+      "priority": 96
+    },
+    {
+      "keyword": "how many listings do you need to make sales",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "slug": "how-many-listings-do-you-need-to-make-sales",
+      "status": "pending",
+      "nl_slug": "hoeveel-advertenties-nodig-voor-verkoop",
+      "priority": 97
+    },
+    {
+      "keyword": "cross list from shopify to 2dehands",
+      "region": "nl",
+      "pillar": "A",
+      "format": "combo",
+      "slug": "cross-list-from-shopify-to-2dehands",
+      "status": "pending",
+      "nl_slug": "shopify-naar-2dehands-crosslisten",
+      "priority": 98
     }
   ],
   "published": [
@@ -1649,6 +1709,16 @@
       "action": "created",
       "url_path": "/reseller-tools/lego-reselling-automation",
       "published_at": "2026-10-23T12:59:08.222601+00:00"
+    },
+    {
+      "keyword": "how to clear drafts on marktplaats",
+      "slug": "how-to-clear-drafts-on-marktplaats",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-clear-drafts-on-marktplaats",
+      "published_at": "2026-10-24T12:23:10.792454+00:00"
     }
   ]
 }
