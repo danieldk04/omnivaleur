@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""Meting van de creatormails (Instagram): wie is benaderd, wie klikte, wie meldde zich aan, wie betaalt.
+"""Meting van de creatormails (Instagram): wie is benaderd, wie reageerde, wat zei die.
 
-  log --handle H --naam N --email E [--versie A]   code aanmaken + regel in het logboek
-  reactie HANDLE ja|nee|geen                       reactie van de creator vastleggen
-  stand                                            hele trechter, per creator en totaal
+  log --handle H --naam N --email E [--versie A]   mail vastleggen in het logboek
+  reactie HANDLE ja|nee|geen                       eerste reactie van de creator vastleggen
+  stand                                            verstuurd, gereageerd, ja/nee, na hoeveel dagen
 
-Draaien met python3.13 vanuit de repo-root (python3 mist de Supabase-pakketten).
-Het logboek staat in data/creator_outreach/ en blijft buiten git (bevat e-mailadressen).
+Draaien met python3.13 vanuit de repo-root. Het logboek staat in data/creator_outreach/ en
+blijft buiten git (bevat e-mailadressen). Er wordt geen link of code per creator gemaakt:
+de mail meet alleen de eerste reactie. Pas na een ja volgt een eigen link, dan met
+`log --link` (maakt een creatorcode, dit schrijft naar de echte database en vraagt de
+service-sleutel). Aanmeldingen en betalingen zijn daarna te zien via
+/api/referrals/admin/overzicht.
 
-De creatorcode is de Instagram-naam in kleine letters; de link is omnivaleur.com/r/CODE.
-Een aanmelding telt alleen mee als de code bestond voordat de ander zich aanmeldde, dus
-eerst `log`, dan pas de mail versturen.
-
-bounty_cents staat bewust op 0: de oude teller in referrals.py rekent een vaste 25 euro per
-klant na 60 dagen. De afspraak van 24-10-2026 is 25% commissie; dat bedrag rekenen we uit
-de echte Stripe-betalingen, niet uit die oude teller."""
+Reacties zoekt Claude op in de Zoho-inbox (mail_zoek op het adres van de creator) en legt
+ze hier vast. bounty_cents staat op 0: de oude teller rekent een vaste 25 euro, de afspraak
+is 25% commissie."""
 import argparse
 import csv
 import sys
@@ -24,19 +24,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from backend.database import execute_with_retry, get_db  # noqa: E402
-from backend.services.referral_codes import schoon_code  # noqa: E402
-
 LOG = ROOT / "data" / "creator_outreach" / "instagram.csv"
-KOP = ["datum", "handle", "naam", "email", "code", "versie", "reactie"]
-BETALEND = {"active", "payment_processing"}
+KOP = ["datum", "handle", "naam", "email", "code", "versie", "reactie", "reactie_datum", "link"]
 
 
 def lees() -> list[dict]:
     if not LOG.exists():
         return []
     with LOG.open(newline="") as f:
-        return list(csv.DictReader(f))
+        return [{k: r.get(k, "") or "" for k in KOP} for r in csv.DictReader(f)]
 
 
 def schrijf(rijen: list[dict]) -> None:
@@ -47,25 +43,49 @@ def schrijf(rijen: list[dict]) -> None:
         w.writerows(rijen)
 
 
-def log(a) -> int:
-    handle = a.handle.lstrip("@").strip()
-    code = schoon_code(handle.replace(".", "_"))
-    if not code:
-        print(f"Ongeldige code uit {handle!r}: alleen letters, cijfers, - en _")
+def maak_code(code: str, naam: str, handle: str) -> int:
+    from backend.config import settings
+    from backend.database import execute_with_retry
+    from supabase import create_client
+    if not settings.supabase_service_key:
+        print("SUPABASE_SERVICE_KEY ontbreekt: zonder die sleutel schrijft de database niets (RLS).")
         return 1
-    rijen = lees()
-    if any(r["code"] == code for r in rijen):
-        print(f"{code} staat al in het logboek, niets gedaan.")
-        return 0
-    execute_with_retry(get_db().table("referral_codes").upsert({
-        "code": code, "creator_name": a.naam, "platform": "instagram",
+    # Bewust de service-sleutel: backend.database.get_db() pakt lokaal de anon-sleutel.
+    db = create_client(settings.supabase_url, settings.supabase_service_key)
+    execute_with_retry(db.table("referral_codes").upsert({
+        "code": code, "creator_name": naam, "platform": "instagram",
         "profile_url": f"https://www.instagram.com/{handle}/", "bounty_cents": 0,
         "fee_paid_cents": 0, "kind": "creator", "active": True,
     }, on_conflict="code"))
-    rijen.append({"datum": str(date.today()), "handle": handle, "naam": a.naam,
-                  "email": a.email, "code": code, "versie": a.versie, "reactie": ""})
+    print(f"Link: https://omnivaleur.com/r/{code}")
+    return 0
+
+
+def log(a) -> int:
+    handle = a.handle.lstrip("@").strip()
+    rijen = lees()
+    bestaand = [r for r in rijen if r["handle"].lower() == handle.lower()]
+    if bestaand and not a.link:
+        print(f"{handle} staat al in het logboek, niets gedaan.")
+        return 0
+    code = ""
+    if a.link:
+        from backend.services.referral_codes import schoon_code
+        code = schoon_code(handle.replace(".", "_")) or ""
+        if not code:
+            print(f"Ongeldige code uit {handle!r}")
+            return 1
+        fout = maak_code(code, a.naam, handle)
+        if fout:
+            return fout
+    if bestaand:
+        bestaand[0].update(code=code, link="ja")
+    else:
+        rijen.append({"datum": str(date.today()), "handle": handle, "naam": a.naam, "email": a.email,
+                      "code": code, "versie": a.versie, "reactie": "", "reactie_datum": "",
+                      "link": "ja" if a.link else ""})
     schrijf(rijen)
-    print(f"Klaar. Link voor de mail: https://omnivaleur.com/r/{code}")
+    print("Vastgelegd.")
     return 0
 
 
@@ -76,8 +96,15 @@ def reactie(a) -> int:
         print("Niet gevonden in het logboek.")
         return 1
     hit[0]["reactie"] = a.waarde
+    hit[0]["reactie_datum"] = str(date.today())
     schrijf(rijen)
     return 0
+
+
+def dagen(r: dict) -> str:
+    if not r["reactie_datum"]:
+        return "-"
+    return str((date.fromisoformat(r["reactie_datum"]) - date.fromisoformat(r["datum"])).days)
 
 
 def stand(_a) -> int:
@@ -85,30 +112,14 @@ def stand(_a) -> int:
     if not rijen:
         print("Nog niets verstuurd.")
         return 0
-    db = get_db()
-    codes = [r["code"] for r in rijen]
-    kliks = execute_with_retry(db.table("referral_clicks").select("code, ip_hash").in_("code", codes)).data or []
-    verw = execute_with_retry(db.table("referrals").select("user_id, code, first_paid_at").in_("code", codes)).data or []
-    abos = {}
-    if verw:
-        for r in execute_with_retry(db.table("subscriptions").select("user_id, status").in_("user_id", [v["user_id"] for v in verw])).data or []:
-            abos[r["user_id"]] = r.get("status")
-    tot = dict(verstuurd=0, reactie=0, ja=0, klik=0, aanmeld=0, betalend=0)
-    print(f"{'creator':<22}{'datum':<12}{'reactie':<8}{'kliks':>6}{'uniek':>6}{'aanmeld':>8}{'betalend':>9}")
+    print(f"{'creator':<22}{'verstuurd':<12}{'reactie':<9}{'na dagen':>9}")
     for r in rijen:
-        k = [x for x in kliks if x["code"] == r["code"]]
-        uniek = len({x["ip_hash"] for x in k if x["ip_hash"]})
-        v = [x for x in verw if x["code"] == r["code"]]
-        b = [x for x in v if abos.get(x["user_id"]) in BETALEND]
-        print(f"{r['handle'][:21]:<22}{r['datum']:<12}{(r['reactie'] or '-'):<8}{len(k):>6}{uniek:>6}{len(v):>8}{len(b):>9}")
-        tot["verstuurd"] += 1
-        tot["reactie"] += bool(r["reactie"])
-        tot["ja"] += r["reactie"] == "ja"
-        tot["klik"] += uniek > 0
-        tot["aanmeld"] += len(v)
-        tot["betalend"] += len(b)
-    print(f"\nVerstuurd {tot['verstuurd']}, gereageerd {tot['reactie']} (ja: {tot['ja']}), "
-          f"creators met een klik {tot['klik']}, aanmeldingen {tot['aanmeld']}, betalend {tot['betalend']}")
+        print(f"{r['handle'][:21]:<22}{r['datum']:<12}{(r['reactie'] or '-'):<9}{dagen(r):>9}")
+    n = len(rijen)
+    g = [r for r in rijen if r["reactie"] in ("ja", "nee")]
+    ja = sum(r["reactie"] == "ja" for r in rijen)
+    print(f"\nVerstuurd {n}, gereageerd {len(g)} ({100 * len(g) // n}%), ja {ja}, "
+          f"nee {len(g) - ja}, nog open {sum(not r['reactie'] for r in rijen)}")
     return 0
 
 
@@ -118,8 +129,9 @@ def main() -> int:
     l = s.add_parser("log")
     l.add_argument("--handle", required=True)
     l.add_argument("--naam", required=True)
-    l.add_argument("--email", required=True)
+    l.add_argument("--email", default="")
     l.add_argument("--versie", default="A")
+    l.add_argument("--link", action="store_true", help="ook een creatorcode aanmaken (na een ja)")
     l.set_defaults(f=log)
     r = s.add_parser("reactie")
     r.add_argument("handle")
