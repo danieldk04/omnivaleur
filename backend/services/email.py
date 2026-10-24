@@ -156,6 +156,8 @@ def send_email_checked(subject: str, body: str, to: str | None = None, reply_to:
     Geeft het Resend-id terug (of None, ook via SMTP): koppelt een latere
     bezorgmelding in mail_events aan deze ene verstuurpoging."""
     recipient_pre = to or settings.owner_email
+    if (tot := _pauze_actief(recipient_pre)):
+        raise MailGepauzeerd(f"mailpauze voor {recipient_pre} tot en met {tot}")
     if settings.resend_api_key:
         if not (settings.resend_from or settings.smtp_from_email):
             raise RuntimeError("RESEND_FROM ontbreekt op Railway (het afzenderadres)")
