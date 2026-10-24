@@ -84,7 +84,7 @@ def log(a) -> int:
     else:
         rijen.append({"datum": str(date.today()), "handle": handle, "naam": a.naam, "email": a.email,
                       "code": code, "versie": a.versie, "reactie": "", "reactie_datum": "",
-                      "link": "ja" if a.link else ""})
+                      "link": "ja" if a.link else "", "type": a.type, "volgers": a.volgers})
     schrijf(rijen)
     print("Vastgelegd.")
     return 0
