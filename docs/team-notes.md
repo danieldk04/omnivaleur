@@ -18052,3 +18052,9 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - Liep een kwartier na de vorige ronde. Gemeten sinds 07:50 UTC: 241 afgeronde opdrachten, 3 fouten, allemaal bij 0b28c1ce. Geen codewijziging.
 - 0b28c1ce "Vintage poef zwart/geel leer": venster "Niet verkocht" beantwoord, daarna zes keer 403, geboekt als mislukt en herplaatsing overgeslagen; m2437503274 geeft nu 404, dus weg. Zelfde patroon als de elf gevallen van 22-10 en Toons Lammycoat. Nu op de te-bouwen-lijst als beslissing voor Daniel. Daarnaast 1x tabblad weg (klant-eigen).
 - Nog steeds op claimed: 09e089ec verwijdering sinds 23-10 16:25 UTC (account geblokkeerd, extensie stil). Foutsoorten beoordeeld, 0 open.
+
+## 24-10-2026: Onboarding nieuwe klanten (ochtend, liep om 10:40)
+- 8 klanten in hun eerste week, geen nieuwe. Alle fouten van na de vorige ronde waren al beoordeeld door de klantfoutenrondes van 09:50 en 10:36. Niets gerepareerd, geen nieuwe mailtjes; de mailtjes van 23-10 (12fc61d0, da176583, 45f9caba) staan nog niet in het postvak.
+- 12fc61d0 (japenco): 94 artikelen zonder prijs zijn Marktplaats-advertenties met bieden (priceType FAST_BID, gemeten op de pagina), geen fout. 20 advertenties op "mogelijk verkocht" staan op Marktplaats echt op gereserveerd (isReserved true, 3 nagemeten); zo ook 4 bij da176583. Werkt zoals bedoeld (gereserveerd.py), klant krijgt de ja/nee-vraag. Rubriekgat gedaald van 270 naar 195.
+- 12fc61d0 en da176583: extensie stil sinds gisteravond (computer uit), 16 en 10 opdrachten wachten, waaronder 7 en 5 herplaatsingen. Klant-eigen.
+- 45f9caba: Vinted kinderschoenmaat gerepareerd (e3c9c27e server, 1.0.403 extensie). Web Store levert 1.0.402, 1.0.403 wacht op upload.
