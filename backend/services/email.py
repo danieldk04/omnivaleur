@@ -267,6 +267,9 @@ def send_email(subject: str, body: str, to: str | None = None, reply_to: str | N
     try:
         send_email_checked(subject, body, to=to, reply_to=reply_to, html=html)
         return True
+    except MailGepauzeerd as e:
+        logger.info(f"E-mail niet verstuurd ({subject}): {e}")
+        return False
     except Exception as e:
         logger.error(f"E-mailmelding mislukt ({subject}): {e}")
         return False
