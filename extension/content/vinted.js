@@ -2713,7 +2713,8 @@
     const trigger = qs('input[data-testid="category-size-single-grid-input"]');
     if (!trigger) return false;
     const opties = () => {
-      const scope = document.querySelector('[data-testid="category-size-single-grid-content"]');
+      const scope = (document.querySelector('[data-testid="category-size-single-grid-content"]')
+        || document.querySelector('[data-testid="category-size-single-grid_chips-content"]'));
       return scope ? [...scope.querySelectorAll('[data-testid*="-grid-option-"]')] : [];
     };
     if (!(await openDropdownVinted(trigger, () => opties().length > 0))) return false;
@@ -4630,7 +4631,8 @@
       // attempt silently failed. Scope to the size panel so we can never click
       // a package-size or colour tile by accident.
       const sizeOptEls = () => {
-        const scope = document.querySelector('[data-testid="category-size-single-grid-content"]');
+        const scope = (document.querySelector('[data-testid="category-size-single-grid-content"]')
+        || document.querySelector('[data-testid="category-size-single-grid_chips-content"]'));
         return scope
           ? [...scope.querySelectorAll('[data-testid*="-grid-option-"]')]
           : [...document.querySelectorAll('[data-testid^="size-group-"][data-testid*="-grid-option-"]')];
@@ -4672,6 +4674,14 @@
       if (!match) {
         // Combined labels ("M / 38 / 10") — compare each part.
         match = opts.find(e => label(e).split("/").map(x => x.trim()).some(x => wants.has(x)));
+      }
+      if (!match) {
+        // Kinderschoenen (23-10-2026, 31d28378 en 45f9caba): Vinted toont de
+        // maat sinds die avond als "EU 25" en "EU 25,5" (veld grid_chips) in
+        // plaats van "25". Onze "25" vond daardoor geen enkele tegel, 14 keer
+        // "Vul je maat in". Vergelijk dus ook zonder "EU" en met punt of komma.
+        const kaal = (e) => label(e).replace(/^eu\s*/, "");
+        match = opts.find(e => wants.has(kaal(e)) || wants.has(kaal(e).replace(",", ".")));
       }
       if (!match && /^\d+$/.test(norm)) {
         // Shirt collar sizes read "18 in | 44 cm" — the number IS our size, just
