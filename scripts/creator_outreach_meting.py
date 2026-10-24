@@ -121,6 +121,19 @@ def stand(_a) -> int:
     ja = sum(r["reactie"] == "ja" for r in rijen)
     print(f"\nVerstuurd {n}, gereageerd {len(g)} ({100 * len(g) // n}%), ja {ja}, "
           f"nee {len(g) - ja}, nog open {sum(not r['reactie'] for r in rijen)}")
+    # Leren: welk type creator reageert en zegt ja? Pas bij genoeg mails zegt dit iets.
+    typen = sorted({r["type"] or "onbekend" for r in rijen})
+    print(f"\n{'type':<12}{'verstuurd':>10}{'gereageerd':>12}{'ja':>5}")
+    for t in typen:
+        s = [r for r in rijen if (r["type"] or "onbekend") == t]
+        print(f"{t:<12}{len(s):>10}{sum(r['reactie'] in ('ja', 'nee') for r in s):>12}"
+              f"{sum(r['reactie'] == 'ja' for r in s):>5}")
+    oud = [r for r in rijen if not r["reactie"] and (date.today() - date.fromisoformat(r["datum"])).days >= 5]
+    if oud:
+        print(f"\nOpvolging nodig: {len(oud)} mails 5+ dagen zonder reactie "
+              f"(eerst Zoho checken): {', '.join(r['handle'] for r in oud)}")
+    if n < 30:
+        print(f"Let op: pas bij ~30 mails zegt het verschil per type iets, nu {n}.")
     return 0
 
 
