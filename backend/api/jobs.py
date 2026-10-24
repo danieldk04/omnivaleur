@@ -2408,6 +2408,19 @@ def _is_verversing(job: dict) -> bool:
     return False
 
 
+_KINDERSCHOEN_MAAT = re.compile(r"^\s*(\d{2}(?:[.,]5)?)\s*$")
+
+
+def _vinted_schoenmaat_als_eu(payload: dict) -> dict:
+    """Kinderschoenen krijgen op Vinted "EU 26" als maat (zie de uitgifte hieronder)."""
+    if (payload.get("category") or "").strip().lower() != "kinderen schoenen":
+        return payload
+    m = _KINDERSCHOEN_MAAT.match(str(payload.get("size") or ""))
+    if not m:
+        return payload
+    return {**payload, "size": "EU " + m.group(1).replace(".", ",")}
+
+
 @router.get("/pending")
 def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depends(require_active_subscription)):
     db = get_db()
@@ -3026,6 +3039,17 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                 if (j["action"] == "create" and j.get("platform") == "vinted"
                         and isinstance(j.get("payload"), dict)):
                     j["payload"]["condition"] = vaste_staat
+
+    # KINDERSCHOENEN OP VINTED: DE MAAT ALS "EU 26" (24-10-2026, Janneke).
+    # Vinted toont sinds 23-10 ~19:40 UTC bij Kinderen > Schoenen tegels als
+    # "EU 26" in plaats van "26"; de kopie 1.0.400 vond geen tegel en elke
+    # plaatsing eindigde in "Vul je maat in" (12x bij Janneke, 2x bij een
+    # nieuwe klant). De extensie leest "EU 26" op beide vormen goed, dus dit
+    # werkt vandaag, vóór 1.0.403 op de Web Store staat. Alleen de opdracht, nooit het artikel.
+    for j in ready:
+        if (j["action"] == "create" and j.get("platform") == "vinted"
+                and isinstance(j.get("payload"), dict)):
+            j["payload"] = _vinted_schoenmaat_als_eu(j["payload"])
 
     # DE KLEUR GOEDZETTEN VLAK VOOR UITGIFTE.
     #
