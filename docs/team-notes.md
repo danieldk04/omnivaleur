@@ -18058,3 +18058,11 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 - 12fc61d0 (japenco): 94 artikelen zonder prijs zijn Marktplaats-advertenties met bieden (priceType FAST_BID, gemeten op de pagina), geen fout. 20 advertenties op "mogelijk verkocht" staan op Marktplaats echt op gereserveerd (isReserved true, 3 nagemeten); zo ook 4 bij da176583. Werkt zoals bedoeld (gereserveerd.py), klant krijgt de ja/nee-vraag. Rubriekgat gedaald van 270 naar 195.
 - 12fc61d0 en da176583: extensie stil sinds gisteravond (computer uit), 16 en 10 opdrachten wachten, waaronder 7 en 5 herplaatsingen. Klant-eigen.
 - 45f9caba: Vinted kinderschoenmaat gerepareerd (e3c9c27e server, 1.0.403 extensie). Web Store levert 1.0.402, 1.0.403 wacht op upload.
+
+## 24-10-2026: Onboarding nieuwe klanten (ochtend, liep om 18:00)
+- Vuring van 13:00 liep nooit af (slot stond nog op bezig). 9 klanten in hun eerste week, 1 nieuw.
+- Nieuw cf1284b8 (radu.stefana@gmail.com), aangemeld 14:41: geen extensie, niets ingelezen. Welkomstmailtje klaargezet.
+- Daniel vroeg (24-10) of de routine kijkt of hij de mailtjes echt verstuurde. Het postvak werd al gelezen, maar niemand vergeleek het met wat klaargezet was. Nu: `nieuwe_klanten.py mailtje <user_id>` bewaart elk klaargezet mailtje met tekst, en de meting zet `! MAILTJE_NIET_VERSTUURD` als er daarna niets naar dat adres in Verzonden staat. Gevolg meteen zichtbaar: de mailtjes van 23-10 aan 12fc61d0, da176583 en 45f9caba zijn nooit verstuurd; de tekst was niet bewaard, dus nieuwe bijgewerkte versies klaargezet.
+- 45f9caba: verkochte hoodie m2456697231 staat nog online op Marktplaats (HTTP 200); in zijn mailtje.
+- 09e089ec: Marktplaats loopt weer, sinds 10:44 66 plaatsingen en 35 verwijderingen gelukt. Eén ring (65fe4b7a) faalt 21-10 en 24-10 op "description could not be placed", oorzaak niet bewezen (oordeel onbekend); de klant kan hem zelf plaatsen.
+- Overige ongewijzigd sinds de ochtend; 12fc61d0 en da176583 nog steeds extensie stil.

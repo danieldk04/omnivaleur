@@ -455,10 +455,40 @@ def gezien(uid: str, samenvatting: str) -> bool:
         return False
     alles = staat()
     oud = alles.get(uid) or {}
-    alles[uid] = {"eerst_gezien": oud.get("eerst_gezien") or _nu().isoformat(),
+    alles[uid] = {**oud, "eerst_gezien": oud.get("eerst_gezien") or _nu().isoformat(),
                   "laatst": _nu().isoformat(), "rondes": int(oud.get("rondes") or 0) + 1,
                   "samenvatting": samenvatting[:600]}
     return A._schrijf(STAAT_SLEUTEL, alles)
+
+
+def mailtje(uid: str, tekst_: str) -> bool:
+    """Legt vast dat er een mailtje voor Daniel klaarstaat, met de tekst, zodat de
+    volgende ronde in het postvak ziet of hij het echt verstuurde (Daniel, 24-10-2026)."""
+    fout = A._bereikbaar()
+    if fout:
+        print(f"Gedeelde opslag niet te lezen ({fout}); niets vastgelegd.")
+        return False
+    alles = staat()
+    alles[uid] = {**(alles.get(uid) or {}), "mailtje_klaar": _nu().isoformat(),
+                  "mailtje_tekst": tekst_.strip()[:3000]}
+    return A._schrijf(STAAT_SLEUTEL, alles)
+
+
+def _mailtjeregel(p: dict, vorige: dict | None) -> list[str]:
+    """Is het klaargezette mailtje verstuurd? Een mail in Verzonden aan dit adres na
+    het klaarzetten telt als verstuurd."""
+    klaar = _tijd((vorige or {}).get("mailtje_klaar"))
+    if not klaar:
+        return []
+    post = p.get("postvak")
+    if isinstance(post, str):
+        return [f"   mailtje klaargezet {_lokaal(klaar)}: onbekend of verstuurd ({post})"]
+    weg = [m for m in post or [] if m["map"] == "Verzonden" and m["datum"] and m["datum"] >= klaar]
+    if weg:
+        return [f"   mailtje klaargezet {_lokaal(klaar)}, verstuurd {_lokaal(weg[0]['datum'])}"]
+    return [f"   ! MAILTJE_NIET_VERSTUURD: klaargezet {_lokaal(klaar)}, staat niet in Verzonden. "
+            f"Bied hetzelfde mailtje opnieuw aan (bijwerken waar de stand veranderde), schrijf geen tweede.",
+            "     tekst: " + ((vorige or {}).get("mailtje_tekst") or "(niet bewaard)").replace("\n", " / ")]
 
 
 def tekst(p: dict, vorige: dict | None, nu: datetime) -> str:
@@ -474,7 +504,7 @@ def tekst(p: dict, vorige: dict | None, nu: datetime) -> str:
     if vorige:
         regels.append(f"   vorige ronde ({str(vorige.get('laatst'))[:16]} UTC): {vorige.get('samenvatting')}")
     if "koude_mail" in p:
-        regels += _contactregels(p)
+        regels += _contactregels(p) + _mailtjeregel(p, vorige)
     prijs = (f"prijs {v['prijs'][0]:.0f} tot {v['prijs'][2]:.0f}, mediaan {v['prijs'][1]:.0f}"
              if v["prijs"] else "geen prijzen")
     regels += [f"   voorraad: {v['aantal']} artikelen (eerste {_lokaal(v['eerste'])}), {prijs}",
@@ -504,6 +534,8 @@ def main() -> None:
     A._omgeving_uit_env_bestand()
     if len(sys.argv) >= 3 and sys.argv[1] == "gezien":
         sys.exit(0 if gezien(sys.argv[2], " ".join(sys.argv[3:])) else 1)
+    if len(sys.argv) == 3 and sys.argv[1] == "mailtje":
+        sys.exit(0 if mailtje(sys.argv[2], sys.stdin.read()) else 1)
     ap = argparse.ArgumentParser(description="Nieuwe klanten in hun eerste week.")
     ap.add_argument("--dagen", type=int, default=FASE_DAGEN)
     ap.add_argument("--klant", help="één user_id, ook ouder dan het venster")

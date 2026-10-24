@@ -159,6 +159,11 @@ Daniel verstuurt zelf; jij verstuurt niets. Wat hij krijgt hangt af van stap 3.0
   niet deed.
 - Nooit contact: begin met de introductie uit het voorbeeld hieronder.
 - Geen mailtje voor een klant bij wie niets veranderde en de vorige ronde er al een had.
+- Heeft Daniel het vorige mailtje echt verstuurd? Het script kijkt in Verzonden (sinds
+  24-10-2026, Daniel: "kijken of ik dat bericht al daadwerkelijk gestuurd heb"). Staat er
+  `! MAILTJE_NIET_VERSTUURD`, schrijf dan geen tweede mailtje: zet het bewaarde mailtje
+  opnieuw onder de actiepunten, bijgewerkt waar de stand veranderde, met erbij "nog niet
+  verstuurd sinds <datum>". Staat er "verstuurd", dan sluit je daar later op aan.
 - De server stuurt zelf één herinnering aan wie liet scannen en na 24 uur nog niets
   importeerde (sinds 29-09-2026). Staat bij de klant "automatische importherinnering"
   met een datum, herhaal die boodschap dan niet.
@@ -211,6 +216,8 @@ voor de klant, tips etc"):
 
 - Per bekeken klant: `PY scripts/nieuwe_klanten.py gezien <user_id> "één zin: stand, wat
   gedaan, mailtje ja/nee"`. Dat ziet de volgende ronde als "vorige ronde".
+- Per klaargezet mailtje: `PY scripts/nieuwe_klanten.py mailtje <user_id>` met de mailtekst via
+  stdin. Zonder dit kan de volgende ronde niet zien of Daniel het verstuurde.
 - Onderaan `docs/team-notes.md`: `## DD-MM-JJJJ: Onboarding nieuwe klanten (ochtend|middag)`
   met per klant één of twee regels, wat gerepareerd is (commit), wat open blijft.
   Commit en push.
