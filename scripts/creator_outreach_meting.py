@@ -49,7 +49,7 @@ def schrijf(rijen: list[dict]) -> None:
 
 def log(a) -> int:
     handle = a.handle.lstrip("@").strip()
-    code = schoon_code(handle)
+    code = schoon_code(handle.replace(".", "_"))
     if not code:
         print(f"Ongeldige code uit {handle!r}: alleen letters, cijfers, - en _")
         return 1
