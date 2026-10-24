@@ -120,6 +120,29 @@ def _is_configured() -> bool:
     return bool(settings.resend_api_key) or bool(settings.smtp_host and settings.smtp_user and settings.smtp_password and settings.smtp_from_email)
 
 
+# Adressen waar tot en met de genoemde dag (datum, dus 29 okt = tot 29 okt 23:59 UTC)
+# niets automatisch heen gaat. Een geblokkeerde mail telt als "niet verstuurd", dus
+# de taken proberen het daarna vanzelf opnieuw. Alleen kleine letters.
+MAIL_PAUZE_TOT: dict[str, str] = {
+    # Aad (Delftsblaeu, eac0cccc): 24-10-2026 zei hij in Spanje te zijn tot de 29e.
+    "info@delftsblaeu.nl": "2026-10-29",
+}
+
+
+class MailGepauzeerd(RuntimeError):
+    pass
+
+
+def _pauze_actief(adres: str | None) -> str | None:
+    """Geeft de einddatum terug als er voor dit adres een pauze loopt, anders None."""
+    if not adres:
+        return None
+    tot = MAIL_PAUZE_TOT.get(adres.strip().lower())
+    if tot and datetime.now(timezone.utc).date().isoformat() <= tot:
+        return tot
+    return None
+
+
 def send_email_checked(subject: str, body: str, to: str | None = None, reply_to: str | None = None,
                        html: str | None = None, unsubscribe_url: str | None = None) -> str | None:
     """Zelfde als send_email, maar laat de fout staan. Gebruikt door de testknop,
