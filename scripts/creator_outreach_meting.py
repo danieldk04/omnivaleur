@@ -25,7 +25,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 LOG = ROOT / "data" / "creator_outreach" / "instagram.csv"
-KOP = ["datum", "handle", "naam", "email", "code", "versie", "reactie", "reactie_datum", "link"]
+KOP = ["datum", "handle", "naam", "email", "code", "versie", "reactie", "reactie_datum", "link",
+       "type", "volgers"]
 
 
 def lees() -> list[dict]:
