@@ -71,7 +71,7 @@ def log(a) -> int:
 
 def reactie(a) -> int:
     rijen = lees()
-    hit = [r for r in rijen if r["handle"].lower() == a.handle.lstrip("@").lower()]
+    hit = [r for r in rijen if r["handle"].lower() == a.handle.lstrip("@").strip().lower()]
     if not hit:
         print("Niet gevonden in het logboek.")
         return 1
