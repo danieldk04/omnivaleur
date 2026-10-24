@@ -18070,3 +18070,12 @@ Bron: opname van het Meet-gesprek, door Daniel aangeleverd.
 ## 24-10-2026 (avond): Janneke (31d28378), Te plaatsen leeg en pakketformaat Groot
 - "Te plaatsen" is leeg omdat een artikel dat ergens live staat (Marktplaats, Shopify) onder Live valt; alleen artikelen zonder enige advertentie staan daar (classifyItems in app.html). Mijn eerdere advies "ga naar Te plaatsen" was fout. Weg: Items, filter "Niet op Vinted", rubriek kinderen schoenen. Van de 12 kinderschoenen stonden er 10 al op Vinted (ze heeft de open tabbladen zelf afgemaakt), 2 (Laarsjes Pinocchio maat 20) niet.
 - Pakketformaat: de extensie kiest dat nooit; Vinted zelf zet "Aanbevolen Groot" (gemeten op het echte formulier: radio 3 aan). Nieuw: instelling vinted_pakket="middel" (alleen bij Janneke aan, via instellingen.schrijf, 24-10), de server zet package_size in de Vinted-opdracht behalve bij bundel/bundle/kavel in titel of rubriek, extensie 1.0.404 klikt Middel (radio 2) na Vinteds eigen keuze. Voor en na op het echte Vinted: Groot, daarna Middel. Werkt pas na 1.0.404 op de Web Store. Geen scherm voor de instelling; op de te-bouwen-lijst zetten als meer klanten het willen.
+
+## 24-10-2026: Mailpauze Delftsblaeu tot 29-10
+- Aad (eac0cccc, info@delftsblaeu.nl) antwoordde op de proef-voorbij-mail dat hij in Spanje zit en op de 29e terug is. Daniel: alle mails naar hem op pauze tot dan en reageren.
+- Pauze zit in de verzending zelf: `MAIL_PAUZE_TOT` in backend/services/email.py. Elke mail naar dat adres telt tot en met 29-10 als niet verstuurd (taken proberen het later opnieuw). Gemeten met de echte code: 24-10 geblokkeerd, andere klant gaat door, 30-10 gaat weer door.
+- Routines (onboarding, klantfouten): geen mailtje voor hem klaarzetten tot 29-10. Daarna vanzelf weer normaal.
+
+## 24-10-2026: creator-outreach als skill, met wekelijkse statuscheck
+
+Daniel mailt Nederlandse Instagram-creators (commissie 25%, gratis toegang, posts in overleg). Werkwijze staat nu in `.claude/skills/creator-outreach/SKILL.md`: profiel erin, persoonlijke mail eruit, loggen na "verstuurd". Meting in `scripts/creator_outreach_meting.py` (logboek buiten git), nu met type (verkoper/ugc/bureau) en volgers zodat na ~30 mails te zien is wie reageert. Geplande taak `omnivaleur-creator-outreach-status` (maandag en donderdag 09:00, Daniels Mac) zoekt reacties in Zoho en meldt de stand. Eerste 8 mails op 24-10-2026 hebben nog type onbekend. Open: uitbetaling van 25% commissie is niet gebouwd.
