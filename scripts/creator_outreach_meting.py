@@ -132,6 +132,9 @@ def main() -> int:
     l.add_argument("--naam", required=True)
     l.add_argument("--email", default="")
     l.add_argument("--versie", default="A")
+    l.add_argument("--type", default="", choices=["", "verkoper", "ugc", "bureau"],
+                   help="verkoper = verkoopt zelf tweedehands, ugc = brand-UGC creator, bureau = via bureau")
+    l.add_argument("--volgers", default="", help="aantal volgers, ruwweg (bv. 1500)")
     l.add_argument("--link", action="store_true", help="ook een creatorcode aanmaken (na een ja)")
     l.set_defaults(f=log)
     r = s.add_parser("reactie")
