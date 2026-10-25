@@ -419,6 +419,7 @@ def start_scheduler():
         _off_the_request_loop(mp_fotos_inhalen),
         "interval",
         hours=2,
+        next_run_time=_dt.now() + _td(minutes=5),
         id="mp_fotos_inhalen",
         replace_existing=True,
         max_instances=1,
