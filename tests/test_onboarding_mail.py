@@ -94,3 +94,46 @@ def test_bericht_meet_maar_blijft_platte_mail():
     code = O._code("anne@voorbeeld.nl", "onboarding1")
     assert f"/t/k/{code}" in opmaak and f"/t/o/{code}" in opmaak
     assert msg["List-Unsubscribe"] is None and msg["From"].endswith("<daniel@omnivaleur.nl>")
+
+
+class _Db:
+    """Nep-opslag voor leadgen_opslag: één rij per naam."""
+    def __init__(self):
+        self.rijen, self._naam = {}, None
+
+    def table(self, _):
+        return self
+
+    def select(self, _):
+        return self
+
+    def eq(self, _, naam):
+        self._naam = naam
+        return self
+
+    def upsert(self, rij, on_conflict=None):
+        self.rijen[rij["naam"]] = rij["inhoud"]
+        return self
+
+    def execute(self):
+        return self
+
+
+def test_klik_en_pixel_worden_geteld(monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from backend.api import tracking
+    db = _Db()
+    monkeypatch.setattr(tracking, "get_admin_db", lambda: db)
+    monkeypatch.setattr(tracking, "execute_with_retry",
+                        lambda q: type("R", (), {"data": [{"inhoud": db.rijen[q._naam]}]
+                                                 if q._naam in db.rijen else []})())
+    app = FastAPI()
+    app.include_router(tracking.router)
+    c = TestClient(app)
+    code = O._code("anne@voorbeeld.nl", "onboarding1")
+    r = c.get(f"/t/k/{code}", follow_redirects=False)
+    assert r.status_code == 302 and r.headers["location"] == "https://omnivaleur.com/app"
+    assert db.rijen["mail_kliks"]["anne@voorbeeld.nl"]["onboarding1"]["aantal"] == 1
+    c.get(f"/t/o/{code}", headers={"user-agent": "Mozilla/5.0 (via ggpht.com GoogleImageProxy)"})
+    assert O._agent(db.rijen["mail_opens"]["anne@voorbeeld.nl"]["onboarding1"]) == "Gmail"

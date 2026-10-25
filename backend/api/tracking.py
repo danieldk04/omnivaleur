@@ -19,7 +19,8 @@ import base64
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Request, Response
+from fastapi.responses import RedirectResponse
 
 from backend.database import execute_with_retry, get_admin_db
 
@@ -45,7 +46,7 @@ def _decode(code: str) -> tuple[str, str] | None:
 
 
 @router.get("/o/{code}")
-def open_pixel(code: str) -> Response:
+def open_pixel(code: str, request: Request) -> Response:
     ontleed = _decode(code)
     if ontleed:
         adres, laag = ontleed
@@ -64,6 +65,9 @@ def open_pixel(code: str) -> Response:
             item = per_lead.setdefault(laag, {"eerst": nu, "aantal": 0})
             item["laatst"] = nu
             item["aantal"] += 1
+            # Wie de pixel haalde zegt of het een mens was: Apple haalt elke pixel
+            # vooraf op (ook ongelezen), Gmail pas bij openen via GoogleImageProxy.
+            item["agent"] = (request.headers.get("user-agent") or "")[:120]
             db.table("leadgen_opslag").upsert(
                 {"naam": "mail_opens", "inhoud": opens}, on_conflict="naam").execute()
         except Exception as e:  # noqa: BLE001 — een mislukte telling mag de pixel niet breken
@@ -72,3 +76,30 @@ def open_pixel(code: str) -> Response:
         "Cache-Control": "no-store, no-cache, must-revalidate",
         "Pragma": "no-cache",
     })
+
+
+# Sinds 25-10-2026: de link in de onboardingmail (scripts/onboarding_mail.py). Een klik
+# is een veel sterker teken van lezen dan een pixel. Het doel staat vast, zodat deze
+# route nooit een open doorverwijzing naar een willekeurige site kan worden.
+_KLIK_DOEL = "https://omnivaleur.com/app"
+
+
+@router.get("/k/{code}")
+def klik(code: str) -> Response:
+    ontleed = _decode(code)
+    if ontleed:
+        adres, laag = ontleed
+        try:
+            db = get_admin_db()
+            rijen = execute_with_retry(db.table("leadgen_opslag")
+                                       .select("inhoud").eq("naam", "mail_kliks")).data or []
+            kliks = rijen[0]["inhoud"] if rijen else {}
+            nu = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            item = kliks.setdefault(adres, {}).setdefault(laag, {"eerst": nu, "aantal": 0})
+            item["laatst"] = nu
+            item["aantal"] += 1
+            db.table("leadgen_opslag").upsert(
+                {"naam": "mail_kliks", "inhoud": kliks}, on_conflict="naam").execute()
+        except Exception as e:  # noqa: BLE001 — een mislukte telling mag de klik niet breken
+            logger.warning("Kliktelling mislukt voor %s: %s", code, e)
+    return RedirectResponse(_KLIK_DOEL, status_code=302)
