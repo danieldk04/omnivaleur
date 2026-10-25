@@ -409,6 +409,21 @@ def start_scheduler():
         id="daily_foto_ontdubbelen",
         replace_existing=True,
     )
+    # Foto's die nog op images.marktplaats.com staan alsnog kopiëren — elke twee
+    # uur, hooguit 25 advertentiepagina's per ronde. Zo'n adres gaat dood zodra
+    # de advertentie vervangen wordt (25-10-2026: 883 artikelen bij 9 klanten).
+    # Zie services/mp_fotos_inhalen.
+    from backend.services.mp_fotos_inhalen import mp_fotos_inhalen
+
+    _scheduler.add_job(
+        _off_the_request_loop(mp_fotos_inhalen),
+        "interval",
+        hours=2,
+        id="mp_fotos_inhalen",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
     # Artikelen zonder rubriek alsnog indelen — dagelijks 05:00 (NL-tijd).
     # Zonder rubriek weigert het publicatiepad een artikel, en dat gebeurt stil:
     # 959 stuks over negen accounts bij het inschakelen. Zie
