@@ -45,6 +45,23 @@ wacht tot `__DONE`, laad opnieuw, volgende artikel. Daarna dezelfde tab naar Mar
 eind sluit je dat ene tabblad. Houd tussen twee proeven een paar seconden pauze. Eén Vinted-proef duurt ~1 minuut,
 de hele set dus ~6 minuten; dat is prima.
 
+## Vergelijken met gisteren en extra rubrieken (Daniel, 25-10-2026)
+
+Alleen kijken of een stap lukt is te zwak: de "bekende artefacten" (description, halswijdte, maat/kleur bij een
+boek) kunnen een echte fout verbergen. Daarom:
+
+1. Zet na elke proef ALLE stappen uit het log ("stap X: ok" of "NIET gelukt"), ook de artefacten, in één
+   uitslag: `{"vinted kinderen schoenen": {"category":"ok","size":"ok",...}, "marktplaats boek": {...}, ...}`.
+2. Bewaar die met `python3 scripts/platformcontrole/vergelijk.py bewaar` (JSON via stdin) en draai daarna
+   `python3 scripts/platformcontrole/vergelijk.py vergelijk`. Een stap die anders uitvalt dan gisteren is een
+   afwijking, ook als hij op een artefact lijkt (een artefact hoort elke dag hetzelfde uit te vallen). Bij de
+   allereerste run is er niets om mee te vergelijken; dat is geen fout.
+3. Draai elke dag drie extra rubrieken op Marktplaats (en dezelfde ids op 2dehands): `vergelijk.py rubrieken`
+   geeft de paden. Ze roteren, dus in een paar maanden is elke rubriek geweest. Stappen: pagina laadt met de
+   goede rubriek, titelveld en beschrijvingsveld aanwezig, en de proefloader slaagt op title/price/condition.
+   Zet ze in dezelfde uitslag onder "marktplaats rubriek <naam>".
+4. Een afwijking uit 2 of 3 behandel je als elke andere afwijking hieronder.
+
 ## Bij een afwijking
 
 1. Zoek de oorzaak tot je het mechanisme kunt aanwijzen (welke testid of label, wat de code verwacht). Meet, geen gokwerk.
@@ -60,7 +77,7 @@ de hele set dus ~6 minuten; dat is prima.
 ## Klopt alles
 
 Geen bericht aan Daniel. Alleen één regel in docs/team-notes.md met datum, kanalen en "geen afwijking".
-Verder niets: geen extra controleronde, geen documentatie.
+Verder niets: geen extra controleronde, geen documentatie. De uitslag bewaren met vergelijk.py hoort er wel bij.
 
 ## Randvoorwaarden
 

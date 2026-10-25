@@ -19,6 +19,8 @@ STAP 2, meten (echte data, nooit schatten). Gebruik een python3 waarin supabase 
 - jobs: telling per platform/action/status, en de result->error teksten van status 'error', gegroepeerd per foutsoort én per klant (user_id). Ook jobs die te lang op 'claimed' of 'pending' hangen. Noem 'cancelled' alleen als het opvalt.
 - extension_heartbeat en subscriptions: klanten met betaalslot (402), verlopen proef, of extensie die stil staat terwijl er werk wacht.
 - Railway-serverlogs of /health als die bereikbaar zijn, en het foutenlogboek/mailalarm als dat bestaat.
+Platformwijziging als tweede alarm (Daniel, 25-10-2026): komt een foutsoort bij Vinted, Marktplaats of 2dehands die gisteren niet bestond bij twee of meer verschillende klanten voor (of bij één klant op meerdere artikelen binnen een paar uur), behandel hem dan als verdacht voor een platformwijziging, niet als klant-eigen. Zoek welke stap of welk veld faalt en draai meteen de platformcontrole voor dat kanaal (docs/routines/platformcontrole.md) om het te bevestigen.
+
 Onderscheid: (a) fout in ONZE code of een kanaal dat de pagina veranderde, (b) klant-eigen oorzaak (computer uit, uitgelogd, advertentie al weg, betaalmuur). Alleen (a) repareer je. Wantrouw lege uitkomsten: controleer dat de meting zelf werkte (bijv. dat de telling niet 0 is door een RLS- of sleutelprobleem).
 
 STAP 3, vergelijk met de vorige run. Per probleem van gisteren: is het nog aanwezig? Zo ja is de reparatie mislukt of niet uitgerold, meld dat expliciet en zoek de reden. Een probleem dat gisteren gemeld en vandaag weg is: noem het als 'opgelost'.

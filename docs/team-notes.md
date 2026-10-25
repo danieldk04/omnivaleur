@@ -18095,3 +18095,9 @@ Daniel mailt Nederlandse Instagram-creators (commissie 25%, gratis toegang, post
 
 ## 25-10-2026: Platformcontrole, geen afwijking
 - Vinted (zes proefartikelen), Marktplaats en 2dehands (boek): alle stappen ok. Bekende artefacten van de proef (beschrijving, halswijdte en maat/kleur bij een boek) zoals gisteren. Les: draai Vinted-proeven één voor één; vijf tabbladen tegelijk gaven bij sneakers dames een vals "category NIET gelukt" (klok stond bijna stil), alleen opnieuw gelukt.
+
+## 25-10-2026: Platformcontrole uitgebreid (Daniel: "doe wat je aanraad", kanalen blijven Vinted, Marktplaats, 2dehands, één keer per dag)
+- Eén tabblad, proeven na elkaar (geen zes tabbladen tegelijk; gaf ook een valse fout bij sneakers dames).
+- Nieuw: uitslag per stap, ook de "artefacten", wordt dagelijks bewaard en met gisteren vergeleken (scripts/platformcontrole/vergelijk.py, data/platformcontrole/ buiten git). Een stap die anders uitvalt is een afwijking.
+- Nieuw: elke dag drie roterende Marktplaats-rubrieken extra (469 in de fixture, ~156 dagen voor alles).
+- Nieuw: klantfoutenronde behandelt een nieuwe foutsoort bij 2+ klanten op een van de drie kanalen als verdacht voor platformwijziging en draait dan meteen de platformcontrole.
