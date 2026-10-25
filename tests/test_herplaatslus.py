@@ -159,7 +159,7 @@ def test_een_mislukte_verwijdering_zet_niet_alles_terug_op_actief():
     """De echte lus: één mislukte verwijdering zette vijf oude rijen terug op
     'actief' met hun oude datum, en die waren daarmee meteen weer aan de beurt."""
     bron = (ROOT / "backend" / "api" / "jobs.py").read_text(encoding="utf-8")
-    blok = bron.split('elif job and job["action"] == "delete":', 1)[1][:1600]
+    blok = bron.split('elif job and job["action"] == "delete":', 1)[1][:2600]
     assert "_verwijderdoelen(db, job)" in blok, "de mislukte verwijdering pakt weer alle rijen"
     assert '.eq("item_id", job["item_id"]).eq("platform", job["platform"])' not in blok
 
