@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## aanvulstap-overschreef-gekopieerde-fotos
+
+*25-10-2026 — "25-10: mp_enrich zette na de import de volle fotoreeks met kale images.marktplaats.com-adressen over de gekopieerde omslagfoto; 883 artikelen bij 9 klanten; nu _eigen_kopie + inhaalronde"*
+
+25-10-2026, bewezen bij 0b28c1ce. De import kopieert het omslagplaatje uit de zoeklijst naar onze opslag (mirror_photos). Daarna haalt mp_enrich (verrijk en vul_item_aan_uit_advertentie) de advertentiepagina op en zette de hele reeks erover met de kale adressen van images.marktplaats.com. 74 van de 74 artikelen van haar import van 24-10 met MP-adressen: kandidaat 1 foto, artikel meer foto's, later bijgewerkt. Railway-log 13:30 tot 13:45: 559 downloads 200, 5 keer 404, geen enkele opslagfout; het kopiëren ging dus niet mis. Zo'n adres gaat dood zodra de advertentie vervangen wordt: 266 van 279 dode foto's hoorden bij een vervangen advertentie.
+
+**Why:** een artikel met dode foto's is nergens meer te plaatsen ("None of the 5 photo(s) could be downloaded"). Het faalt stil en pas weken later.
+
+**How to apply:** elke code die photo_urls op een artikel zet vanuit een kanaal moet eerst door mirror_photos (in mp_enrich: `_eigen_kopie`). Achterstand loopt weg via services/mp_fotos_inhalen (elke 2 uur, 25 pagina's, live foto's via relist._live_fotos). Meet "lukte het kopiëren" in de Railway-log (`photo mirror:` regels en images.marktplaats.com statussen) voor je aanneemt dat de download faalde. Railway-CLI op Daniels Mac: `npx -y @railway/cli login --browserless`, Daniel keurt de code goed. Zie "omnivaleur-r2-fotoopslag", "gat-tussen-opdrachten-meten".
+
+---
+
 ## chrome-vertaalt-de-kanaalpagina
 
 *23-10-2026 — "23-10: Chrome vertaalde Marktplaats naar Engels bij twee klanten; knoptekst \"Not sold via Marktplaats\" en vertaalde titels braken verwijderen (1.0.402)"*
