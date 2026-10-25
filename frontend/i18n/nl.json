@@ -176,7 +176,7 @@
  "Admarkt ({0}) shows no campaigns at all for this session, and every": "Admarkt ({0}) toont voor deze sessie helemaal geen campagnes, terwijl elk",
  "Admarkt ({0}) shows no campaigns at all for this session, and every business account has at least one.": "Admarkt ({0}) toont voor deze sessie helemaal geen campagnes, terwijl elk zakelijk account er minstens één heeft.",
  "Admarkt returned no live adverts. page=\"{0}\"": "Admarkt gaf geen live advertenties terug. pagina=\"{0}\"",
- "Admarkt session expired. Sign in to Admarkt in this browser and try again.": "Admarkt-sessie verlopen is. Log in deze browser in bij Admarkt en probeer het opnieuw.",
+ "Admarkt session expired. Sign in to Admarkt in this browser and try again.": "Je Admarkt-sessie is verlopen. Log in deze browser in bij Admarkt en probeer het opnieuw.",
  "Adult Tricycles": "Driewielfietsen",
  "Adventure & Action": "Avontuur en actie",
  "Adverts go on ebay.nl, in Dutch.": "Advertenties komen op ebay.nl, in het Nederlands.",
@@ -3823,5 +3823,11 @@
  "2dehands refused to extend {0} (HTTP {1}).": "2dehands weigerde {0} te verlengen (HTTP {1}).",
  "Listings that are about to expire on 2dehands are now renewed in a few seconds each instead of about a minute, and the ones that expire first go first. A big stock no longer builds up a waiting list; Chrome updates the extension by itself, so there is nothing for you to do.": "Zoekertjes die bijna verlopen op 2dehands worden nu in een paar seconden per stuk verlengd in plaats van in ongeveer een minuut, en wat het eerst afloopt gaat het eerst. Een grote voorraad bouwt zo geen wachtrij meer op; Chrome werkt de extensie zelf bij, dus je hoeft niets te doen.",
  "Nothing was changed — try again later.": "Er is niets gewijzigd. Probeer het later opnieuw.",
- "Renewing on 2dehands is much faster": "Verlengen op 2dehands gaat veel sneller"
+ "Renewing on 2dehands is much faster": "Verlengen op 2dehands gaat veel sneller",
+ "Import from {0}": "Importeren van {0}",
+ "in this browser. Omnivaleur publishes as you.": "in deze browser. Omnivaleur plaatst namens jou.",
+ "Publish to {0}": "Plaatsen op {0}",
+ "and {0} more": "en nog {0}",
+ "and {0} more.": "en nog {0}.",
+ "…and {0} more.": "…en nog {0}."
 }
