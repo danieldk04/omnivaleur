@@ -36,6 +36,15 @@ Let op: Marktplaats noemt velden in data-testid en gaf op 21-10 de beschrijvings
 (DescriptionEditor); 14-10 en 23-10 ook vertaalde vensters. Lees bij elke run ook de rubriekboom-ids uit
 `tests/fixtures/marktplaats_nieuwe_takken_24-09-2026.json` na op drie willekeurige rubrieken.
 
+## Rustig draaien: één tabblad, één proef tegelijk (Daniel, 25-10-2026)
+
+Nooit meerdere tabbladen tegelijk openen en nooit proeven parallel draaien. Het ziet er voor Vinted uit als
+verdacht gedrag, en het geeft ook valse fouten (verborgen tabbladen hebben een stilstaande klok). Werk met
+precies één tabblad: laad Vinted `/items/new` opnieuw (navigate op hetzelfde tabblad), draai één proefartikel,
+wacht tot `__DONE`, laad opnieuw, volgende artikel. Daarna dezelfde tab naar Marktplaats en 2dehands. Aan het
+eind sluit je dat ene tabblad. Houd tussen twee proeven een paar seconden pauze. Eén Vinted-proef duurt ~1 minuut,
+de hele set dus ~6 minuten; dat is prima.
+
 ## Bij een afwijking
 
 1. Zoek de oorzaak tot je het mechanisme kunt aanwijzen (welke testid of label, wat de code verwacht). Meet, geen gokwerk.
