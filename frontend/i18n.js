@@ -299,8 +299,20 @@
       // Aan elkaar geplakte zinnen ("Could not save. Try again.") één voor één.
       var delen = zinnen(s);
       if (delen.length > 1) {
-        var los = delen.map(function (z) { return vertaalNorm(z); });
-        if (los.every(function (z) { return z !== null; })) uit = los.join(' ');
+        // Een woordenboekzin die zelf uit twee zinnen bestaat ("A. B.") moet
+        // ook als stuk gevonden worden: eerst de langste reeks, dan korter.
+        // Zo bleef 24-10-2026 de hele werkbalk Engels (geen enkele zin van dat
+        // blok paste los, en de twee-zinnen-regel viel erdoorheen).
+        var los = [], i = 0, ok = true;
+        while (i < delen.length && ok) {
+          var gevonden = null, j = delen.length - (i === 0 ? 1 : 0);
+          for (; j > i; j--) {
+            gevonden = vertaalNorm(delen.slice(i, j).join(' '));
+            if (gevonden !== null) break;
+          }
+          if (gevonden === null) ok = false; else { los.push(gevonden); i = j; }
+        }
+        if (ok) uit = los.join(' ');
       }
     }
     if (uit === null) {
