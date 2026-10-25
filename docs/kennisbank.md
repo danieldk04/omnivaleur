@@ -17,6 +17,17 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## onboardingmail-zelf-versturen
+
+*25-10-2026 — "Sinds 25-10-2026 verstuurt de onboardingroutine de mailtjes zelf via scripts/onboarding_mail.py (harde controles in code) en meet opens, kliks, antwoord en actie erna"*
+
+Daniel, 25-10-2026: de routine verstuurt het onboardingmailtje zelf, want met de hand verstuurd viel niets te meten en hij kreeg nooit reactie. Alleen via `scripts/onboarding_mail.py stuur` (eerst proef, dan `--echt`); nooit via de zoho-mail MCP. Het script weigert zelf: ouder dan 7 dagen, eigen adres, mailpauze, 44 uur na elke eigen mail, klant wacht op antwoord, 3 per klant, 10 per dag, verkeerde taal, tekst niet in Daniels vorm. Omzeil een weigering nooit door de tekst te verbouwen tot hij doorgaat zonder dat de reden weg is.
+
+**Why:** zekerheid dat alleen echte nieuwe klanten in de juiste taal mail krijgen moet in code zitten, niet in een prompt; en meten kan alleen als wij versturen.
+**How to apply:** de volgende ochtend `onboarding_mail.py rapport` bovenaan het rapport, één of twee zinnen. "Geopend" kan bij Apple Mail automatisch zijn; klik, antwoord en actie erna zijn het harde bewijs. Briefings (gesprek gepland) nooit versturen. Klantmails beantwoorden blijft concept in de chat, zie "concepten-in-de-chat" en "onboarding-routine-nieuwe-klanten".
+
+---
+
 ## aanvulstap-overschreef-gekopieerde-fotos
 
 *25-10-2026 — "25-10: mp_enrich zette na de import de volle fotoreeks met kale images.marktplaats.com-adressen over de gekopieerde omslagfoto; 883 artikelen bij 9 klanten; nu _eigen_kopie + inhaalronde"*

@@ -150,7 +150,26 @@ staat tussen haken achter de fout), zodat de klantfoutenronde hetzelfde niet opn
 
 ## Stap 5: mailtje of briefing per klant klaarzetten
 
-Daniel verstuurt zelf; jij verstuurt niets. Wat hij krijgt hangt af van stap 3.0:
+Sinds 25-10-2026 verstuur JIJ het mailtje zelf (Daniel: "dat jij die mail verstuurt",
+zodat het te meten is). Alleen via het script, nooit via de Zoho-koppeling of anders:
+
+    PY scripts/onboarding_mail.py stuur <user_id> --taal nl --onderwerp "<onderwerp>" < tekst
+    PY scripts/onboarding_mail.py stuur <user_id> --taal nl --onderwerp "<onderwerp>" --echt < tekst
+
+Eerst zonder `--echt` (proef), dan met. Het adres komt uit het account, nooit van jou.
+Het script weigert zelf bij: account ouder dan 7 dagen, eigen adres, mailpauze, binnen 44
+uur al gemaild (door jou of Daniel), klant die nog op antwoord wacht, drie mails per klant,
+tien per dag, verkeerde taal, en tekst die niet in Daniels vorm is (aanhef Hoi/Hi, slot
+Daniel, geen streepjes of opmaaktekens, het woord dashboard erin, want daar komt de meetlink
+op). Weigert het, stuur dan niet en probeer niet om de weigering heen te schrijven: zet de
+reden in het rapport, en alleen als de reden "postvak niet te controleren" is zet je het
+mailtje klaar zoals vroeger (`nieuwe_klanten.py mailtje`) voor Daniel. Een briefing (zie
+hieronder) wordt nooit verstuurd, die is voor Daniel. Onderwerp kort en persoonlijk, zoals
+"Je account op Omnivaleur", geen uitroeptekens of verkoopwoorden. Taal: Nederlands tenzij
+de klant duidelijk Engelstalig is (titels, berichten); het script dwingt Nederlands af bij
+een .nl of .be adres of wie op Marktplaats of 2dehands verkoopt.
+
+Wat er gestuurd wordt hangt af van stap 3.0:
 - Gesprek gepland of de laatste 48 uur persoonlijk contact: geen mailtje. Een briefing
   van hooguit vijf regels: wat hij verkoopt, waar hij staat, wat we rechtzetten, het ene
   ding om hem te zeggen, en een open vraag van hem als die er is.
@@ -216,8 +235,9 @@ voor de klant, tips etc"):
 
 - Per bekeken klant: `PY scripts/nieuwe_klanten.py gezien <user_id> "één zin: stand, wat
   gedaan, mailtje ja/nee"`. Dat ziet de volgende ronde als "vorige ronde".
-- Per klaargezet mailtje: `PY scripts/nieuwe_klanten.py mailtje <user_id>` met de mailtekst via
-  stdin. Zonder dit kan de volgende ronde niet zien of Daniel het verstuurde.
+- Een verstuurd mailtje legt het script zelf vast (tekst, tijd, stand van de klant op dat
+  moment). Alleen een mailtje dat je voor Daniel klaarzet: `PY scripts/nieuwe_klanten.py
+  mailtje <user_id>` met de tekst via stdin.
 - Onderaan `docs/team-notes.md`: `## DD-MM-JJJJ: Onboarding nieuwe klanten (ochtend|middag)`
   met per klant één of twee regels, wat gerepareerd is (commit), wat open blijft.
   Commit en push.
@@ -225,10 +245,14 @@ voor de klant, tips etc"):
 
 ## Stap 7: rapport aan Daniel
 
-De vier blokjes. In "Wat er aan de hand was" per klant één regel: e-mailadres, wat hij
-verkoopt, stand (loopt / let op / vast), en of Daniel al contact had. Zet de mailtjes
-en briefings kant-en-klaar onder de actiepunten, met per mailtje het adres, zodat hij
-ze kan kopiëren. Rustige dag zonder
+Begin met `PY scripts/onboarding_mail.py rapport` en zet bovenaan in "Wat er aan de hand
+was" in één of twee zinnen wat de mails van de vorige dagen deden: hoeveel echt geopend,
+geklikt, beantwoord, en wie daarna iets deed (inloggen, extensie, artikelen). Zeg erbij dat
+"geopend" bij Apple Mail ook automatisch kan zijn; een klik, antwoord of actie is het harde
+bewijs. Daarna de vier blokjes. In "Wat er aan de hand was" per klant één regel: e-mailadres, wat hij
+verkoopt, stand (loopt / let op / vast), en of Daniel al contact had. Verstuurde mailtjes
+noem je met adres en onderwerp (niet de hele tekst). Alleen briefings en mailtjes die het
+script weigerde omdat het postvak niet te lezen was zet je kant-en-klaar onder de actiepunten. Rustige dag zonder
 nieuwe klanten of problemen: twee zinnen.
 
 Meld eerlijk wat je niet kon zien: fouten die alleen in de browser van de klant staan en
