@@ -818,7 +818,7 @@
       "pillar": "C",
       "format": "competitor",
       "slug": "best-resylr-alternative",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "resylr-alternatief",
       "priority": 94
     },
@@ -1719,6 +1719,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-clear-drafts-on-marktplaats",
       "published_at": "2026-10-24T12:23:10.792454+00:00"
+    },
+    {
+      "keyword": "best resylr alternative",
+      "slug": "best-resylr-alternative",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "action": "created",
+      "url_path": "/vs/best-resylr-alternative",
+      "published_at": "2026-10-25T12:56:13.860615+00:00"
     }
   ]
 }
