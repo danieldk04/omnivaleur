@@ -6756,14 +6756,26 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
         # oppakte. Dat is de lus waardoor (1288) en (1314) dagelijks opnieuw
         # geplaatst werden. Bovendien wiste het een al gestelde vraag
         # "is dit verkocht?" weer uit. Zie _verwijderdoelen.
+        #
+        # NOOIT GEPLAATST WORDT NIET ALSNOG LIVE (25-10-2026, 31d28378 en 96e30080).
+        # Een rij op 'error' of 'pending' zonder advertentienummer is een plaatsing
+        # die mislukte. Na een verkoop elders probeert de verwijdering hem voor de
+        # zekerheid weg te halen, vindt niets, en dit blok maakte er dan 'active'
+        # van: een advertentie die nooit bestond stond voortaan als live in het
+        # dashboard, en elke volgende ronde faalde opnieuw op "cannot be found".
+        # Gemeten: zeven zulke rijen in twee weken, o.a. de Lyle & Scott-truien en
+        # het Perzisch tapijt. Zo'n rij houdt zijn eigen status, alleen met de melding.
         melding = body.get("error", "Delist failed — the listing is still live. You can retry.")
         for rij in _verwijderdoelen(db, job):
             if rij.get("status") in ("sold", "sold_unconfirmed"):
                 continue
-            execute_with_retry(db.table("listings").update({
-                "status": "active",
-                "error_message": melding,
-            }).eq("id", rij["id"]))
+            nooit_live = (rij.get("status") in ("error", "pending")
+                          and not rij.get("platform_listing_id"))
+            execute_with_retry(db.table("listings").update(
+                {"error_message": melding} if nooit_live else {
+                    "status": "active",
+                    "error_message": melding,
+                }).eq("id", rij["id"]))
     return {"ok": True}
 
 
