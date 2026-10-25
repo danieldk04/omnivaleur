@@ -18092,3 +18092,6 @@ Daniel mailt Nederlandse Instagram-creators (commissie 25%, gratis toegang, post
 - De zeven bestaande rijen staan nog op 'active' zonder nummer. Niet zelf teruggezet (klantdata); vraag aan Daniel.
 - Al gerepareerd, nog op oude extensie: 45f9caba Jack & Jones chino 3x (1.0.400, Chrome-vertaling; gerepareerd in 1.0.402).
 - Open, oorzaak niet bewezen: 0b28c1ce hamster, alle 5 bronfoto's op images.marktplaats.com geven 404. Bij deze klant staan 380 van de 784 artikelen nog op Marktplaats-fotolinks (import 29-08, nooit gespiegeld); verdwijnt de advertentie, dan is het artikel nergens meer te plaatsen. 96e30080 2x Vinted "na bevestigen nog in de kast" (niet op Vinted nagemeten). Alle foutsoorten beoordeeld, 0 open.
+
+## 25-10-2026: Platformcontrole, geen afwijking
+- Vinted (zes proefartikelen), Marktplaats en 2dehands (boek): alle stappen ok. Bekende artefacten van de proef (beschrijving, halswijdte en maat/kleur bij een boek) zoals gisteren. Les: draai Vinted-proeven één voor één; vijf tabbladen tegelijk gaven bij sneakers dames een vals "category NIET gelukt" (klok stond bijna stil), alleen opnieuw gelukt.
