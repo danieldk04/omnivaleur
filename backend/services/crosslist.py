@@ -1289,6 +1289,37 @@ def _zelfde_fotos(a: set, b: set) -> bool:
     return len(a & b) / min(len(a), len(b)) >= FOTO_OVERLAP_DREMPEL
 
 
+def _webshopnummers(db, item_ids: list[str]) -> dict[str, set[str]]:
+    """Per artikel de nummers van zijn eigen Shopify- of WooCommerce-product."""
+    uit: dict[str, set[str]] = {i: set() for i in item_ids}
+    if not item_ids:
+        return uit
+    rijen = (db.table("listings").select("item_id,platform_listing_id")
+             .in_("item_id", item_ids).in_("platform", ["shopify", "woocommerce"])
+             .execute().data or [])
+    for r in rijen:
+        if r.get("item_id") in uit and r.get("platform_listing_id"):
+            uit[r["item_id"]].add(str(r["platform_listing_id"]))
+    return uit
+
+
+def _alleen_zelfde_stuk(db, eigen: str, kandidaten: list[str]) -> list[str]:
+    """Laat de kandidaten vallen die een ander stuk zijn (ander webshopnummer).
+
+    Bij twijfel (een van beide heeft geen webshopnummer) blijft de kandidaat
+    staan: dan geldt de oude controle gewoon."""
+    try:
+        nummers = _webshopnummers(db, [eigen, *kandidaten])
+    except Exception as e:  # noqa: BLE001 — dan de oude, strengere controle
+        logger.warning("webshopnummers niet gelezen voor dubbelcontrole: %s", e)
+        return kandidaten
+    mijn = nummers.get(eigen) or set()
+    if not mijn:
+        return kandidaten
+    return [k for k in kandidaten
+            if not (nummers.get(k) and not (nummers[k] & mijn))]
+
+
 def _zelfde_artikel_al_online(db, item: dict, platforms: list[str],
                               al_bekeken: list[str] | None = None) -> dict[str, dict]:
     """Kanalen waar dit artikel al staat onder een ANDER artikel met dezelfde
@@ -1310,17 +1341,38 @@ def _zelfde_artikel_al_online(db, item: dict, platforms: list[str],
     if not (titel and fotos and eigen and user_id and platforms):
         return {}
 
+    # EEN BEWUSTE KOPIE IS NOOIT EEN DUBBELE (25-10-2026, Janneke).
+    #
+    # Wie bij een verkocht stuk op Herplaatsen klikt maakt zelf een nieuw stuk
+    # (sku REV-…, zie relist-copy). Dat deelt titel en foto's met zijn broertjes
+    # omdat het hetzelfde product is, en kreeg daarom "Staat hier al onder een
+    # dubbele kopie" zodra één ander stuk online stond. Janneke verkoopt van
+    # veel producten meer stuks; de trui die ze verkocht had kon ze niet meer
+    # plaatsen. Een REV-rij heeft dus geen dubbelencontrole nodig.
+    if str((item or {}).get("sku") or "").upper().startswith("REV-"):
+        return {}
+
     overslaan = set(al_bekeken or []) | {eigen}
     # Exacte titel. Twee imports van dezelfde advertentie leveren letterlijk
     # dezelfde tekst op (nagemeten), dus hier is geen patroon nodig — en een
     # patroon met haakjes of procenttekens erin is precies waar PostgREST stil
     # een lege lijst op teruggeeft. Zie de opmerking in tweelingen.familie_ids.
-    rijen = (db.table("items").select("id,photo_urls")
+    rijen = (db.table("items").select("id,photo_urls,sku")
              .eq("user_id", user_id).eq("title", titel)
              .limit(50).execute().data or [])
     zelfde = [r["id"] for r in rijen
               if r.get("id") and r["id"] not in overslaan
+              and not str(r.get("sku") or "").upper().startswith("REV-")
               and _zelfde_fotos(fotos, {u for u in (r.get("photo_urls") or []) if u})]
+    if not zelfde:
+        return {}
+
+    # EIGEN WEBSHOPNUMMER = EIGEN STUK (25-10-2026, Janneke). Elk stuk dat uit
+    # Shopify of WooCommerce komt draagt het nummer van zijn eigen product, en
+    # een tweede import van dezelfde advertentie draagt dat nummer juist
+    # mee. Twee verschillende nummers zijn dus twee stukken van hetzelfde
+    # product, die allebei te koop horen te kunnen staan.
+    zelfde = _alleen_zelfde_stuk(db, eigen, zelfde)
     if not zelfde:
         return {}
 
