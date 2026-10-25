@@ -997,6 +997,24 @@ def _is_afgekapt(kort: str, lang: str) -> bool:
     return bool(k) and l.startswith(k[: max(1, len(k) - 3)])
 
 
+async def _eigen_kopie(fotos: list[str], user_id: str | None) -> list[str]:
+    """De foto's van de advertentiepagina, gekopieerd naar onze eigen opslag.
+
+    WAAROM (25-10-2026, 0b28c1ce). De import kopieert het omslagplaatje uit de
+    zoeklijst; daarna zette deze aanvulstap de hele reeks eroverheen met de kale
+    adressen van images.marktplaats.com. Gemeten: alle 74 artikelen van haar
+    import van 24-10 die op Marktplaats-adressen stonden, kregen bij de import
+    één eigen foto en hier de reeks. Zo'n adres gaat dood zodra de advertentie
+    vervangen of weggehaald wordt, en dan is het artikel nergens meer te plaatsen.
+    Wat niet te kopiëren is houdt zijn bronadres (mirror_photos laat niets
+    vallen); de inhaalronde in services/mp_fotos_inhalen pakt dat later op.
+    """
+    if not fotos or not user_id:
+        return fotos
+    from backend.services.photo_mirror import mirror_photos
+    return await mirror_photos(fotos, user_id)
+
+
 async def vul_item_aan_uit_advertentie(db, item: dict, url: str) -> dict:
     """Eén item bijwerken met wat er op zijn eigen advertentiepagina staat.
 
@@ -1041,7 +1059,9 @@ async def vul_item_aan_uit_advertentie(db, item: dict, url: str) -> dict:
     # Meer foto's dan we hebben is altijd winst: de advertentiepagina toont de
     # hele reeks, de zoeklijst waar de import uit komt alleen het omslagplaatje.
     if len(fotos) > len(item.get("photo_urls") or []):
-        patch["photo_urls"] = fotos
+        fotos = await _eigen_kopie(fotos, item.get("user_id"))
+        if len(fotos) > len(item.get("photo_urls") or []):
+            patch["photo_urls"] = fotos
     for veld in ("brand", "size", "color", "condition"):
         waarde = str(gevonden.get(veld) or "").strip()
         if waarde and not str(item.get(veld) or "").strip():
@@ -1532,7 +1552,10 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
                     patch["description"] = pagina["description"]
                 fotos = pagina.get("photo_urls") or []
                 if len(fotos) > len(item.get("photo_urls") or []):
-                    patch["photo_urls"] = fotos
+                    # Een proefronde (schrijf=False) zet niets in de opslag.
+                    fotos = await _eigen_kopie(fotos, user_id) if schrijf else fotos
+                    if len(fotos) > len(item.get("photo_urls") or []):
+                        patch["photo_urls"] = fotos
                 for veld in ("brand", "size", "color", "condition"):
                     if pagina.get(veld) and not str(item.get(veld) or "").strip():
                         patch[veld] = pagina[veld]
