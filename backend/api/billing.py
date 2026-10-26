@@ -1074,7 +1074,5 @@ def _period_end(stripe_sub) -> int | None:
     het Subscription-object zelf, maar op het eerste item in `items.data`. Het
     account hier draait op 2026-06-24, dus de oude `sub["current_period_end"]`
     gooit altijd een KeyError. Val terug op het oude veld voor compatibiliteit."""
-    items = (stripe_sub.get("items") or {}).get("data") or []
-    if items and items[0].get("current_period_end") is not None:
-        return items[0]["current_period_end"]
-    return stripe_sub.get("current_period_end")
+    from backend.services.billing import periode_einde
+    return periode_einde(stripe_sub)
