@@ -17,6 +17,21 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## stripe-webhook-400-handtekening
+
+*26-10-2026 — "26-10: Stripe-webhook kreeg 400 (handtekening) sinds 24-10; rij van Zilverwebsite bleef op oude periode; slot vraagt nu Stripe na; meet via Stripe-events pending_webhooks"*
+
+Sinds 24-10-2026 (laatste geslaagde aflevering 22-10 02:18) weigert onze server elke Stripe-webhook met 400 "Ongeldige webhook handtekening". Gemeten 26-10: Railway-HTTP-log toont POST /api/billing/webhook van Stripe/1.0 met 400 (24-10 14:21, 14:22, 15:22, 19:24, 25-10 09:10); in Stripe staat customer.subscription.updated van Zilverwebsite (26cf5471) op pending_webhooks 1. Geen codewijziging sinds 20-10, dus het geheim in Railway (STRIPE_WEBHOOK_SECRET) en dat van het Stripe-endpoint lopen uiteen. Waarom (rol in Stripe of wijziging in Railway) niet bewezen.
+
+Gevolg: de rij bleef op current_period_end 24-10 terwijl Stripe tot 24-11 verlengde; na 2 dagen bedenktijd zou het slot "geen betaling" zeggen. Gered alleen doordat de SEPA-incasso nog op processing stond.
+
+Gerepareerd (9037a6bb e.v., 26-10): check_access vraagt op het weiger-pad het abonnement bij Stripe na (_stripe_bevestigt_abonnement) en zet de rij recht. Dekt NIET: checkout.session.completed (nieuwe betaler zonder stripe_subscription_id), die blijft afhangen van de webhook.
+
+**Why:** het slot leunde alleen op webhooks; een stille 400 merkt niemand.
+**How to apply:** twijfel je aan abonnementsrijen, lees Stripe-events (`events?created[gte]=`) en kijk naar pending_webhooks > 0; lees Stripe met `npx -y @railway/cli run` (lokale sleutel geeft 401) en ruwe HTTP of `to_dict()`, want de SDK op de Mac (15.x) heeft geen .get, de server pint 10.12. Zie "stripe-webhook-mist-invoice-events", "stripe-twee-api-versies-tegelijk".
+
+---
+
 ## onboardingmail-zelf-versturen
 
 *25-10-2026 — "Sinds 25-10-2026 verstuurt de onboardingroutine de mailtjes zelf via scripts/onboarding_mail.py (harde controles in code) en meet opens, kliks, antwoord en actie erna"*
