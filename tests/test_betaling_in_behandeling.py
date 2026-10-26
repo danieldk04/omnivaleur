@@ -66,6 +66,7 @@ def test_zonder_lopende_incasso_blijft_het_slot(monkeypatch):
     }
     monkeypatch.setattr(sb, "_fetch_subscription", lambda uid: verlopen)
     monkeypatch.setattr(sb, "_subscription_awaiting_incasso", lambda sid: False)
+    monkeypatch.setattr(sb, "_stripe_bevestigt_abonnement", lambda sub: None)
 
     assert asyncio.run(sb.check_access("u1", "klant@example.nl"))["allowed"] is False
 
