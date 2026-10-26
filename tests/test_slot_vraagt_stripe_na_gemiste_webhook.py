@@ -55,7 +55,7 @@ def _zet(monkeypatch, stripe_status, einde):
     monkeypatch.setattr(sb, "_subscription_awaiting_incasso", lambda sid: False)
     db = _NepDb()
     monkeypatch.setattr(sb, "get_db", lambda: db)
-    sb._bevestigd_cache.clear()
+    monkeypatch.setattr(sb, "_bevestigd_cache", {}, raising=False)
     return db
 
 
