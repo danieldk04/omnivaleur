@@ -687,4 +687,64 @@ async def check_access(user_id: str, email: str | None = None) -> dict:
         if loopt:
             return {"allowed": True, "reason": "payment_processing",
                     "grace_ends_at": None, "grace_days_left": None}
+        # Zegt Stripe zelf dat het abonnement gewoon loopt, dan mist alleen onze
+        # rij een webhook: die rij bijwerken en doorlaten.
+        try:
+            velden = await asyncio.to_thread(_stripe_bevestigt_abonnement, sub)
+        except Exception:
+            velden = None
+        if velden:
+            return evaluate_access({**sub, **velden})
     return verdict
+
+
+_bevestigd_cache: dict[str, tuple[float, dict | None]] = {}
+
+
+def periode_einde(stripe_sub) -> int | None:
+    """current_period_end staat sinds Stripe API-versie 2025-03-31 op het eerste
+    item in `items.data`, niet meer op het abonnement zelf. Het oude veld blijft
+    als terugval voor een account op een oudere versie."""
+    items = (stripe_sub.get("items") or {}).get("data") or []
+    if items and items[0].get("current_period_end") is not None:
+        return items[0]["current_period_end"]
+    return stripe_sub.get("current_period_end")
+
+
+def _stripe_bevestigt_abonnement(sub: dict) -> dict | None:
+    """Nieuwe rijvelden als Stripe zegt dat dit abonnement loopt, anders None.
+
+    Het slot leunde alleen op webhooks. Zilverwebsite (26cf5471, 26-10-2026):
+    Stripe verlengde op 24-10 tot 24-11, maar onze server weigerde elke
+    aflevering met 400 (handtekening klopte niet), dus de rij bleef op 24-10
+    staan en twee dagen later viel een betalende klant buiten de deur. Daarom
+    vraagt het weiger-pad het abonnement nog één keer bij Stripe na, en zet het
+    de rij recht zoals de webhook had gedaan.
+
+    Kort gecachet, net als de incassovraag: het weiger-pad draait bij elke poll.
+    """
+    sid = sub.get("stripe_subscription_id")
+    if not sid or not settings.stripe_secret_key:
+        return None
+    hit = _bevestigd_cache.get(sid)
+    if hit and hit[0] > time.monotonic():
+        return hit[1]
+    velden = None
+    try:
+        import stripe
+        from backend.services.light import plan_uit_stripe
+        s = stripe.Subscription.retrieve(sid)
+        einde = periode_einde(s)
+        if (s.get("status") in ("active", "trialing") and einde
+                and einde > datetime.now(timezone.utc).timestamp()):
+            velden = {"status": s["status"], "plan": plan_uit_stripe(s),
+                      "current_period_end": datetime.fromtimestamp(einde, tz=timezone.utc).isoformat(),
+                      "updated_at": datetime.now(timezone.utc).isoformat()}
+            get_db().table("subscriptions").update(velden).eq("stripe_subscription_id", sid).execute()
+            invalidate_access_cache(sub.get("user_id"))
+            logger.warning("Abonnement %s liep volgens Stripe nog (tot %s) terwijl onze rij "
+                           "dicht zat: rij bijgewerkt, mist de webhook?", sid, velden["current_period_end"])
+    except Exception:
+        logger.exception("Kon abonnement %s niet bij Stripe nakijken", sid)
+    _bevestigd_cache[sid] = (time.monotonic() + _PROCESSING_TTL, velden)
+    return velden
