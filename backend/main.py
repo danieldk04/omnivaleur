@@ -188,6 +188,15 @@ async def health():
             # herinneringsmails geruisloos. Dat is precies wat er gebeurd is.
             # De rol staat onversleuteld in de sleutel zelf; dit lekt niets.
             "supabase_key_role": _supabase_key_role(),
+            # Welk SOORT sleutel de server nu echt gebruikt (nieuw sb_secret_ of
+            # oude JWT); alleen het type, nooit de waarde.
+            "supabase_key_soort": {
+                naam: ("nieuw" if (waarde or "").startswith("sb_") else
+                       "oud-jwt" if (waarde or "").startswith("ey") else
+                       "leeg" if not waarde else "onbekend")
+                for naam, waarde in (("supabase_key", _s.supabase_key),
+                                     ("supabase_service_key", _s.supabase_service_key))
+            },
             "anthropic_api_key": bool(_s.anthropic_api_key),
             # Het vangnet voor het vertalen. Staat hier ja, dan blijft publiceren
             # doorlopen als het Anthropic-tegoed op is.
