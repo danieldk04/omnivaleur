@@ -18128,3 +18128,10 @@ Daniel mailt Nederlandse Instagram-creators (commissie 25%, gratis toegang, post
 
 ## 26-10-2026: Platformcontrole, onvolledig (geblokkeerd)
 - Vinted: kinderen schoenen, meisjes kleding, sneakers dames en babykleding meisjes alle stappen ok (artefact description zoals altijd). Heren (overhemden), het niet-kledingartikel, Marktplaats en 2dehands niet gedraaid: de automatische toestemmingscontrole weigerde het laden van de loader vanaf raw.githubusercontent.com in Chrome ("Code from External"), na vier eerdere keren wel. Niet omzeild. Uitslag niet bewaard met vergelijk.py (onvolledig). Eigen fout onderweg: sleutel "meisjes jas" bestaat niet in CAT_HINTS (gebruik "meisjes kleding"), gaf eerst een valse category-fout.
+
+## 26-10-2026: Onboarding nieuwe klanten (ochtend, liep om 11:40)
+- 9 klanten in hun eerste week, geen nieuwe. Eerste ronde waarin de routine zelf verstuurt (onboarding_mail.py, 938ac43d).
+- Verstuurd: c184e384 (gbyte2855@gmail.com) "Je account op Omnivaleur": ~90 actief op Vinted, Marktplaats en 2dehands, extensie stil sinds 23-10 met 7 wachtende klusjes, tip kleur voor Vinted. a45020c9 (imavocado@icloud.com) "Je proef op Omnivaleur": proef loopt 27-10 af, nooit extensie of artikelen.
+- b3cac009 (hjscholing, Henk/automobilia42): Daniel mailde 25-10 met hem. Hij zet eBay-advertenties om naar Vinted en Etsy, legt het even stil, gaat volgende week verder. Hij schreef dat advertenties "op Marktplaats kwamen met de verkeerde beschrijving"; bij ons heeft hij nul artikelen en nooit een extensie, dus dat ging niet via Omnivaleur. Betaalmethode staat, proef loopt 27-10 04:25 UTC af terwijl hij "voor nu bij de trial" blijft. Briefing voor Daniel, geen mailtje. Etsy-regel in de te-bouwen-lijst: teller 3.
+- 09e089ec: sinds 25-10 avond 78 opdrachten op 2dehands, geen fout. Proef 26-10 15:46 met betaalmethode.
+- 12fc61d0, da176583: extensie nog stil sinds 23-10. da176583 logde 25-10 in op het dashboard; 14 wachten (waarvan 7 herplaatsingen van 25-10). Nog binnen 44 uur na het mailtje van 24-10, middagronde mag mailen. cf1284b8, 8adaff42, 45f9caba ongewijzigd of al beoordeeld. Niets gerepareerd, geen code gewijzigd.
