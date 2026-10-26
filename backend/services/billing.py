@@ -734,6 +734,8 @@ def _stripe_bevestigt_abonnement(sub: dict) -> dict | None:
         import stripe
         from backend.services.light import plan_uit_stripe
         s = stripe.Subscription.retrieve(sid)
+        # Server-SDK 10.x geeft een dict, nieuwere SDK's een object zonder .get.
+        s = s.to_dict() if hasattr(s, "to_dict") else s
         einde = periode_einde(s)
         if (s.get("status") in ("active", "trialing") and einde
                 and einde > datetime.now(timezone.utc).timestamp()):
