@@ -142,6 +142,12 @@ def _supabase_key_role() -> str:
     import base64
     import json as _json
     from backend.config import settings as _s
+    # De nieuwe Supabase-sleutels (sinds 26-10-2026) zijn geen JWT en dragen hun
+    # rol in de voorvoegsel. Zonder dit zou /health "onbekend" melden.
+    if _s.supabase_key.startswith("sb_secret_"):
+        return "service_role"
+    if _s.supabase_key.startswith("sb_publishable_"):
+        return "anon"
     try:
         payload = _s.supabase_key.split(".")[1]
         payload += "=" * (-len(payload) % 4)
