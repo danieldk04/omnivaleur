@@ -259,7 +259,7 @@ class EbayPlatform(PlatformBase):
         the global env default so single-tenant setups keep working."""
         sf = (credentials.get("extra_data") or {}).get("ship_from") or {}
         address = {"country": sf.get("country") or settings.ebay_location_country or "NL"}
-        postal = sf.get("postal_code") or settings.ebay_location_postal_code
+        postal = (sf.get("postal_code") or settings.ebay_location_postal_code or "").strip().upper()
         city = sf.get("city") or settings.ebay_location_city
         if postal:
             address["postalCode"] = postal
@@ -274,9 +274,19 @@ class EbayPlatform(PlatformBase):
             f"{INVENTORY_API}/location/{MERCHANT_LOCATION_KEY}",
             headers=self._auth_headers(credentials),
         )
-        if get_resp.status_code == 200:
-            return
         address = self._ship_from_address(credentials)
+        if get_resp.status_code == 200:
+            # Een locatie die eBay met een slecht geschreven postcode kreeg
+            # ("2221dc") blijft staan en laat elke publicatie falen. Herstel hem
+            # zodra hij afwijkt, in plaats van te wachten tot de klant opnieuw opslaat.
+            bestaand = ((get_resp.json().get("location") or {}).get("address") or {}).get("postalCode") or ""
+            if address.get("postalCode") and bestaand != address["postalCode"]:
+                await client.post(
+                    f"{INVENTORY_API}/location/{MERCHANT_LOCATION_KEY}/update_location_details",
+                    json={"location": {"address": address}},
+                    headers=self._auth_headers(credentials, write=True),
+                )
+            return
         create_resp = await client.post(
             f"{INVENTORY_API}/location/{MERCHANT_LOCATION_KEY}",
             json={
