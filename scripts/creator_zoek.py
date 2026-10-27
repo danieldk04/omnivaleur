@@ -65,7 +65,12 @@ def run() -> int:
     bekend = bekende_handles()
     gevonden: dict[str, dict] = {}
     for term in ZOEKTERMEN:
-        for hit in zoek(term, key):
+        try:
+            hits = zoek(term, key)
+        except urllib.error.HTTPError as fout:
+            print(f"Zoekterm overgeslagen (HTTP {fout.code}): {term}", file=sys.stderr)
+            continue
+        for hit in hits:
             m = PROFIEL.match(hit.get("link", ""))
             if not m:
                 continue  # alleen profielpagina's, geen posts of reels
