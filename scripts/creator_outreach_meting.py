@@ -70,11 +70,22 @@ def maak_code(code: str, naam: str, handle: str) -> int:
         return 1
     # Bewust de service-sleutel: backend.database.get_db() pakt lokaal de anon-sleutel.
     db = create_client(settings.supabase_url, settings.supabase_service_key)
-    execute_with_retry(db.table("referral_codes").upsert({
+    rij = {
         "code": code, "creator_name": naam, "platform": "instagram",
         "profile_url": f"https://www.instagram.com/{handle}/", "bounty_cents": 0,
         "fee_paid_cents": 0, "kind": "creator", "active": True,
-    }, on_conflict="code"))
+    }
+    try:
+        # 25% commissie, uitbetaald via scripts/creator_commissie.py.
+        execute_with_retry(db.table("referral_codes").upsert(
+            {**rij, "commission_pct": 25}, on_conflict="code"))
+    except Exception:
+        # Kolom ontbreekt: scripts/sql/creator_commissie.sql is nog niet gedraaid.
+        # De link moet blijven werken, maar zonder percentage telt er niets mee.
+        execute_with_retry(db.table("referral_codes").upsert(rij, on_conflict="code"))
+        print("Let op: commissie niet gekoppeld aan deze link. Draai eerst "
+              "scripts/sql/creator_commissie.sql in Supabase en maak de link opnieuw aan.",
+              file=sys.stderr)
     print(f"Link: https://omnivaleur.com/r/{code}")
     return 0
 
