@@ -38,8 +38,10 @@ Zegt Daniel "check reacties", of draait de wekelijkse taak `omnivaleur-creator-o
    ook in Verzonden voor de datum). Eerste reactie vastleggen: `reactie HANDLE ja|nee|geen`.
    "geen" pas na 7 dagen zonder antwoord.
 2. Bij een ja: link aanmaken met `log --handle H --naam N --link` en Daniel vragen welke
-   afspraak hij maakt (commissie 25%, of een vast bedrag). Uitbetaling van commissie is nog
-   NIET gebouwd (de oude teller rekent een vaste 25 euro): zeg dat zodra er een ja is.
+   afspraak hij maakt (commissie 25%, of een vast bedrag). Commissie is gebouwd (27-10-2026):
+   de link krijgt automatisch 25%, de server legt elk uur de betaalde facturen vast, en
+   `python3.13 scripts/creator_commissie.py stand` toont wat Daniel verschuldigd is (uitbetaalbaar
+   pas 60 dagen na de betaling). Een vast bedrag is niet gebouwd: zeg dat als hij dat kiest.
 3. Leren: `stand` toont per type hoeveel er reageerden en ja zeiden. Trek pas conclusies bij
    ongeveer 30 mails; zeg dat de steekproef klein is zolang dat zo is. Zie je een patroon
    (bijvoorbeeld bureaus zeggen altijd nee, verkopers ja), zet het dan als voorstel aan Daniel:
