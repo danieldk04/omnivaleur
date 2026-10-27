@@ -483,7 +483,10 @@ def _mailtjeregel(p: dict, vorige: dict | None) -> list[str]:
     post = p.get("postvak")
     if isinstance(post, str):
         return [f"   mailtje klaargezet {_lokaal(klaar)}: onbekend of verstuurd ({post})"]
-    weg = [m for m in post or [] if m["map"] == "Verzonden" and m["datum"] and m["datum"] >= klaar]
+    # onboarding_mail.py boekt het mailtje pas ná het versturen, dus een paar seconden
+    # na de tijd in Verzonden (26-10-2026); vijf minuten speling vangt dat op.
+    grens = klaar - timedelta(minutes=5)
+    weg = [m for m in post or [] if m["map"] == "Verzonden" and m["datum"] and m["datum"] >= grens]
     if weg:
         return [f"   mailtje klaargezet {_lokaal(klaar)}, verstuurd {_lokaal(weg[0]['datum'])}"]
     return [f"   ! MAILTJE_NIET_VERSTUURD: klaargezet {_lokaal(klaar)}, staat niet in Verzonden. "
