@@ -838,7 +838,7 @@
       "pillar": "B",
       "format": "money_rules",
       "slug": "belastingdienst-second-hand-selling-rules-netherlands",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "belastingdienst-regels-tweedehands-verkopen",
       "priority": 96
     },
@@ -1739,6 +1739,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-change-language-on-2dehands",
       "published_at": "2026-10-27T18:01:10.776372+00:00"
+    },
+    {
+      "keyword": "belastingdienst second hand selling rules netherlands",
+      "slug": "belastingdienst-second-hand-selling-rules-netherlands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "action": "created",
+      "url_path": "/reseller-tools/belastingdienst-second-hand-selling-rules-netherlands",
+      "published_at": "2026-10-27T18:08:23.041034+00:00"
     }
   ]
 }
