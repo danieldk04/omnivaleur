@@ -17,6 +17,17 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## supabase-nieuwe-sleutels-en-requirements
+
+*27-10-2026 — Nieuwe Supabase-sleutels (sb_secret_) werken alleen met supabase-py >= 2.16; check ALLE requirements-bestanden en workflows bij een sleutelwissel*
+
+Bij de sleutelronde na de Railway-lek (27-10-2026) gaf de contentroutine "Invalid API key" omdat requirements-content.txt nog supabase 2.7.4 pinde terwijl requirements.txt 2.16.0 had. Pins pydantic 2.9.2, httpx 0.27.2 en postgrest 1.1.1 blijven; 2.17+ botst. /health toont per variabele nieuw/oud-jwt (supabase_key_soort). De beheerdersclient pakt SUPABASE_SERVICE_KEY eerst, dus die moet ook nieuw zijn.
+
+**Why:** een sleutelwissel die op de server werkt kan elders stil falen (GitHub-routines met eigen pins).
+**How to apply:** na elke sleutelwissel grep naar supabase in alle requirements*.txt en .github/workflows, en draai de routines één keer. Zie "railway-blokkeert-smtp" en "twee-sleutels-die-niet-te-onderscheiden-zijn".
+
+---
+
 ## stripe-webhookgeheim-vervangen
 
 *27-10-2026 — "27-10: webhook 400 sinds 24-10 opgelost zonder Daniel; proefbericht met Railway-geheim bewijst de kant, nieuw endpoint via API geeft het geheim"*
