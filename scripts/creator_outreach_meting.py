@@ -42,6 +42,23 @@ def schrijf(rijen: list[dict]) -> None:
         w = csv.DictWriter(f, fieldnames=KOP)
         w.writeheader()
         w.writerows(rijen)
+    naar_sheet(rijen)
+
+
+def naar_sheet(rijen: list[dict]) -> None:
+    """Spiegelt het logboek naar het tabblad Creators in "Omnivaleur E-mail outreach".
+    Faalt de sheet, dan blijft het lokale logboek goed en krijg je een waarschuwing."""
+    from pathlib import Path as _P
+    import os
+    from leadgen_sheets import MAIL_SHEET, Sheets
+    try:
+        pad = _P.home() / ".omnivaleur" / "sheets-sleutel.json"
+        ruw = os.environ.get("GOOGLE_SHEETS_SLEUTEL") or (pad.read_text() if pad.exists() else "")
+        blad = [KOP] + [[r[k] for k in KOP] for r in rijen]
+        Sheets(ruw).schrijf(MAIL_SHEET, [{"range": "Creators!A1", "values": blad}])
+    except Exception as fout:
+        print(f"Let op: tabblad Creators niet bijgewerkt ({fout}). Het logboek staat wel goed.",
+              file=sys.stderr)
 
 
 def maak_code(code: str, naam: str, handle: str) -> int:
