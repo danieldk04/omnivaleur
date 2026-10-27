@@ -876,7 +876,13 @@ async def rubriek_op_advertentienummer(client: httpx.AsyncClient, verkoper_id: i
     # net anders terug dan wij ze bewaren, en dan vindt de hele titel niets.
     vragen = []
     for schoon in schone:
-        for v in (schoon[:80], " ".join(schoon.split()[:4])):
+        # Zonder leestekens (28-10-2026, Egbert): "The Stone Roses -Elephant Stone"
+        # vond niets, "Stone Roses Elephant Stone" wel. Een gevonden-niet gold als
+        # "staat niet op Marktplaats" en het zoekertje op 2dehands ging dan met de
+        # geraden rubriek de deur uit.
+        kaal = " ".join(re.sub(r"[^\w\s]", " ", schoon).split())
+        for v in (schoon[:80], " ".join(schoon.split()[:4]),
+                  kaal[:80], " ".join(kaal.split()[:4])):
             if v and v not in vragen:
                 vragen.append(v)
     for vraag in vragen:

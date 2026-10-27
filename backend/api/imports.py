@@ -1044,6 +1044,7 @@ _TAXONOMY = {
         "muziek instrumenten onderdelen", "muziek instrumenten toebehoren",
         "muziek kabels en stekkers", "muziek keyboards", "muziek licht en laser",
         "muziek mengpanelen", "muziek microfoons", "muziek midi-apparatuur",
+        "muziek artiesten en merchandise",
         "muziek orgels", "muziek orkestbanden", "muziek overige muziek en instrumenten",
         "muziek percussie", "muziek piano's", "muziek samplers",
         "muziek snaarinstrumenten banjo's", "muziek snaarinstrumenten gitaren akoestisch",
@@ -1062,6 +1063,36 @@ _ALL_CATEGORIES = {c for cats in _TAXONOMY.values() for c in cats}
 # Elke rubriek hoort bij precies één tak (gemeten: 247 rubrieken, 247 keer
 # uniek), dus de tak is uit de rubriek zelf af te leiden.
 _TAK_VAN_RUBRIEK = {c: g for g, cats in _TAXONOMY.items() for c in cats}
+
+# WAT MARKTPLAATS ZELF ZEGT, GAAT VOOR WAT WIJ RADEN (28-10-2026, Egbert Brouwer).
+#
+# Het overzicht van Marktplaats geeft per advertentie de rubrieknaam mee
+# (`category_id`, bij Egbert 926 in elke scan van 26-10; de naam komt leeg
+# binnen), maar die ging bij het binnenhalen verloren: de rubriek werd uit de
+# titel geraden. Voor bandmerchandise bestond er in onze indeling zelfs
+# geen rubriek, dus kwamen patches binnen als "babykleding" of "unisex
+# accessoires", en 6 van zijn recente artikelen zonder rubriek. De naam hieronder
+# is de rubriek van Marktplaats (895/926), niet onze eigen vondst. Alleen
+# rubrieken waarvan de vertaling zeker is horen hier; de rest blijft geraden.
+_RUBRIEK_VAN_MARKTPLAATSNUMMER = {
+    "926": ("muziek", "muziek artiesten en merchandise"),   # Verzamelen | Muziek, Artiesten en Beroemdheden
+}
+_RUBRIEK_VAN_MARKTPLAATSNAAM = {
+    "muziek, artiesten en beroemdheden": ("muziek", "muziek artiesten en merchandise"),
+}
+
+
+def rubriek_uit_marktplaats(row: dict) -> dict:
+    """{'gender', 'category'} voor een gescande advertentie met een bekende
+    Marktplaats-rubriek (eerst het nummer, dan de naam), anders {}."""
+    row = row or {}
+    gevonden = _RUBRIEK_VAN_MARKTPLAATSNUMMER.get(str(row.get("category_id") or "").strip())
+    if not gevonden:
+        gevonden = _RUBRIEK_VAN_MARKTPLAATSNAAM.get(
+            " ".join(str(row.get("category_name") or "").lower().split()))
+    if not gevonden:
+        return {}
+    return {"gender": gevonden[0], "category": gevonden[1]}
 # Rubrieken met jongen of meisje bij baby en peuter komen alleen uit het label van
 # de winkel (zie geslacht_uit_labels), nooit uit de rubriekvraag: het model zou
 # daar raden, en dat raden zette bij Janneke 140 van 474 artikelen verkeerd om.
@@ -1291,9 +1322,13 @@ async def _classify_with_claude(title: str | None, description: str | None,
             "- If gender is not stated or implied, use unisex where a sensible unisex\n"
             "  category exists; otherwise pick the most likely gender.\n"
             "- Set confidence low if you are guessing about what the garment is.\n"
-            '- The "muziek" branch is ONLY for musical instruments, their parts and their\n'
-            "  accessories (a guitar, a plectrum, a case, a cable). A band T-shirt, a\n"
-            "  festival hoodie or anything else you wear is clothing, never muziek.\n"
+            '- The "muziek" branch is for musical instruments, their parts and their\n'
+            "  accessories (a guitar, a plectrum, a case, a cable), plus official band and\n"
+            "  artist merchandise that is NOT worn as clothing: iron-on and sew-on patches,\n"
+            "  pins, key rings, posters, flags, stickers, tapestries. Those go in\n"
+            '  "muziek artiesten en merchandise", never in a clothing or jewellery\n'
+            "  category. A band T-shirt, a festival hoodie or anything else you wear is\n"
+            "  clothing, never muziek.\n"
             '  When you pick a "muziek" category, gender must be "muziek" too.\n'
             '- The "antiek" branch is for antiques, art and collectables: silverware,\n'
             "  cutlery, porcelain, vases, paintings, clocks, brocante, decorative objects.\n"

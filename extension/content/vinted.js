@@ -664,6 +664,7 @@
     "muziek orgels":                                       ["organ", "keyboard instrument"],
     "muziek orkestbanden":                                 ["backing track", "music"],
     "muziek overige muziek en instrumenten":               ["musical instrument", "music"],
+    "muziek artiesten en merchandise":                     ["music", "poster"],
     "muziek percussie":                                    ["percussion", "musical instrument"],
     "muziek piano's":                                      ["piano", "keyboard instrument"],
     "muziek samplers":                                     ["sampler", "music equipment"],

@@ -508,6 +508,7 @@ const MP_CATEGORIES = {
   "muziek orgels":                                      { cat1: 728, cat3: 761 },   // Orgels
   "muziek orkestbanden":                                { cat1: 728, cat3: 762 },   // Orkestbanden
   "muziek overige muziek en instrumenten":              { cat1: 728, cat3: 764 },   // Overige Muziek en Instrumenten
+  "muziek artiesten en merchandise":                    { cat1: 895, cat3: 926 },   // Verzamelen | Muziek, Artiesten en Beroemdheden
   "muziek percussie":                                   { cat1: 728, cat3: 739 },   // Percussie
   "muziek piano's":                                     { cat1: 728, cat3: 765 },   // Piano's
   "muziek samplers":                                    { cat1: 728, cat3: 770 },   // Samplers

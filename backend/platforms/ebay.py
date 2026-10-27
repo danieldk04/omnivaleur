@@ -1393,6 +1393,7 @@ _EBAY_CATEGORY_HINTS = {
     "muziek orgels": "organ",
     "muziek orkestbanden": "backing track",
     "muziek overige muziek en instrumenten": "musical instrument",
+    "muziek artiesten en merchandise": "band merchandise",
     "muziek percussie": "percussion",
     "muziek piano's": "piano",
     "muziek samplers": "sampler",

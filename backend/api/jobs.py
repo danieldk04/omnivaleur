@@ -5269,6 +5269,10 @@ def _store_scan_results(db, job, scraped: list[dict]):
         # Full snapshot columns — only present once the schema migration has run.
         # If they don't exist yet, PostgREST rejects the whole upsert, so retry
         # with just the base fields so scanning never breaks on an un-migrated DB.
+        if job["platform"] in ("marktplaats", "2dehands") and not row.get("category"):
+            # De rubriek die Marktplaats zelf bij de advertentie noemt, niet onze gok.
+            from backend.api.imports import rubriek_uit_marktplaats
+            row = {**row, **rubriek_uit_marktplaats(row)}
         rich = _rijke_velden(row, photo_urls,
                              prior_rich.get(str(platform_listing_id)))
         # is_hidden is the newest optional column, so it gets its own tier: if only
