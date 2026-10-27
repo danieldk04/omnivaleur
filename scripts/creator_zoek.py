@@ -43,7 +43,7 @@ def sleutel() -> str:
 def zoek(term: str, key: str) -> list[dict]:
     req = urllib.request.Request(
         "https://google.serper.dev/search",
-        data=json.dumps({"q": term, "gl": "nl", "hl": "nl", "num": 20}).encode(),
+        data=json.dumps({"q": term, "gl": "nl", "hl": "nl", "num": 10}).encode(),
         headers={"X-API-KEY": key, "Content-Type": "application/json"},
     )
     with urllib.request.urlopen(req, timeout=30) as r:
