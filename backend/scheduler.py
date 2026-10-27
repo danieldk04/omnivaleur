@@ -340,6 +340,17 @@ def start_scheduler():
         max_instances=1,
         coalesce=True,
     )
+    # Commissie voor creators: legt elke betaalde factuur van aangebrachte
+    # klanten vast in het kasboek (25% afspraak, 24-10-2026).
+    _scheduler.add_job(
+        _off_the_request_loop(verwerk_commissie),
+        "interval",
+        hours=1,
+        id="creator_commissie",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
     # Staat de computer van een klant uit terwijl er werk klaarstaat, dan weet
     # hij dat niet: hij kijkt niet op het dashboard. Elk uur overdag kijken we of
     # er iemand al uren stil is met een volle wachtrij, en mailen we dat één keer.
