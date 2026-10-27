@@ -65,6 +65,7 @@ def start_scheduler():
 
     from backend.services.billing import expire_trials, send_trial_reminders, sync_proefperiode_sheet
     from backend.services.referral_rewards import verwerk_openstaande_beloningen
+    from backend.services.creator_commissie import verwerk_commissie
     from backend.services.extension_offline import waarschuw_offline_extensies
     from backend.services.verkoop_reconciliatie import reconcileer_verkochte_artikelen
     from backend.services.verkoop_herinnering import herinner_onbevestigde_verkopen
