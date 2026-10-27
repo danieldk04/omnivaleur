@@ -17,6 +17,79 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## betalende-rubriek-is-geen-formulierfout
+
+*27-10-2026 — "Je hebt geen zoekertjesvorm gekozen" op 2dehands betekent meestal: deze rubriek kost geld, niet dat er een veld leeg is*
+
+2dehands (en Marktplaats) hebben **betalende rubrieken**. Zit je gratis tegoed
+daar op, dan meldt het formulier "Je hebt geen zoekertjesvorm gekozen", verdwijnt
+`[data-testid="bundle-option-FREE"]`, zegt de pagina "Dit is een betalende
+categorie" en heet de plaatsknop **"Naar betalen"**. Er is dan niets in te vullen
+wat het gratis maakt.
+
+**Waarom:** Egbert Brouwer, 10-09-2026: 24 mislukkingen, alle 24 in dezelfde drie
+gitaarrubrieken (/plaats/728/746, /747, /748). Per rubriek gingen de eerste twee
+zoekertjes wél gratis online, daarna sloeg het om. Op hetzelfde moment publiceerde
+hij probleemloos in Behuizingen en koffers, Standaards en Toebehoren. Het kanaal
+werkt dus; alleen die rubrieken kosten geld. Er stonden nog 274 opdrachten in die
+drie rubrieken te wachten.
+
+**How to apply:** nooit op "Naar betalen" klikken — elke klik is een bestelregel
+(zie "marktplaats-2dehands-link-kost-negen-euro", daar liep zijn winkelmandje op
+tot EUR 153). De rem hoort op **rubriekniveau**, niet op kanaalniveau: de
+kanaalbrede betaalmuur (`_BETAALMUUR`, `_stop_wachtrij`) zou zijn gratis rubrieken
+óók dichtzetten. Sinds 10-09-2026: `_BETAALDE_RUBRIEK` + `_stop_wachtrij(...,
+rubriek=)` in jobs.py, en `betaalrubriekBezwaar()` in shared.js (1.0.317). De
+server herkent ook de melding van oudere kopieën, want die dragen de bewijzen al
+in hun foutmelding — zie "rem-op-de-server-bij-een-extensiefout".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "marktplaats-2dehands-link-kost-negen-euro" — een advertentie mét webadres wordt een betaalde bestelregel; tabblad landt op /payments/
+
+**27-10-2026: herplaatsen in een bekende betaalde rubriek haalde toch de oude advertentie weg.**
+da176583: na de weigering van 26-10 15:57 zette de herplaatsronde om 18:55 opnieuw paren klaar in
+dezelfde rubrieken; de verwijdering ging door, de plaatsing strandde. Nu remt
+`_herplaatsing_in_betaalde_rubriek` (backend/api/jobs.py, via `_herplaatsing_kansloos`) de
+verwijdering bij uitgifte: advertentie blijft staan met melding. Proef
+tests/test_herplaatsen_betaalde_rubriek.py. **How to apply:** een rem op een 'create' van Marktplaats
+komt te laat bij een herplaatsing; zet hem op de verwijdering ervoor.
+
+---
+
+## nep-database-geeft-alle-kolommen
+
+*27-10-2026 — "13-10: fail_job las de opdracht zonder created_at; de proef gaf de hele rij terug en zag niets. Sinds 03-09 bleef elke mislukte herplaatsing stil"*
+
+Op 13-10-2026 (klant 26cf5471, zilveren ring) bleef een mislukte herplaatsing op Marktplaats
+'delisted' zonder melding: oude advertentie weg, nieuwe niet geplaatst, niets op het scherm.
+Precies het gat dat op 03-09 voor Amanda gedicht leek.
+
+Oorzaak: `fail_job` las de opdracht met `select("item_id,platform,action,payload")`, en
+`_meld_mislukte_herplaatsing` zoekt de verwijdering van vóór deze plaatsing op
+`job["created_at"]`. KeyError, opgevangen als "niet te melden", en er gebeurde niets. Bij
+elke mislukte herplaatsing sinds 03-09. Wat soms toch rood werd, kwam van de opruimer van
+vastgelopen opdrachten, niet van deze regel.
+
+De proeven zagen het niet omdat de nep-database bij een select de HELE rij teruggaf, en de
+proef de opdracht met created_at erin rechtstreeks aan de hulpfunctie gaf.
+
+**Why:** een hulpfunctie die klopt maar via een aanroeper met te weinig kolommen wordt gevoed,
+faalt stil zodra er `except Exception` omheen staat.
+**How to apply:** proef de echte aanroeper (hier `fail_job`) met een nep-database die alleen de
+gevraagde kolommen teruggeeft (`_KolomDB` in tests/test_mislukte_herplaatsing_zichtbaar.py).
+Leest een helper een veld uit een rij, kijk dan in de select van ELKE aanroeper of het erin
+zit. Zie ook "extensie-stempel-test-loopt-achter-op-het-scherm".
+
+**27-10-2026: de reparatie van 13-10 stond alleen in de kennisbank, nooit in de code.**
+`git log -S` vond geen commit met created_at in die select, en `_KolomDB` bestond niet in de
+proeven. Gevolg: nog twee weken stille verliezen, 39 advertenties in de week tot 27-10 bij
+vier klanten (28 bij 96e30080 op 21-10). Nu echt: select met created_at plus
+`test_fail_job_zelf_zet_de_melding` (faalt op 30e39d9c met KeyError 'created_at').
+**How to apply:** een les die zegt "opgelost" is geen bewijs; zoek de regel in de code en de
+proef in tests/ voor je op de reparatie vertrouwt. Zie "auto-push-zet-tussenstand-live".
+
+---
+
 ## stripe-webhook-400-handtekening
 
 *26-10-2026 — "26-10: Stripe-webhook kreeg 400 (handtekening) sinds 24-10; rij van Zilverwebsite bleef op oude periode; slot vraagt nu Stripe na; meet via Stripe-events pending_webhooks"*
@@ -663,32 +736,6 @@ Werkwijze die werkte: `git clone --shallow-since=<datum>` van origin naar de scr
 laat ze stil falen, zoals de mailmachine in augustus ("koude-mail-autonoom").
 **How to apply:** "not a git repository" of "deadlock avoided" in deze map = iCloud, niet kapot.
 Niet `git init` of iets herstellen; eerst `brctl download`, anders verse kopie.
-
----
-
-## nep-database-geeft-alle-kolommen
-
-*13-10-2026 — "13-10: fail_job las de opdracht zonder created_at; de proef gaf de hele rij terug en zag niets. Sinds 03-09 bleef elke mislukte herplaatsing stil"*
-
-Op 13-10-2026 (klant 26cf5471, zilveren ring) bleef een mislukte herplaatsing op Marktplaats
-'delisted' zonder melding: oude advertentie weg, nieuwe niet geplaatst, niets op het scherm.
-Precies het gat dat op 03-09 voor Amanda gedicht leek.
-
-Oorzaak: `fail_job` las de opdracht met `select("item_id,platform,action,payload")`, en
-`_meld_mislukte_herplaatsing` zoekt de verwijdering van vóór deze plaatsing op
-`job["created_at"]`. KeyError, opgevangen als "niet te melden", en er gebeurde niets. Bij
-elke mislukte herplaatsing sinds 03-09. Wat soms toch rood werd, kwam van de opruimer van
-vastgelopen opdrachten, niet van deze regel.
-
-De proeven zagen het niet omdat de nep-database bij een select de HELE rij teruggaf, en de
-proef de opdracht met created_at erin rechtstreeks aan de hulpfunctie gaf.
-
-**Why:** een hulpfunctie die klopt maar via een aanroeper met te weinig kolommen wordt gevoed,
-faalt stil zodra er `except Exception` omheen staat.
-**How to apply:** proef de echte aanroeper (hier `fail_job`) met een nep-database die alleen de
-gevraagde kolommen teruggeeft (`_KolomDB` in tests/test_mislukte_herplaatsing_zichtbaar.py).
-Leest een helper een veld uit een rij, kijk dan in de select van ELKE aanroeper of het erin
-zit. Zie ook "extensie-stempel-test-loopt-achter-op-het-scherm".
 
 ---
 
@@ -6710,37 +6757,6 @@ een bewust gezette staat nooit. Voor bestaande rommel:
 `scripts/herstel_conditie_uit_platform.py`. Zelfde soort val als
 "succes-nooit-uit-uitsluitingslijst": een waarde die "niet leeg" is geldt
 daarna als waarheid.
-
----
-
-## betalende-rubriek-is-geen-formulierfout
-
-*10-09-2026 — "Je hebt geen zoekertjesvorm gekozen" op 2dehands betekent meestal: deze rubriek kost geld, niet dat er een veld leeg is*
-
-2dehands (en Marktplaats) hebben **betalende rubrieken**. Zit je gratis tegoed
-daar op, dan meldt het formulier "Je hebt geen zoekertjesvorm gekozen", verdwijnt
-`[data-testid="bundle-option-FREE"]`, zegt de pagina "Dit is een betalende
-categorie" en heet de plaatsknop **"Naar betalen"**. Er is dan niets in te vullen
-wat het gratis maakt.
-
-**Waarom:** Egbert Brouwer, 10-09-2026: 24 mislukkingen, alle 24 in dezelfde drie
-gitaarrubrieken (/plaats/728/746, /747, /748). Per rubriek gingen de eerste twee
-zoekertjes wél gratis online, daarna sloeg het om. Op hetzelfde moment publiceerde
-hij probleemloos in Behuizingen en koffers, Standaards en Toebehoren. Het kanaal
-werkt dus; alleen die rubrieken kosten geld. Er stonden nog 274 opdrachten in die
-drie rubrieken te wachten.
-
-**How to apply:** nooit op "Naar betalen" klikken — elke klik is een bestelregel
-(zie "marktplaats-2dehands-link-kost-negen-euro", daar liep zijn winkelmandje op
-tot EUR 153). De rem hoort op **rubriekniveau**, niet op kanaalniveau: de
-kanaalbrede betaalmuur (`_BETAALMUUR`, `_stop_wachtrij`) zou zijn gratis rubrieken
-óók dichtzetten. Sinds 10-09-2026: `_BETAALDE_RUBRIEK` + `_stop_wachtrij(...,
-rubriek=)` in jobs.py, en `betaalrubriekBezwaar()` in shared.js (1.0.317). De
-server herkent ook de melding van oudere kopieën, want die dragen de bewijzen al
-in hun foutmelding — zie "rem-op-de-server-bij-een-extensiefout".
-
-**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
-- "marktplaats-2dehands-link-kost-negen-euro" — een advertentie mét webadres wordt een betaalde bestelregel; tabblad landt op /payments/
 
 ---
 

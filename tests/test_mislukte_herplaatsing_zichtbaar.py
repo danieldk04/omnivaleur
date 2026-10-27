@@ -366,3 +366,50 @@ def test_de_bijgewerkte_kopie_krijgt_het_werk_gewoon(monkeypatch):
 def test_een_artikel_met_prijs_gaat_ook_op_de_oude_kopie_gewoon_door(monkeypatch):
     db, uit = _uitgifte(monkeypatch, "1.0.281", prijs=12.5)
     assert "delete-1" in [j["id"] for j in uit]
+
+
+# ── De echte aanroeper, met een database die alleen de gevraagde kolommen geeft ──
+#
+# 13-10 en opnieuw 27-10-2026: fail_job las de opdracht zonder created_at, en
+# _meld_mislukte_herplaatsing viel daarop stil om (KeyError, opgevangen). De
+# proeven hierboven gaven de hulpfunctie een volle opdracht en zagen niets.
+# Gemeten 27-10: 39 advertenties in een week weggehaald en nooit teruggezet,
+# zonder melding, bij vier klanten.
+
+class _KolomQ(_Q):
+    def select(self, kolommen="*", *_a, **_k):
+        self.op, self.kolommen = "select", kolommen
+        return self
+
+    def __getattr__(self, _naam):           # in_, is_, neq, ...: niet nodig hier
+        return lambda *a, **k: self
+
+    def execute(self):
+        uit = super().execute()
+        if self.op == "select" and getattr(self, "kolommen", "*") != "*":
+            namen = [k.strip() for k in self.kolommen.split(",")]
+            uit.data = [{k: r[k] for k in namen if k in r} for r in uit.data]
+        return uit
+
+
+class _KolomDB(_DB):
+    def table(self, naam):
+        return _KolomQ(self, naam)
+
+
+def test_fail_job_zelf_zet_de_melding(monkeypatch):
+    plaats = {**_plaatsopdracht(), "status": "claimed",
+              "payload": {"_vervangt_listing_id": "nieuw"}}
+    db = _KolomDB([{"id": "nieuw", "item_id": "it1", "platform": "marktplaats",
+                    "status": "delisted", "error_message": None}],
+                  [_verwijderopdracht(), plaats])
+    monkeypatch.setattr(api, "get_db", lambda: db)
+    monkeypatch.setattr(api, "_record_extension_heartbeat", lambda *a, **k: None)
+    try:
+        api.fail_job("create-1", {"error": "Error: The description could not be placed into the editor"},
+                     user_id="u1")
+    except Exception:
+        pass        # wat ná de melding komt (remmen, tellers) hoort niet bij deze proef
+    rij = db.listings[0]
+    assert rij["status"] == "error", "de weggehaalde advertentie moet rood worden, niet stil 'delisted'"
+    assert "already removed" in rij["error_message"]

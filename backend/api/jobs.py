@@ -6462,7 +6462,11 @@ def _rechtgezette_foutmelding(job: dict | None, body: dict, versie, kansloos: bo
 def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
     db = get_db()
     _record_extension_heartbeat(db, user_id)  # only the extension reports job errors
-    job = eerste_rij(db.table("jobs").select("item_id,platform,action,payload").eq("id", job_id).eq("user_id", user_id).limit(1).execute())
+    # created_at hoort erbij: _meld_mislukte_herplaatsing zoekt daarmee de
+    # verwijdering van vóór deze plaatsing. Zonder viel die stil om met een
+    # KeyError en bleef elke mislukte herplaatsing een advertentie die
+    # nergens staat, zonder melding (27-10-2026: 39 in een week, vier klanten).
+    job = eerste_rij(db.table("jobs").select("item_id,platform,action,payload,created_at").eq("id", job_id).eq("user_id", user_id).limit(1).execute())
 
     # Een verzendbijwerking op 2dehands die "mislukte" terwijl het zoekertje het
     # nieuwe bedrag al toont, is gelukt. Anders zet één valse mislukking de hele
@@ -6786,6 +6790,71 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
 KAN_BIEDEN_VANAF = (1, 0, 285)
 
 
+HERPLAATSING_BETAALDE_RUBRIEK = (
+    "Relist skipped: the marketplace now charges for adverts in this item's category, so "
+    "removing the old listing would have taken it offline for good. Your listing is untouched "
+    "and still live.")
+
+_BETAALD_CACHE: dict[tuple, tuple[float, bool]] = {}
+
+
+def _betaald_gecachet(sleutel: tuple, vraag) -> bool:
+    hit = _BETAALD_CACHE.get(sleutel)
+    if hit and time.monotonic() - hit[0] < 600:
+        return hit[1]
+    uit = bool(vraag())
+    _BETAALD_CACHE[sleutel] = (time.monotonic(), uit)
+    return uit
+
+
+def _heeft_betaalde_rubriekfout(db, user_id: str, platform: str) -> bool:
+    grens = (datetime.now(timezone.utc) - _BETAALDE_RUBRIEK_GEHEUGEN).isoformat()
+    rijen = (db.table("jobs").select("fout:result->>error")
+             .eq("user_id", user_id).eq("platform", platform).eq("action", "create")
+             .eq("status", "error").gte("created_at", grens).limit(1000).execute().data or [])
+    return any(_BETAALDE_RUBRIEK.search(r.get("fout") or "") for r in rijen)
+
+
+def _herplaatsing_in_betaalde_rubriek(db, user_id: str, verwijderopdracht: dict) -> str | None:
+    """Haal geen advertentie weg die in een betalende rubriek niet terug kan komen.
+
+    WAAROM (27-10-2026, da176583). Op 26-10 om 15:57 weigerde Marktplaats twee
+    herplaatsingen in "Ladders en Trappen" en "Isolatie en Afdichting": betaalde
+    rubriek. De server wist het dus. Toch zette de herplaatsronde om 18:55 voor
+    twee andere artikelen in diezelfde rubrieken een nieuwe herplaatsing klaar, en
+    vanochtend haalde de extensie die advertenties weg waarna de plaatsing weer op
+    de betaalpagina strandde. Vier gratis advertenties weg voor niets.
+    _weiger_bekende_betaalde_rubriek houdt een Marktplaats-'create' bewust niet
+    tegen (dan is de oude al weg); de rem hoort dus vóór de verwijdering.
+
+    Eerst een gecachete vraag of deze verkoper ooit zo'n weigering had: voor
+    bijna iedereen is het antwoord nee en kost dit geen extra vraag per poll.
+    """
+    platform = verwijderopdracht.get("platform")
+    try:
+        if not _betaald_gecachet((user_id, platform),
+                                 lambda: _heeft_betaalde_rubriekfout(db, user_id, platform)):
+            return None
+        paar = (db.table("jobs").select("id,payload")
+                .eq("user_id", user_id).eq("item_id", verwijderopdracht["item_id"])
+                .eq("platform", platform).eq("action", "create").eq("status", "pending")
+                .gte("created_at", verwijderopdracht["created_at"])
+                .order("created_at").limit(1).execute().data or [])
+        if not paar:
+            return None
+        sleutel = _rubriek_sleutel(paar[0].get("payload"))
+        if not _betaald_gecachet((user_id, platform, sleutel),
+                                 lambda: _betaalde_rubriek_bekend(db, user_id, platform, sleutel)):
+            return None
+    except Exception as e:  # noqa: BLE001 — een rem mag nooit de uitgifte omgooien
+        logger.warning("betaalde rubriek niet na te gaan voor %s: %s",
+                       verwijderopdracht.get("id"), e)
+        return None
+    logger.warning("herplaatsing %s overgeslagen: rubriek %s kost geld bij %s op %s",
+                   verwijderopdracht.get("id"), sleutel, user_id, platform)
+    return HERPLAATSING_BETAALDE_RUBRIEK
+
+
 def _herplaatsing_kansloos(db, user_id: str, verwijderopdracht: dict,
                            versie: tuple | None) -> str | None:
     """Zou de plaatsing die bij DEZE verwijdering hoort zeker mislukken?
@@ -6807,6 +6876,9 @@ def _herplaatsing_kansloos(db, user_id: str, verwijderopdracht: dict,
     """
     if verwijderopdracht.get("platform") not in ("marktplaats", "2dehands"):
         return None
+    betaald = _herplaatsing_in_betaalde_rubriek(db, user_id, verwijderopdracht)
+    if betaald:
+        return betaald
     if versie is not None and versie >= KAN_BIEDEN_VANAF:
         return None
     try:
