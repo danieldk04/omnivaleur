@@ -96,6 +96,19 @@ def start_scheduler():
         id="shopify_verkopen",
         replace_existing=True,
     )
+    # Mislukte Shopify-koppelingen: pas mailen als het na 20 minuten nog niet
+    # gelukt is, en dan na een echte controle bij Shopify. Zie
+    # backend/services/shopify_koppelalarm.py.
+    from backend.services.shopify_koppelalarm import controleer_mislukte_koppelingen
+    _scheduler.add_job(
+        _off_the_request_loop(controleer_mislukte_koppelingen),
+        "interval",
+        minutes=5,
+        id="shopify_koppelalarm",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
     # Vinted heeft geen webhook en geen server-polling: de enige veilige manier
     # om een Vinted-verkoop te zien is de garderobe uitlezen vanuit de sessie van
     # de verkoper zelf. De wekker in de extensie deed dat vrijwel nooit (gemeten

@@ -188,15 +188,42 @@ def test_shopify_zegt_welke_stap_fout_ging(monkeypatch, status, pagina, fragment
     assert fragment in str(e.value)
 
 
-def test_mislukte_koppeling_mailt_daniel_met_shopifys_reden(monkeypatch):
-    """Janneke (31d28378): haar poging was achteraf niet terug te vinden. Nu krijgt
-    Daniel bij de eerstvolgende mislukking het adres en Shopify's reden, één keer."""
+class _Tabel:
+    """Nep-tabel die platform_credentials genoeg nabootst voor het koppelalarm."""
+    def __init__(self, rijen):
+        self.rijen, self._filter, self._wis = rijen, {}, False
+
+    def select(self, *a, **k): return self
+    def eq(self, k, v): self._filter[k] = v; return self
+    def limit(self, n): return self
+    def delete(self): self._wis = True; return self
+    def update(self, d): self._upd = d; return self
+
+    def _treffers(self):
+        return [r for r in self.rijen if all(r.get(k) == v for k, v in self._filter.items())]
+
+    def upsert(self, d, on_conflict=None):
+        self.rijen[:] = [r for r in self.rijen
+                         if not (r["user_id"] == d["user_id"] and r["platform"] == d["platform"])] + [d]
+        return self
+
+    def execute(self):
+        t = self._treffers()
+        if self._wis:
+            for r in t:
+                self.rijen.remove(r)
+        elif hasattr(self, "_upd"):
+            for r in t:
+                r.update(self._upd)
+        self._filter, self._wis = {}, False
+        return type("R", (), {"data": t})()
+
+
+def _alarm_opstelling(monkeypatch, rijen, werkt):
     import sys
     import types
-    import backend.api.platforms as pl
-    from backend.platforms.shopify import ShopifyGeweigerd
+    import backend.services.shopify_koppelalarm as ka
 
-    # Nepmodules: er mag geen echte mail uit, en geen echte adresopvraag.
     verstuurd = []
     em = types.ModuleType("backend.services.email")
     em.send_email = lambda subject, body, **kw: verstuurd.append((subject, body)) or True
@@ -204,25 +231,62 @@ def test_mislukte_koppeling_mailt_daniel_met_shopifys_reden(monkeypatch):
     rm.email_van = lambda uid: "klant@example.com"
     monkeypatch.setitem(sys.modules, "backend.services.email", em)
     monkeypatch.setitem(sys.modules, "backend.services.referral_mail", rm)
-    monkeypatch.setattr(pl, "_SHOPIFY_ALARM_SINDS", {})
-    fout = ShopifyGeweigerd("Your app isn't installed on w.myshopify.com yet.",
-                            "app_not_installed", "The application is not installed on this shop.",
-                            "w.myshopify.com")
+    tabel = _Tabel(rijen)
+    monkeypatch.setattr(ka, "get_db", lambda: type("D", (), {"table": lambda self, n: tabel})())
 
-    assert pl._meld_mislukte_shopify_koppeling("u1", "w.myshopify.com", fout)
+    async def echt(uid):
+        return werkt
+    monkeypatch.setattr(ka, "werkt_de_koppeling", echt)
+    return ka, verstuurd
+
+
+def _mislukt(ka):
+    from backend.platforms.shopify import ShopifyGeweigerd
+    ka.noteer_mislukking("u1", "w.myshopify.com", ShopifyGeweigerd(
+        "Your app isn't installed on w.myshopify.com yet.", "app_not_installed",
+        "The application is not installed on this shop.", "w.myshopify.com"))
+
+
+def test_mislukte_poging_geeft_geen_mail_en_lukt_hij_daarna_ook_later_niet(monkeypatch):
+    """Voordeelsieraden (09e089ec, 27-10-2026): eerste poging faalt, een minuut later lukt het.
+    Daniel kreeg toch een mail. Nu: noteren, en na de wachttijd alleen mailen als het nog niet werkt."""
+    import asyncio
+    from datetime import datetime, timedelta, timezone
+    rijen = []
+    ka, verstuurd = _alarm_opstelling(monkeypatch, rijen, (True, "Shopify accepteert de opgeslagen koppeling"))
+    _mislukt(ka)
+    assert verstuurd == [] and len(rijen) == 1
+    # Binnen de wachttijd gebeurt er niets.
+    assert asyncio.run(ka.controleer_mislukte_koppelingen())["wachten"] == 1
+    # Na de wachttijd: de koppeling werkt, dus de rij verdwijnt en er komt geen mail.
+    rijen[0]["extra_data"]["laatste"] = (datetime.now(timezone.utc) - timedelta(minutes=21)).isoformat()
+    assert asyncio.run(ka.controleer_mislukte_koppelingen())["gelukt"] == 1
+    assert verstuurd == [] and rijen == []
+
+
+def test_blijft_het_mislukken_dan_komt_er_een_mail_die_zegt_niet_gelukt(monkeypatch):
+    import asyncio
+    from datetime import datetime, timedelta, timezone
+    rijen = []
+    ka, verstuurd = _alarm_opstelling(monkeypatch, rijen, (False, "er staat geen Shopify-koppeling in de database"))
+    _mislukt(ka)
+    rijen[0]["extra_data"]["laatste"] = (datetime.now(timezone.utc) - timedelta(minutes=21)).isoformat()
+    assert asyncio.run(ka.controleer_mislukte_koppelingen())["gemeld"] == 1
     onderwerp, tekst = verstuurd[0]
-    assert "klant@example.com" in onderwerp
-    assert "w.myshopify.com" in tekst and "app_not_installed" in tekst
-    assert "isn't installed" in tekst
-    # Dezelfde fout meteen nog eens: geen tweede mail.
-    assert not pl._meld_mislukte_shopify_koppeling("u1", "w.myshopify.com", fout)
+    assert "NIET gelukt" in onderwerp and "klant@example.com" in onderwerp
+    assert "w.myshopify.com" in tekst and "app_not_installed" in tekst and "isn't installed" in tekst
+    assert "geen Shopify-koppeling" in tekst
+    # Volgende ronde: niet nog een keer.
+    asyncio.run(ka.controleer_mislukte_koppelingen())
     assert len(verstuurd) == 1
 
 
-def test_koppelroute_meldt_een_mislukking_voor_de_foutmelding():
+def test_koppelroute_noteert_een_mislukking_en_wist_hem_bij_succes():
     fn = PLATFORMS.split("async def shopify_connect_app(")[1].split("\n@router.")[0]
     behandel = fn.split("except ValueError as e:")[1]
-    assert behandel.index("_meld_mislukte_shopify_koppeling") < behandel.index("raise HTTPException")
+    assert "noteer_mislukking" in behandel and "send_email" not in behandel
+    assert behandel.index("noteer_mislukking") < behandel.index("raise HTTPException")
+    assert "wis_mislukking(user_id)" in fn.split("_save_credentials(")[1]
 
 
 def test_elke_shopify_reden_staat_ook_in_het_nederlands():
