@@ -26,6 +26,9 @@ ZOEKTERMEN = [
     'site:instagram.com creator nederland "samenwerkingen" email bio',
     'site:instagram.com ugc creator nederland "contact" "@" samenwerken',
     'site:instagram.com nederlandse content creator "collabs" email',
+    'ugc creator nederland instagram bio "email" samenwerking',
+    'nederlandse ugc creator instagram "zakelijk" "@" bio',
+    'instagram ugc creator nl "samenwerkingen" "info@" OR "contact@"',
 ]
 PROFIEL = re.compile(r"^https://www\.instagram\.com/([A-Za-z0-9._]+)/?$")
 MAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
