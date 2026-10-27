@@ -264,3 +264,16 @@ def test_vermeldingen_vindt_kopje_met_adres_en_geheugen(monkeypatch, tmp_path):
                  "kennisbank: Les", "geheugen: vinted-kleur"]
     monkeypatch.setattr(N, "GEHEUGEN", tmp_path / "bestaat-niet")
     assert N.vermeldingen("vagif@x.nl", "1ba42900")[-1] == "geheugen: niet op deze machine"
+
+
+def test_mailtje_dat_het_script_zelf_verstuurde_telt_als_verstuurd():
+    # 26-10-2026: onboarding_mail.py verstuurt eerst en boekt daarna het mailtje
+    # (mailtje_klaar 10:07:08.7 UTC); Verzonden toont 10:07:07. De oude vergelijking
+    # meldde dan MAILTJE_NIET_VERSTUURD en bood een al verstuurde mail opnieuw aan.
+    verzonden = datetime(2026, 10, 26, 10, 7, 7, tzinfo=timezone.utc)
+    p = {"postvak": [{"map": "Verzonden", "datum": verzonden}]}
+    vorige = {"mailtje_klaar": "2026-10-26T10:07:08.699873+00:00", "mailtje_tekst": "Hoi"}
+    regels = N._mailtjeregel(p, vorige)
+    assert "verstuurd" in regels[0] and "NIET" not in regels[0]
+    oud = {"postvak": [{"map": "Verzonden", "datum": verzonden - timedelta(days=4)}]}
+    assert "MAILTJE_NIET_VERSTUURD" in N._mailtjeregel(oud, vorige)[0]
