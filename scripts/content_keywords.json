@@ -828,7 +828,7 @@
       "pillar": "B",
       "format": "howto",
       "slug": "how-to-change-language-on-2dehands",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "2dehands-taal-wijzigen",
       "priority": 95
     },
@@ -1729,6 +1729,16 @@
       "action": "created",
       "url_path": "/vs/best-resylr-alternative",
       "published_at": "2026-10-25T12:56:13.860615+00:00"
+    },
+    {
+      "keyword": "how to change language on 2dehands",
+      "slug": "how-to-change-language-on-2dehands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-change-language-on-2dehands",
+      "published_at": "2026-10-27T18:01:10.776372+00:00"
     }
   ]
 }
