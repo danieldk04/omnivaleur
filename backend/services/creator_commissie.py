@@ -161,14 +161,17 @@ async def verwerk_commissie() -> dict:
                 terug = teruggaven.get(factuur_id, 0)
                 betaald_op = (_ts(_g(_g(f, "status_transitions", {}), "paid_at"))
                               or _ts(_g(f, "created")) or datetime.now(timezone.utc))
-                execute_with_retry(db.table(TABEL).upsert({
+                rij = {
                     "invoice_id": factuur_id, "code": v["code"],
                     "referred_user_id": v["user_id"], "paid_at": betaald_op.isoformat(),
                     "bruto_cents": bruto, "netto_cents": netto, "terugbetaald_cents": terug,
                     "commission_pct": pct,
                     "commission_cents": commissie_cents(netto, terug, bruto, pct),
                     "updated_at": nu,
-                }, on_conflict="invoice_id"))
+                }
+                if not oud:
+                    rij["status"] = "open"
+                execute_with_retry(db.table(TABEL).upsert(rij, on_conflict="invoice_id"))
                 uit["bijgewerkt" if oud else "nieuw"] += 1
         except Exception:
             uit["fout"] += 1
