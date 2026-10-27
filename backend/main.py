@@ -165,6 +165,31 @@ def _r2_configured() -> bool:
         return False
 
 
+_r2_test = {"t": 0.0, "ok": None}
+
+
+def _r2_schrijft() -> bool | None:
+    """Schrijft en wist de server echt een bestandje in R2? Maximaal elke 2 minuten.
+
+    r2_photo_storage zegt alleen dat de instellingen er staan. Een sleutel die te
+    weinig mag laat uploads stil terugvallen op Supabase, dus dit meet het echt.
+    """
+    import time
+    if time.time() - _r2_test["t"] < 120:
+        return _r2_test["ok"]
+    try:
+        from backend.services import r2_storage
+        if not r2_storage.is_configured():
+            return None
+        r2_storage.upload(b"ok", "_health/ping.txt")
+        r2_storage.delete(["_health/ping.txt"])
+        ok = True
+    except Exception:
+        ok = False
+    _r2_test.update(t=time.time(), ok=ok)
+    return ok
+
+
 @app.get("/health")
 async def health():
     # Alleen ja/nee per instelling, nooit de waarde zelf. Dagen zoekwerk gingen op
@@ -221,6 +246,7 @@ async def health():
             # naar Supabase Storage en loopt die bucket dus gewoon weer vol. Dat
             # is van buitenaf verder niet te zien, vandaar hier.
             "r2_photo_storage": _r2_configured(),
+            "r2_schrijft": await asyncio.to_thread(_r2_schrijft),
             # De koude-mailmachine. Draait alleen als leadgen_tick aan staat, en
             # kan alleen versturen als Resend er is (Railway blokkeert SMTP) en
             # alleen concepten klaarzetten als de postbus-gegevens er zijn.
