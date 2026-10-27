@@ -18158,3 +18158,9 @@ Daniel mailt Nederlandse Instagram-creators (commissie 25%, gratis toegang, post
 - Verstuurd (onderwerp "Je account op Omnivaleur"): cf1284b8 radu.stefana@gmail.com (nog niets, extensie installeren), 12fc61d0 japenco@hotmail.com (292 Vinted, 179 MP, extensie stil sinds 23-10, Chrome openen), da176583 info@handelsonderneming038.nl (extensie weer actief, betaalde MP-rubrieken uitgelegd), 45f9caba ffpd7n2@gmail.com (proef 28-10, 11 verkocht via Vinted).
 - Geen mailtje: c184e384 en a45020c9 (gisteren gemaild, a45020c9 proef vandaag om), 8adaff42 (tweede account van c184e384).
 - Mailrapport 26-10: 2 mails, niets geopend, geklikt of beantwoord.
+
+## 27-10-2026: Trustpilot-verzoeken aan betalende klanten
+
+- Daniel mailde 27-10 een reviewverzoek (Trustpilot) aan Amanda (8f91a370, amandaonline001), Blackbird Guitars (f8c0cce9) en Vagif (1ba42900). Papa's Plectrums (bcdf9aa4) en Toon (96e30080) hadden al gereviewd; Amanda Haas (0b28c1ce) kreeg het al op 28-09.
+- Gemeten criterium: actief betalend, foutenpercentage afgelopen week onder ~5%. Bewust nog niet gevraagd: Zilverwebsite (26cf5471, 46% fout afgelopen week), Voordeelsieraden (09e089ec, 31% fout, pas klant), Janneke (31d28378, 8%), Toon al gedaan, albinmooi1009 en hjscholing (geen gebruik).
+- Mailadressen uit de klantendatabase: `get_admin_db().auth.admin.list_users` (de gewone `get_db()` mag dat niet), python3.13.
