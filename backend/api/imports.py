@@ -7,6 +7,7 @@ from backend.api.deps import get_current_user, require_active_subscription
 from backend.models import ItemCreate
 from datetime import datetime, timezone
 import asyncio
+import collections
 import json
 import logging
 import re
@@ -2135,6 +2136,69 @@ def _past(veld: str, waarde):
     return waarde
 
 
+async def shopify_nummers_aanvullen(db, user_id: str, cands: list[dict]) -> None:
+    """Zet het artikelnummer van de winkelier op Shopify-kandidaten (27-10-2026).
+
+    Voordeelsieraden (Mieneke, 09e089ec): de scan las het nummer wel van de
+    Shopify-variant en koppelde er bestaande artikelen mee, maar de tabel met
+    kandidaten heeft er geen kolom voor. Elk product dat als NIEUW werd
+    geïmporteerd kreeg daardoor een eigen IMP-nummer (536 van 536), terwijl haar
+    eigen nummers ("25-013.41") in de winkel stonden. Hier halen we ze op het
+    moment van importeren bij Shopify op, zodat er geen databasewijziging nodig is.
+
+    Alleen lezen. Faalt het ophalen, dan blijft het IMP-nummer (de import mag er
+    nooit op stuklopen). Een nummer dat al bij een ander artikel van deze
+    verkoper hoort, of dubbel in deze lading voorkomt, wordt overgeslagen: de
+    kolom is per verkoper uniek en een botsing zou het hele artikel laten falen."""
+    todo = [c for c in cands if c.get("platform") == "shopify" and not c.get("sku")
+            and c.get("platform_listing_id")]
+    if not todo:
+        return
+    try:
+        import httpx
+        from backend.platforms.shopify import _shop_creds
+        from backend.services.shopify_scan import API_VERSIE
+        rij = ((await naast_de_lus(lambda: db.table("platform_credentials")
+                                   .select("user_id,access_token,extra_data")
+                                   .eq("user_id", user_id).eq("platform", "shopify")
+                                   .limit(1).execute())).data or [])
+        if not rij:
+            return
+        shop, token = await _shop_creds({**rij[0], "user_id": user_id})
+        if not (shop and token):
+            return
+        nummer_van: dict[str, str] = {}
+        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=10.0)) as client:
+            for i in range(0, len(todo), 100):
+                ids = ",".join(str(c["platform_listing_id"]) for c in todo[i:i + 100])
+                r = await client.get(
+                    f"https://{shop}/admin/api/{API_VERSIE}/products.json",
+                    params={"ids": ids, "fields": "id,variants", "limit": 250},
+                    headers={"X-Shopify-Access-Token": token})
+                r.raise_for_status()
+                for p in r.json().get("products", []):
+                    sku = str(((p.get("variants") or [{}])[0].get("sku")) or "").strip()
+                    if sku:
+                        nummer_van[str(p["id"])] = sku
+        if not nummer_van:
+            return
+        bezet: set[str] = set()
+        waarden = sorted(set(nummer_van.values()))
+        for i in range(0, len(waarden), 100):
+            brok = waarden[i:i + 100]
+            bezet |= {str(x["sku"]).strip().lower() for x in
+                      ((await naast_de_lus(lambda: db.table("items").select("sku")
+                                           .eq("user_id", user_id).in_("sku", brok)
+                                           .execute())).data or [])}
+        telling = collections.Counter(v.lower() for v in nummer_van.values())
+        for c in todo:
+            sku = nummer_van.get(str(c["platform_listing_id"]))
+            if sku and sku.lower() not in bezet and telling[sku.lower()] == 1:
+                c["sku"] = sku
+    except Exception as e:
+        logger.warning("Shopify-artikelnummers ophalen mislukt, IMP-nummers blijven: %s", e)
+
+
 def _item_data_from_candidate(cand: dict, body: dict | None = None,
                               inferred: dict | None = None) -> dict:
     """
@@ -2184,7 +2248,7 @@ def _item_data_from_candidate(cand: dict, body: dict | None = None,
         # Fields the user types in the same form but that used to be dropped here,
         # so an imported item silently lost its SKU, its Shopify "was" price and
         # any per-platform price overrides.
-        "sku": _past("sku", body.get("sku")),
+        "sku": _past("sku", body.get("sku") or cand.get("sku")),
         "shopify_title": body.get("shopify_title") or (volle_titel if titel != volle_titel else None),
         "compare_at_price": body.get("compare_at_price"),
         "price_marktplaats": body.get("price_marktplaats"),
@@ -3145,6 +3209,7 @@ async def create_item_from_candidate(candidate_id: str, body: dict, user_id: str
     if light_ruimte is not None and light_ruimte <= 0:
         raise HTTPException(status_code=403, detail=LIGHT_LIMIET_MELDING)
 
+    await shopify_nummers_aanvullen(db, user_id, [cand])
     item_data = _item_data_from_candidate(cand, body, inferred=await _infer_attributes_smart(
         cand.get("title"), cand.get("description"), cand.get("brand")))
     # Copy the photos into our own bucket before the item exists. A listing
@@ -3323,6 +3388,8 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
 
     linked, created, failed = 0, 0, 0
     now = datetime.now(timezone.utc).isoformat()
+
+    await shopify_nummers_aanvullen(db, user_id, candidates)
 
     # Classify every candidate up front and in parallel — one sequential Haiku
     # call per candidate inside the loop would stall a bulk import of 50 items
