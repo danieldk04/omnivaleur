@@ -17,6 +17,21 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## stripe-webhookgeheim-vervangen
+
+*27-10-2026 — "27-10: webhook 400 sinds 24-10 opgelost zonder Daniel; proefbericht met Railway-geheim bewijst de kant, nieuw endpoint via API geeft het geheim"*
+
+Stripe-webhook gaf van 24-10 tot 27-10-2026 400 (handtekening). Opgelost op 27-10 zonder dat Daniel in Stripe hoefde te klikken.
+
+Bewijs van de kant: een zelf ondertekend proefbericht (type `omnivaleur.handtekeningproef`, doet niets) met het geheim uit Railway (`npx -y @railway/cli run`) gaf 200, met een fout geheim 400. Dus de code klopt, en Stripe tekende met een ander geheim. Python-UA krijgt Cloudflare 1010: stuur `User-Agent: Stripe/1.0`.
+
+Oplossing: het geheim van een bestaand endpoint is via de API niet te lezen, maar bij het aanmaken geeft Stripe het wel. Nieuw endpoint we_1UV6jq09Y8J5okHsXNO8szrl (zelfde url, vijf events), geheim via `railway variables --set-from-stdin STRIPE_WEBHOOK_SECRET` (nooit in beeld), oude we_1Tnjt809… uitgezet (niet gewist). Blijven liggende events opnieuw versturen: `POST /v1/events/{id}/retry` met `webhook_endpoint=<nieuw>`, oud naar nieuw. Oud geheim bewaard in ~/.omnivaleur/backups/stripe_webhookgeheim_voor_27-10.txt.
+
+**Why:** de reparatie leek "alleen Daniel kan dit", maar met de serversleutel kan het volledig vanaf de Mac, en bewezen.
+**How to apply:** webhook 400 opnieuw? Eerst het proefbericht. Geeft dat 200, ga dan dezelfde weg. Zie "stripe-webhook-mist-invoice-events", "stripe-twee-api-versies-tegelijk".
+
+---
+
 ## betalende-rubriek-is-geen-formulierfout
 
 *27-10-2026 — "Je hebt geen zoekertjesvorm gekozen" op 2dehands betekent meestal: deze rubriek kost geld, niet dat er een veld leeg is*
