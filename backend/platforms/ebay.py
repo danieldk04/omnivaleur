@@ -996,8 +996,14 @@ def _best_allowed_match(value: str, allowed: list[str], *, concept: str | None =
     for a in allowed:
         if a.lower() == low:
             return a
+    # Alleen op een heel woord, nooit op een los stukje (Toon, 28-10-2026): het merk
+    # "Handgemaakt" kreeg "GE" uit eBay's lijst omdat "ge" in "handgemaakt" zit.
+    # Een tapijt met merk "GE" is een onware advertentie.
     for a in allowed:
-        if low in a.lower() or a.lower() in low:
+        al = a.lower().strip()
+        if not al:
+            continue
+        if re.search(rf"(?<!\w){re.escape(low)}(?!\w)", al) or re.search(rf"(?<!\w){re.escape(al)}(?!\w)", low):
             return a
     if concept == "department":
         side = "men" if low in _DEPARTMENT_KEYWORDS["men"] else (
