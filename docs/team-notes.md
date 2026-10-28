@@ -18244,3 +18244,4 @@ Daniel meldt dat het GitHub-geheim SUPABASE_KEY (bijgewerkt 26-10 11:02) niet me
 - Nieuw 656a5041 (imelene@proton.me): nooit ingelogd, geen abonnement. Afwijkend: bevestigd 0,04 s na aanmaken en nooit een bevestigingsmail (alle andere aanmeldingen kregen er een), en geen code van ons maakt accounts via de beheersleutel. Dus aangemaakt buiten de aanmeldpagina om (Supabase-dashboard of iemand met de service-sleutel), op 27-10 11:53 UTC, de dag van het Railway-lek. Geen mailtje; vraag bij Daniel.
 - Geen mailtje (binnen 44 uur gemaild of niets veranderd): cf1284b8, 12fc61d0, da176583, c184e384 (proef 29-10 om), 8adaff42, 45f9caba (proef vandaag 19:26 om).
 - Mailrapport: 6 mails van 26 en 27-10, 3 echt geopend, 0 klik, 0 antwoord; ffpd7n2 en handelsonderneming038 logden daarna in.
+- Vervolg: 656a5041 (imelene@proton.me) is door Daniel zelf aangemaakt (Daniel, 28-10). Geen klant, geen beveiligingsprobleem.
