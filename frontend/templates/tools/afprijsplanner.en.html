@@ -1,0 +1,53 @@
+<p class="label">Free tool</p>
+<h1>Price drop planner for unsold second-hand items</h1>
+<p class="meta">No login needed. The same ladder as in the Omnivaleur dashboard.</p>
+<p>An item that sits online for weeks without selling rarely sells by waiting. Enter the price and the number of days and see at which lower price it becomes interesting again, without selling at a loss.</p>
+<div class="kr-kaart">
+  <div class="kr-raster">
+    <div class="kr-veld">
+      <label for="ap-prijs">Current price</label>
+      <input id="ap-prijs" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 49.00">
+      <div class="kr-fout" id="ap-prijs-fout"></div>
+    </div>
+    <div class="kr-veld">
+      <label for="ap-dagen">Days online</label>
+      <input id="ap-dagen" type="text" inputmode="numeric" autocomplete="off" placeholder="75">
+      <div class="kr-fout" id="ap-dagen-fout"></div>
+    </div>
+    <div class="kr-veld">
+      <label for="ap-inkoop">What did you pay for it? (optional)</label>
+      <input id="ap-inkoop" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 20.00">
+      <div class="kr-hint">Then we never suggest a price below it.</div>
+      <div class="kr-fout" id="ap-inkoop-fout"></div>
+    </div>
+  </div>
+</div>
+<div id="ap-resultaten" aria-live="polite"></div>
+
+<h2>The ladder</h2>
+<div class="table-wrap">
+<table class="kr-tabel">
+  <thead><tr><th>Days online</th><th>Price drop</th></tr></thead>
+  <tbody>
+    <tr><td>Under 30</td><td>Do nothing</td></tr>
+    <tr><td>From 30</td><td>5%</td></tr>
+    <tr><td>From 60</td><td>10%</td></tr>
+    <tr><td>From 90</td><td>15%</td></tr>
+    <tr><td>From 180</td><td>20%</td></tr>
+  </tbody>
+</table>
+</div>
+<p>The new price is rounded down to an amount ending in .99, because that is usual on Marktplaats, 2dehands and Vinted. If the new price would be under what you paid, the planner makes no suggestion. It is a plain, visible ladder and not a model: you can always explain why the number is what it is.</p>
+<p>Dropping the price and relisting do different things: relisting puts your listing back on top, a lower price makes it more attractive.</p>
+
+<h2>Frequently asked questions</h2>
+<details><summary>After how many days should I drop the price of an item?</summary><p>Under 30 days you do not need to do anything. From 30 days online the price drops 5%, from 60 days 10%, from 90 days 15% and from 180 days 20%.</p></details>
+<details><summary>Can I sell below my purchase price?</summary><p>The planner never suggests it. If the new price would be under what you paid, it says so and leaves the price alone.</p></details>
+<details><summary>Why do prices end in .99?</summary><p>Such a price is usual on Marktplaats, 2dehands and Vinted. The planner therefore rounds down to an amount ending in .99, instead of an arbitrary amount like €41.37.</p></details>
+<details><summary>Is relisting better than dropping the price?</summary><p>They do different things. Relisting puts your listing back on top, a lower price makes it more attractive. For an item that has been up for a long time a combination usually works better than either alone.</p></details>
+
+<h2>Read more</h2>
+<ul>
+  <li><a href="/reseller-tools/relisting-vs-bumping-second-hand">Relisting or bumping?</a></li>
+  <li><a href="/reseller-tools/how-to-price-second-hand-items">How to price second-hand items</a></li>
+</ul>

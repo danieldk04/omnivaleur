@@ -1,0 +1,45 @@
+<p class="label">Gratis tool</p>
+<h1>DAC7-check: worden je verkopen doorgegeven aan de Belastingdienst?</h1>
+<p class="meta">Geen inlog nodig. Regel gecontroleerd op 28 oktober 2026 bij de Belastingdienst.</p>
+<p>Marktplaats, Vinted en eBay geven je gegevens door aan de Belastingdienst als je boven een grens komt. Vul in wat je dit kalenderjaar tot nu toe verkocht, per platform, en je ziet waar je staat.</p>
+<div class="kr-kaart">
+  <div class="kr-grid4">
+    {%- for p in [('marktplaats','Marktplaats'),('2dehands','2dehands'),('vinted','Vinted'),('ebay','eBay'),('anders','Een ander platform')] %}
+    <div class="kr-veld">
+      <label for="d7-{{ p[0] }}-n">{{ p[1] }}: aantal verkopen</label>
+      <input id="d7-{{ p[0] }}-n" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+      <div class="kr-fout" id="d7-{{ p[0] }}-n-fout"></div>
+    </div>
+    <div class="kr-veld">
+      <label for="d7-{{ p[0] }}-o">{{ p[1] }}: omzet in euro</label>
+      <input id="d7-{{ p[0] }}-o" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 0,00">
+      <div class="kr-fout" id="d7-{{ p[0] }}-o-fout"></div>
+    </div>
+    {%- endfor %}
+  </div>
+</div>
+<div id="d7-resultaten" aria-live="polite"></div>
+
+<h2>De regel</h2>
+<p>Voor goederen geven platforms een verkoper door als die in een kalenderjaar <strong>30 keer of vaker</strong> verkoopt, of voor <strong>meer dan € 2.000</strong>. De grens geldt per platform: 20 verkopen op Marktplaats en 20 op Vinted zijn dus geen 40.</p>
+<p>Dat gaat om verkopen via het platform zelf. Een afspraak buiten Marktplaats om, of contant betalen, telt niet mee. Het platform geeft onder andere je persoonsgegevens, je opbrengst en het aantal verkopen per kwartaal door.</p>
+<p><strong>Doorgegeven is niet hetzelfde als belasting betalen.</strong> DAC7 verandert de belastingregels niet, het geeft de Belastingdienst alleen zicht. Of je als ondernemer wordt gezien en over je winst belasting moet betalen, hangt af van hoe je verkoopt, niet van deze grens. Dit is geen belastingadvies.</p>
+
+<h2>Veelgestelde vragen</h2>
+<details><summary>Wat is DAC7?</summary><p>Een Europese regel waarmee online platforms gegevens over hun verkopers moeten doorgeven aan de belastingdienst van hun land. Het geldt voor onder andere Marktplaats, Vinted en eBay.</p></details>
+<details><summary>Vanaf hoeveel verkopen wordt mijn verkoop doorgegeven?</summary><p>Bij 30 verkopen of meer in een kalenderjaar, of bij een omzet van meer dan € 2.000, per platform. Je komt onder de grens als je op allebei eronder blijft.</p></details>
+<details><summary>Moet ik belasting betalen als mijn verkopen worden doorgegeven?</summary><p>Niet automatisch. Doorgeven is informatie voor de Belastingdienst. Of je belasting moet betalen, hangt af van of je als ondernemer wordt gezien en van je winst.</p></details>
+<details><summary>Tellen verkopen op verschillende platforms bij elkaar op?</summary><p>Voor de DAC7-grens niet: de grens geldt per platform. Voor de vraag of je ondernemer bent kijkt de Belastingdienst wel naar alles samen.</p></details>
+
+<h2>Meer lezen</h2>
+<ul>
+  <li><a href="/nl/reseller-tools/dac7-vinted-belastingdienst-regels">DAC7, Vinted en de Belastingdienst: wat je moet weten</a></li>
+  <li><a href="/nl/reseller-tools/belastingdienst-regels-tweedehands-verkopen">Belasting over tweedehands verkopen</a></li>
+  <li><a href="/nl/reseller-tools/wanneer-kvk-nodig-voor-verkopen-op-marktplaats">Wanneer heb je een KvK-nummer nodig?</a></li>
+</ul>
+
+<h2>Bronnen</h2>
+<ul class="bronnen">
+  <li><a href="https://www.belastingdienst.nl/wps/wcm/connect/nl/ondernemers/content/wetsvoorstel-eu-richtlijn-gegevensuitwisseling-digitale-platformen-dac7" rel="nofollow noopener">Belastingdienst: Europese richtlijn (DAC7) voor online verkopen</a></li>
+  <li><a href="https://download.belastingdienst.nl/belastingdienst/docs/dac7-checklist-verkopers-al4811z1ed.pdf" rel="nofollow noopener">Belastingdienst: DAC7-checklist voor verkopers (pdf)</a></li>
+</ul>

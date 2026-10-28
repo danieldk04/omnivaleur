@@ -21,7 +21,7 @@ from pathlib import Path
 import asyncio
 import traceback
 import uuid
-from backend.api import items, listings, platforms, webhooks, jobs, uploads, shopify, auth, billing, imports, content, notifications, beheer, tracking, referrals, mail_verbinding, i18n, verzending, account, bronfotos
+from backend.api import items, listings, platforms, webhooks, jobs, uploads, shopify, auth, billing, imports, content, tools, notifications, beheer, tracking, referrals, mail_verbinding, i18n, verzending, account, bronfotos
 from backend.scheduler import start_scheduler, stop_scheduler
 
 FRONTEND = Path(__file__).parent.parent / "frontend"
@@ -115,6 +115,7 @@ app.include_router(notifications.router, prefix="/api")
 app.include_router(verzending.router, prefix="/api")
 app.include_router(auth.router)
 app.include_router(billing.router)
+app.include_router(tools.router)
 app.include_router(content.router)
 app.include_router(beheer.router)
 app.include_router(tracking.router)
@@ -309,8 +310,6 @@ def _vaste_omleiding(doel: str):
 for _bestand, _pad in {"index": "/", "nl": "/nl", "privacy": "/privacy",
                        "terms": "/terms", "marketplaces": "/marketplaces",
                        "mp-video": "/mp-video", "ai-info": "/ai-info",
-                       "fee-calculator": "/fee-calculator",
-                       "kostenrekenaar": "/nl/kostenrekenaar",
                        "not-found": "/"}.items():
     app.get(f"/{_bestand}.html", include_in_schema=False)(_vaste_omleiding(_pad))
 
@@ -370,19 +369,6 @@ async def ai_info_page():
     nemen geen EU-klanten aan of kennen Marktplaats niet; deze pagina moet ervoor
     zorgen dat een AI-antwoord op die vraag bij ons uitkomt."""
     return met_site_chrome("ai-info.html", "en", "/ai-info")
-
-
-@app.get("/fee-calculator")
-async def fee_calculator_page():
-    """Gratis kostenrekenaar zonder inlog (28-10-2026): Vendoo en Crosslist halen
-    hun zoekverkeer uit zulke tools, wij hadden de margecalculator alleen achter
-    de inlog. Het rekenmodel staat in frontend/assets/kostenrekenaar.js."""
-    return met_site_chrome("fee-calculator.html", "en", "/fee-calculator")
-
-
-@app.get("/nl/kostenrekenaar")
-async def kostenrekenaar_page():
-    return met_site_chrome("kostenrekenaar.html", "nl", "/nl/kostenrekenaar")
 
 
 @app.get("/mp-video")

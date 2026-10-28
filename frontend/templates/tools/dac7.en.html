@@ -1,0 +1,45 @@
+<p class="label">Free tool</p>
+<h1>DAC7 checker: will your sales be reported to the tax authority?</h1>
+<p class="meta">No login needed. Rule checked on 28 October 2026 with the Dutch Belastingdienst.</p>
+<p>Marktplaats, Vinted and eBay pass your details to the tax authority when you go over a limit. Enter what you have sold so far this calendar year, per platform, and see where you stand.</p>
+<div class="kr-kaart">
+  <div class="kr-grid4">
+    {%- for p in [('marktplaats','Marktplaats'),('2dehands','2dehands'),('vinted','Vinted'),('ebay','eBay'),('anders','Another platform')] %}
+    <div class="kr-veld">
+      <label for="d7-{{ p[0] }}-n">{{ p[1] }}: number of sales</label>
+      <input id="d7-{{ p[0] }}-n" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+      <div class="kr-fout" id="d7-{{ p[0] }}-n-fout"></div>
+    </div>
+    <div class="kr-veld">
+      <label for="d7-{{ p[0] }}-o">{{ p[1] }}: revenue in euro</label>
+      <input id="d7-{{ p[0] }}-o" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 0.00">
+      <div class="kr-fout" id="d7-{{ p[0] }}-o-fout"></div>
+    </div>
+    {%- endfor %}
+  </div>
+</div>
+<div id="d7-resultaten" aria-live="polite"></div>
+
+<h2>The rule</h2>
+<p>For goods, platforms report a seller who sells <strong>30 times or more</strong> in a calendar year, or for <strong>more than €2,000</strong>. The limit applies per platform: 20 sales on Marktplaats and 20 on Vinted are not 40.</p>
+<p>It concerns sales through the platform itself. A deal made outside Marktplaats, or paid in cash, does not count. The platform reports your personal details, your revenue and the number of sales per quarter.</p>
+<p><strong>Being reported is not the same as paying tax.</strong> DAC7 does not change the tax rules, it only gives the tax authority sight. Whether you are seen as a business and owe tax on your profit depends on how you sell, not on this limit. This is not tax advice.</p>
+
+<h2>Frequently asked questions</h2>
+<details><summary>What is DAC7?</summary><p>A European rule that makes online platforms pass data about their sellers to the tax authority of their country. It applies to Marktplaats, Vinted and eBay, among others.</p></details>
+<details><summary>How many sales until mine are reported?</summary><p>At 30 sales or more in a calendar year, or revenue above €2,000, per platform. You are under the limit if you stay under both.</p></details>
+<details><summary>Do I have to pay tax if my sales are reported?</summary><p>Not automatically. Reporting is information for the tax authority. Whether you owe tax depends on whether you count as a business and on your profit.</p></details>
+<details><summary>Do sales on different platforms add up?</summary><p>Not for the DAC7 limit: it applies per platform. For the question whether you are a business, the tax authority does look at everything together.</p></details>
+
+<h2>Read more</h2>
+<ul>
+  <li><a href="/reseller-tools/dac7-vinted-reporting-rules-netherlands">DAC7, Vinted and the Belastingdienst: what you need to know</a></li>
+  <li><a href="/reseller-tools/belastingdienst-second-hand-selling-rules-netherlands">Tax on second-hand sales in the Netherlands</a></li>
+  <li><a href="/reseller-tools/when-does-reselling-become-a-business-kvk">When does reselling become a business?</a></li>
+</ul>
+
+<h2>Sources</h2>
+<ul class="bronnen">
+  <li><a href="https://www.belastingdienst.nl/wps/wcm/connect/nl/ondernemers/content/wetsvoorstel-eu-richtlijn-gegevensuitwisseling-digitale-platformen-dac7" rel="nofollow noopener">Belastingdienst: European directive (DAC7) for online sales (Dutch)</a></li>
+  <li><a href="https://download.belastingdienst.nl/belastingdienst/docs/dac7-checklist-verkopers-al4811z1ed.pdf" rel="nofollow noopener">Belastingdienst: DAC7 checklist for sellers (pdf, Dutch)</a></li>
+</ul>

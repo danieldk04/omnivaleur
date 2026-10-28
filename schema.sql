@@ -392,3 +392,17 @@ CREATE TABLE IF NOT EXISTS week_metingen (
     bijgewerkt_op       TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE week_metingen DISABLE ROW LEVEL SECURITY;
+
+-- Aanmeldingen voor de gratis downloads op /tools (28-10-2026). Bewust een eigen tabel:
+-- dit zijn geen leads en geen klanten, en ze horen niet in de koude-mailmachine.
+-- Handmatig uitvoeren in de Supabase SQL-editor; tot dan gaat elk adres per mail naar de eigenaar.
+CREATE TABLE IF NOT EXISTS tool_aanmeldingen (
+    id            BIGSERIAL PRIMARY KEY,
+    email         TEXT NOT NULL UNIQUE,
+    taal          TEXT NOT NULL DEFAULT 'nl',
+    bron          TEXT NOT NULL DEFAULT 'voorraadsheet',
+    toestemming   BOOLEAN NOT NULL DEFAULT FALSE,
+    aangemeld_op  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    afgemeld_op   TIMESTAMPTZ
+);
+ALTER TABLE tool_aanmeldingen ENABLE ROW LEVEL SECURITY;

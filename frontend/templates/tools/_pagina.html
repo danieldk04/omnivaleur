@@ -1,0 +1,58 @@
+{#- Eén sjabloon voor elke toolpagina en voor de hub. Gevuld door backend/api/tools.py. -#}
+<!DOCTYPE html>
+<html lang="{{ taal }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ titel }}</title>
+<meta name="description" content="{{ meta }}">
+<link rel="canonical" href="{{ canonical }}">
+{%- for code, url in alternatieven %}
+<link rel="alternate" hreflang="{{ code }}" href="{{ url }}">
+{%- endfor %}
+<link rel="alternate" hreflang="x-default" href="{{ x_default }}">
+<link rel="icon" type="image/png" href="/logo.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Omnivaleur">
+<meta property="og:locale" content="{{ 'nl_NL' if nl else 'en_GB' }}">
+<meta property="og:title" content="{{ titel }}">
+<meta property="og:description" content="{{ meta }}">
+<meta property="og:url" content="{{ canonical }}">
+<meta property="og:image" content="https://omnivaleur.com/logo.png">
+<script type="application/ld+json">{{ json_ld|safe }}</script>
+<link rel="stylesheet" href="/assets/tools.css?v={{ css_v }}">
+{% include "_site_chrome_style.html" %}
+</head>
+<body>
+{% include "_nav.html" %}
+
+<main>
+  <p class="kr-krumel"><a href="{{ '/nl' if nl else '/' }}">Omnivaleur</a><span>›</span><a href="{{ hub_pad }}">{{ 'Gratis tools' if nl else 'Free tools' }}</a>{% if tool %}<span>›</span>{{ naam }}{% endif %}</p>
+  {{ body|safe }}
+
+  {% if tool %}
+  <h2>{{ 'Meer gratis tools' if nl else 'More free tools' }}</h2>
+  <div class="kr-meer">
+    {%- for t in andere %}<a href="{{ t.pad }}">{{ t.icon }} {{ t.naam }}</a>{%- endfor %}
+    <a href="{{ hub_pad }}">→ {{ 'Alle tools' if nl else 'All tools' }}</a>
+  </div>
+  {% endif %}
+
+  <div class="kr-cta">
+    <h2>{{ 'Alles op één plek plaatsen?' if nl else 'List everywhere in one go?' }}</h2>
+    {% if nl %}
+    <p>Omnivaleur zet één artikel in één keer op Marktplaats, 2dehands, Vinted en eBay, met per kanaal een eigen prijs en een titel die binnen de grens past. Verkoop je het ergens, dan haalt het de andere advertenties weg. 7 dagen gratis, geen creditcard nodig.</p>
+    <a class="kr-knop" href="/register">Probeer 7 dagen gratis</a>
+    {% else %}
+    <p>Omnivaleur puts one item on Marktplaats, 2dehands, Vinted and eBay in one go, with its own price per marketplace and a title that fits each limit. When it sells somewhere, the other listings come down. 7 days free, no credit card needed.</p>
+    <a class="kr-knop" href="/register">Try it free for 7 days</a>
+    {% endif %}
+  </div>
+</main>
+
+{% include "_footer.html" %}
+{%- for s in scripts %}
+<script src="/assets/{{ s }}?v={{ js_v }}"></script>
+{%- endfor %}
+</body>
+</html>

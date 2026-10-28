@@ -1,0 +1,95 @@
+<p class="label">Gratis tool</p>
+  <h1>Kostenrekenaar voor Marktplaats, 2dehands, Vinted en eBay</h1>
+  <p class="meta">Tarieven gecontroleerd op 28 oktober 2026 bij de kanalen zelf. Geen inlog nodig.</p>
+  <p>Je koopt een jas voor € 20 en wilt er € 25 aan overhouden. Wat moet je dan vragen? Op Vinted is dat bijna overal hetzelfde, maar eBay houdt commissie in en dan moet de prijs hoger. Vul je bedragen in en je ziet het per kanaal.</p>
+
+  <div class="kr-kaart">
+    <div class="kr-raster">
+      <div class="kr-veld">
+        <label for="kr-inkoop">Wat betaalde je ervoor?</label>
+        <input id="kr-inkoop" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 20,00">
+        <div class="kr-fout" id="kr-inkoop-fout"></div>
+      </div>
+      <div class="kr-veld">
+        <label for="kr-winst">Wat wil je overhouden?</label>
+        <input id="kr-winst" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 25,00">
+        <div class="kr-fout" id="kr-winst-fout"></div>
+      </div>
+      <div class="kr-veld">
+        <label for="kr-prijs">Of: voor welke prijs staat hij online? (optioneel)</label>
+        <input id="kr-prijs" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 49,00">
+        <div class="kr-hint">Dan zie je ook de winst bij die prijs.</div>
+        <div class="kr-fout" id="kr-prijs-fout"></div>
+      </div>
+    </div>
+    <div class="kr-ebay">
+      <div class="kr-ebay-kop">Alleen voor eBay</div>
+      <div class="kr-veld">
+        <label for="kr-verkoper">Je verkoopt als</label>
+        <select id="kr-verkoper">
+          <option value="particulier">Particulier</option>
+          <option value="zakelijk">Zakelijk</option>
+        </select>
+      </div>
+      <div class="kr-veld" id="kr-rubriek-rij" style="display:none">
+        <label for="kr-rubriek">Rubriek</label>
+        <select id="kr-rubriek">
+          <option value="standaard">Andere rubrieken</option>
+          <option value="sieraden">Sieraden en horloges</option>
+          <option value="muziek">Muziekinstrumenten</option>
+          <option value="foto">Foto en camera</option>
+          <option value="tuin">Tuin en terras</option>
+        </select>
+      </div>
+      <div class="kr-veld">
+        <label for="kr-verzend">Verzendkosten voor de koper</label>
+        <input id="kr-verzend" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 0,00">
+        <div class="kr-hint">eBay rekent commissie ook over de verzendkosten.</div>
+        <div class="kr-fout" id="kr-verzend-fout"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="kr-resultaten" aria-live="polite"></div>
+  <p class="meta">Bedragen zonder btw. Een zakelijke verkoper kan de btw op de kosten verrekenen. Niet meegerekend: verzendkosten die je zelf betaalt, betaalde extra's zoals bumpen of een topadvertentie, en eventuele belasting over je winst.</p>
+
+  <h2>Wat elk kanaal de verkoper rekent</h2>
+
+  <h3>Marktplaats</h3>
+  <p>Marktplaats rekent in de meeste categorieën geen commissie, en de kopersbescherming betaalt de koper. Betaalde extra's, zoals een topadvertentie, en het zakelijke Marktplaats Pro zitten niet in de berekening.</p>
+
+  <h3>2dehands</h3>
+  <p>Volgens het helpcentrum van 2dehands is verkopen in de meeste gevallen gratis, zonder commissie of transactiekosten. In de categorie Auto's en Motoren betaal je vanaf het tweede zoekertje. Bij een betaalverzoek met Bancontact rekent 2dehands €&nbsp;0,40 servicekosten; die betaalt standaard de koper, en jij kunt ze overnemen als je dat wilt.</p>
+
+  <h3>Vinted</h3>
+  <p>Verkopers betalen op Vinted niets. Het volledige bedrag komt in je Vinted Portemonnee. De koper betaalt de Vinted fee, die vroeger kopersbeschermingskosten heette. Alleen optionele diensten, zoals je artikel bumpen, kosten geld.</p>
+
+  <h3>eBay.nl</h3>
+  <ul>
+    <li><strong>Particulier:</strong> 11% over het totaalbedrag tot € 1.990 en 2% daarboven, plus € 0,35 per bestelling (€ 0,05 onder de € 10) en 0,42% wettelijke verwerkingskosten.</li>
+    <li><strong>Zakelijk:</strong> meestal 11% tot € 990 per artikel en 2% daarboven, plus € 0,45 per bestelling boven de € 10 (€ 0,35 tot en met € 10) en 0,35% wettelijke verwerkingskosten. Per rubriek wijkt dit af, bijvoorbeeld 11% tot € 400 bij sieraden en horloges en 6,5% tot € 300 bij foto en camera.</li>
+    <li>Plaatskosten (vanaf € 0,35 per advertentie voor zakelijke verkopers zonder winkel) zitten niet in de berekening, net als de btw op de kosten.</li>
+  </ul>
+
+  <h2>Veelgestelde vragen</h2>
+  <details><summary>Wat kost verkopen op Marktplaats?</summary><p>Marktplaats rekent in de meeste categorieën geen verkoopcommissie en de kopersbescherming is voor rekening van de koper. Betaalde extra's zoals een topadvertentie of bumpen kosten wel geld.</p></details>
+  <details><summary>Is verkopen op Vinted gratis?</summary><p>Ja, voor de verkoper. Je krijgt het volledige bedrag in je Vinted Portemonnee en de koper betaalt de Vinted fee. Alleen optionele diensten, zoals bumpen, kosten geld.</p></details>
+  <details><summary>Hoeveel commissie rekent eBay.nl?</summary><p>Particulier 11% tot € 1.990 en 2% daarboven. Zakelijk meestal 11% tot € 990 en 2% daarboven. Daar komen een vast bedrag per bestelling en wettelijke verwerkingskosten bij. Zie hierboven voor de bedragen.</p></details>
+  <details><summary>Waarom moet ik op eBay een hogere prijs vragen dan op Vinted?</summary><p>Omdat eBay commissie rekent over het verkoopbedrag en Marktplaats, 2dehands en Vinted de verkoper niets rekenen. Voor dezelfde winst moet de prijs op eBay dus hoger zijn. De rekenmachine laat per kanaal zien hoeveel.</p></details>
+
+  <h2>Meer lezen</h2>
+  <ul>
+    <li><a href="/nl/reseller-tools/marktplaats-kosten-overzicht">Wat kost Marktplaats? Het volledige overzicht</a></li>
+    <li><a href="/nl/reseller-tools/belastingdienst-regels-tweedehands-verkopen">Belasting over tweedehands verkopen: de regels van de Belastingdienst</a></li>
+    <li><a href="/nl/reseller-tools/btw-margeregeling-tweedehands">De btw-margeregeling voor tweedehands goederen</a></li>
+  </ul>
+
+  <h2>Bronnen</h2>
+  <ul class="bronnen">
+    <li><a href="https://www.ebay.nl/help/selling/fees-credits-invoices/selling-fees?id=4822" rel="nofollow noopener">eBay.nl: verkoopkosten voor particulieren</a></li>
+    <li><a href="https://www.ebay.nl/help/selling/fees-credits-invoices/selling-fees-business-sellers?id=4809" rel="nofollow noopener">eBay.nl: verkoopkosten voor zakelijke verkopers</a></li>
+    <li><a href="https://www.vinted.nl/help/413/373-is-selling-on-vinted-free" rel="nofollow noopener">Vinted: moet ik betalen om artikelen te verkopen?</a></li>
+    <li><a href="https://help.2dehands.be/articles/nl_NL/Knowledge/hoeveel-kost-een-zoekertje-plaatsen" rel="nofollow noopener">2dehands: hoeveel kost een zoekertje plaatsen?</a></li>
+    <li><a href="https://www.marktplaats.nl/m/kopersbescherming/verkoper/" rel="nofollow noopener">Marktplaats: kopersbescherming voor verkopers</a></li>
+  </ul>
+  <p class="meta">Tarieven kunnen veranderen. Controleer bij een grote aankoop het actuele tarief bij het kanaal zelf. Heb je een fout gevonden? Mail <a href="mailto:info@omnivaleur.com">info@omnivaleur.com</a>.</p>

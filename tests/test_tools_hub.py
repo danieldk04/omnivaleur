@@ -162,7 +162,7 @@ def test_titelchecker_telt_en_kapt_af_zoals_de_extensie():
           tel60: T.tel(T.afkap(lang,60)), tel30: T.tel(T.afkap('Heel lange titel zonder streepjes erin hoor', 30)),
         }));
     """))
-    assert g["a"] == 3 and g["b"] == 10 and g["c"] == 3   # nieuwe regel telt als een spatie, emoji als een teken
+    assert g["a"] == 3 and g["b"] == 9 and g["c"] == 3   # nieuwe regel (met omringende spaties) wordt een spatie, emoji telt als een teken
     assert g["kap60"] == "Burberry wollen jas heren maat 50 - Zwart - Vintage"   # hele " - "-stukken eraf
     assert g["kap30"] == "Heel lange titel zonder"       # anders op een heel woord
     assert g["kort"] == "kort"

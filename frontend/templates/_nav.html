@@ -5,6 +5,7 @@
 {%- set home = '/nl' if nl else '/' -%}
 {%- set links = [
   ('/marketplaces', 'Marktplaatsen' if nl else 'Marketplaces'),
+  ('/nl/tools' if nl else '/tools', 'Gratis tools' if nl else 'Free tools'),
   ('/nl/blog' if nl else '/blog', 'Blog'),
   (home ~ '#inside-the-app', 'In de app' if nl else 'Inside the app'),
   (home ~ '#how-it-works', 'Hoe het werkt' if nl else 'How it works'),
@@ -24,7 +25,7 @@
       {%- endfor %}
     </div>
     <div class="nav-actions">
-      <div class="site-lang">{% if nl %}<a href="/" hreflang="en">EN</a><span class="on">NL</span>{% else %}<span class="on">EN</span><a href="/nl" hreflang="nl">NL</a>{% endif %}</div>
+      <div class="site-lang">{% if nl %}<a href="{{ wissel or '/' }}" hreflang="en">EN</a><span class="on">NL</span>{% else %}<span class="on">EN</span><a href="{{ wissel or '/nl' }}" hreflang="nl">NL</a>{% endif %}</div>
       <a href="/login" class="btn btn-outline">{{ 'Inloggen' if nl else 'Log in' }}</a>
       <a href="/register" class="btn btn-primary">{{ '7 dagen gratis' if nl else '7 days free' }} →</a>
     </div>

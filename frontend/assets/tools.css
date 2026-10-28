@@ -1,0 +1,79 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue: #2563eb; --mint: #34d399; --text: #0f172a;
+  --muted: #64748b; --border: #e2e8f0; --surface: #fff; --bg: #f8fafc; --rood: #b91c1c;
+}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--surface); color: var(--text); line-height: 1.7; }
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+main { max-width: 880px; margin: 0 auto; padding: 56px 24px 96px; }
+.label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--blue); margin-bottom: 12px; }
+h1 { font-size: 34px; font-weight: 900; letter-spacing: -.5px; line-height: 1.2; margin-bottom: 12px; }
+.meta { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
+h2 { font-size: 20px; font-weight: 700; margin: 40px 0 12px; }
+h3 { font-size: 16px; font-weight: 700; margin: 24px 0 6px; }
+p, li, td, th, label { font-size: 15px; color: #334155; }
+p { margin-bottom: 14px; }
+ul { margin: 0 0 14px 20px; display: flex; flex-direction: column; gap: 6px; }
+.kr-kaart { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 22px 24px; margin: 8px 0 20px; }
+.kr-raster { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.kr-veld label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 4px; color: var(--text); }
+.kr-veld input, .kr-veld select { width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
+.kr-veld input:focus, .kr-veld select:focus { outline: 2px solid var(--blue); outline-offset: 1px; }
+.kr-hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.kr-fout { font-size: 12px; color: var(--rood); min-height: 0; }
+.kr-ebay { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); }
+.kr-ebay-kop { grid-column: 1 / -1; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.table-wrap { overflow-x: auto; margin-bottom: 14px; }
+table { border-collapse: collapse; width: 100%; min-width: 480px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+thead th { font-weight: 700; color: var(--text); background: var(--bg); font-size: 13px; }
+tbody th { font-weight: 700; color: var(--text); }
+.kr-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kr-groot { font-weight: 800; color: var(--text); font-size: 17px; }
+.kr-neg { color: var(--rood); font-weight: 700; }
+.kr-leeg { color: var(--muted); }
+.kr-cta { background: linear-gradient(135deg, #eff6ff, #ecfdf5); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin: 40px 0 8px; }
+.kr-cta h2 { margin-top: 0; }
+.kr-knop { display: inline-block; background: var(--blue); color: #fff; font-weight: 700; padding: 11px 20px; border-radius: 8px; }
+.kr-knop:hover { text-decoration: none; background: #1d4ed8; }
+.bronnen li { font-size: 14px; }
+details { border-bottom: 1px solid var(--border); padding: 12px 0; }
+summary { font-weight: 700; cursor: pointer; color: var(--text); }
+details p { margin: 10px 0 0; }
+@media (max-width: 640px) {
+  h1 { font-size: 27px; }
+  .kr-raster, .kr-ebay { grid-template-columns: 1fr; }
+  .kr-tabel { min-width: 0; }
+  .kr-tabel th, .kr-tabel td { padding: 8px 6px; font-size: 13px; }
+  .kr-tabel .kr-num { white-space: normal; }
+  .kr-groot { font-size: 15px; }
+}
+
+.kr-krumel { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+.kr-krumel a { color: var(--muted); }
+.kr-krumel span { margin: 0 6px; }
+.kr-kaarten { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 24px 0 8px; }
+.kr-kaartlink { display: block; border: 1px solid var(--border); border-radius: 12px; padding: 20px; color: var(--text); background: var(--surface); }
+.kr-kaartlink:hover { text-decoration: none; border-color: var(--blue); box-shadow: 0 4px 16px rgba(37,99,235,.08); }
+.kr-kaartlink .ic { font-size: 26px; line-height: 1; display: block; margin-bottom: 10px; }
+.kr-kaartlink strong { display: block; font-size: 16px; margin-bottom: 4px; }
+.kr-kaartlink span.tx { font-size: 14px; color: #475569; }
+.kr-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #ecfdf5; color: #047857; margin-top: 10px; }
+.kr-badge.mail { background: #eff6ff; color: #1d4ed8; }
+.kr-meer { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin: 8px 0; }
+.kr-meer a { border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 14px; background: var(--bg); }
+.kr-balk { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; margin-top: 6px; }
+.kr-balk i { display: block; height: 100%; background: var(--mint); border-radius: 99px; }
+.kr-balk i.over { background: var(--rood); }
+.kr-ok { color: #047857; font-weight: 700; }
+.kr-slecht { color: var(--rood); font-weight: 700; }
+.kr-melding { margin-top: 14px; padding: 14px 16px; border-radius: 10px; font-size: 14px; }
+.kr-melding.goed { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+.kr-melding.fout { background: #fef2f2; border: 1px solid #fecaca; color: var(--rood); }
+.kr-aanvink { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: #475569; margin: 12px 0; }
+.kr-aanvink input { margin-top: 4px; }
+.kr-pot { position: absolute; left: -9999px; height: 0; overflow: hidden; }
+textarea { width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; min-height: 84px; resize: vertical; }
+.kr-grid4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+@media (max-width: 640px) { .kr-kaarten, .kr-grid4 { grid-template-columns: 1fr; } }

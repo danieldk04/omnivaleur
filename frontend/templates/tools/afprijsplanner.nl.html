@@ -1,0 +1,53 @@
+<p class="label">Gratis tool</p>
+<h1>Afprijsplanner voor onverkochte tweedehands artikelen</h1>
+<p class="meta">Geen inlog nodig. Dezelfde ladder als in het Omnivaleur-dashboard.</p>
+<p>Een artikel dat weken online staat zonder te verkopen, wordt zelden verkocht door te wachten. Vul de prijs en het aantal dagen in en je ziet bij welke lagere prijs het weer interessant wordt, zonder dat je verlies maakt.</p>
+<div class="kr-kaart">
+  <div class="kr-raster">
+    <div class="kr-veld">
+      <label for="ap-prijs">Huidige prijs</label>
+      <input id="ap-prijs" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 49,00">
+      <div class="kr-fout" id="ap-prijs-fout"></div>
+    </div>
+    <div class="kr-veld">
+      <label for="ap-dagen">Dagen online</label>
+      <input id="ap-dagen" type="text" inputmode="numeric" autocomplete="off" placeholder="75">
+      <div class="kr-fout" id="ap-dagen-fout"></div>
+    </div>
+    <div class="kr-veld">
+      <label for="ap-inkoop">Wat betaalde je ervoor? (optioneel)</label>
+      <input id="ap-inkoop" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 20,00">
+      <div class="kr-hint">Dan stellen we nooit een prijs eronder voor.</div>
+      <div class="kr-fout" id="ap-inkoop-fout"></div>
+    </div>
+  </div>
+</div>
+<div id="ap-resultaten" aria-live="polite"></div>
+
+<h2>De ladder</h2>
+<div class="table-wrap">
+<table class="kr-tabel">
+  <thead><tr><th>Dagen online</th><th>Korting</th></tr></thead>
+  <tbody>
+    <tr><td>Minder dan 30</td><td>Niets doen</td></tr>
+    <tr><td>Vanaf 30</td><td>5%</td></tr>
+    <tr><td>Vanaf 60</td><td>10%</td></tr>
+    <tr><td>Vanaf 90</td><td>15%</td></tr>
+    <tr><td>Vanaf 180</td><td>20%</td></tr>
+  </tbody>
+</table>
+</div>
+<p>De nieuwe prijs wordt afgerond naar beneden op een bedrag dat eindigt op ,99, omdat dat op Marktplaats, 2dehands en Vinted gebruikelijk is. Staat de nieuwe prijs onder wat je betaalde, dan doet de planner geen voorstel. Dit is een eenvoudige, zichtbare trap en geen model: je kunt altijd uitleggen waarom het getal zo is.</p>
+<p>Afprijzen en opnieuw plaatsen doen iets anders: opnieuw plaatsen zet je advertentie weer bovenaan, afprijzen maakt hem aantrekkelijker.</p>
+
+<h2>Veelgestelde vragen</h2>
+<details><summary>Na hoeveel dagen moet ik een artikel afprijzen?</summary><p>Onder de 30 dagen hoef je niets te doen. Vanaf 30 dagen online zakt de prijs 5%, vanaf 60 dagen 10%, vanaf 90 dagen 15% en vanaf 180 dagen 20%.</p></details>
+<details><summary>Mag ik onder mijn inkoopprijs verkopen?</summary><p>De planner stelt dat nooit voor. Staat de nieuwe prijs onder wat je betaalde, dan zegt hij dat en laat hij de prijs staan.</p></details>
+<details><summary>Waarom eindigen de prijzen op ,99?</summary><p>Zo'n prijs is gebruikelijk op Marktplaats, 2dehands en Vinted. De planner rondt daarom af naar beneden op een bedrag dat op ,99 eindigt, in plaats van op een willekeurig bedrag als € 41,37.</p></details>
+<details><summary>Is opnieuw plaatsen beter dan afprijzen?</summary><p>Ze doen iets anders. Opnieuw plaatsen zet je advertentie weer bovenaan, afprijzen maakt hem aantrekkelijker. Voor een artikel dat al lang staat werkt een combinatie meestal beter dan een van de twee.</p></details>
+
+<h2>Meer lezen</h2>
+<ul>
+  <li><a href="/nl/reseller-tools/opnieuw-plaatsen-of-omhoogbellen">Opnieuw plaatsen of omhoogbellen?</a></li>
+  <li><a href="/nl/reseller-tools/tweedehands-artikelen-prijzen-strategie">Tweedehands artikelen prijzen: een strategie</a></li>
+</ul>

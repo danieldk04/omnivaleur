@@ -2,9 +2,7 @@
 
 Rekenmodel: frontend/assets/kostenrekenaar.js, getoetst met node tegen bedragen
 die met de hand zijn uitgerekend uit de tarieven op de helppagina's van eBay.nl
-(particulier id 4822, zakelijk id 4809). Pagina's: tweetalig, met hreflang,
-canonical, de gedeelde kopregel en voettekst, in de sitemap en met geldige
-JSON-LD.
+(particulier id 4822, zakelijk id 4809). De pagina's staan sinds de tools-hub in tests/test_tools_hub.py.
 """
 import json
 import re
@@ -110,57 +108,6 @@ def test_bedragen_worden_goed_gelezen(tekst, verwacht):
 @pytest.mark.parametrize("tekst", ["abc", "", "12,5,5x", "--3"])
 def test_onzin_is_geen_bedrag(tekst):
     assert _node(f"console.log(JSON.stringify(Number.isNaN(K.leesBedrag({json.dumps(tekst)}))))") is True
-
-
-# ── Pagina's ──────────────────────────────────────────────────────────────
-
-from backend.site_chrome import met_site_chrome  # noqa: E402
-
-PAGINAS = [("fee-calculator.html", "en", "/fee-calculator", "/nl/kostenrekenaar"),
-           ("kostenrekenaar.html", "nl", "/nl/kostenrekenaar", "/fee-calculator")]
-
-
-@pytest.mark.parametrize("bestand,taal,pad,andere", PAGINAS)
-def test_pagina_heeft_kop_voet_canonical_en_hreflang(bestand, taal, pad, andere):
-    bron = (REPO / "frontend" / bestand).read_text(encoding="utf-8")
-    assert f'<html lang="{taal}">' in bron
-    assert f'rel="canonical" href="https://omnivaleur.com{pad}"' in bron
-    assert f'hreflang="x-default" href="https://omnivaleur.com/fee-calculator"' in bron
-    assert f'hreflang="{"nl" if taal == "en" else "en"}" href="https://omnivaleur.com{andere}"' in bron
-    assert not re.search(r"<nav[ >]", bron) and "<footer" not in bron
-    html = met_site_chrome(bestand, taal, pad).body.decode("utf-8")
-    assert html.count('<nav class="site-nav">') == 1 and html.count('<footer class="site-footer">') == 1
-    assert "<!--site-" not in html
-    assert "/assets/kostenrekenaar.js" in html
-    assert html.count("</head>") == 1
-
-
-@pytest.mark.parametrize("bestand,taal,pad,andere", PAGINAS)
-def test_json_ld_is_geldig_en_bevat_faq_breadcrumb_en_app(bestand, taal, pad, andere):
-    bron = (REPO / "frontend" / bestand).read_text(encoding="utf-8")
-    blok = re.search(r'<script type="application/ld\+json">(.*?)</script>', bron, re.S).group(1)
-    types = {n["@type"] for n in json.loads(blok)["@graph"]}
-    assert types == {"WebApplication", "BreadcrumbList", "FAQPage"}
-
-
-@pytest.mark.parametrize("bestand,taal,pad,andere", PAGINAS)
-def test_alle_formulier_ids_die_het_script_gebruikt_bestaan(bestand, taal, pad, andere):
-    bron = (REPO / "frontend" / bestand).read_text(encoding="utf-8")
-    ids = set(re.findall(r"""el\('([a-z-]+)'\)|veld\('([a-z-]+)'\)|\['([a-z-]+)'""", JS.read_text(encoding="utf-8")))
-    gebruikt = {i for tpl in ids for i in tpl if i.startswith("kr-")}
-    assert {"kr-inkoop", "kr-winst", "kr-prijs", "kr-verzend", "kr-verkoper", "kr-rubriek", "kr-resultaten", "kr-rubriek-rij"} <= gebruikt
-    for i in gebruikt:
-        assert f'id="{i}"' in bron, f"{bestand} mist #{i}"
-
-
-def test_sitemap_footer_en_routes():
-    from backend.api.content import STATIC_SITEMAP_URLS
-    paden = {p for p, *_ in STATIC_SITEMAP_URLS}
-    assert {"/fee-calculator", "/nl/kostenrekenaar"} <= paden
-    footer = (REPO / "frontend" / "templates" / "_footer.html").read_text(encoding="utf-8")
-    assert "/nl/kostenrekenaar" in footer and "/fee-calculator" in footer
-    main = (REPO / "backend" / "main.py").read_text(encoding="utf-8")
-    assert '"/fee-calculator"' in main and '"/nl/kostenrekenaar"' in main
 
 
 @node

@@ -22,6 +22,7 @@ from backend.content.branding import (  # noqa: F401  (her-geëxporteerd voor de
 )
 from backend.content.pipeline import run_pipeline
 from backend.database import get_db, naast_de_lus
+from backend.tools_data import sitemap_paden
 
 router = APIRouter(tags=["content"])
 
@@ -473,12 +474,13 @@ STATIC_SITEMAP_URLS = [
     ("/nl/blog", "daily", "0.8"),
     ("/marketplaces", "monthly", "0.8"),
     ("/ai-info", "monthly", "0.6"),
-    ("/fee-calculator", "monthly", "0.8"),
-    ("/nl/kostenrekenaar", "monthly", "0.8"),
     ("/register", "monthly", "0.9"),
     ("/privacy", "yearly", "0.3"),
     ("/terms", "yearly", "0.3"),
 ]
+
+
+STATIC_SITEMAP_URLS += sitemap_paden()
 
 
 @router.get("/sitemap.xml")

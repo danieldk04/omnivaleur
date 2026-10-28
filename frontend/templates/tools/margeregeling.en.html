@@ -1,0 +1,49 @@
+<p class="label">Free tool</p>
+<h1>VAT margin scheme calculator for second-hand goods</h1>
+<p class="meta">No login needed. For Dutch businesses only, 21% rate.</p>
+<p>Under the Dutch margin scheme (margeregeling) you pay VAT on your profit margin, not on the full selling price. Enter what you paid and what you sell it for, and see the difference with normal VAT.</p>
+<div class="kr-kaart">
+  <div class="kr-raster" style="grid-template-columns:repeat(2,1fr)">
+    <div class="kr-veld">
+      <label for="mr-inkoop">Purchase price</label>
+      <input id="mr-inkoop" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 400.00">
+      <div class="kr-fout" id="mr-inkoop-fout"></div>
+    </div>
+    <div class="kr-veld">
+      <label for="mr-verkoop">Selling price</label>
+      <input id="mr-verkoop" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 700.00">
+      <div class="kr-fout" id="mr-verkoop-fout"></div>
+    </div>
+  </div>
+</div>
+<div id="mr-resultaten" aria-live="polite"></div>
+
+<h2>How it calculates</h2>
+<p>The margin is the selling price minus the purchase price. That margin is an amount <em>including</em> VAT. So the VAT is 21/121 of the margin, not 21% on top. On a margin of €300 that is €52.07. Without the margin scheme you would pay VAT on the full selling price of €700, which is €121.49.</p>
+<p>If there is no margin, or you sell at a loss, there is no VAT to pay.</p>
+<h3>When does the margin scheme apply?</h3>
+<ul>
+  <li>You are a business trading in second-hand goods.</li>
+  <li>You bought the goods without VAT, for example from a private person.</li>
+  <li>You put no VAT on the invoice. If you do, you cannot use the scheme.</li>
+  <li>Refurbishing costs do not reduce the margin.</li>
+</ul>
+<p>This calculator only does the basic calculation per item. The globalisation method, art and antiques, and other exceptions are not included. This is not tax advice.</p>
+
+<h2>Frequently asked questions</h2>
+<details><summary>How do you calculate VAT under the margin scheme?</summary><p>Subtract the purchase price from the selling price. Of that margin, which includes VAT, 21/121 is the VAT. If the margin is zero or negative, you pay no VAT.</p></details>
+<details><summary>Can I put VAT on the invoice under the margin scheme?</summary><p>No. If you put VAT on the invoice, you cannot apply the margin scheme to that item.</p></details>
+<details><summary>Can I deduct refurbishing costs from the margin?</summary><p>No. Costs of refurbishing second-hand goods do not reduce the margin.</p></details>
+<details><summary>Does the margin scheme apply to private sellers?</summary><p>No. It is for businesses that sell second-hand goods. A private person who sells something now and then does not charge VAT.</p></details>
+
+<h2>Read more</h2>
+<ul>
+  <li><a href="/reseller-tools/margin-scheme-vat-second-hand-goods">The VAT margin scheme for second-hand goods</a></li>
+  <li><a href="/reseller-tools/when-does-reselling-become-a-business-kvk">When does reselling become a business?</a></li>
+</ul>
+
+<h2>Sources</h2>
+<ul class="bronnen">
+  <li><a href="https://belastingdienst.nl/wps/wcm/connect/bldcontentnl/belastingdienst/zakelijk/btw/bijzondere_regelingen/margeregeling" rel="nofollow noopener">Belastingdienst: margin scheme, VAT on the profit margin (Dutch)</a></li>
+  <li><a href="https://ondernemersplein.overheid.nl/geldzaken-en-belastingen/omzetbelasting-btw/margeregeling-voor-de-btw/" rel="nofollow noopener">Ondernemersplein: margin scheme for VAT (Dutch)</a></li>
+</ul>

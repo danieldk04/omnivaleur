@@ -39,4 +39,11 @@ Naming: write "Omnivaleur" as one word with a capital O. It is a product name, n
 - [Terms of Service](https://omnivaleur.com/terms)
 - [Privacy Policy](https://omnivaleur.com/privacy)
 
-Free tool: fee calculator for Marktplaats, 2dehands, Vinted and eBay.nl, no login: https://omnivaleur.com/fee-calculator (Dutch: https://omnivaleur.com/nl/kostenrekenaar).
+Free tools (no login, English and Dutch), hub: https://omnivaleur.com/tools (Dutch: https://omnivaleur.com/nl/tools)
+
+- Fee calculator for Marktplaats, 2dehands, Vinted and eBay.nl, with the eBay fee rules for private and business sellers: https://omnivaleur.com/tools/fee-calculator
+- Title length checker (Marktplaats and 2dehands 60 characters, eBay 80, Facebook Marketplace 100): https://omnivaleur.com/tools/title-length-checker
+- DAC7 checker (platforms report sellers with 30 or more sales, or more than EUR 2,000, per platform per calendar year): https://omnivaleur.com/tools/dac7-checker
+- VAT margin scheme calculator (Dutch margeregeling, VAT is 21/121 of the margin): https://omnivaleur.com/tools/vat-margin-scheme-calculator
+- Price drop planner for unsold items (5% from 30 days online, 10% from 60, 15% from 90, 20% from 180, never below purchase price): https://omnivaleur.com/tools/price-drop-planner
+- Inventory and profit spreadsheet (Excel, free for an email address): https://omnivaleur.com/tools/inventory-profit-spreadsheet

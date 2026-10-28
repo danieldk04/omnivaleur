@@ -1,0 +1,49 @@
+<p class="label">Gratis tool</p>
+<h1>Btw-margeregeling rekenhulp voor tweedehands goederen</h1>
+<p class="meta">Geen inlog nodig. Alleen voor ondernemers, tarief 21%.</p>
+<p>Met de margeregeling reken je btw niet over de hele verkoopprijs, maar alleen over je winstmarge. Vul in wat je ervoor betaalde en waarvoor je hem verkoopt, en je ziet het verschil met gewone btw.</p>
+<div class="kr-kaart">
+  <div class="kr-raster" style="grid-template-columns:repeat(2,1fr)">
+    <div class="kr-veld">
+      <label for="mr-inkoop">Inkoopprijs</label>
+      <input id="mr-inkoop" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 400,00">
+      <div class="kr-fout" id="mr-inkoop-fout"></div>
+    </div>
+    <div class="kr-veld">
+      <label for="mr-verkoop">Verkoopprijs</label>
+      <input id="mr-verkoop" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 700,00">
+      <div class="kr-fout" id="mr-verkoop-fout"></div>
+    </div>
+  </div>
+</div>
+<div id="mr-resultaten" aria-live="polite"></div>
+
+<h2>Hoe het rekent</h2>
+<p>De marge is de verkoopprijs min de inkoopprijs. Die marge is een bedrag <em>inclusief</em> btw. Daarom is de btw 21/121 van de marge, niet 21% eroverheen. Bij een marge van € 300 is dat € 52,07. Zonder margeregeling zou je btw afdragen over de hele verkoopprijs van € 700, dat is € 121,49.</p>
+<p>Is er geen marge, of verkoop je met verlies, dan is er geen btw af te dragen.</p>
+<h3>Wanneer geldt de margeregeling?</h3>
+<ul>
+  <li>Je bent ondernemer en handelt in gebruikte goederen.</li>
+  <li>Je hebt de goederen zonder btw ingekocht, bijvoorbeeld van een particulier.</li>
+  <li>Je zet geen btw op de factuur. Doe je dat toch, dan mag je de regeling niet toepassen.</li>
+  <li>Kosten voor opknappen verlagen de marge niet.</li>
+</ul>
+<p>Deze rekenhulp neemt alleen de basisberekening per artikel. De globalisatiemethode, kunst en antiek, en andere uitzonderingen zitten er niet in. Dit is geen belastingadvies.</p>
+
+<h2>Veelgestelde vragen</h2>
+<details><summary>Hoe bereken je btw bij de margeregeling?</summary><p>Je trekt de inkoopprijs af van de verkoopprijs. Van die marge, die inclusief btw is, is 21/121 de btw. Is de marge nul of negatief, dan betaal je geen btw.</p></details>
+<details><summary>Mag ik de btw op de factuur zetten bij de margeregeling?</summary><p>Nee. Zet je btw op de factuur, dan mag je de margeregeling niet toepassen voor dat artikel.</p></details>
+<details><summary>Kan ik de kosten van opknappen aftrekken van de marge?</summary><p>Nee. Kosten voor het opknappen van gebruikte goederen verlagen de marge niet.</p></details>
+<details><summary>Geldt de margeregeling ook als particulier?</summary><p>Nee. De margeregeling is voor ondernemers die gebruikte goederen verkopen. Een particulier die af en toe iets verkoopt, rekent geen btw.</p></details>
+
+<h2>Meer lezen</h2>
+<ul>
+  <li><a href="/nl/reseller-tools/btw-margeregeling-tweedehands">De btw-margeregeling voor tweedehands goederen</a></li>
+  <li><a href="/nl/reseller-tools/wanneer-kvk-nodig-voor-verkopen-op-marktplaats">Wanneer heb je een KvK-nummer nodig?</a></li>
+</ul>
+
+<h2>Bronnen</h2>
+<ul class="bronnen">
+  <li><a href="https://belastingdienst.nl/wps/wcm/connect/bldcontentnl/belastingdienst/zakelijk/btw/bijzondere_regelingen/margeregeling" rel="nofollow noopener">Belastingdienst: margeregeling, btw over de winstmarge</a></li>
+  <li><a href="https://ondernemersplein.overheid.nl/geldzaken-en-belastingen/omzetbelasting-btw/margeregeling-voor-de-btw/" rel="nofollow noopener">Ondernemersplein: margeregeling voor de btw</a></li>
+</ul>

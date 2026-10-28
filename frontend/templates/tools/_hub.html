@@ -1,0 +1,25 @@
+<p class="label">{{ 'Omnivaleur tools' if nl else 'Omnivaleur tools' }}</p>
+<h1>{{ h1 }}</h1>
+{% if nl %}
+<p class="meta">Gratis, zonder inlog. Gemaakt voor wie tweedehands verkoopt op Marktplaats, 2dehands, Vinted en eBay.</p>
+<p>Hier staat alles wat wij zelf nodig hebben om tweedehands te verkopen, als losse tool. De rekentools zijn gewoon te gebruiken zonder iets in te vullen. Alleen voor de download vragen we je e-mailadres, en dat zeggen we er vooraf bij.</p>
+{% else %}
+<p class="meta">Free, no login. Made for people who sell second-hand on Marktplaats, 2dehands, Vinted and eBay.</p>
+<p>Everything we need ourselves to sell second-hand, as a separate tool. The calculators work without entering anything about yourself. Only the download asks for your email address, and it says so up front.</p>
+{% endif %}
+<div class="kr-kaarten">
+  {%- for k in kaarten %}
+  <a class="kr-kaartlink" href="{{ k.pad }}">
+    <span class="ic">{{ k.icon }}</span>
+    <strong>{{ k.naam }}</strong>
+    <span class="tx">{{ k.kort }}</span>
+    {% if k.gated %}<span class="kr-badge mail">{{ 'Gratis download, met e-mailadres' if nl else 'Free download, with email' }}</span>{% else %}<span class="kr-badge">{{ 'Gratis, zonder inlog' if nl else 'Free, no login' }}</span>{% endif %}
+  </a>
+  {%- endfor %}
+</div>
+<h2>{{ 'Waarom gratis?' if nl else 'Why free?' }}</h2>
+{% if nl %}
+<p>Omnivaleur is een tool die je artikelen in één keer op Marktplaats, 2dehands, Vinted, eBay, Shopify en WooCommerce zet. Veel verkopers rekenen eerst, met een rekenmachine of spreadsheet, voordat ze iets plaatsen. Daarom bouwen we die hulpmiddelen en geven we ze weg. Wil je daarna alles in één keer plaatsen, dan kun je Omnivaleur 7 dagen gratis proberen.</p>
+{% else %}
+<p>Omnivaleur is a tool that puts your items on Marktplaats, 2dehands, Vinted, eBay, Shopify and WooCommerce in one go. Most sellers do the maths first, with a calculator or spreadsheet, before they list anything. So we build those helpers and give them away. If you then want to list everything in one go, you can try Omnivaleur free for 7 days.</p>
+{% endif %}

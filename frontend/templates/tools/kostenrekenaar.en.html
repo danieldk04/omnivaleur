@@ -1,0 +1,95 @@
+<p class="label">Free tool</p>
+  <h1>Fee calculator for Marktplaats, 2dehands, Vinted and eBay</h1>
+  <p class="meta">Fees checked on 28 October 2026 against the marketplaces themselves. No login needed.</p>
+  <p>You buy a jacket for €20 and want to keep €25. What do you ask? On Vinted the answer is nearly the same everywhere, but eBay takes commission, so the price has to be higher. Enter your amounts and see it per marketplace.</p>
+
+  <div class="kr-kaart">
+    <div class="kr-raster">
+      <div class="kr-veld">
+        <label for="kr-inkoop">What did you pay for it?</label>
+        <input id="kr-inkoop" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 20.00">
+        <div class="kr-fout" id="kr-inkoop-fout"></div>
+      </div>
+      <div class="kr-veld">
+        <label for="kr-winst">What do you want to keep?</label>
+        <input id="kr-winst" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 25.00">
+        <div class="kr-fout" id="kr-winst-fout"></div>
+      </div>
+      <div class="kr-veld">
+        <label for="kr-prijs">Or: what price is it listed at? (optional)</label>
+        <input id="kr-prijs" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 49.00">
+        <div class="kr-hint">Then you also see the profit at that price.</div>
+        <div class="kr-fout" id="kr-prijs-fout"></div>
+      </div>
+    </div>
+    <div class="kr-ebay">
+      <div class="kr-ebay-kop">eBay only</div>
+      <div class="kr-veld">
+        <label for="kr-verkoper">You sell as</label>
+        <select id="kr-verkoper">
+          <option value="particulier">Private seller</option>
+          <option value="zakelijk">Business seller</option>
+        </select>
+      </div>
+      <div class="kr-veld" id="kr-rubriek-rij" style="display:none">
+        <label for="kr-rubriek">Category</label>
+        <select id="kr-rubriek">
+          <option value="standaard">Other categories</option>
+          <option value="sieraden">Jewellery and watches</option>
+          <option value="muziek">Musical instruments</option>
+          <option value="foto">Photo and camera</option>
+          <option value="tuin">Garden and patio</option>
+        </select>
+      </div>
+      <div class="kr-veld">
+        <label for="kr-verzend">Shipping the buyer pays</label>
+        <input id="kr-verzend" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 0.00">
+        <div class="kr-hint">eBay charges commission on shipping too.</div>
+        <div class="kr-fout" id="kr-verzend-fout"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="kr-resultaten" aria-live="polite"></div>
+  <p class="meta">Amounts exclude VAT. A business seller can usually reclaim the VAT on the fees. Not included: shipping you pay yourself, paid extras such as bumping or a top ad, and any tax on your profit.</p>
+
+  <h2>What each marketplace charges the seller</h2>
+
+  <h3>Marktplaats</h3>
+  <p>In most categories Marktplaats charges no commission, and the buyer pays for buyer protection. Paid extras, such as a top ad, and the business plan Marktplaats Pro are not included in the calculation.</p>
+
+  <h3>2dehands</h3>
+  <p>According to the 2dehands help centre, selling is free in most cases, with no commission or transaction fees. In Cars and Motorbikes you pay from the second listing. For a payment request with Bancontact, 2dehands charges a €0.40 service fee; the buyer pays it by default, and you can take it over if you want to.</p>
+
+  <h3>Vinted</h3>
+  <p>Sellers pay nothing on Vinted. The full amount goes into your Vinted wallet. The buyer pays the Vinted fee, which used to be called the buyer protection fee. Only optional services, such as bumping your item, cost money.</p>
+
+  <h3>eBay.nl</h3>
+  <ul>
+    <li><strong>Private seller:</strong> 11% of the total up to €1,990 and 2% above that, plus €0.35 per order (€0.05 under €10) and a 0.42% regulatory fee.</li>
+    <li><strong>Business seller:</strong> usually 11% up to €990 per item and 2% above, plus €0.45 per order over €10 (€0.35 up to and including €10) and a 0.35% regulatory fee. This differs per category, for example 11% up to €400 for jewellery and watches and 6.5% up to €300 for photo and camera.</li>
+    <li>Listing fees (from €0.35 per listing for business sellers without a shop) are not included, nor is VAT on the fees.</li>
+  </ul>
+
+  <h2>Frequently asked questions</h2>
+  <details><summary>What does it cost to sell on Marktplaats?</summary><p>In most categories Marktplaats charges no selling commission, and buyer protection is paid by the buyer. Paid extras such as a top ad or bumping cost money.</p></details>
+  <details><summary>Is selling on Vinted free?</summary><p>Yes, for the seller. You get the full amount in your Vinted wallet and the buyer pays the Vinted fee. Only optional services, such as bumping, cost money.</p></details>
+  <details><summary>How much commission does eBay.nl charge?</summary><p>Private sellers pay 11% up to €1,990 and 2% above. Business sellers usually pay 11% up to €990 and 2% above. A fixed amount per order and a regulatory fee come on top. See above for the amounts.</p></details>
+  <details><summary>Why do I need to ask a higher price on eBay than on Vinted?</summary><p>Because eBay takes commission on the sale amount, while Marktplaats, 2dehands and Vinted charge the seller nothing. For the same profit the eBay price has to be higher. The calculator shows how much higher per marketplace.</p></details>
+
+  <h2>Read more</h2>
+  <ul>
+    <li><a href="/reseller-tools/marktplaats-fees-explained">What does Marktplaats cost? The full overview</a></li>
+    <li><a href="/reseller-tools/belastingdienst-second-hand-selling-rules-netherlands">Tax on second-hand sales: the Belastingdienst rules</a></li>
+    <li><a href="/reseller-tools/margin-scheme-vat-second-hand-goods">The VAT margin scheme for second-hand goods</a></li>
+  </ul>
+
+  <h2>Sources</h2>
+  <ul class="bronnen">
+    <li><a href="https://www.ebay.nl/help/selling/fees-credits-invoices/selling-fees?id=4822" rel="nofollow noopener">eBay.nl: selling fees for private sellers</a></li>
+    <li><a href="https://www.ebay.nl/help/selling/fees-credits-invoices/selling-fees-business-sellers?id=4809" rel="nofollow noopener">eBay.nl: selling fees for business sellers</a></li>
+    <li><a href="https://www.vinted.nl/help/413/373-is-selling-on-vinted-free" rel="nofollow noopener">Vinted: do I have to pay to sell items?</a></li>
+    <li><a href="https://help.2dehands.be/articles/nl_NL/Knowledge/hoeveel-kost-een-zoekertje-plaatsen" rel="nofollow noopener">2dehands: how much does a listing cost?</a></li>
+    <li><a href="https://www.marktplaats.nl/m/kopersbescherming/verkoper/" rel="nofollow noopener">Marktplaats: buyer protection for sellers</a></li>
+  </ul>
+  <p class="meta">Fees can change. For a big purchase, check the current rate with the marketplace itself. Found a mistake? Email <a href="mailto:info@omnivaleur.com">info@omnivaleur.com</a>.</p>
