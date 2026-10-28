@@ -2,7 +2,7 @@
 (async () => {
   const PLATFORM = "marktplaats";
   const { step, clog, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
-          fillBrand, fillBrandField, fillManufacturer, vulLocatie, selectBundleFree, selectDelivery, selectPakketWaarde, typBeschrijvingEcht, vulHalswijdte, uploadPhotos, submitListing,
+          fillBrand, fillBrandField, fillManufacturer, vulLocatie, selectBundleFree, selectDelivery, selectPakketWaarde, typBeschrijvingEcht, vulHalswijdte, vulMateriaal, uploadPhotos, submitListing,
           clickRadioByValue, smartTrunc, fillBidding, zetBieden, dutchColor,
           ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs,
           mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG, zetPrijs } = window.CL;
@@ -313,6 +313,7 @@
     // Halswijdte werkt op getallen in plaats van op tekst; zie vulHalswijdte.
     await step("halswijdte",   () => vulHalswijdte(item));
     await step("color",        () => item.color && selectDropdown("Kleur", dutchColor(item.color)));
+    await step("materiaal",    () => vulMateriaal(item));
     await step("brand",        () => item.brand && fillBrandField(item.brand));
     await step("manufacturer", () => fillManufacturer(item));
     // Waar de verkoper staat. Zonder deze stap neemt het formulier het

@@ -18307,3 +18307,9 @@ Daniel meldt dat het GitHub-geheim SUPABASE_KEY (bijgewerkt 26-10 11:02) niet me
 
 ## 28-10-2026: eBay-kosten in het dashboard rechtgezet
 - De margecalculator rekende eBay met 13,25% + 0,35, de officiele zakelijke tarieven (ebay.nl help 4809) zijn 11% + 0,35% + 0,45 per bestelling. Nu 11,35% + 0,45, tekst "eBay: 11,35% + €0,45 (zakelijk)", vertaling in nl.json. Bij een artikel met 45 netto was de vraagprijs ruim een euro te hoog. Proef: tests/test_kostenrekenaar.py houdt dashboard en openbare rekenaar gelijk.
+
+## 28-10-2026: Materiaal "Zilver" bij elke sieradenadvertentie (Mieneke, Voordeelsieraden) — extensie 1.0.407
+- Mieneke: elke advertentie krijgt Materiaal Zilver, terwijl bijna alles goud is. Oorzaak gemeten op het echte plaatsformulier (ingelogd, ringen, kettingen, armbanden, oorbellen, kettinghangers): Marktplaats zet Materiaal zelf al op Zilver (niet verplicht) en onze extensie raakte het veld nooit aan. Bevestigd op de openbare advertentie m2459169166: kleur goud, materiaal zilver.
+- Gebouwd (shared.js vulMateriaal/materiaalKeuze, in marktplaats.js, tweedehands.js en elke reparatieronde omdat het formulier na foto's terugspringt): eigen materiaal van het artikel, anders een woord in de titel (gouden, 14k, zilveren, 925) mits maar één van de twee, anders de kleur Goud/Zilver, anders "Overige materialen". Nooit meer het vooringevulde Zilver. Categorieën zonder Goud en Zilver in de lijst blijven ongemoeid.
+- Bewezen: tests/extensie-materiaal-test.js (14 proeven, faalt op de oude code), en de echte functies op het echte formulier: Zilver werd Goud en bleef dat na 800 ms. NIET bewezen: de advertentie die daarna echt online komt. Dat kan pas na de Web Store-upload van 1.0.407 (dist/omnivaleur-extension-1.0.407.zip).
+- Mogelijk ook fout, niet onderzocht: "Eigenschappen" stond op de openbare advertentie op "met edelsteen" terwijl een leeg formulier dat veld niet voorinvult.

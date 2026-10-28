@@ -4,7 +4,7 @@
   const { step, clog, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
           fillBrand, fillBrandField, fillManufacturer, vulLocatie, selectBundleFree, selectDelivery, selectPackageSize, zetVerzendkosten, centenUitTekst, waitUntil, typBeschrijvingEcht,
           uploadPhotos, submitListing, clickRadioByValue, smartTrunc, fillBidding, zetBieden,
-          dutchColor, ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs,
+          dutchColor, vulMateriaal, ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs,
           mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG, zetPrijs } = window.CL;
 
   const job = await getJob();
@@ -196,6 +196,7 @@
     await step("sporttype",    () => mpSportType(item) && selectDropdown("Type", mpSportType(item)));
     await step("size",         () => item.size && selectDropdown(["Maat", "Maat (cm)"], item.size));
     await step("color",        () => item.color && selectDropdown("Kleur", dutchColor(item.color)));
+    await step("materiaal",    () => vulMateriaal(item));
     await step("brand",        () => item.brand && fillBrandField(item.brand));
     await step("manufacturer", () => fillManufacturer(item));
     // Waar de verkoper staat. Zonder deze stap neemt het formulier het

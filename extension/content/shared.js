@@ -1510,6 +1510,10 @@ window.CL = (() => {
       if (el?.tagName === "SELECT" && !el.value) { kiesMetTerugval(el, label, value); await sleep(300); }
     }
 
+    // Materiaal staat na elke herbouw van het formulier weer op het vooringevulde
+    // Zilver, dus elke ronde opnieuw zetten (zie vulMateriaal).
+    try { await vulMateriaal(item); } catch (e) { clog(`materiaal: FOUT ${e && e.message ? e.message : e}`); }
+
     const brandEl = brandField();
     if (item.brand && brandEl && !fieldFilled(brandEl)) {
       await fillBrandField(item.brand);
@@ -1664,6 +1668,77 @@ window.CL = (() => {
     if (!wil) return false;
     const ok = fillNativeSelect(select, wil);
     clog(`halswijdte: maat "${item && item.size}" → ${n ?? "onbekend"} → "${wil}" ${ok ? "gezet" : "MISLUKT"}`);
+    return ok;
+  }
+
+  // MATERIAAL: MARKTPLAATS ZET ZELF "ZILVER" KLAAR.
+  //
+  // WAAROM (28-10-2026, Mieneke van Voordeelsieraden). "Elke advertentie wordt
+  // geplaatst met Materiaal Zilver", terwijl bijna alles goud is. Gemeten op het
+  // echte plaatsformulier (ingelogd, 28-10-2026, ringen 1826/22, kettingen /18,
+  // armbanden /1827, oorbellen /19, kettinghangers /2136): het veld Materiaal
+  // staat daar al op "Zilver" voordat wij iets doen, het is niet verplicht, en
+  // wij raakten het nooit aan. Dus elke sieraden-advertentie kreeg Zilver, ook
+  // een gouden ring. Op de openbare advertentie m2459169166 staat dan ook
+  // kleur=goud naast materiaal=zilver.
+  //
+  // Wat we nu kiezen, in volgorde van betrouwbaarheid:
+  //   1. het materiaal dat de verkoper zelf bij het artikel heeft staan
+  //   2. een materiaalwoord in de titel (gouden, 14k, zilveren, 925), maar alleen
+  //      als de titel er maar één van de twee noemt
+  //   3. de kleur van het artikel: Goud wordt Goud, Zilver wordt Zilver
+  // Is er niets te baseren, dan "Overige materialen": dat zegt niets onwaars,
+  // anders dan het vooringevulde Zilver. Een categorie zonder materiaalveld of
+  // zonder Goud en Zilver in de lijst (geen sieraden) laten we met rust.
+  const MATERIAAL_ENGELS = { gold: "goud", silver: "zilver", steel: "staal", iron: "ijzer",
+    leather: "leer", wood: "hout", glass: "glas", plastic: "kunststof", crystal: "kristal",
+    stone: "steen", rubber: "rubber", elastic: "elastiek" };
+
+  function materiaalKeuze(item, opties) {
+    const namen = (opties || []).map((o) => String(o).trim()).filter(Boolean);
+    const heeft = (n) => namen.find((o) => o.toLowerCase() === n.toLowerCase()) || "";
+    const overig = heeft("Overige materialen");
+    const woordenVan = (optie) => optie.toLowerCase().split(/[^a-zà-ÿ]+/).filter(Boolean);
+
+    const eigen = String(item && item.material || "").trim();
+    if (eigen) {
+      for (const woord of eigen.toLowerCase().split(/[^a-zà-ÿ]+/).filter(Boolean)) {
+        const basis = MATERIAAL_ENGELS[woord] || woord;
+        const kandidaten = [basis];
+        if (basis.endsWith("en") && basis.length > 4) kandidaten.push(basis.slice(0, -2)); // gouden → goud
+        if (basis.endsWith("e") && basis.length > 3) kandidaten.push(basis.slice(0, -1));
+        for (const k of kandidaten) {
+          const gevonden = namen.find((o) => o.toLowerCase() === k || woordenVan(o).includes(k));
+          if (gevonden) return gevonden;
+        }
+      }
+      return overig;   // een materiaal dat deze lijst niet kent: nooit het vooringevulde Zilver
+    }
+
+    // Zonder eigen materiaal gokken we alleen bij goud en zilver, dus alleen in
+    // een lijst die beide kent.
+    const goud = heeft("Goud"), zilver = heeft("Zilver");
+    if (!goud || !zilver) return "";
+    const titel = String(item && item.title || "").toLowerCase();
+    const metGoud = /\b(goud|gouden|goudkleurig|geelgoud|roségoud|rosegoud|witgoud|gold|14k|18k|585|750)\b/.test(titel);
+    const metZilver = /\b(zilver|zilveren|zilverkleurig|silver|sterling|925)\b/.test(titel);
+    if (metGoud && !metZilver) return goud;
+    if (metZilver && !metGoud) return zilver;
+    const kleur = String(item && item.color || "").trim().toLowerCase();
+    if (/^(goud|gold|gouden)$/.test(kleur)) return goud;
+    if (/^(zilver|silver|zilveren)$/.test(kleur)) return zilver;
+    return overig;
+  }
+
+  async function vulMateriaal(item) {
+    const el = qs('select[name="singleSelectAttribute[material]"]');
+    if (!el) return true;                       // deze categorie kent het veld niet
+    const wil = materiaalKeuze(item, [...el.options].filter((o) => o.value !== "" && !o.disabled).map((o) => o.text));
+    if (!wil) return true;                      // geen sieraden en geen eigen materiaal: ongemoeid
+    const huidig = (el.options[el.selectedIndex]?.text || "").trim();
+    if (huidig === wil) return true;
+    const ok = fillNativeSelect(el, wil);
+    clog(`materiaal: "${huidig || "leeg"}" → "${wil}" ${ok ? "gezet" : "MISLUKT"}`);
     return ok;
   }
 
@@ -3038,7 +3113,7 @@ window.CL = (() => {
     klokRapport, klokOpnieuw,
     sleep, waitUntil, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, vulLocatie, selectBundleFree,
-    selectDelivery, gekozenLevering, selectPakketWaarde, zetVerzendkosten, centenUitTekst, vulHalswijdte, keuzeveldenKort, typBeschrijvingEcht,
+    selectDelivery, gekozenLevering, selectPakketWaarde, zetVerzendkosten, centenUitTekst, vulHalswijdte, vulMateriaal, materiaalKeuze, keuzeveldenKort, typBeschrijvingEcht,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding, zetBieden,
     clog, plaatsBlokkade, dutchColor, kleurKandidaten, kiesMetTerugval, lijstOpties, valueVariants, platteTekst, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
     mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG, zetPrijs, betaalrubriekBezwaar,
