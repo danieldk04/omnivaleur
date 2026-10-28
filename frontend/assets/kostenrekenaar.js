@@ -138,7 +138,7 @@
       var cel3 = '';
       if (prijs !== null) {
         var w = winstBij(k.key, prijs, inkoop, o);
-        var m = prijs > 0 ? ' · ' + Math.round(w / prijs * 100) + '% ' + T.marge : '';
+        var m = prijs > 0 && w >= 0 ? ' · ' + Math.round(w / prijs * 100) + '% ' + T.marge : '';
         cel3 = '<td class="kr-num' + (w < 0 ? ' kr-neg' : '') + '">' + euro(w) + m + '</td>';
       }
       return '<tr><th scope="row">' + k.naam + '</th><td class="kr-num kr-groot">' + euro(vraag) + '</td><td>' + kostTekst + '</td>' + cel3 + '</tr>';
