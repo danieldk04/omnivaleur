@@ -17,6 +17,20 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## ebay-staat-per-rubriek
+
+*28-10-2026 — "28-10-2026 Toon: eBay-tapijt \"mislukt\" omdat USED_GOOD niet in rubriek 45510 mag; nu staat per rubriek via Metadata API + terugval; nooit gebruikt als nieuw"*
+
+Toon (96e30080) zette 27-10 20:16 UTC zijn eerste eBay-advertentie (tapijt tll07, rubriek 45510 Tapijten). Publiceren faalde met "invalid item condition information ... ID voor de staat is ongeldig voor de geselecteerde primaire rubriek". Oorzaak bewezen: staat "fair" werd altijd USED_GOOD (5000); kleding kent die, Tapijten kent alleen Nieuw (1000) en Gebruikt (USED_EXCELLENT, 3000). Inventarisitem en offer worden geaccepteerd, eBay weigert pas bij /publish. Van 269 eBay-rijen is dit de enige met deze fout.
+
+Fix (ebay.py): `_toegestane_staten` haalt per rubriek de toegestane conditie-ID's (getItemConditionPolicies, appstoken, gecachet), `_kies_staat` kiest de dichtstbijzijnde gebruikte staat, en bij een geweigerde publicatie (`_is_staatfout`) probeert create_listing de naastgelegen gebruikte staten. Een gebruikt stuk wordt nooit als nieuw aangeboden: bij een rubriek met alleen Nieuw volgt een heldere fout. Proef tests/test_ebay_staat_per_rubriek.py: de oude code geeft exact Toons foutmelding.
+
+**Why:** eBay's staten verschillen per rubriek en de fout komt pas laat. Lokaal is geen echte eBay-aanroep mogelijk (zie "ebay-local-sandbox-creds", "ebay-token-nooit-lokaal-verversen"), dus de rubriekslijst van 45510 is alleen via eBay-documentatie en het foutbericht afgeleid, niet live gemeten.
+
+**How to apply:** krijgt een klant een staat-fout bij een andere rubriek, kijk dan eerst of de Metadata-opzoeking antwoordt (logregel "Kon eBay-staten niet ophalen"). Bij elke nieuwe eBay-rubrieksfout: kijk welke stap faalt (inventory, offer of publish) voor je de oorzaak kiest, zie "ebay-25019-zegt-niet-wat-het-is".
+
+---
+
 ## strijkemblemen-rubriek-zonder-model
 
 *28-10-2026 — "28-10: tak hobby (MP/2dehands 1099/2855) + woordenlijst voor strijkemblemen en stropdassen; gratis Google-sleutel gaf 2.606x 429 en 0x 200, spreiden helpt niet"*
