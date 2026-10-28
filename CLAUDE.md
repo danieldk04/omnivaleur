@@ -138,6 +138,7 @@ Brengt Daniel je een klantmail om te beantwoorden (sinds 02-10-2026):
 3. De routine `omnivaleur-schrijfstijl-leren` draait dagelijks en past het stijlbestand
    aan. Pas dat bestand niet zelf aan, tenzij Daniel een stijlregel uitspreekt: dan
    direct erin zetten.
+4. Geen schuld aantrekken (Daniel, 28-10-2026): nooit "sorry", "ligt aan ons" of "onze fout" in een klantbericht, ook niet als de fout in ons systeem zat. Begin met het goede nieuws, zeg neutraal wat er speelde en wat de klant nu kan. Voorbeeld in docs/schrijfstijl-daniel.md.
 
 ## Het klantenservice-brein bijwerken
 

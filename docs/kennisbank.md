@@ -17,18 +17,6 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
-## klantbericht-geen-schuld-aantrekken
-
-*28-10-2026 — Daniel 28-10-2026: in klantberichten nooit "sorry", "ligt aan ons" of "mijn fout" bij een fout in ons systeem; feitelijk zeggen wat er was en wat nu kan*
-
-In concepten voor klanten (Toon-bericht, 28-10-2026) neem ik de schuld niet op me met woorden als "sorry", "excuus", "dat lag aan ons", "dat was onze fout" of "belangrijk dat ik dit zeg". Ook als de fout wel in ons systeem zat.
-
-**Why:** Daniel vindt dat zulke formuleringen de klant op een verkeerd spoor zetten en hem kleiner maken dan nodig. Een fout in het systeem mag gewoon genoemd worden, alleen niet als bekentenis.
-
-**How to apply:** schrijf neutraal en feitelijk: wat er speelde (zonder wie het deed), dat het is opgelost, wat de klant nu kan doen. Bijvoorbeeld "Dit is aangepast, je kunt het opnieuw proberen" in plaats van "Het zat bij ons, sorry". Laat bij een eerste en tweede versie zien wat er veranderd is als hij erom vraagt. Staat ook in docs/schrijfstijl-daniel.md. Zie "klantmail-kort-en-menselijk" en "concepten-in-de-chat".
-
----
-
 ## ebay-staat-per-rubriek
 
 *28-10-2026 — "28-10-2026 Toon: eBay-tapijt \"mislukt\" omdat USED_GOOD niet in rubriek 45510 mag; nu staat per rubriek via Metadata API + terugval; nooit gebruikt als nieuw"*
@@ -40,6 +28,22 @@ Fix (ebay.py): `_toegestane_staten` haalt per rubriek de toegestane conditie-ID'
 **Why:** eBay's staten verschillen per rubriek en de fout komt pas laat. Lokaal is geen echte eBay-aanroep mogelijk (zie "ebay-local-sandbox-creds", "ebay-token-nooit-lokaal-verversen"), dus de rubriekslijst van 45510 is alleen via eBay-documentatie en het foutbericht afgeleid, niet live gemeten.
 
 **How to apply:** krijgt een klant een staat-fout bij een andere rubriek, kijk dan eerst of de Metadata-opzoeking antwoordt (logregel "Kon eBay-staten niet ophalen"). Bij elke nieuwe eBay-rubrieksfout: kijk welke stap faalt (inventory, offer of publish) voor je de oorzaak kiest, zie "ebay-25019-zegt-niet-wat-het-is".
+
+Live bewezen 28-10 (met Daniels ja): Toons rij van 'error' op 'pending' gezet, de uurronde `hervat_afgekapte_api_publicaties` (elke 10 min, serverkant, met zijn eigen eBay-toegang) publiceerde het tapijt in één poging: ebay.nl/itm/920082363961, offer 328197914011. Dat is de veilige weg om een mislukte API-plaatsing (eBay of Shopify) opnieuw te laten lopen zonder lokaal eBay aan te roepen. Oude rij bewaard in ~/.omnivaleur/herstel-toon-ebay-listing-28-10.json.
+
+---
+
+## klantbericht-geen-schuld-aantrekken
+
+*28-10-2026 — Daniel 28-10-2026: in klantberichten nooit "sorry", "ligt aan ons" of "mijn fout" bij een fout in ons systeem; feitelijk zeggen wat er was en wat nu kan*
+
+In concepten voor klanten (Toon-bericht, 28-10-2026) neem ik de schuld niet op me met woorden als "sorry", "excuus", "dat lag aan ons", "dat was onze fout" of "belangrijk dat ik dit zeg". Ook als de fout wel in ons systeem zat.
+
+**Why:** Daniel vindt dat zulke formuleringen de klant op een verkeerd spoor zetten en hem kleiner maken dan nodig. Een fout in het systeem mag gewoon genoemd worden, alleen niet als bekentenis.
+
+**How to apply:** schrijf neutraal en feitelijk: wat er speelde (zonder wie het deed), dat het is opgelost, wat de klant nu kan doen. Bijvoorbeeld "Dit is aangepast, je kunt het opnieuw proberen" in plaats van "Het zat bij ons, sorry". Laat bij een eerste en tweede versie zien wat er veranderd is als hij erom vraagt. Staat ook in docs/schrijfstijl-daniel.md. Zie "klantmail-kort-en-menselijk" en "concepten-in-de-chat".
+
+Voorbeeld, door Daniel goedgekeurd (Toon, eBay-tapijt, 28-10-2026). Eerst: "Het eBay-probleem zat bij ons ... Dat is aangepast." Nu: begin met het goede nieuws ("je tapijt staat nu op eBay: <link>"), zeg neutraal dat voor die rubriek een andere staat nodig bleek, en wat hij nu kan. Geen "bij ons", geen "sorry", geen "belangrijk dat ik dit zeg".
 
 ---
 
