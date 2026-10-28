@@ -741,6 +741,10 @@ _TAXONOMY = {
         "speelgoed modeltreinen n-spoor",
         "speelgoed modeltreinen overige schalen",
     ],
+    # Hobby (28-10-2026): strijkemblemen, zie _strijkembleem_of_stropdas.
+    "hobby": [
+        "hobby kledingapplicaties en strijkemblemen",
+    ],
     "fietsen": [
         "fietsen bakfietsen",
         "fietsen crossfietsen en bmx",
@@ -1404,6 +1408,9 @@ async def _classify_with_claude(title: str | None, description: str | None,
             "  accessories (locks, lights, bags, helmets, child seats, bike racks). Cycling\n"
             "  clothing is clothing, mopeds and scooters have no category here.\n"
             '  When you pick a "fietsen" category, gender must be "fietsen" too.\n'
+            '- The "hobby" branch is iron-on and sew-on patches, appliques and iron-on\n'
+            '  letters that are NOT band or artist merchandise (those go in "muziek artiesten\n'
+            '  en merchandise"). When you pick a "hobby" category, gender must be "hobby" too.\n'
             '- The "sportartikelen" branch is sports EQUIPMENT: rackets, balls, fitness\n'
             "  machines and weights, yoga mats, skis, snowboards, surfboards, golf clubs,\n"
             '  "sportartikelen fitnessapparatuur" is machines (treadmill, exercise bike, rowing\n'
@@ -2002,23 +2009,31 @@ def _infer_attributes(title: str | None, description: str | None = None,
 # en Hotfix (60 van de ~70 bij de zoekvraag "strijkembleem", gemeten 28-10).
 # Alleen de titel telt, en alleen zonder kledingwoord: "spijkerjas met patches"
 # is een jas. Een strijkijzer of strijkplank is geen embleem.
+#
+# Alleen echte strijk- en naaiwoorden. Een losse "patch" of "embleem" is te breed,
+# gemeten op 1.190 titels van andere klanten: bandpatches met sleutelhanger, een
+# militair embleem, een kleed "met vogel applicatie". Merchandise laten we aan de
+# rubriek van Marktplaats of aan het model (muziek artiesten en merchandise).
 _STRIJKEMBLEEM_RE = re.compile(
     r"strijk(?!ijzer|plank|bout|centrale|machine|stoom)|iron[- ]?on|"
-    r"\b(?:patch|patches|embleem|emblemen|applicatie|applicaties)\b", re.I)
-_STROPDAS_RE = re.compile(r"\b(?:stropdas|stropdassen|stopdas|vlinderdas|vlinderdasje|strikje)\b", re.I)
+    r"naai ?applicati|opnaai|sew[- ]?on", re.I)
+_MERCH_RE = re.compile(r"merch|offici|\bband\b|\btour\b|sleutelhanger|keychain|magneet", re.I)
+_STROPDAS_RE = re.compile(r"\b(?:stropdas|stropdassen|stopdas|vlinderdas|vlinderdasje)\b", re.I)
 
 
 def _strijkembleem_of_stropdas(title: str | None, gender: str | None):
     """(gender, rubriek) voor een strijkembleem of stropdas, anders None."""
     t = title or ""
-    if _STRIJKEMBLEEM_RE.search(t) and not _KLEDINGWOORD_RE.search(t):
-        return ("hobby", "hobby kledingapplicaties en strijkemblemen")
+    # Eerst de das: "vintage stropdas met patches" is een stropdas.
     if _STROPDAS_RE.search(t):
         if gender == "kinderen":
             return ("kinderen", "kinderen accessoires")
         if gender == "dames":
             return ("dames", "accessoires dames")
         return ("heren", "heren accessoires")
+    if (_STRIJKEMBLEEM_RE.search(t) and not _KLEDINGWOORD_RE.search(t)
+            and not _MERCH_RE.search(t)):
+        return ("hobby", "hobby kledingapplicaties en strijkemblemen")
     return None
 
 

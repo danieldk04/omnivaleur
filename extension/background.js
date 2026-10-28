@@ -509,6 +509,8 @@ const MP_CATEGORIES = {
   "muziek orkestbanden":                                { cat1: 728, cat3: 762 },   // Orkestbanden
   "muziek overige muziek en instrumenten":              { cat1: 728, cat3: 764 },   // Overige Muziek en Instrumenten
   "muziek artiesten en merchandise":                    { cat1: 895, cat3: 926 },   // Verzamelen | Muziek, Artiesten en Beroemdheden
+  // Gemeten 28-10-2026 op marktplaats.nl/q/strijkembleem: 60 van de ~70 staan hier.
+  "hobby kledingapplicaties en strijkemblemen":         { cat1: 1099, cat3: 2855 }, // Hobby en Vrije tijd | Kledingapplicaties en Hotfix
   "muziek percussie":                                   { cat1: 728, cat3: 739 },   // Percussie
   "muziek piano's":                                     { cat1: 728, cat3: 765 },   // Piano's
   "muziek samplers":                                    { cat1: 728, cat3: 770 },   // Samplers

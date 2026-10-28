@@ -109,8 +109,22 @@ MINIMALE_KINDERTASSEN_VERSIE = (1, 0, 395)
 # "kinderen luiertassen" (luiertassen en mombags) bestaat in de extensie pas vanaf
 # 1.0.398 (19-10-2026, Janneke 31d28378). Zelfde reden als de kindertassen.
 MINIMALE_LUIERTASSEN_VERSIE = (1, 0, 398)
+# "hobby kledingapplicaties en strijkemblemen" (strijkemblemen) bestaat in de
+# extensie pas vanaf 1.0.406 (28-10-2026, gollem.joukes f0291981). Op Marktplaats
+# en 2dehands hoeft het werk niet te wachten: daar sturen we de twee nummers van
+# Marktplaats zelf mee (_MP_NUMMERS_VAN_DE_SERVER), en die volgt elke kopie al.
+# Alleen Vinted wacht, want een oudere kopie leest de tak daar als kleding.
+MINIMALE_HOBBY_VERSIE = (1, 0, 406)
 _RUBRIEK_VANAF_VERSIE = {"kinderen tassen": MINIMALE_KINDERTASSEN_VERSIE,
-                         "kinderen luiertassen": MINIMALE_LUIERTASSEN_VERSIE}
+                         "kinderen luiertassen": MINIMALE_LUIERTASSEN_VERSIE,
+                         "hobby kledingapplicaties en strijkemblemen": MINIMALE_HOBBY_VERSIE}
+# Gemeten 28-10-2026 op marktplaats.nl/q/strijkembleem: 60 van de ~70 staan in
+# Hobby en Vrije tijd (1099) > Kledingapplicaties en Hotfix (2855).
+_MP_NUMMERS_VAN_DE_SERVER = {
+    "hobby kledingapplicaties en strijkemblemen": {
+        "l1": 1099, "l2": 2855, "l1_naam": "Hobby en Vrije tijd",
+        "l2_naam": "Kledingapplicaties en Hotfix"},
+}
 # Jongen of meisje bij baby en peuter ("babykleding jongens", "peuterkleding
 # meisjes") kent de extensie pas vanaf 1.0.397 (18-10-2026, Janneke 31d28378: haar
 # geslacht staat alleen in haar Shopify-labels). Anders dan bij de kindertassen
@@ -199,7 +213,26 @@ def _minimale_versie_voor_rubriek(job: dict) -> tuple | None:
     if _vraagt_nieuwe_takken(job):
         return MINIMALE_NIEUWE_TAKKEN_VERSIE
     cat = str(((job.get("payload") or {}).get("category")) or "").strip().lower()
+    if cat in _MP_NUMMERS_VAN_DE_SERVER and job.get("platform") in ("marktplaats", "2dehands"):
+        return None
     return _RUBRIEK_VANAF_VERSIE.get(cat)
+
+
+def _mp_nummers_van_de_server(jobs: list) -> int:
+    """Zet de Marktplaats-nummers in een uitgaande plaatsing waarvan de rubriek
+    alleen hier bekend is. Alleen in de uitgaande opdracht, nooit in de database.
+    Een rubriek die Marktplaats zelf al noemde (mp_category) gaat altijd voor."""
+    aangepast = 0
+    for j in jobs or []:
+        pl = j.get("payload")
+        if (j.get("platform") not in ("marktplaats", "2dehands")
+                or not isinstance(pl, dict) or pl.get("mp_category")):
+            continue
+        nummers = _MP_NUMMERS_VAN_DE_SERVER.get(str(pl.get("category") or "").strip().lower())
+        if nummers:
+            j["payload"] = {**pl, "mp_category": dict(nummers)}
+            aangepast += 1
+    return aangepast
 # Hoe vaak een scan die door een te oude kopie is opgepakt terug in de wachtrij
 # mag. Twee: genoeg om de bijgewerkte kopie een kans te geven, te weinig om te
 # blijven rondzingen bij iemand die alleen die oude kopie heeft.
@@ -3153,6 +3186,7 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             # Als laatste: de stappen hierboven schrijven de opdracht terug in de
             # database, en de rubriek met geslacht moet daar blijven staan.
             _rubriek_voor_de_kopie(uit, versie_van_de_kopie)
+            _mp_nummers_van_de_server(uit)
             return uit
     return []
 

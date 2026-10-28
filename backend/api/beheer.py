@@ -245,6 +245,8 @@ def _categoriegroep(categorie: str | None) -> str:
         return "Elektronica"
     if c.startswith("speelgoed"):
         return "Speelgoed"
+    if c.startswith("hobby"):
+        return "Hobby"
     if c.startswith("fietsen"):
         return "Fietsen"
     if c.startswith("witgoed"):

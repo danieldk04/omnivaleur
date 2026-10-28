@@ -65,7 +65,7 @@ _TWIJFEL_PATRONEN = [
 # De categoriegroepen uit onze eigen boom, zoals ze in het scherm heten.
 GROEPEN = ("dames", "heren", "kinderen", "unisex", "sieraden",
            "antiek", "kunst", "muziek", "games", "electronics", "wonen",
-           "audio", "boeken", "speelgoed", "fietsen", "sportartikelen",
+           "audio", "boeken", "speelgoed", "hobby", "fietsen", "sportartikelen",
            "witgoed", "klussen", "computers")
 
 # RUBRIEKEN WAAR VINTED GEEN PLEK VOOR HEEFT (24-09-2026).

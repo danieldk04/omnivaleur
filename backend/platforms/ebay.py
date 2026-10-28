@@ -1394,6 +1394,7 @@ _EBAY_CATEGORY_HINTS = {
     "muziek orkestbanden": "backing track",
     "muziek overige muziek en instrumenten": "musical instrument",
     "muziek artiesten en merchandise": "band merchandise",
+    "hobby kledingapplicaties en strijkemblemen": "iron on patch",
     "muziek percussie": "percussion",
     "muziek piano's": "piano",
     "muziek samplers": "sampler",

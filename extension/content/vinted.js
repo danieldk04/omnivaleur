@@ -668,6 +668,7 @@
     "muziek orkestbanden":                                 ["backing track", "music"],
     "muziek overige muziek en instrumenten":               ["musical instrument", "music"],
     "muziek artiesten en merchandise":                     ["music", "poster"],
+    "hobby kledingapplicaties en strijkemblemen":          ["patches", "sewing"],
     "muziek percussie":                                    ["percussion", "musical instrument"],
     "muziek piano's":                                      ["piano", "keyboard instrument"],
     "muziek samplers":                                     ["sampler", "music equipment"],
@@ -3964,7 +3965,7 @@
     // een kledingblad — maar een blad dat "Other …" heet kreeg hieronder tóch
     // een bonuspunt, en één punt is genoeg om gekozen te worden. Zo won
     // "Other children's clothing" van niets.
-    const NIET_KLEDING_TAK = /^(wonen|antiek|kunst|muziek|sieraden|games|electronics|audio|boeken|speelgoed|fietsen|witgoed|klussen|computers|sportartikelen)\b/;
+    const NIET_KLEDING_TAK = /^(wonen|antiek|kunst|muziek|sieraden|games|electronics|audio|boeken|speelgoed|hobby|fietsen|witgoed|klussen|computers|sportartikelen)\b/;
     const isNietKleding = NIET_KLEDING_TAK.test(cat);
 
     // Gaat het om een kledingstuk? Alleen dan gelden de uitsluitingen hieronder.

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=174550fe71"></script>
+<script src="/i18n.js?v=5fab6b9c5a"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -2797,6 +2797,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <option value="wonen">Home, Garden &amp; Christmas</option>
           <option value="boeken">Books</option>
           <option value="speelgoed">Toys, Games &amp; Models</option>
+          <option value="hobby">Hobby &amp; Crafts</option>
           <option value="fietsen">Bikes</option>
           <option value="sportartikelen">Sports Equipment</option>
           <option value="witgoed">Appliances</option>
@@ -6398,7 +6399,7 @@ let _keuzelijstStempel = '';
 const CATEGORIE_GROEP_LABEL = { antiek: 'Antiques & Art', muziek: 'Music', dames: "Women's",
   heren: "Men's", kinderen: 'Kids', unisex: 'Unisex', games: 'Games',
   electronics: 'Electronics', sieraden: 'Jewellery', wonen: 'Home & Garden', audio: 'Audio, TV & photo',
-  boeken: "Books", speelgoed: "Toys, games & models", fietsen: "Bikes", sportartikelen: "Sports equipment", witgoed: "Appliances", klussen: "DIY & tools", computers: "Computers & tablets" };
+  boeken: "Books", speelgoed: "Toys, games & models", hobby: "Hobby & crafts", fietsen: "Bikes", sportartikelen: "Sports equipment", witgoed: "Appliances", klussen: "DIY & tools", computers: "Computers & tablets" };
 let _categorieNamen = null;
 let _categorieGroepMap = null;
 let _laatsteVerkoopcategorieNaarGA = null;
@@ -8309,6 +8310,7 @@ const EBAY_PATH_HINTS = {
   sieraden:    ['jewellery', 'jewelry', 'sieraden', 'watch', 'watches', 'horloge', 'horloges', 'bags', 'tassen', 'sunglasses', 'zonnebril'],
   boeken:      ['book', 'boek', 'comic', 'strip', 'magazine', 'tijdschrift'],
   speelgoed:   ['toy', 'speelgoed', 'game', 'spel', 'puzzle', 'puzzel', 'model', 'trading card', 'verzamelkaart', 'ruilkaart'],
+  hobby:       ['hobby', 'craft', 'knutsel', 'sewing', 'naai', 'patch'],
   fietsen:     ['bike', 'bicycle', 'cycling', 'fiets', 'wielersport'],
   sportartikelen: ['sport'],
   witgoed:     ['appliance', 'huishoud', 'kitchen', 'keuken'],
@@ -11610,7 +11612,7 @@ const VINTED_TWIJFEL = [
   [/\b(ivoor|ivoren|bont(jas|kraag)?|nertsbont|vossenbont|reptielenhuid|krokodillenleer|schildpad)\b/i,
    'Looks like an animal product (ivory, fur, reptile skin) — Vinted does not allow these'],
 ];
-const VINTED_GROEPEN = ['dames','heren','kinderen','unisex','sieraden','antiek','kunst','muziek','games','electronics','wonen','audio','boeken','speelgoed','fietsen','sportartikelen','witgoed','klussen','computers'];
+const VINTED_GROEPEN = ['dames','heren','kinderen','unisex','sieraden','antiek','kunst','muziek','games','electronics','wonen','audio','boeken','speelgoed','hobby','fietsen','sportartikelen','witgoed','klussen','computers'];
 // Rubrieken waar Vinted geen plek voor heeft (bouwmaterialen, software,
 // zonnebanken, simkaarten). Gelijk aan NIET_OP_VINTED in
 // backend/services/platformregels.py en aan de null-waarden in V_PAD (vinted.js).
@@ -11619,7 +11621,7 @@ const VINTED_GROEP_LABELS = { dames:"Women's", heren:"Men's", kinderen:"Kids", u
   sieraden:'Jewellery, watches & bags', antiek:'Antiques', kunst:'Art', muziek:'Music',
   games:'Games', electronics:'Electronics', wonen:'Home & garden',
   audio:'Audio, TV & photo',
-  boeken:"Books", speelgoed:"Toys, games & models", fietsen:"Bikes", sportartikelen:"Sports equipment", witgoed:"Appliances", klussen:"DIY & tools", computers:"Computers & tablets" };
+  boeken:"Books", speelgoed:"Toys, games & models", hobby:"Hobby & crafts", fietsen:"Bikes", sportartikelen:"Sports equipment", witgoed:"Appliances", klussen:"DIY & tools", computers:"Computers & tablets" };
 
 function itemGroep(item) {
   const cat = String(item?.category || '').trim().toLowerCase();
@@ -12258,6 +12260,9 @@ const CATEGORIES = {
     ["boeken tijdschriften en kranten","Magazines & Newspapers"],
     ["boeken overige boeken","Other Books"],
   ],
+  hobby: [
+    ["hobby kledingapplicaties en strijkemblemen","Iron-on Patches & Appliqués"],
+  ],
   speelgoed: [
     ["speelgoed actiefiguren","Action Figures"],
     ["speelgoed babyspeelgoed","Baby Toys"],
@@ -12628,7 +12633,7 @@ const CATEGORIE_TAK_LABEL = {
   wonen: 'Home & garden', antiek: 'Antiques & art', muziek: 'Music',
   sieraden: 'Jewellery, watches & bags', games: 'Games',
   electronics: 'Electronics', audio: 'Audio, TV & photo',
-  boeken: "Books", speelgoed: "Toys, games & models", fietsen: "Bikes", sportartikelen: "Sports equipment", witgoed: "Appliances", klussen: "DIY & tools", computers: "Computers & tablets",
+  boeken: "Books", speelgoed: "Toys, games & models", hobby: "Hobby & crafts", fietsen: "Bikes", sportartikelen: "Sports equipment", witgoed: "Appliances", klussen: "DIY & tools", computers: "Computers & tablets",
 };
 // Kleding eerst (dat is het standaard soort), daarna de rest van de takken.
 const CATEGORIE_TAK_VOLGORDE = ['dames', 'heren', 'kinderen', 'unisex'];
@@ -12643,7 +12648,7 @@ const CATEGORIE_TAK_VOLGORDE = ['dames', 'heren', 'kinderen', 'unisex'];
 // waarna opslaan zijn echte categorie overschrijft. Zo verdwenen 68 audio-,
 // tv- en fotocategorieën (Budgetheld, 01-09-2026); tests/audio-categorie-test.js
 // bewaakt het nu.
-const NON_CLOTHING_PREFIXES = { 'games ': 'games', 'electronics ': 'electronics', 'audio ': 'audio', 'sieraden ': 'sieraden', 'muziek ': 'muziek', 'antiek ': 'antiek', 'kunst ': 'antiek', 'wonen ': 'wonen', 'boeken ': 'boeken', 'speelgoed ': 'speelgoed', 'fietsen ': 'fietsen', 'sportartikelen ': 'sportartikelen', 'witgoed ': 'witgoed', 'klussen ': 'klussen', 'computers ': 'computers' };
+const NON_CLOTHING_PREFIXES = { 'games ': 'games', 'electronics ': 'electronics', 'audio ': 'audio', 'sieraden ': 'sieraden', 'muziek ': 'muziek', 'antiek ': 'antiek', 'kunst ': 'antiek', 'wonen ': 'wonen', 'boeken ': 'boeken', 'speelgoed ': 'speelgoed', 'hobby ': 'hobby', 'fietsen ': 'fietsen', 'sportartikelen ': 'sportartikelen', 'witgoed ': 'witgoed', 'klussen ': 'klussen', 'computers ': 'computers' };
 // Accessoires staan in de kledingboom, maar hebben geen maat en geen merk: een
 // bandana, een patch, een speld, een sleutelhanger. Gemeten op 07-09-2026: van
 // de geslaagde plaatsingen in "unisex accessoires" hadden er 13 van de 14 geen
