@@ -18264,3 +18264,9 @@ Daniel meldt dat het GitHub-geheim SUPABASE_KEY (bijgewerkt 26-10 11:02) niet me
 - Dahli antwoordde: zijn Marktplaats Pro loopt t/m 31-12-2026 en hij wil dat alles ook als gewone (onbetaalde) advertentie via Omnivaleur op Marktplaats komt, naast 2dehands. Dubbel met zijn Pro-feed is dus zijn eigen keuze.
 - De bewaker is gestopt en de 996 tegengehouden Marktplaats-opdrachten staan weer in de rij (3 waren al anders afgerond). Backup van wat er tegengehouden was: ~/.omnivaleur/backups/goudlief_mp_dubbel_28-10.jsonl. De 260 al bestaande dubbelen blijven staan.
 - Na 31-12-2026 verdwijnen zijn Pro-advertenties en blijven alleen die van Omnivaleur over. Het bouwpunt "Marktplaats Pro-feed van de klant herkennen" blijft nuttig voor klanten die dat niet willen.
+
+## 28-10-2026: Onboarding nieuwe klanten (ochtend, tweede keer, liep om 11:00)
+- De geplande taak vuurde twee uur na de ronde van 09:10 opnieuw. Zelfde 8 klanten, geen nieuwe aanmeldingen.
+- f0291981 (gollem.joukes): mailtje van 09:16 geopend, daarna ingelogd en 1 extra live. Zonder rubriek nu 11 van 243 (was 149), dankzij 4ba485fa. Vinted-deel wacht op 1.0.406 in de Web Store. Geen tweede mailtje.
+- Overige 7 ongewijzigd sinds 09:10; geen mailtjes (binnen 44 uur gemaild of niets veranderd). 45f9caba proef vandaag 19:26 om, c184e384 en 8adaff42 morgen, geen van drieën heeft een betaalmethode.
+- Mailrapport: 7 mails sinds 26-10, 4 echt geopend, 0 klik, 0 antwoord, 3 deden daarna iets. Niets gerepareerd, geen code gewijzigd.
