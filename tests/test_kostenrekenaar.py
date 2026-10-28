@@ -123,3 +123,20 @@ def test_dashboard_rekent_ebay_met_hetzelfde_tarief_als_de_openbare_rekenaar():
         model = _node(f"console.log(JSON.stringify(K.vraagprijs('ebay',{nodig},0,{{verkoper:'zakelijk'}})))")
         assert dashboard == pytest.approx(model, abs=0.011), nodig
     assert "13.25" not in app
+
+
+@node
+def test_betaalverzoek_kost_alleen_geld_als_de_verkoper_de_servicekosten_overneemt():
+    """Servicekosten van een betaalverzoek: 0,40 per betaling, standaard voor de koper (Marktplaats, 2dehands)."""
+    g = _node(textwrap.dedent("""
+        const uit=(k,o)=>K.KANALEN.find(x=>x.key===k).kosten(50,K.winstBij?o:o);
+        console.log(JSON.stringify({
+          mpUit: uit('marktplaats',{}), mpAan: uit('marktplaats',{betaalverzoek:true}),
+          dhAan: uit('2dehands',{betaalverzoek:true}), vintedAan: uit('vinted',{betaalverzoek:true}),
+          winstUit: K.winstBij('marktplaats',50,20,{}), winstAan: K.winstBij('marktplaats',50,20,{betaalverzoek:true}),
+          vraagUit: K.vraagprijs('marktplaats',20,25,{}), vraagAan: K.vraagprijs('marktplaats',20,25,{betaalverzoek:true}),
+        }));
+    """))
+    assert g["mpUit"] == 0 and g["mpAan"] == 0.4 and g["dhAan"] == 0.4 and g["vintedAan"] == 0
+    assert g["winstUit"] == 30 and round(g["winstAan"], 2) == 29.6
+    assert g["vraagUit"] == 45 and g["vraagAan"] == 45.4          # de vraagprijs stijgt precies met de servicekosten

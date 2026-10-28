@@ -31,9 +31,14 @@
     return comm + (t < 10 ? 0.05 : 0.35) + 0.0042 * t;
   }
 
+  // Servicekosten van een betaalverzoek (Marktplaats met iDEAL, 2dehands met Bancontact): 0,40 per betaling,
+  // standaard voor de koper. Alleen als de verkoper ze overneemt zijn ze verkoperskosten. Gecontroleerd 28-10-2026
+  // op help.marktplaats.nl (servicekosten-voor-betaalverzoeken-met-ideal-via-marktplaats) en het helpcentrum van 2dehands.
+  function betaalverzoek(prijs, o) { return o.betaalverzoek ? 0.4 : 0; }
+
   var KANALEN = [
-    { key: 'marktplaats', naam: 'Marktplaats', kosten: function () { return 0; } },
-    { key: '2dehands', naam: '2dehands', kosten: function () { return 0; } },
+    { key: 'marktplaats', naam: 'Marktplaats', kosten: betaalverzoek },
+    { key: '2dehands', naam: '2dehands', kosten: betaalverzoek },
     { key: 'vinted', naam: 'Vinted', kosten: function () { return 0; } },
     { key: 'ebay', naam: 'eBay', kosten: function (prijs, o) { return ebayKosten(prijs + (o.verzend || 0), o); } }
   ];
@@ -45,7 +50,7 @@
 
   function opties(o) {
     o = o || {};
-    return { verkoper: o.verkoper === 'zakelijk' ? 'zakelijk' : 'particulier', rubriek: o.rubriek || 'standaard', verzend: Math.max(0, o.verzend || 0) };
+    return { verkoper: o.verkoper === 'zakelijk' ? 'zakelijk' : 'particulier', rubriek: o.rubriek || 'standaard', verzend: Math.max(0, o.verzend || 0), betaalverzoek: !!o.betaalverzoek };
   }
 
   // Wat de verkoper overhoudt na kosten en inkoop, bij een gevraagde artikelprijs.
@@ -124,7 +129,7 @@
     var inkoop = veld('kr-inkoop'), winst = veld('kr-winst'), prijs = veld('kr-prijs');
     var verzend = veld('kr-verzend');
     var uit = el('kr-resultaten');
-    var o = { verkoper: el('kr-verkoper').value, rubriek: el('kr-rubriek').value, verzend: verzend || 0 };
+    var o = { verkoper: el('kr-verkoper').value, rubriek: el('kr-rubriek').value, verzend: verzend || 0, betaalverzoek: el('kr-betaalverzoek').checked };
     el('kr-rubriek-rij').style.display = o.verkoper === 'zakelijk' ? '' : 'none';
     if (isNaN(inkoop) || isNaN(winst) || isNaN(prijs) || isNaN(verzend) || (inkoop === null && winst === null)) {
       uit.innerHTML = '<p class="kr-leeg">' + T.leeg + '</p>';
@@ -149,7 +154,7 @@
 
   function start() {
     ['kr-inkoop', 'kr-winst', 'kr-prijs', 'kr-verzend'].forEach(function (id) { el(id).addEventListener('input', teken); });
-    ['kr-verkoper', 'kr-rubriek'].forEach(function (id) { el(id).addEventListener('change', teken); });
+    ['kr-verkoper', 'kr-rubriek', 'kr-betaalverzoek'].forEach(function (id) { el(id).addEventListener('change', teken); });
     teken();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();

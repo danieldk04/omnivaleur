@@ -36,7 +36,7 @@ TALEN = ("en", "nl")
 
 # Velden die het script van elke tool nodig heeft.
 VELDEN = {
-    "kostenrekenaar": ["kr-inkoop", "kr-winst", "kr-prijs", "kr-verzend", "kr-verkoper", "kr-rubriek", "kr-resultaten", "kr-rubriek-rij"],
+    "kostenrekenaar": ["kr-inkoop", "kr-winst", "kr-prijs", "kr-verzend", "kr-betaalverzoek", "kr-verkoper", "kr-rubriek", "kr-resultaten", "kr-rubriek-rij"],
     "titelchecker": ["tc-titel", "tc-teller", "tc-resultaten"],
     "dac7": [f"d7-{p}-{s}" for p in ("marktplaats", "2dehands", "vinted", "ebay", "anders") for s in ("n", "o", "n-fout", "o-fout")] + ["d7-resultaten"],
     "margeregeling": ["mr-inkoop", "mr-verkoop", "mr-inkoop-fout", "mr-verkoop-fout", "mr-resultaten"],
