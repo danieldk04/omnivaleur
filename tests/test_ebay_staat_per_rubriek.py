@@ -23,7 +23,6 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from backend.platforms import ebay as ebay_mod  # noqa: E402
-from backend.platforms.ebay import _kies_staat, _staat_alternatieven  # noqa: E402
 
 TOEGESTAAN_TAPIJT = {"1000", "3000"}                     # Nieuw en Gebruikt
 TOEGESTAAN_KLEDING = {"1000", "3000", "4000", "5000", "6000"}
