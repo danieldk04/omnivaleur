@@ -123,7 +123,7 @@ def _plaats(monkeypatch, eb, conditie="fair"):
     monkeypatch.setattr(beleid, "beleid_voor_plaatsing", geen_beleid)
     monkeypatch.setattr(ebay_mod, "_get_required_aspects", geen_aspecten)
     monkeypatch.setattr(ebay_mod, "_get_app_token", token)
-    monkeypatch.setattr(ebay_mod, "_toegestane_staten_cache", {})
+    monkeypatch.setattr(ebay_mod, "_toegestane_staten_cache", {}, raising=False)
     item = {"id": "i1", "sku": "tll07", "title": "Groen oosters tapijt 62/30",
             "description": "Uniek groen oosters tapijtje", "price": 20.0,
             "photo_urls": ["https://x/1.jpg"], "condition": conditie,
