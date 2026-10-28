@@ -38,3 +38,5 @@ Naming: write "Omnivaleur" as one word with a capital O. It is a product name, n
 
 - [Terms of Service](https://omnivaleur.com/terms)
 - [Privacy Policy](https://omnivaleur.com/privacy)
+
+Free tool: fee calculator for Marktplaats, 2dehands, Vinted and eBay.nl, no login: https://omnivaleur.com/fee-calculator (Dutch: https://omnivaleur.com/nl/kostenrekenaar).
