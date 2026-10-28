@@ -309,6 +309,8 @@ def _vaste_omleiding(doel: str):
 for _bestand, _pad in {"index": "/", "nl": "/nl", "privacy": "/privacy",
                        "terms": "/terms", "marketplaces": "/marketplaces",
                        "mp-video": "/mp-video", "ai-info": "/ai-info",
+                       "fee-calculator": "/fee-calculator",
+                       "kostenrekenaar": "/nl/kostenrekenaar",
                        "not-found": "/"}.items():
     app.get(f"/{_bestand}.html", include_in_schema=False)(_vaste_omleiding(_pad))
 
