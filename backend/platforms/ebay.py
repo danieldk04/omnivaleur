@@ -505,6 +505,25 @@ class EbayPlatform(PlatformBase):
                 f"{INVENTORY_API}/offer/{offer_id}/publish",
                 headers=self._auth_headers(credentials),
             )
+            if not pub_resp.is_success and _is_staatfout(pub_resp):
+                # Staat past niet bij de rubriek en de opzoeking hierboven wist het niet
+                # (of eBay's lijst klopte niet): de naastgelegen gebruikte staten proberen.
+                # Nooit "nieuw": een gebruikt stuk als nieuw aanbieden is misleiden.
+                for alternatief in _staat_alternatieven(staat):
+                    logger.warning(f"eBay weigerde staat {staat} voor {sku}; probeer {alternatief}")
+                    inventory_payload["condition"] = staat = alternatief
+                    herstel = await client.put(
+                        f"{INVENTORY_API}/inventory_item/{sku}",
+                        json=inventory_payload,
+                        headers=self._auth_headers(credentials, write=True),
+                    )
+                    _raise_with_ebay_error(herstel, "creating inventory item")
+                    pub_resp = await client.post(
+                        f"{INVENTORY_API}/offer/{offer_id}/publish",
+                        headers=self._auth_headers(credentials),
+                    )
+                    if pub_resp.is_success or not _is_staatfout(pub_resp):
+                        break
             if not pub_resp.is_success:
                 fouten = ebay_beleid._fout_ids(pub_resp)
                 if 25026 in fouten and gebruiker:
