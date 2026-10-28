@@ -1,0 +1,334 @@
+"""De gratis tools-hub (28-10-2026): /tools, /nl/tools en elke tool daaronder.
+
+Wat hier bewaakt wordt:
+- elke tool staat overal waar hij hoort (pagina's, sitemap, menu, footer, llms.txt);
+- elke pagina heeft precies een kopregel en voettekst, canonical, hreflang en geldig schema,
+  en het FAQ-schema is exact de zichtbare vragen;
+- de formuliervelden die de scripts gebruiken bestaan op de pagina;
+- de rekenregels (titel, DAC7, margeregeling, afprijsladder) kloppen met de bron, en de
+  afprijsladder is gelijk aan die in het dashboard;
+- de aanmelding voor de download: validatie, lokveld, tempolimiet, en een adres dat nooit
+  verloren gaat als de database weigert;
+- de spreadsheets hebben echte formules.
+"""
+import json
+import re
+import shutil
+import subprocess
+import sys
+import textwrap
+from pathlib import Path
+
+import pytest
+
+REPO = Path(__file__).parent.parent
+sys.path.insert(0, str(REPO))
+
+from fastapi import FastAPI  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+
+from backend.api import tools as tools_api  # noqa: E402
+from backend.tools_data import HUB, TOOLS, sitemap_paden, tool_pad  # noqa: E402
+
+ASSETS = REPO / "frontend" / "assets"
+node = pytest.mark.skipif(shutil.which("node") is None, reason="node ontbreekt")
+TALEN = ("en", "nl")
+
+# Velden die het script van elke tool nodig heeft.
+VELDEN = {
+    "kostenrekenaar": ["kr-inkoop", "kr-winst", "kr-prijs", "kr-verzend", "kr-verkoper", "kr-rubriek", "kr-resultaten", "kr-rubriek-rij"],
+    "titelchecker": ["tc-titel", "tc-teller", "tc-resultaten"],
+    "dac7": [f"d7-{p}-{s}" for p in ("marktplaats", "2dehands", "vinted", "ebay", "anders") for s in ("n", "o", "n-fout", "o-fout")] + ["d7-resultaten"],
+    "margeregeling": ["mr-inkoop", "mr-verkoop", "mr-inkoop-fout", "mr-verkoop-fout", "mr-resultaten"],
+    "afprijsplanner": ["ap-prijs", "ap-dagen", "ap-inkoop", "ap-prijs-fout", "ap-dagen-fout", "ap-inkoop-fout", "ap-resultaten"],
+    "voorraadsheet": ["vs-form", "vs-email", "vs-website", "vs-toestemming", "vs-knop", "vs-melding"],
+}
+
+
+def _pagina(taal: str, tool):
+    return tools_api._render(taal, tool=tool).body.decode("utf-8")
+
+
+def _ld(html: str) -> dict:
+    return json.loads(re.search(r'<script type="application/ld\+json">(.*?)</script>', html, re.S).group(1))
+
+
+ALLE = [(taal, t) for t in TOOLS for taal in TALEN]
+
+
+def test_elke_tool_heeft_een_script_formulier_en_beide_talen():
+    assert {t["key"] for t in TOOLS} == set(VELDEN)
+    for t in TOOLS:
+        for taal in TALEN:
+            assert (REPO / "frontend" / "templates" / "tools" / f"{t['key']}.{taal}.html").exists()
+            assert t["slug"][taal] and t[taal]["naam"] and len(t[taal]["meta"]) <= 200
+        for s in t["scripts"]:
+            assert (ASSETS / s).exists(), s
+
+
+@pytest.mark.parametrize("taal,tool", ALLE)
+def test_toolpagina_heeft_kop_voet_canonical_hreflang_en_velden(taal, tool):
+    html = _pagina(taal, tool)
+    pad = tool_pad(tool, taal)
+    assert f'<html lang="{taal}">' in html
+    assert f'rel="canonical" href="https://omnivaleur.com{pad}"' in html
+    assert f'hreflang="en" href="https://omnivaleur.com{tool_pad(tool, "en")}"' in html
+    assert f'hreflang="nl" href="https://omnivaleur.com{tool_pad(tool, "nl")}"' in html
+    assert f'hreflang="x-default" href="https://omnivaleur.com{tool_pad(tool, "en")}"' in html
+    assert html.count('<nav class="site-nav">') == 1 and html.count('<footer class="site-footer">') == 1
+    assert html.count("</head>") == 1 and html.count("<h1>") == 1
+    for veld in VELDEN[tool["key"]]:
+        assert f'id="{veld}"' in html, f"{tool['key']} {taal} mist #{veld}"
+    for s in tool["scripts"]:
+        assert f'src="/assets/{s}?v=' in html
+    # taalwissel wijst naar dezelfde tool in de andere taal
+    andere = tool_pad(tool, "en" if taal == "nl" else "nl")
+    assert f'href="{andere}" hreflang=' in html
+
+
+@pytest.mark.parametrize("taal,tool", ALLE)
+def test_schema_is_geldig_en_faq_is_precies_de_zichtbare_tekst(taal, tool):
+    html = _pagina(taal, tool)
+    graaf = _ld(html)["@graph"]
+    types = [n["@type"] for n in graaf]
+    assert types[0] == ("WebPage" if tool["gated"] else "WebApplication")
+    assert "BreadcrumbList" in types and "FAQPage" in types
+    zichtbaar = re.findall(r"<details><summary>(.*?)</summary>", html)
+    faq = next(n for n in graaf if n["@type"] == "FAQPage")["mainEntity"]
+    assert len(faq) == len(zichtbaar) >= 3
+    assert all(q["acceptedAnswer"]["text"] for q in faq)
+    kruimels = next(n for n in graaf if n["@type"] == "BreadcrumbList")["itemListElement"]
+    assert [k["position"] for k in kruimels] == [1, 2, 3]
+
+
+@pytest.mark.parametrize("taal", TALEN)
+def test_hub_toont_elke_tool_met_itemlist(taal):
+    html = _pagina(taal, None)
+    graaf = _ld(html)["@graph"]
+    lijst = next(n for n in graaf if n["@type"] == "CollectionPage")["mainEntity"]["itemListElement"]
+    assert [i["url"] for i in lijst] == [f"https://omnivaleur.com{tool_pad(t, taal)}" for t in TOOLS]
+    for t in TOOLS:
+        assert f'href="{tool_pad(t, taal)}"' in html
+    assert html.count('<nav class="site-nav">') == 1 and html.count("<h1>") == 1
+    assert f'rel="canonical" href="https://omnivaleur.com{HUB[taal]["pad"]}"' in html
+
+
+def test_sitemap_menu_footer_en_llms_kennen_elke_tool():
+    paden = {p for p, *_ in sitemap_paden()}
+    from backend.api.content import STATIC_SITEMAP_URLS
+    in_sitemap = {p for p, *_ in STATIC_SITEMAP_URLS}
+    llms = (REPO / "frontend" / "llms.txt").read_text(encoding="utf-8")
+    assert {"/tools", "/nl/tools"} <= paden <= in_sitemap
+    for t in TOOLS:
+        for taal in TALEN:
+            assert tool_pad(t, taal) in paden and tool_pad(t, taal) in in_sitemap
+        assert f"https://omnivaleur.com{tool_pad(t, 'en')}" in llms, f"llms.txt mist {t['key']}"
+    assert "https://omnivaleur.com/tools" in llms
+    nav = (REPO / "frontend" / "templates" / "_nav.html").read_text(encoding="utf-8")
+    footer = (REPO / "frontend" / "templates" / "_footer.html").read_text(encoding="utf-8")
+    assert "/nl/tools' if nl else '/tools'" in nav and "/nl/tools' if nl else '/tools'" in footer
+
+
+def test_oude_kostenrekenaaradressen_sturen_door_en_onbekende_slug_is_404():
+    app = FastAPI()
+    app.include_router(tools_api.router)
+    c = TestClient(app)
+    r = c.get("/fee-calculator", follow_redirects=False)
+    assert r.status_code == 301 and r.headers["location"] == "/tools/fee-calculator"
+    r = c.get("/nl/kostenrekenaar", follow_redirects=False)
+    assert r.status_code == 301 and r.headers["location"] == "/nl/tools/kostenrekenaar"
+    assert c.get("/tools/bestaat-niet").status_code == 404
+    assert c.get("/nl/tools/fee-calculator").status_code == 404   # slug van de andere taal
+    assert c.get("/tools/fee-calculator").status_code == 200
+
+
+# ── Rekenregels (node) ────────────────────────────────────────────────────
+
+def _node(bestanden, code):
+    voor = "".join(f"const {n}=require({json.dumps(str(ASSETS / 'tools' / b))});" for n, b in bestanden)
+    uit = subprocess.run(["node", "-e", voor + "\n" + code], capture_output=True, text=True, timeout=30)
+    assert uit.returncode == 0, uit.stderr
+    return json.loads(uit.stdout)
+
+
+@node
+def test_titelchecker_telt_en_kapt_af_zoals_de_extensie():
+    g = _node([("T", "titelchecker.js")], textwrap.dedent("""
+        const lang='Burberry wollen jas heren maat 50 - Zwart - Vintage - Nieuwstaat met kaartjes';
+        console.log(JSON.stringify({
+          a: T.tel('Jas'), b: T.tel('Jas \\n  zwart'), c: T.tel('😀ab'),
+          kap60: T.afkap(lang,60), kap30: T.afkap('Heel lange titel zonder streepjes erin hoor', 30),
+          kort: T.afkap('kort',60), grenzen: T.KANALEN.map(k=>[k.key,k.max]),
+          tel60: T.tel(T.afkap(lang,60)), tel30: T.tel(T.afkap('Heel lange titel zonder streepjes erin hoor', 30)),
+        }));
+    """))
+    assert g["a"] == 3 and g["b"] == 10 and g["c"] == 3   # nieuwe regel telt als een spatie, emoji als een teken
+    assert g["kap60"] == "Burberry wollen jas heren maat 50 - Zwart - Vintage"   # hele " - "-stukken eraf
+    assert g["kap30"] == "Heel lange titel zonder"       # anders op een heel woord
+    assert g["kort"] == "kort"
+    assert g["tel60"] <= 60 and g["tel30"] <= 30
+    assert g["grenzen"] == [["marktplaats", 60], ["2dehands", 60], ["ebay", 80], ["facebook", 100]]
+
+
+@node
+def test_dac7_grens_is_30_verkopen_of_meer_dan_2000():
+    g = _node([("D", "dac7.js")], textwrap.dedent("""
+        console.log(JSON.stringify([
+          D.beoordeel(null,null), D.beoordeel(0,0), D.beoordeel(29,1999), D.beoordeel(30,0), D.beoordeel(1,2000),
+          D.beoordeel(1,2000.01), D.beoordeel(24,100), D.beoordeel(5,1600), D.beoordeel(5,1599.99), D.beoordeel(100,5),
+        ]));
+    """))
+    assert g == [None, "onder", "dichtbij", "gemeld", "dichtbij", "gemeld", "dichtbij", "dichtbij", "onder", "gemeld"]
+
+
+@node
+def test_margeregeling_is_21_over_121_van_de_marge():
+    g = _node([("M", "margeregeling.js")], textwrap.dedent("""
+        console.log(JSON.stringify({ m: M.btwMarge(400,700), g: M.btwGewoon(700), verlies: M.btwMarge(700,400), nul: M.btwMarge(500,500), marge: M.marge(400,700) }));
+    """))
+    assert g["m"] == pytest.approx(300 * 21 / 121) and round(g["m"], 2) == 52.07
+    assert g["g"] == pytest.approx(700 * 21 / 121) and round(g["g"], 2) == 121.49
+    assert g["verlies"] == 0 and g["nul"] == 0 and g["marge"] == 300
+
+
+@node
+def test_afprijsplanner_gebruikt_dezelfde_ladder_als_het_dashboard():
+    """De ladder en de afronding in app.html worden hier letterlijk uit het dashboard gehaald
+    en tegen de openbare planner gelegd. Wijzigt iemand er een van, dan faalt deze proef."""
+    app = (REPO / "frontend" / "app.html").read_text(encoding="utf-8")
+    ladder = re.search(r"const STALE_LADDER = .*?;", app).group(0)
+    pct = re.search(r"function stalePctFor\(days\) \{.*?\n\}", app, re.S).group(0)
+    r99 = re.search(r"function round99\(v\) \{.*?\n\}", app, re.S).group(0)
+    code = f"""
+      {ladder}\n{pct}\n{r99}
+      const A=require({json.dumps(str(ASSETS / 'tools' / 'afprijsplanner.js'))});
+      const uit=[];
+      for (const dagen of [0,29,30,59,60,89,90,179,180,400]) for (const prijs of [0.5,9.5,19.99,49,120.4,999]) {{
+        const p=stalePctFor(dagen); const dash=p? round99(prijs*(1-p)) : null;
+        const ons=A.advies(prijs,dagen,null);
+        uit.push([dagen,prijs,dash,ons.voorstel,p,ons.pct]);
+      }}
+      console.log(JSON.stringify(uit));
+    """
+    for dagen, prijs, dash, ons, p_dash, p_ons in json.loads(subprocess.run(["node", "-e", code], capture_output=True, text=True, check=True).stdout):
+        assert dash == ons and p_dash == p_ons, (dagen, prijs)
+
+
+@node
+def test_afprijsplanner_stelt_nooit_onder_de_inkoop_voor():
+    g = _node([("A", "afprijsplanner.js")], textwrap.dedent("""
+        console.log(JSON.stringify([A.advies(49,75,20), A.advies(49,75,45), A.advies(49,10,45), A.advies(49,200,39)]));
+    """))
+    assert g[0] == {"pct": 0.1, "voorstel": 43.99, "onderInkoop": False}
+    assert g[1] == {"pct": 0.1, "voorstel": None, "onderInkoop": True}     # 43,99 ligt onder inkoop 45
+    assert g[2] == {"pct": 0, "voorstel": None, "onderInkoop": False}
+    assert g[3] == {"pct": 0.2, "voorstel": None, "onderInkoop": True}     # 38,99 onder 39
+
+
+# ── Aanmelding ────────────────────────────────────────────────────────────
+
+class _FakeTabel:
+    def __init__(self, db): self.db = db
+    def upsert(self, rij, on_conflict=None):
+        if self.db.kapot: raise RuntimeError("relation tool_aanmeldingen does not exist")
+        self.db.rijen.append((rij, on_conflict)); return self
+    def execute(self): return self
+
+
+class _FakeDb:
+    def __init__(self, kapot=False): self.rijen, self.kapot = [], kapot
+    def table(self, naam):
+        assert naam == "tool_aanmeldingen"
+        return _FakeTabel(self)
+
+
+@pytest.fixture
+def client(monkeypatch):
+    app = FastAPI()
+    app.include_router(tools_api.router)
+    tools_api._per_ip.clear()
+    mails = []
+    monkeypatch.setattr(tools_api, "send_email", lambda onderwerp, tekst, **k: mails.append((onderwerp, tekst)) or True)
+    db = _FakeDb()
+    monkeypatch.setattr(tools_api, "get_db", lambda: db)
+    c = TestClient(app)
+    c.db, c.mails = db, mails
+    return c
+
+
+def _post(c, **kw):
+    body = {"email": "Anna@Voorbeeld.nl", "taal": "nl", "bron": "voorraadsheet", "toestemming": True, "website": ""}
+    body.update(kw)
+    return c.post("/api/tools/aanmelden", json=body)
+
+
+def test_aanmelding_slaat_op_en_geeft_werkende_download(client):
+    r = _post(client)
+    assert r.status_code == 200
+    assert client.db.rijen == [({"email": "anna@voorbeeld.nl", "taal": "nl", "bron": "voorraadsheet", "toestemming": True}, "email")]
+    d = client.get(r.json()["download"])
+    assert d.status_code == 200 and d.content[:2] == b"PK"   # een xlsx is een zipbestand
+    assert "voorraad-winst-spreadsheet-nl.xlsx" in d.headers["content-disposition"]
+    en = client.get(_post(client, email="b@b.nl", taal="en").json()["download"])
+    assert en.status_code == 200 and "inventory-profit-spreadsheet-en.xlsx" in en.headers["content-disposition"]
+
+
+def test_download_vraagt_een_geldig_token_voor_dat_adres(client):
+    url = _post(client).json()["download"]
+    assert client.get(url).status_code == 200
+    assert client.get(url.replace("anna@voorbeeld.nl", "ander@voorbeeld.nl")).status_code == 404
+    assert client.get(re.sub(r"t=\w+", "t=" + "0" * 32, url)).status_code == 404
+    assert client.get("/api/tools/download/voorraad-winst-nl").status_code == 404
+    assert client.get("/api/tools/download/onbekend?e=a@b.nl&t=x").status_code == 404
+
+
+@pytest.mark.parametrize("email", ["", "geen-adres", "a@b", "a b@c.nl", "@c.nl", "a@@c.nl"])
+def test_ongeldig_adres_wordt_geweigerd(client, email):
+    assert _post(client, email=email).status_code == 422
+    assert client.db.rijen == []
+
+
+def test_zonder_toestemming_geen_download_en_geen_opslag(client):
+    r = _post(client, toestemming=False)
+    assert r.status_code == 422 and r.json()["detail"] == "toestemming" and client.db.rijen == []
+
+
+def test_lokveld_wordt_stil_genegeerd(client):
+    r = _post(client, website="http://spam.example")
+    assert r.status_code == 200 and client.db.rijen == [] and "download/" not in r.json()["download"]
+
+
+def test_tempolimiet_per_ip(client):
+    codes = [_post(client, email=f"m{i}@voorbeeld.nl").status_code for i in range(tools_api.MAX_PER_UUR + 2)]
+    assert codes[:tools_api.MAX_PER_UUR] == [200] * tools_api.MAX_PER_UUR and codes[-2:] == [429, 429]
+
+
+def test_kapotte_database_verliest_het_adres_niet(client):
+    """Voor-en-na: de tabel bestaat pas als Daniel schema.sql heeft uitgevoerd. Tot dan mag een
+    aanmelding niet stil verdwijnen: het adres gaat per mail naar de eigenaar en de bezoeker
+    krijgt zijn download."""
+    client.db.kapot = True
+    r = _post(client)
+    assert r.status_code == 200 and "/api/tools/download/" in r.json()["download"]
+    assert len(client.mails) == 1 and "anna@voorbeeld.nl" in client.mails[0][1]
+
+
+def test_tabel_staat_in_schema_sql():
+    sql = (REPO / "schema.sql").read_text(encoding="utf-8")
+    assert "CREATE TABLE IF NOT EXISTS tool_aanmeldingen" in sql and "email         TEXT NOT NULL UNIQUE" in sql
+
+
+# ── Spreadsheets ──────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("bestand,kolommen", [("voorraad-winst-spreadsheet-nl.xlsx", 12), ("inventory-profit-spreadsheet-en.xlsx", 12)])
+def test_spreadsheet_heeft_echte_formules(bestand, kolommen):
+    openpyxl = pytest.importorskip("openpyxl")
+    wb = openpyxl.load_workbook(REPO / "backend" / "downloads" / bestand)
+    inv, jaar = wb.worksheets
+    assert inv.max_column == kolommen and inv.max_row == 3 + 500
+    assert inv["J4"].value == '=IF(G4="","",G4-C4-H4-I4)'
+    assert inv["K503"].value.startswith("=IF(E503") and inv["L503"].value.startswith("=IF(F503")
+    assert jaar["B1"].value == 2026
+    assert jaar["B4"].value.startswith("=COUNTIFS(") and "$B$1" in jaar["B4"].value
+    assert ">=30" in jaar["E4"].value and ">2000" in jaar["E4"].value
+    assert inv.data_validations.dataValidation, "keuzelijst voor kanaal ontbreekt"
