@@ -18181,3 +18181,14 @@ Daniel mailt Nederlandse Instagram-creators (commissie 25%, gratis toegang, post
 - Les: nieuwe Supabase-sleutels vragen supabase-py 2.16 of nieuwer. requirements.txt stond erop, requirements-content.txt (contentroutine op GitHub) nog op 2.7.4 en gaf "Invalid API key" tot c7a4db30. Zoek bij elke sleutelwissel alle requirements-bestanden en workflows.
 - /health toont nu per Supabase-variabele of de sleutel nieuw of oud is (supabase_key_soort). SUPABASE_SERVICE_KEY had nog de oude sleutel terwijl SUPABASE_KEY al nieuw was; de beheerdersclient pakt die eerst.
 - Nog open, bewust laag geprioriteerd: Stripe-webhookgeheim (webhook faalt ~50%, oorzaak nog niet uitgezocht), R2, Cloudinary, Apify, SMTP/mailwachtwoord, Resend-webhookgeheim, Shopify/eBay/Marktplaats-geheimen, Google OAuth, SECRET_KEY, ANALYTICS_DASHBOARD_TOKEN.
+
+## 27-10-2026: creatorcommissie van 25% gebouwd
+- De creatormail belooft 25% van wat aangebrachte klanten betalen; de oude teller rekende een vaste 25 euro. Nu: kasboek `creator_commissie` (scripts/sql/creator_commissie.sql, door Daniel in Supabase te draaien), uurronde `verwerk_commissie` leest betaalde facturen rechtstreeks bij Stripe (de webhook mist invoice.paid), netto zonder btw, teruggaven eraf, uitbetaalbaar 60 dagen na betaling. Daniel maakt zelf over en boekt met `python3.13 scripts/creator_commissie.py uitbetaald`.
+- Aanname die Daniel kan wijzigen: commissie loopt zolang de klant betaalt (de mail zegt niets over een einde). Bij 19,99 per maand is het ongeveer 4,13 per klant per maand.
+- Gemeten/bewezen: 12 proeven (tests/test_creator_commissie.py), alle 12 falen zonder de nieuwe code; gepinde stripe 10.12 en 15.3 lezen beide. NIET gemeten: een echte Stripe-factuur van een echte aangebrachte klant, want er is nog geen creator met een betalende klant.
+- Lokaal staan nog de uitgeschakelde Supabase-sleutels in .env (sleutelronde 27-10), dus `creator_commissie.py stand` en een creatorlink aanmaken lukken lokaal pas na de nieuwe service-sleutel.
+
+## 28-10-2026: Dagelijkse klantfouten (ochtendronde, niet gemeten)
+- Niets gemeten, niets gerepareerd. De lokale .env heeft nog de oude ey-sleutels van Supabase, die sinds 27-10 18:03 UTC uitgezet zijn (401 "Legacy API keys are disabled"). Daardoor faalt ook het gedeelde slot (`klantfouten.py ronde begin`) en de wachterlijst; er is geen sb_secret_-sleutel op deze Mac en geen Railway-CLI.
+- Wel gezien via /health: productie draait gewoon (commit 2d1054ac, beide Supabase-sleutels "nieuw", R2 schrijft). De server zelf heeft dus geen last van de sleutelwissel.
+- Open voor de middagronde: de 34 advertenties in de herstelstand (27-10) en de Stripe-webhook na het nieuwe endpoint nog niet nagemeten. Eerst moet SUPABASE_KEY en SUPABASE_SERVICE_KEY in de lokale .env de nieuwe sb_secret_-sleutel krijgen (Daniel).
