@@ -396,6 +396,7 @@ class EbayPlatform(PlatformBase):
         try:
             required = await _get_required_aspects(category_id, _marktplaats(credentials))
             _fill_required_aspects(aspects, item, required)
+            _lokaliseer_aspecten(aspects, await _get_alle_aspecten(category_id, _marktplaats(credentials)))
         except Exception as e:
             logger.warning(f"eBay required-aspect enrichment mislukt (niet-blokkerend): {e}")
 
