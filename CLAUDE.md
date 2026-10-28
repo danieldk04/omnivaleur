@@ -62,7 +62,7 @@ Zo ziet een volledig bericht eruit (door Daniel goedgekeurd op 19-09-2026):
   dagelijks nagelopen, gerepareerd waar het kan, en krijgt een mailtje dat Daniel
   verstuurt. De opdracht staat in `docs/routines/onboarding-nieuwe-klanten.md`; de
   geplande taken zeggen alleen "volg dat bestand". Daniels Mac: taak
-  `omnivaleur-onboarding-nieuwe-klanten`, 06:30, rondenaam `onboarding-ochtend`.
+  `omnivaleur-onboarding-nieuwe-klanten`, 11:00 (was 06:30), rondenaam `onboarding-ochtend`.
 
 - Kosten (sinds 04-10-2026): alle maandelijkse kosten van Omnivaleur staan in de Drive-sheet "Omnivaleur kosten" (map Omnivaleur),
   elke 1e van de maand bijgewerkt door taak `omnivaleur-kosten-bijhouden`; opdracht in `docs/routines/kosten-bijhouden.md`.

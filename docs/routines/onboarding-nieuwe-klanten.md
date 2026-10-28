@@ -1,6 +1,6 @@
 # Routine: onboarding nieuwe klanten
 
-De vaste opdracht voor de ochtendronde (Daniels Mac, 06:30) en de middagronde (account
+De vaste opdracht voor de ochtendronde (Daniels Mac, 11:00) en de middagronde (account
 van de tweede ontwikkelaar, 10:00, tot 02-10-2026 was dat 15:00). Beide geplande taken zeggen alleen "volg dit bestand",
 zodat er één versie is. Wijzig je de routine, wijzig dan dit bestand en push.
 
