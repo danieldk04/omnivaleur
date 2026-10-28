@@ -174,6 +174,7 @@ def test_nieuw_blijft_nieuw(monkeypatch):
 
 
 def test_kies_staat_kiest_dichtstbijzijnde_gebruikte():
+    from backend.platforms.ebay import _kies_staat, _staat_alternatieven
     assert _kies_staat("USED_GOOD", {"NEW", "USED_EXCELLENT"}) == "USED_EXCELLENT"
     assert _kies_staat("USED_ACCEPTABLE", {"NEW", "USED_GOOD", "USED_EXCELLENT"}) == "USED_GOOD"
     assert _kies_staat("USED_GOOD", None) == "USED_GOOD"
