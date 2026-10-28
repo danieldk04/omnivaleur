@@ -25,6 +25,7 @@ if settings.ebay_sandbox:
     TOKEN_URL = "https://api.sandbox.ebay.com/identity/v1/oauth2/token"
     INVENTORY_API = "https://api.sandbox.ebay.com/sell/inventory/v1"
     TAXONOMY_API = "https://api.sandbox.ebay.com/commerce/taxonomy/v1"
+    METADATA_API = "https://api.sandbox.ebay.com/sell/metadata/v1"
 else:
     AUTH_URL = "https://auth.ebay.com/oauth2/authorize"
     TOKEN_URL = "https://api.ebay.com/identity/v1/oauth2/token"
