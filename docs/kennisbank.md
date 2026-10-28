@@ -28,6 +28,8 @@ Gebouwd (4ba485fa, extensie 1.0.406): tak "hobby", rubriek "hobby kledingapplica
 **Why:** de gratis Google-portie gaat op aan vertalen bij grote plaatsingsrondes (Goudlief), dus de rubriekvraag krijgt niets. Spreiden over de dag helpt dan niet.
 **How to apply:** een terugkerend soort artikel zonder rubriek los je eerst op met een gemeten rubriek plus woordenlijst; meet de regel op alle titels met die woorden in de database voor je hem live zet. Let op "auto-push-zet-tussenstand-live": de eerste, te brede versie stond al live voordat de tests klaar waren. Zie ook "gemini-tegoed-op".
 
+Zelfde dag, vervolg: van de 542 lege rubrieken kwamen er 455 uit Shopify, 30 WooCommerce, 22 Marktplaats en maar 11 Vinted, dus de Vinted-route is niet gebouwd. Wel: het Shopify-producttype ("Kettingen", "Ringen", "Dames sieraden/Kettingen/Hangerkettingen") bepaalt bij het inlezen de rubriek (`rubriek_uit_producttype` in imports.py, gebruikt in shopify_scan.naar_scanregel); 251 sieraden gevuld (Voordeelsieraden, Goudlief). Daarna zette Daniel Google-betaling aan (10 euro): 5 van 5 antwoorden. Meet eerst waar de lege rubrieken vandaan komen voordat je een bron bouwt.
+
 ---
 
 ## vinted-account-stilgelegd-reden-onbekend
