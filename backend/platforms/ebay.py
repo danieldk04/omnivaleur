@@ -426,9 +426,11 @@ class EbayPlatform(PlatformBase):
         if item.get("brand"):
             product["brand"] = item["brand"]
             product["mpn"] = str(item["mpn"]) if item.get("mpn") else _GEEN_PRODUCTCODE
+        staat = _kies_staat(_map_condition(item.get("condition", "good")),
+                            await _toegestane_staten(category_id, mp))
         inventory_payload = {
             "product": product,
-            "condition": _map_condition(item.get("condition", "good")),
+            "condition": staat,
             "availability": {
                 "shipToLocationAvailability": {"quantity": 1}
             },
