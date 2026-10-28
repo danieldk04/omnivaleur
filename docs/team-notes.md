@@ -18192,3 +18192,16 @@ Daniel mailt Nederlandse Instagram-creators (commissie 25%, gratis toegang, post
 - Niets gemeten, niets gerepareerd. De lokale .env heeft nog de oude ey-sleutels van Supabase, die sinds 27-10 18:03 UTC uitgezet zijn (401 "Legacy API keys are disabled"). Daardoor faalt ook het gedeelde slot (`klantfouten.py ronde begin`) en de wachterlijst; er is geen sb_secret_-sleutel op deze Mac en geen Railway-CLI.
 - Wel gezien via /health: productie draait gewoon (commit 2d1054ac, beide Supabase-sleutels "nieuw", R2 schrijft). De server zelf heeft dus geen last van de sleutelwissel.
 - Open voor de middagronde: de 34 advertenties in de herstelstand (27-10) en de Stripe-webhook na het nieuwe endpoint nog niet nagemeten. Eerst moet SUPABASE_KEY en SUPABASE_SERVICE_KEY in de lokale .env de nieuwe sb_secret_-sleutel krijgen (Daniel).
+
+## 28-10-2026: looptijd creatorcommissie
+
+Daniel bevestigt dat de creatorcommissie van 25% loopt zolang de aangebrachte klant betaalt. Geen einddatum, geen maximum aantal maanden. Dat is ook wat de code in backend/services/creator_commissie.py doet. Wil hij dit ooit begrenzen, dan moet het vooraf in de creatormail staan.
+
+## 28-10-2026: creatorcommissie in productie bewezen
+
+Daniel draaide scripts/sql/creator_commissie.sql en zette de nieuwe service-sleutel in .env. Gemeten tegen de echte database: tabel en kolom commission_pct bestaan, een proefrij schrijven met echte typen werkt, twee keer upserten geeft een rij, de uurronde draait zonder fout, stand toont de proefcode, alle proefdata is weer weg. Niet gemeten: het RLS-vinkje (geen publieke sleutel in de repo) en een echte Stripe-factuur van een creatorklant (die bestaat nog niet).
+- Vervolg 08:00, na de nieuwe sleutel van Daniel wel gemeten. 24 uur: 1.447 opdrachten, 41 fouten bij 6 klanten. Niets hangt op claimed. Wachtend werk zonder computer: 0b28c1ce 111, 1ba42900 78, 96e30080 63, 12fc61d0 14 (extensies stil sinds 23 tot 27-10, klant). 5aae4954 (Goudlief) had om 07:55 ~674 nieuwe plaatsingen klaargezet na een overstap naar Pro; dat pakt een andere sessie op.
+- Gerepareerd: Vinted-kleur "Meerkleurig" faalde op een Engelstalige Vinted-pagina (45f9caba, kerstbeeld), want COLOUR_MAP kende het woord niet en de Engelse lijstvorm heet de tegel "Multi". Extensie 1.0.405 (cc186bb6, b3e14d8b), proef tests/vinted-kleur-meerkleurig-engels-test.js faalt 6x op 1.0.404. 14 dagen terug: 1 geval.
+- Vinted-scan "member id" (31x): 26cf5471 faalt al sinds 24-10 elke ronde, f8c0cce9 sinds 27-10 11:09; vijf andere klanten scannen gewoon. Klant uitgelogd op Vinted, geen code.
+- De 30 teruggezette advertenties van 27-10 hebben alle 30 een wachtende plaatsing; ze wachten op de computers van 96e30080, 1ba42900 en 0b28c1ce.
+- Open: W30 bij een heren jeans (8f91a370) geweigerd, oorzaak niet te bewijzen. Stripe-webhook na het nieuwe endpoint niet nagemeten. Bijvangst: tests/test_antwoord_uit_de_code.py::test_weggelaten_stukken_worden_gemarkeerd is rood, los van deze wijziging (leest imports.py).
