@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## marktplaats-zet-materiaal-zelf-op-zilver
+
+*28-10-2026 — 28-10 Mieneke: Marktplaats vult Materiaal bij sieraden zelf in op Zilver; wij raakten het veld nooit aan, dus elke gouden ring kwam als zilver online (gerepareerd in extensie 1.0.407)*
+
+Op het echte plaatsformulier van Marktplaats (ringen 1826/22, kettingen /18, armbanden /1827, oorbellen /19, kettinghangers /2136) staat Materiaal al op "Zilver" voordat wij iets doen; het veld is niet verplicht. De extensie vulde Materiaal nooit, dus alles werd zilver (openbare advertentie toonde kleur goud + materiaal zilver).
+
+**Why:** Voordeelsieraden (Mieneke) heeft vooral goud; een verkeerd materiaal misleidt kopers. Meer velden kunnen zo'n vooringevulde standaard hebben (Conditie staat ook op Nieuw, "Eigenschappen" op een advertentie stond op met edelsteen).
+
+**How to apply:** vraagt een klant "elke advertentie krijgt X", meet dan eerst op het echte formulier (Claude in Chrome, /plaats/{cat1}/{cat3}?bucketId=...) of Marktplaats die waarde zelf voorinvult. Zet een voorinvulling nooit stilzwijgend door; kies uit bewijs of "Overige". Zie "vinted-staat-alleen-engels" voor hetzelfde patroon (veld dat leeg of verkeerd blijft). Formulier springt na foto's terug, dus ook in repairOnce zetten.
+
+---
+
 ## ebay-staat-per-rubriek
 
 *28-10-2026 — "28-10-2026 Toon: eBay-tapijt \"mislukt\" omdat USED_GOOD niet in rubriek 45510 mag; nu staat per rubriek via Metadata API + terugval; nooit gebruikt als nieuw"*
