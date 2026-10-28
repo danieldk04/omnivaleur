@@ -1987,7 +1987,39 @@ def _infer_attributes(title: str | None, description: str | None = None,
     if _is_luiertas(title):
         out["gender"] = "kinderen"
         out["category"] = "kinderen luiertassen"
+    rubriek = _strijkembleem_of_stropdas(title, out.get("gender"))
+    if rubriek and not (out.get("category") and rubriek[0] != "hobby"):
+        out["gender"], out["category"] = rubriek
     return out
+
+
+# STRIJKEMBLEMEN EN STROPDASSEN (28-10-2026, gollem.joukes f0291981).
+#
+# Van zijn 243 artikelen bleven er 149 zonder rubriek: 123 strijkemblemen en 14
+# stropdassen. Voor emblemen had onze indeling geen plek (Egbert had hetzelfde
+# met bandpatches op 27-10), en het model kreeg die nacht van Google alleen 429.
+# Marktplaats zelf zet strijkemblemen in Hobby en Vrije tijd > Kledingapplicaties
+# en Hotfix (60 van de ~70 bij de zoekvraag "strijkembleem", gemeten 28-10).
+# Alleen de titel telt, en alleen zonder kledingwoord: "spijkerjas met patches"
+# is een jas. Een strijkijzer of strijkplank is geen embleem.
+_STRIJKEMBLEEM_RE = re.compile(
+    r"strijk(?!ijzer|plank|bout|centrale|machine|stoom)|iron[- ]?on|"
+    r"\b(?:patch|patches|embleem|emblemen|applicatie|applicaties)\b", re.I)
+_STROPDAS_RE = re.compile(r"\b(?:stropdas|stropdassen|stopdas|vlinderdas|vlinderdasje|strikje)\b", re.I)
+
+
+def _strijkembleem_of_stropdas(title: str | None, gender: str | None):
+    """(gender, rubriek) voor een strijkembleem of stropdas, anders None."""
+    t = title or ""
+    if _STRIJKEMBLEEM_RE.search(t) and not _KLEDINGWOORD_RE.search(t):
+        return ("hobby", "hobby kledingapplicaties en strijkemblemen")
+    if _STROPDAS_RE.search(t):
+        if gender == "kinderen":
+            return ("kinderen", "kinderen accessoires")
+        if gender == "dames":
+            return ("dames", "accessoires dames")
+        return ("heren", "heren accessoires")
+    return None
 
 
 def _photos_from_candidate(cand: dict) -> list[str]:
