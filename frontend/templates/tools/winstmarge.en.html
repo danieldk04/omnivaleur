@@ -1,0 +1,62 @@
+<p class="label">Free tool</p>
+<h1>Profit margin calculator for second-hand selling</h1>
+<p class="meta">No login needed. Calculates after channel fees and shipping.</p>
+<p>Enter what you paid and what you sell for, and you see profit, margin and markup. Or enter your purchase price and the margin you want, and you see which price to ask.</p>
+<div class="kr-kaart">
+  <div class="kr-raster">
+    <div class="kr-veld">
+      <label for="wm-inkoop">Purchase price</label>
+      <input id="wm-inkoop" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 20.00">
+      <div class="kr-fout" id="wm-inkoop-fout"></div>
+    </div>
+    <div class="kr-veld">
+      <label for="wm-verkoop">Selling price</label>
+      <input id="wm-verkoop" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 30.00">
+      <div class="kr-fout" id="wm-verkoop-fout"></div>
+    </div>
+    <div class="kr-veld">
+      <label for="wm-kosten">Fixed costs (shipping, packaging)</label>
+      <input id="wm-kosten" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 0.00">
+      <div class="kr-fout" id="wm-kosten-fout"></div>
+    </div>
+  </div>
+  <div class="kr-ebay">
+    <div class="kr-ebay-kop">Optional</div>
+    <div class="kr-veld">
+      <label for="wm-fee">Channel fees as a percentage of the price</label>
+      <input id="wm-fee" type="text" inputmode="decimal" autocomplete="off" placeholder="0">
+      <div class="kr-hint">For example eBay's commission. On Marktplaats and 2dehands this is usually 0.</div>
+      <div class="kr-fout" id="wm-fee-fout"></div>
+    </div>
+    <div class="kr-veld">
+      <label for="wm-doelmarge">Target margin in percent</label>
+      <input id="wm-doelmarge" type="text" inputmode="decimal" autocomplete="off" placeholder="40">
+      <div class="kr-fout" id="wm-doelmarge-fout"></div>
+    </div>
+    <div class="kr-veld">
+      <label for="wm-doelopslag">Or target markup in percent</label>
+      <input id="wm-doelopslag" type="text" inputmode="decimal" autocomplete="off" placeholder="100">
+      <div class="kr-fout" id="wm-doelopslag-fout"></div>
+    </div>
+  </div>
+</div>
+<div id="wm-resultaten" aria-live="polite"></div>
+
+<h2>The difference between margin and markup</h2>
+<p>This is where it often goes wrong. <strong>Margin</strong> is your profit divided by the selling price. <strong>Markup</strong> is your profit divided by the purchase price. Buy for EUR 20 and sell for EUR 30 and your profit is EUR 10. The margin is 10 divided by 30, so 33.3%. The markup is 10 divided by 20, so 50%.</p>
+<p>A margin of 100% does not exist, because you would keep everything as profit. A markup of 100% does: you sell for double your purchase price, and that is a margin of 50%.</p>
+<h3>The formulas</h3>
+<ul>
+  <li>Profit = selling price minus channel fees minus purchase price minus fixed costs</li>
+  <li>Margin = profit divided by selling price</li>
+  <li>Markup = profit divided by purchase price</li>
+  <li>Price for a target margin = (purchase price + fixed costs) divided by (1 minus channel fees minus margin)</li>
+</ul>
+<p>See <a href="/tools/fee-calculator">the fee calculator</a> for what Marktplaats, Vinted and eBay charge. VAT is not included here.</p>
+
+<h2>Frequently asked questions</h2>
+<details><summary>How do I calculate profit margin?</summary><p>Subtract your purchase price and costs from your selling price. That is your profit. Divide it by the selling price and you have the margin in percent.</p></details>
+<details><summary>What is the difference between margin and markup?</summary><p>Margin divides the profit by the selling price, markup divides it by the purchase price. The same profit therefore gives a lower margin percentage than markup percentage.</p></details>
+<details><summary>How do I calculate the selling price for a target margin?</summary><p>Divide your purchase price plus fixed costs by 1 minus your target margin (and minus any channel fees, as a fraction). For EUR 20 purchase and a 40% margin that is 20 divided by 0.6, so EUR 33.34.</p></details>
+<details><summary>What is a good margin for second-hand selling?</summary><p>There is no fixed answer. It depends on what you lose on shipping, packaging and time. Calculating with your real costs and a fixed minimum per item works better than one percentage for everyone.</p></details>
+<details><summary>Does this calculator include VAT?</summary><p>No, all amounts exclude VAT. If you sell second-hand goods as a business, the margin scheme lets you pay VAT on your margin.</p></details>

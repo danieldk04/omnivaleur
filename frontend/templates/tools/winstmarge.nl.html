@@ -1,0 +1,62 @@
+<p class="label">Gratis tool</p>
+<h1>Winstmarge berekenen voor tweedehands verkoop</h1>
+<p class="meta">Geen inlog nodig. Rekent na kanaalkosten en verzending.</p>
+<p>Vul in wat je ervoor betaalde en waarvoor je hem verkoopt, en je ziet winst, marge en opslag. Of vul je inkoop en de marge in die je wilt, en je ziet welke prijs je dan moet vragen.</p>
+<div class="kr-kaart">
+  <div class="kr-raster">
+    <div class="kr-veld">
+      <label for="wm-inkoop">Inkoopprijs</label>
+      <input id="wm-inkoop" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 20,00">
+      <div class="kr-fout" id="wm-inkoop-fout"></div>
+    </div>
+    <div class="kr-veld">
+      <label for="wm-verkoop">Verkoopprijs</label>
+      <input id="wm-verkoop" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 30,00">
+      <div class="kr-fout" id="wm-verkoop-fout"></div>
+    </div>
+    <div class="kr-veld">
+      <label for="wm-kosten">Vaste kosten (verzending, verpakking)</label>
+      <input id="wm-kosten" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 0,00">
+      <div class="kr-fout" id="wm-kosten-fout"></div>
+    </div>
+  </div>
+  <div class="kr-ebay">
+    <div class="kr-ebay-kop">Optioneel</div>
+    <div class="kr-veld">
+      <label for="wm-fee">Kanaalkosten in procenten van de prijs</label>
+      <input id="wm-fee" type="text" inputmode="decimal" autocomplete="off" placeholder="0">
+      <div class="kr-hint">Bijvoorbeeld de commissie van eBay. Op Marktplaats en 2dehands is dat meestal 0.</div>
+      <div class="kr-fout" id="wm-fee-fout"></div>
+    </div>
+    <div class="kr-veld">
+      <label for="wm-doelmarge">Gewenste marge in procenten</label>
+      <input id="wm-doelmarge" type="text" inputmode="decimal" autocomplete="off" placeholder="40">
+      <div class="kr-fout" id="wm-doelmarge-fout"></div>
+    </div>
+    <div class="kr-veld">
+      <label for="wm-doelopslag">Of gewenste opslag in procenten</label>
+      <input id="wm-doelopslag" type="text" inputmode="decimal" autocomplete="off" placeholder="100">
+      <div class="kr-fout" id="wm-doelopslag-fout"></div>
+    </div>
+  </div>
+</div>
+<div id="wm-resultaten" aria-live="polite"></div>
+
+<h2>Het verschil tussen marge en opslag</h2>
+<p>Dit gaat vaak mis. <strong>Marge</strong> is je winst gedeeld door de verkoopprijs. <strong>Opslag</strong> is je winst gedeeld door de inkoopprijs. Koop je voor € 20 en verkoop je voor € 30, dan is de winst € 10. De marge is dan 10 gedeeld door 30, dus 33,3%. De opslag is 10 gedeeld door 20, dus 50%.</p>
+<p>Een marge van 100% bestaat niet, want dan zou je alles als winst houden. Een opslag van 100% bestaat wel: je verkoopt voor het dubbele van je inkoop, en dat is een marge van 50%.</p>
+<h3>De formules</h3>
+<ul>
+  <li>Winst = verkoopprijs min kanaalkosten min inkoop min vaste kosten</li>
+  <li>Marge = winst gedeeld door verkoopprijs</li>
+  <li>Opslag = winst gedeeld door inkoopprijs</li>
+  <li>Prijs voor een gewenste marge = (inkoop + vaste kosten) gedeeld door (1 min kanaalkosten min marge)</li>
+</ul>
+<p>Kijk bij <a href="/nl/tools/kostenrekenaar">de kostenrekenaar</a> welke kosten Marktplaats, Vinted en eBay rekenen. Btw is hier niet meegerekend.</p>
+
+<h2>Veelgestelde vragen</h2>
+<details><summary>Hoe bereken ik winstmarge?</summary><p>Trek je inkoop en kosten af van je verkoopprijs. Dat is je winst. Deel die winst door de verkoopprijs en je hebt de marge in procenten.</p></details>
+<details><summary>Wat is het verschil tussen marge en opslag?</summary><p>Marge deelt de winst door de verkoopprijs, opslag deelt hem door de inkoopprijs. Dezelfde winst geeft daarom een lager margepercentage dan opslagpercentage.</p></details>
+<details><summary>Hoe bereken ik de verkoopprijs voor een gewenste marge?</summary><p>Deel je inkoop plus vaste kosten door 1 min je gewenste marge (en min eventuele kanaalkosten, als breuk). Voor € 20 inkoop en 40% marge is dat 20 gedeeld door 0,6, dus € 33,34.</p></details>
+<details><summary>Welke marge is goed voor tweedehands verkoop?</summary><p>Daar is geen vast antwoord op. Het hangt af van wat je kwijt bent aan verzending, verpakking en tijd. Rekenen met je echte kosten en een vaste ondergrens per artikel werkt beter dan een percentage dat voor iedereen geldt.</p></details>
+<details><summary>Neemt deze rekenhulp btw mee?</summary><p>Nee, alle bedragen zijn zonder btw. Verkoop je als ondernemer tweedehands goederen, dan kun je met de margeregeling btw over je marge rekenen.</p></details>

@@ -41,6 +41,9 @@ VELDEN = {
     "dac7": [f"d7-{p}-{s}" for p in ("marktplaats", "2dehands", "vinted", "ebay", "anders") for s in ("n", "o", "n-fout", "o-fout")] + ["d7-resultaten"],
     "margeregeling": ["mr-inkoop", "mr-verkoop", "mr-inkoop-fout", "mr-verkoop-fout", "mr-resultaten"],
     "afprijsplanner": ["ap-prijs", "ap-dagen", "ap-inkoop", "ap-prijs-fout", "ap-dagen-fout", "ap-inkoop-fout", "ap-resultaten"],
+    "belastingcheck": ["bc-herkomst", "bc-prijs", "bc-inkoop", "bc-omzet", "bc-kosten", "bc-inkoop-fout", "bc-omzet-fout", "bc-kosten-fout", "bc-resultaten"],
+    "winstmarge": [f"wm-{x}" for x in ("inkoop", "verkoop", "kosten", "fee", "doelmarge", "doelopslag")] + [f"wm-{x}-fout" for x in ("inkoop", "verkoop", "kosten", "fee", "doelmarge", "doelopslag")] + ["wm-resultaten"],
+    "advertentietekst": [f"at-{x}" for x in ("kanaal", "taal", "product", "merk", "model", "maat", "kleur", "staat", "afm", "extra", "gebreken", "levering", "resultaten")],
     "voorraadsheet": ["vs-form", "vs-email", "vs-website", "vs-toestemming", "vs-knop", "vs-melding"],
 }
 
@@ -247,12 +250,18 @@ def client(monkeypatch):
     app = FastAPI()
     app.include_router(tools_api.router)
     tools_api._per_ip.clear()
+    tools_api._mail_per_ip.clear()
+    tools_api._mail_per_adres.clear()
     mails = []
-    monkeypatch.setattr(tools_api, "send_email", lambda onderwerp, tekst, **k: mails.append((onderwerp, tekst)) or True)
+    naar = []
+
+    def stuur(onderwerp, tekst, **k):
+        mails.append((onderwerp, tekst)); naar.append((k.get("to"), onderwerp, tekst)); return True
+    monkeypatch.setattr(tools_api, "send_email", stuur)
     db = _FakeDb()
     monkeypatch.setattr(tools_api, "get_db", lambda: db)
     c = TestClient(app)
-    c.db, c.mails = db, mails
+    c.db, c.mails, c.naar = db, mails, naar
     return c
 
 
@@ -332,3 +341,118 @@ def test_spreadsheet_heeft_echte_formules(bestand, kolommen):
     assert jaar["B4"].value.startswith("=COUNTIFS(") and "$B$1" in jaar["B4"].value
     assert ">=30" in jaar["E4"].value and ">2000" in jaar["E4"].value
     assert inv.data_validations.dataValidation, "keuzelijst voor kanaal ontbreekt"
+
+
+# ── Opfrisbeurt 28-10-2026: nieuwe tools, kopblok, acties, mail-resultaat ──
+
+@pytest.mark.parametrize("taal,tool", ALLE)
+def test_elke_pagina_heeft_antwoord_vooraan_chips_en_ux_script(taal, tool):
+    html = _pagina(taal, tool)
+    assert html.count('class="kr-kort"') == 1 and html.count('class="kr-chips"') == 1
+    assert tool["antwoord"][taal][:40].replace("'", "&#39;") in html or tool["antwoord"][taal][:20] in html
+    assert f'src="/assets/tools/ux.js?v=' in html and f'data-tool="{tool["key"]}"' in html
+    assert html.index('class="kr-kort"') > html.index("</h1>")
+
+
+def test_hub_groepeert_en_alle_groepen_hebben_tools():
+    from backend.tools_data import GROEPEN
+    assert {t["groep"] for t in TOOLS} <= set(GROEPEN)
+    for taal in TALEN:
+        html = _pagina(taal, None)
+        assert html.count('class="kr-groep"') == len(GROEPEN)
+        assert html.count('class="kr-nieuw"') == sum(1 for t in TOOLS if t["nieuw"]) == 3
+
+
+@node
+def test_winstmarge_marge_is_van_de_verkoopprijs_en_opslag_van_de_inkoop():
+    g = _node([("W", "winstmarge.js")], textwrap.dedent("""
+        const a=W.bereken(20,30,0,0), b=W.bereken(20,30,2,0.1), v=W.bereken(20,15,0,0);
+        console.log(JSON.stringify({a, b, v,
+          pm: W.prijsVoorMarge(20,0,0,0.4), po: W.prijsVoorOpslag(20,0,0,1.0),
+          pmFee: W.prijsVoorMarge(20,2,0.1,0.3), onm: W.prijsVoorMarge(20,0,0.6,0.5), leeg: W.bereken(20,0,0,0)}));
+    """))
+    assert g["a"]["winst"] == 10 and g["a"]["marge"] == pytest.approx(1 / 3) and g["a"]["opslag"] == pytest.approx(0.5)
+    assert g["b"]["winst"] == pytest.approx(30 * 0.9 - 20 - 2)          # kanaalkosten over de verkoopprijs
+    assert g["v"]["winst"] == -5 and g["v"]["marge"] < 0
+    assert g["pm"] == 33.34 and g["po"] == 40
+    # de prijs voor een marge geeft die marge ook echt terug
+    check = _node([("W", "winstmarge.js")], "console.log(JSON.stringify(W.bereken(20,%s,2,0.1)))" % g["pmFee"])
+    assert check["marge"] >= 0.3 - 1e-9 and check["marge"] < 0.301
+    assert g["onm"] is None and g["leeg"] is None
+
+
+@node
+def test_belastingcheck_volgt_de_regels_van_de_belastingdienst():
+    g = _node([("B", "belastingcheck.js")], textwrap.dedent("""
+        const f=(o)=>B.beoordeel(o).uitslag;
+        console.log(JSON.stringify({
+          eigen: f({herkomst:'eigen',prijs:'meer'}),
+          inkoopMeer: f({herkomst:'inkoop',prijs:'meer'}),
+          inkoopMinder: f({herkomst:'inkoop',prijs:'minder'}),
+          mix: f({herkomst:'mix',prijs:'meer'}),
+          voorbeeld: B.beoordeel({herkomst:'inkoop',prijs:'meer',inkoop:1000,omzet:2100,kosten:0}),
+          verlies: f({herkomst:'inkoop',prijs:'meer',inkoop:500,omzet:150}),
+          kosten: B.beoordeel({herkomst:'inkoop',prijs:'meer',inkoop:1000,omzet:2100,kosten:150}).winst,
+          leeg: f({}),
+        }));
+    """))
+    assert g["eigen"] == "geen" and g["inkoopMeer"] == "wel" and g["inkoopMinder"] == "geen" and g["mix"] == "twijfel"
+    assert g["voorbeeld"] == {"uitslag": "wel", "winst": 1100}        # voorbeeld op de pagina van de Belastingdienst
+    assert g["verlies"] == "geen"                                      # babykleding € 500 voor € 150
+    assert g["kosten"] == 950 and g["leeg"] is None
+
+
+@node
+def test_advertentietekst_kapt_af_zoals_de_titelchecker_en_verzint_niets():
+    inv = {"product": "wollen jas heren", "merk": "Burberry", "model": "Kensington", "maat": "maat 50", "kleur": "zwart",
+           "staat": "goed", "afm": "", "extra": "", "gebreken": "", "levering": "beide"}
+    g = _node([("A", "advertentietekst.js"), ("T", "titelchecker.js")], textwrap.dedent("""
+        const inv=%s;
+        const m=A.maak(inv,'marktplaats','nl'), v=A.maak(inv,'vinted','en'), e=A.maak(inv,'ebay','fr');
+        const lang='Burberry wollen jas heren maat 50 - Zwart - Vintage - Nieuwstaat met kaartjes';
+        console.log(JSON.stringify({m,v,e, gelijk: A.afkap(lang,60)===T.afkap(lang,60) && A.afkap('Heel lange titel zonder streepjes erin hoor',30)===T.afkap('Heel lange titel zonder streepjes erin hoor',30),
+          grenzen: A.LIMIET, tk: T.KANALEN.map(k=>[k.key,k.max])}));
+    """ % json.dumps(inv)))
+    assert g["gelijk"]
+    assert g["m"]["tekens"] <= 60 and g["m"]["limiet"] == 60 and g["v"]["limiet"] is None
+    assert "Staat: Goed" in g["m"]["beschrijving"] and "Gebreken" not in g["m"]["beschrijving"]   # niets bijverzonnen
+    assert g["m"]["zonderGebreken"] is True
+    assert "Condition: Good" in g["v"]["beschrijving"] and "État: Bon état" in g["e"]["beschrijving"]
+    for k, mx in g["tk"]:
+        assert g["grenzen"][k] == mx
+
+
+def _mail(c, **kw):
+    body = {"email": "Anna@Voorbeeld.nl", "taal": "nl", "bron": "winstmarge", "tekst": "Winst € 10,00\nMarge 33,3%",
+            "link": "https://omnivaleur.com/nl/tools/winstmarge-berekenen?wm-inkoop=20", "tips": False, "website": ""}
+    body.update(kw)
+    return c.post("/api/tools/mail-resultaat", json=body)
+
+
+def test_mail_resultaat_verstuurt_naar_de_bezoeker_en_bewaart_geen_adres_zonder_tips(client):
+    r = _mail(client)
+    assert r.status_code == 200
+    to, onderwerp, tekst = client.naar[0]
+    assert to == "anna@voorbeeld.nl" and "Winstmarge berekenen" in onderwerp
+    assert "Winst € 10,00" in tekst and "wm-inkoop=20" in tekst and "/register" in tekst
+    assert "*" not in tekst and "—" not in tekst and "–" not in tekst          # platte tekst, geen streepjes als leesteken
+    assert client.db.rijen == []                                               # geen toestemming, dus niets bewaard
+
+
+def test_mail_resultaat_met_tips_bewaart_het_adres_met_toestemming(client):
+    assert _mail(client, tips=True).status_code == 200
+    assert client.db.rijen == [({"email": "anna@voorbeeld.nl", "taal": "nl", "bron": "mail-winstmarge", "toestemming": True}, "email")]
+
+
+@pytest.mark.parametrize("kw", [{"email": "geen-adres"}, {"bron": "voorraadsheet"}, {"bron": "bestaat-niet"}, {"tekst": "  "}])
+def test_mail_resultaat_weigert_slechte_invoer(client, kw):
+    assert _mail(client, **kw).status_code == 422 and client.db.rijen == []
+
+
+def test_mail_resultaat_lokveld_tempo_en_vreemde_links(client):
+    assert _mail(client, website="x").status_code == 200 and client.mails == []
+    _mail(client, link="https://boos.example/phishing")
+    assert "boos.example" not in client.naar[0][2]                                       # alleen eigen links in de mail
+    for i in range(2):
+        assert _mail(client).status_code == 200
+    assert _mail(client).status_code == 429                                    # 3 per adres per dag

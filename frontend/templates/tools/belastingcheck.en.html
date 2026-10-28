@@ -1,0 +1,70 @@
+<p class="label">Free tool</p>
+<h1>Do I pay tax on Vinted and Marktplaats sales?</h1>
+<p class="meta">No login needed. Rules checked on 28 October 2026 with the Dutch Belastingdienst. Netherlands only.</p>
+<p>Whether you pay tax on what you sell online does not depend on an amount or a number of sales. It depends on what you sell and why. Answer two questions and fill in your numbers if you like.</p>
+<div class="kr-kaart">
+  <div class="kr-raster" style="grid-template-columns:repeat(2,1fr)">
+    <div class="kr-veld">
+      <label for="bc-herkomst">Where do the items come from?</label>
+      <select id="bc-herkomst">
+        <option value="">Choose an answer</option>
+        <option value="eigen">They are my own things (my or my family's clothes, old books, moving house)</option>
+        <option value="inkoop">I buy items to resell them</option>
+        <option value="mix">Both</option>
+      </select>
+    </div>
+    <div class="kr-veld">
+      <label for="bc-prijs">Do you usually sell for more or for less than you paid?</label>
+      <select id="bc-prijs">
+        <option value="meer">For more</option>
+        <option value="minder">For less</option>
+      </select>
+    </div>
+  </div>
+  <div class="kr-ebay">
+    <div class="kr-ebay-kop">Your numbers this year (optional)</div>
+    <div class="kr-veld">
+      <label for="bc-inkoop">What you bought</label>
+      <input id="bc-inkoop" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 1,000.00">
+      <div class="kr-fout" id="bc-inkoop-fout"></div>
+    </div>
+    <div class="kr-veld">
+      <label for="bc-omzet">What it sold for</label>
+      <input id="bc-omzet" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 2,100.00">
+      <div class="kr-fout" id="bc-omzet-fout"></div>
+    </div>
+    <div class="kr-veld">
+      <label for="bc-kosten">Packaging and shipping</label>
+      <input id="bc-kosten" type="text" inputmode="decimal" autocomplete="off" placeholder="€ 150.00">
+      <div class="kr-fout" id="bc-kosten-fout"></div>
+    </div>
+  </div>
+</div>
+<div id="bc-resultaten" aria-live="polite"></div>
+
+<h2>What the Belastingdienst says</h2>
+<p>You pay income tax when you have a <strong>source of income</strong>. That is the case when you buy items to resell at a profit. There is no minimum amount of profit. The Belastingdienst gives the example of vintage clothing bought for EUR 1,000 a year and sold for EUR 2,100. You may deduct packaging and shipping costs.</p>
+<p>If you sell as a <strong>hobby or in your private life</strong>, there is no source of income. The Belastingdienst's examples are your family's clothes on Vinted, old Donald Duck comics on Marktplaats, old books or furniture when you move. Selling for less than you paid is not a source of income either: baby clothes that cost EUR 500 and sell for EUR 150 do not count.</p>
+<p>The words regularly and weekly appear in the examples of taxable selling, but the Belastingdienst gives no limit for them. If you are unsure, contact your tax office.</p>
+
+<h2>This is separate from DAC7</h2>
+<p>Marktplaats, Vinted and eBay report you to the Belastingdienst if you sell 30 times or more, or for more than EUR 2,000, per platform. That is only information for the tax authority. It does not mean you pay tax. See <a href="/tools/dac7-checker">the DAC7 checker</a> to find out how close you are to that limit.</p>
+<p>VAT has separate rules. If you sell second-hand goods as a business, <a href="/tools/vat-margin-scheme-calculator">the margin scheme</a> lets you pay VAT on your profit margin.</p>
+
+<h2>Frequently asked questions</h2>
+<details><summary>Do I have to pay tax on my Vinted sales?</summary><p>Not if you sell your own things, as a hobby or in your private life, or for less than you paid. Yes if you buy items to resell them at a profit. It is about what you sell, not the platform.</p></details>
+<details><summary>From what amount do I pay tax on Vinted or Marktplaats?</summary><p>There is no fixed amount. When you buy to resell at a profit, the Belastingdienst says there is no minimum amount of profit. The limit of 30 sales or EUR 2,000 is only the limit above which a platform reports you (DAC7).</p></details>
+<details><summary>Do I pay tax if I sell my own clothes?</summary><p>No. The Belastingdienst itself gives selling your family's clothes on Vinted as an example of a hobby or private activity without a source of income.</p></details>
+<details><summary>Can I deduct packaging and shipping costs?</summary><p>Yes. In the Belastingdienst's example about buying and reselling clothes, packaging and shipping costs are deductible from your profit.</p></details>
+<details><summary>Does this apply in Belgium too?</summary><p>No, this check follows the rules of the Dutch Belastingdienst. Belgium has its own rules. Ask the Belgian tax authority about those.</p></details>
+
+<h2>Further reading</h2>
+<ul>
+  <li><a href="/reseller-tools/dac7-vinted-reporting-rules-netherlands">DAC7 and Vinted reporting rules in the Netherlands</a></li>
+  <li><a href="/reseller-tools/margin-scheme-vat-second-hand-goods">The margin scheme for second-hand goods</a></li>
+</ul>
+
+<h2>Sources</h2>
+<ul class="bronnen">
+  <li><a href="https://www.belastingdienst.nl/wps/wcm/connect/nl/werk-en-inkomen/content/inkomstenbelasting-betalen-over-internetverkopen" rel="nofollow noopener">Belastingdienst: I sell items on an online platform. Do I pay income tax? (Dutch)</a></li>
+</ul>

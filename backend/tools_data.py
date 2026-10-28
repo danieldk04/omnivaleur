@@ -120,7 +120,7 @@ TOOLS: list[dict] = [
     },
     {
         "key": "advertentietekst", "groep": "advertenties", "nieuw": True, "icon": "✍️", "gated": False,
-        "scripts": ["tools/gedeeld.js", "tools/titelchecker.js", "tools/advertentietekst.js"],
+        "scripts": ["tools/gedeeld.js", "tools/advertentietekst.js"],
         "slug": {"en": "listing-description-generator", "nl": "advertentietekst-generator"},
         "antwoord": {"nl": "Vul in wat je weet en je krijgt een titel binnen de tekengrens van het kanaal en een nette beschrijving, in het Nederlands, Engels, Frans of Duits. Zonder AI, dus er wordt niets bijverzonnen.",
                      "en": "Fill in what you know and you get a title within the channel's character limit and a clean description, in Dutch, English, French or German. No AI, so nothing is made up."},

@@ -1,5 +1,5 @@
 /* Advertentietekst-generator. Geen AI: de tekst wordt uit jouw invoer opgebouwd, dus er wordt niets
- * bijverzonnen. De titelgrenzen komen uit titelchecker.js (Marktplaats/2dehands 60, eBay 80, Facebook 100);
+ * bijverzonnen. De titelgrenzen zijn die van titelchecker.js (Marktplaats/2dehands 60, eBay 80, Facebook 100);
  * Vinted heeft geen gemeten grens en wordt dus niet afgekapt. */
 (function (root) {
   'use strict';
@@ -19,26 +19,42 @@
   };
   var LIMIET = { marktplaats: 60, '2dehands': 60, ebay: 80, facebook: 100, vinted: null };
   function schoon(s) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim(); }
+  // Zelfde afkapregel als tools/titelchecker.js (een test houdt ze gelijk); die pagina-code laden we hier niet.
+  function afkap(s, max) {
+    s = schoon(s);
+    var tekens = Array.from(s);
+    if (tekens.length <= max) return s;
+    var SEP = ' - ';
+    if (s.indexOf(SEP) >= 0) {
+      var delen = s.split(SEP);
+      while (delen.length > 1 && Array.from(delen.join(SEP)).length > max) delen.pop();
+      var kept = delen.join(SEP);
+      if (Array.from(kept).length <= max) return kept;
+    }
+    var stuk = tekens.slice(0, max + 1).join('');
+    var cut = stuk.lastIndexOf(' ');
+    return cut > 0 ? stuk.slice(0, cut) : tekens.slice(0, max).join('');
+  }
 
   // inv: product, merk, model, maat, kleur, staat, afm, extra, gebreken, levering. Geeft { titel, tekens, limiet, beschrijving }.
-  function maak(inv, kanaal, taal, afkap) {
+  function maak(inv, kanaal, taal) {
     var L = TAAL[taal] || TAAL.en;
     var delen = [inv.merk, inv.product, inv.model, inv.maat, inv.kleur].map(schoon).filter(Boolean);
     var titel = delen.join(' '), limiet = LIMIET[kanaal] == null ? null : LIMIET[kanaal];
-    var afgekapt = limiet && afkap ? afkap(titel, limiet) : titel;
+    var afgekapt = limiet ? afkap(titel, limiet) : titel;
     var regels = [];
     var kop = [inv.product, inv.merk, inv.model].map(schoon).filter(Boolean).join(' ');
     if (kop) regels.push(kop, '');
     function regel(naam, w) { w = schoon(w); if (w) regels.push(naam + ': ' + w); }
     regel(L.staat, L.st[inv.staat] || '');
-    regel(L.merk, inv.merk); regel(L.maat, inv.maat); regel(L.kleur, inv.kleur); regel(L.afm, inv.afm);
+    regel(L.merk, inv.merk); regel(L.maat, schoon(inv.maat).replace(/^(maat|size|taille|gr[öo]ße|gr[öo]sse)\s+/i, '')); regel(L.kleur, inv.kleur); regel(L.afm, inv.afm);
     regel(L.gebreken, inv.gebreken); regel(L.extra, inv.extra);
     if (L.lev[inv.levering]) regels.push('', L.lev[inv.levering]);
     regels.push('', L.vragen);
     return { titel: afgekapt, volledig: titel, afgekapt: afgekapt !== titel, tekens: Array.from(afgekapt).length, limiet: limiet,
              beschrijving: regels.join('\n').replace(/\n{3,}/g, '\n\n').trim(), zonderGebreken: !schoon(inv.gebreken) };
   }
-  var api = { maak: maak, TAAL: TAAL, LIMIET: LIMIET };
+  var api = { maak: maak, afkap: afkap, TAAL: TAAL, LIMIET: LIMIET };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.Advertentietekst = api;
   if (typeof document === 'undefined') return;
@@ -57,7 +73,7 @@
     ['product', 'merk', 'model', 'maat', 'kleur', 'staat', 'afm', 'extra', 'gebreken', 'levering'].forEach(function (k) { inv[k] = G.el('at-' + k).value; });
     var uit = G.el('at-resultaten');
     if (!schoon(inv.product)) { uit.innerHTML = '<p class="kr-leeg">' + T.leeg + '</p>'; return; }
-    var kanaal = G.el('at-kanaal').value, r = maak(inv, kanaal, G.el('at-taal').value, root.Titelchecker && root.Titelchecker.afkap);
+    var kanaal = G.el('at-kanaal').value, r = maak(inv, kanaal, G.el('at-taal').value);
     var html = '<h3>' + T.titel + '</h3><p class="kr-uit" id="at-uit-titel">' + esc(r.titel) + '</p>' +
       '<p class="kr-hint">' + (r.limiet ? r.tekens + ' / ' + r.limiet + ' ' + T.tekens : r.tekens + ' ' + T.tekens) + '</p>' +
       '<button type="button" class="kr-klein" data-uitsluiten data-kopieer="at-uit-titel">' + T.kopieer + '</button>' +

@@ -6,8 +6,8 @@
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--surface); color: var(--text); line-height: 1.7; }
 a { color: var(--blue); text-decoration: none; }
 a:hover { text-decoration: underline; }
-main { max-width: 880px; margin: 0 auto; padding: 56px 24px 96px; }
-.label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--blue); margin-bottom: 12px; }
+main { max-width: 900px; margin: 0 auto; padding: 40px 20px 96px; }
+.label { display: inline-block; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #1d4ed8; background: #eff6ff; padding: 4px 10px; border-radius: 999px; margin-bottom: 14px; }
 h1 { font-size: 34px; font-weight: 900; letter-spacing: -.5px; line-height: 1.2; margin-bottom: 12px; }
 .meta { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
 h2 { font-size: 20px; font-weight: 700; margin: 40px 0 12px; }
@@ -15,7 +15,7 @@ h3 { font-size: 16px; font-weight: 700; margin: 24px 0 6px; }
 p, li, td, th, label { font-size: 15px; color: #334155; }
 p { margin-bottom: 14px; }
 ul { margin: 0 0 14px 20px; display: flex; flex-direction: column; gap: 6px; }
-.kr-kaart { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 22px 24px; margin: 8px 0 20px; }
+.kr-kaart { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin: 8px 0 20px; box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 8px 24px rgba(15,23,42,.05); }
 .kr-raster { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .kr-veld label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 4px; color: var(--text); }
 .kr-veld input, .kr-veld select { width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
@@ -77,3 +77,49 @@ details p { margin: 10px 0 0; }
 textarea { width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; min-height: 84px; resize: vertical; }
 .kr-grid4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 @media (max-width: 640px) { .kr-kaarten, .kr-grid4 { grid-template-columns: 1fr; } }
+
+
+/* ── Opfrisbeurt 28-10-2026: antwoord vooraan, uitkomstkaarten, acties ── */
+h1 { font-size: 36px; }
+.kr-kort { font-size: 17px; line-height: 1.6; color: var(--text); background: linear-gradient(135deg, #eff6ff, #ecfdf5); border: 1px solid #dbeafe; border-left: 4px solid var(--blue); border-radius: 12px; padding: 16px 18px; margin: 4px 0 12px; }
+.kr-kort strong { color: #1d4ed8; }
+.kr-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 22px; }
+.kr-chips span { font-size: 12px; font-weight: 600; color: #475569; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; }
+.kr-groep { margin-top: 36px; }
+.kr-nieuw { font-style: normal; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; background: var(--mint); color: #064e3b; padding: 2px 7px; border-radius: 999px; vertical-align: middle; margin-left: 6px; }
+.kr-kaartlink { transition: border-color .15s, box-shadow .15s, transform .15s; }
+.kr-kaartlink:hover { transform: translateY(-2px); }
+.kr-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 8px 0 12px; }
+.kr-kpi { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.kr-kpi span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.kr-kpi strong { font-size: 24px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.kr-uitslag { border-radius: 12px; padding: 16px 18px; margin: 8px 0 12px; border: 1px solid var(--border); }
+.kr-uitslag strong { display: block; font-size: 18px; margin-bottom: 4px; }
+.kr-uitslag p { margin: 0; }
+.kr-uitslag.goed { background: #ecfdf5; border-color: #a7f3d0; }
+.kr-uitslag.goed strong { color: #065f46; }
+.kr-uitslag.let { background: #fffbeb; border-color: #fde68a; }
+.kr-uitslag.let strong { color: #92400e; }
+.kr-uitslag.twijfel { background: #eff6ff; border-color: #bfdbfe; }
+.kr-uitslag.twijfel strong { color: #1e40af; }
+.kr-uit { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin: 0 0 8px; font: inherit; font-size: 15px; white-space: pre-wrap; word-break: break-word; color: var(--text); }
+.kr-klein, .kr-acties button { font: inherit; font-size: 13px; font-weight: 600; color: #1e293b; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+.kr-klein:hover, .kr-acties button:hover { border-color: var(--blue); color: var(--blue); }
+.kr-acties { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 14px 0 6px; }
+.kr-acties button.kr-hoofd { background: var(--blue); border-color: var(--blue); color: #fff; }
+.kr-acties button.kr-hoofd:hover { background: #1d4ed8; color: #fff; }
+.kr-toast { font-size: 13px; color: #047857; font-weight: 600; }
+.kr-mail { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin: 8px 0; }
+.kr-mail label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 4px; color: var(--text); }
+.kr-mail input[type=email] { width: 100%; max-width: 380px; font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; }
+.kr-mail .kr-aanvink { font-weight: 400; }
+.kr-mail .kr-knop { border: 0; font: inherit; font-weight: 700; cursor: pointer; }
+.kr-mail .kr-knop:disabled { opacity: .6; cursor: default; }
+.kr-na { font-size: 14px; color: #475569; margin: 6px 0 0; }
+.kr-na a { font-weight: 700; }
+@media (max-width: 640px) { h1 { font-size: 28px; } .kr-kpis { grid-template-columns: 1fr; } .kr-kpi strong { font-size: 22px; } .kr-kort { font-size: 16px; } }
+@media print {
+  .site-nav, .site-footer, .kr-cta, .kr-acties, .kr-mail, .kr-na, .kr-meer, .kr-krumel, .kr-klein { display: none !important; }
+  main { padding: 0; max-width: none; }
+  .kr-kaart { box-shadow: none; }
+}

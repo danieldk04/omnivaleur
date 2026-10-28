@@ -1,0 +1,40 @@
+<p class="label">Free tool</p>
+<h1>Listing title and description generator for Marktplaats, Vinted and eBay</h1>
+<p class="meta">No login needed. No AI: the text is built from your input, nothing is made up.</p>
+<p>Fill in what you know. You get a title within the channel's character limit and a clear description you can paste. Choose the language of your listing, which helps if you also sell to buyers across the border.</p>
+<div class="kr-kaart">
+  <div class="kr-raster" style="grid-template-columns:repeat(2,1fr)">
+    <div class="kr-veld"><label for="at-kanaal">Channel</label><select id="at-kanaal"><option value="marktplaats" selected>Marktplaats</option><option value="2dehands">2dehands</option><option value="vinted">Vinted</option><option value="ebay">eBay</option><option value="facebook">Facebook Marketplace</option></select></div>
+    <div class="kr-veld"><label for="at-taal">Language of the listing</label><select id="at-taal"><option value="nl">Dutch</option><option value="en" selected>English</option><option value="fr">French</option><option value="de">German</option></select></div>
+    <div class="kr-veld"><label for="at-product">What is it?</label><input id="at-product" type="text" autocomplete="off" placeholder="Wool coat men"></div>
+    <div class="kr-veld"><label for="at-merk">Brand</label><input id="at-merk" type="text" autocomplete="off" placeholder="Burberry"></div>
+    <div class="kr-veld"><label for="at-model">Model or type</label><input id="at-model" type="text" autocomplete="off" placeholder="Kensington"></div>
+    <div class="kr-veld"><label for="at-maat">Size</label><input id="at-maat" type="text" autocomplete="off" placeholder="size 50"></div>
+    <div class="kr-veld"><label for="at-kleur">Colour</label><input id="at-kleur" type="text" autocomplete="off" placeholder="black"></div>
+    <div class="kr-veld"><label for="at-staat">Condition</label><select id="at-staat"><option value="nieuw">New with tags</option><option value="alsnieuw">Like new</option><option value="goed" selected>Good</option><option value="redelijk">Fair</option><option value="gebruikt">Well used</option></select></div>
+    <div class="kr-veld"><label for="at-afm">Dimensions (optional)</label><input id="at-afm" type="text" autocomplete="off" placeholder="120 x 60 cm"></div>
+    <div class="kr-veld"><label for="at-extra">What is included (optional)</label><input id="at-extra" type="text" autocomplete="off" placeholder="original box, manual"></div>
+    <div class="kr-veld" style="grid-column:1 / -1"><label for="at-gebreken">Flaws (optional, but buyers always ask)</label><input id="at-gebreken" type="text" autocomplete="off" placeholder="small stain on the sleeve"></div>
+    <div class="kr-veld"><label for="at-levering">Shipping or pickup</label><select id="at-levering"><option value="beide" selected>Shipping or pickup</option><option value="verzenden">Shipping only</option><option value="ophalen">Pickup only</option><option value="">Do not mention</option></select></div>
+  </div>
+</div>
+<div id="at-resultaten" aria-live="polite"></div>
+
+<h2>How long can your title be?</h2>
+<ul>
+  <li><strong>Marktplaats and 2dehands:</strong> 60 characters.</li>
+  <li><strong>eBay:</strong> 80 characters.</li>
+  <li><strong>Facebook Marketplace:</strong> 100 characters.</li>
+  <li><strong>Vinted:</strong> we have not measured the limit, so nothing is cut here.</li>
+</ul>
+<p>If your title does not fit, the generator cuts it the way Omnivaleur does: first whole parts after a dash, otherwise at a whole word. To count your own title, use <a href="/tools/title-length-checker">the title length checker</a>.</p>
+
+<h2>What a good listing contains</h2>
+<p>A buyer wants to know three things quickly: what it is, what condition it is in and how they get it. Put the brand and size in the title, because that is what people search for. Mention flaws yourself, because a buyer who finds them later is a buyer who argues. Photos do the rest.</p>
+
+<h2>Frequently asked questions</h2>
+<details><summary>Does this generator use AI?</summary><p>No. The title and description are built from your input with fixed sentences, so nothing is made up about your item.</p></details>
+<details><summary>How do I write a good title for Marktplaats?</summary><p>Put the most important things first: brand, what it is, model, size and colour. Marktplaats cuts a title at 60 characters, so what comes last can disappear.</p></details>
+<details><summary>In which languages can I make a listing?</summary><p>In Dutch, English, French and German. You choose the language separately from the page, so you can also make a listing for Belgian or German buyers.</p></details>
+<details><summary>Is my input stored?</summary><p>The text is made in your browser and not sent to us. Your input does go into the page link, so you can share or find it again. Whoever you share that link with also gets the input.</p></details>
+<details><summary>Can I do this for all my channels at once?</summary><p>Omnivaleur puts an item on Marktplaats, 2dehands, Vinted and eBay in one go, with a title per channel that fits the limit. You can try it free for 7 days.</p></details>

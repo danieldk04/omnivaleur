@@ -54,5 +54,8 @@
 {%- for s in scripts %}
 <script src="/assets/{{ s }}?v={{ js_v }}"></script>
 {%- endfor %}
+{%- if tool %}
+<script src="/assets/tools/ux.js?v={{ ux_v }}" data-tool="{{ toolkey }}"></script>
+{%- endif %}
 </body>
 </html>
