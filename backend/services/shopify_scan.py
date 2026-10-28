@@ -102,6 +102,11 @@ def naar_scanregel(product: dict, shop: str, winkelnaam: str | None = None) -> d
             if geslacht else {})
     if kind.get("gender") != "kinderen" or not kind.get("category"):
         kind = {}
+    # Anders het producttype van de winkel zelf, als we dat zeker kennen
+    # (Voordeelsieraden en Goudlief, 28-10-2026: "Kettingen", "Ringen").
+    if not kind:
+        from backend.api.imports import rubriek_uit_producttype
+        kind = rubriek_uit_producttype(product.get("product_type"))
     return {
         "platform_listing_id": str(product["id"]),
         "platform_listing_url": f"https://{shop}/products/{handle}" if handle else None,
