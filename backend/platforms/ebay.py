@@ -881,15 +881,16 @@ async def _get_category_tree_id(marktplaats: str | None = None) -> str:
 _required_aspects_cache: dict = {}
 
 
-async def _get_required_aspects(category_id: str, marktplaats: str | None = None) -> list[dict]:
-    """Required item specifics for a category, via the Taxonomy API. Each entry is
-    {name, values}: `values` is the closed list of allowed values (empty = free
-    text). Cached per category — the taxonomy rarely changes. Never raises."""
+_alle_aspecten_cache: dict = {}
+
+
+async def _get_alle_aspecten(category_id: str, marktplaats: str | None = None) -> list[dict] | None:
+    """Alle kenmerken van een rubriek (verplicht en optioneel) via de Taxonomy API, als
+    {name, values, vrij, verplicht}. Gecachet per rubriek. None als eBay niet antwoordt."""
     marktplaats = marktplaats or settings.ebay_marketplace_id
-    # De standaardsite houdt de oude cachesleutel (alleen het rubrieknummer).
-    cache_sleutel = category_id if marktplaats == settings.ebay_marketplace_id else (marktplaats, category_id)
-    if cache_sleutel in _required_aspects_cache:
-        return _required_aspects_cache[cache_sleutel]
+    sleutel = (marktplaats, str(category_id))
+    if sleutel in _alle_aspecten_cache:
+        return _alle_aspecten_cache[sleutel]
     try:
         token = await _get_app_token()
         tree_id = await _get_category_tree_id(marktplaats)
@@ -903,18 +904,69 @@ async def _get_required_aspects(category_id: str, marktplaats: str | None = None
             data = resp.json()
     except Exception as e:
         logger.warning(f"Kon eBay item-aspecten niet ophalen voor categorie {category_id}: {e}")
-        return []
+        return None
     out = []
     for a in data.get("aspects", []):
-        if not a.get("aspectConstraint", {}).get("aspectRequired"):
-            continue
         values = [v.get("localizedValue") for v in a.get("aspectValues", []) if v.get("localizedValue")]
         # FREE_TEXT: de waarden zijn suggesties, geen gesloten lijst. Dan mogen
         # we zelf een eerlijke waarde invullen in plaats van de eerste suggestie.
         vrij = a.get("aspectConstraint", {}).get("aspectMode") == "FREE_TEXT"
-        out.append({"name": a.get("localizedAspectName"), "values": values, "vrij": vrij})
+        out.append({"name": a.get("localizedAspectName"), "values": values, "vrij": vrij,
+                    "verplicht": bool(a.get("aspectConstraint", {}).get("aspectRequired"))})
+    _alle_aspecten_cache[sleutel] = out
+    return out
+
+
+async def _get_required_aspects(category_id: str, marktplaats: str | None = None) -> list[dict]:
+    """Required item specifics for a category, via the Taxonomy API. Each entry is
+    {name, values}: `values` is the closed list of allowed values (empty = free
+    text). Cached per category — the taxonomy rarely changes. Never raises."""
+    marktplaats = marktplaats or settings.ebay_marketplace_id
+    # De standaardsite houdt de oude cachesleutel (alleen het rubrieknummer).
+    cache_sleutel = category_id if marktplaats == settings.ebay_marketplace_id else (marktplaats, category_id)
+    if cache_sleutel in _required_aspects_cache:
+        return _required_aspects_cache[cache_sleutel]
+    alle = await _get_alle_aspecten(category_id, marktplaats)
+    if alle is None:
+        return []
+    out = [{"name": a["name"], "values": a["values"], "vrij": a["vrij"]} for a in alle if a["verplicht"]]
     _required_aspects_cache[cache_sleutel] = out
     return out
+
+
+def _lokaliseer_aspecten(aspects: dict, alle: list[dict] | None) -> None:
+    """Zet onze Engelse standaardkenmerken (Brand, Colour, Size, Material) onder de
+    naam die eBay voor deze rubriek gebruikt (Merk, Kleur, Maat, Materiaal).
+
+    Toon, 28-10-2026: op ebay.nl stond zijn tapijt met "Brand: Handgemaakt" en "Colour:
+    groen" naast eBay's eigen "Merk" en een lege "Kleur": dubbele kenmerken in twee
+    talen. Alleen verplaatsen als de waarde ook bij eBay's gesloten lijst past; past
+    hij niet, dan blijft het Engelse kenmerk staan zoals voorheen (dat publiceert),
+    want een publicatie die faalt is erger dan een dubbel kenmerk."""
+    if not alle:
+        return
+    for sleutel in [k for k in aspects if k in ("Brand", "Colour", "Size", "Material")]:
+        concept = _canonical_concept(sleutel.lower())
+        waarden = aspects.get(sleutel) or []
+        if not concept or not waarden:
+            continue
+        for a in alle:
+            naam = a.get("name") or ""
+            if not naam or naam.lower() == sleutel.lower() or _canonical_concept(naam.lower()) != concept:
+                continue
+            if naam in aspects:                       # al gevuld (bijvoorbeeld verplicht): geen dubbel
+                del aspects[sleutel]
+                break
+            gesloten = a.get("values") or []
+            if a.get("vrij") or not gesloten:
+                aspects[naam] = waarden
+                del aspects[sleutel]
+                break
+            exact = next((v for v in gesloten if v.lower() == str(waarden[0]).strip().lower()), None)
+            if exact:
+                aspects[naam] = [exact]
+                del aspects[sleutel]
+            break
 
 
 # eBay's Taxonomy API returns required-aspect names in the marketplace's own
