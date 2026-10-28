@@ -848,7 +848,7 @@
       "pillar": "B",
       "format": "strategy",
       "slug": "how-many-listings-do-you-need-to-make-sales",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "hoeveel-advertenties-nodig-voor-verkoop",
       "priority": 97
     },
@@ -1749,6 +1749,16 @@
       "action": "created",
       "url_path": "/reseller-tools/belastingdienst-second-hand-selling-rules-netherlands",
       "published_at": "2026-10-27T18:08:23.041034+00:00"
+    },
+    {
+      "keyword": "how many listings do you need to make sales",
+      "slug": "how-many-listings-do-you-need-to-make-sales",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "action": "created",
+      "url_path": "/reseller-tools/how-many-listings-do-you-need-to-make-sales",
+      "published_at": "2026-10-28T14:45:42.228544+00:00"
     }
   ]
 }
