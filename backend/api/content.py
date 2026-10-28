@@ -473,6 +473,8 @@ STATIC_SITEMAP_URLS = [
     ("/nl/blog", "daily", "0.8"),
     ("/marketplaces", "monthly", "0.8"),
     ("/ai-info", "monthly", "0.6"),
+    ("/fee-calculator", "monthly", "0.8"),
+    ("/nl/kostenrekenaar", "monthly", "0.8"),
     ("/register", "monthly", "0.9"),
     ("/privacy", "yearly", "0.3"),
     ("/terms", "yearly", "0.3"),
