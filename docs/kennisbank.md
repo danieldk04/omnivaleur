@@ -17,6 +17,82 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## stripe-webhook-mist-invoice-events
+
+*28-10-2026 — "Het Stripe-webhookendpoint luisterde niet naar invoice.paid, waardoor een betalende SEPA-klant op payment_processing bleef hangen; op 18-09-2026 aangezet"*
+
+**Opgelost op 18-09-2026: `invoice.paid` staat nu aan.** Het endpoint luistert nu
+naar vijf gebeurtenissen. Sinds 27-10-2026 is het endpoint
+`we_1UV6jq09Y8J5okHsXNO8szrl` (het oude is uitgezet na een geheim dat niet meer klopte),
+met dezelfde vijf. Gemeten 28-10: alle events sinds de wissel afgeleverd (pending_webhooks 0).
+Meten kan met de Stripe-sleutel uit de lokale .env: events met pending_webhooks > 0 die
+ouder zijn dan tien minuten zijn mislukte afleveringen. Wat hieronder staat is waaróm dat nodig was, en waar je
+moet kijken als betaalstatussen ooit weer scheef lopen.
+
+Het endpoint `we_1Tnjt809Y8J5okHsw8htmEuC` (https://omnivaleur.com/api/billing/webhook)
+stond bij Stripe ingesteld op precies vier gebeurtenissen:
+
+- `checkout.session.completed`
+- `customer.subscription.updated`
+- `customer.subscription.deleted`
+- `invoice.payment_failed`
+
+`backend/api/billing.py` heeft daarnaast een handler voor `invoice.paid` en
+`invoice.payment_succeeded`, maar die worden **nooit afgeleverd**. Dat is dode
+code, en het gat dat het achterlaat is echt: de handler is precies bedoeld om een
+klant van `payment_processing` terug op `active` te zetten zodra een SEPA-incasso
+rond is.
+
+**Waarom dit pijn doet:** een SEPA-incasso op een abonnement dat bij Stripe al
+`active` staat verandert niets aan de subscription, dus er komt ook geen
+`customer.subscription.updated`. Zonder `invoice.paid` komt er dan helemaal geen
+bericht, en blijft de klant op `payment_processing` staan tot
+`PROCESSING_GRACE_DAYS` (21) om is. Daarna ziet hij "your payment failed" terwijl
+hij gewoon betaald heeft. Zo stond klant 0b28c1ce op 18-09-2026 tien dagen voor
+zijn uitsluiting, met een betaalde factuur van EUR 19,99 bij Stripe.
+
+**Hoe toe te passen:** controleer bij elke klacht over toegang of betaalstatus
+eerst wélke gebeurtenissen het endpoint binnenkrijgt
+(`curl https://api.stripe.com/v1/webhook_endpoints`), niet alleen of de code de
+gebeurtenis aankan. Een handler in de code bewijst niet dat het bericht aankomt.
+
+Zie ook "stripe-api-versie-verplaatst-velden" en "sepa-incasso-bedenktijd-te-kort".
+
+---
+
+## creator-commissie-25-procent
+
+*28-10-2026 — "27-10-2026: creatorcommissie 25% van netto, kasboek creator_commissie per betaalde factuur, 60 dagen wachttijd, handmatig overmaken; SQL moet nog in Supabase"*
+
+Creators krijgen 25% van wat hun aangebrachte klanten betalen (afspraak in de
+creatormail, 24-10-2026). Gebouwd 27-10-2026; de oude bounty van 25 euro vast
+blijft bestaan voor codes met `commission_pct` 0.
+
+- Kasboek `creator_commissie`: één rij per betaalde Stripe-factuur, unieke
+  sleutel `invoice_id` is de bescherming tegen dubbel tellen. Gevuld door de
+  uurronde `verwerk_commissie` (backend/services/creator_commissie.py) die zelf
+  Stripe leest, NIET de webhook (die mist invoice.paid).
+- Netto = zonder btw, naar rato bij korting; teruggaven (Charge.amount_refunded)
+  halen commissie weg; uitbetaalbaar pas 60 dagen na betaling (SEPA mag 8 weken
+  terug); uitbetaald is bevroren.
+- Daniel maakt zelf over. `scripts/creator_commissie.py stand` en `uitbetaald
+  --code --bedrag --ref` (bedrag moet kloppen, anders weigert hij).
+- Een link krijgt 25% via `creator_outreach_meting.py log --link`.
+- Bij 19,99 per maand is dat ongeveer 4,13 per klant per maand.
+
+**Why:** de oude teller rekende een vaste 25 euro per klant; de mail beloofde 25%.
+**How to apply:** de SQL `scripts/sql/creator_commissie.sql` is op 28-10-2026
+door Daniel gedraaid en tegen de echte database bewezen (proefrij schrijven,
+twee keer upsert = één rij, uurronde zonder fout, opgeruimd). De nieuwe sleutel
+staat lokaal in .env; lokaal is supabase_key nu gelijk aan de service-sleutel.
+RLS op de tabel bevestigd door Daniel via screenshot van de Table Editor (geen
+UNRESTRICTED-label). Niet gemeten: een echte Stripe-factuur van een creatorklant. Looptijd van
+de commissie: Daniel bevestigde 28-10-2026 "zolang de klant betaalt", dus geen
+einddatum, en dat is wat de code doet. Zie
+"stripe-twee-api-versies-tegelijk", "webhook-mist-invoice-paid".
+
+---
+
 ## supabase-nieuwe-sleutels-en-requirements
 
 *27-10-2026 — Nieuwe Supabase-sleutels (sb_secret_) werken alleen met supabase-py >= 2.16; check ALLE requirements-bestanden en workflows bij een sleutelwissel*
@@ -4990,45 +5066,6 @@ hangen en blijft de toegang staan. Hetzelfde geldt bij het beantwoorden van "hoe
 betalende klanten zijn er": tel per klant, niet per abonnement.
 
 Zie ook "stripe-api-versie-verplaatst-velden" en "proefperiode-en-toegangsslot".
-
----
-
-## stripe-webhook-mist-invoice-events
-
-*18-09-2026 — "Het Stripe-webhookendpoint luisterde niet naar invoice.paid, waardoor een betalende SEPA-klant op payment_processing bleef hangen; op 18-09-2026 aangezet"*
-
-**Opgelost op 18-09-2026: `invoice.paid` staat nu aan.** Het endpoint luistert nu
-naar vijf gebeurtenissen. Wat hieronder staat is waaróm dat nodig was, en waar je
-moet kijken als betaalstatussen ooit weer scheef lopen.
-
-Het endpoint `we_1Tnjt809Y8J5okHsw8htmEuC` (https://omnivaleur.com/api/billing/webhook)
-stond bij Stripe ingesteld op precies vier gebeurtenissen:
-
-- `checkout.session.completed`
-- `customer.subscription.updated`
-- `customer.subscription.deleted`
-- `invoice.payment_failed`
-
-`backend/api/billing.py` heeft daarnaast een handler voor `invoice.paid` en
-`invoice.payment_succeeded`, maar die worden **nooit afgeleverd**. Dat is dode
-code, en het gat dat het achterlaat is echt: de handler is precies bedoeld om een
-klant van `payment_processing` terug op `active` te zetten zodra een SEPA-incasso
-rond is.
-
-**Waarom dit pijn doet:** een SEPA-incasso op een abonnement dat bij Stripe al
-`active` staat verandert niets aan de subscription, dus er komt ook geen
-`customer.subscription.updated`. Zonder `invoice.paid` komt er dan helemaal geen
-bericht, en blijft de klant op `payment_processing` staan tot
-`PROCESSING_GRACE_DAYS` (21) om is. Daarna ziet hij "your payment failed" terwijl
-hij gewoon betaald heeft. Zo stond klant 0b28c1ce op 18-09-2026 tien dagen voor
-zijn uitsluiting, met een betaalde factuur van EUR 19,99 bij Stripe.
-
-**Hoe toe te passen:** controleer bij elke klacht over toegang of betaalstatus
-eerst wélke gebeurtenissen het endpoint binnenkrijgt
-(`curl https://api.stripe.com/v1/webhook_endpoints`), niet alleen of de code de
-gebeurtenis aankan. Een handler in de code bewijst niet dat het bericht aankomt.
-
-Zie ook "stripe-api-versie-verplaatst-velden" en "sepa-incasso-bedenktijd-te-kort".
 
 ---
 
