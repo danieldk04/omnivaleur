@@ -23,7 +23,7 @@ Wat een concurrent over zichzelf zegt is marketing en niet bewezen; waar dat tel
 |---|---|---|
 | FLUF Connect (fluf.io) | 70+ kanalen, waaronder Vinted, Marktplaats, Kleinanzeigen, Leboncoin, Wallapop. £9 per maand (Starter), £29 (Pro), 7 dagen voor £1. Mobiele app met foto-naar-advertentie, AI-titel en beschrijving, maten omzetten, 46 valuta, 35 talen, bulk bewerken, biedingen. | Alles is eigen marketing. Zoeken naar onafhankelijke ervaringen met Marktplaats of 2dehands leverde niets op. De WordPress-plugin noemt alleen Depop, eBay, Etsy, Vinted. Of Marktplaats echt werkt is niet bewezen. Geen NL-pagina's in de sitemap. |
 | Crosslee (Chrome-extensie) | Vinted, 2dehands, Marktplaats. Gratis voor 3 per maand, €9,99 onbeperkt. | Kan volgens de zoekresultaten alleen lezen van Vinted, niet er op plaatsen. Niet zelf bekeken (Chrome Web Store wilde geen toestemmingsscherm voorbij). |
-| CrossList EU (Chrome-extensie) | Meerdere Europese kanalen, Marktplaats en 2dehands. Versie 1.0.0 van 01-07-2026. | Heel nieuw, geen details gevonden. |
+| ~~CrossList EU~~ | Geen concurrent: dit is Daniels eigen oude merknaam (bevestigd 28-10-2026, hij mag de naam door de claim van Crosslist niet meer gebruiken). Een Chrome Web Store-vermelding onder die naam (versie 1.0.0, juli 2026) staat mogelijk nog online. | Controleren of die vermelding weg moet. |
 | Ruit (ruit.es) | Vinted (23 landen), eBay, Shopify, Woo, PrestaShop. Voorraadsync, inbox, zoekalarmen, apps in 8 talen. | Geen Marktplaats of 2dehands. |
 | Resylr | eBay, Poshmark, Depop, Mercari, Vinted. Inbox, winst, bonnetjes, kilometers, apps. | Geen Marktplaats. |
 | Voolist | eBay, Etsy, Shopify, Woo, BigCommerce. Vinted "coming soon". Werkt in de EU. | Geen Vinted of Marktplaats. |

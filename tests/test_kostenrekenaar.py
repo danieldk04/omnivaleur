@@ -161,3 +161,18 @@ def test_sitemap_footer_en_routes():
     assert "/nl/kostenrekenaar" in footer and "/fee-calculator" in footer
     main = (REPO / "backend" / "main.py").read_text(encoding="utf-8")
     assert '"/fee-calculator"' in main and '"/nl/kostenrekenaar"' in main
+
+
+@node
+def test_dashboard_rekent_ebay_met_hetzelfde_tarief_als_de_openbare_rekenaar():
+    """Voor-en-na (28-10-2026): het dashboard had 13,25% + 0,35, de officiele
+    zakelijke tarieven zijn 11% + 0,35% + 0,45 per bestelling."""
+    app = (REPO / "frontend" / "app.html").read_text(encoding="utf-8")
+    m = re.search(r"key: 'ebay',\s+label: 'eBay',\s+commission: ([0-9.]+), fixed: ([0-9.]+)", app)
+    assert m, "eBay-regel van de margecalculator niet gevonden"
+    commissie, vast = float(m.group(1)), float(m.group(2))
+    for nodig in (45, 120, 300):
+        dashboard = (nodig + vast) / (1 - commissie)
+        model = _node(f"console.log(JSON.stringify(K.vraagprijs('ebay',{nodig},0,{{verkoper:'zakelijk'}})))")
+        assert dashboard == pytest.approx(model, abs=0.011), nodig
+    assert "13.25" not in app

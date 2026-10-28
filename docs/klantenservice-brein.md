@@ -389,6 +389,16 @@ Dubbele advertenties of een advertentie die verdwenen lijkt:
   geval een nieuwe eerste foto (andere hoek, andere achtergrond). Niet alles
   tegelijk opnieuw plaatsen; veel verwijderingen achter elkaar kunnen het nieuwe
   account ook verdacht maken.
+- Vinted zet het hele account stil ("Je mag tot en met [datum] niets verkopen",
+  melding "overtreding van onze algemene voorwaarden en de Catalogusregels"):
+  Vinted noemt in het scherm geen reden. Het moderatiebericht in de Vinted-inbox
+  (Berichten) vermeldt meestal welke regel en soms de link voor bezwaar; laat de
+  klant dat bericht lezen en doorsturen. Tot de einddatum niets proberen en geen
+  tweede account aanmaken (omzeilen kan tot een permanente blokkade leiden).
+  Wat Vinted zelf als oorzaak noemt: commercieel aandoend verkopen (standaard-
+  account is alleen privé), dezelfde foto of stockfoto's bij meerdere advertenties,
+  dezelfde artikelen meer dan eens, verkeerde categorie. Na de blokkade rustig
+  hervatten: weinig per dag, over de dag verspreid, eigen foto's per stuk.
 - Op Vinted komen titel en omschrijving precies zoals de klant ze in
   Omnivaleur schreef, zonder vertaling (sinds 09-10-2026; daarvoor werd alles
   naar het Engels vertaald). Wie Engels wil voor kopers in heel Europa zet bij

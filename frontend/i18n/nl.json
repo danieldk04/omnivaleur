@@ -858,7 +858,7 @@
  "eBay relist error:": "Fout bij opnieuw plaatsen op eBay:",
  "eBay relist error: {0}": "Fout bij opnieuw plaatsen op eBay: {0}",
  "eBay returned {0} suggestion{1}, none of which look like this item (marked ⚠️). Fill in gender and category above for a better match, or enter an ID manually.": "eBay gaf {0} {1|suggestie|suggesties}, maar geen ervan lijkt op dit item (gemarkeerd met ⚠️). Vul hierboven geslacht en categorie in voor een betere match, of vul zelf een ID in.",
- "eBay — 13.25% + €0.35": "eBay: 13,25% + €0,35",
+ "eBay — 11.35% + €0.45 (business)": "eBay: 11,35% + €0,45 (zakelijk)",
  "eBay — relist ended only.": "eBay: alleen beëindigde opnieuw plaatsen.",
  "eBay's duplicate-listing policy forbids bumping a live listing, so this only republishes listings that have already": "Het eBay-beleid tegen dubbele advertenties verbiedt het omhoogzetten van een live advertentie, dus dit plaatst alleen advertenties opnieuw die al",
  "Economics & Marketing": "Economie en marketing",
