@@ -20,6 +20,7 @@ import logging
 import re
 import time
 from collections import defaultdict
+from urllib.parse import quote
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
@@ -195,6 +196,7 @@ DOWNLOAD_BESTANDEN = {
 EMAIL_RE = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,255}\.[A-Za-z]{2,24}$")
 _per_ip: dict[str, list[float]] = defaultdict(list)
 MAX_PER_UUR = 8
+_aanmeld_per_adres: dict[str, list[float]] = defaultdict(list)
 
 
 class Aanmelding(BaseModel):
@@ -219,34 +221,55 @@ def _te_vaak(ip: str) -> bool:
     return False
 
 
+def _download_naam(taal: str) -> str:
+    return "voorraad-winst-nl" if taal == "nl" else "voorraad-winst-en"
+
+
 def _download_url(email: str, taal: str) -> str:
-    naam = "voorraad-winst-nl" if taal == "nl" else "voorraad-winst-en"
-    return f"/api/tools/download/{naam}?e={email}&t={_token(email, naam)}"
+    naam = _download_naam(taal)
+    return f"/api/tools/download/{naam}?e={quote(email, safe='')}&t={_token(email, naam)}"
+
+
+def _downloadmail(taal: str, url: str) -> tuple[str, str]:
+    if taal == "nl":
+        return ("Je voorraad- en winstspreadsheet van Omnivaleur",
+                "Hier is je spreadsheet. Open de link om hem te downloaden:\n\n" + url + "\n\n"
+                "In de Excel staat per artikel je winst en het aantal dagen dat het online staat, en een jaaroverzicht "
+                "per platform met een controle op de DAC7-grens.\n\n"
+                "Door de link te openen bevestig je dat dit jouw e-mailadres is. Je gaf aan dat je daarna af en toe tips "
+                "voor tweedehands verkopers wilt ontvangen. Afmelden kan altijd: stuur een mail naar info@omnivaleur.com "
+                "en we stoppen. Meer in het privacybeleid: " + SITE + "/privacy\n\n"
+                "Je hebt deze mail gekregen omdat iemand dit adres invulde op omnivaleur.com. Was jij dat niet, dan kun je hem negeren.")
+    return ("Your inventory and profit spreadsheet from Omnivaleur",
+            "Here is your spreadsheet. Open the link to download it:\n\n" + url + "\n\n"
+            "The Excel file shows your profit and the days online per item, and a yearly overview per platform with a "
+            "check against the DAC7 limit.\n\n"
+            "By opening the link you confirm this is your email address. You said you want to receive occasional tips for "
+            "second-hand sellers after that. You can stop any time: email info@omnivaleur.com and we stop. More in the "
+            "privacy policy: " + SITE + "/privacy\n\n"
+            "You got this email because someone entered this address on omnivaleur.com. If that was not you, you can ignore it.")
 
 
 @router.post("/api/tools/aanmelden")
 def aanmelden(body: Aanmelding, request: Request):
+    """De spreadsheet gaat per mail naar het opgegeven adres. Het adres wordt pas bewaard als de link in die
+    mail wordt geopend (zie download): zo staan er alleen adressen in de lijst die echt bij iemand horen."""
     taal = "nl" if body.taal == "nl" else "en"
     email = body.email.strip().lower()
-    if body.website:  # bot: doe alsof het lukte, bewaar niets
-        return {"ok": True, "download": "/tools"}
+    if body.website:  # bot: doe alsof het lukte, verstuur en bewaar niets
+        return {"ok": True, "verstuurd": True}
     if not EMAIL_RE.match(email):
         raise HTTPException(status_code=422, detail="email")
     if not body.toestemming:
         raise HTTPException(status_code=422, detail="toestemming")
     ip = (request.headers.get("cf-connecting-ip") or request.headers.get("x-forwarded-for", "").split(",")[0].strip()
           or (request.client.host if request.client else "-"))
-    if _te_vaak(ip):
+    if _te_vaak(ip) or _te_vaak_lijst(email, _aanmeld_per_adres, 86400, MAX_MAILS_PER_ADRES_PER_DAG):
         raise HTTPException(status_code=429, detail="te vaak")
-    rij = {"email": email, "taal": taal, "bron": body.bron[:40], "toestemming": True}
-    try:
-        get_db().table("tool_aanmeldingen").upsert(rij, on_conflict="email").execute()
-    except Exception as e:  # noqa: BLE001 — het adres mag niet verloren gaan
-        logger.error("tool_aanmeldingen: opslaan mislukt (%s), adres gaat per mail naar de eigenaar", e)
-        send_email("Tool-aanmelding niet opgeslagen",
-                   f"Opslaan in tool_aanmeldingen mislukte ({e}). Adres: {email}, taal {taal}, bron {body.bron}, "
-                   "toestemming gegeven. Staat de tabel er al? Zie schema.sql.")
-    return {"ok": True, "download": _download_url(email, taal)}
+    onderwerp, tekst = _downloadmail(taal, SITE + _download_url(email, taal))
+    if not send_email(onderwerp, tekst, to=email):
+        raise HTTPException(status_code=503, detail="mail")
+    return {"ok": True, "verstuurd": True}
 
 
 @router.get("/api/tools/download/{naam}", include_in_schema=False)
@@ -257,6 +280,18 @@ def download(naam: str, e: str = "", t: str = ""):
     pad = DOWNLOADS / bestand
     if not pad.exists():
         raise HTTPException(status_code=404, detail="Page not found")
+    # De link kwam per mail aan en is geopend: het adres is van de aanvrager. Nu pas bewaren (met de toestemming
+    # die bij de aanvraag is gegeven; zonder toestemming wordt er geen link gemaakt).
+    email = e.strip().lower()
+    taal = "nl" if naam.endswith("-nl") else "en"
+    try:
+        get_db().table("tool_aanmeldingen").upsert(
+            {"email": email, "taal": taal, "bron": "voorraadsheet", "toestemming": True}, on_conflict="email").execute()
+    except Exception as ex:  # noqa: BLE001 — het adres mag niet verloren gaan
+        logger.error("tool_aanmeldingen: opslaan mislukt (%s), adres gaat per mail naar de eigenaar", ex)
+        send_email("Tool-aanmelding niet opgeslagen",
+                   f"Opslaan in tool_aanmeldingen mislukte ({ex}). Adres: {email}, taal {taal}, bron voorraadsheet, "
+                   "toestemming gegeven en adres bevestigd via de link. Staat de tabel er al? Zie schema.sql.")
     return FileResponse(pad, filename=bestand,
                         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 

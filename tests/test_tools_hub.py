@@ -252,6 +252,7 @@ def client(monkeypatch):
     tools_api._per_ip.clear()
     tools_api._mail_per_ip.clear()
     tools_api._mail_per_adres.clear()
+    tools_api._aanmeld_per_adres.clear()
     mails = []
     naar = []
 
@@ -271,24 +272,51 @@ def _post(c, **kw):
     return c.post("/api/tools/aanmelden", json=body)
 
 
-def test_aanmelding_slaat_op_en_geeft_werkende_download(client):
+def _link(client, taal="nl"):
+    """De downloadlink uit de laatst verstuurde mail (relatief gemaakt voor de TestClient)."""
+    m = re.search(r"https://omnivaleur\.com(/api/tools/download/\S+)", client.naar[-1][2])
+    assert m, client.naar[-1][2]
+    return m.group(1)
+
+
+def test_aanmelding_mailt_de_spreadsheet_en_bewaart_het_adres_pas_bij_openen(client):
     r = _post(client)
-    assert r.status_code == 200
-    assert client.db.rijen == [({"email": "anna@voorbeeld.nl", "taal": "nl", "bron": "voorraadsheet", "toestemming": True}, "email")]
-    d = client.get(r.json()["download"])
-    assert d.status_code == 200 and d.content[:2] == b"PK"   # een xlsx is een zipbestand
+    assert r.status_code == 200 and r.json() == {"ok": True, "verstuurd": True}      # geen downloadlink in het antwoord
+    assert client.db.rijen == []                                                       # nog niets bewaard
+    to, onderwerp, tekst = client.naar[0]
+    assert to == "anna@voorbeeld.nl" and "spreadsheet" in onderwerp and "info@omnivaleur.com" in tekst
+    assert "*" not in tekst and "—" not in tekst and "–" not in tekst
+    d = client.get(_link(client))
+    assert d.status_code == 200 and d.content[:2] == b"PK"                             # een xlsx is een zipbestand
     assert "voorraad-winst-spreadsheet-nl.xlsx" in d.headers["content-disposition"]
-    en = client.get(_post(client, email="b@b.nl", taal="en").json()["download"])
+    assert client.db.rijen == [({"email": "anna@voorbeeld.nl", "taal": "nl", "bron": "voorraadsheet", "toestemming": True}, "email")]
+    _post(client, email="b+tag@b.nl", taal="en")
+    en = client.get(_link(client))                                                     # een + in het adres blijft heel
     assert en.status_code == 200 and "inventory-profit-spreadsheet-en.xlsx" in en.headers["content-disposition"]
+    assert client.db.rijen[-1][0]["email"] == "b+tag@b.nl" and client.db.rijen[-1][0]["taal"] == "en"
 
 
 def test_download_vraagt_een_geldig_token_voor_dat_adres(client):
-    url = _post(client).json()["download"]
+    _post(client)
+    url = _link(client)
     assert client.get(url).status_code == 200
-    assert client.get(url.replace("anna@voorbeeld.nl", "ander@voorbeeld.nl")).status_code == 404
+    n = len(client.db.rijen)
+    assert client.get(url.replace("anna%40voorbeeld.nl", "ander%40voorbeeld.nl")).status_code == 404
     assert client.get(re.sub(r"t=\w+", "t=" + "0" * 32, url)).status_code == 404
     assert client.get("/api/tools/download/voorraad-winst-nl").status_code == 404
     assert client.get("/api/tools/download/onbekend?e=a@b.nl&t=x").status_code == 404
+    assert len(client.db.rijen) == n                                                   # een afgewezen link bewaart niets
+
+
+def test_mail_die_niet_verstuurd_kan_worden_geeft_een_fout_en_bewaart_niets(client, monkeypatch):
+    monkeypatch.setattr(tools_api, "send_email", lambda *a, **k: False)
+    r = _post(client)
+    assert r.status_code == 503 and client.db.rijen == []
+
+
+def test_per_adres_hooguit_drie_aanvragen_per_dag(client):
+    codes = [_post(client, taal="nl").status_code for _ in range(5)]
+    assert codes == [200, 200, 200, 429, 429]
 
 
 @pytest.mark.parametrize("email", ["", "geen-adres", "a@b", "a b@c.nl", "@c.nl", "a@@c.nl"])
@@ -304,7 +332,7 @@ def test_zonder_toestemming_geen_download_en_geen_opslag(client):
 
 def test_lokveld_wordt_stil_genegeerd(client):
     r = _post(client, website="http://spam.example")
-    assert r.status_code == 200 and client.db.rijen == [] and "download/" not in r.json()["download"]
+    assert r.status_code == 200 and client.db.rijen == [] and client.naar == []
 
 
 def test_tempolimiet_per_ip(client):
@@ -314,12 +342,14 @@ def test_tempolimiet_per_ip(client):
 
 def test_kapotte_database_verliest_het_adres_niet(client):
     """Voor-en-na: de tabel bestaat pas als Daniel schema.sql heeft uitgevoerd. Tot dan mag een
-    aanmelding niet stil verdwijnen: het adres gaat per mail naar de eigenaar en de bezoeker
-    krijgt zijn download."""
+    bevestigd adres niet stil verdwijnen: het gaat per mail naar de eigenaar en de bezoeker
+    krijgt zijn bestand."""
+    _post(client)
+    url = _link(client)
     client.db.kapot = True
-    r = _post(client)
-    assert r.status_code == 200 and "/api/tools/download/" in r.json()["download"]
-    assert len(client.mails) == 1 and "anna@voorbeeld.nl" in client.mails[0][1]
+    d = client.get(url)
+    assert d.status_code == 200 and d.content[:2] == b"PK"
+    assert len(client.mails) == 2 and "anna@voorbeeld.nl" in client.mails[1][1]      # 1e mail: naar de bezoeker
 
 
 def test_tabel_staat_in_schema_sql():
