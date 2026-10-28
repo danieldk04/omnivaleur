@@ -183,3 +183,66 @@ def test_kies_staat_kiest_dichtstbijzijnde_gebruikte():
     assert _kies_staat("NEW", {"NEW_OTHER", "USED_EXCELLENT"}) == "NEW_OTHER"
     assert "NEW" not in _staat_alternatieven("USED_GOOD")
     assert _staat_alternatieven("NEW") == []
+
+
+# ── Kenmerken op de advertentie (Toon, 28-10-2026) ────────────────────────
+# Op ebay.nl stond zijn tapijt met "Brand: Handgemaakt", "Colour: groen", "Merk: GE".
+# "GE" kwam uit eBay's merkenlijst omdat "ge" in "handgemaakt" zit; de Engelse
+# Brand/Colour stonden dubbel naast eBay's eigen Nederlandse namen.
+
+def test_merk_handgemaakt_wordt_nooit_ge():
+    from backend.platforms.ebay import _best_allowed_match
+    assert _best_allowed_match("Handgemaakt", ["GE", "Nike", "Zara"], concept="brand") == "Handgemaakt"
+    assert _best_allowed_match("nike", ["GE", "Nike"], concept="brand") == "Nike"
+    assert _best_allowed_match("Lichtgrijs", ["Grijs", "Zwart"], concept="colour") == "Grijs"
+    assert _best_allowed_match("Zwart", ["Zwart/wit"], concept="colour") == "Zwart/wit"
+
+
+def test_engelse_kenmerken_gaan_onder_de_naam_van_de_rubriek():
+    from backend.platforms.ebay import _lokaliseer_aspecten
+    alle = [{"name": "Merk", "values": ["Nike"], "vrij": True, "verplicht": True},
+            {"name": "Kleur", "values": ["Groen", "Blauw"], "vrij": False, "verplicht": False}]
+    a = {"Brand": ["Handgemaakt"], "Colour": ["groen"], "Merk": ["Handgemaakt"], "Type": ["Onbekend"]}
+    _lokaliseer_aspecten(a, alle)
+    assert a == {"Merk": ["Handgemaakt"], "Kleur": ["Groen"], "Type": ["Onbekend"]}, a
+
+
+def test_past_de_waarde_niet_in_de_lijst_dan_blijft_het_engelse_kenmerk_staan():
+    from backend.platforms.ebay import _lokaliseer_aspecten
+    alle = [{"name": "Kleur", "values": ["Groen", "Blauw"], "vrij": False, "verplicht": False}]
+    a = {"Colour": ["turkoois"]}
+    _lokaliseer_aspecten(a, alle)
+    assert a == {"Colour": ["turkoois"]}, "een lijst die de waarde niet kent mag de plaatsing niet breken"
+    _lokaliseer_aspecten(a, None)
+    assert a == {"Colour": ["turkoois"]}
+
+
+def test_echt_antwoord_van_ebay_voor_rubriek_45510_wordt_goed_gelezen(monkeypatch):
+    """Gemeten 28-10-2026 met Toons eigen toegang: dit antwoord gaf eBay voor 45510."""
+    echt = {"itemConditionPolicies": [{"categoryTreeId": "146", "categoryId": "45510",
+            "itemConditionRequired": True, "itemConditions": [
+                {"conditionId": "1000", "conditionDescription": "Nieuw met labels"},
+                {"conditionId": "1500", "conditionDescription": "Nieuw zonder labels"},
+                {"conditionId": "1750", "conditionDescription": "Nieuw met defecten"},
+                {"conditionId": "3000", "conditionDescription": "Tweedehands"}]}]}
+
+    class C:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def get(self, url, **kw):
+            return _Antwoord(200, echt)
+
+    async def token():
+        return "t"
+
+    monkeypatch.setattr(httpx, "AsyncClient", lambda *a, **kw: C())
+    monkeypatch.setattr(ebay_mod, "_get_app_token", token)
+    monkeypatch.setattr(ebay_mod, "_toegestane_staten_cache", {})
+    staten = asyncio.run(ebay_mod._toegestane_staten("45510", "EBAY_NL"))
+    assert staten == {"NEW", "NEW_OTHER", "NEW_WITH_DEFECTS", "USED_EXCELLENT"}, staten
+    from backend.platforms.ebay import _kies_staat
+    assert _kies_staat("USED_GOOD", staten) == "USED_EXCELLENT"
