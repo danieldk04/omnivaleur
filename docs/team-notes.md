@@ -18324,3 +18324,8 @@ Daniel meldt dat het GitHub-geheim SUPABASE_KEY (bijgewerkt 26-10 11:02) niet me
 ## 28-10-2026 (avond): Toon, eBay-prijs en foto's
 - Toon vroeg waar hij de eBay-prijs aanpast (Omnivaleur of eBay) en haalde twee advertenties weg omdat de foto's nog de oude uit de Woo waren. Gemeten: een prijswijziging in het Omnivaleur-bewerkscherm (vinkje "Different price per platform", veld eBay) gaat via update_listing_price naar de live eBay-advertentie; foto's en tekst gaan niet naar een al live eBay-advertentie, en foto's die in de Woo veranderen komen niet vanzelf in Omnivaleur (de kopie stamt van de import). Op de te-bouwen-lijst gezet.
 - Op 28-10 stonden bij Toon drie actieve eBay-advertenties (tapijt, Kelim 35 euro, Perzisch 65 euro met 1 foto). Welke twee hij weghaalde is niet bevestigd: beide nieuwe stonden om 17:00 UTC nog actief in onze database.
+
+## 28-10-2026 (vervolg): tools-hub live bewezen
+- Railway had een eigen storing ("deployments stuck in initializing"); de bouw van 6efd66cc stond ~1 uur in de wachtrij en is daarna live gegaan. Alle 14 toolpagina's, de assets, de 301-doorsturing van de oude kostenrekenaaradressen, de sitemap, het menu en llms.txt gemeten op omnivaleur.com.
+- Tabel tool_aanmeldingen door Claude aangemaakt in Daniels Supabase (project crosslist-eu), via de SQL-editor. Echte aanmelding op productie getest met claude-test-tools@omnivaleur.com: rij stond erin (toestemming true), download gaf een echt xlsx-bestand, zonder toestemming 422, verkeerd token 404. De testrij is daarna verwijderd (tabel staat op 0).
+- Open: wat aanmelders per mail krijgen bepaalt Daniel later. Tot dan verstuurt niets naar de lijst.
