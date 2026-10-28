@@ -18245,3 +18245,10 @@ Daniel meldt dat het GitHub-geheim SUPABASE_KEY (bijgewerkt 26-10 11:02) niet me
 - Geen mailtje (binnen 44 uur gemaild of niets veranderd): cf1284b8, 12fc61d0, da176583, c184e384 (proef 29-10 om), 8adaff42, 45f9caba (proef vandaag 19:26 om).
 - Mailrapport: 6 mails van 26 en 27-10, 3 echt geopend, 0 klik, 0 antwoord; ffpd7n2 en handelsonderneming038 logden daarna in.
 - Vervolg: 656a5041 (imelene@proton.me) is door Daniel zelf aangemaakt (Daniel, 28-10). Geen klant, geen beveiligingsprobleem.
+
+## 28-10-2026: Rubrieken zonder betaald taalmodel (Daniel: "probeer eerst alles")
+- Gebouwd (4ba485fa, extensie 1.0.406): tak "hobby" met rubriek Kledingapplicaties en Hotfix (Marktplaats en 2dehands 1099/2855, gemeten op beide sites), en een woordenlijst voor strijkemblemen en stropdassen. Bij gollem.joukes (f0291981) krijgen 137 van de 149 lege artikelen zo een rubriek (121 al ingevuld door een tussenversie die de auto-push live zette, alle 121 gelijk aan de definitieve regel). Gecontroleerd op 1.195 titels met die woorden bij andere klanten: geen bestaande rubriek wordt overschreven, sleutelhangers, militaire emblemen en merchandise vallen erbuiten.
+- Marktplaats en 2dehands krijgen de nummers van de server mee, dus werken ook met extensie 1.0.404. Vinted wacht op 1.0.406 (Web Store-upload door Daniel).
+- Rubriek uit Vinted overnemen: de Vinted-scan stuurt de rubriek van Vinted niet mee (alleen titel, prijs, merk, maat, staat, kleur). Bruikbaar, maar vraagt een extensiewijziging plus een vertaaltabel; nog niet gebouwd.
+- Gratis Google spreiden: zinloos, gemeten op /health: 2.606x HTTP 429 en 0x 200 sinds de laatste herstart. De gratis portie gaat helemaal op aan vertalen bij grote plaatsingsrondes.
+- Proeven: tests/test_strijkemblemen_en_stropdassen.py (faalt op de oude code). Volle ronde: 8 rode Python-proeven en 19 rode JS-proeven, die alle al rood waren vóór deze wijziging (gemeten op een schone kopie van 110c1be5).

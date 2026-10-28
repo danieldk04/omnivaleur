@@ -17,11 +17,38 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## strijkemblemen-rubriek-zonder-model
+
+*28-10-2026 — "28-10: tak hobby (MP/2dehands 1099/2855) + woordenlijst voor strijkemblemen en stropdassen; gratis Google-sleutel gaf 2.606x 429 en 0x 200, spreiden helpt niet"*
+
+Op 28-10-2026 bleven bij gollem.joukes (f0291981) 149 van 243 artikelen zonder rubriek: 123 strijkemblemen, 14 stropdassen. Onze indeling had geen plek voor emblemen en de rubriekvraag kreeg van Google alleen HTTP 429 (/health: 2.606x 429, 0x 200 sinds de herstart; de nachtronde van 05:00 deed nul pogingen). Claude mag rubriekvragen bewust niet doen (kosten, 09-10).
+
+Gebouwd (4ba485fa, extensie 1.0.406): tak "hobby", rubriek "hobby kledingapplicaties en strijkemblemen", gemeten op marktplaats.nl en 2dehands.be/q/strijkembleem: Hobby en Vrije tijd 1099 > Kledingapplicaties en Hotfix 2855. Woordenlijst `_strijkembleem_of_stropdas` in imports.py: alleen strijk-/naaiwoorden zonder kledingwoord en zonder merchandise; stropdas gaat voor. Een losse "patch" of "embleem" is te breed (bandsleutelhangers, militair embleem, kleed met applicatie). Server stuurt de MP-nummers mee in de uitgaande opdracht (`_MP_NUMMERS_VAN_DE_SERVER` in jobs.py), dus Marktplaats/2dehands werken met elke extensie; Vinted wacht op 1.0.406.
+
+**Why:** de gratis Google-portie gaat op aan vertalen bij grote plaatsingsrondes (Goudlief), dus de rubriekvraag krijgt niets. Spreiden over de dag helpt dan niet.
+**How to apply:** een terugkerend soort artikel zonder rubriek los je eerst op met een gemeten rubriek plus woordenlijst; meet de regel op alle titels met die woorden in de database voor je hem live zet. Let op "auto-push-zet-tussenstand-live": de eerste, te brede versie stond al live voordat de tests klaar waren. Zie ook "gemini-tegoed-op".
+
+---
+
+## vinted-account-stilgelegd-reden-onbekend
+
+*28-10-2026 — 28-10 Janneke: Vinted legt verkoop stil tot 31-10 zonder reden op het scherm; zo onderzoek je het en wat je wel en niet kunt beloven*
+
+Janneke (31d28378) kreeg 27-10 "Je mag tot en met 31-10-2026 niets verkopen" (algemene voorwaarden + Catalogusregels). Het scherm noemt geen regel en geen advertentie.
+
+Onderzoek dat werkt: jobs per user_id (kolommen created_at, done_at, payload; geen completed_at), listings via item_id, extension_heartbeat.last_seen. Gemeten: 309 plaatsingen in 11 dagen, tempo van 215 s naar ~75 s tussentijd na 19-10, 155 advertenties met een gedeelde eerste foto, Calm mode uit. Vinteds Catalogusregels (vinted.com/catalog-rules): sectie 1 één advertentie per artikel, sectie 2 geen stockfoto's, sectie 4 commercieel verkopen met accountbeperking (7 dagen als voorbeeld).
+
+**Why:** de oorzaak is niet te bewijzen vanaf onze kant; alleen het moderatiebericht in de Vinted-inbox van de klant noemt de regel. Zeg dat eerlijk in plaats van een oorzaak aan te wijzen.
+
+**How to apply:** vraag de klant het Vinted-bericht door te sturen, laat niets forceren en geen tweede account maken, hervat daarna met Calm mode en weinig per dag. Zie "klantdata-niet-op-eigen-initiatief" (haar advertenties of instellingen niet zelf aanpassen) en "calm-mode".
+
+---
+
 ## pro-feed-van-klant-geeft-dubbelen
 
 *28-10-2026 — Klant met eigen Marktplaats Pro-feed (titels "Winkelnaam ...") krijgt dubbele advertenties bij bulk plaatsen; server kent alleen eigen rijen*
 
-28-10-2026, Goudlief (Dahli): na Pro alle 4.047 artikelen geselecteerd en Plaatsen op Marktplaats en 2dehands. Haar Marktplaats had al 3.599 advertenties via een eigen Pro/Admarkt-koppeling (titel "Goudlief <producttitel afgekapt> (rubriek)", datum steeds "Vandaag", websitelink via admarkt.marktplaats.nl/bside). De dubbelcontrole in crosslist.py kijkt alleen naar onze eigen listings-rijen, dus vrijwel elke Marktplaats-opdracht werd een dubbele advertentie. 2dehands had die feed niet.
+28-10-2026, Goudlief (Dahli): na Pro alle 4.047 artikelen geselecteerd en Plaatsen op Marktplaats en 2dehands. Zijn Marktplaats had al 3.599 advertenties via een eigen Pro/Admarkt-koppeling (titel "Goudlief <producttitel afgekapt> (rubriek)", datum steeds "Vandaag", websitelink via admarkt.marktplaats.nl/bside). De dubbelcontrole in crosslist.py kijkt alleen naar onze eigen listings-rijen, dus vrijwel elke Marktplaats-opdracht werd een dubbele advertentie. 2dehands had die feed niet.
 
 **Why:** een feed via een API-partner bestaat voor ons niet; de scan van "Mijn advertenties" ziet zakelijke advertenties ook niet. Zie "admarkt-pro-mag-niet-geautomatiseerd" en "admarkt-zakelijke-marktplaats".
 
