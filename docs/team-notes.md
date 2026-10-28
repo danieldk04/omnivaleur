@@ -18292,3 +18292,8 @@ Daniel meldt dat het GitHub-geheim SUPABASE_KEY (bijgewerkt 26-10 11:02) niet me
 - Tapijt stond op ebay.nl met "Merk: GE" en dubbele Engelse kenmerken (Brand, Colour). Oorzaak: een los stukje ("ge" in "handgemaakt") telde als merkmatch. Gerepareerd en kenmerken gaan nu onder de naam van de rubriek (Merk, Kleur) als de waarde in eBay's lijst past. Het live tapijt is niet aangepast (Toon zette de prijs zelf op 25 en een herpublicatie zou dat terugzetten).
 - Kosten eBay.nl voor zakelijke verkoper (ebay.nl help 4809, excl. btw): 11% over verkoopbedrag (inclusief verzendkosten) tot EUR 990 per object, 2% erboven, plus EUR 0,45 per bestelling boven EUR 10 (EUR 0,35 eronder), plus 0,35% wettelijke kosten. Particulier is 11% + EUR 0,35 + 0,42%. Toon staat als "Zakelijk" ingeschreven.
 - Prijs alleen op eBay verhogen: per artikel kan (price_ebay), voor alles tegelijk niet. Op de te-bouwen-lijst gezet, status Overwegen.
+
+## 28-10-2026: Concurrentenonderzoek
+- Daniel vroeg een grondig onderzoek naar de grote concurrenten (Vendoo, Crosslist, List Perfectly, Nifty, Flyp, OneShop, Zipsale, SellRaze, Closo, plus Europese: FLUF, Crosslee, CrossList EU, Ruit, Resylr, Voolist). Volledig rapport: docs/concurrentenonderzoek-28-10-2026.md.
+- Kern: de Amerikaanse partijen sluiten Europa uit (Crosslist zegt het letterlijk) of kennen Marktplaats en 2dehands niet. Enige echte Europese rivaal is FLUF Connect (claimt Marktplaats en Vinted, vanaf 9 pond, met app en AI uit foto), maar dat is alleen hun eigen claim, nog niet zelf getest.
+- Grootste gaten bij ons: AI uit foto, mobiele toegang, sjablonen en bulk-tekst bewerken, gratis openbare tools (SEO), reviews/succesverhalen op de site. Op de te-bouwen-lijst gezet; niets gebouwd.
