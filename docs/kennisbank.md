@@ -31,6 +31,10 @@ Fix (ebay.py): `_toegestane_staten` haalt per rubriek de toegestane conditie-ID'
 
 Live bewezen 28-10 (met Daniels ja): Toons rij van 'error' op 'pending' gezet, de uurronde `hervat_afgekapte_api_publicaties` (elke 10 min, serverkant, met zijn eigen eBay-toegang) publiceerde het tapijt in één poging: ebay.nl/itm/920082363961, offer 328197914011. Dat is de veilige weg om een mislukte API-plaatsing (eBay of Shopify) opnieuw te laten lopen zonder lokaal eBay aan te roepen. Oude rij bewaard in ~/.omnivaleur/herstel-toon-ebay-listing-28-10.json.
 
+**Gemeten 28-10 (aanvulling, vervangt "niet live gemeten" hierboven):** met Toons nog geldige access_token alleen-lezen opgevraagd (GET, nooit verversen): getItemConditionPolicies EBAY_NL werkt met een gebruikerstoken, Taxonomy geeft 403 met een gebruikerstoken. In alle 19 vaste NL-rubrieken van Toon (1.487 van 1.624 artikelen) is USED_GOOD niet toegestaan en USED_EXCELLENT wel; oude code liet dus elk "fair" (944) en "poor" (36) mislukken. Controleer een token eerst op `token_expires_at` in platform_credentials en print hem nooit.
+
+Tweede bug, zelfde dag: `_best_allowed_match` koos "GE" als merk voor "Handgemaakt" (substring "ge" in "handgemaakt"), en Brand/Colour (Engels) stonden dubbel naast Merk/Kleur op ebay.nl. Nu alleen hele woorden, nooit los stukje bij merk, en `_lokaliseer_aspecten` verplaatst de Engelse kenmerken onder eBay's naam als de waarde in de gesloten lijst past. Kosten eBay.nl zakelijk: 11% (+2% boven EUR 990) + EUR 0,45 per bestelling + 0,35%, over prijs plus verzendkosten, excl. btw.
+
 ---
 
 ## klantbericht-geen-schuld-aantrekken
