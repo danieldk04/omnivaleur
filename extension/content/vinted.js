@@ -94,6 +94,9 @@
     "goud":         "Gold",
     "multi":        "Various",
     "veelkleurig":  "Various",
+    // Ontbrak tot 28-10-2026: op een Engelse Vinted-pagina zocht hij dan het
+    // Nederlandse woord tussen Engelse tegels (45f9caba, kerstbeeld).
+    "meerkleurig":  "Various",
     "transparant":  "Clear",
     // English passthrough (dashboard sends English for many items) → canonical
     // Vinted label, so casing/normalisation is deterministic.
