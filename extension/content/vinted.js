@@ -4307,6 +4307,8 @@
       "donkergroen": "dark green", "khaki": "khaki", "bruin": "brown", "mosterdgeel": "mustard",
       "geel": "yellow", "zilver": "silver", "goud": "gold", "meerkleurig": "various",
       "transparant": "clear",
+      // Engelse lijstvorm: de tegel VARIOUS heet daar "Multi" (gemeten 27-10-2026).
+      "multi": "various",
     };
     const code = el.querySelector('[data-testid^="color_code_"]')?.dataset.testid || "";
     const title = el.querySelector('[class*="web_ui__Cell__title"]');
