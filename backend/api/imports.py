@@ -1098,6 +1098,41 @@ def rubriek_uit_marktplaats(row: dict) -> dict:
     if not gevonden:
         return {}
     return {"gender": gevonden[0], "category": gevonden[1]}
+
+
+# WAT DE WINKEL ZELF ZEGT: HET PRODUCTTYPE (28-10-2026, gemeten).
+#
+# Van de 542 artikelen zonder rubriek kwamen er 455 uit Shopify. Bij
+# Voordeelsieraden (164) en Goudlief (133) waren het bijna allemaal sieraden met
+# een keurig producttype ("Kettingen", "Ringen", "Dames sieraden/Kettingen/
+# Hangerkettingen"), maar de woordenlijst kent geen sieraden en Google gaf alleen
+# 429. Alleen soorten waarvan de vertaling zeker is; "Overig", "Horloges" (dames of
+# heren?) en "Verpakking en weergave" blijven aan de rubriekvraag.
+_RUBRIEK_VAN_PRODUCTTYPE = {
+    **dict.fromkeys(("kettingen", "ketting", "hangerkettingen", "colliers", "collier"),
+                    ("sieraden", "sieraden kettingen")),
+    **dict.fromkeys(("hangers", "hanger", "kettinghangers", "kettinghanger"),
+                    ("sieraden", "sieraden kettinghangers")),
+    **dict.fromkeys(("ringen", "ring"), ("sieraden", "sieraden ringen")),
+    **dict.fromkeys(("armbanden", "armband"), ("sieraden", "sieraden armbanden")),
+    **dict.fromkeys(("oorbellen", "oorbel", "oorknopjes"), ("sieraden", "sieraden oorbellen")),
+    **dict.fromkeys(("broches", "broche"), ("sieraden", "sieraden broches")),
+    **dict.fromkeys(("bedels", "bedel"), ("sieraden", "sieraden bedels")),
+    **dict.fromkeys(("enkelbandjes", "enkelbandje"), ("sieraden", "sieraden enkelbandjes")),
+    **dict.fromkeys(("sjaals", "sjaal", "zomersjaals"), ("unisex", "unisex accessoires")),
+}
+
+
+def rubriek_uit_producttype(product_type) -> dict:
+    """{'gender', 'category'} uit het producttype van de winkel, anders {}.
+    Bij een pad ("Dames sieraden/Kettingen/Hangerkettingen") telt het meest
+    specifieke stuk dat we kennen."""
+    delen = [" ".join(d.lower().split()) for d in str(product_type or "").split("/")]
+    for deel in reversed(delen):
+        gevonden = _RUBRIEK_VAN_PRODUCTTYPE.get(deel)
+        if gevonden:
+            return {"gender": gevonden[0], "category": gevonden[1]}
+    return {}
 # Rubrieken met jongen of meisje bij baby en peuter komen alleen uit het label van
 # de winkel (zie geslacht_uit_labels), nooit uit de rubriekvraag: het model zou
 # daar raden, en dat raden zette bij Janneke 140 van 474 artikelen verkeerd om.
