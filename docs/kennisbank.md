@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## klantbericht-geen-schuld-aantrekken
+
+*28-10-2026 — Daniel 28-10-2026: in klantberichten nooit "sorry", "ligt aan ons" of "mijn fout" bij een fout in ons systeem; feitelijk zeggen wat er was en wat nu kan*
+
+In concepten voor klanten (Toon-bericht, 28-10-2026) neem ik de schuld niet op me met woorden als "sorry", "excuus", "dat lag aan ons", "dat was onze fout" of "belangrijk dat ik dit zeg". Ook als de fout wel in ons systeem zat.
+
+**Why:** Daniel vindt dat zulke formuleringen de klant op een verkeerd spoor zetten en hem kleiner maken dan nodig. Een fout in het systeem mag gewoon genoemd worden, alleen niet als bekentenis.
+
+**How to apply:** schrijf neutraal en feitelijk: wat er speelde (zonder wie het deed), dat het is opgelost, wat de klant nu kan doen. Bijvoorbeeld "Dit is aangepast, je kunt het opnieuw proberen" in plaats van "Het zat bij ons, sorry". Laat bij een eerste en tweede versie zien wat er veranderd is als hij erom vraagt. Staat ook in docs/schrijfstijl-daniel.md. Zie "klantmail-kort-en-menselijk" en "concepten-in-de-chat".
+
+---
+
 ## ebay-staat-per-rubriek
 
 *28-10-2026 — "28-10-2026 Toon: eBay-tapijt \"mislukt\" omdat USED_GOOD niet in rubriek 45510 mag; nu staat per rubriek via Metadata API + terugval; nooit gebruikt als nieuw"*

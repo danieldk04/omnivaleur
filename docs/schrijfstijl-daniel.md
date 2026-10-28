@@ -145,3 +145,7 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - 26-10-2026: Gekeken: 133 mails in Verzonden (3 dagen), 34 van Daniel, 27 al verwerkt; 7 nieuw, 5 met concept (4 hoorden bij een andere draad, niet vergelijkbaar). Nieuw: in de Engelse creatormail schrapte hij één belofte-zin (1x, onder Nog te leren).
 - 27-10-2026: Gekeken: 81 mails in Verzonden (3 dagen), 30 van Daniel, 30 al verwerkt; 0 nieuw, 0 met concept. Niets te leren.
 - 28-10-2026: Gekeken: 85 mails in Verzonden (3 dagen), 27 van Daniel, 7 al verwerkt; 20 nieuw, 10 met concept (7 vergelijkbaar, 3 hoorden bij een andere draad). Nieuw: vaste regels voor creator-antwoorden over geld (eerlijk-opening weg, "verhoging mogelijk", vast slot over succesvolle samenwerking, 6 van 6), check-up aangepast.
+
+## 28-10-2026: geen schuld aantrekken (Daniel spreekt de regel uit)
+- Geen "sorry", "excuus", "dat lag aan ons", "dat was onze fout" of "belangrijk dat ik dit zeg", ook niet als de fout in ons systeem zat. Dit staat los van de oudere regel hierboven over een fout van ons: ook daar niet als bekentenis.
+- Wel: neutraal zeggen wat er speelde, dat het is opgelost, en wat de klant nu kan doen. "Dit is aangepast, je kunt het opnieuw proberen."
