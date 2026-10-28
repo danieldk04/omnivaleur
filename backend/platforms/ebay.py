@@ -2227,3 +2227,107 @@ def _map_condition(condition: str) -> str:
         "fair": "USED_GOOD",
         "poor": "USED_ACCEPTABLE",
     }.get(condition, "USED_EXCELLENT")
+
+
+# STAAT PER RUBRIEK (Toon, 28-10-2026).
+#
+# Welke staten eBay toelaat verschilt per rubriek. Kleding kent Goed, Heel goed en
+# Acceptabel, maar een rubriek als Tapijten (45510) kent alleen Nieuw en Gebruikt.
+# "Gebruikt" heet in de API USED_EXCELLENT (3000). Wij stuurden bij "fair" altijd
+# USED_GOOD (5000): het inventarisitem werd geaccepteerd, de offer ook, en pas bij
+# het publiceren kwam "invalid item condition information". Toon zag "mislukt".
+# De conditie-ID's en hun namen: developer.ebay.com condition-id-values.
+_ID_NAAR_STAAT = {
+    "1000": "NEW", "1500": "NEW_OTHER", "1750": "NEW_WITH_DEFECTS",
+    "2000": "CERTIFIED_REFURBISHED", "2010": "EXCELLENT_REFURBISHED",
+    "2020": "VERY_GOOD_REFURBISHED", "2030": "GOOD_REFURBISHED",
+    "2500": "SELLER_REFURBISHED", "2750": "LIKE_NEW",
+    "2990": "PRE_OWNED_EXCELLENT", "3000": "USED_EXCELLENT",
+    "3010": "PRE_OWNED_FAIR", "4000": "USED_VERY_GOOD", "5000": "USED_GOOD",
+    "6000": "USED_ACCEPTABLE", "7000": "FOR_PARTS_OR_NOT_WORKING",
+}
+# Van netjes naar slijtage. Dichtstbijzijnde toegestane staat wint, maar een
+# gebruikt stuk wordt nooit als nieuw aangeboden.
+_GEBRUIKT_LADDER = ["USED_EXCELLENT", "USED_VERY_GOOD", "USED_GOOD", "USED_ACCEPTABLE"]
+_NIEUW_STATEN = {"NEW", "NEW_OTHER", "NEW_WITH_DEFECTS", "LIKE_NEW"}
+_toegestane_staten_cache: dict = {}
+
+
+async def _toegestane_staten(category_id: str, marktplaats: str | None = None) -> set[str] | None:
+    """De staten die eBay voor deze rubriek toelaat (Metadata API, getItemConditionPolicies),
+    als ConditionEnum-namen. None als dat niet te weten is; raised nooit, want
+    zonder antwoord plaatsen we gewoon zoals voorheen."""
+    marktplaats = marktplaats or settings.ebay_marketplace_id
+    sleutel = (marktplaats, str(category_id))
+    if sleutel in _toegestane_staten_cache:
+        return _toegestane_staten_cache[sleutel]
+    try:
+        token = await _get_app_token()
+        async with httpx.AsyncClient(timeout=_EBAY_TIMEOUT) as client:
+            resp = await client.get(
+                f"{METADATA_API}/marketplace/{marktplaats}/get_item_condition_policies",
+                params={"filter": f"categoryIds:{{{category_id}}}"},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Kon eBay-staten niet ophalen voor categorie {category_id}: {e}")
+        return None
+    staten: set[str] = set()
+    for beleid in data.get("itemConditionPolicies") or []:
+        if str(beleid.get("categoryId")) != str(category_id):
+            continue
+        for s in beleid.get("itemConditions") or []:
+            naam = _ID_NAAR_STAAT.get(str(s.get("conditionId")))
+            if naam:
+                staten.add(naam)
+    if not staten:
+        return None
+    _toegestane_staten_cache[sleutel] = staten
+    return staten
+
+
+def _kies_staat(gewenst: str, toegestaan: set[str] | None) -> str:
+    """De staat die we sturen: de gewenste als eBay die toelaat, anders de dichtstbijzijnde
+    toegestane. Gebruikt blijft gebruikt; als de rubriek geen gebruikte staat kent,
+    weigeren we met een heldere tekst in plaats van het als nieuw te plaatsen."""
+    if not toegestaan or gewenst in toegestaan:
+        return gewenst
+    if gewenst in _GEBRUIKT_LADDER:
+        i = _GEBRUIKT_LADDER.index(gewenst)
+        for naam in sorted((n for n in _GEBRUIKT_LADDER if n in toegestaan),
+                           key=lambda n: abs(_GEBRUIKT_LADDER.index(n) - i)):
+            return naam
+        for naam in ("PRE_OWNED_EXCELLENT", "PRE_OWNED_FAIR"):
+            if naam in toegestaan:
+                return naam
+        raise RuntimeError(
+            "eBay only allows new items in this category, so this second-hand item "
+            "cannot be listed there. Pick another eBay category and publish again.")
+    if gewenst == "NEW":
+        for naam in ("NEW_OTHER", "NEW_WITH_DEFECTS"):
+            if naam in toegestaan:
+                return naam
+    return gewenst
+
+
+def _staat_alternatieven(gebruikt: str) -> list[str]:
+    """Volgorde waarin we bij een geweigerde staat nog proberen, dichtstbij eerst."""
+    if gebruikt not in _GEBRUIKT_LADDER:
+        return []
+    i = _GEBRUIKT_LADDER.index(gebruikt)
+    return sorted((n for n in _GEBRUIKT_LADDER if n != gebruikt),
+                  key=lambda n: abs(_GEBRUIKT_LADDER.index(n) - i))
+
+
+def _is_staatfout(resp: httpx.Response) -> bool:
+    """25021: de staat past niet bij de rubriek. Alleen de tekst is betrouwbaar genoeg
+    om aan te leunen (het ID is niet uit eBay's documentatie bevestigd)."""
+    try:
+        return any(
+            str(e.get("errorId")) == "25021" or "item condition" in
+            (e.get("message") or e.get("longMessage") or "").lower()
+            for e in (resp.json().get("errors") or []))
+    except Exception:  # noqa: BLE001
+        return False
