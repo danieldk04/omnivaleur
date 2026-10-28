@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## pro-feed-van-klant-geeft-dubbelen
+
+*28-10-2026 — Klant met eigen Marktplaats Pro-feed (titels "Winkelnaam ...") krijgt dubbele advertenties bij bulk plaatsen; server kent alleen eigen rijen*
+
+28-10-2026, Goudlief (Dahli): na Pro alle 4.047 artikelen geselecteerd en Plaatsen op Marktplaats en 2dehands. Haar Marktplaats had al 3.599 advertenties via een eigen Pro/Admarkt-koppeling (titel "Goudlief <producttitel afgekapt> (rubriek)", datum steeds "Vandaag", websitelink via admarkt.marktplaats.nl/bside). De dubbelcontrole in crosslist.py kijkt alleen naar onze eigen listings-rijen, dus vrijwel elke Marktplaats-opdracht werd een dubbele advertentie. 2dehands had die feed niet.
+
+**Why:** een feed via een API-partner bestaat voor ons niet; de scan van "Mijn advertenties" ziet zakelijke advertenties ook niet. Zie "admarkt-pro-mag-niet-geautomatiseerd" en "admarkt-zakelijke-marktplaats".
+
+**How to apply:** voor je een zakelijke klant in bulk naar Marktplaats laat plaatsen: haal de openbare lijst op (`/lrp/api/search?sellerIds[]=<id>`, let op de []), tel titels die met de winkelnaam beginnen. Match op titelbegin na het weghalen van "Winkelnaam " en "(rubriek)", want feedtitels zijn afgekapt met "...". Exacte titelvergelijking gaf 0 treffers terwijl het er honderden waren. Zie "dubbele-advertentie-titel-en-foto".
+
+---
+
 ## stripe-webhook-mist-invoice-events
 
 *28-10-2026 — "Het Stripe-webhookendpoint luisterde niet naar invoice.paid, waardoor een betalende SEPA-klant op payment_processing bleef hangen; op 18-09-2026 aangezet"*
