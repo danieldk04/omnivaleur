@@ -18274,3 +18274,8 @@ Daniel meldt dat het GitHub-geheim SUPABASE_KEY (bijgewerkt 26-10 11:02) niet me
 
 ## 28-10-2026: overdracht volledig bijgewerkt (Daniel: "100% gesynchroniseerd")
 - docs/overdracht.md herschreven met de stand van 28-10: wat sinds 15-10 is afgerond, wat open staat, routines met echte tijden, en dat de tweede ontwikkelaar een nieuwe sb_secret_-sleutel nodig heeft (oude ey-sleutels uit, RLS aan). Gemeten voor het schrijven: Toon 0 van 1.624 artikelen met bronfoto (was 241), Web Store 1.0.404 tegen repo 1.0.406, GitHub-geheim SUPABASE_KEY vervangen op 28-10 09:08 en Leadmachine daarna zonder sleutelfout. Opgevallen: sinds 20-10 geen onboarding-middag of middagronde meer in team-notes. CLAUDE.md en de onboardingroutine noemen nu 11:00 voor de ochtendronde (was 06:30).
+
+## 28-10-2026: Melding bij titels boven 60 tekens (Mieneke, Voordeelsieraden)
+- Mieneke vroeg om een melding bij import als de titel langer is dan 60 tekens, zoals nu "Voeg rubriek toe voor Marktplaats". Plaatsen kortte lange titels al zelf in (07-10, _mp_titel in jobs.py), maar de klant zag dat vooraf niet.
+- Gebouwd: in Items verschijnt onder het artikel een gele melding "Titel is N tekens, Marktplaats en 2dehands nemen er 60", naast de bestaande melding over ontbrekende velden. Alleen als Marktplaats of 2dehands gekoppeld is en het artikel daar nog niet live staat. Blokkeert niets. Proef: tests/lange-titel-melding-test.js (faalt op de oude pagina). Geen "Wat is er nieuw"-venster: kleine aanvulling.
+- Nog niet gedaan: docs/klantenservice-brein.md (bevatte onopgeslagen werk van een andere sessie).

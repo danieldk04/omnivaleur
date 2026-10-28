@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=5fab6b9c5a"></script>
+<script src="/i18n.js?v=e9901c4ba1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -4207,7 +4207,29 @@ function showPublishError(itemId) {
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
+// TITEL BOVEN DE GRENS (Mieneke, Voordeelsieraden, 28-10-2026). Marktplaats en
+// 2dehands nemen hoogstens 60 tekens titel; Shopify-titels zijn vaak langer. De
+// server kort ze bij het plaatsen zelf in (_mp_titel in backend/api/jobs.py), maar
+// de klant zag dat niet vooraf. Deze melding staat naast de andere, niet erin:
+// het blokkeert niets en komt dus ook als er nog iets anders ontbreekt.
+const MP_MAX_TITEL = 60;
+function langeTitelBadge(item) {
+  const titel = String(item.title || '').trim();
+  if (titel.length <= MP_MAX_TITEL) return '';
+  const kanalen = ['marktplaats', '2dehands'].filter(p => (state.connected || []).includes(p));
+  if (!kanalen.length) return '';
+  const online = (p) => (state.listings || []).some(
+    l => l.item_id === item.id && l.platform === p && l.status === 'active');
+  if (kanalen.every(online)) return '';
+  const tip = esc('Marktplaats and 2dehands accept at most 60 characters. When you publish, Omnivaleur shortens this title for you at a whole word, so the end is cut off. Shorten it yourself via Edit to choose what stays.');
+  return `<div class="missing-data-badge" style="background:#fffbeb;color:#b45309;border-color:#b4530933" title="${tip}">⚠ Title is ${titel.length} characters, Marktplaats & 2dehands allow 60</div>`;
+}
+
 function smartMissingBadge(item) {
+  return smartMissingBadgeHoofd(item) + langeTitelBadge(item);
+}
+
+function smartMissingBadgeHoofd(item) {
   const missingByPlatform = missingFieldsAllPlatforms(item);
   if (!Object.keys(missingByPlatform).length) return '';
 

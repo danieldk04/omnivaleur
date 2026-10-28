@@ -3835,5 +3835,7 @@
  "Relist skipped: the marketplace now charges for adverts in this item's category, so removing the old listing would have taken it offline for good. Your listing is untouched and still live.": "Herplaatsen overgeslagen: de site vraagt nu geld voor advertenties in de rubriek van dit artikel, dus de oude advertentie weghalen had hem voorgoed offline gezet. Je advertentie is niet aangeraakt en staat nog gewoon online.",
  "Hobby & Crafts": "Hobby en knutselen",
  "Hobby & crafts": "Hobby en knutselen",
- "Iron-on Patches & Appliqués": "Strijkemblemen en applicaties"
+ "Iron-on Patches & Appliqués": "Strijkemblemen en applicaties",
+ "Marktplaats and 2dehands accept at most 60 characters. When you publish, Omnivaleur shortens this title for you at a whole word, so the end is cut off. Shorten it yourself via Edit to choose what stays.": "Marktplaats en 2dehands nemen hoogstens 60 tekens. Bij het plaatsen kort Omnivaleur deze titel zelf in op een heel woord, dus het einde valt weg. Kort hem zelf in via Bewerken om te kiezen wat blijft staan.",
+ "⚠ Title is {0} characters, Marktplaats & 2dehands allow 60": "⚠ Titel is {0} tekens, Marktplaats en 2dehands nemen er 60"
 }
