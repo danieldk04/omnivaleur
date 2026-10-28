@@ -31,6 +31,7 @@ else:
     TOKEN_URL = "https://api.ebay.com/identity/v1/oauth2/token"
     INVENTORY_API = "https://api.ebay.com/sell/inventory/v1"
     TAXONOMY_API = "https://api.ebay.com/commerce/taxonomy/v1"
+    METADATA_API = "https://api.ebay.com/sell/metadata/v1"
 
 SCOPES = [
     "https://api.ebay.com/oauth/api_scope/sell.inventory",
