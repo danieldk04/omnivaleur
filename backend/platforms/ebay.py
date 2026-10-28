@@ -1058,6 +1058,13 @@ def _best_allowed_match(value: str, allowed: list[str], *, concept: str | None =
             continue
         if re.search(rf"(?<!\w){re.escape(low)}(?!\w)", al) or re.search(rf"(?<!\w){re.escape(al)}(?!\w)", low):
             return a
+    # Bij kleur, maat en materiaal blijft de ruimere vergelijking ("lichtgrijs" past
+    # bij "Grijs"), maar niet voor korte waarden en nooit voor een merk.
+    if concept != "brand":
+        for a in allowed:
+            al = a.lower().strip()
+            if len(al) >= 4 and (low in al or al in low):
+                return a
     if concept == "department":
         side = "men" if low in _DEPARTMENT_KEYWORDS["men"] else (
             "women" if low in _DEPARTMENT_KEYWORDS["women"] else None
