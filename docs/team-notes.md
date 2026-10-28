@@ -18259,3 +18259,8 @@ Daniel meldt dat het GitHub-geheim SUPABASE_KEY (bijgewerkt 26-10 11:02) niet me
 - Wel gebouwd (29f270ed, a4d436c4, proef tests/test_rubriek_uit_shopify_producttype.py faalt op a67ff445): het producttype van de winkel ("Kettingen", "Ringen", "Dames sieraden/Kettingen/Hangerkettingen") bepaalt bij het inlezen de rubriek. Alleen zekere soorten; Overig, Horloges en Verpakking blijven aan de rubriekvraag.
 - Klantdata, alleen lege rubrieken gevuld, bron = het producttype in hun eigen Shopify (alleen gelezen): Voordeelsieraden 09e089ec 164 naar 7 leeg, Goudlief 5aae4954 133 naar 39 leeg. 251 artikelen, terug te zetten uit ~/.omnivaleur/backups/rubriek_uit_producttype_28-10.jsonl. Janneke 31d28378 (158 leeg) heeft geen producttype en titels als "* Accessoires": hier valt niets gratis te halen.
 - Stand na beide stappen: ~290 van de 542 lege artikelen hebben nu gratis een rubriek. Rest: Janneke 158, Goudlief 39, Toon 30 (WooCommerce), Amanda Haas 22 (Marktplaats), een handvol losse.
+
+## 28-10-2026: Goudlief (Dahli) wil alles ook via Omnivaleur op Marktplaats
+- Dahli antwoordde: zijn Marktplaats Pro loopt t/m 31-12-2026 en hij wil dat alles ook als gewone (onbetaalde) advertentie via Omnivaleur op Marktplaats komt, naast 2dehands. Dubbel met zijn Pro-feed is dus zijn eigen keuze.
+- De bewaker is gestopt en de 996 tegengehouden Marktplaats-opdrachten staan weer in de rij (3 waren al anders afgerond). Backup van wat er tegengehouden was: ~/.omnivaleur/backups/goudlief_mp_dubbel_28-10.jsonl. De 260 al bestaande dubbelen blijven staan.
+- Na 31-12-2026 verdwijnen zijn Pro-advertenties en blijven alleen die van Omnivaleur over. Het bouwpunt "Marktplaats Pro-feed van de klant herkennen" blijft nuttig voor klanten die dat niet willen.
