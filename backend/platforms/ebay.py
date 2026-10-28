@@ -2296,9 +2296,9 @@ def _kies_staat(gewenst: str, toegestaan: set[str] | None) -> str:
         return gewenst
     if gewenst in _GEBRUIKT_LADDER:
         i = _GEBRUIKT_LADDER.index(gewenst)
-        for naam in sorted((n for n in _GEBRUIKT_LADDER if n in toegestaan),
-                           key=lambda n: abs(_GEBRUIKT_LADDER.index(n) - i)):
-            return naam
+        gebruikt = [n for n in _GEBRUIKT_LADDER if n in toegestaan]
+        if gebruikt:
+            return min(gebruikt, key=lambda n: abs(_GEBRUIKT_LADDER.index(n) - i))
         for naam in ("PRE_OWNED_EXCELLENT", "PRE_OWNED_FAIR"):
             if naam in toegestaan:
                 return naam
