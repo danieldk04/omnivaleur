@@ -370,6 +370,19 @@ async def ai_info_page():
     return met_site_chrome("ai-info.html", "en", "/ai-info")
 
 
+@app.get("/fee-calculator")
+async def fee_calculator_page():
+    """Gratis kostenrekenaar zonder inlog (28-10-2026): Vendoo en Crosslist halen
+    hun zoekverkeer uit zulke tools, wij hadden de margecalculator alleen achter
+    de inlog. Het rekenmodel staat in frontend/assets/kostenrekenaar.js."""
+    return met_site_chrome("fee-calculator.html", "en", "/fee-calculator")
+
+
+@app.get("/nl/kostenrekenaar")
+async def kostenrekenaar_page():
+    return met_site_chrome("kostenrekenaar.html", "nl", "/nl/kostenrekenaar")
+
+
 @app.get("/mp-video")
 async def mp_video_page(request: Request):
     """Losse leadpagina voor de video in de koude-mail-sequence. Bewust niet
