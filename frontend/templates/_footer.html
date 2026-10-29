@@ -10,10 +10,10 @@
       </a>
       {% if nl %}
       <p>Zet je tweedehands items in seconden op Marktplaats, 2dehands, Vinted, eBay, Shopify en WooCommerce, elk in de juiste taal.</p>
-      <p>Zakelijke vragen: <a href="mailto:info@omnivaleur.com">info@omnivaleur.com</a></p>
+      <p>Zakelijke vragen: <!--email_off--><a href="mailto:info@omnivaleur.com">info@omnivaleur.com</a><!--/email_off--></p>
       {% else %}
       <p>Cross-list your second-hand items on Marktplaats, 2dehands, Vinted, eBay, Shopify and WooCommerce in seconds, each in the right language.</p>
-      <p>Business inquiries: <a href="mailto:info@omnivaleur.com">info@omnivaleur.com</a></p>
+      <p>Business inquiries: <!--email_off--><a href="mailto:info@omnivaleur.com">info@omnivaleur.com</a><!--/email_off--></p>
       {% endif %}
     </div>
 
@@ -35,7 +35,7 @@
       <ul>
         <li><a href="/terms">{{ 'Algemene voorwaarden' if nl else 'Terms of Service' }}</a></li>
         <li><a href="/privacy">{{ 'Privacybeleid' if nl else 'Privacy Policy' }}</a></li>
-        <li><a href="mailto:info@omnivaleur.com">Contact</a></li>
+        <li><!--email_off--><a href="mailto:info@omnivaleur.com">Contact</a><!--/email_off--></li>
         <li><a href="{{ '/nl/tools' if nl else '/tools' }}">{{ 'Gratis tools' if nl else 'Free tools' }}</a></li>
         <li><a href="/ai-info"{% if nl %} hreflang="en"{% endif %}>{{ 'Voor AI-assistenten' if nl else 'For AI assistants' }}</a></li>
       </ul>
