@@ -795,6 +795,58 @@ _LIMIET_TEKST = (
 )
 
 
+# Telefoonnummer: +31 6 5396 0664, 0031 6 53 96 06 64, 06-12345678, 010 1234567.
+_TELEFOON = re.compile(r"(?<![\d/,.])(?:(?:\+|00)\d{2}|0)[\s.\-]?\(?\d\)?(?:[\s.\-]?\d){7,9}(?![\d/])")
+# Een regel die de koper buiten eBay om stuurt: sociale media, eigen webshop of
+# winkel, afspraak, "neem contact op". Alleen hele regels, nooit een stuk ervan.
+_BUITEN_EBAY_REGEL = re.compile(
+    r"instagram|facebook|whatsapp|tiktok|pinterest|webshop|web shop|onze website|op de website"
+    r"|kom (?:gerust )?langs|neem contact|contact op|winkelbezoek|onze winkel|openingstijden"
+    r"|op afspraak|maak een afspraak|^\s*(?:locatie|adres|telefoon|tel|mobiel|e-?mail)\s*:",
+    re.I)
+
+
+def _zonder_contactgegevens(tekst: str) -> str:
+    """De omschrijving zonder telefoonnummer, webadres, e-mailadres en regels die
+    de koper naar de eigen winkel of webshop sturen.
+
+    WAAROM (28-10-2026, Toon, De Juiste Toon). Zijn Perzische tapijt stond op
+    eBay onder "Schending van het beleid: Aanbieden om buiten eBay om te kopen of
+    verkopen. Deze blijft verborgen totdat u het probleem kunt oplossen". De
+    omschrijving kwam uit zijn Marktplaats-advertentie en bevatte "Volg ons op
+    Instagram, bekijk de webshop of kom langs in onze winkel ... neem contact op via
+    0031 6 53 96 06 64". Marktplaats en 2dehands kregen die tekst al zonder
+    adressen (_zonder_links); eBay kreeg hem ongewijzigd.
+
+    Zit er niets van dit alles in, dan blijft de tekst LETTERLIJK zoals hij was.
+    Blijft er bijna niets over, dan ook: een lege omschrijving is erger dan een
+    omschrijving met een telefoonnummer, want eBay weigert hem dan zelf.
+    """
+    if not tekst:
+        return tekst
+    try:
+        from backend.services.crosslist import _zonder_links
+    except Exception:  # noqa: BLE001 — zonder zeef gaat de tekst liever door dan niet
+        _zonder_links = lambda t: t  # noqa: E731
+    uit: list[str] = []
+    geschrapt = False
+    for regel in tekst.replace(" ", "\n").replace(" ", "\n").split("\n"):
+        if _BUITEN_EBAY_REGEL.search(regel):
+            geschrapt = True
+            continue
+        schoon = _TELEFOON.sub("", regel)
+        if schoon != regel:
+            geschrapt = True
+            if not schoon.strip(" \t.,:;|-"):
+                continue
+        uit.append(schoon.rstrip())
+    if not geschrapt:
+        zonder = _zonder_links(tekst)
+        return zonder if len((zonder or "").strip()) >= 20 else tekst
+    resultaat = _zonder_links(re.sub(r"\n{3,}", "\n\n", "\n".join(uit)).strip())
+    return resultaat if len((resultaat or "").strip()) >= 20 else tekst
+
+
 def _kort_omschrijving(tekst: str) -> str:
     """eBay weigert een voorraadartikel met meer dan 4000 tekens omschrijving.
     Liever een tekst die vier regels korter is dan geen advertentie."""
