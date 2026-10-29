@@ -17,6 +17,7 @@ from fastapi.templating import Jinja2Templates
 from backend.config import settings
 from backend.content.branding import (  # noqa: F401  (her-geëxporteerd voor de rest van de codebase)
     KANAAL_LINKS,
+    TRUSTPILOT_URL,
     WEBSTORE_URL,
     merk_profielen,
 )
@@ -600,7 +601,8 @@ MERK_LINKS: list[dict] = [
     {"label": k["kanaal"] + (" (NL)" if k["taal"] == "NL" else ""), "url": k["profiel"]}
     for k in KANAAL_LINKS
     if k.get("profiel")
-] + [{"label": "Chrome Web Store", "url": WEBSTORE_URL}]
+] + [{"label": "Chrome Web Store", "url": WEBSTORE_URL},
+     {"label": "Trustpilot", "url": TRUSTPILOT_URL}]
 
 
 # De koude mail staat er apart bij: die link wordt niet ergens geplakt maar door

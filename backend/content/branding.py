@@ -70,6 +70,11 @@ WEBSTORE_URL = (
     "gfaogapbhaacfbpdppdcmnkjndlphleh"
 )
 
+# Beoordelingspagina op Trustpilot (29-10-2026: 4,0 uit 3 reviews). Staat in sameAs
+# omdat AI-antwoordmachines Trustpilot veel als bron gebruiken, en als zichtbare
+# link naast de rating op de homepage.
+TRUSTPILOT_URL = "https://nl.trustpilot.com/review/omnivaleur.com"
+
 
 def merk_profielen() -> list[str]:
     """Alle openbare profielen van het merk, ontdubbeld en in vaste volgorde.
@@ -82,4 +87,6 @@ def merk_profielen() -> list[str]:
             uniek.append(profiel)
     if WEBSTORE_URL not in uniek:
         uniek.append(WEBSTORE_URL)
+    if TRUSTPILOT_URL not in uniek:
+        uniek.append(TRUSTPILOT_URL)
     return uniek
