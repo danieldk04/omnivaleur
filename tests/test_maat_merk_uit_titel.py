@@ -67,6 +67,21 @@ def test_shopify_nederlandse_optienamen():
     assert (out["size"], out["color"], out["material"]) == ("24", "Zilver", "Rubber")
 
 
+def test_titelstuk_na_streepje_alleen_als_het_een_maat_is():
+    # Goudlief 28-10-2026: "creme Plastic" werd de maat en 2dehands weigerde.
+    def maat(titel):
+        return _convert({"id": 1, "title": titel, "variants": [{"price": "5"}]})["size"]
+    assert maat("Haarklem rechthoek - creme Plastic") is None
+    assert maat("Muurverf - 2,5 liter") is None
+    assert maat("Oorbellen - Goud kleur-4.0MM") is None
+    assert maat("Jurk - 152 reinowwestra") is None
+    assert maat("Navy Quechua Trousers - Men XL - Very Good") == "Men XL"
+    assert maat("Sneakers - Men 39 - Good") == "Men 39"
+    assert maat("Hoodie - Men 3XL") == "Men 3XL"
+    assert maat("Jurk - 152") == "152"
+    assert maat("Ring - ringmaat 19,5") == "ringmaat 19,5"
+
+
 class _Q:
     def __init__(self, db, tabel):
         self.db, self.tabel, self.f, self.gt_id, self.patch = db, tabel, [], None, None

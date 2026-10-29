@@ -1258,6 +1258,11 @@ _DESC_FIELDS = {
     "color": re.compile(r"comes in ([a-z]+)!", re.IGNORECASE),
 }
 
+_MAAT_IN_TITEL = re.compile(
+    r"^(?:(?:men|women|heren|dames|kids|boys|girls|unisex|maat|ringmaat|size|eu|uk|us)\.?\s+)*"
+    r"(?:x{0,3}s|m|x{0,4}l|[2-6]xl|\d{1,3}(?:[.,]5)?(?:\s*[/-]\s*\d{1,3}(?:[.,]5)?)?"
+    r"|w\s?\d{2}(?:\s*l\s?\d{2})?|one\s?size)$", re.IGNORECASE)
+
 _BRAND_KEYWORDS = [
     "Ralph Lauren", "Massimo Dutti", "Suitsupply", "Profuomo",
     "Stone Island", "Zara", "Mango", "Gymshark", "North Face",
@@ -1301,9 +1306,14 @@ def _convert(p: dict) -> dict:
         if m:
             color = m.group(1).strip()
 
+    # Alleen een stuk dat echt een maat is. Het formaat "Trui - Men XL - Very
+    # Good" kent alleen 3bfbed2c; bij Goudlief stond er "Haarklem rechthoek -
+    # creme Plastic" en werd "creme Plastic" de maat, waarna 2dehands de
+    # advertentie weigerde (29-10-2026: 191 artikelen met kleur, liters of mm
+    # als maat, bij 31d28378 Instagramnamen als "152 reinowwestra").
     if not size:
         parts = title.split(" - ")
-        if len(parts) >= 2:
+        if len(parts) >= 2 and _MAAT_IN_TITEL.match(parts[1].strip()):
             size = parts[1].strip()
 
     for b in _BRAND_KEYWORDS:
