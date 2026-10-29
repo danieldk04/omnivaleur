@@ -27,6 +27,7 @@ gender, photo_urls). Elke ochtend deze set, één per rubriekgroep, categorie-sl
 4. heren (shirt), maat "M"
 5. babykleding meisjes, maat "74"
 6. een niet-kledingrubriek met V_PAD (bijvoorbeeld wonen wanddecoraties of een boek)
+7. jongens kleding (trui), maat "116" (toegevoegd 29-10-2026 voor creator Amanda, mama van twee jongens; eerste run ok: Truien, 6 jaar / 116 cm, Zara, Blauw)
 Wisselt Vinted de taal of een label, dan zie je dat in dezelfde run.
 
 Marktplaats en 2dehands: dezelfde aanpak met marktplaats.js / tweedehands.js (zelfde berichten: GET_JOB, LOG, JOB_DONE,

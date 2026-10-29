@@ -17,6 +17,20 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## creatorlink-belooft-geen-vriendenkorting
+
+*29-10-2026 — "29-10: register.html toonde \"50% off first month\" bij elke ?ref=code, ook creatorcodes; creatorlink geeft alleen 7 dagen proef; creators krijgen voorrang in de onboardingronde"*
+
+Een code in localStorage (assets/ref.js) betekent niet dat de aanmelder korting krijgt. Alleen een KLANTCODE (referral_codes.owner_user_id gevuld) geeft de vriendenkorting van 50% op de eerste maand (`heeft_recht_op_vriendenkorting`). Een creatorcode (kind creator, geen eigenaar) geeft alleen de gewone 7 dagen proef plus 25% commissie voor de creator.
+
+register.html toonde het groene vak "A friend invited you, 50% off" bij elke code. Bij creator Amanda (the_cooking_mommy, 29-10-2026) zou dat haar volgers iets beloven wat niet komt. Nu beslist de server via `/api/referrals/uitnodiging/{code}`; bij twijfel of storing blijft het vak weg. Proef: tests/test_register_uitnodiging_creator.py.
+
+**Why:** de creatorroute is nog nooit door een echte aanmelder doorlopen (17 TikTok-klikken, 0 aanmeldingen; Amanda 10 klikken, 0 aanmeldingen op 29-10). Alles aan die route is dus onbewezen tot de eerste echte aanmelding.
+
+**How to apply:** verander je iets aan korting of codes, kijk dan naar ALLE plekken die de belofte tonen (register.html, app.html 2448/5237 lezen de serverstatus) en test met een klantcode én een creatorcode. Creators die zich aanmelden verschijnen met `*** CREATOR via code` in `scripts/nieuwe_klanten.py`: voorrang en apart in het rapport. Verwant: "trechter-aanmelding-tot-betalend-27-09", "nooit-opgepakte-opdracht-is-geen-spoor".
+
+---
+
 ## marktplaats-zet-materiaal-zelf-op-zilver
 
 *29-10-2026 — 28-10/29-10 Mieneke: Marktplaats vult Materiaal (Zilver) en bij Antieke sieraden ook Type (Ring) zelf in, zet PostNL/DHL/Budbee en kopersbescherming aan; wij raakten het nooit aan (Materiaal 1.0.407, Type/verzending/kopersbescherming 1.0.408)*
