@@ -119,7 +119,7 @@ class _Opnemer(_FakeEbay):
         return Client()
 
 
-def _plaats(monkeypatch, eb, omschrijving):
+def _plaats(monkeypatch, eb, omschrijving, extra_data=None):
     async def klaar(*a, **kw):
         return None
 
@@ -148,7 +148,8 @@ def _plaats(monkeypatch, eb, omschrijving):
             "description": omschrijving, "price": 65.0, "photo_urls": ["https://x/1.jpg"],
             "condition": "good", "category": "wonen tapijten en kleden"}
     return asyncio.run(platform.create_listing(
-        item, {"access_token": "t", "user_id": "u1", "token_expires_at": None}))
+        item, {"access_token": "t", "user_id": "u1", "token_expires_at": None,
+                  "extra_data": extra_data or {}}))
 
 
 def test_beide_plekken_waar_eBay_de_tekst_leest_zijn_schoon(monkeypatch):
@@ -184,3 +185,35 @@ def test_lange_alinea_zonder_regeleinde_verliest_alleen_de_zin():
              "Er zijn geen gaten of vlekken te zien aan de voorkant of achterkant.")
     uit = ebay_mod._zonder_contactgegevens(tekst)
     assert "Instagram" not in uit and "handgeknoopt van wol" in uit and "geen gaten" in uit
+
+
+# ---- afsluitregel per verkoper (Toon, 29-10-2026: "zoals de onderste zin op Vinted") -----------
+
+AFSLUITING = "Dejuistetoon Etten-Leur 🇳🇱"
+MET = {"extra_data": {"ebay_afsluiting": AFSLUITING}}
+
+
+def test_afsluitregel_komt_terug_waar_iets_is_weggehaald():
+    uit = ebay_mod._voor_ebay(PERZISCH, MET)
+    assert uit.endswith("\n\n" + AFSLUITING), uit
+    assert "0031" not in uit and "Instagram" not in uit
+    html = ebay_mod._voor_ebay(HTML, MET)
+    assert html.endswith("<br/><br/>" + AFSLUITING) and "5396" not in html, html
+
+
+def test_zonder_instelling_verandert_er_niets():
+    assert ebay_mod._voor_ebay(PERZISCH, {}) == ebay_mod._zonder_contactgegevens(PERZISCH)
+    assert ebay_mod._voor_ebay(PERZISCH, None) == ebay_mod._zonder_contactgegevens(PERZISCH)
+
+
+def test_schone_tekst_krijgt_de_regel_niet_dubbel():
+    assert ebay_mod._voor_ebay(SCHOON_TL104, MET) == SCHOON_TL104      # staat er al in
+    assert ebay_mod._voor_ebay(SCHOON_TL72, MET) == SCHOON_TL72        # niets weggehaald: geen toevoeging
+
+
+def test_afsluitregel_gaat_naar_beide_plekken_bij_eBay(monkeypatch):
+    eb = _Opnemer()
+    _plaats(monkeypatch, eb, PERZISCH, extra_data=MET["extra_data"])
+    assert {plek for plek, _ in eb.omschrijvingen} == {"product", "aanbieding"}
+    for plek, tekst in eb.omschrijvingen:
+        assert tekst.endswith(AFSLUITING) and "0031" not in tekst, (plek, tekst)
