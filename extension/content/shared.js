@@ -1513,6 +1513,11 @@ window.CL = (() => {
     // Materiaal staat na elke herbouw van het formulier weer op het vooringevulde
     // Zilver, dus elke ronde opnieuw zetten (zie vulMateriaal).
     try { await vulMateriaal(item); } catch (e) { clog(`materiaal: FOUT ${e && e.message ? e.message : e}`); }
+    // Type bij sieraden, verzendkosten en kopersbescherming staan na een herbouw
+    // van het formulier ook weer op de vooringevulde waarde.
+    try { await vulSieraadType(item); } catch (e) { clog(`sieraad-type: FOUT ${e && e.message ? e.message : e}`); }
+    try { if (!mpVerzendingKlopt(item)) await zetMpVerzending(item); } catch (e) { clog(`verzendkosten: FOUT ${e && e.message ? e.message : e}`); }
+    try { if (!mpKopersbeschermingKlopt(item)) await zetMpKopersbescherming(item); } catch (e) { clog(`kopersbescherming: FOUT ${e && e.message ? e.message : e}`); }
 
     const brandEl = brandField();
     if (item.brand && brandEl && !fieldFilled(brandEl)) {
@@ -1585,6 +1590,11 @@ window.CL = (() => {
       missing.push("manufacturer e-mail");
     }
     if (item.bid_percentage && emptyInput("price.minimumBidPrice")) missing.push("minimum bid");
+    // Wat de verkoper zelf koos mag niet stil terugvallen op wat Marktplaats
+    // klaarzet: dan betaalt hij verzending of koopt de klant met bescherming die
+    // hij niet wilde. Liever de advertentie tegenhouden mét de reden.
+    if (!mpVerzendingKlopt(item)) missing.push("shipping cost (self-shipping for a fixed amount)");
+    if (!mpKopersbeschermingKlopt(item)) missing.push("buyer protection (should be off)");
 
     if (missing.length) {
       throw new Error(
@@ -1740,6 +1750,152 @@ window.CL = (() => {
     const ok = fillNativeSelect(el, wil);
     clog(`materiaal: "${huidig || "leeg"}" → "${wil}" ${ok ? "gezet" : "MISLUKT"}`);
     return ok;
+  }
+
+  // SIERADEN: "TYPE" STAAT OP RING (Mieneke van Voordeelsieraden, 29-10-2026).
+  //
+  // Alleen in Antieke sieraden (1826/13) heeft het plaatsformulier een keuzelijst
+  // Type: Armband, Broche, Hanger, Ketting, Manchetknopen, Oorbellen, Ring,
+  // Overige typen. Live gemeten op 29-10-2026: die lijst staat al op "Ring" voordat
+  // wij iets doen, en wij raakten hem nooit aan. Elk antiek collier kwam dus online
+  // als ring. De andere sieradencategorieën hebben dit veld niet (kettingen,
+  // hangers en ringen zelf gemeten), daarom ging het daar goed.
+  //
+  // Wat we kiezen: het sieraad dat de titel noemt; noemt de titel er niets, dan wat
+  // de omschrijving noemt als dat er precies één is. Twee verschillende sieraden in
+  // de titel: het eerste genoemde, behalve bij een set of parure. Is er niets te
+  // baseren, dan "Overige typen": dat zegt niets onwaars, anders dan het
+  // vooringevulde Ring.
+  const SIERAAD_LIJST = ["Armband", "Broche", "Hanger", "Ketting", "Oorbellen", "Ring"];
+
+  function sieraadTypeVanWoord(woord) {
+    const w = String(woord || "").toLowerCase();
+    if (/^(oorbel|oorknop|oorstekers?$|oorhanger|oorring|oorclip|oorsieraad|oorsieraden|creool|creolen)/.test(w)) return "Oorbellen";
+    if (/^(manchetknoop|manchetknopen|manchetknopjes)$/.test(w)) return "Manchetknopen";
+    if (/^(armband|armbandje|armring|armringen|bangle|slavenband)/.test(w) || /armband(je|jes|en)?$/.test(w)) return "Armband";
+    if (/^(broche|broches|broschje|broschjes|brooch)$/.test(w)) return "Broche";
+    if (/^(ketting|kettingen|kettinkje|kettinkjes|collier|colliers|halsketting|halskettingen|choker|sautoir|halssnoer|halssnoeren)$/.test(w)
+        || /ketting(je|jes|en)?$/.test(w)) return "Ketting";
+    if (/^(hanger|hangers|hangertje|hangertjes|pendant|medaillon|medaillons|amulet)$/.test(w) || /hangers?$/.test(w)) return "Hanger";
+    if (/^(ring|ringen|ringetje|ringetjes|(zegel|dames|heren|kinder|trouw|verlovings|alliantie|cocktail|pink|duim|vinger|aanschuif|stapel|memoire|solitair)ring(en|etje|etjes)?)$/.test(w)) return "Ring";
+    return null;
+  }
+
+  function sieraadTypen(tekst) {
+    const uit = [];
+    String(tekst || "").toLowerCase().split(/[^a-zà-ÿ]+/).filter(Boolean).forEach((w, i) => {
+      const t = sieraadTypeVanWoord(w);
+      if (t) uit.push({ type: t, i });
+    });
+    return uit;
+  }
+
+  function sieraadTypeKeuze(item, opties) {
+    const namen = (opties || []).map((o) => String(o).trim()).filter(Boolean);
+    const heeft = (n) => namen.find((o) => o.toLowerCase() === n.toLowerCase()) || "";
+    const overig = heeft("Overige typen");
+    const titel = String(item && item.title || "");
+    const inTitel = sieraadTypen(titel);
+    let gekozen = null;
+    if (inTitel.length) {
+      const uniek = [...new Set(inTitel.map((x) => x.type))];
+      if (uniek.length === 1) gekozen = uniek[0];
+      else if (/\b(set|parure|combinatie|duo)\b/i.test(titel)) gekozen = null;
+      else gekozen = inTitel[0].type;
+    } else {
+      const uniek = [...new Set(sieraadTypen(item && item.description).map((x) => x.type))];
+      if (uniek.length === 1) gekozen = uniek[0];
+    }
+    return (gekozen && heeft(gekozen)) || overig;
+  }
+
+  async function vulSieraadType(item) {
+    const el = qs('select[name="singleSelectAttribute[type]"]');
+    if (!el) return true;                       // deze categorie kent het veld niet
+    const namen = [...el.options].filter((o) => o.value !== "" && !o.disabled).map((o) => o.text.trim());
+    // Alleen de sieradenlijst: Type bij sportkleding of audio heeft eigen stappen.
+    if (!SIERAAD_LIJST.every((n) => namen.includes(n))) return true;
+    const wil = sieraadTypeKeuze(item, namen);
+    if (!wil) return true;
+    const huidig = (el.options[el.selectedIndex]?.text || "").trim();
+    if (huidig === wil) return true;
+    const optie = [...el.options].find((o) => o.text.trim() === wil);
+    if (!optie) return false;
+    Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value").set.call(el, optie.value);
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    const nu = (el.options[el.selectedIndex]?.text || "").trim();
+    clog(`sieraad-type: "${huidig || "leeg"}" → "${wil}" ${nu === wil ? "gezet" : "MISLUKT"}`);
+    return nu === wil;
+  }
+
+  // MARKTPLAATS: ZELF VERZENDEN VOOR EEN VAST BEDRAG EN KOPERSBESCHERMING UIT
+  // (Mieneke van Voordeelsieraden, 29-10-2026). Haar prijzen zijn inclusief
+  // verzekerde verzending; ze kiest op Marktplaats altijd "Zelf Verzenden" met
+  // EUR 0,01. Het plaatsformulier staat standaard op PostNL, DHL en Budbee met de
+  // kosten van Marktplaats, en "Kopersbescherming toevoegen?" staat aan. Live
+  // gemeten op het plaatsformulier (29-10-2026):
+  //   - shippingMethod zijn nu selectievakjes (budbee, postnl, dhl-nl, diy);
+  //     op diy klikken zet de andere drie zelf uit en toont input[name=othersPrice]
+  //     (placeholder 0,00, niet verplicht); de pakketmaten verdwijnen.
+  //   - kopersbescherming is een schakelaar [role=switch] met
+  //     aria-labelledby="bp-dc-label"; aria-checked flipt bij een klik, en hij blijft
+  //     aan staan als je Zelf Verzenden kiest.
+  // Alleen als de verkoper het koos (item.mp_zelf_verzenden_cents,
+  // item.mp_kopersbescherming === "uit"); anders raken we niets aan. Alleen op
+  // Marktplaats: 2dehands heeft zijn eigen verzendkeuze (zetVerzendkosten).
+  function opMarktplaats() {
+    return typeof location !== "undefined" && /(^|\.)marktplaats\.nl$/i.test(location.hostname);
+  }
+
+  function mpVasteVerzendCents(item) {
+    const c = item && item.mp_zelf_verzenden_cents;
+    return opMarktplaats() && Number.isInteger(c) && c >= 1 ? c : null;
+  }
+
+  function mpVerzendingKlopt(item) {
+    const cents = mpVasteVerzendCents(item);
+    if (cents == null) return true;
+    const diy = qs('input[name="shippingMethod"][value="diy"]');
+    if (!diy) return true;                      // geen verzending op dit formulier (alleen ophalen)
+    const veld = qs('input[name="othersPrice"]');
+    return !!(diy.checked && veld && centenUitTekst(veld.value) === cents);
+  }
+
+  async function zetMpVerzending(item) {
+    const cents = mpVasteVerzendCents(item);
+    if (cents == null) return "niets te doen (niet ingesteld)";
+    const diy = await wachtOpElement('input[name="shippingMethod"][value="diy"]', 3000);
+    if (!diy) return "dit formulier heeft geen keuze voor zelf verzenden";
+    if (!diy.checked) { diy.click(); await sleep(500); }
+    const bedrag = (cents / 100).toFixed(2).replace(".", ",");
+    const veld = await wachtOpElement('input[name="othersPrice"]', 3000);
+    if (veld && centenUitTekst(veld.value) !== cents) { fillInput(veld, bedrag); await sleep(400); }
+    const klopt = mpVerzendingKlopt(item);
+    clog(`verzendkosten: zelf verzenden voor € ${bedrag} ${klopt ? "gezet" : "MISLUKT"}`);
+    return klopt;
+  }
+
+  function mpKopersbeschermingSchakelaar() {
+    return qs('[role="switch"][aria-labelledby="bp-dc-label"]');
+  }
+
+  function mpKopersbeschermingKlopt(item) {
+    if (!opMarktplaats() || !item || item.mp_kopersbescherming !== "uit") return true;
+    const sw = mpKopersbeschermingSchakelaar();
+    return !sw || sw.getAttribute("aria-checked") !== "true";
+  }
+
+  async function zetMpKopersbescherming(item) {
+    if (!opMarktplaats() || !item || item.mp_kopersbescherming !== "uit") return "niets te doen (niet ingesteld)";
+    const sw = mpKopersbeschermingSchakelaar();
+    if (!sw) return "dit formulier heeft geen kopersbescherming";
+    for (let poging = 0; poging < 2 && !mpKopersbeschermingKlopt(item); poging++) {
+      sw.click();
+      await sleep(500);
+    }
+    const klopt = mpKopersbeschermingKlopt(item);
+    clog(`kopersbescherming: uitgezet ${klopt ? "gelukt" : "MISLUKT"}`);
+    return klopt;
   }
 
   // DE BESCHRIJVING ECHT TYPEN.
@@ -3113,7 +3269,7 @@ window.CL = (() => {
     klokRapport, klokOpnieuw,
     sleep, waitUntil, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, vulLocatie, selectBundleFree,
-    selectDelivery, gekozenLevering, selectPakketWaarde, zetVerzendkosten, centenUitTekst, vulHalswijdte, vulMateriaal, materiaalKeuze, keuzeveldenKort, typBeschrijvingEcht,
+    selectDelivery, gekozenLevering, selectPakketWaarde, zetVerzendkosten, centenUitTekst, vulHalswijdte, vulMateriaal, materiaalKeuze, vulSieraadType, sieraadTypeKeuze, zetMpVerzending, zetMpKopersbescherming, keuzeveldenKort, typBeschrijvingEcht,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding, zetBieden,
     clog, plaatsBlokkade, dutchColor, kleurKandidaten, kiesMetTerugval, lijstOpties, valueVariants, platteTekst, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
     mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG, zetPrijs, betaalrubriekBezwaar,

@@ -2,7 +2,7 @@
 (async () => {
   const PLATFORM = "marktplaats";
   const { step, clog, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
-          fillBrand, fillBrandField, fillManufacturer, vulLocatie, selectBundleFree, selectDelivery, selectPakketWaarde, typBeschrijvingEcht, vulHalswijdte, vulMateriaal, uploadPhotos, submitListing,
+          fillBrand, fillBrandField, fillManufacturer, vulLocatie, selectBundleFree, selectDelivery, selectPakketWaarde, typBeschrijvingEcht, vulHalswijdte, vulMateriaal, vulSieraadType, zetMpVerzending, zetMpKopersbescherming, uploadPhotos, submitListing,
           clickRadioByValue, smartTrunc, fillBidding, zetBieden, dutchColor,
           ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs,
           mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG, zetPrijs } = window.CL;
@@ -314,6 +314,7 @@
     await step("halswijdte",   () => vulHalswijdte(item));
     await step("color",        () => item.color && selectDropdown("Kleur", dutchColor(item.color)));
     await step("materiaal",    () => vulMateriaal(item));
+    await step("sieraadtype",  () => vulSieraadType(item));
     await step("brand",        () => item.brand && fillBrandField(item.brand));
     await step("manufacturer", () => fillManufacturer(item));
     // Waar de verkoper staat. Zonder deze stap neemt het formulier het
@@ -325,7 +326,12 @@
     // op Marktplaats bleef het leeg en moest de verkoper het per advertentie
     // zelf aanklikken. item.pakket komt uit zijn eigen instelling (onder de
     // prijsgrens brievenbuspakje, daarboven groot pakket).
-    await step("package",      () => item.pakket && selectPakketWaarde(item.pakket));
+    // Zelf verzenden voor een vast bedrag en kopersbescherming uit: alleen als de
+    // verkoper dat koos (zie zetMpVerzending in shared.js). Onder zelf verzenden
+    // bestaan de pakketmaten niet.
+    await step("verzendkosten", () => zetMpVerzending(item));
+    await step("kopersbescherming", () => zetMpKopersbescherming(item));
+    await step("package",      () => item.pakket && !Number.isInteger(item.mp_zelf_verzenden_cents) && selectPakketWaarde(item.pakket));
     // "Bieden vanaf" hoort bij een vraagprijs. Zonder prijs is het minimumbod 0,
     // en dat is geen bod maar een leeg veld dat de advertentie tegenhoudt.
     // Altijd zetten, ook als de verkoper GEEN bieden wil: de schakelaar

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=7f20b0854a"></script>
+<script src="/i18n.js?v=f8cd7720ee"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1793,6 +1793,33 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <label for="pakket-grens" style="font-size:13px">Letterbox parcel below</label>
           <span style="font-size:13px">€</span>
           <input type="number" id="pakket-grens" min="0" max="5000" step="1" style="max-width:90px">
+        </div>
+        <!-- Marktplaats zet zelf PostNL, DHL en Budbee klaar en laat kopersbescherming
+             aan (live gemeten op het plaatsformulier, 29-10-2026). Voordeelsieraden
+             (Mieneke): prijzen zijn inclusief verzekerde verzending, dus zelf
+             verzenden voor EUR 0,01 en kopersbescherming uit. Alleen Marktplaats. -->
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin:14px 0 10px">
+          <b>Shipping cost on Marktplaats.</b> By default Marktplaats sets up PostNL, DHL and Budbee with its own
+          shipping costs. If your prices already include shipping, choose "I ship myself" and set the amount your
+          buyers pay on top (Marktplaats needs at least €0.01).
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <select id="mp-verzending-keuze" onchange="toonMpVerzending()" style="max-width:290px">
+            <option value="standaard">Marktplaats shipping (PostNL, DHL, Budbee)</option>
+            <option value="zelf">I ship myself, for a fixed amount</option>
+          </select>
+          <span id="mp-verzending-bedrag-wrap" style="display:none;font-size:13px">€
+            <input type="number" id="mp-verzending-bedrag" min="0.01" max="100" step="0.01" placeholder="0.01" style="max-width:90px"></span>
+        </div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin:14px 0 10px">
+          <b>Buyer protection on Marktplaats.</b> Marktplaats switches "Add buyer protection?" on for every new listing.
+          Choose to have it switched off on the listings we publish.
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <select id="mp-kopersbescherming" style="max-width:290px">
+            <option value="volg">Leave it as Marktplaats sets it</option>
+            <option value="uit">Switch it off</option>
+          </select>
         </div>
       </div>
       <!-- Verzendkosten op 2dehands. Tot 27-09-2026 zette Daniel dit per klant met
@@ -13900,6 +13927,7 @@ async function loadRelistDagen() {
     if (lev) lev.value = data.levering || 'beide';
     const grens = document.getElementById('pakket-grens');
     if (grens) grens.value = data.pakket_grens != null ? data.pakket_grens : 0;
+    toonMpVerzendInstelling(data);
     const slot = document.getElementById('slottekst');
     if (slot) slot.value = data.slottekst || '';
     toonSlottekstVinted(data);
@@ -13916,6 +13944,17 @@ async function loadRelistDagen() {
 // leveren gegarandeerd de helft opgeslagen op.
 async function saveVerzenden() {
   const melding = document.getElementById('verzenden-status');
+  // "Zelf verzenden" zonder bedrag zou stil niets doen: dan zet Marktplaats de
+  // verzendkosten gewoon zelf, en dat is precies wat deze keuze moet voorkomen.
+  let mpZelfVerzendenCents = null;
+  if (document.getElementById('mp-verzending-keuze').value === 'zelf') {
+    const euro = Number(String(document.getElementById('mp-verzending-bedrag').value).replace(',', '.'));
+    mpZelfVerzendenCents = Math.round(euro * 100);
+    if (!(mpZelfVerzendenCents >= 1)) {
+      melding.textContent = 'Enter the shipping amount, at least €0.01.';
+      return;
+    }
+  }
   melding.textContent = 'Saving…';
   try {
     const r = await apiFetchRetry(`${API}/api/items/settings`, {
@@ -13923,6 +13962,8 @@ async function saveVerzenden() {
       body: JSON.stringify({
         levering: document.getElementById('levering-keuze').value,
         pakket_grens: Number(document.getElementById('pakket-grens').value) || 0,
+        mp_zelf_verzenden_cents: mpZelfVerzendenCents,
+        mp_kopersbescherming: document.getElementById('mp-kopersbescherming').value,
       }),
     });
     const data = await parseJsonSafe(r);
@@ -13930,12 +13971,29 @@ async function saveVerzenden() {
     state.settings = { ...state.settings, ...data };
     document.getElementById('levering-keuze').value = data.levering || 'beide';
     document.getElementById('pakket-grens').value = data.pakket_grens || 0;
+    toonMpVerzendInstelling(data);
     melding.textContent = data.pakket_grens
       ? `Saved — below €${data.pakket_grens} a letterbox parcel, above it a large parcel.`
       : 'Saved.';
   } catch (e) {
     melding.textContent = `Could not save: ${e.message}`;
   }
+}
+
+function toonMpVerzendInstelling(data) {
+  const cents = data.mp_zelf_verzenden_cents;
+  const keuze = document.getElementById('mp-verzending-keuze');
+  if (keuze) keuze.value = Number.isInteger(cents) && cents >= 1 ? 'zelf' : 'standaard';
+  const bedrag = document.getElementById('mp-verzending-bedrag');
+  if (bedrag && Number.isInteger(cents) && cents >= 1) bedrag.value = (cents / 100).toFixed(2);
+  const kopers = document.getElementById('mp-kopersbescherming');
+  if (kopers) kopers.value = data.mp_kopersbescherming === 'uit' ? 'uit' : 'volg';
+  toonMpVerzending();
+}
+
+function toonMpVerzending() {
+  const zelf = document.getElementById('mp-verzending-keuze').value === 'zelf';
+  document.getElementById('mp-verzending-bedrag-wrap').style.display = zelf ? '' : 'none';
 }
 
 function toonVerzending2dh(data) {

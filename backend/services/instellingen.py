@@ -267,6 +267,22 @@ VINTED_SLOT = "vinted_slot"
 VINTED_SLOT_KEUZES = ("zelfde", "geen", "eigen")
 SLOTTEKST_VINTED = "slottekst_vinted"
 
+# MARKTPLAATS: ZELF VERZENDEN EN KOPERSBESCHERMING (29-10-2026, Mieneke van
+# Voordeelsieraden). Haar prijzen zijn inclusief verzekerde verzending, dus ze
+# kiest op Marktplaats altijd "Zelf verzenden" met EUR 0,01. Het formulier staat
+# standaard op PostNL, DHL en Budbee met de verzendkosten van Marktplaats, en
+# "Kopersbescherming toevoegen" staat standaard aan (live gemeten op het
+# plaatsformulier, 29-10-2026). Beide zijn nu een keuze van de verkoper.
+# None = zoals Marktplaats het klaarzet (zoals het altijd was); een bedrag in
+# centen = zelf verzenden voor dat bedrag. "volg" = de schakelaar laten zoals
+# Marktplaats hem zet, "uit" = hem uitzetten. Alleen Marktplaats: 2dehands heeft
+# zijn eigen keuze (VERZENDING_2DH_MODUS).
+MP_ZELF_VERZENDEN = "mp_zelf_verzenden_cents"
+MP_ZELF_VERZENDEN_MIN = 1
+MP_ZELF_VERZENDEN_MAX = 10000
+MP_KOPERSBESCHERMING = "mp_kopersbescherming"
+MP_KOPERSBESCHERMING_KEUZES = ("volg", "uit")
+
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "auto_relist": True, RELIST_MOMENT: None, "vinted_herplaatsen": False, VERKOOPVRAAG: True, WEBSHOP_MET_RUST: False, VERZENDING_2DH_WOORDEN: [],
              VERZENDING_2DH_BRIEF_ONDER: 0, VERZENDING_2DH_MODUS: "standaard",
@@ -277,7 +293,8 @@ STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              SHOPIFY_AUTO_IMPORT: None, SHOPIFY_AUTO_IMPORT_STAND: {}, "vinted_taal": "zelf",
              WOO_AUTO_IMPORT: None, WOO_AUTO_IMPORT_STAND: {}, IMPORT_STAAT: None,
              NIEUWS_GEZIEN: None, VINTED_STAAT: None, VINTED_PAKKET: None,
-             VINTED_SLOT: "zelfde", SLOTTEKST_VINTED: ""}
+             VINTED_SLOT: "zelfde", SLOTTEKST_VINTED: "",
+             MP_ZELF_VERZENDEN: None, MP_KOPERSBESCHERMING: "volg"}
 
 
 def _schoon(rauw: dict | None) -> dict:
@@ -348,6 +365,17 @@ def _schoon(rauw: dict | None) -> dict:
             uit[veld] = str(rauw.get(veld) or "").strip()[:100]
     if "slottekst" in rauw:
         uit["slottekst"] = str(rauw.get("slottekst") or "").strip()[:SLOTTEKST_MAX]
+    if MP_ZELF_VERZENDEN in rauw:
+        # Leeg of onleesbaar = uit. Een bedrag wordt bijgesteld naar het bereik,
+        # want een leeg of nul-bedrag laat Marktplaats de verzendkosten gewoon
+        # zelf zetten, en dat is precies wat de verkoper niet wilde.
+        try:
+            cents = int(rauw.get(MP_ZELF_VERZENDEN))
+            uit[MP_ZELF_VERZENDEN] = max(MP_ZELF_VERZENDEN_MIN, min(cents, MP_ZELF_VERZENDEN_MAX))
+        except (TypeError, ValueError):
+            uit[MP_ZELF_VERZENDEN] = None
+    if rauw.get(MP_KOPERSBESCHERMING) in MP_KOPERSBESCHERMING_KEUZES:
+        uit[MP_KOPERSBESCHERMING] = rauw[MP_KOPERSBESCHERMING]
     if rauw.get(VINTED_SLOT) in VINTED_SLOT_KEUZES:
         uit[VINTED_SLOT] = rauw[VINTED_SLOT]
     if SLOTTEKST_VINTED in rauw:
@@ -660,4 +688,11 @@ def verzendkeuzes(user_id: str, prijs) -> dict:
             uit["pakket"] = PAKKET_KLEIN if float(prijs or 0) < grens else PAKKET_GROOT
         except (TypeError, ValueError):
             pass
+    # Alleen meesturen als de verkoper het koos: zonder sleutel doet de extensie
+    # niets en blijft het formulier zoals Marktplaats het klaarzet.
+    cents = s.get(MP_ZELF_VERZENDEN)
+    if isinstance(cents, int) and not isinstance(cents, bool) and cents >= MP_ZELF_VERZENDEN_MIN:
+        uit[MP_ZELF_VERZENDEN] = cents
+    if s.get(MP_KOPERSBESCHERMING) == "uit":
+        uit[MP_KOPERSBESCHERMING] = "uit"
     return uit

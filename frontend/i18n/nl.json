@@ -3837,5 +3837,14 @@
  "Hobby & crafts": "Hobby en knutselen",
  "Iron-on Patches & Appliqués": "Strijkemblemen en applicaties",
  "Marktplaats and 2dehands accept at most 60 characters. When you publish, Omnivaleur shortens this title for you at a whole word, so the end is cut off. Shorten it yourself via Edit to choose what stays.": "Marktplaats en 2dehands nemen hoogstens 60 tekens. Bij het plaatsen kort Omnivaleur deze titel zelf in op een heel woord, dus het einde valt weg. Kort hem zelf in via Bewerken om te kiezen wat blijft staan.",
- "⚠ Title is {0} characters, Marktplaats & 2dehands allow 60": "⚠ Titel is {0} tekens, Marktplaats en 2dehands nemen er 60"
+ "⚠ Title is {0} characters, Marktplaats & 2dehands allow 60": "⚠ Titel is {0} tekens, Marktplaats en 2dehands nemen er 60",
+ "By default Marktplaats sets up PostNL, DHL and Budbee with its own shipping costs. If your prices already include shipping, choose \"I ship myself\" and set the amount your buyers pay on top (Marktplaats needs at least €0.01).": "Standaard zet Marktplaats PostNL, DHL en Budbee klaar met eigen verzendkosten. Zitten de verzendkosten al in je prijzen, kies dan \"Ik verzend zelf\" en stel in wat kopers erbovenop betalen (Marktplaats vraagt minimaal € 0,01).",
+ "Marktplaats shipping (PostNL, DHL, Budbee)": "Verzending via Marktplaats (PostNL, DHL, Budbee)",
+ "I ship myself, for a fixed amount": "Ik verzend zelf, voor een vast bedrag",
+ "Marktplaats switches \"Add buyer protection?\" on for every new listing. Choose to have it switched off on the listings we publish.": "Marktplaats zet \"Kopersbescherming toevoegen?\" bij elke nieuwe advertentie aan. Kies of wij hem uitzetten op de advertenties die we plaatsen.",
+ "Leave it as Marktplaats sets it": "Laten zoals Marktplaats hem zet",
+ "Switch it off": "Uitzetten",
+ "Enter the shipping amount, at least €0.01.": "Vul het verzendbedrag in, minimaal € 0,01.",
+ "Shipping cost on Marktplaats.": "Verzendkosten op Marktplaats.",
+ "Buyer protection on Marktplaats.": "Kopersbescherming op Marktplaats."
 }

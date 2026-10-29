@@ -17,6 +17,24 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## marktplaats-zet-materiaal-zelf-op-zilver
+
+*29-10-2026 — 28-10/29-10 Mieneke: Marktplaats vult Materiaal (Zilver) en bij Antieke sieraden ook Type (Ring) zelf in, zet PostNL/DHL/Budbee en kopersbescherming aan; wij raakten het nooit aan (Materiaal 1.0.407, Type/verzending/kopersbescherming 1.0.408)*
+
+Op het echte plaatsformulier van Marktplaats (ringen 1826/22, kettingen /18, armbanden /1827, oorbellen /19, kettinghangers /2136) staat Materiaal al op "Zilver" voordat wij iets doen; het veld is niet verplicht. De extensie vulde Materiaal nooit, dus alles werd zilver (openbare advertentie toonde kleur goud + materiaal zilver).
+
+**Why:** Voordeelsieraden (Mieneke) heeft vooral goud; een verkeerd materiaal misleidt kopers. Meer velden kunnen zo'n vooringevulde standaard hebben (Conditie staat ook op Nieuw, "Eigenschappen" op een advertentie stond op met edelsteen).
+
+**How to apply:** vraagt een klant "elke advertentie krijgt X", meet dan eerst op het echte formulier (Claude in Chrome, /plaats/{cat1}/{cat3}?bucketId=...) of Marktplaats die waarde zelf voorinvult. Zet een voorinvulling nooit stilzwijgend door; kies uit bewijs of "Overige". Zie "vinted-staat-alleen-engels" voor hetzelfde patroon (veld dat leeg of verkeerd blijft). Formulier springt na foto's terug, dus ook in repairOnce zetten.
+
+**Vervolg 29-10 (extensie 1.0.408).** Zelfde mechanisme, drie nieuwe velden, live gemeten op /plaats/1826/13?bucketId=200:
+- Alleen Antieke sieraden heeft `singleSelectAttribute[type]` (Armband, Broche, Hanger, Ketting, Manchetknopen, Oorbellen, Ring, Overige typen), vooringevuld op Ring. Ringen, kettingen en hangers hebben het veld niet. Nu `vulSieraadType` in shared.js: titel eerst, dan omschrijving, anders "Overige typen".
+- `shippingMethod` zijn nu selectievakjes (budbee, postnl, dhl-nl, diy). Klik op diy zet de rest zelf uit en toont `othersPrice`; pakketmaten verdwijnen. Instelling `mp_zelf_verzenden_cents` (Preferences, alleen Marktplaats) doet dit; 2dehands houdt zijn eigen regel.
+- Kopersbescherming is `[role=switch][aria-labelledby="bp-dc-label"]`, standaard aan, blijft aan bij Zelf Verzenden. Instelling `mp_kopersbescherming: "uit"`.
+- Staat zet niets op haar account: ze moet de twee keuzes zelf instellen of Daniel zet ze met haar ja.
+
+---
+
 ## titelstuk-is-geen-maat
 
 *29-10-2026 — 29-10: Shopify-import nam alles na " - " in de titel als maat; 217 artikelen kregen kleur/liters/namen als maat, 2dehands weigerde*
@@ -25,18 +43,6 @@ De Shopify-import (`_convert` in backend/platforms/shopify_importer.py) viel bij
 
 **Why:** een terugval die voor één winkel klopt, vult bij andere winkels stil onzin in die pas bij het plaatsen op een ander kanaal opvalt.
 **How to apply:** een gok uit vrije tekst altijd tegen een patroon toetsen en meten op de echte data van alle klanten met die bron. De 217 oude artikelen zijn niet bijgewerkt zonder Daniels ja, zie "klantdata-niet-op-eigen-initiatief".
-
----
-
-## marktplaats-zet-materiaal-zelf-op-zilver
-
-*28-10-2026 — 28-10 Mieneke: Marktplaats vult Materiaal bij sieraden zelf in op Zilver; wij raakten het veld nooit aan, dus elke gouden ring kwam als zilver online (gerepareerd in extensie 1.0.407)*
-
-Op het echte plaatsformulier van Marktplaats (ringen 1826/22, kettingen /18, armbanden /1827, oorbellen /19, kettinghangers /2136) staat Materiaal al op "Zilver" voordat wij iets doen; het veld is niet verplicht. De extensie vulde Materiaal nooit, dus alles werd zilver (openbare advertentie toonde kleur goud + materiaal zilver).
-
-**Why:** Voordeelsieraden (Mieneke) heeft vooral goud; een verkeerd materiaal misleidt kopers. Meer velden kunnen zo'n vooringevulde standaard hebben (Conditie staat ook op Nieuw, "Eigenschappen" op een advertentie stond op met edelsteen).
-
-**How to apply:** vraagt een klant "elke advertentie krijgt X", meet dan eerst op het echte formulier (Claude in Chrome, /plaats/{cat1}/{cat3}?bucketId=...) of Marktplaats die waarde zelf voorinvult. Zet een voorinvulling nooit stilzwijgend door; kies uit bewijs of "Overige". Zie "vinted-staat-alleen-engels" voor hetzelfde patroon (veld dat leeg of verkeerd blijft). Formulier springt na foto's terug, dus ook in repairOnce zetten.
 
 ---
 
