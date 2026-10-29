@@ -402,7 +402,7 @@ class EbayPlatform(PlatformBase):
 
         product = {
             "title": item["title"][:80],
-            "description": _kort_omschrijving(item.get("description", "")),
+            "description": _kort_omschrijving(_zonder_contactgegevens(item.get("description", ""))),
             "imageUrls": item.get("photo_urls", [])[:12],
             "aspects": aspects,
         }
