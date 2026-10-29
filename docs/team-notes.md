@@ -18390,3 +18390,9 @@ Verstuurd 20, gereageerd 5, ja 1 (the_cooking_mommy), nee 4. Naomi (contentbynao
 - Meting rubriekherstel (gevraagd op 28-10): nachtronde liep 29-10 04:02 UTC, maar probeerde maar 14 artikelen, alle 14 bleven leeg. Totaal leeg nu 244 (was 252). 234 van de 244 hebben hun drie kansen op (model antwoordde echt, sinds 15-10 telt een 429 niet mee), dus de verwachting "haalt ze in twee nachten in" klopt niet: de ronde vraagt die pas opnieuw als de tekst verandert. Dit zijn artikelen die onze indeling niet kan plaatsen.
 - Mailrapport: 7 mails sinds 26-10, 4 echt geopend, 0 klik, 0 antwoord, 3 deden daarna iets (ffpd7n2, handelsonderneming038, gollem.joukes).
 - Het slot gaf eerst "Gedeelde opslag niet te lezen ([Errno 22] Invalid argument)", een tel later lukte het gewoon. Waarschijnlijk iCloud (kennisbank icloud-parkeert-de-repo), niet bewezen.
+
+## 29-10-2026: Voordeelsieraden (09e089ec), twee instellingen voor haar gezet
+
+- Met Daniels ja gezet op haar account: `mp_zelf_verzenden_cents` 1 (zelf verzenden, 0,01) en `mp_kopersbescherming` "uit". Alleen Marktplaats; 2dehands houdt haar bestaande regel (`verzending_2dh_modus` alles).
+- Oude waarden: `mp_zelf_verzenden_cents` leeg, `mp_kopersbescherming` "volg". Rest van haar instellingen ongewijzigd (voor en na vergeleken). Terugzetten kan door beide op die waarden te zetten.
+- Werkt pas zodra haar extensie 1.0.408 heeft (Web Store-upload door Daniel nog nodig).
