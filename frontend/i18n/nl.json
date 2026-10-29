@@ -2921,6 +2921,7 @@
  "{0} copies of one article{1}": "{0} kopieën van één artikel{1}",
  "{0} day{1}": "{0} {1|dag|dagen}",
  "{0} day{1} left": "nog {0} {1|dag|dagen}",
+ "No credit card needed": "Geen creditcard nodig",
  "{0} day{1} left in free trial · No credit card needed": "Nog {0} {1|dag|dagen} gratis proberen · Geen creditcard nodig",
  "{0} day{1} left in your free trial": "Nog {0} {1|dag|dagen} in je gratis proefperiode",
  "{0} delisted{1}.": "{0} offline gehaald{1}.",
