@@ -146,6 +146,26 @@ def volg_klik(code: str, request: Request) -> RedirectResponse:
     return RedirectResponse(url=f"{doel}?ref={schoon}", status_code=302)
 
 
+@router.get("/api/referrals/uitnodiging/{code}")
+def uitnodiging(code: str) -> dict:
+    """Mag de aanmeldpagina "A friend invited you, 50% off" tonen bij deze code?
+
+    Alleen bij de link van een KLANT. Een creatorlink (geen owner_user_id) geeft
+    geen vriendenkorting, zie heeft_recht_op_vriendenkorting; de belofte tonen
+    zou volgers van een creator iets beloven wat niet komt (29-10-2026, Amanda,
+    the_cooking_mommy). Bij twijfel of een fout: niet tonen.
+    """
+    schoon = _schoon(code)
+    if not schoon:
+        return {"korting": False}
+    try:
+        rij = eigenaar_van_code(schoon)
+    except Exception:
+        logger.exception("Kon code %s niet opzoeken voor het uitnodigingsvak", schoon)
+        return {"korting": False}
+    return {"korting": bool(rij and rij.get("active") and rij.get("owner_user_id"))}
+
+
 def _landingspagina(request: Request) -> str:
     """Nederlands of Engels, op de taalvoorkeur van de browser.
 
