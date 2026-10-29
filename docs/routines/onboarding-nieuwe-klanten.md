@@ -61,8 +61,10 @@ demo aan volgers. Eerste creator: Amanda, code `the_cooking_mommy` (Instagram, 1
 mama van twee jongens, UGC; verkoopt waarschijnlijk kinder- en damesmode, beauty, keuken).
 - Elke ronde volgen, ook als er geen signaal is, en haar apart bovenaan het rapport zetten.
 - Elke fout bij haar repareer je dezelfde ronde, ook als het bij een gewone klant een OOIT-punt zou zijn.
-- Haar proef is 7 dagen. Loopt die af voor ze betaalt, meld dat dan 2 dagen eerder aan Daniel: hij
-  beslist of ze `complimentary` krijgt (kennisbank: billing, status complimentary). Zelf niets zetten.
+- Daniel besliste op 29-10-2026: Amanda blijft gratis (geen einddatum). Zodra haar account in de
+  lijst staat (bevestigde mail), draai je `python3.13 scripts/gratis_toegang.py <haar adres>` en
+  daarna met `--doe-het`; het script weigert bij een Stripe-abonnement. Meld het in het rapport.
+  Alleen voor haar: een andere creator zet je nooit zelf op complimentary, dat beslist Daniel.
 - Zij staat niet in de lijst met "aanmeldingen zonder voorraad die nooit betalen": ze hoeft niet te
   betalen om waarde te hebben.
 
