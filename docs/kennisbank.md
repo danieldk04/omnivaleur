@@ -17,6 +17,17 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## titelstuk-is-geen-maat
+
+*29-10-2026 — 29-10: Shopify-import nam alles na " - " in de titel als maat; 217 artikelen kregen kleur/liters/namen als maat, 2dehands weigerde*
+
+De Shopify-import (`_convert` in backend/platforms/shopify_importer.py) viel bij een lege maatoptie terug op het stuk na het eerste " - " in de titel. Dat formaat ("Trui - Men XL - Very Good") is van één klant (3bfbed2c); bij Goudlief werd "creme Plastic", "2,5 liter" of "Gold kleur" de maat en 2dehands weigerde de advertentie. Sinds 30ba2f44 alleen een stuk dat echt een maat is (_MAAT_IN_TITEL).
+
+**Why:** een terugval die voor één winkel klopt, vult bij andere winkels stil onzin in die pas bij het plaatsen op een ander kanaal opvalt.
+**How to apply:** een gok uit vrije tekst altijd tegen een patroon toetsen en meten op de echte data van alle klanten met die bron. De 217 oude artikelen zijn niet bijgewerkt zonder Daniels ja, zie "klantdata-niet-op-eigen-initiatief".
+
+---
+
 ## marktplaats-zet-materiaal-zelf-op-zilver
 
 *28-10-2026 — 28-10 Mieneke: Marktplaats vult Materiaal bij sieraden zelf in op Zilver; wij raakten het veld nooit aan, dus elke gouden ring kwam als zilver online (gerepareerd in extensie 1.0.407)*
