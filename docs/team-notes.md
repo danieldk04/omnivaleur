@@ -18396,3 +18396,7 @@ Verstuurd 20, gereageerd 5, ja 1 (the_cooking_mommy), nee 4. Naomi (contentbynao
 - Met Daniels ja gezet op haar account: `mp_zelf_verzenden_cents` 1 (zelf verzenden, 0,01) en `mp_kopersbescherming` "uit". Alleen Marktplaats; 2dehands houdt haar bestaande regel (`verzending_2dh_modus` alles).
 - Oude waarden: `mp_zelf_verzenden_cents` leeg, `mp_kopersbescherming` "volg". Rest van haar instellingen ongewijzigd (voor en na vergeleken). Terugzetten kan door beide op die waarden te zetten.
 - Werkt pas zodra haar extensie 1.0.408 heeft (Web Store-upload door Daniel nog nodig).
+
+## 29-10-2026: eBay-afsluitregel per verkoper (Toon)
+
+Toon vroeg om op eBay dezelfde onderste regel als op Vinted ("Dejuistetoon Etten-Leur"). Bij zijn Marktplaats-teksten stond die regel onder telefoon en webshop en ging met het schoonmaken mee weg. Nieuw: `ebay._voor_ebay` zet een afsluitregel terug als er iets is weggehaald, uit `extra_data.ebay_afsluiting` van de eBay-koppeling van die verkoper (zonder instelling verandert er niets). Code en tests staan op main (ca3b98f7). Gemeten: 3 van Toons 6 live eBay-advertenties (TL104, GF124, tll07) eindigen al op deze regel en stonden niet verborgen. NOG NIET GEDAAN: de instelling bij Toon zetten en de twee schoongemaakte advertenties (IMP-07A5310E wandkleed, txl18) bijwerken; dat is geblokkeerd en wacht op Daniels ja. Script: scratchpad afsluiting_toon.py, droogloop gedaan, backup gaat naar ~/.omnivaleur/herstel-toon-29-10-ebay-afsluiting.json.
