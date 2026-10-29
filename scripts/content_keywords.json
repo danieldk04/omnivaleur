@@ -858,7 +858,7 @@
       "pillar": "A",
       "format": "combo",
       "slug": "cross-list-from-shopify-to-2dehands",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "shopify-naar-2dehands-crosslisten",
       "priority": 98
     }
@@ -1759,6 +1759,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-many-listings-do-you-need-to-make-sales",
       "published_at": "2026-10-28T14:45:42.228544+00:00"
+    },
+    {
+      "keyword": "cross list from shopify to 2dehands",
+      "slug": "cross-list-from-shopify-to-2dehands",
+      "region": "nl",
+      "pillar": "A",
+      "format": "combo",
+      "action": "created",
+      "url_path": "/crosslisting/cross-list-from-shopify-to-2dehands",
+      "published_at": "2026-10-29T14:51:43.494104+00:00"
     }
   ]
 }
