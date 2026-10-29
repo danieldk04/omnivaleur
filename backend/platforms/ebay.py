@@ -883,6 +883,26 @@ def _zonder_contactgegevens(tekst: str) -> str:
     return nieuw if len((nieuw or "").strip()) >= 20 else tekst
 
 
+def _voor_ebay(tekst: str, credentials: dict | None) -> str:
+    """De omschrijving zoals eBay hem krijgt: zonder contactgegevens, en met de
+    afsluitregel van de verkoper als daar iets voor is weggehaald.
+
+    WAAROM (29-10-2026, Toon). Op Vinted eindigt zijn advertentie met
+    "Dejuistetoon Etten-Leur" en hij wil dezelfde regel op eBay. Bij zijn Marktplaats-
+    teksten stond die regel onder het telefoonnummer en de webshop, en ging samen
+    met die weg. De regel staat per verkoper in extra_data.ebay_afsluiting van zijn
+    eBay-koppeling; zonder die instelling verandert er niets. Alleen een naam en
+    plaats: geen link, geen nummer, dus niets wat eBay als "buiten eBay om" telt.
+    Staat de regel er al in, of is er niets weggehaald, dan blijft de tekst gelijk.
+    """
+    schoon = _zonder_contactgegevens(tekst)
+    afsluiting = str(((credentials or {}).get("extra_data") or {}).get("ebay_afsluiting") or "").strip()
+    if not afsluiting or not tekst or schoon == tekst or afsluiting.lower() in schoon.lower():
+        return schoon
+    scheiding = "<br/><br/>" if re.search(r"<br\s*/?>", schoon, flags=re.I) else "\n\n"
+    return f"{schoon}{scheiding}{afsluiting}"
+
+
 def _kort_omschrijving(tekst: str) -> str:
     """eBay weigert een voorraadartikel met meer dan 4000 tekens omschrijving.
     Liever een tekst die vier regels korter is dan geen advertentie."""
