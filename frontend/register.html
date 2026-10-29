@@ -196,9 +196,17 @@ async function doRegister(e) {
 <script src="/assets/ref.js"></script>
 <script>
   // Na ref.js, want die zet de code pas neer.
+  // Alleen bij de link van een klant: een creatorlink geeft geen vriendenkorting,
+  // dus daar mag de belofte niet staan. De server beslist, bij twijfel blijft het vak weg.
   try {
-    if (window.omnivaleurRef && window.omnivaleurRef()) {
-      document.getElementById('uitnodiging').style.display = 'block';
+    var refCode = window.omnivaleurRef && window.omnivaleurRef();
+    if (refCode) {
+      fetch('/api/referrals/uitnodiging/' + encodeURIComponent(refCode))
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (d && d.korting === true) document.getElementById('uitnodiging').style.display = 'block';
+        })
+        .catch(function () {});
     }
   } catch (e) { /* een kapot vakje mag het aanmelden nooit tegenhouden */ }
 </script>
