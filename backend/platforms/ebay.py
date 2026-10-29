@@ -456,7 +456,7 @@ class EbayPlatform(PlatformBase):
                     "price": {"value": str(item["price"]), "currency": "EUR"}
                 },
                 "categoryId": category_id,
-                "listingDescription": _zonder_contactgegevens(item.get("description", "")),
+                "listingDescription": _voor_ebay(item.get("description", ""), credentials),
                 "quantityLimitPerBuyer": 1,
                 "merchantLocationKey": MERCHANT_LOCATION_KEY,
                 "listingPolicies": listing_policies,
