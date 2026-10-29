@@ -161,3 +161,26 @@ def test_beide_plekken_waar_eBay_de_tekst_leest_zijn_schoon(monkeypatch):
     for plek, tekst in eb.omschrijvingen:
         assert "0031" not in tekst and "Instagram" not in tekst and "webshop" not in tekst, (plek, tekst)
         assert "Perzisch tapijt" in tekst, plek
+
+
+# 82 van Toons teksten zijn HTML met alles op één regel (<br/> als regeleinde).
+HTML = ("Afmetingen 126/94 cm, Perzisch tapijt<br/><br/>Laat je inspireren door onze vintage schatten!<br/><br/>"
+        "Kijk op onze webshop Dejuistetoon voor het volledige en actuele aanbod.<br/><br/>"
+        "Wil je onze collectie in het echt bekijken , maak een afspraak.<br/>Zie openingstijden op de website"
+        "<br/>DeJuisteToon<br/><br/>Alle dagen op afspraak | <strong>Do &amp; Za 10.00 uur tot 17.00 uur</strong>"
+        "<br/><br/>Locatie: Mon Plaisir 19, Etten-Leur.<br/>telefoon: +31 6 5396 0664.")
+
+
+def test_html_met_alles_op_een_regel_wordt_per_br_opgeschoond():
+    uit = ebay_mod._zonder_contactgegevens(HTML)
+    assert "5396" not in uit and "webshop" not in uit and "Locatie" not in uit and "afspraak" not in uit, uit
+    assert "Afmetingen 126/94 cm, Perzisch tapijt" in uit and "Laat je inspireren" in uit and "DeJuisteToon" in uit
+    assert not uit.endswith("<br/>"), uit
+
+
+def test_lange_alinea_zonder_regeleinde_verliest_alleen_de_zin():
+    tekst = ("Dit Perzische tapijt is handgeknoopt van wol en heeft een rijk patroon in rood en blauw. "
+             "De franjes zijn nog compleet en het kleed ligt vlak. Volg ons op Instagram voor meer kleden. "
+             "Er zijn geen gaten of vlekken te zien aan de voorkant of achterkant.")
+    uit = ebay_mod._zonder_contactgegevens(tekst)
+    assert "Instagram" not in uit and "handgeknoopt van wol" in uit and "geen gaten" in uit

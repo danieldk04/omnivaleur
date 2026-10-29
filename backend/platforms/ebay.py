@@ -806,6 +806,34 @@ _BUITEN_EBAY_REGEL = re.compile(
     re.I)
 
 
+_REGELSCHEIDING = re.compile(r"(<br\s*/?>|</p>|</div>|</li>|\n|\u2028|\u2029)", re.I)
+_ZIN_EINDE = re.compile(r"(?<=[.!?])\s+")
+
+
+def _is_buiten_ebay(stuk: str) -> bool:
+    """Staat in dit stuk (zonder opmaakcodes) iets wat een koper buiten eBay stuurt?"""
+    platte = html.unescape(re.sub(r"<[^>]+>", "", stuk))
+    return bool(_BUITEN_EBAY_REGEL.search(platte))
+
+
+def _stuk_schoon(stuk: str) -> str | None:
+    """Eén regel (of, bij een lange regel, zin voor zin) zonder wat buiten eBay om
+    wijst. None als er niets overblijft."""
+    if len(stuk) > 160:
+        zinnen = [z for z in _ZIN_EINDE.split(stuk) if z]
+        if len(zinnen) > 1:
+            over = [z for z in (_stuk_schoon(z) for z in zinnen) if z]
+            return " ".join(over) if over else None
+    if _is_buiten_ebay(stuk):
+        return None
+    schoon = _TELEFOON.sub("", stuk)
+    if schoon == stuk:
+        return stuk                   # niets te halen: letterlijk laten staan
+    if not html.unescape(re.sub(r"<[^>]+>", "", schoon)).strip(" \t.,:;|-"):
+        return None
+    return schoon.rstrip()
+
+
 def _zonder_contactgegevens(tekst: str) -> str:
     """De omschrijving zonder telefoonnummer, webadres, e-mailadres en regels die
     de koper naar de eigen winkel of webshop sturen.
@@ -818,6 +846,9 @@ def _zonder_contactgegevens(tekst: str) -> str:
     0031 6 53 96 06 64". Marktplaats en 2dehands kregen die tekst al zonder
     adressen (_zonder_links); eBay kreeg hem ongewijzigd.
 
+    Regels worden herkend aan een regeleinde of <br/>, want 82 van zijn teksten zijn
+    HTML met alles op één regel. Opmaak van wat blijft staan, blijft staan.
+
     Zit er niets van dit alles in, dan blijft de tekst LETTERLIJK zoals hij was.
     Blijft er bijna niets over, dan ook: een lege omschrijving is erger dan een
     omschrijving met een telefoonnummer, want eBay weigert hem dan zelf.
@@ -828,23 +859,28 @@ def _zonder_contactgegevens(tekst: str) -> str:
         from backend.services.crosslist import _zonder_links
     except Exception:  # noqa: BLE001 — zonder zeef gaat de tekst liever door dan niet
         _zonder_links = lambda t: t  # noqa: E731
+    delen = _REGELSCHEIDING.split(tekst)
     uit: list[str] = []
     geschrapt = False
-    for regel in tekst.replace(" ", "\n").replace(" ", "\n").split("\n"):
-        if _BUITEN_EBAY_REGEL.search(regel):
-            geschrapt = True
+    for i in range(0, len(delen), 2):
+        stuk = delen[i]
+        scheiding = delen[i + 1] if i + 1 < len(delen) else ""
+        schoon = _stuk_schoon(stuk) if stuk.strip() else stuk
+        if schoon is None:
+            geschrapt = True          # de regel gaat weg, en zijn regeleinde ook
             continue
-        schoon = _TELEFOON.sub("", regel)
-        if schoon != regel:
+        if schoon != stuk:
             geschrapt = True
-            if not schoon.strip(" \t.,:;|-"):
-                continue
-        uit.append(schoon.rstrip())
+        uit.append(schoon + scheiding)
     if not geschrapt:
         zonder = _zonder_links(tekst)
         return zonder if len((zonder or "").strip()) >= 20 else tekst
-    resultaat = _zonder_links(re.sub(r"\n{3,}", "\n\n", "\n".join(uit)).strip())
-    return resultaat if len((resultaat or "").strip()) >= 20 else tekst
+    nieuw = "".join(uit)
+    nieuw = re.sub(r"(?:<br\s*/?>\s*){3,}", "<br/><br/>", nieuw, flags=re.I)
+    nieuw = re.sub(r"\n{3,}", "\n\n", nieuw)
+    nieuw = re.sub(r"(?:\s*(?:<br\s*/?>|\n))+\s*$", "", nieuw, flags=re.I).strip()
+    nieuw = _zonder_links(nieuw)
+    return nieuw if len((nieuw or "").strip()) >= 20 else tekst
 
 
 def _kort_omschrijving(tekst: str) -> str:
