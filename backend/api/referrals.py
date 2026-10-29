@@ -27,6 +27,7 @@ from backend.api.deps import get_current_user_full
 from backend.services.billing import is_owner_email as _is_owner_email
 from backend.services.referral_codes import (
     codes_van,
+    eigenaar_van_code,
     kies_eigen_code,
     link_voor,
     schoon_code,
