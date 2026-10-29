@@ -514,6 +514,11 @@ def tekst(p: dict, vorige: dict | None, nu: datetime) -> str:
               f"   abonnement: {abo['status']}, proef tot {_lokaal(abo['proef_tot'])}, "
               f"{'betaalmethode ingesteld' if abo['kaart'] else 'geen betaalmethode'}",
               f"   extensie: {ext['versie'] or '-'}, laatst gezien {_lokaal(ext['laatst'])}"]
+    if p.get("via_creator"):
+        regels.insert(1, f"   *** CREATOR via code {p['via_code']} ({p.get('via_naam') or '?'}): voorrang, "
+                         "elke ronde volgen en Daniel in het rapport apart melden")
+    elif p.get("via_code"):
+        regels.insert(1, f"   aangebracht via code {p['via_code']}")
     if vorige:
         regels.append(f"   vorige ronde ({str(vorige.get('laatst'))[:16]} UTC): {vorige.get('samenvatting')}")
     if "koude_mail" in p:
