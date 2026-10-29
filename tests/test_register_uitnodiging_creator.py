@@ -62,6 +62,5 @@ def test_pagina_toont_het_vak_alleen_na_antwoord_van_de_server():
     html = (ROOT / "frontend" / "register.html").read_text()
     assert "/api/referrals/uitnodiging/" in html
     # Het vak mag nergens meer direct open gaan op alleen een code in localStorage.
-    for regel in html.splitlines():
-        if "getElementById('uitnodiging').style.display = 'block'" in regel:
-            assert "korting === true" in html.split(regel)[0].splitlines()[-1]
+    openen = [r for r in html.splitlines() if "getElementById('uitnodiging').style.display = 'block'" in r]
+    assert openen and all("korting === true" in r for r in openen)
