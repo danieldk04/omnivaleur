@@ -53,6 +53,19 @@ Aan het eind ALTIJD, ook bij afbreken:
 `git log --since="30 hours ago" --name-only` en de onderkant van `docs/team-notes.md`.
 Zoek het laatste kopje "Onboarding nieuwe klanten" en lees wat toen per klant speelde.
 
+## Creators krijgen voorrang (Daniel, 29-10-2026)
+
+Staat er in de uitvoer van `nieuwe_klanten.py` een regel `*** CREATOR via code ...`, dan is dat
+een creator die Omnivaleur ook op haar eigen kanaal gaat laten zien. Haar eerste ervaring is haar
+demo aan volgers. Eerste creator: Amanda, code `the_cooking_mommy` (Instagram, 16.100 volgers,
+mama van twee jongens, UGC; verkoopt waarschijnlijk kinder- en damesmode, beauty, keuken).
+- Elke ronde volgen, ook als er geen signaal is, en haar apart bovenaan het rapport zetten.
+- Elke fout bij haar repareer je dezelfde ronde, ook als het bij een gewone klant een OOIT-punt zou zijn.
+- Haar proef is 7 dagen. Loopt die af voor ze betaalt, meld dat dan 2 dagen eerder aan Daniel: hij
+  beslist of ze `complimentary` krijgt (kennisbank: billing, status complimentary). Zelf niets zetten.
+- Zij staat niet in de lijst met "aanmeldingen zonder voorraad die nooit betalen": ze hoeft niet te
+  betalen om waarde te hebben.
+
 ## Stap 1b: eenmalige controles (alleen op de genoemde datum, daarna laten staan als afgevinkt)
 
 - **09-10-2026, automatische Shopify-import (Daniel: "check dit morgen voor mij").** Sinds
