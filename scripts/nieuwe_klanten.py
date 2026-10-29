@@ -154,6 +154,16 @@ def profiel(db, uid: str, account: dict, nu: datetime) -> dict:
     p["abonnement"] = {"status": abo.get("status") or "geen", "proef_tot": _tijd(abo.get("trial_ends_at")),
                        "kaart": bool(abo.get("stripe_subscription_id"))}
 
+    # Via wiens link binnengekomen. Een creator (kind creator, geen eigenaar) krijgt
+    # voorrang in de ronde: haar eerste ervaring is ook haar demo aan volgers.
+    verw = (db.table("referrals").select("code").eq("user_id", uid).limit(1).execute().data or [{}])[0]
+    p["via_code"], p["via_creator"] = verw.get("code"), False
+    if verw.get("code"):
+        rij = (db.table("referral_codes").select("kind,owner_user_id,creator_name")
+               .eq("code", verw["code"]).limit(1).execute().data or [{}])[0]
+        p["via_creator"] = rij.get("kind") == "creator" and not rij.get("owner_user_id")
+        p["via_naam"] = rij.get("creator_name") or ""
+
     hart = (db.table("extension_heartbeat").select("last_seen,ext_version")
             .eq("user_id", uid).limit(1).execute().data or [{}])[0]
     p["extensie"] = {"versie": hart.get("ext_version"), "laatst": _tijd(hart.get("last_seen"))}
