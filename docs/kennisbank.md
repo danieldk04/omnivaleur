@@ -17,6 +17,31 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## startpoort-voor-nieuwe-klanten
+
+*30-10-2026 — 30-10: nieuwe accounts komen het dashboard pas in na extensie, marktplaats-login en een item; poort.js met pijlen; wie al werkte komt er nooit in*
+
+Sinds 30-10-2026 staat voor nieuwe accounts een poort voor het dashboard (`frontend/poort.js`,
+`OBPoort`). Reden: klanten zeiden "het werkt niet" terwijl ze een voorbereidingsstap misten, en
+het afvinklijstje (onboarding.js) was weg te klikken.
+
+- Fasen uit feiten: extensie (ook uitgelogd, telefoon, Safari/Firefox), kanalen kiezen en daar niet
+  bewezen uitgelogd, minstens één item (server levert `items` in /api/jobs/onboarding), eerste plaatsing
+  (alleen pijl). Fase 1 en 2 dekken alles af behalve Help en Account; fase 3 laat Import, Items, Platforms open.
+- Nooit buitensluiten: een gelukte plaatsing of eBay/Shopify/Woo-koppeling = vrij; een gelukte kanaalopdracht = niets dicht, wel de pijl naar de eerste plaatsing; server zonder antwoord = vrij.
+  Items uit de server, niet uit het scherm: bij het laden is `state.items` nog leeg en zou elke klant met
+  voorraad even buitengesloten worden.
+- Kanaal-login bewijzen kan alleen negatief (`ingelogd === false`); de poort vraagt een expliciete keuze
+  van kanalen en een klik "ik ben ingelogd", en zet hem terug zodra de extensie uitgelogd meldt.
+
+**Why:** "kanaalicoon-aanvinken-is-geen-publiceren" en "onboarding-afvinken-op-feiten": klanten handelen op wat
+ze denken te hebben gedaan. **How to apply:** wijzig fasen in `OBPoort.fase` en draai
+`node tests/poort-fase-test.js`; nieuwe tekst via `python3 scripts/i18n_extract.py` (poort.js staat in SCRIPTS).
+Zinnen met een dynamische naam apart in een `<span>` zetten, anders blijft de rest Engels. Ophogen van `?v=` van poort.js.
+Testen zonder account: echte app.html met een nagebootste fetch en `window.postMessage` EXT_HELLO (zie team-notes 30-10).
+
+---
+
 ## korter-en-zelf-regelen
 
 *30-10-2026 — Daniel 30-10: de vier blokjes blijven maar korter (één scherm); alles wat je zelf kunt zelf doen en testen; actiepunten alleen wat alleen hij kan; interview alleen als het echt nodig is*
@@ -29,31 +54,6 @@ Vragen stellen alleen als het eindresultaat onduidelijk is en een verkeerde gok 
 **Why:** hij kreeg extreem lange berichten en moest werk doen dat ik ook had kunnen doen (hij vroeg zelf:
 "kan jij dit niet gewoon voor mij testen?"). **How to apply:** blokje 1 en 2 samen hooguit vijf regels,
 geen uitleg over hoe; een actiepunt dat ik ook had kunnen uitvoeren is mijn fout. Zie "rapportage-in-gewone-taal".
-
----
-
-## startpoort-voor-nieuwe-klanten
-
-*30-10-2026 — 30-10: nieuwe accounts komen het dashboard pas in na extensie, marktplaats-login en een item; poort.js met pijlen; wie al werkte komt er nooit in*
-
-Sinds 30-10-2026 staat voor nieuwe accounts een poort voor het dashboard (`frontend/poort.js`,
-`OBPoort`). Reden: klanten zeiden "het werkt niet" terwijl ze een voorbereidingsstap misten, en
-het afvinklijstje (onboarding.js) was weg te klikken.
-
-- Fasen uit feiten: extensie (ook uitgelogd, telefoon, Safari/Firefox), kanalen kiezen en daar niet
-  bewezen uitgelogd, minstens één item (server levert `items` in /api/jobs/onboarding), eerste plaatsing
-  (alleen pijl). Fase 1 en 2 dekken alles af behalve Help en Account; fase 3 laat Import, Items, Platforms open.
-- Nooit buitensluiten: een gelukte plaatsing of eBay/Shopify/Woo-koppeling = vrij; server zonder antwoord = vrij.
-  Items uit de server, niet uit het scherm: bij het laden is `state.items` nog leeg en zou elke klant met
-  voorraad even buitengesloten worden.
-- Kanaal-login bewijzen kan alleen negatief (`ingelogd === false`); de poort vraagt een expliciete keuze
-  van kanalen en een klik "ik ben ingelogd", en zet hem terug zodra de extensie uitgelogd meldt.
-
-**Why:** "kanaalicoon-aanvinken-is-geen-publiceren" en "onboarding-afvinken-op-feiten": klanten handelen op wat
-ze denken te hebben gedaan. **How to apply:** wijzig fasen in `OBPoort.fase` en draai
-`node tests/poort-fase-test.js`; nieuwe tekst via `python3 scripts/i18n_extract.py` (poort.js staat in SCRIPTS).
-Zinnen met een dynamische naam apart in een `<span>` zetten, anders blijft de rest Engels. Ophogen van `?v=` van poort.js.
-Testen zonder account: echte app.html met een nagebootste fetch en `window.postMessage` EXT_HELLO (zie team-notes 30-10).
 
 ---
 

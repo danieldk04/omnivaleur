@@ -18493,3 +18493,7 @@ Aanleiding: een nieuwe klant zegt "het werkt niet" terwijl hij een stap van de v
 - Wie al een gelukte plaatsing of een eBay/Shopify/WooCommerce-koppeling heeft komt er nooit in. Geeft de server geen antwoord, dan blijft alles open (een storing van ons mag niemand buitensluiten). Telefoon en Safari/Firefox krijgen "Ga verder op je computer" / "Open in Chrome".
 - Bewezen: `node tests/poort-fase-test.js` (25 regels), `tests/test_onboarding_status.py`, en de echte app.html in een nagebootste omgeving (stap 1 tot 4, Nederlands, telefoon). NIET gemeten: met een echt nieuw account en een echte extensie.
 - Ook besloten: korter rapporteren en alles zelf regelen wat kan; skill `interview-daniel` voor als het eindresultaat echt onduidelijk is.
+
+## 2026-10-30: startpoort live doorlopen op Daniels Chrome
+
+Live (poort.js ?v=20261030e) doorlopen met de echte extensie 1.0.409 en een blanco account: stap 1 afgevinkt door de extensie, stap 2 toont per marktplaats wat de extensie meldt (ingelogd:true, status 200 voor Marktplaats, 2dehands, Vinted), echte Marktplaats-scan gestart: server meldt daarna kanaal=true en items=true, alle slotjes verdwijnen, stap 4 wijst met een pijl naar Plaatsen. Gerepareerd onderweg: de pijl bij Import lag over de vakjes (nu naar de hele rij), en na een marktplaats-import sloeg hij stap 4 over (nu fase plaatsen als er items zijn en nooit geplaatst). NIET gedaan: een echte plaatsing (openbaar). Het blanco account bevat nu 128 items uit Daniels eigen Marktplaats (alleen gelezen).
