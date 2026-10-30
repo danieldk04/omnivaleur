@@ -18497,3 +18497,10 @@ Aanleiding: een nieuwe klant zegt "het werkt niet" terwijl hij een stap van de v
 ## 2026-10-30: startpoort live doorlopen op Daniels Chrome
 
 Live (poort.js ?v=20261030e) doorlopen met de echte extensie 1.0.409 en een blanco account: stap 1 afgevinkt door de extensie, stap 2 toont per marktplaats wat de extensie meldt (ingelogd:true, status 200 voor Marktplaats, 2dehands, Vinted), echte Marktplaats-scan gestart: server meldt daarna kanaal=true en items=true, alle slotjes verdwijnen, stap 4 wijst met een pijl naar Plaatsen. Gerepareerd onderweg: de pijl bij Import lag over de vakjes (nu naar de hele rij), en na een marktplaats-import sloeg hij stap 4 over (nu fase plaatsen als er items zijn en nooit geplaatst). NIET gedaan: een echte plaatsing (openbaar). Het blanco account bevat nu 128 items uit Daniels eigen Marktplaats (alleen gelezen).
+
+## 30-10-2026: Onboarding nieuwe klanten (ochtend, liep om 20:15)
+- 4 klanten in hun eerste week, 1 nieuw. Geen creator. Agenda zonder afspraken met deze klanten. Niets gerepareerd, geen code gewijzigd.
+- 49b900b4 (valentinomtcg@gmail.com, nieuw 29-10 19:03): extensie 1.0.406 op Windows, meldde zich 13 minuten en daarna niet meer; nul artikelen, geen opdrachten, geen koppelingen, voorkeuren nooit opgeslagen. Welkomstmailtje verstuurd via onboarding_mail.py ("Je account op Omnivaleur"). Bij zijn volgende bezoek staat de nieuwe startpoort klaar.
+- f0291981 (gollem.joukes): ongewijzigd, extensie stil sinds 28-10 15:18 (computer uit), 1 Vinted-scan wacht, 2 kledingstukken maat Overige. Geen mailtje: niets veranderd sinds het mailtje van 28-10.
+- cf1284b8 (radu.stefana): ongewijzigd, geen extensie, nul artikelen, proef loopt 31-10 af. Geen mailtje (al twee). 656a5041 is Daniels eigen account.
+- Mailrapport: 7 mails sinds 26-10, 4 echt geopend, 0 klik, 0 antwoord, 3 deden daarna iets.
