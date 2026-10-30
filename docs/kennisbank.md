@@ -17,6 +17,20 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## 2dehands-vast-verzendbedrag-en-bieden-standaard
+
+*30-10-2026 — "30-10 Mieneke: 2dehands-keuze \"vast bedrag voor alles\" (EUR 0,01) en instelling \"bieden toestaan op elke advertentie, vanaf 0\"; bieden vraagt extensie 1.0.409"*
+
+30-10-2026, Mieneke (Voordeelsieraden, 09e089ec): na Marktplaats (1.0.408) wilde ze op 2dehands ook overal "Zelf verzenden" voor EUR 0,01, en bieden toestaan aan met bieden vanaf 0 op elke advertentie.
+
+**Gebouwd.** Verzendkeuze `vast` naast standaard/regel/alles (`verzending_2dh_modus`, bedrag in `verzending_2dh_vast_cents`, 1 tot 9999 cent; zonder bedrag valt hij terug, nooit stil Bpost). Gaat vóór Marktplaats, dus ook voor artikelen zonder Marktplaats-advertentie en bij een storing daar; een eigen keuze per artikel gaat nog voor. De ronde voor wat al online staat (`/verzending-2dh/ronde`) kent hem ook. Bieden: `bieden_standaard` "volg" (oude gedrag: zonder vinkje gaat bieden UIT) of "aan"; gaat via `verzendkeuzes()` mee in de opdracht en `zetBiedenAan` in shared.js laat de schakelaar aan en "Bieden vanaf" leeg (= 0, zoals Egberts MIN_BID-zoekertjes). Eigen percentage op het artikel gaat voor. Mieneke zelf stond al op `alles` voor 2dehands, gezet op `vast` 1 cent.
+
+**Why:** "alles" leest per artikel het bedrag van de Marktplaats-advertentie; wat daar PostNL is of niet op Marktplaats staat kreeg Bpost 7,10. `bid_percentage` kan geen 0 dragen (0 = uit), dus "vanaf 0" kon niet via het artikelvinkje.
+
+**How to apply:** bieden werkt pas op extensie 1.0.409 (Web Store-upload door Daniel); de verzending werkt direct, de server legt het bedrag in de opdracht. NIET gemeten op het echte formulier (Chrome niet verbonden op 30-10): dat 2dehands othersPrice 0,01 accepteert (Marktplaats deed het, zelfde formulier, en Mieneke zet het zelf) en dat een leeg "Bieden vanaf" met schakelaar aan plaatst. Bestaande advertenties niet aangeraakt: de ronde voor al online staande 2dehands-zoekertjes start pas met haar ja. Zie "marktplaats-zet-materiaal-zelf-op-zilver" voor 1.0.408 en "bieden-toestaan-staat-standaard-aan".
+
+---
+
 ## creatorlink-belooft-geen-vriendenkorting
 
 *29-10-2026 — "29-10: register.html toonde \"50% off first month\" bij elke ?ref=code, ook creatorcodes; creatorlink geeft alleen 7 dagen proef; creators krijgen voorrang in de onboardingronde"*
