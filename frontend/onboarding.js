@@ -304,6 +304,13 @@
     };
   }
 
+  // Voor de startpoort (poort.js): wat de server weet en wat dit scherm weet.
+  // `bekend` is pas waar als de server echt antwoordde: de poort blijft anders open.
+  OB.feiten = async function (vers) {
+    const server = await serverFeiten(vers);
+    return { server: server || {}, lokaal: lokaleFeiten(), bekend: !!_server };
+  };
+
   // ── Get started op het dashboard ───────────────────────────────────────────
   // Het dashboard ververst elke paar seconden; alleen tekenen als er iets
   // veranderde, anders springt een open stap of een knop onder je muis weg.
