@@ -18445,3 +18445,10 @@ Daniel liet Ahrefs, Search Console en onze site doorzoeken omdat de score laag w
 ## 2026-10-30: platformcontrole niet gedraaid
 
 Claude in Chrome was niet verbonden (geen browser gevonden), dus geen proef op Vinted, Marktplaats of 2dehands. Geen afwijking gemeten, ook niets bewezen. Meld aan Daniel pas als dit twee dagen achter elkaar gebeurt.
+
+## 30-10-2026: Dagelijkse klantfouten (ochtendronde)
+- Gemeten over 24 uur (op done_at): 28 fouten bij 7 klanten, geen enkele aantoonbaar in onze code. Niets gerepareerd, geen code gewijzigd.
+- Klant: Vinted-scan 26cf5471 uitgelogd (13x, al sinds 24-10; 96e30080 1x). Goudlief (5aae4954) plaatste gisteravond 332 opdrachten, 6 fouten: betaalde rubriek "Klussen verf beits en lak", en tabblad dicht of time-out; de laatste om 23:39 UTC, toen ging haar computer uit. 1.197 wachtende opdrachten wachten op haar computer. 0b28c1ce en 31d28378: opdrachten na 3 dagen afgeblazen, computer uit sinds 26-10 en 25-10. 45f9caba: proef verlopen 28-10. bcdf9aa4: 2dehands-verlenging van een advertentie die niet meer in zijn overzicht staat.
+- Onbekend: Goudlief, 21:35 "publishing was interrupted" en 21:38 time-out, terwijl haar extensie daarna nog twee uur doorwerkte. 2 op 338, niet te herleiden zonder haar browser.
+- Vorige ronde: Vinted-jeans 8f91a370 sinds gisteren geen fout meer (2 Vinted-plaatsingen gelukt); Vinted-verwijderingen 96e30080 vandaag 4 gelukt, geen "nog in je kast". Telefoonkoorden Goudlief op 2dehands: geen nieuwe fout, niet gemeten of ze nu online staan.
+- Wachtrij beweegt: 96e30080 (39 wachtend) en 3bfbed2c (5) werken nu actief af, server draait f585d7e7 (gelijk aan main).
