@@ -48,7 +48,7 @@ def _status(monkeypatch, **tabellen):
 
 
 def test_nieuw_account_heeft_niets(monkeypatch):
-    assert _status(monkeypatch) == {"extensie": False, "kanaal": False, "gepubliceerd": False}
+    assert _status(monkeypatch) == {"extensie": False, "kanaal": False, "gepubliceerd": False, "items": False}
 
 
 def test_aangeklikte_iconen_tellen_niet_als_gepubliceerd(monkeypatch):
