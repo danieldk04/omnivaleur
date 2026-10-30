@@ -3753,7 +3753,10 @@ function renderExtSetup() {
 
   // Install step: blocking, because publishing is impossible without it.
   // Dismissal is per-browser ("Not now"), but a real detection still wins.
-  modal.style.display = (missing && !_opTelefoon() && !_andereBrowser() && !localStorage.getItem('cl_ext_ok')) ? 'flex' : 'none';
+  // De startpoort (poort.js) is de installatiestap voor wie nog niets bewezen heeft;
+  // daar staat geen "Not now" op. Dit venster blijft voor wie al werkte.
+  const poortActief = !!(window.OBPoort && OBPoort.actief());
+  modal.style.display = (missing && !poortActief && !_opTelefoon() && !_andereBrowser() && !localStorage.getItem('cl_ext_ok')) ? 'flex' : 'none';
 
   // Bijwerkstap: net zo blokkerend. Een te oude kopie is erger dan geen kopie,
   // want ze neemt werk aan en levert het half af. Het weggeklikte "toch doorgaan"
