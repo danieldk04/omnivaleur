@@ -18452,3 +18452,18 @@ Claude in Chrome was niet verbonden (geen browser gevonden), dus geen proef op V
 - Onbekend: Goudlief, 21:35 "publishing was interrupted" en 21:38 time-out, terwijl haar extensie daarna nog twee uur doorwerkte. 2 op 338, niet te herleiden zonder haar browser.
 - Vorige ronde: Vinted-jeans 8f91a370 sinds gisteren geen fout meer (2 Vinted-plaatsingen gelukt); Vinted-verwijderingen 96e30080 vandaag 4 gelukt, geen "nog in je kast". Telefoonkoorden Goudlief op 2dehands: geen nieuwe fout, niet gemeten of ze nu online staan.
 - Wachtrij beweegt: 96e30080 (39 wachtend) en 3bfbed2c (5) werken nu actief af, server draait f585d7e7 (gelijk aan main).
+
+## 2026-10-30: SEO-hygiëne en tweede ronde titels
+
+- Gemeten met een scan over alle 203 sitemap-pagina's: 21 omschrijvingen boven 160 tekens (waaronder de homepage met 298 en /nl met 310), 25 pagina's zonder X-kaart (twitter:card), privacy en terms zonder Open Graph, bloglijst zonder og:image. Alle 203 pagina's geven 200.
+- Gerepareerd in code: omschrijvingen van `/`, `/nl`, `/register`, `/ai-info` en alle toolpagina's (`backend/tools_data.py`) ingekort tot maximaal 160, drie toolkoppen onder 68 tekens; `twitter:*` toegevoegd aan het toolsjabloon, de bloglijst, ai-info, privacy en terms. NIET bewezen tot Ahrefs opnieuw crawlt.
+- Tweede ronde titels en omschrijvingen (alleen `title` en `meta_description` in content_pages, taal en): margin-scheme-vat-second-hand-goods, omnivaleur-vs-crosslist, omnivaleur-vs-list-perfectly, marktplaats-to-2dehands-crosslisting, how-to-price-second-hand-items, shopify-to-vinted-crosslisting, vintage-book-reselling-automation (alleen titel), omnivaleur-vs-vendoo (alleen titel); bij IndexNow gemeld (200). Oude waarden:
+- margin-scheme-vat-second-hand-goods: "Margin Scheme VAT Second Hand Goods: 2026 Guide" | "Master the margin scheme VAT for second hand goods in 2026. Calculate profit margins, handle EU cross-border trade, and avoid costly tax mistakes."
+- omnivaleur-vs-crosslist: "Omnivaleur vs Crosslist: Honest 2026 Reseller Comparison" | "Comparing Omnivaleur and Crosslist for 2026. Discover features, euro pricing, EU platform support, and speed differences for European sellers."
+- omnivaleur-vs-list-perfectly: "Omnivaleur vs List Perfectly: Honest 2026 Comparison" | "Omnivaleur vs List Perfectly compared: pricing, platforms, sync, EU support. Which crosslisting tool actually fits Dutch and EU resellers?"
+- marktplaats-to-2dehands-crosslisting: "Marktplaats to 2dehands Cross-Listing: 2026 Guide" | "Cross-list Marktplaats to 2dehands in 2026: Belgian sister sites, B2C vs B2B rules, fees, sync tips and how to automate both listings."
+- how-to-price-second-hand-items: "How to Price Second-Hand Items: The 2026 Reseller Guide" | "Master how to price second-hand items for maximum profit. Learn condition grading, depreciation formulas, and market research rules for 2026."
+- shopify-to-vinted-crosslisting: "Shopify to Vinted Crosslisting: 2026 Sync & Setup Guide" | "Learn how to cross-list from Shopify to Vinted in 2026. Master inventory sync, avoid overselling, and automate your second-hand workflow."
+- vintage-book-reselling-automation: titel "Vintage Book Reselling Automation 2026: Full Guide" (omschrijving ongewijzigd)
+- omnivaleur-vs-vendoo: titel "Vendoo Alternative for European Resellers: Omnivaleur vs Vendoo (2026)" (omschrijving ongewijzigd)
+- De nameting van 26-11 (taak `omnivaleur-seo-nameting-26-nov`) meet alleen de eerste acht artikelen; kijk bij deze acht apart naar de CTR.
