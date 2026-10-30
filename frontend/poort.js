@@ -89,6 +89,7 @@
   P.guard = function (view) {
     if (P.toegestaan(huidig.fase, view)) return view;
     const f = P.terugval(huidig.fase);
+    if (view === f) return f;
     try { const t = g("showToast"); if (typeof t === "function") t("Finish the setup first: this screen opens right after."); } catch (e) { /* geen toast */ }
     return f;
   };
