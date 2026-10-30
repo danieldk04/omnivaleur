@@ -317,7 +317,7 @@
       coach(`<div class="pt-cs">Step 3 of 4</div><b class="pt-ct">Add your items</b>
         <p>Import the adverts you already have on Marktplaats, 2dehands or Vinted, or create one with <b>New item</b>. The next step opens as soon as there is one item.</p>
         ${opImport ? "" : `<div class="pt-cb"><button class="pt-groot" style="padding:10px 20px;font-size:13px" onclick="showView('import')">Go to Import</button></div>`}`);
-      pijl(opImport ? "#import-scan-grid" : ".nav-item[data-view='import']", opImport ? "Tick where you sell" : "Open Import", opImport ? ID("import-scan-grid", "> :last-child") : null);
+      pijl(opImport ? "#import-scan-grid" : ".nav-item[data-view='import']", opImport ? "Tick where you sell" : "Open Import", opImport ? ID("import-scan-grid", ">") + " :last-child" : null);
       return;
     }
     // plaatsen
