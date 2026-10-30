@@ -350,7 +350,7 @@
       huidig = r;
       const view = actieveView();
       // Mag hij hier nog zijn? Zo niet: naar waar het wel mag.
-      if (view && !P.toegestaan(r.fase, view)) { const sv = g("showView"); if (typeof sv === "function") sv(P.terugval(r.fase)); }
+      if (view && !P.toegestaan(r.fase, view) && view !== P.terugval(r.fase)) { const sv = g("showView"); if (typeof sv === "function") sv(P.terugval(r.fase)); }
       let ov = document.getElementById("ob-poort");
       if (!ov) { ov = document.createElement("div"); ov.id = "ob-poort"; document.body.appendChild(ov); }
       const dicht = (r.fase === "extensie" || r.fase === "kanalen") && !P.toegestaan(r.fase, actieveView());
