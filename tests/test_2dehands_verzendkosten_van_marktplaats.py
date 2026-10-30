@@ -357,10 +357,10 @@ def test_lezen_uit_de_rij_van_de_verkoper():
     lees = ECHT_LEZEN
     assert lees("u", db(_V([{"extra_data": {I.VERZENDING_2DH_WOORDEN: ["patch"],
                                             I.VERZENDING_2DH_BRIEF_ONDER: 495}}]))) == \
-        {**EGBERT, "modus": "regel"}, "wie nog niet koos, houdt zijn regel (27-09-2026)"
+        {**EGBERT, "modus": "regel", "vast_cents": None}, "wie nog niet koos, houdt zijn regel (27-09-2026)"
     assert lees("u", db(_V([{"extra_data": {I.VERZENDING_2DH_WOORDEN: ["patch"]}}]))) == \
-        {**ALLEEN_WOORDEN, "modus": "regel"}
-    assert lees("u", db(_V([]))) == {"modus": "standaard", "woorden": [], "brief_onder": 0}
+        {**ALLEEN_WOORDEN, "modus": "regel", "vast_cents": None}
+    assert lees("u", db(_V([]))) == {"modus": "standaard", "woorden": [], "brief_onder": 0, "vast_cents": None}
     assert lees("u", db(_V(fout=True))) is None
 
 

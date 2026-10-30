@@ -3847,5 +3847,16 @@
  "Switch it off": "Uitzetten",
  "Enter the shipping amount, at least €0.01.": "Vul het verzendbedrag in, minimaal € 0,01.",
  "Shipping cost on Marktplaats.": "Verzendkosten op Marktplaats.",
- "Buyer protection on Marktplaats.": "Kopersbescherming op Marktplaats."
+ "Buyer protection on Marktplaats.": "Kopersbescherming op Marktplaats.",
+ "A fixed amount for everything": "Een vast bedrag voor alles",
+ "Allow bidding on every listing, from €0": "Bieden toestaan op elke advertentie, vanaf € 0",
+ "Bidding on Marktplaats & 2dehands": "Bieden op Marktplaats en 2dehands",
+ "Buyers pay": "Kopers betalen",
+ "Choose whether buyers can make a bid on the listings we publish. An item with its own lowest bid (\"Allow bidding\" on the item) keeps that bid.": "Kies of kopers een bod mogen doen op de advertenties die wij plaatsen. Een artikel met een eigen laagste bod (\"Allow bidding\" bij het artikel) houdt dat bod.",
+ "Every listing on 2dehands gets \"I ship myself\" for this amount, whatever it costs on Marktplaats. Good if your prices already include shipping.": "Elke advertentie op 2dehands krijgt \"Ik verzend zelf\" voor dit bedrag, wat het op Marktplaats ook kost. Handig als de verzendkosten al in je prijzen zitten.",
+ "Per item: only where I ticked \"Allow bidding\"": "Per artikel: alleen waar ik \"Allow bidding\" aanvinkte",
+ "Saved. Bidding follows the \"Allow bidding\" box on each item.": "Opgeslagen. Bieden volgt het vakje \"Allow bidding\" bij elk artikel.",
+ "Saved. New 2dehands listings get \"I ship myself\" for €{0}.": "Opgeslagen. Nieuwe 2dehands-advertenties krijgen \"Ik verzend zelf\" voor €{0}.",
+ "Saved. New listings allow bidding, from €0.": "Opgeslagen. Nieuwe advertenties staan open voor bieden, vanaf € 0.",
+ "This applies to new listings and relists. Listings that are already online keep their current setting.": "Dit geldt voor nieuwe advertenties en herplaatsingen. Advertenties die al online staan houden hun huidige instelling."
 }

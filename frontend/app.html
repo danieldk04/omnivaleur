@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=b106172c2b"></script>
+<script src="/i18n.js?v=0836fbdcb2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1822,6 +1822,27 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           </select>
         </div>
       </div>
+      <!-- Bieden toestaan op elke advertentie (Mieneke van Voordeelsieraden,
+           30-10-2026). Zonder deze keuze beslist het vinkje Allow bidding per
+           artikel, en zonder vinkje zetten we bieden juist UIT. -->
+      <div style="background:var(--card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:4px">Bidding on Marktplaats &amp; 2dehands</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          Choose whether buyers can make a bid on the listings we publish. An item with its own lowest bid
+          ("Allow bidding" on the item) keeps that bid.
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <select id="bieden-standaard" style="max-width:340px">
+            <option value="volg">Per item: only where I ticked "Allow bidding"</option>
+            <option value="aan">Allow bidding on every listing, from €0</option>
+          </select>
+          <button class="btn btn-sm btn-primary" onclick="saveBieden()">Save</button>
+          <span id="bieden-status" style="font-size:12px;color:var(--muted)"></span>
+        </div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:10px">
+          This applies to new listings and relists. Listings that are already online keep their current setting.
+        </div>
+      </div>
       <!-- Verzendkosten op 2dehands. Tot 27-09-2026 zette Daniel dit per klant met
            de hand (Egbert: patches en alles onder EUR 4,95), en zette hij daarna met
            een script om wat al online stond. Nu kiest de verkoper zelf uit drie
@@ -1854,6 +1875,15 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           </div>
           <label class="vg-chip vz-keuze"><input type="radio" name="verzending-2dh-modus" value="alles" onchange="toonVerzending2dhKeuze()">
             <span>My Marktplaats amount for everything<span class="vz-uitleg">Good if you ship from Belgium. From the Netherlands a parcel to Belgium usually costs more than your Marktplaats amount.</span></span></label>
+          <label class="vg-chip vz-keuze"><input type="radio" name="verzending-2dh-modus" value="vast" onchange="toonVerzending2dhKeuze()">
+            <span>A fixed amount for everything<span class="vz-uitleg">Every listing on 2dehands gets "I ship myself" for this amount, whatever it costs on Marktplaats. Good if your prices already include shipping.</span></span></label>
+          <div id="verzending-2dh-vast-velden" style="margin:2px 0 4px 28px">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <label for="verzending-2dh-vast" style="font-size:13px">Buyers pay</label>
+              <span style="font-size:13px">€</span>
+              <input type="number" id="verzending-2dh-vast" min="0.01" max="99.99" step="0.01" placeholder="0.01" style="max-width:90px">
+            </div>
+          </div>
         </div>
         <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:10px">
           Your Marktplaats amount is what you set per item with "Zelf verzenden". Items you send through Marktplaats (PostNL or DHL), or that are not on Marktplaats, get Bpost €7.10.
@@ -13928,6 +13958,7 @@ async function loadRelistDagen() {
     const grens = document.getElementById('pakket-grens');
     if (grens) grens.value = data.pakket_grens != null ? data.pakket_grens : 0;
     toonMpVerzendInstelling(data);
+    toonBiedenInstelling(data);
     const slot = document.getElementById('slottekst');
     if (slot) slot.value = data.slottekst || '';
     toonSlottekstVinted(data);
@@ -13991,6 +14022,31 @@ function toonMpVerzendInstelling(data) {
   toonMpVerzending();
 }
 
+function toonBiedenInstelling(data) {
+  const keuze = document.getElementById('bieden-standaard');
+  if (keuze) keuze.value = data.bieden_standaard === 'aan' ? 'aan' : 'volg';
+}
+
+async function saveBieden() {
+  const melding = document.getElementById('bieden-status');
+  melding.textContent = 'Saving…';
+  try {
+    const r = await apiFetchRetry(`${API}/api/items/settings`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bieden_standaard: document.getElementById('bieden-standaard').value }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+    state.settings = { ...state.settings, ...data };
+    toonBiedenInstelling(data);
+    melding.textContent = data.bieden_standaard === 'aan'
+      ? 'Saved. New listings allow bidding, from €0.'
+      : 'Saved. Bidding follows the "Allow bidding" box on each item.';
+  } catch (e) {
+    melding.textContent = `Could not save: ${e.message}`;
+  }
+}
+
 function toonMpVerzending() {
   const zelf = document.getElementById('mp-verzending-keuze').value === 'zelf';
   document.getElementById('mp-verzending-bedrag-wrap').style.display = zelf ? '' : 'none';
@@ -14003,6 +14059,9 @@ function toonVerzending2dh(data) {
   if (grens) grens.value = ((data.verzending_2dh_brief_onder || 0) / 100).toFixed(2);
   const woorden = document.getElementById('verzending-2dh-woorden');
   if (woorden) woorden.value = (data.verzending_2dh_woorden || []).join(', ');
+  const vast = document.getElementById('verzending-2dh-vast');
+  if (vast) vast.value = Number.isInteger(data.verzending_2dh_vast_cents)
+    ? (data.verzending_2dh_vast_cents / 100).toFixed(2) : '';
   toonVerzending2dhKeuze();
   laadVerzending2dhRonde();
 }
@@ -14022,6 +14081,12 @@ function toonVerzending2dhKeuze() {
     velden.style.opacity = regel ? '1' : '.5';
     velden.querySelectorAll('input').forEach(i => { i.disabled = !regel; });
   }
+  const vast = gekozenVerzending2dh() === 'vast';
+  const vastVelden = document.getElementById('verzending-2dh-vast-velden');
+  if (vastVelden) {
+    vastVelden.style.opacity = vast ? '1' : '.5';
+    vastVelden.querySelectorAll('input').forEach(i => { i.disabled = !vast; });
+  }
 }
 
 function itemsOp2dehands() {
@@ -14036,14 +14101,23 @@ async function saveVerzending2dh() {
   const euro = parseFloat(String(document.getElementById('verzending-2dh-onder').value || '0').replace(',', '.'));
   const woorden = String(document.getElementById('verzending-2dh-woorden').value || '')
     .split(',').map(w => w.trim()).filter(Boolean);
+  // "Vast bedrag" zonder bedrag zou stil terugvallen op Bpost: dan niet opslaan.
+  const vastEuro = parseFloat(String(document.getElementById('verzending-2dh-vast').value || '').replace(',', '.'));
+  const vastCents = Number.isFinite(vastEuro) ? Math.round(vastEuro * 100) : null;
+  if (gekozenVerzending2dh() === 'vast' && !(vastCents >= 1)) {
+    melding.textContent = 'Enter the shipping amount, at least €0.01.';
+    return;
+  }
   try {
+    const instelling = {
+      verzending_2dh_modus: gekozenVerzending2dh(),
+      verzending_2dh_brief_onder: Number.isFinite(euro) && euro > 0 ? Math.round(euro * 100) : 0,
+      verzending_2dh_woorden: woorden,
+    };
+    if (vastCents >= 1) instelling.verzending_2dh_vast_cents = vastCents;
     const r = await apiFetchRetry(`${API}/api/items/settings`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        verzending_2dh_modus: gekozenVerzending2dh(),
-        verzending_2dh_brief_onder: Number.isFinite(euro) && euro > 0 ? Math.round(euro * 100) : 0,
-        verzending_2dh_woorden: woorden,
-      }),
+      body: JSON.stringify(instelling),
     });
     const data = await parseJsonSafe(r);
     if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
@@ -14054,6 +14128,11 @@ async function saveVerzending2dh() {
     const heeftWoorden = (data.verzending_2dh_woorden || []).length > 0;
     if (modus === 'standaard' || (modus === 'regel' && !onder && !heeftWoorden)) {
       melding.textContent = 'Saved. New 2dehands listings get Bpost €7.10. Listings already online keep their current shipping cost.';
+      return;
+    }
+    if (modus === 'vast') {
+      melding.textContent = `Saved. New 2dehands listings get "I ship myself" for €${(data.verzending_2dh_vast_cents / 100).toFixed(2)}.`;
+      vraagVerzending2dhToepassen();
       return;
     }
     melding.textContent = modus === 'alles'

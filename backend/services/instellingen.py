@@ -214,8 +214,16 @@ VERZENDING_2DH_BRIEF_ONDER_MAX = 710   # nooit boven Bpost 0-2 kg zelf
 #                briefgrens kon dat niet, die stopt bij Bpost zelf.
 # Ontbreekt de sleutel (iedereen van vóór 27-09), dan volgt hij uit de velden: wie
 # een grens of woord had, had "regel". Zo verandert er voor Egbert niets.
+#   "vast"       een vast bedrag voor elk artikel, wat Marktplaats ook toont
+#                (30-10-2026, Mieneke van Voordeelsieraden: haar prijzen zijn
+#                inclusief verzekerde verzending, dus overal zelf versturen voor
+#                EUR 0,01, ook voor wat niet op Marktplaats staat). Het bedrag
+#                staat in VERZENDING_2DH_VAST; zonder bedrag geldt "vast" niet.
 VERZENDING_2DH_MODUS = "verzending_2dh_modus"
-VERZENDING_2DH_MODI = ("standaard", "regel", "alles")
+VERZENDING_2DH_MODI = ("standaard", "regel", "alles", "vast")
+VERZENDING_2DH_VAST = "verzending_2dh_vast_cents"
+VERZENDING_2DH_VAST_MIN = 1
+VERZENDING_2DH_VAST_MAX = 9999
 
 # NIEUWE SHOPIFY-PRODUCTEN VANZELF IMPORTEREN (08-10-2026, Janneke).
 # None = niet zelf gekozen: dan aan zodra de verkoper ooit zelf uit Shopify
@@ -283,6 +291,15 @@ MP_ZELF_VERZENDEN_MAX = 10000
 MP_KOPERSBESCHERMING = "mp_kopersbescherming"
 MP_KOPERSBESCHERMING_KEUZES = ("volg", "uit")
 
+# BIEDEN TOESTAAN OP ELKE ADVERTENTIE (30-10-2026, Mieneke van Voordeelsieraden:
+# "bij alle items standaard Bieden toestaan aan, met bieden vanaf 0"). "volg" =
+# per artikel beslist het vinkje Allow bidding in het dashboard (zoals het altijd
+# was: zonder vinkje gaat bieden UIT). "aan" = elk artikel zonder eigen
+# minimumbod krijgt bieden toestaan aan, bieden vanaf 0. Een eigen percentage op
+# het artikel gaat altijd voor.
+BIEDEN_STANDAARD = "bieden_standaard"
+BIEDEN_STANDAARD_KEUZES = ("volg", "aan")
+
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "auto_relist": True, RELIST_MOMENT: None, "vinted_herplaatsen": False, VERKOOPVRAAG: True, WEBSHOP_MET_RUST: False, VERZENDING_2DH_WOORDEN: [],
              VERZENDING_2DH_BRIEF_ONDER: 0, VERZENDING_2DH_MODUS: "standaard",
@@ -294,7 +311,8 @@ STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              WOO_AUTO_IMPORT: None, WOO_AUTO_IMPORT_STAND: {}, IMPORT_STAAT: None,
              NIEUWS_GEZIEN: None, VINTED_STAAT: None, VINTED_PAKKET: None,
              VINTED_SLOT: "zelfde", SLOTTEKST_VINTED: "",
-             MP_ZELF_VERZENDEN: None, MP_KOPERSBESCHERMING: "volg"}
+             MP_ZELF_VERZENDEN: None, MP_KOPERSBESCHERMING: "volg",
+             VERZENDING_2DH_VAST: None, BIEDEN_STANDAARD: "volg"}
 
 
 def _schoon(rauw: dict | None) -> dict:
@@ -401,9 +419,25 @@ def _schoon(rauw: dict | None) -> dict:
                                                          VERZENDING_2DH_BRIEF_ONDER_MAX))
         except (TypeError, ValueError):
             uit[VERZENDING_2DH_BRIEF_ONDER] = 0
+    if VERZENDING_2DH_VAST in rauw:
+        # Zelfde bijstelling als bij Marktplaats: leeg of onleesbaar = geen bedrag,
+        # een bedrag buiten bereik wordt bijgesteld (nul zou "zelf versturen" met
+        # een leeg bedrag geven en dan betaalt de verkoper het porto zelf).
+        try:
+            cents = int(rauw.get(VERZENDING_2DH_VAST))
+            uit[VERZENDING_2DH_VAST] = max(VERZENDING_2DH_VAST_MIN,
+                                           min(cents, VERZENDING_2DH_VAST_MAX))
+        except (TypeError, ValueError):
+            uit[VERZENDING_2DH_VAST] = None
     modus = str(rauw.get(VERZENDING_2DH_MODUS) or "").strip().lower()
     uit[VERZENDING_2DH_MODUS] = (modus if modus in VERZENDING_2DH_MODI
                                  else afgeleide_modus(uit))
+    # "vast" zonder bedrag bestaat niet: dan zou elke plaatsing stil Bpost worden
+    # terwijl de verkoper dacht dat alles op een vast bedrag stond.
+    if uit[VERZENDING_2DH_MODUS] == "vast" and not uit[VERZENDING_2DH_VAST]:
+        uit[VERZENDING_2DH_MODUS] = afgeleide_modus(uit)
+    if rauw.get(BIEDEN_STANDAARD) in BIEDEN_STANDAARD_KEUZES:
+        uit[BIEDEN_STANDAARD] = rauw[BIEDEN_STANDAARD]
     groepen = rauw.get("vinted_groepen")
     if isinstance(groepen, list):
         uit["vinted_groepen"] = [g for g in
@@ -557,7 +591,8 @@ def verzending_2dh_regel(user_id: str, db=None) -> dict | None:
     schoon = _schoon(rij[0].get("extra_data") if rij else None)
     return {"modus": schoon[VERZENDING_2DH_MODUS],
             "woorden": schoon[VERZENDING_2DH_WOORDEN],
-            "brief_onder": schoon[VERZENDING_2DH_BRIEF_ONDER]}
+            "brief_onder": schoon[VERZENDING_2DH_BRIEF_ONDER],
+            "vast_cents": schoon[VERZENDING_2DH_VAST]}
 
 
 def afgeleide_modus(regel: dict) -> str:
@@ -582,10 +617,23 @@ def titel_neemt_over(regel: dict, titel: str) -> bool:
     return any(w in t for w in regel.get("woorden") or [])
 
 
+def vast_bedrag(regel: dict) -> int | None:
+    """Het vaste bedrag (centen) voor elk 2dehands-artikel, of None als de
+    verkoper die keuze niet maakte. Alleen bij modus "vast" met een geldig bedrag."""
+    if regel.get("modus") != "vast":
+        return None
+    cents = regel.get("vast_cents")
+    if isinstance(cents, int) and not isinstance(cents, bool) and cents >= VERZENDING_2DH_VAST_MIN:
+        return cents
+    return None
+
+
 def heeft_marktplaats_nodig(regel: dict, titel: str) -> bool:
     """Doet het Marktplaats-bedrag voor dit artikel ertoe? Zo niet, dan hoeft
-    Marktplaats niet eens gevraagd: het wordt Bpost."""
+    Marktplaats niet eens gevraagd: het wordt Bpost (of het vaste bedrag)."""
     modus = modus_van(regel)
+    if modus == "vast":
+        return False
     if modus == "alles":
         return True
     return modus == "regel" and (bool(regel.get("brief_onder")) or titel_neemt_over(regel, titel))
@@ -695,4 +743,8 @@ def verzendkeuzes(user_id: str, prijs) -> dict:
         uit[MP_ZELF_VERZENDEN] = cents
     if s.get(MP_KOPERSBESCHERMING) == "uit":
         uit[MP_KOPERSBESCHERMING] = "uit"
+    # Bieden hoort bij dezelfde uitgifte (zelfde drie aanroepers). Alleen "aan"
+    # gaat mee; zonder sleutel doet de extensie wat hij altijd deed.
+    if s.get(BIEDEN_STANDAARD) == "aan":
+        uit[BIEDEN_STANDAARD] = "aan"
     return uit

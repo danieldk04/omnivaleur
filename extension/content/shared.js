@@ -3222,10 +3222,49 @@ window.CL = (() => {
     return !biedSchakelaar()?.checked;
   }
 
+  // BIEDEN TOESTAAN OP ELKE ADVERTENTIE (30-10-2026, Mieneke van Voordeelsieraden:
+  // "standaard bieden toestaan aan, met bieden vanaf 0"). De verkoper koos dat in
+  // zijn instellingen (item.bieden_standaard === "aan"); een eigen minimumbod op
+  // het artikel (bid_percentage) gaat voor, zie zetBieden.
+  //
+  // "Bieden vanaf 0" = het veld "Bieden vanaf" leeg laten. Gemeten op 10-09-2026
+  // bij Egbert: elf zoekertjes met schakelaar aan en leeg veld stonden na het
+  // plaatsen als MIN_BID online, dus het formulier neemt dat zonder bedrag aan.
+  // Een bedrag in het veld zou het minimumbod boven nul zetten; staat er toch een
+  // (het formulier onthoudt de vorige stand), dan halen we het weg.
+  async function zetBiedenAan() {
+    let sw = null;
+    for (let i = 0; i < 12 && !sw; i++) {
+      sw = biedSchakelaar();
+      if (!sw) await sleep(200);
+    }
+    if (!sw) { clog("bieden toestaan: geen schakelaar op dit formulier"); return null; }
+    if (!sw.checked) {
+      sw.click();
+      await sleep(400);
+      if (!biedSchakelaar()?.checked) {
+        try {
+          const lab = sw.id ? document.querySelector(`label[for="${sw.id}"]`) : null;
+          if (lab) { lab.click(); await sleep(400); }
+        } catch (_) { /* een mislukte terugval mag het plaatsen niet breken */ }
+      }
+    }
+    const aan = !!biedSchakelaar()?.checked;
+    const veld = qs('input[name="price.minimumBidPrice"]');
+    if (aan && veld && (veld.value || "").trim() && !/^0*[.,]?0*$/.test(veld.value.trim())) {
+      fillInput(veld, "");
+      await sleep(300);
+    }
+    const rest = veld ? (veld.value || "").trim() : "";
+    clog(`bieden toestaan: ${aan ? "aan" : "BLIJFT UIT"}, bieden vanaf ${rest || "leeg (0)"}`);
+    return aan;
+  }
+
   async function zetBieden(item) {
     const prijs = Number(item && item.price);
     if (!(isFinite(prijs) && prijs > 0)) return null;   // bied-advertentie: met rust laten
     if (item && item.bid_percentage) return fillBidding(prijs, item.bid_percentage);
+    if (item && item.bieden_standaard === "aan") return zetBiedenAan();
 
     // Het blok met de prijs wordt door React opnieuw opgebouwd na het kiezen van
     // de advertentievorm, dus even wachten in plaats van een keer kijken en het

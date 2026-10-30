@@ -30,6 +30,10 @@ T = _laad("tests/test_verzending_2dh_keuze_en_ronde.py", "verzendproef_vast")
 I, V, RO, J = T.I, T.V, T.RO, T.J
 wereld = T.wereld   # dezelfde nagemaakte wereld (database, Marktplaats, 2dehands)
 
+
+def _oud(pad, naam, bevat, mist):
+    return T.R._oude_module(pad, VOOR, naam, moet_bevatten=bevat, moet_missen=mist)
+
 VAST = {"modus": "vast", "woorden": [], "brief_onder": 0, "vast_cents": 1}
 ZELF1 = {"soort": "zelf", "cents": 1}
 
@@ -105,7 +109,7 @@ def test_vast_vraagt_marktplaats_niets():
 
 
 def test_oude_code_kende_vast_niet():
-    oud = T._oud("backend/services/instellingen.py", "oude_instellingen_vast",
+    oud = _oud("backend/services/instellingen.py", "oude_instellingen_vast",
                  ("verzending_2dh_modus",), ("vast_bedrag",))
     assert "vast" not in oud.VERZENDING_2DH_MODI
     assert oud._schoon({"verzending_2dh_modus": "vast", "verzending_2dh_vast_cents": 1})[
@@ -143,7 +147,7 @@ def test_eigen_keuzes_niet_te_lezen_legt_niets_vast(monkeypatch):
 
 def test_oude_uitgifte_gaf_bpost(monkeypatch):
     """VOOR: met dezelfde instelling (vast 1 cent) werd het Bpost 7,10."""
-    oud = T._oud("backend/api/jobs.py", "oude_jobs_vast",
+    oud = _oud("backend/api/jobs.py", "oude_jobs_vast",
                  ("verzending_2dh_regel",), ("vast_bedrag",))
     nu, _ = T._uitgifte(monkeypatch, "Gouden ring", None, VAST, op_mp=False, module=oud)
     assert nu != ZELF1, "de oude code legde het vaste bedrag niet vast"

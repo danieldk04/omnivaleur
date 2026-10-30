@@ -125,11 +125,14 @@ def doel(regel: dict, eigen, titel: str, mp) -> dict | None:
     Terug: {"soort": "zelf", "cents": n}, STANDAARD (Bpost), of None als het
     zonder Marktplaats niet te zeggen is. Een storing wordt nooit Bpost.
     """
-    from backend.services.instellingen import heeft_marktplaats_nodig, neemt_bedrag_over
+    from backend.services.instellingen import heeft_marktplaats_nodig, neemt_bedrag_over, vast_bedrag
     if eigen == BPOST:
         return dict(STANDAARD)
     if isinstance(eigen, int) and not isinstance(eigen, bool):
         return {"soort": "zelf", "cents": eigen}
+    vast = vast_bedrag(regel)
+    if vast is not None:
+        return {"soort": "zelf", "cents": vast}
     if not heeft_marktplaats_nodig(regel, titel):
         return dict(STANDAARD)
     if mp is None:

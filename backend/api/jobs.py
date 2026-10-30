@@ -1488,7 +1488,7 @@ def _zet_verzending_van_marktplaats(db, user_id: str, job: dict) -> None:
     # tegen 9,50 echt). Zie VERZENDING_2DH_WOORDEN en VERZENDING_2DH_BRIEF_ONDER
     # in instellingen.py.
     from backend.services.instellingen import (heeft_marktplaats_nodig, neemt_bedrag_over,
-                                               verzending_2dh_regel)
+                                               vast_bedrag, verzending_2dh_regel)
     from backend.services.verzending_2dh import BPOST, eigen_keuzes
     regel = verzending_2dh_regel(user_id, db)
     if regel is None:
@@ -1502,6 +1502,12 @@ def _zet_verzending_van_marktplaats(db, user_id: str, job: dict) -> None:
     if keuze is not None:
         _bewaar_verzending(db, job, {"soort": "standaard"} if keuze == BPOST
                            else {"soort": "zelf", "cents": keuze})
+        return
+    vast = vast_bedrag(regel)
+    if vast is not None:
+        # Vast bedrag voor elk artikel (modus "vast"): Marktplaats hoeft niet
+        # gevraagd en een storing daar kan niets verkeerd zetten.
+        _bewaar_verzending(db, job, {"soort": "zelf", "cents": vast})
         return
     if not heeft_marktplaats_nodig(regel, pl.get("title")):
         # Niets waar het bedrag toe doet: Marktplaats hoeft niet eens gevraagd.
