@@ -267,6 +267,12 @@
     if (!el) { el = document.createElement("div"); el.id = "ob-pijl"; document.body.appendChild(el); }
     let doel = null;
     try { doel = selector ? document.querySelector(selector) : null; } catch (e) { doel = null; }
+    // Staat het doel buiten beeld (op het dashboard zit de tabel onder de startkaart),
+    // schuif er dan één keer naartoe, anders wijst de pijl naar niets.
+    if (doel && wijsDoel !== doel) {
+      const b = doel.getBoundingClientRect();
+      if (b.width >= 4 && (b.top > innerHeight - 90 || b.bottom < 60)) doel.scrollIntoView({ block: "center" });
+    }
     const r = doel ? doel.getBoundingClientRect() : null;
     if (!doel || r.width < 4 || r.height < 4 || r.bottom < 0 || r.top > innerHeight || r.right <= 0 || r.left >= innerWidth) {
       el.style.display = "none";
