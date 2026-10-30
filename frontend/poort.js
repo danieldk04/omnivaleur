@@ -93,6 +93,8 @@
     try { const t = g("showToast"); if (typeof t === "function") t("Finish the setup first: this screen opens right after."); } catch (e) { /* geen toast */ }
     return f;
   };
+  // Een selector op id, opgebouwd uit stukjes zodat de vertaallaag er geen tekst in ziet.
+  const ID = (id, rest) => "#" + id + " " + rest;
   const actieveView = () => {
     const el = document.querySelector(".view.active");
     return el ? el.id.replace(/^view-/, "") : "";
@@ -302,12 +304,12 @@
       coach(`<div class="pt-cs">Step 3 of 4</div><b class="pt-ct">Add your items</b>
         <p>Import the adverts you already have on Marktplaats, 2dehands or Vinted, or create one with <b>New item</b>. The next step opens as soon as there is one item.</p>
         ${opImport ? "" : `<div class="pt-cb"><button class="pt-groot" style="padding:10px 20px;font-size:13px" onclick="showView('import')">Go to Import</button></div>`}`);
-      pijl(opImport ? "#view-import .btn-primary" : ".nav-item[data-view='import']", opImport ? "Start here" : "Open Import");
+      pijl(opImport ? ID("view-import", ".imp-chip") : ".nav-item[data-view='import']", opImport ? "Tick where you sell" : "Open Import");
       return;
     }
     // plaatsen
-    const sel = view === "dashboard" ? "#dashboard-items-body .btn-primary"
-      : view === "items" ? "#items-body .btn-primary" : ".nav-item[data-view='items']";
+    const sel = view === "dashboard" ? ID("dashboard-items-body", ".btn-primary")
+      : view === "items" ? ID("items-body", ".btn-primary") : ".nav-item[data-view='items']";
     coach(`<div class="pt-cs">Step 4 of 4</div><b class="pt-ct">Publish your first item</b>
       <p>Press <b>Publish</b> on an item, tick a marketplace and confirm. The icon turns orange while the extension works and <b>green once the advert is really online</b>.</p>`);
     pijl(sel, view === "dashboard" || view === "items" ? "Press Publish" : "Go to your items");
