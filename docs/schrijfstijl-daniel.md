@@ -31,6 +31,8 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - Soms staat er een punt achter de naam: "Daniel." Beide vormen komen voor (08-10: 2x, 09-10: 1x, 10-10: 2x, vooral bij een nee-mail en een kort afspraakmailtje). Soms ook geen lege regel tussen "Groetjes," en "Daniel" (10-10: 2x), dus laat dat zoals het in zijn eigen mails staat.
 - Aanhef met voornaam in een lopend gesprek schrapt hij vaak: mijn "Hoi Egbert," werd 2x niets, en
   "Hi Martijn," bleef staan. Bij een antwoord op een vraag zet hij liever "Hi," of niets.
+- Geen genummerde stappen (1. 2. 3.) of kopjes in een uitleg: losse alinea's met een dubbelepunt-label ("Type bij antieke sieraden: ..."). 2x geschrapt (10-10, 30-10). Gebruik in beschreven schermen de Nederlandse namen uit het dashboard ("Voorkeuren", "Levering op Marktplaats en 2dehands"), niet de Engelse ("Preferences", "Delivery"), en gebruik gebogen aanhalingstekens.
+- Tijdsduur van een extensie-update noemt hij optimistisch: "meestal binnen enkele uren" (30-10, ook 07-10), niet "een dag of twee".
 
 ## Toon
 
