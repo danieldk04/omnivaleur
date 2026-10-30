@@ -151,6 +151,7 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - 27-10-2026: Gekeken: 81 mails in Verzonden (3 dagen), 30 van Daniel, 30 al verwerkt; 0 nieuw, 0 met concept. Niets te leren.
 - 28-10-2026: Gekeken: 85 mails in Verzonden (3 dagen), 27 van Daniel, 7 al verwerkt; 20 nieuw, 10 met concept (7 vergelijkbaar, 3 hoorden bij een andere draad). Nieuw: vaste regels voor creator-antwoorden over geld (eerlijk-opening weg, "verhoging mogelijk", vast slot over succesvolle samenwerking, 6 van 6), check-up aangepast.
 - 29-10-2026: Gekeken: 121 mails in Verzonden (3 dagen), 26 van Daniel, 20 al verwerkt; 6 nieuw, 1 met concept. Nieuw: bij een creator-bod schrapte hij een extra slotaanbod (1x, onder Nog te leren); verder creatorsjabloon 3x en een functie-antwoord zonder concept.
+- 30-10-2026: Gekeken: 174 mails in Verzonden (3 dagen), 32 van Daniel, 26 al verwerkt; 6 nieuw, 2 met concept. Nieuw: genummerde stappen weer geschrapt (nu 2x, naar Vorm), Nederlandse dashboardnamen, "binnen enkele uren", geen eigen voorwaarden bij creator-vraag (2e keer).
 
 ## 28-10-2026: geen schuld aantrekken (Daniel spreekt de regel uit)
 - Geen "sorry", "excuus", "dat lag aan ons", "dat was onze fout" of "belangrijk dat ik dit zeg", ook niet als de fout in ons systeem zat. Dit staat los van de oudere regel hierboven over een fout van ons: ook daar niet als bekentenis.
