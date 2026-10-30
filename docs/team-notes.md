@@ -18441,3 +18441,7 @@ Daniel liet Ahrefs, Search Console en onze site doorzoeken omdat de score laag w
 ## 2026-10-29 (vervolg): Amanda blijft gratis
 - Daniel: "Ja, gratis". Amanda (the_cooking_mommy) krijgt `complimentary` zonder einddatum zodra haar account bestaat. Nog niet gezet: ze heeft zich nog niet aangemeld. Het gaat met `scripts/gratis_toegang.py <adres> --doe-het` (maakt de abonnementsrij zo nodig aan, weigert bij een Stripe-abonnement, bewaart de oude rij in ~/.omnivaleur/backups). De onboardingronde doet dit zelf zodra ze verschijnt. Alleen voor haar: andere creators beslist Daniel apart.
 - Bewezen: tests/test_gratis_toegang.py (verlopen proef geeft allowed False, na het script allowed True met reden complimentary). NIET bewezen: de echte schrijfactie op een echt account, want die bestaat nog niet; de droogloop op een onbekend adres meldt netjes "geen account".
+
+## 2026-10-30: platformcontrole niet gedraaid
+
+Claude in Chrome was niet verbonden (geen browser gevonden), dus geen proef op Vinted, Marktplaats of 2dehands. Geen afwijking gemeten, ook niets bewezen. Meld aan Daniel pas als dit twee dagen achter elkaar gebeurt.
