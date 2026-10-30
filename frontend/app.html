@@ -4402,6 +4402,8 @@ function calcMargin() {
 // scherm van hun ouder (.subtabs), en het menu-item van de ouder licht op.
 const NAV_PARENT = { stale: 'refresh', calculator: 'analytics', protections: 'preferences' };
 function showView(name) {
+  // De startpoort: wie de voorbereiding nog niet af heeft, komt niet overal. Zie poort.js.
+  if (window.OBPoort) name = OBPoort.guard(name) || name;
   // Find the target BEFORE hiding anything. Hiding first and then hitting a
   // missing view threw, which left every view hidden and the whole app blank
   // with no way back except a reload — that's exactly what a half-finished
