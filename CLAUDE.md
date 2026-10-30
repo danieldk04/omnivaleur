@@ -55,6 +55,13 @@ Zo ziet een volledig bericht eruit (door Daniel goedgekeurd op 19-09-2026):
 > 2. [OOIT, 2 min] Logs van 15:00 exporteren, alleen als je wilt weten waarom de database omviel.
 > 3. [OVERSLAAN] De tests die de echte database aanspreken. Doe ik zelf.
 
+## Kort, en alles wat je zelf kunt zelf doen
+
+Daniel, 30-10-2026: de vier blokjes blijven, maar korter (één scherm, blokje 1 en 2 samen
+hooguit vijf regels). Regel alles wat je zelf kunt zelf, inclusief testen en nameten, en
+zet alleen in de actiepunten wat alleen hij kan. Is het eindresultaat onduidelijk en niet
+zelf te vinden: skill `interview-daniel` in `.claude/skills/`.
+
 ## Vaste routines (dagelijks, op twee accounts)
 
 - Klantfouten: ochtend ±08:00 (Daniels Mac), middag 14:00 (tweede account).

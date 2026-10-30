@@ -162,6 +162,8 @@
     #ob-pijl span{background:#2563eb;border-radius:10px;padding:7px 12px;box-shadow:0 6px 20px rgba(37,99,235,.4);white-space:nowrap}
     #ob-pijl svg{color:#2563eb;filter:drop-shadow(0 3px 5px rgba(37,99,235,.35))}
     #ob-pijl.zij{animation:pt-zij2 .9s ease-in-out infinite}
+    #ob-pijl.links{animation:pt-zij3 .9s ease-in-out infinite}
+    @keyframes pt-zij3{0%,100%{transform:translateX(0)}50%{transform:translateX(9px)}}
     #ob-pijl.onder{flex-direction:column;animation:pt-op 1s ease-in-out infinite}
     @keyframes pt-zij2{0%,100%{transform:translateX(0)}50%{transform:translateX(-9px)}}
     .pt-wijs{outline:3px solid #2563eb!important;outline-offset:3px;border-radius:8px;animation:pt-glow 1.4s infinite}
@@ -231,7 +233,7 @@
       return `<div class="pt-rij ${uit ? "slecht" : ""}">${logo(p)}<b>${naam(p)}</b>
           <span class="pt-stat ${uit ? "slecht" : gemeten ? "goed" : ""}">${uit ? "Not signed in" : gemeten ? "No problem found" : "Checking…"}</span>
           ${uit ? '<span class="pt-hier">←</span>' : ""}
-          <a class="${uit ? "pt-groot" : "pt-licht"}" href="${url}" target="_blank" rel="noopener" style="${uit ? "padding:9px 18px;font-size:13px" : ""}">${uit ? "Sign in here" : "Open"} ${naam(p)}</a>
+          <a class="${uit ? "pt-groot" : "pt-licht"}" href="${url}" target="_blank" rel="noopener" style="${uit ? "padding:9px 18px;font-size:13px" : ""}">${uit ? "Sign in here" : "Open"} <span translate="no">${naam(p)}</span></a>
         </div>`;
     }).join("");
     const geblokkeerd = !gekozen.length || (r.ontbreekt || []).length;
@@ -240,7 +242,7 @@
         <p>Omnivaleur publishes <b>as you</b>, so you need to be signed in to each marketplace in <b>this same Chrome</b>. Marktplaats and 2dehands are separate sites with separate logins. Tick yours, open each one, sign in, and come back: the status updates by itself.</p>
         <div class="pt-chips">${chips}</div>
         ${rijen}
-        ${(r.ontbreekt || []).length ? `<p style="color:#b91c1c;font-weight:650;margin-top:6px">You are not signed in to ${r.ontbreekt.map(naam).join(" and ")} in this browser. Sign in there, then come back.</p>` : ""}
+        ${(r.ontbreekt || []).length ? `<p style="color:#b91c1c;font-weight:650;margin-top:6px"><span>You are not signed in to ${r.ontbreekt.map(naam).join(" and ")} in this browser.</span> <span>Sign in there, then come back.</span></p>` : ""}
         <button class="pt-groot" ${geblokkeerd ? "disabled" : ""} onclick="OBPoort.bevestig()">${gekozen.length ? "I am signed in, continue" : "Tick at least one marketplace"}</button>
       </div>`;
   }
@@ -281,14 +283,16 @@
     }
     if (wijsDoel !== doel) { if (wijsDoel) wijsDoel.classList.remove("pt-wijs"); doel.classList.add("pt-wijs"); wijsDoel = doel; }
     const zij = r.right + 250 < innerWidth;
-    el.className = zij ? "zij" : "onder";
-    el.innerHTML = zij
-      ? `<svg width="30" height="26" viewBox="0 0 28 24" fill="currentColor"><path d="M0 12L14 1v7h14v8H14v7z"/></svg><span>${esc(tekst)}</span>`
-      : `<svg width="26" height="30" viewBox="0 0 24 28" fill="currentColor"><path d="M12 0l11 14h-7v14H8V14H1z"/></svg><span>${esc(tekst)}</span>`;
+    const links = !zij && r.left > 280;
+    el.className = zij ? "zij" : links ? "links" : "onder";
+    const naar = zij ? '<svg width="30" height="26" viewBox="0 0 28 24" fill="currentColor"><path d="M0 12L14 1v7h14v8H14v7z"/></svg>'
+      : links ? '<svg width="30" height="26" viewBox="0 0 28 24" fill="currentColor"><path d="M28 12L14 1v7H0v8h14v7z"/></svg>'
+      : '<svg width="26" height="30" viewBox="0 0 24 28" fill="currentColor"><path d="M12 0l11 14h-7v14H8V14H1z"/></svg>';
+    el.innerHTML = links ? `<span>${esc(tekst)}</span>${naar}` : `${naar}<span>${esc(tekst)}</span>`;
     el.style.display = "flex";
     const w = el.offsetWidth, h = el.offsetHeight;
-    el.style.left = Math.max(8, Math.min(innerWidth - w - 8, zij ? r.right + 8 : r.left + r.width / 2 - w / 2)) + "px";
-    el.style.top = Math.max(8, Math.min(innerHeight - h - 8, zij ? r.top + r.height / 2 - h / 2 : r.bottom + 8)) + "px";
+    el.style.left = Math.max(8, Math.min(innerWidth - w - 8, zij ? r.right + 8 : links ? r.left - w - 8 : r.left + r.width / 2 - w / 2)) + "px";
+    el.style.top = Math.max(8, Math.min(innerHeight - h - 8, zij || links ? r.top + r.height / 2 - h / 2 : r.bottom + 8)) + "px";
   }
   function wisPijl() {
     const el = document.getElementById("ob-pijl");
