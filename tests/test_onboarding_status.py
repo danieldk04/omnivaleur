@@ -58,7 +58,7 @@ def test_aangeklikte_iconen_tellen_niet_als_gepubliceerd(monkeypatch):
                   items=[{"id": "i1", "user_id": "u"}],
                   listings=[{"id": "l", "item_id": "i1", "platform": "2dehands", "status": "active"}],
                   jobs=[{"user_id": "u", "status": "done", "platform": "marktplaats", "action": "scan", "result": {}}])
-    assert uit == {"extensie": True, "kanaal": True, "gepubliceerd": False}
+    assert uit == {"extensie": True, "kanaal": True, "gepubliceerd": False, "items": True}
 
 
 def test_gelukte_plaatsing_of_bevestigde_facebook_telt(monkeypatch):
