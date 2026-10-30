@@ -1230,7 +1230,19 @@ function animateCounts(scope) {
     window.location.hash.slice(1).split('&').map(p => { const [k,v] = p.split('='); return [k, decodeURIComponent(v||'')]; })
   );
   if (params.access_token && params.type === 'signup') {
-    window.location.replace('/login?confirmed=1');
+    // Bevestigen logt direct in (30-10-2026): de inlogpagina met wachtwoord was een
+    // drempel waar bevestigde aanmelders bleven hangen. Lukt het niet, dan terug naar de oude weg.
+    let naar = '/login?confirmed=1';
+    try {
+      const mail = JSON.parse(atob(params.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).email;
+      if (mail && params.refresh_token) {
+        const zet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} try { sessionStorage.setItem(k, v); } catch (e) {} };
+        zet('cl_auth', '1'); zet('cl_token', params.access_token);
+        zet('cl_refresh', params.refresh_token); zet('cl_email', mail);
+        naar = '/app';
+      }
+    } catch (e) {}
+    window.location.replace(naar);
   } else if (params.access_token && params.type === 'recovery') {
     window.location.replace('/reset-password' + window.location.hash);
   } else if (params.error || params.error_code) {
