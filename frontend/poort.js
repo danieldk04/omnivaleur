@@ -264,7 +264,7 @@
 
   // ── Pijl en coachkaart ──────────────────────────────────────────────────────
   let wijsDoel = null;
-  function pijl(selector, tekst) {
+  function pijl(selector, tekst, anker) {
     let el = document.getElementById("ob-pijl");
     if (!el) { el = document.createElement("div"); el.id = "ob-pijl"; document.body.appendChild(el); }
     let doel = null;
@@ -282,8 +282,11 @@
       return;
     }
     if (wijsDoel !== doel) { if (wijsDoel) wijsDoel.classList.remove("pt-wijs"); doel.classList.add("pt-wijs"); wijsDoel = doel; }
-    const zij = r.right + 250 < innerWidth;
-    const links = !zij && r.left > 280;
+    // De pijl hoort bij `anker` als dat er is (de rand van een rij vakjes), anders bij het doel zelf.
+    let a = r;
+    try { const ae = anker ? document.querySelector(anker) : null; if (ae) a = ae.getBoundingClientRect(); } catch (e) { a = r; }
+    const zij = a.right + 250 < innerWidth;
+    const links = !zij && a.left > 280;
     el.className = zij ? "zij" : links ? "links" : "onder";
     const naar = zij ? '<svg width="30" height="26" viewBox="0 0 28 24" fill="currentColor"><path d="M0 12L14 1v7h14v8H14v7z"/></svg>'
       : links ? '<svg width="30" height="26" viewBox="0 0 28 24" fill="currentColor"><path d="M28 12L14 1v7H0v8h14v7z"/></svg>'
@@ -291,8 +294,8 @@
     el.innerHTML = links ? `<span>${esc(tekst)}</span>${naar}` : `${naar}<span>${esc(tekst)}</span>`;
     el.style.display = "flex";
     const w = el.offsetWidth, h = el.offsetHeight;
-    el.style.left = Math.max(8, Math.min(innerWidth - w - 8, zij ? r.right + 8 : links ? r.left - w - 8 : r.left + r.width / 2 - w / 2)) + "px";
-    el.style.top = Math.max(8, Math.min(innerHeight - h - 8, zij || links ? r.top + r.height / 2 - h / 2 : r.bottom + 8)) + "px";
+    el.style.left = Math.max(8, Math.min(innerWidth - w - 8, zij ? a.right + 8 : links ? a.left - w - 8 : a.left + a.width / 2 - w / 2)) + "px";
+    el.style.top = Math.max(8, Math.min(innerHeight - h - 8, zij || links ? a.top + a.height / 2 - h / 2 : a.bottom + 8)) + "px";
   }
   function wisPijl() {
     const el = document.getElementById("ob-pijl");
@@ -314,7 +317,7 @@
       coach(`<div class="pt-cs">Step 3 of 4</div><b class="pt-ct">Add your items</b>
         <p>Import the adverts you already have on Marktplaats, 2dehands or Vinted, or create one with <b>New item</b>. The next step opens as soon as there is one item.</p>
         ${opImport ? "" : `<div class="pt-cb"><button class="pt-groot" style="padding:10px 20px;font-size:13px" onclick="showView('import')">Go to Import</button></div>`}`);
-      pijl(opImport ? ID("view-import", ".imp-chip") : ".nav-item[data-view='import']", opImport ? "Tick where you sell" : "Open Import");
+      pijl(opImport ? "#import-scan-grid" : ".nav-item[data-view='import']", opImport ? "Tick where you sell" : "Open Import", opImport ? ID("import-scan-grid", "> :last-child") : null);
       return;
     }
     // plaatsen
