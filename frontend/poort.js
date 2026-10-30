@@ -55,7 +55,10 @@
     f = f || {};
     const s = f.server || {};
     if (!f.bekend) return { fase: "vrij" };
-    if (s.gepubliceerd || s.kanaal) return { fase: "vrij" };
+    if (s.gepubliceerd) return { fase: "vrij" };
+    // Een gelukte opdracht op een kanaal bewijst extensie en login: niets blijft dicht.
+    // Is er voorraad maar nog nooit geplaatst, dan wijst de pijl nog wel naar Publish.
+    if (s.kanaal) return (s.items || f.items > 0) ? { nr: 4, fase: "plaatsen" } : { fase: "vrij" };
     if ((f.gekoppeld || []).some((p) => ["ebay", "shopify", "woocommerce"].includes(p))) return { fase: "vrij" };
     if (!(s.extensie || f.extStatus === "ready")) {
       let sub = "zoeken";

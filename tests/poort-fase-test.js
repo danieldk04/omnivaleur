@@ -54,7 +54,8 @@ ok("met items maar nooit geplaatst: stap 4, niets dicht", P.toegestaan("plaatsen
 
 console.log("4. Wie al werkt komt er nooit in");
 ok("gelukte plaatsing", fase({ server: { gepubliceerd: true } }).fase === "vrij");
-ok("gelukte opdracht op een kanaal", fase({ server: { kanaal: true } }).fase === "vrij");
+ok("gelukte opdracht op een kanaal zonder items: vrij", fase({ server: { kanaal: true } }).fase === "vrij");
+ok("gelukte opdracht, wel items, nooit geplaatst: alleen de pijl, niets dicht", fase({ server: { kanaal: true, items: true } }).fase === "plaatsen");
 ok("eBay gekoppeld", fase({ gekoppeld: ["ebay"] }).fase === "vrij");
 ok("Shopify gekoppeld", fase({ gekoppeld: ["shopify"] }).fase === "vrij");
 
