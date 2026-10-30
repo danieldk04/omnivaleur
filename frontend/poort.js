@@ -225,13 +225,12 @@
       const uit = r.ontbreekt && r.ontbreekt.includes(p);
       const gemeten = kanalen[p] && kanalen[p].ingelogd !== undefined;
       const url = (KANALEN.find((k) => k[0] === p) || [])[2];
-      return `<div class="pt-rij ${uit ? "slecht" : ""}">${logo(p)}<b>${n(p)}</b>
+      return `<div class="pt-rij ${uit ? "slecht" : ""}">${logo(p)}<b>${naam(p)}</b>
           <span class="pt-stat ${uit ? "slecht" : gemeten ? "goed" : ""}">${uit ? "Not signed in" : gemeten ? "No problem found" : "Checking…"}</span>
           ${uit ? '<span class="pt-hier">←</span>' : ""}
-          <a class="${uit ? "pt-groot" : "pt-licht"}" href="${url}" target="_blank" rel="noopener" style="${uit ? "padding:9px 18px;font-size:13px" : ""}">${uit ? "Sign in here" : "Open"} ${n(p)}</a>
+          <a class="${uit ? "pt-groot" : "pt-licht"}" href="${url}" target="_blank" rel="noopener" style="${uit ? "padding:9px 18px;font-size:13px" : ""}">${uit ? "Sign in here" : "Open"} ${naam(p)}</a>
         </div>`;
     }).join("");
-    function n(p) { return naam(p); }
     const geblokkeerd = !gekozen.length || (r.ontbreekt || []).length;
     return `<div style="grid-column:1/-1">
         <h2>Which marketplaces do you sell on?</h2>
