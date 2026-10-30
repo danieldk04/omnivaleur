@@ -861,6 +861,66 @@
       "status": "published",
       "nl_slug": "shopify-naar-2dehands-crosslisten",
       "priority": 98
+    },
+    {
+      "keyword": "how to use marktplaats in english",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "how-to-use-marktplaats-in-english",
+      "status": "published",
+      "nl_slug": "marktplaats-in-het-engels-gebruiken",
+      "priority": 99
+    },
+    {
+      "keyword": "omnivaleur vs export your store",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "slug": "omnivaleur-vs-export-your-store",
+      "status": "pending",
+      "nl_slug": "omnivaleur-vs-export-your-store",
+      "priority": 100
+    },
+    {
+      "keyword": "how to set holiday mode on vinted",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "how-to-set-holiday-mode-on-vinted",
+      "status": "pending",
+      "nl_slug": "hoe-zet-je-vinted-op-vakantiemodus",
+      "priority": 101
+    },
+    {
+      "keyword": "return rights on second hand sales netherlands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "slug": "return-rights-on-second-hand-sales-netherlands",
+      "status": "pending",
+      "nl_slug": "herroepingsrecht-tweedehands-verkoop-marktplaats",
+      "priority": 102
+    },
+    {
+      "keyword": "how to calculate sell through rate for reselling",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "slug": "how-to-calculate-sell-through-rate-for-reselling",
+      "status": "pending",
+      "nl_slug": "doorloopsnelheid-berekenen-tweedehands-verkoop",
+      "priority": 103
+    },
+    {
+      "keyword": "woocommerce to marktplaats crosslisting",
+      "region": "nl",
+      "pillar": "A",
+      "format": "combo",
+      "slug": "woocommerce-to-marktplaats-crosslisting",
+      "status": "pending",
+      "nl_slug": "woocommerce-naar-marktplaats-koppelen",
+      "priority": 104
     }
   ],
   "published": [
@@ -1769,6 +1829,16 @@
       "action": "created",
       "url_path": "/crosslisting/cross-list-from-shopify-to-2dehands",
       "published_at": "2026-10-29T14:51:43.494104+00:00"
+    },
+    {
+      "keyword": "how to use marktplaats in english",
+      "slug": "how-to-use-marktplaats-in-english",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-use-marktplaats-in-english",
+      "published_at": "2026-10-30T14:45:58.050910+00:00"
     }
   ]
 }
