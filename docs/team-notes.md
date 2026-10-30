@@ -18467,3 +18467,4 @@ Claude in Chrome was niet verbonden (geen browser gevonden), dus geen proef op V
 - vintage-book-reselling-automation: titel "Vintage Book Reselling Automation 2026: Full Guide" (omschrijving ongewijzigd)
 - omnivaleur-vs-vendoo: titel "Vendoo Alternative for European Resellers: Omnivaleur vs Vendoo (2026)" (omschrijving ongewijzigd)
 - De nameting van 26-11 (taak `omnivaleur-seo-nameting-26-nov`) meet alleen de eerste acht artikelen; kijk bij deze acht apart naar de CTR.
+- 30-10 (vervolg): de Vinted-scanfouten van Zilverwebsite (26cf5471, Jaap) zijn GEEN uitgelogde klant. Jaap mailde 17-10 dat hij zijn Vinted-account heeft verwijderd (geen verificatie als VOF); Daniel antwoordde 18-10. Bij ons staan nog 5 Vinted-advertenties op 'hidden' en 1 op 'pending', daardoor zet `plan_vinted_scans` elk uur een scan klaar die faalt (39 fouten). Niet mailen. Oplossing wacht op Daniels ja: die 6 rijen afmelden, dan stopt de planner vanzelf.
