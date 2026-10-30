@@ -3287,10 +3287,15 @@ def onboarding_status(user_id: str = Depends(get_current_user)):
       die niet via opdrachten lopen maar ook niet te importeren zijn).
     """
     db = get_db()
-    uit = {"extensie": False, "kanaal": False, "gepubliceerd": False}
+    uit = {"extensie": False, "kanaal": False, "gepubliceerd": False, "items": False}
     try:
         uit["extensie"] = bool(db.table("extension_heartbeat").select("user_id")
                                .eq("user_id", user_id).limit(1).execute().data)
+        # De startpoort (frontend/poort.js) laat niemand het dashboard in zonder
+        # item. Dat moet de server zeggen: het scherm heeft in de eerste seconden
+        # nog geen items geladen en zou een klant met 500 items buitensluiten.
+        uit["items"] = bool(db.table("items").select("id")
+                            .eq("user_id", user_id).limit(1).execute().data)
         # GEEN `result` VAN SCANS OPHALEN (06-10-2026). Een scanresultaat is
         # honderden kilobytes groot, en dit antwoord gebruikte alleen dat van
         # plaatsingen. Vijftig rijen met scans erbij kon zo megabytes per aanroep
