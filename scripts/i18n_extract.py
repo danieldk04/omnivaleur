@@ -43,7 +43,7 @@ PAGINAS = [
     "ebay-callback.html",
     "shopify-callback.html",
 ]
-SCRIPTS = ["onboarding.js"]
+SCRIPTS = ["onboarding.js", "poort.js"]
 # Foutteksten die de extensie naar het dashboard stuurt. Die komen daar als
 # gewone tekst op het scherm en worden dus ook in het dashboard vertaald.
 EXTENSIE = [
