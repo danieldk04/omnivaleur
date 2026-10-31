@@ -878,7 +878,7 @@
       "pillar": "C",
       "format": "competitor",
       "slug": "omnivaleur-vs-export-your-store",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "omnivaleur-vs-export-your-store",
       "priority": 100
     },
@@ -1839,6 +1839,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-use-marktplaats-in-english",
       "published_at": "2026-10-30T14:45:58.050910+00:00"
+    },
+    {
+      "keyword": "omnivaleur vs export your store",
+      "slug": "omnivaleur-vs-export-your-store",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "action": "created",
+      "url_path": "/vs/omnivaleur-vs-export-your-store",
+      "published_at": "2026-10-31T14:07:58.325873+00:00"
     }
   ]
 }
