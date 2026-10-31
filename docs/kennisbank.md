@@ -17,6 +17,60 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## extensiekopie-die-niet-meebeweegt
+
+*31-10-2026 — "Een kopie die dagen achterloopt op de Web Store werkt zichzelf niet bij; meet het af tegen de andere klanten, niet tegen een vaste ondergrens"*
+
+07-09-2026, Toon (dejuistetoon): "het beeld blijft wederom wegspringen", dezelfde
+rode rubriekmeldingen, dubbele advertenties. Zijn Chromebook draaide op dat moment
+**1.0.260 van 28 augustus** terwijl er **1.0.311** in de Chrome Web Store stond.
+De drie rubrieken waar hij op vastliep (`verkleedkleding`, `heren
+verkleedkleding`, `unisex verkleedkleding`) zijn precies de drie die ná 1.0.260
+zijn toegevoegd. Elke reparatie van tien dagen bestond bij hem niet.
+
+**Why:** de harde ondergrens (`MINIMALE_SCANVERSIE`, 1.0.244) moet met de hand mee
+omhoog en staat daardoor altijd te laag; hij liet 1.0.260 gewoon door. Het
+wegklikbare "er is een update"-balkje gaat ervan uit dat Chrome het wel oplost, en
+dat is precies wat bij een met de hand geladen kopie nooit gebeurt. Dat er twee
+versiestempels door elkaar in zijn foutmeldingen stonden (1.0.260 én 1.0.273 op
+02-09) is het extra teken dat er twee kopieën draaiden; zie
+"tweede-extensiekopie".
+
+**How to apply:** meet de achterstand tegen wat er vandaag in de Web Store staat,
+niet tegen een vaste grens, en ijk op de andere klanten van diezelfde dag. Toen
+Toon 51 versies achterliep stonden de vier andere actieve computers op 1, 2, 3 en
+0 versies achterstand: Chrome doet zijn werk dus wel. Boven `ACHTERSTAND_GRENS`
+(20, ruim vier dagen bij ~5 uitgaven per dag) geeft de uitgifte geen werk meer en
+toont het dashboard een venster zonder "toch doorgaan" — die knop zou een lege
+belofte zijn. Zie ook "extension-version-floor" en
+"rem-op-de-server-bij-een-extensiefout".
+
+En: houd de Web Store buiten de testsuite (`tests/conftest.py`). Tien tests met
+een vaste versie in de hand (1.0.286, 1.0.294) vielen anders vanzelf om zodra er
+een nieuwe versie uitging.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "tweede-extensiekopie" — handmatig geladen extensie bevriest en pikt tóch opdrachten; herkenbaar aan versiestempel
+- "stille-extensie-is-niet-altijd-uitgezet" — hartslagversie zegt of aanzetten überhaupt helpt
+
+**Oude kopie + zakelijk account = rij stil (16-09-2026, Toon, Edge 1.0.327).** Een
+kopie onder 1.0.332 leest een zakelijk account als uitgelogd en annuleert vóór het
+plaatsen. De uitgifte geeft zo'n kopie bij TRADER nu geen create/content_refresh
+meer (`_oude_kopie_leest_zakelijk_als_uitgelogd`). Herkenbaar: een geannuleerde
+opdracht zonder claimed_at met `cancelled: login unproven` en een versiestempel die
+achterloopt op de Web Store. De hartslagtabel heeft één rij per gebruiker, dus die
+toont alleen de laatst pollende kopie; de andere zie je aan `_progress.versie` in
+de opdrachten.
+
+31-10-2026, Amanda Haas (0b28c1ce): welke kopie welk werk pakt zie je in de Railway-verzoeklog:
+`npx -y @railway/cli logs <deployment-id> --http --json --since <iso> --until <iso> --filter "@srcIp:<ip>"`
+en dan per clientUa (Edge heeft `Edg/`, Chrome het versienummer) tellen wie `/claim` en `/progress`
+doet. Het IP vind je via een `/progress` of `/claim` op een bekend opdracht-id. Daar bleek Edge
+1.0.260 terecht niets te krijgen terwijl een Chrome-kopie op hetzelfde adres het werk pakte en liet
+hangen. Zonder `--since/--until` geeft de CLI maar 500 regels per deployment.
+
+---
+
 ## startpoort-voor-nieuwe-klanten
 
 *30-10-2026 — 30-10: nieuwe accounts komen het dashboard pas in na extensie, marktplaats-login en een item; poort.js met pijlen; wie al werkte komt er nooit in*
@@ -5577,53 +5631,6 @@ Marktplaats-verkoop geboekt en bleef 2dehands staan. Nu telt `foto_controle.py` 
 openbare verkoperslijst wat verdwenen is (twee rondes, volledige lijst, 48 uur, geen
 open werk) en maakt er de gewone vraag van. Kijk bij "afmelden werkt niet" eerst of de
 verkoop überhaupt geboekt is: het afmelden zelf werkte wel.
-
----
-
-## extensiekopie-die-niet-meebeweegt
-
-*17-09-2026 — "Een kopie die dagen achterloopt op de Web Store werkt zichzelf niet bij; meet het af tegen de andere klanten, niet tegen een vaste ondergrens"*
-
-07-09-2026, Toon (dejuistetoon): "het beeld blijft wederom wegspringen", dezelfde
-rode rubriekmeldingen, dubbele advertenties. Zijn Chromebook draaide op dat moment
-**1.0.260 van 28 augustus** terwijl er **1.0.311** in de Chrome Web Store stond.
-De drie rubrieken waar hij op vastliep (`verkleedkleding`, `heren
-verkleedkleding`, `unisex verkleedkleding`) zijn precies de drie die ná 1.0.260
-zijn toegevoegd. Elke reparatie van tien dagen bestond bij hem niet.
-
-**Why:** de harde ondergrens (`MINIMALE_SCANVERSIE`, 1.0.244) moet met de hand mee
-omhoog en staat daardoor altijd te laag; hij liet 1.0.260 gewoon door. Het
-wegklikbare "er is een update"-balkje gaat ervan uit dat Chrome het wel oplost, en
-dat is precies wat bij een met de hand geladen kopie nooit gebeurt. Dat er twee
-versiestempels door elkaar in zijn foutmeldingen stonden (1.0.260 én 1.0.273 op
-02-09) is het extra teken dat er twee kopieën draaiden; zie
-"tweede-extensiekopie".
-
-**How to apply:** meet de achterstand tegen wat er vandaag in de Web Store staat,
-niet tegen een vaste grens, en ijk op de andere klanten van diezelfde dag. Toen
-Toon 51 versies achterliep stonden de vier andere actieve computers op 1, 2, 3 en
-0 versies achterstand: Chrome doet zijn werk dus wel. Boven `ACHTERSTAND_GRENS`
-(20, ruim vier dagen bij ~5 uitgaven per dag) geeft de uitgifte geen werk meer en
-toont het dashboard een venster zonder "toch doorgaan" — die knop zou een lege
-belofte zijn. Zie ook "extension-version-floor" en
-"rem-op-de-server-bij-een-extensiefout".
-
-En: houd de Web Store buiten de testsuite (`tests/conftest.py`). Tien tests met
-een vaste versie in de hand (1.0.286, 1.0.294) vielen anders vanzelf om zodra er
-een nieuwe versie uitging.
-
-**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
-- "tweede-extensiekopie" — handmatig geladen extensie bevriest en pikt tóch opdrachten; herkenbaar aan versiestempel
-- "stille-extensie-is-niet-altijd-uitgezet" — hartslagversie zegt of aanzetten überhaupt helpt
-
-**Oude kopie + zakelijk account = rij stil (16-09-2026, Toon, Edge 1.0.327).** Een
-kopie onder 1.0.332 leest een zakelijk account als uitgelogd en annuleert vóór het
-plaatsen. De uitgifte geeft zo'n kopie bij TRADER nu geen create/content_refresh
-meer (`_oude_kopie_leest_zakelijk_als_uitgelogd`). Herkenbaar: een geannuleerde
-opdracht zonder claimed_at met `cancelled: login unproven` en een versiestempel die
-achterloopt op de Web Store. De hartslagtabel heeft één rij per gebruiker, dus die
-toont alleen de laatst pollende kopie; de andere zie je aan `_progress.versie` in
-de opdrachten.
 
 ---
 
