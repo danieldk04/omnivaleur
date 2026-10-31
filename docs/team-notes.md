@@ -18515,3 +18515,9 @@ Live (poort.js ?v=20261030e) doorlopen met de echte extensie 1.0.409 en een blan
 ## 2026-10-31: platformcontrole, geen afwijking
 
 Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, babykleding meisjes, jongens kleding: alle stappen ok (beschrijving valt in de proef uit, artefact). Kookboek: maat en kleur NIET gelukt, bekend sinds 27-10. Marktplaats stofzuigers (maat, halswijdte, kleur NIET), stoomapparaten en strijkijzers (merk, kleur, halswijdte NIET), 2dehands strijkijzers (merk, kleur NIET): titel, prijs en staat ok. Merk valt weer uit bij rubrieken waarvan het formulier waarschijnlijk geen merkveld heeft (zelfde als 30-10), NIET bewezen. Proefpayload deze run zelf samengesteld, dus vergelijk.py niet gedraaid (geen volledige set per artikel bewaard). Niets geplaatst.
+
+## 31-10-2026: Onboarding nieuwe klanten (ochtend)
+- 4 klanten in hun eerste week, 0 nieuw, geen creator. Agenda zonder afspraken met deze klanten. Niets gerepareerd, geen code gewijzigd, geen mailtje verstuurd.
+- 49b900b4 (valentinomtcg@gmail.com, Pokémonkaarten): na het welkomstmailtje van 30-10 extensie bijgewerkt naar 1.0.409, Vinted ingelezen (25), 21 kaarten live op Vinted. De 4 ontbrekende (Snorunt, Fomantis, Manectric, Azurill) heeft hij zelf verwijderd: Railway-verzoeklog toont vanaf zijn adres 3x bulk-import en een minuut later 4x DELETE /api/items (30-10 21:00 UTC). Nog geen plaatsing op een tweede kanaal; 1 Vinted-scan wacht tot zijn Chrome weer aan staat. Mailtje kan pas na 1-11 16:15 (44 uur).
+- f0291981 (gollem.joukes): ongewijzigd sinds 28-10 15:18 (computer uit), extensie 1.0.404. cf1284b8 (radu.stefana): ongewijzigd, proef vandaag om. 656a5041 is Daniels eigen account.
+- Mailrapport: 8 mails sinds 26-10, 4 echt geopend, 0 klik, 0 antwoord, 5 deden daarna iets (valentinomtcg: extensie, +21 artikelen live).
