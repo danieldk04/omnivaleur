@@ -2472,7 +2472,7 @@ def _backfill_patch(current: dict, cand: dict, inferred: dict | None = None) -> 
             patch[field] = cand[field]
     if _is_empty(current.get("condition")) and _map_condition(cand.get("condition")):
         patch["condition"] = _map_condition(cand.get("condition"))
-    if _is_empty(current.get("photo_urls")):
+    if _is_empty(current.get("photo_urls")) or alleen_onbereikbare_fotos(current.get("photo_urls")):
         photos = _photos_from_candidate(cand)
         if photos:
             patch["photo_urls"] = photos
