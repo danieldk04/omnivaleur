@@ -9407,6 +9407,17 @@ function scrapeMarktplaatsAds(url, platform) {
 // actually received — far better than inferring a sale from a wardrobe
 // disappearance. Each order's title embeds our "(1234)" SKU, which the backend
 // matches EXACTLY + uniquely, so a bad scrape can't touch the wrong item.
+// Hoeveel Vinted-advertenties dit account heeft, in welke staat ook. `null` =
+// niet vast te stellen (netwerk, storing): dat is nooit een reden om te stoppen.
+async function vintedArtikelenAantal(serverUrl, headers) {
+  try {
+    const r = await fetch(`${serverUrl}/api/listings/?platform=vinted`, { headers });
+    if (!r || !r.ok) return null;
+    const rijen = await r.json();
+    return Array.isArray(rijen) ? rijen.filter(l => l && l.platform === "vinted").length : null;
+  } catch (_) { return null; }
+}
+
 async function checkVintedOrders() {
   try {
     const serverUrl = await getServerUrl();
