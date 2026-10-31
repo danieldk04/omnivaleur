@@ -2072,12 +2072,39 @@ def _strijkembleem_of_stropdas(title: str | None, gender: str | None):
     return None
 
 
+# Foto-adressen die alleen binnen het netwerk van het kanaal bestaan. De Admarkt-
+# lijst geeft voor een foto die Marktplaats nog niet verwerkt heeft alleen
+# `src`: https://dmz.mp.prod.icas.io/api/sellside/image/... Die naam wijst naar
+# 10.37.x.x (gemeten 31-10-2026), dus geen server, dashboard of extensie komt er
+# ooit bij. Egbert Brouwer: de laatste 7 advertenties kwamen zonder afbeelding
+# binnen, en omdat dit host niet als Marktplaats-fotoserver bekend was, pakte
+# ook de inhaalronde ze nooit op.
+ONBEREIKBARE_FOTOHOSTS = ("icas.io",)
+
+
+def foto_onbereikbaar(url) -> bool:
+    if not isinstance(url, str):
+        return False
+    from urllib.parse import urlparse
+    host = urlparse(("https:" + url) if url.startswith("//") else url).netloc.lower().split(":")[0]
+    return any(host == d or host.endswith("." + d) for d in ONBEREIKBARE_FOTOHOSTS)
+
+
+def alleen_onbereikbare_fotos(urls) -> bool:
+    urls = [u for u in (urls or []) if u]
+    return bool(urls) and all(foto_onbereikbaar(u) for u in urls)
+
+
 def _photos_from_candidate(cand: dict) -> list[str]:
-    """Full photo list if the scan captured it, else the single thumbnail."""
+    """Full photo list if the scan captured it, else the single thumbnail.
+
+    Nooit een adres dat niemand kan ophalen: liever geen foto dan een dode."""
     photos = cand.get("photo_urls")
     if isinstance(photos, list) and photos:
-        return [p for p in photos if p]
-    return [cand["photo_url"]] if cand.get("photo_url") else []
+        lijst = [p for p in photos if p]
+    else:
+        lijst = [cand["photo_url"]] if cand.get("photo_url") else []
+    return [p for p in lijst if not foto_onbereikbaar(p)]
 
 
 async def _infer_attributes_smart(title: str | None, description: str | None,
