@@ -8106,7 +8106,20 @@ async function bgScanAdmarkt(job, serverUrl) {
                 .filter(i => i && i.status !== "ERROR")
                 .map(i => {
                   const l = i.links || {};
-                  const beste = l["1024x1024"] || l["726x726"] || l["498x498"] || i.src;
+                  let beste = l["1024x1024"] || l["726x726"] || l["498x498"];
+                  if (!beste) {
+                    // Geen van de drie vaste maten: neem de grootste die er is.
+                    let groot = 0;
+                    for (const [k, v] of Object.entries(l)) {
+                      const m = /^(\d+)x(\d+)$/.exec(k);
+                      const opp = m ? m[1] * m[2] : 0;
+                      if (typeof v === "string" && v && opp > groot) { groot = opp; beste = v; }
+                    }
+                  }
+                  // `src` alleen als hij van buiten bereikbaar is. Het adres
+                  // dmz.mp.prod.icas.io is intern (10.37.x.x): daar komt niemand bij
+                  // (Egbert Brouwer, 31-10-2026, zeven advertenties zonder foto).
+                  if (!beste && i.src && !/^(?:https?:)?\/\/[^/]*icas\.io(?:[:/]|$)/i.test(i.src)) beste = i.src;
                   return !beste ? null
                     : beste.startsWith("//") ? `https:${beste}` : beste;
                 })
