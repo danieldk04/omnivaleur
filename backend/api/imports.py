@@ -3010,6 +3010,20 @@ def start_scan(platform: str, background_tasks: BackgroundTasks,
                            if r.get("platform_listing_id") is not None]
                 if len(rij) < stap:
                     break
+            # Advertenties waarvan de foto onbereikbaar is komen NIET in de
+            # "ken ik al"-lijst: de extensie leest ze dan opnieuw, en een
+            # herscan vult de foto in zodra Marktplaats hem verwerkt heeft
+            # (_backfill_patch). Alleen de kleine kolom photo_url, en gefilterd
+            # in de database, dus geen extra verkeer voor 5.000 advertenties.
+            try:
+                kapot = {str(r["platform_listing_id"]) for r in (
+                    db.table("import_candidates").select("platform_listing_id")
+                    .eq("user_id", user_id).eq("platform", platform)
+                    .like("photo_url", "%icas.io/%").limit(1000).execute().data or [])}
+                if kapot:
+                    bekend = [b for b in bekend if b not in kapot]
+            except Exception as e:  # noqa: BLE001 — zonder dit werkt de scan als altijd
+                logger.warning("Kon advertenties met onbereikbare foto niet bepalen voor %s: %s", user_id, e)
             payload["bekende_ids"] = bekend
             # De oude teller blijft meegaan voor wie nog een oudere extensie
             # draait; die kan met bekende_ids niets.
