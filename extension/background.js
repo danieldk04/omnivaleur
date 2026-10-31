@@ -9412,6 +9412,15 @@ async function checkVintedOrders() {
     const serverUrl = await getServerUrl();
     const authHeaders = await getAuthHeaders();
     if (!authHeaders.Authorization) return; // not logged into the extension yet
+    // Geen Vinted-artikelen, dan ook geen Vinted-tabblad (Egbert Brouwer,
+    // 31-10-2026: elke 10 tot 40 minuten ging er een Vinted-tabblad open terwijl
+    // hij Vinted nooit gebruikt). checkSoldListings slaat een kanaal zonder
+    // artikelen al over. Alleen een duidelijk "nul" houdt hem tegen: lukt de
+    // vraag niet, dan kijken we zoals altijd.
+    if ((await vintedArtikelenAantal(serverUrl, authHeaders)) === 0) {
+      console.log("[Omnivaleur][sold] Vinted: no Vinted listings for this account — orders page not opened");
+      return;
+    }
     const ordersUrl = "https://www.vinted.nl/my_orders";
     console.log(`[Omnivaleur][sold] Vinted: opening orders page ${ordersUrl}`);
     const orders = await scrapeVintedOrders(ordersUrl);
