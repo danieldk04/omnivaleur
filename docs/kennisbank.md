@@ -17,6 +17,44 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## bunq-export-leidend-voor-kosten
+
+*01-11-2026 — 01-11: de bunq-export is leidend voor de totale kosten; sheet "Omnivaleur kosten" (tabs Omnivaleur en Revaleur) altijd meteen bijwerken; Anthropic niet automatisch bijladen*
+
+Daniel 01-11-2026: de bunq-export (CSV in Downloads) is leidend voor wat Omnivaleur kost; de sheet moet daarmee kloppen en altijd meteen bijgewerkt zijn, want een andere routine leest hem. Revaleur heeft een eigen tab.
+
+**Why:** de maandronde las alleen dienstpagina's en miste Google Cloud (betaald), CapCut, ElevenLabs en Google One; het totaal stond op EUR 56 terwijl het ±EUR 84 was.
+**How to apply:** volg het kopje "bunq-export is leidend" in docs/routines/kosten-bijhouden.md. Anthropic-tegoed niet automatisch bijladen; sleutels nexus-trading-bot en blogs-zenbtw horen bij andere projecten en tellen niet mee. CSV nooit in git.
+
+---
+
+## admarkt-foto-intern-adres
+
+*31-10-2026 — "31-10 Egbert: 7 Admarkt-advertenties zonder foto, scan nam intern adres dmz.mp.prod.icas.io (10.37.x.x) over; herscan vervangt, extensiecheck op Vinted-orders poort"*
+
+31-10-2026, Egbert Brouwer (bcdf9aa4): "de laatste 7 advertenties van Marktplaats zonder afbeeldingen".
+Oorzaak aangetoond: de Admarkt-scan (`ad.getAds`) pakte voor een foto zonder verwerkte maten `i.src`,
+`https://dmz.mp.prod.icas.io/api/sellside/image/<hex>/<uuid>`. Die naam wijst naar 10.37.x.x: voor server,
+dashboard en extensie onbereikbaar. Het is ook geen bekende Marktplaats-fotoserver in
+`relist._KANAAL_FOTOSERVERS`, dus pakte `mp_fotos_inhalen` ze nooit op. Het afgeleide openbare CDN-adres
+(`admarkt-cdn.marktplaats.com/.../images/<eerste 2 tekens>/<uuid>`) gaf 404 voor deze uuid's, en Admarkt-nummers
+hebben geen openbare pagina (marktplaats.nl/<nummer> geeft 404): de foto's zijn alleen via zijn Admarkt-sessie te krijgen.
+
+Gebouwd: `foto_onbereikbaar` in backend/api/imports.py; `_photos_from_candidate` laat het adres weg;
+`_backfill_patch` vervangt een fotolijst die alleen uit zulke adressen bestaat; `bekende_ids` van de scan laat
+die advertenties weg zodat de extensie ze opnieuw leest; extensie 1.0.410 kiest de grootste beschikbare maat
+en slaat nooit het interne `src` op. NIET gemeten: of Marktplaats voor die 7 nu wel verwerkte foto's geeft.
+
+Zelfde sessie: `checkVintedOrders` (wekker sold-check, 10 min) opende elke keer vinted.nl/my_orders, ook zonder
+Vinted-artikelen; nu poort via `/api/listings/?platform=vinted`. De uurlijkse `vinted-auto-scan` belt een adres
+dat niet bestaat (405) en is dus bij iedereen stil; bewust niet hersteld.
+
+**Why:** een foto-adres dat nergens bereikbaar is, is erger dan geen foto: niets herstelt het vanzelf.
+**How to apply:** nieuwe fotobron eerst op bereikbaarheid van buiten testen (nslookup + curl), en controleer of de
+inhaalronde de host kent. Zie "klantdata-niet-op-eigen-initiatief" voor het herscan-principe.
+
+---
+
 ## extensiekopie-die-niet-meebeweegt
 
 *31-10-2026 — "Een kopie die dagen achterloopt op de Web Store werkt zichzelf niet bij; meet het af tegen de andere klanten, niet tegen een vaste ondergrens"*

@@ -54,3 +54,15 @@ wat bij Revaleur hoort op tab "Revaleur" (Metricool, Shopify, Whop Fyndit, Anthr
 revaleur-blog). Een bedrag nooit op twee tabs tellen. Bron voor volledigheid: bunq-export (Daniel
 levert die aan); de Anthropic-kosten komen per API-sleutel uit platform.claude.com/cost (groeperen op
 API-sleutel). Nexus-trading-bot en blogs-zenbtw zijn andere projecten en staan er niet in.
+
+## De bunq-export is leidend voor het totaal (Daniel, 01-11-2026)
+
+Wat daadwerkelijk van de bunq-rekening gaat is de waarheid; de sheet moet daarmee kloppen, niet met wat een dienstpagina belooft.
+
+1. Zoek bij elke ronde de nieuwste `*_exporteren.csv` in ~/Downloads (bunq, rekening NL85BUNQ2157496785). Is de nieuwste ouder dan 35 dagen of ontbreekt hij, zet dan in je rapport als actiepunt voor Daniel: "bunq-export van afgelopen maand downloaden". Verzin dan geen cijfers.
+2. Tel per afgelopen volle maand alle uitgaven bij Omnivaleur-diensten (indeling hieronder) en leg ze naast het totaal van de sheet. Verschil groter dan EUR 5: zoek de post en corrigeer de sheet. Een nieuwe terugkerende afschrijving die nergens in de sheet staat meld je aan Daniel en vraag bij welk project hij hoort, tenzij hij hier al is ingedeeld.
+3. De CSV is privé: nooit in git zetten, nooit kopiëren naar de repo, geen privé-uitgaven noemen in rapporten of team-notes.
+
+Indeling door Daniel: Omnivaleur = Supabase, Railway, Claude Pro, Anthropic-tegoed van de sleutels crosslisteu en omnivaleur-2, ElevenLabs, CapCut, Google One, Google Cloud (Gemini), Zoho, domeinen, Hostinger-mail, KvK. Revaleur (tab "Revaleur") = Metricool, Shopify, Whop Fyndit, Anthropic-sleutel revaleur-blog. Niet meetellen: Anthropic-sleutels nexus-trading-bot en blogs-zenbtw, Mijn host (opgezegd), en alles wat privé is (Whoop, Decathlon, Vinted, Lime enzovoort).
+
+Anthropic-tegoed loopt achter op het verbruik: een bijlading van USD 24,20 betaalt weken aan verbruik. Zet in de sheet het verbruikstempo per maand (Console, groeperen op API-sleutel, plus 21% btw) en gebruik de bunq-som alleen om te controleren over meerdere maanden. Automatisch bijladen blijft uit (Daniel, 01-11-2026): meld alleen als het saldo onder USD 3 komt, bijladen doet Daniel zelf.
