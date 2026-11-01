@@ -18557,3 +18557,9 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 - Kosten 01-11-2026: totaal EUR 56,29 per maand (vast 42,99, wisselend 13,30), was 53,16. Railway USD 15,46 (was 11,87), Supabase USD 25 prognose. Cloudflare R2 7,97 van 10 GB gratis. Niet gelezen: Claude Pro (pagina laadde niet), Stripe (laadde niet), Hostinger (uitgelogd), bleven op oude waarde.
 
 - Platformcontrole 01-11-2026: geen afwijking. Vinted (kinderen schoenen EU 26, meisjes kleding 116, sneakers dames 38, heren overhemd M, babykleding meisjes 74, jongens kleding 116, kookboek) alle stappen ok, kookboek size/colour NIET gelukt zoals altijd. Marktplaats witgoed thuistaps, vaatwasmachines, ventilatoren en 2dehands thuistaps: pagina en velden laden, bekende artefacten (halswijdte, color, brand bij rubrieken zonder dat veld, beschrijving in de proef) onveranderd. Eerste proef sneakers faalde door mijn verkeerde rubrieknaam ("dames sneakers" bestaat niet, het is "sneakers" met gender dames), daarna ok. Rubriekids staan als sleutels van de rotatie, niet apart tegen de fixture gelezen.
+
+## 01-11-2026: Onboarding nieuwe klanten (ochtend)
+- 3 accounts in hun eerste week, 0 nieuw, geen creator. Agenda 01 tot 03-11 zonder afspraken met deze klanten. Niets gerepareerd, geen code gewijzigd, geen mailtje verstuurd.
+- 49b900b4 (valentinomtcg@gmail.com, Pokémonkaarten): ongewijzigd sinds 30-10 23:02, 21 live op Vinted, extensie 1.0.409 (Web Store 1.0.411), 1 Vinted-scan wacht op zijn Chrome. Proef tot 05-11.
+- f0291981 (gollem.joukes): ongewijzigd sinds 28-10 15:18 (computer uit), extensie 1.0.404, proef tot 03-11. 656a5041 is Daniels eigen account. radu.stefana valt buiten de eerste week.
+- Mailrapport: 8 mails sinds 26-10, 4 echt geopend, 0 klik, 0 antwoord, 5 deden daarna iets.
