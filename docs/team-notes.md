@@ -18576,3 +18576,9 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 - Geplande ochtendtaak vuurde opnieuw; de echte ochtendronde liep al om 08:53. Alleen gemeten wat er sinds 08:30 bijkwam: 451 afgeronde opdrachten bij 5 klanten (vooral 372 verlengingen op 2dehands), 0 fouten. Wachter: 16 foutsoorten, 0 open. Niets gerepareerd.
 - Wel: Google geeft sinds de herstart van 13:04 (commit 69c3130b) op elke vraag HTTP 402, 9 van 9, sleutel 27d2bcd9. Volgens de kennisbank (24-09) is 402 "prepayment credits are depleted": het tegoed van 28-10 (EUR 10, ~1 euro per dag) is op. Rubriekvragen mogen niet naar Claude, dus nieuwe artikelen krijgen zolang geen rubriek. Tegoed opwaarderen kan alleen Daniel. Railway-log niet gelezen (geen CLI hier), de 402-tekst zelf dus niet gezien.
 - Hangend op claimed: Goudlief en Amanda (computer uit sinds 31-10), 26cf5471 (extensie weg vlak na de claim om 12:45), Toon loopt. Goudlief 995 2dehands-opdrachten wachten op zijn computer.
+
+## 01-11-2026: Google-kosten 31-10 (EUR 5,49 op één dag)
+- Daniel vroeg of EUR 5,49 op 31-10 niet veel te veel is (AI Studio, 28 dagen samen EUR 8,43, banner "Prepay credits depleted").
+- Gemeten in de Railway-log: op 31-10 ~1.380 geslaagde Google-aanroepen, vrijwel allemaal vertalingen naar het Nederlands. Die ochtend zette Goudlief (5aae4954) 2.588 artikelen tegelijk door naar Marktplaats en 2dehands (5.176 opdrachten). Zijn omschrijvingen zijn een half Engels specificatieblok en zijn titels te kort om als Nederlands herkend te worden, dus titel en omschrijving gingen per artikel elk één keer naar Google. Niet dubbel per kanaal. Rond 0,4 cent per vraag; tussen 13 en 15 uur was het tegoed van EUR 10 op.
+- Gewone dag: ~1 euro. Een volledige bulk van 2.588 artikelen kost zo rond EUR 15 tot 20 eenmalig.
+- Niets gewijzigd. Besparing mogelijk door de denkstap bij vertalen uit te zetten, maar het aandeel daarvan is niet gemeten (sleutel geeft 402). Na opwaarderen eerst meten.
