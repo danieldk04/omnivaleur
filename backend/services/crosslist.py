@@ -573,6 +573,22 @@ def _vertaal(text: str, target_lang: str, brand: str | None = None) -> str:
                 return None
             return antwoord
 
+        # EERST AZURE, GRATIS TOT 2 MILJOEN TEKENS PER MAAND (01-11-2026). Zie
+        # backend/services/azure_vertaling.py. Zelfde zeef als voor de modellen:
+        # nooit veel langer dan de bron en nooit in de andere taal. Lukt het
+        # niet, dan gaat de tekst naar het taalmodel zoals hiervoor.
+        from backend.services import azure_vertaling
+        if azure_vertaling.beschikbaar():
+            vertaald = azure_vertaling.vertaal(text, target_lang, brand)
+            andere = "en" if target_lang == "nl" else "nl"
+            if vertaald and vertaald.strip() \
+                    and len(vertaald) <= max(120, len(text) * 3) \
+                    and not (lijkt_al_in_taal(vertaald, andere)
+                             and not lijkt_al_in_taal(vertaald, target_lang)):
+                logger.info("translate→%s out (azure): repr=%r", target_lang, vertaald[:200])
+                return vertaald
+            logger.warning("Azure-vertaling naar %s onbruikbaar, taalmodel als reserve", target_lang)
+
         prompt = (
             f"Translate the listing text between the <text> tags to {lang_name}."
             f"{brand_note}"
