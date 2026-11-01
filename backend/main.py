@@ -132,6 +132,11 @@ def _taalmodel_teller() -> dict:
             "google_codes": dict(gemini_vertaling.TELLER)}
 
 
+def _azure_teller() -> dict:
+    from backend.services import azure_vertaling
+    return {"aan": azure_vertaling.beschikbaar(), **dict(azure_vertaling.TELLER)}
+
+
 def _supabase_key_role() -> str:
     """De rol uit de Supabase-sleutel ('anon' of 'service_role'), of 'onbekend'.
 
