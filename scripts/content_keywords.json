@@ -888,7 +888,7 @@
       "pillar": "B",
       "format": "howto",
       "slug": "how-to-set-holiday-mode-on-vinted",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "hoe-zet-je-vinted-op-vakantiemodus",
       "priority": 101
     },
@@ -1849,6 +1849,16 @@
       "action": "created",
       "url_path": "/vs/omnivaleur-vs-export-your-store",
       "published_at": "2026-10-31T14:07:58.325873+00:00"
+    },
+    {
+      "keyword": "how to set holiday mode on vinted",
+      "slug": "how-to-set-holiday-mode-on-vinted",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-set-holiday-mode-on-vinted",
+      "published_at": "2026-11-01T14:45:42.121961+00:00"
     }
   ]
 }
