@@ -71,7 +71,7 @@ zelf te vinden: skill `interview-daniel` in `.claude/skills/`.
   geplande taken zeggen alleen "volg dat bestand". Daniels Mac: taak
   `omnivaleur-onboarding-nieuwe-klanten`, 11:00 (was 06:30), rondenaam `onboarding-ochtend`.
 
-- Kosten (sinds 04-10-2026): alle maandelijkse kosten van Omnivaleur staan in de Drive-sheet "Omnivaleur kosten" (map Omnivaleur),
+- Kosten (sinds 04-10-2026): alle maandelijkse kosten van Omnivaleur staan in de Drive-sheet "Kosten en doelen (Omnivaleur en Revaleur)" (map Omnivaleur),
   elke 1e van de maand bijgewerkt door taak `omnivaleur-kosten-bijhouden`; opdracht in `docs/routines/kosten-bijhouden.md`.
 
 **Tweede ontwikkelaar, eenmalig bij je eerstvolgende sessie:** staat er op jouw account

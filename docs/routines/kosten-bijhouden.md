@@ -1,6 +1,6 @@
 # Kosten bijhouden (maandelijks)
 
-Bestand: Google Sheet "Omnivaleur kosten" in Drive, map Omnivaleur.
+Bestand: Google Sheet "Kosten en doelen (Omnivaleur en Revaleur)" in Drive, map Omnivaleur.
 Id: 1BQ5bwdMXPEd-bAipoROaqSaEU0bThdvwBx5GdYYs43U
 Link: https://docs.google.com/spreadsheets/d/1BQ5bwdMXPEd-bAipoROaqSaEU0bThdvwBx5GdYYs43U/edit
 

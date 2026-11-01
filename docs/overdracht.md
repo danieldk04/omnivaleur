@@ -116,7 +116,7 @@ kopjes; lessen in `docs/kennisbank.md`.
 | Klantfouten | Daniels Mac 08:00 (`ochtendronde`), jouw account 14:00 (`middagronde`) | `docs/routines/klantfouten.md` |
 | Onboarding nieuwe klanten, verstuurt zelf het mailtje | Daniels Mac 11:00 (`onboarding-ochtend`), jouw account 10:00 (`onboarding-middag`) | `docs/routines/onboarding-nieuwe-klanten.md` |
 | Platformcontrole Vinted, Marktplaats, 2dehands | Daniels Mac 10:00 | geplande taak `omnivaleur-platformcontrole`, scripts in `scripts/platformcontrole/` |
-| Kosten bijhouden (Drive-sheet "Omnivaleur kosten") | Daniels Mac, 1e van de maand | `docs/routines/kosten-bijhouden.md` |
+| Kosten bijhouden (Drive-sheet "Kosten en doelen (Omnivaleur en Revaleur)") | Daniels Mac, 1e van de maand | `docs/routines/kosten-bijhouden.md` |
 | Schrijfstijl leren uit Daniels verzonden mail | Alleen Daniels Mac (Zoho), dagelijks 07:15 | `docs/schrijfstijl-daniel.md` |
 | Creator-outreach status | Daniels Mac, maandag en donderdag 09:00 | `.claude/skills/creator-outreach/SKILL.md` |
 
