@@ -243,6 +243,10 @@ async def health():
             # claude / geen_antwoord), en wat zei Google per poging (http_200,
             # http_503 = te druk, gered_door_tweede_ronde). Zie gemini_vertaling.
             "taalmodel_sinds_start": _taalmodel_teller(),
+            # Azure Translator vóór de taalmodellen (01-11-2026): aan/uit en wat
+            # Azure antwoordde sinds de herstart (http_200, http_403 = gratis
+            # tegoed op, uit_geheugen, tekens_gevraagd).
+            "azure_vertaling": _azure_teller(),
             # Staat dit op false, dan schrijft de server nieuwe foto's nog steeds
             # naar Supabase Storage en loopt die bucket dus gewoon weer vol. Dat
             # is van buitenaf verder niet te zien, vandaar hier.
