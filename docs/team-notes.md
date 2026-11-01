@@ -18582,3 +18582,8 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 - Gemeten in de Railway-log: op 31-10 ~1.380 geslaagde Google-aanroepen, vrijwel allemaal vertalingen naar het Nederlands. Die ochtend zette Goudlief (5aae4954) 2.588 artikelen tegelijk door naar Marktplaats en 2dehands (5.176 opdrachten). Zijn omschrijvingen zijn een half Engels specificatieblok en zijn titels te kort om als Nederlands herkend te worden, dus titel en omschrijving gingen per artikel elk één keer naar Google. Niet dubbel per kanaal. Rond 0,4 cent per vraag; tussen 13 en 15 uur was het tegoed van EUR 10 op.
 - Gewone dag: ~1 euro. Een volledige bulk van 2.588 artikelen kost zo rond EUR 15 tot 20 eenmalig.
 - Niets gewijzigd. Besparing mogelijk door de denkstap bij vertalen uit te zetten, maar het aandeel daarvan is niet gemeten (sleutel geeft 402). Na opwaarderen eerst meten.
+
+## 01-11-2026: Alternatieven voor betaald Google-vertalen
+- Gemeten: in oktober gingen 12.543 artikelen naar Marktplaats of 2dehands, 1.977 daarvan niet in het Nederlands, samen ~670.000 tekens (Goudlief 395.000, Toon 79.000). Veel regels komen steeds terug (specificatieblokken): wie elke regel één keer vertaalt en onthoudt, zit op ~237.000 tekens.
+- Gratis vertaaldiensten (prijzen van de sites, niet zelf geproefd): DeepL API Free 500.000 tekens per maand, Azure Translator F0 2 miljoen, Google Cloud Translation 500.000 (wel met facturering aan). Een rubriekkeuze kan geen vertaaldienst doen, die blijft bij Gemini.
+- Voorstel aan Daniel: DeepL Free plus onthouden per regel, Google met bestedingslimiet als reserve en voor de rubrieken. Aanmelden bij DeepL moet Daniel zelf doen. Op de te-bouwen-lijst gezet (Overwegen).
