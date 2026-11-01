@@ -55,6 +55,10 @@ class Settings(BaseSettings):
     # bestaat dat vangnet niet en wacht een advertentie bij een lege
     # Anthropic-rekening gewoon, precies zoals daarvoor.
     google_api_key: str = ""
+    # Azure Translator (gratis laag F0, 2 miljoen tekens per maand) vertaalt vóór
+    # de taalmodellen; zie backend/services/azure_vertaling.py. Leeg = uit.
+    azure_translator_key: str = ""
+    azure_translator_region: str = "westeurope"
 
     # Cloudflare R2 — de opslag voor advertentiefoto's. Supabase Storage gaf
     # 1 GB en rekende ook nog verkeer; R2 geeft 10 GB en verkeer is gratis.
