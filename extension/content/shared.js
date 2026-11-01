@@ -992,7 +992,7 @@ window.CL = (() => {
 
   // Maten die geen maat zijn maar "past iedereen". Marktplaats noemt dat per
   // categorie anders, of helemaal niet.
-  const MAAT_UNIVERSEEL = ["Universeel", "One size", "Onesize", "Verstelbaar",
+  const MAAT_UNIVERSEEL = ["Universeel", "One size", "Onesize", "Eén maat", "Een maat", "Verstelbaar",
                            "Aanpasbaar", "Adjustable", "Overige", "Overig",
                            "Overige maten", "Niet van toepassing", "Anders"];
 
@@ -1004,7 +1004,12 @@ window.CL = (() => {
   // online, dus het veld is daar niet verplicht. Biedt de lijst geen
   // "Verstelbaar" of verzamelnaam, dan blijft het veld leeg en plaatsen we,
   // precies zoals bij een artikel zonder maat.
-  const MAAT_VERSTELBAAR = /^(aanpasbaar|verstelbaar|instelbaar|adjustable)$/i;
+  //
+  // "Eén maat" hoort daar ook bij (01-11-2026, Goudlief 5aae4954): 14 ringen en
+  // een paar sokken met die maat bleven 18 keer staan op Marktplaats en 2dehands,
+  // omdat de ringmaten en de kledingmaten geen "Eén maat" kennen. Staat er wél
+  // een "One size" of "Universeel" in de lijst, dan kiest kiesMetTerugval die.
+  const MAAT_VERSTELBAAR = /^(aanpasbaar|verstelbaar|instelbaar|adjustable|e[eé]n maat|one ?size)$/i;
 
   function _alternatievenVoor(label, waarde) {
     const w = String(waarde || "").trim();

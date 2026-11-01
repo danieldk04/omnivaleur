@@ -80,6 +80,11 @@ const verstelbaar = eindcontrole("Aanpasbaar");
 check('"Aanpasbaar" houdt de ring niet meer tegen', verstelbaar === "", verstelbaar);
 check('"Verstelbaar" ook niet', eindcontrole("Verstelbaar") === "");
 check("een ring zonder maat ging al door", eindcontrole("") === "");
+// Goudlief (5aae4954), 01-11-2026: 18 keer "Eén maat" staat niet in de lijst,
+// bij ringen (ringmaten) en sokken (kledingmaten). Ook die zijn geen maat.
+// Draaien met --oud op f879ba9f moet hier falen (code van vóór die reparatie).
+check('"Eén maat" houdt de ring niet meer tegen', eindcontrole("Eén maat") === "", eindcontrole("Eén maat"));
+check('"Een maat" en "One size" ook niet', eindcontrole("Een maat") === "" && eindcontrole("One size") === "");
 const echt = eindcontrole("M");
 check("een echte maat die niet in de lijst staat houdt hem nog wel tegen",
       /left empty on the form: size/.test(echt), echt || "(niet tegengehouden)");
