@@ -18563,3 +18563,4 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 - 49b900b4 (valentinomtcg@gmail.com, Pokémonkaarten): ongewijzigd sinds 30-10 23:02, 21 live op Vinted, extensie 1.0.409 (Web Store 1.0.411), 1 Vinted-scan wacht op zijn Chrome. Proef tot 05-11.
 - f0291981 (gollem.joukes): ongewijzigd sinds 28-10 15:18 (computer uit), extensie 1.0.404, proef tot 03-11. 656a5041 is Daniels eigen account. radu.stefana valt buiten de eerste week.
 - Mailrapport: 8 mails sinds 26-10, 4 echt geopend, 0 klik, 0 antwoord, 5 deden daarna iets.
+- Kosten 01-11 (aanvulling): Google Cloud blijkt betaald: EUR 10 op 28-10, EUR 8 laatste 30 dagen (stond op 0). Totaal nu ±EUR 64 per maand. CapCut-abonnementen (cloud 10 en 100, maandelijks) staan nog niet in de sheet, bedrag onbekend. Railway lovely-grace: geen sleutels, geen echt verkeer, wacht op besluit Daniel.
