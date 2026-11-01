@@ -9,7 +9,7 @@ buiten beschouwing laten.
 
 ## Opdracht
 
-1. Lees de sheet (tab 1: rijen 5 tot 23, kolommen A tot I; tab "Revaleur": rijen 5 tot 10) met de Sheets-klasse uit scripts/leadgen_sheets.py
+1. Lees de sheet (tab "Omnivaleur": rijen 5 tot 23, kolommen A tot I; tab "Revaleur": rijen 5 tot 10; het eerste tabblad "Overzicht" rekent zelf mee, daar nooit in schrijven) met de Sheets-klasse uit scripts/leadgen_sheets.py
    (python 3.13: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3, sleutel in
    ~/.omnivaleur/sheets-sleutel.json). De sleutel (omnivaleur-leadmachine@...) heeft schrijfrecht op dit ene bestand.
 2. Open in Daniels Chrome (Claude in Chrome, hij is daar ingelogd) de factuurpagina's en lees de echte bedragen:
@@ -69,4 +69,4 @@ Anthropic-tegoed loopt achter op het verbruik: een bijlading van USD 24,20 betaa
 
 ## Samengevoegd met de doelencheck (Daniel, 01-11-2026)
 
-Kosten en doelen zijn één routine: de geplande taak `omnivaleur-kosten-bijhouden` (1e van de maand, 09:00) doet eerst deze opdracht en daarna de skill `kwartaalcheck` (kwartaalmodus in jan/apr/jul/okt, anders maandmodus). De taken `kwartaalcheck-doelen-2027` en `maandcheck-doelen-2027` staan uit. De doelen staan nu als tabs "Doelen meetlog" en "Uitgangspunten" in deze sheet; de oude losse sheet "Doelen meetlog" is weg. Tab 1 heet nu "Omnivaleur". Formules in deze sheet gebruiken puntkomma's. Schrijf in tab "Doelen meetlog" alleen kolom B, C en D van de rij van de maand; de rest rekent mee.
+Kosten en doelen zijn één routine: de geplande taak `omnivaleur-kosten-bijhouden` (1e van de maand, 09:00) doet eerst deze opdracht en daarna de skill `kwartaalcheck` (kwartaalmodus in jan/apr/jul/okt, anders maandmodus). De taken `kwartaalcheck-doelen-2027` en `maandcheck-doelen-2027` staan uit. De doelen staan nu als tabs "Doelen meetlog" en "Uitgangspunten" in deze sheet; de oude losse sheet "Doelen meetlog" is weg. Het eerste tabblad is "Overzicht" (alleen formules, nooit in schrijven); gebruik bij lezen en schrijven altijd de tabnaam, bijvoorbeeld Omnivaleur!F27. Formules in deze sheet gebruiken puntkomma's. Schrijf in tab "Doelen meetlog" alleen kolom B, C en D van de rij van de maand; de rest rekent mee.
