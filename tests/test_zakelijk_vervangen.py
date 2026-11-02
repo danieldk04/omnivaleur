@@ -42,6 +42,7 @@ class _DB:
             def in_(self, *_a): return self
             def not_(self): return self
             def limit(self, *_a): return self
+            def order(self, *_a, **_k): return self
 
             def execute(self):
                 db.gevraagd.append(naam)
