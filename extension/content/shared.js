@@ -3366,7 +3366,7 @@ window.CL = (() => {
     if (item.size) return String(item.size);
     if (!/ring/i.test(String(item.category || ""))) return "";
     const tekst = `${item.title || ""} ${item.description || ""}`;
-    const m = tekst.match(/ringmaat\s*(?:is|=|:|ca\.?|circa)?\s*(?:ca\.?|circa)?\s*(\d{2}(?:[.,]\d{1,2})?)/i);
+    const m = tekst.match(/\b(?:ring)?maat\s*(?:is|=|:|nu|ca\.?|circa)?\s*(?:ca\.?|circa)?\s*(\d{2}(?:[.,]\d{1,2})?)/i);
     if (!m) return "";
     const d = parseFloat(m[1].replace(",", "."));
     if (!(d >= 12 && d < 30)) return "";
