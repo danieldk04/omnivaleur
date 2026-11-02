@@ -3164,7 +3164,10 @@ async def list_import_candidates(platform: str = None, status: str = "pending", 
             q = q.eq("status", status)
         cands = q.order("created_at", desc=True).limit(500).execute().data or []
         if not cands:
-            return cands, [], {}, {}
+            # Vijf waarden, net als hieronder: met vier gaf een lege lijst sinds
+            # 24-09 een 500, en bleef na "Import all" de oude lijst op het scherm
+            # staan (kardkid9, 01-11-2026: importscherm 3x 500).
+            return cands, [], {}, {}, set()
         # sku en created_at horen erbij: zonder die twee koos deze lijst bij een
         # nummer soms een ander item dan "Import all" daarna echt koppelde.
         its = fetch_all(lambda: db.table("items")
