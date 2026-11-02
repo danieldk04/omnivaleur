@@ -1143,6 +1143,12 @@ function getEditUrl(platform, payload) {
     const m = String(payload?.platform_listing_id || "").match(/^m?(\d+)$/i);
     return m ? `https://www.2dehands.be/plaats/m${m[1]}/edit` : null;
   }
+  // Marktplaats (02-11-2026, Toon): alleen de prijs van een advertentie die al
+  // online staat; zelfde formulier en zelfde knop als 2dehands (live nagemeten).
+  if (platform === "marktplaats") {
+    const m = String(payload?.platform_listing_id || "").match(/^m?(\d+)$/i);
+    return m ? `https://www.marktplaats.nl/plaats/m${m[1]}/edit` : null;
+  }
   return null;
 }
 
@@ -1152,8 +1158,8 @@ function getEditUrl(platform, payload) {
 // Opslaan, en alleen op DEZELFDE advertentie: het formulier zelf
 // (/plaats/m{id}/edit) draagt hetzelfde nummer en telt dus nooit.
 function bewerkingOpgeslagen2dh(url, meta) {
-  if (!meta || meta.platform !== "2dehands" || meta.action !== "content_refresh"
-      || !meta.submitClicked) return false;
+  if (!meta || (meta.platform !== "2dehands" && meta.platform !== "marktplaats")
+      || meta.action !== "content_refresh" || !meta.submitClicked) return false;
   const lid = String(meta.payload?.platform_listing_id || "").replace(/^m/i, "");
   if (!/^\d+$/.test(lid)) return false;
   let pad;
@@ -8849,7 +8855,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   // 2DEHANDS-BIJWERKING OPGESLAGEN (26-09-2026). Zelfde reden als bij Vinted
   // hierboven: de opslagklik kan het tabblad wegsturen voordat het script
   // JOB_DONE stuurt. Zie bewerkingOpgeslagen2dh.
-  if (meta.platform === "2dehands" && meta.action === "content_refresh") {
+  if ((meta.platform === "2dehands" || meta.platform === "marktplaats") && meta.action === "content_refresh") {
     if (bewerkingOpgeslagen2dh(changeInfo.url, meta)) {
       console.log(`[Omnivaleur] 2dehands-bijwerking ${meta.payload?.platform_listing_id} opgeslagen (tabblad verliet het formulier) — afgemeld.`);
       clearJobWatchdog(tabId);

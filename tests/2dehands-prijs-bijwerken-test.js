@@ -39,9 +39,10 @@ const cent = (t) => {
   return m ? Number(m[1]) * 100 + Number((m[2] || "0").padEnd(2, "0")) : null;
 };
 
+let BESTAND = "tweedehands.js";
 async function draai(commit, { job, prijs = "34,99", bod = "24,49", bieden = true, geenPrijsveld = false,
                               klikSlaatOp = true, veldNeemtNietAan = false }) {
-  const bron = lees("extension/content/tweedehands.js", commit);
+  const bron = lees("extension/content/" + BESTAND, commit);
   const berichten = [];
   const prijsEl = { value: prijs, type: "text" };
   const bodEl = { value: bod, type: "text" };
@@ -82,14 +83,14 @@ async function draai(commit, { job, prijs = "34,99", bod = "24,49", bieden = tru
 }
 
 const opdracht = (price, extra = {}) => ({
-  id: "j1", serverUrl: "https://omnivaleur.com", action: "content_refresh", platform: "2dehands",
+  id: "j1", serverUrl: "https://omnivaleur.com", action: "content_refresh", platform: BESTAND === "marktplaats.js" ? "marktplaats" : "2dehands",
   payload: { platform_listing_id: "m2446468449", price, _prijs_bijwerken: true, ...extra },
 });
 const klik = (r) => r.berichten.filter((b) => b.type === "KLIK_ECHT").length;
 const fout = (r) => r.berichten.some((b) => b.type === "JOB_ERROR");
 const klaar = (r) => r.berichten.find((b) => b.type === "JOB_DONE");
 
-(async () => {
+async function proef() {
   let r = await draai(null, { job: opdracht(40) });
   check("nieuwe prijs staat op het formulier", r.prijs === "40,00", r.prijs);
   check("minimumbod volgt de prijs (70%)", r.bod === "28,00", r.bod);
@@ -119,9 +120,17 @@ const klaar = (r) => r.berichten.find((b) => b.type === "JOB_DONE");
 
   // Voor-en-na: de oude code kende alleen verzendkosten.
   r = await draai(VOOR, { job: opdracht(40) });
-  check("voor de wijziging: de prijs bleef staan en er kwam een fout",
-    r.prijs === "34,99" && klik(r) === 0 && fout(r), `prijs ${r.prijs}`);
+  check("voor de wijziging: de prijs bleef staan en er was geen bewijs van opslaan",
+    r.prijs === "34,99" && klaar(r)?.result?.prijs_bijgewerkt !== true, `prijs ${r.prijs}`);
 
+}
+
+(async () => {
+  for (const b of ["tweedehands.js", "marktplaats.js"]) {
+    BESTAND = b;
+    console.log(b);
+    await proef();
+  }
   console.log(mislukt ? `\n${mislukt} proef(ven) mislukt` : "\nalles in orde");
   process.exit(mislukt ? 1 : 0);
 })();

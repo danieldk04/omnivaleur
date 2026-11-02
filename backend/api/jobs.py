@@ -83,6 +83,12 @@ MINIMALE_NIEUWE_TAKKEN_VERSIE = (1, 0, 351)
 # kopie kent geen wijzigadres voor 2dehands en zou de opdracht als mislukt
 # melden. Het werk blijft 'pending' tot een bijgewerkte kopie polt.
 MINIMALE_2DH_BIJWERK_VERSIE = (1, 0, 354)
+# Sinds 02-11-2026 (Toon) gaat ook een PRIJSWIJZIGING als content_refresh naar
+# 2dehands (_prijs_bijwerken). Dat kan pas vanaf 1.0.412: een oudere kopie kent
+# alleen de verzendkosten, meldt "geen verzendbedrag" als fout en zet daarmee de
+# noodrem voor al het 2dehands-bijwerkwerk van die verkoper dicht. Het werk
+# blijft 'pending' tot een bijgewerkte kopie polt.
+MINIMALE_2DH_PRIJS_VERSIE = (1, 0, 412)
 # Een Vinted-plaatsing gaat alleen naar 1.0.386 of nieuwer (15-10-2026, Janneke
 # 31d28378 en Amanda). Daaronder wacht de prijsstap op Chrome 128 zonder grens
 # of geeft hij het na 20 s op; gemeten duurt de eerste prijsvraag daar 12 tot
@@ -1611,7 +1617,18 @@ def _is_2dh_bijwerking(job: dict) -> bool:
     deze opdrachten wachtten op extensie 1.0.354 terwijl hij 1.0.352 had. De balk
     zei twee uur lang "178 queued" en er gebeurde niets. Hij meldde "hij lijkt
     vastgelopen", logde uit en in, en leegde uiteindelijk de hele rij."""
-    return job.get("action") == "content_refresh" and job.get("platform") == "2dehands"
+    if job.get("action") != "content_refresh":
+        return False
+    if job.get("platform") == "2dehands":
+        return True
+    # Een prijswijziging op Marktplaats (02-11-2026, Toon) is hetzelfde soort
+    # werk: op de achtergrond, geen wachtrij waar de verkoper op wacht.
+    return job.get("platform") == "marktplaats" and _is_prijs_opdracht(job)
+
+
+def _is_prijs_opdracht(job: dict) -> bool:
+    """Lichte rij (prijs_bijwerken) of volle rij (payload._prijs_bijwerken)."""
+    return bool(job.get("prijs_bijwerken") or (job.get("payload") or {}).get("_prijs_bijwerken"))
 
 
 # Hetzelfde als filter voor de database (niet: content_refresh EN 2dehands).
@@ -2114,6 +2131,7 @@ def _scan_achterstallig(j: dict, now_dt: datetime) -> bool:
 # De lichte velden waarmee de volgorde over de hele wachtrij bepaald wordt. Uit de
 # payload alleen het ene tijdstip dat zegt of een plaatsing op zijn rubriek wacht.
 _LICHTE_VELDEN = ("id,action,platform,item_id,created_at,scheduled_for,"
+                  "prijs_bijwerken:payload->>_prijs_bijwerken,"
                   "rubriek_sinds:payload->>_rubriek_zoeken_sinds,"
                   "rubriek_pogingen:payload->>_rubriek_pogingen,"
                   "fotos_sinds:payload->>_fotos_wachten_sinds,"
@@ -2540,10 +2558,14 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
 
     def bijwerking_moet_wachten(j: dict) -> bool:
         nonlocal bijwerken_staat_stil
-        if j.get("action") != "content_refresh" or j.get("platform") != "2dehands":
+        if not _is_2dh_bijwerking(j):
             return False
         if versie_van_de_kopie is None or versie_van_de_kopie < MINIMALE_2DH_BIJWERK_VERSIE:
             return True
+        if _is_prijs_opdracht(j) and versie_van_de_kopie < MINIMALE_2DH_PRIJS_VERSIE:
+            return True
+        if j.get("platform") != "2dehands":
+            return False    # de noodrem hieronder kijkt alleen naar 2dehands-verzendwerk
         if bijwerken_staat_stil is None:
             bijwerken_staat_stil = _bijwerken_2dh_staat_stil(db, user_id)
         return bijwerken_staat_stil

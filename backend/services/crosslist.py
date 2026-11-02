@@ -3960,6 +3960,40 @@ async def _delist_one(listing: dict):
 # they are reported as "unsupported" rather than silently skipped.
 _PRICE_SYNC_API = {"ebay", "shopify", "woocommerce"}
 _PRICE_SYNC_EXTENSION = {"vinted"}
+# Marktplaats en 2dehands hebben geen API: de extensie opent het wijzigformulier
+# van het zoekertje en zet de prijs (02-11-2026, Toon). Eén opdracht per
+# zoekertje; een nog wachtende opdracht krijgt de nieuwste prijs in plaats van
+# een tweede, zodat vijf prijswijzigingen achter elkaar vijf keer opslaan niet
+# kunnen worden.
+_PRICE_SYNC_FORMULIER = {"2dehands", "marktplaats"}
+
+
+async def _prijs_opdracht_voor_formulier(db, user_id: str, item: dict, listing: dict, price: float) -> dict:
+    platform = listing["platform"]
+    lid = listing.get("platform_listing_id")
+    if not lid:
+        return {"platform": platform, "status": "error", "error": "This listing has no platform id yet"}
+    wachtend = (await naast_de_lus(lambda: db.table("jobs").select("id,payload")
+                .eq("user_id", user_id).eq("item_id", item["id"]).eq("platform", platform)
+                .eq("action", "content_refresh").eq("status", "pending")
+                .limit(20).execute())).data or []
+    wachtend = [j for j in wachtend if (j.get("payload") or {}).get("_prijs_bijwerken")]
+    bericht = {"platform": platform, "status": "queued",
+               "message": "Price edit queued — Chrome extension will apply it"}
+    if wachtend:
+        pl = {**(wachtend[0].get("payload") or {}), "price": price}
+        await naast_de_lus(lambda: db.table("jobs").update({"payload": pl})
+                           .eq("id", wachtend[0]["id"]).execute())
+        return bericht
+    await naast_de_lus(lambda: db.table("jobs").insert({
+        "user_id": user_id, "item_id": item["id"], "platform": platform,
+        "action": "content_refresh", "status": "pending",
+        "payload": {"platform_listing_id": lid,
+                    "platform_listing_url": listing.get("platform_listing_url"),
+                    "title": item.get("title"), "price": price,
+                    "_prijs_bijwerken": True},
+    }).execute())
+    return bericht
 
 
 async def sync_price_to_platforms(item_id: str, user_id: str) -> list[dict]:
@@ -4035,6 +4069,10 @@ async def sync_price_to_platforms(item_id: str, user_id: str) -> list[dict]:
             }).execute()))
             results.append({"platform": platform, "status": "queued",
                             "message": "Price edit queued — Chrome extension will apply it"})
+            continue
+
+        if platform in _PRICE_SYNC_FORMULIER:
+            results.append(await _prijs_opdracht_voor_formulier(db, user_id, item, listing, price))
             continue
 
         if platform not in _PRICE_SYNC_API:

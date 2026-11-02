@@ -7,6 +7,8 @@
           ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs,
           mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG, zetPrijs } = window.CL;
 
+  const { centenUitTekst, waitUntil } = window.CL;
+
   const job = await getJob();
   if (!job) return;
   // Eerste levensteken vóór het eerste wachten; zie tweedehands.js.
@@ -17,6 +19,11 @@
     if (job.action === "delete") {
       await deleteListingMp(item.platform_listing_id);
       send("JOB_DONE", {});
+    } else if (job.action === "content_refresh") {
+      // Een bestaande advertentie bijwerken (alleen de prijs). NOOIT doorvallen naar
+      // het plaatsformulier hieronder: dat zou alles opnieuw invullen op een
+      // advertentie die al online staat.
+      send("JOB_DONE", await prijsBijwerken(item));
     } else {
       await fillForm(item);
       const id = await submitListing(/marktplaats\.nl\/v\/[^/]+\/(m\d+)/);
@@ -31,6 +38,87 @@
     }
   } catch (e) {
     send("JOB_ERROR", null, String(e)); // tab stays open (background no longer closes it)
+  }
+
+  // Opslaan op het wijzigformulier, gedeeld door verzendkosten en prijs.
+  async function wijzigingOpslaan(wat) {
+    const achtergrond = (bericht) => new Promise((res) => {
+      try { chrome.runtime.sendMessage(bericht, (r) => { void chrome.runtime.lastError; res(r); }); }
+      catch (_) { res(null); }
+    });
+    // Zelfde volgorde als bij plaatsen (submitListing): de vraag "Site verlaten?"
+    // uitzetten, laten weten dat er geklikt wordt, en dan een echte klik.
+    await achtergrond({ type: "ONTWAPEN_AFSLUITVRAAG" });
+    await achtergrond({ type: "SUBMIT_CLICKED" });
+    const clickResult = await achtergrond({ type: "KLIK_ECHT", selector: '[data-testid="update-listing-submit-button"]' });
+    clog(`opslaan: echte klik — ${typeof clickResult === "string" ? clickResult : JSON.stringify(clickResult)}`);
+    // Na het opslaan verlaat Marktplaats het wijzigformulier. Gebeurt dat met een
+    // volledige paginawissel, dan sterft dit script hier en meldt de achtergrond
+    // het af (zie bewerkingOpgeslagen2dh in background.js).
+    const weg = await waitUntil(() => !/\/edit\b/.test(location.pathname), 20000);
+    if (!weg) {
+      throw new Error(`Marktplaats did not save the new ${wat} (click: ${clickResult}). Nothing was changed.`);
+    }
+  }
+
+  // DE PRIJS VAN EEN ADVERTENTIE DIE AL ONLINE STAAT (02-11-2026, Toon).
+  //
+  // Zelfde werk als prijsBijwerken in tweedehands.js; het Marktplaats-formulier
+  // heeft dezelfde velden en dezelfde knop. LIVE NAGEMETEN 02-11-2026 op een eigen
+  // advertentie (m2459776391, ingelogd): vraagprijs input[name="price.value"] = "44,99",
+  // minimumbod input[name="price.minimumBidPrice"] = "31,49" (70%), knop
+  // [data-testid="update-listing-submit-button"]. Oorspronkelijk nagemeten op vraagprijs in input[name="price.value"] als "34,99", en bij
+  // "bieden vanaf" een tweede veld input[name="price.minimumBidPrice"] = "24,49",
+  // precies 70% van de prijs. Dat bod hangt dus aan de prijs: een nieuwe prijs
+  // met het oude bod geeft een verkeerd minimumbod. We houden de verhouding aan
+  // die de verkoper op dit zoekertje heeft staan.
+  //
+  // Staat er geen prijsveld (Bieden, Zie omschrijving, Gratis), dan wordt er niets
+  // aangeraakt en niets opgeslagen. Elk veld wordt teruggelezen voor er opgeslagen
+  // wordt: een prijs die het formulier niet aannam, wordt nooit opgeslagen.
+  async function prijsBijwerken(item) {
+    const gewild = Math.round(Number(item && item.price) * 100);
+    if (!item || !item._prijs_bijwerken || !isFinite(gewild) || gewild <= 0) {
+      throw new Error("This Marktplaats update carries no valid price to set, so nothing was changed.");
+    }
+    const veld = await waitUntil(() => qs('input[name="price.value"]'), 20000);
+    if (!veld) {
+      throw new Error("The Marktplaats edit form shows no price field (a listing without an asking price), "
+        + "so nothing was changed.");
+    }
+    const oud = centenUitTekst(veld.value);
+    const schakelaar = qs('input#syi-bidding-switch-input') || qs('#syi-bidding-switch input[type="checkbox"]');
+    const bodVeld = qs('input[name="price.minimumBidPrice"]');
+    const bieden = !!(schakelaar && schakelaar.checked && bodVeld);
+    let bodGewild = null;
+    if (bieden) {
+      const oudBod = centenUitTekst(bodVeld.value);
+      if (!oud || !oudBod) {
+        throw new Error(`The current price/minimum bid could not be read ("${veld.value}" / "${bodVeld.value}"), `
+          + "so nothing was changed.");
+      }
+      bodGewild = Math.round(gewild * oudBod / oud);
+    }
+    const prijsGoed = () => centenUitTekst((qs('input[name="price.value"]') || {}).value) === gewild;
+    const bodGoed = () => !bieden
+      || Math.abs(centenUitTekst((qs('input[name="price.minimumBidPrice"]') || {}).value) - bodGewild) <= 1;
+    if (prijsGoed() && bodGoed()) {
+      clog("prijs: stond al goed, niets opgeslagen");
+      return { prijs_bijgewerkt: false, al_goed: true };
+    }
+    await fillInputHuman(veld, mpPrijs(gewild / 100, veld));
+    await sleep(400);
+    if (bieden) {
+      await fillBidding(gewild / 100, bodGewild / gewild * 100);
+      await sleep(400);
+    }
+    clog(`prijs: ${veld.value}${bieden ? ` met minimumbod ${(qs('input[name="price.minimumBidPrice"]') || {}).value}` : ""}`);
+    if (!prijsGoed() || !bodGoed()) {
+      throw new Error(`The price could not be set on Marktplaats (price "${(qs('input[name="price.value"]') || {}).value}"`
+        + `${bieden ? `, minimum bid "${(qs('input[name="price.minimumBidPrice"]') || {}).value}"` : ""}), so nothing was saved.`);
+    }
+    await wijzigingOpslaan("price");
+    return { prijs_bijgewerkt: true };
   }
 
   async function deleteListingMp(listingId) {
