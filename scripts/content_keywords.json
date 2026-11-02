@@ -898,7 +898,7 @@
       "pillar": "B",
       "format": "money_rules",
       "slug": "return-rights-on-second-hand-sales-netherlands",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "herroepingsrecht-tweedehands-verkoop-marktplaats",
       "priority": 102
     },
@@ -1859,6 +1859,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-set-holiday-mode-on-vinted",
       "published_at": "2026-11-01T14:45:42.121961+00:00"
+    },
+    {
+      "keyword": "return rights on second hand sales netherlands",
+      "slug": "return-rights-on-second-hand-sales-netherlands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "action": "created",
+      "url_path": "/reseller-tools/return-rights-on-second-hand-sales-netherlands",
+      "published_at": "2026-11-02T17:39:30.342257+00:00"
     }
   ]
 }
