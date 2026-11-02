@@ -18598,3 +18598,8 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 ## 2026-11-02: platformcontrole, geen afwijking op Vinted en Marktplaats, 2dehands niet uitgelezen
 
 Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, babykleding meisjes, jongens kleding: alle stappen ok (beschrijving valt in de proef uit, artefact). Kookboek (nu met sleutel "boeken kookboeken"): maat en kleur NIET gelukt, bekend sinds 27-10. Marktplaats vriezers, wafelijzers, was-droogcombinaties: titel, prijs, staat ok; maat, halswijdte, kleur en merk NIET gelukt, zelfde patroon als eerdere dagen bij rubrieken zonder die velden, NIET bewezen; bij vriezers viel ook sporttype uit. 2dehands wafelijzers: proef gestart, uitslag niet uitgelezen (de leesactie werd door de rechtencontrole geweigerd), dus vandaag niet gecontroleerd. Uitslag bewaard met vergelijk.py; verschillen met gisteren zijn alleen rubriekrotatie en extra logregels (herstel).
+
+## 02-11-2026: Vertalen via Azure Translator live
+- Daniel sloot een Azure-abonnement af; ik maakte de vertaler omnivaleur-vertaler aan (gratis laag F0, 2 miljoen tekens per maand, regio Sweden Central omdat West Europe geen nieuwe klanten aannam). Daniel zette AZURE_TRANSLATOR_KEY in Railway.
+- Vertalen naar Marktplaats en 2dehands gaat nu eerst via Azure, per regel met geheugen; Gemini en Claude alleen nog als reserve. Proef met de echte sleutel op 40 artikelen van Goudlief: 40 goed vertaald, 0 keer Google, 4.178 tekens. Code: backend/services/azure_vertaling.py, tests/test_azure_vertaling.py (oude code faalt, nieuwe slaagt).
+- Google blijft nodig voor de rubriekkeuze; tegoed is nog op. Advies: klein bedrag met bestedingslimiet.

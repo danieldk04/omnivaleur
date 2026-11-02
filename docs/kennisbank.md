@@ -17,6 +17,53 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## gemini-tegoed-op
+
+*02-11-2026 — Google 402 = tegoed op (24-09 en 31-10); 31-10 EUR 5,49 door Goudliefs bulk-crosslist van 2.588 artikelen, ~1.380 vertaalvragen à ~0,4 ct*
+
+Op 24-09-2026 antwoordde Gemini met HTTP 402 "Your prepayment credits are
+depleted" (sleutel f7c8c67f, de Omnivaleur-sleutel). taalmodel.py valt dan stil
+terug op Claude, dus rubriekkeuze, vertalen, tweelingzoeker en blog liepen op de
+dure route zonder dat iets rood werd. De tweelingzoeker is op Claude aantoonbaar
+slechter (zie team-notes 23-09).
+
+**Why:** de omzetting naar Gemini was om kosten; een leeg tegoed maakt dat
+onzichtbaar ongedaan. Lokaal staat dezelfde sleutel in de instellingen
+(settings.google_api_key, niet gemini_api_key).
+**How to apply:** meet bij twijfel eerst met gemini_vertaling.vraag() en kijk of er
+402 in de log staat. Een alarm op 402 bestaat nog niet. Zie
+"modellenlijst-van-de-dienst-is-geen-bewijs".
+
+Sinds 24-09-2026 ~16:30 draait de server op een nieuwe, gratis Google-sleutel
+(vingerafdruk ddf59aed in /health) uit een project zonder betaling. Boven het
+gratis dagmaximum antwoordt Google 429 en gaat de vraag vanzelf naar Claude.
+
+**31-10-2026, tweede keer op (sleutel 27d2bcd9, betaald Tier 1, EUR 10 op 28-10).**
+AI Studio: 31-10 EUR 5,49 tegen ~1 per dag daarvoor. Railway-log per deployment
+(`npx -y @railway/cli logs <id> --deployment --lines 5000 --filter "generativelanguage"`,
+meer dan 5000 regels geeft "Invalid input"): ~1.380 geslaagde aanroepen op 31-10,
+bijna allemaal `translate→nl in` (crosslist._vertaal). Bron: Goudlief zette die
+ochtend 2.588 artikelen tegelijk door naar Marktplaats en 2dehands. Zijn
+omschrijvingen zijn een half Engels specificatieblok ("Basic Information / SPU ID /
+Material: roestvrij staal") en zijn titels te kort voor lijkt_al_in_taal, dus titel
+en omschrijving gingen elk één keer naar Gemini (één Nederlandse versie voor beide
+kanalen, geen dubbel werk). Rond 0,4 cent per aanroep, vertalen draait met denkstap
+(denken=True, 8192 ruimte). Om 13 tot 15 uur was het tegoed op, daarna 402.
+**How to apply:** een kostenpiek bij Google is eerst een bulk-crosslist; tel per
+deployment in de Railway-log. Het aandeel van de denkstap is niet gemeten (sleutel
+gaf 402); dat eerst meten met usageMetadata.thoughtsTokenCount voor je hem uitzet.
+
+**Sinds 02-11-2026 vertaalt Azure Translator eerst** (backend/services/azure_vertaling.py,
+resource omnivaleur-vertaler, F0 gratis 2M tekens/maand, regio swedencentral want West
+Europe nam geen nieuwe klanten aan). Per regel met geheugen; Gemini/Claude alleen als
+Azure weigert. Stand op /health onder azure_vertaling (http_403 = gratis tegoed op).
+Proef met de echte sleutel zonder hem te zien: `npx -y @railway/cli run python3 script.py`
+(Railway zet de variabelen erin). 40 Goudlief-artikelen: 40 goed, 0 Google, 4.178 tekens.
+Nieuw Azure-abonnement was in het portal onzichtbaar door "Geavanceerde filters" en
+Microsoft.CognitiveServices moest eerst geregistreerd worden.
+
+---
+
 ## 403-na-verwijderen-is-blokkade
 
 *02-11-2026 — "Een 403 bij het nakijken van een verwijdering is een blokkade van Marktplaats/2dehands, geen bewijs dat de advertentie er nog staat; na een echte verwijdering geeft /seller/view 410"*
@@ -50,44 +97,6 @@ Gerepareerd 02-11-2026 (4679526a): `_verwijdering_openbaar_bewezen` in backend/a
 kijkt nu ook bij nacontroles met alleen 403/429/5xx zelf www.marktplaats.nl/<m-nummer> na;
 404/410 = gelukt en de herplaatsing gaat door. In 14 dagen ervoor 13 gevallen bij 4 klanten.
 Zie "storing-mag-niet-nog-even-laden-heten" voor het principe: geen antwoord is geen bewijs.
-
----
-
-## gemini-tegoed-op
-
-*01-11-2026 — Google 402 = tegoed op (24-09 en 31-10); 31-10 EUR 5,49 door Goudliefs bulk-crosslist van 2.588 artikelen, ~1.380 vertaalvragen à ~0,4 ct*
-
-Op 24-09-2026 antwoordde Gemini met HTTP 402 "Your prepayment credits are
-depleted" (sleutel f7c8c67f, de Omnivaleur-sleutel). taalmodel.py valt dan stil
-terug op Claude, dus rubriekkeuze, vertalen, tweelingzoeker en blog liepen op de
-dure route zonder dat iets rood werd. De tweelingzoeker is op Claude aantoonbaar
-slechter (zie team-notes 23-09).
-
-**Why:** de omzetting naar Gemini was om kosten; een leeg tegoed maakt dat
-onzichtbaar ongedaan. Lokaal staat dezelfde sleutel in de instellingen
-(settings.google_api_key, niet gemini_api_key).
-**How to apply:** meet bij twijfel eerst met gemini_vertaling.vraag() en kijk of er
-402 in de log staat. Een alarm op 402 bestaat nog niet. Zie
-"modellenlijst-van-de-dienst-is-geen-bewijs".
-
-Sinds 24-09-2026 ~16:30 draait de server op een nieuwe, gratis Google-sleutel
-(vingerafdruk ddf59aed in /health) uit een project zonder betaling. Boven het
-gratis dagmaximum antwoordt Google 429 en gaat de vraag vanzelf naar Claude.
-
-**31-10-2026, tweede keer op (sleutel 27d2bcd9, betaald Tier 1, EUR 10 op 28-10).**
-AI Studio: 31-10 EUR 5,49 tegen ~1 per dag daarvoor. Railway-log per deployment
-(`npx -y @railway/cli logs <id> --deployment --lines 5000 --filter "generativelanguage"`,
-meer dan 5000 regels geeft "Invalid input"): ~1.380 geslaagde aanroepen op 31-10,
-bijna allemaal `translate→nl in` (crosslist._vertaal). Bron: Goudlief zette die
-ochtend 2.588 artikelen tegelijk door naar Marktplaats en 2dehands. Zijn
-omschrijvingen zijn een half Engels specificatieblok ("Basic Information / SPU ID /
-Material: roestvrij staal") en zijn titels te kort voor lijkt_al_in_taal, dus titel
-en omschrijving gingen elk één keer naar Gemini (één Nederlandse versie voor beide
-kanalen, geen dubbel werk). Rond 0,4 cent per aanroep, vertalen draait met denkstap
-(denken=True, 8192 ruimte). Om 13 tot 15 uur was het tegoed op, daarna 402.
-**How to apply:** een kostenpiek bij Google is eerst een bulk-crosslist; tel per
-deployment in de Railway-log. Het aandeel van de denkstap is niet gemeten (sleutel
-gaf 402); dat eerst meten met usageMetadata.thoughtsTokenCount voor je hem uitzet.
 
 ---
 
