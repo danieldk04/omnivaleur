@@ -63,7 +63,7 @@ def _met_slottekst(gelokaliseerd: dict, platform: str, user_id: str) -> dict:
     webadressen (dat kost EUR 9,00), de rest met slottekst.
     """
     from backend.services.crosslist import (slotteksten_van, omschrijving_met_slot,
-                                            _zonder_slot, _zonder_links)
+                                            _zonder_slot, _zonder_links, _zonder_hekjes)
     slot, slot_vinted = slotteksten_van(user_id)
     beschrijving = str(gelokaliseerd.get("description") or "")
     titel = str(gelokaliseerd.get("title") or "")
@@ -73,8 +73,8 @@ def _met_slottekst(gelokaliseerd: dict, platform: str, user_id: str) -> dict:
     else:
         beschrijving = omschrijving_met_slot(beschrijving, platform, slot, slot_vinted)
         if platform in ("marktplaats", "2dehands"):
-            beschrijving = _zonder_links(beschrijving)
-            titel = _zonder_links(titel)
+            beschrijving = _zonder_hekjes(_zonder_links(beschrijving))
+            titel = _zonder_hekjes(_zonder_links(titel))
     return {**gelokaliseerd, "title": titel, "description": beschrijving}
 
 

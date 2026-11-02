@@ -18625,3 +18625,7 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 
 ## 02-11-2026: Onboarding nieuwe klanten (middag)
 - Liep om 12:37, 25 minuten na de ochtendronde. Dezelfde 5 accounts, geen nieuwe, geen creator. Bij niemand iets veranderd (kardkid9 en bankai2855 nog 0 artikelen, valentinomtcg en gollem.joukes extensie stil). Alle drie de mailtjes van vanochtend staan in Verzonden; geen nieuwe mailtjes, niets gerepareerd.
+
+## 02-11-2026: gollem.joukes (f0291981), extra handelingen en hekjes
+- Klacht: bij bijna elke Vinted-import vraagt Omnivaleur om titel, kleur of categorie, en # staat in de Marktplaatsteksten. Gemeten: de publiceercontrole hield 150 van 243 artikelen tegen. 125 strijkemblemen (rubriek hobby, 28-10) eisten merk, maat en kleur omdat "hobby " niet bij de niet-kledingrubrieken stond; 9 stropdassen (heren accessoires) eisten maat. 228 van 243 omschrijvingen en 4 titels hadden #.
+- Gerepareerd: hobby en heren accessoires hoeven geen maat/merk/kleur meer (150 naar 16 tegengehouden; die 16 zijn kleding zonder kleur). Marktplaats en 2dehands krijgen titel en omschrijving zonder # (woord blijft staan), op alle drie de paden (publiceren, herplaatsen, uitgifte). Proef tests/test_hekjes_en_hobby_zonder_maat.py. Niet gemeten op het echte MP-formulier: Chrome was daar niet ingelogd.
