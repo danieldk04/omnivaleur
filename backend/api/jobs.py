@@ -3467,6 +3467,13 @@ def _verouderde_extensie(db, user_id: str, hartslag_versie=_ZELF_LEZEN) -> dict:
     }
 
 
+@router.get("/rubriek-afwijkingen")
+async def rubriek_afwijkingen(user_id: str = Depends(get_current_user)):
+    """Advertenties die Marktplaats of 2dehands in een andere rubriek zette dan we bedoelden."""
+    from backend.services.rubriek_controle import afwijkingen_voor
+    return {"afwijkingen": await afwijkingen_voor(get_db(), user_id)}
+
+
 @router.get("/relist-status")
 def relist_status(user_id: str = Depends(get_current_user)):
     """

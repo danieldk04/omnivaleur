@@ -17,6 +17,33 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## rubriek-na-plaatsen-controleren
+
+*02-11-2026 — "02-11: Marktplaats-rubriek is achteraf niet te wijzigen; server leest na plaatsen de echte rubriek terug (rubriek_controle.py), extensie 1.0.413 bewaakt het formulier; 100% beloven kan niet"*
+
+02-11-2026, Esther (hetisvintastisch, lead): "advertenties eerst als concept?" Daniel wil voor iedereen zekerheid dat een artikel in de juiste Marktplaats-rubriek komt.
+
+**Wat is gemeten.** Plaatsing weigert een onbekende rubriek (geen standaard), maar niets keek ná het plaatsen of Marktplaats de advertentie ook echt in die rubriek zette. Dashboard toont onze categorie, niet de Marktplaats-rubriek. Alle 788 paren in MP_CATEGORIES bestaan in Marktplaats' eigen boom, maar enkele zijn bewust benaderd: zwemkleding/badkleding/ondergoed dames onder Jurken (622 en 632 bestaan), leggings onder Broeken (1676 bestaat), heren ondergoed en zwembroeken onder Spijkerbroeken (1675 bestaat).
+
+**Gebouwd.** `backend/services/rubriek_controle.py` (elke 10 min, per verkoper lezen, alleen meten), `jobs.result.rubriekcontrole` = ok/afwijkend/onbekend, `GET /api/jobs/rubriek-afwijkingen`, balk bovenaan Items. Extensie 1.0.413: `_rubriek_verwacht` uit het formulieradres, `bewaakRubriek` weigert plaatsen bij andere rubriek (fail-open bij onleesbaar adres), `rubriek` mee in JOB_DONE.
+
+**Why:** de rubriek kan op Marktplaats achteraf niet wijzigen; een fout zoekertje moet weg en opnieuw (Amanda 30-08 kreeg dat na een verversing). Een meting die alleen 'ok' zegt moet eerst bewezen worden: 30 van 30 echte herplaatsingen kwamen ok terug.
+
+**How to apply:** beloof een klant nooit 100%; zeg dat hij het vooraf ziet en dat afwijking wordt gemeld. Nieuwe plaatsingen worden pas gecontroleerd met extensie >= 1.0.413. Benaderde rubrieken repareren vraagt het bucketId uit een INGELOGD formulier (`/plaats/api/v1/category-aggregate/{l1}/buckets`); zonder login niet te meten, dus niet gokken. Lees nooit jobs.result over meerdere klanten, zie "meten-op-de-productiedatabase". Zie ook "extension-release-bump-version".
+
+---
+
+## daniel-verstuurt-zelf
+
+*02-11-2026 — "Daniel verstuurt klantmails altijd zelf; concept in de chat leveren, nooit vragen of het mag worden verstuurd"*
+
+Concept van een klantmail staat klaar in de chat, Daniel kopieert en verstuurt het zelf (02-11-2026: "sturen doe ik altijd zelf").
+
+**Why:** Hij houdt de controle over wat naar klanten gaat; de vraag "mag het de deur uit?" is overbodig.
+**How to apply:** Geen wrap_up-vraag of knop "verstuur" over een klantmail; zet het concept in het antwoord en in de actiepunten alleen "Kopieer en verstuur". Zie "concepten-in-de-chat".
+
+---
+
 ## vertalen-via-azure
 
 *02-11-2026 — "Sinds 02-11-2026 vertaalt Azure Translator (gratis F0, 2M tekens/maand) vrijwel alles; Gemini alleen nog voor rubrieken en als reserve"*

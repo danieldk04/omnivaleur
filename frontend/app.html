@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=1d5f3820e4"></script>
+<script src="/i18n.js?v=bab3ff4292"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1298,6 +1298,9 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
 
     <!-- ── ITEMS VIEW ──────────────────────────────────────────────── -->
     <div id="view-items" class="view">
+      <!-- Advertenties die Marktplaats of 2dehands in een andere rubriek zette dan we bedoelden.
+           Zie backend/services/rubriek_controle.py; de rubriek is na het plaatsen niet te wijzigen. -->
+      <div id="rubriek-afwijking-banner" style="display:none;margin-bottom:14px;padding:12px 14px;border-radius:10px;background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.45);font-size:13px;line-height:1.55"></div>
       <div class="card">
         <div class="card-header">
           <div>
@@ -4430,7 +4433,7 @@ function showView(name) {
   // instead of failing silently.
   try {
     if (name === 'berichten') { loadNotifications(); }
-    if (name === 'items') { clearSelection(); applyFilters(); }
+    if (name === 'items') { clearSelection(); applyFilters(); loadRubriekAfwijkingen(); }
     if (name === 'analytics') { renderAnalytics(); }
     if (name === 'platforms') { renderPlatforms(); }
     if (name === 'help') { if (window.OB) OB.renderHelp(); }
@@ -10338,6 +10341,33 @@ function fmtEta(ms) {
   if (m >= 60) { const h = Math.floor(m/60); return `~${h}h ${m%60}m`; }
   if (m >= 1) return `~${m}m ${s}s`;
   return `~${s}s`;
+}
+
+// Staat een geplaatste advertentie in een andere rubriek dan we bedoelden? Marktplaats laat de
+// rubriek achteraf niet wijzigen, dus we zeggen het zodra de server het zag.
+async function loadRubriekAfwijkingen() {
+  const box = document.getElementById('rubriek-afwijking-banner');
+  if (!box) return;
+  let lijst = [];
+  try {
+    const res = await apiFetch(`${API}/api/jobs/rubriek-afwijkingen`);
+    const data = res.ok ? await res.json() : {};
+    lijst = Array.isArray(data.afwijkingen) ? data.afwijkingen : [];
+  } catch (e) { lijst = []; }
+  if (!lijst.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  const naam = (r) => (r && (r.l2_naam || r.l1_naam)) ? `${r.l1_naam || ''} › ${r.l2_naam || ''}` : 'a different category';
+  const rijen = lijst.slice(0, 8).map(x => {
+    const titel = esc(x.titel || x.advertentie || 'Listing');
+    const link = x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">${titel}</a>` : titel;
+    return `<li>${link} <span style="color:var(--muted)">(${esc(x.platform)}) is in <b>${esc(naam(x.echt))}</b></span></li>`;
+  }).join('');
+  const kop = lijst.length === 1
+    ? 'One listing is in a different category than intended.'
+    : `${lijst.length} listings are in a different category than intended.`;
+  box.innerHTML = `<b>${kop}</b>
+    Marktplaats and 2dehands don't allow the category to be changed afterwards, so delete the listing there and place it again with the right category.
+    <ul style="margin:8px 0 0 18px;padding:0">${rijen}</ul>`;
+  box.style.display = 'block';
 }
 
 // Fetch active relists and refresh the Refresh view's live bits.

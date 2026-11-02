@@ -2732,6 +2732,33 @@ window.CL = (() => {
     };
   }
 
+  // OP DE RUBRIEK PLAATSEN WAAROP WE BEDOELDEN TE PLAATSEN (02-11-2026, Esther).
+  //
+  // Op Marktplaats en 2dehands is de rubriek na het plaatsen niet meer te
+  // wijzigen. De achtergrond opent het formulier op /plaats/{l1}/{l2} en geeft
+  // die twee nummers mee als item._rubriek_verwacht. Staat het formulier bij het
+  // plaatsen ergens anders (de site stuurde door, of de keuze sprong om), dan
+  // klikken we NIET op Plaatsen: een fout zoekertje moet weg en opnieuw, een
+  // geweigerde plaatsing kost alleen een melding.
+  //
+  // Kan het adres niet gelezen worden (de site veranderde het adresschema), dan
+  // wordt er niet geblokkeerd maar wel null gemeld: de server vergelijkt daarna
+  // zelf wat er echt online kwam, zie backend/services/rubriek_controle.py.
+  function bewaakRubriek(item) {
+    const verwacht = item && item._rubriek_verwacht;
+    if (!verwacht || !verwacht.l1 || !verwacht.l2) return null;
+    const m = /^\/plaats\/(\d+)\/(\d+)/.exec(location.pathname || "");
+    if (!m) return null;
+    const l1 = Number(m[1]), l2 = Number(m[2]);
+    if (l1 !== Number(verwacht.l1) || l2 !== Number(verwacht.l2)) {
+      throw new Error(
+        `The form is on category ${l1}/${l2} instead of the intended ${verwacht.l1}/${verwacht.l2}, ` +
+        "so nothing was published. Marktplaats cannot change the category afterwards."
+      );
+    }
+    return { l1, l2 };
+  }
+
   async function submitListing(idFromUrl) {
     // Brand FIRST — closing the brand modal triggers a React re-render that resets
     // the Lexical EditorState. Description must be filled AFTER brand to survive.
@@ -3314,7 +3341,7 @@ window.CL = (() => {
     sleep, waitUntil, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, vulLocatie, selectBundleFree,
     selectDelivery, gekozenLevering, selectPakketWaarde, zetVerzendkosten, centenUitTekst, vulHalswijdte, vulMateriaal, materiaalKeuze, vulSieraadType, sieraadTypeKeuze, zetMpVerzending, zetMpKopersbescherming, keuzeveldenKort, typBeschrijvingEcht,
-    selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding, zetBieden,
+    selectPackageSize, uploadPhotos, submitListing, bewaakRubriek, step, closePopup, smartTrunc, fillBidding, zetBieden,
     clog, plaatsBlokkade, dutchColor, kleurKandidaten, kiesMetTerugval, lijstOpties, valueVariants, platteTekst, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
     mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG, zetPrijs, betaalrubriekBezwaar,
     borgFotosOpFormulier, _zetAangebodenFotos: (f) => { _aangebodenFotos = f; },

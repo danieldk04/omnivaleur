@@ -193,6 +193,19 @@ def start_scheduler():
         coalesce=True,
         next_run_time=_dt.now() + _td(minutes=10),
     )
+    # Staat een nieuwe advertentie echt in de rubriek die we bedoelden? Op
+    # Marktplaats is die achteraf niet te wijzigen. Elke tien minuten een klein
+    # pakket, alleen meten en melden. Zie backend/services/rubriek_controle.py.
+    from backend.services.rubriek_controle import controleer_rubrieken
+    _scheduler.add_job(
+        _off_the_request_loop(controleer_rubrieken),
+        "interval",
+        minutes=10,
+        id="rubriek_controle",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
     # Gereserveerd op Marktplaats of 2dehands = de verkoopvraag (23-09-2026,
     # Toon). Elk uur, op de verkopers die de fotoronde hierboven al bewees.
     # Zie backend/services/gereserveerd.py.

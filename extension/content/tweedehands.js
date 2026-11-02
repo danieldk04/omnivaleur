@@ -30,6 +30,7 @@
         : await verzendingBijwerken(item));
     } else {
       await fillForm(item);
+      const rubriek = window.CL.bewaakRubriek(item);
       const id = await submitListing(/2dehands\.be\/v\/[^/]+\/(m\d+)/);
       // Marktplaats/2dehands hebben GEEN werkende /v/listing/{id}-vorm: die geeft
       // 404, ook voor een advertentie die gewoon online staat. Een verzonnen link
@@ -41,7 +42,7 @@
       // verzending_gezet: kreeg dit zoekertje het eigen verzendbedrag? Zo niet,
       // dan zet de server vanzelf een bijwerking klaar (zie jobs.py).
       send("JOB_DONE", { platform_listing_id: id, platform_listing_url: echteUrl,
-                         verzending_gezet: verzendingGezet });
+                         verzending_gezet: verzendingGezet, rubriek });
     }
   } catch (e) {
     send("JOB_ERROR", null, String(e)); // tab stays open

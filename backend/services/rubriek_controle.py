@@ -45,7 +45,7 @@ KANALEN = ("marktplaats", "2dehands")
 VENSTER = timedelta(days=3)       # zo lang na het plaatsen kijken we nog
 MAX_PER_RONDE = 40
 MAX_PER_VERKOPER = 15
-MAX_POGINGEN = 6                  # daarna blijft het "onbekend"
+MAX_POGINGEN = 12                # 12 rondes = twee uur wachten tot het platform hem toont
 WACHT_TUSSEN = 0.6                # seconden tussen twee vragen aan het platform
 
 
@@ -62,14 +62,24 @@ def verwachte_rubriek(result: dict | None, payload: dict | None) -> dict | None:
 
 
 def beoordeel(verwacht: dict | None, echt: dict | None) -> str:
-    """ok / afwijkend / onbekend. Alleen een gelezen rubriek mag 'afwijkend' zeggen."""
+    """ok / afwijkend / onbekend. Alleen een gelezen rubriek mag 'afwijkend' zeggen.
+
+    Het adres /plaats/{l1}/{l2} noemt soms een rubriek die dieper ligt dan het
+    tweede niveau (Steps, Zwembaden: ouder is geen hoofdrubriek). De advertentie
+    meldt dan dat diepere nummer als `blad`; ook dat telt als dezelfde rubriek."""
     if not verwacht or not echt:
         return "onbekend"
     try:
         e1, e2 = int(echt.get("l1")), int(echt.get("l2"))
     except (TypeError, ValueError):
         return "onbekend"
-    return "ok" if (e1 == verwacht["l1"] and e2 == verwacht["l2"]) else "afwijkend"
+    if e1 != verwacht["l1"]:
+        return "afwijkend"
+    try:
+        blad = int(echt.get("blad")) if echt.get("blad") is not None else None
+    except (TypeError, ValueError):
+        blad = None
+    return "ok" if verwacht["l2"] in (e2, blad) else "afwijkend"
 
 
 async def echte_rubriek(client, platform: str, nummer: str) -> dict | None:
@@ -95,6 +105,8 @@ async def echte_rubriek(client, platform: str, nummer: str) -> dict | None:
     rubriek = categorie_uit_html(html)
     if not (rubriek.get("l1") and rubriek.get("l2")):
         return None
+    if gevonden.get("categoryId") is not None:
+        rubriek["blad"] = gevonden["categoryId"]
     return rubriek
 
 
@@ -132,7 +144,7 @@ async def _bewaar(db, kandidaat: dict, status: str, echt: dict | None) -> None:
     res["rubriekcontrole"] = {
         "status": status,
         "verwacht": kandidaat["verwacht"],
-        "echt": ({k: echt.get(k) for k in ("l1", "l2", "l1_naam", "l2_naam")}
+        "echt": ({k: echt.get(k) for k in ("l1", "l2", "l1_naam", "l2_naam", "blad")}
                  if echt else None),
         "pogingen": (vorige.get("pogingen") or 0) + 1,
         "gecontroleerd_op": datetime.now(timezone.utc).isoformat(),
@@ -145,7 +157,7 @@ async def controleer_rubrieken() -> dict:
     """Eén ronde. Geeft tellingen terug zodat een test ze kan nalopen."""
     import httpx
     from backend.services import marktplaats_rem
-    from backend.services.mp_enrich import ZOEK_PER_PLATFORM, UA
+    from backend.services.mp_enrich import UA
 
     db = get_db()
     telling = {"ok": 0, "afwijkend": 0, "onbekend": 0}
@@ -156,9 +168,8 @@ async def controleer_rubrieken() -> dict:
         gekoppeld = [r.get("user_id") for r in ((await naast_de_lus(
             lambda p=platform: db.table("platform_credentials").select("user_id")
             .eq("platform", p).execute())).data or [])]
-        _, basis = ZOEK_PER_PLATFORM[platform]
-        async with httpx.AsyncClient(base_url=None, headers={"User-Agent": UA},
-                                     timeout=30, follow_redirects=True) as client:
+        async with httpx.AsyncClient(headers={"User-Agent": UA}, timeout=30,
+                                     follow_redirects=True) as client:
             for user_id in gekoppeld:
                 if over <= 0:
                     break
@@ -193,21 +204,27 @@ async def afwijkingen_voor(db, user_id: str) -> list[dict]:
     """Voor het dashboard: advertenties van deze verkoper in een andere rubriek."""
     grens = (datetime.now(timezone.utc) - timedelta(days=14)).isoformat()
     rijen = (await naast_de_lus(lambda: db.table("jobs")
-             .select("id,platform,item_id,result,items(title)")
+             .select("id,platform,item_id,result")
              .eq("user_id", user_id).eq("action", "create").eq("status", "done")
              .in_("platform", list(KANALEN)).gte("done_at", grens)
              .order("done_at", desc=True).limit(500).execute())).data or []
     uit = []
     for rij in rijen:
-        res = rij.get("result") if isinstance(res := rij.get("result"), dict) else {}
+        res = rij.get("result") if isinstance(rij.get("result"), dict) else {}
         controle = res.get("rubriekcontrole") or {}
         if controle.get("status") != "afwijkend":
             continue
         uit.append({
             "job_id": rij["id"], "platform": rij["platform"], "item_id": rij.get("item_id"),
-            "titel": (rij.get("items") or {}).get("title"),
             "advertentie": res.get("platform_listing_id"),
             "url": res.get("platform_listing_url"),
             "verwacht": controle.get("verwacht"), "echt": controle.get("echt"),
         })
+    ids = [u["item_id"] for u in uit if u["item_id"]]
+    if ids:
+        titels = {r["id"]: r.get("title") for r in ((await naast_de_lus(
+            lambda: db.table("items").select("id,title").in_("id", ids[:100]).execute()
+        )).data or [])}
+        for u in uit:
+            u["titel"] = titels.get(u["item_id"])
     return uit

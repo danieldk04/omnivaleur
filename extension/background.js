@@ -3381,6 +3381,13 @@ async function processJob(job, serverUrl) {
     return;
   }
 
+  // De rubriek waarop dit formulier opent, voor de bewaker in shared.js
+  // (bewaakRubriek) en voor de controle op de server achteraf.
+  if (job.action === "create" && (job.platform === "marktplaats" || job.platform === "2dehands")) {
+    const rb = /\/plaats\/(\d+)\/(\d+)/.exec(url);
+    if (rb && job.payload) job.payload._rubriek_verwacht = { l1: Number(rb[1]), l2: Number(rb[2]) };
+  }
+
   console.log(`[Omnivaleur v${chrome.runtime.getManifest().version}] Opening tab for ${job.platform} job ${job.id}: ${url}`);
   // Een klus die iets SCHRIJFT vult een formulier in: honderden kleine pauzes,
   // keuzelijsten en knoppen die allemaal op de klok van de pagina wachten. Die

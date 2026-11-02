@@ -26,6 +26,7 @@
       send("JOB_DONE", await prijsBijwerken(item));
     } else {
       await fillForm(item);
+      const rubriek = window.CL.bewaakRubriek(item);
       const id = await submitListing(/marktplaats\.nl\/v\/[^/]+\/(m\d+)/);
       // Marktplaats/2dehands hebben GEEN werkende /v/listing/{id}-vorm: die geeft
       // 404, ook voor een advertentie die gewoon online staat. Een verzonnen link
@@ -34,7 +35,7 @@
       // concludeerde "al weg" terwijl de advertentie er nog stond. Neem daarom de
       // echte pagina waar we na het plaatsen op belanden.
       const echteUrl = /\/v\//.test(location.href) ? location.href.split("?")[0] : `https://www.marktplaats.nl/seller/view/${id}`;
-      send("JOB_DONE", { platform_listing_id: id, platform_listing_url: echteUrl });
+      send("JOB_DONE", { platform_listing_id: id, platform_listing_url: echteUrl, rubriek });
     }
   } catch (e) {
     send("JOB_ERROR", null, String(e)); // tab stays open (background no longer closes it)
