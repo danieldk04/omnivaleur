@@ -81,6 +81,12 @@
     if (!bedragGoed()) {
       throw new Error(`The shipping cost could not be set on 2dehands (${detail}), so nothing was saved.`);
     }
+    await wijzigingOpslaan("shipping cost");
+    return { verzending_bijgewerkt: true };
+  }
+
+  // Opslaan op het wijzigformulier, gedeeld door verzendkosten en prijs.
+  async function wijzigingOpslaan(wat) {
     const achtergrond = (bericht) => new Promise((res) => {
       try { chrome.runtime.sendMessage(bericht, (r) => { void chrome.runtime.lastError; res(r); }); }
       catch (_) { res(null); }
@@ -96,9 +102,67 @@
     // het af (zie bewerkingOpgeslagen2dh in background.js).
     const weg = await waitUntil(() => !/\/edit\b/.test(location.pathname), 20000);
     if (!weg) {
-      throw new Error(`2dehands did not save the new shipping cost (click: ${clickResult}). Nothing was changed.`);
+      throw new Error(`2dehands did not save the new ${wat} (click: ${clickResult}). Nothing was changed.`);
     }
-    return { verzending_bijgewerkt: true };
+  }
+
+  // DE PRIJS VAN EEN ZOEKERTJE DAT AL ONLINE STAAT (02-11-2026, Toon).
+  //
+  // Toon vroeg of een prijswijziging in Omni overal meegaat; naar Vinted, eBay en
+  // zijn webshop ging hij, naar 2dehands niet. Het wijzigformulier is hetzelfde
+  // als bij de verzendkosten. LIVE NAGEMETEN 02-11-2026 op een eigen zoekertje
+  // (m2446468449): vraagprijs in input[name="price.value"] als "34,99", en bij
+  // "bieden vanaf" een tweede veld input[name="price.minimumBidPrice"] = "24,49",
+  // precies 70% van de prijs. Dat bod hangt dus aan de prijs: een nieuwe prijs
+  // met het oude bod geeft een verkeerd minimumbod. We houden de verhouding aan
+  // die de verkoper op dit zoekertje heeft staan.
+  //
+  // Staat er geen prijsveld (Bieden, Zie omschrijving, Gratis), dan wordt er niets
+  // aangeraakt en niets opgeslagen. Elk veld wordt teruggelezen voor er opgeslagen
+  // wordt: een prijs die het formulier niet aannam, wordt nooit opgeslagen.
+  async function prijsBijwerken(item) {
+    const gewild = Math.round(Number(item && item.price) * 100);
+    if (!item || !item._prijs_bijwerken || !isFinite(gewild) || gewild <= 0) {
+      throw new Error("This 2dehands update carries no valid price to set, so nothing was changed.");
+    }
+    const veld = await waitUntil(() => qs('input[name="price.value"]'), 20000);
+    if (!veld) {
+      throw new Error("The 2dehands edit form shows no price field (a listing without an asking price), "
+        + "so nothing was changed.");
+    }
+    const oud = centenUitTekst(veld.value);
+    const schakelaar = qs('input#syi-bidding-switch-input') || qs('#syi-bidding-switch input[type="checkbox"]');
+    const bodVeld = qs('input[name="price.minimumBidPrice"]');
+    const bieden = !!(schakelaar && schakelaar.checked && bodVeld);
+    let bodGewild = null;
+    if (bieden) {
+      const oudBod = centenUitTekst(bodVeld.value);
+      if (!oud || !oudBod) {
+        throw new Error(`The current price/minimum bid could not be read ("${veld.value}" / "${bodVeld.value}"), `
+          + "so nothing was changed.");
+      }
+      bodGewild = Math.round(gewild * oudBod / oud);
+    }
+    const prijsGoed = () => centenUitTekst((qs('input[name="price.value"]') || {}).value) === gewild;
+    const bodGoed = () => !bieden
+      || Math.abs(centenUitTekst((qs('input[name="price.minimumBidPrice"]') || {}).value) - bodGewild) <= 1;
+    if (prijsGoed() && bodGoed()) {
+      clog("prijs: stond al goed, niets opgeslagen");
+      return { prijs_bijgewerkt: false, al_goed: true };
+    }
+    await fillInputHuman(veld, mpPrijs(gewild / 100, veld));
+    await sleep(400);
+    if (bieden) {
+      await fillBidding(gewild / 100, bodGewild / gewild * 100);
+      await sleep(400);
+    }
+    clog(`prijs: ${veld.value}${bieden ? ` met minimumbod ${(qs('input[name="price.minimumBidPrice"]') || {}).value}` : ""}`);
+    if (!prijsGoed() || !bodGoed()) {
+      throw new Error(`The price could not be set on 2dehands (price "${(qs('input[name="price.value"]') || {}).value}"`
+        + `${bieden ? `, minimum bid "${(qs('input[name="price.minimumBidPrice"]') || {}).value}"` : ""}), so nothing was saved.`);
+    }
+    await wijzigingOpslaan("price");
+    return { prijs_bijgewerkt: true };
   }
 
   async function deleteListing2dh(listingId) {
