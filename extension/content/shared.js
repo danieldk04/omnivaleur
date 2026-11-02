@@ -1504,11 +1504,21 @@ window.CL = (() => {
     if (condEl && !condEl.value) { await selectCondition(item.condition); await sleep(300); }
 
     const intendedEl = intendedForSelect();
-    if (intendedEl && !intendedEl.value) { selectIntendedFor(item); await sleep(300); }
+    // Niet alleen als hij leeg is: na een herbouw van het formulier (en na de
+    // invulling van Marktplaats zelf) stond er bij Mieneke "Dame of Heer" terwijl
+    // de titel "dame" zegt, en bij een ring van 16/16,25 de maat "17 tot 18"
+    // (02-11-2026). selectIntendedFor kiest steeds hetzelfde, dus opnieuw zetten
+    // kost niets en haalt de waarde van het formulier weg.
+    if (intendedEl) { selectIntendedFor(item); await sleep(300); }
 
-    for (const [label, value] of [["Maat", item.size], ["Kleur", dutchColor(item.color)]]) {
+    const afgeleideMaat = !item.size ? ringMaatUitTekst(item) : "";
+    for (const [label, value] of [["Maat", item.size || afgeleideMaat], ["Kleur", dutchColor(item.color)]]) {
       if (!value) continue;
       const el = findFieldByLabel(label);
+      if (label === "Maat" && afgeleideMaat && el?.tagName === "SELECT"
+          && (el.options[el.selectedIndex]?.text || "").trim() !== afgeleideMaat) {
+        kiesMetTerugval(el, label, afgeleideMaat); await sleep(300); continue;
+      }
       // kiesMetTerugval, niet fillNativeSelect: staat onze waarde niet in de
       // lijst van déze categorie, dan pakt hij het dichtstbijzijnde dat er wél
       // in staat in plaats van het veld leeg te laten (zie COLOUR_FALLBACK).

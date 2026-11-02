@@ -14,6 +14,7 @@ WAT ER BEPROEFD WORDT, en waarom juist dit:
   * DE VOOR-EN-NA-PROEF: zonder het bestand backend/services/creator_commissie.py
     (de situatie van vóór 27-10) faalt deze hele module bij het laden.
 """
+import asyncio
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -72,10 +73,10 @@ def cc(monkeypatch):
     return m
 
 
-async def _ronde(cc, monkeypatch, db, stripe):
+def _ronde(cc, monkeypatch, db, stripe):
     monkeypatch.setattr(cc, "get_db", lambda: db)
     monkeypatch.setattr(cc, "stripe", stripe)
-    return await cc.verwerk_commissie()
+    return asyncio.run(cc.verwerk_commissie())
 
 
 # ── 1. Het bedrag klopt ─────────────────────────────────────────────────────
@@ -103,60 +104,54 @@ def test_niet_betaalde_factuur_levert_niets(cc):
 
 # ── 2. Nooit dubbel ─────────────────────────────────────────────────────────
 
-@pytest.mark.asyncio
-async def test_zelfde_factuur_in_vijf_rondes_is_een_rij(cc, monkeypatch):
+def test_zelfde_factuur_in_vijf_rondes_is_een_rij(cc, monkeypatch):
     db = _db()
     stripe = NepStripe([_factuur("in_1")])
     for _ in range(5):
-        await _ronde(cc, monkeypatch, db, stripe)
+        _ronde(cc, monkeypatch, db, stripe)
     rijen = db.data["creator_commissie"]
     assert len(rijen) == 1
     assert rijen[0]["commission_cents"] == 413 and rijen[0]["commission_pct"] == 25
 
 
-@pytest.mark.asyncio
-async def test_elke_maand_een_nieuwe_factuur_komt_erbij(cc, monkeypatch):
+def test_elke_maand_een_nieuwe_factuur_komt_erbij(cc, monkeypatch):
     db = _db()
-    await _ronde(cc, monkeypatch, db, NepStripe([_factuur("in_1")]))
-    uit = await _ronde(cc, monkeypatch, db, NepStripe([_factuur("in_1"), _factuur("in_2")]))
+    _ronde(cc, monkeypatch, db, NepStripe([_factuur("in_1")]))
+    uit = _ronde(cc, monkeypatch, db, NepStripe([_factuur("in_1"), _factuur("in_2")]))
     assert uit["nieuw"] == 1
     assert sum(r["commission_cents"] for r in db.data["creator_commissie"]) == 826
 
 
 # ── 3. Teruggave, oude bounty, uitbetaald ───────────────────────────────────
 
-@pytest.mark.asyncio
-async def test_volledige_teruggave_geeft_nul_commissie(cc, monkeypatch):
+def test_volledige_teruggave_geeft_nul_commissie(cc, monkeypatch):
     db = _db()
-    await _ronde(cc, monkeypatch, db, NepStripe([_factuur("in_1")], {"in_1": 1999}))
+    _ronde(cc, monkeypatch, db, NepStripe([_factuur("in_1")], {"in_1": 1999}))
     assert db.data["creator_commissie"][0]["commission_cents"] == 0
 
 
-@pytest.mark.asyncio
-async def test_teruggave_na_de_eerste_ronde_haalt_commissie_alsnog_weg(cc, monkeypatch):
+def test_teruggave_na_de_eerste_ronde_haalt_commissie_alsnog_weg(cc, monkeypatch):
     db = _db()
-    await _ronde(cc, monkeypatch, db, NepStripe([_factuur("in_1")]))
+    _ronde(cc, monkeypatch, db, NepStripe([_factuur("in_1")]))
     assert db.data["creator_commissie"][0]["commission_cents"] == 413
-    await _ronde(cc, monkeypatch, db, NepStripe([_factuur("in_1")], {"in_1": 1999}))
+    _ronde(cc, monkeypatch, db, NepStripe([_factuur("in_1")], {"in_1": 1999}))
     assert db.data["creator_commissie"][0]["commission_cents"] == 0
 
 
-@pytest.mark.asyncio
-async def test_code_met_oude_bounty_krijgt_geen_commissie(cc, monkeypatch):
+def test_code_met_oude_bounty_krijgt_geen_commissie(cc, monkeypatch):
     db = _db(pct=0)
-    uit = await _ronde(cc, monkeypatch, db, NepStripe([_factuur("in_1")]))
+    uit = _ronde(cc, monkeypatch, db, NepStripe([_factuur("in_1")]))
     assert db.data["creator_commissie"] == [] and uit["nieuw"] == 0
 
 
-@pytest.mark.asyncio
-async def test_uitbetaald_is_bevroren(cc, monkeypatch):
+def test_uitbetaald_is_bevroren(cc, monkeypatch):
     oud = {"invoice_id": "in_1", "code": CREATOR, "referred_user_id": KLANT,
            "paid_at": (NU - timedelta(days=90)).isoformat(), "bruto_cents": 1999,
            "netto_cents": 1652, "terugbetaald_cents": 0, "commission_pct": 25,
            "commission_cents": 413, "status": "uitbetaald", "uitbetaling_ref": "bank"}
     db = _db(rijen=[oud])
     # Zelfs een latere volledige teruggave verandert een uitbetaalde regel niet.
-    await _ronde(cc, monkeypatch, db, NepStripe([_factuur("in_1")], {"in_1": 1999}))
+    _ronde(cc, monkeypatch, db, NepStripe([_factuur("in_1")], {"in_1": 1999}))
     assert db.data["creator_commissie"][0]["commission_cents"] == 413
 
 
