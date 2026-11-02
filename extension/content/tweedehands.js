@@ -25,7 +25,9 @@
       // Een bestaand zoekertje bijwerken. NOOIT doorvallen naar het
       // plaatsformulier hieronder: dat zou titel, tekst en foto's opnieuw
       // invullen op een advertentie die al online staat.
-      send("JOB_DONE", await verzendingBijwerken(item));
+      send("JOB_DONE", item && item._prijs_bijwerken
+        ? await prijsBijwerken(item)
+        : await verzendingBijwerken(item));
     } else {
       await fillForm(item);
       const id = await submitListing(/2dehands\.be\/v\/[^/]+\/(m\d+)/);
