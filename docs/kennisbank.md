@@ -17,6 +17,38 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vertalen-via-azure
+
+*02-11-2026 — "Sinds 02-11-2026 vertaalt Azure Translator (gratis F0, 2M tekens/maand) vrijwel alles; Gemini alleen nog voor rubrieken en als reserve"*
+
+Sinds 02-11-2026 loopt vertalen van advertentietekst (naar Marktplaats, 2dehands en
+waar nodig Vinted/eBay) grotendeels via **Azure Translator**, niet meer via Gemini of
+Claude. Daniel besloot dit na de Google-kostenpiek van 31-10 (EUR 5,49 op één dag door
+Goudliefs bulk-crosslist, zie "gemini-tegoed-op").
+
+- Code: backend/services/azure_vertaling.py, aangeroepen bovenaan crosslist._vertaal.
+  Per regel met geheugen (spec-blokken als "Material:" gaan één keer). Test:
+  tests/test_azure_vertaling.py.
+- Azure-resource: omnivaleur-vertaler, resourcegroep omnivaleur, abonnement "Azure
+  subscription" in directory Omnivaleur (danielomnivaleur387.onmicrosoft.com), laag
+  **F0 gratis, 2 miljoen tekens per maand**, regio **swedencentral** (West Europe nam
+  geen nieuwe klanten aan). Railway: AZURE_TRANSLATOR_KEY (regio staat als standaard
+  in config.py).
+- Gemini blijft voor de **rubriekkeuze** (vertaaldienst kan dat niet) en als reserve als
+  Azure weigert (403/429 = gratis tegoed op). Google-tegoed met bestedingslimiet.
+- Meten: /health → config.azure_vertaling (aan, http_200, http_403, uit_geheugen,
+  tekens_gevraagd). Proef met de echte sleutel zonder hem te zien:
+  `npx -y @railway/cli run python3 <script>`.
+
+**Why:** gratis tot 2M tekens; oktober (drukste maand) was ~670.000 tekens, met
+regelgeheugen veel minder. Gemini kostte ~0,4 cent per vertaalvraag.
+**How to apply:** nieuwe vertaalcode altijd via `_vertaal` laten lopen zodat Azure eerst
+gaat; verander niets aan de Gemini-volgorde zonder te weten dat Azure ervoor staat. Bij
+een kostenpiek bij Google: eerst /health azure_vertaling bekijken (staat hij uit of op
+403?). Proef 02-11: 40 Goudlief-artikelen, 40 goed, 0 keer Google.
+
+---
+
 ## gemini-tegoed-op
 
 *02-11-2026 — Google 402 = tegoed op (24-09 en 31-10); 31-10 EUR 5,49 door Goudliefs bulk-crosslist van 2.588 artikelen, ~1.380 vertaalvragen à ~0,4 ct*
