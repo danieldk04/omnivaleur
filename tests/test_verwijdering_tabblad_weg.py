@@ -142,3 +142,38 @@ def test_fail_job_boekt_de_echte_melding_als_gelukt(kanaal, monkeypatch):
         pass
     statussen = [w.get("status") for t, w in db.wijzigingen if t == "jobs" and "status" in w]
     assert statussen and statussen[0] == "done", statussen
+
+
+# 02-11-2026, klant 26cf5471, letterlijk uit productie: venster beantwoord, daarna gaf
+# /seller/view zes keer 403. De openbare pagina gaf 410, de herplaatsing werd overgeslagen.
+GEBLOKKEERD = (
+    'Error: "Zilveren miniatuur, zeilschip, Arezzo, Italië, 800" cannot be found in your marktplaats '
+    'listings overview, and the delete button on its own page (https://www.marktplaats.nl/seller/view/'
+    'm2449039463) could not be used either. | Buttons on that page: niet gekeken | Diag: [{"fase":'
+    '"bevestigen","stap":0,"clicked":true,"labels":["Close","Niet verkocht via Marktplaats","Verkocht '
+    'via Marktplaats"],"open":true,"picked":"Niet verkocht via Marktplaats"},{"fase":"bevestigen",'
+    '"stap":1,"open":false},' + ",".join(
+        '{"fase":"fetch-check","poging":%d,"status":403,"via":"not-ok","weg":false}' % i
+        for i in range(6)) + '] [extensie 1.0.411]'
+)
+JOB_GEBLOKKEERD = {"action": "delete", "platform": "marktplaats",
+                   "payload": {"platform_listing_id": "m2449039463"}}
+
+
+def test_extensie_geblokkeerd_dan_kijkt_de_server(kanaal):
+    gevraagd = kanaal(410)
+    assert jobs._verwijdering_openbaar_bewezen(JOB_GEBLOKKEERD, GEBLOKKEERD) is True
+    assert gevraagd == ["https://www.marktplaats.nl/m2449039463"]
+
+
+def test_extensie_geblokkeerd_en_pagina_leeft_blijft_mislukt(kanaal):
+    kanaal(200)
+    assert jobs._verwijdering_openbaar_bewezen(JOB_GEBLOKKEERD, GEBLOKKEERD) is False
+
+
+def test_extensie_kreeg_404_of_200_dan_niet_overrulen(kanaal):
+    for status in (200, 404):
+        gevraagd = kanaal(410)
+        fout = GEBLOKKEERD.replace('"poging":5,"status":403', '"poging":5,"status":%d' % status)
+        assert jobs._verwijdering_openbaar_bewezen(JOB_GEBLOKKEERD, fout) is False
+        assert gevraagd == []
