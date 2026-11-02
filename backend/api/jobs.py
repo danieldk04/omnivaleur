@@ -3820,9 +3820,12 @@ async def relist_retry(body: dict, user_id: str = Depends(require_active_subscri
     # nieuwe poging echt in de wachtrij staat: hem alvast wissen betekende dat
     # een geweigerde herkansing een schoon scherm achterliet waarop niets meer
     # te zien was van wat er misging.
+    # Alleen de rij die halverwege bleef staan. Alle rijen van item+kanaal op
+    # active zetten haalde ook verwijderde regels terug (02-11-2026, 26cf5471),
+    # en refresh_listing kon dan juist die dode regel kiezen.
     (await naast_de_lus(lambda: db.table("listings").update({
         "status": "active",
-    }).eq("item_id", item_id).eq("platform", platform).execute()))
+    }).eq("item_id", item_id).eq("platform", platform).eq("status", "relisting").execute()))
 
     from backend.services.relist import refresh_listing, RefreshError
     from backend.services.crosslist import VertalingOnbeschikbaar
