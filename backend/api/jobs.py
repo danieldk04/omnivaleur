@@ -879,7 +879,7 @@ def _haal_links_eruit(db, jobs: list) -> int:
     geschiedenis staat wat er werkelijk naar de site is gegaan.
     """
     try:
-        from backend.services.crosslist import _zonder_links
+        from backend.services.crosslist import _zonder_links, _zonder_hekjes
     except Exception as e:  # noqa: BLE001 — het uitdelen gaat hoe dan ook door
         logger.warning("linkzeef niet beschikbaar: %s", e)
         return 0
@@ -895,7 +895,7 @@ def _haal_links_eruit(db, jobs: list) -> int:
         for veld in ("title", "description"):
             waarde = pl.get(veld)
             if isinstance(waarde, str) and waarde:
-                nieuw[veld] = _zonder_links(waarde)
+                nieuw[veld] = _zonder_hekjes(_zonder_links(waarde))
         if nieuw == pl:
             continue
         logger.info("job %s (%s): web-/e-mailadres uit de advertentie gehaald "

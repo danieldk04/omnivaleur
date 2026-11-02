@@ -106,6 +106,21 @@ _KAAL_DOMEIN = re.compile(
 )
 
 
+def _zonder_hekjes(tekst: str) -> str:
+    """Het #-teken weghalen uit een advertentietekst voor Marktplaats en 2dehands.
+
+    Vinted-hashtags ("#carnaval #festival") betekenen daar niets en staan er
+    rommelig (gollem.joukes, 02-11-2026: "alle # automatisch weghalen"). Het woord
+    blijft staan, want dat is nog steeds een zoekwoord. "kruis#stropdas" wordt
+    "kruis stropdas". Zit er geen # in, dan blijft de tekst letterlijk zoals hij is.
+    """
+    if not tekst or "#" not in tekst:
+        return tekst
+    tekst = re.sub(r"(?<=\w)#+(?=\w)", " ", tekst)
+    tekst = re.sub(r"#+(?=\w)", "", tekst)
+    return re.sub(r"[ \t]*#+", "", tekst)
+
+
 def _zonder_links(tekst: str) -> str:
     """Webadressen en e-mailadressen uit een advertentietekst halen.
 
@@ -932,7 +947,11 @@ _NON_CLOTHING_PREFIXES = ("games ", "electronics ", "sieraden ", "muziek ",
                           "antiek ", "kunst ", "wonen ", "audio ",
                           # 24-09-2026
                           "boeken ", "speelgoed ", "fietsen ", "sportartikelen ",
-                          "witgoed ", "klussen ", "computers ")
+                          "witgoed ", "klussen ", "computers ",
+                          # 02-11-2026: strijkemblemen (tak hobby, 28-10) hebben geen
+                          # maat, merk of kleur; zonder deze regel kreeg elk van de 125
+                          # emblemen van gollem.joukes "voeg merk, maat, kleur toe".
+                          "hobby ")
 # Accessoires staan in de kledingboom, maar een bandana, een patch, een speld of
 # een sleutelhanger heeft geen maat en geen merk.
 #
@@ -945,7 +964,8 @@ _NON_CLOTHING_PREFIXES = ("games ", "electronics ", "sieraden ", "muziek ",
 # wat hij "gaten in mijn listings" noemt, en het is de tweede keer: op
 # 03-09-2026 is dezelfde fout al uit de knopteller gehaald (zie _mist_iets in
 # mp_enrich.py), maar niet uit de eis zelf.
-_GEEN_MAAT_CATEGORIEEN = ("unisex accessoires", "accessoires dames", "kinderen accessoires",
+_GEEN_MAAT_CATEGORIEEN = ("unisex accessoires", "accessoires dames", "heren accessoires",
+                          "kinderen accessoires",
                           "kinderen tassen", "kinderen luiertassen")
 _NON_CLOTHING_PLATFORM_REQUIRED = ["category"]
 
@@ -1912,8 +1932,8 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
         # erin. Zie _zonder_links: dat kostte Egbert Brouwer drie weken en een
         # winkelmandje van EUR 153,00 aan advertenties die nooit online kwamen.
         if platform in ("marktplaats", "2dehands"):
-            titel = _zonder_links(titel)
-            beschrijving = _zonder_links(beschrijving)
+            titel = _zonder_hekjes(_zonder_links(titel))
+            beschrijving = _zonder_hekjes(_zonder_links(beschrijving))
         return {**base, "title": titel, "description": beschrijving}
 
     # Eerst de extensieplatforms in de wachtrij, dán de API-platforms.
