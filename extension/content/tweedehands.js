@@ -261,7 +261,7 @@
     await sleep(400); // let React re-render kenmerken after condition selection
     await step("package",      () => selectPackageSize());
     await step("sporttype",    () => mpSportType(item) && selectDropdown("Type", mpSportType(item)));
-    await step("size",         () => item.size && selectDropdown(["Maat", "Maat (cm)"], item.size));
+    await step("size",         () => { const m = window.CL.ringMaatUitTekst(item); return m && selectDropdown(["Maat", "Maat (cm)"], m); });
     await step("color",        () => item.color && selectDropdown("Kleur", dutchColor(item.color)));
     await step("materiaal",    () => vulMateriaal(item));
     await step("brand",        () => item.brand && fillBrandField(item.brand));
