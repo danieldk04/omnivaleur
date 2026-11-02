@@ -5512,6 +5512,20 @@ def _diag_uit_fout(fout) -> list | None:
     return diag if isinstance(diag, list) else None
 
 
+def _status_zegt_iets(status) -> bool:
+    """Zegt deze statuscode van een nacontrole iets over de advertentie zelf?
+
+    Geen antwoord, een blokkade (403/429) of een storing (5xx) zegt niets.
+    """
+    if status is None:
+        return False
+    try:
+        status = int(status)
+    except (TypeError, ValueError):
+        return True
+    return not (status in (403, 429) or status >= 500)
+
+
 def _verwijdering_openbaar_bewezen(job: dict, fout) -> bool:
     """Bevestigd verwijderd, tabblad daarna weg: toont de openbare pagina dat hij weg is?
 
