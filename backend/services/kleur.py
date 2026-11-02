@@ -68,7 +68,7 @@ COLOUR_NL = {
     "black": "Zwart", "grey": "Grijs", "gray": "Grijs",
     "light grey": "Grijs", "light gray": "Grijs",
     "dark grey": "Grijs", "dark gray": "Grijs",
-    "silver": "Grijs", "white": "Wit", "off white": "Wit", "cream": "Wit",
+    "silver": "Zilver", "white": "Wit", "off white": "Wit", "cream": "Wit",
     "ecru": "Wit", "beige": "Beige", "camel": "Beige", "tan": "Beige",
     "taupe": "Beige", "apricot": "Oranje", "orange": "Oranje",
     "coral": "Rood", "red": "Rood", "burgundy": "Bordeaux", "maroon": "Bordeaux",
