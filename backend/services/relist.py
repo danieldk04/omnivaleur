@@ -891,11 +891,27 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         .eq("item_id", item_id)
         .eq("platform", platform)
         .eq("status", "active")
+        # 02-11-2026: zonder volgorde koos dit een willekeurige rij. Bij twee
+        # actieve rijen (een oude die al weg is plus de echte) werd zo de dode
+        # "verwijderd" en kwam er een tweede advertentie naast de levende.
+        .order("listed_at", desc=True, nullsfirst=False)
         .execute(), herkans=True))
     )
     if not listing_resp.data:
         raise RefreshError("No active listing on this platform")
     listing = listing_resp.data[0]
+
+    # GEEN TWEEDE HERPLAATSING NAAST EEN LOPENDE (02-11-2026). Gemeten: 10 artikelen
+    # stonden twee keer live op Marktplaats. Twee herplaatsingen van één rij liepen
+    # tegelijk (77539a54: beide verwijderden m2440809548, de tweede telde "al weg"
+    # als gelukt), en elke plaatsing zette er een advertentie bij.
+    if strategy == "relist":
+        lopend = (await naast_de_lus(lambda: db.table("jobs").select("id")
+                  .eq("user_id", user_id).eq("item_id", item_id).eq("platform", platform)
+                  .in_("action", ["delete", "create"]).in_("status", ["pending", "claimed"])
+                  .limit(1).execute(), herkans=True)).data
+        if lopend:
+            raise RefreshError("A relist for this listing is already in progress")
 
     if platform not in REFRESH_CAPABLE_PLATFORMS:
         raise RefreshError(f"Refresh isn't available for {platform} yet")
