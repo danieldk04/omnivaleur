@@ -65,7 +65,7 @@ NU = datetime(2026, 9, 19, 8, 0, tzinfo=timezone.utc)
 KLANT = "klant-1"
 
 
-def _db(sub_status=None, laatst_gezien=None, loopt_tot="2026-10-19T00:00:00+00:00"):
+def _db(sub_status=None, laatst_gezien=None, loopt_tot="2099-01-01T00:00:00+00:00"):
     """loopt_tot is de echte scheidslijn: een proef of periode die al voorbij is
     geeft geen toegang meer, wat er ook in de statuskolom staat."""
     subs = ([{"user_id": KLANT, "status": sub_status, "plan": "pro",

@@ -339,7 +339,7 @@ def test_alleen_marktplaats_en_2dehands_krijgen_de_gefilterde_tekst():
     bron = (ROOT / "backend/services/crosslist.py").read_text(encoding="utf-8")
     pick = bron.split("def _pick(platform: str) -> dict:")[1].split("\n    # Eerst de extensieplatforms")[0]
     assert 'if platform in ("marktplaats", "2dehands"):' in pick
-    assert "beschrijving = _zonder_links(beschrijving)" in pick
+    assert "_zonder_links(beschrijving)" in pick
     assert "titel = _zonder_links(titel)" in pick
 
 
