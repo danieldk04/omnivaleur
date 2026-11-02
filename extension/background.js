@@ -8855,7 +8855,9 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
       clearJobWatchdog(tabId);
       await chrome.storage.local.remove([key, `job_${meta.platform}`]);
       await finaliseJob(meta.serverUrl, meta.jobId, "complete",
-        { note: "saved_navigated", verzending_bijgewerkt: true });
+        meta.payload?._prijs_bijwerken
+          ? { note: "saved_navigated", prijs_bijgewerkt: true }
+          : { note: "saved_navigated", verzending_bijgewerkt: true });
       sluitWerkTabblad(tabId, 2000);
     }
     return;
