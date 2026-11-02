@@ -3937,5 +3937,6 @@
  "The price could not be set on 2dehands (price \"{0}\"": "De prijs kon niet op 2dehands worden gezet (prijs \"{0}\"",
  "This listing has no platform id yet": "Deze advertentie heeft nog geen nummer bij het platform",
  "One listing is in a different category than intended.": "Eén advertentie staat in een andere rubriek dan bedoeld.",
- "{0} listings are in a different category than intended.": "{0} advertenties staan in een andere rubriek dan bedoeld."
+ "{0} listings are in a different category than intended.": "{0} advertenties staan in een andere rubriek dan bedoeld.",
+ "The form says it will publish in category {0} instead of the intended {1},": "Het formulier zegt te plaatsen in rubriek {0} in plaats van de bedoelde {1},"
 }

@@ -70,11 +70,15 @@ def beoordeel(verwacht: dict | None, echt: dict | None) -> str:
     if not verwacht or not echt:
         return "onbekend"
     try:
-        e1, e2 = int(echt.get("l1")), int(echt.get("l2"))
+        int(echt.get("l1"))
+        e2 = int(echt.get("l2"))
     except (TypeError, ValueError):
         return "onbekend"
-    if e1 != verwacht["l1"]:
-        return "afwijkend"
+    # ALLEEN DE RUBRIEKNUMMERS OP NIVEAU TWEE TELLEN, NIET DE HOOFDRUBRIEK. Rubriek-
+    # nummers zijn uniek, maar het formulier noemt soms een andere hoofdrubriek dan
+    # waar de advertentie landt: /plaats/621/626 (handtassen) wordt Sieraden, Tassen
+    # en Uiterlijk (1826) en /plaats/784/982 (duiken) wordt Watersport en Boten (976).
+    # Gemeten 02-11-2026 in het ingelogde formulier (c.l1 tegen het adres).
     try:
         blad = int(echt.get("blad")) if echt.get("blad") is not None else None
     except (TypeError, ValueError):

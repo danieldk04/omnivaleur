@@ -2756,7 +2756,24 @@ window.CL = (() => {
         "so nothing was published. Marktplaats cannot change the category afterwards."
       );
     }
-    return { l1, l2 };
+    // Tweede, onafhankelijke lezing: het formulier zelf draagt in zijn ingebedde gegevens
+    // de rubriek die Marktplaats ervan maakt ("c":{"l1":{..},"l2":{"id":..}}, gemeten
+    // 02-11-2026 op 16 adressen). Staat die er en wijkt hij af, dan niet plaatsen. Ontbreekt
+    // hij (andere opbouw van de pagina), dan geldt alleen het adres hierboven.
+    let ingebed = null;
+    try {
+      const html = (typeof document !== "undefined" && document.documentElement)
+        ? document.documentElement.innerHTML : "";
+      const c = /"c":\{"l1":\{"id":(\d+)[^}]*\},"l2":\{"id":(\d+)/.exec(html);
+      if (c) ingebed = { l1: Number(c[1]), l2: Number(c[2]) };
+    } catch (_) { /* geen tweede lezing */ }
+    if (ingebed && ingebed.l2 !== Number(verwacht.l2)) {
+      throw new Error(
+        `The form says it will publish in category ${ingebed.l2} instead of the intended ${verwacht.l2}, ` +
+        "so nothing was published. Marktplaats cannot change the category afterwards."
+      );
+    }
+    return { l1: ingebed ? ingebed.l1 : l1, l2 };
   }
 
   async function submitListing(idFromUrl) {

@@ -1017,7 +1017,7 @@ Na het plaatsen zoekt Omnivaleur de advertentie terug op Marktplaats en kijkt in
 Groetjes,
 Daniel
 
-(Eerlijk blijven: de controle achteraf werkt vanaf de nieuwste extensie. Zwemkleding en ondergoed gaan nog onder Jurken, tot dat is gerepareerd, zie team-notes 02-11-2026. Beloof dus geen 100%, wel dat hij het meldt.)
+(Eerlijk blijven: de controle achteraf en de rubriekbewaker werken vanaf extensie 1.0.413. Zwemkleding, ondergoed, leggings en accessoires gaan sinds 1.0.413 naar hun eigen Marktplaats-rubriek. Beloof geen 100%, wel dat het vooraf zichtbaar is en dat een afwijking gemeld wordt.)
 
 ### Vraagt naar rubrieken voor spullen die geen kleding zijn
 

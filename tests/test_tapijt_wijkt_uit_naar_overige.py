@@ -252,6 +252,7 @@ def test_de_extensie_opent_voor_de_uitgeweken_opdracht_echt_rubriek_536():
       bron.slice(0, bron.indexOf("class CategoryUnresolvedError")),
       stuk("class CategoryUnresolvedError"), "let _mpOpNummer = null;",
       stuk("function mpCategorieOpNummer("), stuk("function mpKidsSizeCat3("),
+      stuk("const MP_ACCESSOIRES = {"), stuk("function mpAccessoireRubriek("),
       stuk("function getMpSyiUrl("),
     ].join("\n");
     const f = new Function(code + "\nreturn getMpSyiUrl;")();

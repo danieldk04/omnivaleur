@@ -29,7 +29,7 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 **Why:** de rubriek kan op Marktplaats achteraf niet wijzigen; een fout zoekertje moet weg en opnieuw (Amanda 30-08 kreeg dat na een verversing). Een meting die alleen 'ok' zegt moet eerst bewezen worden: 30 van 30 echte herplaatsingen kwamen ok terug.
 
-**How to apply:** beloof een klant nooit 100%; zeg dat hij het vooraf ziet en dat afwijking wordt gemeld. Nieuwe plaatsingen worden pas gecontroleerd met extensie >= 1.0.413. Benaderde rubrieken repareren vraagt het bucketId uit een INGELOGD formulier (`/plaats/api/v1/category-aggregate/{l1}/buckets`); zonder login niet te meten, dus niet gokken. Lees nooit jobs.result over meerdere klanten, zie "meten-op-de-productiedatabase". Zie ook "extension-release-bump-version".
+**How to apply:** beloof een klant nooit 100%; zeg dat hij het vooraf ziet en dat afwijking wordt gemeld. Nieuwe plaatsingen worden pas gecontroleerd met extensie >= 1.0.413. Rubrieknummers en bucketId's alleen uit een INGELOGD formulier (`/plaats/api/v1/category-aggregate/{l1}/buckets`, in de ingebouwde browser als Daniel daar is ingelogd; de Chrome-extensiebrowser was niet ingelogd). Sinds 02-11 gerepareerd: zwemkleding, ondergoed, leggings, accessoires per titel; 803 van 803 adressen bewezen in het echte formulier. Vergelijk altijd alleen het rubrieknummer niveau twee: het formulier noemt soms een andere hoofdrubriek (handtassen, duiken). Lees nooit jobs.result over meerdere klanten, zie "meten-op-de-productiedatabase". Zie ook "extension-release-bump-version".
 
 ---
 

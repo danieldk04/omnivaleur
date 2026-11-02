@@ -39,7 +39,7 @@ const MP_CATEGORIES = {
   "spijkerbroeken":         { cat1: 621,  cat3: 636,  bucketId: 162 },
   "broeken":                { cat1: 621,  cat3: 629,  bucketId: 162 },  // Broeken en Pantalons
   "shorts":                 { cat1: 621,  cat3: 629,  bucketId: 162 },
-  "leggings":               { cat1: 621,  cat3: 629,  bucketId: 162 },
+  "leggings":               { cat1: 621,  cat3: 1676, bucketId: 164 },  // Leggings en Panty's (02-11-2026, uit het ingelogde formulier)
   "rokken":                 { cat1: 621,  cat3: 635,  bucketId: 162 },  // Rokken
   "jurken":                 { cat1: 621,  cat3: 631,  bucketId: 162 },  // Jurken
   "jurken casual":          { cat1: 621,  cat3: 631,  bucketId: 162 },
@@ -82,9 +82,12 @@ const MP_CATEGORIES = {
   // en die groeps-id (bucketId) is niet uit de openbare boom te lezen. Tot die
   // geverifieerd is blijven deze staan waar ze stonden; fout, maar wél een
   // categorie die het formulier accepteert. Zie het openstaande punt hierover.
-  "zwemkleding":            { cat1: 621,  cat3: 631,  bucketId: 162 },
-  "badkleding":             { cat1: 621,  cat3: 631,  bucketId: 162 },
-  "ondergoed":              { cat1: 621,  cat3: 631,  bucketId: 162 },
+  // 02-11-2026: gerepareerd. Badmode en Ondergoed is op Marktplaats een eigen groep
+  // (bucket 160) naast Kleding (162), gelezen uit het ingelogde plaatsformulier
+  // (/plaats/api/v1/category-aggregate/621/buckets). Eerder gingen deze drie onder Jurken.
+  "zwemkleding":            { cat1: 621,  cat3: 622,  bucketId: 160 },  // Badmode en Zwemkleding
+  "badkleding":             { cat1: 621,  cat3: 622,  bucketId: 160 },
+  "ondergoed":              { cat1: 621,  cat3: 632,  bucketId: 160 },  // Ondergoed en Lingerie
   // Carnaval, verkleedkleding en klederdracht. Zonder deze regel viel een dirndl
   // of lederhose terug op broeken en jeans.
   //
@@ -94,8 +97,11 @@ const MP_CATEGORIES = {
   // Feestkleding", en /plaats/1776/2031?bucketId=169 hetzelfde onder Heren.
   "verkleedkleding":        { cat1: 621,  cat3: 623,  bucketId: 162 },  // Carnavalskleding en Feestkleding
   "unisex verkleedkleding": { cat1: 621,  cat3: 623,  bucketId: 162 },
-  "accessoires dames":      { cat1: 621,  cat3: 628,  bucketId: 162 },
-  "unisex accessoires":     { cat1: 621,  cat3: 628,  bucketId: 162 },
+  // Accessoires hebben op Marktplaats geen eigen rubriek maar een groep (bucket 159) met
+  // hoeden, sjaals, riemen en tassen. Per titel gekozen in mpAccessoireRubriek; dit is
+  // alleen de terugval als geen titelwoord past: Overige Dameskleding, nooit Blouses.
+  "accessoires dames":      { cat1: 621,  cat3: 633,  bucketId: 165 },
+  "unisex accessoires":     { cat1: 621,  cat3: 633,  bucketId: 165 },
   // Schoenen: één type (625) voor alle soorten, Marktplaats splitst niet verder.
   "schoenen":               { cat1: 621,  cat3: 625,  bucketId: 164 },
   "schoenen dames":         { cat1: 621,  cat3: 625,  bucketId: 164 },
@@ -141,9 +147,9 @@ const MP_CATEGORIES = {
   "heren skikleding":       { cat1: 1776, cat3: 1779, bucketId: 169 },
   // Zie de opmerking bij dames: badmode, ondergoed en accessoires zitten in een
   // andere groep, waarvan de id nog niet geverifieerd is.
-  "heren zwembroeken":      { cat1: 1776, cat3: 1497, bucketId: 169 },
-  "heren ondergoed":        { cat1: 1776, cat3: 1497, bucketId: 169 },
-  "heren accessoires":      { cat1: 1776, cat3: 652,  bucketId: 169 },
+  "heren zwembroeken":      { cat1: 1776, cat3: 1778, bucketId: 167 },  // Badmode, Zwemkleding (02-11-2026, was Jeans)
+  "heren ondergoed":        { cat1: 1776, cat3: 1675, bucketId: 167 },  // Ondergoed (was Jeans)
+  "heren accessoires":      { cat1: 1776, cat3: 650,  bucketId: 172 },  // terugval: Overige Herenkleding; titel kiest, zie mpAccessoireRubriek
   // Schoenen: één type (642) voor alle soorten.
   "heren schoenen":         { cat1: 1776, cat3: 642,  bucketId: 171 },
   "heren sneakers":         { cat1: 1776, cat3: 642,  bucketId: 171 },
@@ -1212,6 +1218,33 @@ function mpCategorieOpNummer(l1, l2) {
   return _mpOpNummer.get(`${l1}/${l2}`) || null;
 }
 
+// ACCESSOIRES PER TITEL (02-11-2026). Onze ene categorie "accessoires" komt op Marktplaats
+// uiteen in hoeden, sjaals, riemen, tassen en (heren) stropdassen. Alleen een titelwoord dat
+// ondubbelzinnig is kiest er een; anders blijft de terugval uit de tabel (Overige ...).
+// Nummers gelezen uit het ingelogde plaatsformulier, groepen 159 (dames) en 166 (heren).
+const MP_ACCESSOIRES = {
+  dames: [
+    [/\b(hoed|hoeden|pet|petten|cap|baret|bucket hat)\b/i,          { cat1: 621,  cat3: 624,  bucketId: 159 }],
+    [/\b(sjaal|sjaals|muts|mutsen|handschoen|handschoenen|shawl|omslagdoek)\b/i, { cat1: 621, cat3: 1679, bucketId: 159 }],
+    [/\b(riem|riemen|ceintuur|ceinturen)\b/i,                        { cat1: 621,  cat3: 1493, bucketId: 159 }],
+    [/\b(tas|tassen|handtas|schoudertas|clutch|portemonnee)\b/i,    { cat1: 621,  cat3: 626,  bucketId: 159 }],
+  ],
+  heren: [
+    [/\b(hoed|hoeden|pet|petten|cap|baret)\b/i,                      { cat1: 1776, cat3: 641,  bucketId: 166 }],
+    [/\b(sjaal|sjaals|muts|mutsen|handschoen|handschoenen)\b/i,      { cat1: 1776, cat3: 1680, bucketId: 166 }],
+    [/\b(riem|riemen|ceintuur|ceinturen)\b/i,                        { cat1: 1776, cat3: 1495, bucketId: 166 }],
+    [/\b(stropdas|stropdassen|das|dassen|vlinderstrik)\b/i,          { cat1: 1776, cat3: 643,  bucketId: 166 }],
+  ],
+};
+function mpAccessoireRubriek(cat, gender, title) {
+  const sleutel = (cat === "heren accessoires" || (cat === "unisex accessoires" && gender === "heren")) ? "heren"
+    : (cat === "accessoires dames" || cat === "unisex accessoires") ? "dames" : null;
+  if (!sleutel) return null;
+  const t = String(title || "");
+  for (const [re, regel] of MP_ACCESSOIRES[sleutel]) if (re.test(t)) return regel;
+  return null;
+}
+
 function getMpSyiUrl(platform, item) {
   // Vinted has a simple listing flow — no category-based URLs needed.
   // Open the create form on the account's real country domain when known
@@ -1269,7 +1302,9 @@ function getMpSyiUrl(platform, item) {
 
   // Kennen we het paar van Marktplaats zelf ook? Dan die regel, want daar hangt
   // het bucketId aan (en bij kinderkleding de maat-afhankelijke onderverdeling).
-  let c = eigenPaar;
+  // typeof: een proef die getMpSyiUrl los uit dit bestand haalt kent de helper niet.
+  let c = eigenPaar || (typeof mpAccessoireRubriek === "function"
+    ? mpAccessoireRubriek(cat, gender, item?.title) : null);
 
   // When gender is heren, always try heren-prefixed first so "truien / vesten" + heren → Heren
   if (c) { /* de advertentie zelf heeft het al gezegd */ }

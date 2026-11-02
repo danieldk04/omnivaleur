@@ -28,7 +28,13 @@ def test_beoordeel_gelijk_is_ok():
 
 def test_beoordeel_andere_rubriek_is_afwijkend():
     assert rc.beoordeel({"l1": 621, "l2": 636}, {"l1": 621, "l2": 631}) == "afwijkend"
-    assert rc.beoordeel({"l1": 1776, "l2": 631}, {"l1": 621, "l2": 631}) == "afwijkend"
+
+
+def test_beoordeel_andere_hoofdrubriek_met_zelfde_rubriek_is_ok():
+    # Gemeten in het ingelogde formulier: /plaats/621/626 (handtassen) landt bij hoofdrubriek 1826,
+    # /plaats/784/982 (duiken) bij 976. Het rubrieknummer zelf is uniek en beslist.
+    assert rc.beoordeel({"l1": 621, "l2": 626}, {"l1": 1826, "l2": 626}) == "ok"
+    assert rc.beoordeel({"l1": 784, "l2": 982}, {"l1": 976, "l2": 982}) == "ok"
 
 
 def test_beoordeel_diepere_rubriek_telt_als_dezelfde():
