@@ -5538,7 +5538,12 @@ def _verwijdering_openbaar_bewezen(job: dict, fout) -> bool:
     beantwoord = any(isinstance(d, dict) and d.get("fase") == "bevestigen" and d.get("clicked")
                      for d in diag)
     checks = [d for d in diag if isinstance(d, dict) and d.get("fase") == "fetch-check"]
-    if not beantwoord or not checks or any(d.get("status") is not None for d in checks):
+    # 02-11-2026, klant 26cf5471 ("Zilveren miniatuur"): venster beantwoord, daarna gaf
+    # /seller/view zes keer 403 (afgeknepen, kennisbank 403-na-verwijderen-is-blokkade).
+    # Ook dat is geen antwoord over de advertentie; in 14 dagen 13 keer, de openbare
+    # pagina gaf telkens 410 en vijf herplaatsingen vielen zo weg. Alleen een 200 of
+    # 404/410 van het kanaal zelf zegt iets, en dan beslist de extensie.
+    if not beantwoord or not checks or any(_status_zegt_iets(d.get("status")) for d in checks):
         return False
     try:
         import httpx
