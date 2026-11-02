@@ -398,7 +398,7 @@
     await step("sporttype",    () => mpSportType(item) && selectDropdown("Type", mpSportType(item)));
     await step("audiotype",    () => { const t = mpAudioType(item);    return t && selectDropdown("Type", t); });
     await step("wattage",      () => { const w = mpAudioWattage(item); return w && selectDropdown("Wattage", w); });
-    await step("size",         () => item.size && selectDropdown(["Maat", "Jeansmaat", "Maat (cm)", "Maat bovenstuk", "Maat onderstuk"], item.size));
+    await step("size",         () => { const m = window.CL.ringMaatUitTekst(item); return m && selectDropdown(["Maat", "Jeansmaat", "Maat (cm)", "Maat bovenstuk", "Maat onderstuk"], m); });
     // Halswijdte werkt op getallen in plaats van op tekst; zie vulHalswijdte.
     await step("halswijdte",   () => vulHalswijdte(item));
     await step("color",        () => item.color && selectDropdown("Kleur", dutchColor(item.color)));
