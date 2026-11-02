@@ -3353,7 +3353,32 @@ window.CL = (() => {
     return cut > 0 ? str.slice(0, cut) : str.slice(0, maxLen);
   }
 
+  // RINGMAAT UIT DE OMSCHRIJVING (02-11-2026, Mieneke van Voordeelsieraden).
+  // 316 van haar 320 ringen hebben de maat alleen in de omschrijving ("ringmaat
+  // is 15,75(49)"), het maatveld van het artikel is leeg, dus bleef "Maat" op
+  // Marktplaats en 2dehands op "Kies...". De lijst heeft vijf groepen op
+  // binnendiameter: Kleiner dan 17, 17 tot 18, 18 tot 19, 19 tot 20, 20 of groter.
+  // Alleen een getal direct achter het woord "ringmaat"/"maat", als diameter
+  // (12 tot 30). Het getal tussen haakjes is de omtrek en telt nooit. Staat er
+  // niets duidelijks, dan blijft het veld leeg: nooit een gok.
+  function ringMaatUitTekst(item) {
+    if (!item) return "";
+    if (item.size) return String(item.size);
+    if (!/ring/i.test(String(item.category || ""))) return "";
+    const tekst = `${item.title || ""} ${item.description || ""}`;
+    const m = tekst.match(/ringmaat\s*(?:is|=|:|ca\.?|circa)?\s*(?:ca\.?|circa)?\s*(\d{2}(?:[.,]\d{1,2})?)/i);
+    if (!m) return "";
+    const d = parseFloat(m[1].replace(",", "."));
+    if (!(d >= 12 && d < 30)) return "";
+    if (d < 17) return "Kleiner dan 17";
+    if (d < 18) return "17 tot 18";
+    if (d < 19) return "18 tot 19";
+    if (d < 20) return "19 tot 20";
+    return "20 of groter";
+  }
+
   return {
+    ringMaatUitTekst,
     klokRapport, klokOpnieuw,
     sleep, waitUntil, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, vulLocatie, selectBundleFree,
