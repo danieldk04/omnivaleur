@@ -18683,3 +18683,10 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 
 ## 03-11-2026: Onboarding nieuwe klanten (ochtend, tweede ronde 11:00)
 - Geplande ronde van 11:00, twee uur na de ronde van 09:01. Zelfde 6 accounts, geen nieuwe, geen creator. Niets veranderd: momme (e6f4a9d3) nog niet ingelogd na het mailtje van 09:12, de anderen ongewijzigd. Geen reparatie, geen mailtje.
+
+## 03-11-2026 (17:00): Dagelijkse klantfouten, tweede ochtendronde
+- Late afvuring van de ochtendtaak; gemeten sinds de ronde van 08:43 (07:30 tot 16:10 UTC): 5 fouten bij 3 klanten, ruim 1.000 opdrachten goed afgerond bij 8 klanten. Alle 18 foutsoorten van de wachter afgehandeld.
+- Gerepareerd (extensie 1.0.415): een ring met een EIGEN maat die zo niet in de lijst staat ("ringmaat 19,5" bij Mieneke 09e089ec, en de Vinted-notatie "18.1 mm Ø" of "53.1 mm / 16.9 mm Ø" bij 45f9caba, 1ba42900, 12fc61d0, ~25 ringen) liet Maat leeg; op 2dehands ging de advertentie dan niet online, op Marktplaats zonder maat. Nu omgezet naar de groep (19 tot 20 enz.); een maat zonder diameter ("Kroon vorm", "Eén maat") blijft. Proef tests/ring-maat-en-zilver-test.js: oude shared.js 5 fouten, nieuwe 0. Niet opnieuw op het echte formulier gemeten (zelfde keuzeroute als de afgeleide maat van 02-11, die daar wel bewezen is). Werkt pas na Web Store-upload van 1.0.415.
+- Klant-eigen: Amanda (0b28c1ce) Chrome stil sinds 10:35 UTC, één Marktplaats-plaatsing staat sindsdien geclaimd, 69 wachten; bcdf9aa4 verlenging van een advertentie die al weg is; Amanda Vinted-scan tabblad gesloten.
+- Open, onbekend: "The description could not be placed into the editor" nu 2x vandaag (Amanda 09:22, Mieneke 13:03 op 2dehands terwijl Marktplaats tegelijk plaatste). Mechanisme niet aangetoond, niet gerepareerd.
+- Niet gemeten: fouten die alleen in de browser van de klant staan.

@@ -15,7 +15,12 @@ const a = S.indexOf("const COLOUR_NL"), b = S.indexOf("// ── ALS ONZE WAARDE
 const dc = new Function(S.slice(a, b) + "\nreturn { dutchColor };")();
 const s = S.indexOf("function ringMaatUitTekst(");
 let maat = () => "";
-if (s >= 0) { const e = S.indexOf("\n  }\n", s) + 4; maat = new Function(S.slice(s, e) + "\nreturn ringMaatUitTekst;")(); }
+if (s >= 0) {
+  // Sinds 03-11 staat de groepsindeling in _ringGroep, direct eronder.
+  const g = S.indexOf("function _ringGroep(", s);
+  const e = S.indexOf("\n  }\n", g >= 0 ? g : s) + 4;
+  maat = new Function(S.slice(s, e) + "\nreturn ringMaatUitTekst;")();
+}
 
 let fouten = 0;
 const eis = (naam, ok) => { console.log((ok ? "ok    " : "FOUT  ") + naam); if (!ok) fouten++; };
@@ -31,7 +36,15 @@ eis("18 is 18 tot 19", maat(ring("ringmaat 18, breedte ringkop 6mm.")) === "18 t
 eis("19,5 is 19 tot 20", maat(ring("Ringmaat: 19,5")) === "19 tot 20");
 eis("20,5 is 20 of groter", maat(ring("ringmaat is 20,5")) === "20 of groter");
 eis("ca. 15,5/16 pakt het eerste getal", maat(ring("ringmaat is ca. 15,5/16 (slank)")) === "Kleiner dan 17");
-eis("eigen maat van het artikel gaat voor", maat(ring("ringmaat 18", { size: "ringmaat 19,5" })) === "ringmaat 19,5");
+eis("eigen maat gaat voor de omschrijving", maat(ring("ringmaat 18", { size: "ringmaat 19,5" })) === "19 tot 20");
+// 03-11-2026 (Mieneke): de eigen maat van een ring staat zo nooit in de lijst.
+eis("eigen maat 'ringmaat 19,5' is 19 tot 20", maat(ring("", { size: "ringmaat 19,5" })) === "19 tot 20");
+eis("eigen maat '18.1 mm Ø' is 18 tot 19", maat(ring("", { size: "18.1 mm Ø" })) === "18 tot 19");
+eis("eigen maat '53.1 mm / 16.9 mm Ø' is Kleiner dan 17", maat(ring("", { size: "53.1 mm / 16.9 mm Ø" })) === "Kleiner dan 17");
+eis("eigen maat '19' is 19 tot 20", maat(ring("", { size: "19" })) === "19 tot 20");
+eis("eigen maat zonder diameter blijft", maat(ring("", { size: "Kroon vorm" })) === "Kroon vorm");
+eis("eigen maat 'Eén maat' blijft", maat(ring("", { size: "Eén maat" })) === "Eén maat");
+eis("geen ring: eigen maat blijft", maat({ category: "dames jassen", size: "38" }) === "38");
 eis("geen ringmaat in tekst: leeg, geen gok", maat(ring("Mooie ring met diamant")) === "");
 eis("omtrek alleen (54): leeg, geen gok", maat(ring("ringmaat 54")) === "");
 eis("geen ring (jas): nooit", maat({ category: "dames jassen", description: "ringmaat 18" }) === "");

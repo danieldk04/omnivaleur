@@ -1511,7 +1511,8 @@ window.CL = (() => {
     // kost niets en haalt de waarde van het formulier weg.
     if (intendedEl) { selectIntendedFor(item); await sleep(300); }
 
-    const afgeleideMaat = !item.size ? ringMaatUitTekst(item) : "";
+    const ringGroep = ringMaatUitTekst(item);
+    const afgeleideMaat = ringGroep !== String(item.size || "") ? ringGroep : "";
     for (const [label, value] of [["Maat", item.size || afgeleideMaat], ["Kleur", dutchColor(item.color)]]) {
       if (!value) continue;
       const el = findFieldByLabel(label);
@@ -3371,12 +3372,23 @@ window.CL = (() => {
   // Alleen een getal direct achter het woord "ringmaat"/"maat", als diameter
   // (12 tot 30). Het getal tussen haakjes is de omtrek en telt nooit. Staat er
   // niets duidelijks, dan blijft het veld leeg: nooit een gok.
+  //
+  // Ook de eigen maat van een ring (03-11-2026, Mieneke): "ringmaat 19,5" en de
+  // Vinted-notatie "18.1 mm Ø" of "53.1 mm / 16.9 mm Ø" staan nooit zo in de
+  // lijst, dus "Maat" bleef leeg en de advertentie ging niet online. Die zetten
+  // we om naar de groep; een eigen maat zonder diameter ("Kroon vorm") blijft.
   function ringMaatUitTekst(item) {
     if (!item) return "";
-    if (item.size) return String(item.size);
-    if (!/ring/i.test(String(item.category || ""))) return "";
-    const tekst = `${item.title || ""} ${item.description || ""}`;
-    const m = tekst.match(/\b(?:ring)?maat\s*(?:is|=|:|nu|ca\.?|circa)?\s*(?:ca\.?|circa)?\s*(\d{2}(?:[.,]\d{1,2})?)/i);
+    const isRing = /ring/i.test(String(item.category || ""));
+    if (item.size) return (isRing && _ringGroep(String(item.size), true)) || String(item.size);
+    if (!isRing) return "";
+    return _ringGroep(`${item.title || ""} ${item.description || ""}`, false);
+  }
+
+  function _ringGroep(tekst, eigenMaat) {
+    const m = tekst.match(/\b(?:ring)?maat\s*(?:is|=|:|nu|ca\.?|circa)?\s*(?:ca\.?|circa)?\s*(\d{2}(?:[.,]\d{1,2})?)/i)
+      || (eigenMaat && tekst.match(/(\d{2}(?:[.,]\d{1,2})?)\s*mm\s*Ø/i))
+      || (eigenMaat && tekst.trim().match(/^(\d{2}(?:[.,]\d{1,2})?)$/));
     if (!m) return "";
     const d = parseFloat(m[1].replace(",", "."));
     if (!(d >= 12 && d < 30)) return "";
