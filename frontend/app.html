@@ -15872,11 +15872,11 @@ function renderAnalytics(force) {
     50%      { box-shadow: 0 0 0 5px rgba(34,197,94,0); }
   }
   @media (max-width: 560px) {
-    #founder-call-widget { right: 14px; bottom: 14px; }
-    #founder-call-fab { padding: 6px 16px 6px 6px; gap: 9px; }
-    .fcf-badge { width: 34px; height: 34px; }
-    .fcf-l1 { display: none; }          /* compact op mobiel: alleen de knoptekst */
-    .fcf-l2 { font-size: 13.5px; }
+    #founder-call-widget { right: 12px; bottom: 12px; }
+    /* Op een telefoon alleen het ronde icoon: de lange knop dekte de onderkant van elk scherm af. */
+    #founder-call-fab { padding: 5px; gap: 0; }
+    .fcf-badge { width: 38px; height: 38px; }
+    .fcf-labels { display: none; }
   }
   @media print { #founder-call-widget { display: none !important; } }
   @media (prefers-reduced-motion: reduce) {
