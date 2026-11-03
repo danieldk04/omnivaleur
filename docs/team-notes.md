@@ -18680,3 +18680,6 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 
 ## 03-11-2026: Platformcontrole (onvolledig)
 - Vinted: 6 van 7 proefartikelen gedraaid (kinderschoenen, meisjesjas, sneakers dames, heren, babykleding, kookboek), geen afwijking: alle stappen ok, behalve maat en kleur bij het kookboek (bekend artefact). Proef 7 (jongens trui) en Marktplaats/2dehands niet gedraaid: een tweede foto-download vanuit de proef werd door de toestemmingscontrole van de sessie geweigerd (code ophalen van buiten), en ik heb dat niet omzeild. Vergelijk.py niet bijgewerkt, want de set was niet compleet.
+
+## 03-11-2026: Onboarding nieuwe klanten (ochtend, tweede ronde 11:00)
+- Geplande ronde van 11:00, twee uur na de ronde van 09:01. Zelfde 6 accounts, geen nieuwe, geen creator. Niets veranderd: momme (e6f4a9d3) nog niet ingelogd na het mailtje van 09:12, de anderen ongewijzigd. Geen reparatie, geen mailtje.
