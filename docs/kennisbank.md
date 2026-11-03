@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## bevestigingsmail-door-spamfilter-geweigerd
+
+*03-11-2026 — 03-11: Mittwald weigerde de Supabase/Resend-bevestigingsmail 3x als spam; klant kon niet in. Herkennen via mail_events, oplossen met hand-bevestiging plus Zoho-mail*
+
+Een nieuw account dat nooit inlogt kan vastzitten omdat de bevestigingsmail nooit aankwam. 02-11-2026: momme@nordsonne.net (Duitse host Mittwald) kreeg drie keer "554 5.7.1 Spam message rejected"; de Resend-webhook zet dat in mail_events als email.bounced, bounce_soort Transient.
+
+**Why:** zonder bevestiging geen inlog en geen proef; opnieuw aanvragen gaat via dezelfde route en faalt dus weer. De onboardingronde zag alleen "geen extensie".
+
+**How to apply:** scripts/nieuwe_klanten.py meldt dit nu als BEVESTIGING_GEWEIGERD. Oplossing: oude waarde bewaren, auth.admin.update_user_by_id(uid, {"email_confirm": True}) (proef start bij eerste inlog via _get_or_create_subscription), en de klant mailen via scripts/onboarding_mail.py (Zoho, andere route dan Resend). Zie "onboarding-routine-nieuwe-klanten" en "railway-blokkeert-smtp".
+
+---
+
 ## rubriek-na-plaatsen-controleren
 
 *02-11-2026 — "02-11: Marktplaats-rubriek is achteraf niet te wijzigen; server leest na plaatsen de echte rubriek terug (rubriek_controle.py), extensie 1.0.413 bewaakt het formulier; 100% beloven kan niet"*

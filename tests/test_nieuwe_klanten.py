@@ -168,6 +168,17 @@ def test_plaatsopdrachten_zonder_enig_succes():
     assert any(x.startswith("NOG_NIETS_GELUKT") for x in s)
 
 
+def test_bevestigingsmail_geweigerd_valt_op():
+    # 02-11-2026: de spamfilter van een Duitse host weigerde de bevestigingsmail drie keer.
+    s = N.signalen(_profiel(bevestigd=False, bevestiging_geweigerd=["Transient"] * 3,
+                            opdrachten=[("marktplaats create:done", 1)],
+                            eerste_gelukt={"marktplaats": NU}), NU)
+    assert s and s[0].startswith("BEVESTIGING_GEWEIGERD") and "3x" in s[0]
+    s = N.signalen(_profiel(bevestigd=False, opdrachten=[("marktplaats create:done", 1)],
+                            eerste_gelukt={"marktplaats": NU}), NU)
+    assert s == ["NIET_BEVESTIGD: e-mail nooit bevestigd, dus nooit ingelogd en geen proef."]
+
+
 def test_versies_vergelijken_als_getallen():
     assert N._versie("1.0.99") < N._versie("1.0.358")
 

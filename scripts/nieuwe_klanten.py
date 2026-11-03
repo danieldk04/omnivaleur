@@ -127,7 +127,8 @@ def accounts(db_admin) -> dict[str, dict]:
         gevonden = db_admin.auth.admin.list_users(page=pagina, per_page=200)
         for u in gevonden or []:
             uit[u.id] = {"email": u.email or "", "aangemeld": _tijd(str(u.created_at)),
-                         "laatste_login": _tijd(str(u.last_sign_in_at)) if u.last_sign_in_at else None}
+                         "laatste_login": _tijd(str(u.last_sign_in_at)) if u.last_sign_in_at else None,
+                         "bevestigd": bool(u.email_confirmed_at)}
         if not gevonden or len(gevonden) < 200:
             break
     if not uit:
@@ -147,7 +148,15 @@ def profiel(db, uid: str, account: dict, nu: datetime) -> dict:
     """Alles wat we van één klant weten, per user_id gelezen."""
     p: dict = {"user_id": uid, "email": account["email"],
                "aangemeld": account["aangemeld"], "laatste_login": account["laatste_login"],
-               "afgekapt": []}
+               "afgekapt": [], "bevestigd": account.get("bevestigd", True), "bevestiging_geweigerd": []}
+
+    # Nooit bevestigd: kwam de bevestigingsmail wel aan? 02-11-2026 weigerde de spamfilter
+    # van een Duitse host hem drie keer en kon de klant er niet in, zonder dat iets het zag.
+    if not p["bevestigd"] and account.get("email"):
+        p["bevestiging_geweigerd"] = [
+            r.get("bounce_soort") or "?" for r in
+            (db.table("mail_events").select("bounce_soort").eq("ontvanger", account["email"])
+             .eq("type", "email.bounced").limit(20).execute().data or [])]
 
     abo = (db.table("subscriptions").select("status,trial_ends_at,stripe_subscription_id")
            .eq("user_id", uid).limit(1).execute().data or [{}])[0]
@@ -265,6 +274,13 @@ def signalen(p: dict, nu: datetime) -> list[str]:
     uit = []
     uren = (nu - p["aangemeld"]).total_seconds() / 3600 if p["aangemeld"] else 0
     ext, v = p["extensie"], p["voorraad"]
+    if not p.get("bevestigd", True):
+        if p.get("bevestiging_geweigerd"):
+            uit.append(f"BEVESTIGING_GEWEIGERD: e-mail nooit bevestigd en de bevestigingsmail kwam "
+                       f"{len(p['bevestiging_geweigerd'])}x terug ({', '.join(sorted(set(p['bevestiging_geweigerd'])))}); "
+                       "zonder bevestiging kan hij niet inloggen. Kijk in mail_events naar de reden.")
+        else:
+            uit.append("NIET_BEVESTIGD: e-mail nooit bevestigd, dus nooit ingelogd en geen proef.")
     if not ext["laatst"]:
         uit.append("GEEN_EXTENSIE: de extensie heeft zich nooit gemeld; zonder extensie plaatst er niets.")
     elif nu - ext["laatst"] > timedelta(hours=24) and p["vast"]:
