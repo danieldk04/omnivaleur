@@ -300,8 +300,12 @@ textarea { resize: vertical; min-height: 80px; }
 .vz-uitleg { display: block; font-weight: 400; font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
 .vg-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.platform-checkboxes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
-.platform-checkbox { display: flex; align-items: center; gap: 8px; padding: 9px 13px; border: 1.5px solid var(--border); border-radius: 8px; cursor: pointer; transition: all .15s; }
+.platform-checkboxes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+/* Een vakje is een <label>, en label is globaal hoofdletters met letterafstand: dat
+   duwde "Facebook Marketplace" en "Shopify Gepl..." buiten het scherm. Hier terug naar
+   gewone tekst, en alles mag naar de volgende regel in plaats van af te kappen. */
+.platform-checkbox { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; min-width: 0; margin: 0; padding: 9px 13px; border: 1.5px solid var(--border); border-radius: 8px; cursor: pointer; transition: all .15s; text-transform: none; letter-spacing: normal; color: var(--text); }
+.platform-checkbox > span { min-width: 0; overflow-wrap: anywhere; }
 .platform-checkbox:hover { border-color: var(--blue); background: #f0f9ff; }
 .platform-checkbox:has(input:checked) { border-color: var(--blue); background: #eff6ff; }
 .platform-checkbox input { width: auto; accent-color: var(--blue); }
