@@ -18690,3 +18690,11 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 - Klant-eigen: Amanda (0b28c1ce) Chrome stil sinds 10:35 UTC, één Marktplaats-plaatsing staat sindsdien geclaimd, 69 wachten; bcdf9aa4 verlenging van een advertentie die al weg is; Amanda Vinted-scan tabblad gesloten.
 - Open, onbekend: "The description could not be placed into the editor" nu 2x vandaag (Amanda 09:22, Mieneke 13:03 op 2dehands terwijl Marktplaats tegelijk plaatste). Mechanisme niet aangetoond, niet gerepareerd.
 - Niet gemeten: fouten die alleen in de browser van de klant staan.
+
+## 03-11-2026: Janneke (31d28378), 41 keer "Is dit verkocht?" op Vinted
+
+- Ze meldde via screenshot dat ze niet wist wat ze met de oranje balk moest; ze houdt haar voorraad zelf bij in Shopify (webshop_met_rust stond al aan).
+- Gemeten: 41 Vinted-advertenties op sold_unconfirmed, 32 geplaatst op 25-10 (de avond voor de Vinted-blokkade). Alle 41 openbare Vinted-pagina's geven 404 (twee keer gemeten); 15 van 15 verkochte Vinted-artikelen van haar geven 200. Dus weg, niet verkocht. Wie ze weghaalde (zijzelf of Vinted) is niet bewezen. Alle 41 stonden nog actief op Marktplaats (40) en Shopify (38).
+- Gedaan: verkoopvraag voor haar uit via schrijf() plus _sluit_openstaande_verkoopvragen (zelfde pad als de knop in Voorkeuren). De 41 staan op delisted, andere kanalen onaangeroerd, 0 vragen open. Terugzetten kan uit ~/.omnivaleur/backups/janneke_verkoopvraag_03-11.json (status en tekst per rij).
+- Concept-antwoord aan Janneke bewaard via schrijfstijl_leren.py.
+- Open: de balktekst zegt "met de hand weggehaald" ook als tientallen advertenties tegelijk verdwijnen; dat is geen verkoop. Niet aangepast.
