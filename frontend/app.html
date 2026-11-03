@@ -772,7 +772,15 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
   .platform-checkbox { padding: 12px 14px; }
   .platform-checkbox .pm-cb-check { margin-left: auto; }
   .pm-cb-missing { font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
-  .modal-footer { position: sticky; bottom: 0; }
+  .modal-footer { position: sticky; bottom: 0; flex-wrap: wrap; }
+  .modal-footer .btn { flex: 1 1 auto; justify-content: center; text-align: center; }
+
+  /* Wachtrij- en slotbalk: tekst over de volle breedte, knop eronder, en niet meer
+     meeschuiven (op een telefoon dekte een meeschuivende balk de helft van het scherm af). */
+  .activity-bar { position: static; flex-wrap: wrap; align-items: flex-start; padding: 12px 14px; gap: 8px 10px; }
+  .activity-bar .activity-body { flex: 1 1 0; min-width: 0; overflow-wrap: anywhere; }
+  .activity-bar .activity-dot { margin-top: 6px; }
+  .activity-bar #ext-activity-cancel { flex: 1 1 100%; margin-left: 0 !important; }
   .modal-body, .modal-header h3 { overflow-wrap: anywhere; }
 
   /* View headers */
