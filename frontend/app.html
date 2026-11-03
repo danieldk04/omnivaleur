@@ -768,7 +768,12 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
 
   /* Form rows: single column */
   .form-row { grid-template-columns: 1fr !important; }
-  .platform-checkboxes { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .platform-checkboxes { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .platform-checkbox { padding: 12px 14px; }
+  .platform-checkbox .pm-cb-check { margin-left: auto; }
+  .pm-cb-missing { font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+  .modal-footer { position: sticky; bottom: 0; }
+  .modal-body, .modal-header h3 { overflow-wrap: anywhere; }
 
   /* View headers */
   .view-header h1 { font-size: 18px; }
