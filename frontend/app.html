@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=a57fccc98d"></script>
+<script src="/i18n.js?v=a86801f523"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -536,6 +536,7 @@ textarea { resize: vertical; min-height: 80px; }
 .an-platform-val { font-weight: 700; font-size: 12px; color: var(--text); min-width: 44px; text-align: right; }
 .an-empty { text-align: center; padding: 48px; color: var(--muted); font-size: 14px; }
 /* Sales breakdown table */
+.mob-l { display: none; }
 .an-sales-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
 .an-sales-table th { text-align: left; padding: 8px 12px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
 .an-sales-table td { padding: 7px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap; }
@@ -772,6 +773,39 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
   .platform-checkbox { padding: 12px 14px; }
   .platform-checkbox .pm-cb-check { margin-left: auto; }
   .pm-cb-missing { font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+  select { max-width: 100% !important; }
+
+  /* Tabellen als kaartjes: de platformknoppen en bedragen vielen rechts buiten beeld. */
+  .table-wrap:has(#dashboard-items-body) { overflow-x: visible; }
+  .table-wrap:has(#dashboard-items-body) thead { display: none; }
+  .table-wrap:has(#dashboard-items-body) table, #dashboard-items-body { display: block; width: 100%; }
+  #dashboard-items-body tr { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "info info" "badges badges" "price action"; gap: 10px; align-items: center; padding: 14px; border-bottom: 1px solid var(--border); }
+  #dashboard-items-body tr:last-child { border-bottom: none; }
+  #dashboard-items-body td { display: block; padding: 0; border: 0; min-width: 0; white-space: normal; }
+  #dashboard-items-body td:nth-child(1) { grid-area: info; }
+  #dashboard-items-body td:nth-child(2) { grid-area: price; font-weight: 700; }
+  #dashboard-items-body td:nth-child(3) { grid-area: badges; }
+  #dashboard-items-body td:nth-child(4) { grid-area: action; }
+  #dashboard-items-body td[colspan] { grid-column: 1 / -1; grid-area: auto; }
+
+  #an-sales-table { display: block; }
+  #an-sales-table thead { display: none; }
+  #an-sales-table tbody { display: block; }
+  #an-sales-table tbody tr { display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: "item item" "date platform" "sale cost" "profit margin" "btn btn"; gap: 8px 12px; padding: 14px; border-bottom: 1px solid var(--border); }
+  #an-sales-table tbody tr:last-child { border-bottom: none; }
+  #an-sales-table td { display: block; padding: 0; border: 0; white-space: normal; text-align: left; min-width: 0; }
+  #an-sales-table td:nth-child(1) { grid-area: date; }
+  #an-sales-table td:nth-child(2) { grid-area: item; }
+  #an-sales-table td:nth-child(3) { grid-area: platform; }
+  #an-sales-table td:nth-child(4) { grid-area: sale; }
+  #an-sales-table td:nth-child(5) { grid-area: cost; }
+  #an-sales-table td:nth-child(6) { grid-area: profit; }
+  #an-sales-table td:nth-child(7) { grid-area: margin; }
+  #an-sales-table td:nth-child(8) { grid-area: btn; }
+  #an-sales-table .mob-l { display: block; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 2px; }
+  .an-sales-title { max-width: none; white-space: normal; }
+  .an-sales-table tbody tr:hover { background: none; }
+  #view-referral td, #view-referral th { white-space: normal; padding-left: 8px; padding-right: 8px; }
   .modal-footer { position: sticky; bottom: 0; flex-wrap: wrap; }
   .modal-footer .btn { flex: 1 1 auto; justify-content: center; text-align: center; }
 
@@ -1736,7 +1770,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <div>
             <label for="locatie-land" style="font-size:13px;font-weight:600">Country</label>
             <select id="locatie-land" style="width:100%">
-            <option value="">Not set — use my account on the site</option>
+            <option value="">Not set (use my account)</option>
             <option value="Nederland">Nederland</option>
             <option value="België">België</option>
             <option value="Duitsland">Duitsland</option>
@@ -1814,9 +1848,9 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           a large parcel — so valuable items travel insured. Leave it at 0 to choose the size yourself on Marktplaats.
         </div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <label for="pakket-grens" style="font-size:13px">Letterbox parcel below</label>
-          <span style="font-size:13px">€</span>
-          <input type="number" id="pakket-grens" min="0" max="5000" step="1" style="max-width:90px">
+          <label for="pakket-grens" style="font-size:13px;margin:0">Letterbox parcel below</label>
+          <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px">€
+            <input type="number" id="pakket-grens" min="0" max="5000" step="1" style="max-width:90px"></span>
         </div>
         <!-- Marktplaats zet zelf PostNL, DHL en Budbee klaar en laat kopersbescherming
              aan (live gemeten op het plaatsformulier, 29-10-2026). Voordeelsieraden
@@ -1829,7 +1863,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <select id="mp-verzending-keuze" onchange="toonMpVerzending()" style="max-width:290px">
-            <option value="standaard">Marktplaats shipping (PostNL, DHL, Budbee)</option>
+            <option value="standaard">Marktplaats shipping</option>
             <option value="zelf">I ship myself, for a fixed amount</option>
           </select>
           <span id="mp-verzending-bedrag-wrap" style="display:none;font-size:13px">€
@@ -1857,7 +1891,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <select id="bieden-standaard" style="max-width:340px">
-            <option value="volg">Per item: only where I ticked "Allow bidding"</option>
+            <option value="volg">Per item, as ticked</option>
             <option value="aan">Allow bidding on every listing, from €0</option>
           </select>
           <button class="btn btn-sm btn-primary" onclick="saveBieden()">Save</button>
@@ -1885,13 +1919,13 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <span>My Marktplaats amount for letters<span class="vz-uitleg">Below the amount you set here, and for titles with your words. Everything else gets Bpost €7.10.</span></span></label>
           <div id="verzending-2dh-regel-velden" style="margin:2px 0 4px 28px">
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-              <label for="verzending-2dh-onder" style="font-size:13px">A letter is everything below</label>
-              <span style="font-size:13px">€</span>
-              <input type="number" id="verzending-2dh-onder" min="0" max="7.10" step="0.01" style="max-width:90px">
+              <label for="verzending-2dh-onder" style="font-size:13px;margin:0">A letter is everything below</label>
+              <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px">€
+              <input type="number" id="verzending-2dh-onder" min="0" max="7.10" step="0.01" style="max-width:90px"></span>
             </div>
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-              <label for="verzending-2dh-woorden" style="font-size:13px">And always for titles with</label>
-              <input type="text" id="verzending-2dh-woorden" maxlength="400" placeholder="patch, button" style="max-width:260px;flex:1">
+              <label for="verzending-2dh-woorden" style="font-size:13px;margin:0">And always for titles with</label>
+              <input type="text" id="verzending-2dh-woorden" maxlength="400" placeholder="patch, button" style="max-width:260px;flex:1 1 150px;min-width:150px">
             </div>
             <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:6px">
               Words separated by a comma, for letters that cost more, like a patch at €4.95.
@@ -2275,7 +2309,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
              spullen verkoopt moest dat honderden keren corrigeren. -->
         <div class="imp-cond">
           <label for="import-condition">Listings without a condition become</label>
-          <select id="import-condition" onchange="importConditionGekozen()">
+          <select id="import-condition" onchange="importConditionGekozen()" style="min-width:215px;max-width:100%">
             <option value="new_with_tags">New with tags</option>
             <option value="new">New (without tags)</option>
             <option value="good" selected>Like new</option>
@@ -7583,8 +7617,8 @@ function renderPlatforms() {
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
           <div><label id="ebay-vz-kosten-label" style="font-size:10px;display:block;color:var(--muted)">Shipping cost in NL (€)</label><input id="ebay-vz-kosten" type="number" step="0.01" min="0" placeholder="6.95" style="width:110px"></div>
-          <div><label style="font-size:10px;display:block;color:var(--muted)">Ships within</label><select id="ebay-vz-dagen" style="width:100px"><option value="1">1 day</option><option value="2">2 days</option><option value="3" selected>3 days</option><option value="4">4 days</option><option value="5">5 days</option><option value="10">10 days</option></select></div>
-          <div><label style="font-size:10px;display:block;color:var(--muted)">Returns</label><select id="ebay-vz-retour" style="width:100px"><option value="14">14 days</option><option value="30" selected>30 days</option><option value="60">60 days</option></select></div>
+          <div><label style="font-size:10px;display:block;color:var(--muted)">Ships within</label><select id="ebay-vz-dagen" style="width:auto;min-width:112px"><option value="1">1 day</option><option value="2">2 days</option><option value="3" selected>3 days</option><option value="4">4 days</option><option value="5">5 days</option><option value="10">10 days</option></select></div>
+          <div><label style="font-size:10px;display:block;color:var(--muted)">Returns</label><select id="ebay-vz-retour" style="width:auto;min-width:112px"><option value="14">14 days</option><option value="30" selected>30 days</option><option value="60">60 days</option></select></div>
           <label style="font-size:11px;display:flex;align-items:center;gap:4px"><input id="ebay-vz-ophalen" type="checkbox"> Buyers may also pick up</label>
           <button class="btn btn-sm btn-primary" onclick="saveEbayVerzending(this)">Save</button>
           <span id="ebay-vz-status" style="font-size:11px;color:var(--muted)"></span>
@@ -15727,10 +15761,10 @@ function renderAnalytics(force) {
         <td style="color:var(--muted)"><span style="cursor:pointer;text-decoration:underline;text-decoration-style:dotted" title="Wrong date? We fill in the day we detected the sale — click to correct it" onclick="setSoldDate('${item.id}','${p}','${listing.sold_at || ''}')">${soldDate}</span></td>
         <td><div class="an-sales-item">${thumb}<span class="an-sales-title" title="${esc(item.title || '')}">${esc(item.title || 'Untitled')}</span></div></td>
         <td><span style="font-size:12px">${PLATFORM_ICONS[p] || '🏪'}</span> ${PLATFORM_LABELS[p] || p}</td>
-        <td class="an-sales-num">${saleCell}</td>
-        <td class="an-sales-num">${costCell}</td>
-        <td class="an-sales-num">${profCell}</td>
-        <td class="an-sales-num">${marginCell}</td>
+        <td class="an-sales-num"><span class="mob-l">Sale price</span>${saleCell}</td>
+        <td class="an-sales-num"><span class="mob-l">Purchase</span>${costCell}</td>
+        <td class="an-sales-num"><span class="mob-l">Profit</span>${profCell}</td>
+        <td class="an-sales-num"><span class="mob-l">Margin</span>${marginCell}</td>
         <td class="an-sales-num"><button class="an-notsold-btn" title="This item isn't actually sold — put it back to active" onclick="markNotSold('${item.id}','${p}','${jsArg(item.title)}')">Not sold</button></td>
       </tr>`;
     }).join('');
