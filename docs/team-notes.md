@@ -18677,3 +18677,6 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 - Open, niet gerepareerd: waarom Mittwald onze bevestigingsmail als spam ziet. Eén geval in twee weken (alle Transient-bounces sinds 20-10 zijn van dit adres).
 - kardkid9 (bc55c91e) en bankai2855 (7630bcf9): nog 0 artikelen, mailtje van 02-11 niet geopend gemeten, geen nieuw mailtje. valentinomtcg (49b900b4): ongewijzigd, proef tot 05-11. gollem.joukes (f0291981): computer uit sinds 28-10, proef loopt vandaag 13:12 af, geen mailtje. 656a5041 is Daniels eigen account.
 - Mailrapport: 12 mails sinds 26-10, 4 echt geopend, 0 klik, 0 antwoord, 5 deden daarna iets.
+
+## 03-11-2026: Platformcontrole (onvolledig)
+- Vinted: 6 van 7 proefartikelen gedraaid (kinderschoenen, meisjesjas, sneakers dames, heren, babykleding, kookboek), geen afwijking: alle stappen ok, behalve maat en kleur bij het kookboek (bekend artefact). Proef 7 (jongens trui) en Marktplaats/2dehands niet gedraaid: een tweede foto-download vanuit de proef werd door de toestemmingscontrole van de sessie geweigerd (code ophalen van buiten), en ik heb dat niet omzeild. Vergelijk.py niet bijgewerkt, want de set was niet compleet.
