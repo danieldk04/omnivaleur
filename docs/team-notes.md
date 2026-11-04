@@ -18698,3 +18698,11 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 - Gedaan: verkoopvraag voor haar uit via schrijf() plus _sluit_openstaande_verkoopvragen (zelfde pad als de knop in Voorkeuren). De 41 staan op delisted, andere kanalen onaangeroerd, 0 vragen open. Terugzetten kan uit ~/.omnivaleur/backups/janneke_verkoopvraag_03-11.json (status en tekst per rij).
 - Concept-antwoord aan Janneke bewaard via schrijfstijl_leren.py.
 - Open: de balktekst zegt "met de hand weggehaald" ook als tientallen advertenties tegelijk verdwijnen; dat is geen verkoop. Niet aangepast.
+
+## 04-11-2026: Dagelijkse klantfouten
+- Gemeten 06:50 UTC over 24 uur: 1.816 afgeronde opdrachten bij 11 klanten, 530 fouten bij 8 klanten, waarvan 500 bij Goudlief. Alle 11 open foutsoorten beoordeeld, geen fout van onze kant bewezen, niets gerepareerd.
+- Goudlief (5aae4954): om 03:12 UTC zette de driedagenveger 500 2dehands-plaatsingen uit de bulk van 31-10 op fout (ontwerp, VASTGELOPEN_NA_DAGEN=3, 500 per ronde, elke 6 uur). Er wachten nog 2.013 Marktplaats- en 1.556 2dehands-plaatsingen plus 202 verlengingen; ze haalt ~70 per kanaal per dag, dus de komende rondes blazen de rest van 31-10 ook af. Besluit bij Daniel of dat zo mag. Extensie stil sinds 03-11 17:47.
+- Vinted verwijderen: alle 6 van de afgelopen 24 uur mislukt, bij Janneke (31d28378) en Toon (96e30080). In beide gevallen zei de Vinted-scan in dezelfde sessie "niet ingelogd" en had de pagina alleen anonieme koekjes; de advertenties staan nog online (200). Oordeel klant, maar de melding zegt "Vinted may have changed its layout", wat misleidt. 8f91a370 verwijderde op 02-11 nog gewoon. Eén keer "still in wardrobe after confirming" bij Toon: onbekend.
+- Verder klant-eigen: Toon overzicht leeg op 2dehands en MP om 22:12 (zelfde minuut, daarna stil); tabbladen gesloten (Amanda, Toon, 26cf5471); Janneke Chrome dicht tijdens plaatsen. Amanda (0b28c1ce) en Toon elk één opdracht geclaimd sinds hun extensie stilviel.
+- Vorige ronde: ringmaatfout (Mieneke) niet teruggezien; "description could not be placed" vandaag niet terug, blijft onbekend.
+- Niet gemeten: fouten die alleen in de browser van de klant staan; Railway-log niet bekeken.
