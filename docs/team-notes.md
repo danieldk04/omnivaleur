@@ -18706,3 +18706,6 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 - Verder klant-eigen: Toon overzicht leeg op 2dehands en MP om 22:12 (zelfde minuut, daarna stil); tabbladen gesloten (Amanda, Toon, 26cf5471); Janneke Chrome dicht tijdens plaatsen. Amanda (0b28c1ce) en Toon elk één opdracht geclaimd sinds hun extensie stilviel.
 - Vorige ronde: ringmaatfout (Mieneke) niet teruggezien; "description could not be placed" vandaag niet terug, blijft onbekend.
 - Niet gemeten: fouten die alleen in de browser van de klant staan; Railway-log niet bekeken.
+
+## 04-11-2026: Platformcontrole (niet gedraaid)
+- Claude in Chrome niet verbonden (geen browser gevonden, twee pogingen), dus geen proef op Vinted, Marktplaats of 2dehands. Niets gewijzigd. Eerste keer dat Chrome onbereikbaar was; melden bij twee dagen achter elkaar.
