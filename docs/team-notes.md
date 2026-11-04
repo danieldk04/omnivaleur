@@ -18726,3 +18726,6 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 - Late ronde (16:00), na de klantfoutenronde die het slot tot 15:38 had. 4 accounts in hun eerste week, geen nieuwe, geen creator. gollem.joukes viel uit het venster.
 - Niets veranderd sinds 03-11: momme (e6f4a9d3) nooit ingelogd; kardkid9 (bc55c91e) 0 artikelen, extensie stil sinds 01-11; bankai2855 (7630bcf9) geen extensie; valentinomtcg (49b900b4) computer uit sinds 30-10, proef loopt 05-11 19:03 af. Geen reparatie, geen mailtje.
 - Mailrapport: 6 mails sinds 28-10, 1 echt geopend, 0 klik, 0 antwoord, 2 deden daarna iets (gollem, valentino na de eerste mail).
+
+## 04-11-2026: Platformcontrole (tweede poging, Chrome weer verbonden)
+- Vinted 7 van 7 proefartikelen (kinderschoenen, meisjesjas, sneakers dames, heren shirt, baby meisjes, kookboek, jongens trui) en Marktplaats waterkokers, waterontharders, weegschalen plus 2dehands waterkokers: geen afwijking. Alleen de bekende artefacten (kookboek zonder maat en kleur, beschrijving in de proef, geen kleur/merk/halswijdte in die witgoedrubrieken). Eerste Marktplaats-uitslag bewaard; vergelijking met eerdere dagen niet 1 op 1 mogelijk door andere artikelnamen.
