@@ -2090,6 +2090,25 @@ def foto_onbereikbaar(url) -> bool:
     return any(host == d or host.endswith("." + d) for d in ONBEREIKBARE_FOTOHOSTS)
 
 
+def ids_zonder_bruikbare_foto(db, user_id: str, platform: str) -> set[str]:
+    """Advertentienummers waarvan de scan geen foto kon bewaren: het interne
+    adres (zie boven) of niets. Alleen de kleine kolom photo_url, gefilterd in de
+    database, dus geen extra verkeer voor 5.000 advertenties.
+
+    Egbert Brouwer, 04-11-2026: vier advertenties kwamen zonder foto binnen en
+    "opnieuw ophalen" deed niets. Sinds de extensie het interne adres niet meer
+    bewaart, is photo_url leeg, en een lege kandidaat stond gewoon in de lijst
+    "ken ik al": elke scan sloeg hem over, dus er kon nooit een foto bijkomen."""
+    uit: set[str] = set()
+    for filt in ("photo_url.like.%icas.io/%", "photo_url.is.null", "photo_url.eq."):
+        rijen = (db.table("import_candidates").select("platform_listing_id")
+                 .eq("user_id", user_id).eq("platform", platform)
+                 .or_(filt).limit(1000).execute().data or [])
+        uit |= {str(r["platform_listing_id"]) for r in rijen
+                if r.get("platform_listing_id") is not None}
+    return uit
+
+
 def alleen_onbereikbare_fotos(urls) -> bool:
     urls = [u for u in (urls or []) if u]
     return bool(urls) and all(foto_onbereikbaar(u) for u in urls)
