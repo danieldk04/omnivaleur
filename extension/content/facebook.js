@@ -36,6 +36,22 @@
     'img[src*="fbcdn.net"]', 'img[src^="blob:"]',
   ].join(", ");
 
+  // Staat BOVEN `await getJob()`: lager bestond hij nog niet als fillForm draaide,
+  // en viel elke plaatsing met foto's om (20-09 tot 04-11-2026).
+  //
+  // FACEBOOK NEEMT ER MAXIMAAL TIEN.
+  //
+  // GEMETEN 20-09-2026 op het echte formulier (account van Daniel, NL): bied je
+  // er meer aan, dan weigert Facebook de hele selectie. Het formulier zegt
+  // "Foto's · 19 / 10 — je kunt maximaal 10 foto's toevoegen", zet er een
+  // waarschuwing bij ("Je kunt maximaal 10 foto's selecteren"), en de knop
+  // Volgende blijft daarna UITGESCHAKELD. Er is dan geen weg meer vooruit: die
+  // advertentie kán niet gepubliceerd worden, hoe lang je ook wacht.
+  //
+  // Wij boden er tot twintig aan. Van de 25 mislukte plaatsingen bij Blackbird
+  // Guitars hadden er 19 meer dan tien foto's (11 tot en met 20).
+  const FB_MAX_FOTOS = 10;
+
   const job = await getJob();
   if (!job) return;
   const { id: jobId, serverUrl, payload: item } = job;
@@ -325,19 +341,6 @@
     // broad category beats a job that dies right after uploading the photos.
     return ["Overig", "Other"];
   }
-
-  // FACEBOOK NEEMT ER MAXIMAAL TIEN.
-  //
-  // GEMETEN 20-09-2026 op het echte formulier (account van Daniel, NL): bied je
-  // er meer aan, dan weigert Facebook de hele selectie. Het formulier zegt
-  // "Foto's · 19 / 10 — je kunt maximaal 10 foto's toevoegen", zet er een
-  // waarschuwing bij ("Je kunt maximaal 10 foto's selecteren"), en de knop
-  // Volgende blijft daarna UITGESCHAKELD. Er is dan geen weg meer vooruit: die
-  // advertentie kán niet gepubliceerd worden, hoe lang je ook wacht.
-  //
-  // Wij boden er tot twintig aan. Van de 25 mislukte plaatsingen bij Blackbird
-  // Guitars hadden er 19 meer dan tien foto's (11 tot en met 20).
-  const FB_MAX_FOTOS = 10;
 
   async function fillForm(item) {
     // Photos first — FB's create form opens straight on the photo step.

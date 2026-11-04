@@ -174,17 +174,22 @@ def test_geen_hulpwaarden_na_de_hoofdstroom():
     midden in het publiceren. Alles wat de invulstappen gebruiken hoort dus bóven
     die regel te staan.
     """
-    regels = VINTED.split("\n")
-    na_job = next(i for i, r in enumerate(regels) if "const job = await getJob();" in r)
-    # Alles tot en met de `try {` draait nog vóór er iets ingevuld wordt; wat
-    # daarna komt, bestaat tijdens het invullen nog niet.
-    start = next(i for i, r in enumerate(regels[na_job:], na_job) if r.rstrip() == "  try {")
-    laat = [
-        (i + 1, r.strip())
-        for i, r in enumerate(regels[start:], start)
-        if re.match(r"  (const|let) [A-Za-z_$][\w$]*\s*=", r)
-    ]
-    assert not laat, "hulpwaarden staan na de hoofdstroom en bestaan dan nog niet: " + str(laat[:5])
+    # Elk kanaal, niet alleen Vinted: op 04-11-2026 bleek FB_MAX_FOTOS in
+    # facebook.js (elke plaatsing met foto's stuk sinds 20-09) en MP_AUDIO_* in
+    # marktplaats.js (Type en Wattage stil leeg sinds 27-08) hetzelfde gat.
+    facebook = (ROOT / "extension/content/facebook.js").read_text(encoding="utf-8")
+    for naam, bron in (("vinted", VINTED), ("marktplaats", MP), ("2dehands", TWEEDEHANDS), ("facebook", facebook)):
+        regels = bron.split("\n")
+        na_job = next(i for i, r in enumerate(regels) if "const job = await getJob();" in r)
+        # Alles tot en met de `try {` draait nog vóór er iets ingevuld wordt; wat
+        # daarna komt, bestaat tijdens het invullen nog niet.
+        start = next(i for i, r in enumerate(regels[na_job:], na_job) if r.rstrip() == "  try {")
+        laat = [
+            (i + 1, r.strip())
+            for i, r in enumerate(regels[start:], start)
+            if re.match(r"  (const|let) [A-Za-z_$][\w$]*\s*=", r)
+        ]
+        assert not laat, f"{naam}: hulpwaarden staan na de hoofdstroom en bestaan dan nog niet: " + str(laat[:5])
 
 
 # ─────────────────────────────────────────────────────────────────────────────

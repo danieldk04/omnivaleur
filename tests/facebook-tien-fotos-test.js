@@ -29,11 +29,13 @@ const NIEUW = fs.readFileSync(path.join(WORTEL, "extension/content/facebook.js")
 const OUD = execSync(`git show ${VOOR_DE_REPARATIE}:extension/content/facebook.js`, { cwd: WORTEL }).toString();
 
 function vulroutineUit(bron) {
-  const start = bron.indexOf("  const FB_MAX_FOTOS");
-  const vanaf = start >= 0 ? start : bron.indexOf("  async function fillForm(");
+  // FB_MAX_FOTOS staat sinds 04-11-2026 boven `await getJob()` (daaronder
+  // bestond hij nog niet als fillForm draaide); de grens dus los meenemen.
+  const grens = (bron.match(/^  const FB_MAX_FOTOS = .*$/m) || [""])[0];
+  const vanaf = bron.indexOf("  async function fillForm(");
   const eind = bron.indexOf("  // Click through FB's \"Next\" → \"Publish\"");
   if (vanaf < 0 || eind < 0) throw new Error("fillForm niet gevonden in facebook.js");
-  return bron.slice(vanaf, eind);
+  return grens + "\n" + bron.slice(vanaf, eind);
 }
 
 let mislukt = 0;
