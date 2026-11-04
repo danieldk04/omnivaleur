@@ -27,6 +27,7 @@ def _t(min_geleden):
 class _Vraag:
     def __init__(self, db, tabel):
         self.db, self.tabel, self.kolommen, self.filters = db, tabel, "", {}
+        self.volgorde, self.max = None, None
 
     def select(self, k):
         self.kolommen = k
@@ -48,15 +49,23 @@ class _Vraag:
         self.filters[k] = ("<=", v)
         return self
 
-    def order(self, *_a, **_k):
+    def order(self, kolom, desc=False):
+        # Zoals PostgREST: oplopend tenzij desc, en limit kapt daarna af.
+        self.volgorde = (kolom, desc)
         return self
 
-    def limit(self, *_a):
+    def limit(self, n):
+        self.max = n
         return self
 
     def execute(self):
         self.db.vragen.append((self.tabel, self.kolommen, dict(self.filters)))
         rijen = [r for r in self.db.rijen.get(self.tabel, []) if self._past(r)]
+        if self.volgorde:
+            kolom, desc = self.volgorde
+            rijen.sort(key=lambda r: r.get(kolom) or "", reverse=desc)
+        if self.max is not None:
+            rijen = rijen[:self.max]
         return type("A", (), {"data": rijen})()
 
     def _past(self, r):
@@ -126,6 +135,18 @@ def test_een_klantfout_wordt_een_ronde_die_de_starter_oppakt(kast):
     ronde = next(iter(sig.values()))
     assert len(ronde["sleutels"]) == 1          # zelfde fout, ander nummer: één soort
     assert S._te_doen(sig, {}) and "Delete control" in S.opdracht(*next(iter(sig.items())))
+
+
+def test_een_nieuwe_fout_valt_niet_weg_achter_een_berg_oude(kast):
+    """04-11-2026: 500 afgeblazen opdrachten van Goudlief vulden de leeslimiet,
+    en de Facebook-fout van een andere klant drie uur later bleef onzichtbaar.
+    De nieuwste fouten moeten altijd binnen de limiet vallen."""
+    oud = [_fout(f"g{i}", uid="goudlief-1", fout="stond meer dan 3 dagen te wachten",
+                 platform="2dehands", action="create", min_geleden=600) for i in range(450)]
+    nieuw = _fout("fb1", uid="klant-2", fout="ReferenceError: Cannot access 'FB_MAX_FOTOS'",
+                  platform="facebook", action="create", min_geleden=30)
+    soorten = K.meet(NepDb(oud + [nieuw]), NU)
+    assert any("FB_MAX_FOTOS" in s["wat"] for s in soorten.values()), list(soorten)
 
 
 def test_result_wordt_alleen_per_klant_gelezen(kast):

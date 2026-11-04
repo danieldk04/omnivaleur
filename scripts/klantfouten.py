@@ -96,9 +96,12 @@ def meet(db=None, nu: datetime | None = None) -> dict:
     grens = (nu - timedelta(hours=VENSTER_UUR)).isoformat()
     soorten: dict = {}
 
+    # Nieuwste eerst: een berg oude fouten (Goudlief, 500 afgeblazen opdrachten
+    # op 04-11-2026) mag een verse fout van een andere klant nooit wegdrukken.
+    # Lichte kolommen, dus 1000 rijen kan; de server levert er nooit meer.
     fouten = (db.table("jobs").select("id,user_id,platform,action,done_at")
               .eq("status", "error").gte("done_at", grens)
-              .order("done_at").limit(400).execute().data or [])
+              .order("done_at", desc=True).limit(1000).execute().data or [])
     per_klant: dict = {}
     for j in fouten:
         per_klant.setdefault(j["user_id"], []).append(j)

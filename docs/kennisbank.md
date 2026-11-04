@@ -17,6 +17,43 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## extensie-const-na-await-valstrik
+
+*04-11-2026 — "In de content-scripts moet elke const/let bóven `await getJob()` staan, anders valt de invulstap stil om"*
+
+De content-scripts van de extensie (o.a. `extension/content/vinted.js`) zijn één
+grote async functie. Zodra de code bij `const job = await getJob();` wacht, zijn
+de regels daarónder nog niet uitgevoerd. Een `const` die verderop staat bestaat op
+dat moment dus niet, en elke functie die hem gebruikt stopt met een harde fout op
+het moment dat hij aangeroepen wordt.
+
+**Dit is al zes keer misgegaan** (de zesde, 04-11-2026: `FB_MAX_FOTOS` in facebook.js, elke Facebook-plaatsing met foto's stuk van 20-09 tot 04-11, en `MP_AUDIO_*` in marktplaats.js, Type/Wattage stil leeg sinds 27-08; de bewaakproef keek alleen naar vinted.js en dekt sinds 1.0.416 alle kanalen, plus `tests/extensie-const-na-await-echt-test.js` die de echte bestanden in Node draait) (de vijfde: `HOOFDLETTER_KLACHT_RE`, 10-10 tot 12-10-2026, extensie 1.0.384): de kleurstap, de categoriekeuze (`V_KLEDING`),
+de prijscontrole (`PRICE_ERR_RE`) en op 27-08-2026 `BLAD_VOORKEUR`/`enkelvoud`.
+
+Wat het zo verraderlijk maakt: `step()` in `extension/content/shared.js` vangt de
+fout op, logt "stap X: FOUT" en gaat gewoon door. Het publiceren stopt dus niet —
+de advertentie gaat zonder categorie de deur uit. Je ziet geen crash, alleen een
+advertentie die niet klopt.
+
+**Een rode bewakingsproef is nooit "bestaand rood".** Op 11-10-2026 stond
+`test_geen_hulpwaarden_na_de_hoofdstroom` rood en werd weggezet als "ook zonder deze
+wijziging rood"; een dag later kreeg een klant precies die fout. Rood op de proef
+die deze valstrik bewaakt = eerst repareren. Een sandboxproef die stukken los uit
+vinted.js knipt ziet de volgorde niet; toets die apart.
+
+**Hoe toe te passen:**
+- Nieuwe hulpwaarden altijd boven `const job = await getJob();` zetten, bij de
+  andere constanten. Er staat een waarschuwingsblok in vinted.js op die plek.
+- `tests/test_vinted_categories.py::test_geen_hulpwaarden_na_de_hoofdstroom`
+  bewaakt dit. Die test faalde maandenlang zonder dat iemand keek — zie
+  "eerst-recente-wijzigingen-lezen".
+- Elke wijziging in `extension/` vereist een versiebump, zie
+  "extension-release-bump-version".
+
+**Weer gebeurd, 16-10-2026 (1.0.390/391).** `_catEn`, `_kaalCat`, `KIND_KLEDING`, `KIND_VOORKEUR` stonden na `await getJob()`: de Vinted-categoriestap faalde bij elke plaatsing ("Cannot access '_catEn' before initialization") en Vinted koos zelf uit de foto. De bewaakproef `tests/test_vinted_categories.py::test_geen_hulpwaarden_na_de_hoofdstroom` stond ROOD en is toch uitgebracht; de node-harnassen (blokUit/regio) knippen blokken los en zien dit nooit. Draai vóór elke extensie-uitgave die pytest-proef, en meet het liefst met de echte code op de echte pagina, zie "echte-extensiecode-op-vinted-draaien".
+
+---
+
 ## bevestigingsmail-door-spamfilter-geweigerd
 
 *03-11-2026 — 03-11: Mittwald weigerde de Supabase/Resend-bevestigingsmail 3x als spam; klant kon niet in. Herkennen via mail_events, oplossen met hand-bevestiging plus Zoho-mail*
@@ -881,43 +918,6 @@ Methode (16-10-2026, Toon): in Daniels Chrome (Claude in Chrome) op vinted.nl/it
 Valkuilen: de achtergrond-`setTimeout` niet stilzetten (dan antwoorden de _mw-functies nooit); het pakketformaat komt van een POST naar shipping-estimation (blokkeer je die, dan lijkt de extensie het formaat te vergeten); Vinted kiest tijdens het uploaden zelf al een rubriek uit de foto's. Opruimen: localStorage-sleutels weg, tabblad dicht. Nooit zonder Daniels ja op Toevoegen drukken.
 
 Zie "extensie-const-na-await-valstrik" en "vinted-woontextiel-maat-in-cm".
-
----
-
-## extensie-const-na-await-valstrik
-
-*16-10-2026 — "In de content-scripts moet elke const/let bóven `await getJob()` staan, anders valt de invulstap stil om"*
-
-De content-scripts van de extensie (o.a. `extension/content/vinted.js`) zijn één
-grote async functie. Zodra de code bij `const job = await getJob();` wacht, zijn
-de regels daarónder nog niet uitgevoerd. Een `const` die verderop staat bestaat op
-dat moment dus niet, en elke functie die hem gebruikt stopt met een harde fout op
-het moment dat hij aangeroepen wordt.
-
-**Dit is al vijf keer misgegaan** (de vijfde: `HOOFDLETTER_KLACHT_RE`, 10-10 tot 12-10-2026, extensie 1.0.384): de kleurstap, de categoriekeuze (`V_KLEDING`),
-de prijscontrole (`PRICE_ERR_RE`) en op 27-08-2026 `BLAD_VOORKEUR`/`enkelvoud`.
-
-Wat het zo verraderlijk maakt: `step()` in `extension/content/shared.js` vangt de
-fout op, logt "stap X: FOUT" en gaat gewoon door. Het publiceren stopt dus niet —
-de advertentie gaat zonder categorie de deur uit. Je ziet geen crash, alleen een
-advertentie die niet klopt.
-
-**Een rode bewakingsproef is nooit "bestaand rood".** Op 11-10-2026 stond
-`test_geen_hulpwaarden_na_de_hoofdstroom` rood en werd weggezet als "ook zonder deze
-wijziging rood"; een dag later kreeg een klant precies die fout. Rood op de proef
-die deze valstrik bewaakt = eerst repareren. Een sandboxproef die stukken los uit
-vinted.js knipt ziet de volgorde niet; toets die apart.
-
-**Hoe toe te passen:**
-- Nieuwe hulpwaarden altijd boven `const job = await getJob();` zetten, bij de
-  andere constanten. Er staat een waarschuwingsblok in vinted.js op die plek.
-- `tests/test_vinted_categories.py::test_geen_hulpwaarden_na_de_hoofdstroom`
-  bewaakt dit. Die test faalde maandenlang zonder dat iemand keek — zie
-  "eerst-recente-wijzigingen-lezen".
-- Elke wijziging in `extension/` vereist een versiebump, zie
-  "extension-release-bump-version".
-
-**Weer gebeurd, 16-10-2026 (1.0.390/391).** `_catEn`, `_kaalCat`, `KIND_KLEDING`, `KIND_VOORKEUR` stonden na `await getJob()`: de Vinted-categoriestap faalde bij elke plaatsing ("Cannot access '_catEn' before initialization") en Vinted koos zelf uit de foto. De bewaakproef `tests/test_vinted_categories.py::test_geen_hulpwaarden_na_de_hoofdstroom` stond ROOD en is toch uitgebracht; de node-harnassen (blokUit/regio) knippen blokken los en zien dit nooit. Draai vóór elke extensie-uitgave die pytest-proef, en meet het liefst met de echte code op de echte pagina, zie "echte-extensiecode-op-vinted-draaien".
 
 ---
 
