@@ -908,7 +908,7 @@
       "pillar": "B",
       "format": "strategy",
       "slug": "how-to-calculate-sell-through-rate-for-reselling",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "doorloopsnelheid-berekenen-tweedehands-verkoop",
       "priority": 103
     },
@@ -1869,6 +1869,16 @@
       "action": "created",
       "url_path": "/reseller-tools/return-rights-on-second-hand-sales-netherlands",
       "published_at": "2026-11-02T17:39:30.342257+00:00"
+    },
+    {
+      "keyword": "how to calculate sell through rate for reselling",
+      "slug": "how-to-calculate-sell-through-rate-for-reselling",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-calculate-sell-through-rate-for-reselling",
+      "published_at": "2026-11-04T15:56:16.782098+00:00"
     }
   ]
 }
