@@ -918,7 +918,7 @@
       "pillar": "A",
       "format": "combo",
       "slug": "woocommerce-to-marktplaats-crosslisting",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "woocommerce-naar-marktplaats-koppelen",
       "priority": 104
     }
@@ -1879,6 +1879,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-calculate-sell-through-rate-for-reselling",
       "published_at": "2026-11-04T15:56:16.782098+00:00"
+    },
+    {
+      "keyword": "woocommerce to marktplaats crosslisting",
+      "slug": "woocommerce-to-marktplaats-crosslisting",
+      "region": "nl",
+      "pillar": "A",
+      "format": "combo",
+      "action": "created",
+      "url_path": "/crosslisting/woocommerce-to-marktplaats-crosslisting",
+      "published_at": "2026-11-05T16:01:05.193350+00:00"
     }
   ]
 }
