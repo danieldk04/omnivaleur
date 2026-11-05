@@ -123,7 +123,7 @@ def test_voor_de_wijziging_was_2dehands_unsupported():
 def test_ondergrenzen():
     from backend.api.jobs import MINIMALE_2DH_BIJWERK_VERSIE, MINIMALE_2DH_PRIJS_VERSIE
     assert MINIMALE_2DH_BIJWERK_VERSIE == (1, 0, 354)   # verzendkosten blijven kunnen
-    assert MINIMALE_2DH_PRIJS_VERSIE == (1, 0, 412)
+    assert MINIMALE_2DH_PRIJS_VERSIE == (1, 0, 417)
 
 
 def test_prijs_gaat_ook_naar_marktplaats():

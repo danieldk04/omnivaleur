@@ -128,7 +128,9 @@
     if (!item || !item._prijs_bijwerken || !isFinite(gewild) || gewild <= 0) {
       throw new Error("This 2dehands update carries no valid price to set, so nothing was changed.");
     }
-    const veld = await waitUntil(() => qs('input[name="price.value"]'), 20000);
+    // waitUntil geeft true of false, nooit het veld zelf: pak het daarna op.
+    await waitUntil(() => qs('input[name="price.value"]'), 20000);
+    const veld = qs('input[name="price.value"]');
     if (!veld) {
       throw new Error("The 2dehands edit form shows no price field (a listing without an asking price), "
         + "so nothing was changed.");

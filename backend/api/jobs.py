@@ -87,8 +87,10 @@ MINIMALE_2DH_BIJWERK_VERSIE = (1, 0, 354)
 # 2dehands (_prijs_bijwerken). Dat kan pas vanaf 1.0.412: een oudere kopie kent
 # alleen de verzendkosten, meldt "geen verzendbedrag" als fout en zet daarmee de
 # noodrem voor al het 2dehands-bijwerkwerk van die verkoper dicht. Het werk
-# blijft 'pending' tot een bijgewerkte kopie polt.
-MINIMALE_2DH_PRIJS_VERSIE = (1, 0, 412)
+# blijft 'pending' tot een bijgewerkte kopie polt. Opgehoogd naar 1.0.417 op
+# 05-11-2026: tot en met 1.0.416 viel elke prijswijziging om (waitUntil geeft true,
+# niet het veld), dus die opdrachten wachten nu op de reparatie.
+MINIMALE_2DH_PRIJS_VERSIE = (1, 0, 417)
 # Een Vinted-plaatsing gaat alleen naar 1.0.386 of nieuwer (15-10-2026, Janneke
 # 31d28378 en Amanda). Daaronder wacht de prijsstap op Chrome 128 zonder grens
 # of geeft hij het na 20 s op; gemeten duurt de eerste prijsvraag daar 12 tot

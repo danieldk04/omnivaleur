@@ -17,6 +17,46 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## waituntil-geeft-boolean
+
+*05-11-2026 — 05-11: elke prijswijziging naar Marktplaats/2dehands viel om (7 van 7) omdat waitUntil true geeft en niet het veld; de proef bouwde waitUntil verkeerd na*
+
+`waitUntil` in extension/content/shared.js geeft true of false, nooit het gevonden element. De prijswijziging van 02-11 (125c0e99, 1.0.412) schreef `const veld = await waitUntil(() => qs(...))`, dus veld was `true`. Met bieden aan: "current price/minimum bid could not be read ("undefined" / ...)"; zonder bieden: "TypeError: el.dispatchEvent is not a function". In productie 0 prijswijzigingen gelukt, 7 van 7 fout (8f91a370, Toon). Gerepareerd in 1.0.417; de ondergrens MINIMALE_2DH_PRIJS_VERSIE staat nu op 1.0.417.
+
+**Why:** de proef tests/2dehands-prijs-bijwerken-test.js had een nagebouwde waitUntil die het veld WEL teruggaf, dus groen terwijl de echte code stuk was. De "live bewezen"-regel van 02-11 dekte de echte extensieroute niet.
+**How to apply:** element ophalen NA het wachten. Een nabouw in een proef volgt de echte functie, ook in de teruggeefwaarde; zie "extensie-stempel-test-loopt-achter-op-het-scherm". Een nieuwe opdrachtsoort: meet de eerste dagen of er echt iets op "done" komt per soort. 96 "done" op content_refresh waren allemaal verzendkosten en verborgen dat de prijsopdrachten er 0 hadden. Een "shows no price field" is echt bij FAST_BID (Bieden); m2441758348 met MIN_BID en prijs 44,99 gaf hem ook, dat is nog onbewezen.
+
+---
+
+## admarkt-foto-intern-adres
+
+*04-11-2026 — "31-10 Egbert: 7 Admarkt-advertenties zonder foto, scan nam intern adres dmz.mp.prod.icas.io (10.37.x.x) over; herscan vervangt, extensiecheck op Vinted-orders poort"*
+
+31-10-2026, Egbert Brouwer (bcdf9aa4): "de laatste 7 advertenties van Marktplaats zonder afbeeldingen".
+Oorzaak aangetoond: de Admarkt-scan (`ad.getAds`) pakte voor een foto zonder verwerkte maten `i.src`,
+`https://dmz.mp.prod.icas.io/api/sellside/image/<hex>/<uuid>`. Die naam wijst naar 10.37.x.x: voor server,
+dashboard en extensie onbereikbaar. Het is ook geen bekende Marktplaats-fotoserver in
+`relist._KANAAL_FOTOSERVERS`, dus pakte `mp_fotos_inhalen` ze nooit op. Het afgeleide openbare CDN-adres
+(`admarkt-cdn.marktplaats.com/.../images/<eerste 2 tekens>/<uuid>`) gaf 404 voor deze uuid's, en Admarkt-nummers
+hebben geen openbare pagina (marktplaats.nl/<nummer> geeft 404): de foto's zijn alleen via zijn Admarkt-sessie te krijgen.
+
+Gebouwd: `foto_onbereikbaar` in backend/api/imports.py; `_photos_from_candidate` laat het adres weg;
+`_backfill_patch` vervangt een fotolijst die alleen uit zulke adressen bestaat; `bekende_ids` van de scan laat
+die advertenties weg zodat de extensie ze opnieuw leest; extensie 1.0.410 kiest de grootste beschikbare maat
+en slaat nooit het interne `src` op. NIET gemeten: of Marktplaats voor die 7 nu wel verwerkte foto's geeft.
+
+Zelfde sessie: `checkVintedOrders` (wekker sold-check, 10 min) opende elke keer vinted.nl/my_orders, ook zonder
+Vinted-artikelen; nu poort via `/api/listings/?platform=vinted`. De uurlijkse `vinted-auto-scan` belt een adres
+dat niet bestaat (405) en is dus bij iedereen stil; bewust niet hersteld.
+
+**Why:** een foto-adres dat nergens bereikbaar is, is erger dan geen foto: niets herstelt het vanzelf.
+**How to apply:** nieuwe fotobron eerst op bereikbaarheid van buiten testen (nslookup + curl), en controleer of de
+inhaalronde de host kent. Zie "klantdata-niet-op-eigen-initiatief" voor het herscan-principe.
+
+**Vervolg 04-11 (Egbert, 4 artikelen nog leeg):** mijn eigen reparatie liet lege kandidaten in 'ken ik al' staan (extensie bewaart het interne adres niet meer, dus photo_url leeg). Nu `ids_zonder_bruikbare_foto` (leeg, null of intern). Bewijs dat herscan werkt: de 7 van 30-10 kregen op 01-11 10:04 hun foto's. Les: een reparatie die iets weglaat moet nagaan of het weggelaten ding nog in een lijst 'dit ken ik' valt.
+
+---
+
 ## extensie-const-na-await-valstrik
 
 *04-11-2026 — "In de content-scripts moet elke const/let bóven `await getJob()` staan, anders valt de invulstap stil om"*
@@ -216,33 +256,6 @@ Daniel 01-11-2026: de bunq-export (CSV in Downloads) is leidend voor wat Omnival
 
 **Why:** de maandronde las alleen dienstpagina's en miste Google Cloud (betaald), CapCut, ElevenLabs en Google One; het totaal stond op EUR 56 terwijl het ±EUR 84 was.
 **How to apply:** volg het kopje "bunq-export is leidend" in docs/routines/kosten-bijhouden.md. Anthropic-tegoed niet automatisch bijladen; sleutels nexus-trading-bot en blogs-zenbtw horen bij andere projecten en tellen niet mee. CSV nooit in git.
-
----
-
-## admarkt-foto-intern-adres
-
-*31-10-2026 — "31-10 Egbert: 7 Admarkt-advertenties zonder foto, scan nam intern adres dmz.mp.prod.icas.io (10.37.x.x) over; herscan vervangt, extensiecheck op Vinted-orders poort"*
-
-31-10-2026, Egbert Brouwer (bcdf9aa4): "de laatste 7 advertenties van Marktplaats zonder afbeeldingen".
-Oorzaak aangetoond: de Admarkt-scan (`ad.getAds`) pakte voor een foto zonder verwerkte maten `i.src`,
-`https://dmz.mp.prod.icas.io/api/sellside/image/<hex>/<uuid>`. Die naam wijst naar 10.37.x.x: voor server,
-dashboard en extensie onbereikbaar. Het is ook geen bekende Marktplaats-fotoserver in
-`relist._KANAAL_FOTOSERVERS`, dus pakte `mp_fotos_inhalen` ze nooit op. Het afgeleide openbare CDN-adres
-(`admarkt-cdn.marktplaats.com/.../images/<eerste 2 tekens>/<uuid>`) gaf 404 voor deze uuid's, en Admarkt-nummers
-hebben geen openbare pagina (marktplaats.nl/<nummer> geeft 404): de foto's zijn alleen via zijn Admarkt-sessie te krijgen.
-
-Gebouwd: `foto_onbereikbaar` in backend/api/imports.py; `_photos_from_candidate` laat het adres weg;
-`_backfill_patch` vervangt een fotolijst die alleen uit zulke adressen bestaat; `bekende_ids` van de scan laat
-die advertenties weg zodat de extensie ze opnieuw leest; extensie 1.0.410 kiest de grootste beschikbare maat
-en slaat nooit het interne `src` op. NIET gemeten: of Marktplaats voor die 7 nu wel verwerkte foto's geeft.
-
-Zelfde sessie: `checkVintedOrders` (wekker sold-check, 10 min) opende elke keer vinted.nl/my_orders, ook zonder
-Vinted-artikelen; nu poort via `/api/listings/?platform=vinted`. De uurlijkse `vinted-auto-scan` belt een adres
-dat niet bestaat (405) en is dus bij iedereen stil; bewust niet hersteld.
-
-**Why:** een foto-adres dat nergens bereikbaar is, is erger dan geen foto: niets herstelt het vanzelf.
-**How to apply:** nieuwe fotobron eerst op bereikbaarheid van buiten testen (nslookup + curl), en controleer of de
-inhaalronde de host kent. Zie "klantdata-niet-op-eigen-initiatief" voor het herscan-principe.
 
 ---
 

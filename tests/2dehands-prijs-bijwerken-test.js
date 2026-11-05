@@ -23,6 +23,7 @@ const vm = require("vm");
 
 const WORTEL = path.join(__dirname, "..");
 const VOOR = "f53be0d3";
+const FOUT_0511 = "c17c3c45"; // extensie 1.0.416
 
 let mislukt = 0;
 function check(naam, voorwaarde, uitleg) {
@@ -57,10 +58,13 @@ async function draai(commit, { job, prijs = "34,99", bod = "24,49", bieden = tru
   const CL = new Proxy({
     clog: () => {}, qs, sleep: async () => {},
     step: async (_n, fn) => { try { await fn(); } catch (_) {} },
-    waitUntil: async (v) => { try { return v() || false; } catch (_) { return false; } },
+    // Zoals de echte waitUntil in shared.js: true of false, nooit het veld zelf.
+    // Deze nabouw gaf eerst het veld terug, en zo zag de proef op 02-11-2026 niet
+    // dat elke prijswijziging bij klanten omviel (7 van 7, 05-11-2026).
+    waitUntil: async (v) => { try { return !!v(); } catch (_) { return false; } },
     centenUitTekst: cent,
     mpPrijs: (w, el) => Number(w).toFixed(2).replace(".", ","),
-    fillInputHuman: async (el, w) => { if (!veldNeemtNietAan) el.value = w; },
+    fillInputHuman: async (el, w) => { if (typeof el !== "object") throw new TypeError("el.dispatchEvent is not a function"); if (!veldNeemtNietAan) el.value = w; },
     // dezelfde som als fillBidding in shared.js
     fillBidding: async (p, pct) => {
       const min = Math.round(p * pct / 100 * 100) / 100;
@@ -117,6 +121,16 @@ async function proef() {
 
   r = await draai(null, { job: opdracht(40), bod: "geen getal" });
   check("onleesbaar minimumbod: niets aangeraakt", klik(r) === 0 && fout(r) && r.prijs === "34,99");
+
+  // De echte waitUntil moet een boolean blijven, anders klopt de nabouw hierboven niet.
+  check("nabouw volgt shared.js: waitUntil geeft een boolean",
+    /const check = \(\) => \{ try \{ return !!voorwaarde\(\);/.test(lees("extension/content/shared.js")));
+
+  // Voor-en-na van 05-11-2026: de versie die bij klanten omviel.
+  r = await draai(FOUT_0511, { job: opdracht(40) });
+  check("1.0.416 met bieden: valt om op een onleesbare prijs", klik(r) === 0 && fout(r), `prijs ${r.prijs}`);
+  r = await draai(FOUT_0511, { job: opdracht(29.5), bieden: false });
+  check("1.0.416 zonder bieden: valt om op dispatchEvent", klik(r) === 0 && fout(r), `prijs ${r.prijs}`);
 
   // Voor-en-na: de oude code kende alleen verzendkosten.
   r = await draai(VOOR, { job: opdracht(40) });

@@ -470,7 +470,7 @@ def test_zonder_bewijs_blijft_het_een_mislukking(monkeypatch, pagina, code):
 
 
 # ── Prijs bijwerken (02-11-2026, Toon) ──────────────────────────────────────
-# Een prijsopdracht gaat alleen naar 1.0.412 of nieuwer. Een oudere kopie kent
+# Een prijsopdracht gaat alleen naar 1.0.417 of nieuwer (tot en met 1.0.416 viel elke prijswijziging om, 05-11-2026). Een oudere kopie kent
 # alleen de verzendkosten, zou een fout melden en zo de noodrem voor al het
 # 2dehands-bijwerkwerk van die verkoper dichtzetten.
 def _prijsopdracht():
@@ -480,9 +480,9 @@ def _prijsopdracht():
 
 
 @pytest.mark.parametrize("versie,uitgedeeld", [
-    ("1.0.354", False), ("1.0.411", False), ("1.0.412", True),
+    ("1.0.354", False), ("1.0.416", False), ("1.0.417", True),
 ])
-def test_prijsopdracht_alleen_naar_1_0_412(monkeypatch, versie, uitgedeeld):
+def test_prijsopdracht_alleen_naar_1_0_417(monkeypatch, versie, uitgedeeld):
     uit = _uitgifte(monkeypatch, _db([_prijsopdracht()]), versie)
     assert bool(uit) == uitgedeeld, f"{versie}: {uit}"
     if uitgedeeld:
@@ -493,8 +493,8 @@ def test_verzendopdracht_blijft_naar_1_0_354(monkeypatch):
     assert len(_uitgifte(monkeypatch, _db([_bijwerking()]), "1.0.354")) == 1
 
 
-def test_marktplaats_prijsopdracht_alleen_naar_1_0_412(monkeypatch):
+def test_marktplaats_prijsopdracht_alleen_naar_1_0_417(monkeypatch):
     j = _prijsopdracht()
     j["platform"] = "marktplaats"
-    assert _uitgifte(monkeypatch, _db([j]), "1.0.411", platform="marktplaats") == []
-    assert len(_uitgifte(monkeypatch, _db([j]), "1.0.412", platform="marktplaats")) == 1
+    assert _uitgifte(monkeypatch, _db([j]), "1.0.416", platform="marktplaats") == []
+    assert len(_uitgifte(monkeypatch, _db([j]), "1.0.417", platform="marktplaats")) == 1
