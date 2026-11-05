@@ -18747,3 +18747,8 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 - Klant-eigen: Toon "Gratis" op 2dehands (artikel stond op prijsvorm FREE met prijs 95, zelf rechtgezet 12:02, daarna geplaatst); f8c0cce9 uitgelogd op 2dehands en Vinted; 09e089ec Vinted-scan uitgelogd; bcdf9aa4 twee verlengingen van weg-zijnde advertenties; 26cf5471 tabblad dicht, één Marktplaats-plaatsing geclaimd sinds Chrome stilviel; Amanda (0b28c1ce, extensie stil sinds 03-11, 168 wachtend) en 7c0700e4 (198 wachtend, stil sinds 30-10, proef tot 06-11) lopen de veger in; da176583 en 45f9caba proef verlopen.
 - Vorige ronde: Facebook-fout niet teruggezien (1.0.416 staat in de Web Store, 8 klanten erop). Vinted verwijderen vandaag geen fouten.
 - Niet gemeten: fouten die alleen in de browser van de klant staan; Railway-log (geen CLI hier).
+
+## 05-11-2026 (avond): Daniel: "doe wat je aanraad" (prijswijzigingen en Goudlief)
+- 6 mislukte prijswijzigingen opnieuw klaargezet (8f91a370 5x, Toon 1x); ze wachten op extensie 1.0.417. De zevende (m2440090118) is echt Bieden zonder prijs, overgeslagen.
+- Veger aangepast: plaatsen en verlengen worden niet meer afgeblazen zolang er op dat kanaal de afgelopen 3 dagen iets lukte, met een bovengrens van 14 dagen. 3 dagen niets gelukt blijft een storing. Prijswijzigingen wachten tot 21 dagen op de extensie-update. Reden: Goudlief plaatste 320 per kanaal op 04-11 terwijl de veger 500 per ronde afblies. Proef tests/test_veger_lopende_reeks.py, oude code valt erop om.
+- Niet teruggezet: wat al is afgeblazen. Besluit van Daniel.

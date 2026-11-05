@@ -327,7 +327,7 @@ def test_de_driedagenveger_laat_een_wachtende_bijwerking_staan(monkeypatch):
 
     class _V:
         def __init__(self, t):
-            self.t, self.velden, self.id = t, None, None
+            self.t, self.velden, self.id, self.status = t, None, None, None
 
         def update(self, v):
             self.velden = v
@@ -336,6 +336,8 @@ def test_de_driedagenveger_laat_een_wachtende_bijwerking_staan(monkeypatch):
         def eq(self, k, v):
             if k == "id":
                 self.id = v
+            if k == "status":
+                self.status = v
             return self
 
         def __getattr__(self, _n):
@@ -345,7 +347,7 @@ def test_de_driedagenveger_laat_een_wachtende_bijwerking_staan(monkeypatch):
             if self.velden is not None:
                 gewijzigd[self.id] = self.velden
                 return type("R", (), {"data": []})()
-            return type("R", (), {"data": list(banen) if self.t == "jobs" else []})()
+            return type("R", (), {"data": [b for b in banen if self.status is None] if self.t == "jobs" else []})()
 
     db = type("Db", (), {"table": lambda self, n: _V(n)})()
     monkeypatch.setattr(rl, "get_db", lambda: db)

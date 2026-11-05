@@ -48,6 +48,7 @@ class _Q:
     def eq(self, k, v): self.filters[k] = v; return self
     def in_(self, k, v): self.ins[k] = list(v); return self
     def lt(self, k, v): self.lt_ = (k, v); return self
+    def gt(self, *_a): return self
     def gte(self, k, v): self.gte_ = (k, v); return self
     def lte(self, k, v): self.lte_ = (k, v); return self
     def order(self, *_a, desc=False, **_k): self.desc = desc; return self

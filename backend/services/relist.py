@@ -143,6 +143,13 @@ CONTENT_PRICE_JITTER_PCT = 0.02  # +/-2% nudge, rounded to a sane price
 # is dus geen drukte meer maar een storing.
 VASTGELOPEN_NA_DAGEN = 3
 
+# EEN GROTE REEKS DIE GEWOON LOOPT IS GEEN STORING (05-11-2026, Goudlief). Zij zette
+# op 31-10 duizenden plaatsingen klaar; de wachtrij deed er 50 tot 320 per kanaal per
+# dag, en de veger blies na drie dagen 500 per ronde af terwijl haar extensie gewoon
+# werkte. Plaatsen en verlengen wachten daarom zolang er op dat kanaal de afgelopen
+# drie dagen nog iets lukte, met dit als bovengrens.
+LOPENDE_REEKS_MAX_DAGEN = 14
+
 # HOE LANG "DE EXTENSIE DRAAIT" NOG WAAR IS.
 #
 # Elke ronde langs de wachtrij stempelt extension_heartbeat.last_seen. Is die
@@ -229,6 +236,47 @@ def _tijd(waarde) -> datetime | None:
     except ValueError:
         return None
     return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
+
+
+def _reeks_loopt_nog(db, user_id: str, platform: str, sinds: str) -> bool:
+    return bool(db.table("jobs").select("id").eq("user_id", user_id).eq("platform", platform)
+                .eq("status", "done").gte("done_at", sinds).limit(1).execute().data)
+
+
+def _oude_banen(db, grens: str, nu: datetime, limiet: int = 500) -> list:
+    """Wat de veger deze ronde mag oppakken, zonder banen van een lopende reeks.
+
+    Eerst alleen de lichte kolommen, op volgorde: anders vullen 1.000 wachtende
+    plaatsingen van een klant de hele ronde en komt niemand anders meer aan de beurt.
+    """
+    hard = (nu - timedelta(days=LOPENDE_REEKS_MAX_DAGEN)).isoformat()
+    loopt: dict = {}
+    ids: list = []
+    vanaf = None
+    for _ in range(10):
+        vraag = (db.table("jobs").select("id,user_id,platform,action,created_at")
+                 .in_("status", ["pending", "claimed"]).lt("created_at", grens)
+                 .order("created_at").limit(1000))
+        if vanaf:
+            vraag = vraag.gt("created_at", vanaf)
+        rijen = vraag.execute().data or []
+        for r in rijen:
+            if r.get("action") in ("create", "extend") and (r.get("created_at") or "") > hard:
+                k = (r.get("user_id"), r.get("platform"))
+                if k not in loopt:
+                    loopt[k] = _reeks_loopt_nog(db, k[0], k[1], grens)
+                if loopt[k]:
+                    continue
+            ids.append(r["id"])
+        if len(ids) >= limiet or len(rijen) < 1000:
+            break
+        vanaf = rijen[-1]["created_at"]
+    ids = ids[:limiet]
+    banen: list = []
+    for i in range(0, len(ids), 100):
+        banen += (db.table("jobs").select("id,user_id,item_id,platform,action,created_at,payload")
+                  .in_("id", ids[i:i + 100]).execute().data or [])
+    return banen
 
 
 async def herstel_vastgelopen_werk() -> dict:
@@ -376,10 +424,7 @@ async def herstel_vastgelopen_werk() -> dict:
 
     # Werk dat al dagen stilstaat hoort zichtbaar te worden.
     try:
-        oud = ((await naast_de_lus(lambda: db.table("jobs")
-               .select("id,user_id,item_id,platform,action,created_at,payload")
-               .in_("status", ["pending", "claimed"])
-               .lt("created_at", grens).limit(500).execute())).data or [])
+        oud = await naast_de_lus(lambda: _oude_banen(db, grens, datetime.now(timezone.utc)))
         # De banen die we hierboven zojuist zelf hebben ingepland zijn van
         # vandaag en vallen dus per definitie buiten deze grens.
         #
@@ -432,6 +477,11 @@ async def herstel_vastgelopen_werk() -> dict:
                     "result": {"note": "De extensie werd in drie weken niet bijgewerkt; "
                                        "verzendkosten op 2dehands niet omgezet."},
                 }).eq("id", baan["id"]).execute()))
+                continue
+            # Een prijswijziging wacht op dezelfde manier op een extensie-update
+            # (MINIMALE_2DH_PRIJS_VERSIE); de advertentie staat gewoon online.
+            if (baan.get("action") == "content_refresh" and pl_baan.get("_prijs_bijwerken")
+                    and (baan.get("created_at") or "") > (datetime.now(timezone.utc) - timedelta(days=21)).isoformat()):
                 continue
             # De reden hoort in 'result'. De tabel heeft geen 'error'-kolom, en
             # daarop schrijven laat deze hele opruimronde stilletjes mislukken.
