@@ -2536,6 +2536,19 @@ def _staat_alternatieven(gebruikt: str) -> list[str]:
                   key=lambda n: abs(_GEBRUIKT_LADDER.index(n) - i))
 
 
+_BESCHIKBAARHEID_WACHT = (3, 8, 15)     # seconden tussen de pogingen
+
+
+def _is_beschikbaarheidsfout(resp: httpx.Response) -> bool:
+    """eBay ziet de voorraad van het net gezette inventarisitem nog niet."""
+    try:
+        return any("availability not found" in
+                   ((e.get("message") or "") + (e.get("longMessage") or "")).lower()
+                   for e in (resp.json().get("errors") or []))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def _is_staatfout(resp: httpx.Response) -> bool:
     """25021: de staat past niet bij de rubriek. Alleen de tekst is betrouwbaar genoeg
     om aan te leunen (het ID is niet uit eBay's documentatie bevestigd)."""
