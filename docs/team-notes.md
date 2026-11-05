@@ -18729,3 +18729,8 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 
 ## 04-11-2026: Platformcontrole (tweede poging, Chrome weer verbonden)
 - Vinted 7 van 7 proefartikelen (kinderschoenen, meisjesjas, sneakers dames, heren shirt, baby meisjes, kookboek, jongens trui) en Marktplaats waterkokers, waterontharders, weegschalen plus 2dehands waterkokers: geen afwijking. Alleen de bekende artefacten (kookboek zonder maat en kleur, beschrijving in de proef, geen kleur/merk/halswijdte in die witgoedrubrieken). Eerste Marktplaats-uitslag bewaard; vergelijking met eerdere dagen niet 1 op 1 mogelijk door andere artikelnamen.
+
+## 05-11-2026: Onboarding nieuwe klanten (ochtend)
+- Late ronde (15:38 lokaal). 4 accounts in hun eerste week, geen nieuwe, geen creator. Web Store levert nu 1.0.416 (Daniel uploadde de Facebook-reparatie).
+- Niets veranderd sinds 04-11: momme (e6f4a9d3) nooit ingelogd; kardkid9 (bc55c91e) 0 artikelen, extensie stil sinds 01-11; bankai2855 (7630bcf9) geen extensie; valentinomtcg (49b900b4) computer uit sinds 30-10, proef loopt vandaag 19:03 af. Geen reparatie, geen mailtje. Vinted-scanfout Valentino beoordeeld als klant (computer uit).
+- Mailrapport: 5 mails sinds 30-10, 0 echt geopend, 0 klik, 0 antwoord, 1 deed daarna iets (valentino na de eerste mail).
