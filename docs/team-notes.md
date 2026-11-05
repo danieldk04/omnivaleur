@@ -18752,3 +18752,7 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 - 6 mislukte prijswijzigingen opnieuw klaargezet (8f91a370 5x, Toon 1x); ze wachten op extensie 1.0.417. De zevende (m2440090118) is echt Bieden zonder prijs, overgeslagen.
 - Veger aangepast: plaatsen en verlengen worden niet meer afgeblazen zolang er op dat kanaal de afgelopen 3 dagen iets lukte, met een bovengrens van 14 dagen. 3 dagen niets gelukt blijft een storing. Prijswijzigingen wachten tot 21 dagen op de extensie-update. Reden: Goudlief plaatste 320 per kanaal op 04-11 terwijl de veger 500 per ronde afblies. Proef tests/test_veger_lopende_reeks.py, oude code valt erop om.
 - Niet teruggezet: wat al is afgeblazen. Besluit van Daniel.
+
+## 05-11-2026 (avond): Goudlief, afgeblazen plaatsingen teruggezet (op verzoek van Daniel)
+- 2.358 plaatsingen van de bulk van 31-10 (1.719 2dehands, 639 Marktplaats) staan weer op pending, met nieuwe aanmaakdatum 05-11, zodat ze een eigen venster van 14 dagen krijgen. Eén overgeslagen: artikel verkocht op Shopify. Controle per artikel: geen enkele stond al op dat kanaal en er liep geen andere opdracht. Oude rijen bewaard in ~/.omnivaleur/goudlief-afgeblazen-05-11.json.
+- Werkt alleen als haar computer aanstaat (extensie stil sinds 04-11 21:37). Bij ~320 per kanaal per dag is dat ruim 5 volle dagen per kanaal; lukt er 3 dagen niets op een kanaal, dan blaast de veger weer af.
