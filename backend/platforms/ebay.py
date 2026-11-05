@@ -525,6 +525,26 @@ class EbayPlatform(PlatformBase):
                     )
                     if pub_resp.is_success or not _is_staatfout(pub_resp):
                         break
+            for wacht in _BESCHIKBAARHEID_WACHT:
+                if pub_resp.is_success or not _is_beschikbaarheidsfout(pub_resp):
+                    break
+                # eBay heeft de voorraad van het inventarisitem soms een paar
+                # seconden na de PUT nog niet bij het publiceren ("Availability not
+                # found. Please try again"). Gemeten 05-11-2026 bij Toons tapijt tl06:
+                # direct daarna stond de voorraad er wel (quantity 1). Even wachten,
+                # het item opnieuw zetten en nogmaals publiceren.
+                logger.warning(f"eBay: voorraad van {sku} nog niet zichtbaar; opnieuw na {wacht}s")
+                await asyncio.sleep(wacht)
+                herstel = await client.put(
+                    f"{INVENTORY_API}/inventory_item/{sku}",
+                    json=inventory_payload,
+                    headers=self._auth_headers(credentials, write=True),
+                )
+                _raise_with_ebay_error(herstel, "creating inventory item")
+                pub_resp = await client.post(
+                    f"{INVENTORY_API}/offer/{offer_id}/publish",
+                    headers=self._auth_headers(credentials),
+                )
             if not pub_resp.is_success:
                 fouten = ebay_beleid._fout_ids(pub_resp)
                 if 25026 in fouten and gebruiker:
