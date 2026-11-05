@@ -18734,3 +18734,6 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 - Late ronde (15:38 lokaal). 4 accounts in hun eerste week, geen nieuwe, geen creator. Web Store levert nu 1.0.416 (Daniel uploadde de Facebook-reparatie).
 - Niets veranderd sinds 04-11: momme (e6f4a9d3) nooit ingelogd; kardkid9 (bc55c91e) 0 artikelen, extensie stil sinds 01-11; bankai2855 (7630bcf9) geen extensie; valentinomtcg (49b900b4) computer uit sinds 30-10, proef loopt vandaag 19:03 af. Geen reparatie, geen mailtje. Vinted-scanfout Valentino beoordeeld als klant (computer uit).
 - Mailrapport: 5 mails sinds 30-10, 0 echt geopend, 0 klik, 0 antwoord, 1 deed daarna iets (valentino na de eerste mail).
+
+## 05-11-2026: Platformcontrole (niet gedraaid, uitvoering geweigerd)
+- Chrome was verbonden en Vinted toonde het plaatsformulier, maar de beveiligingscontrole van de sessie weigerde het draaien van de proefloader (script van GitHub ophalen en in de pagina uitvoeren). Geen proef op Vinted, Marktplaats of 2dehands, niets gewijzigd, niets geplaatst. Het tabblad is gesloten.
