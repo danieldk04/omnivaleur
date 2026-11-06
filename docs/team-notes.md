@@ -18777,3 +18777,9 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 - Nieuw: kjrmohamed@gmail.com (720924e6), aangemeld 05-11 20:49, 1 minuut ingelogd, geen extensie, 0 artikelen, nooit eerder contact, niets in de agenda. Welkomstmail "Je account op Omnivaleur" (exit 0), aanhef zonder naam omdat de voornaam niet vaststaat; vraag erin wat hij verkoopt.
 - Niets veranderd: momme (e6f4a9d3) nooit ingelogd; kardkid9 (bc55c91e) 0 artikelen, extensie stil sinds 01-11, proef tot 08-11; bankai2855 (7630bcf9) geen extensie, proef tot 08-11. Geen reparatie, geen mailtje.
 - Mailrapport: 5 mails sinds 30-10, 0 echt geopend, 0 klik, 0 antwoord, 1 deed daarna iets (valentino na de eerste mail).
+
+## 06-11-2026: Call met Mieneke (Voordeelsieraden, 09e089ec)
+- Gesprek 09:00. Tevreden: alles draait, kleine punten (zilver/grijs, verzending, kopersbescherming) snel opgelost. Verkopen nog niet zichtbaar door de hack van haar Marktplaats-account, ze vertrouwt dat het terugkomt.
+- Vragen aan ons: Etsy-koppeling (voor hen exclusief luxe, wereldwijd, belangrijk), Daniel zei dit jaar, waarschijnlijk deze maand. Prijs naar aantal advertenties: ze stelde stappen tot 100, 500, 1000 voor. Beide in de te-bouwen-lijst bijgewerkt (Etsy keer 4, prijs keer 2).
+- Zij zet hun site om van Magento naar Shopify (goldensmira.nl) en vroeg of de URL-omleidingen in bulk kunnen. Daniel zou erover nadenken. Zelfde dag mailde ze dat het niet meer nodig is: ze matchen het zelf en uploaden in bulk. Niets te bouwen.
+- Toezegging van Daniel: Trustpilot-link sturen, zij zei ja. Nog te sturen.
