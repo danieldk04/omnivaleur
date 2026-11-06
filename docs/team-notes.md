@@ -18790,3 +18790,7 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 
 ## 06-11-2026: platformcontrole, geen afwijking (volledige set)
 Vinted: alle zeven artikelen (kinderen schoenen, meisjes jas, sneakers dames, heren shirt, baby meisjes, jongens trui, kookboek) alle stappen ok; alleen kookboek maat en kleur NIET gelukt (bekend sinds 27-10), beschrijving valt in de proef uit (artefact). Marktplaats architectuur, atlassen en antieke boeken en 2dehands atlassen en antieke boeken: titel, prijs, beschrijving, verzending ok; halswijdte NIET gelukt (bekend). Bij antieke boeken faalt staat op beide sites: bewezen dat het formulier daar geen staatveld heeft (alleen Auteur, verzending, prijs), dus geen afwijking. Uitslag bewaard, vergelijk.py: alleen rubrieken-rotatie en de logregels 'description (herstel)'. Niets geplaatst.
+
+## 06-11-2026: Onboarding nieuwe klanten (ochtend, tweede ronde 11:00)
+- De ronde van 09:42 draaide al onder dezelfde naam. Nu 4 accounts in hun eerste week, 0 nieuw, geen creator, Web Store levert 1.0.417. Bij geen van de vier iets veranderd (kjrmohamed, momme, kardkid9, bankai2855). Geen reparatie, geen mailtje, niets in de agenda.
+- Mailrapport: 6 mails sinds 30-10, 0 echt geopend, 0 klik, 0 antwoord, 1 deed daarna iets (valentino na de eerste mail).
