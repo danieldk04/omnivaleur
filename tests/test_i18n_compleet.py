@@ -92,16 +92,19 @@ def test_woordenboekversie_staat_in_elke_pagina():
         )
 
 
-def test_extensiemenu_blijft_engels_in_de_uitleg():
-    """De extensie zelf (popup) is Engels en gaat via de Chrome Web Store. Een
-    vertaalde verwijzing naar een knop die daar anders heet, stuurt de klant de
-    verkeerde kant op."""
+def test_extensiemenu_klopt_met_de_uitleg():
+    """De popup is sinds 1.0.418 tweetalig. Een verwijzing in het dashboard naar een
+    knop die in de popup anders heet, stuurt de klant de verkeerde kant op."""
     popup = (ROOT / "extension" / "popup.html").read_text(encoding="utf-8")
-    for label in ("Calm mode", "Business account (Admarkt)", "Let Omnivaleur type like a keyboard"):
+    popup_nl = (ROOT / "extension" / "popup-taal.js").read_text(encoding="utf-8")
+    for label, nl_label in (("Calm mode", "Calm mode"),
+                            ("Business account (Admarkt)", "Zakelijk account (Admarkt)"),
+                            ("Let Omnivaleur type like a keyboard", "Laat Omnivaleur typen als een toetsenbord")):
         assert label in popup, f"{label!r} staat niet meer in de popup; pas nl.json aan"
+        assert nl_label in popup_nl
         for en, nl in WB.items():
             if label in en:
-                assert label in nl, f"{en!r}: popupknop {label!r} is vertaald naar {nl!r}"
+                assert nl_label in nl, f"{en!r}: popupknop heet {nl_label!r}, vertaling zegt {nl!r}"
 
 
 def test_negeerlijst_bevat_geen_zinnen():

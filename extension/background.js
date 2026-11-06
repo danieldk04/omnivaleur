@@ -1,3 +1,6 @@
+// Taal van de teksten op het extensie-icoon: die van de browser.
+function _opNl() { try { return (chrome.i18n.getUILanguage() || "").toLowerCase().startsWith("nl"); } catch (_) { return false; } }
+
 importScripts("analytics.js", "content/vinted_prijs_main.js");
 
 // Terugvalklok. Chrome staat geen kortere wekker toe dan een halve minuut, dus
@@ -1703,9 +1706,10 @@ function refreshAuthBadge() {
     ["authToken", KANAAL_SESSIE_SLEUTEL], (s) => {
     if (!s.authToken) {
       chrome.action.setBadgeText({ text: "!" });
-      chrome.action.setBadgeBackgroundColor({ color: "#dc2626" });
+      chrome.action.setBadgeBackgroundColor({ color: "#a4261c" });
       chrome.action.setTitle({
-        title: "Omnivaleur — not logged in. Nothing will be published until you log in.",
+        title: _opNl() ? "Omnivaleur: niet ingelogd. Er wordt niets geplaatst tot je inlogt."
+          : "Omnivaleur: not logged in. Nothing will be published until you log in.",
       });
       return;
     }
@@ -1717,10 +1721,11 @@ function refreshAuthBadge() {
       .map(([p]) => kanaalNaam(p));
     if (uit.length) {
       chrome.action.setBadgeText({ text: "!" });
-      chrome.action.setBadgeBackgroundColor({ color: "#dc2626" });
+      chrome.action.setBadgeBackgroundColor({ color: "#a4261c" });
       chrome.action.setTitle({
-        title: `Omnivaleur — you are not signed in to ${uit.join(" and ")} in this browser. `
-          + `Nothing is published there until you sign in. Click for details.`,
+        title: _opNl()
+          ? `Omnivaleur: je bent in deze browser niet ingelogd op ${uit.join(" en ")}. Daar wordt niets geplaatst tot je inlogt. Klik voor meer.`
+          : `Omnivaleur: you are not signed in to ${uit.join(" and ")} in this browser. Nothing is published there until you sign in. Click for details.`,
       });
       return;
     }
@@ -1824,8 +1829,8 @@ async function refreshAccessToken() {
           await _tremove(["authToken", "refreshToken", "_refreshAt"]);
           try {
             await chrome.action.setBadgeText({ text: "!" });
-            await chrome.action.setBadgeBackgroundColor({ color: "#dc2626" });
-            await chrome.action.setTitle({ title: "Omnivaleur — sign in again to keep publishing" });
+            await chrome.action.setBadgeBackgroundColor({ color: "#a4261c" });
+            await chrome.action.setTitle({ title: _opNl() ? "Omnivaleur: log opnieuw in om te blijven plaatsen" : "Omnivaleur: sign in again to keep publishing" });
           } catch (_) {}
         }
         return null;

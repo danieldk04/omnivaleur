@@ -48,10 +48,10 @@ const SITES = {
 function sindsWanneer(ms) {
   if (!ms) return "";
   const uren = Math.floor((Date.now() - ms) / 3600000);
-  if (uren < 1) return " (just now)";
-  if (uren < 24) return ` (for ${uren} hour${uren === 1 ? "" : "s"})`;
+  if (uren < 1) return t(" (just now)");
+  if (uren < 24) return t(uren === 1 ? " (for {0} hour)" : " (for {0} hours)", uren);
   const dagen = Math.round(uren / 24);
-  return ` (for ${dagen} day${dagen === 1 ? "" : "s"})`;
+  return t(dagen === 1 ? " (for {0} day)" : " (for {0} days)", dagen);
 }
 
 async function toonKanaalSessies() {
@@ -78,19 +78,17 @@ async function toonKanaalSessies() {
     stip.style.marginTop = "5px";
     const tekst = document.createElement("div");
     const kop = document.createElement("div");
-    kop.textContent = `Not signed in to ${site.naam} in this browser${sindsWanneer(stand.sinds)}`;
+    kop.textContent = t("Not signed in to {0} in this browser{1}", site.naam, sindsWanneer(stand.sinds));
     const uitleg = document.createElement("div");
     uitleg.className = "user-email";
-    uitleg.textContent = `Nothing is published to ${site.naam} until you sign in there. `
-      + `Marktplaats and 2dehands have separate logins. Your queue stays as it is and `
-      + `starts again on its own once you are back in.`;
+    uitleg.textContent = t("Nothing is published to {0} until you sign in there. Marktplaats and 2dehands have separate logins. Your queue stays as it is and starts again on its own once you are back in.", site.naam);
     tekst.appendChild(kop);
     tekst.appendChild(uitleg);
     if (site.url) {
       const knop = document.createElement("button");
       knop.className = "btn btn-primary";
       knop.style.marginTop = "8px";
-      knop.textContent = `Sign in to ${site.naam}`;
+      knop.textContent = t("Sign in to {0}", site.naam);
       knop.addEventListener("click", () => chrome.tabs.create({ url: site.url }));
       tekst.appendChild(knop);
     }
@@ -115,11 +113,11 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
   const password = document.getElementById("password").value;
   const statusEl = document.getElementById("authStatus");
   if (!email || !password) {
-    statusEl.textContent = "Please enter your email and password.";
+    statusEl.textContent = t("Please enter your email and password.");
     return;
   }
   const btn = document.getElementById("loginBtn");
-  btn.textContent = "Logging in…";
+  btn.textContent = t("Logging in…");
   btn.disabled = true;
   try {
     const res = await fetch(`${SERVER_URL}/api/auth/login`, {
@@ -129,8 +127,8 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
     });
     const data = await res.json();
     if (!res.ok) {
-      statusEl.textContent = data.detail || "Login failed. Check your credentials.";
-      btn.textContent = "Log in";
+      statusEl.textContent = data.detail || t("Login failed. Check your credentials.");
+      btn.textContent = t("Log in");
       btn.disabled = false;
       return;
     }
@@ -143,12 +141,12 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
       _refreshAt: 0,
     });
     statusEl.textContent = "";
-    btn.textContent = "Log in";
+    btn.textContent = t("Log in");
     btn.disabled = false;
     checkLoginState();
   } catch (e) {
-    statusEl.textContent = "Could not reach server. Check your internet connection.";
-    btn.textContent = "Log in";
+    statusEl.textContent = t("Could not reach server. Check your internet connection.");
+    btn.textContent = t("Log in");
     btn.disabled = false;
   }
 });
