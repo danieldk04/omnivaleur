@@ -418,6 +418,16 @@ def _lees_fout(r) -> WooFout:
         return WooFout(f"Your shop's {door} blocked our request (HTTP {r.status_code}). Allow "
                        f"requests to /wp-json/wc/v3 from Omnivaleur, or ask your host to.",
                        "geblokkeerd", r.status_code)
+    if r.status_code in (400, 422) and "json" in ct:
+        # WooCommerce zegt zelf waarom (dubbel artikelnummer, foto geweigerd, ...);
+        # 06-11-2026 Toon: "HTTP 400, probeer het zo opnieuw" liet de reden weg.
+        try:
+            reden = " ".join(str((r.json() or {}).get("message") or "").split())[:200]
+        except ValueError:
+            reden = ""
+        if reden:
+            return WooFout(f"Your shop refused this (HTTP {r.status_code}): {reden}",
+                           "geweigerd", r.status_code)
     return WooFout(f"Your shop answered HTTP {r.status_code}. Try again in a moment.",
                    "serverfout", r.status_code)
 

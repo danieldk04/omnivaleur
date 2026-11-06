@@ -921,6 +921,66 @@
       "status": "published",
       "nl_slug": "woocommerce-naar-marktplaats-koppelen",
       "priority": 104
+    },
+    {
+      "keyword": "how to cancel an order on vinted",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "how-to-cancel-an-order-on-vinted",
+      "status": "published",
+      "nl_slug": "bestelling-annuleren-op-vinted",
+      "priority": 105
+    },
+    {
+      "keyword": "omnivaleur vs foxtail",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "slug": "omnivaleur-vs-foxtail",
+      "status": "pending",
+      "nl_slug": "omnivaleur-of-foxtail",
+      "priority": 106
+    },
+    {
+      "keyword": "how to block a buyer on ebay",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "how-to-block-a-buyer-on-ebay",
+      "status": "pending",
+      "nl_slug": "koper-blokkeren-op-ebay",
+      "priority": 107
+    },
+    {
+      "keyword": "legal warranty on second hand goods netherlands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "slug": "legal-warranty-on-second-hand-goods-netherlands",
+      "status": "pending",
+      "nl_slug": "wettelijke-garantie-tweedehands-goederen",
+      "priority": 108
+    },
+    {
+      "keyword": "how to calculate profit margin reselling",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "slug": "how-to-calculate-profit-margin-reselling",
+      "status": "pending",
+      "nl_slug": "winstmarge-berekenen-tweedehands-verkoop",
+      "priority": 109
+    },
+    {
+      "keyword": "trading card reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "format": "niche",
+      "slug": "trading-card-reselling-automation",
+      "status": "pending",
+      "nl_slug": "trading-cards-automatisering-voor-resellers",
+      "priority": 110
     }
   ],
   "published": [
@@ -1889,6 +1949,16 @@
       "action": "created",
       "url_path": "/crosslisting/woocommerce-to-marktplaats-crosslisting",
       "published_at": "2026-11-05T16:01:05.193350+00:00"
+    },
+    {
+      "keyword": "how to cancel an order on vinted",
+      "slug": "how-to-cancel-an-order-on-vinted",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-cancel-an-order-on-vinted",
+      "published_at": "2026-11-06T15:33:02.369384+00:00"
     }
   ]
 }
