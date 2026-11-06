@@ -1635,6 +1635,8 @@ def _is_prijs_opdracht(job: dict) -> bool:
 
 # Hetzelfde als filter voor de database (niet: content_refresh EN 2dehands).
 _NIET_2DH_BIJWERKING = "action.neq.content_refresh,platform.neq.2dehands"
+# Alles behalve een gewone plaatsing; een herplaatsing heeft een scheduled_for.
+_NIET_GEWONE_PLAATSING = "action.neq.create,scheduled_for.not.is.null"
 
 
 def _bijwerken_2dh_staat_stil(db, user_id: str) -> bool:
@@ -2155,6 +2157,35 @@ def _rubriek_mislukt(j: dict) -> int:
         return 0
 
 
+def _lees_wachtrij(db, user_id: str, platform: str) -> list[dict]:
+    """De wachtrij van één kanaal, in de lichte velden.
+
+    EEN BULK MAG DE REST NIET UIT BEELD DUWEN (06-11-2026, Goudlief). Gelezen werd
+    alleen de oudste WACHTRIJ_MAX, en haar oudste 500 waren allemaal plaatsingen
+    van 31-10. Wat later kwam bestond voor de uitgifte niet: geen enkele
+    Marktplaats-verwijdering sinds 20-10, de scan niet, en na drie dagen blies de
+    veger ze af terwijl haar verkochte artikelen online bleven staan.
+    """
+    def lees(*filters) -> list[dict]:
+        vraag = (db.table("jobs").select(_LICHTE_VELDEN)
+                 .eq("user_id", user_id).eq("status", "pending").eq("platform", platform))
+        for filter_ in filters:
+            vraag = vraag.or_(filter_)
+        return vraag.order("created_at").limit(WACHTRIJ_MAX).execute().data or []
+
+    licht = lees()
+    if len(licht) < WACHTRIJ_MAX:
+        return licht
+    if any(_is_2dh_bijwerking(j) for j in licht):
+        # Een volle lezing kan uit alleen oude bijwerkingen bestaan, en dan
+        # valt de verse klik er buiten. Lees het eigen werk dan apart.
+        licht = lees(_NIET_2DH_BIJWERKING) + [
+            j for j in licht if _is_2dh_bijwerking(j)][:WACHTRIJ_KOP]
+    gezien = {j["id"] for j in licht}
+    return licht + [j for j in lees(_NIET_2DH_BIJWERKING, _NIET_GEWONE_PLAATSING)
+                    if j["id"] not in gezien]
+
+
 def _wachtrij_volgorde(licht: list[dict], now_dt: datetime) -> list[dict]:
     """De hele wachtrij op urgentie zetten (alleen met de lichte velden)."""
     # Welke verwijderingen staan er nog te wachten? Staat de verwijdering die bij
@@ -2199,6 +2230,12 @@ def _wachtrij_volgorde(licht: list[dict], now_dt: datetime) -> list[dict]:
             if gemaakt and now_dt - gemaakt >= NACHTRONDE_GEDULD:
                 return 2          # lang genoeg gewacht, anders komt hij nooit
             return 3
+        # EEN LOSSE VERWIJDERING GAAT VOOR DE PLAATSINGEN (06-11-2026, Goudlief).
+        # Dat is meestal een verkocht artikel dat nog op dit kanaal staat. Op
+        # aanmaakvolgorde stond het achter 854 plaatsingen van 31-10, dagen lang,
+        # terwijl iemand het artikel nog kon kopen.
+        if actie == "delete":
+            return 0
         return 1
 
     # BINNEN DE WACHTERS GAAT WIE HET MEEST MISLUKTE ACHTERAAN (03-10-2026, Egbert).
@@ -2578,19 +2615,7 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
         # volgorde zonder ook maar één payload op te halen. Daarna lezen we
         # alleen de kop volledig in — evenveel dataverkeer als de oude
         # limit(20), maar dan wel de twintig die er echt toe doen.
-        licht = (db.table("jobs")
-                 .select(_LICHTE_VELDEN)
-                 .eq("user_id", user_id).eq("status", "pending").eq("platform", platform)
-                 .order("created_at").limit(WACHTRIJ_MAX).execute().data or [])
-        if len(licht) >= WACHTRIJ_MAX and any(_is_2dh_bijwerking(j) for j in licht):
-            # Een volle lezing kan uit alleen oude bijwerkingen bestaan, en dan
-            # valt de verse klik er buiten. Lees het eigen werk dan apart.
-            eigen = (db.table("jobs")
-                     .select(_LICHTE_VELDEN)
-                     .eq("user_id", user_id).eq("status", "pending").eq("platform", platform)
-                     .or_(_NIET_2DH_BIJWERKING)
-                     .order("created_at").limit(WACHTRIJ_MAX).execute().data or [])
-            licht = eigen + [j for j in licht if _is_2dh_bijwerking(j)][:WACHTRIJ_KOP]
+        licht = _lees_wachtrij(db, user_id, platform)
         licht = _ruim_dubbele_scans_op(db, licht, now)
         licht = [j for j in licht if not bijwerking_moet_wachten(j)]
         kop =[j["id"] for j in _wachtrij_volgorde(licht, now_dt)[:WACHTRIJ_KOP]]
