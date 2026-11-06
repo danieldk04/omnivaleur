@@ -28,17 +28,27 @@
 {% include "_site_chrome_style.html" %}
 </head>
 <body>
+{%- set ns = namespace(wissel='') %}
+{%- for code, url in alternatieven %}{% if code[:2] == ('en' if nl else 'nl') %}{% set ns.wissel = url.replace('https://omnivaleur.com', '') %}{% endif %}{% endfor %}
+{%- set wissel = ns.wissel %}
 {% include "_nav.html" %}
 
+{%- set delen = body.split('</h1>', 1) %}
 <main>
-  <p class="kr-krumel"><a href="{{ '/nl' if nl else '/' }}">Omnivaleur</a><span>›</span><a href="{{ hub_pad }}">{{ 'Gratis tools' if nl else 'Free tools' }}</a>{% if tool %}<span>›</span>{{ naam }}{% endif %}</p>
-  {{ body|safe }}
+<header class="page-head on-field">
+  <div class="tool-head">
+    <p class="kr-krumel"><a href="{{ '/nl' if nl else '/' }}">Omnivaleur</a><span>›</span><a href="{{ hub_pad }}">{{ 'Gratis tools' if nl else 'Free tools' }}</a>{% if tool %}<span>›</span>{{ naam }}{% endif %}</p>
+    {{ delen[0]|safe }}</h1>
+  </div>
+</header>
+<div class="tool-main">
+  {{ delen[1]|safe }}
 
   {% if tool %}
   <h2>{{ 'Meer gratis tools' if nl else 'More free tools' }}</h2>
   <div class="kr-meer">
-    {%- for t in andere %}<a href="{{ t.pad }}">{{ t.icon }} {{ t.naam }}</a>{%- endfor %}
-    <a href="{{ hub_pad }}">→ {{ 'Alle tools' if nl else 'All tools' }}</a>
+    {%- for t in andere %}<a href="{{ t.pad }}">{{ t.naam }}</a>{%- endfor %}
+    <a href="{{ hub_pad }}">{{ 'Alle tools' if nl else 'All tools' }}</a>
   </div>
   {% endif %}
 
@@ -52,6 +62,7 @@
     <a class="kr-knop" href="/register">Try it free for 7 days</a>
     {% endif %}
   </div>
+</div>
 </main>
 
 {% include "_footer.html" %}

@@ -22,10 +22,10 @@ FOOTER = "<!--site-footer-->"
 
 
 @lru_cache(maxsize=64)
-def _render(bestand: str, taal: str, pad: str, mtime: float) -> str:
+def _render(bestand: str, taal: str, pad: str, wissel: str, mtime: float) -> str:
     html = (FRONTEND / bestand).read_text(encoding="utf-8")
     env = templates.env
-    ctx = {"taal": taal, "pad": pad, "merk_links": MERK_LINKS}
+    ctx = {"taal": taal, "pad": pad, "wissel": wissel, "merk_links": MERK_LINKS}
     stijl = env.get_template("_site_chrome_style.html").render()
     html = html.replace("</head>", stijl + "\n</head>", 1)
     html = html.replace(NAV, env.get_template("_nav.html").render(ctx), 1)
@@ -33,7 +33,9 @@ def _render(bestand: str, taal: str, pad: str, mtime: float) -> str:
     return html
 
 
-def met_site_chrome(bestand: str, taal: str = "en", pad: str = "", status_code: int = 200) -> HTMLResponse:
-    """Serveer een statische pagina met de gedeelde kopregel en voettekst."""
+def met_site_chrome(bestand: str, taal: str = "en", pad: str = "", status_code: int = 200,
+                    wissel: str = "") -> HTMLResponse:
+    """Serveer een statische pagina met de gedeelde kopregel en voettekst.
+    wissel: adres van dezelfde pagina in de andere taal, voor de EN/NL-knop."""
     mtime = (FRONTEND / bestand).stat().st_mtime
-    return HTMLResponse(_render(bestand, taal, pad, mtime), status_code=status_code)
+    return HTMLResponse(_render(bestand, taal, pad, wissel, mtime), status_code=status_code)

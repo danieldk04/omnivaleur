@@ -9,10 +9,10 @@
         <span>Omnivaleur</span>
       </a>
       {% if nl %}
-      <p>Zet je tweedehands items in seconden op Marktplaats, 2dehands, Vinted, eBay, Shopify en WooCommerce, elk in de juiste taal.</p>
+      <p>Zet je tweedehands items op Marktplaats, 2dehands, Vinted, eBay, Shopify en WooCommerce, elk in de juiste taal.</p>
       <p>Zakelijke vragen: <!--email_off--><a href="mailto:info@omnivaleur.com">info@omnivaleur.com</a><!--/email_off--></p>
       {% else %}
-      <p>Cross-list your second-hand items on Marktplaats, 2dehands, Vinted, eBay, Shopify and WooCommerce in seconds, each in the right language.</p>
+      <p>Cross-list your second-hand items on Marktplaats, 2dehands, Vinted, eBay, Shopify and WooCommerce, each in the right language.</p>
       <p>Business inquiries: <!--email_off--><a href="mailto:info@omnivaleur.com">info@omnivaleur.com</a><!--/email_off--></p>
       {% endif %}
     </div>
@@ -33,8 +33,8 @@
     <div class="footer-col">
       <h4>{{ 'Bedrijf' if nl else 'Company' }}</h4>
       <ul>
-        <li><a href="/terms">{{ 'Algemene voorwaarden' if nl else 'Terms of Service' }}</a></li>
-        <li><a href="/privacy">{{ 'Privacybeleid' if nl else 'Privacy Policy' }}</a></li>
+        <li><a href="{{ '/nl/terms' if nl else '/terms' }}">{{ 'Algemene voorwaarden' if nl else 'Terms of Service' }}</a></li>
+        <li><a href="{{ '/nl/privacy' if nl else '/privacy' }}">{{ 'Privacybeleid' if nl else 'Privacy Policy' }}</a></li>
         <li><!--email_off--><a href="mailto:info@omnivaleur.com">Contact</a><!--/email_off--></li>
         <li><a href="{{ '/nl/tools' if nl else '/tools' }}">{{ 'Gratis tools' if nl else 'Free tools' }}</a></li>
         <li><a href="/ai-info"{% if nl %} hreflang="en"{% endif %}>{{ 'Voor AI-assistenten' if nl else 'For AI assistants' }}</a></li>
@@ -44,12 +44,12 @@
     <div class="footer-col">
       <h4>{{ 'Marktplaatsen' if nl else 'Marketplaces' }}</h4>
       <ul>
-        <li><a href="/marketplaces">Marktplaats</a></li>
-        <li><a href="/marketplaces">2dehands</a></li>
-        <li><a href="/marketplaces">Vinted</a></li>
-        <li><a href="/marketplaces">eBay</a></li>
-        <li><a href="/marketplaces">Shopify</a></li>
-        <li><a href="/marketplaces">WooCommerce</a></li>
+        <li><a href="{{ '/nl/marketplaces' if nl else '/marketplaces' }}">Marktplaats</a></li>
+        <li><a href="{{ '/nl/marketplaces' if nl else '/marketplaces' }}">2dehands</a></li>
+        <li><a href="{{ '/nl/marketplaces' if nl else '/marketplaces' }}">Vinted</a></li>
+        <li><a href="{{ '/nl/marketplaces' if nl else '/marketplaces' }}">eBay</a></li>
+        <li><a href="{{ '/nl/marketplaces' if nl else '/marketplaces' }}">Shopify</a></li>
+        <li><a href="{{ '/nl/marketplaces' if nl else '/marketplaces' }}">WooCommerce</a></li>
       </ul>
     </div>
   </div>
@@ -64,8 +64,8 @@
   <div class="footer-bottom">
     <span>© 2026 Revaleur, KVK 86792423, {{ 'btw' if nl else 'VAT' }} NL004117227B97, Kleine Melanen 5, 4614RG Bergen op Zoom</span>
     <div class="footer-bottom-links">
-      <a href="/privacy">{{ 'Privacybeleid' if nl else 'Privacy Policy' }}</a>
-      <a href="/terms">{{ 'Algemene voorwaarden' if nl else 'Terms of Service' }}</a>
+      <a href="{{ '/nl/privacy' if nl else '/privacy' }}">{{ 'Privacybeleid' if nl else 'Privacy Policy' }}</a>
+      <a href="{{ '/nl/terms' if nl else '/terms' }}">{{ 'Algemene voorwaarden' if nl else 'Terms of Service' }}</a>
     </div>
   </div>
 </footer>

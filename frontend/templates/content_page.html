@@ -30,82 +30,6 @@
 <script type="application/ld+json">{{ software_json_ld | tojson }}</script>
 <script type="application/ld+json">{{ article_json_ld | tojson }}</script>
 <script type="application/ld+json">{{ breadcrumb_json_ld | tojson }}</script>
-<style>
-{% include "_chrome_style.html" %}
-  main{width:100%;max-width:760px;margin:0 auto;padding:32px 20px 80px}
-
-  .lang-switch{margin-bottom:14px}
-  .lang-switch a{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--blue-dark);background:#eff6ff;padding:6px 12px;border-radius:100px;text-decoration:none}
-  .lang-switch a:hover{background:#dbeafe}
-
-  h1{font-size:2rem;line-height:1.25;margin-bottom:16px}
-  h2{font-size:1.4rem;margin-top:2.2em;clear:both}
-  h3{font-size:1.15rem;margin-top:1.6em}
-  blockquote{background:#eff6ff;border-left:4px solid var(--blue);padding:16px 20px;margin:24px 0;font-size:1.05rem;border-radius:0 8px 8px 0}
-  table{width:100%;border-collapse:collapse;margin:20px 0}
-  th,td{border:1px solid var(--border);padding:8px 12px;text-align:left}
-  th{background:#f8fafc}
-  /* Hero: een echt beeld per artikel (backend/content/hero.py). De aspect-ratio
-     staat vast op 1200/630 zodat de pagina niet verspringt terwijl hij laadt. */
-  .featured-hero-img{width:100%;aspect-ratio:1200/630;height:auto;border-radius:12px;margin:24px 0;display:block;background:#eef2ff}
-  .faq-item{margin-bottom:20px}
-
-  .article-meta{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:13px;color:var(--muted);margin:0 0 4px}
-  .article-meta time{font-variant-numeric:tabular-nums}
-
-  /* _chrome_style.html style't élke <nav> als de sticky flex-sitebalk
-     (height:64px, display:flex, backdrop-filter, border-bottom). Die regel
-     sloopte de inhoudsopgave: het kader bleef op 64px staan terwijl de lijst
-     eronderdoor liep. Alles wat die regel zet, wordt hier expliciet
-     teruggedraaid — een losse display:block was niet genoeg. */
-  .toc{display:block;position:static;height:auto;z-index:auto;backdrop-filter:none;
-       border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin:28px 0;background:#f8fafc}
-  .toc-label{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
-  .toc ol{margin:0;padding-left:20px}
-  .toc li{margin-bottom:6px;font-size:15px}
-  .toc a{color:var(--blue-dark);text-decoration:none}
-  .toc a:hover{text-decoration:underline}
-  /* Zorgt dat een aangeklikte kop niet onder de sticky nav verdwijnt. */
-  h2[id]{scroll-margin-top:80px}
-
-  .related{margin-top:44px;border-top:1px solid var(--border);padding-top:28px}
-  .related h2{margin-top:0;font-size:1.25rem}
-  .related-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:16px}
-  .related-card{border:1px solid var(--border);border-radius:12px;overflow:hidden;text-decoration:none;color:inherit;background:#fff;transition:box-shadow .15s}
-  .related-card:hover{box-shadow:0 4px 14px rgba(15,23,42,.08)}
-  .related-card img{width:100%;aspect-ratio:1200/630;height:auto;object-fit:cover;display:block;background:#eef2ff}
-  .related-card span{display:block;padding:12px 14px;font-size:14px;font-weight:600;line-height:1.4}
-
-  .takeaways{background:var(--purple-bg);border:1px solid #d8b4fe;border-radius:12px;padding:20px 24px;margin:28px 0}
-  .takeaways-label{color:var(--purple-dark);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin:0 0 12px}
-  .takeaways ul{list-style:none;margin:0;padding:0}
-  .takeaways li{position:relative;padding-left:26px;margin-bottom:10px;font-size:15px}
-  .takeaways li:last-child{margin-bottom:0}
-  .takeaways li::before{content:"✓";position:absolute;left:0;top:0;color:#fff;background:var(--purple);width:18px;height:18px;border-radius:50%;font-size:11px;line-height:18px;text-align:center}
-
-  .author-box{display:flex;align-items:center;gap:16px;max-width:100%;margin:28px 0;padding:18px 20px;border:1px solid var(--border);border-radius:14px;background:#f8fafc;text-align:left;font-size:13px;line-height:1.6;color:var(--muted)}
-  .author-box img{width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0}
-  .author-box .ab-label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#94a3b8;margin-bottom:2px}
-  .author-box .ab-name{font-weight:700;font-size:15px;color:var(--text);margin-bottom:4px}
-  .author-box p{margin:0}
-  @media(max-width:600px){.author-box{flex-direction:column;text-align:center}}
-
-  .cta-box{margin-top:40px;background:linear-gradient(135deg,var(--blue) 0%,var(--mint) 100%);border-radius:16px;padding:32px;text-align:center;color:#fff}
-  .cta-box h3{margin:0 0 8px;color:#fff;font-size:1.3rem}
-  .cta-box p{margin:0 0 20px;opacity:.92;font-size:14px}
-  .cta-btn{background:#fff;color:var(--blue-dark);padding:14px 28px;border-radius:8px;display:inline-block;text-decoration:none;font-weight:700}
-
-  @media(max-width:600px){
-    main{padding:22px 16px 60px}
-    h1{font-size:1.6rem}
-    h2{font-size:1.25rem}
-    /* Keep the breadcrumb to a single tidy line instead of wrapping to 3 rows. */
-    .breadcrumbs{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    /* Wide comparison tables scroll horizontally instead of overflowing the page. */
-    table{display:block;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
-    th,td{white-space:nowrap}
-  }
-</style>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJ5BVD3GCH"></script>
 <script>
@@ -119,30 +43,36 @@
 <body>
 
 {% set nav_region = page.region %}
+{% set wissel = language_switch.url if language_switch else '' %}
+{% set is_nl = page.language == 'nl' %}
+{% set soorten = {'A': 'Platformgids', 'B': 'Verkopersgids', 'C': 'Eerlijke vergelijking'} if is_nl else {'A': 'Platform guide', 'B': 'Reseller guide', 'C': 'Honest comparison'} %}
 {% include "_nav.html" %}
 
 <main>
-  <nav class="breadcrumbs" aria-label="Breadcrumb">
-    <a href="/">Home</a><span>/</span>
+<header class="page-head on-field">
+  <div class="article-head">
+  <nav class="breadcrumbs" aria-label="{{ 'Kruimelpad' if is_nl else 'Breadcrumb' }}">
+    <a href="{{ '/nl' if is_nl else '/' }}">Home</a><span>/</span>
     <a href="{{ blog_index_path | default('/blog') }}">Blog</a><span>/</span>
     {{ page.h1[:60] }}{% if page.h1|length > 60 %}…{% endif %}
   </nav>
-
-  <article>
-    {% if language_switch %}
-    <div class="lang-switch">
-      <a href="{{ language_switch.url }}">{{ 'Lees dit artikel in het Nederlands' if language_switch.language == 'nl' else 'Read this article in English' }}</a>
-    </div>
-    {% endif %}
     <h1>{{ page.h1 }}</h1>
-
     <p class="article-meta">
-      <span>{{ {'A': 'Platform guide', 'B': 'Reseller guide', 'C': 'Honest comparison'}.get(page.pillar, 'Reseller guide') }}</span>
+      <span>{{ soorten.get(page.pillar, soorten['B']) }}</span>
       {% if published_at %}<span>·</span>
       <time datetime="{{ published_at }}">{{ 'Gepubliceerd' if page.language == 'nl' else 'Published' }} {{ published_at }}</time>{% endif %}
       {% if modified_at and modified_at != published_at %}<span>·</span>
       <time datetime="{{ modified_at }}">{{ 'bijgewerkt' if page.language == 'nl' else 'updated' }} {{ modified_at }}</time>{% endif %}
     </p>
+    {% if language_switch %}
+    <div class="lang-switch">
+      <a href="{{ language_switch.url }}">{{ 'Lees dit artikel in het Nederlands' if language_switch.language == 'nl' else 'Read this article in English' }}</a>
+    </div>
+    {% endif %}
+  </div>
+</header>
+<div class="article-page">
+  <article class="doc">
 
     {% if page.featured_image_url %}
     <img class="featured-hero-img" src="{{ page.featured_image_url }}" alt="{{ page.h1 }}" width="1200" height="630" fetchpriority="high" decoding="async" onerror="this.style.display='none'">
@@ -178,14 +108,14 @@
       <div>
         <div class="ab-label">Over de auteur</div>
         <div class="ab-name">Daniel</div>
-        <p>Oprichter van <a href="https://omnivaleur.com">Omnivaleur</a>. Daniel heeft jarenlang zijn eigen resale-shops gerund en bouwde Omnivaleur om precies de crosslisting-problemen op te lossen die in dit artikel beschreven staan — categorieën, maten, verzendregels en voorraadsynchronisatie op elk groot Europees marktplatform.</p>
+        <p>Oprichter van <a href="https://omnivaleur.com">Omnivaleur</a>. Daniel heeft jarenlang zijn eigen resale-shops gerund en bouwde Omnivaleur om precies de crosslisting-problemen op te lossen die in dit artikel beschreven staan, categorieën, maten, verzendregels en voorraadsynchronisatie op elk groot Europees marktplatform.</p>
       </div>
       {% else %}
       <img src="/assets/blog/author-daniel.webp" alt="Daniel, founder of Omnivaleur">
       <div>
         <div class="ab-label">About the author</div>
         <div class="ab-name">Daniel</div>
-        <p>Founder of <a href="https://omnivaleur.com">Omnivaleur</a>. Daniel has run his own resale shops for years and built Omnivaleur to solve the exact cross-listing headaches described in this article — categories, sizing, shipping rules and stock sync across every major European marketplace.</p>
+        <p>Founder of <a href="https://omnivaleur.com">Omnivaleur</a>. Daniel has run his own resale shops for years and built Omnivaleur to solve the exact cross-listing headaches described in this article, categories, sizing, shipping rules and stock sync across every major European marketplace.</p>
       </div>
       {% endif %}
     </aside>
@@ -198,7 +128,7 @@
     <div class="faq-item">
       <h3>{{ item.question }}</h3>
       {# div i.p.v. p: FAQ-antwoorden bevatten soms meerdere alinea's of een
-         lijst, en die mogen niet in een <p> staan — de browser breekt dat op en
+         lijst, en die mogen niet in een <p> staan, de browser breekt dat op en
          de opmaak valt uit elkaar. #}
       <div>{{ item.answer_html | safe }}</div>
     </div>
@@ -220,19 +150,20 @@
     {% endif %}
 
     {% if page.language == 'nl' %}
-    <div class="cta-box">
+    <div class="cta-box on-field">
       <h3>Stop met listings handmatig kopiëren</h3>
       <p>Omnivaleur publiceert je item in één keer op elk platform en synchroniseert de voorraad automatisch zodra iets verkocht is.</p>
-      <a class="cta-btn" href="https://omnivaleur.com">Start gratis proefperiode</a>
+      <a class="cta-btn btn btn-primary" href="https://omnivaleur.com/nl">Start gratis proefperiode</a>
     </div>
     {% else %}
-    <div class="cta-box">
+    <div class="cta-box on-field">
       <h3>Stop copying listings by hand</h3>
       <p>Omnivaleur publishes your item to every platform at once and syncs stock automatically when something sells.</p>
-      <a class="cta-btn" href="https://omnivaleur.com">Start free trial</a>
+      <a class="cta-btn btn btn-primary" href="https://omnivaleur.com">Start free trial</a>
     </div>
     {% endif %}
   </article>
+</div>
 </main>
 
 {% include "_footer.html" %}

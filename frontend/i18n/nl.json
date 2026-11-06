@@ -3942,5 +3942,17 @@
  "Your listings land in the right Marktplaats category": "Je advertenties komen in de juiste Marktplaats-rubriek",
  "Marktplaats does not let you change the category afterwards, so we now check it twice: the extension refuses to publish when the form is on another category than intended, and afterwards Omnivaleur looks up your listing and warns you at the top of Items if it ended up elsewhere. Swimwear, underwear, leggings and accessories now go to their own category instead of a nearby one. Chrome updates the extension by itself.": "Marktplaats laat de rubriek achteraf niet wijzigen, dus we controleren hem nu twee keer: de extensie plaatst niet als het formulier op een andere rubriek staat dan bedoeld, en daarna zoekt Omnivaleur je advertentie op en waarschuwt je bovenaan bij Items als hij ergens anders terechtkwam. Zwemkleding, ondergoed, leggings en accessoires gaan nu naar hun eigen rubriek in plaats van een rubriek in de buurt. Chrome werkt de extensie zelf bij.",
  "Price changes now reach Marktplaats and 2dehands": "Prijswijzigingen komen nu ook op Marktplaats en 2dehands",
- "Change the price of an item in Omnivaleur and the live listing on Marktplaats and 2dehands is updated too, including the minimum bid. No more deleting and relisting for a new price. Chrome updates the extension by itself, so there is nothing for you to do.": "Verander de prijs van een artikel in Omnivaleur en de advertentie op Marktplaats en 2dehands wordt ook bijgewerkt, inclusief het minimumbod. Geen verwijderen en opnieuw plaatsen meer voor een nieuwe prijs. Chrome werkt de extensie zelf bij, dus je hoeft niets te doen."
+ "Change the price of an item in Omnivaleur and the live listing on Marktplaats and 2dehands is updated too, including the minimum bid. No more deleting and relisting for a new price. Chrome updates the extension by itself, so there is nothing for you to do.": "Verander de prijs van een artikel in Omnivaleur en de advertentie op Marktplaats en 2dehands wordt ook bijgewerkt, inclusief het minimumbod. Geen verwijderen en opnieuw plaatsen meer voor een nieuwe prijs. Chrome werkt de extensie zelf bij, dus je hoeft niets te doen.",
+ "Reset link sent!": "Resetlink verstuurd!",
+ "Send reset link": "Resetlink versturen",
+ "Back to login": "Terug naar inloggen",
+ "Email confirmed! You can now log in.": "E-mailadres bevestigd! Je kunt nu inloggen.",
+ "Back to homepage": "Terug naar de homepage",
+ "Create your account, no credit card needed": "Maak je account aan, geen creditcard nodig",
+ "Account created!": "Account aangemaakt!",
+ "Create account": "Account aanmaken",
+ "Password updated!": "Wachtwoord bijgewerkt!",
+ "Save password": "Wachtwoord opslaan",
+ "This confirmation link is no longer valid: it may already have been used. If your email is confirmed, just log in below. Otherwise": "Deze bevestigingslink is niet meer geldig; hij is misschien al gebruikt. Is je e-mailadres bevestigd, log dan hieronder gewoon in. Anders",
+ "Your session expired. Please sign in again, nothing was lost.": "Je sessie is verlopen. Log opnieuw in; er is niets verloren."
 }

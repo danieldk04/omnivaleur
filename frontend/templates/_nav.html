@@ -4,13 +4,17 @@
 {%- set nl = (taal or language or (page.language if page is defined and page else '')) == 'nl' -%}
 {%- set home = '/nl' if nl else '/' -%}
 {%- set links = [
-  ('/marketplaces', 'Marktplaatsen' if nl else 'Marketplaces'),
+  ('/nl/marketplaces' if nl else '/marketplaces', 'Marktplaatsen' if nl else 'Marketplaces'),
   ('/nl/tools' if nl else '/tools', 'Gratis tools' if nl else 'Free tools'),
   ('/nl/blog' if nl else '/blog', 'Blog'),
   (home ~ '#inside-the-app', 'In de app' if nl else 'Inside the app'),
   (home ~ '#how-it-works', 'Hoe het werkt' if nl else 'How it works'),
   (home ~ '#pricing', 'Prijs' if nl else 'Pricing'),
 ] -%}
+{%- if nl %}
+{#- Wie op de Nederlandse site zit en nog geen taal koos, krijgt ook inloggen en dashboard in het Nederlands. Een eerdere keuze blijft staan. #}
+<script>try{if(!localStorage.getItem('omni_taal'))localStorage.setItem('omni_taal','nl')}catch(e){}</script>
+{%- endif %}
 <nav class="site-nav">
   <a href="{{ home }}" class="nav-logo" aria-label="Omnivaleur">
     <img src="/assets/site/mark.png" alt="" width="44" height="24">

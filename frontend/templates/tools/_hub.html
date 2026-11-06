@@ -12,7 +12,6 @@
 <div class="kr-kaarten">
   {%- for k in g.kaarten %}
   <a class="kr-kaartlink" href="{{ k.pad }}">
-    <span class="ic">{{ k.icon }}</span>
     <strong>{{ k.naam }}{% if k.nieuw %} <em class="kr-nieuw">{{ 'Nieuw' if nl else 'New' }}</em>{% endif %}</strong>
     <span class="tx">{{ k.kort }}</span>
     {% if k.gated %}<span class="kr-badge mail">{{ 'Gratis, per e-mail naar jou' if nl else 'Free, sent to your email' }}</span>{% else %}<span class="kr-badge">{{ 'Gratis, zonder inlog' if nl else 'Free, no login' }}</span>{% endif %}

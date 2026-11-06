@@ -371,10 +371,10 @@ def _reading_minutes(words: int) -> int:
 
 BLOG_INDEX_COPY = {
     "en": {
-        "title": "Blog — Omnivaleur",
+        "title": "Blog | Omnivaleur",
         "meta": "Guides on cross-listing across Marktplaats, 2dehands, Vinted, eBay, Etsy, Shopify and WooCommerce.",
         "h1": "Cross-listing guides",
-        "subtitle": "Platform comparisons, DAC7 rules and reselling tips — updated for 2026.",
+        "subtitle": "Platform comparisons, DAC7 rules and reselling tips, updated for 2026.",
         "filters": {"all": "All guides", "A": "Platform comparisons", "B": "Reseller guides", "C": "Vs. competitors"},
         "read": "Read article",
         "read_time": "min read",
@@ -383,10 +383,10 @@ BLOG_INDEX_COPY = {
         "switch": "Lees deze gidsen in het Nederlands",
     },
     "nl": {
-        "title": "Blog — Omnivaleur",
+        "title": "Blog | Omnivaleur",
         "meta": "Gidsen over crosslisten naar Marktplaats, 2dehands, Vinted, eBay, Etsy, Shopify en WooCommerce.",
         "h1": "Crosslist-gidsen",
-        "subtitle": "Platformvergelijkingen, DAC7-regels en verkooptips — bijgewerkt voor 2026.",
+        "subtitle": "Platformvergelijkingen, DAC7-regels en verkooptips, bijgewerkt voor 2026.",
         "filters": {"all": "Alle gidsen", "A": "Platformvergelijkingen", "B": "Verkopersgidsen", "C": "Vs. concurrenten"},
         "read": "Lees het artikel",
         "read_time": "min lezen",
@@ -474,10 +474,13 @@ STATIC_SITEMAP_URLS = [
     ("/blog", "daily", "0.9"),
     ("/nl/blog", "daily", "0.8"),
     ("/marketplaces", "monthly", "0.8"),
+    ("/nl/marketplaces", "monthly", "0.7"),
     ("/ai-info", "monthly", "0.6"),
     ("/register", "monthly", "0.9"),
     ("/privacy", "yearly", "0.3"),
     ("/terms", "yearly", "0.3"),
+    ("/nl/privacy", "yearly", "0.3"),
+    ("/nl/terms", "yearly", "0.3"),
 ]
 
 

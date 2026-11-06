@@ -3,233 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Marketplaces — Omnivaleur</title>
-<meta name="description" content="Omnivaleur works with all major European marketplaces. One click, all platforms — across all 27 EU countries.">
+<title>Marketplaces | Omnivaleur</title>
+<meta name="description" content="Omnivaleur works with the major European marketplaces. One item, every platform.">
 <link rel="canonical" href="https://omnivaleur.com/marketplaces">
+<link rel="alternate" hreflang="en" href="https://omnivaleur.com/marketplaces">
+<link rel="alternate" hreflang="nl" href="https://omnivaleur.com/nl/marketplaces">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Omnivaleur">
-<meta property="og:title" content="Marketplaces — Omnivaleur">
-<meta property="og:description" content="Omnivaleur works with all major European marketplaces. One click, all platforms — across all 27 EU countries.">
+<meta property="og:title" content="Marketplaces | Omnivaleur">
+<meta property="og:description" content="Omnivaleur works with the major European marketplaces. One item, every platform.">
 <meta property="og:url" content="https://omnivaleur.com/marketplaces">
 <meta property="og:image" content="https://omnivaleur.com/logo.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Marketplaces — Omnivaleur">
-<meta name="twitter:description" content="Omnivaleur works with all major European marketplaces. One click, all platforms.">
+<meta name="twitter:title" content="Marketplaces | Omnivaleur">
+<meta name="twitter:description" content="Omnivaleur works with the major European marketplaces. One item, every platform.">
 <meta name="twitter:image" content="https://omnivaleur.com/logo.png">
-<link rel="icon" type="image/png" href="logo.png">
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --blue: #2563eb;
-  --mint: #34d399;
-  --blue-dark: #1d4ed8;
-  --mint-dark: #10b981;
-  --bg: #f0f9ff;
-  --surface: #fff;
-  --border: #e2e8f0;
-  --text: #0f172a;
-  --muted: #64748b;
-  --radius: 10px;
-}
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--surface); color: var(--text); }
-a { color: inherit; text-decoration: none; }
-.grad { background: linear-gradient(135deg, var(--blue) 0%, var(--mint) 100%); }
-.grad-text { background: linear-gradient(135deg, var(--blue), var(--mint)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-
-/* NAV */
-nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.nav-logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; letter-spacing: -.4px; text-decoration: none; color: var(--text); }
-.nav-logo img { height: 32px; width: auto; }
-.nav-links { display: flex; gap: 24px; align-items: center; }
-.nav-links a { font-size: 14px; font-weight: 500; color: var(--muted); transition: color .15s; text-decoration: none; }
-.nav-links a:hover, .nav-links a.active { color: var(--text); }
-.nav-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 20px; border-radius: 100px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all .2s; white-space: nowrap; }
-.btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
-.btn-outline:hover { border-color: var(--blue); color: var(--blue); }
-.btn-primary { background: linear-gradient(135deg, var(--blue), var(--mint)); color: #fff; box-shadow: 0 2px 12px rgba(37,99,235,.25); }
-.btn-primary:hover { box-shadow: 0 4px 20px rgba(37,99,235,.4); transform: translateY(-1px); }
-.btn-white { background: #fff; color: var(--blue); font-weight: 700; }
-.btn-white:hover { box-shadow: 0 8px 24px rgba(0,0,0,.15); transform: translateY(-1px); }
-
-/* HERO */
-.hero { padding: 80px 40px 60px; text-align: center; background: linear-gradient(180deg, #f0f9ff 0%, #fff 100%); position: relative; overflow: hidden; }
-.hero::before { content: ''; position: absolute; top: -60px; left: 50%; transform: translateX(-50%); width: 700px; height: 700px; background: radial-gradient(circle, rgba(37,99,235,.07) 0%, transparent 70%); pointer-events: none; }
-.hero-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, rgba(37,99,235,.1), rgba(52,211,153,.1)); border: 1px solid rgba(37,99,235,.2); border-radius: 100px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--blue); margin-bottom: 24px; }
-.hero h1 { font-size: clamp(32px, 5vw, 56px); font-weight: 900; line-height: 1.08; letter-spacing: -1.5px; margin-bottom: 18px; max-width: 760px; margin-left: auto; margin-right: auto; }
-.hero p { font-size: 17px; color: var(--muted); line-height: 1.7; max-width: 540px; margin: 0 auto 36px; }
-.hero-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-.hero-cta .btn { font-size: 15px; padding: 12px 28px; }
-
-/* PRODUCT SHOWCASE */
-.showcase { padding: 10px 40px 90px; position: relative; }
-.showcase-track { display: flex; align-items: flex-end; justify-content: center; gap: 40px; }
-.showcase-desktop { flex: 1; max-width: 900px; position: relative; }
-.browser-frame { background: #1e293b; border-radius: 14px; padding: 10px 10px 0; box-shadow: 0 30px 70px -15px rgba(15,23,42,.35), 0 10px 30px -10px rgba(15,23,42,.2); }
-.browser-bar { display: flex; align-items: center; gap: 8px; padding: 6px 8px 12px; }
-.browser-dot { width: 10px; height: 10px; border-radius: 50%; }
-.browser-dot.red { background: #f87171; }
-.browser-dot.yellow { background: #fbbf24; }
-.browser-dot.green { background: #4ade80; }
-.browser-url { flex: 1; margin-left: 10px; background: rgba(255,255,255,.08); border-radius: 6px; padding: 5px 12px; font-size: 12px; color: rgba(255,255,255,.5); text-align: center; }
-.browser-body { background: #f0f9ff; border-radius: 8px 8px 0 0; overflow: hidden; }
-.browser-body iframe { display: block; width: 1440px; height: 900px; border: none; transform: scale(0.625); transform-origin: top left; }
-.browser-viewport { width: 900px; height: 562px; overflow: hidden; }
-.showcase-mobile { position: relative; margin-bottom: -20px; }
-.phone-frame { width: 230px; background: #111827; border-radius: 32px; padding: 10px; box-shadow: 0 25px 60px -12px rgba(15,23,42,.4); }
-.phone-notch { width: 60px; height: 16px; background: #111827; border-radius: 0 0 12px 12px; margin: 0 auto; position: relative; z-index: 2; }
-.phone-screen { border-radius: 22px; overflow: hidden; background: #f0f9ff; margin-top: -16px; }
-.phone-screen-viewport { width: 230px; height: 498px; overflow: hidden; }
-.phone-screen iframe { display: block; width: 375px; height: 812px; border: none; transform: scale(0.6133); transform-origin: top left; }
-.showcase-badge { position: absolute; top: -18px; right: 6%; background: #fff; border: 1px solid var(--border); border-radius: 100px; padding: 6px 14px; font-size: 12px; font-weight: 700; color: var(--text); box-shadow: 0 6px 20px rgba(15,23,42,.1); display: flex; align-items: center; gap: 6px; z-index: 3; }
-.showcase-desktop, .showcase-mobile { opacity: 0; transform: translateY(40px); animation: showcaseIn .9s cubic-bezier(.2,.7,.2,1) .3s forwards; }
-.showcase-mobile { animation-delay: .55s; }
-@keyframes showcaseIn { to { opacity: 1; transform: translateY(0); } }
-.browser-frame { animation: floatY 6s ease-in-out infinite; }
-.phone-frame { animation: floatY 5.5s ease-in-out .4s infinite; }
-@keyframes floatY { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-.showcase-badge { animation: badgeFloat 3.4s ease-in-out infinite; }
-@keyframes badgeFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-@media (max-width: 900px) {
-  .showcase { display: flex; justify-content: center; align-items: flex-start; padding: 10px 16px 64px; overflow: hidden; }
-  .showcase-track { width: max-content; flex: none; transform-origin: top center; }
-  .showcase-desktop { flex: none; width: 900px; }
-  .showcase-mobile { flex: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .browser-frame, .phone-frame, .showcase-badge, .hero::before { animation: none !important; }
-}
-
-.platform-logos { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 32px; }
-.platform-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 8px 18px; font-size: 13px; font-weight: 500; color: var(--muted); display: flex; align-items: center; gap: 7px; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
-.platform-chip.soon { opacity: .55; border-style: dashed; }
-.platform-chip.beta { border-color: rgba(245,158,11,.45); }
-.beta-label { font-size: 10px; font-weight: 700; color: #b45309; background: rgba(245,158,11,.14); padding: 1px 6px; border-radius: 100px; letter-spacing: .03em; text-transform: uppercase; }
-.platform-logo { height: 16px; width: auto; max-width: 20px; object-fit: contain; display: block; }
-.soon-label { font-size: 10px; font-weight: 700; color: #d97706; background: rgba(245,158,11,.1); padding: 1px 6px; border-radius: 100px; letter-spacing: .03em; }
-
-/* COUNTRIES STRIP */
-.countries-strip { background: var(--bg); padding: 48px 40px; }
-.countries-strip h2 { text-align: center; font-size: 20px; font-weight: 700; margin-bottom: 32px; color: var(--muted); letter-spacing: -.2px; }
-.countries-grid { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; max-width: 1100px; margin: 0 auto; }
-.country-chip { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 8px 16px; font-size: 13px; font-weight: 500; color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,.04); transition: all .15s; }
-.country-chip:hover { border-color: var(--blue); color: var(--blue); box-shadow: 0 2px 10px rgba(37,99,235,.1); }
-.flag { font-size: 18px; line-height: 1; }
-
-/* PLATFORMS */
-.section { max-width: 1140px; margin: 0 auto; padding: 80px 40px; }
-.section-label { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--blue); margin-bottom: 12px; }
-.section-title { font-size: clamp(26px, 4vw, 38px); font-weight: 800; letter-spacing: -.5px; line-height: 1.2; margin-bottom: 14px; }
-.section-sub { font-size: 16px; color: var(--muted); line-height: 1.6; max-width: 540px; }
-
-/* PLATFORM GRID */
-.platforms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-top: 48px; }
-.platform-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; transition: all .2s; position: relative; overflow: hidden; }
-.platform-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--blue), var(--mint)); }
-.platform-card:hover { box-shadow: 0 8px 32px rgba(37,99,235,.1); transform: translateY(-2px); }
-.platform-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
-.platform-logo-box { width: 52px; height: 52px; border-radius: 12px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 26px; background: var(--bg); flex-shrink: 0; }
-.platform-logo-box img { width: 30px; height: 30px; object-fit: contain; }
-.platform-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; }
-.badge-live { background: rgba(52,211,153,.12); color: #059669; border: 1px solid rgba(52,211,153,.3); }
-.badge-beta { background: rgba(245,158,11,.14); color: #b45309; border: 1px solid rgba(245,158,11,.35); }
-.badge-soon { background: rgba(245,158,11,.1); color: #d97706; border: 1px solid rgba(245,158,11,.25); }
-.badge-eu { background: rgba(37,99,235,.08); color: var(--blue); border: 1px solid rgba(37,99,235,.2); }
-.platform-card h3 { font-size: 17px; font-weight: 800; margin-bottom: 6px; }
-.platform-card p { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
-.platform-countries { display: flex; flex-wrap: wrap; gap: 6px; }
-.country-tag { font-size: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
-
-/* STATS */
-.stats-bar { background: linear-gradient(135deg, var(--blue), var(--mint)); padding: 48px 40px; display: flex; justify-content: center; gap: 0; }
-.stat-item { text-align: center; padding: 0 48px; border-right: 1px solid rgba(255,255,255,.2); }
-.stat-item:last-child { border-right: none; }
-.stat-num { font-size: 40px; font-weight: 900; color: #fff; line-height: 1; }
-.stat-label { font-size: 13px; color: rgba(255,255,255,.75); margin-top: 6px; }
-
-/* HOW IT WORKS */
-.how-bg { background: var(--bg); padding: 80px 40px; }
-.steps { max-width: 780px; margin: 48px auto 0; display: flex; flex-direction: column; gap: 0; }
-.step { display: flex; gap: 24px; align-items: flex-start; padding: 28px 0; border-bottom: 1px solid var(--border); }
-.step:last-child { border-bottom: none; }
-.step-num { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--blue), var(--mint)); color: #fff; font-weight: 800; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.step-text h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-.step-text p { font-size: 13px; color: var(--muted); line-height: 1.5; }
-
-/* FAQ */
-.faq-section { max-width: 780px; margin: 0 auto; padding: 80px 40px; }
-.faq-list { margin-top: 48px; display: flex; flex-direction: column; gap: 0; }
-.faq-item { border-bottom: 1px solid var(--border); }
-.faq-question { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 20px 0; background: none; border: none; cursor: pointer; text-align: left; font-family: inherit; font-size: 15px; font-weight: 600; color: var(--text); gap: 16px; }
-.faq-question:hover { color: var(--blue); }
-.faq-icon { width: 24px; height: 24px; border-radius: 50%; background: var(--bg); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; transition: all .2s; color: var(--muted); }
-.faq-item.open .faq-icon { background: linear-gradient(135deg, var(--blue), var(--mint)); color: #fff; border-color: transparent; transform: rotate(45deg); }
-.faq-answer { display: none; padding: 0 0 20px; font-size: 14px; color: var(--muted); line-height: 1.7; }
-.faq-item.open .faq-answer { display: block; }
-
-/* CTA */
-.cta-block { background: linear-gradient(135deg, var(--blue) 0%, var(--mint) 100%); padding: 80px 40px; text-align: center; }
-.cta-block h2 { font-size: clamp(26px, 4vw, 38px); font-weight: 900; color: #fff; margin-bottom: 14px; letter-spacing: -.5px; }
-.cta-block p { font-size: 17px; color: rgba(255,255,255,.8); margin-bottom: 36px; }
-
-/* FOOTER */
-.site-footer { background: #0f172a; color: rgba(255,255,255,.55); font-size: 13px; }
-.footer-main { max-width: 1200px; margin: 0 auto; padding: 64px 40px 48px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; }
-.footer-brand p { font-size: 13px; line-height: 1.7; margin: 16px 0; color: rgba(255,255,255,.45); max-width: 260px; }
-.footer-brand a { color: rgba(255,255,255,.55); text-decoration: none; }
-.footer-brand a:hover { color: #fff; }
-.footer-col h4 { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.35); margin-bottom: 16px; }
-.footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-.footer-col ul li a { color: rgba(255,255,255,.6); transition: color .15s; font-size: 14px; text-decoration: none; }
-.footer-col ul li a:hover { color: #fff; }
-.footer-bottom { border-top: 1px solid rgba(255,255,255,.08); padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; gap: 8px; font-size: 12px; color: rgba(255,255,255,.35); }
-.footer-bottom-links { display: flex; gap: 20px; }
-.footer-bottom-links a { color: rgba(255,255,255,.4); font-size: 12px; transition: color .15s; text-decoration: none; }
-.footer-bottom-links a:hover { color: #fff; }
-
-/* COMING SOON SECTION */
-.coming-soon { background: var(--bg); padding: 60px 40px; text-align: center; }
-.coming-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 800px; margin: 32px auto 0; }
-.coming-chip { background: var(--surface); border: 1px dashed var(--border); border-radius: 100px; padding: 8px 18px; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
-
-.nav-toggle-cb { display: none; }
-.nav-hamburger { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 30px; height: 30px; cursor: pointer; margin-left: auto; }
-.nav-hamburger span { display: block; height: 2px; width: 22px; background: var(--text); border-radius: 2px; transition: .2s; }
-.nav-toggle-cb:checked ~ .nav-hamburger span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-.nav-toggle-cb:checked ~ .nav-hamburger span:nth-child(2) { opacity: 0; }
-.nav-toggle-cb:checked ~ .nav-hamburger span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-.nav-panel { display: contents; }
-@media (max-width: 700px) {
-  .nav-hamburger { display: flex; }
-  .nav-panel { display: none; position: absolute; top: 64px; left: 0; right: 0; flex-direction: column; background: rgba(255,255,255,.98); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: 0 8px 24px rgba(15,23,42,.08); }
-  .nav-toggle-cb:checked ~ .nav-panel { display: flex; }
-  .nav-links { flex-direction: column; gap: 0; align-items: stretch; padding: 6px 0; }
-  .nav-links a { padding: 13px 24px; font-size: 15px; }
-  .nav-links a:hover { background: rgba(0,0,0,.03); }
-  .nav-actions { flex-direction: column; align-items: stretch; gap: 10px; padding: 16px 24px; border-top: 1px solid var(--border); }
-  .nav-actions .btn { width: 100%; justify-content: center; }
-}
-
-@media (max-width: 768px) {
-  .hero { padding: 60px 20px 50px; }
-  .countries-strip { padding: 40px 20px; }
-  .section { padding: 60px 20px; }
-  .faq-section { padding: 60px 20px; }
-  .how-bg { padding: 60px 20px; }
-  .cta-block { padding: 60px 20px; }
-  .stats-bar { flex-direction: column; gap: 32px; padding: 48px 20px; }
-  .stat-item { border-right: none; border-bottom: 1px solid rgba(255,255,255,.2); padding: 0 0 28px; }
-  .stat-item:last-child { border-bottom: none; padding-bottom: 0; }
-  .platforms-grid { grid-template-columns: 1fr; }
-  .footer-main { grid-template-columns: 1fr 1fr; gap: 32px; padding: 48px 20px 32px; }
-  .footer-brand { grid-column: 1 / -1; }
-  .footer-bottom { padding: 16px 20px; flex-direction: column; align-items: flex-start; }
-}
-@media (max-width: 480px) {
-  .footer-main { grid-template-columns: 1fr; }
-}
-</style>
+<link rel="icon" type="image/png" href="/logo.png">
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJ5BVD3GCH"></script>
 <script>
@@ -243,497 +32,137 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
 
 <!--site-nav-->
 
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-badge">⚡ Save hours every week</div>
-  <h1>One item. <span class="grad-text">All European marketplaces.</span></h1>
-  <p>Stop copy-pasting. Omnivaleur automatically lists your second-hand items on Marktplaats, 2dehands, Vinted and more — in seconds.</p>
-  <div class="hero-cta">
-    <a href="/register" class="btn btn-primary">Start 7-day free trial →</a>
-    <a href="/login" class="btn btn-outline">Log in</a>
-  </div>
-  <div class="platform-logos">
-    <div class="platform-chip"><img class="platform-logo" src="/assets/logos/marktplaats.png" alt="Marktplaats logo"> Marktplaats</div>
-    <div class="platform-chip"><img class="platform-logo" src="/assets/logos/2dehands.png" alt="2dehands logo"> 2dehands</div>
-    <div class="platform-chip"><img class="platform-logo" src="/assets/logos/vinted.png" alt="Vinted logo"> Vinted</div>
-    <div class="platform-chip"><img class="platform-logo" src="/assets/logos/ebay.webp" alt="eBay logo"> eBay</div>
-    <div class="platform-chip"><img class="platform-logo" src="/assets/logos/shopify.webp" alt="Shopify logo"> Shopify</div>
-    <div class="platform-chip"><img class="platform-logo" src="/assets/logos/woocommerce.svg" alt="WooCommerce logo"> WooCommerce</div>
-    <div class="platform-chip beta"><img class="platform-logo" src="/assets/logos/facebook.svg" alt="Facebook Marketplace logo"> Facebook Marketplace <span class="beta-label">beta</span></div>
-    <div class="platform-chip soon"><img class="platform-logo" src="/assets/logos/etsy.svg" alt="Etsy logo"> Etsy <span class="soon-label">coming soon</span></div>
-    <div class="platform-chip soon"><img class="platform-logo" src="/assets/logos/kleinanzeigen.svg" alt="Kleinanzeigen logo"> Kleinanzeigen <span class="soon-label">coming soon</span></div>
-    <div class="platform-chip soon"><img class="platform-logo" src="/assets/logos/wallapop.png" alt="Wallapop logo"> Wallapop <span class="soon-label">coming soon</span></div>
+<main>
+<section class="hero on-field">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <h1>One item.<br>All European<br>marketplaces.</h1>
+      <p class="lede">Stop copy-pasting. Omnivaleur lists your second-hand items on Marktplaats, 2dehands, Vinted and more, marketplace by marketplace.</p>
+      <div class="hero-cta">
+        <a href="/register" class="btn btn-primary">Start 7-day free trial</a>
+        <a href="/login" class="btn btn-outline">Log in</a>
       </div>
+    </div>
+    <figure class="hero-shot">
+      <img src="/assets/site/app/en/hero.webp" alt="The Omnivaleur items screen with each item and the marketplaces it is live on" width="1960" height="1200">
+    </figure>
+  </div>
 </section>
 
-<!-- PRODUCT SHOWCASE -->
-<div class="showcase">
-  <div class="showcase-track">
-    <div class="showcase-desktop">
-      <div class="showcase-badge">🖥️ Desktop dashboard</div>
-      <div class="browser-frame">
-        <div class="browser-bar">
-          <span class="browser-dot red"></span><span class="browser-dot yellow"></span><span class="browser-dot green"></span>
-          <div class="browser-url">omnivaleur.com/dashboard</div>
-        </div>
-        <div class="browser-body">
-          <div class="browser-viewport">
-            <iframe src="demo-dashboard.html" title="Omnivaleur dashboard preview" loading="lazy"></iframe>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="showcase-mobile">
-      <div class="showcase-badge" style="right:auto;left:10%">📱 Mobile</div>
-      <div class="phone-frame">
-        <div class="phone-notch"></div>
-        <div class="phone-screen">
-          <div class="phone-screen-viewport">
-            <iframe src="demo-dashboard.html" title="Omnivaleur mobile dashboard preview" loading="lazy"></iframe>
-          </div>
-        </div>
-      </div>
-    </div>
+<section class="band wrap" aria-labelledby="plat-kop">
+  <h2 id="plat-kop">All major European platforms, in one place</h2>
+  <p class="section-lede">From local favourites like Marktplaats to pan-European names like Vinted.</p>
+<div class="plat-group">
+  <h3>Live now</h3>
+  <div class="plat-row">
+    <div class="plat-name"><img src="/assets/logos/marktplaats.png" alt="" loading="lazy">Marktplaats</div>
+    <p>The largest second-hand marketplace in the Netherlands with 8 million unique visitors per month. Essential for every Dutch reseller.</p>
+    <p class="plat-reach">Netherlands</p>
+  </div>
+  <div class="plat-row">
+    <div class="plat-name"><img src="/assets/logos/vinted.png" alt="" loading="lazy">Vinted</div>
+    <p>Over 105 million users across Europe. The largest fashion platform in the EU, active in 21 countries, perfect for clothing and accessories.</p>
+    <p class="plat-reach">NL, BE, DE, FR, ES, IT and 15 more</p>
+  </div>
+  <div class="plat-row">
+    <div class="plat-name"><img src="/assets/logos/2dehands.png" alt="" loading="lazy">2dehands</div>
+    <p>The Belgian equivalent of Marktplaats. Covers both Dutch and French-speaking Belgium, essential for the entire Belgian market.</p>
+    <p class="plat-reach">Flanders, Wallonia</p>
+  </div>
+  <div class="plat-row">
+    <div class="plat-name"><img src="/assets/logos/ebay.webp" alt="" loading="lazy">eBay Europe</div>
+    <p>367 million monthly visits across Europe. The go-to marketplace for electronics, collectibles and fashion in Germany, France, Italy and Spain.</p>
+    <p class="plat-reach">DE, FR, IT, ES, NL and 12 more</p>
+  </div>
+  <div class="plat-row">
+    <div class="plat-name"><img src="/assets/logos/shopify.webp" alt="" loading="lazy">Shopify</div>
+    <p>Build your own webshop and sync your inventory automatically. Ideal for professional resellers who want their own channel alongside the marketplaces.</p>
+    <p class="plat-reach">NL, DE, FR and across the EU</p>
+  </div>
+  <div class="plat-row">
+    <div class="plat-name"><img src="/assets/logos/woocommerce.svg" alt="" loading="lazy">WooCommerce</div>
+    <p>Already selling from your own WordPress shop? Connect it with one click, import your products, and every sale on Marktplaats, Vinted or eBay updates your shop's stock automatically, and the other way round.</p>
+    <p class="plat-reach">NL, BE, DE and across the EU</p>
   </div>
 </div>
-
-<!-- EU COUNTRIES STRIP -->
-<div class="countries-strip">
-  <h2>Active across all 27 EU countries</h2>
-  <div class="countries-grid">
-    <div class="country-chip"><span class="flag">🇳🇱</span> Netherlands</div>
-    <div class="country-chip"><span class="flag">🇧🇪</span> Belgium</div>
-    <div class="country-chip"><span class="flag">🇩🇪</span> Germany</div>
-    <div class="country-chip"><span class="flag">🇫🇷</span> France</div>
-    <div class="country-chip"><span class="flag">🇪🇸</span> Spain</div>
-    <div class="country-chip"><span class="flag">🇮🇹</span> Italy</div>
-    <div class="country-chip"><span class="flag">🇵🇱</span> Poland</div>
-    <div class="country-chip"><span class="flag">🇵🇹</span> Portugal</div>
-    <div class="country-chip"><span class="flag">🇸🇪</span> Sweden</div>
-    <div class="country-chip"><span class="flag">🇩🇰</span> Denmark</div>
-    <div class="country-chip"><span class="flag">🇫🇮</span> Finland</div>
-    <div class="country-chip"><span class="flag">🇦🇹</span> Austria</div>
-    <div class="country-chip"><span class="flag">🇨🇿</span> Czech Republic</div>
-    <div class="country-chip"><span class="flag">🇭🇺</span> Hungary</div>
-    <div class="country-chip"><span class="flag">🇷🇴</span> Romania</div>
-    <div class="country-chip"><span class="flag">🇬🇷</span> Greece</div>
-    <div class="country-chip"><span class="flag">🇧🇬</span> Bulgaria</div>
-    <div class="country-chip"><span class="flag">🇸🇰</span> Slovakia</div>
-    <div class="country-chip"><span class="flag">🇭🇷</span> Croatia</div>
-    <div class="country-chip"><span class="flag">🇸🇮</span> Slovenia</div>
-    <div class="country-chip"><span class="flag">🇱🇹</span> Lithuania</div>
-    <div class="country-chip"><span class="flag">🇱🇻</span> Latvia</div>
-    <div class="country-chip"><span class="flag">🇪🇪</span> Estonia</div>
-    <div class="country-chip"><span class="flag">🇱🇺</span> Luxembourg</div>
-    <div class="country-chip"><span class="flag">🇮🇪</span> Ireland</div>
-    <div class="country-chip"><span class="flag">🇨🇾</span> Cyprus</div>
-    <div class="country-chip"><span class="flag">🇲🇹</span> Malta</div>
+<div class="plat-group">
+  <h3>Beta</h3>
+  <div class="plat-row">
+    <div class="plat-name"><img src="/assets/logos/facebook.svg" alt="" loading="lazy">Facebook Marketplace</div>
+    <p>Local and pan-European reach via Facebook. Strong for furniture, electronics and clothing across all EU countries. Built-in buyer chat.</p>
+    <p class="plat-reach">NL, BE, DE and across the EU</p>
   </div>
 </div>
-
-<!-- STATS -->
-<div class="stats-bar">
-  <div class="stat-item">
-    <div class="stat-num">27</div>
-    <div class="stat-label">EU countries</div>
+<div class="plat-group">
+  <h3>Coming soon</h3>
+  <div class="plat-row">
+    <div class="plat-name"><img src="/assets/logos/kleinanzeigen.svg" alt="" loading="lazy">Kleinanzeigen</div>
+    <p>Germany's largest classifieds site (formerly eBay Kleinanzeigen) with over 35 million active users, crucial for the DACH market.</p>
+    <p class="plat-reach">Germany, Austria</p>
   </div>
-  <div class="stat-item">
-    <div class="stat-num">10+</div>
-    <div class="stat-label">Marketplaces</div>
+  <div class="plat-row">
+    <div class="plat-name"><img src="/assets/logos/wallapop.png" alt="" loading="lazy">Wallapop</div>
+    <p>The most used second-hand app in Spain with 15+ million users. Strong in fashion, electronics and furniture in Spain and Portugal.</p>
+    <p class="plat-reach">Spain, Portugal</p>
   </div>
-  <div class="stat-item">
-    <div class="stat-num">1</div>
-    <div class="stat-label">Dashboard</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-num">∞</div>
-    <div class="stat-label">Hours saved</div>
+  <div class="plat-row">
+    <div class="plat-name"><img src="/assets/logos/etsy.svg" alt="" loading="lazy">Etsy</div>
+    <p>Global platform for handmade, vintage and unique products. Large audience in Western Europe for creative and artisan items.</p>
+    <p class="plat-reach">DE, FR, NL, IT and across the EU</p>
   </div>
 </div>
+</section>
 
-<!-- MAIN PLATFORMS -->
-<div class="section">
-  <div class="section-label">Integrated marketplaces</div>
-  <h2 class="section-title">All major European platforms, <span class="grad-text">in one place</span></h2>
-  <p class="section-sub">From local favourites like Marktplaats to pan-European giants like Vinted — Omnivaleur syncs them all.</p>
-
-  <div class="platforms-grid">
-
-    <div class="platform-card">
-      <div class="platform-header">
-        <div class="platform-logo-box"><img src="/assets/logos/marktplaats.png" alt="Marktplaats logo"></div>
-        <div class="platform-badges">
-          <span class="badge badge-live">✓ Live</span>
-          <span class="badge badge-eu">🇳🇱 NL</span>
-        </div>
-      </div>
-      <h3>Marktplaats</h3>
-      <p>The largest second-hand marketplace in the Netherlands with 8 million unique visitors per month. Essential for every Dutch reseller.</p>
-      <div class="platform-countries">
-        <span class="country-tag"><span>🇳🇱</span> Netherlands</span>
-      </div>
-    </div>
-
-    <div class="platform-card">
-      <div class="platform-header">
-        <div class="platform-logo-box"><img src="/assets/logos/vinted.png" alt="Vinted logo"></div>
-        <div class="platform-badges">
-          <span class="badge badge-live">✓ Live</span>
-          <span class="badge badge-eu">Pan-EU</span>
-        </div>
-      </div>
-      <h3>Vinted</h3>
-      <p>Over 105 million users across Europe. The largest fashion platform in the EU, active in 21 countries — perfect for clothing and accessories.</p>
-      <div class="platform-countries">
-        <span class="country-tag"><span>🇳🇱</span> NL</span>
-        <span class="country-tag"><span>🇧🇪</span> BE</span>
-        <span class="country-tag"><span>🇩🇪</span> DE</span>
-        <span class="country-tag"><span>🇫🇷</span> FR</span>
-        <span class="country-tag"><span>🇪🇸</span> ES</span>
-        <span class="country-tag"><span>🇮🇹</span> IT</span>
-        <span class="country-tag">+15</span>
-      </div>
-    </div>
-
-    <div class="platform-card">
-      <div class="platform-header">
-        <div class="platform-logo-box"><img src="/assets/logos/2dehands.png" alt="2dehands logo"></div>
-        <div class="platform-badges">
-          <span class="badge badge-live">✓ Live</span>
-          <span class="badge badge-eu">🇧🇪 BE</span>
-        </div>
-      </div>
-      <h3>2dehands</h3>
-      <p>The Belgian equivalent of Marktplaats. Covers both Dutch and French-speaking Belgium — essential for the entire Belgian market.</p>
-      <div class="platform-countries">
-        <span class="country-tag"><span>🇧🇪</span> Flanders</span>
-        <span class="country-tag"><span>🇧🇪</span> Wallonia</span>
-      </div>
-    </div>
-
-    <div class="platform-card">
-      <div class="platform-header">
-        <div class="platform-logo-box"><img src="/assets/logos/ebay.webp" alt="eBay logo"></div>
-        <div class="platform-badges">
-          <span class="badge badge-live">✓ Live</span>
-          <span class="badge badge-eu">Pan-EU</span>
-        </div>
-      </div>
-      <h3>eBay Europe</h3>
-      <p>367 million monthly visits across Europe. The go-to marketplace for electronics, collectibles and fashion in Germany, France, Italy and Spain.</p>
-      <div class="platform-countries">
-        <span class="country-tag"><span>🇩🇪</span> DE</span>
-        <span class="country-tag"><span>🇫🇷</span> FR</span>
-        <span class="country-tag"><span>🇮🇹</span> IT</span>
-        <span class="country-tag"><span>🇪🇸</span> ES</span>
-        <span class="country-tag"><span>🇳🇱</span> NL</span>
-        <span class="country-tag">+12</span>
-      </div>
-    </div>
-
-    <div class="platform-card">
-      <div class="platform-header">
-        <div class="platform-logo-box"><img src="/assets/logos/kleinanzeigen.svg" alt="Kleinanzeigen logo"></div>
-        <div class="platform-badges">
-          <span class="badge badge-soon">Coming soon</span>
-          <span class="badge badge-eu">🇩🇪 DE</span>
-        </div>
-      </div>
-      <h3>Kleinanzeigen</h3>
-      <p>Germany's largest classifieds site (formerly eBay Kleinanzeigen) with over 35 million active users — crucial for the DACH market.</p>
-      <div class="platform-countries">
-        <span class="country-tag"><span>🇩🇪</span> Germany</span>
-        <span class="country-tag"><span>🇦🇹</span> Austria</span>
-      </div>
-    </div>
-
-    <div class="platform-card">
-      <div class="platform-header">
-        <div class="platform-logo-box"><img src="/assets/logos/wallapop.png" alt="Wallapop logo"></div>
-        <div class="platform-badges">
-          <span class="badge badge-soon">Coming soon</span>
-          <span class="badge badge-eu">🇪🇸 ES</span>
-        </div>
-      </div>
-      <h3>Wallapop</h3>
-      <p>The most used second-hand app in Spain with 15+ million users. Strong in fashion, electronics and furniture in Spain and Portugal.</p>
-      <div class="platform-countries">
-        <span class="country-tag"><span>🇪🇸</span> Spain</span>
-        <span class="country-tag"><span>🇵🇹</span> Portugal</span>
-      </div>
-    </div>
-
-    <div class="platform-card">
-      <div class="platform-header">
-        <div class="platform-logo-box"><img src="/assets/logos/etsy.svg" alt="Etsy logo"></div>
-        <div class="platform-badges">
-          <span class="badge badge-soon">Coming soon</span>
-          <span class="badge badge-eu">Global</span>
-        </div>
-      </div>
-      <h3>Etsy</h3>
-      <p>Global platform for handmade, vintage and unique products. Large audience in Western Europe for creative and artisan items.</p>
-      <div class="platform-countries">
-        <span class="country-tag"><span>🇩🇪</span> DE</span>
-        <span class="country-tag"><span>🇫🇷</span> FR</span>
-        <span class="country-tag"><span>🇳🇱</span> NL</span>
-        <span class="country-tag"><span>🇮🇹</span> IT</span>
-        <span class="country-tag">+EU</span>
-      </div>
-    </div>
-
-    <div class="platform-card">
-      <div class="platform-header">
-        <div class="platform-logo-box"><img src="/assets/logos/facebook.svg" alt="Facebook Marketplace logo"></div>
-        <div class="platform-badges">
-          <span class="badge badge-beta">Beta</span>
-          <span class="badge badge-eu">Pan-EU</span>
-        </div>
-      </div>
-      <h3>Facebook Marketplace</h3>
-      <p>Local and pan-European reach via Facebook. Strong for furniture, electronics and clothing across all EU countries. Built-in buyer chat.</p>
-      <div class="platform-countries">
-        <span class="country-tag"><span>🇳🇱</span> NL</span>
-        <span class="country-tag"><span>🇧🇪</span> BE</span>
-        <span class="country-tag"><span>🇩🇪</span> DE</span>
-        <span class="country-tag">+EU</span>
-      </div>
-    </div>
-
-    <div class="platform-card">
-      <div class="platform-header">
-        <div class="platform-logo-box"><img src="/assets/logos/shopify.webp" alt="Shopify logo"></div>
-        <div class="platform-badges">
-          <span class="badge badge-live">✓ Live</span>
-          <span class="badge badge-eu">Pan-EU</span>
-        </div>
-      </div>
-      <h3>Shopify</h3>
-      <p>Build your own webshop and sync your inventory automatically. Ideal for professional resellers who want their own channel alongside the marketplaces.</p>
-      <div class="platform-countries">
-        <span class="country-tag"><span>🇳🇱</span> NL</span>
-        <span class="country-tag"><span>🇩🇪</span> DE</span>
-        <span class="country-tag"><span>🇫🇷</span> FR</span>
-        <span class="country-tag">+EU</span>
-      </div>
-    </div>
-
-    <div class="platform-card">
-      <div class="platform-header">
-        <div class="platform-logo-box"><img src="/assets/logos/woocommerce.svg" alt="WooCommerce logo"></div>
-        <div class="platform-badges">
-          <span class="badge badge-live">✓ Live</span>
-          <span class="badge badge-eu">Pan-EU</span>
-        </div>
-      </div>
-      <h3>WooCommerce</h3>
-      <p>Already selling from your own WordPress shop? Connect it with one click, import your products, and every sale on Marktplaats, Vinted or eBay updates your shop's stock automatically, and the other way round.</p>
-      <div class="platform-countries">
-        <span class="country-tag"><span>🇳🇱</span> NL</span>
-        <span class="country-tag"><span>🇧🇪</span> BE</span>
-        <span class="country-tag"><span>🇩🇪</span> DE</span>
-        <span class="country-tag">+EU</span>
-      </div>
-    </div>
-
+<section class="band on-ink" aria-labelledby="land-kop">
+  <div class="wrap">
+    <h2 id="land-kop">Active across all 27 EU countries</h2>
+    <ul class="country-list"><li>Netherlands</li><li>Belgium</li><li>Germany</li><li>France</li><li>Spain</li><li>Italy</li><li>Poland</li><li>Portugal</li><li>Sweden</li><li>Denmark</li><li>Finland</li><li>Austria</li><li>Czech Republic</li><li>Hungary</li><li>Romania</li><li>Greece</li><li>Bulgaria</li><li>Slovakia</li><li>Croatia</li><li>Slovenia</li><li>Lithuania</li><li>Latvia</li><li>Estonia</li><li>Luxembourg</li><li>Ireland</li><li>Cyprus</li><li>Malta</li></ul>
+    <h3 class="road-kop" style="margin-top:var(--space-2xl)">On the roadmap</h3>
+    <ul class="road-list"><li>Vide Dressing (FR)</li><li>Momox Fashion (DE)</li><li>Subito.it (IT)</li><li>OLX.pl (PL)</li><li>Blocket (SE)</li><li>Kapaza (BE)</li><li>Car.gr (GR)</li><li>OLX Portugal (PT)</li><li>OLX.ro (RO)</li></ul>
   </div>
-</div>
+</section>
 
-<!-- COMING SOON -->
-<div class="coming-soon">
-  <div class="section-label" style="text-align:center">On the roadmap</div>
-  <h2 class="section-title" style="text-align:center;font-size:clamp(22px,3vw,30px)">More platforms coming</h2>
-  <div class="coming-grid">
-    <div class="coming-chip">🇫🇷 Vide Dressing</div>
-    <div class="coming-chip">🇩🇪 Momox Fashion</div>
-    <div class="coming-chip">🇮🇹 Subito.it</div>
-    <div class="coming-chip">🇵🇱 OLX.pl</div>
-    <div class="coming-chip">🇸🇪 Blocket</div>
-    <div class="coming-chip">🇳🇱 Bol.com</div>
-    <div class="coming-chip">🇧🇪 Kapaza</div>
-    <div class="coming-chip">🇬🇷 Car.gr</div>
-    <div class="coming-chip">🇵🇹 OLX Portugal</div>
-    <div class="coming-chip">🇷🇴 OLX.ro</div>
+<section class="band on-mint" aria-labelledby="stap-kop">
+  <div class="wrap">
+    <h2 id="stap-kop">From one item to all of Europe</h2>
+    <p class="section-lede">Omnivaleur makes cross-listing so easy you'll never have to think about it again.</p>
+    <ol class="steps steps-wide">
+  <li><div><h3>Install the Chrome extension</h3><p>The extension runs in the background and does the placing on Marktplaats, 2dehands and Vinted through your own logged-in accounts. Install once, always active.</p></div></li>
+  <li><div><h3>Import your existing items</h3><p>Scan your existing listings on Marktplaats, 2dehands or Vinted and import them in bulk. Photos, description, price and category land in your dashboard.</p></div></li>
+  <li><div><h3>Choose your marketplaces</h3><p>Select per item which marketplaces it goes to.</p></div></li>
+  <li><div><h3>Omnivaleur publishes everything automatically</h3><p>Our extension fills in forms, adapts categories per platform and posts your item. You don't have to do a thing.</p></div></li>
+  <li><div><h3>Sell, sync, repeat</h3><p>Once an item sells on one platform, Omnivaleur automatically removes it everywhere else. No more double sales or outdated listings.</p></div></li>
+    </ol>
   </div>
-</div>
+</section>
 
-<!-- HOW IT WORKS -->
-<div class="how-bg">
-  <div style="max-width:780px;margin:0 auto;text-align:center">
-    <div class="section-label">How it works</div>
-    <h2 class="section-title">From one item to <span class="grad-text">all of Europe</span></h2>
-    <p class="section-sub" style="margin:0 auto">Omnivaleur makes cross-listing so easy you'll never have to think about it again.</p>
-  </div>
-  <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <div class="step-text">
-        <h3>Install the Chrome extension</h3>
-        <p>The extension runs in the background and automatically detects your products on the platforms you already use. Install once, always active.</p>
-      </div>
-    </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <div class="step-text">
-        <h3>Import your existing items</h3>
-        <p>Open an existing listing on Marktplaats or Vinted — Omnivaleur automatically imports photos, description, price and category to your dashboard.</p>
-      </div>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <div class="step-text">
-        <h3>Choose your target markets</h3>
-        <p>Select which marketplaces and countries to list in. Choose from 10+ platforms across 27 EU countries.</p>
-      </div>
-    </div>
-    <div class="step">
-      <div class="step-num">4</div>
-      <div class="step-text">
-        <h3>Omnivaleur publishes everything automatically</h3>
-        <p>Our extension fills in forms, adapts categories per platform and posts your item. You don't have to do a thing — we do the work.</p>
-      </div>
-    </div>
-    <div class="step">
-      <div class="step-num">5</div>
-      <div class="step-text">
-        <h3>Sell · sync · repeat</h3>
-        <p>Once an item sells on one platform, Omnivaleur automatically removes it everywhere else. No more double sales or outdated listings.</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- FAQ -->
-<div class="faq-section">
-  <div class="section-label">Frequently asked questions</div>
-  <h2 class="section-title">Everything about the <span class="grad-text">marketplaces</span></h2>
-
+<section class="band wrap" aria-labelledby="faq-kop">
+  <h2 id="faq-kop">Everything about the marketplaces</h2>
   <div class="faq-list">
-
-    <div class="faq-item">
-      <button class="faq-question" onclick="toggleFaq(this)">
-        Which marketplaces are available now?
-        <div class="faq-icon">+</div>
-      </button>
-      <div class="faq-answer">Currently Marktplaats (NL), Vinted (pan-EU), 2dehands (BE), eBay Europe, Shopify and WooCommerce are fully integrated. Facebook Marketplace works as a beta: Facebook doesn't officially allow automated listing, so use it deliberately. Etsy, Kleinanzeigen (DE) and Wallapop (ES) are coming soon. We continuously add new platforms based on user feedback.</div>
-    </div>
-
-    <div class="faq-item">
-      <button class="faq-question" onclick="toggleFaq(this)">
-        Do I need an account on every marketplace?
-        <div class="faq-icon">+</div>
-      </button>
-      <div class="faq-answer">Yes, you need your own account on each marketplace you want to publish to. Omnivaleur posts items on your behalf via your own logged-in browser, so everything stays under your name and reputation.</div>
-    </div>
-
-    <div class="faq-item">
-      <button class="faq-question" onclick="toggleFaq(this)">
-        Does Omnivaleur work in all EU countries?
-        <div class="faq-icon">+</div>
-      </button>
-      <div class="faq-answer">Yes. Omnivaleur is designed for all 27 EU member states. Platform availability per country varies — Marktplaats is only active in the Netherlands, for example — but the dashboard works everywhere. We continuously expand platform coverage per country.</div>
-    </div>
-
-    <div class="faq-item">
-      <button class="faq-question" onclick="toggleFaq(this)">
-        What happens when I sell an item on one platform?
-        <div class="faq-icon">+</div>
-      </button>
-      <div class="faq-answer">Once you mark a sale in Omnivaleur (or the extension detects it), all other listings are automatically removed or deactivated. This prevents double sales and outdated listings on other platforms.</div>
-    </div>
-
-    <div class="faq-item">
-      <button class="faq-question" onclick="toggleFaq(this)">
-        Are descriptions automatically translated?
-        <div class="faq-icon">+</div>
-      </button>
-      <div class="faq-answer">Yes! Omnivaleur has built-in automatic translation. You enter everything in English. For Marktplaats and 2dehands, titles and descriptions are automatically translated to Dutch. For international platforms like Vinted, eBay and Etsy, your English content is used directly.</div>
-    </div>
-
-    <div class="faq-item">
-      <button class="faq-question" onclick="toggleFaq(this)">
-        Are all marketplaces included in every plan?
-        <div class="faq-icon">+</div>
-      </button>
-      <div class="faq-answer">All live platforms are available in every paid plan. There are no extra costs per platform. You pay one price and get access to everything Omnivaleur offers.</div>
-    </div>
-
-    <div class="faq-item">
-      <button class="faq-question" onclick="toggleFaq(this)">
-        How is Omnivaleur different from Vendoo or List Perfectly?
-        <div class="faq-icon">+</div>
-      </button>
-      <div class="faq-answer">Vendoo and List Perfectly are primarily focused on the US market (Poshmark, Mercari, eBay US). Omnivaleur focuses exclusively on European platforms: Marktplaats, Vinted, 2dehands, Kleinanzeigen, Wallapop and more. We also support EU-specific features like multilingual listings, DAC7 reporting and the correct platform categories for Europe.</div>
-    </div>
-
-    <div class="faq-item">
-      <button class="faq-question" onclick="toggleFaq(this)">
-        Can I use multiple accounts for the same marketplace?
-        <div class="faq-icon">+</div>
-      </button>
-      <div class="faq-answer">Currently Omnivaleur supports one account per marketplace. Multiple accounts per platform is on the roadmap for professional resellers and teams. Contact us if this is urgent for you.</div>
-    </div>
-
-    <div class="faq-item">
-      <button class="faq-question" onclick="toggleFaq(this)">
-        Which Chrome extension do I need?
-        <div class="faq-icon">+</div>
-      </button>
-      <div class="faq-answer">Omnivaleur works via an official Chrome extension that you install once. The extension communicates with your Omnivaleur dashboard and automatically posts items to the marketplaces. Without the extension, automatic publishing does not work — but you can still import and manage your inventory in the dashboard.</div>
-    </div>
-
-    <div class="faq-item">
-      <button class="faq-question" onclick="toggleFaq(this)">
-        Is my data safe and GDPR-compliant?
-        <div class="faq-icon">+</div>
-      </button>
-      <div class="faq-answer">Absolutely. Omnivaleur stores all data on European servers, is fully GDPR-compliant and never shares data with third parties. Your marketplace login credentials never leave your own browser — the extension always works via your own logged-in session.</div>
-    </div>
-
+  <details><summary>Which marketplaces are available now?</summary><div>Currently Marktplaats (NL), Vinted (pan-EU), 2dehands (BE), eBay Europe, Shopify and WooCommerce are fully integrated. Facebook Marketplace works as a beta: Facebook doesn't officially allow automated listing, so use it deliberately. Etsy, Kleinanzeigen (DE) and Wallapop (ES) are coming soon. We continuously add new platforms based on user feedback.</div></details>
+  <details><summary>Do I need an account on every marketplace?</summary><div>Yes, you need your own account on each marketplace you want to publish to. Omnivaleur posts items on your behalf via your own logged-in browser, so everything stays under your name and reputation.</div></details>
+  <details><summary>Does Omnivaleur work in all EU countries?</summary><div>Yes. Omnivaleur is designed for all 27 EU member states. Platform availability per country varies (Marktplaats is only active in the Netherlands, for example) but the dashboard works everywhere. We continuously expand platform coverage per country.</div></details>
+  <details><summary>What happens when I sell an item on one platform?</summary><div>Once you mark a sale in Omnivaleur (or the extension detects it), all other listings are automatically removed or deactivated. This prevents double sales and outdated listings on other platforms.</div></details>
+  <details><summary>Are descriptions automatically translated?</summary><div>Yes. You write it once. Marktplaats, 2dehands and eBay get Dutch and Shopify gets English, translated on every placement. Vinted and WooCommerce get exactly the text you wrote.</div></details>
+  <details><summary>Are all marketplaces included in every plan?</summary><div>All live platforms are available in every paid plan. There are no extra costs per platform. You pay one price and get access to everything your plan offers.</div></details>
+  <details><summary>How is Omnivaleur different from Vendoo or List Perfectly?</summary><div>Vendoo and List Perfectly are primarily focused on the US market (Poshmark, Mercari, eBay US). Omnivaleur focuses exclusively on European platforms: Marktplaats, 2dehands, Vinted and eBay, with Kleinanzeigen and Wallapop planned. We also handle what Europe needs, such as listings in the right language and the correct platform categories, and we offer a free DAC7 checker.</div></details>
+  <details><summary>Can I use multiple accounts for the same marketplace?</summary><div>Currently Omnivaleur supports one account per marketplace. Multiple accounts per platform is on the roadmap for professional resellers and teams. Contact us if this is urgent for you.</div></details>
+  <details><summary>Which Chrome extension do I need?</summary><div>Omnivaleur works via an official Chrome extension that you install once. The extension communicates with your Omnivaleur dashboard and automatically posts items to the marketplaces. Without the extension, automatic publishing to Marktplaats, 2dehands, Vinted and Facebook does not work, but you can still import and manage your inventory in the dashboard.</div></details>
+  <details><summary>Is my data safe and GDPR-compliant?</summary><div>Yes. Your account and listing data are stored in the EU and we do not sell your data. We only share it with the processors named in our privacy policy. Your marketplace login credentials never leave your own browser: the extension always works via your own logged-in session.</div></details>
   </div>
-</div>
+</section>
 
-<!-- CTA -->
-<div class="cta-block">
-  <h2>Ready to reach all of Europe?</h2>
-  <p>7 days free. No credit card needed. Start today.</p>
-  <a href="/register" class="btn btn-white" style="font-size:15px;padding:13px 32px">Start free trial →</a>
-</div>
+<section class="band on-field" aria-labelledby="slot-kop">
+  <div class="wrap close-band">
+    <div>
+      <h2 id="slot-kop">Ready to reach all of Europe?</h2>
+      <p>7 days free. No credit card needed. Start today.</p>
+    </div>
+    <div class="close-act"><a href="/register" class="btn btn-primary">Start free trial</a></div>
+  </div>
+</section>
+</main>
 
 <!--site-footer-->
-
-<script>
-// Scale the whole showcase (desktop + mobile together) to fit narrow screens,
-// keeping their side-by-side layout instead of stacking them.
-(function() {
-  const wrap = document.querySelector('.showcase');
-  const track = document.querySelector('.showcase-track');
-  if (!wrap || !track) return;
-  const mq = window.matchMedia('(max-width: 900px)');
-  function fitScale() {
-    if (!mq.matches) { track.style.transform = ''; wrap.style.height = ''; return; }
-    track.style.transform = '';
-    const cs = getComputedStyle(wrap);
-    const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
-    const padTop = parseFloat(cs.paddingTop);
-    const padBottom = parseFloat(cs.paddingBottom);
-    const naturalWidth = track.offsetWidth;
-    const naturalHeight = track.offsetHeight;
-    const scale = (wrap.clientWidth - padX) / naturalWidth;
-    track.style.transform = `scale(${scale})`;
-    wrap.style.height = (naturalHeight * scale + padTop + padBottom) + 'px';
-  }
-  fitScale();
-  window.addEventListener('resize', fitScale);
-})();
-
-function toggleFaq(btn) {
-  const item = btn.closest('.faq-item');
-  const wasOpen = item.classList.contains('open');
-  document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
-  if (!wasOpen) item.classList.add('open');
-}
-</script>
-
 </body>
 </html>

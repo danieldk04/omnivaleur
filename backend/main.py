@@ -319,18 +319,20 @@ def _vaste_omleiding(doel: str):
 for _bestand, _pad in {"index": "/", "nl": "/nl", "privacy": "/privacy",
                        "terms": "/terms", "marketplaces": "/marketplaces",
                        "mp-video": "/mp-video", "ai-info": "/ai-info",
-                       "not-found": "/"}.items():
+                       "not-found": "/", "not-found.nl": "/nl",
+                       "privacy.nl": "/nl/privacy", "terms.nl": "/nl/terms",
+                       "marketplaces.nl": "/nl/marketplaces"}.items():
     app.get(f"/{_bestand}.html", include_in_schema=False)(_vaste_omleiding(_pad))
 
 
 @app.get("/privacy")
 async def privacy():
-    return met_site_chrome("privacy.html", "en", "/privacy")
+    return met_site_chrome("privacy.html", "en", "/privacy", wissel="/nl/privacy")
 
 
 @app.get("/terms")
 async def terms():
-    return met_site_chrome("terms.html", "en", "/terms")
+    return met_site_chrome("terms.html", "en", "/terms", wissel="/nl/terms")
 
 
 @app.get("/login")
@@ -368,7 +370,22 @@ async def beheer_page():
 
 @app.get("/marketplaces")
 async def marketplaces_page():
-    return met_site_chrome("marketplaces.html", "en", "/marketplaces")
+    return met_site_chrome("marketplaces.html", "en", "/marketplaces", wissel="/nl/marketplaces")
+
+
+@app.get("/nl/marketplaces")
+async def marketplaces_page_nl():
+    return met_site_chrome("marketplaces.nl.html", "nl", "/nl/marketplaces", wissel="/marketplaces")
+
+
+@app.get("/nl/privacy")
+async def privacy_page_nl():
+    return met_site_chrome("privacy.nl.html", "nl", "/nl/privacy", wissel="/privacy")
+
+
+@app.get("/nl/terms")
+async def terms_page_nl():
+    return met_site_chrome("terms.nl.html", "nl", "/nl/terms", wissel="/terms")
 
 
 @app.get("/ai-info")
@@ -460,6 +477,8 @@ async def not_found_page(request: Request, exc: StarletteHTTPException):
         # Bewust niet "404.html": StaticFiles(html=True) serveert een bestand met
         # díe naam automatisch bij élke misser, ook op /api — dan kregen de app en
         # de extensie HTML terug waar ze JSON verwachten.
+        if request.url.path == "/nl" or request.url.path.startswith("/nl/"):
+            return met_site_chrome("not-found.nl.html", "nl", "", status_code=404)
         return met_site_chrome("not-found.html", "en", "", status_code=404)
     return await http_exception_handler(request, exc)
 

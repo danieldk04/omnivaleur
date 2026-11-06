@@ -21,6 +21,8 @@ PAGINAS = [
     ("index.html", "en"), ("nl.html", "nl"), ("marketplaces.html", "en"),
     ("privacy.html", "en"), ("terms.html", "en"), ("ai-info.html", "en"),
     ("mp-video.html", "nl"), ("not-found.html", "en"),
+    ("marketplaces.nl.html", "nl"), ("privacy.nl.html", "nl"),
+    ("terms.nl.html", "nl"), ("not-found.nl.html", "nl"),
 ]
 
 
@@ -40,7 +42,10 @@ def test_pagina_krijgt_precies_een_gedeelde_kopregel_en_voettekst(bestand, taal)
     assert html.count('id="site-chrome"') == 1
     assert "<!--site-" not in html
     assert ('Inloggen' in html) == (taal == "nl")
-    for pad in ("/marketplaces", "/ai-info", "/privacy", "/terms", "/register", "/login"):
+    # Sinds 06-11-2026 hebben marktplaatsen, privacy en voorwaarden een eigen
+    # Nederlandse versie; de Nederlandse kopregel en voettekst wijzen daarnaar.
+    voor = "/nl" if taal == "nl" else ""
+    for pad in (f"{voor}/marketplaces", "/ai-info", f"{voor}/privacy", f"{voor}/terms", "/register", "/login"):
         assert f'href="{pad}"' in html
 
 

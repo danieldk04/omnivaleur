@@ -39,36 +39,27 @@ WIDTH, HEIGHT = 1200, 630
 # publiceert). Zonder werkbaar font valt de generatie zacht terug op None en
 # publiceert het artikel gewoon zonder hero.
 FONT_CANDIDATES_BOLD = [
+    str(FRONTEND_DIR / "assets" / "site" / "fonts" / "clash-grotesk-600.woff2"),
     "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
     "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
     "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
 ]
 FONT_CANDIDATES_REGULAR = [
+    str(FRONTEND_DIR / "assets" / "site" / "fonts" / "hanken-grotesk-var.woff2"),
     "/System/Library/Fonts/Supplemental/Arial.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
     "/usr/share/fonts/TTF/DejaVuSans.ttf",
 ]
 
-PILLAR_LABELS = {
-    "A": "PLATFORM GUIDE",
-    "B": "RESELLER GUIDE",
-    "C": "HONEST COMPARISON",
-}
-
-# Merkkleuren uit frontend/templates/_chrome_style.html. De hero varieert binnen
-# deze familie — nooit erbuiten, anders herkent niemand het als Omnivaleur.
-#
-# Kleur per PILLAR, niet puur op hash: platform-guides zijn blauw, reseller-guides
-# groen/teal, vergelijkingen indigo. Zo ziet een terugkerende lezer aan de kleur
-# meteen wat voor artikel het is — en binnen elke pillar zorgt de slug-hash nog
-# voor twee varianten, zodat twee artikelen naast elkaar in de bloglijst niet
-# identiek ogen.
+# Kleuren uit frontend/assets/site/site.css (sinds de nieuwe site van 06-11-2026):
+# vlak merkblauw, inktblauw en mint, geen verloop. Kleur per PILLAR, zodat een
+# terugkerende lezer aan de kleur ziet wat voor artikel het is.
 PALETTES = {
-    "A": [((37, 99, 235), (56, 189, 248)), ((30, 64, 175), (37, 99, 235))],     # blauw
-    "B": [((15, 118, 110), (52, 211, 153)), ((5, 150, 105), (110, 231, 183))],  # teal/mint
-    "C": [((67, 56, 202), (139, 92, 246)), ((79, 70, 229), (167, 139, 250))],   # indigo/paars
+    "A": ((6, 75, 199), (250, 251, 253)),    # platformgids: kobalt met witte letters
+    "B": ((10, 27, 58), (250, 251, 253)),    # verkopersgids: inkt met witte letters
+    "C": ((134, 239, 186), (10, 27, 58)),    # vergelijking: mint met inkt letters
 }
 
 PLATFORM_WORDS = ["Marktplaats", "2dehands", "Vinted", "eBay", "Etsy", "Shopify", "WooCommerce"]
@@ -88,24 +79,6 @@ def _load_font(candidates: list[str], size: int):
             except Exception:
                 continue
     return None
-
-
-def _gradient(size: tuple[int, int], start: tuple, end: tuple, angle_down: bool):
-    """Diagonale verloop-achtergrond. `angle_down` kantelt 'm de andere kant op,
-    wat twee visueel duidelijk verschillende beelden uit hetzelfde kleurpaar geeft."""
-    from PIL import Image
-
-    w, h = size
-    base = Image.new("RGB", (w, h))
-    pixels = base.load()
-    for y in range(h):
-        for x in range(0, w, 4):  # om de 4px berekenen en invullen — 4x sneller, niet zichtbaar
-            t = ((x / w) + (1 - y / h if angle_down else y / h)) / 2
-            color = tuple(round(start[i] + (end[i] - start[i]) * t) for i in range(3))
-            for dx in range(4):
-                if x + dx < w:
-                    pixels[x + dx, y] = color
-    return base
 
 
 def _wrap(draw, text: str, font, max_width: int) -> list[str]:
@@ -155,73 +128,45 @@ def generate_hero(slug: str, title: str, pillar: str, keyword: str = "", force: 
         return hero_url(slug)
 
     try:
-        from PIL import Image, ImageDraw, ImageFilter
+        from PIL import Image, ImageDraw
 
-        seed = _slug_seed(slug)
-        family = PALETTES.get(pillar, PALETTES["B"])
-        start, end = family[seed % len(family)]
-        img = _gradient((WIDTH, HEIGHT), start, end, angle_down=bool((seed >> 3) & 1))
-        draw = ImageDraw.Draw(img, "RGBA")
+        veld, inkt = PALETTES.get(pillar, PALETTES["B"])
+        img = Image.new("RGB", (WIDTH, HEIGHT), veld)
+        draw = ImageDraw.Draw(img)
 
-        # Zachte lichtcirkels: geven diepte en maken twee artikelen met hetzelfde
-        # kleurpaar alsnog van elkaar te onderscheiden (positie hangt aan de slug).
-        glow = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
-        gdraw = ImageDraw.Draw(glow)
-        for i in range(3):
-            r = 160 + ((seed >> (i * 5)) % 200)
-            cx = 260 + ((seed >> (i * 7)) % (WIDTH - 200))
-            cy = ((seed >> (i * 11)) % HEIGHT)
-            gdraw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(255, 255, 255, 22))
-        img = Image.alpha_composite(img.convert("RGBA"), glow.filter(ImageFilter.GaussianBlur(70))).convert("RGB")
-        draw = ImageDraw.Draw(img, "RGBA")
-
-        font_brand = _load_font(FONT_CANDIDATES_BOLD, 30)
-        font_chip = _load_font(FONT_CANDIDATES_BOLD, 20)
-        font_meta = _load_font(FONT_CANDIDATES_REGULAR, 24)
+        font_brand = _load_font(FONT_CANDIDATES_BOLD, 34)
+        font_meta = _load_font(FONT_CANDIDATES_REGULAR, 26)
         if not font_brand:
-            logger.warning("Geen bruikbaar font gevonden — hero overgeslagen voor %s", slug)
+            logger.warning("Geen bruikbaar font gevonden, hero overgeslagen voor %s", slug)
             return None
 
         margin = 72
-
-        # Merkregel bovenaan.
-        draw.text((margin, 56), "OMNIVALEUR", font=font_brand, fill=(255, 255, 255))
-
-        # Pillar-chip rechtsboven.
-        label = PILLAR_LABELS.get(pillar, "RESELLER GUIDE")
-        chip_w = draw.textlength(label, font=font_chip) + 36
-        chip_x = WIDTH - margin - chip_w
-        draw.rounded_rectangle([chip_x, 52, chip_x + chip_w, 92], radius=20, fill=(255, 255, 255, 46))
-        draw.text((chip_x + 18, 62), label, font=font_chip, fill=(255, 255, 255))
+        draw.text((margin, 60), "Omnivaleur", font=font_brand, fill=inkt)
 
         # Titel: schaalt terug tot hij in maximaal 4 regels past. Lange
         # programmatic titels ("... Crosslisting in 2026: The Complete Guide")
         # zouden anders van het beeld af lopen.
         title = re.sub(r"\s+", " ", title or "").strip()
         lines: list[str] = []
-        for size in (64, 58, 52, 46, 40):
+        for size in (76, 68, 60, 52, 46):
             font_title = _load_font(FONT_CANDIDATES_BOLD, size)
             lines = _wrap(draw, title, font_title, WIDTH - margin * 2)
             if len(lines) <= 4:
                 break
         lines = lines[:4]
 
-        line_height = round(size * 1.22)
-        block_height = line_height * len(lines)
-        y = (HEIGHT - block_height) // 2 + 10
+        # Onderaan gelijnd, boven de platformregel: dezelfde kop-links-onder als de site.
+        line_height = round(size * 1.12)
+        y = HEIGHT - 128 - line_height * len(lines)
         for line in lines:
-            # Lichte schaduw houdt de tekst leesbaar boven de lichtste plek van
-            # het verloop (WCAG-contrast wisselt over de breedte van het beeld).
-            draw.text((margin + 2, y + 2), line, font=font_title, fill=(15, 23, 42, 70))
-            draw.text((margin, y), line, font=font_title, fill=(255, 255, 255))
+            draw.text((margin, y), line, font=font_title, fill=inkt)
             y += line_height
 
-        # Platformregel onderaan — vertelt in één blik waar het artikel over gaat.
+        # Platformregel onderaan: vertelt in één blik waar het artikel over gaat.
         platforms = _platforms_in(f"{title} {keyword}") or ["Marktplaats", "Vinted", "eBay", "Shopify"]
         footer = "  ·  ".join(platforms[:5])
         if font_meta:
-            draw.line([(margin, HEIGHT - 108), (margin + 56, HEIGHT - 108)], fill=(255, 255, 255, 200), width=4)
-            draw.text((margin, HEIGHT - 88), footer, font=font_meta, fill=(255, 255, 255, 232))
+            draw.text((margin, HEIGHT - 92), footer, font=font_meta, fill=inkt)
 
         dest.parent.mkdir(parents=True, exist_ok=True)
         img.save(dest, "JPEG", quality=88, optimize=True, progressive=True)
