@@ -3953,5 +3953,9 @@
  "Save password": "Wachtwoord opslaan",
  "This confirmation link is no longer valid: it may already have been used. If your email is confirmed, just log in below. Otherwise": "Deze bevestigingslink is niet meer geldig; hij is misschien al gebruikt. Is je e-mailadres bevestigd, log dan hieronder gewoon in. Anders",
  "Your session expired. Please sign in again, nothing was lost.": "Je sessie is verlopen. Log opnieuw in; er is niets verloren.",
- "Your shop refused this (HTTP {0}): {1}": "Je webshop weigerde dit (HTTP {0}): {1}"
+ "Your shop refused this (HTTP {0}): {1}": "Je webshop weigerde dit (HTTP {0}): {1}",
+ "work as before. Green means it is live there.": "werken zoals altijd. Groen betekent dat het daar live staat.",
+ "Your dashboard now has the same look as our new website: calmer colours, a new typeface and clearer numbers. Everything is still in the same place and works the same way, and your items, listings and settings are untouched.": "Je dashboard heeft nu dezelfde uitstraling als onze nieuwe website: rustigere kleuren, een nieuw lettertype en duidelijkere cijfers. Alles staat nog op dezelfde plek en werkt hetzelfde, en je artikelen, advertenties en instellingen zijn niet aangeraakt.",
+ "not refreshed yet": "nog niet ververst",
+ "Back to dashboard": "Terug naar het dashboard"
 }
