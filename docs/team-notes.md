@@ -18771,3 +18771,9 @@ Vinted: kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, ba
 - Klant-eigen: Goudlief betaalde rubrieken (2x, melding klopt), tabblad dicht 2x; f8c0cce9 uitgelogd op 2dehands en Vinted; 09e089ec Vinted uitgelogd; bcdf9aa4 2 verlengingen van weg-zijnde advertenties; da176583 abonnement niet lopend; 7c0700e4 en Amanda herplaatsingen afgeblazen (extensie dagenlang stil, oude advertenties blijven online). 8f91a370 staat nog op 1.0.416, zijn 9 prijswijzigingen wachten daarop.
 - Twee oude proeven staan al rood, ook zonder deze wijziging: test_plaatsing_wacht_op_webshopfotos en test_vinted_vaste_staat (test_oude_uitgifte_*).
 - Niet gemeten: fouten die alleen in de browser van de klant staan; Railway-log (geen CLI hier).
+
+## 06-11-2026: Onboarding nieuwe klanten (ochtend)
+- 4 accounts in hun eerste week, 1 nieuw, geen creator. Web Store levert 1.0.417. Valentino viel uit het venster.
+- Nieuw: kjrmohamed@gmail.com (720924e6), aangemeld 05-11 20:49, 1 minuut ingelogd, geen extensie, 0 artikelen, nooit eerder contact, niets in de agenda. Welkomstmail "Je account op Omnivaleur" (exit 0), aanhef zonder naam omdat de voornaam niet vaststaat; vraag erin wat hij verkoopt.
+- Niets veranderd: momme (e6f4a9d3) nooit ingelogd; kardkid9 (bc55c91e) 0 artikelen, extensie stil sinds 01-11, proef tot 08-11; bankai2855 (7630bcf9) geen extensie, proef tot 08-11. Geen reparatie, geen mailtje.
+- Mailrapport: 5 mails sinds 30-10, 0 echt geopend, 0 klik, 0 antwoord, 1 deed daarna iets (valentino na de eerste mail).
