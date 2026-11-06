@@ -18807,3 +18807,10 @@ Vinted: alle zeven artikelen (kinderen schoenen, meisjes jas, sneakers dames, he
 ## 06-11-2026: Toon, eBay buiten Nederland en doorzetten naar Woo
 - eBay: Toon maakte eBay "voornamelijk voor buiten Nederland". Gemeten 05-11: zijn eBay-beleid (259412487025) heeft alleen NL_StandardDelivery 7 euro en NL_PickUp, geen internationale optie, globalShipping uit. Niemand buiten NL kan dus kopen. Niet gebouwd: wacht op zijn verzendprijzen per land (en of dat voor alle artikelen geldt).
 - Woo doorzetten werkt (TL24, tk07 staan erop). Grand foulard 148/126 (8e8d42b4, geimporteerd van MP/2dehands) kreeg 06-11 13:17 UTC "Your shop answered HTTP 400", reden onbekend: de foutmelding gooide Woo's eigen reden weg. Gerepareerd (08d64fd9): een 400/422 noemt nu Woo's reden, tweetalig, proef tests/test_woocommerce_weigering_noemt_reden.py. AVIF-foto's zijn het waarschijnlijk niet (zijn site heeft zelf AVIF in de mediabibliotheek), niet bewezen. Rij opnieuw op pending gezet (oude rij in ~/.omnivaleur/herstel-toon-woo-foulard-06-11.json); Woo kan alleen via zijn open dashboard, na 13 minuten nog pending.
+
+## 06-11-2026: dashboard en extensie in de nieuwe stijl (Daniel akkoord)
+- Dashboard (app.html, onboarding.js, poort.js) heeft dezelfde kleuren, letters en knoppen als de site; indeling ongemoeid, per scherm nagemeten tegen de oude versie. Emoji's zijn vervangen door iconen of weg, ook in nl.json. Melding, rondleiding en bericht "Een nieuw jasje" (NIEUWS_ID 2026-11-nieuw-jasje).
+- Extensie 1.0.418: uitklapvenster, werkvenster en icoonteksten tweetalig met EN/NL-knop, standaard de browsertaal. Logica niet aangeraakt, ondergrens niet verhoogd. Upload naar de Web Store door Daniel.
+- Knopnamen in de NL-popup: Zakelijk account (Admarkt) en Laat Omnivaleur typen als een toetsenbord; Calm mode blijft Calm mode. nl.json noemt ze zo, wie nog op 1.0.417 zit ziet de Engelse naam tot de update.
+- Eerste-schermafbeelding op de site opnieuw opgenomen: aparte scherpe versie voor telefoon (hero-m.webp) en computer, binnen de kantlijnen.
+- Niet bekeken: Account-scherm en startpoort zonder extensie, beide in de teststand niet te openen.
