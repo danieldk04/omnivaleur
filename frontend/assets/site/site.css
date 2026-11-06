@@ -149,7 +149,8 @@ a { color: var(--link); text-underline-offset: 0.18em; text-decoration-thickness
 .hero { overflow: clip; }
 .hero-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-2xl); align-items: start; padding-top: clamp(var(--space-xl), 6vw, 72px); }
 .hero-copy { padding-bottom: 0; }
-.hero-copy h1 { font-size: clamp(2.75rem, 4.5vw, 5.25rem); max-width: none; }
+.hero-copy h1 { font-size: clamp(2.375rem, min(12vw, 4.5vw + 1px), 4.7rem); max-width: none; }
+@media (max-width: 1000px) { .hero-copy h1 { font-size: clamp(2.375rem, 12vw, 2.75rem); } }
 .hero { padding-bottom: clamp(var(--space-xl), 6vw, 72px); }
 .hero-copy .lede { margin-top: var(--space-lg); }
 .hero-cta { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-top: var(--space-xl); }
