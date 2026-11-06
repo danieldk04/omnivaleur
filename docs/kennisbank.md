@@ -17,6 +17,20 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## etsy-commercial-access-is-de-poort
+
+*06-11-2026 — Etsy-koppeling vraagt eerst Commercial Access van Etsy (handmatige beoordeling); bestaande etsy.py gebruikt PKCE plain en is onbruikbaar*
+
+06-11-2026, call met Mieneke (Voordeelsieraden, 09e089ec): Etsy is voor hen "een belangrijk onderdeel van onze business" (exclusieve, duurdere sieraden, wereldwijd). Daniel zei dat Etsy dit jaar komt, waarschijnlijk deze maand, en dat hij het pas uitrolt als het in één keer goed loopt. Vier klanten vroegen erom (te-bouwen-lijst, keer 4).
+
+Uit de officiële Etsy-documentatie: OAuth 2.0 met verplichte PKCE S256, access token 1 uur, refresh token 90 dagen, scopes listings_w/r/d en transactions_r. Een listing maken = verzendprofiel, readiness-profiel, draft met who_made, when_made, taxonomy_id, minstens één foto, dan state active.
+
+**Why:** een app die voor meerdere verkopers plaatst heeft Commercial Access nodig: eerst Personal App goedgekeurd, dan handmatige aanvraag, doorlooptijd onbekend, community meldt dat het recent moeilijk is. Zonder dat werkt het alleen voor eigen shops. De bestaande `backend/platforms/etsy.py` (juli) gebruikt PKCE "plain", wat Etsy weigert, en heeft geen inlogkoppeling.
+
+**How to apply:** begin bij de aanvraag bij Etsy, niet bij code, en beloof klanten geen datum voor die goedkeuring binnen is. Zie "ebay-staat-per-rubriek" voor hoe een API-kanaal bij ons veilig live gaat (alleen lezen op echte accounts, nooit lokaal verversen, zie "ebay-token-nooit-lokaal-verversen").
+
+---
+
 ## bulk-duwt-rest-uit-de-wachtrij
 
 *06-11-2026 — 06-11 Goudlief: uitgifte las de oudste 500 van een kanaal, dus achter een bulk bestonden verwijderingen en scans niet; verkochte artikelen bleven online*
