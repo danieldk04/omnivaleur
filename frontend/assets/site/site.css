@@ -425,6 +425,12 @@ html:not(.js) .sale-btn, html:not(.js) .sale-reset, html:not(.js) .sale-col-act 
 .auth-lang { font-size: var(--text-small); color: var(--fg); }
 .auth-lang a { color: var(--fg); }
 
+.auth-card > p { color: var(--fg-2); }
+.auth-card .spinner { width: 28px; height: 28px; margin-bottom: var(--space-md); border: 3px solid var(--rule); border-top-color: var(--color-field); border-radius: 50%; animation: draai 0.8s linear infinite; }
+@keyframes draai { to { transform: rotate(360deg); } }
+.auth-card .icon { margin-bottom: var(--space-sm); font: 600 2rem/1 var(--font-display); color: var(--color-field); }
+.auth-card .btn { margin-top: var(--space-md); }
+
 /* 404 */
 .nf { min-height: 60vh; display: flex; flex-direction: column; justify-content: center; }
 .nf-code { font: 600 clamp(4.5rem, 12vw, 9rem)/1 var(--font-display); letter-spacing: -0.03em; }

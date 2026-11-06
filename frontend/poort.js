@@ -105,71 +105,71 @@
 
   // ── Stijl ───────────────────────────────────────────────────────────────────
   const CSS = `
-    #ob-poort{position:fixed;top:0;right:0;bottom:0;left:232px;z-index:90;background:var(--bg,#f1f5f9);overflow:auto;display:none;padding:32px 28px 60px}
+    #ob-poort{position:fixed;top:0;right:0;bottom:0;left:232px;z-index:90;background:var(--bg,#eaf1f6);overflow:auto;display:none;padding:32px 28px 60px}
     @media(max-width:768px){#ob-poort{left:0;padding:20px 16px 60px}}
     .pt-wrap{max-width:980px;margin:0 auto}
     .pt-kop{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px}
     .pt-kop h1{font-size:22px;font-weight:800;letter-spacing:-.3px;margin:0}
-    .pt-belofte{font-size:14px;color:var(--muted,#64748b);margin:0 0 20px}
+    .pt-belofte{font-size:14px;color:var(--muted,#485363);margin:0 0 20px}
     .pt-lijn{display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap}
-    .pt-pas{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:100px;background:#fff;border:1.5px solid var(--border,#e2e8f0);font-size:13px;font-weight:650;color:#94a3b8}
-    .pt-pas b{width:22px;height:22px;border-radius:50%;background:#e2e8f0;color:#64748b;display:flex;align-items:center;justify-content:center;font-size:12px}
-    .pt-pas.nu{border-color:#2563eb;color:#0f172a;box-shadow:0 0 0 4px rgba(37,99,235,.12)}
-    .pt-pas.nu b{background:#2563eb;color:#fff}
-    .pt-pas.klaar{color:#15803d;border-color:#bbf7d0;background:#f0fdf4}
-    .pt-pas.klaar b{background:#16a34a;color:#fff}
-    .pt-kaart{background:#fff;border:1px solid var(--border,#e2e8f0);border-radius:18px;padding:28px;display:grid;grid-template-columns:1.1fr 1fr;gap:28px;box-shadow:0 10px 40px rgba(15,23,42,.07)}
+    .pt-pas{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:6px;background:#fff;border:1.5px solid var(--border,#d0d8e1);font-size:13px;font-weight:650;color:#485363}
+    .pt-pas b{width:22px;height:22px;border-radius:50%;background:#d0d8e1;color:#485363;display:flex;align-items:center;justify-content:center;font-size:12px}
+    .pt-pas.nu{border-color:#0649c7;color:#0a1936;box-shadow:0 0 0 4px rgba(6,73,199,.12)}
+    .pt-pas.nu b{background:#0649c7;color:#fff}
+    .pt-pas.klaar{color:#005f3a;border-color:#d8f7e6;background:#d8f7e6}
+    .pt-pas.klaar b{background:#005f3a;color:#fff}
+    .pt-kaart{background:#fff;border:1px solid var(--border,#d0d8e1);border-radius:8px;padding:28px;display:grid;grid-template-columns:1.1fr 1fr;gap:28px;box-shadow:0 10px 40px rgba(10,25,54,.07)}
     @media(max-width:860px){.pt-kaart{grid-template-columns:1fr;padding:20px}}
     .pt-kaart h2{font-size:21px;font-weight:800;letter-spacing:-.3px;margin:0 0 10px}
-    .pt-kaart p{font-size:14px;line-height:1.65;color:#475569;margin:0 0 16px}
-    .pt-groot{display:inline-block;padding:14px 26px;background:linear-gradient(135deg,#2563eb,#34d399);color:#fff!important;border-radius:100px;font-size:15px;font-weight:750;text-decoration:none;border:0;cursor:pointer;box-shadow:0 4px 16px rgba(37,99,235,.3)}
+    .pt-kaart p{font-size:14px;line-height:1.65;color:#485363;margin:0 0 16px}
+    .pt-groot{display:inline-block;padding:14px 26px;background:#0649c7;color:#fff!important;border-radius:6px;font-size:15px;font-weight:750;text-decoration:none;border:0;cursor:pointer;box-shadow:0 4px 16px rgba(6,73,199,.3)}
     .pt-groot[disabled]{opacity:.45;cursor:not-allowed;box-shadow:none}
-    .pt-licht{display:inline-block;padding:11px 18px;background:#fff;border:1.5px solid var(--border,#e2e8f0);border-radius:100px;font-size:13px;font-weight:650;color:#334155;text-decoration:none;cursor:pointer}
+    .pt-licht{display:inline-block;padding:11px 18px;background:#fff;border:1.5px solid var(--border,#d0d8e1);border-radius:6px;font-size:13px;font-weight:650;color:#15284b;text-decoration:none;cursor:pointer}
     .pt-lijst{margin:0 0 18px;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
-    .pt-lijst li{display:flex;gap:11px;align-items:flex-start;font-size:13.5px;line-height:1.5;color:#334155}
-    .pt-lijst li i{flex:0 0 24px;height:24px;border-radius:50%;background:#eff6ff;color:#2563eb;font-style:normal;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center}
-    .pt-wacht{display:flex;align-items:center;gap:9px;font-size:13px;color:#64748b;margin-top:16px}
-    .pt-puls{width:10px;height:10px;border-radius:50%;background:#2563eb;animation:pt-puls 1.2s infinite}
-    @keyframes pt-puls{0%{box-shadow:0 0 0 0 rgba(37,99,235,.5)}100%{box-shadow:0 0 0 12px rgba(37,99,235,0)}}
-    .pt-beeld{background:linear-gradient(160deg,#eff6ff,#ecfdf5);border-radius:14px;padding:18px;display:flex;align-items:center;justify-content:center;min-height:240px;position:relative;overflow:hidden}
-    .pt-chrome{width:100%;max-width:380px;background:#fff;border-radius:10px;box-shadow:0 8px 28px rgba(15,23,42,.14);overflow:hidden;position:relative}
-    .pt-balk{display:flex;align-items:center;gap:6px;padding:9px 10px;background:#e2e8f0}
-    .pt-balk i{width:9px;height:9px;border-radius:50%;background:#94a3b8}
-    .pt-url{flex:1;background:#fff;border-radius:100px;font-size:10px;color:#64748b;padding:4px 10px;margin:0 6px}
-    .pt-puzzel{width:24px;height:24px;border-radius:6px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;outline:3px solid #2563eb;animation:pt-glow 1.4s infinite}
-    @keyframes pt-glow{0%,100%{outline-color:rgba(37,99,235,.9)}50%{outline-color:rgba(37,99,235,.2)}}
-    .pt-pagina{padding:18px 14px;font-size:11px;color:#64748b;line-height:1.7}
-    .pt-pijl-mock{position:absolute;top:44px;right:8px;display:flex;flex-direction:column;align-items:flex-end;animation:pt-op 1s ease-in-out infinite;color:#2563eb;font-size:11px;font-weight:750}
+    .pt-lijst li{display:flex;gap:11px;align-items:flex-start;font-size:13.5px;line-height:1.5;color:#15284b}
+    .pt-lijst li i{flex:0 0 24px;height:24px;border-radius:50%;background:#dde8fd;color:#0649c7;font-style:normal;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center}
+    .pt-wacht{display:flex;align-items:center;gap:9px;font-size:13px;color:#485363;margin-top:16px}
+    .pt-puls{width:10px;height:10px;border-radius:50%;background:#0649c7;animation:pt-puls 1.2s infinite}
+    @keyframes pt-puls{0%{box-shadow:0 0 0 0 rgba(6,73,199,.5)}100%{box-shadow:0 0 0 12px rgba(6,73,199,0)}}
+    .pt-beeld{background:#dde8fd;border-radius:8px;padding:18px;display:flex;align-items:center;justify-content:center;min-height:240px;position:relative;overflow:hidden}
+    .pt-chrome{width:100%;max-width:380px;background:#fff;border-radius:8px;box-shadow:0 8px 28px rgba(10,25,54,.14);overflow:hidden;position:relative}
+    .pt-balk{display:flex;align-items:center;gap:6px;padding:9px 10px;background:#d0d8e1}
+    .pt-balk i{width:9px;height:9px;border-radius:50%;background:#485363}
+    .pt-url{flex:1;background:#fff;border-radius:6px;font-size:10px;color:#485363;padding:4px 10px;margin:0 6px}
+    .pt-puzzel{width:24px;height:24px;border-radius:6px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;outline:3px solid #0649c7;animation:pt-glow 1.4s infinite}
+    @keyframes pt-glow{0%,100%{outline-color:rgba(6,73,199,.9)}50%{outline-color:rgba(6,73,199,.2)}}
+    .pt-pagina{padding:18px 14px;font-size:11px;color:#485363;line-height:1.7}
+    .pt-pijl-mock{position:absolute;top:44px;right:8px;display:flex;flex-direction:column;align-items:flex-end;animation:pt-op 1s ease-in-out infinite;color:#0649c7;font-size:11px;font-weight:750}
     @keyframes pt-op{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-    .pt-pijl-mock span{background:#2563eb;color:#fff;border-radius:8px;padding:5px 9px;margin-top:2px;white-space:nowrap}
+    .pt-pijl-mock span{background:#0649c7;color:#fff;border-radius:8px;padding:5px 9px;margin-top:2px;white-space:nowrap}
     .pt-chips{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:16px}
-    .pt-chip{display:flex;align-items:center;gap:8px;padding:11px 16px;border-radius:12px;border:2px solid var(--border,#e2e8f0);background:#fff;font-size:14px;font-weight:650;cursor:pointer;color:#334155}
-    .pt-chip.aan{border-color:#2563eb;background:#eff6ff;color:#0f172a}
-    .pt-rij{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;border:1px solid var(--border,#e2e8f0);background:#fff;margin-bottom:9px;font-size:13.5px;flex-wrap:wrap}
-    .pt-rij.slecht{border-color:#fecaca;background:#fef2f2}
+    .pt-chip{display:flex;align-items:center;gap:8px;padding:11px 16px;border-radius:8px;border:2px solid var(--border,#d0d8e1);background:#fff;font-size:14px;font-weight:650;cursor:pointer;color:#15284b}
+    .pt-chip.aan{border-color:#0649c7;background:#dde8fd;color:#0a1936}
+    .pt-rij{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:8px;border:1px solid var(--border,#d0d8e1);background:#fff;margin-bottom:9px;font-size:13.5px;flex-wrap:wrap}
+    .pt-rij.slecht{border-color:#ffe7e3;background:#ffe7e3}
     .pt-rij b{flex:1;min-width:110px}
-    .pt-stat{font-size:12px;font-weight:700;padding:3px 10px;border-radius:100px;background:#f1f5f9;color:#64748b}
-    .pt-stat.slecht{background:#fee2e2;color:#b91c1c}
-    .pt-stat.goed{background:#dcfce7;color:#15803d}
-    .pt-hier{color:#dc2626;font-weight:800;display:inline-block;animation:pt-zij .9s ease-in-out infinite}
+    .pt-stat{font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px;background:#eaf1f6;color:#485363}
+    .pt-stat.slecht{background:#ffe7e3;color:#a51f1b}
+    .pt-stat.goed{background:#d8f7e6;color:#005f3a}
+    .pt-hier{color:#a51f1b;font-weight:800;display:inline-block;animation:pt-zij .9s ease-in-out infinite}
     @keyframes pt-zij{0%,100%{transform:translateX(0)}50%{transform:translateX(-7px)}}
-    .pt-voet{margin-top:18px;font-size:12.5px;color:#64748b;text-align:center}
-    .pt-voet a{color:#2563eb;font-weight:650;cursor:pointer;text-decoration:none}
-    #ob-coach{position:fixed;bottom:18px;left:calc(232px + 18px);right:18px;max-width:600px;z-index:80;background:#fff;border:2px solid #2563eb;border-radius:16px;padding:14px 18px;box-shadow:0 14px 40px rgba(15,23,42,.22);display:none}
+    .pt-voet{margin-top:18px;font-size:12.5px;color:#485363;text-align:center}
+    .pt-voet a{color:#0649c7;font-weight:650;cursor:pointer;text-decoration:none}
+    #ob-coach{position:fixed;bottom:18px;left:calc(232px + 18px);right:18px;max-width:600px;z-index:80;background:#fff;border:2px solid #0649c7;border-radius:8px;padding:14px 18px;box-shadow:0 14px 40px rgba(10,25,54,.22);display:none}
     @media(max-width:768px){#ob-coach{left:12px;right:12px}}
-    #ob-coach .pt-cs{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2563eb;margin-bottom:3px}
+    #ob-coach .pt-cs{font-size:11px;font-weight:800;color:#0649c7;margin-bottom:3px}
     #ob-coach b.pt-ct{display:block;font-size:15px;margin-bottom:3px}
-    #ob-coach p{margin:0;font-size:13px;line-height:1.55;color:#475569}
+    #ob-coach p{margin:0;font-size:13px;line-height:1.55;color:#485363}
     #ob-coach .pt-cb{margin-top:10px}
     #ob-pijl{position:fixed;z-index:85;display:none;pointer-events:none;align-items:center;gap:6px;color:#fff;font-weight:750;font-size:13px}
-    #ob-pijl span{background:#2563eb;border-radius:10px;padding:7px 12px;box-shadow:0 6px 20px rgba(37,99,235,.4);white-space:nowrap}
-    #ob-pijl svg{color:#2563eb;filter:drop-shadow(0 3px 5px rgba(37,99,235,.35))}
+    #ob-pijl span{background:#0649c7;border-radius:8px;padding:7px 12px;box-shadow:0 6px 20px rgba(6,73,199,.4);white-space:nowrap}
+    #ob-pijl svg{color:#0649c7;filter:drop-shadow(0 3px 5px rgba(6,73,199,.35))}
     #ob-pijl.zij{animation:pt-zij2 .9s ease-in-out infinite}
     #ob-pijl.links{animation:pt-zij3 .9s ease-in-out infinite}
     @keyframes pt-zij3{0%,100%{transform:translateX(0)}50%{transform:translateX(9px)}}
     #ob-pijl.onder{flex-direction:column;animation:pt-op 1s ease-in-out infinite}
     @keyframes pt-zij2{0%,100%{transform:translateX(0)}50%{transform:translateX(-9px)}}
-    .pt-wijs{outline:3px solid #2563eb!important;outline-offset:3px;border-radius:8px;animation:pt-glow 1.4s infinite}
+    .pt-wijs{outline:3px solid #0649c7!important;outline-offset:3px;border-radius:8px;animation:pt-glow 1.4s infinite}
     .nav-item.pt-slot{opacity:.45}
     .nav-item.pt-slot::after{content:"\\1F512";margin-left:auto;font-size:11px}
   `;
@@ -183,7 +183,7 @@
   // ── Het scherm ──────────────────────────────────────────────────────────────
   function beeldChrome(label) {
     return `<div class="pt-beeld"><div class="pt-chrome">
-        <div class="pt-balk"><i></i><i></i><i></i><span class="pt-url">omnivaleur.com/app</span><span class="pt-puzzel">🧩</span></div>
+        <div class="pt-balk"><i></i><i></i><i></i><span class="pt-url">omnivaleur.com/app</span><span class="pt-puzzel"></span></div>
         <div class="pt-pagina">Omnivaleur<br>Your items, on every marketplace.<br>One click to publish.</div>
         <div class="pt-pijl-mock"><svg width="26" height="30" viewBox="0 0 24 28" fill="currentColor"><path d="M12 0l11 14h-7v14H8V14H1z"/></svg><span>${label}</span></div>
       </div></div>`;
@@ -245,7 +245,7 @@
         <p>Omnivaleur publishes <b>as you</b>, so you need to be signed in to each marketplace in <b>this same Chrome</b>. Marktplaats and 2dehands are separate sites with separate logins. Tick yours, open each one, sign in, and come back: the status updates by itself.</p>
         <div class="pt-chips">${chips}</div>
         ${rijen}
-        ${(r.ontbreekt || []).length ? `<p style="color:#b91c1c;font-weight:650;margin-top:6px"><span>You are not signed in to ${r.ontbreekt.map(naam).join(" and ")} in this browser.</span> <span>Sign in there, then come back.</span></p>` : ""}
+        ${(r.ontbreekt || []).length ? `<p style="color:#a51f1b;font-weight:650;margin-top:6px"><span>You are not signed in to ${r.ontbreekt.map(naam).join(" and ")} in this browser.</span> <span>Sign in there, then come back.</span></p>` : ""}
         <button class="pt-groot" ${geblokkeerd ? "disabled" : ""} onclick="OBPoort.bevestig()">${gekozen.length ? "I am signed in, continue" : "Tick at least one marketplace"}</button>
       </div>`;
   }

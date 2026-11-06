@@ -186,3 +186,7 @@ Europe/Amsterdam
 Choose one of:
 Unknown eBay site
 input[name="price.value"]
+style="background:#fbe9c6;color:#7b4800"
+0 0 0 3px rgba(6,73,199,.55)
+rgba(6,73,199,.12)
+rgba(133,237,188,.08)

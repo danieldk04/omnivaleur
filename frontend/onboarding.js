@@ -47,10 +47,10 @@
   const g = (naam) => { try { return GLOBAAL[naam](); } catch (e) { return undefined; } };
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const EMOJI = { marktplaats: "🟧", "2dehands": "🟦", vinted: "🟩", facebook: "📘", ebay: "🛒", shopify: "🛍️", woocommerce: "🛍️" };
+  const EMOJI = { marktplaats: "", "2dehands": "", vinted: "", facebook: "", ebay: "", shopify: "", woocommerce: "" };
   function logo(p, size) {
     const f = g("platIcon");
-    return typeof f === "function" ? f(p, size || 16) : (EMOJI[p] || "🏪");
+    return typeof f === "function" ? f(p, size || 16) : (EMOJI[p] || "");
   }
   function ga(view) {
     const f = g("showView");
@@ -60,125 +60,125 @@
 
   // ── Stijl ──────────────────────────────────────────────────────────────────
   const CSS = `
-  .ob-card{background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);border-radius:var(--radius,10px);box-shadow:var(--shadow-sm,0 1px 3px rgba(0,0,0,.06));margin-bottom:20px;overflow:hidden}
+  .ob-card{background:var(--surface,#fff);border:1px solid var(--border,#d0d8e1);border-radius:var(--radius,10px);box-shadow:var(--shadow-sm,0 1px 3px rgba(0,0,0,.06));margin-bottom:20px;overflow:hidden}
   .ob-kop{display:flex;align-items:center;gap:16px;padding:16px 20px;flex-wrap:wrap}
   .ob-kop-tekst{flex:1;min-width:200px}
-  .ob-titel{font-weight:800;font-size:15px;color:var(--text,#0f172a);letter-spacing:-.2px}
-  .ob-sub{font-size:12.5px;color:var(--muted,#64748b);margin-top:2px}
-  .ob-voortgang{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;color:var(--muted,#64748b)}
-  .ob-balk{width:120px;height:6px;border-radius:99px;background:#e2e8f0;overflow:hidden}
-  .ob-balk i{display:block;height:100%;background:var(--grad,linear-gradient(135deg,#2563eb,#34d399));border-radius:99px;transition:width .4s}
-  .ob-link{background:none;border:0;color:var(--muted,#64748b);font-size:12px;font-weight:600;cursor:pointer;padding:4px 6px;border-radius:6px}
-  .ob-link:hover{color:var(--text,#0f172a);background:#f1f5f9}
+  .ob-titel{font-weight:800;font-size:15px;color:var(--text,#0a1936);letter-spacing:-.2px}
+  .ob-sub{font-size:12.5px;color:var(--muted,#485363);margin-top:2px}
+  .ob-voortgang{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;color:var(--muted,#485363)}
+  .ob-balk{width:120px;height:6px;border-radius:6px;background:#d0d8e1;overflow:hidden}
+  .ob-balk i{display:block;height:100%;background:var(--grad,#0649c7);border-radius:6px;transition:width .4s}
+  .ob-link{background:none;border:0;color:var(--muted,#485363);font-size:12px;font-weight:600;cursor:pointer;padding:4px 6px;border-radius:6px}
+  .ob-link:hover{color:var(--text,#0a1936);background:#eaf1f6}
   .ob-stappen{list-style:none;margin:0;padding:0 8px 8px}
-  .ob-stap{border-top:1px solid var(--border,#e2e8f0)}
-  .ob-stap-kop{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;padding:12px;cursor:pointer;text-align:left;font:inherit;color:var(--text,#0f172a);border-radius:8px}
-  .ob-stap-kop:hover{background:#f8fafc}
-  .ob-nr{width:24px;height:24px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;border:1.5px solid #cbd5e1;color:#64748b;background:#fff}
-  .ob-stap.actief .ob-nr{border-color:var(--blue,#2563eb);color:var(--blue,#2563eb);box-shadow:0 0 0 4px #dbeafe}
-  .ob-stap.klaar .ob-nr{background:#059669;border-color:#059669;color:#fff}
+  .ob-stap{border-top:1px solid var(--border,#d0d8e1)}
+  .ob-stap-kop{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;padding:12px;cursor:pointer;text-align:left;font:inherit;color:var(--text,#0a1936);border-radius:8px}
+  .ob-stap-kop:hover{background:#f8fafd}
+  .ob-nr{width:24px;height:24px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;border:1.5px solid #d0d8e1;color:#485363;background:#fff}
+  .ob-stap.actief .ob-nr{border-color:var(--blue,#0649c7);color:var(--blue,#0649c7);box-shadow:0 0 0 4px #dde8fd}
+  .ob-stap.klaar .ob-nr{background:#005f3a;border-color:#005f3a;color:#fff}
   .ob-stap-titel{flex:1;font-size:13.5px;font-weight:650}
-  .ob-stap.klaar .ob-stap-titel{color:var(--muted,#64748b);text-decoration:line-through;text-decoration-color:#cbd5e1}
-  .ob-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b;background:#f1f5f9;border-radius:99px;padding:2px 8px}
+  .ob-stap.klaar .ob-stap-titel{color:var(--muted,#485363);text-decoration:line-through;text-decoration-color:#d0d8e1}
+  .ob-tag{font-size:10px;font-weight:700;color:#485363;background:#eaf1f6;border-radius:6px;padding:2px 8px}
   .ob-tag.let-op{color:#9a3412;background:#ffedd5}
-  .ob-pijl{color:#94a3b8;transition:transform .2s;flex-shrink:0}
+  .ob-pijl{color:#485363;transition:transform .2s;flex-shrink:0}
   .ob-stap.open .ob-pijl{transform:rotate(180deg)}
   .ob-stap-inhoud{display:none;padding:0 12px 16px 48px}
   .ob-stap.open .ob-stap-inhoud{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,260px);gap:18px;align-items:center}
-  .ob-stap-inhoud p{margin:0 0 10px;font-size:13px;line-height:1.6;color:var(--muted,#64748b)}
-  .ob-stap-inhoud p b{color:var(--text,#0f172a)}
+  .ob-stap-inhoud p{margin:0 0 10px;font-size:13px;line-height:1.6;color:var(--muted,#485363)}
+  .ob-stap-inhoud p b{color:var(--text,#0a1936)}
   .ob-acties{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .ob-waarschuwing{font-size:12.5px;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:8px 10px;margin:0 0 10px;line-height:1.5}
-  .ob-mini{background:#f8fafc;border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:12px;font-size:11px;color:#475569}
-  .ob-klaar-rij{display:flex;align-items:center;gap:10px;padding:14px 20px;font-size:13px;color:#065f46;background:#ecfdf5}
+  .ob-waarschuwing{font-size:12.5px;color:#9a3412;background:#fbe9c6;border:1px solid #fed7aa;border-radius:8px;padding:8px 10px;margin:0 0 10px;line-height:1.5}
+  .ob-mini{background:#f8fafd;border:1px solid var(--border,#d0d8e1);border-radius:8px;padding:12px;font-size:11px;color:#485363}
+  .ob-klaar-rij{display:flex;align-items:center;gap:10px;padding:14px 20px;font-size:13px;color:#005f3a;background:#d8f7e6}
   @media(max-width:720px){.ob-stap.open .ob-stap-inhoud{grid-template-columns:1fr;padding-left:12px}.ob-balk{width:80px}}
 
   /* mini-schermpjes */
-  .ob-m-browser{border:1px solid #cbd5e1;border-radius:8px;background:#fff;overflow:hidden}
-  .ob-m-balk{display:flex;align-items:center;gap:6px;padding:6px 8px;background:#f1f5f9;border-bottom:1px solid #e2e8f0}
-  .ob-m-dot{width:7px;height:7px;border-radius:50%;background:#cbd5e1}
-  .ob-m-url{flex:1;height:14px;border-radius:99px;background:#fff;border:1px solid #e2e8f0}
-  .ob-m-puzzel{width:18px;height:18px;border-radius:5px;background:var(--grad,linear-gradient(135deg,#2563eb,#34d399));position:relative}
-  .ob-m-bubbel{margin:8px;border:1px solid #bbf7d0;background:#f0fdf4;color:#065f46;border-radius:8px;padding:6px 8px;font-weight:700;display:flex;align-items:center;gap:6px}
+  .ob-m-browser{border:1px solid #d0d8e1;border-radius:8px;background:#fff;overflow:hidden}
+  .ob-m-balk{display:flex;align-items:center;gap:6px;padding:6px 8px;background:#eaf1f6;border-bottom:1px solid #d0d8e1}
+  .ob-m-dot{width:7px;height:7px;border-radius:50%;background:#d0d8e1}
+  .ob-m-url{flex:1;height:14px;border-radius:6px;background:#fff;border:1px solid #d0d8e1}
+  .ob-m-puzzel{width:18px;height:18px;border-radius:5px;background:var(--grad,#0649c7);position:relative}
+  .ob-m-bubbel{margin:8px;border:1px solid #d8f7e6;background:#d8f7e6;color:#005f3a;border-radius:8px;padding:6px 8px;font-weight:700;display:flex;align-items:center;gap:6px}
   .ob-m-rij{display:flex;align-items:center;gap:6px;padding:5px 0}
-  .ob-m-pil{display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #e2e8f0;border-radius:99px;padding:3px 8px;font-weight:600;color:#334155}
-  .ob-m-ok{color:#059669;font-weight:800}
-  .ob-m-knop{display:inline-block;background:var(--grad,linear-gradient(135deg,#2563eb,#34d399));color:#fff;border-radius:6px;padding:4px 10px;font-weight:700}
-  .ob-m-vak{width:11px;height:11px;border-radius:3px;border:1.5px solid #94a3b8;display:inline-block;vertical-align:-2px;margin-right:5px}
-  .ob-m-vak.aan{background:var(--blue,#2563eb);border-color:var(--blue,#2563eb);box-shadow:inset 0 0 0 2px #fff}
-  .ob-m-icoon{width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid #e2e8f0;background:#f1f5f9;position:relative;font-size:11px}
-  .ob-m-icoon.groen{background:#d1fae5;border-color:#6ee7b7}
-  .ob-m-icoon.oranje{background:#fef3c7;border-color:#fcd34d}
-  .ob-m-icoon.rood{background:#fff7ed;border-color:#fbbf24}
+  .ob-m-pil{display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #d0d8e1;border-radius:6px;padding:3px 8px;font-weight:600;color:#15284b}
+  .ob-m-ok{color:#005f3a;font-weight:800}
+  .ob-m-knop{display:inline-block;background:var(--grad,#0649c7);color:#fff;border-radius:6px;padding:4px 10px;font-weight:700}
+  .ob-m-vak{width:11px;height:11px;border-radius:3px;border:1.5px solid #485363;display:inline-block;vertical-align:-2px;margin-right:5px}
+  .ob-m-vak.aan{background:var(--blue,#0649c7);border-color:var(--blue,#0649c7);box-shadow:inset 0 0 0 2px #fff}
+  .ob-m-icoon{width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid #d0d8e1;background:#eaf1f6;position:relative;font-size:11px}
+  .ob-m-icoon.groen{background:#d1fae5;border-color:#85edbc}
+  .ob-m-icoon.oranje{background:#fbe9c6;border-color:#fcd34d}
+  .ob-m-icoon.rood{background:#fbe9c6;border-color:#fbbf24}
   .ob-m-icoon.paars{background:#ede9fe;border-color:#c4b5fd}
   .ob-m-icoon.grijs{opacity:.5}
   .ob-m-icoon i{position:absolute;right:-4px;bottom:-4px;width:12px;height:12px;border-radius:50%;border:1.5px solid #fff;font-size:8px;font-style:normal;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800}
-  .ob-m-icoon.groen i{background:#059669}.ob-m-icoon.oranje i{background:#d97706}.ob-m-icoon.rood i{background:#dc2626}.ob-m-icoon.paars i{background:#7c3aed}
+  .ob-m-icoon.groen i{background:#005f3a}.ob-m-icoon.oranje i{background:#7b4800}.ob-m-icoon.rood i{background:#a51f1b}.ob-m-icoon.paars i{background:#7c3aed}
 
   /* Help */
   .ob-help{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
   .ob-help-kop{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
   .ob-help-kop h1{margin:0;font-size:22px;letter-spacing:-.4px}
-  .ob-help-kop p{margin:4px 0 0;color:var(--muted,#64748b);font-size:13.5px}
+  .ob-help-kop p{margin:4px 0 0;color:var(--muted,#485363);font-size:13.5px}
   .ob-zoek{position:relative;min-width:240px;flex:0 1 320px}
-  .ob-zoek input{width:100%;box-sizing:border-box;padding:9px 12px 9px 34px;border:1px solid var(--border,#e2e8f0);border-radius:10px;font:inherit;font-size:13px;background:#fff}
-  .ob-zoek input:focus{outline:2px solid #bfdbfe;border-color:var(--blue,#2563eb)}
-  .ob-zoek svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#94a3b8}
+  .ob-zoek input{width:100%;box-sizing:border-box;padding:9px 12px 9px 34px;border:1px solid var(--border,#d0d8e1);border-radius:8px;font:inherit;font-size:13px;background:#fff}
+  .ob-zoek input:focus{outline:2px solid #dde8fd;border-color:var(--blue,#0649c7)}
+  .ob-zoek svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#485363}
   .ob-chips{display:flex;gap:6px;flex-wrap:wrap}
-  .ob-chip{font-size:12px;font-weight:600;color:#334155;background:#fff;border:1px solid var(--border,#e2e8f0);border-radius:99px;padding:5px 11px;cursor:pointer;text-decoration:none}
-  .ob-chip:hover{border-color:#93c5fd;color:var(--blue,#2563eb)}
-  .ob-taal{font-size:11px;font-weight:800;color:#64748b;background:#f1f5f9;border:0;border-radius:99px;padding:3px 10px;cursor:pointer}.ob-taal-aan{background:#0f172a;color:#fff}
+  .ob-chip{font-size:12px;font-weight:600;color:#15284b;background:#fff;border:1px solid var(--border,#d0d8e1);border-radius:6px;padding:5px 11px;cursor:pointer;text-decoration:none}
+  .ob-chip:hover{border-color:#93c5fd;color:var(--blue,#0649c7)}
+  .ob-taal{font-size:11px;font-weight:800;color:#485363;background:#eaf1f6;border:0;border-radius:6px;padding:3px 10px;cursor:pointer}.ob-taal-aan{background:#0a1936;color:#fff}
   .ob-sectie{scroll-margin-top:80px}
   .ob-sectie > .ob-card{margin-bottom:0}
-  .ob-sectie-kop{padding:16px 22px;border-bottom:1px solid var(--border,#e2e8f0)}
+  .ob-sectie-kop{padding:16px 22px;border-bottom:1px solid var(--border,#d0d8e1)}
   .ob-sectie-kop h2{margin:0;font-size:15px}
-  .ob-sectie-kop p{margin:3px 0 0;font-size:12.5px;color:var(--muted,#64748b)}
+  .ob-sectie-kop p{margin:3px 0 0;font-size:12.5px;color:var(--muted,#485363)}
   .ob-sectie-lijf{padding:18px 22px 22px}
 
   .ob-flow{display:grid;grid-template-columns:1fr 28px 1fr 28px 1fr 28px 1fr;align-items:stretch}
-  .ob-fase{background:#f8fafc;border:1px solid var(--border,#e2e8f0);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
-  .ob-fase-nr{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--blue,#2563eb)}
-  .ob-fase-titel{font-size:13.5px;font-weight:750;color:var(--text,#0f172a)}
-  .ob-fase-tekst{font-size:12px;line-height:1.55;color:var(--muted,#64748b)}
+  .ob-fase{background:#f8fafd;border:1px solid var(--border,#d0d8e1);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px}
+  .ob-fase-nr{font-size:10px;font-weight:800;color:var(--blue,#0649c7)}
+  .ob-fase-titel{font-size:13.5px;font-weight:750;color:var(--text,#0a1936)}
+  .ob-fase-tekst{font-size:12px;line-height:1.55;color:var(--muted,#485363)}
   .ob-fase .ob-mini{padding:8px;background:#fff}
-  .ob-flow-pijl{display:flex;align-items:center;justify-content:center;color:#94a3b8}
+  .ob-flow-pijl{display:flex;align-items:center;justify-content:center;color:#485363}
   .ob-onder{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-  .ob-weg{border:1px dashed #cbd5e1;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.55;color:var(--muted,#64748b)}
-  .ob-weg b{color:var(--text,#0f172a)}
+  .ob-weg{border:1px dashed #d0d8e1;border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.55;color:var(--muted,#485363)}
+  .ob-weg b{color:var(--text,#0a1936)}
   @media(max-width:820px){.ob-flow{grid-template-columns:1fr}.ob-flow-pijl{height:26px}.ob-flow-pijl svg{transform:rotate(90deg)}.ob-onder{grid-template-columns:1fr}}
 
-  .ob-uitleg-rij{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:10px 12px;flex-wrap:wrap}
-  .ob-uitleg-duim{width:38px;height:38px;border-radius:8px;background:linear-gradient(135deg,#fde68a,#f59e0b)}
+  .ob-uitleg-rij{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--border,#d0d8e1);border-radius:8px;padding:10px 12px;flex-wrap:wrap}
+  .ob-uitleg-duim{width:38px;height:38px;border-radius:8px;background:#fbe9c6}
   .ob-uitleg-icons{display:flex;gap:12px;margin-left:auto;padding:6px 4px 0}
   .ob-pin{position:relative}
-  .ob-pin b{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:15px;height:15px;border-radius:50%;background:#0f172a;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center}
+  .ob-pin b{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:15px;height:15px;border-radius:50%;background:#0a1936;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center}
   .ob-legenda{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;margin-top:14px}
-  .ob-legenda div{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;line-height:1.5;color:var(--muted,#64748b)}
-  .ob-legenda div b{color:var(--text,#0f172a)}
+  .ob-legenda div{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;line-height:1.5;color:var(--muted,#485363)}
+  .ob-legenda div b{color:var(--text,#0a1936)}
   .ob-legenda .ob-m-icoon{flex-shrink:0;margin-top:1px}
   @media(max-width:640px){.ob-legenda{grid-template-columns:1fr}.ob-uitleg-icons{margin-left:0}}
 
   .ob-kanalen{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
-  .ob-kanaal{border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:12px 14px;background:#fff}
+  .ob-kanaal{border:1px solid var(--border,#d0d8e1);border-radius:8px;padding:12px 14px;background:#fff}
   .ob-kanaal-kop{display:flex;align-items:center;gap:8px;font-weight:750;font-size:13.5px;margin-bottom:6px}
-  .ob-kanaal-via{margin-left:auto;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#64748b;background:#f1f5f9;border-radius:99px;padding:2px 7px}
-  .ob-kanaal ul{margin:0;padding-left:16px;font-size:12.5px;line-height:1.6;color:var(--muted,#64748b)}
-  .ob-kanaal li b{color:var(--text,#0f172a)}
+  .ob-kanaal-via{margin-left:auto;font-size:10px;font-weight:700;color:#485363;background:#eaf1f6;border-radius:6px;padding:2px 7px}
+  .ob-kanaal ul{margin:0;padding-left:16px;font-size:12.5px;line-height:1.6;color:var(--muted,#485363)}
+  .ob-kanaal li b{color:var(--text,#0a1936)}
 
-  .ob-faq-groep{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#94a3b8;margin:16px 0 4px}
+  .ob-faq-groep{font-size:11px;font-weight:800;color:#485363;margin:16px 0 4px}
   .ob-faq-groep:first-child{margin-top:0}
-  .ob-faq{border-bottom:1px solid var(--border,#e2e8f0)}
-  .ob-faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;font-size:13.5px;font-weight:620;color:var(--text,#0f172a)}
+  .ob-faq{border-bottom:1px solid var(--border,#d0d8e1)}
+  .ob-faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;font-size:13.5px;font-weight:620;color:var(--text,#0a1936)}
   .ob-faq summary::-webkit-details-marker{display:none}
   .ob-faq[open] summary .ob-pijl{transform:rotate(180deg)}
-  .ob-faq-antwoord{font-size:13px;line-height:1.65;color:var(--muted,#64748b);padding:0 0 14px}
-  .ob-faq-antwoord b{color:var(--text,#0f172a)}
-  .ob-geen{display:none;font-size:13px;color:var(--muted,#64748b);padding:6px 0}
+  .ob-faq-antwoord{font-size:13px;line-height:1.65;color:var(--muted,#485363);padding:0 0 14px}
+  .ob-faq-antwoord b{color:var(--text,#0a1936)}
+  .ob-geen{display:none;font-size:13px;color:var(--muted,#485363);padding:6px 0}
 
-  .ob-popover{position:absolute;z-index:300;width:320px;max-width:calc(100vw - 32px);background:#fff;border:1px solid var(--border,#e2e8f0);border-radius:12px;box-shadow:0 12px 40px rgba(15,23,42,.18);padding:14px}
+  .ob-popover{position:absolute;z-index:300;width:320px;max-width:calc(100vw - 32px);background:#fff;border:1px solid var(--border,#d0d8e1);border-radius:8px;box-shadow:0 12px 40px rgba(10,25,54,.18);padding:14px}
   .ob-popover .ob-legenda{grid-template-columns:1fr;margin-top:0}
-  .ob-vraagje{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid #cbd5e1;background:#fff;color:#64748b;font-size:10px;font-weight:800;cursor:pointer;margin-left:6px;vertical-align:1px;padding:0}
-  .ob-vraagje:hover{border-color:var(--blue,#2563eb);color:var(--blue,#2563eb)}
+  .ob-vraagje{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid #d0d8e1;background:#fff;color:#485363;font-size:10px;font-weight:800;cursor:pointer;margin-left:6px;vertical-align:1px;padding:0}
+  .ob-vraagje:hover{border-color:var(--blue,#0649c7);color:var(--blue,#0649c7)}
   `;
   function zorgVoorStijl() {
     if (document.getElementById("ob-stijl")) return;
@@ -337,7 +337,7 @@
     if (klaar === kern.length) {
       if (opslag.lees(KLAAR_GEZIEN_SLEUTEL) === "1") { zet(doel, ""); return; }
       zet(doel, `<div class="ob-card"><div class="ob-klaar-rij">
-          <span style="font-size:18px">🎉</span>
+          <span style="font-size:18px"></span>
           <div style="flex:1"><b>You're set up.</b> Your items are going out to other marketplaces. Questions later on? Everything is under Help.</div>
           <button class="ob-link" onclick="OB.klaarGezien()">Close</button>
         </div></div>`);
@@ -413,7 +413,7 @@
     p.className = "ob-popover";
     p._knop = knop;
     p.innerHTML = `<div style="font-weight:750;font-size:13px;margin-bottom:10px">What the marketplace icons mean</div>${legendaHtml()}
-      <div style="margin-top:10px;font-size:12px"><a href="#" onclick="document.getElementById('ob-popover').remove();OB.naarHelp('iconen');return false" style="color:var(--blue,#2563eb);font-weight:650">More in Help →</a></div>`;
+      <div style="margin-top:10px;font-size:12px"><a href="#" onclick="document.getElementById('ob-popover').remove();OB.naarHelp('iconen');return false" style="color:var(--blue,#0649c7);font-weight:650">More in Help →</a></div>`;
     document.body.appendChild(p);
     const r = knop.getBoundingClientRect();
     const links = Math.max(16, Math.min(window.scrollX + r.left - 150, window.scrollX + document.documentElement.clientWidth - p.offsetWidth - 16));
@@ -435,21 +435,21 @@
     const ext = g("extState") || {};
     const meting = (ext.kanalen || {})[platform];
     const site = { marktplaats: "marktplaats.nl", "2dehands": "2dehands.be", vinted: "vinted.nl", facebook: "facebook.com/marketplace" }[platform];
-    let badge = `<span class="badge" style="background:#f1f5f9;color:#475569">Uses your Chrome login</span>`;
-    let regel = `Sign in to <a href="https://${site}" target="_blank" rel="noopener" style="color:var(--blue,#2563eb);font-weight:650">${site}</a> in the Chrome where the extension runs. There is nothing to connect: Omnivaleur publishes as you.`;
+    let badge = `<span class="badge" style="background:#eaf1f6;color:#485363">Uses your Chrome login</span>`;
+    let regel = `Sign in to <a href="https://${site}" target="_blank" rel="noopener" style="color:var(--blue,#0649c7);font-weight:650">${site}</a> in the Chrome where the extension runs. There is nothing to connect: Omnivaleur publishes as you.`;
     if (meting && meting.ingelogd === true) {
       badge = `<span class="badge active">✓ Signed in</span>`;
       regel = `You're signed in to <b>${site}</b> in this browser. Omnivaleur publishes as you.`;
     } else if (meting && meting.ingelogd === false && !(actief > 0)) {
       // Niet ingelogd op een kanaal dat hij niet gebruikt is geen probleem.
-      badge = `<span class="badge" style="background:#f1f5f9;color:#475569">Not signed in</span>`;
-      regel = `Not signed in to <b>${site}</b> in this browser. Only needed if you want to sell there. <a href="https://${site}" target="_blank" rel="noopener" style="color:var(--blue,#2563eb);font-weight:650">Open and sign in →</a>`;
+      badge = `<span class="badge" style="background:#eaf1f6;color:#485363">Not signed in</span>`;
+      regel = `Not signed in to <b>${site}</b> in this browser. Only needed if you want to sell there. <a href="https://${site}" target="_blank" rel="noopener" style="color:var(--blue,#0649c7);font-weight:650">Open and sign in →</a>`;
     } else if (meting && meting.ingelogd === false) {
-      badge = `<span class="badge" style="background:#fff7ed;color:#9a3412">Not signed in</span>`;
-      regel = `You're not signed in to <b>${site}</b> in this browser. <a href="https://${site}" target="_blank" rel="noopener" style="color:var(--blue,#2563eb);font-weight:650">Open and sign in →</a>`;
+      badge = `<span class="badge" style="background:#fbe9c6;color:#9a3412">Not signed in</span>`;
+      regel = `You're not signed in to <b>${site}</b> in this browser. <a href="https://${site}" target="_blank" rel="noopener" style="color:var(--blue,#0649c7);font-weight:650">Open and sign in →</a>`;
     }
-    const tel = actief > 0 ? "" : ` <span style="color:#94a3b8">No adverts placed or imported here yet: use <b>Publish</b> on an item.</span>`;
-    return { badge, regel: `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border,#e2e8f0);font-size:12px;color:var(--muted,#64748b);line-height:1.55">${regel}${tel}</div>` };
+    const tel = actief > 0 ? "" : ` <span style="color:#485363">No adverts placed or imported here yet: use <b>Publish</b> on an item.</span>`;
+    return { badge, regel: `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border,#d0d8e1);font-size:12px;color:var(--muted,#485363);line-height:1.55">${regel}${tel}</div>` };
   };
 
   // ── Help ────────────────────────────────────────────────────────────────────
@@ -553,7 +553,7 @@
 
   function kanaalKaart([p, naam, via, regels]) {
     const label = { Chrome: "Via Chrome", Beta: "Beta", Connect: "Connect once" }[via];
-    return `<div class="ob-kanaal"><div class="ob-kanaal-kop">${logo(p, 18)} ${naam}<span class="ob-kanaal-via" ${via === "Beta" ? 'style="background:#fef3c7;color:#92400e"' : ""}>${label}</span></div>
+    return `<div class="ob-kanaal"><div class="ob-kanaal-kop">${logo(p, 18)} ${naam}<span class="ob-kanaal-via" ${via === "Beta" ? 'style="background:#fbe9c6;color:#7b4800"' : ""}>${label}</span></div>
       <ul>${regels.map((r) => `<li>${r}</li>`).join("")}</ul></div>`;
   }
 
@@ -567,7 +567,7 @@
         ${pijl}
         ${fase(3, "Placed for you", "The advert is created on each marketplace, as you. About a minute or two per advert.", `<div style="display:flex;align-items:center;gap:6px"><span class="ob-m-icoon oranje">${logo("vinted", 12)}<i>…</i></span>${PIJL_RECHTS.replace('width="22" height="22"', 'width="14" height="14"')}<span class="ob-m-icoon groen">${logo("vinted", 12)}<i>✓</i></span><span>live</span></div>`)}
         ${pijl}
-        ${fase(4, "Sold once, gone everywhere", "Sold somewhere? The item comes off your other marketplaces, so you never sell it twice.", `<div style="display:flex;align-items:center;gap:6px"><span class="ob-m-icoon groen">${logo("vinted", 12)}<i>✓</i></span><b style="color:#059669">Sold</b></div><div style="margin-top:6px;display:flex;gap:6px"><span class="ob-m-icoon grijs">${logo("marktplaats", 12)}</span><span class="ob-m-icoon grijs">${logo("2dehands", 12)}</span><span>removed</span></div>`)}
+        ${fase(4, "Sold once, gone everywhere", "Sold somewhere? The item comes off your other marketplaces, so you never sell it twice.", `<div style="display:flex;align-items:center;gap:6px"><span class="ob-m-icoon groen">${logo("vinted", 12)}<i>✓</i></span><b style="color:#005f3a">Sold</b></div><div style="margin-top:6px;display:flex;gap:6px"><span class="ob-m-icoon grijs">${logo("marktplaats", 12)}</span><span class="ob-m-icoon grijs">${logo("2dehands", 12)}</span><span>removed</span></div>`)}
       </div>
       <div class="ob-onder">
         <div class="ob-weg">${logo("marktplaats", 14)} ${logo("2dehands", 14)} ${logo("vinted", 14)} ${logo("facebook", 14)} <b>Through your Chrome.</b> The extension opens the site in your own Chrome, where you are signed in, and fills in the form. Keep that computer on while it works.</div>
@@ -578,7 +578,7 @@
   function iconenHtml() {
     return `<div class="ob-uitleg-rij" aria-hidden="true">
         <span class="ob-uitleg-duim"></span>
-        <div><div style="font-weight:700;font-size:13px">Martin D-28 Custom Ambertone</div><div style="font-size:12px;color:#64748b">€ 3.300</div></div>
+        <div><div style="font-weight:700;font-size:13px">Martin D-28 Custom Ambertone</div><div style="font-size:12px;color:#485363">€ 3.300</div></div>
         <div class="ob-uitleg-icons">
           ${[["marktplaats", "grijs", "", 1], ["2dehands", "oranje", "…", 2], ["vinted", "groen", "✓", 3], ["facebook", "rood", "!", 4], ["ebay", "paars", "⧉", 5]]
             .map(([p, kleur, badge, nr]) => `<span class="ob-pin"><b>${nr}</b><span class="ob-m-icoon ${kleur}">${logo(p, 12)}${badge ? `<i>${badge}</i>` : ""}</span></span>`).join("")}
@@ -619,17 +619,17 @@
     const nl = (document.documentElement.lang || "").toLowerCase().startsWith("nl");
     return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px">${VIDEOS.filter((v) => nl || !v.alleenNL).map((v) => {
       if (v.youtube) {
-        return `<div data-video><div style="position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#0f172a"><iframe src="https://www.youtube-nocookie.com/embed/${v.youtube}?rel=0&playsinline=1" title="${esc(v.titel)}" loading="lazy" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe></div>
+        return `<div data-video><div style="position:relative;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:#0a1936"><iframe src="https://www.youtube-nocookie.com/embed/${v.youtube}?rel=0&playsinline=1" title="${esc(v.titel)}" loading="lazy" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe></div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0 2px"><div style="font-weight:700;font-size:13.5px">${esc(v.titel)}</div>
       <div style="display:flex;gap:4px" translate="no"><span class="ob-taal ob-taal-aan">NL</span></div></div>
-      <div style="font-size:12.5px;color:var(--muted,#64748b);line-height:1.5">${esc(v.tekst)}</div></div>`;
+      <div style="font-size:12.5px;color:var(--muted,#485363);line-height:1.5">${esc(v.tekst)}</div></div>`;
       }
       const start = nl && v.talen.NL ? "NL" : "EN";
       const basis = v.talen[start];
-      return `<div data-video><video controls preload="none" playsinline poster="/assets/videos/${basis}.jpg" style="width:100%;border-radius:12px;background:#0f172a;display:block"><source src="/assets/videos/${basis}.mp4" type="video/mp4"></video>
+      return `<div data-video><video controls preload="none" playsinline poster="/assets/videos/${basis}.jpg" style="width:100%;border-radius:8px;background:#0a1936;display:block"><source src="/assets/videos/${basis}.mp4" type="video/mp4"></video>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0 2px"><div style="font-weight:700;font-size:13.5px">${esc(v.titel)}</div>
       <div style="display:flex;gap:4px" translate="no">${Object.keys(v.talen).map((t) => `<button type="button" class="ob-taal${t === start ? " ob-taal-aan" : ""}" data-taal="${t}" onclick="OB.videoTaal(this,'${t}','${v.talen[t]}')">${t}</button>`).join("")}</div></div>
-      <div style="font-size:12.5px;color:var(--muted,#64748b);line-height:1.5">${esc(v.tekst)}</div></div>`;
+      <div style="font-size:12.5px;color:var(--muted,#485363);line-height:1.5">${esc(v.tekst)}</div></div>`;
     }).join("")}</div>`;
   }
 
@@ -661,17 +661,17 @@
         <a class="ob-chip" href="#" onclick="OB.naarHelp('contact');return false">Contact</a>
       </nav>
       ${sectie("werking", "How Omnivaleur works", "From item to advert to sale, in four steps.", flowHtml())}
-      ${sectie("starten", "Getting started", "The same steps as on your dashboard. Hidden them there? <a href='#' onclick='OB.toonWeer();return false' style='color:var(--blue,#2563eb);font-weight:650'>Show them again</a>.",
-        `<ol style="margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:var(--muted,#64748b)">${OB.stappen({}).map((s) =>
-          `<li style="margin-bottom:8px"><b style="color:var(--text,#0f172a)">${esc(s.titel)}${s.optioneel ? " (optional)" : ""}.</b> ${s.tekst}</li>`).join("")}</ol>`)}
+      ${sectie("starten", "Getting started", "The same steps as on your dashboard. Hidden them there? <a href='#' onclick='OB.toonWeer();return false' style='color:var(--blue,#0649c7);font-weight:650'>Show them again</a>.",
+        `<ol style="margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:var(--muted,#485363)">${OB.stappen({}).map((s) =>
+          `<li style="margin-bottom:8px"><b style="color:var(--text,#0a1936)">${esc(s.titel)}${s.optioneel ? " (optional)" : ""}.</b> ${s.tekst}</li>`).join("")}</ol>`)}
       ${sectie("video", "Video guides", "Short screen recordings that show it step by step.", videosHtml())}
       ${sectie("iconen", "The icons on each item", "Every item shows one icon per marketplace. Its colour tells you where the item really is.", iconenHtml())}
       ${sectie("kanalen", "What you need per marketplace", "And what the marketplaces themselves may charge. Those costs are between you and the marketplace; Omnivaleur never pays anything on your behalf.", `<div class="ob-kanalen">${KANALEN.map(kanaalKaart).join("")}</div>`)}
       ${sectie("vragen", "Questions", "", `<div id="ob-faq-lijst">${faqHtml()}</div><div class="ob-geen" id="ob-geen">Nothing found. Ask us directly below: we reply within one business day.</div>`)}
       <section class="ob-sectie" id="ob-contact"><div class="ob-card"><div style="padding:20px 22px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap">
         <div><div style="font-weight:750;font-size:14px;margin-bottom:4px">Still stuck?</div>
-          <div style="font-size:13px;color:var(--muted,#64748b)">Book a free video call with the founder, or email us: we reply within one business day.</div>
-          <div style="font-size:11px;color:var(--muted,#64748b);margin-top:6px">Revaleur · KVK 86792423 · Kleine Melanen 5, 4614RG Bergen op Zoom</div></div>
+          <div style="font-size:13px;color:var(--muted,#485363)">Book a free video call with the founder, or email us: we reply within one business day.</div>
+          <div style="font-size:11px;color:var(--muted,#485363);margin-top:6px">Revaleur · KVK 86792423 · Kleine Melanen 5, 4614RG Bergen op Zoom</div></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button onclick="typeof openFounderCall==='function'&&openFounderCall()" class="btn btn-primary btn-sm" style="white-space:nowrap">Talk to the founder</button>
           <a href="mailto:info@omnivaleur.com" class="btn btn-outline btn-sm" style="text-decoration:none;white-space:nowrap">Email support →</a>
