@@ -18803,3 +18803,7 @@ Vinted: alle zeven artikelen (kinderen schoenen, meisjes jas, sneakers dames, he
 - 183 blogbeelden opnieuw getekend (hero.py), oude staan tot 4 uur in Cloudflare. 15 beelden van niet-gepubliceerde pagina's zijn niet vervangen.
 - Nog bij Daniel: of "Vinted fotobescherming" op de site blijft.
 - 23 tests falen op main, ook zonder deze wijziging (vinted-slottekst, verwijzing, Light en andere). Niet onderzocht.
+
+## 06-11-2026: Toon, eBay buiten Nederland en doorzetten naar Woo
+- eBay: Toon maakte eBay "voornamelijk voor buiten Nederland". Gemeten 05-11: zijn eBay-beleid (259412487025) heeft alleen NL_StandardDelivery 7 euro en NL_PickUp, geen internationale optie, globalShipping uit. Niemand buiten NL kan dus kopen. Niet gebouwd: wacht op zijn verzendprijzen per land (en of dat voor alle artikelen geldt).
+- Woo doorzetten werkt (TL24, tk07 staan erop). Grand foulard 148/126 (8e8d42b4, geimporteerd van MP/2dehands) kreeg 06-11 13:17 UTC "Your shop answered HTTP 400", reden onbekend: de foutmelding gooide Woo's eigen reden weg. Gerepareerd (08d64fd9): een 400/422 noemt nu Woo's reden, tweetalig, proef tests/test_woocommerce_weigering_noemt_reden.py. AVIF-foto's zijn het waarschijnlijk niet (zijn site heeft zelf AVIF in de mediabibliotheek), niet bewezen. Rij opnieuw op pending gezet (oude rij in ~/.omnivaleur/herstel-toon-woo-foulard-06-11.json); Woo kan alleen via zijn open dashboard, na 13 minuten nog pending.
