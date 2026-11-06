@@ -12,12 +12,12 @@
   (home ~ '#pricing', 'Prijs' if nl else 'Pricing'),
 ] -%}
 <nav class="site-nav">
-  <a href="{{ home }}" class="nav-logo">
-    <img src="/logo.png" alt="Omnivaleur">
-    <span class="grad-text">Omnivaleur</span>
+  <a href="{{ home }}" class="nav-logo" aria-label="Omnivaleur">
+    <img src="/assets/site/mark.png" alt="" width="44" height="24">
+    <span>Omnivaleur</span>
   </a>
-  <input type="checkbox" id="nav-toggle" class="nav-toggle-cb">
-  <label for="nav-toggle" class="nav-hamburger" aria-label="Menu"><span></span><span></span><span></span></label>
+  <input type="checkbox" id="nav-toggle" class="nav-toggle-cb" aria-label="Menu">
+  <label for="nav-toggle" class="nav-hamburger" aria-hidden="true"><span></span><span></span><span></span></label>
   <div class="nav-panel">
     <div class="nav-links">
       {%- for href, label in links %}
@@ -27,7 +27,7 @@
     <div class="nav-actions">
       <div class="site-lang">{% if nl %}<a href="{{ wissel or '/' }}" hreflang="en">EN</a><span class="on">NL</span>{% else %}<span class="on">EN</span><a href="{{ wissel or '/nl' }}" hreflang="nl">NL</a>{% endif %}</div>
       <a href="/login" class="btn btn-outline">{{ 'Inloggen' if nl else 'Log in' }}</a>
-      <a href="/register" class="btn btn-primary">{{ '7 dagen gratis' if nl else '7 days free' }} →</a>
+      <a href="/register" class="btn btn-primary">{{ '7 dagen gratis' if nl else '7 days free' }}</a>
     </div>
   </div>
 </nav>

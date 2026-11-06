@@ -5,7 +5,7 @@
   <div class="footer-main">
     <div class="footer-brand">
       <a href="{{ home }}" class="footer-logo">
-        <img src="/logo.png" alt="Omnivaleur">
+        <img src="/assets/site/mark.png" alt="" width="59" height="32">
         <span>Omnivaleur</span>
       </a>
       {% if nl %}
@@ -62,7 +62,7 @@
   {% endif %}
 
   <div class="footer-bottom">
-    <span>© 2026 Revaleur · KVK 86792423 · VAT NL004117227B97 · Kleine Melanen 5, 4614RG Bergen op Zoom</span>
+    <span>© 2026 Revaleur, KVK 86792423, {{ 'btw' if nl else 'VAT' }} NL004117227B97, Kleine Melanen 5, 4614RG Bergen op Zoom</span>
     <div class="footer-bottom-links">
       <a href="/privacy">{{ 'Privacybeleid' if nl else 'Privacy Policy' }}</a>
       <a href="/terms">{{ 'Algemene voorwaarden' if nl else 'Terms of Service' }}</a>
