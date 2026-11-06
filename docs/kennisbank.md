@@ -17,6 +17,19 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## bulk-duwt-rest-uit-de-wachtrij
+
+*06-11-2026 — 06-11 Goudlief: uitgifte las de oudste 500 van een kanaal, dus achter een bulk bestonden verwijderingen en scans niet; verkochte artikelen bleven online*
+
+06-11-2026: bij Goudlief (5aae4954) waren de oudste 500 Marktplaats-opdrachten allemaal plaatsingen van 31-10. `/pending` las alleen die 500 (WACHTRIJ_MAX), dus 149 verwijderingen, de scan en de herplaatsingen bestonden niet voor de uitgifte. Sinds 20-10 lukte er geen Marktplaats-verwijdering meer bij haar; de veger blies ze na 3 dagen af met "de wachtrij was te lang"; op Shopify verkochte artikelen stonden nog online.
+
+Twee gaten: de lezing (`_lees_wachtrij` leest nu bij een volle rij ook alles behalve gewone plaatsingen) en de volgorde (een losse verwijdering stond op aanmaakdatum achter de bulk; nu groep 0).
+
+**Why:** een zin als "de wachtrij was te lang" is geen oorzaak maar een symptoom. Een bulk van duizenden is sinds de crosslist normaal.
+**How to apply:** tel bij wachtwerk altijd per soort wat er in de oudste WACHTRIJ_MAX zit. Wil je een advertentie publiek controleren: `https://link.marktplaats.nl/m<nummer>` met -L en browser-UA, altijd met een controle die zeker online staat; `/v/x/x/m...` geeft altijd 404. Zie "rubriekwachters-vulden-de-kop" en "scan-achter-plaatsingen-verhongert".
+
+---
+
 ## waituntil-geeft-boolean
 
 *05-11-2026 — 05-11: elke prijswijziging naar Marktplaats/2dehands viel om (7 van 7) omdat waitUntil true geeft en niet het veld; de proef bouwde waitUntil verkeerd na*
