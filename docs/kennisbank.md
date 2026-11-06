@@ -17,6 +17,22 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## openbare-site-een-stylesheet
+
+*06-11-2026 — "Sinds 06-11-2026 draait de hele openbare site op frontend/assets/site/site.css; nieuwe pagina's altijd daarop en in EN en NL"*
+
+De openbare site (home, /nl, marktplaatsen, video, tools, blog, juridisch, inloggen, 404) is op 06-11-2026 in één keer vernieuwd met de Hallmark-skill. Alle kleuren en lettertypes staan alleen in `:root` van `frontend/assets/site/site.css`; tools hebben daarbovenop `frontend/assets/tools.css`. De app, beheer en analytics vallen erbuiten.
+
+Wijzig je site.css, verhoog dan `?v=` in `frontend/templates/_site_chrome_style.html` en in login, register, forgot-password en reset-password: Cloudflare houdt bestanden 4 uur vast.
+
+Blogbeelden tekent `backend/content/hero.py` vlak in merkkleuren met de eigen lettertypes uit de repo. Zonder `force=True` blijft een bestaand beeld staan, dus een stijlwijziging vraagt een herteken-ronde met titels uit /blog en /nl/blog.
+
+**Why:** de oude site had per pagina een eigen stijlblok en liep daardoor uit elkaar. Bij de ombouw bleken teksten niet meer te kloppen (dashboard alleen Engels, niets te installeren, 10+ marktplaatsen).
+
+**How to apply:** nieuwe openbare pagina's krijgen `.page-head on-field` als kop en een eigen NL-versie (`naam.nl.html`, route `/nl/naam`, `wissel=` in `met_site_chrome`, plus de sitemap). Controleer bij elke tekstwijziging of de claim nog klopt met de app. /nl zet nu `omni_taal` op nl als er nog geen keuze is, zie "eerst-recente-wijzigingen-lezen".
+
+---
+
 ## etsy-commercial-access-is-de-poort
 
 *06-11-2026 — Etsy-koppeling vraagt eerst Commercial Access van Etsy (handmatige beoordeling); bestaande etsy.py gebruikt PKCE plain en is onbruikbaar*

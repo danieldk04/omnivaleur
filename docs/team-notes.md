@@ -18794,3 +18794,12 @@ Vinted: alle zeven artikelen (kinderen schoenen, meisjes jas, sneakers dames, he
 ## 06-11-2026: Onboarding nieuwe klanten (ochtend, tweede ronde 11:00)
 - De ronde van 09:42 draaide al onder dezelfde naam. Nu 4 accounts in hun eerste week, 0 nieuw, geen creator, Web Store levert 1.0.417. Bij geen van de vier iets veranderd (kjrmohamed, momme, kardkid9, bankai2855). Geen reparatie, geen mailtje, niets in de agenda.
 - Mailrapport: 6 mails sinds 30-10, 0 echt geopend, 0 klik, 0 antwoord, 1 deed daarna iets (valentino na de eerste mail).
+
+## 06-11-2026: nieuwe openbare site live (Daniel akkoord)
+- Hele openbare site opnieuw vormgegeven met de Hallmark-skill: home, /nl, marktplaatsen, video, tools, blog, juridisch, inloggen, 404. De app is niet aangeraakt. Eén stylesheet: frontend/assets/site/site.css.
+- Nieuw: /nl/marketplaces, /nl/privacy, /nl/terms en een Nederlandse 404. De Nederlandse privacy en voorwaarden zijn een vertaling door Claude, nog niet juridisch nagekeken; de Engelse tekst is letterlijk gelijk gebleven.
+- Wie op de Nederlandse site zit en nog geen taal koos, krijgt inloggen en dashboard in het Nederlands (omni_taal). Dat verruimt de keuze van 24-09 dat Nederlands alleen aangaat na een klik op NL; Daniel vroeg op 06-11 om alles kloppend in beide talen.
+- Teksten aangepast omdat ze niet klopten: Vinted refresh staat uit, geen "binnen seconden", Etsy-verlenging weg, dashboard is tweetalig, de extensie moet wel geïnstalleerd, 10+ marktplaatsen weg, Bol uit de planning, "deelt nooit met derden" vervangen door de waarheid uit het privacybeleid. Videopagina nu 87+ resellers (getal van Daniel).
+- 183 blogbeelden opnieuw getekend (hero.py), oude staan tot 4 uur in Cloudflare. 15 beelden van niet-gepubliceerde pagina's zijn niet vervangen.
+- Nog bij Daniel: of "Vinted fotobescherming" op de site blijft.
+- 23 tests falen op main, ook zonder deze wijziging (vinted-slottekst, verwijzing, Light en andere). Niet onderzocht.
