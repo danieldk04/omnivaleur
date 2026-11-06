@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=7e469d0d5d"></script>
+<script src="/i18n.js?v=a968cb9cf0"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -243,15 +243,15 @@ tr.selected td { background: #dde8fd; }
 .pm-dot-icon.s-error { background: #fbe9c6; border-color: #fbbf24; }
 .pm-dot-icon.s-none { background: #eaf1f6; border-color: #d0d8e1; opacity: .45; }
 /* Staat er wél op, maar via een dubbele rij van hetzelfde artikel. */
-.pm-dot-icon.s-twin { background: #ede9fe; border-color: #c4b5fd; }
+.pm-dot-icon.s-twin { background: #dfe8f6; border-color: #d0d8e1; }
 .pm-dot-icon .pm-dot-badge { position: absolute; bottom: -3px; right: -3px; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid #fff; font-size: 7px; display: flex; align-items: center; justify-content: center; font-weight: 800; line-height: 1; }
 .pm-dot-icon.s-active .pm-dot-badge { background: #005f3a; color: #fff; }
 .pm-dot-icon.s-pending .pm-dot-badge { background: #7b4800; color: #fff; }
 .pm-dot-icon.s-error .pm-dot-badge { background: #a51f1b; color: #fff; }
-.pm-dot-icon.s-twin .pm-dot-badge { background: #7c3aed; color: #fff; }
+.pm-dot-icon.s-twin .pm-dot-badge { background: #0649c7; color: #fff; }
 .pm-dot-label { font-size: 9px; font-weight: 700; color: #485363; letter-spacing: .2px; text-transform: uppercase; }
 .pm-dot-icon.s-active + .pm-dot-label { color: #005f3a; }
-.pm-dot-icon.s-twin + .pm-dot-label { color: #6d28d9; }
+.pm-dot-icon.s-twin + .pm-dot-label { color: #0039ab; }
 .pm-cb-listed { display: flex; align-items: center; gap: 8px; padding: 9px 13px; border: 1.5px solid #85edbc; border-radius: 8px; background: #d8f7e6; }
 .pm-cb-listed span { font-size: 13px; font-weight: 600; color: #005f3a; }
 .pm-cb-listed .pm-cb-check { font-size: 13px; margin-left: auto; color: #005f3a; font-weight: 800; }
@@ -315,7 +315,7 @@ textarea { resize: vertical; min-height: 80px; }
 
 /* ── Wat is er nieuw: tijdlijn ─────────────────────────────────── */
 .upd-hero{position:relative;overflow:hidden;border-radius:8px;padding:26px 28px;color:#fff;background:#0039ab;box-shadow:0 10px 30px rgba(6,73,199,.25)}
-.upd-hero::after{content:'';position:absolute;right:-70px;top:-70px;width:240px;height:240px;border-radius:50%;background:rgba(255,255,255,.1)}
+.upd-hero::after{display:none}
 .upd-hero h2{margin:0 0 4px;font-size:24px;font-weight:900;letter-spacing:-.4px;position:relative}
 .upd-hero p{margin:0 0 18px;font-size:13.5px;opacity:.85;position:relative;max-width:520px;line-height:1.5}
 .upd-tegels{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;position:relative}
@@ -341,7 +341,7 @@ textarea { resize: vertical; min-height: 80px; }
 .upd-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px;font-size:11.5px;font-weight:700;color:var(--muted)}
 .upd-cat{background:#dde8fd;color:var(--blue);border-radius:6px;padding:2px 9px;font-size:10.5px;font-weight:800;}
 .upd[data-cat=automation] .upd-cat{background:#d8f7e6;color:#005f3a}
-.upd[data-cat=dashboard] .upd-cat{background:#f5f3ff;color:#6d28d9}
+.upd[data-cat=dashboard] .upd-cat{background:#eaf1f6;color:#0039ab}
 .upd[data-cat=plans] .upd-cat{background:#fbe9c6;color:#7b4800}
 .upd h3{margin:0 0 4px;font-size:16px;font-weight:900;letter-spacing:-.2px}
 .upd p{margin:0;font-size:13.5px;line-height:1.6;color:#15284b}
@@ -583,7 +583,7 @@ tr.an-row-missing { background: rgba(245,158,11,.05); }
 .protection-icon.green { background: var(--green-bg); }
 .protection-icon.blue { background: var(--blue-bg); }
 .protection-icon.yellow { background: var(--yellow-bg); }
-.protection-icon.purple { background: #f3e8ff; }
+.protection-icon.purple { background: #dfe8f6; }
 .protection-status { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px; background: var(--green-bg); color: var(--green); margin-top: 4px; }
 .protection-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; animation: protDotPulse 1.8s ease-in-out infinite; }
 @keyframes protDotPulse { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(22,163,74,.5); } 50% { opacity: .7; box-shadow: 0 0 0 4px rgba(22,163,74,0); } }
@@ -882,6 +882,8 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
 .empty-icon .ic, .protection-icon .ic, .protections-summary-icon .ic { width: 22px; height: 22px; }
 .empty-icon { color: var(--muted); }
 ::selection { background: var(--mint); color: var(--text); }
+.upd-hero { box-shadow: none; }
+.upd-balk i { min-height: 4px; }
 </style>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJ5BVD3GCH"></script>
@@ -5212,7 +5214,7 @@ function renderReferralTeaser() {
     ? ` <b style="color:#005f3a">${s.months_earned} month${s.months_earned !== 1 ? 's' : ''} earned.</b>` : '';
   doel.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;background:#d8f7e6;border:1px solid #85edbc;border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:13px;color:#005f3a;line-height:1.5">
-      <span style="font-size:18px">&#127873;</span>
+      <span style="font-size:18px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-info"/></svg></span>
       <div style="flex:1;min-width:220px"><b>Earn 1 month free.</b> Every seller who subscribes through your link gives you a free month; they get 50% off their first month.${gehaald}</div>
       <div style="display:flex;gap:6px;flex-shrink:0">
         <button class="btn btn-sm btn-outline" onclick="referralCopy(_referral.link, this)">Copy my link</button>
@@ -5890,7 +5892,7 @@ async function toonImportSeintje() {
     const n = (d && d.by_status && d.by_status.pending) || 0;
     if (!n) return;
     doel.innerHTML = `<div style="display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;background:#dde8fd;border:1px solid #dde8fd;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13.5px;color:#0039ab;line-height:1.5">
-      <span style="font-size:18px">&#128229;</span>
+      <span style="font-size:18px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-inbox"/></svg></span>
       <div style="flex:1;min-width:220px">${n === 1
         ? `<b>We found 1 advert of yours that is not in Omnivaleur yet.</b> One click puts it in, so you can publish it on your other channels.`
         : `<b>We found ${n} adverts of yours that are not in Omnivaleur yet.</b> One click puts them in, so you can publish them on your other channels.`}</div>
@@ -6927,7 +6929,7 @@ function renderDuplicateBar() {
       (i.listings || []).filter(l => ['active', 'hidden'].includes(l.status))
                         .map(l => PLATFORM_LABELS[l.platform] || l.platform)))];
     const eerste = g.items[0];
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #ede9fe">
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #dfe8f6">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600;color:#15284b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" translate="no">${esc(eerste.title || '')}</div>
         <div style="font-size:11px;color:#485363">${g.items.length} copies of one article${kanalen.length ? ' · live on ' + esc(kanalen.join(', ')) : ''}</div>
@@ -6937,16 +6939,16 @@ function renderDuplicateBar() {
   }).join('');
 
   bar.style.display = '';
-  bar.innerHTML = `<div style="border:1.5px solid #c4b5fd;background:#f5f3ff;border-radius:8px;padding:12px 14px;margin-bottom:14px">
+  bar.innerHTML = `<div style="border:1.5px solid #d0d8e1;background:#eaf1f6;border-radius:8px;padding:12px 14px;margin-bottom:14px">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <strong style="font-size:14px;color:#5b21b6">⧉ ${teveel} duplicate row${teveel === 1 ? '' : 's'} — the same article is in your inventory more than once</strong>
+      <strong style="font-size:14px;color:#0039ab">⧉ ${teveel} duplicate row${teveel === 1 ? '' : 's'} — the same article is in your inventory more than once</strong>
       <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="mergeAllDuplicates()">Merge all ${groepen.length}</button>
     </div>
-    <div style="font-size:12px;color:#5b21b6;margin-top:4px">
+    <div style="font-size:12px;color:#0039ab;margin-top:4px">
       Each copy only knows its own adverts, so the others look "not listed" — publish from one and you get a second advert for an article you already have for sale. Merging keeps every advert and puts them under one item.
     </div>
     ${regels}
-    ${groepen.length > TOON ? `<div style="font-size:11px;color:#7c3aed;padding-top:8px">…and ${groepen.length - TOON} more.</div>` : ''}
+    ${groepen.length > TOON ? `<div style="font-size:11px;color:#0649c7;padding-top:8px">…and ${groepen.length - TOON} more.</div>` : ''}
   </div>`;
 }
 
@@ -9201,7 +9203,7 @@ function sharedAdvertBadge(item, idx) {
   const tip = `This row and another row in your dashboard point at the SAME advert on ${kanalen}. `
     + `Delist would remove that advert from the platform for both. Imported twice? Use Delete: `
     + `that only clears this row and leaves the advert online.`;
-  return ` <span class="badge" style="background:#ede9fe;color:#5b21b6;font-weight:700;cursor:pointer"
+  return ` <span class="badge" style="background:#dfe8f6;color:#0039ab;font-weight:700;cursor:pointer"
     title="${esc(tip)}"
     onclick="event.stopPropagation();showSharedAdvertInfo('${esc(item.id)}')">\u{1F517} Shared advert</span>`;
 }
