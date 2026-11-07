@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## woo-bronfotos-wachttijd-korter-dan-github
+
+*07-11-2026 — "07-11 Toon: 48 plaatsingen faalden op foto's; GitHub draaide bronfotos maar 2x in 8 uur terwijl de wachttijd 2 uur is; nu zet de server ze zelf terug"*
+
+Toon (96e30080), 07-11-2026: nieuwe Woo-artikelen faalden op MP, 2dehands en Vinted met "photo(s) could not be downloaded". De GitHub-taak bronfotos.yml (cron elke 15 min) draaide in werkelijkheid 10:25 en 16:36; de plaatsing wacht maar _FOTO_GEDULD (2 u).
+
+**Why:** GitHub knijpt schedule-runs af, dus "elk kwartier" is geen garantie. Zie "bronfotos-via-github-taak".
+
+**How to apply:** faalt een Woo-klant op foto's, tel eerst de runs van "Bronfoto's" van die dag en de artikelen met bronfoto. Sinds 07-11 zet photo_mirror._fotoplaatsingen_terugzetten mislukte fotoplaatsingen (24 u) zelf terug zodra de foto's binnen zijn. Woo-verzendtarieven lezen kan alleen-lezen met zijn sleutel (basic, browser-UA).
+
+---
+
 ## telefoonhouders-bestemd-voor
 
 *07-11-2026 — 07-11: Telefoonhouders heeft Bestemd voor Auto/Fiets/Motor, niet verplicht; 2dehands laat het leeg, Marktplaats vult zelf Auto in; onze eindcontrole hield telefoonkoorden tegen (1.0.419)*
