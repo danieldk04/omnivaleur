@@ -188,3 +188,25 @@ def test_aflevering_werkt_de_wachtende_plaatsing_bij(monkeypatch):
     assert bijgewerkt, "de wachtende opdracht hoort de nieuwe foto's te krijgen"
     nieuw = bijgewerkt[0][1][0]["payload"]
     assert nieuw["photo_urls"] == ONS and "_fotos_wachten_sinds" not in nieuw
+
+
+def test_mislukte_fotoplaatsing_gaat_terug_zodra_de_fotos_er_zijn():
+    """07-11-2026 Toon: 48 plaatsingen faalden op foto's, niets zette ze terug."""
+    bijgewerkt = []
+    rijen = [
+        {"id": "a", "platform": "2dehands", "status": "error", "payload": {"photo_urls": list(BRON)},
+         "result": {"error": "None of the 7 photo(s) could be downloaded"}},
+        {"id": "b", "platform": "marktplaats", "status": "error", "payload": {"photo_urls": list(BRON)},
+         "result": {"error": "None of the 7 photo(s) could be downloaded"}},
+        {"id": "b2", "platform": "marktplaats", "status": "pending", "payload": {}, "result": None},
+        {"id": "c", "platform": "vinted", "status": "error", "payload": {},
+         "result": {"error": "Vinted wouldn't accept these fields: colour"}},
+    ]
+
+    class _Db:
+        def table(self, n):
+            return _Rij(rijen, bijgewerkt)
+    n = asyncio.run(pm._fotoplaatsingen_terugzetten(_Db(), "u1", "i1", list(ONS)))
+    assert n == 1, "alleen 2dehands: marktplaats loopt al, vinted faalde om iets anders"
+    nieuw = bijgewerkt[0][1][0]
+    assert nieuw["status"] == "pending" and nieuw["payload"]["photo_urls"] == ONS
