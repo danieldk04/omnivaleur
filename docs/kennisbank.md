@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## telefoonhouders-bestemd-voor
+
+*07-11-2026 — 07-11: Telefoonhouders heeft Bestemd voor Auto/Fiets/Motor, niet verplicht; 2dehands laat het leeg, Marktplaats vult zelf Auto in; onze eindcontrole hield telefoonkoorden tegen (1.0.419)*
+
+Goudliefs telefoonkoorden (rubriek 820/3046) kregen op 2dehands "left empty: intended for", 10 van de 14, sinds 31-10. Op beide formulieren staat na openen "Kies...", het veld is niet verplicht en er staan zoekertjes zonder online. Marktplaats zet na het invullen zelf Auto (te zien in de openbare zoek-API, intendedFor), 2dehands niet. Daarom lukte Marktplaats wel en leek het geen fout.
+
+**Why:** onze eindcontrole eiste een veld dat de site niet eist; drie rondes schreven het op als "onbekend".
+
+**How to apply:** verschillen tussen Marktplaats en 2dehands op dezelfde rubriek: lees eerst de opties met de zoek-API (`l2CategoryIds`) en het formulier. Echte code draaien kan met scripts/platformcontrole/mp_loader.js; die stopt op de bekende "description"-fout vóór de eindcontrole, roep daarna zelf `CL.verifyMpGroupFields(item)` aan in dezelfde tab. Zie "marktplaats-zet-materiaal-zelf-op-zilver" en "verzonnen-standaard-is-erger-dan-leeg".
+
+---
+
 ## openbare-site-een-stylesheet
 
 *06-11-2026 — "Sinds 06-11-2026 draait de hele openbare site op frontend/assets/site/site.css; nieuwe pagina's altijd daarop en in EN en NL"*
