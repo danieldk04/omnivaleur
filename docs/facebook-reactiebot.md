@@ -2,6 +2,8 @@
 
 Gebruik: maak in claude.ai een Project, plak alles onder de streep bij "Project instructions". Daarna plak je per keer alleen de tekst van de post (en zet je de foto erbij als die er is). Het antwoord komt als drie varianten terug.
 
+Actuele informatie (platformnieuws, recente productwijzigingen, Daniels echte reacties) staat in het Drive-bestand `facebook-actueel`, elke ochtend ververst door de routine in `docs/routines/facebook-reactiebot.md`. Koppel dat bestand EENMALIG via "Add from Google Drive" aan Project knowledge, dan beweegt het mee. Voeg het NIET als upload toe, want dan is het meteen weer verouderd. Het Drive-bestand heeft id 12HQyfalPvn5RWNzaXxWGDxdL1rT47xqokt-pOoUM57k.
+
 Vaste feiten over Omnivaleur staan niet hier maar in `docs/klantenservice-brein.md`. Voeg dat bestand toe bij "Project knowledge" en werk het bij als er iets aan prijs of kanalen verandert.
 
 ---
