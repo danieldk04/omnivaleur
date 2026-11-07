@@ -765,7 +765,8 @@ window.CL = (() => {
     const b = value.trim().toLowerCase();
     if (!a || !b) return 0;
     if (a === b) return 3;
-    const tokenRe = new RegExp(`(^|[\\s(/-])${escapeRegex(b)}([\\s)/-]|$)`, "i");
+    // Komma erbij: Marktplaats schrijft hoedmaten als "58 of 59 cm (L, 7¼ of ⅜ inch)".
+    const tokenRe = new RegExp(`(^|[\\s(/-])${escapeRegex(b)}([\\s,)/-]|$)`, "i");
     if (tokenRe.test(a)) return 2;
     if (b.length >= 3 && a.includes(b)) return 1;
     return 0;
@@ -1382,6 +1383,15 @@ window.CL = (() => {
   // met "Jongen of Meisje" op een muziekformulier laat het veld leeg staan, en
   // dan weigert verifyMpGroupFields terecht te plaatsen. Daarom kijken we naar
   // de opties die er écht staan in plaats van naar de categorie te gokken.
+  // Telefoonhouders: "Auto", "Fiets", "Motor" (gemeten 07-11-2026 op het formulier
+  // van 2dehands en Marktplaats, /plaats/820/3046). Een keuze, geen eis: het veld
+  // is niet verplicht en er staan advertenties zonder online. Een telefoonkoord
+  // hoort bij geen van de drie, dus leeg is hier het eerlijke antwoord.
+  function voertuigLijst(el) {
+    const opties = [...el.options].filter((o) => o.value !== "").map((o) => o.text.trim());
+    return opties.length > 0 && opties.every((o) => /^(Auto|Fiets|Motor)$/i.test(o));
+  }
+
   function selectIntendedFor(item) {
     const el = intendedForSelect();
     if (!el) return true; // deze categorie kent het veld niet — niets te doen
@@ -1420,6 +1430,16 @@ window.CL = (() => {
       const dame = /\bdames|\bdame\b|\bvrouw|\bwomen|\bladies|\bfemale/.test(tekst);
       const want = heer && !dame ? "Heer" : dame && !heer ? "Dame" : "Dame of Heer";
       return fillNativeSelect(el, want);
+    }
+
+    // Alleen de titel: "fiets" of "auto" in een omschrijving zegt niets over het
+    // artikel, en \bauto zou ook "automatisch" raken.
+    if (voertuigLijst(el)) {
+      const titel = String(item.title || "").toLowerCase();
+      const want = /\bauto(houder|'s)?\b/.test(titel) ? "Auto"
+        : /\bfiets|\bbike\b/.test(titel) ? "Fiets"
+        : /\bmotor|\bscooter/.test(titel) ? "Motor" : "";
+      return want ? fillNativeSelect(el, want) : true;
     }
 
     // Instrumentenlijst: neem het eerste instrument dat in de tekst voorkomt en
@@ -1592,7 +1612,7 @@ window.CL = (() => {
         : "condition kon niet worden ingevuld");
     }
     const intendedEl = intendedForSelect();
-    if (intendedEl && !intendedEl.value) missing.push("intended for");
+    if (intendedEl && !intendedEl.value && !voertuigLijst(intendedEl)) missing.push("intended for");
     const bf = brandField();
     if (item.brand && bf && !fieldFilled(bf)) missing.push("brand");
     // Alleen klagen over de verantwoordelijke partij als de verkoper hem ook
