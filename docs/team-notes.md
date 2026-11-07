@@ -18835,3 +18835,8 @@ Vinted: alle zeven artikelen alle stappen ok, identiek aan 06-11; kookboek maat 
 - bankai2855 (7630bcf9): mailtje van 02-11 op 06-11 11:20 echt geopend in Gmail, de eerste harde opening van deze reeks, maar niet ingelogd en geen extensie. Proef tot 08-11 12:22.
 - Niets veranderd: kardkid9 (bc55c91e) 0 artikelen, extensie 1.0.411 stil sinds 01-11, proef tot 08-11 17:43; kjrmohamed (720924e6) 0 artikelen, geen extensie; momme (e6f4a9d3) nooit ingelogd. Geen reparatie, geen mailtje: de proefherinnering stuurt de server zelf (send_trial_reminders).
 - Mailrapport: 6 mails sinds 30-10, 1 echt geopend, 0 klik, 0 antwoord, 1 deed daarna iets (valentino na de eerste mail).
+
+## 07-11-2026: Facebook-reactiebot actueel en lerend
+- Oorzaak van "verouderd": het Claude Project kreeg één keer een kopie van klantenservice-brein.md (08-10), dat sindsdien 8 keer wijzigde, en kent geen platformnieuws.
+- Nieuw: Drive-bestand `facebook-actueel` (id 12HQyfalPvn5RWNzaXxWGDxdL1rT47xqokt-pOoUM57k, ook in docs/facebook-actueel.md), dagelijks 07:30 ververst door taak `omnivaleur-facebook-reactiebot-verversen` (opdracht docs/routines/facebook-reactiebot.md). Bevat platformnieuws van het web, wat verkopers merken van Omnivaleur, en Daniels echte reacties.
+- Leren: de routine LEEST Daniels eigen activiteitenlogboek op Facebook (alleen lezen, één keer per dag, geen klikken) en bewaart zijn reacties in data/facebook-leren/reacties.jsonl (buiten git). Daniel gaf hiervoor zelf toestemming op 07-11. Grens blijft: niets plaatst of reageert namens hem.
