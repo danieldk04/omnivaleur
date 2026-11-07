@@ -43,6 +43,8 @@ _CATEGORIE = [{"name": "ALL_EXCLUDING_MOTORS_VEHICLES"}]
 # op site 146 (ebay.nl): NL_StandardDelivery heet daar "Standaardverzending".
 _OPHALEN = {"EBAY_NL": "NL_PickUp", "EBAY_BE": "BENL_Pickup"}
 _VERZENDDIENST = {"EBAY_NL": "NL_StandardDelivery", "EBAY_BE": "BENL_DePostStandardShipping"}
+# Alleen ebay.nl gemeten (07-11-2026); voor ebay.be is de code niet gemeten, dus daar geen Europa.
+_INTERNATIONAAL = {"EBAY_NL": "NL_StandardInternational"}
 
 # Welke eBay-sites een klant mag kiezen (extra_data.ebay_marktplaats). Zonder keuze
 # geldt settings.ebay_marketplace_id (EBAY_NL), dus bestaande klanten merken niets.
@@ -93,12 +95,22 @@ def controleer_instellingen(body: dict) -> dict:
         raise ValueError(f"eBay only allows a dispatch time of {', '.join(map(str, TOEGESTANE_VERZENDDAGEN))} days.")
     if retour not in TOEGESTANE_RETOURDAGEN:
         raise ValueError("Return period must be 14, 30 or 60 days.")
-    return {
+    uit = {
         "kosten": kosten,
         "verzenddagen": dagen,
         "retourdagen": retour,
         "ophalen": bool(body.get("ophalen")),
     }
+    eu = body.get("kosten_eu")
+    if eu not in (None, ""):
+        try:
+            eu = round(float(str(eu).replace(",", ".")), 2)
+        except (TypeError, ValueError):
+            raise ValueError("Enter your shipping cost to the rest of the EU in euros.")
+        if eu < 0 or eu > 500:
+            raise ValueError("Shipping cost to the EU must be between €0 and €500.")
+        uit["kosten_eu"] = eu
+    return uit
 
 
 def _verzend_beleid(inst: dict, marktplaats: str) -> dict:
@@ -121,17 +133,35 @@ def _verzend_beleid(inst: dict, marktplaats: str) -> dict:
             "shippingCost": {"value": "0.00", "currency": "EUR"},
             "freeShipping": False,
         })
+    opties = [{
+        "optionType": "DOMESTIC",
+        "costType": "FLAT_RATE",
+        "shippingServices": diensten,
+    }]
+    if inst.get("kosten_eu") is not None and marktplaats in _INTERNATIONAAL:
+        # Europa (De Juiste Toon, 07-11-2026): NL_StandardInternational is gemeten met
+        # GeteBayDetails op site 146; regio EUROPEAN_UNION werd aangenomen en door eBay
+        # genormaliseerd naar "EuropeanUnion" (dat sturen we, anders ziet _komt_overeen
+        # elke keer een verschil); "EU" werd geweigerd (Ongeldige aanvraag).
+        eu = float(inst["kosten_eu"])
+        opties.append({
+            "optionType": "INTERNATIONAL",
+            "costType": "FLAT_RATE",
+            "shippingServices": [{
+                "sortOrder": 1,
+                "shippingServiceCode": _INTERNATIONAAL[marktplaats],
+                "shippingCost": {"value": f"{eu:.2f}", "currency": "EUR"},
+                "freeShipping": eu == 0,
+                "shipToLocations": {"regionIncluded": [{"regionName": "EuropeanUnion"}]},
+            }],
+        })
     return {
         "name": BELEIDSNAAM,
         "marketplaceId": marktplaats,
         "categoryTypes": _CATEGORIE,
         "handlingTime": {"unit": "DAY", "value": int(inst["verzenddagen"])},
         "localPickup": False,
-        "shippingOptions": [{
-            "optionType": "DOMESTIC",
-            "costType": "FLAT_RATE",
-            "shippingServices": diensten,
-        }],
+        "shippingOptions": opties,
     }
 
 

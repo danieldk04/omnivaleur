@@ -18851,3 +18851,7 @@ Vinted: alle zeven artikelen alle stappen ok, identiek aan 06-11; kookboek maat 
 ## 07-11-2026: Facebook-reactiebot verhuisd naar Project v2 met de repo als bron
 - Bewezen: het oude Code-project kon geen bibliotheekbestanden (ook Drive niet) en geen web lezen; antwoorden kwamen alleen uit eigen kennis. Het nieuwe project "Facebook-reactiebot v2" (claude.ai/code/project/chan_01RSDHcESSnzUiKX9YCrKkDg) heeft danieldk04/omnivaleur als context. Testpost gaf nu 8 okt-voorwaarden Vinted, Vinted Pay en de prijssync van 02-11.
 - Elke ochtend 07:30 ververst de routine docs/facebook-actueel.md en pusht; de bot leest hem live. Drive-bestand facebook-actueel en het oude project zijn overbodig.
+
+## 07-11-2026 (avond): eBay Europa voor Toon staat aan
+- Toon: "Nederland 7 euro, EU 15 euro". Gemeten: ebay.nl kent NL_StandardInternational (GeteBayDetails site 146); eBay nam regio EUROPEAN_UNION aan en bewaart hem als "EuropeanUnion" (EU werd geweigerd). Zijn beleid 259412487025 heeft nu DOMESTIC NL 7 + afhalen en INTERNATIONAL 15 voor de EU; een live offer hangt aan datzelfde beleid, dus bestaande advertenties krijgen het mee. Oude instellingen in ~/.omnivaleur/herstel-toon-ebay-extra-07-11.json.
+- Code: kosten_eu in ebay_beleid.controleer_instellingen/_verzend_beleid, alleen voor EBAY_NL (ebay.be niet gemeten). Zwitserland, VK en rest van Europa vallen er niet onder (zijn webshop vraagt CH 35). Niet gemeten: een echte aankoop uit een ander EU-land; geen dashboardveld voor kosten_eu (alleen via de API).
