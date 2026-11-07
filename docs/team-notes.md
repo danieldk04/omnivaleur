@@ -18829,3 +18829,9 @@ Vinted: alle zeven artikelen (kinderen schoenen, meisjes jas, sneakers dames, he
 
 ## 07-11-2026: platformcontrole, geen afwijking (volledige set)
 Vinted: alle zeven artikelen alle stappen ok, identiek aan 06-11; kookboek maat en kleur NIET gelukt (bekend sinds 27-10). Marktplaats en 2dehands, rubrieken boeken auto s boeken, folders en handleidingen: titel, prijs, beschrijving, verzending ok; halswijdte NIET gelukt op Marktplaats (bekend). Bij handleidingen faalt staat op beide sites: bewezen dat het formulier daar geen staatveld heeft, dus geen afwijking. Uitslag bewaard, vergelijk.py: alleen rubrieken-rotatie. Niets geplaatst.
+
+## 07-11-2026: Onboarding nieuwe klanten (ochtend)
+- 4 accounts in hun eerste week, 0 nieuw, geen creator, Web Store levert 1.0.418 (repo 1.0.419). Niets in de agenda tot en met 09-11 over deze klanten.
+- bankai2855 (7630bcf9): mailtje van 02-11 op 06-11 11:20 echt geopend in Gmail, de eerste harde opening van deze reeks, maar niet ingelogd en geen extensie. Proef tot 08-11 12:22.
+- Niets veranderd: kardkid9 (bc55c91e) 0 artikelen, extensie 1.0.411 stil sinds 01-11, proef tot 08-11 17:43; kjrmohamed (720924e6) 0 artikelen, geen extensie; momme (e6f4a9d3) nooit ingelogd. Geen reparatie, geen mailtje: de proefherinnering stuurt de server zelf (send_trial_reminders).
+- Mailrapport: 6 mails sinds 30-10, 1 echt geopend, 0 klik, 0 antwoord, 1 deed daarna iets (valentino na de eerste mail).
