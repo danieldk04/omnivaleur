@@ -938,7 +938,7 @@
       "pillar": "C",
       "format": "competitor",
       "slug": "omnivaleur-vs-foxtail",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "omnivaleur-of-foxtail",
       "priority": 106
     },
@@ -1959,6 +1959,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-cancel-an-order-on-vinted",
       "published_at": "2026-11-06T15:33:02.369384+00:00"
+    },
+    {
+      "keyword": "omnivaleur vs foxtail",
+      "slug": "omnivaleur-vs-foxtail",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "action": "created",
+      "url_path": "/vs/omnivaleur-vs-foxtail",
+      "published_at": "2026-11-07T14:34:32.684583+00:00"
     }
   ]
 }
