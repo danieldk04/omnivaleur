@@ -8,6 +8,19 @@ de Facebook-reactiebot schrijft concepten voor Daniel.
 Doel: zichtbaar worden als iemand uit de reseller- en indie-scene. Waarde geven, niet verkopen. Daniel heeft
 0 volgers op X; reacties onder andermans posts zijn de enige manier om gezien te worden.
 
+## Alleen reageren, nooit zelf plaatsen
+Daniel, 07-11-2026: building in public doet hij zelf. Deze routine plaatst geen eigen berichten, alleen reacties op
+andere mensen. De focus: creators en threads die Daniel in de scene zichtbaar maken. Dat zijn accounts met bereik die
+over reselling, Vinted, Marktplaats, eBay, crosslisten, solo founders, SaaS bouwen, Chrome-extensies en organisch groeien
+posten, en draadjes waar iemand een echte vraag stelt of een ervaring deelt. Een reactie onder een creator met bereik
+wordt door zijn publiek gelezen; dat is het hele doel.
+
+## Wat je weet en gebruikt
+Reageer met alles wat in de repo staat, zodat het klopt en uit ervaring komt: `docs/kennisbank.md` (valkuilen en wat
+echt gebeurde), `docs/team-notes.md` (wat er wanneer gebeurde, ook de laatste weken), `docs/klantenservice-brein.md`
+(feiten over Omnivaleur), `docs/facebook-actueel.md` (platformnieuws en wat verkopers merken). Is het feit daar niet
+te vinden, dan weet Daniel het niet en zeg je het niet.
+
 ## Aantallen (harde plafonds per dag)
 - X: maximaal 6 reacties, minstens 10 minuten tussen twee reacties. Nooit twee keer onder dezelfde persoon op een dag.
 - Indie Hackers: maximaal 4 reacties (aanwarmen: reageren op posts van anderen, zelf nog niets plaatsen).
