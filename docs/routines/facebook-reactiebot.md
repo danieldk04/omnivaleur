@@ -1,8 +1,7 @@
 # Facebook-reactiebot: dagelijks verversen (07:30)
 
 Daniel, 07-11-2026. Doel: het Claude Project "Facebook-reactiebot" antwoordt op actuele informatie en leert van
-Daniels echte reacties. Het Project leest één Drive-bestand: `facebook-actueel.md` (koppel het aan Project knowledge
-via Google Drive, zodat het meebeweegt). De opdracht zelf staat in `docs/facebook-reactiebot.md`.
+Daniels echte reacties. Het Project "Facebook-reactiebot v2" (claude.ai/code/project/chan_01RSDHcESSnzUiKX9YCrKkDg) heeft de repo danieldk04/omnivaleur als context en leest `docs/facebook-actueel.md` zelf bij elk gesprek. De opdracht zelf staat in `docs/facebook-reactiebot.md`.
 
 Harde afspraak (14-09 en 08-10): niets plaatst of reageert namens Daniel. Alleen LEZEN, één keer per dag, in
 Daniels eigen Chrome.
@@ -17,5 +16,5 @@ Stappen:
    Alleen wat een bron zelf zegt; twijfel = markeren als onbevestigd.
 4. Herschrijf `docs/facebook-actueel.md` in dezelfde opbouw: platformnieuws, wat er bij Omnivaleur veranderde
    (uit `git log --since="21 days ago"`, alleen wat verkopers merken), laatste vijf tot tien echte reacties.
-5. Zet het bestand in Drive (update dezelfde file, nooit een nieuwe naast de oude) en commit.
+5. Commit en push `docs/facebook-actueel.md`: de repo is de bron, het Project leest hem daar. (Het oude Drive-bestand mag je laten liggen.)
 6. Melden alleen als iets niet lukte (niet ingelogd, Facebook toont een controle of checkpoint: dan stoppen en niets herhalen).

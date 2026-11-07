@@ -2,7 +2,7 @@
 
 Gebruik: maak in claude.ai een Project, plak alles onder de streep bij "Project instructions". Daarna plak je per keer alleen de tekst van de post (en zet je de foto erbij als die er is). Het antwoord komt als drie varianten terug.
 
-Actuele informatie (platformnieuws, recente productwijzigingen, Daniels echte reacties) staat in het Drive-bestand `facebook-actueel`, elke ochtend ververst door de routine in `docs/routines/facebook-reactiebot.md`. Koppel dat bestand EENMALIG via "Add from Google Drive" aan Project knowledge, dan beweegt het mee. Voeg het NIET als upload toe, want dan is het meteen weer verouderd. Het Drive-bestand heeft id 12HQyfalPvn5RWNzaXxWGDxdL1rT47xqokt-pOoUM57k.
+Sinds 07-11-2026 draait de bot in het Claude Code-project "Facebook-reactiebot v2" met de repo als context. Die instructies staan daar als projectdoel en verwijzen naar dit bestand, `docs/facebook-actueel.md` (elke ochtend ververst door de routine in `docs/routines/facebook-reactiebot.md`) en `docs/klantenservice-brein.md`. Je hoeft niets te plakken of te koppelen. Het oude project "Facebook-reactiebot" kon geen bestanden lezen en wordt niet meer gebruikt.
 
 Vaste feiten over Omnivaleur staan niet hier maar in `docs/klantenservice-brein.md`. Voeg dat bestand toe bij "Project knowledge" en werk het bij als er iets aan prijs of kanalen verandert.
 
