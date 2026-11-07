@@ -351,7 +351,52 @@ async def aangeleverde_fotos_opslaan(user_id: str, item_id: str, fotos: dict) ->
                and not is_mirrored(u))
     if vervangen:
         await _wachtende_plaatsingen_bijwerken(db, user_id, item_id, oud, nieuw, over)
+        if not over:
+            await _fotoplaatsingen_terugzetten(db, user_id, item_id, nieuw)
     return {"vervangen": vervangen, "over": over}
+
+
+_FOTO_FOUT = ("could be downloaded", "could not be loaded")
+
+
+async def _fotoplaatsingen_terugzetten(db, user_id, item_id, nieuw) -> int:
+    """Een plaatsing die faalde omdat de foto's er nog niet waren, gaat opnieuw.
+
+    De Juiste Toon, 07-11-2026: 48 plaatsingen (16 artikelen x Marktplaats,
+    2dehands, Vinted) faalden met "None of the N photo(s) could be downloaded".
+    GitHub draaide de fototaak die dag om 10:25 en 16:36, de wachttijd is 2 uur,
+    dus de plaatsingen gingen met bronadressen de deur uit. Zodra de foto's er
+    wel zijn zetten we die mislukte plaatsingen (laatste 24 uur) zelf terug in
+    de rij, tenzij er voor dat kanaal al een nieuwe poging loopt of geslaagd is."""
+    import datetime as _dt
+    import json as _json
+    from backend.database import naast_de_lus
+    try:
+        sinds = (_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(hours=24)).isoformat()
+        rijen = (await naast_de_lus(lambda: db.table("jobs").select("id,platform,payload,result,status")
+                                    .eq("user_id", user_id).eq("item_id", item_id).eq("action", "create")
+                                    .gte("created_at", sinds).execute())).data or []
+        bezet = {r.get("platform") for r in rijen if r.get("status") in ("pending", "claimed", "done")}
+        n = 0
+        for r in rijen:
+            if r.get("status") != "error" or r.get("platform") in bezet:
+                continue
+            if not any(t in _json.dumps(r.get("result") or "") for t in _FOTO_FOUT):
+                continue
+            pl = r.get("payload") if isinstance(r.get("payload"), dict) else {}
+            pl = {**pl, "photo_urls": nieuw}
+            pl.pop("_fotos_wachten_sinds", None)
+            await naast_de_lus(lambda: db.table("jobs").update(
+                {"status": "pending", "claimed_at": None, "done_at": None, "result": None, "payload": pl})
+                .eq("id", r["id"]).eq("status", "error").execute())
+            bezet.add(r.get("platform"))
+            n += 1
+        if n:
+            logger.info("fotoplaatsingen %s/%s: %s mislukte plaatsing(en) terug in de rij", user_id, item_id, n)
+        return n
+    except Exception as e:  # noqa: BLE001 — dan blijft de klant zelf op Plaatsen kunnen klikken
+        logger.warning("Mislukte plaatsingen van %s niet teruggezet: %s", item_id, e)
+        return 0
 
 
 async def _wachtende_plaatsingen_bijwerken(db, user_id, item_id, oud, nieuw, over) -> None:
