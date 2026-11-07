@@ -18826,3 +18826,6 @@ Vinted: alle zeven artikelen (kinderen schoenen, meisjes jas, sneakers dames, he
 - 8f91a370 en f8c0cce9 nog op 1.0.416, 11 prijswijzigingen wachten. Abonnementen: 0 in betaalproblemen (11 actief, 4 proef, meting klopt, 85 rijen gelezen).
 - Twee proeven in test_meldingen_engels (marktplaats.js, tweedehands.js) staan rood; die bestanden zijn niet aangeraakt. Overige 211 extensieproeven goed.
 - Niet gemeten: fouten die alleen in de browser van de klant staan; Railway-log (geen CLI hier).
+
+## 07-11-2026: platformcontrole, geen afwijking (volledige set)
+Vinted: alle zeven artikelen alle stappen ok, identiek aan 06-11; kookboek maat en kleur NIET gelukt (bekend sinds 27-10). Marktplaats en 2dehands, rubrieken boeken auto s boeken, folders en handleidingen: titel, prijs, beschrijving, verzending ok; halswijdte NIET gelukt op Marktplaats (bekend). Bij handleidingen faalt staat op beide sites: bewezen dat het formulier daar geen staatveld heeft, dus geen afwijking. Uitslag bewaard, vergelijk.py: alleen rubrieken-rotatie. Niets geplaatst.
