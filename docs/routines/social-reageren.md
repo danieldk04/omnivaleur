@@ -23,7 +23,11 @@ te vinden, dan weet Daniel het niet en zeg je het niet.
 
 ## Aantallen (harde plafonds per dag)
 - X: maximaal 6 reacties, minstens 10 minuten tussen twee reacties. Nooit twee keer onder dezelfde persoon op een dag.
-- Indie Hackers: maximaal 4 reacties (aanwarmen: reageren op posts van anderen, zelf nog niets plaatsen).
+- Indie Hackers: maximaal 2 reacties (aanwarmen: reageren op posts van anderen, zelf nog niets plaatsen). Proef van
+  7 dagen, 08-11 tot 15-11-2026, Daniel akkoord: altijd het eerlijke vinkje "Yes, an AI agent, for a person". Bij één
+  waarschuwing, verborgen of verwijderde reactie, of een melding van de site: Indie Hackers meteen stoppen, loggen en
+  melden. Op 15-11 beoordelen: bleven alle reacties zichtbaar (open ze uitgelogd of via een tweede weergave), kregen
+  ze upvotes of antwoorden. Schrijf dat in het rapport onder "Proef Indie Hackers".
 - Niet liken, volgen of herplaatsen in bulk. Hooguit 5 volgen per dag, alleen accounts waar je op reageerde.
 
 ## Wat je opzoekt
