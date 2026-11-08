@@ -8,6 +8,17 @@ de Facebook-reactiebot schrijft concepten voor Daniel.
 Doel: zichtbaar worden als iemand uit de reseller- en indie-scene. Waarde geven, niet verkopen. Daniel heeft
 0 volgers op X; reacties onder andermans posts zijn de enige manier om gezien te worden.
 
+## Werkwijze sinds 08-11-2026: klaarzetten, Daniel plaatst
+De toestemmingscontrole van de sessie blokkeert het plaatsen (07-11 twee keer, 08-11 opnieuw) en Daniel kan die
+niet verruimen. Daarom klikt de routine nooit meer op Reply, Post comment of Comment, op geen enkel platform
+(X, Indie Hackers, Facebook). De routine zoekt, kiest, schrijft en zet het klaar. Per reactie in
+`data/social/laatste-rapport.txt` (kop per platform): link naar de post, auteur, taal, en de kant-en-klare tekst
+om te plakken, plus bij Indie Hackers de opmerking dat het vinkje "Yes, an AI agent, for a person" moet. Alle
+andere regels (plafonds, stijl, overslaan, feiten uit de repo) gelden ongewijzigd; de plafonds tellen de
+klaargezette reacties. Daniel plakt ze zelf. Regel in `data/social/gedaan.jsonl` met `"status":"klaargezet"`
+(dezelfde post nooit twee keer klaarzetten). Meld alleen iets als er een waarschuwing kwam; het lijstje zelf is
+het rapport.
+
 ## Alleen reageren, nooit zelf plaatsen
 Daniel, 07-11-2026: building in public doet hij zelf. Deze routine plaatst geen eigen berichten, alleen reacties op
 andere mensen. De focus: creators en threads die Daniel in de scene zichtbaar maken. Dat zijn accounts met bereik die
