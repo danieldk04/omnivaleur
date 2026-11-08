@@ -18882,3 +18882,8 @@ Vinted: alle zeven artikelen alle stappen ok, identiek aan 06-11; kookboek maat 
 - Gemeten: de geplande taak omnivaleur-social-reageren wordt bij elke klik op plaatsen geweigerd: "Permission for this action was denied by the Claude Code auto mode classifier. Reason: [External System Writes]." Het gesprek van Daniel draait in bypass en plaatst wel (X, Indie Hackers met vinkje "AI agent, for a person", Facebook). Taak staat uit.
 - De ronde draait nu als cron in het vastgepinde gesprek (12:43 en 19:43, 7 dagen, app en gesprek moeten openstaan). Kennis in data/social/lessen.md (kort, buiten git), maandelijkse meting van bereik leidt de lessen. Op 15-11 beoordeling Indie Hackers-proef.
 - Niet zelf met de hand in de geplande sessies typen: een van hen herschreef de opdracht naar "alleen klaarzetten".
+
+## 08-11-2026: Instagram erbij in de reageerronde (Daniel akkoord)
+- Vierde platform in de ronde (data/social/ronde-prompt.txt): ingelogd account is Omnivaleur, max 5 per dag, 2 à 3 per ronde, alleen verse posts van grote relevante accounts (reseller, Vinted, ondernemers en bouwers). Doel: bovenaan de reacties; eerst de bovenste reacties lezen en het patroon kopiëren, nooit de tekst. Geen pitch, link of hashtags.
+- Leren: lessen.md (kort) en voorbeelden.md (wat bovenaan werkte), wekelijkse meting van likes, antwoorden en positie. Risico: Instagram blokkeert automatisch reageren het snelst; stoppen bij actieblokkade of checkpoint.
+- Besloten: breed "ook algemeen trending" niet gedaan (publiek past niet bij Omnivaleur); alleen relevante grote accounts.
