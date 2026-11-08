@@ -948,7 +948,7 @@
       "pillar": "B",
       "format": "howto",
       "slug": "how-to-block-a-buyer-on-ebay",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "koper-blokkeren-op-ebay",
       "priority": 107
     },
@@ -1969,6 +1969,16 @@
       "action": "created",
       "url_path": "/vs/omnivaleur-vs-foxtail",
       "published_at": "2026-11-07T14:34:32.684583+00:00"
+    },
+    {
+      "keyword": "how to block a buyer on ebay",
+      "slug": "how-to-block-a-buyer-on-ebay",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-block-a-buyer-on-ebay",
+      "published_at": "2026-11-08T14:44:02.561651+00:00"
     }
   ]
 }
