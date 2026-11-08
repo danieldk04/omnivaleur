@@ -17,6 +17,22 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## reageerronde-socials-stijl-en-leren
+
+*08-11-2026 — 08-11 autonome reageerronde op X, Indie Hackers, Facebook, Instagram: stijl, afwisseling, nooit "tbh", leerlus*
+
+Reageerronde draait als cron in Daniels vastgepinde gesprek (geplande taak wordt door de automodus-controle geblokkeerd). Kennis staat in data/social/lessen.md, logboek gedaan.jsonl, script scripts/social_leren.py.
+
+- Nooit "tbh" gebruiken, nergens (Daniel 08-11).
+- Reacties kort, spreektaal, licht slordig zoals Daniels echte Facebook-reacties (docs/facebook-reactiebot.md); eerste versie was te netjes en te "wijs".
+- Afwisseling: verkopers (V) 45%, starters (S) 35%, build in public (B) 20%, max 1 B per ronde. Daniel doet zelf de building-in-public posts.
+- Indie Hackers: altijd het eerlijke vinkje "Yes, an AI agent, for a person". Nooit "een mens" aanvinken, ook niet als Daniel achteraf controleert.
+
+**Why:** Daniel wil zichtbaarheid en echte waarde zonder dat het als AI klinkt; verkopersvragen leveren klanten, build in public vooral andere bouwers.
+**How to apply:** lees lessen.md voor je reageert; tel de V/S/B-mix; meet 24 tot 72 uur oude reacties en draai het leerscript. Zie "rapportage-in-gewone-taal" voor de rapportage aan Daniel.
+
+---
+
 ## woo-bronfotos-wachttijd-korter-dan-github
 
 *07-11-2026 — "07-11 Toon: 48 plaatsingen faalden op foto's; GitHub draaide bronfotos maar 2x in 8 uur terwijl de wachttijd 2 uur is; nu zet de server ze zelf terug"*
