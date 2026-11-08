@@ -18890,3 +18890,7 @@ Vinted: alle zeven artikelen alle stappen ok, identiek aan 06-11; kookboek maat 
 
 ## 08-11-2026: platformcontrole
 - Vinted (7 artikelen), Marktplaats en 2dehands (3 rubrieken elk: boeken avontuur en actie, baby s en peuters, beeldend): geen afwijking. Alleen bekende artefacten (beschrijving, halswijdte, maat/kleur bij boek). Chrome bereikbaar; Vinted-tabblad liep traag (verborgen tabblad), stappen lukten wel.
+
+## 08-11-2026: reageerronde krijgt afwisseling en Daniels schrijfstijl (feedback Daniel)
+- Eerste ronde was te veel build in public en te nette, perfecte reacties. Nu: mix V (verkopers op Vinted/MP/2dehands/eBay) 45%, S (starters) 35%, B (build in public) 20%, max 1 B per ronde; stijl uit docs/facebook-reactiebot.md en Daniels echte reacties (kort, spreektaal, "iig", "t", slordig, vraag aan het eind hooguit 1 op 3). Staat in data/social/lessen.md en wordt elke ronde gelezen.
+- Elke ronde beoordeelt één nog onbekende Facebook-groep voor echte verkopersvragen (groepen.json). Eerdere reacties van vandaag blijven staan.
