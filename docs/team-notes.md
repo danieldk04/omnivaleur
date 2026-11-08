@@ -18915,3 +18915,7 @@ Vinted: alle zeven artikelen alle stappen ok, identiek aan 06-11; kookboek maat 
   9. Meten (Daniel wil data): uitnodigingen per actieve klant, % klanten dat trede 1 haalt, proef-naar-betaald van uitgenodigden, churn uitgenodigd vs niet, viral coefficient k, terugverdientijd.
   10. Misbruik: eigen account/zelf-verwijzing blokkeren, de unieke sleutel blijft de basis.
 - Open keuzes voor het bouwen: welke feature als eerste op slot, drempels (1/3/5/10 of anders), blijft ontgrendeling permanent of loopt hij mee met betalende vrienden.
+
+## 08-11-2026 (vervolg): premium-features-via-uitnodigen is uitgesteld, maar staat op de korte termijn (Daniel)
+- Bouwen is even uitgesteld; Daniel spart er eerst over met een andere AI. Status: Uitgesteld, wel bedoeld voor de KORTE termijn.
+- Afspraak: kom er ongevraagd op terug op een passend moment (bijv. bij werk aan referrals, abonnementen, nieuwe features of "wat staat er open"), of als Daniel zelf met nieuwe input komt. Niet zelf bouwen zonder zijn ja. Uitgangspunt is het advies in het vorige blok.

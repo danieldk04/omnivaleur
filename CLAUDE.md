@@ -215,6 +215,12 @@ When you make or learn a decision of that kind, append a dated entry to
 `docs/team-notes.md` and push it — the same way a code change gets pushed.
 Do not let it live only in memory or only in chat.
 
+## Terugkomen op: premium features ontgrendelen via uitnodigen (Daniel, 08-11-2026)
+
+Uitgesteld maar voor de korte termijn bedoeld. Zie het blok van 08-11-2026 in
+`docs/team-notes.md`. Breng het ongevraagd ter sprake als het past (referrals, abonnementen,
+nieuwe features, "wat staat er open"); niet bouwen zonder Daniels ja.
+
 ## De centrale lijst: Google Sheet "Omnivaleur te bouwen"
 
 Daniel, 19-10-2026, verhuisd naar Drive op 20-10-2026. Alles wat klanten vragen of wat we
