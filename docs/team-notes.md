@@ -18887,3 +18887,6 @@ Vinted: alle zeven artikelen alle stappen ok, identiek aan 06-11; kookboek maat 
 - Vierde platform in de ronde (data/social/ronde-prompt.txt): ingelogd account is Omnivaleur, max 5 per dag, 2 à 3 per ronde, alleen verse posts van grote relevante accounts (reseller, Vinted, ondernemers en bouwers). Doel: bovenaan de reacties; eerst de bovenste reacties lezen en het patroon kopiëren, nooit de tekst. Geen pitch, link of hashtags.
 - Leren: lessen.md (kort) en voorbeelden.md (wat bovenaan werkte), wekelijkse meting van likes, antwoorden en positie. Risico: Instagram blokkeert automatisch reageren het snelst; stoppen bij actieblokkade of checkpoint.
 - Besloten: breed "ook algemeen trending" niet gedaan (publiek past niet bij Omnivaleur); alleen relevante grote accounts.
+
+## 08-11-2026: platformcontrole
+- Vinted (7 artikelen), Marktplaats en 2dehands (3 rubrieken elk: boeken avontuur en actie, baby s en peuters, beeldend): geen afwijking. Alleen bekende artefacten (beschrijving, halswijdte, maat/kleur bij boek). Chrome bereikbaar; Vinted-tabblad liep traag (verborgen tabblad), stappen lukten wel.
