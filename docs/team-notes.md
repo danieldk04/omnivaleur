@@ -18899,3 +18899,6 @@ Vinted: alle zeven artikelen alle stappen ok, identiek aan 06-11; kookboek maat 
 - 4 accounts in hun eerste week, 0 nieuw, geen creator, Web Store levert 1.0.418 (repo 1.0.419). Agenda: niets over deze klanten.
 - Niets veranderd bij alle vier: kjrmohamed (720924e6) 0 artikelen, geen extensie; momme (e6f4a9d3) nooit ingelogd; kardkid9 (bc55c91e) 0 artikelen, extensie stil sinds 01-11, proef loopt vandaag 17:43 af; bankai2855 (7630bcf9) geen extensie, proef liep vandaag 12:22 af. Geen reparatie, geen mailtje (proefherinnering stuurt de server zelf).
 - Mailrapport: 5 mails sinds 02-11, 1 echt geopend, 0 klik, 0 antwoord, 0 deden daarna iets.
+
+## 08-11-2026
+- 08-11-2026: drie ideeën staan nu in de sheet te bouwen (premium via uitnodigen, twee deuren uitnodigen of Ultra-plan, win-back verlopen proefaccounts).
