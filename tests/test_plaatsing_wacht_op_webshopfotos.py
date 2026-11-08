@@ -82,8 +82,11 @@ def _ext(module, monkeypatch, db):
     monkeypatch.setattr(module, "_recover_stale_claims", lambda *a, **kw: None)
     monkeypatch.setattr(module, "execute_with_retry", lambda q, *a, **k: q.execute())
     monkeypatch.setattr(module, "_zet_kleur_goed", lambda rijen: None)
+    # De nagemaakte kopie hoort zonder dit al snel bij "loopt te ver
+    # achter" (geen werk). Dat is een andere poort dan wat deze proef meet.
+    monkeypatch.setattr(module, "_kopie_staat_stil", lambda *a, **k: None, raising=False)
     return module.get_pending_jobs(
-        request=type("R", (), {"headers": {"x-omnivaleur-ext": "1.0.392"}})(),
+        request=type("R", (), {"headers": {"x-omnivaleur-ext": "1.0.419"}})(),
         platform="marktplaats", user_id="u1")
 
 
@@ -210,3 +213,51 @@ def test_mislukte_fotoplaatsing_gaat_terug_zodra_de_fotos_er_zijn():
     assert n == 1, "alleen 2dehands: marktplaats loopt al, vinted faalde om iets anders"
     nieuw = bijgewerkt[0][1][0]
     assert nieuw["status"] == "pending" and nieuw["payload"]["photo_urls"] == ONS
+
+
+# DE JUISTE TOON, 07-11-2026: wandkleed 03859008. Zijn webshop gaf 8 foto's,
+# waarvan twee met dezelfde inhoud; onze opslag (naam op inhoud) maakte er 7 van.
+# De uitgifte ververste alleen als het artikel minstens evenveel foto's had als
+# de opdracht, dus 7 < 8: de plaatsing wachtte de volle twee uur op foto's die al
+# binnen waren en ging daarna met 8 onbereikbare bronadressen de deur uit, op
+# Marktplaats, 2dehands en Vinted tegelijk mislukt.
+VOOR_ONTDUBBELD = "44914eb3"   # jobs.py met de oude telling
+BRON_DUBBEL = BRON + [BRON[0].replace(".jpg", "-kopie.jpg")]
+
+
+def _oude_jobs_ontdubbeld():
+    bron = subprocess.run(["git", "show", f"{VOOR_ONTDUBBELD}:backend/api/jobs.py"], cwd=ROOT,
+                          capture_output=True, text=True, check=True).stdout
+    assert "len(verse_fotos) >= len(oude_fotos)" in bron, "verkeerd commitnummer gepind"
+    with tempfile.TemporaryDirectory() as map_:
+        pad = Path(map_) / "oude_jobs_ontdubbeld.py"
+        pad.write_text(bron)
+        spec = importlib.util.spec_from_file_location("oude_jobs_ontdubbeld", pad)
+        oud = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(oud)
+    return oud
+
+
+def test_oude_uitgifte_hield_ontdubbelde_fotos_tegen(monkeypatch):
+    lang = int(J._FOTO_GEDULD.total_seconds() // 60) + 5
+    db = _met_fotos(_bouw_db([_plaatsing(lang, lang, fotos=BRON_DUBBEL)], laatst_bediend=None), ONS)
+    uit = _ext(_oude_jobs_ontdubbeld(), monkeypatch, db)
+    assert uit and uit[0]["payload"]["photo_urls"] == BRON_DUBBEL, (
+        "de oude uitgifte had dit geval al goed, dan bewijst deze proef niets")
+
+
+def test_ontdubbelde_fotos_gaan_meteen_mee(monkeypatch):
+    db = _met_fotos(_bouw_db([_plaatsing(fotos=BRON_DUBBEL)], laatst_bediend=None), ONS)
+    uit = _ext(J, monkeypatch, db)
+    assert uit and uit[0]["id"] == "woo1", "de foto's zijn binnen, niet langer wachten"
+    assert uit[0]["payload"]["photo_urls"] == ONS
+
+
+def test_artikel_met_minder_bruikbare_fotos_vervangt_niets(monkeypatch):
+    # Opdracht heeft 3 foto's uit onze opslag plus 1 bronfoto; het artikel nog maar 2.
+    # Dan wint de opdracht: nooit armer aan foto's die echt werken.
+    opdracht = ONS + [BRON[0]]
+    db = _met_fotos(_bouw_db([_plaatsing(gestempeld_minuten=None, fotos=opdracht)],
+                             laatst_bediend=None), ONS[:2])
+    uit = _ext(J, monkeypatch, db)
+    assert uit and uit[0]["payload"]["photo_urls"] == opdracht

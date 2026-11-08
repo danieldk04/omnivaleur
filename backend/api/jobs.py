@@ -3119,10 +3119,15 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                 j["payload"][veld] = waarde
         # De foto's ook: de kopie in de opdracht kan nog bronadressen dragen die
         # intussen in onze opslag staan (zie _wacht_op_fotos). Alleen als het
-        # artikel er minder onbereikbare heeft en er niet armer van wordt.
+        # artikel er minder onbereikbare heeft en niet armer wordt aan foto's die
+        # echt werken. Tel bruikbare foto's, niet alle: onze opslag ontdubbelt op
+        # inhoud, dus 8 webshopfoto's met een dubbele worden er 7 (De Juiste Toon,
+        # 07-11-2026). Met "minstens evenveel" bleef de opdracht dan op 8
+        # onbereikbare bronadressen staan en mislukte op elk kanaal.
         verse_fotos = vers.get("photo_urls") or []
         oude_fotos = j["payload"].get("photo_urls") or []
-        if (verse_fotos and len(verse_fotos) >= len(oude_fotos)
+        bruikbaar = lambda fotos: len(fotos) - _onbereikbare_fotos(fotos)  # noqa: E731
+        if (verse_fotos and bruikbaar(verse_fotos) >= bruikbaar(oude_fotos)
                 and _onbereikbare_fotos(verse_fotos) < _onbereikbare_fotos(oude_fotos)):
             j["payload"]["photo_urls"] = verse_fotos
 
