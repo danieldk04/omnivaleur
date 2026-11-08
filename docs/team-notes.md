@@ -18899,3 +18899,19 @@ Vinted: alle zeven artikelen alle stappen ok, identiek aan 06-11; kookboek maat 
 - 4 accounts in hun eerste week, 0 nieuw, geen creator, Web Store levert 1.0.418 (repo 1.0.419). Agenda: niets over deze klanten.
 - Niets veranderd bij alle vier: kjrmohamed (720924e6) 0 artikelen, geen extensie; momme (e6f4a9d3) nooit ingelogd; kardkid9 (bc55c91e) 0 artikelen, extensie stil sinds 01-11, proef loopt vandaag 17:43 af; bankai2855 (7630bcf9) geen extensie, proef liep vandaag 12:22 af. Geen reparatie, geen mailtje (proefherinnering stuurt de server zelf).
 - Mailrapport: 5 mails sinds 02-11, 1 echt geopend, 0 klik, 0 antwoord, 0 deden daarna iets.
+
+## 08-11-2026: Idee voor later, premium features ontgrendelen door uitnodigen (Daniel)
+- Idee (nog niet gebouwd, voor later): nieuwe premium features (AI, achtergrond verwijderen, enz.) bestaan wel, maar staan zichtbaar op slot. Een klant ontgrendelt ze door X mensen uit te nodigen die een BETALEND account nemen (proef telt niet). Dus niet langer gratis uitrollen, maar uitrollen als beloning voor wie werft. Doel: mond-tot-mondreclame maximaal benutten, loyale klanten als motor.
+- Bestaat al: invite-and-earn (klantcode, 50% korting eerste maand voor de vriend, gratis maand voor de aanbrenger, `referral_rewards`, unieke sleutel `referred_user_id`). Dit idee is een laag daarbovenop: status en features in plaats van alleen tegoed.
+- Advies van Claude (Hormozi-lijn), om bij het bouwen te gebruiken:
+  1. Trap met zichtbare voortgangsbalk: 1 / 3 / 5 / 10 betalende vrienden. Eerste trede binnen 1 vriend, anders haakt men af. Niveau 10 koppelen aan "levenslang gratis" of de 20%-commissie van het affiliate-programma.
+  2. Alleen NIEUWE features achter de trap, nooit iets wat bestaande klanten al hebben (anders voelen loyale klanten zich gestraft).
+  3. Voortgang tonen als "2 van 3, 1 in proef": proefaanmeldingen tonen als bijna-klaar zodat de aanbrenger zijn vriend aanzet te betalen. Ontgrendeld blijft zolang genoeg vrienden betalen (houdt ook de aanbrenger zelf vast).
+  4. Locked state is het verkoopmiddel: feature zichtbaar met demo of voorbeeld, "ontgrendel met 3 vrienden". Eerst één gratis proefgebruik geven, dan op slot (eerst geven, dan vragen).
+  5. Vragen op het piekmoment (eerste verkochte artikel, tijdwinst-melding), niet bij aanmelden.
+  6. Delen zonder moeite: één link, kant-en-klaar WhatsApp-bericht en deelkaart met eigen cijfers ("Omnivaleur bespaarde mij 14 uur"). Aanbod voor de vriend zo goed dat nee zeggen dom voelt (de 50% bestaat al).
+  7. Schaarste en status: "Founding member"-badge, maandelijkse top-werver, beperkte eerste lichting.
+  8. Kosten: AI-features hebben variabele kosten, dus gebruiksplafond per maand per feature.
+  9. Meten (Daniel wil data): uitnodigingen per actieve klant, % klanten dat trede 1 haalt, proef-naar-betaald van uitgenodigden, churn uitgenodigd vs niet, viral coefficient k, terugverdientijd.
+  10. Misbruik: eigen account/zelf-verwijzing blokkeren, de unieke sleutel blijft de basis.
+- Open keuzes voor het bouwen: welke feature als eerste op slot, drempels (1/3/5/10 of anders), blijft ontgrendeling permanent of loopt hij mee met betalende vrienden.
