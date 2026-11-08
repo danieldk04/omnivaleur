@@ -165,6 +165,7 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - 04-11-2026: Gekeken: 177 mails in Verzonden (3 dagen), 7 van Daniel, 6 al verwerkt; 1 nieuw, 1 met concept. Nieuw: Goedemorgen i.p.v. Hoi (2e keer), eigen openingszin met reden van de mail, slot met reden i.p.v. extra instructie (onder Nog te leren).
 - 06-11-2026: Gekeken: 116 mails in Verzonden (3 dagen), 7 van Daniel, 1 al verwerkt; 6 nieuw, 5 met concept (3 niet vergelijkbaar). Nieuw: meelevende opening bij bezwaar i.p.v. dank, reparatiemelding zonder aanhef en dankzin (2e keer, onder Nog te leren).
 - 07-11-2026: Gekeken: 80 mails in Verzonden (3 dagen), 8 van Daniel, 6 al verwerkt; 2 nieuw, 1 met concept. Nieuw: warme openingszin na telefoongesprek toegevoegd, afrekenmail aan creator met "Goedemiddag" en "Daniel." (onder Nog te leren).
+- 08-11-2026: Gekeken: 50 mails in Verzonden (3 dagen), 5 van Daniel, 5 al verwerkt; 0 nieuw, 0 met concept. Niets te leren.
 
 ## 28-10-2026: geen schuld aantrekken (Daniel spreekt de regel uit)
 - Geen "sorry", "excuus", "dat lag aan ons", "dat was onze fout" of "belangrijk dat ik dit zeg", ook niet als de fout in ons systeem zat. Dit staat los van de oudere regel hierboven over een fout van ons: ook daar niet als bekentenis.
