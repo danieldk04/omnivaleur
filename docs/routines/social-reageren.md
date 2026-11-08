@@ -55,6 +55,13 @@ Alleen als de post direct gaat over crosslisten naar Europese platformen, dubbel
 Dan één zin, na het echte antwoord, met eigen belang erbij ("full disclosure, I built a tool for this"), zonder link.
 Bij ongeveer één op de vijf reacties. Staat de naam al in Daniels bio, dan hoeft hij nergens anders te staan.
 
+## Geleerd op 07 en 08-11-2026
+- Indie Hackers vraagt onder elke reactie of een AI-agent schrijft. Kies altijd het eerlijke antwoord: "Yes, an AI agent, for a person". Nooit "No, a person is".
+- Posts met meer dan 30 reacties overslaan, ook op Indie Hackers (de post van garbarok had er 44).
+- X laadt traag: wacht 4 seconden na navigate voor get_page_text. Zoektermen "vinted", "crosslist" en "reselling" geven vooral referralcodes; "first customers" en "solo founder" geven echte vragen.
+- De toestemmingscontrole van de geplande sessie blokkeerde op 07-11 twee keer het plaatsen (X "Reply" en Indie Hackers "Post comment"), een derde keer niet. Niet omheen werken: log het, schrijf wat klaarstond in het rapport en meld het Daniel.
+- Controleer elk "voor ons" of "bij mij" tegen de repo. Koude mail naar leads bestaat bij Omnivaleur, dus zeg nooit dat het volledig zonder outreach ging als je de koude mail noemt.
+
 ## Uitvoering
 1. Lees `data/social/gedaan.jsonl` (bestaat het niet: maak het, het bestand blijft buiten git). Elke regel: datum, platform,
    url van de post, auteur, onze tekst. Reageer nooit twee keer op dezelfde post.
