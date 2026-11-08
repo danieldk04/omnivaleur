@@ -18871,3 +18871,8 @@ Vinted: alle zeven artikelen alle stappen ok, identiek aan 06-11; kookboek maat 
 ## 08-11-2026: Indie Hackers proef van 7 dagen (Daniel akkoord)
 - Autonoom reageren op X en Indie Hackers. Op Indie Hackers max 2 reacties per dag, altijd het eerlijke vinkje "Yes, an AI agent, for a person" (Daniel wilde "een mens" laten aanvinken; dat is niet gedaan, het zou onwaar zijn). Stoppen bij één waarschuwing of verborgen reactie. Beoordeling op 15-11: zichtbaar, upvotes, antwoorden.
 - Gemeten 08-11: een openbare regel van Indie Hackers over AI-reacties is niet te vinden; het formulier biedt de AI-opties zelf aan. Effect op bereik of account onbekend, dus proef.
+
+## 08-11-2026: Facebook reageren in groepen, autonoom (Daniel)
+- Daniel: precies hetzelfde als X en Indie Hackers, Engels en Nederlands, in relevante groepen. Opdracht docs/routines/facebook-reageren.md, taak omnivaleur-facebook-reageren (13:15 en 20:15), plafond 4 reacties per dag, 1 per groep, alleen reageren, geen eigen posts. 44 groepen waarvan een selectie van reseller-, Vinted- en ondernemersgroepen; "promotie/geen regels"-groepen overgeslagen.
+- Hef de oude afspraak op voor reacties in groepen. De verversroutine van de reactiebot blijft alleen lezen en slaat reacties van deze routine over bij het leren.
+- Risico: Facebook kan Daniels eigen profiel beperken; daarom lage aantallen en stoppen bij elke melding.
