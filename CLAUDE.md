@@ -221,6 +221,12 @@ Uitgesteld maar voor de korte termijn bedoeld. Zie het blok van 08-11-2026 in
 `docs/team-notes.md`. Breng het ongevraagd ter sprake als het past (referrals, abonnementen,
 nieuwe features, "wat staat er open"); niet bouwen zonder Daniels ja.
 
+## Terugkomen op: verlopen proefaccounts terughalen (Daniel, 08-11-2026)
+
+Zo snel mogelijk, want verse proefaccounts komen vaker terug. Zie het blok van 08-11-2026
+("win-back") in `docs/team-notes.md`. Eerst per segment tellen, dan een concept voor Daniel.
+Geen Google- of LinkedIn-zoekwerk op e-mailadressen van klanten; alleen eigen kanalen.
+
 ## De centrale lijst: Google Sheet "Omnivaleur te bouwen"
 
 Daniel, 19-10-2026, verhuisd naar Drive op 20-10-2026. Alles wat klanten vragen of wat we
