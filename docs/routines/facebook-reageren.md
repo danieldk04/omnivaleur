@@ -57,6 +57,12 @@ pb in plaats van link), hooguit bij 1 op de 5 reacties.
    activiteitenlogboek. Reacties van deze routine staan daar ook in. Sla ze over bij het leren: haal de teksten uit
    `data/social/gedaan.jsonl` (platform facebook) uit `data/facebook-leren/reacties.jsonl` of neem ze niet op.
 
+## Geleerd op 08-11-2026 (eerste echte ronde)
+- Facebook toont posttekst slecht via get_page_text (verborgen letters). Werk met screenshots en `find`.
+- Veel reseller- en Vinted-groepen zijn advertentieborden (alleen links en "promoot je kleding"): daar valt niets te beantwoorden. Beoordeling per groep staat in `data/social/groepen.json`; ga eerst naar de groepen onder "bruikbaar" en beoordeel de rest één keer bij bezoek.
+- Werkt: reageren onder een post in de openbare groep #BuildInPublic (opmerkingsveld onder de post, tekst typen, het verzendpijltje rechts klikken; daarna op de pagina controleren dat de reactie er staat).
+- EU Resellers (Daniels eigen groep) heeft maar 9 leden en geen posts van anderen: overslaan.
+
 ## Risico dat Daniel kent
 Facebook kan een account tijdelijk beperken of blokkeren voor automatisch gedrag, en het gaat om Daniels eigen profiel
 met zijn echte naam. Daarom de lage aantallen, geen links, één per groep en stoppen bij elke melding. Een groepsbeheerder
