@@ -18894,3 +18894,8 @@ Vinted: alle zeven artikelen alle stappen ok, identiek aan 06-11; kookboek maat 
 ## 08-11-2026: reageerronde krijgt afwisseling en Daniels schrijfstijl (feedback Daniel)
 - Eerste ronde was te veel build in public en te nette, perfecte reacties. Nu: mix V (verkopers op Vinted/MP/2dehands/eBay) 45%, S (starters) 35%, B (build in public) 20%, max 1 B per ronde; stijl uit docs/facebook-reactiebot.md en Daniels echte reacties (kort, spreektaal, "iig", "t", slordig, vraag aan het eind hooguit 1 op 3). Staat in data/social/lessen.md en wordt elke ronde gelezen.
 - Elke ronde beoordeelt één nog onbekende Facebook-groep voor echte verkopersvragen (groepen.json). Eerdere reacties van vandaag blijven staan.
+
+## 08-11-2026: Onboarding nieuwe klanten (ochtend)
+- 4 accounts in hun eerste week, 0 nieuw, geen creator, Web Store levert 1.0.418 (repo 1.0.419). Agenda: niets over deze klanten.
+- Niets veranderd bij alle vier: kjrmohamed (720924e6) 0 artikelen, geen extensie; momme (e6f4a9d3) nooit ingelogd; kardkid9 (bc55c91e) 0 artikelen, extensie stil sinds 01-11, proef loopt vandaag 17:43 af; bankai2855 (7630bcf9) geen extensie, proef liep vandaag 12:22 af. Geen reparatie, geen mailtje (proefherinnering stuurt de server zelf).
+- Mailrapport: 5 mails sinds 02-11, 1 echt geopend, 0 klik, 0 antwoord, 0 deden daarna iets.
