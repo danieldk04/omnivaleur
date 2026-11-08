@@ -3,8 +3,9 @@
 Daniel, 07-11-2026. Doel: het Claude Project "Facebook-reactiebot" antwoordt op actuele informatie en leert van
 Daniels echte reacties. Het Project "Facebook-reactiebot v2" (claude.ai/code/project/chan_01RSDHcESSnzUiKX9YCrKkDg) heeft de repo danieldk04/omnivaleur als context en leest `docs/facebook-actueel.md` zelf bij elk gesprek. De opdracht zelf staat in `docs/facebook-reactiebot.md`.
 
-Harde afspraak (14-09 en 08-10): niets plaatst of reageert namens Daniel. Alleen LEZEN, één keer per dag, in
-Daniels eigen Chrome.
+Harde afspraak (14-09 en 08-10): DEZE routine plaatst of reageert niet namens Daniel. Alleen LEZEN, één keer per dag, in
+Daniels eigen Chrome. Sinds 08-11-2026 reageert een aparte routine wel zelf in groepen (`docs/routines/facebook-reageren.md`);
+sla bij het leren de reacties over die in `data/social/gedaan.jsonl` (platform facebook) staan.
 
 Stappen:
 1. Open in Claude in Chrome (nieuw tabblad) https://www.facebook.com/me/allactivity?category_key=COMMENTSCLUSTER
