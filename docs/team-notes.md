@@ -18972,3 +18972,8 @@ Daniel: Monaim heeft op dit moment niets meer met Omnivaleur te maken, mogelijk 
 - Vast: klassement met drempel 3 nieuwe betalende vrienden per maand, prijs rolt door als niemand de drempel haalt, niveaus Brons 1 / Zilver 3 / Goud 5 / Platina 10, Founding Circle voor de eerste 10 met 5 betalende vrienden. Vrienden tellen voor het klassement pas na 30 dagen betalen; winnaar handmatig gecontroleerd.
 - Gat gevonden in het voorstel: een Light-vriend betaalt 9,99, dus 10 euro korting zou meer kosten dan hij oplevert. Korting daarom nooit hoger dan 50% van wat de vriend betaalt, en telt alleen vanaf Pro. Te verwerken bij het bouwen.
 - Bouwvolgorde (voorstel): eerst de stimulus (korting per vriend, 2 gratis maanden, trap, AI-titels), want die loopt tot 01-01-2027; daarna het plansysteem eerst uitgezet in de code; daarna foto naar advertentie en Etsy; mail en dashboardmelding rond 01-12.
+
+## 09-11-2026: fasering, jaarprijzen en Light-regel akkoord, community later (Daniel)
+- Akkoord: grote drie in stappen (1 jan tot 31 mrt 29,99, 1 apr tot 30 jun 39, daarna 49), jaarprijzen Pro 199, Plus 299, Ultra 490 (Light 99), en de regel dat een vriend alleen meetelt vanaf Pro met korting hooguit 50% van wat hij betaalt.
+- Besloten community en directe supportlijn zijn nu niet relevant: Daniel bouwt langzaam een Facebook-community en weet niet of dat de juiste mensen zijn. Community komt later, kanaal nog niet gekozen. Uit het plan gehaald.
+- Het planoverzicht moet kort zijn: twee tabbladen (Plan, Open), geen onderzoeks- of tijdtabblad. Compacte versie staat lokaal als plan2.xlsx in de scratchpad en is naar de Drive-map Omnivaleur gekopieerd; de sheet met zes tabbladen bestond al in Drive (id 1LAqocUrU).
