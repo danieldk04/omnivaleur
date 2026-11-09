@@ -18902,3 +18902,10 @@ Vinted: alle zeven artikelen alle stappen ok, identiek aan 06-11; kookboek maat 
 
 ## 08-11-2026
 - 08-11-2026: drie ideeën staan nu in de sheet te bouwen (premium via uitnodigen, twee deuren uitnodigen of Ultra-plan, win-back verlopen proefaccounts).
+
+## Daniel 08-11 avond
+Elke ronde minstens 1 reactie op ALLE vier platforms; alleen overslaan bij dagplafond (IH 2) of blokkade. Zie ronde-prompt.txt.
+Indie Hackers dagplafond van 2 naar 3 (Daniel 08-11 avond), zodat elke van de 3 rondes er 1 plaatst. Proef tot 15-11 blijft, stoppen bij waarschuwing.
+
+## 09-11-2026: platformcontrole niet gedraaid
+- Claude in Chrome niet verbonden (geen browser in de lijst, twee pogingen). Niets gemeten. Gisteren (08-11) draaide het wel; volgens de afspraak pas melden als het twee dagen achter elkaar gebeurt.
