@@ -87,6 +87,77 @@ def maandprijs_cents(sub) -> int | None:
         return None
 
 
+def _terugbetaald_per_sleutel(klant_id: str) -> dict[str, int]:
+    """Teruggaven per factuurnummer EN per payment_intent.
+
+    Waarom beide: in de oude Stripe-API (gepinde SDK op de server) hangt een
+    betaling met `invoice` aan de factuur, in de nieuwe API bestaat dat veld niet
+    meer en loopt de koppeling via de payment_intent. Gemeten 09-11-2026 in
+    testmodus: met alleen `invoice` bleef een teruggave onzichtbaar op de nieuwe API.
+    Mislukt het lezen, dan geldt "niets teruggegeven" en volgt het volgende uur een
+    nieuwe poging.
+    """
+    uit: dict[str, int] = {}
+    try:
+        for charge in stripe.Charge.list(customer=klant_id, limit=100).auto_paging_iter():
+            terug = int(_g(charge, "amount_refunded", 0) or 0)
+            for sleutel in (_g(charge, "invoice"), _g(charge, "payment_intent")):
+                if sleutel:
+                    uit[sleutel] = uit.get(sleutel, 0) + terug
+    except Exception:
+        logger.exception("Kon teruggaven niet lezen voor %s", klant_id)
+    return uit
+
+
+def _id_van(waarde) -> str | None:
+    """Een verwijzing is soms een id en soms een uitgeklapt object."""
+    if isinstance(waarde, str):
+        return waarde
+    return _g(waarde, "id") if waarde else None
+
+
+def _payment_intent_van_factuur(f) -> str | None:
+    """Oude API: veld op de factuur. Nieuwe API: via de (uitgeklapte) betalingen."""
+    pi = _id_van(_g(f, "payment_intent"))
+    if pi:
+        return pi
+    for p in _g(_g(f, "payments", {}), "data", []) or []:
+        pi = _id_van(_g(_g(p, "payment", {}), "payment_intent"))
+        if pi:
+            return pi
+    return None
+
+
+def _betaalde_facturen(klant_id: str):
+    """Betaalde facturen, met de betalingen uitgeklapt waar de API dat kent."""
+    try:
+        return list(stripe.Invoice.list(customer=klant_id, status="paid", limit=100,
+                                        expand=["data.payments"]).auto_paging_iter())
+    except Exception:
+        # De oude API kent `payments` niet en weigert het uitklappen.
+        return list(stripe.Invoice.list(customer=klant_id, status="paid",
+                                        limit=100).auto_paging_iter())
+
+
+def facturen_van_klant(klant_id: str) -> list[dict]:
+    """Alle betaalde facturen van een klant, in de vorm die verwerk_vriend wil."""
+    teruggaven = _terugbetaald_per_sleutel(klant_id)
+    uit = []
+    for f in _betaalde_facturen(klant_id):
+        fid = _g(f, "id")
+        if not fid:
+            continue
+        pi = _payment_intent_van_factuur(f)
+        uit.append({
+            "id": fid,
+            "bruto_cents": int(_g(f, "amount_paid", 0) or 0),
+            "terug_cents": max(teruggaven.get(fid, 0), teruggaven.get(pi, 0) if pi else 0),
+            "paid_at": (_ts(_g(_g(f, "status_transitions", {}), "paid_at"))
+                        or _ts(_g(f, "created"))),
+        })
+    return uit
+
+
 def _boekingen_per_factuur(klant_id: str) -> dict[str, int]:
     """Per vriendenfactuur: wat er netto aan tegoed gegeven is (positief getal).
 

@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 EINDE_ACTIE = datetime(2027, 1, 1, tzinfo=timezone.utc)
 BEDRAG_ACTIE_CENTS = 1000
 BEDRAG_NORMAAL_CENTS = 500
+MIN_BEDRAG_CENTS = 100         # onder een euro boekt het niets (geen centen-ruis)
 AANDEEL_NOOIT_MEER_DAN = 0.5   # van wat de vriend (incl. btw) betaalde
 PLANNEN_DIE_TELLEN = {"pro", "plus", "ultra"}   # niet "light"
 
@@ -71,7 +72,8 @@ def korting_cents(
     bedrag = bedrag_per_vriend_cents(vriend_eerste_betaling_op)
     bedrag = min(bedrag, int(vriend_betaald_cents * AANDEEL_NOOIT_MEER_DAN))
     ruimte = max(0, int(eigen_maandprijs_cents) - max(0, int(huidig_tegoed_cents)))
-    return max(0, min(bedrag, ruimte))
+    uitkomst = max(0, min(bedrag, ruimte))
+    return uitkomst if uitkomst >= MIN_BEDRAG_CENTS else 0
 
 
 def trede(aantal_betalende_vrienden: int) -> int:

@@ -45,7 +45,7 @@ def test_onbekend_plan_of_geen_betaling_geeft_niets():
 
 
 def test_nooit_meer_dan_helft_van_wat_vriend_betaalde():
-    for netto in (1, 99, 1000, 1652, 1999, 4900):
+    for netto in (1, 99, 250, 1000, 1652, 1999, 4900):
         assert _k(vriend_betaald_cents=netto) <= netto // 2
 
 
@@ -59,6 +59,11 @@ def test_nooit_meer_dan_eigen_rekening_en_geen_tegoed_opstapelen():
     assert _k(vriend_betaald_cents=4000, eigen_maandprijs_cents=1999, huidig_tegoed_cents=1500) == 499
     assert _k(vriend_betaald_cents=4000, eigen_maandprijs_cents=1999, huidig_tegoed_cents=1999) == 0
     assert _k(vriend_betaald_cents=4000, eigen_maandprijs_cents=1999, huidig_tegoed_cents=5000) == 0
+
+
+def test_onder_een_euro_boekt_niets():
+    assert _k(vriend_betaald_cents=4000, eigen_maandprijs_cents=1999, huidig_tegoed_cents=1950) == 0
+    assert _k(vriend_betaald_cents=150) == 0
 
 
 def test_datum_zonder_tijdzone_wordt_als_utc_gelezen():
