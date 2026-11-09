@@ -18909,3 +18909,11 @@ Indie Hackers dagplafond van 2 naar 3 (Daniel 08-11 avond), zodat elke van de 3 
 
 ## 09-11-2026: platformcontrole niet gedraaid
 - Claude in Chrome niet verbonden (geen browser in de lijst, twee pogingen). Niets gemeten. Gisteren (08-11) draaide het wel; volgens de afspraak pas melden als het twee dagen achter elkaar gebeurt.
+
+## 09-11-2026: Toon, blijven steken op meerdere kanalen en Woo niet alles in Omni
+- Gemeten 09:40 UTC (alleen lezen, niets gewijzigd): Toons extensie (1.0.418) deed tussen 08-11 20:00 en 09-11 09:00 UTC niets (computer uit), daarna loopt hij weer, ~1 klus per 2 min. Open: 23 Marktplaats-verlengingen (create), 22 Marktplaats-verwijderingen, 13 2dehands-verlengingen, 1 2dehands-create; dat zijn verlengingen van oude advertenties, geen nieuwe plaatsingen.
+- Vinted: 13 artikelen van gisteren vast op "colour (empty)". 7 hebben nog geen kleur in Omni (VL12, IMP-03859008, 57B242D2, 92136AD6, 95E2B178, AC55180F, F53AFEFE). 6 kregen gisteravond 18:26 tot 19:31 UTC wel een kleur (D3B9F85F Red, GR84 Blue, 460CEC62, GR98, gr99, gr11 Various), maar de opdracht bleef error met de oude payload (kleur null). Niet opnieuw klaargezet: niet bewezen dat 'Various' op Vinted slaagt, in Toons geschiedenis staat geen enkele geslaagde Vinted-plaatsing met een Engelse kleurnaam.
+- Wandkleed 03859008 (fix d940767e van 08-11) staat nu actief op Marktplaats, 2dehands, eBay en Woo; alleen Vinted wacht op kleur. Fix werkt.
+- Schapenvacht IMP-2966F9C0: foto's staan op images.marktplaats.com en zijn niet meer op te halen (MP en 2dehands "None of the 5 photos"); Toon moet foto's opnieuw toevoegen.
+- Woo naar Omni: alle 920 openbaar gepubliceerde producten hebben een Omni-item met Woo-regel, 0 ontbreken (op id en op sku). Concepten, privé of verborgen producten zijn niet te meten zonder zijn sleutels.
+- eBay alleen ongedaan maken: kan niet, Delist (POST /api/items/{id}/delist) haalt van alle kanalen. In de sheet gezet als nieuwe regel.
