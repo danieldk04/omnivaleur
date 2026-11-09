@@ -100,7 +100,7 @@ def omgeving(monkeypatch):
     monkeypatch.setattr(database, "get_db", lambda: db)
     monkeypatch.setattr(database, "get_admin_db", lambda: db)
     monkeypatch.setattr(email_mod, "send_email",
-                        lambda subject, body, to=None, reply_to=None: verstuurd.append((to, subject, body)) or db.mail_lukt)
+                        lambda subject, body, to=None, reply_to=None, **_kw: verstuurd.append((to, subject, body)) or db.mail_lukt)
     db.mail_lukt = True
     return db, verstuurd
 
