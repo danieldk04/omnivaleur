@@ -40,5 +40,7 @@ eBay
 - "Pfff vervelend hoor. Zelf nog geen pakje op de verkeerde plek gehad bij Mondial Relay, maar ik hoor het hier wel vaker. Foto van het pakje bij het punt bewaren iig, voor als de koper gaat zeuren"
 - "Leuk dat je zo bezig bent. Bij mij hielp t vooral om op meerdere plekken tegelijk te verkopen, en vooral de leverage gebruiken van marketplaces. [...] Kijk ook eens naar specialistische platforms voor jouw niche."
 - Als iemand reageert op een post van hem: kort, verwijs naar het privébericht en de berichtverzoeken (of spam).
+- "Ik zit zelf in kleding dus neem het met een korreltje zout, maar als ik jou was zou ik Etsy als eerste pakken. [...] daar zitten je kopers letterlijk al :)" (advies in andermans niche, met voorbehoud)
+- "Mooi initiatief! Als student ernaast ondernemen is pittig, dus zet je studie-uren echt vast in je agenda, heb ik zelf ook op de harde manier geleerd haha"
 
 Patroon: eerst een korte menselijke reactie, dan één ervaring of tip, geen verkooppraatje.
