@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## alleen-bouwen-wat-100-procent-zeker-werkt
+
+*09-11-2026 — Daniel 09-11-2026: nooit bouwen om te bouwen, nooit iets uitrollen dat nog niet helemaal werkt; elke bouwstap eerst aantoonbaar zeker, ook buiten dit gesprek*
+
+Daniel zei bij de start van de uitnodig- en plannenbouw (09-11-2026): bouw geen dingen om te bouwen, bouw alleen wat 100% zeker lukt en slaagt, en rol nooit iets uit dat nog niet goed werkt. Dit geldt altijd, los van dat gesprek.
+
+**Why:** hij verkoopt zekerheid door aan klanten. Een half werkende uitrol (een korting die verkeerd rekent, een belofte die niet te leveren is) kost hem vertrouwen en geld, en het uitnodigsysteem raakt facturatie.
+
+**How to apply:** per bouwstap eerst bewijzen (echte code draaien, Stripe-testmodus, voor-en-na-proef) en pas dan live zetten. Wat nog niet bewezen is blijft uit of verborgen, nooit half aan. Een belofte aan klanten (AI-pakket, features) pas doen als het gemeten werkt. Zie "omnivaleur-altijd-bewijzen" en "klantdata-niet-op-eigen-initiatief".
+
+---
+
 ## afmelden-zonder-inlog-alleen-waar-verplicht
 
 *09-11-2026 — "09-11: afmeldregel alleen op commerciële mail, subtiel, nooit achter een inlog; afmelder meteen in mail_unsubscribed"*

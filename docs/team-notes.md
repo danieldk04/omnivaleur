@@ -18977,3 +18977,8 @@ Daniel: Monaim heeft op dit moment niets meer met Omnivaleur te maken, mogelijk 
 - Akkoord: grote drie in stappen (1 jan tot 31 mrt 29,99, 1 apr tot 30 jun 39, daarna 49), jaarprijzen Pro 199, Plus 299, Ultra 490 (Light 99), en de regel dat een vriend alleen meetelt vanaf Pro met korting hooguit 50% van wat hij betaalt.
 - Besloten community en directe supportlijn zijn nu niet relevant: Daniel bouwt langzaam een Facebook-community en weet niet of dat de juiste mensen zijn. Community komt later, kanaal nog niet gekozen. Uit het plan gehaald.
 - Het planoverzicht moet kort zijn: twee tabbladen (Plan, Open), geen onderzoeks- of tijdtabblad. Compacte versie staat lokaal als plan2.xlsx in de scratchpad en is naar de Drive-map Omnivaleur gekopieerd; de sheet met zes tabbladen bestond al in Drive (id 1LAqocUrU).
+
+## 09-11-2026: bouwstart stimulus, regel 100% zeker, Etsy geblokkeerd (Daniel)
+- Akkoord: actieve artikelen tellen bij elke factuur (10% ruimte, 14 dagen speling, alleen nieuwe artikelen blokkeren), grenzen 250 en 1.500 blijven. Het klassement belooft een feature naar keuze "in overleg": past het niet of is het niet betrouwbaar, dan kiest de winnaar een andere feature.
+- Daniel gaf akkoord om de stimulus te bouwen. Harde regel (ook los van dit gesprek): alleen bouwen wat 100% zeker lukt, niets half uitrollen. Staat in memory en kennisbank.
+- Etsy: Daniel is al lange tijd geblokkeerd op Etsy. Zonder werkend Etsy-account geen ontwikkelaarsaccount en dus geen Etsy-koppeling. Geen nieuw account onder andere naam om de blokkade te omzeilen: dat kan een nieuwe blokkade geven. Eerst uitzoeken waarom en bezwaar indienen.
