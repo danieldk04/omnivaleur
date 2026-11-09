@@ -187,7 +187,8 @@ async def herinner_niet_geimporteerd(now: datetime | None = None) -> int:
             return verstuurd
         _gemaild_uit_geheugen.add(uid)
         onderwerp, tekst = herinnering_mail(aantal, kanalen)
-        if send_email(subject=onderwerp, body=tekst, to=adres, reply_to=CONTACT_EMAIL):
+        if send_email(subject=onderwerp, body=tekst, to=adres, reply_to=CONTACT_EMAIL,
+                      afmelden_user_id=uid):
             verstuurd += 1
             logger.info(f"Importherinnering naar {adres}: {aantal} wachtend op {kanalen}")
         else:
