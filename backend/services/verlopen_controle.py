@@ -67,6 +67,24 @@ UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
 
 
+def _openbaar_adres(rij: dict) -> str:
+    """Het adres dat iedereen kan openen.
+
+    Van zoekertjes die WIJ plaatsten kennen we vaak alleen /seller/view/{nummer}.
+    Die pagina is alleen voor de ingelogde verkoper: de server krijgt 401 en dus
+    nooit een uitspraak (09-11-2026, Egbert bcdf9aa4: vijf verlopen zoekertjes
+    kregen daardoor sinds 30-10 elke dag een kansloze verlenging). {site}/{nummer}
+    stuurt door naar de openbare pagina, gemeten op 2dehands (410 verlopen, 200
+    levend) en al eerder op Marktplaats (zie relist._live_fotos).
+    """
+    url = str(rij.get("platform_listing_url") or "").split("?")[0]
+    nummer = str(rij.get("platform_listing_id") or "").strip()
+    m = re.match(r"(https://www\.(?:marktplaats\.nl|2dehands\.be))/seller/view/(m\d+)", url)
+    if m and (not nummer or nummer == m.group(2)):
+        return f"{m.group(1)}/{m.group(2)}"
+    return url
+
+
 async def _pagina_zegt_verlopen(client, url: str) -> bool | None:
     """True = bewezen verlopen, False = bewezen niet, None = geen uitspraak.
 
@@ -166,7 +184,7 @@ async def controleer_mislukte_verlengingen() -> int:
         for rij in kandidaten[:MAX_VERLENGINGEN_PER_RONDE]:
             if nagekeken:
                 await asyncio.sleep(PAUZE_SECONDEN)
-            uitkomst = await _pagina_zegt_verlopen(client, str(rij["platform_listing_url"]).split("?")[0])
+            uitkomst = await _pagina_zegt_verlopen(client, _openbaar_adres(rij))
             nagekeken += 1
             if uitkomst is None:
                 zonder_uitspraak += 1
@@ -233,8 +251,7 @@ async def _verkoopvragen() -> dict:
         for rij in kandidaten[:MAX_PER_RONDE]:
             if nagekeken:
                 await asyncio.sleep(PAUZE_SECONDEN)
-            url = str(rij["platform_listing_url"]).split("?")[0]
-            uitkomst = await _pagina_zegt_verlopen(client, url)
+            uitkomst = await _pagina_zegt_verlopen(client, _openbaar_adres(rij))
             nagekeken += 1
             if uitkomst is None:
                 zonder_uitspraak += 1

@@ -332,3 +332,29 @@ def test_andere_verlengfout_wordt_niet_nagekeken(monkeypatch):
                                      {url: _Antwoord(410, VERLOPEN_PAGINA)})
     assert client.gevraagd == []
     assert db.listings[0]["status"] == "active"
+
+
+def test_verlenging_op_inlogadres_kijkt_op_de_openbare_pagina(monkeypatch):
+    """09-11-2026, Egbert (bcdf9aa4): vijf zoekertjes faalden sinds 30-10 elke dag
+    met 'not in your overview'. Hun opgeslagen adres was /seller/view/{nummer}; dat
+    geeft de server 401, dus kwam er nooit een uitspraak en bleef de rij actief.
+    2dehands.be/{nummer} stuurt door naar de openbare pagina: gemeten 410 verlopen."""
+    url = "https://www.2dehands.be/seller/view/m2447286531"
+    openbaar = "https://www.2dehands.be/m2447286531"
+    db, uit, client = _draai_verleng(monkeypatch, [_actieve_rij("m2447286531", url)],
+                                     [_verlengfout("m2447286531")],
+                                     {url: _Antwoord(401, ""),
+                                      openbaar: _Antwoord(410, VERLOPEN_PAGINA)})
+    assert client.gevraagd == [openbaar]
+    assert uit["verlengingen_verlopen"] == 1
+    assert db.listings[0]["status"] == "delisted"
+
+
+def test_verkoopvraag_op_inlogadres_kijkt_op_de_openbare_pagina(monkeypatch):
+    url = "https://www.marktplaats.nl/seller/view/m2222222222"
+    openbaar = "https://www.marktplaats.nl/m2222222222"
+    rij = dict(_vraag("m2222222222", url), platform="marktplaats")
+    db, uit, client = _draai(monkeypatch, [rij],
+                             {url: _Antwoord(401, ""), openbaar: _Antwoord(410, VERLOPEN_PAGINA)})
+    assert client.gevraagd == [openbaar]
+    assert uit["verlopen"] == 1
