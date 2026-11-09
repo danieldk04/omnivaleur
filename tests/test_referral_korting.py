@@ -79,3 +79,16 @@ def test_trap():
     assert volgende_trede(4) == (5, 1)
     assert volgende_trede(5) is None
     assert trede(-3) == 0
+
+
+def test_actie_blok_voor_het_dashboard(monkeypatch):
+    from backend.api import referrals as r
+    monkeypatch.setattr(r.settings, "referral_korting_aan", True, raising=False)
+    b = r.actie_blok(2)
+    assert b["active"] is True and b["reward_months"] == 2 and b["euro_per_friend"] == 10
+    assert b["step"] == 1 and b["next_step"] == {"at": 3, "to_go": 1}
+    assert b["ends"] == "2027-01-01" and b["steps"] == [1, 3, 5]
+    assert r.actie_blok(5)["next_step"] is None
+    monkeypatch.setattr(r.settings, "referral_korting_aan", False, raising=False)
+    uit = r.actie_blok(2)
+    assert uit["active"] is False and uit["reward_months"] == 1

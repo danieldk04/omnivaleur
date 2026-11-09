@@ -345,6 +345,27 @@ def _stand_van(abo: dict | None) -> str:
     return "inactive"
 
 
+def actie_blok(aantal_betalende_vrienden: int) -> dict:
+    """De uitnodigactie tot 01-01-2027 voor het dashboard. Staat de vlag
+    referral_korting_aan uit, dan is `active` onwaar en toont het dashboard niets
+    nieuws. Een vriend op Light telt niet mee (zie referral_korting.py)."""
+    from backend.services.referral_korting import (
+        BEDRAG_ACTIE_CENTS, EINDE_ACTIE, TREDEN, trede, volgende_trede,
+    )
+    aan = bool(settings.referral_korting_aan) and datetime.now(timezone.utc) < EINDE_ACTIE
+    volgende = volgende_trede(aantal_betalende_vrienden)
+    return {
+        "active": aan,
+        "ends": EINDE_ACTIE.date().isoformat(),
+        "euro_per_friend": BEDRAG_ACTIE_CENTS // 100,
+        "reward_months": 2 if aan else 1,
+        "counting_friends": int(aantal_betalende_vrienden),
+        "step": trede(aantal_betalende_vrienden),
+        "steps": list(TREDEN),
+        "next_step": {"at": volgende[0], "to_go": volgende[1]} if volgende else None,
+    }
+
+
 def _tegoed_eur(user_id: str) -> float | None:
     """Het openstaande tegoed bij Stripe in euro's, of None als we het niet
     kunnen weten. Bewust live opgehaald en niet zelf bijgehouden: Stripe haalt er
@@ -404,7 +425,7 @@ def mijn_verwijzingen(compact: bool = False, user=Depends(get_current_user_full)
     abos = {}
     if ids:
         abos = {r["user_id"]: r for r in ((execute_with_retry(
-            db.table("subscriptions").select("user_id, status, stripe_subscription_id")
+            db.table("subscriptions").select("user_id, status, stripe_subscription_id, plan")
             .in_("user_id", ids)).data) or [])}
     per_vriend = {b["referred_user_id"]: b for b in beloningen}
 
@@ -421,13 +442,18 @@ def mijn_verwijzingen(compact: bool = False, user=Depends(get_current_user_full)
 
     standen = [_stand_van(abos.get(v["user_id"])) for v in verwijzingen]
     maanden = sum(1 for b in beloningen if b.get("status") == "granted")
+    telt_mee = sum(1 for v in verwijzingen
+                   if _stand_van(abos.get(v["user_id"])) == "paying"
+                   and (abos.get(v["user_id"]) or {}).get("plan") != "light")
+    actie = actie_blok(telt_mee)
     return {
         "ready": True,
         "compact": compact,
         "code": code,
         "link": link_voor(code),
         "old_links": [link_voor(c) for c in mijn_codes[1:]],
-        "reward_months": 1,
+        "reward_months": actie["reward_months"],
+        "campaign": actie,
         "friend_discount_percent": 50,
         "stats": {
             "clicks": len(kliks),

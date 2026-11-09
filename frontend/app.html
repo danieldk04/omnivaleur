@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=270982f9fd"></script>
+<script src="/i18n.js?v=38cc73793d"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -5257,6 +5257,33 @@ function renderReferral() {
          <div style="font-size:12px;color:#005f3a;margin-top:3px">It comes off your next invoice automatically. You do not have to do anything.</div>
        </div>` : '';
 
+  // Uitnodigactie tot 01-01-2027 (aan via de vlag referral_korting_aan op de server).
+  const c = _referral.campaign || {};
+  const nTelt = c.counting_friends || 0;
+  const trap = [
+    {n: 1, tekst: `${c.reward_months || 2} free months for each friend`},
+    {n: 3, tekst: 'The AI pack: smart titles and photo to listing'},
+    {n: 5, tekst: 'All premium features, as soon as they are live'},
+  ];
+  const campagneKaart = c.active ? `
+    <div class="card" style="margin-bottom:20px;border:1px solid #85edbc">
+      <div style="padding:20px 22px">
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px">Until 1 January 2027: earn more for every friend</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">
+          Every friend who becomes a paying customer on Pro or higher takes &euro;${c.euro_per_friend} off your invoice every month, for as long as they keep paying. You also get ${c.reward_months} free months for each one. Enough friends bring your own plan down to zero.
+        </div>
+        <div style="background:#eef2f7;border-radius:999px;height:10px;overflow:hidden;margin-bottom:8px">
+          <div style="background:var(--green);height:10px;width:${Math.min(nTelt, 5) * 20}%"></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">
+          ${c.next_step ? `${nTelt} paying friends so far. ${c.next_step.to_go} more unlocks the next reward.` : 'You have unlocked every reward.'}
+        </div>
+        ${trap.map(t => `<div style="display:flex;gap:10px;align-items:center;padding:6px 0;font-size:13px">
+          <span style="font-weight:800;color:${nTelt >= t.n ? 'var(--green)' : 'var(--muted)'}">${nTelt >= t.n ? '&#10003;' : t.n}</span>
+          <span style="${nTelt >= t.n ? 'font-weight:600' : 'color:var(--muted)'}">${t.tekst}</span></div>`).join('')}
+      </div>
+    </div>` : '';
+
   const rijen = vrienden.length ? vrienden.map(v => {
     const st = REFERRAL_STANDEN[v.status] || REFERRAL_STANDEN.signed_up;
     return `<tr>
@@ -5269,6 +5296,7 @@ function renderReferral() {
 
   doel.innerHTML = `
     ${tegoedRegel}
+    ${campagneKaart}
     <div class="card" style="margin-bottom:20px">
       <div style="padding:20px 22px">
         <div style="font-size:15px;font-weight:700;margin-bottom:4px">Your personal link</div>
