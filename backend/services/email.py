@@ -144,8 +144,39 @@ def _pauze_actief(adres: str | None) -> str | None:
     return None
 
 
+class MailAfgemeld(MailGepauzeerd):
+    """De ontvanger heeft zich afgemeld voor commerciële mail."""
+
+
+def _afmeldregel(link: str) -> tuple[str, str]:
+    """Eén kleine regel onderaan, tweetalig en zonder uitleg. Geen inlog nodig:
+    wie al afhaakt mag er niet nog een drempel voor krijgen (Telecommunicatiewet 11.7)."""
+    tekst = f"Afmelden / Unsubscribe: {link}"
+    html = (f'<p style="margin:18px 0 0;font-size:11px;color:#94a3b8;">'
+            f'<a href="{link}" style="color:#94a3b8;">Afmelden / Unsubscribe</a></p>')
+    return tekst, html
+
+
+def _met_afmelding(body: str, html: str | None, user_id: str) -> tuple[str, str | None, str]:
+    """Zet de afmeldregel onder een commerciële mail. Geeft (body, html, link) terug,
+    of gooit MailAfgemeld als deze gebruiker zich al afmeldde."""
+    from backend.database import get_admin_db
+    from backend.services.mail_verbinding import afmeldlink
+
+    gevonden = (get_admin_db().table("mail_unsubscribed").select("user_id")
+                .eq("user_id", user_id).limit(1).execute().data or [])
+    if gevonden:
+        raise MailAfgemeld(f"afgemeld: {user_id}")
+    link = afmeldlink(user_id)
+    t, h = _afmeldregel(link)
+    nieuw_html = html.replace("</body>", h + "</body>", 1) if html and "</body>" in html else (
+        (html + h) if html else None)
+    return f"{body.rstrip()}\n\n{t}\n", nieuw_html, link
+
+
 def send_email_checked(subject: str, body: str, to: str | None = None, reply_to: str | None = None,
-                       html: str | None = None, unsubscribe_url: str | None = None) -> str | None:
+                       html: str | None = None, unsubscribe_url: str | None = None,
+                       afmelden_user_id: str | None = None) -> str | None:
     """Zelfde als send_email, maar laat de fout staan. Gebruikt door de testknop,
     zodat op het scherm komt te staan wát de mailserver precies weigerde in
     plaats van alleen 'het lukte niet'.
