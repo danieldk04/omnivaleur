@@ -18967,3 +18967,8 @@ Daniel: Monaim heeft op dit moment niets meer met Omnivaleur te maken, mogelijk 
 
 ## 09-11-2026: 10 euro per betalende vriend akkoord (Daniel)
 - Akkoord: 10 euro korting per betalende vriend per maand tot 31-12-2026, "dat is minimaal". Wie vóór 01-01-2027 binnenkomt houdt dat bedrag zolang die vriend betaalt. Klassement: voorkomen dat iemand met 1 uitnodiging maandwinnaar wordt. Voorstel in de chat: drempel van 3 nieuwe betalende vrienden en een prijs die doorrolt (jackpot) als niemand de drempel haalt. Nog niets gebouwd.
+
+## 09-11-2026: uitnodigsysteem vastgesteld, nog niets gebouwd (Daniel akkoord)
+- Vast: klassement met drempel 3 nieuwe betalende vrienden per maand, prijs rolt door als niemand de drempel haalt, niveaus Brons 1 / Zilver 3 / Goud 5 / Platina 10, Founding Circle voor de eerste 10 met 5 betalende vrienden. Vrienden tellen voor het klassement pas na 30 dagen betalen; winnaar handmatig gecontroleerd.
+- Gat gevonden in het voorstel: een Light-vriend betaalt 9,99, dus 10 euro korting zou meer kosten dan hij oplevert. Korting daarom nooit hoger dan 50% van wat de vriend betaalt, en telt alleen vanaf Pro. Te verwerken bij het bouwen.
+- Bouwvolgorde (voorstel): eerst de stimulus (korting per vriend, 2 gratis maanden, trap, AI-titels), want die loopt tot 01-01-2027; daarna het plansysteem eerst uitgezet in de code; daarna foto naar advertentie en Etsy; mail en dashboardmelding rond 01-12.
