@@ -10,7 +10,7 @@ De regels die je niet moet omdraaien:
   * Een vriend telt pas mee na een echte betaling, nooit bij aanmelding.
   * Alleen vanaf Pro. Een Light-vriend betaalt 9,99; 10 euro korting zou meer
     kosten dan hij oplevert.
-  * De korting is nooit meer dan 50% van wat de vriend netto betaalde. Wie een
+  * De korting is nooit meer dan 50% van wat de vriend betaalde. Wie een
     tweede account op eigen kaart neemt, betaalt dus altijd meer dan hij
     terugkrijgt.
   * De korting is nooit meer dan de eigen rekening en wordt nooit contant
@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 EINDE_ACTIE = datetime(2027, 1, 1, tzinfo=timezone.utc)
 BEDRAG_ACTIE_CENTS = 1000
 BEDRAG_NORMAAL_CENTS = 500
-AANDEEL_NOOIT_MEER_DAN = 0.5   # van wat de vriend netto betaalde
+AANDEEL_NOOIT_MEER_DAN = 0.5   # van wat de vriend (incl. btw) betaalde
 PLANNEN_DIE_TELLEN = {"pro", "plus", "ultra"}   # niet "light"
 
 # De trap: aantal betalende vrienden dat een trede ontsluit.
@@ -52,22 +52,24 @@ def bedrag_per_vriend_cents(eerste_betaling_op: datetime | None) -> int:
 def korting_cents(
     *,
     vriend_plan: str | None,
-    vriend_netto_cents: int,
+    vriend_betaald_cents: int,
     vriend_eerste_betaling_op: datetime | None,
     eigen_maandprijs_cents: int,
     huidig_tegoed_cents: int,
 ) -> int:
     """Wat de aanbrenger krijgt voor één betaalde factuur van één vriend.
 
-    vriend_netto_cents: wat de vriend voor deze factuur netto betaalde (zonder
-        btw, na eventuele teruggave).
+    vriend_betaald_cents: wat de vriend voor deze factuur betaalde INCLUSIEF btw,
+        na eventuele teruggave. Bewust het bruto bedrag: het tegoed van de
+        aanbrenger is ook bruto en verlaagt zijn btw mee, dus 50% bruto is voor ons
+        precies 50% netto (Pro: 19,99 geeft 9,99 korting, kost ons 8,26 netto).
     huidig_tegoed_cents: wat de aanbrenger nu al aan niet-verbruikt tegoed
         heeft (positief getal).
     """
-    if not telt_mee(vriend_plan) or vriend_netto_cents <= 0:
+    if not telt_mee(vriend_plan) or vriend_betaald_cents <= 0:
         return 0
     bedrag = bedrag_per_vriend_cents(vriend_eerste_betaling_op)
-    bedrag = min(bedrag, int(vriend_netto_cents * AANDEEL_NOOIT_MEER_DAN))
+    bedrag = min(bedrag, int(vriend_betaald_cents * AANDEEL_NOOIT_MEER_DAN))
     ruimte = max(0, int(eigen_maandprijs_cents) - max(0, int(huidig_tegoed_cents)))
     return max(0, min(bedrag, ruimte))
 
