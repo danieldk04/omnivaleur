@@ -85,6 +85,10 @@ class Settings(BaseSettings):
     # Omnivaleur Light (EUR 9,99 inclusief btw, tot 20 actieve artikelen). Leeg =
     # Light staat uit: geen keuze op de betaalpagina en geen limiet voor iemand.
     stripe_price_id_light: str = ""
+    # Uitnodigactie (besluit Daniel 09-11-2026): korting per betalende vriend en twee
+    # gratis maanden tot 01-01-2027. Staat standaard UIT: pas aan na bewijs in
+    # Stripe-testmodus en een controle van de eerste echte ronde.
+    referral_korting_aan: bool = False
     app_url: str = "https://omnivaleur.com"
 
     secret_key: str = "change-me"
