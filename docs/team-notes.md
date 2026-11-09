@@ -18955,3 +18955,7 @@ Daniel: Monaim heeft op dit moment niets meer met Omnivaleur te maken, mogelijk 
 - Besluit Daniel: bestaande klanten blijven NIET op 19,99 staan. Iedereen wordt per 01-01-2027 ingedeeld op actieve artikelen (Light 20, Pro 250, Plus 1.500, Ultra onbeperkt voor 49). Mail en dashboardmelding komen vooraf.
 - Stimulus tot 01-01-2027: 1 betalende vriend geeft 2 gratis maanden (nu 1, MAAND_DAGEN=30 in referral_rewards.py); 3 betalende vrienden geeft een AI-pakket. Na 01-01-2027 geeft 3 ook Etsy, 5 alles. Alleen betalende vrienden tellen, ontgrendeling geldt zolang zij blijven betalen.
 - AI-pakket moet eerst bewezen worden op echte artikelen voor het wordt beloofd. Bestaand: titel_ai.py (gebouwd en getest, niet live), ai_listing.py (oude aanzet foto naar advertentie, niet in gebruik). Per maand een plafond op AI-gebruik, want het tegoed liep eerder twee keer leeg.
+
+## 09-11-2026: fasering grote accounts, jaarbetaling, AI beide (Daniel)
+- Besluit Daniel: de drie accounts boven 3.000 actieve artikelen gaan niet in een keer van 19,99 naar 49 maar in stappen ertussen. Jaarbetaling komt erbij (2 maanden gratis) en een jaarklant mag bijbetalen om naar een groter plan te gaan. AI-titels en foto naar advertentie allebei in het AI-pakket. Nog niets gebouwd, Daniel zei expliciet "bouw nog niks".
+- Daniel wil de uitnodigtrap idioot aantrekkelijk maken: puur sturen op vrienden werven. Voorstellen staan in de chat van 09-11, nog niet besloten.
