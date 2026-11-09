@@ -18950,3 +18950,8 @@ Daniel: Monaim heeft op dit moment niets meer met Omnivaleur te maken, mogelijk 
 - Concurrenten (eigen prijspagina's 09-11): Vendoo 14,99/29,99/59,99 zonder artikellimiet, Crosslist 29,99 tot 44,99 op nieuwe advertenties per maand, List Perfectly 29 tot 99+ met AI-limiet. Bijna niemand begrenst op actieve artikelen.
 - Besluit Daniel: Ultra 49 euro per maand, onbeperkt, met Etsy en nieuwe features en voorrang bij support. Alleen betalende vrienden tellen mee voor ontgrendelen. Nieuwe prijsstructuur gaat in op 01-01-2027; daarna mail en dashboardmelding over de nieuwe structuur. Tot 01-01-2027 een stimulus om vrienden uit te nodigen.
 - Voorstel schijven (op actieve artikelen): Light 9,99 tot 20, Pro 19,99 tot 250, Plus 29,99 tot 1.500, Ultra 49 onbeperkt. Open: bestaande klanten vast op 19,99, en of Plus blijft.
+
+## 09-11-2026: bestaande klanten gaan mee, stimulus tot 01-01-2027 (Daniel)
+- Besluit Daniel: bestaande klanten blijven NIET op 19,99 staan. Iedereen wordt per 01-01-2027 ingedeeld op actieve artikelen (Light 20, Pro 250, Plus 1.500, Ultra onbeperkt voor 49). Mail en dashboardmelding komen vooraf.
+- Stimulus tot 01-01-2027: 1 betalende vriend geeft 2 gratis maanden (nu 1, MAAND_DAGEN=30 in referral_rewards.py); 3 betalende vrienden geeft een AI-pakket. Na 01-01-2027 geeft 3 ook Etsy, 5 alles. Alleen betalende vrienden tellen, ontgrendeling geldt zolang zij blijven betalen.
+- AI-pakket moet eerst bewezen worden op echte artikelen voor het wordt beloofd. Bestaand: titel_ai.py (gebouwd en getest, niet live), ai_listing.py (oude aanzet foto naar advertentie, niet in gebruik). Per maand een plafond op AI-gebruik, want het tegoed liep eerder twee keer leeg.
