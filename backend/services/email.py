@@ -295,11 +295,16 @@ def _ipv4_only():
 
 
 def send_email(subject: str, body: str, to: str | None = None, reply_to: str | None = None,
-               html: str | None = None) -> bool:
+               html: str | None = None, afmelden_user_id: str | None = None) -> bool:
     """Best-effort: een mislukte mail mag nooit een publicatie of een geplande
-    taak omvergooien, dus hier wordt de fout gelogd en verder genegeerd."""
+    taak omvergooien, dus hier wordt de fout gelogd en verder genegeerd.
+
+    `afmelden_user_id`: zet het bij commerciële mail (herinneringen die iets
+    verkopen of uitnodigen). Dan krijgt de mail een afmeldregel en gaat hij niet
+    naar wie zich al afmeldde. Bij dienstmail (betaling, storing, koppeling) niet."""
     try:
-        send_email_checked(subject, body, to=to, reply_to=reply_to, html=html)
+        send_email_checked(subject, body, to=to, reply_to=reply_to, html=html,
+                           afmelden_user_id=afmelden_user_id)
         return True
     except MailGepauzeerd as e:
         logger.info(f"E-mail niet verstuurd ({subject}): {e}")
