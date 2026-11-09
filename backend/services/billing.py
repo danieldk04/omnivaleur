@@ -250,7 +250,8 @@ def _mail_batch(rows: list[dict], marker_column: str, build_mail, moment_key) ->
             continue
 
         subject, body = build_mail(_days_until(moment_key(sub), now))
-        if not send_email(subject=subject, body=body, to=email, reply_to=CONTACT_EMAIL):
+        if not send_email(subject=subject, body=body, to=email, reply_to=CONTACT_EMAIL,
+                          afmelden_user_id=sub["user_id"]):
             continue
         db.table("subscriptions").update({marker_column: now.isoformat()}).eq("id", sub["id"]).execute()
         logger.info(f"{marker_column} verstuurd naar {email}")
