@@ -958,7 +958,7 @@
       "pillar": "B",
       "format": "money_rules",
       "slug": "legal-warranty-on-second-hand-goods-netherlands",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "wettelijke-garantie-tweedehands-goederen",
       "priority": 108
     },
@@ -1979,6 +1979,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-block-a-buyer-on-ebay",
       "published_at": "2026-11-08T14:44:02.561651+00:00"
+    },
+    {
+      "keyword": "legal warranty on second hand goods netherlands",
+      "slug": "legal-warranty-on-second-hand-goods-netherlands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "action": "created",
+      "url_path": "/reseller-tools/legal-warranty-on-second-hand-goods-netherlands",
+      "published_at": "2026-11-09T18:07:27.434133+00:00"
     }
   ]
 }
