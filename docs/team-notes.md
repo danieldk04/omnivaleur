@@ -18959,3 +18959,8 @@ Daniel: Monaim heeft op dit moment niets meer met Omnivaleur te maken, mogelijk 
 ## 09-11-2026: fasering grote accounts, jaarbetaling, AI beide (Daniel)
 - Besluit Daniel: de drie accounts boven 3.000 actieve artikelen gaan niet in een keer van 19,99 naar 49 maar in stappen ertussen. Jaarbetaling komt erbij (2 maanden gratis) en een jaarklant mag bijbetalen om naar een groter plan te gaan. AI-titels en foto naar advertentie allebei in het AI-pakket. Nog niets gebouwd, Daniel zei expliciet "bouw nog niks".
 - Daniel wil de uitnodigtrap idioot aantrekkelijk maken: puur sturen op vrienden werven. Voorstellen staan in de chat van 09-11, nog niet besloten.
+
+## 09-11-2026: uitnodigsysteem verder uitgewerkt (Daniel), nog niets gebouwd
+- Daniel: kwartiergesprek als prijs voor de klassementswinnaar eruit, vervangen door iets waardevollers. Klassement (maandelijks, vrijwillig, met gebruikersnaam), besloten kring (invloed op wat we bouwen), directe supportlijn naar Daniel (exclusief, niet te koop) en "wij zetten je artikelen erin" zijn goed. Fysieke dag later. 1-op-1 gesprek twijfelachtig, hij heeft al snel contact.
+- Prioriteit: de drempel van aanmelden naar eerste gecrosslist artikel verkleinen (quick win). Daniel is bereid de eerste maanden geld te kosten voor groei omdat betalers blijven (let op: in de database staat minstens een Pro-klant uit juli die op 18-09 opzegde; Stripe-betalingen niet nagekeken).
+- Voorstel in de chat: 10 euro korting per betalende vriend per maand tot 31-12-2026 (vastgezet voor wie dan binnen is), daarna 5 euro; 5 vrienden betekent Ultra gratis.
