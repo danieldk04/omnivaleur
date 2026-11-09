@@ -17,6 +17,87 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## afmelden-zonder-inlog-alleen-waar-verplicht
+
+*09-11-2026 — "09-11: afmeldregel alleen op commerciële mail, subtiel, nooit achter een inlog; afmelder meteen in mail_unsubscribed"*
+
+Daniel wil een afmeldmogelijkheid alleen waar het juridisch echt moet (commerciële mail: proefherinneringen, importherinnering, terughaal/opvolging), subtiel verwerkt. Dienstmail (betaling, storing, koppeling) krijgt hem niet.
+
+**Why:** 09-11-2026 vroeg bankai2855 na de terughaalmail te stoppen en "kon zich niet eens uitschrijven". Daniel vroeg of afmelden pas na inloggen kan. Dat mag niet: een inlog is een drempel (Telecommunicatiewet 11.7, ACM), dus afmelden gaat met één klik zonder inlog. Voorkeuren kunnen hooguit als vrijwillige extra ná het afmelden.
+
+**How to apply:** nieuwe commerciële mail via `send_email(..., afmelden_user_id=uid)` (backend/services/email.py): zet regel "Afmelden / Unsubscribe" en slaat wie in `mail_unsubscribed` staat over. Persoonlijke Zoho-mails: één zin "Liever geen mail meer? Laat het even weten, dan haal ik je meteen van de lijst." Vraagt iemand te stoppen: direct in `mail_unsubscribed` en `data/schrijfstijl/terughaal/niet_mailen.json`, nooit meer mailen. Zie "klanten-zijn-geen-leads" en "koude-mail-wat-mag".
+
+---
+
+## monaim-50-50-partnership
+
+*09-11-2026 — "Monaim is op dit moment NIET betrokken bij Omnivaleur (Daniel doet alles zelf, 09-11-2026); mogelijk later weer. Historisch: 50/50-partner Growth & Content, aparte deal van Somnia"*
+
+Monaim bouwt sinds 2026-08-26 mee aan **Omnivaleur** als 50/50-partner —
+losstaand van zijn eigen merk **Somnia** (paid ads/e-commerce, aparte
+context, niet Omnivaleur-gerelateerd). "omnivaleur-brand-never-a-verb"
+
+**Why:** Daniel wil eerst zien hoe de samenwerking in de praktijk loopt
+voordat er iets juridisch (aandelen/contract) wordt vastgelegd. De 50/50 is
+dus nu een mondelinge afspraak, bewust nog geen contract.
+
+**Herkomst van het merk:** Revaleur is Daniels eigen vintage kledingmerk;
+Omnivaleur is de software die daaruit is ontstaan (gebouwd om Revaleurs
+eigen cross-listing te automatiseren) en later losgetrokken tot een eigen
+SaaS-product.
+
+**Rol & taken:** Growth & Content Partner — wekelijks Nederlandstalig
+contentschema voor TikTok/Instagram (eigen suggestie: 3 posts + 1 video/week
+als eerste test) en een social-DM-outreachsysteem verkennen naast de
+bestaande koude-mail-leadgen "leadgen-vier-bronnen". **Maar de echte
+bedrijfsbrede prioriteit ligt nu (tot 50 gebruikers) bij
+dashboard-verbetering, debuggen en feedback verzamelen** — Monaims
+content/outreach-werk loopt daarnaast, niet in plaats daarvan.
+
+**Paid ads — pas vanaf 50 gebruikers (harde drempel, geen vage voorwaarde):**
+- Eerste fase richt zich **alleen op kleding/schoenen-verkopers** — daar is
+  het dashboard voor gebouwd en presteert het het best. Niet breder targeten
+  in fase 1.
+- Creatives: organische content mag hergebruikt worden als de kwaliteit goed
+  genoeg is; Monaim mag ook aparte landingspagina's bouwen.
+- Geografie: **alleen Europa**, bewust weg van US/UK — daar is de concurrentie
+  voor cross-listing-tools het grootst.
+- Concurrentie: **Channable** is de grote speler die de meeste
+  marktplaatsverkopers nu gebruiken — groot, maar zeer slecht beoordeeld.
+  Focust breed op marketplace-verkopers (incl. bol.com etc). Omnivaleur
+  differentieert door **uitsluitend tweedehands-platforms** te bedienen, voor
+  nu niet breder positioneren.
+
+**Blogs:** volledig geautomatiseerd (backend/content/quality.py + dagelijkse
+auto-publish-job) — geen taak voor Monaim, alleen ter info.
+
+**Toegang:** volledige Notion-workspace-toegang toegekend.
+
+**Gratis account:** `backend/services/billing.py` heeft een
+`complimentary`-subscriptionstatus (onbeperkte toegang, geen
+stripe_subscription_id nodig) — expliciet niet via `status = active` zonder
+stripe-id, want dat pad is bewust geblokkeerd tegen een oude bug. Monaim
+meldt zich zelf normaal aan met eigen e-mail en stuurt dat adres naar
+Daniel; Daniel zet daarna zijn subscriptions-rij op `complimentary` in
+Supabase.
+
+**How to apply:** verwar dit niet met Somnia-gerelateerde vragen (aparte
+klant/merk, geen Omnivaleur-partnerschap). Volledige, meest actuele context
+staat in `docs/team-notes.md` in de repo zelf: dat bestand is leidend bij
+tegenstrijdigheid, deze memory is het lokale snelle geheugen op dit account.
+
+**Status sinds 21-09-2026: Monaim is niet actief.** Draag content of
+growth-taken dus niet aan hem voor in voorstellen of planning; op dit moment
+zijn er twee mensen op het project: Daniel zelf en één andere developer.
+Alles wat hierboven als "Monaims taak" staat (contentschema, screenshots/
+video's, klantverhalen, growth-werk) ligt tot nader order bij Daniel of moet
+hij zelf beleggen. Vraag bij twijfel wie iets oppakt, ga niet zelf uit van
+Monaim.
+
+**Status 09-11-2026 (Daniel): Monaim heeft op dit moment helemaal niets meer met Omnivaleur te maken.** Misschien in de toekomst weer, maar nu doet Daniel echt 100% alles zelf (groei, content, social, klanten). Noem Monaim of een "partner" dus nooit in reacties, posts of klantberichten, en schrijf niet dat iemand anders "growth en content doet". Zeg in naar buiten gerichte teksten gewoon "ik". Dit gaat boven de oudere regels over 50/50 hierboven. Zie "reageerronde-socials-stijl-en-leren".
+
+---
+
 ## reageerronde-socials-stijl-en-leren
 
 *08-11-2026 — 08-11 autonome reageerronde op X, Indie Hackers, Facebook, Instagram: stijl, afwisseling, nooit "tbh", leerlus*
@@ -4252,73 +4333,6 @@ woorden. Zie ook "verbogen-kleurnamen-matchen-niet" voor de Marktplaats-kant.
 
 **How to apply:** een verplicht keuzeveld dat geen treffer geeft mag nooit de
 hele advertentie kosten zolang er nog een eerlijke dichtstbijzijnde waarde is.
-
----
-
-## monaim-50-50-partnership
-
-*21-09-2026 — "Monaim is 50/50-partner op Omnivaleur (Growth & Content), aparte deal van zijn eigen merk Somnia; juridische vastlegging bewust uitgesteld"*
-
-Monaim bouwt sinds 2026-08-26 mee aan **Omnivaleur** als 50/50-partner —
-losstaand van zijn eigen merk **Somnia** (paid ads/e-commerce, aparte
-context, niet Omnivaleur-gerelateerd). "omnivaleur-brand-never-a-verb"
-
-**Why:** Daniel wil eerst zien hoe de samenwerking in de praktijk loopt
-voordat er iets juridisch (aandelen/contract) wordt vastgelegd. De 50/50 is
-dus nu een mondelinge afspraak, bewust nog geen contract.
-
-**Herkomst van het merk:** Revaleur is Daniels eigen vintage kledingmerk;
-Omnivaleur is de software die daaruit is ontstaan (gebouwd om Revaleurs
-eigen cross-listing te automatiseren) en later losgetrokken tot een eigen
-SaaS-product.
-
-**Rol & taken:** Growth & Content Partner — wekelijks Nederlandstalig
-contentschema voor TikTok/Instagram (eigen suggestie: 3 posts + 1 video/week
-als eerste test) en een social-DM-outreachsysteem verkennen naast de
-bestaande koude-mail-leadgen "leadgen-vier-bronnen". **Maar de echte
-bedrijfsbrede prioriteit ligt nu (tot 50 gebruikers) bij
-dashboard-verbetering, debuggen en feedback verzamelen** — Monaims
-content/outreach-werk loopt daarnaast, niet in plaats daarvan.
-
-**Paid ads — pas vanaf 50 gebruikers (harde drempel, geen vage voorwaarde):**
-- Eerste fase richt zich **alleen op kleding/schoenen-verkopers** — daar is
-  het dashboard voor gebouwd en presteert het het best. Niet breder targeten
-  in fase 1.
-- Creatives: organische content mag hergebruikt worden als de kwaliteit goed
-  genoeg is; Monaim mag ook aparte landingspagina's bouwen.
-- Geografie: **alleen Europa**, bewust weg van US/UK — daar is de concurrentie
-  voor cross-listing-tools het grootst.
-- Concurrentie: **Channable** is de grote speler die de meeste
-  marktplaatsverkopers nu gebruiken — groot, maar zeer slecht beoordeeld.
-  Focust breed op marketplace-verkopers (incl. bol.com etc). Omnivaleur
-  differentieert door **uitsluitend tweedehands-platforms** te bedienen, voor
-  nu niet breder positioneren.
-
-**Blogs:** volledig geautomatiseerd (backend/content/quality.py + dagelijkse
-auto-publish-job) — geen taak voor Monaim, alleen ter info.
-
-**Toegang:** volledige Notion-workspace-toegang toegekend.
-
-**Gratis account:** `backend/services/billing.py` heeft een
-`complimentary`-subscriptionstatus (onbeperkte toegang, geen
-stripe_subscription_id nodig) — expliciet niet via `status = active` zonder
-stripe-id, want dat pad is bewust geblokkeerd tegen een oude bug. Monaim
-meldt zich zelf normaal aan met eigen e-mail en stuurt dat adres naar
-Daniel; Daniel zet daarna zijn subscriptions-rij op `complimentary` in
-Supabase.
-
-**How to apply:** verwar dit niet met Somnia-gerelateerde vragen (aparte
-klant/merk, geen Omnivaleur-partnerschap). Volledige, meest actuele context
-staat in `docs/team-notes.md` in de repo zelf: dat bestand is leidend bij
-tegenstrijdigheid, deze memory is het lokale snelle geheugen op dit account.
-
-**Status sinds 21-09-2026: Monaim is niet actief.** Draag content of
-growth-taken dus niet aan hem voor in voorstellen of planning; op dit moment
-zijn er twee mensen op het project: Daniel zelf en één andere developer.
-Alles wat hierboven als "Monaims taak" staat (contentschema, screenshots/
-video's, klantverhalen, growth-werk) ligt tot nader order bij Daniel of moet
-hij zelf beleggen. Vraag bij twijfel wie iets oppakt, ga niet zelf uit van
-Monaim.
 
 ---
 

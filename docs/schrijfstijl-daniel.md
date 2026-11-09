@@ -171,3 +171,5 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 ## 28-10-2026: geen schuld aantrekken (Daniel spreekt de regel uit)
 - Geen "sorry", "excuus", "dat lag aan ons", "dat was onze fout" of "belangrijk dat ik dit zeg", ook niet als de fout in ons systeem zat. Dit staat los van de oudere regel hierboven over een fout van ons: ook daar niet als bekentenis.
 - Wel: neutraal zeggen wat er speelde, dat het is opgelost, en wat de klant nu kan doen. "Dit is aangepast, je kunt het opnieuw proberen."
+
+- Afmelden in commerciële mail (Daniel, 09-11-2026): een persoonlijke mail die iets verkoopt of terughaalt (terughaalmail, opvolging, onboarding) krijgt vlak voor de groet één zin: "Liever geen mail meer? Laat het even weten, dan haal ik je meteen van de lijst." Nooit meer dan die ene zin, geen kopje, geen kleine letters. Reageert iemand dat hij wil stoppen: meteen in mail_unsubscribed zetten en nooit meer mailen. Een afmelding mag nooit een inlog vragen: dat is bij de wet een drempel en dus niet toegestaan.
