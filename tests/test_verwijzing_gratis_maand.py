@@ -597,3 +597,87 @@ def test_een_opgegeven_beloning_wordt_niet_elk_uur_opnieuw_geprobeerd(rw, monkey
 
     assert uitkomst["toegekend"] == 0
     assert not stripe.tegoeden, "er hoort niets naar Stripe te gaan"
+
+
+# ── 10. Uitnodigactie tot 01-01-2027: twee maanden in plaats van een ─────────
+
+def _actie(rw, monkeypatch, aan=True):
+    monkeypatch.setattr(rw.settings, "referral_korting_aan", aan, raising=False)
+
+
+def test_actie_aan_vriend_voor_einddatum_geeft_twee_maanden_tegoed(rw, monkeypatch):
+    _actie(rw, monkeypatch)
+    db = _basis({"user_id": AANBRENGER, "status": "active",
+                 "stripe_subscription_id": "sub_1", "stripe_customer_id": "cus_1"},
+                betaald=(NU).isoformat())
+    _zet_db(monkeypatch, rw, db)
+    stripe = NepStripe({"status": "active", "customer": "cus_1",
+                        "items": {"data": [{"price": {"unit_amount": 1999}, "quantity": 1}]}})
+    monkeypatch.setattr(rw, "stripe", stripe)
+    # De proef gaat uit van "nu" als eerste betaling; staat de klok na 01-01-2027 dan
+    # geeft de code een maand. Daarom de einddatum hier vastzetten op ver weg.
+    monkeypatch.setattr(rw, "EINDE_ACTIE", NU + timedelta(days=30))
+
+    assert rw.verwerk_beloning(VRIEND) == "toegekend"
+
+    assert len(stripe.tegoeden) == 1
+    assert stripe.tegoeden[0][1]["amount"] == -2 * 1999
+    assert db.data["referral_rewards"][0]["amount_cents"] == 2 * 1999
+
+
+def test_actie_aan_vriend_na_einddatum_geeft_een_maand(rw, monkeypatch):
+    _actie(rw, monkeypatch)
+    db = _basis({"user_id": AANBRENGER, "status": "active",
+                 "stripe_subscription_id": "sub_1", "stripe_customer_id": "cus_1"},
+                betaald=(NU).isoformat())
+    _zet_db(monkeypatch, rw, db)
+    stripe = NepStripe({"status": "active", "customer": "cus_1",
+                        "items": {"data": [{"price": {"unit_amount": 1999}, "quantity": 1}]}})
+    monkeypatch.setattr(rw, "stripe", stripe)
+    monkeypatch.setattr(rw, "EINDE_ACTIE", NU - timedelta(days=1))
+
+    assert rw.verwerk_beloning(VRIEND) == "toegekend"
+    assert stripe.tegoeden[0][1]["amount"] == -1999
+
+
+def test_actie_uit_blijft_een_maand_ook_voor_einddatum(rw, monkeypatch):
+    _actie(rw, monkeypatch, aan=False)
+    db = _basis({"user_id": AANBRENGER, "status": "active",
+                 "stripe_subscription_id": "sub_1", "stripe_customer_id": "cus_1"})
+    _zet_db(monkeypatch, rw, db)
+    stripe = NepStripe({"status": "active", "customer": "cus_1",
+                        "items": {"data": [{"price": {"unit_amount": 1999}, "quantity": 1}]}})
+    monkeypatch.setattr(rw, "stripe", stripe)
+    monkeypatch.setattr(rw, "EINDE_ACTIE", NU + timedelta(days=30))
+
+    assert rw.verwerk_beloning(VRIEND) == "toegekend"
+    assert stripe.tegoeden[0][1]["amount"] == -1999
+
+
+def test_actie_aan_lopende_proef_schuift_zestig_dagen_op(rw, monkeypatch):
+    _actie(rw, monkeypatch)
+    monkeypatch.setattr(rw, "EINDE_ACTIE", NU + timedelta(days=30))
+    einde = NU + timedelta(days=2)
+    db = _basis({"user_id": AANBRENGER, "status": "trialing",
+                 "stripe_subscription_id": None, "trial_ends_at": einde.isoformat()})
+    _zet_db(monkeypatch, rw, db)
+    monkeypatch.setattr(rw, "stripe", NepStripe())
+
+    assert rw.verwerk_beloning(VRIEND) == "toegekend"
+    nieuw = datetime.fromisoformat(db.data["subscriptions"][0]["trial_ends_at"])
+    assert timedelta(days=61, hours=23) < nieuw - NU < timedelta(days=62, hours=1)
+
+
+def test_dezelfde_vriend_levert_ook_met_de_actie_nooit_twee_keer_op(rw, monkeypatch):
+    _actie(rw, monkeypatch)
+    monkeypatch.setattr(rw, "EINDE_ACTIE", NU + timedelta(days=30))
+    db = _basis({"user_id": AANBRENGER, "status": "active",
+                 "stripe_subscription_id": "sub_1", "stripe_customer_id": "cus_1"})
+    _zet_db(monkeypatch, rw, db)
+    stripe = NepStripe({"status": "active", "customer": "cus_1",
+                        "items": {"data": [{"price": {"unit_amount": 1999}, "quantity": 1}]}})
+    monkeypatch.setattr(rw, "stripe", stripe)
+
+    rw.verwerk_beloning(VRIEND)
+    assert rw.verwerk_beloning(VRIEND) == "al_toegekend"
+    assert len(stripe.tegoeden) == 1

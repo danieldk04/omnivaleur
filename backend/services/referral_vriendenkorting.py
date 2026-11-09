@@ -242,3 +242,75 @@ def verwerk_vriend(*, aanbrenger_klant_id: str, eigen_maandprijs_cents: int,
             idempotency_key=f"{BRON}-{fid}")
         uit["toegekend"] += bedrag
     return uit
+
+
+async def verwerk_vriendenkorting() -> dict:
+    """Draait elk uur (zolang de vlag referral_korting_aan aan staat): per
+    aangebrachte vriend van een klant legt het zijn betaalde facturen vast als
+    tegoed bij de aanbrenger. Een fout bij één vriend stopt de rest niet."""
+    uit = {"vrienden": 0, "toegekend": 0, "teruggedraaid": 0, "overgeslagen": 0, "fout": 0}
+    if not settings.referral_korting_aan or not settings.stripe_secret_key:
+        return uit
+
+    from backend.database import execute_with_retry, get_db
+    from backend.services.referral_rewards import _is_eigenaar
+
+    db = get_db()
+    try:
+        verwijzingen = execute_with_retry(db.table("referrals").select("user_id, code")).data or []
+        eigenaar_per_code = {c["code"]: c.get("owner_user_id") for c in (execute_with_retry(
+            db.table("referral_codes").select("code, owner_user_id")).data or [])}
+    except Exception as e:
+        logger.error("Vriendenkortingronde overgeslagen (%s)", e)
+        return uit
+
+    paren = [(v["user_id"], eigenaar_per_code.get(v.get("code"))) for v in verwijzingen]
+    # Alleen klantcodes: een creatorcode heeft geen eigenaar en loopt via geld.
+    paren = [(vriend, aanbrenger) for vriend, aanbrenger in paren
+             if aanbrenger and aanbrenger != vriend]
+    if not paren:
+        return uit
+
+    ids = sorted({x for p in paren for x in p})
+    try:
+        abos = {r["user_id"]: r for r in (execute_with_retry(
+            db.table("subscriptions").select(
+                "user_id, status, stripe_customer_id, stripe_subscription_id")
+            .in_("user_id", ids)).data or [])}
+    except Exception as e:
+        logger.error("Vriendenkortingronde: abonnementen niet te lezen (%s)", e)
+        return uit
+
+    prijs_per_aanbrenger: dict[str, int | None] = {}
+    for vriend, aanbrenger in paren:
+        v_abo, a_abo = abos.get(vriend) or {}, abos.get(aanbrenger) or {}
+        try:
+            if (a_abo.get("status") == "complimentary" or not a_abo.get("stripe_customer_id")
+                    or not a_abo.get("stripe_subscription_id")
+                    or not v_abo.get("stripe_customer_id")
+                    or not v_abo.get("stripe_subscription_id")
+                    or _is_eigenaar(aanbrenger)):
+                uit["overgeslagen"] += 1
+                continue
+            if aanbrenger not in prijs_per_aanbrenger:
+                prijs_per_aanbrenger[aanbrenger] = maandprijs_cents(
+                    stripe.Subscription.retrieve(a_abo["stripe_subscription_id"]))
+            prijs = prijs_per_aanbrenger[aanbrenger]
+            plan = plan_van_abonnement(stripe.Subscription.retrieve(v_abo["stripe_subscription_id"]))
+            if not prijs or not plan:
+                # Niet te lezen: liever niets toekennen dan iets onverantwoords.
+                uit["overgeslagen"] += 1
+                continue
+            r = verwerk_vriend(
+                aanbrenger_klant_id=a_abo["stripe_customer_id"], eigen_maandprijs_cents=prijs,
+                vriend_id=vriend, vriend_plan=plan,
+                facturen=facturen_van_klant(v_abo["stripe_customer_id"]))
+            uit["vrienden"] += 1
+            uit["toegekend"] += r["toegekend"]
+            uit["teruggedraaid"] += r["teruggedraaid"]
+        except Exception:
+            uit["fout"] += 1
+            logger.exception("Vriendenkorting mislukt voor vriend %s", vriend)
+    if uit["toegekend"] or uit["teruggedraaid"] or uit["fout"]:
+        logger.info("Vriendenkortingronde: %s", uit)
+    return uit

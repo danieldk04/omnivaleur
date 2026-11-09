@@ -66,6 +66,7 @@ def start_scheduler():
     from backend.services.billing import expire_trials, send_trial_reminders, sync_proefperiode_sheet
     from backend.services.referral_rewards import verwerk_openstaande_beloningen
     from backend.services.creator_commissie import verwerk_commissie
+    from backend.services.referral_vriendenkorting import verwerk_vriendenkorting
     from backend.services.extension_offline import waarschuw_offline_extensies
     from backend.services.verkoop_reconciliatie import reconcileer_verkochte_artikelen
     from backend.services.verkoop_herinnering import herinner_onbevestigde_verkopen
@@ -349,6 +350,17 @@ def start_scheduler():
         "interval",
         hours=1,
         id="verwijzingen_herstel",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    # Korting per betalende vriend (besluit Daniel 09-11-2026). Doet niets zolang de
+    # vlag referral_korting_aan uit staat.
+    _scheduler.add_job(
+        _off_the_request_loop(verwerk_vriendenkorting),
+        "interval",
+        hours=1,
+        id="vriendenkorting",
         replace_existing=True,
         max_instances=1,
         coalesce=True,

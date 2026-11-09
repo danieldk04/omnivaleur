@@ -37,6 +37,7 @@ from backend.config import settings
 from backend.database import execute_with_retry, get_db
 from backend.services.billing import invalidate_access_cache, is_owner_email
 from backend.services.referral_codes import eigenaar_van_code
+from backend.services.referral_korting import EINDE_ACTIE
 from backend.services.referral_mail import (
     email_van,
     mail_aanmelding,
@@ -49,6 +50,16 @@ logger = logging.getLogger(__name__)
 # Eén maand gratis = 30 dagen erbij, of één maandbedrag aan tegoed.
 MAAND_DAGEN = 30
 STANDAARD_MAANDPRIJS_CENTS = 1999
+
+
+def maanden_voor(eerste_betaling_op) -> int:
+    """Hoeveel gratis maanden een betalende vriend oplevert: 2 voor wie vóór
+    01-01-2027 voor het eerst betaalde (besluit Daniel 09-11-2026), anders 1. Alleen
+    als de uitnodigactie aan staat; staat hij uit, dan blijft alles bij 1."""
+    if not settings.referral_korting_aan:
+        return 1
+    d = _lees_ts(eerste_betaling_op) or _nu()
+    return 2 if d < EINDE_ACTIE else 1
 
 # De korting voor de aangebrachte vriend. Wordt zo nodig zelf bij Stripe
 # aangemaakt, zodat er niets met de hand klaargezet hoeft te worden.
@@ -180,7 +191,7 @@ def _maandprijs_cents(stripe_sub) -> int:
     return STANDAARD_MAANDPRIJS_CENTS
 
 
-def _verleng_proef_lokaal(sub: dict) -> tuple[str, int, str]:
+def _verleng_proef_lokaal(sub: dict, maanden: int = 1) -> tuple[str, int, str]:
     """De proefperiode in onze eigen tabel 30 dagen oprekken. Vanaf nu als de
     proef al voorbij was, anders vanaf het oude einde: wie nog twee dagen had,
     houdt die twee dagen."""
@@ -188,7 +199,7 @@ def _verleng_proef_lokaal(sub: dict) -> tuple[str, int, str]:
     nu = _nu()
     oud = _lees_ts(sub.get("trial_ends_at"))
     basis = oud if (oud and oud > nu) else nu
-    nieuw = basis + timedelta(days=MAAND_DAGEN)
+    nieuw = basis + timedelta(days=MAAND_DAGEN * maanden)
     velden = {"trial_ends_at": nieuw.isoformat(), "updated_at": nu.isoformat()}
     # Een verlopen proef weer openzetten is de bedoeling: iemand die een
     # betalende klant aanbrengt hoort niet buitengesloten te blijven staan.
@@ -199,7 +210,7 @@ def _verleng_proef_lokaal(sub: dict) -> tuple[str, int, str]:
     return ("proef_verlengd", 0, f"Trial runs until {nieuw.date().isoformat()}")
 
 
-def _ken_toe(referrer_user_id: str) -> tuple[str, int, str]:
+def _ken_toe(referrer_user_id: str, maanden: int = 1) -> tuple[str, int, str]:
     """De maand daadwerkelijk geven. Geeft terug: (manier, bedrag_in_centen,
     uitleg). Gooit een fout als het niet lukte, zodat de rij op 'pending' blijft
     staan en de herstelronde het opnieuw probeert."""
@@ -229,7 +240,7 @@ def _ken_toe(referrer_user_id: str) -> tuple[str, int, str]:
             basis = datetime.fromtimestamp(huidig, tz=timezone.utc) if huidig else _nu()
             if basis < _nu():
                 basis = _nu()
-            nieuw = basis + timedelta(days=MAAND_DAGEN)
+            nieuw = basis + timedelta(days=MAAND_DAGEN * maanden)
             stripe.Subscription.modify(
                 stripe_sub_id,
                 trial_end=int(nieuw.timestamp()),
@@ -248,17 +259,17 @@ def _ken_toe(referrer_user_id: str) -> tuple[str, int, str]:
             bedrag = _maandprijs_cents(s)
             txn = stripe.Customer.create_balance_transaction(
                 klant,
-                amount=-bedrag,          # negatief = tegoed
+                amount=-bedrag * maanden,          # negatief = tegoed
                 currency="eur",
-                description="Omnivaleur referral reward: 1 month free",
+                description=f"Omnivaleur referral reward: {maanden} month(s) free",
                 metadata={"user_id": referrer_user_id, "bron": "referral"},
             )
             txn_id = txn.get("id") if hasattr(txn, "get") else getattr(txn, "id", "")
-            return ("tegoed", bedrag, f"Stripe credit {txn_id}")
+            return ("tegoed", bedrag * maanden, f"Stripe credit {txn_id}")
 
     # Geen lopend abonnement (of Stripe staat uit): dan is de proefperiode de
     # plek waar een gratis maand thuishoort.
-    return _verleng_proef_lokaal(sub)
+    return _verleng_proef_lokaal(sub, maanden)
 
 
 def verwerk_beloning(referred_user_id: str) -> str:
@@ -273,7 +284,7 @@ def verwerk_beloning(referred_user_id: str) -> str:
     try:
         db = get_db()
         rij = execute_with_retry(
-            db.table("referrals").select("user_id, code").eq("user_id", referred_user_id).limit(1)
+            db.table("referrals").select("user_id, code, first_paid_at").eq("user_id", referred_user_id).limit(1)
         )
         verwijzing = (rij.data or [None])[0]
         if not verwijzing:
@@ -318,7 +329,8 @@ def verwerk_beloning(referred_user_id: str) -> str:
             return "eigenaar"
 
         try:
-            manier, bedrag, uitleg = _ken_toe(aanbrenger)
+            maanden = maanden_voor(verwijzing.get("first_paid_at"))
+            manier, bedrag, uitleg = _ken_toe(aanbrenger, maanden)
         except Exception as e:
             _noteer_mislukking(beloning, e)
             logger.exception("Gratis maand toekennen mislukt voor %s", aanbrenger)
@@ -330,7 +342,7 @@ def verwerk_beloning(referred_user_id: str) -> str:
 
         _sluit_af(beloning, "granted", manier, bedrag, uitleg)
         logger.info("Gratis maand toegekend aan %s via %s (%s)", aanbrenger, manier, uitleg)
-        mail_beloning(aanbrenger, manier, uitleg)
+        mail_beloning(aanbrenger, manier, uitleg, maanden)
         return "toegekend"
     except Exception:
         logger.exception("Beloning verwerken mislukt voor %s", referred_user_id)

@@ -71,22 +71,23 @@ Omnivaleur
     return bool(send_email(subject=onderwerp, body=tekst, to=adres, reply_to=CONTACT_EMAIL))
 
 
-def mail_beloning(referrer_user_id: str, manier: str, uitleg: str) -> bool:
+def mail_beloning(referrer_user_id: str, manier: str, uitleg: str, maanden: int = 1) -> bool:
     adres = email_van(referrer_user_id)
     if not adres:
         return False
     from backend.services.billing import CONTACT_EMAIL
     from backend.services.email import send_email
 
+    een = "one month" if maanden == 1 else f"{maanden} months"
     if manier == "tegoed":
-        wat = ("We put one month of credit on your account. Stripe takes it off your\n"
+        wat = (f"We put {een} of credit on your account. Stripe takes it off your\n"
                "next invoice automatically, so your next payment is zero. You do not\n"
                "have to enter anything.")
     elif manier in ("stripe_proef", "proef_verlengd"):
-        wat = (f"We added a month to your account. {uitleg}, so your next payment moves\n"
-               "back by a month.")
+        wat = (f"We added {een} to your account. {uitleg}, so your next payment moves\n"
+               f"back by {een}.")
     else:
-        wat = "We added a month to your account."
+        wat = f"We added {een} to your account."
 
     onderwerp = "Your free month is in"
     tekst = f"""Hi there,
@@ -94,7 +95,7 @@ def mail_beloning(referrer_user_id: str, manier: str, uitleg: str) -> bool:
 Daniel here.
 
 Someone you invited just became a paying Omnivaleur customer. That means you
-earned a month free.
+earned {een} free.
 
 {wat}
 

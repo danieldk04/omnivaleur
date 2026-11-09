@@ -190,7 +190,7 @@ def wereld(monkeypatch):
     monkeypatch.setattr(billing, "find_active_promo", lambda: None)
     mails = {"beloning": [], "aanmelding": [], "alarm": []}
     monkeypatch.setattr(referral_rewards, "mail_beloning",
-                        lambda uid, manier, uitleg: mails["beloning"].append((uid, manier)) or True)
+                        lambda uid, manier, uitleg, maanden=1: mails["beloning"].append((uid, manier)) or True)
     monkeypatch.setattr(referral_rewards, "mail_aanmelding",
                         lambda uid, wie, code: mails["aanmelding"].append((uid, wie, code)) or True)
     monkeypatch.setattr(referral_rewards, "mail_beloning_mislukt",
