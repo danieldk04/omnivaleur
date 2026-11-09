@@ -24,6 +24,7 @@ def _geen_echte_mail(monkeypatch):
     gemeld = []
     monkeypatch.setattr(J, "_stuur_naar_eigenaar", lambda onderwerp, tekst: gemeld.append((onderwerp, tekst)))
     monkeypatch.setattr(J, "_bijwerking_stil_gemeld", {})
+    monkeypatch.setattr(J, "get_db", lambda: _db([]))   # geen meldstand in de database
     return gemeld
 
 
@@ -500,3 +501,60 @@ def test_marktplaats_prijsopdracht_alleen_naar_1_0_417(monkeypatch):
     j["platform"] = "marktplaats"
     assert _uitgifte(monkeypatch, _db([j]), "1.0.416", platform="marktplaats") == []
     assert len(_uitgifte(monkeypatch, _db([j]), "1.0.417", platform="marktplaats")) == 1
+
+
+# ── prijs en verzendkosten hebben elk hun rem; de mail noemt het echte soort ───
+# Amanda (8f91a370, 09-11-2026): een prijswijziging die op 04-11 omviel door de
+# waitUntil-fout (gerepareerd in 1.0.417) hield de rem dicht en gaf een mail over
+# "verzendkosten". En de dagteller zat in het geheugen: elke deploy gaf weer een mail.
+_OUDE_PRIJSFOUT = {"id": "prijs-oud", "status": "error", "prijs": "true",
+                   "created_at": "2026-11-04T15:55:06+00:00",
+                   "claimed_at": "2026-11-04T15:55:06+00:00", "done_at": "2026-11-04T15:55:08+00:00"}
+
+
+def test_een_prijsfout_van_voor_de_reparatie_houdt_de_rem_niet_dicht(_geen_echte_mail):
+    assert J._bijwerken_2dh_staat_stil(_db([], [_OUDE_PRIJSFOUT]), USER, prijs=True) is False
+    assert _geen_echte_mail == [], "een gerepareerde oude fout is geen alarm"
+
+
+def test_een_nieuwe_prijsfout_houdt_de_prijsreeks_wel_tegen(monkeypatch, _geen_echte_mail):
+    monkeypatch.setattr(J, "get_db", lambda: _db([]))
+    nieuw = {**_OUDE_PRIJSFOUT, "id": "prijs-nieuw", "done_at": _tijd(5), "created_at": _tijd(6),
+             "claimed_at": _tijd(6)}
+    assert J._bijwerken_2dh_staat_stil(_db([], [nieuw]), USER, prijs=True) is True
+    onderwerp, tekst = _geen_echte_mail[0]
+    assert "prijswijziging" in onderwerp and "verzendkosten" not in tekst and "Bpost" not in tekst
+
+
+def test_een_prijsfout_houdt_de_verzendkosten_niet_tegen_en_andersom(_geen_echte_mail):
+    prijsfout = {**_OUDE_PRIJSFOUT, "done_at": _tijd(5), "created_at": _tijd(6), "claimed_at": _tijd(6)}
+    assert J._bijwerken_2dh_staat_stil(_db([], [prijsfout]), USER, prijs=False) is False
+    verzendfout = {"id": "v", "status": "error", "created_at": _tijd(6), "claimed_at": _tijd(6), "done_at": _tijd(5)}
+    assert J._bijwerken_2dh_staat_stil(_db([], [verzendfout]), USER, prijs=True) is False
+    assert _geen_echte_mail == []
+
+
+def test_na_een_herstart_komt_dezelfde_mail_niet_opnieuw(monkeypatch, _geen_echte_mail):
+    opgeslagen = {}
+
+    class _Db:
+        def table(self, _n):
+            return self
+        def select(self, *a, **k):
+            return self
+        def eq(self, *a, **k):
+            return self
+        def limit(self, *a, **k):
+            return self
+        def upsert(self, rij, **k):
+            opgeslagen["rij"] = rij
+            return self
+        def execute(self):
+            return type("R", (), {"data": [{"extra_data": opgeslagen["rij"]["extra_data"]}]
+                                  if "rij" in opgeslagen else []})()
+    monkeypatch.setattr(J, "get_db", lambda: _Db())
+    J._meld_bijwerking_staat_stil(USER, "j1")
+    assert len(_geen_echte_mail) == 1
+    monkeypatch.setattr(J, "_bijwerking_stil_gemeld", {})   # de server is herstart
+    J._meld_bijwerking_staat_stil(USER, "j1")
+    assert len(_geen_echte_mail) == 1, "de database onthoudt het, ook na een deploy"

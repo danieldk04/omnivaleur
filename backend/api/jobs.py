@@ -1639,7 +1639,14 @@ _NIET_2DH_BIJWERKING = "action.neq.content_refresh,platform.neq.2dehands"
 _NIET_GEWONE_PLAATSING = "action.neq.create,scheduled_for.not.is.null"
 
 
-def _bijwerken_2dh_staat_stil(db, user_id: str) -> bool:
+# Prijsopdrachten die vóór dit tijdstip mislukten, deden dat aan de fout in
+# extensie 1.0.416 en eerder (waitUntil, gerepareerd 05-11-2026 17:34 lokaal) en
+# worden alleen nog naar een kopie van 1.0.417 of nieuwer uitgedeeld. Zo'n oude
+# fout mag de rem niet eeuwig dicht houden (Amanda, 8f91a370, 09-11-2026).
+_PRIJS_FOUTEN_VANAF = "2026-11-05T16:34:25+00:00"
+
+
+def _bijwerken_2dh_staat_stil(db, user_id: str, prijs: bool = False) -> bool:
     """Mislukte de laatst afgeronde 2dehands-bijwerking van deze verkoper?
 
     Een noodrem voor een reeks. Bij Egbert stonden 116 zoekertjes klaar om hun
@@ -1649,33 +1656,78 @@ def _bijwerken_2dh_staat_stil(db, user_id: str) -> bool:
     _stop_wachtrij). Dus: mislukte de laatste, dan wacht de rest tot iemand die
     ene opnieuw klaarzet en hij slaagt. Bij twijfel (niet te lezen) niets
     uitdelen: dit werk heeft geen haast.
+
+    Verzendkosten en prijswijzigingen hebben elk hun eigen rem (09-11-2026): een
+    mislukte prijswijziging hield anders de verzendkosten vast en andersom, en de
+    mail beschreef de verkeerde opdracht.
     """
     try:
-        rijen = (db.table("jobs").select("id,status,created_at,claimed_at,done_at")
+        rijen = (db.table("jobs")
+                 .select("id,status,created_at,claimed_at,done_at,prijs:payload->>_prijs_bijwerken")
                  .eq("user_id", user_id).eq("platform", "2dehands")
                  .eq("action", "content_refresh").in_("status", ["done", "error"])
                  .order("created_at", desc=True).limit(50).execute().data or [])
     except Exception as e:  # noqa: BLE001
         logger.warning("2dehands-bijwerkingen van %s niet te lezen: %s", user_id, e)
         return True
+
+    def tijdstip(r):
+        return str(r.get("done_at") or r.get("claimed_at") or r.get("created_at") or "")
+
+    rijen = [r for r in rijen if bool(r.get("prijs")) == prijs]
+    if prijs:
+        rijen = [r for r in rijen
+                 if r.get("status") != "error" or tijdstip(r) >= _PRIJS_FOUTEN_VANAF]
     if not rijen:
         return False
     # Wat het laatst AFLIEP telt, niet wat het laatst werd klaargezet: een reeks
     # wordt in dezelfde seconde aangemaakt en loopt daarna een voor een af.
-    laatste = max(rijen, key=lambda r: str(r.get("done_at") or r.get("claimed_at")
-                                            or r.get("created_at") or ""))
+    laatste = max(rijen, key=tijdstip)
     if laatste.get("status") != "error":
         return False
-    _meld_bijwerking_staat_stil(user_id, laatste.get("id"))
+    _meld_bijwerking_staat_stil(user_id, laatste.get("id"), prijs)
     return True
 
 
 # Hooguit één mail per verkoper per dag. Deze rem wordt bij elke poll opnieuw
 # bekeken zolang er bijwerkingen wachten, dus zonder klok komt er elke 15 sec één.
 _bijwerking_stil_gemeld: dict[str, float] = {}
+_STIL_GEMELD_RIJ = "_bijwerking_stil_gemeld"
 
 
-def _meld_bijwerking_staat_stil(user_id: str, job_id) -> None:
+def _al_gemeld_vandaag(user_id: str) -> bool:
+    """Staat in de database dat deze verkoper de laatste 24 uur al een mail kreeg?
+
+    De teller in het geheugen verdween bij elke herstart van de server, dus bij
+    elke deploy kwam dezelfde mail opnieuw (09-11-2026). Bij twijfel: geen mail,
+    want een database die niet te lezen is meldt zich via zijn eigen alarm."""
+    import time
+    from datetime import datetime, timezone
+    try:
+        db = get_db()
+        rij = (db.table("platform_credentials").select("extra_data").eq("user_id", user_id)
+               .eq("platform", _STIL_GEMELD_RIJ).limit(1).execute().data or [])
+        op = ((rij[0].get("extra_data") or {}).get("op") if rij else None)
+        if not op:
+            return False
+        return time.time() - datetime.fromisoformat(op).timestamp() < 86400
+    except Exception as e:  # noqa: BLE001
+        logger.warning("meldstand van %s niet te lezen: %s", user_id, e)
+        return True
+
+
+def _onthoud_gemeld(user_id: str) -> None:
+    from datetime import datetime, timezone
+    try:
+        get_db().table("platform_credentials").upsert(
+            {"user_id": user_id, "platform": _STIL_GEMELD_RIJ,
+             "extra_data": {"op": datetime.now(timezone.utc).isoformat()}},
+            on_conflict="user_id,platform").execute()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("meldstand van %s niet te bewaren: %s", user_id, e)
+
+
+def _meld_bijwerking_staat_stil(user_id: str, job_id, prijs: bool = False) -> None:
     """Een stilstaande reeks mag niet onopgemerkt blijven (26-09-2026).
 
     Deze bijwerkingen staan sinds vandaag niet meer in de wachtrij op het
@@ -1686,7 +1738,20 @@ def _meld_bijwerking_staat_stil(user_id: str, job_id) -> None:
     import time
     if time.time() - _bijwerking_stil_gemeld.get(user_id, 0.0) < 86400:
         return
+    if _al_gemeld_vandaag(user_id):
+        _bijwerking_stil_gemeld[user_id] = time.time()
+        return
     _bijwerking_stil_gemeld[user_id] = time.time()
+    _onthoud_gemeld(user_id)
+    if prijs:
+        _stuur_naar_eigenaar(
+            "Omnivaleur: prijswijziging op 2dehands staat stil bij een klant",
+            f"Bij gebruiker {user_id} mislukte de laatste prijswijziging op 2dehands "
+            f"(opdracht {job_id}). De rest wacht daarom. De prijs op 2dehands is niet "
+            "veranderd: die zoekertjes houden hun oude prijs. Laat Claude deze "
+            "opdracht bekijken; staat de oorzaak vast, dan kan de rij weer verder.\n\n"
+            "Deze mail komt hooguit een keer per dag per klant.")
+        return
     _stuur_naar_eigenaar(
         "Omnivaleur: verzendkosten bijwerken op 2dehands staat stil bij een klant",
         f"Bij gebruiker {user_id} mislukte de laatste bijwerking van de verzendkosten "
@@ -2593,10 +2658,9 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # stonden er 178 klaar bij een kopie van 1.0.352. Die kregen de kop van de rij
     # (WACHTRIJ_KOP, op volgorde van aanmaken), werden daarna allemaal
     # overgeslagen, en een plaatsing die er achter kwam zou nooit meer uitgaan.
-    bijwerken_staat_stil = None  # pas opgevraagd als er zo'n opdracht in de rij staat
+    bijwerken_staat_stil: dict = {}  # per soort pas opgevraagd als zo'n opdracht in de rij staat
 
     def bijwerking_moet_wachten(j: dict) -> bool:
-        nonlocal bijwerken_staat_stil
         if not _is_2dh_bijwerking(j):
             return False
         if versie_van_de_kopie is None or versie_van_de_kopie < MINIMALE_2DH_BIJWERK_VERSIE:
@@ -2605,9 +2669,10 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             return True
         if j.get("platform") != "2dehands":
             return False    # de noodrem hieronder kijkt alleen naar 2dehands-verzendwerk
-        if bijwerken_staat_stil is None:
-            bijwerken_staat_stil = _bijwerken_2dh_staat_stil(db, user_id)
-        return bijwerken_staat_stil
+        soort = _is_prijs_opdracht(j)
+        if soort not in bijwerken_staat_stil:
+            bijwerken_staat_stil[soort] = _bijwerken_2dh_staat_stil(db, user_id, soort)
+        return bijwerken_staat_stil[soort]
 
     now = now_dt.isoformat()
     if platform:

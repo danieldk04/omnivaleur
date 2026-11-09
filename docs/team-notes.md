@@ -18929,3 +18929,8 @@ Daniel: Monaim heeft op dit moment niets meer met Omnivaleur te maken, mogelijk 
 
 ## 09-11-2026: platformcontrole, geen afwijking (volledige set, tweede poging)
 - Eerste poging mislukte door Chrome die niet verbonden was; na herstel gedraaid. Vinted (7 artikelen), Marktplaats en 2dehands (biografieen, boekenweekgeschenken, catalogussen en folders): alle stappen als gisteren, alleen bekende artefacten (beschrijving, halswijdte, maat/kleur bij boek). Vinted-tabblad zeer traag (verborgen tabblad), foto-download bij een eerste sneakers-poging faalde door die traagheid en lukte bij herhaling.
+
+## 09-11-2026: melding "verzendkosten bijwerken staat stil" gerepareerd (Amanda, 8f91a370)
+- De mail ging eigenlijk over een prijswijziging van 04-11 die omviel op de waitUntil-fout (gerepareerd in 1.0.417). Prijs en verzendkosten hebben nu elk hun eigen noodrem, en een prijsfout van vóór 05-11 17:34 lokaal houdt de rem niet meer dicht. De mail noemt het echte soort opdracht.
+- De daglimiet van één mail per klant staat nu ook in de database (platform_credentials, rij `_bijwerking_stil_gemeld`), dus een deploy geeft niet meer dezelfde mail opnieuw.
+- Open: de 9 wachtende prijsopdrachten van 8f91a370 gaan pas uit zodra haar extensie 1.0.417 draait; haar versie is niet gemeten. 14 oude tests (vinted, audio, meldingen) falen ook zonder deze wijziging.
