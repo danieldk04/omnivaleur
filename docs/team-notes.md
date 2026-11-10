@@ -18996,3 +18996,6 @@ Daniel: Monaim heeft op dit moment niets meer met Omnivaleur te maken, mogelijk 
 - Onbekend, niet gerepareerd: Toon (96e30080) 4x Vinted-kleur leeg op kleden (sheet te bouwen regel 24, wacht op besluit); 2x Vinted-maat leeg op tafelkleden, terwijl zijn gelukte tafelkleden op Vinted geen maatveld hebben (vermoedelijk andere rubriek, niet te bewijzen). 8f91a370 2x een vrijwel leeg Vinted-formulier (ook 05-11), tussendoor lukt het. Marktplaats-verwijderen "Frame with ID 0 was removed" bij Toon en 26cf5471: beide advertenties staan nog online, herplaatsing veilig afgebroken, 5x in 3 weken.
 - Klant-eigen: f8c0cce9 2x 2dehands 401 (uitgelogd); 1ba42900 Vinted-inlogpagina; tabbladen dichtgeklikt; 26cf5471 66 verwijderingen en 66 nachtelijke herplaatsingen wachten (Chrome uit sinds 22:00); Goudlief ~800 wachtend, Chrome uit sinds 09-11 18:25; 7c0700e4 proef verlopen, 48 wachtend.
 - Niet gemeten: Railway-log en fouten die alleen in de browser van de klant staan.
+
+## 10-11-2026: platformcontrole, geen afwijking (volledige set)
+- Vinted (7 artikelen), Marktplaats en 2dehands (rubrieken chicklit, comics, dans en theater): alle stappen als gisteren, alleen bekende artefacten (beschrijving, halswijdte, maat/kleur bij boek). Eén proef met een eigen verkeerde categoriesleutel (baby) herhaald met de juiste: ok.
