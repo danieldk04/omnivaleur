@@ -1,4 +1,4 @@
-# Facebook-actueel (bijgewerkt 09-11-2026)
+# Facebook-actueel (bijgewerkt 10-11-2026)
 
 Dit bestand wordt elke ochtend ververst door een routine en gaat voor op alles wat je eerder
 wist. Staat hier iets anders dan in je eigen kennis over een platform: dit bestand wint. Wat hier
@@ -6,7 +6,7 @@ niet staat en je niet zeker weet: zeg het als eigen ervaring of laat het weg. Zo
 (als dat aan staat) voor een vraag over regels of kosten, gebruik dan alleen bronnen van de
 laatste maanden en noem er niets uit als feit zonder dat de bron het zelf zegt.
 
-## Platformnieuws (laatst gecontroleerd 09-11-2026)
+## Platformnieuws (laatst gecontroleerd 10-11-2026)
 
 Vinted
 - Nieuwe voorwaarden sinds 8 oktober 2026: verkopers moeten ze accepteren om te blijven verkopen.
@@ -18,15 +18,16 @@ Vinted
 
 Marktplaats en 2dehands
 - Marktplaats' gebruiksvoorwaarden gelden in nieuwe versie sinds 22 juli 2026. Inhoud van de wijziging niet gevonden.
-- Geen andere nieuwe verkopersregels gevonden (controle 09-11).
+- Geen andere nieuwe verkopersregels gevonden (controle 10-11).
 
 eBay
 - Sinds 1 november 2026 geldt in de EU een nieuwe heffing van 2 euro voor douanebehandeling bij internationale bestellingen. Dat is een kostenpost voor de koper, niet voor de verkoper (volgens een vakblog, eBay noemt het bij International Shipping). Bij verkoop aan EU-kopers op afstand zijn ook productidentificatiecodes verplicht geworden (onbevestigd voor tweedehands).
 - Frankrijk en Italië: sinds september 2026 geen verkoopkosten meer voor particulieren, de kosten zitten nu bij de koper (kopersbescherming). Spanje is een voorspelling, geen aankondiging.
 - Duitsland: sinds juli 2026 vast 5% voor tweedehands in sommige rubrieken, alleen voor zakelijke accounts. Particulieren betalen daar sinds 2023 niets.
-- Nederland en België: geen wijziging gevonden (controle 09-11). Frankrijk, Italië en Spanje: een bron noemt wijzigingen per 16 oktober, inhoud onbevestigd.
+- Nederland en België: geen wijziging gevonden (controle 10-11). Frankrijk, Italië en Spanje: een bron noemt wijzigingen per 16 oktober, inhoud onbevestigd.
 
 ## Wat er bij Omnivaleur de afgelopen weken veranderde (alleen wat verkopers merken)
+- 09-11: de controle op verlopen 2dehands-advertenties kijkt op de openbare pagina, zodat kansloze verlengpogingen wegblijven.
 - 07-11: eBay-verzending naar de EU kan nu (Nederland 7 en EU 15 als standaard).
 - 07-11: mislukte plaatsingen door ontbrekende bronfoto's gaan vanzelf terug in de rij zodra de foto's binnen zijn.
 - 07-11: telefoonkoorden worden op 2dehands niet meer tegengehouden bij "Bestemd voor".
