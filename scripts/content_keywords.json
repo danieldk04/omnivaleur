@@ -968,7 +968,7 @@
       "pillar": "B",
       "format": "strategy",
       "slug": "how-to-calculate-profit-margin-reselling",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "winstmarge-berekenen-tweedehands-verkoop",
       "priority": 109
     },
@@ -1989,6 +1989,16 @@
       "action": "created",
       "url_path": "/reseller-tools/legal-warranty-on-second-hand-goods-netherlands",
       "published_at": "2026-11-09T18:07:27.434133+00:00"
+    },
+    {
+      "keyword": "how to calculate profit margin reselling",
+      "slug": "how-to-calculate-profit-margin-reselling",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-calculate-profit-margin-reselling",
+      "published_at": "2026-11-10T16:02:16.091344+00:00"
     }
   ]
 }
