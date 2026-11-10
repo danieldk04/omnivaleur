@@ -24,3 +24,12 @@ Gebouwd op 10-11-2026 (versie 1 tot 3). Code staat in `scripts/video/`. Werkmap 
 - Eén hulp uit het skill kan stil falen: controleer dat `silent.mp4` echt de verwachte lengte heeft.
 - Een patch in een python-script dat stilvalt laat het oude bestand staan: draai na elke patch de test opnieuw.
 - Geluid is nooit beluisterd door mij: gebruik earshot om te meten (luidheid, verstaanbaarheid), niet "klinkt goed".
+
+## Geluid meten met earshot (10-11-2026)
+Installeren: `cd ~/earshot && python3.13 -m venv .venv && .venv/bin/pip install -e ".[mcp]"` (duurt even, torch).
+Gebruik: `.venv/bin/python -m earshot measure film.mp4` en `... critique film.mp4 --fast`.
+Meting proef3: -12,0 LUFS (doel was -14, loudnorm kwam hoger uit), top -1,5 dBTP, bijna alles groen, geluid valt in 84% op een beeldwissel.
+Zwak: de luidste 3 seconden zijn maar 0,6 LU luider dan de rest (vlak, geen uitschieter), geen stilte vlak voor de grote klap
+(4 van 7 referentiefilms hebben die), klank wat dof (1012 Hz tegen 1183 tot 3030 Hz bij de referenties), en volledig mono.
+Verbeterpunten voor de volgende video's: een stop-down van 0,2 tot 1 s vóór de grote wissel, een duidelijker piek in de laatste klap,
+iets helderder muziek, en mix op -14 LUFS controleren in plaats van aannemen.

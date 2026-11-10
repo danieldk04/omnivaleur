@@ -19,5 +19,5 @@ Nog geen cijfers: proefvideo's 1 tot 3 zijn niet geplaatst. Eerste echte meting 
 (Wordt de eerste dinsdag gevuld: renno.app en 5 tot 8 andere.)
 
 ## Openstaande punten
-- Geluid van proef3 is nog niet met earshot gemeten (installatie bezig op 10-11-2026).
+- Geluid van proef3 gemeten met earshot op 10-11-2026 (zie recept). De zwaardere meting (herkenning of het als echte opname klinkt) vraagt een download van ongeveer 1,1 GB modellen en is nog niet gedaan.
 - Aanmeldingen per video zijn niet te bewijzen met bio-links; alleen per platform en dag.
