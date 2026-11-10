@@ -5,7 +5,7 @@ import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { SHOTS, CAPTIONS, DURATION, FADES } from './shots.js';
+import { SHOTS, CAPTIONS, DURATION, FADES } from './active.js';
 
 const W = 720, H = 1280;
 const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
