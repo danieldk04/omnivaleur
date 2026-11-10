@@ -103,6 +103,13 @@ async def na_verkoop(db, item_id: str, sold_on_platform: str) -> str | None:
 
     stuks = totaal(product, variaties)
     if stuks is None:
+        # Een gewoon product zonder voorraadtelling heeft geen aantal om te beschermen:
+        # dat is een uniek stuk, ook in een winkel die elders wel voorraad heeft.
+        # Toon (10-11-2026): 24 producten met meer dan een stuk zetten de vlag, en
+        # daarna bleef elk stuk zonder telling na een Vinted-verkoop overal staan.
+        # Producten met maten blijven de voorzichtige kant op: daar weten we niet welke.
+        if product.get("type") != "variable":
+            return None
         return BLIJFT if gevlagd else None
     meer_dan_een = stuks > 1 or (variaties is not None and len(variaties) > 1)
     if meer_dan_een and not gevlagd:
