@@ -18999,3 +18999,8 @@ Daniel: Monaim heeft op dit moment niets meer met Omnivaleur te maken, mogelijk 
 
 ## 10-11-2026: platformcontrole, geen afwijking (volledige set)
 - Vinted (7 artikelen), Marktplaats en 2dehands (rubrieken chicklit, comics, dans en theater): alle stappen als gisteren, alleen bekende artefacten (beschrijving, halswijdte, maat/kleur bij boek). Eén proef met een eigen verkeerde categoriesleutel (baby) herhaald met de juiste: ok.
+
+## 10-11-2026: Onboarding nieuwe klanten (ochtend)
+- 1 account in de eerste week, 0 nieuw, geen creator. Web Store levert nu 1.0.419 (gelijk aan de repo). Agenda: niets over deze klant.
+- kjrmohamed (720924e6): ongewijzigd sinds 05-11, 0 artikelen, extensie nooit gemeld, proef tot 12-11 20:50. Geen reparatie, geen mailtje (06-11 al gemaild, niets veranderd; proefherinnering stuurt de server zelf).
+- Mailrapport: 5 mails sinds 02-11, 1 echt geopend, 0 klik, 1 antwoord (bankai2855, 09-11: wil geen mail meer; al afgehandeld op 09-11, staat in mail_unsubscribed), 0 deden daarna iets.
