@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## social-video-routine
+
+*10-11-2026 — 10-11: dinsdagroutine maakt 3-4 social video's in renno-stijl, leert van cijfers; pijplijn in scripts/video, recept in docs/video-recept.md*
+
+Daniel (10-11-2026) wil elke dinsdag 3 tot 4 geanimeerde video's in de stijl van renno.app, door hem geplaatst op TikTok, Instagram, YouTube Shorts (Threads, Pinterest ook). Taak `omnivaleur-social-videos`, dinsdag 09:30; opdracht in `docs/routines/social-videos.md`, leerlog in `docs/social-video-leerlog.md`, recept in `docs/video-recept.md`, code in `scripts/video/`.
+
+**Why:** doel is aanmeldingen en betalende klanten, niet views. Klikken op de link meten hoeft niet (mensen gaan via de bio); verkeer per platform loopt via de korte links /ig /tt /yt /pin /th en GA4. Ontbrekende skills of toegang escaleren naar Daniel, nooit verzwijgen. Hij mag mijn groei sturen.
+
+**How to apply:** skills echt lezen (huashu-art-motion, huashu-motion, earshot, claude-animation-skills) en niet alleen klonen; versie 1 tot 3 gebruikte alleen de kit van claude-animation-skills. Geluid nooit "goed" noemen zonder earshot-meting. Poppetje nooit door spullen heen: clip.mjs op 0. Zie "korter-en-zelf-regelen" voor de rapportage.
+
+---
+
 ## alleen-bouwen-wat-100-procent-zeker-werkt
 
 *09-11-2026 — Daniel 09-11-2026: nooit bouwen om te bouwen, nooit iets uitrollen dat nog niet helemaal werkt; elke bouwstap eerst aantoonbaar zeker, ook buiten dit gesprek*

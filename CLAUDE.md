@@ -71,6 +71,8 @@ zelf te vinden: skill `interview-daniel` in `.claude/skills/`.
   geplande taken zeggen alleen "volg dat bestand". Daniels Mac: taak
   `omnivaleur-onboarding-nieuwe-klanten`, 11:00 (was 06:30), rondenaam `onboarding-ochtend`.
 
+- Social video's (sinds 10-11-2026): elke dinsdag 09:30 taak `omnivaleur-social-videos`, 3 tot 4 geanimeerde video's in renno-stijl voor Daniel om te plaatsen, met meting van vorige week; opdracht in `docs/routines/social-videos.md`, leerlog `docs/social-video-leerlog.md`, recept `docs/video-recept.md`.
+
 - Kosten (sinds 04-10-2026): alle maandelijkse kosten van Omnivaleur staan in de Drive-sheet "Kosten en doelen (Omnivaleur en Revaleur)" (map Omnivaleur),
   elke 1e van de maand bijgewerkt door taak `omnivaleur-kosten-bijhouden`; opdracht in `docs/routines/kosten-bijhouden.md`.
 
