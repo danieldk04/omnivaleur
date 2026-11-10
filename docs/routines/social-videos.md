@@ -22,6 +22,11 @@ videoknip), zoek hem, en lukt dat niet of kost het geld: zet het als actiepunt v
 
 ## Stap 1: meten wat vorige week deed
 Alleen lezen. Daniel is in Chrome ingelogd (Claude in Chrome); voer nooit wachtwoorden in.
+0. Eerst Schedchie (Daniels planner, alle accounts op één plek, hij is er in Chrome ingelogd): Analytics geeft per platform en per
+   post volgers, weergaven, betrokkenheid, betrokkenheidspercentage en top posts, met vergelijking met de vorige periode.
+   Ook het tabblad Competitors (beta) is bruikbaar voor stap 2. Daniel plant de video's daar zelf in (Scheduling): zo
+   weet je de plaatsdatum per platform. Kijktijd en percentage bekeken staan er niet in: haal die uit stap 1 hieronder.
+   Geteld op 10-11-2026: 6 accounts (Instagram 179 volgers, YouTube 32, Threads 13, Bluesky 7, Pinterest 0, Facebook nog niet bevestigd).
 1. Per platform, per video van vorige week (en de weken ervoor, voor het verloop):
    - YouTube Studio (studio.youtube.com): weergaven, gemiddelde kijkduur, percentage bekeken, "bekeken versus weggeswiped", likes, reacties, nieuwe abonnees.
    - Instagram Insights (Professional dashboard): bereik, weergaven, gemiddelde kijktijd, likes, reacties, opgeslagen, gedeeld, volgers erbij.
