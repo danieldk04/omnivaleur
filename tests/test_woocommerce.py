@@ -232,6 +232,17 @@ def test_laatste_stuk_elders_product_blijft_uitverkocht_staan(monkeypatch):
     assert g["extensie_weg"] == ["vinted"]
 
 
+def test_stuk_zonder_voorraadtelling_in_voorraadwinkel_is_gewoon_uniek(monkeypatch):
+    # Toon (10-11-2026): zijn winkel heeft de vlag omdat 24 producten er meer dan een
+    # stuk hebben. Zijn gewone stukken hebben geen voorraadtelling (Woo toont max 9999).
+    # De oude code gaf daar BLIJFT: verkocht op Vinted, bleef overal staan.
+    winkel = FakeWoo([_product(stuks=1, beheer=False)])
+    db = _situatie(winkel, vlag=True)
+    g = _verkoop(cl, monkeypatch, db, winkel, "vinted")
+    assert g["woo_afgemeld"] == ["101"] and sorted(g["extensie_weg"]) == ["marktplaats"]
+    assert _status(db, "v1") == "sold", "de Vinted-verkoop staat als verkoop in de boeken"
+
+
 def test_twee_maten_met_voorraad_niet_raden(monkeypatch):
     winkel = FakeWoo([_product(type="variable", manage_stock=False, stock_quantity=None,
                                variations=[201, 202])],
