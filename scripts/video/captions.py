@@ -33,11 +33,11 @@ def main():
     print('export const CAPTIONS = [')
     groups = chunks(words)
     for i, g in enumerate(groups):
-        text = re.sub(r'[.,;:]+$', '', ' '.join(x['w'] for x in g)).replace("'", "\\'")
+        text = re.sub(r'[.,;:]+$', '', re.sub(r'[\[\]"]', '', ' '.join(x['w'] for x in g)).strip(' ,.')).replace("'", "\\'")
         end = f", {g[-1]['e'] + .3:.2f}" if i == len(groups) - 1 else ''
         print(f"  [{g[0]['s']:.2f}, '{text}'{end}],")
     print('];')
-    print(f'export const DURATION = {words[-1]["e"] + .5:.2f};')
+    print(f'export const DURATION = {words[-1]["e"] + 1.6:.2f};')   # 1.6 s of end card after the last word
 
 
 if __name__ == '__main__':

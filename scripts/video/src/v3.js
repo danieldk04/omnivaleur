@@ -9,8 +9,8 @@ export const FADES = [];
 
 function space(update, { fov = 40, red = false } = {}) {
   return ({ makeStage }) => {
-    const S = spaceScene(), a = astronaut(), c = cam(fov); S.scene.add(a.root); S.a = a; S.red = red;
-    const alarm = new THREE.PointLight(0xff2a2a, 0, 8); alarm.position.set(0, 0.6, 1.5); S.scene.add(alarm); S.alarm = alarm;
+    const S = spaceScene(), a = astronaut(), c = cam(fov); const pv = new THREE.Group(); pv.position.y = -1.0; pv.add(a.root); S.scene.add(pv); S.a = a; S.red = red;
+    const alarm = new THREE.PointLight(0xff2a2a, 0, 8); alarm.position.set(0, 0.6, 1.5); S.scene.add(alarm); S.alarm = alarm; alarm.position.y = 0.2;
     return { scene: S.scene, camera: c, update: (t, T) => { const r = update(t, T, S, c) || {}; alarm.intensity = red ? (Math.sin(t * 14) > 0 ? 14 : 2) : 0; return r; } };
   };
 }
@@ -26,9 +26,9 @@ const S1 = space((t, T, S, c) => {
 // S2 face in the helmet, ALERT stamp
 const S2 = space((t, T, S, c) => {
   S.a.root.position.set(0, 0, 0); S.a.root.rotation.set(0, 0, 0); float(S.a, t * 2, { ...panic(t), head: [0, Math.sin(t * 12) * 0.3, 0] });
-  if (!S.st) { S.st = planeCard(stampTex('ALERT'), 0.8, 0.3); S.scene.add(S.st); }
-  S.st.position.set(0.0, 1.55, 0.6); S.st.scale.setScalar(pop(t, 0.2, 0.2, 2) * (t < 0.2 ? 0 : 1)); S.st.rotation.z = -0.1;
-  place(c, [0.0, 1.4, kf(t, [[0, 2.8], [1.1, 2.0]], easeOut)], [0, 1.35, 0]);
+  if (!S.st) { S.st = planeCard(stampTex('ALERT'), 0.55, 0.2); S.scene.add(S.st); }
+  S.st.position.set(0.35, 1.6, 0.6); S.st.scale.setScalar(pop(t, 0.2, 0.2, 2) * (t < 0.2 ? 0 : 1)); S.st.rotation.z = -0.1;
+  place(c, [0.0, 0.95, kf(t, [[0, 3.6], [1.1, 2.7]], easeOut)], [0, 0.9, 0]);
   return { bloom: 0.7, exposure: 1.05, dof: { focus: 2.2, aperture: 0.005, maxblur: 0.012 } };
 }, { red: true, fov: 38 });
 // S3/S4 satellites with logos arrive (four platforms)

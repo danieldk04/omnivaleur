@@ -2,14 +2,14 @@
 import * as THREE from 'three';
 import { makeBlocky } from './blocky.js';
 import { kf, lerp, easeOut, easeInOut, range, clamp, V, cam, place, shake } from './anim.js';
-import { std, rbox, room, windowPane, desk, laptop, lamp, typingPose, seat, pop, planeCard, lights, logoTex, listingTex, checkTex, bubbleTex, canvasTex, rr, gradTex, walkPose, cheer, IMG, PLATFORMS, rnd, kitchen, ledTex } from './shots.js';
+import { std, rbox, room, windowPane, desk, laptop, lamp, typingPose, seat, pop, planeCard, lights, logoTex, listingTex, checkTex, bubbleTex, canvasTex, rr, gradTex, walkPose, cheer, IMG, PLATFORMS, rnd, kitchen } from './shots.js';
 
 export const labelTex = (txt, { bg = '#fff', fg = '#1b2a44', w = 640, h = 200, size = 72, font = '800' } = {}) => canvasTex(w, h, (g, W, H) => {
   g.fillStyle = bg; rr(g, 0, 0, W, H, 36); g.fill(); g.fillStyle = fg; g.font = `${font} ${size}px Montserrat, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, W / 2, H / 2 + 3);
 });
 export const stampTex = (txt, col = '#d62b2b') => canvasTex(640, 240, (g, W, H) => {
   g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 16; rr(g, 12, 12, W - 24, H - 24, 24); g.stroke();
-  g.font = '900 120px Montserrat, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, W / 2, H / 2 + 6);
+  g.font = `900 ${txt.length > 8 ? 70 : 120}px Montserrat, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, W / 2, H / 2 + 6);
 });
 const kids = (o, f) => { o.children.forEach(c => f(c)); };
 
@@ -19,9 +19,9 @@ export function courtroom(makeStage) {
   scene.add(Object.assign(rbox(2.6, 0.32, 0.9, 0.04, std(0x5a3b25, 0.7), [0, 0.16, -1.15]), {}));                    // platform
   scene.add(rbox(2.3, 0.78, 0.12, 0.03, std(0x4a2f1c, 0.65), [0, 0.7, -0.74]));                                        // bench front
   scene.add(rbox(2.4, 0.06, 0.55, 0.02, std(0x3a2414, 0.6), [0, 1.1, -0.9]));                                          // bench top
-  const seal = new THREE.Mesh(new THREE.CircleGeometry(0.45, 40), new THREE.MeshBasicMaterial({ color: 0xd8b04a, toneMapped: false })); seal.position.set(0, 2.2, -1.57); scene.add(seal);
-  const bar = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.07), new THREE.MeshBasicMaterial({ color: 0x5a3b25, toneMapped: false })); bar.position.set(0, 2.2, -1.56); scene.add(bar);
-  const scale = new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.55), new THREE.MeshBasicMaterial({ color: 0x5a3b25, toneMapped: false })); scale.position.set(0, 2.2, -1.56); scene.add(scale);
+  const seal = new THREE.Mesh(new THREE.CircleGeometry(0.33, 40), new THREE.MeshBasicMaterial({ color: 0xd8b04a, toneMapped: false })); seal.position.set(0, 2.85, -1.57); scene.add(seal);
+  const bar = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.05), new THREE.MeshBasicMaterial({ color: 0x5a3b25, toneMapped: false })); bar.position.set(0, 2.85, -1.56); 
+  const scale = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.42), new THREE.MeshBasicMaterial({ color: 0x5a3b25, toneMapped: false })); scale.position.set(0, 2.85, -1.56); 
   for (const sx of [-1, 1]) scene.add(rbox(0.18, 2.2, 0.18, 0.03, std(0x4a2f1c, 0.7), [sx * 1.5, 1.1, -1.45]));
   // judge on the platform
   const judge = makeBlocky({ hoodie: 0x15151c, hair: 0xf2f2f4 }); judge.root.position.set(0, 0.32, -1.3); scene.add(judge.root);
@@ -31,7 +31,7 @@ export function courtroom(makeStage) {
   judge.R.el.add(gavel); gavel.position.set(0, -0.36, 0.05); gavel.rotation.x = -1.2;
   const block = rbox(0.28, 0.06, 0.2, 0.02, std(0x3a2414), [0.55, 1.16, -0.82]); scene.add(block);
   // defendant at a small desk
-  const dk = desk(scene, { z: 1.25 }); const lap = laptop(scene, { z: 1.2 }); const hd = makeBlocky({ hoodie: 0xb55a3a }); hd.root.position.set(0, 0, 0.49); scene.add(hd.root);
+  const dk = desk(scene); const lap = laptop(scene); const hd = makeBlocky({ hoodie: 0xb55a3a }); seat(hd); scene.add(hd.root);
   return { scene, judge, gavel, hd, lap, dk };
 }
 // strike: 0..1 phase of one gavel strike; returns pose for the judge's right arm

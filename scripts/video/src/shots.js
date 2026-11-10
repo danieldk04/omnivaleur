@@ -459,3 +459,6 @@ export const SHOTS = [
   [0.0, 0.8, A], [0.8, 1.4, B], [1.4, 2.4, C], [2.4, 3.3, D], [3.3, 4.4, E], [4.4, 5.4, F], [5.4, 6.4, G], [6.4, 7.75, Hh], [7.75, 8.7, I], [8.7, 9.6, Jj],
   [9.6, 10.4, K], [10.4, 11.2, Ll], [11.2, 12.0, Mm], [12.0, 12.9, Nn], [12.9, 13.65, Oo], [13.65, 14.6, P], [14.6, 16.0, Q],
 ].map(([start, end, b], i) => ({ start, end, build: wrap(b, end - start, i % 2 ? 1 : -1) })).concat([{ start: 16.0, end: DURATION + 1, build: s8 }]);
+
+// exported for the week videos (shots_*.js)
+export { std, rbox, room, windowPane, desk, laptop, lamp, typingPose, seat, pop, planeCard, wrap, lights, logoTex, listingTex, checkTex, bubbleTex, canvasTex, rr, gradTex, endTex, dashShot, K, Ll, Mm, Nn, Oo, F, parcel, walkPose, cheer, IMG, PLATFORMS, rnd, kitchen, s8, solveArms };

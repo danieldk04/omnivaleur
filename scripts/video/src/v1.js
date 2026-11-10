@@ -18,7 +18,7 @@ function court(update, { fov = 40 } = {}) {
 // A: low angle on the judge, gavel strikes
 const A = court((t, T, C, c) => {
   judgeStrike(C.judge, range(t, 0.25, 0.75)); typingPose(C.hd, t + 3, { smile: 0 });
-  const s = bang(t, 0.7) * 0.05; place(c, [0.5 + s, 0.9 - s, kf(t, [[0, 1.4], [1.3, 0.9]], easeOut)], [0, 1.75, -1.3]);
+  const s = bang(t, 0.7) * 0.05; place(c, [1.0 + s, 1.6 - s, kf(t, [[0, 3.3], [1.3, 2.6]], easeOut)], [0, 1.85, -1.3]);
   return { dof: { focus: 2.6, aperture: 0.004, maxblur: 0.01 }, bloom: 0.5, exposure: 1.05 };
 }, { fov: 42 });
 // B: judge points at the defendant (wide)
@@ -51,7 +51,7 @@ const exhibit = (ids, labels, a0) => ({ makeStage }) => {
   const cards = ids.map((k, i) => { const m = planeCard(logoTex(k), 0.62, 0.39); scene.add(m); const st = planeCard(stampTex(labels[i]), 0.5, 0.19); scene.add(st); return [m, st]; });
   const c = cam(40);
   return { scene, camera: c, update(t) {
-    cards.forEach(([m, st], i) => { const t0 = a0[i]; m.position.set(0, 0.28 - i * 0.62, 0); m.scale.setScalar(pop(t, t0, 0.22, 1.6) * (t < t0 ? 0 : 1)); m.rotation.z = (i ? 1 : -1) * 0.05; st.position.set(0.14, 0.18 - i * 0.62 - 0.04, 0.05); st.scale.setScalar(pop(t, t0 + 0.2, 0.18, 2.2) * (t < t0 + 0.2 ? 0 : 1)); st.rotation.z = -0.18; });
+    cards.forEach(([m, st], i) => { const t0 = a0[i]; m.position.set(0, 0.28 - i * 0.62, 0); m.scale.setScalar(pop(t, t0, 0.22, 1.6) * (t < t0 ? 0 : 1)); m.rotation.z = (i ? 1 : -1) * 0.05; st.position.set(0.0, 0.28 - i * 0.62 - 0.27, 0.05); st.scale.setScalar(pop(t, t0 + 0.2, 0.18, 2.2) * (t < t0 + 0.2 ? 0 : 1)); st.rotation.z = -0.08; });
     const p = kf(t, [[0, [0.15, 0.0, 2.9]], [1.4, [-0.05, -0.1, 2.3]]], easeInOut); place(c, p, [0, -0.1, 0], Math.sin(t * 4) * 0.02);
     return { bloom: 0.3 };
   } };
@@ -59,9 +59,9 @@ const exhibit = (ids, labels, a0) => ({ makeStage }) => {
 // G: GUILTY, judge close-up, stamp pops
 const G = court((t, T, C, c) => {
   judgeStrike(C.judge, range(t, 0.05, 0.5), { rSh: [-1.0 - Math.sin(clamp(range(t, 0.05, 0.5)) * Math.PI) * 1.0, 0, -0.15] }); typingPose(C.hd, 1, { neck: [0.5, 0, 0], head: [0.2, 0, 0.1], blink: true });
-  if (!C.st) { C.st = planeCard(stampTex('GUILTY'), 1.2, 0.45); C.scene.add(C.st); }
-  C.st.position.set(0.15, 2.2, -0.6); C.st.scale.setScalar(pop(t, 0.35, 0.18, 2.4) * (t < 0.35 ? 0 : 1)); C.st.rotation.z = -0.12;
-  const s = bang(t, 0.3) * 0.05; place(c, [0.3 + s, 1.6 - s, kf(t, [[0, 2.8], [1.1, 2.0]], easeOut)], [0, 1.8, -1.3]);
+  if (!C.st) { C.st = planeCard(stampTex('GUILTY'), 0.95, 0.36); C.scene.add(C.st); }
+  C.st.position.set(-0.05, 2.45, -0.6); C.st.scale.setScalar(pop(t, 0.35, 0.18, 2.4) * (t < 0.35 ? 0 : 1)); C.st.rotation.z = -0.12;
+  const s = bang(t, 0.3) * 0.05; place(c, [0.3 + s, 2.3 - s, kf(t, [[0, 3.2], [1.1, 2.7]], easeOut)], [0, 1.95, -1.3]);
   return { dof: { focus: 3.2, aperture: 0.004, maxblur: 0.01 }, bloom: 0.5, exposure: 1.05 };
 });
 // H: defendant slumped, camera pushes in
