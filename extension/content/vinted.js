@@ -4651,7 +4651,7 @@
         await waitUntil(
           () => [...document.querySelectorAll('[class*="web_ui__Cell__title"]')]
             .some((e) => e.textContent.toLowerCase().includes(value.toLowerCase())),
-          2500);
+          9000); // 11-11-2026: de merklijst komt bij meisjeskleding pas na ~3,5 s; 2,5 s gaf "option not found"
       }
     } else if (!isSize) {
       // All other fields: click trigger to open panel. Scroll it into view

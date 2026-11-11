@@ -14,3 +14,9 @@ def test_merkzoekveld_krijgt_geen_fillinput():
     blok = SRC.split("const brandSearch = zoekveld();")[1][:900]
     assert 'new Event("input"' in blok
     assert 'new Event("blur"' not in blok and 'new Event("change"' not in blok
+
+
+def test_merklijst_krijgt_genoeg_tijd():
+    # Gemeten 11-11: resultaten verschijnen na ~3,5 s, de oude 2,5 s was te kort.
+    blok = SRC.split("const brandSearch = zoekveld();")[1][:1500]
+    assert "9000)" in blok and "2500);\n      }" not in blok
