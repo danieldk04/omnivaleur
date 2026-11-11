@@ -181,7 +181,16 @@ def dag() -> int:
     print(f"vandaag {gedaan} artikelen, totaal {klaar_n} van {len(artikelen)}")
     if klaar_n >= len(artikelen):
         samenvatting()
+        stop_planning()
     return 0
+
+
+def stop_planning() -> None:
+    """De dagelijkse taak haalt zichzelf weg als de steekproef af is."""
+    import os
+    import subprocess
+    subprocess.run(["launchctl", "bootout", f"gui/{os.getuid()}/com.omnivaleur.fotometing"],
+                   capture_output=True)
 
 
 def samenvatting() -> int:
