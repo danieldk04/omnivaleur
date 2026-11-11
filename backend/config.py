@@ -85,6 +85,15 @@ class Settings(BaseSettings):
     # Omnivaleur Light (EUR 9,99 inclusief btw, tot 20 actieve artikelen). Leeg =
     # Light staat uit: geen keuze op de betaalpagina en geen limiet voor iemand.
     stripe_price_id_light: str = ""
+    # Nieuwe plannen per 01-01-2027 (besluit Daniel 09-11-2026). Leeg = bestaat nog niet.
+    stripe_price_id_plus: str = ""
+    stripe_price_id_ultra: str = ""
+    stripe_price_id_light_jaar: str = ""
+    stripe_price_id_pro_jaar: str = ""
+    stripe_price_id_plus_jaar: str = ""
+    stripe_price_id_ultra_jaar: str = ""
+    # Grenzen per plan (250 / 1.500 artikelen). UIT = alleen Light heeft een grens.
+    nieuwe_plannen_aan: bool = False
     # Uitnodigactie (besluit Daniel 09-11-2026): korting per betalende vriend en twee
     # gratis maanden tot 01-01-2027. Staat standaard UIT: pas aan na bewijs in
     # Stripe-testmodus en een controle van de eerste echte ronde.

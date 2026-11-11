@@ -14,6 +14,7 @@ import logging
 
 from backend.config import settings
 from backend.database import fetch_all, fetch_all_in
+from backend.services.plannen import plan_uit_prijs_id, grens
 
 logger = logging.getLogger(__name__)
 
@@ -32,14 +33,22 @@ LIGHT_LIMIET_MELDING = (
 )
 
 
-def plan_uit_stripe(stripe_sub) -> str:
-    """'light' als het abonnement op de Light-prijs loopt, anders 'pro'.
+def melding_bij_limiet(limiet: int | None) -> str:
+    """De tekst voor wie op de grens zit. Light houdt zijn eigen tekst."""
+    if limiet is None or limiet == LIGHT_MAX_ARTIKELEN:
+        return LIGHT_LIMIET_MELDING
+    return (f"Your plan includes up to {limiet} active items and you have reached that. "
+            "Mark something as sold, or upgrade your plan for more room.")
 
-    Staat de Light-prijs niet in de instellingen, dan is alles 'pro': liever geen
-    limiet dan een klant die we ten onrechte beperken.
+
+def plan_uit_stripe(stripe_sub) -> str:
+    """Het plan (light, pro, plus of ultra) uit de prijs van het abonnement.
+
+    Een onbekende of ontbrekende prijs is 'pro': liever geen limiet dan een klant die
+    we ten onrechte beperken. Staan de Plus- en Ultra-prijzen niet in de instellingen,
+    dan komen die plannen niet voor en is alles zoals voor 01-01-2027.
     """
-    light_id = (settings.stripe_price_id_light or "").strip()
-    if not light_id or not stripe_sub:
+    if not stripe_sub:
         return PLAN_PRO
     try:
         items = (stripe_sub.get("items") or {}).get("data") or []
@@ -48,8 +57,9 @@ def plan_uit_stripe(stripe_sub) -> str:
     for it in items:
         prijs = it.get("price") or {}
         pid = prijs.get("id") if isinstance(prijs, dict) else getattr(prijs, "id", None)
-        if pid == light_id:
-            return PLAN_LIGHT
+        plan = plan_uit_prijs_id(pid)
+        if plan != PLAN_PRO:
+            return plan
     return PLAN_PRO
 
 
@@ -66,6 +76,12 @@ def plan_van_gebruiker(user_id: str) -> str:
 
 def is_light(user_id: str) -> bool:
     return plan_van_gebruiker(user_id) == PLAN_LIGHT
+
+
+def grens_van(user_id: str) -> int | None:
+    """Het aantal actieve artikelen waarboven een NIEUW artikel geweigerd wordt, of
+    None voor geen grens. Met de schakelaar uit is dat alleen Light (20)."""
+    return grens(plan_van_gebruiker(user_id))
 
 
 def actieve_artikelen(db, user_id: str, statussen=None) -> set[str]:
@@ -93,10 +109,11 @@ def ruimte_over(db, user_id: str) -> int | None:
 
     Bij een fout ook None: dan laten we door.
     """
-    if not is_light(user_id):
+    limiet = grens_van(user_id)
+    if limiet is None:
         return None
     try:
-        return max(0, LIGHT_MAX_ARTIKELEN - len(actieve_artikelen(db, user_id)))
+        return max(0, limiet - len(actieve_artikelen(db, user_id)))
     except Exception:  # noqa: BLE001
         logger.exception("Kon de artikelen van %s niet tellen, geen limiet toegepast", user_id)
         return None
@@ -108,16 +125,17 @@ def publicatie_geblokkeerd(db, user_id: str, item_id: str) -> str | None:
     Een artikel dat al draait (op een ander kanaal) telt al mee en mag dus altijd
     naar een extra kanaal.
     """
-    if not is_light(user_id):
+    limiet = grens_van(user_id)
+    if limiet is None:
         return None
     try:
         actief = actieve_artikelen(db, user_id)
     except Exception:  # noqa: BLE001
         logger.exception("Kon de artikelen van %s niet tellen, geen limiet toegepast", user_id)
         return None
-    if str(item_id) in actief or len(actief) < LIGHT_MAX_ARTIKELEN:
+    if str(item_id) in actief or len(actief) < limiet:
         return None
-    return LIGHT_LIMIET_MELDING
+    return melding_bij_limiet(limiet)
 
 
 def neem_plaatsing_terug_boven_limiet(db, user_id: str, job: dict) -> bool:
@@ -132,24 +150,26 @@ def neem_plaatsing_terug_boven_limiet(db, user_id: str, job: dict) -> bool:
     pl = job.get("payload") if isinstance(job.get("payload"), dict) else {}
     if pl.get("_refresh_rollback"):
         return False
-    if not is_light(user_id):
+    limiet = grens_van(user_id)
+    if limiet is None:
         return False
     try:
         online = actieve_artikelen(db, user_id, ONLINE_STATUS)
     except Exception as e:  # noqa: BLE001
         logger.warning("job %s: Light-limiet niet na te gaan: %s", job.get("id"), e)
         return False
-    if str(job["item_id"]) in online or len(online) < LIGHT_MAX_ARTIKELEN:
+    if str(job["item_id"]) in online or len(online) < limiet:
         return False
     from datetime import datetime, timezone
     now = datetime.now(timezone.utc).isoformat()
+    melding = melding_bij_limiet(limiet)
     try:
         db.table("jobs").update({
             "status": "cancelled",
-            "result": {"cancelled": "light limit", "error": LIGHT_LIMIET_MELDING},
+            "result": {"cancelled": "light limit", "error": melding},
             "done_at": now,
         }).eq("id", job["id"]).eq("status", "pending").execute()
-        db.table("listings").update({"status": "error", "error_message": LIGHT_LIMIET_MELDING}).eq(
+        db.table("listings").update({"status": "error", "error_message": melding}).eq(
             "item_id", job["item_id"]).eq("platform", job.get("platform")).eq("status", "pending").execute()
     except Exception as e:  # noqa: BLE001
         logger.warning("job %s: Light-limiet niet kunnen toepassen: %s", job.get("id"), e)

@@ -66,8 +66,8 @@ def plan_van_abonnement(sub) -> str | None:
         pid = _g(_g(items[0], "price", {}), "id")
         if not pid:
             return None
-        light = (settings.stripe_price_id_light or "").strip()
-        return "light" if light and pid == light else "pro"
+        from backend.services.plannen import plan_uit_prijs_id
+        return plan_uit_prijs_id(pid)
     except Exception:
         logger.exception("Kon het plan van een abonnement niet lezen")
         return None
