@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=38cc73793d"></script>
+<script src="/i18n.js?v=84f30639ab"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -2536,6 +2536,11 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
               <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0"><path d="M2.5 5.5A1.5 1.5 0 014 4h12a1.5 1.5 0 011.5 1.5V6h-15v-.5zM2.5 8v6.5A1.5 1.5 0 004 16h12a1.5 1.5 0 001.5-1.5V8h-15zM4.5 12h3v1.5h-3V12z"/></svg>
               <span id="billing-payment-method-label">—</span>
             </div>
+            <div id="billing-wissel" style="display:none;margin-bottom:14px;padding:12px 14px;background:#f8fafd;border:1px solid #e0e7ff;border-radius:8px">
+              <div style="font-size:12px;font-weight:700;margin-bottom:2px">Need more room?</div>
+              <div style="font-size:12px;color:var(--muted)">You only pay the difference, we count what is left of your current period.</div>
+              <div id="billing-wissel-knoppen"></div>
+            </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
               <button onclick="openPortal()" class="btn btn-primary" style="flex:1;justify-content:center;min-width:180px">Manage subscription →</button>
             </div>
@@ -2571,8 +2576,23 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
               </div>
               <div id="plan-kaart-pro" onclick="kiesPlan('pro')" style="cursor:pointer;border:2px solid #0649c7;border-radius:8px;padding:14px 16px;background:#f8fafd;grid-column:span 2">
                 <div style="font-size:12px;font-weight:800;color:#0649c7;">Pro</div>
-                <div style="font-weight:800;font-size:18px;margin:4px 0 2px">€19.99 <span style="font-size:12px;font-weight:600;color:var(--muted)">/ month excl. VAT</span></div>
-                <div style="font-size:12px;color:var(--muted);line-height:1.5">Unlimited items. All marketplaces. Built for businesses.</div>
+                <div style="font-weight:800;font-size:18px;margin:4px 0 2px"><span class="plan-prijs">€19.99</span> <span class="plan-periode" style="font-size:12px;font-weight:600;color:var(--muted)">/ month excl. VAT</span></div>
+                <div id="plan-tekst-pro" style="font-size:12px;color:var(--muted);line-height:1.5">Unlimited items. All marketplaces. Built for businesses.</div>
+              </div>
+              <div id="plan-kaart-plus" onclick="kiesPlan('plus')" style="display:none;cursor:pointer;border:2px solid #e0e7ff;border-radius:8px;padding:14px 16px;background:#fff">
+                <div style="font-size:12px;font-weight:800;color:#0649c7;">Plus</div>
+                <div style="font-weight:800;font-size:18px;margin:4px 0 2px"><span class="plan-prijs">€29.99</span> <span class="plan-periode" style="font-size:12px;font-weight:600;color:var(--muted)">/ month excl. VAT</span></div>
+                <div style="font-size:12px;color:var(--muted);line-height:1.5">Up to 1,500 active items. All marketplaces.</div>
+              </div>
+              <div id="plan-kaart-ultra" onclick="kiesPlan('ultra')" style="display:none;cursor:pointer;border:2px solid #e0e7ff;border-radius:8px;padding:14px 16px;background:#fff">
+                <div style="font-size:12px;font-weight:800;color:#0649c7;">Ultra</div>
+                <div style="font-weight:800;font-size:18px;margin:4px 0 2px"><span class="plan-prijs">€49.00</span> <span class="plan-periode" style="font-size:12px;font-weight:600;color:var(--muted)">/ month excl. VAT</span></div>
+                <div style="font-size:12px;color:var(--muted);line-height:1.5">Unlimited items, priority support and the newest features first.</div>
+              </div>
+              <div id="plan-jaar-schakelaar" style="display:none;grid-column:span 2;text-align:center;font-size:13px">
+                <a href="#" id="plan-jaar-maand" onclick="kiesInterval('month');return false" style="font-weight:700;text-decoration:none">Monthly</a>
+                <span style="color:var(--muted)"> | </span>
+                <a href="#" id="plan-jaar-jaar" onclick="kiesInterval('year');return false" style="font-weight:700;text-decoration:none">Yearly, 2 months free</a>
               </div>
             </div>
             <!-- Uitgenodigd door een vriend: de helft van de eerste maand.
@@ -4754,36 +4774,70 @@ function toonAfrekenMelding(data) {
 // (€19.99 excl. btw). De keuze staat alleen op het scherm als de server zegt dat
 // Light af te rekenen is; anders blijft alles zoals het was.
 let _gekozenPlan = 'pro';
+let _gekozenInterval = 'month';
+let _nieuwePlannen = false;
+
+// Prijzen per plan: [per maand, per jaar]. Light is incl. btw, de rest excl. btw.
+const PLAN_PRIJZEN = {
+  light: ['€9.99', '€99.00'], pro: ['€19.99', '€199.00'],
+  plus: ['€29.99', '€299.00'], ultra: ['€49.00', '€490.00'],
+};
+const PLAN_VOLGORDE = ['light', 'pro', 'plus', 'ultra'];
 
 function kiesPlan(plan) {
-  _gekozenPlan = plan === 'light' ? 'light' : 'pro';
-  const light = document.getElementById('plan-kaart-light');
-  const pro = document.getElementById('plan-kaart-pro');
-  if (light) { light.style.borderColor = _gekozenPlan === 'light' ? '#0649c7' : '#e0e7ff'; light.style.background = _gekozenPlan === 'light' ? '#f8fafd' : '#fff'; }
-  if (pro) { pro.style.borderColor = _gekozenPlan === 'pro' ? '#0649c7' : '#e0e7ff'; pro.style.background = _gekozenPlan === 'pro' ? '#f8fafd' : '#fff'; }
-  const naam = _gekozenPlan === 'light' ? 'Light' : 'Pro';
+  _gekozenPlan = PLAN_VOLGORDE.includes(plan) && (_nieuwePlannen || plan === 'light' || plan === 'pro') ? plan : 'pro';
+  PLAN_VOLGORDE.forEach(p => {
+    const k = document.getElementById('plan-kaart-' + p);
+    if (k) { k.style.borderColor = _gekozenPlan === p ? '#0649c7' : '#e0e7ff'; k.style.background = _gekozenPlan === p ? '#f8fafd' : '#fff'; }
+  });
+  const naam = _gekozenPlan.charAt(0).toUpperCase() + _gekozenPlan.slice(1);
   const btn = document.getElementById('btn-checkout');
   // Werkt op de Engelse en de vertaalde knoptekst ("Activate Pro →" / "Pro activeren →").
-  if (btn && /Activate|activeren/.test(btn.textContent)) btn.textContent = btn.textContent.replace(/\b(Pro|Light)\b/, naam);
+  if (btn && /Activate|activeren/.test(btn.textContent)) btn.textContent = btn.textContent.replace(/\b(Pro|Light|Plus|Ultra)\b/, naam);
+}
+
+function kiesInterval(iv) {
+  _gekozenInterval = iv === 'year' ? 'year' : 'month';
+  const jaar = _gekozenInterval === 'year';
+  PLAN_VOLGORDE.forEach(p => {
+    const k = document.getElementById('plan-kaart-' + p);
+    if (!k) return;
+    const prijs = k.querySelector('.plan-prijs'), periode = k.querySelector('.plan-periode');
+    if (prijs) prijs.textContent = PLAN_PRIJZEN[p][jaar ? 1 : 0];
+    if (periode) periode.textContent = p === 'light' ? (jaar ? '/ year incl. VAT' : '/ month incl. VAT') : (jaar ? '/ year excl. VAT' : '/ month excl. VAT');
+  });
+  const m = document.getElementById('plan-jaar-maand'), j = document.getElementById('plan-jaar-jaar');
+  if (m) m.style.color = jaar ? 'var(--muted)' : '#0649c7';
+  if (j) j.style.color = jaar ? '#0649c7' : 'var(--muted)';
 }
 
 function renderPlanKeuze(data) {
+  _nieuwePlannen = !!(data && data.new_plans);
   const beschikbaar = !!(data && data.light_available);
   const light = document.getElementById('plan-kaart-light');
   const pro = document.getElementById('plan-kaart-pro');
   if (light) light.style.display = beschikbaar ? 'block' : 'none';
-  if (pro) pro.style.gridColumn = beschikbaar ? 'auto' : 'span 2';
+  if (pro) pro.style.gridColumn = (beschikbaar || _nieuwePlannen) ? 'auto' : 'span 2';
+  ['plus', 'ultra'].forEach(p => { const k = document.getElementById('plan-kaart-' + p); if (k) k.style.display = _nieuwePlannen ? 'block' : 'none'; });
+  const sw = document.getElementById('plan-jaar-schakelaar');
+  if (sw) sw.style.display = _nieuwePlannen ? 'block' : 'none';
+  const tekst = document.getElementById('plan-tekst-pro');
+  if (tekst) tekst.textContent = _nieuwePlannen ? 'Up to 250 active items. All marketplaces. Built for businesses.' : 'Unlimited items. All marketplaces. Built for businesses.';
   const pw = document.getElementById('paywall-light');
   if (pw) pw.style.display = beschikbaar ? 'block' : 'none';
-  if (!beschikbaar) _gekozenPlan = 'pro';
+  if (!beschikbaar && !_nieuwePlannen) _gekozenPlan = 'pro';
+  if (!_nieuwePlannen) _gekozenInterval = 'month';
+  kiesInterval(_gekozenInterval);
   kiesPlan(_gekozenPlan);
 
   // Actieve klant: naam, prijs en teller volgen het plan.
   const isLight = !!(data && data.plan === 'light');
   const naam = document.getElementById('billing-plan-name');
-  if (naam) naam.textContent = isLight ? 'Omnivaleur Light' : 'Omnivaleur Pro';
+  const huidig = (data && PLAN_VOLGORDE.includes(data.plan)) ? data.plan : 'pro';
+  if (naam) naam.textContent = 'Omnivaleur ' + huidig.charAt(0).toUpperCase() + huidig.slice(1);
   const prijs = document.getElementById('billing-price-value');
-  if (prijs) prijs.textContent = isLight ? '€9.99 / month incl. VAT' : '€19.99 / month excl. VAT';
+  if (prijs) prijs.textContent = (isLight || huidig === 'pro') ? (isLight ? '€9.99 / month incl. VAT' : '€19.99 / month excl. VAT') : (PLAN_PRIJZEN[huidig][0] + ' / month excl. VAT');
+  renderPlanWissel(data, huidig);
   const box = document.getElementById('billing-light-box');
   if (box) box.style.display = isLight ? 'block' : 'none';
   if (isLight) {
@@ -4808,6 +4862,37 @@ async function upgradeToPro(btn) {
     alert('Could not switch plans. ' + e.message);
   }
   if (btn) { btn.disabled = false; btn.textContent = 'Upgrade to Pro →'; }
+}
+
+// Actieve klant: hoger plan of jaarbetaling, alleen het verschil betalen. Verborgen zolang
+// de nieuwe plannen uit staan.
+function renderPlanWissel(data, huidig) {
+  const doos = document.getElementById('billing-wissel');
+  if (!doos) return;
+  if (!data || !data.new_plans) { doos.style.display = 'none'; return; }
+  const hoger = PLAN_VOLGORDE.filter(p => PLAN_VOLGORDE.indexOf(p) > PLAN_VOLGORDE.indexOf(huidig));
+  const knop = (plan, iv, tekst) => `<button class="btn" style="margin:4px 6px 0 0" onclick="wijzigPlan('${plan}','${iv}',this)">${tekst}</button>`;
+  const UPGRADE = { plus: 'Upgrade to Plus', ultra: 'Upgrade to Ultra' };
+  let h = hoger.map(p => knop(p, 'month', UPGRADE[p] || 'Upgrade')).join('');
+  h += knop(huidig, 'year', 'Pay yearly, 2 months free');
+  document.getElementById('billing-wissel-knoppen').innerHTML = h;
+  doos.style.display = 'block';
+}
+
+async function wijzigPlan(plan, interval, btn) {
+  if (btn) btn.disabled = true;
+  try {
+    const res = await apiFetch(`${API}/api/billing/wijzig-plan`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan, interval }),
+    });
+    const data = await parseJsonSafe(res);
+    if (data.changed) { await loadBillingStatus(); return; }
+    alert(data.detail || 'Could not switch plans. Please use Manage subscription.');
+  } catch (e) {
+    alert('Could not switch plans. ' + e.message);
+  }
+  if (btn) btn.disabled = false;
 }
 
 function renderBilling(data) {
@@ -5488,7 +5573,7 @@ async function startCheckout() {
   try {
     const res = await apiFetch(`${API}/api/billing/checkout`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan: _gekozenPlan }),
+      body: JSON.stringify({ plan: _gekozenPlan, interval: _gekozenInterval }),
     });
     // Rauwe tekst lezen: bij een gateway-fout komt er HTML terug en klapte
     // res.json() eruit, waarna de melding alleen nog "kan geen verbinding maken"

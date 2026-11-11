@@ -174,6 +174,10 @@ async def billing_status(user=Depends(get_current_user_full)):
             # Het dashboard toont de keuze tussen Light en Pro alleen als Light
             # echt kan worden afgerekend, en de teller alleen bij een Light-klant.
             "light_available": bool(settings.stripe_price_id_light),
+            # Plus, Ultra en jaarbetaling: alleen zichtbaar als de schakelaar aan staat
+            # en de prijzen echt in Stripe staan. Anders is het dashboard ongewijzigd.
+            "new_plans": bool(settings.nieuwe_plannen_aan and settings.stripe_price_id_plus
+                              and settings.stripe_price_id_ultra),
             "light_max_items": LIGHT_MAX_ARTIKELEN,
             "active_items": actieve_items,
             "trial_ends_at": sub.get("trial_ends_at"),

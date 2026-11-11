@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="/i18n.js?v=b011c34bb9"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Log in — Omnivaleur</title>
+<meta name="robots" content="noindex, follow">
+<link rel="canonical" href="https://omnivaleur.com/login">
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="preload" href="/assets/site/fonts/clash-grotesk-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/site/fonts/hanken-grotesk-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/site/site.css?v=3">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJ5BVD3GCH"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-VJ5BVD3GCH');
+</script>
+</head>
+<body class="on-field auth-page">
+
+<a class="auth-logo" href="/"><img src="/assets/site/mark.png" alt="" width="52" height="28"><span>Omnivaleur</span></a>
+
+<main class="auth-card">
+  <h1>Welcome back</h1>
+  <p class="subtitle">Log in to your account</p>
+
+  <div id="confirmed" class="note-ok" style="display:none">Email confirmed! You can now log in.</div>
+  <div id="linkexpired" class="note-warn" style="display:none">This confirmation link is no longer valid: it may already have been used. If your email is confirmed, just log in below. Otherwise <a href="/forgot-password" style="color:#a16207;text-decoration:underline">reset your password</a> to get a fresh link.</div>
+  <div id="error" class="error"></div>
+
+  <form onsubmit="doLogin(event)">
+    <div class="field">
+      <label for="email">Email address</label>
+      <input type="email" id="email" placeholder="name@example.com" autofocus autocomplete="email">
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button type="submit" class="btn btn-primary" id="btn">Log in</button>
+  </form>
+
+  <div class="links auth-links">
+    <span>No account yet? <a href="/register">Start free</a></span>
+    <a href="/forgot-password">Forgot password?</a>
+    <a href="/">Back to homepage</a>
+  </div>
+</main>
+
+<div data-taalkeuze class="auth-lang"></div>
+
+<script>
+const API = window.location.hostname === 'localhost' ? 'http://localhost:8001' : '';
+
+const _q = new URLSearchParams(window.location.search);
+if (_q.get('confirmed') === '1') {
+  document.getElementById('confirmed').style.display = 'block';
+}
+if (_q.get('link_error') === '1') {
+  document.getElementById('linkexpired').style.display = 'block';
+}
+// Teruggestuurd omdat de sessie niet meer te vernieuwen was. Zonder uitleg lijkt
+// dat op willekeurig uitloggen.
+if (_q.get('verlopen') === '1') {
+  const el = document.getElementById('error');
+  el.textContent = 'Your session expired. Please sign in again, nothing was lost.';
+  el.style.display = 'block';
+}
+
+// ── HET INLOGBEWIJS OVERLEEFT HET TABBLAD (08-09-2026) ───────────────────────
+//
+// Stond in sessionStorage. Dat is per tabblad: een tweede tabblad opende op de
+// inlogpagina, en zodra Chrome dichtging was je uitgelogd. Voor een dienst waar
+// je de computer juist áán laat staan met de extensie erop is dat elke dag
+// opnieuw inloggen. beheer.html gebruikte al localStorage, met precies deze
+// uitleg erbij; het klantendashboard was daar simpelweg nooit langs gegaan.
+//
+// Lezen kijkt ook nog in sessionStorage, zodat wie op dit moment is ingelogd
+// niet door deze wijziging wordt uitgelogd.
+const SESSIE = {
+  lees(sleutel) {
+    try { const v = localStorage.getItem(sleutel); if (v !== null) return v; } catch (e) {}
+    try { return sessionStorage.getItem(sleutel); } catch (e) { return null; }
+  },
+  zet(sleutel, waarde) {
+    try { localStorage.setItem(sleutel, waarde); } catch (e) {}
+    // Ook in sessionStorage: de browserextensie (content/webapp_sync.js) leest
+    // haar inlogbewijs daaruit. Mag pas weg als elke extensiekopie in de Chrome
+    // Web Store localStorage-first leest (webapp_sync.js vanaf 1.0.314).
+    try { sessionStorage.setItem(sleutel, waarde); } catch (e) {}
+  },
+  wis(sleutel) {
+    try { localStorage.removeItem(sleutel); } catch (e) {}
+    try { sessionStorage.removeItem(sleutel); } catch (e) {}
+  },
+  wisAlles() {
+    ['cl_auth', 'cl_token', 'cl_refresh', 'cl_email'].forEach((s) => this.wis(s));
+  },
+};
+
+// Een storing tussen browser en server (502/504 van de gateway) geeft een
+// HTML-foutpagina terug, geen JSON. Kaal res.json() maakte daar
+// "Unexpected token '<', "<!DOCTYPE"… is not valid JSON" van — op het aller-
+// eerste scherm dat een nieuwe gebruiker ziet. Dit zegt wat er echt aan de hand
+// is, en vooral: dat het aan ons ligt en dat het zo weer werkt.
+async function leesAntwoord(res) {
+  const tekst = await res.text();
+  try {
+    return tekst ? JSON.parse(tekst) : {};
+  } catch (e) {
+    if ([502, 503, 504].includes(res.status)) {
+      throw new Error('De server reageert even niet. Probeer het over een halve minuut opnieuw.');
+    }
+    throw new Error(`De server gaf een onverwacht antwoord (${res.status}). Probeer het zo nog eens.`);
+  }
+}
+
+async function doLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const btn = document.getElementById('btn');
+  const errEl = document.getElementById('error');
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Logging in...';
+  try {
+    const res = await fetch(`${API}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await leesAntwoord(res);
+    if (!res.ok) throw new Error(data.detail || 'Login failed');
+    SESSIE.zet('cl_auth', '1');
+    SESSIE.zet('cl_token', data.access_token);
+    if (data.refresh_token) SESSIE.zet('cl_refresh', data.refresh_token);
+    SESSIE.zet('cl_email', data.user.email);
+    // Terug naar het scherm waar de link heen wees (bijv. #import), alleen een kale naam.
+    const naar = new URLSearchParams(location.search).get('naar') || '';
+    window.location.href = '/app' + (/^[a-z]+$/.test(naar) ? '#' + naar : '');
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Log in';
+  }
+}
+</script>
+
+</body>
+</html>
