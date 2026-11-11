@@ -1,0 +1,3700 @@
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends
+from backend.services.kleur import canonieke_kleur
+from backend.database import (get_db, fetch_all, fetch_all_in, naast_de_lus,
+                               execute_with_retry, eerste_rij, kolom_bestaat)
+from backend.services.light import LIGHT_LIMIET_MELDING, ruimte_over
+from backend.api.deps import get_current_user, require_active_subscription
+from backend.models import ItemCreate
+from datetime import datetime, timezone
+import asyncio
+import collections
+import json
+import logging
+import re
+import time as _time_mod
+import uuid
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/imports", tags=["imports"])
+
+SCANNABLE_PLATFORMS = {"vinted", "marktplaats", "2dehands"}
+
+# user_id -> {"items", "by_id", "by_platform", "ts"} — zie de uitleg bij
+# bulk_import_candidates(). Eén proces, geen cross-worker gedeeld geheugen nodig
+# (de server draait met één worker, zie backend/database.py).
+_BULK_IMPORT_CACHE: dict[str, dict] = {}
+
+
+# WAAROM HIER GEEN PARALLELLE LEZER MEER STAAT (27-08-2026).
+#
+# Hier stond `_parallel_fetch_all`: acht pagina's tegelijk ophalen om een grote
+# voorraad sneller in te lezen. Dat is gemeten en het werkt niet. De
+# Supabase-client is synchroon en deelt ÉÉN verbinding; acht werkdraden die daar
+# tegelijk overheen gaan krijgen van Cloudflare "400 Bad Request" of van de
+# verbinding zelf "ConnectionTerminated" terug.
+#
+# Gemeten op het echte account van Egbert Brouwer (2.135 items): 55 gelijktijdige
+# verzoeken -> 45 mislukt. Na elkaar: 0 mislukt, en het hele inlezen kost 4,4
+# seconden. "Import all -> Items" gaf daardoor sinds 25-08-2026 bij iedereen een
+# kale serverfout, hoe klein de lading ook was.
+#
+# Dus: gewoon `fetch_all` / `fetch_all_in` uit backend/database.py. Die zijn
+# sequentieel, herkansen een weggevallen verbinding, en zijn ruim snel genoeg —
+# zeker omdat het resultaat een half uur bewaard blijft (_BULK_IMPORT_CACHE).
+
+
+# DE STAAT VAN HET PLATFORM, IN ONZE VIJF TREDEN (24-09-2026).
+#
+# Onze treden en wat ze op de kanalen betekenen staan in CONDITION_HINTS
+# (frontend/app.html) en CONDITION_MAP (extension/content/vinted.js):
+#   new_with_tags  Nieuw met prijskaartje   / Vinted New with tags
+#   new            Nieuw (zonder kaartje)   / Vinted New without tags
+#   good           Zo goed als nieuw        / Vinted Very good ("Heel goed")
+#   fair           Gebruikt                 / Vinted Good ("Goed")
+#   poor           Beschadigd, niet werkend / Vinted Satisfactory ("Veelgebruikt")
+#
+# Hier stond een lijstje dat op losse lettergrepen zocht, in de verkeerde
+# volgorde. Gemeten op 1000 echte Vinted-kandidaten: 414 zeiden "Goed"/"Good"
+# en werden "good" (Like new), een trede te hoog; "New with tags" verloor zijn
+# kaartje. Voor Marktplaats werd "Zo goed als nieuw" zelfs "new" (het woord
+# nieuw zit erin), "Gebruikt" werd "poor" (Damaged) en "Niet werkend" "good".
+#
+# De volgorde hieronder is de beveiliging: eerst wat ondubbelzinnig slecht is,
+# dan "zo goed als nieuw" (dat het woord nieuw bevat), dan de nieuwe treden, en
+# pas als laatste het kale "goed"/"gebruikt". Een woord dat we niet kennen geeft
+# None: dan beslist de standaard van de lading, nooit een gok van deze lijst.
+_STAAT_WOORDEN = (
+    ("poor", (r"niet werkend", r"werkt niet", r"defect", r"kapot", r"beschadigd",
+              r"voor onderdelen", r"veelgebruikt", r"redelijk", r"matig", r"slecht",
+              r"satisf\w*", r"damaged", r"for parts", r"not working", r"poor",
+              r"zufriedenstellend", r"besch[äa]digt", r"endommag\w*",
+              r"d[ée]fectueux", r"ne fonctionne pas", r"satisfaisant")),
+    ("good", (r"zo goed als nieuw", r"als nieuw", r"zeer goed", r"heel goed",
+              r"like new", r"very good", r"comme neuf", r"tr[èe]s bon", r"wie neu",
+              r"sehr gut")),
+    ("new_with_tags", (r"nieuw met", r"with tags?", r"avec [ée]tiquettes?",
+                       r"mit etikett", r"new with")),
+    ("new", (r"nieuw", r"ongebruikt", r"niet gebruikt", r"new", r"brand new", r"neuf", r"neu",
+             r"unused")),
+    ("fair", (r"gebruikt", r"gedragen", r"lichte gebruikssporen", r"goed", r"good",
+              r"used", r"fair", r"utilis[ée]", r"usag[ée]", r"bon [ée]tat", r"bon",
+              r"gebraucht", r"gut")),
+)
+
+
+def _map_condition(raw: str | None) -> str | None:
+    """De staat zoals het platform hem noemt, als onze trede. None = onbekend."""
+    # Marktplaats levert de staat uit de advertentiepagina als slug
+    # ("zo-goed-als-nieuw", "niet-werkend"); streepjes tellen als spatie.
+    s = " ".join((raw or "").lower().replace("-", " ").split())
+    if not s:
+        return None
+    for trede, patronen in _STAAT_WOORDEN:
+        if any(re.search(r"\b" + p + r"\b", s) for p in patronen):
+            return trede
+    return None
+
+
+# Closed colour vocabulary, English + Dutch (incl. common inflected forms like
+# "grijze"/"blauwe"). Compound/longer entries first so "light blue"/"lichtblauw"
+# win over "blue"/"blauw". Whole-word matched, so a re-scan on Dutch listings
+# (Marktplaats/2dehands) fills colour just as well as English ones.
+_COLORS = [
+    # English compounds first
+    "light blue", "dark blue", "light green", "dark green", "light grey", "dark grey",
+    "off white", "navy", "royal blue",
+    # Dutch compounds (base + inflected -e forms)
+    "lichtblauwe", "donkerblauwe", "marineblauwe", "lichtgroene", "donkergroene",
+    "lichtgrijze", "donkergrijze", "olijfgroene",
+    "lichtblauw", "donkerblauw", "marineblauw", "lichtgroen", "donkergroen",
+    "lichtgrijs", "donkergrijs", "gebroken wit",
+    # English base
+    "blue", "black", "white", "grey", "gray", "burgundy", "maroon", "wine", "red",
+    "olive", "khaki", "green", "beige", "cream", "camel", "tan", "cognac", "brown",
+    "pink", "lilac", "purple", "lavender", "yellow", "mustard", "orange", "silver",
+    "gold", "teal", "turquoise", "multi",
+    # Dutch base + inflected forms (irregular endings listed explicitly)
+    "zwart", "zwarte", "wit", "witte", "grijs", "grijze", "blauw", "blauwe",
+    "rood", "rode", "groen", "groene", "bruin", "bruine", "geel", "gele",
+    "paars", "paarse", "roze", "lila", "oranje", "beige", "bordeaux", "marine",
+    "olijfgroen", "kaki", "crème", "creme", "zilver", "zilveren", "goud", "gouden",
+    "zalm", "mint", "ecru", "taupe", "camel", "cognac",
+]
+
+# Garment keyword -> the exact category key per gender (mirrors the frontend CATEGORIES
+# map). Only genders with a sensible category are listed; anything else is left empty
+# rather than guessed wrong. Keys are ordered so more specific words match first.
+_CATEGORY_RULES = [
+    # Sportswear first: an athletic short is a "sportbroek", not a "short", and
+    # certainly not jeans. Without these rules "sport shorts" fell through to the
+    # generic short/broek rules (or to nothing at all) — the MyProtein bug.
+    (("sports bra", "sport bh", "sportbh"), {"dames": "sport bh"}),
+    # Sporttakken vóór de algemene sportregels: een wielrenpak, skibroek of
+    # voetbalshirt is geen "sportbroek", en belandde daardoor in de verkeerde
+    # categorie (of, zonder gender, in damesjeans).
+    (("cycling", "cycle jersey", "bib short", "bibshort", "wielren", "wielrenshirt",
+      "fietsshirt", "fietsbroek", "cycling suit", "wielrenpak"),
+     {"heren": "heren wielrenkleding", "dames": "wielrenkleding",
+      "kinderen": "kinderen wielrenkleding", "unisex": "unisex wielrenkleding"}),
+    (("football shirt", "voetbalshirt", "voetbaltenue", "voetbalbroekje",
+      "football kit", "soccer jersey", "voetbalkleding"),
+     {"heren": "heren voetbalkleding", "dames": "voetbalkleding",
+      "kinderen": "kinderen voetbalkleding", "unisex": "unisex sportkleding"}),
+    (("ski jacket", "ski pants", "skibroek", "skijas", "skipak", "snowboard",
+      "skikleding", "wintersport"),
+     {"heren": "heren skikleding", "dames": "skikleding",
+      "kinderen": "kinderen sportkleding", "unisex": "unisex sportkleding"}),
+    (("tracksuit", "trainingspak", "track suit", "trainingsjack", "trainingsjas"),
+     {"heren": "heren trainingspakken", "dames": "trainingspakken",
+      "kinderen": "kinderen sportkleding", "unisex": "unisex trainingspakken"}),
+    (("running jacket", "hardloopjas", "sports jacket", "sportjas", "windbreaker",
+      "windjack"),
+     {"heren": "heren sportjassen", "dames": "sportjassen",
+      "kinderen": "kinderen sportkleding", "unisex": "unisex sportkleding"}),
+    (("running shirt", "hardloopshirt", "hardloopkleding", "running top", "running tee"),
+     {"heren": "heren hardloopkleding", "dames": "hardloopkleding",
+      "kinderen": "kinderen sportkleding", "unisex": "unisex hardloopkleding"}),
+    (("yoga",), {"dames": "yogakleding", "heren": "heren gymkleding",
+                 "unisex": "unisex sportkleding"}),
+    (("sports top", "sportshirt", "sport top", "sporttop"),
+     {"heren": "heren sport tops", "dames": "sport tops",
+      "kinderen": "kinderen sportkleding", "unisex": "unisex sportkleding"}),
+    (("swim shorts", "swimming trunks", "zwembroek"),
+     {"heren": "heren zwembroeken", "dames": "zwemkleding",
+      "kinderen": "kinderen zwemkleding", "unisex": "unisex sportkleding"}),
+    (("sports legging", "sportlegging", "gym legging", "yoga legging", "running tight",
+      "hardlooptight", "legging"),
+     {"dames": "sportleggings", "heren": "heren sportbroeken", "unisex": "unisex sportkleding"}),
+    (("sport short", "sportshort", "sportbroek", "gym short", "running short",
+      "training short", "hardloopshort", "korte sportbroek", "zwembroek"),
+     {"dames": "sportbroeken", "heren": "heren sportbroeken",
+      "kinderen": "kinderen sportkleding", "unisex": "unisex sportkleding"}),
+    (("sportkleding", "sportswear", "trainingspak", "tracksuit", "gymwear",
+      "activewear", "voetbalshirt", "wielrenshirt"),
+     {"dames": "sportbroeken", "heren": "heren sportbroeken",
+      "kinderen": "kinderen sportkleding", "unisex": "unisex sportkleding"}),
+    # Verkleedkleding en klederdracht STAAT VOOR de pak- en broekregels. Een
+    # lederhose bevat "hose" noch "short", maar viel bij het model wél terug op
+    # een broektype, en op Marktplaats werd dat een spijkerbroek. Een dirndl ging
+    # dezelfde kant op als jurk. Dit zijn feestkleding, geen dagelijkse kleding.
+    (("lederhose", "lederhosen", "dirndl", "tiroler", "tirol", "carnaval",
+      "carnavalskleding", "carnavalspak", "carnavalskostuum", "carnavalsoutfit",
+      "carnival", "verkleedkleding", "verkleedkleren", "verkleedpak",
+      "verkleedkostuum", "fancy dress", "cosplay", "klederdracht", "kerstman",
+      "halloween", "onesie pak", "mascottepak"),
+     {"dames": "verkleedkleding", "heren": "heren verkleedkleding",
+      "kinderen": "kinderen accessoires", "unisex": "unisex verkleedkleding"}),
+    (("blazer", "suit", "pak", "tuxedo", "colbert", "kostuum"), {"heren": "heren pakken"}),
+    (("turtleneck", "half zip", "half-zip", "jumper", "sweater", "knitted", "knit",
+      "pullover", "cardigan", "fleece", "zip vest", "gilet", "bodywarmer", "vest",
+      "spencer", "tank top",
+      # Dutch
+      "trui", "coltrui", "col", "gebreid", "gebreide", "sweater", "vest"),
+     {"heren": "heren truien", "dames": "truien", "unisex": "unisex truien"}),
+    (("hoodie", "sweatshirt", "capuchontrui"),
+     {"heren": "heren hoodies", "dames": "hoodies", "unisex": "unisex truien"}),
+    (("polo",), {"heren": "heren polo's", "dames": "tops"}),
+    (("overhemd", "buttoned shirt", "dress shirt", "shirt", "blouse"),
+     {"heren": "heren overhemden", "dames": "blouses"}),
+    (("t-shirt", "tee", "t shirt"), {"heren": "heren t-shirts", "dames": "tops"}),
+    # EEN LOAFER IS GEEN NETTE SCHOEN (Daniel, 18-09-2026, artikel 1369).
+    #
+    # Instappers stonden hier op één hoop met derby's en brogues, en bij dames
+    # zelfs op "hakken" — een loafer heeft geen hak. Op Marktplaats maakt het
+    # niets uit (alle herenschoenen delen categorie 642), maar op Vinted en eBay
+    # wel: "heren formele schoenen" zoekt daar op formal/dress/oxford shoes,
+    # terwijl Vinted een eigen rubriek Loafers heeft die onder "heren schoenen"
+    # wordt gezocht. Een verkeerde rubriek kost vertoningen.
+    (("loafer", "loafers", "moccasin", "moccasins", "mocassin", "mocassins",
+      "penny loafer", "instapper", "instappers", "bootschoen", "boat shoe",
+      "boat shoes"),
+     {"heren": "heren schoenen", "dames": "schoenen dames"}),
+    (("formal shoe", "dress shoe", "derby", "brogue", "oxford", "nette schoen",
+      "veterschoen", "veterschoenen"),
+     {"heren": "heren formele schoenen", "dames": "schoenen dames"}),
+    (("sneaker", "sneakers", "trainer", "trainers"), {"heren": "heren sneakers", "dames": "sneakers dames"}),
+    (("boot", "boots", "laars", "laarzen"), {"heren": "heren laarzen", "dames": "laarzen dames"}),
+    (("shoe", "shoes", "schoen", "schoenen"), {"heren": "heren schoenen", "dames": "schoenen dames"}),
+    (("jeans", "denim", "spijkerbroek"), {"heren": "heren jeans", "dames": "jeans"}),
+    (("chino", "trouser", "pants", "pantalon", "broek"),
+     {"heren": "heren chinos", "dames": "broeken"}),
+    (("short", "korte broek"), {"heren": "heren shorts", "dames": "shorts"}),
+    (("coat", "jacket", "parka", "bomber", "shacket",
+      "jas", "jassen", "winterjas", "zomerjas", "regenjas"),
+     {"heren": "heren jassen", "dames": "jassen", "unisex": "unisex jassen"}),
+    (("skirt", "rok"), {"dames": "rokken"}),
+    # "kleed" staat hier BEWUST NIET bij. In Vlaanderen is een kleed een jurk, in
+    # Nederland een vloerkleed — en wij weten niet welk van de twee de verkoper
+    # bedoelt. Een vaste regel zou dus de helft van de gevallen fout indelen, en
+    # dat is erger dan geen indeling: een leeg veld vraagt om aandacht, een fout
+    # veld niet. Het model krijgt beide betekenissen uitgelegd en moet bij twijfel
+    # "low" teruggeven, waarna er niets wordt ingevuld. Zie _classify_with_claude.
+    (("dress", "jurk", "jurkje"), {"dames": "jurken casual"}),
+    (("blouse", "tunic", "tuniek"), {"dames": "blouses"}),
+]
+
+
+# The complete taxonomy, mirroring frontend CATEGORIES. This is what the
+# classifier is allowed to choose from — it may not invent a key, because the
+# extension maps these to hardcoded platform category IDs.
+_TAXONOMY = {
+    "dames": [
+        "jeans", "broeken", "shorts", "rokken", "jurken casual", "jurken feest",
+        "blouses", "tops", "truien", "hoodies", "jassen", "sport bh",
+        "sportleggings", "sportbroeken", "zwemkleding", "ondergoed",
+        "sneakers dames", "schoenen dames", "hakken", "laarzen dames",
+        "sandalen", "accessoires dames", "verkleedkleding",
+        "sport tops", "sportjassen", "trainingspakken", "hardloopkleding",
+        "wielrenkleding", "voetbalkleding", "yogakleding", "gymkleding",
+        "skikleding", "sportkleding",
+    ],
+    "heren": [
+        "heren jeans", "heren chinos", "heren shorts", "heren t-shirts",
+        "heren polo's", "heren overhemden", "heren truien", "heren hoodies",
+        "heren jassen", "heren pakken", "heren sportbroeken", "heren sneakers",
+        "heren schoenen", "heren formele schoenen", "heren laarzen",
+        "heren accessoires", "heren verkleedkleding",
+        "heren sport tops", "heren sportjassen", "heren trainingspakken",
+        "heren hardloopkleding", "heren wielrenkleding", "heren voetbalkleding",
+        "heren gymkleding", "heren skikleding", "heren sportkleding",
+        "heren zwembroeken", "heren ondergoed",
+    ],
+    "kinderen": [
+        "babykleding", "peuterkleding", "jongens kleding", "meisjes kleding",
+        "babykleding jongens", "babykleding meisjes",
+        "peuterkleding jongens", "peuterkleding meisjes",
+        "tieners jongens", "tieners meisjes", "kinderen sportkleding",
+        "kinderen schoenen", "kinderen wielrenkleding", "kinderen voetbalkleding",
+        "kinderen zwemkleding", "kinderen accessoires", "kinderen tassen",
+        "kinderen luiertassen",
+    ],
+    "unisex": [
+        "unisex truien", "unisex jassen", "unisex sportkleding",
+        "unisex schoenen", "unisex accessoires", "unisex verkleedkleding",
+        "unisex wielrenkleding", "unisex trainingspakken", "unisex hardloopkleding",
+    ],
+    # Niet-kleding: Muziek en Instrumenten. Zelfde sleutels als in
+    # MP_CATEGORIES in extension/background.js — het "muziek "-voorvoegsel houdt
+    # ze uit de buurt van de kledingtakken. Geslacht speelt hier geen rol.
+    # Antiek en Kunst. Marktplaats' op een na grootste boom en volledig
+    # ontbrekend: een zilverhandelaar met 1.200 advertenties kreeg voor 97 van
+    # zijn 130 items GEEN categorie, waarna het dashboard om maat en merk vroeg
+    # en een gembercouvert onder sieraden belandde. Twee niveaus, net als muziek.
+    # Sieraden, tassen, horloges en zonnebrillen. Stond wél in het dashboard en
+    # in de extensie, maar niet in deze lijst — waardoor het model een ring of
+    # armband nooit als sieraad kón indelen en die in "unisex accessoires"
+    # belandden. Gelijk aan CATEGORIES.sieraden in frontend/app.html.
+    "sieraden": [
+        "sieraden horloges dames",
+        "sieraden horloges heren",
+        "sieraden horloges kinderen",
+        "sieraden horloges antiek",
+        "sieraden smartwatch",
+        "sieraden sporthorloge",
+        "sieraden activity tracker",
+        "sieraden kettingen",
+        "sieraden kettinghangers",
+        "sieraden armbanden",
+        "sieraden ringen",
+        "sieraden oorbellen",
+        "sieraden bedels",
+        "sieraden broches",
+        "sieraden enkelbandjes",
+        "sieraden kindersieraden",
+        "sieraden antiek",
+        "sieraden damestassen",
+        "sieraden schoudertassen",
+        "sieraden rugtassen",
+        "sieraden reistassen",
+        "sieraden sporttassen",
+        "sieraden koffers",
+        "sieraden portemonnees",
+        "sieraden zonnebril dames",
+        "sieraden zonnebril heren",
+    ],
+    # Huis, tuin en kerst. Drie takken van Marktplaats onder één noemer,
+    # want voor de verkoper is het één soort voorraad. Kerst hangt bij
+    # Marktplaats onder Diversen, niet onder wonen.
+    "wonen": [
+        "wonen tuinmeubel accessoires",
+        "wonen parasols",
+        "wonen tuinstoelen",
+        "wonen tuintafels",
+        "wonen tuinsets en loungesets",
+        "wonen tuinbanken",
+        "wonen ligbedden",
+        "wonen bloembakken en plantenbakken",
+        "wonen bloempotten",
+        "wonen buitenverlichting",
+        "wonen vuurkorven",
+        "wonen terrasverwarmers",
+        "wonen partytenten",
+        "wonen overkappingen",
+        "wonen schaduwdoeken",
+        "wonen zonneschermen",
+        "wonen hangmatten",
+        "wonen picknicktafels",
+        "wonen gordijnen en lamellen",
+        "wonen barkrukken",
+        "wonen stoelen",
+        "wonen krukjes",
+        "wonen fauteuils",
+        "wonen eettafels",
+        "wonen salontafels",
+        "wonen bijzettafels",
+        "wonen tapijten en kleden",
+        "wonen kussens",
+        "wonen plaids en woondekens",
+        "wonen vachten",
+        "wonen beddengoed",
+        "wonen vazen",
+        "wonen spiegels",
+        "wonen wanddecoraties",
+        "wonen kunstplanten",
+        "wonen tafellampen",
+        "wonen vloerlampen",
+        "wonen hanglampen",
+        "wonen kandelaars en kaarsen",
+        "wonen tafelkleden",
+        "wonen overige huis en inrichting",
+        "wonen kerst",
+    ],
+    "antiek": [
+        "antiek curiosa en brocante",
+        "antiek glas en kristal",
+        "kunst schilderijen klassiek",
+        "antiek vazen",
+        "antiek keramiek en aardewerk",
+        "antiek overige antiek",
+        "antiek woonaccessoires",
+        "antiek porselein",
+        "antiek servies los",
+        "kunst beelden en houtsnijwerken",
+        "antiek meubels stoelen en banken",
+        "antiek lampen",
+        "kunst schilderijen modern",
+        "antiek wandborden en tegels",
+        "kunst etsen en gravures",
+        "antiek koper en brons",
+        "antiek bestek",
+        "antiek boeken en bijbels",
+        "antiek klokken",
+        "antiek meubels kasten",
+        "antiek speelgoed",
+        "kunst niet westerse kunst",
+        "antiek schalen",
+        "antiek meubels tafels",
+        "antiek gereedschap en instrumenten",
+        "kunst schilderijen abstract",
+        "antiek religie",
+        "kunst designobjecten",
+        "antiek emaille",
+        "antiek goud en zilver",
+        "kunst litho s en zeefdrukken",
+        "kunst tekeningen en foto s",
+        "antiek keukenbenodigdheden",
+        "antiek servies compleet",
+        "antiek kandelaars",
+        "antiek spiegels",
+        "antiek tin",
+        "antiek kleden en textiel",
+        "kunst overige kunst",
+        "antiek kantoor en zakelijk",
+        "antiek schoolplaten",
+        "antiek kleding en accessoires",
+        "antiek naaimachines",
+        "antiek tv s en audio",
+        "antiek meubels bedden",
+    ],
+    # Spelcomputers en games, telefoons, en audio, tv en foto. Stonden al in
+    # het dashboard, de extensie, Vinted en eBay, maar niet hier, waardoor de
+    # import een PS5, iPhone of camera nooit kon indelen (24-09-2026).
+    # Woordelijk gelijk aan CATEGORIES in frontend/app.html; bewaakt door
+    # tests/test_category_taxonomy.py.
+    "games": [
+        "games playstation 5",
+        "games playstation 4",
+        "games playstation 3",
+        "games playstation 2",
+        "games playstation 1",
+        "games psp",
+        "games ps vita",
+        "games nintendo switch",
+        "games nintendo wii u",
+        "games nintendo wii",
+        "games nintendo 3ds",
+        "games nintendo ds",
+        "games gamecube",
+        "games nintendo 64",
+        "games snes",
+        "games nes",
+        "games gameboy",
+        "games xbox series",
+        "games xbox one",
+        "games xbox 360",
+        "games xbox original",
+        "games pc",
+        "games sega",
+        "games atari",
+        "games overige",
+        "games console playstation 5",
+        "games console playstation 4",
+        "games console playstation 3",
+        "games console playstation 2",
+        "games console playstation 1",
+        "games console ps vita",
+        "games console psp",
+        "games console nintendo switch",
+        "games console nintendo switch lite",
+        "games console nintendo wii u",
+        "games console nintendo wii",
+        "games console nintendo 3ds",
+        "games console nintendo ds",
+        "games console gamecube",
+        "games console nintendo 64",
+        "games console snes",
+        "games console nes",
+        "games console gameboy",
+        "games console xbox series",
+        "games console xbox one",
+        "games console xbox 360",
+        "games console xbox original",
+        "games console sega",
+        "games console atari",
+        "games console overige",
+        "games accessoires nintendo console",
+        "games accessoires nintendo portable",
+        "games accessoires playstation console",
+        "games accessoires playstation portable",
+        "games accessoires xbox",
+        "games accessoires overige",
+        "games controllers nintendo",
+        "games controllers playstation",
+        "games controllers xbox",
+        "games virtual reality",
+    ],
+    "electronics": [
+        "electronics telefoon apple iphone",
+        "electronics telefoon samsung",
+        "electronics telefoon huawei",
+        "electronics telefoon sony",
+        "electronics telefoon nokia",
+        "electronics telefoon lg",
+        "electronics telefoon motorola",
+        "electronics telefoon htc",
+        "electronics telefoon blackberry",
+        "electronics telefoon overige",
+        "electronics telefoon sagem",
+        "electronics telefoon siemens",
+        "electronics telefoon pda s",
+        "electronics hoesjes apple iphone",
+        "electronics hoesjes blackberry",
+        "electronics hoesjes htc",
+        "electronics hoesjes nokia",
+        "electronics hoesjes samsung",
+        "electronics hoesjes overige merken",
+        "electronics powerbanks",
+        "electronics autoladers",
+        "electronics batterijen en accu s",
+        "electronics oordopjes",
+        "electronics pda-toebehoren",
+        "electronics prepaidkaarten en simkaarten",
+        "electronics telefoonsoftware",
+        "electronics telefoon-opladers",
+        "electronics telefoonhouders",
+        "electronics toebehoren en onderdelen",
+        "electronics antwoordapparaten",
+        "electronics draadloze handsets",
+        "electronics niet-draadloze handsets",
+        "electronics telefooncentrales",
+        "electronics wearable-accessoires",
+        "electronics datacommunicatie",
+        "electronics faxen",
+        "electronics antennes en masten",
+        "electronics portofoons en walkie-talkies",
+        "electronics radioscanners",
+        "electronics zenders en ontvangers",
+        "electronics carkits",
+        "electronics overige telecommunicatie",
+    ],
+    "audio": [
+        "audio luidsprekers",
+        "audio soundbars",
+        "audio koptelefoons",
+        "audio versterkers en receivers",
+        "audio buizenversterkers",
+        "audio tuners",
+        "audio stereo sets",
+        "audio home cinema sets",
+        "audio platenspelers",
+        "audio cd spelers",
+        "audio blu ray spelers",
+        "audio dvd spelers",
+        "audio videospelers",
+        "audio cassettedecks",
+        "audio bandrecorders",
+        "audio radio s",
+        "audio walkmans en discmans",
+        "audio mp3 spelers ipod",
+        "audio mp3 spelers overige",
+        "audio mp4 spelers",
+        "audio mp3 accessoires ipod",
+        "audio mp3 accessoires overige",
+        "audio mediaspelers",
+        "audio karaoke apparatuur",
+        "audio professionele audio en video",
+        "audio televisies",
+        "audio vintage televisies",
+        "audio televisiebeugels",
+        "audio televisie accessoires",
+        "audio afstandsbedieningen",
+        "audio decoders en harddiskrecorders",
+        "audio schotelantennes",
+        "audio audio en tv kabels",
+        "audio converters",
+        "audio opladers",
+        "audio accu s en batterijen",
+        "audio beamers",
+        "audio beamer accessoires",
+        "audio projectieschermen",
+        "audio diaprojectors",
+        "audio videobewaking",
+        "audio drones",
+        "audio actiecamera s",
+        "audio fotocamera s digitaal",
+        "audio fotocamera s analoog",
+        "audio onderwatercamera s",
+        "audio videocamera s digitaal",
+        "audio videocamera s analoog",
+        "audio lenzen en objectieven",
+        "audio filters",
+        "audio flitsers",
+        "audio statieven en balhoofden",
+        "audio fototassen",
+        "audio geheugenkaarten",
+        "audio fotografie accu s",
+        "audio fotostudio en toebehoren",
+        "audio professionele fotoapparatuur",
+        "audio doka toebehoren",
+        "audio filmrollen",
+        "audio fotopapier",
+        "audio fotolijsten",
+        "audio digitale fotolijsten",
+        "audio fotoalbums en accessoires",
+        "audio verrekijkers",
+        "audio telescopen",
+        "audio microscopen",
+        "audio weerstations en barometers",
+        "audio overige audio tv en foto",
+    ],
+    # Boeken, speelgoed, fietsen, sportartikelen, witgoed, klussen, computers
+    # (24-09-2026). Woordelijk gelijk aan CATEGORIES in frontend/app.html.
+    "boeken": [
+        "boeken gezondheid en voeding",
+        "boeken kookboeken",
+        "boeken geschiedenis regio",
+        "boeken geschiedenis vaderland",
+        "boeken geschiedenis wereld",
+        "boeken historische romans",
+        "boeken oorlog en militair",
+        "boeken politiek en maatschappij",
+        "boeken baby s en peuters",
+        "boeken kleuters",
+        "boeken jeugd onder 10 jaar",
+        "boeken jeugd 10 tot 12 jaar",
+        "boeken jeugd 13 jaar en ouder",
+        "boeken film tv en media",
+        "boeken architectuur",
+        "boeken beeldend",
+        "boeken dans en theater",
+        "boeken fotografie en design",
+        "boeken muziek",
+        "boeken avontuur en actie",
+        "boeken chicklit",
+        "boeken detectives",
+        "boeken literatuur",
+        "boeken romans",
+        "boeken fantasy",
+        "boeken science fiction",
+        "boeken sprookjes en fabels",
+        "boeken thrillers",
+        "boeken advies hulp en training",
+        "boeken economie en marketing",
+        "boeken encyclopedieen",
+        "boeken esoterie en spiritualiteit",
+        "boeken filosofie",
+        "boeken godsdienst en theologie",
+        "boeken informatica en computer",
+        "boeken psychologie",
+        "boeken schoolboeken",
+        "boeken studie en cursus",
+        "boeken techniek",
+        "boeken wetenschap",
+        "boeken zwangerschap en opvoeding",
+        "boeken auto s boeken",
+        "boeken auto s folders",
+        "boeken auto s handleidingen",
+        "boeken dieren en huisdieren",
+        "boeken hobby en vrije tijd",
+        "boeken mode",
+        "boeken motoren",
+        "boeken motoren handleidingen",
+        "boeken natuur",
+        "boeken sportboeken",
+        "boeken vervoer en transport",
+        "boeken wonen en tuinieren",
+        "boeken stripboeken",
+        "boeken comics",
+        "boeken reisgidsen",
+        "boeken reisverhalen",
+        "boeken streekboeken en streekromans",
+        "boeken taal duits",
+        "boeken taal engels",
+        "boeken taal frans",
+        "boeken taal spaans",
+        "boeken taal overige talen",
+        "boeken woordenboeken",
+        "boeken antieke boeken en bijbels",
+        "boeken atlassen en landkaarten",
+        "boeken biografieen",
+        "boeken boekenweekgeschenken",
+        "boeken catalogussen en folders",
+        "boeken e-books",
+        "boeken essays en columns",
+        "boeken gedichten en poezie",
+        "boeken humor",
+        "boeken luisterboeken",
+        "boeken partijen",
+        "boeken prentenboeken en plaatjesalbums",
+        "boeken tijdschriften en kranten",
+        "boeken overige boeken",
+    ],
+    "speelgoed": [
+        "speelgoed actiefiguren",
+        "speelgoed babyspeelgoed",
+        "speelgoed badspeelgoed",
+        "speelgoed bouwstenen",
+        "speelgoed duplo en lego",
+        "speelgoed educatief en creatief",
+        "speelgoed fisher-price",
+        "speelgoed hobbelfiguren",
+        "speelgoed houten speelgoed",
+        "speelgoed kinderpuzzels",
+        "speelgoed knuffels en pluche",
+        "speelgoed my little pony",
+        "speelgoed playmobil",
+        "speelgoed poppen",
+        "speelgoed poppenhuizen",
+        "speelgoed racebanen",
+        "speelgoed speelgoedvoertuigen",
+        "speelgoed speelhuisjes",
+        "speelgoed speelkeukens",
+        "speelgoed speelkleden",
+        "speelgoed speeltafels",
+        "speelgoed speeltenten",
+        "speelgoed thomas de trein",
+        "speelgoed voetbaltafels",
+        "speelgoed vtech",
+        "speelgoed overig binnenspeelgoed",
+        "speelgoed accuvoertuigen",
+        "speelgoed actiespeelgoed",
+        "speelgoed los buitenspeelgoed",
+        "speelgoed opblaasfiguren",
+        "speelgoed rolschaatsen",
+        "speelgoed skelters",
+        "speelgoed sleeen",
+        "speelgoed speeltoestellen",
+        "speelgoed springkussens",
+        "speelgoed steps",
+        "speelgoed trampolines",
+        "speelgoed voertuigen en loopfietsen",
+        "speelgoed zandbakken",
+        "speelgoed zwembaden",
+        "speelgoed denksport en puzzels",
+        "speelgoed bordspellen",
+        "speelgoed kaartspellen",
+        "speelgoed overige gezelschapsspellen",
+        "speelgoed wargaming",
+        "speelgoed magic the gathering",
+        "speelgoed pokemon",
+        "speelgoed yu-gi-oh",
+        "speelgoed overige verzamelkaartspellen",
+        "speelgoed modelbouw auto s en voertuigen",
+        "speelgoed modelbouw boten en schepen",
+        "speelgoed modelbouw figuren en diorama s",
+        "speelgoed modelbouw vliegtuigen en helikopters",
+        "speelgoed modelbouw overige",
+        "speelgoed radiografisch auto s",
+        "speelgoed radiografisch helikopters en quadcopters",
+        "speelgoed radiografisch vliegtuigen",
+        "speelgoed radiografisch overige",
+        "speelgoed modelauto s schaal 1 5 tot 1 12",
+        "speelgoed modelauto s schaal 1 18",
+        "speelgoed modelauto s schaal 1 24",
+        "speelgoed modelauto s schaal 1 32",
+        "speelgoed modelauto s schaal 1 43",
+        "speelgoed modelauto s schaal 1 50",
+        "speelgoed modelauto s schaal 1 87",
+        "speelgoed modelauto s overige schalen",
+        "speelgoed modeltreinen h0",
+        "speelgoed modeltreinen n-spoor",
+        "speelgoed modeltreinen overige schalen",
+    ],
+    # Hobby (28-10-2026): strijkemblemen, zie _strijkembleem_of_stropdas.
+    "hobby": [
+        "hobby kledingapplicaties en strijkemblemen",
+    ],
+    "fietsen": [
+        "fietsen bakfietsen",
+        "fietsen crossfietsen en bmx",
+        "fietsen cruisers en lowriders",
+        "fietsen driewielfietsen",
+        "fietsen eenwielers",
+        "fietsen elektrische fietsen",
+        "fietsen ligfietsen",
+        "fietsen mountainbikes en atb",
+        "fietsen oldtimers",
+        "fietsen racefietsen",
+        "fietsen tandems",
+        "fietsen vouwfietsen",
+        "fietsen damesfietsen",
+        "fietsen moederfietsen",
+        "fietsen omafietsen",
+        "fietsen sportfietsen dames",
+        "fietsen herenfietsen",
+        "fietsen sportfietsen heren",
+        "fietsen driewielers",
+        "fietsen jongensfietsen",
+        "fietsen kinderfietsjes",
+        "fietsen meisjesfietsen",
+        "fietsen aanhangers en karren",
+        "fietsen bagagedragers",
+        "fietsen buggydragers",
+        "fietsen fietsaccu s",
+        "fietsen fietsbellen",
+        "fietsen fietscomputers",
+        "fietsen fietsendragers",
+        "fietsen fietsenrekken",
+        "fietsen fietsgereedschap",
+        "fietsen fietshelmen",
+        "fietsen fietsmanden",
+        "fietsen fietsonderdelen",
+        "fietsen fietspompen",
+        "fietsen fietssloten",
+        "fietsen fietsstoeltjes",
+        "fietsen fietstassen",
+        "fietsen fietsverlichting",
+        "fietsen overige fietsaccessoires",
+        "fietsen overige fietsen",
+    ],
+    "sportartikelen": [
+        "sportartikelen badminton",
+        "sportartikelen basketbal",
+        "sportartikelen bowlen",
+        "sportartikelen golf",
+        "sportartikelen handbal",
+        "sportartikelen hockey",
+        "sportartikelen honkbal en softbal",
+        "sportartikelen korfbal",
+        "sportartikelen padel",
+        "sportartikelen rugby",
+        "sportartikelen squash",
+        "sportartikelen tafeltennis",
+        "sportartikelen tennis",
+        "sportartikelen voetbal",
+        "sportartikelen volleybal",
+        "sportartikelen ballet",
+        "sportartikelen dansen",
+        "sportartikelen fitnessapparatuur",
+        "sportartikelen fitnessmaterialen",
+        "sportartikelen turnen",
+        "sportartikelen yoga en pilates",
+        "sportartikelen bergsport en wandelen",
+        "sportartikelen klimsport",
+        "sportartikelen loopsport en atletiek",
+        "sportartikelen skateboarden",
+        "sportartikelen skeelers",
+        "sportartikelen wielrennen",
+        "sportartikelen biljarten en poolen",
+        "sportartikelen darts",
+        "sportartikelen handboogschieten",
+        "sportartikelen schietsport-accessoires",
+        "sportartikelen karting",
+        "sportartikelen paardrijkleding",
+        "sportartikelen vliegeren",
+        "sportartikelen zweefvliegen en paragliding",
+        "sportartikelen bidons",
+        "sportartikelen hartslagmeters",
+        "sportartikelen hoelahoeps",
+        "sportartikelen springtouwen",
+        "sportartikelen boksen",
+        "sportartikelen vechtsporten en zelfverdediging",
+        "sportartikelen duiken",
+        "sportartikelen golfsurfen",
+        "sportartikelen kitesurfen",
+        "sportartikelen snorkelen",
+        "sportartikelen suppen",
+        "sportartikelen wakeboarden",
+        "sportartikelen waterpolo",
+        "sportartikelen waterski s",
+        "sportartikelen windsurfen",
+        "sportartikelen wingsurfen",
+        "sportartikelen gezondheidsproducten en wellness",
+        "sportartikelen massageproducten",
+        "sportartikelen sauna",
+        "sportartikelen ijshockey",
+        "sportartikelen schaatsen",
+        "sportartikelen skien en langlaufen",
+        "sportartikelen snowboarden",
+        "sportartikelen overige sport en fitness",
+    ],
+    "witgoed": [
+        "witgoed airco s",
+        "witgoed luchtbehandelingsapparatuur",
+        "witgoed stofzuigers",
+        "witgoed stoomapparaten",
+        "witgoed strijkijzers en strijkplanken",
+        "witgoed ventilatoren",
+        "witgoed was-droogcombinaties",
+        "witgoed wasdrogers",
+        "witgoed wasmachines",
+        "witgoed waterontharders",
+        "witgoed afzuigkappen",
+        "witgoed airfryers",
+        "witgoed blenders",
+        "witgoed broodbakmachines",
+        "witgoed broodroosters",
+        "witgoed bruiswatermachines",
+        "witgoed contactgrills",
+        "witgoed eierkokers",
+        "witgoed fonduesets",
+        "witgoed fornuizen",
+        "witgoed frituurpannen",
+        "witgoed gourmetstellen",
+        "witgoed grillplaten",
+        "witgoed ijsmachines",
+        "witgoed juicers",
+        "witgoed keukenmixers",
+        "witgoed koelkasten en ijskasten",
+        "witgoed koffiezetapparaten",
+        "witgoed koffiemachine-accessoires",
+        "witgoed kookplaten",
+        "witgoed magnetrons",
+        "witgoed melkopschuimers",
+        "witgoed ovens",
+        "witgoed rijstkokers",
+        "witgoed slowcookers",
+        "witgoed thuistaps",
+        "witgoed vaatwasmachines",
+        "witgoed vriezers en diepvrieskisten",
+        "witgoed wafelijzers",
+        "witgoed waterkoelers",
+        "witgoed waterkokers",
+        "witgoed onderdelen en toebehoren",
+        "witgoed persoonlijke verzorgingsapparatuur",
+        "witgoed weegschalen",
+        "witgoed wekkers",
+        "witgoed zonnebanken en gezichtsbruiners",
+        "witgoed overige witgoed en apparatuur",
+    ],
+    "klussen": [
+        "klussen steigers",
+        "klussen dakbedekking",
+        "klussen gereedschapskisten",
+        "klussen handgereedschap",
+        "klussen kruiwagens",
+        "klussen ladders en trappen",
+        "klussen meetapparatuur",
+        "klussen tekentafels",
+        "klussen transportwagens",
+        "klussen werkbanken",
+        "klussen betonmolens",
+        "klussen boormachines",
+        "klussen compressors",
+        "klussen draaibanken",
+        "klussen freesmachines",
+        "klussen hogedrukreinigers",
+        "klussen lasapparaten",
+        "klussen lieren en takels",
+        "klussen motoren",
+        "klussen onderdelen machines",
+        "klussen reinigingsmachines",
+        "klussen schaafmachines",
+        "klussen schuurmachines",
+        "klussen slijpmachines",
+        "klussen weegschalen",
+        "klussen zaagmachines",
+        "klussen overige machines",
+        "klussen buizen en afvoer",
+        "klussen hang- en sluitwerk",
+        "klussen hout en planken",
+        "klussen ijzerwaren en bevestigingsmiddelen",
+        "klussen isolatie en afdichting",
+        "klussen kratten en dozen",
+        "klussen metalen",
+        "klussen metselstenen",
+        "klussen platen en panelen",
+        "klussen plinten en afwerking",
+        "klussen vloerdelen en plavuizen",
+        "klussen zeil en folie",
+        "klussen zwenkwielen",
+        "klussen alarmsystemen",
+        "klussen deuren en horren",
+        "klussen glas en ramen",
+        "klussen kozijnen en schuifpuien",
+        "klussen rolluiken",
+        "klussen sanitair",
+        "klussen tegels",
+        "klussen schildersmaterialen",
+        "klussen verf beits en lak",
+        "klussen bouwverlichting",
+        "klussen elektra en kabels",
+        "klussen geisers en boilers",
+        "klussen thermostaten",
+        "klussen ventilatie en afzuiging",
+        "klussen verwarming en radiatoren",
+        "klussen adembescherming",
+        "klussen gehoorbeschermers",
+        "klussen laskappen",
+        "klussen veiligheidsbrillen",
+        "klussen veiligheidshelmen",
+        "klussen veiligheidskleding",
+        "klussen werkkleding",
+        "klussen overige doe-het-zelf en verbouw",
+    ],
+    "computers": [
+        "computers barebones",
+        "computers computerbehuizingen",
+        "computers computerkoelers",
+        "computers geheugenkaartlezers",
+        "computers geluidskaarten",
+        "computers harde schijven",
+        "computers interne voedingen",
+        "computers moederborden",
+        "computers nas",
+        "computers netwerkkaarten",
+        "computers processors",
+        "computers ram geheugen",
+        "computers serverkasten",
+        "computers videokaarten",
+        "computers apple desktops",
+        "computers desktop pc s",
+        "computers servers",
+        "computers vintage computers",
+        "computers laptop accu s",
+        "computers apple macbooks",
+        "computers chromebooks",
+        "computers laptophoezen",
+        "computers laptop-opladers",
+        "computers laptopstandaarden",
+        "computers laptoptafels",
+        "computers laptoptassen",
+        "computers windows laptops",
+        "computers accesspoints",
+        "computers isdn en adsl",
+        "computers netwerk switches",
+        "computers pc- en netwerkkabels",
+        "computers powerlines",
+        "computers wifi-versterkers",
+        "computers beschrijfbare discs",
+        "computers usb sticks",
+        "computers labelprinters",
+        "computers pocketprinters",
+        "computers printers",
+        "computers printerbenodigdheden",
+        "computers 3d printers",
+        "computers 3d-printerbenodigheden",
+        "computers scanners",
+        "computers capture cards",
+        "computers dockingstations",
+        "computers headsets",
+        "computers joysticks",
+        "computers monitoren",
+        "computers muismatten",
+        "computers muizen",
+        "computers noodvoedingen ups",
+        "computers optische drives",
+        "computers pc speakers",
+        "computers presenters",
+        "computers routers en modems",
+        "computers toetsenborden",
+        "computers webcams",
+        "computers antivirus- en beveiligingssoftware",
+        "computers audio software",
+        "computers besturingssoftware",
+        "computers educatie- en cursussoftware",
+        "computers navigatiesoftware",
+        "computers office-software",
+        "computers ontwerp- en bewerkingssoftware",
+        "computers android tablets",
+        "computers apple ipads",
+        "computers e-readers",
+        "computers tablet-hoezen",
+        "computers tekentablets",
+        "computers windows tablets",
+        "computers overige computers en software",
+    ],
+    "muziek": [
+        "muziek accordeons", "muziek behuizingen en koffers",
+        "muziek blaasinstrumenten blokfluiten", "muziek blaasinstrumenten didgeridoos",
+        "muziek blaasinstrumenten dwarsfluiten en piccolo's",
+        "muziek blaasinstrumenten hobo's", "muziek blaasinstrumenten hoorns",
+        "muziek blaasinstrumenten klarinetten", "muziek blaasinstrumenten mondharmonica's",
+        "muziek blaasinstrumenten overige", "muziek blaasinstrumenten saxofoons",
+        "muziek blaasinstrumenten trombones", "muziek blaasinstrumenten trompetten",
+        "muziek blaasinstrumenten tuba's", "muziek bladmuziek",
+        "muziek dj-sets en draaitafels", "muziek draaiorgels", "muziek drumcomputers",
+        "muziek drumstellen en slagwerk", "muziek effecten",
+        "muziek instrumenten onderdelen", "muziek instrumenten toebehoren",
+        "muziek kabels en stekkers", "muziek keyboards", "muziek licht en laser",
+        "muziek mengpanelen", "muziek microfoons", "muziek midi-apparatuur",
+        "muziek artiesten en merchandise",
+        "muziek orgels", "muziek orkestbanden", "muziek overige muziek en instrumenten",
+        "muziek percussie", "muziek piano's", "muziek samplers",
+        "muziek snaarinstrumenten banjo's", "muziek snaarinstrumenten gitaren akoestisch",
+        "muziek snaarinstrumenten gitaren bas",
+        "muziek snaarinstrumenten gitaren elektrisch", "muziek snaarinstrumenten harpen",
+        "muziek snaarinstrumenten klavecimbels", "muziek snaarinstrumenten mandolines",
+        "muziek snaarinstrumenten overige", "muziek soundmodules", "muziek standaards",
+        "muziek strijkinstrumenten cello's", "muziek strijkinstrumenten contrabassen",
+        "muziek strijkinstrumenten overige",
+        "muziek strijkinstrumenten violen en altviolen", "muziek synthesizers",
+        "muziek theaterbelichting", "muziek versterkers bas en gitaar",
+        "muziek versterkers keyboard, monitor en pa",
+    ],
+}
+_ALL_CATEGORIES = {c for cats in _TAXONOMY.values() for c in cats}
+# Elke rubriek hoort bij precies één tak (gemeten: 247 rubrieken, 247 keer
+# uniek), dus de tak is uit de rubriek zelf af te leiden.
+_TAK_VAN_RUBRIEK = {c: g for g, cats in _TAXONOMY.items() for c in cats}
+
+# WAT MARKTPLAATS ZELF ZEGT, GAAT VOOR WAT WIJ RADEN (28-10-2026, Egbert Brouwer).
+#
+# Het overzicht van Marktplaats geeft per advertentie de rubrieknaam mee
+# (`category_id`, bij Egbert 926 in elke scan van 26-10; de naam komt leeg
+# binnen), maar die ging bij het binnenhalen verloren: de rubriek werd uit de
+# titel geraden. Voor bandmerchandise bestond er in onze indeling zelfs
+# geen rubriek, dus kwamen patches binnen als "babykleding" of "unisex
+# accessoires", en 6 van zijn recente artikelen zonder rubriek. De naam hieronder
+# is de rubriek van Marktplaats (895/926), niet onze eigen vondst. Alleen
+# rubrieken waarvan de vertaling zeker is horen hier; de rest blijft geraden.
+_RUBRIEK_VAN_MARKTPLAATSNUMMER = {
+    "926": ("muziek", "muziek artiesten en merchandise"),   # Verzamelen | Muziek, Artiesten en Beroemdheden
+}
+_RUBRIEK_VAN_MARKTPLAATSNAAM = {
+    "muziek, artiesten en beroemdheden": ("muziek", "muziek artiesten en merchandise"),
+}
+
+
+def rubriek_uit_marktplaats(row: dict) -> dict:
+    """{'gender', 'category'} voor een gescande advertentie met een bekende
+    Marktplaats-rubriek (eerst het nummer, dan de naam), anders {}."""
+    row = row or {}
+    gevonden = _RUBRIEK_VAN_MARKTPLAATSNUMMER.get(str(row.get("category_id") or "").strip())
+    if not gevonden:
+        gevonden = _RUBRIEK_VAN_MARKTPLAATSNAAM.get(
+            " ".join(str(row.get("category_name") or "").lower().split()))
+    if not gevonden:
+        return {}
+    return {"gender": gevonden[0], "category": gevonden[1]}
+
+
+# WAT DE WINKEL ZELF ZEGT: HET PRODUCTTYPE (28-10-2026, gemeten).
+#
+# Van de 542 artikelen zonder rubriek kwamen er 455 uit Shopify. Bij
+# Voordeelsieraden (164) en Goudlief (133) waren het bijna allemaal sieraden met
+# een keurig producttype ("Kettingen", "Ringen", "Dames sieraden/Kettingen/
+# Hangerkettingen"), maar de woordenlijst kent geen sieraden en Google gaf alleen
+# 429. Alleen soorten waarvan de vertaling zeker is; "Overig", "Horloges" (dames of
+# heren?) en "Verpakking en weergave" blijven aan de rubriekvraag.
+_RUBRIEK_VAN_PRODUCTTYPE = {
+    **dict.fromkeys(("kettingen", "ketting", "hangerkettingen", "colliers", "collier"),
+                    ("sieraden", "sieraden kettingen")),
+    **dict.fromkeys(("hangers", "hanger", "kettinghangers", "kettinghanger"),
+                    ("sieraden", "sieraden kettinghangers")),
+    **dict.fromkeys(("ringen", "ring"), ("sieraden", "sieraden ringen")),
+    **dict.fromkeys(("armbanden", "armband"), ("sieraden", "sieraden armbanden")),
+    **dict.fromkeys(("oorbellen", "oorbel", "oorknopjes"), ("sieraden", "sieraden oorbellen")),
+    **dict.fromkeys(("broches", "broche"), ("sieraden", "sieraden broches")),
+    **dict.fromkeys(("bedels", "bedel"), ("sieraden", "sieraden bedels")),
+    **dict.fromkeys(("enkelbandjes", "enkelbandje"), ("sieraden", "sieraden enkelbandjes")),
+    **dict.fromkeys(("sjaals", "sjaal", "zomersjaals"), ("unisex", "unisex accessoires")),
+}
+
+
+def rubriek_uit_producttype(product_type) -> dict:
+    """{'gender', 'category'} uit het producttype van de winkel, anders {}.
+    Bij een pad ("Dames sieraden/Kettingen/Hangerkettingen") telt het meest
+    specifieke stuk dat we kennen."""
+    delen = [" ".join(d.lower().split()) for d in str(product_type or "").split("/")]
+    for deel in reversed(delen):
+        gevonden = _RUBRIEK_VAN_PRODUCTTYPE.get(deel)
+        if gevonden:
+            return {"gender": gevonden[0], "category": gevonden[1]}
+    return {}
+# Rubrieken met jongen of meisje bij baby en peuter komen alleen uit het label van
+# de winkel (zie geslacht_uit_labels), nooit uit de rubriekvraag: het model zou
+# daar raden, en dat raden zette bij Janneke 140 van 474 artikelen verkeerd om.
+_ALLEEN_UIT_LABEL = frozenset({"babykleding jongens", "babykleding meisjes",
+                               "peuterkleding jongens", "peuterkleding meisjes"})
+
+
+def _rubrieken_voor_de_vraag(cats) -> str:
+    return ", ".join(c for c in cats if c not in _ALLEEN_UIT_LABEL)
+
+
+# HOEVEEL CLASSIFICATIES TEGELIJK, EN WAAROM DAT EEN REM NODIG HEEFT.
+#
+# Toon (dejuistetoon), 05-09-2026: van de 294 artikelen die hij die middag
+# importeerde kwamen er 103 zonder rubriek binnen, en bij een tweede verkoper
+# 42 van de 59. Gemeten: dezelfde titels leveren vandaag, één voor één, 20 van
+# de 20 keer wél een rubriek op. De gegevens waren dus prima; de lopende band
+# liet ze vallen.
+#
+# Het mechanisme: bulk-import vuurt met asyncio.gather de hele lading in één
+# klap af (tot 100 tegelijk), en elke vraag draagt de volledige taxonomie mee —
+# een kleine 5.000 tokens. Vijfentwintig tegelijk is dus een uitbarsting van
+# ruim 100.000 invoertokens in één seconde, en daar zet Anthropic een
+# snelheidslimiet op. Een geweigerde vraag werd stil {} en viel terug op de
+# woordenlijst, die zonder omschrijving niets vindt: rubriek leeg.
+#
+# Twee remmen: hoogstens een handvol vragen tegelijk, en een geweigerde vraag
+# krijgt herkansingen in plaats van meteen op te geven.
+_CLASSIFY_GELIJKTIJDIG = asyncio.Semaphore(5)
+_CLASSIFY_POGINGEN = 3
+_CLASSIFY_WACHT_S = (1.0, 3.0)
+
+
+async def _haiku_classificatie(client, prompt: str, claude_ok: bool = False):
+    """Eén classificatievraag, met rem en herkansingen. Geeft de antwoordtekst.
+
+    Sinds 23-09-2026 gaat de vraag eerst naar Gemini en pas daarna naar Claude
+    (backend/services/taalmodel.py). `client` is er alleen nog voor oude
+    aanroepers en wordt niet gebruikt.
+
+    Gooit de laatste fout door als het na alle pogingen niet lukt, zodat de
+    aanroeper het kan loggen in plaats van het stil als "geen rubriek" te
+    verwerken.
+    """
+    from backend.services import taalmodel
+    laatste = None
+    for poging in range(_CLASSIFY_POGINGEN):
+        try:
+            async with _CLASSIFY_GELIJKTIJDIG:
+                # Beide clients zijn synchroon; vraag_async zet de vraag in een
+                # werkdraad zodat asyncio.gather in bulk-import echt naast elkaar
+                # indeelt in plaats van een voor een op de lus.
+                return await taalmodel.vraag_async(
+                    prompt, max_tokens=200, tijdslimiet=20.0, wat="rubriekkeuze",
+                    # Zonder denkstap: 182 van 199 gelijk aan mét, 3x zo snel
+                    # (gemeten 23-09-2026 op echte artikelen van acht takken).
+                    denken=False, claude_toegestaan=claude_ok)
+        except Exception as e:
+            laatste = e
+            if poging == _CLASSIFY_POGINGEN - 1:
+                break
+            wacht = _CLASSIFY_WACHT_S[min(poging, len(_CLASSIFY_WACHT_S) - 1)]
+            logger.warning(
+                f"Classificatie mislukt ({type(e).__name__}: {e}); "
+                f"poging {poging + 2} van {_CLASSIFY_POGINGEN} over {wacht}s"
+            )
+            await asyncio.sleep(wacht)
+    raise laatste
+
+
+from collections import Counter as _Counter  # noqa: E402
+
+# Hoe vaak de korte kledingvraag volstond (zichtbaar in logs/tests).
+TELLER_RUBRIEKVRAAG: _Counter = _Counter()
+
+_KLEDINGTAKKEN = ("dames", "heren", "kinderen", "unisex", "sieraden")
+
+# Een woord dat zegt: dit is iets om te dragen.
+_KLEDINGWOORD_RE = re.compile(
+    r"\b(?:shirt|t-shirt|tshirt|polo|blouse|top|topje|trui|sweater|vest|hoodie|"
+    r"jas|jasje|jack|jacket|coat|parka|blazer|colbert|pak|kostuum|broek|jeans|"
+    r"chino|short|shorts|legging|rok|rokje|jurk|jurkje|dress|skirt|romper|"
+    r"rompertje|boxpakje|pakje|longsleeve|overhemd|sokken|ondergoed|bikini|"
+    r"badpak|zwembroek|pyjama|schoen|schoenen|schoentjes|sneaker|sneakers|"
+    r"laars|laarzen|laarsjes|boots|sandaal|sandalen|slippers|pumps|hakken|"
+    r"loafers|instappers|ketting|armband|ring|oorbellen|horloge|tas|tasje|"
+    r"portemonnee|zonnebril|sjaal|muts|pet|cap|riem|"
+    r"maat|mt|size|kinderkleding|babykleding)\b",
+    re.I)
+
+# Een woord dat naar een andere tak wijst: dan meteen de volledige vraag.
+# "kleed" en "foulard" omdat hun regel naar de woontak verwijst.
+_ANDERE_TAK_RE = re.compile(
+    r"(?:kleed|foulard|tapijt|plaid|deken|kussen|gordijn|lamp|stoel|tafel|kast|"
+    r"vaas|servies|bestek|zilverwerk|porselein|schilderij|antiek|brocante|"
+    r"gitaar|piano|plectrum|versterker|lego|duplo|playmobil|puzzel|spel|"
+    r"pokemon|knuffel|pop\b|boek|roman|strip|fiets|helm|iphone|telefoon|"
+    r"samsung|laptop|tablet|ipad|computer|console|playstation|xbox|nintendo|"
+    r"switch|camera|speaker|koptelefoon|televisie|tv\b|racket|dumbbell|"
+    r"kettlebell|ski\b|snowboard|golf|wasmachine|koffie|stofzuiger|boor|"
+    r"zaag|gereedschap|ladder|kinderwagen|autostoel|cd\b|dvd|lp\b|vinyl|"
+    r"munt|postzegel|kerst)",
+    re.I)
+
+
+def _alleen_kledingtakken(title: str | None, description: str | None) -> bool:
+    """Kleding/schoenen/sieraad volgens de titel, en niets wat ergens anders op wijst."""
+    titel = title or ""
+    if not _KLEDINGWOORD_RE.search(titel):
+        return False
+    return not _ANDERE_TAK_RE.search(f"{titel} {(description or '')[:300]}")
+
+
+def _kledingprompt(title: str | None, description: str | None, brand: str | None) -> str:
+    """De rubriekvraag met alleen de kledingtakken en hun regels."""
+    lijnen = "\n".join(f"  {g}: {_rubrieken_voor_de_vraag(_TAXONOMY[g])}" for g in _KLEDINGTAKKEN)
+    return (
+        "You categorise second-hand listings for a Dutch marketplace. This one looks\n"
+        "like clothing, footwear, jewellery or an accessory.\n\n"
+        f"Brand: {brand or 'unknown'}\n"
+        f"Title: {title or ''}\n"
+        f"Description: {(description or '')[:1500]}\n\n"
+        "Pick the single best gender and category from this exact taxonomy:\n"
+        f"{lijnen}\n\n"
+        "Rules:\n"
+        "- The category MUST be copied verbatim from the list for the gender you pick.\n"
+        "- WHAT the garment is comes from the title and description ONLY. The brand\n"
+        "  never decides that: Puma shoes are shoes, Nike trousers are trousers.\n"
+        "  Use the brand only to choose between a sporty and a casual variant of the\n"
+        "  SAME garment (e.g. Gymshark shorts = sportbroeken rather than shorts).\n"
+        "- Footwear (shoes, sneakers, trainers, boots, loafers, heels, sandals) always\n"
+        "  goes in a footwear category, whatever the brand is.\n"
+        "- Loafers, moccasins, penny loafers and boat shoes are NOT formal shoes:\n"
+        '  they belong in the plain shoes category ("heren schoenen" /\n'
+        '  "schoenen dames"). Only laced dress shoes (oxford, derby, brogue) are\n'
+        '  "heren formele schoenen".\n'
+        "- Athletic shorts belong in a sportbroeken category, NOT shorts or jeans.\n"
+        "- Children's and baby clothing and shoes go in the kinderen branch. Baby sizes\n"
+        "  (44 to 86) are babykleding, toddler sizes (92 to 104) peuterkleding, shoe\n"
+        '  sizes under 34 "kinderen schoenen".\n'
+        "- Children's bags and backpacks (kids' or toddler backpacks, school bags,\n"
+        "  plush or animal-shaped backpacks with ears, bags in a kids' print) are\n"
+        '  "kinderen tassen" with gender "kinderen", never a "sieraden" bag.\n'
+        "- Diaper bags, changing bags and mom bags (luiertas, verzorgingstas, mombag)\n"
+        '  are "kinderen luiertassen" with gender "kinderen".\n'
+        "- If gender is not stated or implied, use unisex where a sensible unisex\n"
+        "  category exists; otherwise pick the most likely gender.\n"
+        "- Costumes, fancy dress and folk dress (lederhosen, dirndl, carnival,\n"
+        "  Halloween, cosplay) go in a verkleedkleding category, never everyday clothing.\n"
+        '- The "sieraden" branch covers jewellery, watches, bags, suitcases, wallets\n'
+        "  and sunglasses. Anything worn or carried as an accessory goes there, however\n"
+        '  old or silver. When you pick a "sieraden" category, gender must be\n'
+        '  "sieraden" too.\n'
+        "- Set confidence low if you are guessing about what the item is.\n"
+        "- If the item is NOT clothing, footwear, jewellery or an accessory, respond\n"
+        '  {"gender":"none","category":"none","confidence":"high"}.\n\n'
+        'Respond with ONLY JSON: {"gender":"...","category":"...","confidence":"high|medium|low"}'
+    )
+
+
+def _lees_rubriekantwoord(raw: str, *, toegestaan=None, alleen_zeker: bool = False) -> dict:
+    """Antwoord van de korte vraag naar {gender, category}, of {} als het niet telt."""
+    m = re.search(r"\{.*\}", raw or "", re.S)
+    if not m:
+        return {}
+    data = json.loads(m.group(0))
+    category = data.get("category")
+    if alleen_zeker and data.get("confidence") not in ("high", "medium"):
+        return {}
+    if category not in _ALL_CATEGORIES:
+        return {}
+    tak = _TAK_VAN_RUBRIEK[category]
+    if toegestaan and tak not in toegestaan:
+        return {}
+    return {"gender": tak, "category": category}
+
+
+async def _classify_with_claude(title: str | None, description: str | None,
+                                brand: str | None) -> dict:
+    """
+    Ask Claude for gender + category, choosing only from _TAXONOMY.
+
+    The keyword rules below can't see brand context and have no sportswear rule
+    for adults, so "MyProtein sport shorts" matched nothing, fell through to an
+    empty category, and the extension's MP_DEFAULT turned it into women's jeans.
+    Claude gets the brand too, which is usually the strongest signal about what
+    kind of garment this is.
+
+    Returns {} on any failure or low confidence — callers fall back to the
+    keyword rules, and an unresolved category is surfaced to the user rather
+    than guessed (see _infer_attributes).
+    """
+    if not (title or description):
+        return {}
+    try:
+        # Een tijdslimiet per vraag (20 s, in _haiku_classificatie) zodat één
+        # trage vraag een bulk-import nooit laat bevriezen; daarna de woordenlijst.
+        client = None
+
+        taxonomy_lines = "\n".join(
+            f"  {g}: {_rubrieken_voor_de_vraag(cats)}" for g, cats in _TAXONOMY.items()
+        )
+        prompt = (
+            "You categorise second-hand listings for a Dutch marketplace. Most are"
+            " clothing; the rest are musical instruments, antiques, art and"
+            " collectables, home goods, jewellery, video games, phones, audio, TV and"
+            " photo equipment, computers, books, toys, bikes, sports equipment,"
+            " household appliances, or tools and DIY supplies.\n\n"
+            f"Brand: {brand or 'unknown'}\n"
+            f"Title: {title or ''}\n"
+            f"Description: {(description or '')[:1500]}\n\n"
+            "Pick the single best gender and category from this exact taxonomy:\n"
+            f"{taxonomy_lines}\n\n"
+            "Rules:\n"
+            "- The category MUST be copied verbatim from the list for the gender you pick.\n"
+            "- WHAT the garment is comes from the title and description ONLY. The brand\n"
+            "  never decides that: Puma shoes are shoes, Nike trousers are trousers.\n"
+            "  Use the brand only to choose between a sporty and a casual variant of the\n"
+            "  SAME garment (e.g. Gymshark shorts = sportbroeken rather than shorts).\n"
+            "- Footwear (shoes, sneakers, trainers, boots, loafers, heels, sandals) always\n"
+            "  goes in a footwear category, whatever the brand is.\n"
+            "- Loafers, moccasins, penny loafers and boat shoes are NOT formal shoes:\n"
+            '  they belong in the plain shoes category ("heren schoenen" /\n'
+            '  "schoenen dames"). Only laced dress shoes (oxford, derby, brogue) are\n'
+            '  "heren formele schoenen".\n'
+            "- Athletic shorts belong in a sportbroeken category, NOT shorts or jeans.\n"
+            "- If gender is not stated or implied, use unisex where a sensible unisex\n"
+            "  category exists; otherwise pick the most likely gender.\n"
+            "- Set confidence low if you are guessing about what the garment is.\n"
+            '- The "muziek" branch is for musical instruments, their parts and their\n'
+            "  accessories (a guitar, a plectrum, a case, a cable), plus official band and\n"
+            "  artist merchandise that is NOT worn as clothing: iron-on and sew-on patches,\n"
+            "  pins, key rings, posters, flags, stickers, tapestries. Those go in\n"
+            '  "muziek artiesten en merchandise", never in a clothing or jewellery\n'
+            "  category. A band T-shirt, a festival hoodie or anything else you wear is\n"
+            "  clothing, never muziek.\n"
+            '  When you pick a "muziek" category, gender must be "muziek" too.\n'
+            '- The "antiek" branch is for antiques, art and collectables: silverware,\n'
+            "  cutlery, porcelain, vases, paintings, clocks, brocante, decorative objects.\n"
+            "  DECIDE ON WHAT IT IS, NOT WHAT IT IS MADE OF. Anything a person WEARS is\n"
+            '  jewellery and belongs in the "sieraden" branch, however old or silver:\n'
+            "  a ring, a bracelet, a necklace, earrings, a brooch, a watch. Anything you\n"
+            "  put on a table, a wall or a shelf is antiek: a serving spoon, a ginger jar\n"
+            "  spoon, a candlestick, a vase, a plate. Modern mass-produced homeware is\n"
+            "  NOT antiek.\n"
+            '  When you pick an "antiek" category, gender must be "antiek" too.\n'
+            '- The "wonen" branch is home, garden and Christmas: chairs, bar stools,\n'
+            "  armchairs, garden sets, tables, curtains, rugs, cushions, lamps,\n"
+            "  mirrors, planters, parasols, terrace heaters and Christmas\n"
+            "  decorations. This is ordinary modern homeware — genuinely old or\n"
+            '  collectable pieces belong in "antiek" instead.\n'
+            '  When you pick a "wonen" category, gender must be "wonen" too.\n'
+            "- Costumes, fancy dress and folk dress are NEVER everyday clothing: lederhosen,\n"
+            "  dirndl, Tyrolean outfits, carnival and Halloween outfits, cosplay and mascot\n"
+            "  suits all go in a verkleedkleding category, never in shorts, trousers, jeans\n"
+            "  or dresses.\n"
+            "- The Dutch word \"kleed\" is ambiguous and must NEVER be guessed. In Flemish\n"
+            "  it means a DRESS; in the Netherlands it usually means a RUG (vloerkleed,\n"
+            "  tapijt). Decide only if the rest of the text makes it obvious (a size like\n"
+            "  200x300 or the word tapijt means a rug; a clothing size, a brand of clothing\n"
+            "  or words like mouwen/taille mean a dress). With nothing else to go on,\n"
+            '  a Dutch listing means a rug: pick "wonen tapijten en kleden". It is never\n'
+            "  a bag.\n"
+            '- A "grand foulard" (also written grandfoulard) is NOT a scarf and NOT an\n'
+            "  accessory: in the Dutch second-hand trade it is a large piece of home\n"
+            "  textile — a throw, bedspread, sofa or wall cloth, often 150-300 cm wide.\n"
+            '  It belongs in the "wonen" branch, normally "wonen plaids en woondekens".\n'
+            '  A plain "foulard" without "grand" IS a scarf and stays an accessory.\n'
+            '- The "sieraden" branch covers jewellery, watches, bags, suitcases, wallets\n'
+            "  and sunglasses. Pick it for anything worn or carried as an accessory.\n"
+            '  When you pick a "sieraden" category, gender must be "sieraden" too.\n'
+            '- The "games" branch is video games, game consoles and their accessories, per\n'
+            '  platform: a game disc or cartridge goes in "games <platform>", the machine\n'
+            '  itself in "games console <platform>", a controller in "games controllers\n'
+            '  <platform>", other accessories in "games accessoires ...", VR headsets in\n'
+            '  "games virtual reality". Board games are NOT "games" (see speelgoed).\n'
+            '  When you pick a "games" category, gender must be "games" too.\n'
+            '- The "electronics" branch is mobile and landline phones and their accessories:\n'
+            "  phones by brand, phone cases, chargers, power banks, earphones, phone holders,\n"
+            "  walkie-talkies. Smartwatches are jewellery (sieraden), tablets are computers.\n"
+            '  When you pick an "electronics" category, gender must be "electronics" too.\n'
+            '- The "audio" branch is audio, TV and photo: speakers, headphones,\n'
+            "  amplifiers and receivers, turntables, radios, televisions, projectors,\n"
+            "  cameras, lenses, drones, binoculars. A guitar amplifier or effects pedal\n"
+            '  is "muziek", not audio. When you pick an "audio" category, gender must be\n'
+            '  "audio" too.\n'
+            '- The "computers" branch is computers, laptops, tablets, e-readers, computer\n'
+            "  parts, monitors, keyboards, mice, printers, scanners, networking gear and\n"
+            '  software. Tablets go in a tablets category: an iPad in "computers apple\n'
+            '  ipads", a Galaxy Tab in "computers android tablets", a Surface in\n'
+            '  "computers windows tablets"; "computers apple desktops" is only an iMac,\n'
+            '  Mac mini or Mac Pro. When you pick a "computers" category, gender must be\n'
+            '  "computers" too.\n'
+            '- The "boeken" branch is books, comics, magazines and audiobooks: pick the\n'
+            "  genre or subject. Only a genuinely old book or bible (the text says antique,\n"
+            '  or a year before about 1950) goes in "boeken antieke boeken en bijbels".\n'
+            '  When you pick a "boeken" category, gender must be "boeken" too.\n'
+            '- The "speelgoed" branch is toys and games for play: LEGO, Duplo, Playmobil,\n'
+            '  Any LEGO or Duplo set goes in "speelgoed duplo en lego"; "speelgoed bouwstenen"\n'
+            '  is other brands of building blocks.\n'
+            "  dolls, soft toys, toy vehicles, board games, card games, puzzles, trading\n"
+            "  cards (Pokemon, Magic, Yu-Gi-Oh), model kits, model cars and model trains,\n"
+            "  radio-controlled models, outdoor toys and trampolines. Only toys the text\n"
+            '  calls old or antique (antiek, blikken speelgoed, a year before about 1970)\n'
+            '  go in "antiek speelgoed". When you pick a "speelgoed" category, gender must\n'
+            '  be "speelgoed" too.\n'
+            '- The "fietsen" branch is bicycles, e-bikes, kids\' bikes and bicycle parts and\n'
+            "  accessories (locks, lights, bags, helmets, child seats, bike racks). Cycling\n"
+            "  clothing is clothing, mopeds and scooters have no category here.\n"
+            '  When you pick a "fietsen" category, gender must be "fietsen" too.\n'
+            '- The "hobby" branch is iron-on and sew-on patches, appliques and iron-on\n'
+            '  letters that are NOT band or artist merchandise (those go in "muziek artiesten\n'
+            '  en merchandise"). When you pick a "hobby" category, gender must be "hobby" too.\n'
+            '- The "sportartikelen" branch is sports EQUIPMENT: rackets, balls, fitness\n'
+            "  machines and weights, yoga mats, skis, snowboards, surfboards, golf clubs,\n"
+            '  "sportartikelen fitnessapparatuur" is machines (treadmill, exercise bike, rowing\n'
+            '  machine, home gym); dumbbells, kettlebells, weights, bands and mats go in\n'
+            '  "sportartikelen fitnessmaterialen".\n'
+            "  darts, boxing gloves. Sports clothing and sports shoes stay clothing.\n"
+            '  When you pick a "sportartikelen" category, gender must be "sportartikelen" too.\n'
+            '- The "witgoed" branch is household appliances: washing machines, dryers,\n'
+            "  fridges, freezers, dishwashers, ovens, coffee machines, air fryers, kettles,\n"
+            "  blenders, vacuum cleaners, irons, fans, and personal care appliances.\n"
+            '  When you pick a "witgoed" category, gender must be "witgoed" too.\n'
+            '- The "klussen" branch is tools and DIY: power tools, hand tools, ladders,\n'
+            "  workbenches, painting supplies, protective gear, and building materials\n"
+            "  (wood, tiles, doors, sanitary ware, pipes, cables).\n"
+            '  When you pick a "klussen" category, gender must be "klussen" too.\n'
+            "- SOME ITEMS STILL FIT NONE OF THESE BRANCHES, and then the answer is none:\n"
+            "  car and motorbike parts, mopeds and scooters, pet supplies, prams, car seats\n"
+            "  and other baby gear, films, CDs, DVDs and records, tickets, coins and stamps.\n"
+            '  For those respond {"gender":"none","category":"none","confidence":"high"}.\n'
+            '  Never put them in "antiek" or "wonen" because nothing else fits: a modern\n'
+            "  item is never antique, and an appliance or tool is not home decoration.\n\n"
+            'Respond with ONLY JSON: {"gender":"...","category":"...","confidence":"high|medium|low"}'
+        )
+        # KLEDING EERST MET EEN KORTE VRAAG (Daniel, 08-10-2026: tegoed sparen).
+        # De volledige vraag is ~9.000 tokens, vooral de 469 rubrieken van
+        # takken als boeken en klussen. Is het herkenbaar kleding, schoenen of
+        # een sieraad, dan eerst alleen die vijf takken (~6x kleiner). Alleen
+        # een zeker antwoord telt; bij twijfel, "past nergens" of een rubriek
+        # buiten die takken alsnog de volledige vraag hieronder.
+        if _alleen_kledingtakken(title, description):
+            kort = _kledingprompt(title, description, brand)
+            try:
+                uit = _lees_rubriekantwoord(
+                    (await _haiku_classificatie(client, kort, claude_ok=True)).strip(),
+                    toegestaan=_KLEDINGTAKKEN, alleen_zeker=True)
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"Korte rubriekvraag mislukt ({type(e).__name__}: {e}); volledige vraag")
+                uit = {}
+            if uit.get("category"):
+                TELLER_RUBRIEKVRAAG["kort"] += 1
+                return uit
+            TELLER_RUBRIEKVRAAG["kort_daarna_volledig"] += 1
+        else:
+            TELLER_RUBRIEKVRAAG["volledig"] += 1
+
+        raw = (await _haiku_classificatie(client, prompt)).strip()
+        m = re.search(r"\{.*\}", raw, re.S)
+        if not m:
+            return {}
+        data = json.loads(m.group(0))
+
+        gender, category = data.get("gender"), data.get("category")
+        # Never trust the model's key blindly: an invented category would be
+        # mapped to MP_DEFAULT downstream, recreating the exact bug this fixes.
+        if data.get("confidence") == "low":
+            return {}
+        # Past in geen enkele tak (Lego, boeken, apparaten): leeg laten. Het
+        # dashboard vraagt de verkoper dan om een rubriek, in plaats van dat
+        # het stuk als antiek de deur uitgaat. {"geen_tak": True} laat de
+        # aanroeper ook de woordenlijst overslaan.
+        if str(category or "").strip().lower() in ("none", "null", ""):
+            return {"geen_tak": True}
+        if category not in _ALL_CATEGORIES:
+            logger.warning(f"Claude returned category outside taxonomy: {gender}/{category}")
+            return {}
+        # EEN GOEDE RUBRIEK MET DE VERKEERDE TAK IS GEEN AFGEKEURD ANTWOORD.
+        #
+        # Hier stond dat gender én rubriek allebei moesten kloppen, anders ging
+        # het hele antwoord de prullenbak in. Gemeten op de eerste vijf artikelen
+        # van de hersteldraaiing: één van de vijf was "unisex" +
+        # "wonen plaids en woondekens" — de rubriek klopte, alleen het etiket
+        # ernaast niet, en het artikel bleef daardoor zonder rubriek staan.
+        # Elke rubriek hoort bij precies één tak, dus die is af te leiden.
+        tak = _TAK_VAN_RUBRIEK[category]
+        if gender != tak:
+            logger.info(f"Doelgroep bijgesteld: {gender!r} -> {tak!r} bij {category!r}")
+        return {"gender": tak, "category": category}
+    except Exception as e:
+        # Foutniveau, niet waarschuwing: dit is precies de stille val waardoor
+        # 959 artikelen zonder rubriek in de voorraad kwamen te staan.
+        logger.error(
+            f"Classificatie definitief mislukt na {_CLASSIFY_POGINGEN} pogingen "
+            f"({type(e).__name__}: {e}) — terug naar de woordenlijst"
+        )
+        return {}
+
+
+def _word_in(word: str, text: str) -> bool:
+    """Whole-word match so a garment/colour word inside a brand name (e.g. 'suit'
+    in 'Suitsupply') never triggers a false category."""
+    return re.search(r"\b" + re.escape(word) + r"\b", text) is not None
+
+
+def _is_grand_foulard(title: str | None, description: str | None = None) -> bool:
+    """Een "grand foulard" is woontextiel, geen sjaal.
+
+    Toon (dejuistetoon), 05-09-2026: zijn "Grand Foulard Groot 264/128 cm" — een
+    kleed van ruim twee en een halve meter — stond in het dashboard onder
+    "sieraden damestassen". Het mechanisme is aanwijsbaar: de classificatieprompt
+    zegt over de sieraden-tak "pick it for anything worn or carried as an
+    accessory", en een foulard is in het gewone taalgebruik een sjaal. Het woord
+    "grand" ervoor maakt er in de tweedehandshandel juist een grote lap
+    woontextiel van: een plaid, sprei, bankkleed of wandkleed.
+
+    Alleen de combinatie telt. Een losse "foulard" is wél gewoon een sjaal, dus
+    daar blijven we vanaf.
+    """
+    tekst = f"{title or ''} {description or ''}".lower()
+    return re.search(r"\bgrand\s?foulards?\b", tekst) is not None
+
+
+# Schoenwoorden in het Nederlands en Engels, als heel woord. Alleen gebruikt
+# samen met een kindersignaal, dus "boot" als vaartuig doet hier geen kwaad.
+_SCHOEN_WOORDEN = (
+    "schoen", "schoenen", "schoentje", "schoentjes", "laars", "laarzen", "laarsjes",
+    "regenlaars", "regenlaarzen", "snowboots", "sneaker", "sneakers", "sandaal",
+    "sandalen", "slof", "sloffen", "pantoffel", "pantoffels", "klompen", "shoes",
+    "boots", "sandals", "slippers",
+)
+
+
+def _kinderschoenmaat(text: str) -> bool:
+    """Staat er een schoenmaat van 15 tot en met 33 in de tekst ("schoenmaat 27",
+    "maat 19", "mt. 24", "size 31")? Volwassenen hebben die maten niet; de
+    kleinste damesmaat die je tegenkomt is 34-35. Alleen gebruikt samen met een
+    schoenwoord. Was eerst tot en met 29: "Schoenen Jopper schoenmaat 31" van
+    Janneke viel er dan net buiten (onboardingronde 08-10-2026)."""
+    for m in re.finditer(r"\b(?:schoenmaat|maat|mt|size)\.?\s*:?\s*(\d{2})(?:[.,]5)?\b", text):
+        if 15 <= int(m.group(1)) <= 33:
+            return True
+    return False
+
+
+# DE MAAT EN HET MERK STAAN VAAK ALLEEN IN DE TITEL (08-10-2026, Janneke 31d28378).
+#
+# "Regenlaarzen Bergstein schoenmaat 31*": geen maatveld, geen merkveld, dus
+# hield het dashboard Marktplaats en 2dehands op slot met "Voeg brand, size toe".
+# Alleen de schoenmaat lezen we uit de titel: bij een schoen is "maat 31"
+# eenduidig, bij kleding ("maat 44/50", "maat 98") niet, en een maat die het
+# kanaal niet kent is erger dan een lege. Het merk alleen als het een merk is dat
+# deze verkoper zelf al bij een ander artikel invulde, en precies één ervan.
+_MAAT_IN_TITEL_RE = re.compile(
+    r"\b(?:schoenmaat|maat|mt|size|eu)\.?\s*:?\s*(\d{2})(?:[.,](5))?(?![\d/])")
+_GEEN_MERK = {"overige", "overige merken", "onbekend", "geen merk", "no brand", "unknown",
+              "other", "others", "diversen", "vintage", "handmade", "handgemaakt", "merkloos"}
+# Merken die ook een gewoon woord zijn: "Only worn once" is geen Only-jurk. Die
+# vullen we nooit uit de titel in; daar beslist de verkoper.
+_MERK_IS_OOK_WOORD = {"only", "pieces", "object", "selected", "guess", "basic", "basics",
+                      "score", "name it", "even", "blue", "replay", "esprit", "new look",
+                      "mexx", "vans", "boss", "bench", "sissy", "noisy may", "vila", "jack",
+                      "hema", "zeeman", "primark", "action", "lucky", "monki", "kids",
+                      "baby", "classic", "sport", "sports", "original", "originals"}
+
+
+def _schoenmaat_uit_titel(title: str | None) -> str | None:
+    """De schoenmaat uit een titel met een schoenwoord: "Regenlaarzen Bergstein
+    schoenmaat 31*" → "31". Eén maat, 15 tot en met 50; twee verschillende maten
+    in één titel ("maat 27 en 28") → None, want dan weten we het niet."""
+    tekst = (title or "").lower()
+    if not ("schoenmaat" in tekst or any(_word_in(w, tekst) for w in _SCHOEN_WOORDEN)):
+        return None
+    maten = set()
+    for m in _MAAT_IN_TITEL_RE.finditer(tekst):
+        if 15 <= int(m.group(1)) <= 50:
+            maten.add(m.group(1) + ("." + m.group(2) if m.group(2) else ""))
+    return maten.pop() if len(maten) == 1 else None
+
+
+def merken_uit_voorraad(rijen) -> dict:
+    """kleine letters → de schrijfwijze die deze verkoper het vaakst gebruikt.
+
+    Alleen merken die hij bij minstens twee artikelen invulde: één keer kan een
+    tikfout of een gok zijn, twee keer is zijn eigen woordenschat."""
+    from collections import Counter
+    tel: dict[str, Counter] = {}
+    for r in rijen:
+        merk = " ".join(str(r.get("brand") or "").split())
+        laag = merk.lower()
+        if len(merk) < 3 or laag in _GEEN_MERK or laag in _MERK_IS_OOK_WOORD:
+            continue
+        tel.setdefault(laag, Counter())[merk] += 1
+    return {k: c.most_common(1)[0][0] for k, c in tel.items() if sum(c.values()) >= 2}
+
+
+def _merk_uit_titel(title: str | None, merken: dict) -> str | None:
+    """Het merk uit de titel, maar alleen een merk dat de verkoper zelf al bij
+    een ander artikel invulde, en alleen als er precies één in staat. Een merk dat
+    binnen een langer merk valt ("Nike" in "Nike ACG") telt niet apart."""
+    tekst = " ".join((title or "").lower().split())
+    gevonden = [k for k in merken if re.search(r"(?<![\w])" + re.escape(k) + r"(?![\w])", tekst)]
+    gevonden = [k for k in gevonden if not any(k != g and k in g for g in gevonden)]
+    return merken[gevonden[0]] if len(gevonden) == 1 else None
+
+
+# KINDERKLEDING HERKEN JE OOK AAN DE MAAT (08-10-2026, Janneke 31d28378).
+#
+# Bij Janneke stonden 1.755 van de 1.917 artikelen zonder rubriek: kinder- en
+# babykleding met titels als "Babypakje / romper" en "Longsleeve Noppies maat
+# 44/50", zonder "kids", "jongens" of "meisjes" erin. De AI die zulke gevallen
+# oplost had geen tegoed. De kindermaten zelf zijn eenduidig:
+#   * een dubbele maat op het kinderraster ("44/50", "56/62", "98/104") bestaat
+#     bij volwassenen niet;
+#   * enkele maten 68 tot en met 176 op het kinderraster ook niet, BEHALVE 98 en
+#     110: dat zijn lange herenmaten. Die en 44/50/56/62 (colbertmaten) tellen
+#     alleen als dubbele maat.
+_KINDERRASTER = (44, 50, 56, 62, 68, 74, 80, 86, 92, 98, 104, 110, 116, 122, 128,
+                 134, 140, 146, 152, 158, 164, 170, 176)
+_KINDERMAAT_LOS = {68, 74, 80, 86, 92, 104, 116, 122, 128, 134, 140, 146, 152, 158,
+                   164, 170, 176}
+
+# Merken die alleen kinderkleding of kinderschoenen maken.
+_KINDERMERKEN = (
+    "noppies", "jopper", "vingino", "z8", "tumble n dry", "tumble 'n dry",
+    "name it", "feetje", "prenatal", "prénatal", "b.nosy", "quapi", "molo", "mini rodini",
+    "petit bateau", "bobo choses", "shoesme", "develab", "bunnies jr", "braqeez",
+    "like flo", "levv", "little label", "dirkje", "mayoral", "babyface", "koeka",
+)
+
+# Babywoorden; ook als deel van een samenstelling ("babypakje", "rompertje").
+_BABY_RE = re.compile(r"\b(baby\w*|romper\w*|boxpak\w*|kruippak\w*|slab\w*|newborn|"
+                      r"prematuur|preemie|slaapzakje\w*|rompertje\w*)\b")
+_MEISJES_RE = re.compile(r"\b(jurk\w*|rok|rokje\w*|rokken|tuniek\w*|tutu\w*|dress|dresses|skirts?)\b")
+
+
+def _kindermaat(text: str) -> int | None:
+    """De kleinste kindermaat in de tekst, of None. Zie _KINDERRASTER."""
+    gevonden = []
+    for m in re.finditer(r"\b(\d{2,3})\s*/\s*(\d{2,3})\b", text):
+        a, b = int(m.group(1)), int(m.group(2))
+        if a in _KINDERRASTER and b in _KINDERRASTER and b - a == 6:
+            gevonden.append(a)
+    for m in re.finditer(r"\b(?:maat|mt|size)\.?\s*:?\s*(\d{2,3})\b(?!\s*/)(?!\s*cm)", text):
+        n = int(m.group(1))
+        if n in _KINDERMAAT_LOS:
+            gevonden.append(n)
+    return min(gevonden) if gevonden else None
+
+
+# KINDERMAAT EN KINDERMERK UIT DE TITEL (09-10-2026, Janneke 31d28378, Daniel: "go").
+#
+# Van haar 2.748 artikelen hadden er ~2.070 geen maat en 2.746 geen merk, dus
+# bleven Marktplaats en 2dehands dicht ("Voeg merk, maat toe"). Haar titels
+# zeggen het wel: "Tussenjas Name it maat 128", "Trui Your Wishes maat 122-128".
+# Bij kleding lazen we de maat bewust niet uit de titel (een maat die het kanaal
+# niet kent is erger dan een lege). Voor KINDERkleding geldt dat niet: het
+# kinderraster (50, 56, ... 176) is op Marktplaats "Maat 128" en op Vinted
+# "8 jaar / 128 cm", en de extensie vindt beide aan het kale getal. Daarom alleen
+# bij een artikel dat al als kinderartikel bekend is, alleen getallen op dat
+# raster, en precies één maat. Een dubbele maat ("122-128", "44/50") wordt de
+# eerste: Vinted kent alleen losse maten, en zo staat hij er ook op Marktplaats.
+_KIND_RUBRIEK_RE = re.compile(r"kinder|jongens|meisjes|baby|peuter|\bkids\b")
+
+
+def _is_kinderartikel(gender: str | None, category: str | None) -> bool:
+    return (str(gender or "").strip().lower() == "kinderen"
+            or _KIND_RUBRIEK_RE.search(str(category or "").lower()) is not None)
+
+
+def _kindermaat_uit_titel(title: str | None) -> str | None:
+    tekst = (title or "").lower()
+    maten = set()
+    for m in re.finditer(r"\b(?:maat|mt|size)\.?\s*:?\s*(\d{2,3})(?:\s*[-/]\s*(\d{2,3}))?(?!\d)(?!\s*cm)",
+                         tekst):
+        a = int(m.group(1))
+        if a not in _KINDERRASTER:
+            return None
+        if m.group(2):
+            b = int(m.group(2))
+            if b not in _KINDERRASTER or b - a != 6:
+                return None
+        maten.add(a)
+    return str(maten.pop()) if len(maten) == 1 else None
+
+
+def maat_uit_titel(title: str | None, gender: str | None = None,
+                   category: str | None = None) -> str | None:
+    """De maat uit de titel: een schoenmaat, of bij een kinderartikel een
+    kindermaat. Anders None (zie hierboven en _schoenmaat_uit_titel)."""
+    schoen = _schoenmaat_uit_titel(title)
+    if schoen:
+        return schoen
+    if "schoen" in str(category or "").lower() or not _is_kinderartikel(gender, category):
+        return None
+    return _kindermaat_uit_titel(title)
+
+
+# De kindermerken uit _KINDERMERKEN zoals ze op Vinted en Marktplaats heten. Bij
+# een kinderartikel zijn ze eenduidig, ook "Name it" (bij volwassenen is dat
+# gewone taal, zie _MERK_IS_OOK_WOORD).
+_KINDERMERK_NAAM = {
+    "noppies": "Noppies", "jopper": "Jopper", "vingino": "Vingino", "z8": "Z8",
+    "tumble n dry": "Tumble 'n Dry", "tumble 'n dry": "Tumble 'n Dry", "name it": "Name It",
+    "feetje": "Feetje", "prenatal": "Prénatal", "prénatal": "Prénatal", "b.nosy": "B.Nosy",
+    "quapi": "Quapi", "molo": "Molo", "mini rodini": "Mini Rodini", "petit bateau": "Petit Bateau",
+    "bobo choses": "Bobo Choses", "shoesme": "Shoesme", "develab": "Develab",
+    "bunnies jr": "Bunnies Jr", "braqeez": "Braqeez", "like flo": "Like Flo", "levv": "LEVV",
+    "little label": "Little Label", "dirkje": "Dirkje", "mayoral": "Mayoral",
+    "babyface": "Babyface", "koeka": "Koeka", "bergstein": "Bergstein",
+}
+
+
+def merk_uit_titel(title: str | None, eigen_merken: dict, gender: str | None = None,
+                   category: str | None = None) -> str | None:
+    """Een merk dat de verkoper zelf al gebruikt, of bij een kinderartikel een
+    bekend kindermerk; alleen als er precies één in de titel staat."""
+    merken = dict(eigen_merken or {})
+    if _is_kinderartikel(gender, category):
+        for k, naam in _KINDERMERK_NAAM.items():
+            merken.setdefault(k, naam)
+    tekst = " ".join((title or "").lower().split())
+    gevonden = {k for k in merken if re.search(r"(?<![\w])" + re.escape(k) + r"(?![\w])", tekst)}
+    gevonden = {k for k in gevonden if not any(k != g and k in g for g in gevonden)}
+    namen = {merken[k] for k in gevonden}
+    return namen.pop() if len(namen) == 1 else None
+
+
+# JONGEN OF MEISJE UIT DE LABELS VAN DE WINKEL (18-10-2026, Janneke 31d28378).
+#
+# Haar titels noemen nooit een geslacht ("Longsleeve Noppies maat 56"), haar
+# Shopify-labels wel: van 17.839 producten 8.648 alleen "meisje", 5.413 alleen
+# "jongen", 1.787 beide of "unisex". Wij lazen die labels niet, dus haar
+# babykleding stond geslachtsloos (Vinted koos dan Boys clothing, Marktplaats
+# "Jongetje") en wat de rubriek wél een geslacht gaf was een gok uit "jurk" of
+# van het model: 140 van 474 verkeerd om. Beide geslachten of unisex = geen keuze.
+_LABEL_JONGEN = frozenset({"jongen", "jongens", "boy", "boys"})
+_LABEL_MEISJE = frozenset({"meisje", "meisjes", "girl", "girls"})
+
+# Een kledingstuk in de titel. Alleen nodig als de titel zelf niets over kinderen
+# zegt: dan maakt het label het tot kinderartikel, maar alleen als het ook echt
+# kleding is (een "jongen"-label op speelgoed blijft van het model). Zonder \b
+# vooraan, want samenstellingen tellen mee: winterjas, tuinbroek.
+#
+# _KLEDING_RE mag ook de rubriek jongens- of meisjeskleding geven. Sokken,
+# schoenen, mutsen en maillots niet: die horen op Marktplaats bij "Schoenen en
+# Sokken" of accessoires, en daar beslist de import zoals altijd (gemeten bij
+# Janneke: 80 paar Ewers-sokken werden anders meisjeskleding).
+_KLEDING_RE = re.compile(
+    r"trui|broek|shirt|longsleeve|jurk|\brok\b|rokje|\bvest|blouse|\btop\b|topje|"
+    r"legging|tregging|jegging|jas\b|jasje|jack\b|gilet|overgooier|jumpsuit|playsuit|"
+    r"pyjama|poncho|salopette|onesie|pakje|\bset\b|setje|bodywarmer|hoodie|sweater|"
+    r"jeans|\bshort|\bpolo|\bbody|romper|badpak|bikini|zwembroek|skipak|skibroek|"
+    r"slaapzak|tuniek|tanktop|kleding")
+_KLEDINGSTUK_RE = re.compile(
+    _KLEDING_RE.pattern + r"|maillot|\bmuts|sokken|sokjes|kousen|panty|hoed\b|"
+    r"handschoen|want(en|jes)\b|sjaal|schoen|laars|laarzen|sandaal|sandalen|sneaker|"
+    r"boots?\b|slipper")
+
+
+def geslacht_uit_labels(labels, product_type: str | None = None) -> str | None:
+    """'jongen', 'meisje' of None uit de labels (Shopify-tags) van een product.
+
+    `labels` is Shopify's tekst met komma's of een lijst. Alleen hele labels
+    tellen ("Sissy-Boy" of "maat 116" niet). Beide, of "unisex": None.
+    """
+    if isinstance(labels, str):
+        labels = labels.split(",")
+    alle = {str(t).strip().lower() for t in (labels or []) if str(t).strip()}
+    if product_type and str(product_type).strip():
+        alle.add(str(product_type).strip().lower())
+    jongen, meisje = bool(alle & _LABEL_JONGEN), bool(alle & _LABEL_MEISJE)
+    if "unisex" in alle or jongen == meisje:
+        return None
+    return "jongen" if jongen else "meisje"
+
+
+def kinderrubriek_met_geslacht(category: str | None, geslacht: str | None) -> str | None:
+    """De kinderrubriek met het bekende geslacht erin, de leeftijd blijft.
+
+    babykleding -> babykleding jongens, peuterkleding -> peuterkleding meisjes,
+    tieners en jongens/meisjes kleding naar het label. Schoenen, sport, tassen en
+    accessoires hebben geen jongens- of meisjesrubriek: die blijven zoals ze zijn.
+    """
+    if geslacht not in ("jongen", "meisje"):
+        return category
+    g = "jongens" if geslacht == "jongen" else "meisjes"
+    cat = (category or "").strip().lower()
+    if not cat or cat in ("jongens kleding", "meisjes kleding"):
+        return f"{g} kleding"
+    for leeftijd in ("babykleding", "peuterkleding"):
+        if cat in (leeftijd, f"{leeftijd} jongens", f"{leeftijd} meisjes"):
+            return f"{leeftijd} {g}"
+    if cat in ("tieners jongens", "tieners meisjes"):
+        return f"tieners {g}"
+    return category
+
+
+# LUIERTASSEN (19-10-2026, Janneke 31d28378: "Ik wilde 2 mombags plaatsen, maar
+# dat kan niet"). Haar "Mombag onesize" van Your Wishes is een luiertas, maar
+# stond als "sieraden schoudertassen", en haar eigen instelling "Vinted alleen
+# kinderen" hield hem daardoor tegen. Vinted heeft er een kinderrubriek voor
+# (Kids > Bathing & changing > Baby changing bags, 3394) en Marktplaats ook
+# (Kinderen en Baby's > Luiertassen). Alleen de titel telt: "tas met
+# verschoonmatje" in een omschrijving maakt een damestas nog geen luiertas.
+_LUIERTAS_RE = re.compile(
+    r"\b(luier(?:tas|tasje|tassen|rugzak|rugtas)\w*|verzorgingstas\w*|verschoontas\w*|"
+    r"mom ?bags?|diaper ?bags?|nappy ?bags?|changing ?bags?|wickeltasche\w*)\b", re.I)
+
+
+def _is_luiertas(title: str | None) -> bool:
+    return bool(_LUIERTAS_RE.search(title or ""))
+
+
+def _infer_attributes(title: str | None, description: str | None = None,
+                      geslacht: str | None = None) -> dict:
+    """Best-effort colour / gender / category from the listing text. Conservative:
+    only returns a value when confident, so callers can fill empty fields without
+    ever writing a wrong guess (worst case a field just stays empty, as before).
+
+    `geslacht` ('jongen'/'meisje') komt uit de labels van de winkel, zie
+    geslacht_uit_labels. Het maakt een kledingstuk zonder volwassen woord in de
+    tekst tot kinderartikel en zet jongen of meisje in de kinderrubriek."""
+    text = f"{title or ''} {description or ''}".lower()
+    out = {}
+
+    # Pick the colour that appears EARLIEST in the text (titles lead with the
+    # colour: "Grey … Blazer"), preferring the longest match at that position.
+    best_pos, best_len, best_color = None, 0, None
+    for c in _COLORS:
+        m = re.search(r"\b" + re.escape(c) + r"\b", text)
+        if m and (best_pos is None or m.start() < best_pos or (m.start() == best_pos and len(c) > best_len)):
+            best_pos, best_len, best_color = m.start(), len(c), c
+    if best_color:
+        out["color"] = "grey" if best_color == "gray" else best_color
+
+    # Gender from explicit whole-word keywords only.
+    if any(_word_in(w, text) for w in ("men", "mens", "male", "heren")):
+        gender = "heren"
+    elif any(_word_in(w, text) for w in ("women", "woman", "womens", "ladies", "dames", "female")):
+        gender = "dames"
+    elif any(_word_in(w, text) for w in ("kids", "child", "children", "boys", "girls", "junior",
+                                          "kinderen", "baby", "toddler",
+                                          "jongen", "jongens", "meisje", "meisjes", "peuter", "tiener")):
+        gender = "kinderen"
+    elif _word_in("unisex", text):
+        gender = "unisex"
+    else:
+        gender = None
+    # KINDERSCHOENEN HERKEN JE AAN DE MAAT. Een schoenmaat onder de 30 bestaat
+    # bij volwassenen niet. Janneke (31d28378, 07-10-2026) verkoopt
+    # kinderschoenen vanaf maat 19 met titels als "Schoenen | Regenlaarzen
+    # Bergstein schoenmaat 27": geen "kids" of "kinder" erin, dus bleef de
+    # rubriek leeg en weigerde elk kanaal het plaatsen.
+    if not gender and _kinderschoenmaat(text) and any(_word_in(w, text) for w in _SCHOEN_WOORDEN):
+        gender = "kinderen"
+    kindermaat = _kindermaat(text)
+    is_baby = _BABY_RE.search(text) is not None
+    # "herenjas", "damesblazer": volwassen, ook als het woord aan een ander vastzit.
+    volwassen = re.search(r"heren|dames|women|\bmen'?s?\b|ladies", text) is not None
+    if not gender and not volwassen and (kindermaat or is_baby
+                                         or any(_word_in(w, text) for w in _KINDERMERKEN)):
+        gender = "kinderen"
+    # Het label van de winkel zegt jongen of meisje: een kledingstuk is dan voor
+    # een kind, ook als de titel dat niet zegt ("Schoenen Hip schoenmaat 37"
+    # stond bij Janneke als damesschoen, met label "jongen").
+    if (geslacht in ("jongen", "meisje") and not gender and not volwassen
+            and _KLEDINGSTUK_RE.search((title or "").lower())):
+        gender = "kinderen"
+    # "women"/"womens" also contain "men" as a substring, but whole-word matching
+    # keeps them distinct, so the order above is safe.
+    if gender:
+        out["gender"] = gender
+
+    # Category needs a known gender to pick the right key. Match is plural-tolerant
+    # ("shoe"→"shoes", "shirt"→"shirts") while whole-word, so brand names like
+    # "Suitsupply" still never match a garment keyword.
+    def _garment_in(k):
+        return re.search(r"\b" + re.escape(k) + r"s?\b", text) is not None
+
+    if gender == "kinderen":
+        # Staat al vast dat het voor een kind is, dan is ook een losse maat 50, 56
+        # of 62 een babymaat ("Longsleeve Noppies maat 56"); _kindermaat telt die
+        # alleen dubbel, omdat het bij volwassenen colbertmaten zijn. Zonder dit
+        # werd zo'n babyshirt met het label "meisje" (18-10-2026) meisjeskleding
+        # voor 4 tot 12 jaar.
+        _los = _kindermaat_uit_titel(title)
+        leeftijdsmaat = kindermaat if kindermaat is not None else (int(_los) if _los else None)
+        # Kids' taxonomy is age/gender-based, not garment-based: a "Boys XL vest"
+        # is simply "jongens kleding". Shoes/sportswear are the only garment splits.
+        # Een tas of rugzak is geen kleding (Janneke 31d28378, 17-10-2026: haar
+        # teddyrugzakjes stonden als volwassen rugtas en "Vinted alleen kinderen"
+        # hield ze tegen). Eerst, want "rugzak" is nooit een schoen of shirt. Alleen
+        # de titel, en niet als er ook een kledingstuk in staat: "jurk met tasje"
+        # blijft een jurk.
+        titel_l = (title or "").lower()
+        if (any(re.search(r"\b" + k + r"s?\b", titel_l)
+                for k in ("bag", "backpack", "tas", "rugtas", "rugzak", "schooltas",
+                          "rugzakje", "tasje", "rugtasje"))
+                and not re.search(r"\b(jurk|broek|shirt|t-shirt|jas|trui|rok|vest|pak|set|"
+                                  r"legging|body|pyjama|schoen|laars|sneaker|dress|jacket|"
+                                  r"coat|shoe|boot)", titel_l)):
+            out["category"] = "kinderen tassen"
+        elif (any(_garment_in(k) for k in ("shoe", "sneaker", "boot", "trainer"))
+                or any(_word_in(w, text) for w in _SCHOEN_WOORDEN)):
+            out["category"] = "kinderen schoenen"
+        elif any(_garment_in(k) for k in ("cycling", "wielren", "wielrenshirt", "fietsshirt")):
+            out["category"] = "kinderen wielrenkleding"
+        elif any(_garment_in(k) for k in ("football", "voetbal", "voetbalshirt",
+                                          "voetbaltenue", "soccer")):
+            out["category"] = "kinderen voetbalkleding"
+        elif any(_garment_in(k) for k in ("swimwear", "swimsuit", "zwempak", "zwembroek",
+                                          "badpak", "bikini")):
+            out["category"] = "kinderen zwemkleding"
+        elif any(_garment_in(k) for k in ("sport", "sportshirt", "sportbroek", "legging",
+                                          "trainingspak", "tracksuit", "activewear")):
+            out["category"] = "kinderen sportkleding"
+        elif any(_word_in(w, text) for w in ("boys", "boy", "jongens", "jongen")):
+            out["category"] = "jongens kleding"
+        elif any(_word_in(w, text) for w in ("girls", "girl", "meisjes", "meisje")):
+            out["category"] = "meisjes kleding"
+        # Zonder jongen of meisje in de titel: leeftijd uit maat of babywoord,
+        # anders een jurk of rok als meisjeskleding. Wat daarna nog over is
+        # blijft leeg; liever geen rubriek dan jongen en meisje omdraaien.
+        elif is_baby or (leeftijdsmaat is not None and leeftijdsmaat <= 86):
+            out["category"] = "babykleding"
+        elif leeftijdsmaat is not None and leeftijdsmaat <= 104:
+            out["category"] = "peuterkleding"
+        elif _MEISJES_RE.search(text):
+            out["category"] = "meisjes kleding"
+        # Het label van de winkel wint van een gok uit "jurk" en van de
+        # omschrijving ("meisjesjas, kan ook voor jongens"), niet van een TITEL
+        # die het andere geslacht noemt ("SALEtas: meisje maat 128" met label
+        # jongen). Los "boy" telt niet: dat is bij haar het merk Sissy-Boy.
+        if geslacht in ("jongen", "meisje") and not any(_word_in(w, titel_l) for w in (
+                ("meisje", "meisjes", "girls") if geslacht == "jongen"
+                else ("jongen", "jongens", "boys"))):
+            if out.get("category") or _KLEDING_RE.search(titel_l):
+                out["category"] = kinderrubriek_met_geslacht(out.get("category"), geslacht)
+    elif not gender and _is_grand_foulard(title, description):
+        # Zie _is_grand_foulard: de combinatie "grand foulard" is woontextiel.
+        out["gender"] = "wonen"
+        out["category"] = "wonen plaids en woondekens"
+    # WOONTEXTIEL DAT NET NAAST DE WOORDENLIJST VIEL.
+    #
+    # De regel hieronder kijkt op héle woorden, dus "kleed" ving wél "kleed" maar
+    # niet "kleedje", "wandkleed" of "sprei". Gemeten bij De Juiste Toon op
+    # 05-09-2026: van zijn 21 artikelen zonder rubriek waren er zeven zulke
+    # gevallen. Zonder rubriek kan er niets gepubliceerd worden, dus die zeven
+    # stonden stil zonder dat er iets rood werd.
+    #
+    # Deze drie staan vóór de algemene kleden-regel omdat ze een eigen rubriek op
+    # Marktplaats hebben: een wandkleed hoort niet op de vloer en een sprei niet
+    # op tafel. Allemaal achter dezelfde voorwaarde `not gender`: staat er een
+    # kledingsignaal in de tekst, dan beslist het model en niet deze lijst.
+    elif not gender and any(_word_in(w, text) for w in
+                            ("wandkleed", "wandkleden", "wandkleedje", "wandtapijt")):
+        out["gender"] = "wonen"
+        out["category"] = "wonen wanddecoraties"
+    elif not gender and any(_word_in(w, text) for w in
+                            # "plaid" staat er bewust NIET bij: dat is in het
+                            # Engels een ruitpatroon ("plaid shirt"), en zonder
+                            # geslachtssignaal zou een geruit overhemd hier als
+                            # woondeken eindigen.
+                            ("sprei", "spreien", "beddensprei", "bedsprei")):
+        out["gender"] = "wonen"
+        out["category"] = "wonen plaids en woondekens"
+    elif not gender and any(_word_in(w, text) for w in
+                            ("tafelkleed", "tafelkleden", "tafelkleedje", "tafelloper")):
+        out["gender"] = "wonen"
+        out["category"] = "wonen tafelkleden"
+    elif not gender and any(_word_in(w, text) for w in
+                            ("vloerkleed", "vloerkleden", "tapijt", "tapijten",
+                             "karpet", "karpetten", "kleed", "kleden",
+                             # "kleedje" is hetzelfde woord in het klein, en een
+                             # kelim is per definitie een geweven vloerkleed.
+                             "kleedje", "kleedjes", "kelim", "kelims")):
+        # "Kleed" zonder enig kledingsignaal is in Nederland een vloerkleed —
+        # bevestigd door De Juiste Toon op 30-08-2026, die er vintage kleden mee
+        # bedoelde. Alleen als er verder niets op kleding wijst: staat er "dames"
+        # of "heren" bij, dan is de tak hierboven al gekozen en beslist het model.
+        # Een tafelkleed valt hier buiten, want er wordt op hele woorden gekeken.
+        out["gender"] = "wonen"
+        out["category"] = "wonen tapijten en kleden"
+    elif gender:
+        for keywords, per_gender in _CATEGORY_RULES:
+            if any(_garment_in(k) for k in keywords):
+                key = per_gender.get(gender)
+                if key:
+                    out["category"] = key
+                break
+
+    if _is_luiertas(title):
+        out["gender"] = "kinderen"
+        out["category"] = "kinderen luiertassen"
+    rubriek = _strijkembleem_of_stropdas(title, out.get("gender"))
+    if rubriek and not (out.get("category") and rubriek[0] != "hobby"):
+        out["gender"], out["category"] = rubriek
+    return out
+
+
+# STRIJKEMBLEMEN EN STROPDASSEN (28-10-2026, gollem.joukes f0291981).
+#
+# Van zijn 243 artikelen bleven er 149 zonder rubriek: 123 strijkemblemen en 14
+# stropdassen. Voor emblemen had onze indeling geen plek (Egbert had hetzelfde
+# met bandpatches op 27-10), en het model kreeg die nacht van Google alleen 429.
+# Marktplaats zelf zet strijkemblemen in Hobby en Vrije tijd > Kledingapplicaties
+# en Hotfix (60 van de ~70 bij de zoekvraag "strijkembleem", gemeten 28-10).
+# Alleen de titel telt, en alleen zonder kledingwoord: "spijkerjas met patches"
+# is een jas. Een strijkijzer of strijkplank is geen embleem.
+#
+# Alleen echte strijk- en naaiwoorden. Een losse "patch" of "embleem" is te breed,
+# gemeten op 1.190 titels van andere klanten: bandpatches met sleutelhanger, een
+# militair embleem, een kleed "met vogel applicatie". Merchandise laten we aan de
+# rubriek van Marktplaats of aan het model (muziek artiesten en merchandise).
+_STRIJKEMBLEEM_RE = re.compile(
+    r"strijk(?!ijzer|plank|bout|centrale|machine|stoom)|iron[- ]?on|"
+    r"naai ?applicati|opnaai|sew[- ]?on", re.I)
+_MERCH_RE = re.compile(r"merch|offici|\bband\b|\btour\b|sleutelhanger|keychain|magneet", re.I)
+_STROPDAS_RE = re.compile(r"\b(?:stropdas|stropdassen|stopdas|vlinderdas|vlinderdasje)\b", re.I)
+
+
+def _strijkembleem_of_stropdas(title: str | None, gender: str | None):
+    """(gender, rubriek) voor een strijkembleem of stropdas, anders None."""
+    t = title or ""
+    # Eerst de das: "vintage stropdas met patches" is een stropdas.
+    if _STROPDAS_RE.search(t):
+        if gender == "kinderen":
+            return ("kinderen", "kinderen accessoires")
+        if gender == "dames":
+            return ("dames", "accessoires dames")
+        return ("heren", "heren accessoires")
+    if (_STRIJKEMBLEEM_RE.search(t) and not _KLEDINGWOORD_RE.search(t)
+            and not _MERCH_RE.search(t)):
+        return ("hobby", "hobby kledingapplicaties en strijkemblemen")
+    return None
+
+
+# Foto-adressen die alleen binnen het netwerk van het kanaal bestaan. De Admarkt-
+# lijst geeft voor een foto die Marktplaats nog niet verwerkt heeft alleen
+# `src`: https://dmz.mp.prod.icas.io/api/sellside/image/... Die naam wijst naar
+# 10.37.x.x (gemeten 31-10-2026), dus geen server, dashboard of extensie komt er
+# ooit bij. Egbert Brouwer: de laatste 7 advertenties kwamen zonder afbeelding
+# binnen, en omdat dit host niet als Marktplaats-fotoserver bekend was, pakte
+# ook de inhaalronde ze nooit op.
+ONBEREIKBARE_FOTOHOSTS = ("icas.io",)
+
+
+def foto_onbereikbaar(url) -> bool:
+    if not isinstance(url, str):
+        return False
+    from urllib.parse import urlparse
+    host = urlparse(("https:" + url) if url.startswith("//") else url).netloc.lower().split(":")[0]
+    return any(host == d or host.endswith("." + d) for d in ONBEREIKBARE_FOTOHOSTS)
+
+
+def alleen_onbereikbare_fotos(urls) -> bool:
+    urls = [u for u in (urls or []) if u]
+    return bool(urls) and all(foto_onbereikbaar(u) for u in urls)
+
+
+def _photos_from_candidate(cand: dict) -> list[str]:
+    """Full photo list if the scan captured it, else the single thumbnail.
+
+    Nooit een adres dat niemand kan ophalen: liever geen foto dan een dode."""
+    photos = cand.get("photo_urls")
+    if isinstance(photos, list) and photos:
+        lijst = [p for p in photos if p]
+    else:
+        lijst = [cand["photo_url"]] if cand.get("photo_url") else []
+    return [p for p in lijst if not foto_onbereikbaar(p)]
+
+
+async def _infer_attributes_smart(title: str | None, description: str | None,
+                                  brand: str | None = None) -> dict:
+    """
+    Category/gender inference for user-facing import paths: Claude first (it can
+    weigh the brand and understands the garment), keyword rules as fallback.
+
+    Kept separate from _infer_attributes because the bulk scan-store path is
+    synchronous and runs per scanned row — it would fire one LLM call per
+    listing. Colour always comes from the cheap keyword pass.
+    """
+    keyword_out = _infer_attributes(title, description)
+    smart = await _classify_with_claude(title, description, brand)
+    if smart.get("geen_tak"):
+        # Het model zegt: dit is geen kleding, sieraad, antiek, muziek of wonen.
+        # Dan ook geen doelgroep of rubriek uit de woordenlijst; alleen de kleur.
+        return {k: v for k, v in keyword_out.items() if k == "color"}
+    if not smart:
+        return keyword_out
+    # Claude wins on gender/category; keep the keyword colour.
+    merged = {**keyword_out, **smart}
+
+    # …except when it contradicts a word that leaves no room for interpretation.
+    # A pair of "White Puma Shoes" came back as sportbroeken (athletic shorts),
+    # because the brand was treated as a stronger signal than the noun in the
+    # title. Marktplaats then filed a shoe under Jeans. The text says "shoes";
+    # no brand changes that, so the keyword rule wins here.
+    if _is_footwear_text(title, description):
+        if not _is_footwear_category(merged.get("category")):
+            kw = keyword_out.get("category")
+            logger.warning(
+                "Category override: text says footwear but classifier picked "
+                f"{merged.get('category')!r}; using {kw or 'no category'} instead."
+            )
+            # No trustworthy footwear key (unknown gender) → leave it empty rather
+            # than keep a wrong one. The user is asked, instead of silently
+            # publishing a shoe as a pair of jeans.
+            merged["category"] = kw if _is_footwear_category(kw) else None
+            if merged["category"] is None:
+                merged.pop("category")
+    elif _is_footwear_category(merged.get("category")) and keyword_out.get("category"):
+        # The mirror image: footwear picked with nothing in the text supporting it.
+        merged["category"] = keyword_out["category"]
+
+    # Een luiertas is kinderspul, wat het model ook zegt (zie _LUIERTAS_RE).
+    if _is_luiertas(title):
+        merged["gender"] = "kinderen"
+        merged["category"] = "kinderen luiertassen"
+
+    # EEN GRAND FOULARD IS GEEN SJAAL — zie _is_grand_foulard.
+    #
+    # Net als bij schoenen hierboven: staat het er met zoveel woorden, dan wint
+    # de tekst van het model. Alleen als het model búiten de woontak uitkomt,
+    # want binnen die tak (tapijten en kleden, plaids en woondekens,
+    # wanddecoraties) is de keuze een kwestie van smaak en niet van fout.
+    if _is_grand_foulard(title, description) and not str(
+            merged.get("category") or "").startswith("wonen"):
+        logger.warning(
+            "Category override: text says grand foulard but classifier picked "
+            f"{merged.get('category')!r}; using wonen plaids en woondekens instead."
+        )
+        merged["gender"] = "wonen"
+        merged["category"] = "wonen plaids en woondekens"
+
+    return merged
+
+
+# Category keys that ARE footwear, across every gender branch of _TAXONOMY.
+_FOOTWEAR_CATEGORIES = {
+    "sneakers dames", "schoenen dames", "hakken", "laarzen dames", "sandalen",
+    "heren sneakers", "heren schoenen", "heren formele schoenen", "heren laarzen",
+    "kinderen schoenen", "unisex schoenen",
+}
+
+# Words that can only mean footwear. Deliberately excludes ambiguous ones like
+# "pump" (also a machine) and "slipper" (also a garment in Dutch listings).
+# Dutch plurals are spelled out: the -s/-en suffix in the pattern below does not
+# cover them all ("laars" → "laarzen"), and it was exactly the Dutch spelling
+# that slipped through — a listing titled "Witte Puma schoenen" stayed filed as
+# athletic shorts while the English "White Puma Shoes" was caught.
+_FOOTWEAR_WORDS = (
+    "shoe", "sneaker", "trainer", "boot", "loafer", "brogue", "derby", "heel",
+    "sandal", "espadrille", "moccasin",
+    "schoen", "schoenen", "laars", "laarzen", "sandaal", "sandalen",
+    "instapper", "instappers", "veterschoen", "veterschoenen",
+    "gymp", "gympen", "hakschoen", "hakschoenen", "pumps", "hakken",
+)
+
+
+def _is_footwear_category(category: str | None) -> bool:
+    return (category or "").strip().lower() in _FOOTWEAR_CATEGORIES
+
+
+def _is_footwear_text(title: str | None, description: str | None) -> bool:
+    """True when the listing text names footwear. The title carries far more
+    weight than the description — a jacket description mentioning "matching
+    boots" must not turn the jacket into footwear — so the description only
+    counts when the title says nothing about the garment at all."""
+    t = (title or "").lower()
+    if any(re.search(r"\b" + w + r"(?:s|en)?\b", t) for w in _FOOTWEAR_WORDS):
+        return True
+    if t.strip():
+        return False
+    d = (description or "").lower()
+    return any(re.search(r"\b" + w + r"(?:s|en)?\b", d) for w in _FOOTWEAR_WORDS)
+
+
+# Een artikel mag hooguit 100 tekens als titel hebben (ItemCreate). Shopify laat
+# 255 toe, en Goudlief (07-10-2026) heeft 250 producten boven de 100: die vielen
+# bij het inlezen stil om op "failed". Inkorten op een heel woord; de volledige
+# naam blijft de titel in Shopify zelf (shopify_title), zodat we die nooit
+# verminken. Marktplaats en Vinted korten bij het plaatsen toch al naar 60.
+_TITEL_MAX = 100
+
+
+def _titel_ingekort(titel: str) -> str:
+    if len(titel) <= _TITEL_MAX:
+        return titel
+    kort = titel[:_TITEL_MAX + 1].rsplit(" ", 1)[0] if " " in titel[:_TITEL_MAX + 1] else ""
+    kort = (kort or titel[:_TITEL_MAX]).rstrip(" ,.;:-/")
+    return kort[:_TITEL_MAX]
+
+
+# De velden van een artikel hebben in de database een vaste lengte. Past een
+# waarde er niet in, dan weigert de database het hele artikel en valt het stil
+# om op "failed". Goudlief (07-10-2026): de Shopify-lezer pakt het tweede stuk
+# van "Cetabever - Meesterbeits Deur & Kozijn Dekkend - RAL 7022 - 750 ML" als
+# maat, 34 tekens in een veld van 20; 19 producten mislukten, 28 stonden klaar om
+# hetzelfde te doen. Zo'n lange waarde is geen maat of kleur, dus leeg laten.
+_VELD_MAX = {"brand": 100, "size": 20, "color": 50, "material": 100,
+             "category": 100, "sku": 50}
+
+
+def _past(veld: str, waarde):
+    if isinstance(waarde, str) and len(waarde.strip()) > _VELD_MAX.get(veld, len(waarde)):
+        return None
+    return waarde
+
+
+async def shopify_nummers_aanvullen(db, user_id: str, cands: list[dict]) -> None:
+    """Zet het artikelnummer van de winkelier op Shopify-kandidaten (27-10-2026).
+
+    Voordeelsieraden (Mieneke, 09e089ec): de scan las het nummer wel van de
+    Shopify-variant en koppelde er bestaande artikelen mee, maar de tabel met
+    kandidaten heeft er geen kolom voor. Elk product dat als NIEUW werd
+    geïmporteerd kreeg daardoor een eigen IMP-nummer (536 van 536), terwijl haar
+    eigen nummers ("25-013.41") in de winkel stonden. Hier halen we ze op het
+    moment van importeren bij Shopify op, zodat er geen databasewijziging nodig is.
+
+    Alleen lezen. Faalt het ophalen, dan blijft het IMP-nummer (de import mag er
+    nooit op stuklopen). Een nummer dat al bij een ander artikel van deze
+    verkoper hoort, of dubbel in deze lading voorkomt, wordt overgeslagen: de
+    kolom is per verkoper uniek en een botsing zou het hele artikel laten falen."""
+    todo = [c for c in cands if c.get("platform") == "shopify" and not c.get("sku")
+            and c.get("platform_listing_id")]
+    if not todo:
+        return
+    try:
+        import httpx
+        from backend.platforms.shopify import _shop_creds
+        from backend.services.shopify_scan import API_VERSIE
+        rij = ((await naast_de_lus(lambda: db.table("platform_credentials")
+                                   .select("user_id,access_token,extra_data")
+                                   .eq("user_id", user_id).eq("platform", "shopify")
+                                   .limit(1).execute())).data or [])
+        if not rij:
+            return
+        shop, token = await _shop_creds({**rij[0], "user_id": user_id})
+        if not (shop and token):
+            return
+        nummer_van: dict[str, str] = {}
+        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=10.0)) as client:
+            for i in range(0, len(todo), 100):
+                ids = ",".join(str(c["platform_listing_id"]) for c in todo[i:i + 100])
+                r = await client.get(
+                    f"https://{shop}/admin/api/{API_VERSIE}/products.json",
+                    params={"ids": ids, "fields": "id,variants", "limit": 250},
+                    headers={"X-Shopify-Access-Token": token})
+                r.raise_for_status()
+                for p in r.json().get("products", []):
+                    sku = str(((p.get("variants") or [{}])[0].get("sku")) or "").strip()
+                    if sku:
+                        nummer_van[str(p["id"])] = sku
+        if not nummer_van:
+            return
+        bezet: set[str] = set()
+        waarden = sorted(set(nummer_van.values()))
+        for i in range(0, len(waarden), 100):
+            brok = waarden[i:i + 100]
+            bezet |= {str(x["sku"]).strip().lower() for x in
+                      ((await naast_de_lus(lambda: db.table("items").select("sku")
+                                           .eq("user_id", user_id).in_("sku", brok)
+                                           .execute())).data or [])}
+        telling = collections.Counter(v.lower() for v in nummer_van.values())
+        for c in todo:
+            sku = nummer_van.get(str(c["platform_listing_id"]))
+            if sku and sku.lower() not in bezet and telling[sku.lower()] == 1:
+                c["sku"] = sku
+    except Exception as e:
+        logger.warning("Shopify-artikelnummers ophalen mislukt, IMP-nummers blijven: %s", e)
+
+
+def _item_data_from_candidate(cand: dict, body: dict | None = None,
+                              inferred: dict | None = None) -> dict:
+    """
+    Build the full item payload from a scraped candidate, so an import lands
+    with everything the scan captured (all photos, description, brand, size,
+    condition, category, colour, material). `body` overrides any field the user
+    edited in the import dialog and carries data the scan can't see (e.g.
+    purchase_price).
+    """
+    body = body or {}
+    # Fill colour/gender/category the scan can't see by inferring them from the
+    # listing text — only used as a last resort below (body + scan always win).
+    # Async callers pass the Claude-backed result; otherwise keywords only.
+    if inferred is None:
+        inferred = _infer_attributes(cand.get("title"), cand.get("description"))
+
+    def pick(key, cand_key=None, default=None):
+        v = body.get(key)
+        return v if v is not None else (cand.get(cand_key or key) or default)
+
+    volle_titel = (pick("title") or "Untitled").strip() or "Untitled"
+    titel = _titel_ingekort(volle_titel)
+    rij = {
+        "title": titel,
+        "price": body.get("price") if body.get("price") is not None else (cand.get("price") or 0),
+        "photo_urls": body.get("photo_urls") or _photos_from_candidate(cand),
+        "description": pick("description"),
+        "purchase_price": body.get("purchase_price"),
+        "brand": _past("brand", pick("brand")),
+        "size": _past("size", pick("size") or maat_uit_titel(
+            volle_titel, pick("gender") or inferred.get("gender"),
+            pick("category") or inferred.get("category"))),
+        # De staat komt van drie kanten, in deze volgorde: wat de gebruiker in het
+        # formulier typte, wat het platform meegaf, en anders de standaard voor
+        # deze hele lading. Die laatste bestaat omdat Admarkt geen staat meelevert
+        # en alles dan op "Like new" belandde — een handelaar die uitsluitend
+        # nieuwe spullen verkoopt moest dat 240 keer met de hand corrigeren.
+        # Een staatwoord dat _map_condition niet kent valt ook terug op die
+        # standaard, in plaats van op een gok.
+        "condition": (body.get("condition")
+                      or _map_condition(cand.get("condition"))
+                      or body.get("_default_condition") or "good"),
+        "category": _past("category", pick("category") or inferred.get("category")),
+        "gender": pick("gender") or inferred.get("gender"),
+        "color": _past("color", (lambda c: canonieke_kleur(c) or c)(pick("color") or inferred.get("color"))),
+        "material": _past("material", pick("material")),
+        # Fields the user types in the same form but that used to be dropped here,
+        # so an imported item silently lost its SKU, its Shopify "was" price and
+        # any per-platform price overrides.
+        "sku": _past("sku", body.get("sku") or cand.get("sku")),
+        "shopify_title": body.get("shopify_title") or (volle_titel if titel != volle_titel else None),
+        "compare_at_price": body.get("compare_at_price"),
+        "price_marktplaats": body.get("price_marktplaats"),
+        "price_2dehands": body.get("price_2dehands"),
+        "price_vinted": body.get("price_vinted"),
+        "price_ebay": body.get("price_ebay"),
+        "price_shopify": body.get("price_shopify"),
+    }
+    # Kolom komt pas na de handmatige migratie; zonder waarde of kolom laten we hem weg.
+    if body.get("price_woocommerce") is not None and kolom_bestaat("items", "price_woocommerce"):
+        rij["price_woocommerce"] = body.get("price_woocommerce")
+    return rij
+
+
+def _is_empty(v) -> bool:
+    return v is None or (isinstance(v, str) and not v.strip()) or (isinstance(v, list) and not v)
+
+
+def _listing_status_for(cand: dict) -> str:
+    """
+    What status the listing this import creates should start in.
+
+    A candidate the platform reports as hidden must NOT land as 'active': it
+    would sit in the dashboard as if it were for sale, and count as stale stock,
+    until the next scan happened to correct it. Anything else starts active.
+    """
+    return "hidden" if cand.get("is_hidden") else "active"
+
+
+BACKFILL_FIELDS = "id,description,brand,size,color,material,condition,photo_urls,gender,category"
+
+
+def _vinted_ids_met_tekst(db, user_id: str) -> list[str]:
+    """Vinted-advertentienummers waarvan we de omschrijving al hebben.
+
+    Twee bronnen, allebei even hard:
+      1. een kandidaat uit een eerdere scan die al tekst droeg;
+      2. een geïmporteerd artikel dát tekst heeft — de advertentie die eraan
+         hangt hoeft dan niet opnieuw van Vinted gehaald te worden.
+
+    Er worden alleen NUMMERS gelezen, nooit de teksten zelf. `description` is de
+    dikste kolom die we hebben; een eerdere ronde die hem wel meenam at het
+    verkeersbudget van Supabase op en zette daarmee de hele site plat (zie de
+    uitleg in mp_enrich.verrijk). De vraag hier is "heeft dit tekst, ja of nee",
+    en dat antwoord is een rij id's.
+    """
+    uit: set[str] = set()
+
+    # 1. Kandidaten die zelf al tekst dragen.
+    try:
+        rijen = fetch_all(lambda: db.table("import_candidates")
+                          .select("platform_listing_id")
+                          .eq("user_id", user_id).eq("platform", "vinted")
+                          .not_.is_("description", "null").neq("description", ""))
+        uit |= {str(r["platform_listing_id"]) for r in rijen
+                if r.get("platform_listing_id") is not None}
+    except Exception as e:  # noqa: BLE001
+        logger.warning("tekst_bekend: kandidaten niet gelezen (%s)", e)
+
+    # 2. Artikelen met tekst → hun Vinted-advertentie.
+    #    Dezelfde negatie als mp_enrich gebruikt ("wie mist tekst"), en dan het
+    #    verschil nemen. Een nieuwe, ongeteste positieve filter zou bij een
+    #    verkeerde uitkomst stilzwijgend de verkeerde advertenties overslaan —
+    #    en overslaan is hier het gevaarlijke antwoord.
+    try:
+        alle = {r["id"] for r in fetch_all(
+            lambda: db.table("items").select("id").eq("user_id", user_id))}
+        zonder = {r["id"] for r in fetch_all(
+            lambda: db.table("items").select("id").eq("user_id", user_id)
+            .or_("description.is.null,description.eq."))}
+        met = list(alle - zonder)
+        if met:
+            for l in fetch_all_in(lambda: db.table("listings")
+                                  .select("platform_listing_id")
+                                  .eq("platform", "vinted"),
+                                  "item_id", met):
+                if l.get("platform_listing_id") is not None:
+                    uit.add(str(l["platform_listing_id"]))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("tekst_bekend: artikelen niet gelezen (%s)", e)
+
+    return sorted(uit)
+
+
+def _backfill_item_from_candidate(db, item_id: str, cand: dict,
+                                  inferred: dict | None = None) -> dict:
+    """Fill ONLY the empty fields on an existing item from a freshly scanned
+    candidate (description, colour, photos, …). Never overwrites data the user
+    already has, so linking a rescanned listing enriches — never clobbers — the item.
+    Returns the applied patch (empty if nothing to fill)."""
+    current = db.table("items").select(BACKFILL_FIELDS).eq("id", item_id).execute().data
+    if not current:
+        return {}
+    patch = _backfill_patch(current[0], cand, inferred)
+    if patch:
+        db.table("items").update(patch).eq("id", item_id).execute()
+    return patch
+
+
+def _backfill_patch(current: dict, cand: dict, inferred: dict | None = None) -> dict:
+    """
+    Work out what a scanned candidate would add to an item — pure, no database.
+
+    Split out so a scan can compute hundreds of these from ONE prefetched read
+    instead of a select per row; the scan-store used to do a query per candidate,
+    which is what made saving a big wardrobe take minutes.
+    """
+    patch = {}
+    for field in ("description", "brand", "size", "color", "material"):
+        if (_is_empty(current.get(field)) and not _is_empty(cand.get(field))
+                and _past(field, cand[field]) is not None):
+            patch[field] = cand[field]
+    if _is_empty(current.get("condition")) and _map_condition(cand.get("condition")):
+        patch["condition"] = _map_condition(cand.get("condition"))
+    if _is_empty(current.get("photo_urls")) or alleen_onbereikbare_fotos(current.get("photo_urls")):
+        photos = _photos_from_candidate(cand)
+        if photos:
+            patch["photo_urls"] = photos
+    # Colour/gender/category the scan couldn't see: infer from the listing text,
+    # but only fill fields still empty on the item (and never wrong — see _infer_attributes).
+    # Async callers pass the Claude-backed result; the sync scan path uses keywords.
+    if inferred is None:
+        inferred = _infer_attributes(cand.get("title"), cand.get("description"))
+    for field in ("color", "gender", "category"):
+        if (field not in patch and _is_empty(current.get(field)) and inferred.get(field)
+                and _past(field, inferred[field]) is not None):
+            patch[field] = inferred[field]
+    if "size" not in patch and _is_empty(current.get("size")):
+        maat = maat_uit_titel(cand.get("title"),
+                              patch.get("gender") or current.get("gender") or inferred.get("gender"),
+                              patch.get("category") or current.get("category") or inferred.get("category"))
+        if maat:
+            patch["size"] = maat
+    return patch
+
+
+def _norm_title(t: str | None) -> str:
+    """Normalise a title for matching: lowercase, collapse all whitespace."""
+    return " ".join((t or "").lower().split())
+
+
+def _best_match(title: str, items: list[dict]) -> str | None:
+    """
+    Only auto-suggest an EXACT title match. Titles are published verbatim to the
+    platform, so a genuine re-import of an existing item has an identical title.
+    Fuzzy matching is dangerous here: items differ only by size/colour/number
+    ("Navy … Men L" vs "Navy … Men XL"), which score ~0.95+ on a character-ratio
+    and get wrongly linked. Exact-only means "no confident match" (→ create new)
+    rather than a wrong link the user has to notice and undo.
+    """
+    want = _norm_title(title)
+    if not want:
+        return None
+    matches = [it["id"] for it in items if _norm_title(it.get("title")) == want]
+    # Only trust an exact title if it's UNIQUE — if two items share the title we
+    # can't tell them apart, so leave it unmatched rather than pick one at random.
+    return matches[0] if len(matches) == 1 else None
+
+
+def _match_candidate(cand: dict, items: list[dict], listings_by_id: dict,
+                     bekende_merken: set | None = None,
+                     verkocht: set | None = None) -> tuple[str | None, str | None]:
+    """
+    Decide which existing item (if any) a scraped listing belongs to, and why.
+    Three confident signals, strongest first:
+      1. same_listing — the exact same platform listing id already lives on an
+         item (we imported/created this listing before). 100% certain.
+      2. same_code   — de advertentie begint met hetzelfde artikelnummer als een
+         item dat we al hebben, en kleur/maat/merk/prijs spreken elkaar niet
+         tegen. Dit is het signaal dat een VERTAALDE advertentie herkent: de
+         titel verschilt per taal, het nummer tussen haakjes niet.
+      3. same_title  — a single existing item has an identical title.
+    Anything else → (None, None): no auto-link, the row becomes a new item.
+    Returns (item_id, reason).
+    """
+    lid = cand.get("platform_listing_id")
+    if lid is not None:
+        item_id = listings_by_id.get((cand.get("platform"), str(lid)))
+        if item_id and any(it["id"] == item_id for it in items):
+            return item_id, "same_listing"
+
+    # Het artikelnummer. Staan er meerdere items met datzelfde nummer, dan is dat
+    # zelf al de rommel die we hier proberen te stoppen: dan pakken we het OUDSTE
+    # item, want daar hangt de langste geschiedenis aan. Een nieuw item erbij
+    # maken zou de stapel alleen maar hoger maken.
+    code = advertentiecode(cand.get("title"))
+    if code:
+        gelijk = [it for it in items
+                  if advertentiecode(it.get("title"), it.get("sku")) == code
+                  and plausibel(cand, it, bekende_merken or set()) is None]
+        if gelijk:
+            # Een onverkochte rij gaat voor een verkochte. Hetzelfde nummer op een
+            # verkocht en een onverkocht item betekent: opnieuw ingekocht, twee
+            # voorwerpen (zie list_duplicates in items.py). Een levende advertentie
+            # hoort dan bij de voorraad die er nog is, niet bij het verkochte stuk.
+            verkocht = verkocht or set()
+            gelijk.sort(key=lambda i: (i["id"] in verkocht,
+                                       i.get("created_at") or "", i.get("id") or ""))
+            return gelijk[0]["id"], "same_code"
+
+    title_match = _best_match(cand.get("title"), items)
+    if title_match:
+        # ALLEEN DE TITEL IS GEEN BEWIJS (16-10-2026, Janneke 31d28378). Haar
+        # oude eigen Vinted-advertenties (15 euro, andere tekst, ander stuk)
+        # werden zo stil gekoppeld aan Shopify-artikelen van 25 tot 30 euro met
+        # dezelfde titel; bij een verkoop ging daarna het verkeerde stuk van de
+        # andere kanalen af. Spreken prijs, kleur, maat of merk elkaar tegen,
+        # dan beslist de verkoper (likely_same: "Import all" slaat hem over).
+        item = next((it for it in items if it["id"] == title_match), {})
+        if (prijs_wijkt_af(cand.get("price"), item.get("price"))
+                or plausibel(cand, item, bekende_merken or set()) is not None):
+            return title_match, "likely_same"
+        return title_match, "same_title"
+    # Shopify: het artikelnummer staat op de variant, niet in de titel. De scan
+    # heeft er al op gekoppeld (jobs._store_scan_results, row["sku"]) en die
+    # keuze als suggested_item_id bewaard; hier is het nummer zelf niet meer.
+    # Maar de scan koppelt ook op een unieke gelijke titel. Draagt het item geen
+    # eigen nummer van de verkoper (alleen ons imp-/rev-nummer), dan kan de
+    # suggestie niet op een nummer berusten: dan is het een titelmatch (Janneke
+    # 10-10: 140 producten heetten "zelfde nummer" zonder dat er één gelijk was).
+    if cand.get("platform") in ("shopify", "woocommerce") and cand.get("suggested_item_id"):
+        item = next((it for it in items if it["id"] == cand["suggested_item_id"]), None)
+        if item:
+            sku = str(item.get("sku") or "").strip().lower()
+            eigen = advertentiecode(item.get("title")) or (
+                sku if sku and not re.match(r"^(imp|rev)-", sku) else "")
+            return item["id"], "same_code" if eigen else "same_title"
+    return None, None
+
+
+def _listing_index(db, items: list[dict]) -> tuple[dict, dict, set]:
+    """
+    Read the user's listings once and return three views of them:
+      * (platform, platform_listing_id) → item_id  — for the certain re-import match
+      * item_id → {platforms}                      — which channels an item is already on
+      * {item_id}                                  — items with a sold listing
+    Scoped via the user's item ids (the listings table has no user_id column).
+    """
+    item_ids = [it["id"] for it in items]
+    if not item_ids:
+        return {}, {}, set()
+    # Na elkaar, niet tegelijk — zie de uitleg bovenaan dit bestand. Gemeten bij
+    # 2.135 items: 3,7 seconden voor alle brokken samen, tegen een foutkans van
+    # ruim tachtig procent zodra dit gelijktijdig gebeurt.
+    rows = fetch_all_in(lambda: db.table("listings")
+                        .select("item_id,platform,platform_listing_id,status"),
+                        "item_id", item_ids)
+    by_listing_id, platforms, verkocht = {}, {}, set()
+    for l in rows:
+        item_id, plat = l.get("item_id"), l.get("platform")
+        if not item_id:
+            continue
+        if l.get("status") == "sold":
+            verkocht.add(item_id)
+        if plat:
+            platforms.setdefault(item_id, set()).add(plat)
+        pid = l.get("platform_listing_id")
+        if pid is not None:
+            by_listing_id[(plat, str(pid))] = item_id
+    return by_listing_id, platforms, verkocht
+
+
+# ── Zeker of twijfel ──────────────────────────────────────────────────────
+#
+# Daniel, 24-09-2026: "het systeem mag zelf koppelen, dingen die het 100% zeker
+# weet; de rest is twijfel en leg je rustig voor aan de gebruiker." Hij importeert
+# van vier kanalen, meerdere keren, en wil daarna zonder na te lopen weten dat er
+# niets dubbel in zijn voorraad staat.
+#
+# Zeker is: dezelfde advertentie die we al kennen, hetzelfde artikelnummer zonder
+# tegenspraak in kleur, maat, merk en prijs, of één bestaand item met exact
+# dezelfde titel. Nergens een overeenkomst is ook zeker: dan is het nieuw.
+# Twijfel is alles waar een automatische keuze een van twee kanten op fout kan
+# gaan. Die rijen blijven staan tot de verkoper kiest; "Import all" slaat ze over.
+TWIJFEL_REDENEN = ("shopify_duplicate", "likely_same", "sold_match", "second_advert")
+
+
+def _shopify_van_item(listings_by_id: dict) -> dict:
+    """item_id → de Shopify-productnummers die er al aan hangen."""
+    uit: dict = {}
+    for (pf, pid), iid in listings_by_id.items():
+        if pf == "shopify":
+            uit.setdefault(iid, set()).add(pid)
+    return uit
+
+
+def _twijfelreden(cand: dict, item_id: str | None, reden: str | None,
+                  verkocht: set, shopify_van_item: dict,
+                  listings_by_id: dict | None = None) -> str | None:
+    """Waarom deze zekere-ogende koppeling tóch een vraag aan de verkoper is.
+
+    * shopify_duplicate: het item hangt al aan een ánder Shopify-product. Dan
+      staat het stuk twee keer in de winkel, of het zijn twee stukken met een
+      verkeerd nummer (1071 bij Revaleur: col tegen ronde hals).
+    * sold_match: de advertentie staat nog te koop, het item is al verkocht.
+      Opnieuw ingekocht of een advertentie die bleef hangen; dat weet alleen hij.
+    * second_advert: alleen de titel is gelijk, en dat item staat op dit kanaal
+      al met een ándere advertentie. Tien blikjes plectrums zijn tien stuks, een
+      dubbel geplaatste advertentie is één stuk; aan de titel zie je het niet.
+    Dezelfde advertentie die we al kennen is nooit twijfel: die hoort er al bij.
+    """
+    if not item_id or reden == "same_listing":
+        return None
+    # Al twijfel uit _match_candidate zelf (alleen de titel gelijk, de prijs niet).
+    if reden in TWIJFEL_REDENEN:
+        return reden
+    # Alleen bij een gedeeld NUMMER zegt de winkel zelf dat het één stuk is. Is
+    # alleen de titel gelijk, dan zijn het meestal twee stukken (Janneke 09-10:
+    # 526 kinderschoenen en truien met dezelfde titel kregen "zelfde nummer,
+    # verwijder het extra product in Shopify"). Sinds de middag van 09-10 is
+    # dat geen vraag meer maar een eigen stuk, zie hieronder.
+    if (cand.get("platform") == "shopify" and reden != "same_title"
+            and shopify_van_item.get(item_id, set()) - {str(cand.get("platform_listing_id"))}):
+        return "shopify_duplicate"
+    # Twee Shopify-producten met alleen dezelfde titel zijn twee stukken: de
+    # winkel zelf telt ze als twee producten (Daniel, 09-10-2026: Janneke kreeg
+    # 291 keer "alleen de titel komt overeen" voor kinderschoenen in elke maat).
+    # Geen vraag meer; "Import all" maakt er een eigen item van via
+    # _tweede_advertentie, precies wat "Ander stuk, toevoegen" deed.
+    if _ander_shopify_product(cand, item_id, reden, listings_by_id):
+        return None
+    if item_id in verkocht:
+        return "sold_match"
+    if reden == "same_title" and listings_by_id:
+        eigen = str(cand.get("platform_listing_id"))
+        if any(pf == cand.get("platform") and iid == item_id and pid != eigen
+               for (pf, pid), iid in listings_by_id.items()):
+            return "second_advert"
+    return None
+
+
+def _ander_shopify_product(cand: dict, item_id: str | None, reden: str | None,
+                           listings_by_id: dict | None) -> bool:
+    """Is dit een Shopify-product dat alleen in titel lijkt op een item dat al
+    aan een ÁNDER Shopify-product hangt? Dan is het een eigen stuk."""
+    if cand.get("platform") != "shopify" or not item_id or reden != "same_title":
+        return False
+    eigen = str(cand.get("platform_listing_id"))
+    return any(pf == "shopify" and iid == item_id and pid != eigen
+               for (pf, pid), iid in (listings_by_id or {}).items())
+
+
+def _tweede_advertentie(db, item_id: str, platform: str, listing_id) -> bool:
+    """Staat er voor dit item al een ANDERE advertentie op ditzelfde platform?
+
+    Een verkoper kan hetzelfde artikel meerdere keren los te koop zetten — tien
+    identieke blikjes plectrums zijn tien advertenties, geen één. De titelmatch
+    hierboven ziet dat verschil niet, en de koppeling overschreef dan het
+    advertentienummer van de vorige. Gevolg: negen advertenties die het dashboard
+    niet meer kende en dus ook niet kon verwijderen als er één verkocht was.
+
+    Geldt alleen nog voor de TITELmatch. Draagt de advertentie hetzelfde
+    artikelnummer als een bestaand item, dan zegt de verkoper zelf dat het één
+    artikel is en krijgt de tweede advertentie een eigen regel onder datzelfde
+    item — zie de uitleg in bulk_import_candidates().
+    """
+    if not item_id or listing_id is None:
+        return False
+    try:
+        rijen = (db.table("listings").select("platform_listing_id")
+                 .eq("item_id", item_id).eq("platform", platform).execute().data or [])
+    except Exception:
+        # Bewust True bij een leesfout, en dat is geen slordigheid maar de enige
+        # kant die te herstellen valt. False betekent hier "er is geen tweede
+        # advertentie", waarna de aanroeper het advertentienummer van de
+        # BESTAANDE regel overschrijft — precies de schade die deze functie moet
+        # voorkomen: een advertentie die het dashboard niet meer kent en dus ook
+        # niet kan weghalen als hij verkocht is. True laat de kandidaat een eigen
+        # item worden; dat is hooguit een dubbeling die de verkoper zelf ziet en
+        # samenvoegt. Leesfouten zijn hier geen theorie — parallelle
+        # Supabase-leesacties vielen eerder gemeten 45 van de 55 keer om.
+        return True
+    return any(
+        (r.get("platform_listing_id") is not None
+         and str(r["platform_listing_id"]) != str(listing_id))
+        for r in rijen
+    )
+
+
+# ── Cross-platform duplicate detection ────────────────────────────────────
+#
+# The exact-title match above cannot see that "Blauwe Nike hoodie maat M" on
+# Marktplaats and "Blue Nike hoodie size M" on Vinted are one and the same
+# jumper. A seller who imports from BOTH platforms would end up with the item
+# twice — and cross-listing one of those copies would post a genuine duplicate
+# advert on a channel where the item is already for sale.
+#
+# So we look for translated twins, with two hard rules:
+#   1. It NEVER links automatically. Merging two different items is much harder
+#      to undo than leaving a duplicate, so the seller always confirms.
+#   2. It only ever compares a candidate against items that are already listed
+#      on a DIFFERENT channel and NOT on the candidate's own channel — the only
+#      situation in which a translated twin can exist at all.
+# Costs nothing for the common case: a seller who only imports from one
+# platform has no cross-platform items, so the model is never called.
+
+_TWIN_BATCH = 40          # candidates per model call
+_TWIN_MAX_ITEMS = 250     # never build a prompt bigger than this
+# De prijsgrens voor een tweeling staat in backend/services/dubbelen.py.
+
+
+def _twin_pool(platform: str, items: list[dict], platforms_by_item: dict) -> list[dict]:
+    """
+    The items a candidate from `platform` could plausibly be a translated twin of.
+
+    Scoped to ONE platform on purpose: with a mixed set of candidates the union of
+    their platforms excluded every item that was on any of them, which emptied the
+    pool completely and quietly switched duplicate detection off.
+    """
+    pool = []
+    for it in items:
+        on = platforms_by_item.get(it["id"]) or set()
+        if not on:
+            continue                       # never published anywhere — nothing to be a twin of
+        if platform in on:
+            continue                       # already on this channel; not a cross-channel twin
+        pool.append(it)
+    return pool[:_TWIN_MAX_ITEMS]
+
+
+# Kleur, maat, merk en prijs vergelijken zit sinds 30-08-2026 in één module,
+# omdat het publiceren dezelfde controle nodig heeft: zonder die controle zette
+# "Publish" een artikel dat al op een kanaal stond er voor de tweede keer op.
+from backend.services.tweelingen import (          # noqa: E402
+    advertentiecode, plausibel, prijs_wijkt_af, bekende_merken_van,
+    plausibel as _twin_plausible,
+    kleuren as _canon_colors,
+    maten as _sizes,
+    merken as _brands,
+    _prijs as _price,
+)
+
+
+async def _find_twins(cands: list[dict], items: list[dict], platforms_by_item: dict,
+                      _rem=None) -> dict:
+    """
+    candidate_id → item_id for listings that look like the same physical object
+    already in the inventory under another language. Empty dict on any failure:
+    a missing suggestion just means one extra row to review, never a wrong merge.
+    """
+    if not cands:
+        return {}
+    # One platform at a time: the pool of possible twins is different for each.
+    by_platform: dict[str, list[dict]] = {}
+    for c in cands:
+        by_platform.setdefault(c.get("platform"), []).append(c)
+    if len(by_platform) > 1:
+        import asyncio as _a
+        # Eén rem voor de héle aanroep, ook over de platforms heen. Zonder dat
+        # zou elk platform zijn eigen budget krijgen en zijn we bij drie
+        # platforms alsnog met negen tegelijk bezig. Zie _TWIN_TEGELIJK.
+        rem = _rem or _a.Semaphore(_TWIN_TEGELIJK)
+        results = await _a.gather(*(
+            _find_twins(group, items, platforms_by_item, _rem=rem)
+            for group in by_platform.values()
+        ))
+        merged = {}
+        for r in results:
+            merged.update(r)
+        return merged
+
+    pool = _twin_pool(cands[0].get("platform"), items, platforms_by_item)
+    if not pool:
+        return {}
+    # Sinds 23-09-2026 eerst Gemini, dan Claude (backend/services/taalmodel.py).
+    from backend.services import taalmodel
+
+    # The seller's own brand vocabulary, so a brand can be spotted in a title even
+    # when the scan didn't record one for that row.
+    known_brands = {(it.get("brand") or "").strip().lower() for it in items}
+    known_brands |= {(c.get("brand") or "").strip().lower() for c in cands}
+    known_brands.discard("")
+
+    item_lines = "\n".join(
+        f"[{i}] {(it.get('title') or '').strip()[:120]}"
+        f"{' — ' + it['brand'] if it.get('brand') else ''}"
+        f"{' — €' + str(it['price']) if it.get('price') is not None else ''}"
+        for i, it in enumerate(pool)
+    )
+
+    async def _chunk(batch: list[dict]) -> dict:
+        cand_lines = "\n".join(
+            f"({j}) {(c.get('title') or '').strip()[:120]}"
+            f"{' — ' + c['brand'] if c.get('brand') else ''}"
+            f"{' — €' + str(c['price']) if c.get('price') is not None else ''}"
+            for j, c in enumerate(batch)
+        )
+        prompt = (
+            "A second-hand seller lists the same physical object on several marketplaces,"
+            " often in different languages (Dutch on Marktplaats/2dehands, English on Vinted).\n\n"
+            "ITEMS ALREADY IN THE INVENTORY:\n"
+            f"{item_lines}\n\n"
+            "NEWLY SCANNED LISTINGS:\n"
+            f"{cand_lines}\n\n"
+            "For each newly scanned listing, decide whether it is the SAME PHYSICAL OBJECT"
+            " as one of the inventory items, allowing for translation between Dutch and English.\n"
+            "Rules:\n"
+            "- Only answer when you are certain. Brand, model, size and colour must all match.\n"
+            "- Two similar garments that differ in size, colour or model are DIFFERENT objects.\n"
+            "- A seller with several of the same product is normal; if you cannot tell which"
+            " one it is, leave it out.\n"
+            "- Leave out anything you are unsure about. An omission is harmless; a wrong"
+            " pairing destroys the seller's inventory.\n\n"
+            'Respond with ONLY a JSON array, e.g. [{"listing":0,"item":3}] — [] if none match.'
+        )
+        try:
+            raw = (await taalmodel.vraag_async(
+                prompt, max_tokens=1000, tijdslimiet=60.0, wat="tweelingzoeker",
+                # Zonder denkstap 2 in plaats van 16 seconden, en deze vraag draait
+                # bij elke keer dat de importlijst laadt. Gemeten 23-09-2026 op 120
+                # echte NL/EN-paren van Revaleur, drie keer: nul koppelingen naar
+                # een ander soort stuk. Wat misging was altijd een tweede exemplaar
+                # met precies dezelfde titel, en een tweeling wordt nooit vanzelf
+                # samengevoegd (zie de regels boven _find_twins).
+                denken=False)).strip()
+            m = re.search(r"\[.*\]", raw, re.S)
+            if not m:
+                return {}
+            pairs = json.loads(m.group(0))
+        except Exception as e:
+            logger.warning(f"Twin detection call failed: {e}")
+            return {}
+
+        out = {}
+        seen_items = set()
+        for p in pairs if isinstance(pairs, list) else []:
+            try:
+                j, i = int(p["listing"]), int(p["item"])
+            except (TypeError, ValueError, KeyError):
+                continue
+            if not (0 <= j < len(batch) and 0 <= i < len(pool)):
+                continue
+            if i in seen_items:
+                continue   # two candidates claiming one item — can't tell them apart, drop both
+            reject = _twin_plausible(batch[j], pool[i], known_brands)
+            if reject:
+                logger.info(
+                    "Twin rejected on %s: %r vs %r",
+                    reject, (batch[j].get("title") or "")[:60], (pool[i].get("title") or "")[:60],
+                )
+                continue
+            seen_items.add(i)
+            out[batch[j]["id"]] = pool[i]["id"]
+        return out
+
+    chunks = [cands[i:i + _TWIN_BATCH] for i in range(0, len(cands), _TWIN_BATCH)]
+    results = await _asyncio_gather_safe(chunks, _chunk, _rem)
+    merged = {}
+    for r in results:
+        merged.update(r)
+    return merged
+
+
+# Hoeveel modelaanroepen er hier hooguit tegelijk mogen lopen.
+#
+# WAAROM DIT ER IS (31-08-2026, Egbert Brouwer).
+# Egbert stuurde een schermafbeelding: zijn importlijst blijft leeg en het
+# scherm zegt "Server error (500). Please try again in a moment." Zijn extensie
+# staat op 1.0.273 en de Admarkt-schakelaar staat aan — daar lag het dus niet
+# aan.
+#
+# Wat hier gebeurde: bij 500 kandidaten maakt de code 13 brokken en vuurt die
+# ALLEMAAL tegelijk af met `asyncio.gather`. Elke brok doet zijn modelaanroep
+# via `asyncio.to_thread`, en die deelt zijn draden met de inlogcontrole die op
+# élk verzoek draait — dezelfde valkuil die bovenaan scheduler.py al beschreven
+# staat. Op Railway is die voorraad zes draden groot. Dertig seconden lang was
+# er dus geen draad meer over voor wie dan ook, en dat is precies hoe een
+# verzoek eindigt in een 500 zonder JSON eronder.
+#
+# Drie tegelijk is nog steeds ruim vier keer sneller dan één voor één, en laat
+# de helft van de draden vrij voor gewone verzoeken.
+_TWIN_TEGELIJK = 3
+
+
+async def _asyncio_gather_safe(chunks, fn, rem=None):
+    import asyncio as _asyncio
+    rem = rem or _asyncio.Semaphore(_TWIN_TEGELIJK)
+
+    async def _met_rem(c):
+        async with rem:
+            return await fn(c)
+
+    return await _asyncio.gather(*(_met_rem(c) for c in chunks))
+
+
+@router.post("/scan/{platform}")
+def start_scan(platform: str, background_tasks: BackgroundTasks,
+               user_id: str = Depends(require_active_subscription)):
+    if platform == "shopify":
+        return _start_shopify_scan(user_id, background_tasks)
+    if platform == "woocommerce":
+        return _start_server_scan(user_id, background_tasks, "woocommerce")
+    if platform not in SCANNABLE_PLATFORMS:
+        raise HTTPException(status_code=400, detail=f"Scanning isn't available for {platform}")
+    db = get_db()
+    # The extension now also triggers Vinted scans autonomously on a timer; avoid
+    # piling up duplicate scan jobs (and opening a second tab) if one is already
+    # queued or actively running.
+    #
+    # execute_with_retry, niet .execute(): Supabase verbreekt af en toe een
+    # hergebruikte verbinding, en dat gaf hier een kale "Internal Server Error"
+    # terug. De app kon daar geen fout uit lezen en toonde de verkoper
+    # `Unexpected token 'I', "Internal S"... is not valid JSON` (Egbert Brouwer,
+    # 27-08-2026) — een onbegrijpelijke melding voor iets dat gewoon opnieuw
+    # geprobeerd had moeten worden.
+    existing = execute_with_retry(
+        db.table("jobs")
+        .select("id")
+        .eq("user_id", user_id)
+        .eq("platform", platform)
+        .eq("action", "scan")
+        .in_("status", ["pending", "claimed"])
+        .limit(1)
+    ).data
+    if existing:
+        return {"job_id": existing[0]["id"]}
+    # Een zakelijk Marktplaats-account (Admarkt) kan tienduizenden advertenties
+    # hebben. Die passen niet in één ronde, dus elke scan pakt de volgende lading
+    # op. Zonder dit begon iedere scan weer bij advertentie 1 en leverde hij niets
+    # nieuws op — de scan meldde "klaar" terwijl er niets bijkwam.
+    payload: dict = {}
+    if platform == "marktplaats":
+        # WAT WE AL HEBBEN, MEE NAAR DE EXTENSIE.
+        #
+        # Hier stond een teller: "sla de eerste N advertenties over". Dat werkt
+        # alleen als Admarkt zijn advertenties élke keer in dezelfde volgorde
+        # teruggeeft, en dat doet hij niet. Gemeten bij een verkoper met 5.534
+        # advertenties: drie scans achter elkaar, elke keer dezelfde 250 en nul
+        # nieuwe kandidaten — terwijl het scherm netjes "klaar" meldde.
+        #
+        # Nu sturen we de nummers mee die we al kennen. De extensie slaat die
+        # over, ongeacht de volgorde waarin ze langskomen. Elke ronde levert dan
+        # gegarandeerd nieuwe advertenties op, tot ze op zijn.
+        try:
+            bekend: list[str] = []
+            stap = 1000
+            for offset in range(0, 40000, stap):
+                # .order("id") is hier kritiek. Zonder vaste sortering geeft de
+                # database elke pagina in willekeurige volgorde terug, dus deze
+                # lijst mist advertentienummers én bevat dubbele. Gevolg: de
+                # extensie krijgt een onvolledige "deze ken ik al"-lijst mee,
+                # haalt advertenties op die we al hebben, en meldt daarna
+                # "niets nieuws gevonden" terwijl er nog duizenden open staan.
+                # Precies het beeld bij Egbert Brouwer (26-08-2026): 1000
+                # gevonden, allemaal al bekend, terwijl er 5.534 zijn.
+                rij = (db.table("import_candidates").select("platform_listing_id")
+                       .eq("user_id", user_id).eq("platform", platform).order("id")
+                       .range(offset, offset + stap - 1).execute().data or [])
+                bekend += [str(r["platform_listing_id"]) for r in rij
+                           if r.get("platform_listing_id") is not None]
+                if len(rij) < stap:
+                    break
+            # Advertenties waarvan de foto onbereikbaar is komen NIET in de
+            # "ken ik al"-lijst: de extensie leest ze dan opnieuw, en een
+            # herscan vult de foto in zodra Marktplaats hem verwerkt heeft
+            # (_backfill_patch). Alleen de kleine kolom photo_url, en gefilterd
+            # in de database, dus geen extra verkeer voor 5.000 advertenties.
+            try:
+                kapot = {str(r["platform_listing_id"]) for r in (
+                    db.table("import_candidates").select("platform_listing_id")
+                    .eq("user_id", user_id).eq("platform", platform)
+                    .like("photo_url", "%icas.io/%").limit(1000).execute().data or [])}
+                if kapot:
+                    bekend = [b for b in bekend if b not in kapot]
+            except Exception as e:  # noqa: BLE001 — zonder dit werkt de scan als altijd
+                logger.warning("Kon advertenties met onbereikbare foto niet bepalen voor %s: %s", user_id, e)
+            payload["bekende_ids"] = bekend
+            # De oude teller blijft meegaan voor wie nog een oudere extensie
+            # draait; die kan met bekende_ids niets.
+            payload["scan_offset"] = len(bekend)
+        except Exception as e:
+            logger.warning("Kon scanpositie niet bepalen voor %s: %s", user_id, e)
+    elif platform == "vinted":
+        # VAN WELKE ADVERTENTIES WE DE TEKST AL HEBBEN.
+        #
+        # Toon (dejuistetoon), 02-09-2026. Vinted's kastoverzicht geeft alles
+        # behalve de omschrijving; die staat alleen op de advertentiepagina
+        # zelf. De scan haalde daarom ELKE keer alle ruim duizend pagina's op,
+        # ook die van advertenties waarvan de tekst allang in het dashboard
+        # stond. Vinted knijpt dat af: gemeten geeft hij na een bui verzoeken
+        # 429 terug en laat er daarna nog maar een handvol per halve minuut
+        # door. Zijn drie scans van dezelfde kast leverden achtereenvolgens 52,
+        # 776 en 507 advertenties zónder tekst op — dezelfde kast, alleen een
+        # leger budget. Die lege uitkomsten werden vervolgens over de goede
+        # heen geschreven (dichtgezet in jobs._store_scan_results), en wat je
+        # daarna importeerde had geen tekst meer. Zonder tekst weigert het
+        # dashboard te publiceren: alles grijs, niets aanklikbaar.
+        #
+        # We sturen daarom mee wat we al hebben. De extensie slaat die over en
+        # besteedt haar hele budget aan de advertenties die het echt nodig
+        # hebben — bij Toon 52 in plaats van 1.017.
+        try:
+            payload["tekst_bekend"] = _vinted_ids_met_tekst(db, user_id)
+        except Exception as e:  # noqa: BLE001
+            # Niet fataal: zonder deze lijst doet de scan gewoon wat hij altijd
+            # deed. Een mislukte optimalisatie mag geen scan tegenhouden.
+            logger.warning("Kon 'tekst al bekend'-lijst niet maken voor %s: %s", user_id, e)
+
+    job_id = str(uuid.uuid4())
+    try:
+        execute_with_retry(db.table("jobs").insert({
+            "id": job_id,
+            "user_id": user_id,
+            "item_id": None,
+            "platform": platform,
+            "action": "scan",
+            "status": "pending",
+            "payload": payload,
+        }), dubbel_is_ok=True)
+    except Exception as e:  # noqa: BLE001
+        # Nooit een kale 500: die komt in het scherm aan als onleesbare
+        # JSON-fout. Liever een zin waar de verkoper iets mee kan.
+        logger.exception("Kon scanopdracht niet aanmaken voor %s (%s)", user_id, platform)
+        raise HTTPException(
+            status_code=503,
+            detail="Could not start the scan just now — the database did not respond. Try again in a moment.")
+    return {"job_id": job_id}
+
+
+def _start_shopify_scan(user_id: str, background_tasks: BackgroundTasks) -> dict:
+    """Shopify leest de server zelf uit (services/shopify_scan.py).
+
+    Bewust NIET in SCANNABLE_PLATFORMS: die lijst betekent "de extensie doet de
+    scan". Een wachtende opdracht voor Shopify zou de extensie oppakken en niet
+    kunnen uitvoeren. Daarom begint deze opdracht meteen op 'claimed'."""
+    from backend.services.shopify_scan import scan_winkel
+
+    db = get_db()
+    lopend = execute_with_retry(
+        db.table("jobs").select("id").eq("user_id", user_id).eq("platform", "shopify")
+        .eq("action", "scan").in_("status", ["pending", "claimed"]).limit(1)
+    ).data
+    if lopend:
+        return {"job_id": lopend[0]["id"]}
+    job_id = str(uuid.uuid4())
+    try:
+        execute_with_retry(db.table("jobs").insert({
+            "id": job_id, "user_id": user_id, "item_id": None, "platform": "shopify",
+            "action": "scan", "status": "claimed", "payload": {},
+            "claimed_at": datetime.now(timezone.utc).isoformat(),
+            "result": {"_progress": {"stage": "opening",
+                                     "message": "Connecting to your Shopify store…"}},
+        }), dubbel_is_ok=True)
+    except Exception:  # noqa: BLE001
+        logger.exception("Kon Shopify-scan niet aanmaken voor %s", user_id)
+        raise HTTPException(
+            status_code=503,
+            detail="Could not start the scan just now — the database did not respond. Try again in a moment.")
+    background_tasks.add_task(scan_winkel, user_id, job_id)
+    return {"job_id": job_id}
+
+
+def _start_server_scan(user_id: str, background_tasks: BackgroundTasks, platform: str) -> dict:
+    """Een scan die de server zelf doet, met de sleutel van de koppeling.
+
+    Zoals Shopify hierboven: bewust niet in SCANNABLE_PLATFORMS (dat betekent
+    "de extensie doet het") en meteen op 'claimed', zodat de extensie hem nooit
+    oppakt. WooCommerce sinds 09-10-2026 (services/woocommerce_scan.py)."""
+    from backend.services.woocommerce_scan import scan_winkel
+
+    db = get_db()
+    lopend = execute_with_retry(
+        db.table("jobs").select("id").eq("user_id", user_id).eq("platform", platform)
+        .eq("action", "scan").in_("status", ["pending", "claimed"]).limit(1)
+    ).data
+    if lopend:
+        return {"job_id": lopend[0]["id"]}
+    job_id = str(uuid.uuid4())
+    try:
+        execute_with_retry(db.table("jobs").insert({
+            "id": job_id, "user_id": user_id, "item_id": None, "platform": platform,
+            "action": "scan", "status": "claimed", "payload": {},
+            "claimed_at": datetime.now(timezone.utc).isoformat(),
+            "result": {"_progress": {"stage": "opening",
+                                     "message": "Connecting to your WooCommerce shop…"}},
+        }), dubbel_is_ok=True)
+    except Exception:  # noqa: BLE001
+        logger.exception("Kon %s-scan niet aanmaken voor %s", platform, user_id)
+        raise HTTPException(
+            status_code=503,
+            detail="Could not start the scan just now — the database did not respond. Try again in a moment.")
+    background_tasks.add_task(scan_winkel, user_id, job_id)
+    return {"job_id": job_id}
+
+
+@router.get("/")
+async def list_import_candidates(platform: str = None, status: str = "pending", user_id: str = Depends(get_current_user)):
+    import asyncio
+
+    db = get_db()
+
+    # De Supabase-client is SYNCHROON en deze functie is async: elke .execute()
+    # hieronder liep dus rechtstreeks op de lus die de hele server bedient. Bij
+    # een verkoper met duizenden advertenties kost dit blok een paar seconden —
+    # en al die tijd stond ALLES stil, voor iedereen, inclusief de import die op
+    # dat moment bezig was. Precies daar kwamen de 500'en vandaan die de lading
+    # lieten halveren. Alles wat de database raakt gaat daarom naar een aparte
+    # werkdraad.
+    def _lees():
+        q = db.table("import_candidates").select("*").eq("user_id", user_id)
+        if platform:
+            q = q.eq("platform", platform)
+        if status:
+            q = q.eq("status", status)
+        cands = q.order("created_at", desc=True).limit(500).execute().data or []
+        if not cands:
+            # Vijf waarden, net als hieronder: met vier gaf een lege lijst sinds
+            # 24-09 een 500, en bleef na "Import all" de oude lijst op het scherm
+            # staan (kardkid9, 01-11-2026: importscherm 3x 500).
+            return cands, [], {}, {}, set()
+        # sku en created_at horen erbij: zonder die twee koos deze lijst bij een
+        # nummer soms een ander item dan "Import all" daarna echt koppelde.
+        its = fetch_all(lambda: db.table("items")
+                        .select("id,title,price,brand,sku,created_at").eq("user_id", user_id))
+        by_id, by_item, verkocht = _listing_index(db, its)
+        return cands, its, by_id, by_item, verkocht
+
+    candidates, items, listings_by_id, platforms_by_item, verkocht = await asyncio.to_thread(_lees)
+    if candidates:
+        # Precies dezelfde beslissing als bulk_import_candidates, zodat wat het
+        # scherm "zeker" noemt ook is wat "Import all" zelf koppelt.
+        merken = bekende_merken_van(items) | bekende_merken_van(candidates)
+        shopify_van_item = _shopify_van_item(listings_by_id)
+        unmatched = []
+        for c in candidates:
+            item_id, reason = _match_candidate(c, items, listings_by_id, merken, verkocht)
+            if _ander_shopify_product(c, item_id, reason, listings_by_id):
+                # Wordt bij importeren een eigen item; toon het ook als nieuw,
+                # anders koppelt de knop per rij het aan het voorgestelde item.
+                item_id, reason = None, None
+            reason = _twijfelreden(c, item_id, reason, verkocht, shopify_van_item, listings_by_id) or reason
+            c["suggested_item_id"] = item_id
+            c["match_reason"] = reason
+            if not item_id:
+                unmatched.append(c)
+        # Anything the certain rules couldn't place: check whether it is the same
+        # object under another language, already imported from another channel.
+        for cand_id, item_id in (await _find_twins(unmatched, items, platforms_by_item)).items():
+            for c in candidates:
+                if c["id"] == cand_id:
+                    c["suggested_item_id"] = item_id
+                    c["match_reason"] = "likely_same"
+        for c in candidates:
+            c["twijfel"] = c.get("match_reason") in TWIJFEL_REDENEN
+    return candidates
+
+
+@router.get("/summary")
+def import_candidates_summary(user_id: str = Depends(get_current_user)):
+    """
+    What the last scan of each platform actually found, broken down by what has
+    already been decided about it.
+
+    The review list only shows PENDING candidates, and a re-scan deliberately
+    keeps the status of anything you already imported, linked or ignored. Put
+    together, that means a scan of a wardrobe you've fully imported before ends
+    with an empty review list — which looked exactly like "the scan found
+    nothing". This is what lets the UI say where those listings went instead.
+    """
+    db = get_db()
+    # fetch_all, niet .limit(5000): PostgREST negeert een limiet boven zijn
+    # eigen max-rows en stuurt er stilzwijgend 1.000 terug. Daardoor meldde het
+    # scherm "Last scan found 1000 listings" bij een verkoper met 2.250
+    # kandidaten — alsof de scan de helft was kwijtgeraakt.
+    rows = fetch_all(lambda: db.table("import_candidates")
+                     .select("platform,status").eq("user_id", user_id))
+    by_status: dict[str, int] = {}
+    by_platform: dict[str, dict[str, int]] = {}
+    for r in rows:
+        st = r.get("status") or "pending"
+        pf = r.get("platform") or "unknown"
+        by_status[st] = by_status.get(st, 0) + 1
+        by_platform.setdefault(pf, {})
+        by_platform[pf][st] = by_platform[pf].get(st, 0) + 1
+    return {"total": len(rows), "by_status": by_status, "by_platform": by_platform}
+
+
+# Only these may be put back on the review list. 'imported' and 'linked' are
+# deliberately NOT reopenable: those listings already exist as items, so
+# re-importing them would duplicate your stock.
+REOPENABLE = ("ignored", "failed")
+
+
+@router.post("/reopen")
+def reopen_candidates(body: dict = None, user_id: str = Depends(get_current_user)):
+    """Put ignored/failed candidates back on the review list."""
+    body = body or {}
+    statuses = [s for s in (body.get("statuses") or list(REOPENABLE)) if s in REOPENABLE]
+    if not statuses:
+        raise HTTPException(status_code=400, detail="Nothing reopenable requested")
+    db = get_db()
+    q = db.table("import_candidates").select("id").eq("user_id", user_id).in_("status", statuses)
+    if body.get("platform"):
+        q = q.eq("platform", body["platform"])
+    ids = [c["id"] for c in (q.execute().data or [])]
+    for i in range(0, len(ids), 100):
+        (db.table("import_candidates").update({"status": "pending"})
+           .eq("user_id", user_id).in_("id", ids[i:i + 100]).execute())
+    return {"reopened": len(ids)}
+
+
+@router.post("/{candidate_id}/link")
+async def link_candidate(candidate_id: str, body: dict, user_id: str = Depends(get_current_user)):
+    """Attach a scraped listing to an existing item — no new item, no guessed fields."""
+    item_id = body.get("item_id")
+    if not item_id:
+        raise HTTPException(status_code=400, detail="item_id required")
+    db = get_db()
+    cand = eerste_rij(await naast_de_lus(lambda: db.table("import_candidates").select("*").eq("id", candidate_id).eq("user_id", user_id).limit(1).execute()))
+    if not cand:
+        raise HTTPException(status_code=404, detail="Import candidate not found")
+    item = (await naast_de_lus(lambda: db.table("items").select("id").eq("id", item_id).eq("user_id", user_id).execute()))
+    if not item.data:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    # Backfill any empty item fields from the freshly scanned candidate. Photos
+    # first, so a link-to-existing-item stores our own urls too (same reason as
+    # the create path).
+    from backend.services.photo_mirror import mirror_photos
+    _mirrored = await mirror_photos(_photos_from_candidate(cand), user_id)
+    if _mirrored:
+        cand["photo_urls"] = _mirrored
+    _backfill_item_from_candidate(db, item_id, cand, inferred=await _infer_attributes_smart(
+        cand.get("title"), cand.get("description"), cand.get("brand")))
+
+    existing = (await naast_de_lus(lambda: db.table("listings").select("id,status,platform_listing_id").eq("item_id", item_id).eq("platform", cand["platform"]).execute()))
+    listed_at = cand.get("platform_listed_at") or datetime.now(timezone.utc).isoformat()
+    if cand["platform"] in ("shopify", "woocommerce") and existing.data:
+        # Een Shopify-productnummer verandert nooit, dus een ánder nummer is een
+        # ánder product: hetzelfde stuk staat twee keer in de winkel. Overschrijven
+        # maakte het eerste product onvindbaar, en een verkoop daarvan haalde het
+        # stuk dan nergens meer weg (Revaleur, 24-09-2026, zeven stuks). Alleen
+        # de rij van dit product, of een rij zonder levend ander product, mag
+        # worden bijgewerkt; anders komt er een tweede rij naast.
+        eigen = str(cand["platform_listing_id"])
+        bruikbaar = ([r for r in existing.data if str(r.get("platform_listing_id") or "") == eigen]
+                     or [r for r in existing.data if not r.get("platform_listing_id")
+                         or r.get("status") not in ("active", "pending", "relisting", "hidden", "sold")])
+        existing.data = bruikbaar
+    if existing.data:
+        (await naast_de_lus(lambda: db.table("listings").update({
+            "platform_listing_id": cand["platform_listing_id"],
+            "platform_listing_url": cand["platform_listing_url"],
+            "status": _listing_status_for(cand),
+            "listed_at": listed_at,
+        }).eq("id", existing.data[0]["id"]).execute()))
+    else:
+        (await naast_de_lus(lambda: db.table("listings").insert({
+            "item_id": item_id,
+            "platform": cand["platform"],
+            "platform_listing_id": cand["platform_listing_id"],
+            "platform_listing_url": cand["platform_listing_url"],
+            "status": _listing_status_for(cand),
+            "listed_at": listed_at,
+        }).execute()))
+
+    (await naast_de_lus(lambda: db.table("import_candidates").update({"status": "linked"}).eq("id", candidate_id).execute()))
+    return {"ok": True}
+
+
+@router.post("/{candidate_id}/create-item")
+async def create_item_from_candidate(candidate_id: str, body: dict, user_id: str = Depends(require_active_subscription)):
+    """
+    Create a new item from a scraped listing. `body` carries the fields scraping
+    can't see (purchase_price, brand, size, condition, category, color, material, ...)
+    plus optional overrides for title/price/photo_urls that were pre-filled from the scrape.
+    """
+    db = get_db()
+    cand = eerste_rij(await naast_de_lus(lambda: db.table("import_candidates").select("*").eq("id", candidate_id).eq("user_id", user_id).limit(1).execute()))
+    if not cand:
+        raise HTTPException(status_code=404, detail="Import candidate not found")
+
+    # Omnivaleur Light: tot 20 actieve artikelen. Zie services/light.py.
+    light_ruimte = await naast_de_lus(lambda: ruimte_over(db, user_id))
+    if light_ruimte is not None and light_ruimte <= 0:
+        raise HTTPException(status_code=403, detail=LIGHT_LIMIET_MELDING)
+
+    await shopify_nummers_aanvullen(db, user_id, [cand])
+    item_data = _item_data_from_candidate(cand, body, inferred=await _infer_attributes_smart(
+        cand.get("title"), cand.get("description"), cand.get("brand")))
+    # Copy the photos into our own bucket before the item exists. A listing
+    # imported from Vinted keeps CDN urls that the extension physically cannot
+    # download from a Marktplaats page (their CDN blocks that origin), so an
+    # item stored with source urls could never be published with its photos.
+    from backend.services.photo_mirror import mirror_photos
+    item_data["photo_urls"] = await mirror_photos(item_data.get("photo_urls"), user_id)
+    item = ItemCreate(**item_data)
+    data = item.model_dump()
+    data["id"] = str(uuid.uuid4())
+    data["user_id"] = user_id
+    # Only auto-generate when the user left the SKU blank — this used to overwrite
+    # unconditionally, so a SKU typed in the import form was always discarded.
+    if not data.get("sku"):
+        data["sku"] = f"IMP-{data['id'][:8].upper()}"
+    created = (await naast_de_lus(lambda: db.table("items").insert(data).execute())).data[0]
+
+    listed_at = cand.get("platform_listed_at") or datetime.now(timezone.utc).isoformat()
+    (await naast_de_lus(lambda: db.table("listings").insert({
+        "item_id": created["id"],
+        "platform": cand["platform"],
+        "platform_listing_id": cand["platform_listing_id"],
+        "platform_listing_url": cand["platform_listing_url"],
+        "status": _listing_status_for(cand),
+        "listed_at": listed_at,
+    }).execute()))
+
+    (await naast_de_lus(lambda: db.table("import_candidates").update({"status": "imported"}).eq("id", candidate_id).execute()))
+    return {"item": created}
+
+
+@router.post("/bulk-import")
+async def bulk_import_candidates(body: dict = None, user_id: str = Depends(require_active_subscription)):
+    """
+    Process every pending import candidate in one go: candidates with a high-confidence
+    suggested_item_id get linked to that item, everything else becomes a new item
+    (title/price/photo straight from the scrape, condition defaults to 'good' since
+    scraping can't see purchase price/brand/size — those stay editable on the item after).
+
+    One exception: a candidate that looks like the same physical object as an item
+    already imported from ANOTHER channel is left alone (still `pending`) and
+    reported as `parked`. Auto-merging could destroy an item, auto-creating would
+    silently duplicate it — so those few rows go back to the seller to confirm.
+    The caller walks past them with the returned `next_offset`.
+    """
+    db = get_db()
+    body = body or {}
+    platform = body.get("platform")
+    # Eén staat voor de hele lading. Alleen gebruikt waar het platform zelf niets
+    # meegaf; wat wél bekend is blijft leidend.
+    standaard_staat = body.get("default_condition")
+    if standaard_staat not in ("new_with_tags", "new", "good", "fair", "poor"):
+        standaard_staat = None
+    if standaard_staat is None:
+        # De automatische import heeft geen keuzelijst: dan geldt wat de
+        # verkoper bij importeren koos (instelling import_staat).
+        try:
+            from backend.services.instellingen import IMPORT_STAAT, lees
+            standaard_staat = (await naast_de_lus(lambda: lees(user_id))).get(IMPORT_STAAT)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("import_staat niet gelezen voor %s: %s", user_id, e)
+    # Alleen deze kandidaten (de automatische Shopify-import, zie
+    # services/shopify_auto_import.py): die importeert wat er sinds het vorige
+    # uur bijkwam, en laat liggen wat de verkoper zelf nog moet beslissen.
+    alleen_ids = [str(i) for i in (body.get("candidate_ids") or []) if i][:500]
+
+    # Process in bounded batches so a single request can never run long enough for the
+    # reverse proxy / gateway to time out and hand the browser an HTML error page (which
+    # then surfaced as the cryptic "Unexpected token '<' … is not valid JSON"). The
+    # frontend loops, calling this until `remaining` hits 0.
+    try:
+        batch = int(body.get("limit") or 25)
+    except (TypeError, ValueError):
+        batch = 25
+    batch = max(1, min(batch, 100))
+    try:
+        offset = max(0, int(body.get("offset") or 0))
+    except (TypeError, ValueError):
+        offset = 0
+
+    import asyncio
+
+    # The frontend calls this endpoint in a tight retry loop — for a seller with
+    # thousands of items (like Egbert, 25-08-2026: "0 listing(s) were imported,
+    # server kept timing out" even with the batch shrunk to 1) that loop can hit
+    # this endpoint dozens of times in one import session. Every one of those
+    # calls used to re-fetch ALL of the user's items + ALL their listings from
+    # scratch below — tens of sequential Supabase round-trips PER CALL, entirely
+    # independent of how small `batch` is. That's why shrinking the batch to 1
+    # didn't help him at all: the slow part wasn't the candidates being
+    # processed, it was this re-read happening before a single candidate was
+    # even looked at. Caching it per user for the length of one import session
+    # turns that into a one-time cost instead of a per-request one.
+    _CACHE_TTL_S = 1800
+    entry = _BULK_IMPORT_CACHE.get(user_id)
+    cache_vers = entry is not None and (_time_mod.monotonic() - entry["ts"]) < _CACHE_TTL_S
+
+    # The Supabase client is SYNCHRONOUS, and this endpoint is async — so every
+    # .execute() below ran directly on the event loop and froze the whole server
+    # for the duration. Importing a few hundred listings means hundreds of
+    # sequential round-trips, which is why the dashboard started returning 502/524
+    # to everyone (including this very import) while a bulk run was going.
+    # Everything that touches the database therefore runs in a worker thread.
+    def _read():
+        # One channel per pass. A seller who scanned Vinted AND Marktplaats before
+        # importing has both sets pending, and neither exists as an item yet — so a
+        # mixed batch could create the same object twice before duplicate detection
+        # ever had something to compare against. Finishing one channel first means
+        # the second channel is always matched against real inventory.
+        q = db.table("import_candidates").select("*").eq("user_id", user_id).eq("status", "pending")
+        if platform:
+            q = q.eq("platform", platform)
+        if alleen_ids:
+            q = q.in_("id", alleen_ids)
+        # Ordered by platform first, so the queue is walked one channel at a time
+        # with a single stable offset. A batch that straddles two channels is cut
+        # back to the first one; the next pass picks up from the boundary.
+        cands = (q.order("platform").order("created_at")
+                  .range(offset, offset + batch - 1).execute().data or [])
+        if cands:
+            head = cands[0].get("platform")
+            cands = [c for c in cands if c.get("platform") == head]
+        # `its`/`by_id`/`by_platform` are the expensive part (see comment above) —
+        # reuse them across calls in this import session instead of re-reading a
+        # seller's entire inventory on every single request.
+        if cache_vers:
+            entry["ts"] = _time_mod.monotonic()  # sessie loopt door, klok niet laten aflopen
+            return cands, entry["items"], entry["by_id"], entry["by_platform"], entry["verkocht"]
+        # created_at en sku horen erbij: het advertentienummer kan uit de sku
+        # komen, en bij meerdere rijen met hetzelfde nummer wint de oudste.
+        its = fetch_all(lambda: db.table("items")
+                        .select("id,title,price,brand,sku,created_at").eq("user_id", user_id))
+        by_id, by_platform, verkocht = _listing_index(db, its)
+        _BULK_IMPORT_CACHE[user_id] = {
+            "items": its, "by_id": by_id, "by_platform": by_platform,
+            "verkocht": verkocht, "ts": _time_mod.monotonic(),
+        }
+        return cands, its, by_id, by_platform, verkocht
+
+    candidates, items, listings_by_id, platforms_by_item, verkocht = await asyncio.to_thread(_read)
+
+    # De eigen merkenwoordenschat van deze verkoper: nodig om te beslissen of
+    # twee advertenties met hetzelfde nummer echt hetzelfde artikel zijn.
+    merken_van_verkoper = bekende_merken_van(items) | bekende_merken_van(candidates)
+    # En om een leeg merk uit de titel te halen: "Regenlaarzen Bergstein
+    # schoenmaat 31*" krijgt Bergstein als de verkoper dat merk elders al invulde.
+    # Vóór het koppelen, zodat ook de vergelijking op merk het ziet.
+    _merken = merken_uit_voorraad(list(items) + list(candidates))
+    for c in candidates:
+        if not str(c.get("brand") or "").strip():
+            _afl = _infer_attributes(c.get("title"), c.get("description"))
+            merk = merk_uit_titel(c.get("title"), _merken,
+                                  c.get("gender") or _afl.get("gender"),
+                                  c.get("category") or _afl.get("category"))
+            if merk:
+                c["brand"] = merk
+
+    # Work out up front which rows must NOT be processed automatically, and drop
+    # them from this pass entirely: everything that is not certain (see
+    # _twijfelreden). Before 24-09-2026 only translated twins were held back; a
+    # second Shopify product and a live advert on a sold item were linked
+    # silently.
+    shopify_van_item = _shopify_van_item(listings_by_id)
+    unmatched, twijfel = [], set()
+    for c in candidates:
+        mid, rd = _match_candidate(c, items, listings_by_id, merken_van_verkoper, verkocht)
+        if not mid:
+            unmatched.append(c)
+        elif _twijfelreden(c, mid, rd, verkocht, shopify_van_item, listings_by_id):
+            twijfel.add(c["id"])
+    twijfel |= set(await _find_twins(unmatched, items, platforms_by_item))
+    parked = len(twijfel)
+    if twijfel:
+        candidates = [c for c in candidates if c["id"] not in twijfel]
+
+    linked, created, failed = 0, 0, 0
+    now = datetime.now(timezone.utc).isoformat()
+
+    await shopify_nummers_aanvullen(db, user_id, candidates)
+
+    # Classify every candidate up front and in parallel — one sequential Haiku
+    # call per candidate inside the loop would stall a bulk import of 50 items
+    # for minutes. Each entry falls back to keywords on its own failure.
+    inferred_by_id = dict(zip(
+        (c["id"] for c in candidates),
+        await asyncio.gather(*(
+            _infer_attributes_smart(c.get("title"), c.get("description"), c.get("brand"))
+            for c in candidates
+        )),
+    )) if candidates else {}
+
+    # Mirror every candidate's photos into our own bucket BEFORE the (synchronous)
+    # processing loop, which runs in a worker thread and can't await. Writing the
+    # result back onto the candidate means both paths below — creating a new item
+    # and backfilling an existing one — store our urls instead of the source CDN's.
+    if candidates:
+        from backend.services.photo_mirror import mirror_photos_bulk
+        mirrored = await mirror_photos_bulk(
+            [_photos_from_candidate(c) for c in candidates], user_id
+        )
+        for cand, photos in zip(candidates, mirrored):
+            if photos:
+                cand["photo_urls"] = photos
+
+    # Omnivaleur Light: nieuwe artikelen alleen zolang er ruimte is. Wat niet past
+    # blijft 'pending' (geparkeerd) en gaat vanzelf mee zodra er ruimte is.
+    light_ruimte = await asyncio.to_thread(lambda: ruimte_over(db, user_id))
+    light_vol = False
+    light_geparkeerd = 0
+
+    def _process():
+        nonlocal linked, created, failed, light_ruimte, light_vol, light_geparkeerd
+        # Harde tijdgrens. Elke kandidaat kost hier een handvol losse
+        # database-aanroepen, en bij een verkoper met duizenden advertenties
+        # tikt dat op tot voorbij de tijd die de gateway een verzoek gunt — dan
+        # kreeg de browser een foutpagina in plaats van antwoord, halveerde de
+        # lading en kroop de import door op één advertentie per aanroep.
+        # Wat niet meer past blijft gewoon 'pending' en gaat mee met de
+        # volgende ronde; er gaat niets verloren.
+        import time as _time
+        deadline = _time.monotonic() + 20
+        for cand in candidates:
+            if _time.monotonic() > deadline:
+                break
+            try:
+                listed_at = cand.get("platform_listed_at") or now
+                match_id, reden = _match_candidate(
+                    cand, items, listings_by_id, merken_van_verkoper, verkocht)
+                # Een TITELmatch zegt niets over aantallen: tien identieke
+                # blikjes plectrums heten alle tien hetzelfde en zijn tien
+                # voorwerpen. Staat er al een ándere advertentie op dat kanaal,
+                # dan blijft het een eigen item. Bij een advertentieNUMMER ligt
+                # dat anders — dan zegt de verkoper zelf dat het één artikel is.
+                if match_id and reden == "same_title" and _tweede_advertentie(
+                        db, match_id, cand["platform"], cand.get("platform_listing_id")):
+                    match_id = None
+                if match_id:
+                    velden = {
+                        "platform_listing_id": cand["platform_listing_id"],
+                        "platform_listing_url": cand["platform_listing_url"],
+                        "status": _listing_status_for(cand),
+                        "listed_at": listed_at,
+                    }
+                    # WELKE REGEL HOORT BIJ DEZE ADVERTENTIE? (30-08-2026)
+                    #
+                    # Een verkoper kan hetzelfde artikel meerdere keren op één
+                    # kanaal hebben staan — een advertentie die hij zelf opnieuw
+                    # plaatste, of een oude die bleef hangen. Vroeger werd dan
+                    # het advertentienummer van de BESTAANDE regel overschreven
+                    # (advertentie kwijt) of, met de rem erop, een heel nieuw
+                    # item aangemaakt. Dat tweede is wat de voorraad opblies:
+                    # zeven rijen voor één vest, en bij elke rij zei het
+                    # dashboard "staat niet op Vinted".
+                    #
+                    # Nu krijgt elke advertentie zijn eigen regel ONDER hetzelfde
+                    # item. Dan klopt het overzicht, en bij verkoop gaan ze
+                    # allemaal weg in plaats van één.
+                    bestaand = (db.table("listings")
+                                .select("id,platform_listing_id")
+                                .eq("item_id", match_id)
+                                .eq("platform", cand["platform"]).execute().data or [])
+                    pid = cand.get("platform_listing_id")
+                    doel = next((r for r in bestaand
+                                 if pid is not None
+                                 and str(r.get("platform_listing_id")) == str(pid)), None)
+                    if doel is None:
+                        # Een regel die nog geen advertentienummer draagt is de
+                        # lege plek die deze advertentie hoort te vullen.
+                        doel = next((r for r in bestaand
+                                     if r.get("platform_listing_id") is None), None)
+                    if doel is not None:
+                        db.table("listings").update(velden).eq("id", doel["id"]).execute()
+                    else:
+                        db.table("listings").insert({
+                            "item_id": match_id, "platform": cand["platform"], **velden,
+                        }).execute()
+                    _backfill_item_from_candidate(db, match_id, cand, inferred=inferred_by_id.get(cand["id"]))
+                    db.table("import_candidates").update({"status": "linked"}).eq("id", cand["id"]).execute()
+                    # Houd de (mogelijk gecachte) index bij, anders herkent de
+                    # volgende kandidaat in dit ronde deze koppeling niet.
+                    pid = cand.get("platform_listing_id")
+                    if pid is not None:
+                        listings_by_id[(cand["platform"], str(pid))] = match_id
+                    platforms_by_item.setdefault(match_id, set()).add(cand["platform"])
+                    linked += 1
+                else:
+                    if light_ruimte is not None and light_ruimte <= 0:
+                        light_vol = True
+                        light_geparkeerd += 1
+                        continue
+                    item_data = _item_data_from_candidate(
+                        cand,
+                        {"_default_condition": standaard_staat} if standaard_staat else None,
+                        inferred=inferred_by_id.get(cand["id"]),
+                    )
+                    item = ItemCreate(**item_data)
+                    data = item.model_dump()
+                    data["id"] = str(uuid.uuid4())
+                    data["user_id"] = user_id
+                    if not data.get("sku"):
+                        data["sku"] = f"IMP-{data['id'][:8].upper()}"
+                    created_item = db.table("items").insert(data).execute().data[0]
+
+                    db.table("listings").insert({
+                        "item_id": created_item["id"],
+                        "platform": cand["platform"],
+                        "platform_listing_id": cand["platform_listing_id"],
+                        "platform_listing_url": cand["platform_listing_url"],
+                        "status": _listing_status_for(cand),
+                        "listed_at": listed_at,
+                    }).execute()
+
+                    db.table("import_candidates").update({"status": "imported"}).eq("id", cand["id"]).execute()
+                    items.append({
+                        "id": created_item["id"], "title": created_item["title"],
+                        "sku": created_item.get("sku"), "brand": created_item.get("brand"),
+                        "price": created_item.get("price"),
+                        "created_at": created_item.get("created_at"),
+                    })
+                    pid = cand.get("platform_listing_id")
+                    if pid is not None:
+                        listings_by_id[(cand["platform"], str(pid))] = created_item["id"]
+                    platforms_by_item.setdefault(created_item["id"], set()).add(cand["platform"])
+                    created += 1
+                    if light_ruimte is not None:
+                        light_ruimte -= 1
+            except Exception:
+                # Mark it failed so it drops out of the pending set — otherwise the batched
+                # loop would re-fetch the same broken candidate every pass and never finish.
+                try:
+                    db.table("import_candidates").update({"status": "failed"}).eq("id", cand["id"]).execute()
+                except Exception:
+                    pass
+                failed += 1
+
+        remaining_q = db.table("import_candidates").select("id", count="exact").eq("user_id", user_id).eq("status", "pending")
+        if platform:
+            remaining_q = remaining_q.eq("platform", platform)
+        if alleen_ids:
+            remaining_q = remaining_q.in_("id", alleen_ids)
+        return remaining_q.execute().count or 0
+
+    remaining = await asyncio.to_thread(_process)
+
+    # Parked rows stay pending, so the next pass must start past them or it would
+    # fetch the same rows forever and never reach the rest of the queue.
+    return {
+        "linked": linked, "created": created, "failed": failed,
+        "parked": parked, "remaining": remaining,   # remaining still counts parked rows
+        "next_offset": offset + parked + light_geparkeerd,
+        "light_parked": light_geparkeerd,
+        # Light zit vol: het scherm legt uit waarom de rest blijft wachten.
+        "light_limit": LIGHT_LIMIET_MELDING if light_vol else None,
+    }
+
+
+@router.post("/{candidate_id}/ignore")
+def ignore_candidate(candidate_id: str, user_id: str = Depends(get_current_user)):
+    db = get_db()
+    db.table("import_candidates").update({"status": "ignored"}).eq("id", candidate_id).eq("user_id", user_id).execute()
+    return {"ok": True}

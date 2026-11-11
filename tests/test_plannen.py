@@ -91,3 +91,53 @@ def test_light_melding_blijft_zoals_hij_was(monkeypatch):
     _zet(monkeypatch, False)
     _met(monkeypatch, "light", 20)
     assert light.publicatie_geblokkeerd(None, "u", "nieuw") == light.LIGHT_LIMIET_MELDING
+
+
+# ── Checkout: Plus, Ultra en jaar zijn pas te koop als de schakelaar aan staat ──
+from fastapi import HTTPException
+
+
+def _ids(monkeypatch):
+    _zet(monkeypatch, False, stripe_price_id="p_pro", stripe_price_id_light="p_l", stripe_price_id_plus="p_plus",
+         stripe_price_id_ultra="p_u", stripe_price_id_light_jaar="p_lj", stripe_price_id_plus_jaar="p_pj",
+         stripe_price_id_ultra_jaar="p_uj", stripe_price_id_pro_jaar="p_prj")
+
+
+@pytest.fixture
+def billing_api(monkeypatch):
+    import backend.api.billing as b
+    for veld in ("stripe_price_id", "stripe_price_id_light"):
+        monkeypatch.setattr(b.settings, veld, {"stripe_price_id": "p_pro", "stripe_price_id_light": "p_l"}[veld], raising=False)
+    return b
+
+
+def test_checkout_oude_keuzes_blijven_werken_met_schakelaar_uit(monkeypatch, billing_api):
+    _ids(monkeypatch)
+    assert billing_api._prijs_voor_plan("pro") == ("pro", "p_pro")
+    assert billing_api._prijs_voor_plan(None) == ("pro", "p_pro")
+    assert billing_api._prijs_voor_plan("light") == ("light", "p_l")
+
+
+@pytest.mark.parametrize("plan,interval", [("plus", None), ("ultra", None), ("pro", "year"), ("light", "year"),
+                                           ("plus", "year"), ("ultra", "year")])
+def test_checkout_nieuwe_keuzes_geweigerd_met_schakelaar_uit(monkeypatch, billing_api, plan, interval):
+    _ids(monkeypatch)
+    with pytest.raises(HTTPException) as e:
+        billing_api._prijs_voor_plan(plan, interval)
+    assert e.value.status_code == 503
+
+
+def test_checkout_nieuwe_keuzes_met_schakelaar_aan(monkeypatch, billing_api):
+    _ids(monkeypatch)
+    monkeypatch.setattr(plannen.settings, "nieuwe_plannen_aan", True, raising=False)
+    assert billing_api._prijs_voor_plan("plus") == ("plus", "p_plus")
+    assert billing_api._prijs_voor_plan("ultra", "year") == ("ultra", "p_uj")
+    assert billing_api._prijs_voor_plan("pro", "year") == ("pro", "p_prj")
+    assert billing_api._prijs_voor_plan("light", "yearly") == ("light", "p_lj")
+
+
+def test_checkout_aan_maar_prijs_niet_ingesteld_geeft_fout_nooit_pro(monkeypatch, billing_api):
+    _zet(monkeypatch, True)
+    monkeypatch.setattr(billing_api.settings, "stripe_price_id", "p_pro", raising=False)
+    with pytest.raises(HTTPException):
+        billing_api._prijs_voor_plan("plus")

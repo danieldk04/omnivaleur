@@ -284,10 +284,19 @@ def _maak_afrekensessie(session_args: dict):
         return stripe.checkout.Session.create(**session_args)
 
 
-def _prijs_voor_plan(plan: str | None) -> tuple[str, str]:
+def _prijs_voor_plan(plan: str | None, interval: str | None = None) -> tuple[str, str]:
     """(plan, Stripe-prijsnummer). Onbekend of niet ingesteld Light geeft een fout,
-    nooit stilletjes Pro: wie Light koos mag niet €19,99 betalen."""
-    if (plan or "").lower() == PLAN_LIGHT:
+    nooit stilletjes Pro: wie Light koos mag niet €19,99 betalen. Plus, Ultra en
+    jaarbetaling kunnen pas gekozen worden als de nieuwe plannen aan staan."""
+    from backend.services.plannen import keuze_beschikbaar
+    plan = (plan or "").lower()
+    jaar = (interval or "").lower() in ("year", "yearly", "jaar")
+    if plan in ("plus", "ultra") or jaar:
+        prijs = keuze_beschikbaar(plan or PLAN_PRO, jaar)
+        if not prijs:
+            raise HTTPException(status_code=503, detail="This plan is not available yet")
+        return plan or PLAN_PRO, prijs
+    if plan == PLAN_LIGHT:
         if not settings.stripe_price_id_light:
             raise HTTPException(status_code=503, detail="Omnivaleur Light is not available yet")
         return PLAN_LIGHT, settings.stripe_price_id_light
@@ -298,7 +307,7 @@ def _prijs_voor_plan(plan: str | None) -> tuple[str, str]:
 def create_checkout(user=Depends(get_current_user_full), body: dict = None):
     if not settings.stripe_secret_key or not settings.stripe_price_id:
         raise HTTPException(status_code=503, detail="Stripe is not configured")
-    plan, prijs_id = _prijs_voor_plan((body or {}).get("plan"))
+    plan, prijs_id = _prijs_voor_plan((body or {}).get("plan"), (body or {}).get("interval"))
 
     user_id = user.id
     db = get_db()

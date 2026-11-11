@@ -52,3 +52,24 @@ def grens(plan: str | None) -> int | None:
     if basis is None:
         return None
     return int(basis * (1 + MARGE)) if plan in MET_MARGE else basis
+
+
+_MAAND_VELD = {PLAN_LIGHT: "stripe_price_id_light", PLAN_PRO: "stripe_price_id",
+               PLAN_PLUS: "stripe_price_id_plus", PLAN_ULTRA: "stripe_price_id_ultra"}
+_JAAR_VELD = {PLAN_LIGHT: "stripe_price_id_light_jaar", PLAN_PRO: "stripe_price_id_pro_jaar",
+              PLAN_PLUS: "stripe_price_id_plus_jaar", PLAN_ULTRA: "stripe_price_id_ultra_jaar"}
+
+
+def keuze_beschikbaar(plan: str, jaar: bool = False) -> str | None:
+    """Het Stripe-prijsnummer voor deze keuze, of None als die (nog) niet te koop is.
+
+    Plus, Ultra en elk jaarplan zijn pas te koop als de schakelaar aan staat EN het
+    prijsnummer ingesteld is. Light en Pro per maand blijven zoals ze waren.
+    """
+    if plan not in _MAAND_VELD:
+        return None
+    nieuw = jaar or plan in (PLAN_PLUS, PLAN_ULTRA)
+    if nieuw and not settings.nieuwe_plannen_aan:
+        return None
+    veld = (_JAAR_VELD if jaar else _MAAND_VELD)[plan]
+    return (getattr(settings, veld, "") or "").strip() or None

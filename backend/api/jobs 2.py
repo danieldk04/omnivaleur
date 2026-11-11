@@ -1,0 +1,7477 @@
+from fastapi import APIRouter, HTTPException, Depends, Request
+from backend.database import (get_db, fetch_all, fetch_all_in, update_in, naast_de_lus,
+                              execute_with_retry, eerste_rij)
+from backend.services.light import neem_plaatsing_terug_boven_limiet
+from backend.api.deps import get_current_user, require_active_subscription
+from backend.api.imports import _backfill_item_from_candidate
+from backend.services.crosslist import handle_item_sold, BEWIJS_KANAAL_ZEGT_VERKOCHT
+from backend.services.kleur import normaliseer_kleur
+from datetime import datetime, timezone, timedelta
+from types import SimpleNamespace
+import logging
+import time
+import re
+import json
+import unicodedata
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/jobs", tags=["jobs"])
+
+
+# A claim older than this with no progress means the run was interrupted (the
+# MV3 service worker gets killed the moment Chrome closes or after ~30s idle, so
+# a job can be claimed but never reach /complete or /error). Nothing ever
+# re-surfaced those, so they hung "claimed" forever — blocking paired relists and
+# tripping the "extension is working" banner. We recover them below.
+STALE_CLAIM_MINUTES = 5
+
+# HOEVEEL KANALEN MOGEN ER NAAST ELKAAR PUBLICEREN? (19-09-2026)
+#
+# Hiervoor was het er precies één in het hele account: elke publicatie stuurt een
+# echt tabblad aan, en die tabbladen deelden vroeger één opslagplek per kanaal,
+# waardoor een tweede tabblad de gegevens van het eerste overschreef. Die reden
+# bestaat niet meer — elke opdracht hangt sinds 1.0.30x aan zijn eigen tabblad
+# (`jobtab_<tabId>`), en het invulscript vraagt de opdracht van ZIJN tabblad op.
+#
+# Wat het kostte: gemeten over tien dagen bij Daniel wachtte een opdracht die op
+# een andere moest wachten 289 seconden (mediaan), terwijl het werk zelf 108 tot
+# 354 seconden duurt. Drie kanalen achter elkaar is zes tot tien minuten, terwijl
+# de kanalen niets met elkaar te maken hebben.
+#
+# Waarom drie en niet vier: elk tabblad is een echt browservenster-proces dat
+# foto's uploadt. Drie is genoeg om Marktplaats, 2dehands en Vinted tegelijk te
+# doen — de combinatie waar iedereen op zit te wachten — en houdt de laptop van
+# de verkoper vrij. Op HETZELFDE kanaal blijft het er altijd één.
+MAX_PARALLELLE_PUBLICATIES = 3
+MAX_RECLAIMS = 2
+
+# De oudste extensieversie die we nog vertrouwen voor een scan.
+#
+# WAAROM DIT BESTAAT (27-08-2026, Egbert Brouwer). Hij bleek de extensie TWEE
+# keer te draaien: een bijgewerkte kopie én een losse, met de hand geladen kopie
+# van 16 augustus (1.0.207) die nooit meebeweegt met de Chrome Web Store. Beide
+# halen opdrachten uit dezelfde wachtrij. Welke van de twee de scan het eerst
+# pakt bepaalt de uitslag — en de oude kopie kán het niet: die haalt hooguit 250
+# advertenties op en kent de "sla over wat we al hebben"-lijst niet. Uitslag over
+# twee weken: 13 geslaagde scans, 18 mislukte, en die 18 meldden allemaal
+# "je bent niet ingelogd bij Marktplaats" terwijl hij gewoon ingelogd was.
+#
+# 1.0.244 is de eerste versie die de bekende-id's-lijst gebruikt; alles daaronder
+# kan een grote winkel niet uitlezen.
+MINIMALE_SCANVERSIE = (1, 0, 244)
+# 'extend' (2dehands verlengen) bestaat pas vanaf 1.0.318. Een oudere kopie kent
+# die opdrachtsoort niet en zou hem als een gewone publicatie behandelen — dus
+# het plaatsformulier openen en er een TWEEDE advertentie naast zetten. Zolang
+# de Chrome Web Store 1.0.318 nog niet heeft goedgekeurd, krijgt zo'n kopie geen
+# extend-werk; de opdracht blijft gewoon 'pending' tot een bijgewerkte kopie
+# hem oppakt.
+MINIMALE_EXTEND_VERSIE = (1, 0, 318)
+# Vanaf deze versie leest de extensie een zakelijk account niet meer als
+# uitgelogd (kopbalk van de site in plaats van het persoonlijke overzicht). Zie
+# _oude_kopie_leest_zakelijk_als_uitgelogd.
+MINIMALE_ZAKELIJK_VERSIE = (1, 0, 332)
+# Boeken, speelgoed, fietsen, sportartikelen, witgoed, klussen en computers, plus
+# accessoires/controllers/VR bij games en de rest van telefonie, bestaan in de
+# extensie pas vanaf 1.0.351 (24-09-2026). Een oudere kopie kent die rubrieken
+# niet: op Marktplaats stopt ze, maar op Vinted gaat ze zoeken en pakt ze het
+# dichtstbijzijnde blad. Zulk werk blijft dus 'pending' tot een bijgewerkte kopie
+# polt, precies zoals 'extend' hierboven.
+MINIMALE_NIEUWE_TAKKEN_VERSIE = (1, 0, 351)
+# De verzendkosten van een BESTAAND 2dehands-zoekertje bijwerken (content_refresh
+# op 2dehands) kan pas vanaf 1.0.354 (26-09-2026, Egbert Brouwer). Een oudere
+# kopie kent geen wijzigadres voor 2dehands en zou de opdracht als mislukt
+# melden. Het werk blijft 'pending' tot een bijgewerkte kopie polt.
+MINIMALE_2DH_BIJWERK_VERSIE = (1, 0, 354)
+# Een Vinted-plaatsing gaat alleen naar 1.0.386 of nieuwer (15-10-2026, Janneke
+# 31d28378 en Amanda). Daaronder wacht de prijsstap op Chrome 128 zonder grens
+# of geeft hij het na 20 s op; gemeten duurt de eerste prijsvraag daar 12 tot
+# 33 s. Elke poging van een oude kopie wordt een mislukking plus een leeg
+# concept op Vinted. Een oude kopie werkt zichzelf binnen ~2 uur bij
+# (controleerOpNieuweVersie, elk uur), dus het werk blijft zo lang 'pending'.
+MINIMALE_VINTED_PLAATS_VERSIE = (1, 0, 386)
+# Plaatsen en bijwerken op Marktplaats en 2dehands gaat alleen naar 1.0.400 of
+# nieuwer (21-10-2026). Vanaf 12:30 UTC gaf Marktplaats de beschrijvingseditor een
+# ander kenmerk (id DescriptionEditor_nl-NL); een oudere kopie vindt het veld niet.
+# Gemeten bij Voordeelsieraden (09e089ec) op 1.0.398: 2dehands sinds 12:00 UTC 90
+# van 90 mislukt, Marktplaats 16:00 tot 18:00 UTC 26 van 26. Elke poging van een
+# oude kopie is dus een zekere mislukking; het werk blijft 'pending' tot een
+# bijgewerkte kopie polt. Verwijderen, verlengen en de verzendkosten bijwerken op
+# 2dehands vullen geen beschrijving in en gaan gewoon door.
+MINIMALE_MP_BESCHRIJVING_VERSIE = (1, 0, 400)
+# "kinderen tassen" (kinderrugzakjes en -tassen) bestaat in de extensie pas vanaf
+# 1.0.395 (17-10-2026, Janneke 31d28378: teddyrugzakjes stonden als volwassen
+# rugtas en haar eigen instelling "Vinted alleen kinderen" hield ze tegen). Een
+# oudere kopie kent de rubriek niet: op Marktplaats stopt ze, op Vinted zoekt ze
+# en pakt ze een willekeurig blad. Het werk blijft 'pending' tot een bijgewerkte
+# kopie polt.
+MINIMALE_KINDERTASSEN_VERSIE = (1, 0, 395)
+# "kinderen luiertassen" (luiertassen en mombags) bestaat in de extensie pas vanaf
+# 1.0.398 (19-10-2026, Janneke 31d28378). Zelfde reden als de kindertassen.
+MINIMALE_LUIERTASSEN_VERSIE = (1, 0, 398)
+_RUBRIEK_VANAF_VERSIE = {"kinderen tassen": MINIMALE_KINDERTASSEN_VERSIE,
+                         "kinderen luiertassen": MINIMALE_LUIERTASSEN_VERSIE}
+# Jongen of meisje bij baby en peuter ("babykleding jongens", "peuterkleding
+# meisjes") kent de extensie pas vanaf 1.0.397 (18-10-2026, Janneke 31d28378: haar
+# geslacht staat alleen in haar Shopify-labels). Anders dan bij de kindertassen
+# hierboven hoeft het werk niet te wachten: een oudere kopie krijgt de rubriek
+# zonder geslacht, precies zoals vóór die datum. Dan kiest het kanaal zelf jongen
+# of meisje, maar staat haar nieuwe babykleding niet stil tot de Web Store de
+# nieuwe versie doorgeeft. Alleen in de uitgaande opdracht, nooit in de database.
+MINIMALE_KIND_GESLACHT_VERSIE = (1, 0, 397)
+_KIND_GESLACHT_TERUGVAL = {
+    "babykleding jongens": "babykleding", "babykleding meisjes": "babykleding",
+    "peuterkleding jongens": "peuterkleding", "peuterkleding meisjes": "peuterkleding",
+}
+
+
+def _rubriek_voor_de_kopie(jobs: list, versie) -> int:
+    """Geef een kopie van voor 1.0.397 de rubriek zonder geslacht. Geeft terug
+    hoeveel opdrachten zijn aangepast."""
+    if versie is not None and versie >= MINIMALE_KIND_GESLACHT_VERSIE:
+        return 0
+    aangepast = 0
+    for j in jobs or []:
+        pl = j.get("payload")
+        if not isinstance(pl, dict):
+            continue
+        terug = _KIND_GESLACHT_TERUGVAL.get(str(pl.get("category") or "").strip().lower())
+        if terug:
+            j["payload"] = {**pl, "category": terug}
+            aangepast += 1
+    return aangepast
+_NIEUWE_TAK_VOORVOEGSELS = ("boeken ", "speelgoed ", "fietsen ", "sportartikelen ",
+                            "witgoed ", "klussen ", "computers ")
+_NIEUW_IN_BESTAANDE_TAK = frozenset([
+    "electronics antennes en masten",
+    "electronics antwoordapparaten",
+    "electronics autoladers",
+    "electronics batterijen en accu s",
+    "electronics carkits",
+    "electronics datacommunicatie",
+    "electronics draadloze handsets",
+    "electronics faxen",
+    "electronics hoesjes apple iphone",
+    "electronics hoesjes blackberry",
+    "electronics hoesjes htc",
+    "electronics hoesjes nokia",
+    "electronics hoesjes overige merken",
+    "electronics hoesjes samsung",
+    "electronics niet-draadloze handsets",
+    "electronics oordopjes",
+    "electronics overige telecommunicatie",
+    "electronics pda-toebehoren",
+    "electronics portofoons en walkie-talkies",
+    "electronics powerbanks",
+    "electronics prepaidkaarten en simkaarten",
+    "electronics radioscanners",
+    "electronics telefoon pda s",
+    "electronics telefoon sagem",
+    "electronics telefoon siemens",
+    "electronics telefoon-opladers",
+    "electronics telefooncentrales",
+    "electronics telefoonhouders",
+    "electronics telefoonsoftware",
+    "electronics toebehoren en onderdelen",
+    "electronics wearable-accessoires",
+    "electronics zenders en ontvangers",
+    "games accessoires nintendo console",
+    "games accessoires nintendo portable",
+    "games accessoires overige",
+    "games accessoires playstation console",
+    "games accessoires playstation portable",
+    "games accessoires xbox",
+    "games controllers nintendo",
+    "games controllers playstation",
+    "games controllers xbox",
+    "games virtual reality",
+])
+
+
+def _vraagt_nieuwe_takken(job: dict) -> bool:
+    """Gaat deze opdracht over een rubriek die pas in 1.0.351 bestaat?"""
+    cat = str(((job.get("payload") or {}).get("category")) or "").strip().lower()
+    return cat.startswith(_NIEUWE_TAK_VOORVOEGSELS) or cat in _NIEUW_IN_BESTAANDE_TAK
+
+
+def _minimale_versie_voor_rubriek(job: dict) -> tuple | None:
+    """Vanaf welke extensieversie bestaat de rubriek van deze opdracht? None = altijd."""
+    if _vraagt_nieuwe_takken(job):
+        return MINIMALE_NIEUWE_TAKKEN_VERSIE
+    cat = str(((job.get("payload") or {}).get("category")) or "").strip().lower()
+    return _RUBRIEK_VANAF_VERSIE.get(cat)
+# Hoe vaak een scan die door een te oude kopie is opgepakt terug in de wachtrij
+# mag. Twee: genoeg om de bijgewerkte kopie een kans te geven, te weinig om te
+# blijven rondzingen bij iemand die alleen die oude kopie heeft.
+MAX_HERKANSING_OUDE_EXTENSIE = 2
+
+# HOEVEEL VERSIES EEN KOPIE MAG ACHTERLOPEN VOORDAT ZE AANTOONBAAR NIET MEEBEWEEGT.
+#
+# GEMETEN (07-09-2026, De Juiste Toon). Zijn Chromebook draaide 1.0.260 van
+# 28 augustus terwijl er 1.0.311 in de Chrome Web Store stond: 51 versies en
+# tien dagen achterstand. Alle andere computers die die week werk deden stonden
+# op 1.0.308 t/m 1.0.311, dus Chrome werkt de extensie bij zoals het hoort — een
+# kopie die dat niet doet is met de hand geladen en zal NOOIT bijwerken.
+#
+# Waarom niet gewoon de harde ondergrens verhogen: die moet met de hand mee
+# omhoog en staat daardoor altijd te laag. Deze grens meet zichzelf tegen wat er
+# vandaag in de Web Store staat.
+#
+# Waarom 20 en niet minder: er gaan ongeveer vijf versies per dag uit, dus twintig
+# is ruim vier dagen. Chrome controleert elke paar uur op updates. Wie meer dan
+# vier dagen achterloopt, loopt niet achter maar staat stil. De drie andere
+# actieve computers stonden op 1, 2 en 3 versies achterstand.
+ACHTERSTAND_GRENS = 20
+
+
+def _achterstand(gemeld, gepubliceerd) -> int | None:
+    """Hoeveel versies deze kopie achterloopt, of None als dat niet te zeggen is.
+
+    Alleen binnen dezelfde hoofd- en tussenversie (1.0.x) is het verschil een
+    getal met betekenis. Springt de nummering naar 1.1.0, dan telt elke stap
+    daar als "ver achter", want dan is er iets fundamenteels veranderd.
+    """
+    if not gemeld or not gepubliceerd:
+        return None
+    if gemeld >= gepubliceerd:
+        return 0
+    if gemeld[:2] != gepubliceerd[:2]:
+        return ACHTERSTAND_GRENS   # andere reeks: altijd te ver weg
+    return gepubliceerd[2] - gemeld[2]
+
+
+def _kopie_staat_stil(gemeld) -> tuple[int, str] | None:
+    """(achterstand, gepubliceerde versie) als deze kopie zichzelf niet bijwerkt.
+
+    None bij twijfel: komt de Web Store-versie niet binnen, dan houden we niets
+    tegen. Een kopie ten onrechte stilzetten is erger dan er een keer eentje
+    doorlaten — precies dezelfde afweging als bij _kopstuk_versie.
+    """
+    if not gemeld:
+        return None
+    tekst = _gepubliceerde_extensieversie()
+    gepubliceerd = _kopstuk_versie(tekst)
+    achter = _achterstand(gemeld, gepubliceerd)
+    if achter is None or achter < ACHTERSTAND_GRENS:
+        return None
+    return achter, tekst
+
+_EXT_VERSIE = re.compile(r"\[extensie\s+(\d+)\.(\d+)\.(\d+)\]")
+
+
+def _extensie_versie(tekst) -> tuple[int, int, int] | None:
+    """De versie die de extensie zelf in haar foutmelding stempelt, of None.
+
+    Handig omdat een oude extensie niets anders over zichzelf prijsgeeft: dit
+    stempel zit er al sinds 1.0.19x in, dus we kunnen een verouderde kopie
+    herkennen zonder dat die kopie daaraan hoeft mee te werken.
+    """
+    m = _EXT_VERSIE.search(str(tekst or ""))
+    return (int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
+
+
+def _kopstuk_versie(waarde) -> tuple[int, int, int] | None:
+    """De versie uit het X-Omnivaleur-Ext-kopstuk, of None als die er niet is.
+
+    Anders dan _extensie_versie hoeft er hier niets mis te zijn gegaan: elke
+    ronde langs de wachtrij vertelt de extensie wie ze is. Onleesbaar of
+    afwezig geeft None — dan houden we niets tegen, want een kopie ten onrechte
+    stilzetten is erger dan er een keer eentje doorlaten.
+    """
+    m = re.fullmatch(r"\s*(\d{1,3})\.(\d{1,3})\.(\d{1,4})\s*", str(waarde or ""))
+    return (int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
+
+
+def _oude_kopie_leest_zakelijk_als_uitgelogd(db, user_id: str, job: dict,
+                                            versie: tuple[int, int, int] | None) -> bool:
+    """Deze plaatsopdracht NIET aan deze kopie geven: zij zou hem kapot oordelen.
+
+    GEMETEN 16-09-2026 (De Juiste Toon). Zijn 2dehands-account is zakelijk
+    ("sellerType":"TRADER" op zijn eigen advertentie). Naast zijn bijgewerkte
+    browser draaide Edge nog 1.0.327, terwijl de Web Store al 1.0.336 had. Die
+    kopie doet vóór elke create/content_refresh op Marktplaats en 2dehands een
+    inlogcontrole op het persoonlijke overzicht, en dat geeft bij een zakelijk
+    account 401. Dus: "niet ingelogd", de rij twintig minuten op pauze, en een
+    lederhose die net klaargezet was geannuleerd, zonder dat de opdracht ooit is
+    geprobeerd. Gerepareerd in 1.0.332, maar een kopie die niet bijwerkt blijft
+    het doen, elke ronde weer.
+
+    Krijgt zo'n kopie de opdracht niet, dan doet ze die controle ook niet. De
+    opdracht blijft 'pending' voor een kopie die het wel kan. Onbekende versie of
+    onbekend accounttype: gewoon uitdelen, zoals overal in dit bestand.
+    """
+    if job.get("action") not in ("create", "content_refresh"):
+        return False
+    if job.get("platform") not in ("marktplaats", "2dehands"):
+        return False
+    if versie is None or versie >= MINIMALE_ZAKELIJK_VERSIE:
+        return False
+    return _verkoper_soort(db, user_id, job["platform"]) == "TRADER"
+
+# The optional import_candidates snapshot columns, dropped together if the
+# migration hasn't run (see _store_scan_results).
+RICH_KEYS = ("photo_urls", "description", "brand", "size", "condition",
+             "category", "gender", "color", "material", "is_hidden")
+
+# How recently the extension must have checked in for us to call a computer
+# "online". The extension's poll alarm is nominally 15s, but Chrome MV3 throttles
+# background alarms to ~30-60s in practice, so a tight window flipped to a false
+# "offline" right before each poll even though Chrome was open. 120s tolerates a
+# throttled alarm plus a couple of missed check-ins; the trade-off is that
+# closing Chrome now shows as offline within ~2 min instead of within one.
+EXTENSION_ONLINE_WINDOW_SECONDS = 120
+
+
+# Of de kolom ext_version bestaat. Niet één keer per proces vaststellen: dan
+# blijft een server die toevallig opstartte VOORDAT de kolom werd toegevoegd
+# eeuwig zonder versies schrijven, en dat is precies wat er op 05-09-2026
+# gebeurde — de kolom stond er, de hartslagen kwamen binnen, en het veld bleef
+# leeg tot de volgende deploy. Een mislukking geldt daarom maar een uur.
+_HEARTBEAT_VERSIEKOLOM_UIT_TOT = [0.0]
+_HEARTBEAT_VERSIEKOLOM_PAUZE = 3600.0
+
+# STILTES VASTLEGGEN (03-10-2026, Egbert). Hij zegt dat zijn wachtrij vastloopt
+# "iedere keer nadat ik weer opnieuw ingelogd ben op de computer". Niet te meten:
+# extension_heartbeat bewaart alleen het laatste moment. Komt de extensie na meer
+# dan _STILTE_MIN_MINUTEN stilte terug, dan schrijven we één rij met van en tot
+# wanneer ze weg was. Zo kan een klacht naast de echte offline-momenten gelegd
+# worden. Tabel moet met de hand worden gemaakt (scripts/sql/extension_stiltes.sql);
+# tot dan wordt er niets vastgelegd en lijdt de aanwezigheidsstempel er niet onder.
+_STILTE_MIN_MINUTEN = 3
+_LAATST_GEZIEN: dict[str, datetime] = {}
+_STILTES_UIT_TOT = [0.0]
+
+
+def _leg_stilte_vast(db, user_id: str, nu: datetime, user_agent: str | None,
+                     versie: str | None) -> None:
+    """Schrijf een rij als deze extensie langer dan _STILTE_MIN_MINUTEN weg was.
+
+    Het vorige moment komt uit het geheugen van dit proces; na een herstart van de
+    server (elke deploy) eenmalig uit de heartbeat-rij, anders zou elke deploy alle
+    stiltes verstoppen."""
+    vorige = _LAATST_GEZIEN.get(user_id)
+    if vorige is None:
+        try:
+            rij = eerste_rij(db.table("extension_heartbeat").select("last_seen")
+                             .eq("user_id", user_id).limit(1).execute())
+            vorige = _parse_ts((rij or {}).get("last_seen"))
+        except Exception:  # noqa: BLE001
+            vorige = None
+    _LAATST_GEZIEN[user_id] = nu
+    if vorige is None or nu - vorige < timedelta(minutes=_STILTE_MIN_MINUTEN):
+        return
+    if time.monotonic() < _STILTES_UIT_TOT[0]:
+        return
+    try:
+        db.table("extension_stiltes").insert({
+            "user_id": user_id,
+            "stil_van": vorige.isoformat(),
+            "stil_tot": nu.isoformat(),
+            "minuten": round((nu - vorige).total_seconds() / 60, 1),
+            "ext_version": (versie or "")[:20] or None,
+            "user_agent": (user_agent or "")[:300] or None,
+        }).execute()
+    except Exception:  # noqa: BLE001
+        _STILTES_UIT_TOT[0] = time.monotonic() + 3600.0
+        logger.info("Tabel extension_stiltes ontbreekt nog; stiltes worden niet "
+                    "vastgelegd. SQL staat in scripts/sql/extension_stiltes.sql")
+
+
+def _record_extension_heartbeat(db, user_id: str, user_agent: str | None = None,
+                                versie: str | None = None) -> None:
+    """
+    Stamp that the extension just checked in, so a user on their phone can see
+    whether a computer is online to run their queued jobs. Called from every
+    extension-only endpoint (the platform poll AND claim/progress/complete/error),
+    so any extension activity — not just the dispatch poll — keeps the computer
+    marked online.
+
+    Best-effort: it must never slow down or break dispatch — if the heartbeat
+    table hasn't been created yet, or the write fails, we silently move on.
+    The user_agent is only written when provided, so a check-in without it (e.g.
+    from /complete) refreshes last_seen without wiping the UA the poll captured.
+    """
+    try:
+        nu_stempel = datetime.now(timezone.utc)
+        try:
+            _leg_stilte_vast(db, user_id, nu_stempel, user_agent, versie)
+        except Exception:  # noqa: BLE001 — meten mag de stempel nooit tegenhouden
+            pass
+        row = {
+            "user_id": user_id,
+            "last_seen": nu_stempel.isoformat(),
+        }
+        ua = (user_agent or "")[:300]
+        if ua:
+            row["user_agent"] = ua
+        # De versie erbij, zodat we kunnen TELLEN wie er achterloopt in plaats
+        # van het af te leiden uit foutmeldingen (waarmee je alleen de mensen
+        # ziet die iets kapot hadden). De kolom moet met de hand worden
+        # toegevoegd; tot die tijd valt hij hieronder weg zonder dat de
+        # aanwezigheidsstempel eronder lijdt.
+        if versie and time.monotonic() >= _HEARTBEAT_VERSIEKOLOM_UIT_TOT[0]:
+            row["ext_version"] = versie[:20]
+        try:
+            db.table("extension_heartbeat").upsert(row).execute()
+        except Exception:
+            if "ext_version" not in row:
+                raise
+            _HEARTBEAT_VERSIEKOLOM_UIT_TOT[0] = time.monotonic() + _HEARTBEAT_VERSIEKOLOM_PAUZE
+            logger.info(
+                "Kolom ext_version ontbreekt nog in extension_heartbeat; de "
+                "versie wordt niet vastgelegd; over een uur proberen we het "
+                "opnieuw. Zet hem erbij met: ALTER TABLE "
+                "extension_heartbeat ADD COLUMN ext_version text;")
+            row.pop("ext_version")
+            db.table("extension_heartbeat").upsert(row).execute()
+    except Exception:
+        pass
+
+
+def _scan_sku(t: str) -> str:
+    """Het voorloopnummer uit een titel: "(1327) Navy Suit…" → "1327"."""
+    m = re.match(r"^\s*\(([^)]{1,24})\)", t or "")
+    return m.group(1).strip().lower() if m else ""
+
+
+def _scan_norm_title(t: str) -> str:
+    """Titel zonder accenten, leestekens, SKU-prefix en dubbele spaties."""
+    t = unicodedata.normalize("NFKD", t or "")
+    t = "".join(c for c in t if not unicodedata.combining(c)).lower()
+    t = re.sub(r"^\s*\([^)]{1,24}\)\s*", "", t)
+    # Apostrofs verdwijnen in plaats van spatie te worden: "B'TWIN" en "BTWIN"
+    # zijn hetzelfde merk, en platforms schrijven dat door elkaar.
+    t = t.replace("'", "").replace("’", "")
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", t).split())
+
+
+def _ander_nummer(item: dict | None, nummer: str) -> bool:
+    """Draagt dit artikel aantoonbaar een ánder artikelnummer dan `nummer`?
+
+    Telt het nummer vooraan de titel en het sku-veld, behalve de nummers die
+    Omnivaleur zelf uitdeelt bij importeren (imp-…, rev-…): die zeggen niets over
+    het nummer van de verkoper. Zonder enig nummer weten we het niet: False."""
+    if not item:
+        return False
+    nummers = {_scan_sku(item.get("title"))}
+    sku = str(item.get("sku") or "").strip().lower()
+    if sku and not re.match(r"^(imp|rev)-", sku):
+        nummers.add(sku)
+    nummers.discard("")
+    return bool(nummers) and nummer not in nummers
+
+
+def _unique_index(pairs, tweelingen: dict | None = None) -> dict:
+    """key → id, maar alleen als die sleutel bij precies één id hoort.
+
+    Uitzondering: TWEELINGEN. Dezelfde trui staat vaak twee keer in de voorraad
+    (één rij per importbron), met hetzelfde nummer én dezelfde titel. Dan zijn er
+    twee kandidaten en viel de sleutel weg — met als gevolg dat een advertentie
+    die gewoon live stond aan geen van beide rijen gekoppeld werd, en het
+    dashboard "staat niet op Vinted" toonde terwijl hij er wél stond. Zijn alle
+    kandidaten aantoonbaar hetzelfde product, dan kiezen we er één, altijd
+    dezelfde (de laagste id, zodat elke ronde tot dezelfde uitkomst komt).
+    Verschillende producten met hetzelfde nummer blijven zonder koppeling.
+    """
+    out: dict = {}
+    botsingen: dict = {}
+    for key, value in pairs:
+        if not key:
+            continue
+        if key not in out:
+            out[key] = value
+        elif out[key] != value:
+            botsingen.setdefault(key, {out[key]}).add(value)
+            out[key] = None
+    for key, ids in botsingen.items():
+        # Tweelingen zijn vaak VERTALINGEN van elkaar ("Suitable Half Zip" en
+        # "Geschikte Halve Rits"), dus titels vergelijken werkt hier niet. Het
+        # merk wel: dat staat in een eigen veld en vertaalt niet mee.
+        kenmerk = {(tweelingen or {}).get(i) for i in ids}
+        if len(kenmerk) == 1 and None not in kenmerk and "" not in kenmerk:
+            out[key] = sorted(ids)[0]
+    return {k: v for k, v in out.items() if v}
+
+
+def _parse_ts(ts):
+    if not ts:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+
+
+def _is_nieuwe_voorraad(item_gemaakt_op, zuster_verkocht_op) -> bool:
+    """Is dit artikel pas ná de verkoop van zijn tweeling aangemaakt?
+
+    WAAROM DIT BESTAAT (18-09-2026, Daniels eigen account).
+
+    De verkoop-rem hieronder kijkt naar de hele familie: alle artikelen met
+    hetzelfde nummer voor de titel. Dat is terecht voor een echte tweeling —
+    twee rijen die door twee imports van ÉÉN trui zijn ontstaan. Maar een
+    tweedehandsverkoper die hetzelfde artikel opnieuw inkoopt geeft het
+    gewoon weer nummer 987, en dan is het een ANDER voorwerp.
+
+    Gemeten: artikel (987) verkocht op Vinted op 23-08. Op 18-09 maakte Daniel
+    een nieuwe rij met nummer 987 aan en drukte tien seconden later op Publish.
+    Alle drie de kanalen werden geannuleerd met "Item already sold on vinted".
+    Hetzelfde op 15-09 met een rij die hij zelf "1349 - 2" had genoemd — hij
+    schreef er letterlijk bij dat het het tweede exemplaar was.
+
+    Het onderscheid is hard te maken: een tweelingrij ontstaat bij de import,
+    dus lang vóór de verkoop. Een nieuw exemplaar wordt erná aangemaakt. Bij
+    twijfel (een datum die we niet kunnen lezen) remmen we, want een dubbel
+    verkocht artikel is erger dan een publicatie die blijft wachten.
+    """
+    gemaakt = _parse_ts(item_gemaakt_op)
+    verkocht = _parse_ts(zuster_verkocht_op)
+    if gemaakt is None or verkocht is None:
+        return False
+    return gemaakt > verkocht
+
+
+def _recover_stale_claims(db, user_id: str, platform: str, now_dt: datetime) -> None:
+    """
+    Find jobs stuck in 'claimed' with no recent activity and get them unstuck.
+
+    Retry-safe jobs are reset to 'pending' so the extension runs them again:
+      - delete: the extension verifies the listing is still in the wardrobe and
+        no-ops if it's already gone, so a re-run can't double-delete.
+      - scan: read-only.
+      - content_refresh: re-edits the same listing (idempotent).
+
+    NOT retry-safe → marked 'error' instead of retried:
+      - ANY create job (initial crosslist OR relist recreate): if the first
+        attempt did publish but the completion just wasn't recorded (e.g. the
+        MV3 service worker was killed right after the tab confirmed the
+        listing), re-running would post a DUPLICATE listing. A relist's create
+        is no more idempotent than an initial create — its paired delete only
+        guarantees the OLD listing is gone, not that THIS run didn't already
+        publish the new one. Safer to surface an error and let the user retry
+        manually.
+      - anything that already hit the reclaim cap (persistently failing).
+    """
+    stale_before = (now_dt - timedelta(minutes=STALE_CLAIM_MINUTES)).isoformat()
+    q = (
+        db.table("jobs")
+        .select("id,action,item_id,platform,scheduled_for,claimed_at,result")
+        .eq("user_id", user_id)
+        .eq("status", "claimed")
+    )
+    if platform:
+        q = q.eq("platform", platform)
+    for j in q.execute().data:
+        claimed = _parse_ts(j.get("claimed_at"))
+        if claimed and claimed.isoformat() > stale_before:
+            continue  # claimed recently — genuinely in progress
+        res = j.get("result") or {}
+        prog_at = _parse_ts((res.get("_progress") or {}).get("at")) if isinstance(res, dict) else None
+        if prog_at and prog_at.isoformat() > stale_before:
+            continue  # long job (e.g. scan) still posting progress
+
+        reclaims = (res.get("_reclaims", 0) if isinstance(res, dict) else 0)
+        is_relist_create = j["action"] == "create" and j.get("scheduled_for")
+        # 'extend' opnieuw draaien kan geen kwaad: is het zoekertje al verlengd,
+        # dan is de verlengknop weg en meldt de extensie "niets te doen" terug.
+        retry_safe = j["action"] in ("delete", "scan", "content_refresh", "extend")
+        # Een Shopify-scan draait op de server (services/shopify_scan.py), niet in
+        # de extensie. Terug op 'pending' zou de extensie hem oppakken en niet
+        # kunnen uitvoeren; blijft hij hangen (bijvoorbeeld door een deploy
+        # middenin), dan is afsluiten met een fout het enige eerlijke.
+        if j["action"] == "scan" and j.get("platform") in ("shopify", "woocommerce"):
+            retry_safe = False
+
+        if retry_safe and reclaims < MAX_RECLAIMS:
+            db.table("jobs").update({
+                "status": "pending",
+                "claimed_at": None,
+                "result": {"_reclaims": reclaims + 1, "_last_reclaim": now_dt.isoformat()},
+            }).eq("id", j["id"]).eq("status", "claimed").execute()
+        else:
+            msg = (
+                "Publishing was interrupted (Chrome likely closed mid-run) and couldn't be "
+                "verified either way — check whether it actually listed before publishing again "
+                "to avoid a duplicate."
+                if j["action"] == "create" else
+                f"This {j['action']} job was interrupted and couldn't finish after retries. Try it again."
+            )
+            db.table("jobs").update({
+                "status": "error",
+                "result": {"error": msg},
+                "done_at": now_dt.isoformat(),
+            }).eq("id", j["id"]).eq("status", "claimed").execute()
+            if is_relist_create:
+                db.table("listings").update({
+                    "status": "error",
+                    "error_message": "Relist recreate was interrupted before it finished — the old listing was removed but the new one wasn't confirmed. Refresh again to retry.",
+                }).eq("item_id", j["item_id"]).eq("platform", j["platform"]).execute()
+
+
+
+def _titel_sleutel(titel) -> str:
+    """Dezelfde vergelijking als de extensie (resolveCreatedVintedItem in
+    content/vinted.js): kleine letters, alleen letters en cijfers."""
+    return re.sub(r"[^a-z0-9]", "", str(titel or "").lower())
+
+
+def _zonder_sku(titel) -> str:
+    """Titel zonder voorloopnummer als "(1327) ", zoals _vintedTitelZonderSku
+    in extension/background.js."""
+    return re.sub(r"^\s*\([^)]{1,24}\)\s*", "", str(titel or ""))
+
+
+def _titel_zonder_sku(titel) -> str:
+    return _titel_sleutel(_zonder_sku(titel))
+
+
+# EEN OPGEGEVEN VINTED-TABBLAD WERKT NOG DOOR (16-10-2026, Janneke 31d28378).
+#
+# Na drie minuten zonder antwoord meldt de bewaker van de extensie een Vinted-
+# plaatsing als "timed out" en laat het tabblad open, zodat de verkoper hem kan
+# afmaken. Het invulscript in dat tabblad loopt intussen gewoon door: het klikt
+# op Plaatsen en zoekt daarna zijn advertentie in de kast. Voor de server was
+# het kanaal op dat moment vrij, dus ging de volgende plaatsing al de deur uit.
+# Gemeten in de serverlog van 15-10: jas A opgegeven om 20:03:52, jas B
+# uitgegeven om 20:04:15, A meldde zich om 20:07:15 alsnog met een advertentie.
+# Drie gelijknamige jassen liepen zo door elkaar heen, en de advertenties die
+# ze in de kast vonden waren van elkaar. Daarom blijft Vinted na zo'n melding
+# nog even bezet, tot het tabblad zich alsnog meldt of de naloop voorbij is.
+_VINTED_NALOOP = timedelta(minutes=8)
+# Welke afsluitingen een tabblad achterlaten dat nog kan plaatsen. Naast de
+# melding van de bewaker ook de opruiming door de server zelf: lukt het de
+# extensie niet haar "timed out" af te leveren (Janneke, 16-10 22:26: vijf keer
+# 422, geen inlog meegestuurd), dan zet _recover_stale_claims de opdracht na vijf
+# minuten op "interrupted". Om 22:30:26 gebeurde dat, om 22:30:29 ging de
+# volgende Vinted-plaatsing al uit, en het eerste tabblad plaatste om 22:39.
+_TABBLAD_KAN_DOORWERKEN = re.compile(
+    r"timed out waiting for this .* job to finish|Publishing was interrupted", re.I)
+
+
+def _vinted_tabblad_werkt_nog(db, user_id: str, now_dt: datetime) -> bool:
+    """Is er net een Vinted-plaatsing opgegeven op tijd, waarvan het tabblad
+    nog bezig kan zijn? Dan geen tweede Vinted-plaatsing ernaast."""
+    try:
+        rijen = (db.table("jobs").select("result,done_at")
+                 .eq("user_id", user_id).eq("platform", "vinted").eq("action", "create")
+                 .eq("status", "error")
+                 .gte("done_at", (now_dt - _VINTED_NALOOP).isoformat())
+                 .limit(10).execute().data or [])
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Vinted-naloop niet te lezen (%s)", e)
+        return False
+    return any(isinstance(r.get("result"), dict)
+               and _TABBLAD_KAN_DOORWERKEN.search(str(r["result"].get("error") or ""))
+               for r in rijen)
+
+
+def _heeft_titelgenoot(db, job: dict) -> bool:
+    """Heeft deze verkoper nog een ánder artikel met dezelfde titel (zoals de
+    extensie titels vergelijkt, zonder nummer vooraan)?"""
+    titel = (job.get("payload") or {}).get("title") if isinstance(job.get("payload"), dict) else None
+    sleutel = _titel_zonder_sku(titel)
+    if not sleutel or not job.get("item_id"):
+        return False
+    woorden = re.findall(r"[a-z0-9]+", _zonder_sku(titel).lower())
+    artikelen = (db.table("items").select("id,title")
+                 .eq("user_id", job["user_id"]).ilike("title", "%" + "%".join(woorden) + "%")
+                 .execute().data or [])
+    return any(a.get("id") != job["item_id"] and _titel_zonder_sku(a.get("title")) == sleutel
+               for a in artikelen)
+
+
+def _vinted_titelgenoten_meegeven(db, user_id: str, jobs: list) -> int:
+    """Geef bij een Vinted-plaatsing mee welke Vinted-advertenties al bij een
+    ánder artikel met dezelfde titel horen.
+
+    WAAROM (09-10-2026, Janneke 31d28378). Vóór elke Vinted-plaatsing kijkt de
+    extensie of het artikel al online staat: een advertentie in de eigen kast
+    met precies dezelfde titel geldt als "door de verkoper zelf geplaatst" en
+    wordt gekoppeld in plaats van geplaatst. Twee stukken met dezelfde titel
+    (haar rode en haar bruine "Tussenjas Name it maat 128") zijn dan niet uit
+    elkaar te houden: de bruine kreeg de advertentie van de rode en is nooit op
+    Vinted gezet. Bij haar hebben 2.316 van de 3.219 artikelen een titelgenoot.
+
+    De extensie slaat sinds 1.0.376 alles in `_vinted_bezet` over. Oudere
+    kopieën slaan alleen `platform_listing_id` over (bedoeld voor de oude
+    advertentie bij herplaatsen); daar zetten we de nieuwste titelgenoot in,
+    zodat ook de kopie die de verkoper vandaag draait het meest voorkomende
+    geval goed doet. Zijn het er meer, dan houdt _advertentie_van_ander_artikel
+    bij het afmelden de verkeerde koppeling tegen.
+    """
+    vinted = [j for j in jobs
+              if j.get("platform") == "vinted" and j.get("action") == "create"
+              and isinstance(j.get("payload"), dict) and j.get("item_id")
+              and _titel_sleutel(j["payload"].get("title"))]
+    if not vinted:
+        return 0
+    gezet = 0
+    try:
+        # Titelgenoot is wat de EXTENSIE als dezelfde titel ziet, niet alleen
+        # een letterlijk gelijke titel. Janneke (13-10-2026): "Vest Dirkje maat
+        # 86*" en "Vest Dirkje maat 86" zijn voor de extensie gelijk, voor een
+        # .eq("title") niet. Ze kreeg geen _vinted_bezet, de extensie pakte de
+        # advertentie van het andere vest, de server weigerde die, en elke
+        # nieuwe poging liep precies zo af.
+        #
+        # En een titel die BINNEN de andere valt telt ook (Janneke, 14-10-2026).
+        # Na een trage plaatsing zoekt de extensie in de kast met "de ene titel
+        # bevat de andere" (resolveCreatedVintedItem, content/vinted.js). Voor
+        # "Trui Lyle & Scott maat 110-116 (donkerblauw)" pakte ze daarmee de
+        # advertentie van een van haar zeven "Trui Lyle & Scott maat 110-116",
+        # want die bevat ze. De server keek alleen naar gelijke titels en gaf
+        # die advertenties dus niet als bezet mee.
+        per_titel: dict[str, list[dict]] = {}
+        aantal: dict[str, set] = {}
+        for sleutel, titel in {_titel_zonder_sku(j["payload"]["title"]): j["payload"]["title"]
+                               for j in vinted}.items():
+            woorden = re.findall(r"[a-z0-9]+", _zonder_sku(titel).lower())
+            artikelen = (db.table("items").select("id,title")
+                         .eq("user_id", user_id).ilike("title", "%" + "%".join(woorden) + "%")
+                         .execute().data or [])
+            # Kortere titels die in de onze vallen: die beginnen in de praktijk
+            # met hetzelfde woord (de rest is een kleur of toevoeging erachter).
+            if len(woorden) > 1:
+                artikelen += (db.table("items").select("id,title")
+                              .eq("user_id", user_id).ilike("title", "%" + woorden[0] + "%")
+                              .execute().data or [])
+            ons = (sleutel, _titel_sleutel(titel))
+
+            def _genoot(ander) -> bool:
+                hun = (_titel_zonder_sku(ander), _titel_sleutel(ander))
+                return any(a and b and (a in b or b in a) for a, b in zip(ons, hun))
+
+            ids = list(dict.fromkeys(a["id"] for a in artikelen if _genoot(a.get("title"))))
+            aantal[sleutel] = set(ids)
+            if len(ids) < 2:
+                per_titel[sleutel] = []
+                continue
+            # In brokken: bij een korte titel ("Trui") kunnen het honderden zijn.
+            per_titel[sleutel] = [r for i in range(0, len(ids), 100)
+                                  for r in (db.table("listings")
+                                            .select("item_id,platform_listing_id,created_at")
+                                            .eq("platform", "vinted").in_("item_id", ids[i:i + 100])
+                                            .execute().data or [])]
+        for j in vinted:
+            p = j["payload"]
+            # Hoeveel ándere artikelen deze titel dragen, ook als die nog nergens
+            # op Vinted staan. Een titelgenoot zonder koppeling kan toch een
+            # advertentie in de kast hebben (een "mislukte" plaatsing die wel
+            # online kwam); de extensie koppelt dan alleen op hard bewijs.
+            n = len(aantal.get(_titel_zonder_sku(p["title"]), set()) - {j["item_id"]})
+            if n:
+                p["_vinted_titelgenoten"] = n
+            genoten = sorted(
+                (r for r in per_titel.get(_titel_zonder_sku(p["title"]), [])
+                 if r.get("item_id") != j["item_id"] and r.get("platform_listing_id")),
+                key=lambda r: r.get("created_at") or "", reverse=True)
+            bezet = list(dict.fromkeys(str(r["platform_listing_id"]) for r in genoten))
+            if not bezet:
+                continue
+            p["_vinted_bezet"] = bezet
+            if not p.get("platform_listing_id"):
+                p["platform_listing_id"] = bezet[0]
+            gezet += 1
+    except Exception as e:  # noqa: BLE001
+        # Lukt het niet, dan gaat de opdracht zonder lijst de deur uit; de
+        # controle bij het afmelden vangt een verkeerde koppeling dan alsnog.
+        logger.warning("Vinted-titelgenoten niet meegegeven (%s)", e)
+    return gezet
+
+
+def _advertentie_van_ander_artikel(db, job: dict, body: dict) -> str | None:
+    """Hoort het advertentienummer dat de extensie meldt al bij een ánder
+    artikel van deze verkoper? Dan is het niet de advertentie van deze opdracht
+    maar die van een titelgenoot (zie _vinted_titelgenoten_meegeven), en geeft
+    deze functie de titel van dat andere artikel terug."""
+    lid = body.get("platform_listing_id")
+    if not lid or not job.get("item_id"):
+        return None
+    rijen = (db.table("listings").select("item_id")
+             .eq("platform", job["platform"]).eq("platform_listing_id", str(lid))
+             .neq("item_id", job["item_id"]).execute().data or [])
+    if not rijen:
+        return None
+    ander = (db.table("items").select("id,title")
+             .in_("id", list({r["item_id"] for r in rijen}))
+             .eq("user_id", job["user_id"]).limit(1).execute().data or [])
+    return (ander[0].get("title") or "another item") if ander else None
+
+
+def _zet_kleur_goed(jobs: list) -> int:
+    """Zet de kleur in elke uitgaande opdracht om naar de naam die Marktplaats
+    aanbiedt. Geeft terug hoeveel er zijn aangepast.
+
+    Alleen als we de kleur herkennen. Een woord dat we niet kennen blijft staan
+    zoals de verkoper het schreef — nooit een verzonnen kleur. Vinted heeft een
+    eigen kleurenlijst en blijft hier buiten.
+    """
+    aangepast = 0
+    for j in jobs or []:
+        pl = j.get("payload")
+        if j.get("platform") not in ("marktplaats", "2dehands"):
+            continue
+        if not isinstance(pl, dict) or not pl.get("color"):
+            continue
+        net = normaliseer_kleur(pl["color"])
+        if net and net != str(pl["color"]).strip():
+            logger.info("job %s: kleur %r -> %r", j.get("id"), pl["color"], net)
+            pl["color"] = net
+            aangepast += 1
+    return aangepast
+
+
+def _haal_links_eruit(db, jobs: list) -> int:
+    """Geen web- of e-mailadres in een advertentie voor Marktplaats of 2dehands,
+    vlak voordat de opdracht de deur uitgaat. Geeft terug hoeveel er zijn
+    aangepast.
+
+    WAAROM DIT ER IS (09-09-2026, Egbert Brouwer). Een zoekertje met een link in
+    de omschrijving publiceren die sites niet: ze zetten hem klaar als bestelregel
+    "Websitevermelding" van EUR 9,00. Zijn winkelmandje bij 2dehands liep zo op
+    tot EUR 153,00 aan advertenties die nooit online kwamen, terwijl wij hem
+    357 keer vertelden dat hij niet ingelogd zou zijn.
+
+    De filter zelf (`_zonder_links` in crosslist.py) zat op het publicatiepad, in
+    `_pick`. Dat is niet het enige pad dat een 'create' klaarzet: de reddingsronde
+    in relist.py bouwde haar eigen payload, en `captured_listing` hierboven vult
+    een lege omschrijving aan met de tekst die letterlijk van de advertentiepagina
+    komt — bij hem dus mét link. Precies dezelfde soort lek als waar
+    `_zet_taal_goed` hieronder voor bestaat, en daarom staat het op dezelfde plek:
+    hier gaat er precies één opdracht naar de extensie, en pas hier is zeker dat
+    hij ook echt gebruikt wordt. Wat voor pad die opdracht ook heeft afgelegd.
+
+    We schrijven het terug in de opdracht, zodat in het dashboard en in de
+    geschiedenis staat wat er werkelijk naar de site is gegaan.
+    """
+    try:
+        from backend.services.crosslist import _zonder_links
+    except Exception as e:  # noqa: BLE001 — het uitdelen gaat hoe dan ook door
+        logger.warning("linkzeef niet beschikbaar: %s", e)
+        return 0
+
+    aangepast = 0
+    for j in jobs or []:
+        if j.get("platform") not in ("marktplaats", "2dehands"):
+            continue
+        pl = j.get("payload")
+        if not isinstance(pl, dict):
+            continue
+        nieuw = dict(pl)
+        for veld in ("title", "description"):
+            waarde = pl.get(veld)
+            if isinstance(waarde, str) and waarde:
+                nieuw[veld] = _zonder_links(waarde)
+        if nieuw == pl:
+            continue
+        logger.info("job %s (%s): web-/e-mailadres uit de advertentie gehaald "
+                    "— dat kost EUR 9,00 per plaatsing", j.get("id"), j.get("platform"))
+        j["payload"] = nieuw
+        aangepast += 1
+        try:
+            db.table("jobs").update({"payload": nieuw}).eq("id", j["id"]).execute()
+        except Exception as e:  # noqa: BLE001 — de opdracht die uitgaat is al schoon
+            logger.warning("job %s: schone tekst niet kunnen opslaan: %s", j.get("id"), e)
+    return aangepast
+
+
+# ── Marktplaats en 2dehands nemen hoogstens 60 tekens titel ──────────────────
+#
+# WAAROM DIT ER IS (07-10-2026, Goudlief). 155 van zijn 672 Shopify-titels zijn
+# langer dan 60 tekens (tot 100). De extensie kapte ze af op het laatste hele
+# woord, en dan stond er op Marktplaats "Armbanden van roestvrij staal,
+# geometrisch, casual," of "... eenvoudige dagelijkse sieraden uit de". Hier
+# korten we eerst zelf in, op dezelfde manier als smartTrunc in
+# extension/content/shared.js (hele " - "-stukken eraf, anders op een heel
+# woord), en halen we daarna een losse komma of een los lidwoord of voorzetsel
+# aan het eind weg. Wat hier uitgaat is dan al binnen de grens, dus smartTrunc
+# laat het ongemoeid: wat in de opdracht staat is letterlijk wat er getypt wordt.
+#
+# Alleen plaatsen en bijwerken. Een verwijderopdracht zoekt in noodgevallen op de
+# titel die destijds is geplaatst; die mag hier niet veranderen.
+MP_MAX_TITEL = 60
+_TITEL_ACTIES = ("create", "content_refresh")
+_LOS_EIND = {
+    "de", "het", "een", "en", "of", "met", "van", "voor", "uit", "in", "op", "aan",
+    "bij", "tot", "om", "door", "naar", "over", "als", "zonder", "per", "&", "+",
+    "the", "and", "or", "with", "for", "of", "a", "an", "to", "from", "by", "in",
+}
+
+
+def _js_lengte(tekst: str) -> int:
+    """Lengte zoals de browser hem telt (een emoji telt daar als twee)."""
+    return len(tekst.encode("utf-16-le")) // 2
+
+
+def _js_kap(tekst: str, maximum: int) -> str:
+    """Het langste begin van `tekst` dat in de browser binnen `maximum` past."""
+    while _js_lengte(tekst) > maximum:
+        tekst = tekst[:-1]
+    return tekst
+
+
+def _mp_titel(titel: str, maximum: int = MP_MAX_TITEL) -> str:
+    """Titel binnen de grens van Marktplaats en 2dehands, zonder los eind."""
+    if _js_lengte(titel) <= maximum:
+        return titel
+    korter = None
+    scheiding = " - "
+    if scheiding in titel:
+        delen = titel.split(scheiding)
+        while len(delen) > 1 and _js_lengte(scheiding.join(delen)) > maximum:
+            delen.pop()
+        if _js_lengte(scheiding.join(delen)) <= maximum:
+            korter = scheiding.join(delen)
+    if korter is None:
+        kop = _js_kap(titel, maximum + 1)
+        knip = kop.rfind(" ")
+        korter = kop[:knip] if knip > 0 else _js_kap(titel, maximum)
+    vorige = None
+    while korter != vorige:
+        vorige = korter
+        korter = korter.rstrip(" ,;:/-–|.(")
+        if korter.count("(") > korter.count(")"):
+            korter = korter[:korter.rfind("(")]
+            continue
+        laatste = korter.rsplit(" ", 1)
+        # "Vitamine A" en "Type A" houden hun letter; alleen een kleine "a" is los.
+        if (len(laatste) == 2 and laatste[1].lower() in _LOS_EIND
+                and (len(laatste[1]) > 1 or laatste[1].islower())):
+            korter = laatste[0]
+    return korter or _js_kap(titel, maximum)
+
+
+def _mp_titel_binnen_grens(db, jobs: list) -> int:
+    """Kort de titel in van elke uitgaande plaatsing of bijwerking voor
+    Marktplaats en 2dehands. Geeft terug hoeveel er zijn aangepast.
+
+    We schrijven het terug in de opdracht, net als _haal_links_eruit, zodat in de
+    geschiedenis staat wat er werkelijk op de site is gezet."""
+    aangepast = 0
+    for j in jobs or []:
+        if j.get("platform") not in ("marktplaats", "2dehands"):
+            continue
+        if j.get("action") not in _TITEL_ACTIES:
+            continue
+        pl = j.get("payload")
+        if not isinstance(pl, dict) or not isinstance(pl.get("title"), str):
+            continue
+        nieuw_titel = _mp_titel(pl["title"].strip())
+        if nieuw_titel == pl["title"]:
+            continue
+        nieuw = {**pl, "title": nieuw_titel}
+        logger.info("job %s (%s): titel ingekort tot %d tekens", j.get("id"),
+                    j.get("platform"), _js_lengte(nieuw_titel))
+        j["payload"] = nieuw
+        aangepast += 1
+        try:
+            db.table("jobs").update({"payload": nieuw}).eq("id", j["id"]).execute()
+        except Exception as e:  # noqa: BLE001 — de opdracht die uitgaat is al goed
+            logger.warning("job %s: ingekorte titel niet kunnen opslaan: %s", j.get("id"), e)
+    return aangepast
+
+
+# ── Vinted neemt hoogstens 2000 tekens omschrijving ──────────────────────────
+#
+# GEMETEN 17-09-2026, Johan Kist (Blackbird Guitars). Vinted weigerde zijn gitaren
+# met "Gebruik niet meer dan 2000 tekens voor je beschrijving": 11 van zijn 24
+# omschrijvingen komen van Marktplaats en zijn langer (tot 4219 tekens). Marktplaats
+# en eBay nemen dat wel, dus het artikel zelf blijft heel; alleen wat naar Vinted
+# gaat wordt ingekort. De langste omschrijving die Vinted bij ons ooit aannam was
+# 1904 tekens met 17 regels.
+#
+# We tellen voorzichtig: een regeleinde als twee tekens (een formulier stuurt het
+# als \r\n) en tekens zoals emoji zoals de browser ze telt. Afgebroken wordt op een
+# alinea, regel, zin of woord, en een vaste slottekst van de verkoper blijft staan.
+VINTED_MAX_OMSCHRIJVING = 2000
+_VINTED_MARGE = 10
+
+
+def _vinted_lengte(tekst: str) -> int:
+    return len(tekst.encode("utf-16-le")) // 2 + tekst.count("\n")
+
+
+def _platte_tekst(ruw: str) -> str:
+    """Wat de extensie er zelf van maakt (platteTekst in content/shared.js)."""
+    import html as _html
+    s = str(ruw or "")
+    if not re.search(r"[<&]", s):
+        return s
+    s = re.sub(r"<\s*br\s*/?\s*>", "\n", s, flags=re.I)
+    s = re.sub(r"<\s*/\s*(?:p|div|li|h[1-6]|tr)\s*>", "\n", s, flags=re.I)
+    s = re.sub(r"<\s*li\b[^>]*>", "- ", s, flags=re.I)
+    s = re.sub(r"<\s*(?:p|div|h[1-6]|tr)\b[^>]*>", "\n", s, flags=re.I)
+    s = re.sub(r"<[^>]+>", "", s)
+    s = _html.unescape(s).replace(" ", " ")
+    s = re.sub(r"[ \t]+\n", "\n", s)
+    return re.sub(r"\n{3,}", "\n\n", s).strip()
+
+
+def _knip_voor_vinted(tekst: str, grens: int) -> str:
+    if _vinted_lengte(tekst) <= grens:
+        return tekst
+    laag, hoog = 0, len(tekst)
+    while laag < hoog:                      # langste begin dat nog past
+        mid = (laag + hoog + 1) // 2
+        if _vinted_lengte(tekst[:mid]) <= grens:
+            laag = mid
+        else:
+            hoog = mid - 1
+    stuk = tekst[:laag]
+    ondergrens = int(laag * 0.7)            # nooit meer dan 30% extra weggooien
+    # De LAATSTE nette plek: einde van een regel of een zin. Eerst op alinea's
+    # zoeken gooide bij Johans Duesenberg 450 tekens te veel weg, terwijl er
+    # vlak voor de grens gewoon een zin eindigde.
+    plekken = [stuk.rfind(s) + h for s, h in (("\n", 0), (". ", 1), ("! ", 1), ("? ", 1))]
+    plek = max(plekken)
+    if plek < ondergrens:
+        plek = stuk.rfind(" ")
+        if plek < ondergrens:
+            return stuk.rstrip()
+    kort = stuk[:plek].rstrip()
+    # Geen losse tussenkop onderaan ("Toon en speelbaarheid" zonder tekst eronder).
+    kop = kort.rsplit("\n", 1)
+    if len(kop) == 2 and len(kop[1]) < 60 and not re.search(r"[.!?:)]$", kop[1].strip()) \
+            and not kop[1].lstrip().startswith(("-", "•", "*")) and len(kop[0]) >= ondergrens:
+        kort = kop[0].rstrip()
+    return kort
+
+
+def vinted_omschrijving(tekst: str, slot: str = "") -> str:
+    """De omschrijving zoals Vinted hem aanneemt: ongewijzigd als hij past."""
+    grens = VINTED_MAX_OMSCHRIJVING - _VINTED_MARGE
+    if _vinted_lengte(str(tekst or "")) <= grens:
+        return tekst
+    schoon = _platte_tekst(tekst)
+    if _vinted_lengte(schoon) <= grens:
+        return schoon
+    slot = (slot or "").strip()
+    if slot and schoon.rstrip().endswith(slot):
+        rest = "\n\n" + slot
+        ruimte = grens - _vinted_lengte(rest)
+        if ruimte >= grens // 2:
+            romp = schoon.rstrip()[:-len(slot)].rstrip()
+            return _knip_voor_vinted(romp, ruimte) + rest
+    return _knip_voor_vinted(schoon, grens)
+
+
+def _vinted_tekst_binnen_grens(db, jobs: list) -> int:
+    """Vlak voordat een Vinted-opdracht de deur uitgaat, net als _haal_links_eruit:
+    hier komt elke opdracht langs, welk pad hem ook klaarzette."""
+    aangepast = 0
+    for j in jobs or []:
+        if j.get("platform") != "vinted" or j.get("action") not in ("create", "edit", "content_refresh"):
+            continue
+        pl = j.get("payload")
+        if not isinstance(pl, dict) or not isinstance(pl.get("description"), str):
+            continue
+        slot, tekst = "", pl["description"]
+        try:
+            from backend.services.crosslist import slotteksten_van, omschrijving_met_slot
+            standaard, slot = slotteksten_van(j.get("user_id") or "")
+            # Koos de verkoper op Vinted een andere of geen vaste tekst (Lynn van
+            # De Juiste Toon, 18-10-2026), dan hier nog eens de juiste eronder:
+            # ook een opdracht die vóór die keuze, of langs een pad dat de
+            # Vinted-tekst niet kent, klaargezet werd. Zelfde tekst = niets doen.
+            if slot.strip() != standaard.strip():
+                tekst = omschrijving_met_slot(tekst, "vinted", standaard, slot)
+        except Exception:  # noqa: BLE001 — zonder slottekst gewoon inkorten
+            pass
+        kort = vinted_omschrijving(tekst, slot)
+        if kort == pl["description"]:
+            continue
+        logger.info("job %s: Vinted-omschrijving ingekort van %d naar %d tekens",
+                    j.get("id"), _vinted_lengte(pl["description"]), _vinted_lengte(kort))
+        nieuw = {**pl, "description": kort}
+        j["payload"] = nieuw
+        aangepast += 1
+        try:
+            db.table("jobs").update({"payload": nieuw}).eq("id", j["id"]).execute()
+        except Exception as e:  # noqa: BLE001 — de opdracht die uitgaat is al goed
+            logger.warning("job %s: ingekorte tekst niet kunnen opslaan: %s", j.get("id"), e)
+    return aangepast
+
+
+# ── De rubriek waar de verkoper het artikel ZELF in heeft gezet ──────────────
+#
+# GEMETEN 13-09-2026, Egbert Brouwer (Papa's Plectrums). "Ik heb vandaag
+# geprobeerd er 35 online te zetten, daar zijn er 34 niet van gelukt." Alle 34
+# waren miniatuurgitaartjes, en 2dehands vraagt geld in Gitaren | Elektrisch,
+# Akoestisch en Bas (twee gratis per rubriek, daarna betalen). Op Marktplaats
+# staan die 34 in Verzamelen | Muziek, Artiesten en Beroemdheden, gekozen door
+# hemzelf. Onze import had de rubriek uit de titel geraden: van zijn 5.533
+# artikelen had er maar 947 bij ons dezelfde rubriek als op Marktplaats.
+#
+# Marktplaats en 2dehands delen dezelfde rubriekenboom met dezelfde nummers
+# (nagemeten op alle tien rubrieken die hij gebruikt), en de extensie plaatst al
+# sinds 1.0.273 op die nummers als ze in de opdracht staan (getMpSyiUrl, zie
+# "mp_category"). Dat gebeurde alleen bij een herplaatsing op Marktplaats. Hier,
+# vlak voor uitgifte, geldt het nu ook voor een nieuw zoekertje op 2dehands van
+# een artikel dat op Marktplaats staat. Dus zonder nieuwe extensie.
+# TIEN MINUTEN WAS GEEN VANGNET MAAR EEN AFTELKLOK (gemeten 14-09-2026).
+# Na dit geduld gaat de opdracht alsnog met de GERADEN rubriek de deur uit, en
+# juist die geraden rubriek is wat op 2dehands geld kost: bij Egbert klopte hij
+# bij 947 van zijn 5.533 artikelen. Een kortdurende storing bij de opzoeking
+# werd zo binnen tien minuten omgezet in een plaatsing in een betalende rubriek.
+# Zes uur: lang genoeg dat geen enkele storing hem haalt, kort genoeg dat een
+# artikel dat echt niet op Marktplaats te vinden is nog dezelfde dag online gaat.
+_RUBRIEK_ZOEK_GEDULD = timedelta(hours=6)
+# Ligt de opzoeking plat, dan niet bij elke opdracht opnieuw bellen: dat is
+# precies het salvo waar Marktplaats op dichtklapt. Binnen deze rust blijft een
+# wachtende opdracht gewoon wachten, zonder één verzoek naar buiten.
+_RUBRIEK_STORING_RUST = timedelta(minutes=3)
+_RUBRIEK_STORING: dict[str, datetime] = {}
+# MAAR EEN ARTIKEL DAT NIET TERUG TE VINDEN IS, IS GEEN STORING (14-10-2026, Egbert).
+# "Darkthrone - Fuck Off..." en twee V-Picks-plectrums vonden we niet op titel en
+# niet bij zijn honderd nieuwste advertenties, terwijl die lijst gewoon terugkwam.
+# Toch ging de hele verkoper drie minuten op rust: van 09:28 tot 09:38 UTC ging er
+# daardoor één plaatsing per drie minuten uit in plaats van elke halve minuut.
+# Dit artikel wacht nog steeds (zie hieronder), de rest van de rij nu een halve
+# minuut: ongeveer het tempo waarin zijn plaatsingen toch al uitgaan. Hooguit één
+# zo'n opzoeking per halve minuut (vijf vragen), zodat een reeks onvindbare
+# artikelen zelf nooit het salvo wordt waar Marktplaats op dichtklapt.
+_NIET_GEVONDEN_RUST = timedelta(seconds=30)
+# Hetzelfde onvindbare artikel zelf pas na drie minuten opnieuw, zoals vroeger: anders
+# vraagt één achterblijver elke halve minuut vijf keer bij Marktplaats (gemeten
+# 14-10, 09:53 tot 10:09 UTC, toen het zijn laatste wachtende zoekertje was).
+_NIET_GEVONDEN_OPNIEUW = timedelta(minutes=3)
+_RUBRIEK_NIET_GEVONDEN: dict[tuple[str, str], datetime] = {}
+# En pas na zoveel ECHTE mislukte opzoekingen voor deze opdracht zelf, elk na de
+# rust hierboven. WAAROM (27-09-2026, Egbert): het geduld telde alleen kloktijd.
+# 24 nummerplaten wachtten sinds 26-09 14:40 op hun rubriek terwijl zijn computer
+# 's nachts uit stond; om 10:00 was de klok ruim voorbij de zes uur. Eén mislukte
+# opzoeking zette de rust aan, en in die rust gingen alle 24 zonder zelf te zoeken
+# met de geraden rubriek de deur uit: nummerplaten tussen damestassen,
+# schilderijen en antiek, terwijl ze op Marktplaats in Verzamelen staan.
+_RUBRIEK_MIN_POGINGEN = 3
+# Hetzelfde voor de verzendkosten (_zet_verzending_van_marktplaats), met één
+# verschil: daar wacht een opdracht niet. De standaardverzending kost geen geld
+# en vond de verkoper "prima", een stilstaande wachtrij kost wel iets.
+_VERZENDING_STORING_RUST = timedelta(minutes=3)
+_VERZENDING_STORING: dict[str, datetime] = {}
+
+
+# WACHTEN OP FOTO'S UIT EEN WEBSHOP DIE ONS TEGENHOUDT (16-10-2026, De Juiste Toon).
+#
+# SiteGround geeft onze server een captcha op Toons productfoto's, en zijn browser
+# mag ze niet ophalen (geen CORS-kop). Ze komen binnen via de GitHub-taak
+# bronfotos.yml, maar die draait niet op de minuut. Plaatste hij een vers product
+# uit zijn webshop voordat de taak langs was geweest, dan mislukte het op elk
+# kanaal met "None of the 7 photo(s) could be downloaded". Zo'n plaatsing krijgt
+# bij het aanmaken een stempel (_fotos_wachten_sinds, zie crosslist.py), wacht
+# hooguit _FOTO_GEDULD achteraan in de rij, en gaat met de foto's uit onze opslag
+# de deur uit zodra die er zijn. Daarna gaat hij hoe dan ook, met een eerlijke
+# melding als het dan nog niet kan.
+_FOTO_GEDULD = timedelta(hours=2)
+
+
+def _onbereikbare_fotos(urls) -> int:
+    """Hoeveel foto's nog op de bron staan in plaats van in onze opslag."""
+    from backend.services.photo_mirror import is_mirrored
+    return sum(1 for u in (urls or []) if isinstance(u, str)
+               and u.startswith(("http://", "https://")) and not is_mirrored(u))
+
+
+def _wacht_op_fotos(job: dict, nu: datetime) -> bool:
+    """Wordt deze plaatsing nu teruggehouden tot haar foto's binnen zijn?"""
+    if job.get("action") != "create":
+        return False
+    pl = job.get("payload")
+    ruw = job.get("fotos_sinds")
+    if ruw is None and isinstance(pl, dict):
+        ruw = pl.get("_fotos_wachten_sinds")
+    sinds = _parse_ts(ruw)
+    if not sinds or nu - sinds >= _FOTO_GEDULD:
+        return False
+    # Een lichte rij (volgorde) kent alleen het stempel; een volle rij weet ook of
+    # de foto's er intussen zijn.
+    return _onbereikbare_fotos(pl.get("photo_urls")) > 0 if isinstance(pl, dict) else True
+
+
+def _wacht_op_rubriek(job: dict, nu: datetime) -> bool:
+    """Wordt deze 2dehands-plaatsing nu teruggehouden tot zijn rubriek bekend is?"""
+    pl = job.get("payload")
+    if (job.get("action") != "create" or job.get("platform") != "2dehands"
+            or not isinstance(pl, dict)):
+        return False
+    sinds = _parse_ts(pl.get("_rubriek_zoeken_sinds"))
+    return bool(sinds and nu - sinds < _RUBRIEK_ZOEK_GEDULD)
+_BETAALDE_RUBRIEK_GEHEUGEN = timedelta(days=28)
+
+# EEN GRATIS BUURRUBRIEK, ALS DE EIGEN RUBRIEK GELD GAAT KOSTEN.
+#
+# WAAROM (22-09-2026, Martijn Bax / Watchero, tweedehands Apple Watches).
+# Marktplaats laat per account maar twee advertenties gratis in "Smartwatches"
+# staan; de derde kost geld. "Sporthorloges", in dezelfde tak, heeft die grens
+# niet. Horlogeverkopers zetten hun derde smartwatch daarom zelf in
+# Sporthorloges, en zo vroeg Martijn het ook van ons. Zonder dit liep elke
+# volgende smartwatch op "Naar betalen" vast, nam de rem de rest van zijn rij in
+# die rubriek terug en ging er vanaf de derde niets meer online.
+#
+# Nummers nagemeten op de openbare zoek-API van Marktplaats (22-09-2026):
+# 1826/3041 heet "Smartwatches", 1826/3045 "Sporthorloges". 2dehands deelt die
+# boom. Alleen paren die zo gemeten zijn horen hier: een geraden buurrubriek
+# kan zelf geld kosten of een verkeerde plek zijn.
+#
+# Er wordt pas uitgeweken als die rubriek bij DEZE verkoper aantoonbaar geld
+# kost. Zolang er een gratis plek is blijft een smartwatch in Smartwatches, waar
+# kopers hem het eerst zoeken.
+#
+# TAPIJTEN (06-10-2026, Toon / De Juiste Toon, 2dehands.be). "Stoffering |
+# Tapijten en Vloerkleden" (504/533) is bij hem vol en kost geld; zijn eigen
+# oplossing was "Woonaccessoires | Overige" (504/536), waar hij ze gratis kwijt
+# kon. 533 en 536 zijn op 06-10-2026 nagemeten in de openbare boom van
+# 2dehands.be en marktplaats.nl (zelfde nummers, zelfde namen). De extensie
+# kent 504/536 al als "wonen vachten".
+_GRATIS_UITWIJK = {
+    "sieraden smartwatch": "sieraden sporthorloge",
+    "mp:1826/3041": "mp:1826/3045",
+    "wonen tapijten en kleden": "wonen vachten",
+    "mp:504/533": "mp:504/536",
+}
+_UITWIJK_MP_NAAM = {"mp:1826/3045": "Sporthorloges",
+                    "mp:504/536": "Woonaccessoires | Overige"}
+
+
+def _uitwijk_payload(payload) -> dict | None:
+    """Dezelfde opdracht in de gratis buurrubriek, of None als die er niet is.
+
+    Een opdracht wijkt hooguit één keer uit. Kost de buurrubriek óók geld, dan
+    geldt daar de gewone rem en niet een volgende sprong.
+    """
+    pl = payload if isinstance(payload, dict) else {}
+    # "in" en niet .get(): ook een lege terugdraai-notitie maakt dit een herplaatsing.
+    if "_refresh_rollback" in pl or pl.get("_uitgeweken_van"):
+        return None
+    sleutel = _rubriek_sleutel(pl)
+    doel = _GRATIS_UITWIJK.get(sleutel)
+    if not doel:
+        return None
+    nieuw = dict(pl)
+    if doel.startswith("mp:"):
+        # De extensie kiest de rubriek op deze twee nummers als ze er staan
+        # (getMpSyiUrl), dus die moeten mee, in hetzelfde type als ze waren.
+        mc = dict(pl["mp_category"])
+        l1, l2 = doel[3:].split("/")
+        mc["l1"] = type(mc["l1"])(l1)
+        mc["l2"] = type(mc["l2"])(l2)
+        mc["l2_naam"] = _UITWIJK_MP_NAAM.get(doel) or mc.get("l2_naam")
+        nieuw["mp_category"] = mc
+    categorie = str(pl.get("category") or "").strip().lower()
+    if categorie in _GRATIS_UITWIJK and not _GRATIS_UITWIJK[categorie].startswith("mp:"):
+        nieuw["category"] = _GRATIS_UITWIJK[categorie]
+    nieuw["_uitgeweken_van"] = sleutel
+    return nieuw
+
+
+def _rubriek_sleutel(payload) -> str:
+    """De rubriek die deze opdracht op het formulier kiest, als vergelijkbare sleutel.
+
+    De echte Marktplaats-rubriek gaat voor, want die kiest de extensie ook.
+    Twee opdrachten met dezelfde geraden categorie kunnen dus in verschillende
+    rubrieken landen, en een rem op de een zegt dan niets over de ander.
+    """
+    pl = payload if isinstance(payload, dict) else {}
+    mc = pl.get("mp_category")
+    if isinstance(mc, dict) and mc.get("l1") and mc.get("l2"):
+        return f"mp:{mc['l1']}/{mc['l2']}"
+    return str(pl.get("category") or "").strip().lower()
+
+
+def _rubriek_leesbaar(payload) -> str | None:
+    pl = payload if isinstance(payload, dict) else {}
+    mc = pl.get("mp_category")
+    if isinstance(mc, dict) and mc.get("l2_naam"):
+        return " ".join(x for x in (mc.get("l1_naam"), mc.get("l2_naam")) if x)
+    return str(pl.get("category") or "").strip() or None
+
+
+def _draai_los(coro):
+    """Een coroutine uitvoeren vanuit gewone code, ook als er al een lus draait."""
+    import asyncio
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=1) as uitvoerder:
+        return uitvoerder.submit(asyncio.run, coro).result()
+
+
+def _rubriek_uit_eerdere_opdracht(db, user_id: str, item_id) -> dict | None:
+    """De Marktplaats-rubriek die we voor DIT artikel eerder al vonden.
+
+    WAAROM (14-09-2026). De gevonden rubriek stond alleen in de opdracht zelf,
+    dus elke nieuwe plaatsing van hetzelfde artikel ging opnieuw bij Marktplaats
+    langs. Vijftig zoekertjes tegelijk zijn dan vijftig vragen binnen een minuut,
+    en precies in zo'n salvo ging het mis. Een rubriek die we al kennen is
+    bovendien niet afhankelijk van of Marktplaats op dat moment antwoordt.
+    """
+    if not item_id:
+        return None
+    try:
+        rij = eerste_rij(db.table("jobs").select("payload->mp_category")
+                         .eq("user_id", user_id).eq("item_id", item_id)
+                         .not_.is_("payload->mp_category", "null")
+                         .order("created_at", desc=True).limit(1).execute())
+    except Exception as e:  # noqa: BLE001 — dit is een snelkoppeling, geen eis
+        logger.warning("item %s: eerdere rubriek niet te lezen: %s", item_id, e)
+        return None
+    mc = (rij or {}).get("mp_category")
+    return mc if isinstance(mc, dict) and mc.get("l1") and mc.get("l2") else None
+
+
+def _zet_rubriek_van_marktplaats(db, user_id: str, job: dict) -> bool:
+    """Zet de echte Marktplaats-rubriek in een 2dehands-plaatsing. Zie hierboven.
+
+    Geeft False als deze opdracht nu even moet blijven staan: het artikel staat
+    op Marktplaats maar de rubriek was niet op te vragen. Dan niet gokken met de
+    geraden rubriek, want die kost bij Egbert geld en zet via de rem ook de rest
+    van de rij stil. Na _RUBRIEK_ZOEK_GEDULD gaat hij alsnog met de geraden
+    rubriek, zodat een storing bij Marktplaats de wachtrij nooit blijvend stopt.
+    """
+    if job.get("action") != "create" or job.get("platform") != "2dehands":
+        return True
+    pl = job.get("payload")
+    if (not isinstance(pl, dict) or _rubriek_sleutel(pl).startswith("mp:")
+            or pl.get("_rubriek_niet_op_marktplaats")):
+        return True
+    try:
+        rij = eerste_rij(db.table("listings")
+                         .select("platform_listing_id,items(title)")
+                         .eq("item_id", job.get("item_id")).eq("platform", "marktplaats")
+                         .eq("status", "active").not_.is_("platform_listing_id", "null")
+                         .limit(1).execute())
+    except Exception as e:  # noqa: BLE001 — uitdelen gaat voor
+        logger.warning("job %s: Marktplaats-advertentie niet te lezen: %s", job.get("id"), e)
+        return True
+    if not rij or not rij.get("platform_listing_id"):
+        return True
+
+    nu = datetime.now(timezone.utc)
+    rubriek = _rubriek_uit_eerdere_opdracht(db, user_id, job.get("item_id"))
+    rust = _RUBRIEK_STORING.get(user_id)
+    artikel = (user_id, str(job.get("item_id")))
+    net_niet_gevonden = _RUBRIEK_NIET_GEVONDEN.get(artikel)
+    geprobeerd = False
+    if rubriek:
+        pass
+    elif rust and nu - rust < _RUBRIEK_STORING_RUST:
+        # De vorige opzoeking liep stuk. Wachten zonder te bellen.
+        rubriek = None
+    elif net_niet_gevonden and nu - net_niet_gevonden < _NIET_GEVONDEN_OPNIEUW:
+        # Dit artikel vonden we zojuist niet terug: niet opnieuw bellen.
+        rubriek = None
+    else:
+        geprobeerd = True
+        from backend.services.mp_enrich import rubriek_van_eigen_advertentie
+        # BEIDE TITELS, DE GEPLAATSTE EERST (19-09-2026).
+        #
+        # Op Marktplaats staat de titel waarmee wij de advertentie daar hebben
+        # gezet, en die is vertaald. In `items` staat de brontitel, en die is bij
+        # alles wat uit Vinted of de webshop komt Engels. Hier stond de brontitel
+        # voorop, dus werd er gezocht op "(1367) White Columbia Fleece Jacket"
+        # terwijl de advertentie "(1367) Witte Columbia fleecejas" heet: nul
+        # resultaten, en nul leest als een storing. Het zoekertje op 2dehands
+        # bleef daardoor staan tot het geduld van zes uur op was.
+        titels = [pl.get("title"), (rij.get("items") or {}).get("title")]
+        uitleg: dict = {}
+        try:
+            rubriek = _draai_los(rubriek_van_eigen_advertentie(
+                db, user_id, titels, rij["platform_listing_id"], uitleg=uitleg))
+        except Exception as e:  # noqa: BLE001
+            logger.warning("job %s: rubriek opvragen mislukt: %s", job.get("id"), e)
+            rubriek = None
+        if rubriek is None and uitleg.get("zoekfunctie_werkt"):
+            # Rust die over _NIET_GEVONDEN_RUST afloopt in plaats van over drie minuten.
+            _RUBRIEK_STORING[user_id] = nu - _RUBRIEK_STORING_RUST + _NIET_GEVONDEN_RUST
+            if len(_RUBRIEK_NIET_GEVONDEN) > 5000:
+                _RUBRIEK_NIET_GEVONDEN.clear()
+            _RUBRIEK_NIET_GEVONDEN[artikel] = nu
+        elif rubriek is None:
+            _RUBRIEK_STORING[user_id] = nu
+        else:
+            _RUBRIEK_STORING.pop(user_id, None)
+
+    nieuw = dict(pl)
+    uitdelen = True
+    if rubriek:
+        nieuw["mp_category"] = rubriek
+        nieuw.pop("_rubriek_zoeken_sinds", None)
+        nieuw.pop("_rubriek_pogingen", None)
+        logger.info("job %s: 2dehands in de eigen Marktplaats-rubriek %s (was %r)",
+                    job.get("id"), _rubriek_leesbaar(nieuw), pl.get("category"))
+    elif rubriek == {}:
+        # Zijn eigen advertenties kwamen terug en die van dit artikel zat er niet
+        # bij: dan is er geen eigen rubriek om te volgen. Dit is een ANTWOORD, en
+        # het is het enige geval dat hier een stempel mag zetten. Een storing ziet
+        # er van buiten hetzelfde uit en komt daarom als None binnen (zie
+        # mp_enrich.rubriek_op_advertentienummer) — dat stempel zetten op een
+        # storing is precies wat op 14-09-2026 vijftig zoekertjes de betalende
+        # gitaarrubriek in duwde.
+        nieuw["_rubriek_niet_op_marktplaats"] = True
+    else:
+        sinds = _parse_ts(pl.get("_rubriek_zoeken_sinds"))
+        if not sinds:
+            nieuw["_rubriek_zoeken_sinds"] = nu.isoformat()
+            sinds = nu
+        pogingen = int(pl.get("_rubriek_pogingen") or 0)
+        if geprobeerd:
+            pogingen += 1
+            nieuw["_rubriek_pogingen"] = pogingen
+        # Alleen na een eigen, zojuist mislukte opzoeking, en pas na genoeg
+        # daarvan: zie _RUBRIEK_MIN_POGINGEN.
+        uitdelen = (geprobeerd and pogingen >= _RUBRIEK_MIN_POGINGEN
+                    and nu - sinds >= _RUBRIEK_ZOEK_GEDULD)
+        if not uitdelen:
+            logger.info("job %s: rubriek nog niet op te vragen, blijft wachten", job.get("id"))
+    if nieuw != pl:
+        job["payload"] = nieuw
+        try:
+            db.table("jobs").update({"payload": nieuw}).eq("id", job["id"]).execute()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("job %s: rubriek niet kunnen opslaan: %s", job.get("id"), e)
+    return uitdelen
+
+
+def _zet_verzending_van_marktplaats(db, user_id: str, job: dict) -> None:
+    """Zet de verzendkosten die de verkoper zelf op Marktplaats koos in een
+    2dehands-plaatsing. Zie verzending_uit_html in mp_enrich.py voor het waarom.
+
+    Alleen "zelf verzenden met een bedrag" gaat mee: de extensie kiest dan op
+    2dehands "Zelf versturen" met datzelfde bedrag. Al het andere (verzenden via
+    Marktplaats, alleen ophalen, niet op Marktplaats) laat het formulier zoals het
+    altijd was. Houdt nooit iets tegen: lukt het opzoeken niet, dan gaat de
+    opdracht met de standaardverzending, want die vond de verkoper "prima".
+    """
+    if job.get("action") != "create" or job.get("platform") != "2dehands":
+        return
+    pl = job.get("payload")
+    if not isinstance(pl, dict) or "verzending" in pl:
+        return
+    # ALLEEN WAAR DE VERKOPER DAT WIL. Het Marktplaats-bedrag is een Nederlandse
+    # prijs; voor een pakje naar België is het veel te laag (Egbert: EUR 4,95
+    # tegen 9,50 echt). Zie VERZENDING_2DH_WOORDEN en VERZENDING_2DH_BRIEF_ONDER
+    # in instellingen.py.
+    from backend.services.instellingen import (heeft_marktplaats_nodig, neemt_bedrag_over,
+                                               verzending_2dh_regel)
+    from backend.services.verzending_2dh import BPOST, eigen_keuzes
+    regel = verzending_2dh_regel(user_id, db)
+    if regel is None:
+        return   # instelling niet te lezen: niets vastleggen, deze keer Bpost
+    # EEN EIGEN KEUZE VOOR DIT ARTIKEL GAAT VOOR (27-09-2026): Bpost of een vast
+    # bedrag, gezet vanuit de voorraad. Zie verzending_2dh.py.
+    eigen = eigen_keuzes(user_id, db)
+    if eigen is None:
+        return   # niet te lezen: niets vastleggen, deze keer Bpost
+    keuze = eigen.get(str(job.get("item_id")))
+    if keuze is not None:
+        _bewaar_verzending(db, job, {"soort": "standaard"} if keuze == BPOST
+                           else {"soort": "zelf", "cents": keuze})
+        return
+    if not heeft_marktplaats_nodig(regel, pl.get("title")):
+        # Niets waar het bedrag toe doet: Marktplaats hoeft niet eens gevraagd.
+        _bewaar_verzending(db, job, {"soort": "standaard"})
+        return
+    try:
+        rij = eerste_rij(db.table("listings").select("platform_listing_id")
+                         .eq("item_id", job.get("item_id")).eq("platform", "marktplaats")
+                         .eq("status", "active").not_.is_("platform_listing_id", "null")
+                         .limit(1).execute())
+    except Exception as e:  # noqa: BLE001 — uitdelen gaat voor
+        logger.warning("job %s: Marktplaats-advertentie niet te lezen: %s", job.get("id"), e)
+        return
+    nummer = (rij or {}).get("platform_listing_id")
+    if not nummer:
+        verzending = {"soort": "onbekend"}
+    else:
+        rust = _VERZENDING_STORING.get(user_id)
+        if rust and datetime.now(timezone.utc) - rust < _VERZENDING_STORING_RUST:
+            return
+        from backend.services.mp_enrich import verzending_van_advertentie
+        try:
+            verzending = _draai_los(verzending_van_advertentie(nummer, user_id))
+        except Exception as e:  # noqa: BLE001
+            logger.warning("job %s: verzending opvragen mislukt: %s", job.get("id"), e)
+            verzending = None
+        if verzending is None:
+            # Een storing is geen antwoord: niets vastleggen, de volgende
+            # opdracht mag het opnieuw proberen (na een korte rust).
+            _VERZENDING_STORING[user_id] = datetime.now(timezone.utc)
+            logger.warning("job %s: verzending van Marktplaats %s niet te lezen, "
+                           "standaardverzending", job.get("id"), nummer)
+            return
+        _VERZENDING_STORING.pop(user_id, None)
+        verzending = verzending or {"soort": "onbekend"}
+    if verzending.get("soort") == "zelf":
+        if not neemt_bedrag_over(regel, pl.get("title"), verzending.get("cents")):
+            # Een pakje-bedrag zonder woord uit de regel: Bpost, zoals altijd.
+            _bewaar_verzending(db, job, {"soort": "standaard"})
+            return
+        logger.info("job %s: 2dehands zelf versturen voor %s cent, zoals op Marktplaats %s",
+                    job.get("id"), verzending.get("cents"), nummer)
+    _bewaar_verzending(db, job, verzending)
+
+
+def _bewaar_verzending(db, job: dict, verzending: dict) -> None:
+    """Vastleggen, zodat de volgende ronde niet opnieuw hoeft te zoeken."""
+    nieuw = {**job["payload"], "verzending": verzending}
+    job["payload"] = nieuw
+    try:
+        db.table("jobs").update({"payload": nieuw}).eq("id", job["id"]).execute()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("job %s: verzending niet kunnen opslaan: %s", job.get("id"), e)
+
+
+def _verzending_alsnog_bijwerken(db, job: dict, body) -> None:
+    """Een 2dehands-zoekertje dat zijn eigen verzendbedrag niet meekreeg: alsnog.
+
+    Vanaf 1.0.354 meldt de extensie bij een geslaagde plaatsing of het eigen
+    bedrag echt op het formulier stond (`verzending_gezet`). Een oudere kopie
+    kent item.verzending niet en meldt niets, en ook 1.0.354 valt terug op Bpost
+    als het bedrag niet te zetten was. In beide gevallen staat het zoekertje met
+    Bpost EUR 7,10 online. Dan zetten we hier een bijwerking klaar; die gaat pas
+    naar een kopie die het kan (MINIMALE_2DH_BIJWERK_VERSIE). Stond het bedrag er
+    tóch al goed, dan ziet de bijwerking dat en slaat ze niets op.
+    """
+    pl = job.get("payload") or {}
+    v = pl.get("verzending") or {}
+    antwoord = body if isinstance(body, dict) else {}
+    lid = antwoord.get("platform_listing_id")
+    if (job.get("platform") != "2dehands" or v.get("soort") != "zelf"
+            or not isinstance(v.get("cents"), int) or not lid
+            or antwoord.get("verzending_gezet") is True):
+        return
+    try:
+        al = (db.table("jobs").select("id").eq("user_id", job["user_id"])
+              .eq("item_id", job.get("item_id")).eq("platform", "2dehands")
+              .eq("action", "content_refresh").in_("status", ["pending", "claimed"])
+              .limit(1).execute().data or [])
+        if al:
+            return
+        db.table("jobs").insert({
+            "user_id": job["user_id"], "item_id": job.get("item_id"),
+            "platform": "2dehands", "action": "content_refresh", "status": "pending",
+            "payload": {"platform_listing_id": lid,
+                        "platform_listing_url": antwoord.get("platform_listing_url"),
+                        "title": pl.get("title"), "_verzending_bijwerken": True,
+                        "verzending": {"soort": "zelf", "cents": v["cents"]}},
+        }).execute()
+        logger.info("job %s: 2dehands %s kreeg Bpost in plaats van %s cent; bijwerking klaargezet",
+                    job.get("id"), lid, v["cents"])
+    except Exception as e:  # noqa: BLE001 — het zoekertje staat online, dat telt
+        logger.warning("job %s: bijwerking verzendkosten niet klaar te zetten: %s", job.get("id"), e)
+
+
+def _is_2dh_bijwerking(job: dict) -> bool:
+    """Verzendkosten van een 2dehands-zoekertje dat al online staat bijwerken.
+
+    Onderhoud op de achtergrond, geen werk waar de verkoper op wacht. Het telt dus
+    niet mee in de wachtrij op het dashboard. WAAROM (26-09-2026, Egbert): 178 van
+    deze opdrachten wachtten op extensie 1.0.354 terwijl hij 1.0.352 had. De balk
+    zei twee uur lang "178 queued" en er gebeurde niets. Hij meldde "hij lijkt
+    vastgelopen", logde uit en in, en leegde uiteindelijk de hele rij."""
+    return job.get("action") == "content_refresh" and job.get("platform") == "2dehands"
+
+
+# Hetzelfde als filter voor de database (niet: content_refresh EN 2dehands).
+_NIET_2DH_BIJWERKING = "action.neq.content_refresh,platform.neq.2dehands"
+
+
+def _bijwerken_2dh_staat_stil(db, user_id: str) -> bool:
+    """Mislukte de laatst afgeronde 2dehands-bijwerking van deze verkoper?
+
+    Een noodrem voor een reeks. Bij Egbert stonden 116 zoekertjes klaar om hun
+    verzendkosten te laten bijwerken. Gaat er iets mis dat voor allemaal geldt,
+    dan wil je één mislukking zien en niet 116, en honderd mislukte opdrachten
+    tellen bovendien mee in de rem die zijn hele 2dehands-rij stilzet (zie
+    _stop_wachtrij). Dus: mislukte de laatste, dan wacht de rest tot iemand die
+    ene opnieuw klaarzet en hij slaagt. Bij twijfel (niet te lezen) niets
+    uitdelen: dit werk heeft geen haast.
+    """
+    try:
+        rijen = (db.table("jobs").select("id,status,created_at,claimed_at,done_at")
+                 .eq("user_id", user_id).eq("platform", "2dehands")
+                 .eq("action", "content_refresh").in_("status", ["done", "error"])
+                 .order("created_at", desc=True).limit(50).execute().data or [])
+    except Exception as e:  # noqa: BLE001
+        logger.warning("2dehands-bijwerkingen van %s niet te lezen: %s", user_id, e)
+        return True
+    if not rijen:
+        return False
+    # Wat het laatst AFLIEP telt, niet wat het laatst werd klaargezet: een reeks
+    # wordt in dezelfde seconde aangemaakt en loopt daarna een voor een af.
+    laatste = max(rijen, key=lambda r: str(r.get("done_at") or r.get("claimed_at")
+                                            or r.get("created_at") or ""))
+    if laatste.get("status") != "error":
+        return False
+    _meld_bijwerking_staat_stil(user_id, laatste.get("id"))
+    return True
+
+
+# Hooguit één mail per verkoper per dag. Deze rem wordt bij elke poll opnieuw
+# bekeken zolang er bijwerkingen wachten, dus zonder klok komt er elke 15 sec één.
+_bijwerking_stil_gemeld: dict[str, float] = {}
+
+
+def _meld_bijwerking_staat_stil(user_id: str, job_id) -> None:
+    """Een stilstaande reeks mag niet onopgemerkt blijven (26-09-2026).
+
+    Deze bijwerkingen staan sinds vandaag niet meer in de wachtrij op het
+    dashboard (zie _is_2dh_bijwerking), dus de klant ziet niet dat ze wachten, en
+    er is geen fout die hij ziet. Zonder deze mail zou een mislukking bij Egbert
+    (zijn 2dehands-account is zakelijk, de wijzigroute is alleen op een
+    particulier account nagemeten) er dagen onopgemerkt staan."""
+    import time
+    if time.time() - _bijwerking_stil_gemeld.get(user_id, 0.0) < 86400:
+        return
+    _bijwerking_stil_gemeld[user_id] = time.time()
+    _stuur_naar_eigenaar(
+        "Omnivaleur: verzendkosten bijwerken op 2dehands staat stil bij een klant",
+        f"Bij gebruiker {user_id} mislukte de laatste bijwerking van de verzendkosten "
+        f"op 2dehands (opdracht {job_id}). De rest wacht daarom. Op 2dehands gaat er "
+        "niets mis: die zoekertjes houden gewoon Bpost EUR 7,10. Laat Claude deze "
+        "opdracht bekijken; staat de oorzaak vast, dan kan de rij weer verder.\n\n"
+        "Deze mail komt hooguit een keer per dag per klant.")
+
+
+def _bijwerking_staat_al_online(job: dict) -> bool:
+    """Toont de openbare 2dehands-pagina al het bedrag dat deze bijwerking moest zetten?
+
+    WAAROM (27-09-2026, Egbert). Van zijn eerste 59 bijwerkingen meldde er één een
+    tijdsoverschrijding: de echte klik op Opslaan was gedaan, daarna was het
+    tabblad weg voordat de achtergrond de landing zag. Op 2dehands stond het
+    zoekertje wel goed (Zelf verzenden EUR 2,95). Die ene valse mislukking zette
+    de noodrem (_bijwerken_2dh_staat_stil) dicht, en 93 bijwerkingen wachtten
+    ruim vier uur op iemand die hem met de hand opende. Het doel van de opdracht is
+    wat de openbare pagina toont; toont die het bedrag, dan is het werk gedaan.
+
+    Alleen een positief bewijs telt: precies dit bedrag als "zelf verzenden". Een
+    storing, een blokkade, een verlopen zoekertje of een ander bedrag is geen
+    bewijs, en dan blijft het een mislukking zoals voorheen.
+    """
+    pl = job.get("payload") or {}
+    v = pl.get("verzending") or {}
+    if (not _is_2dh_bijwerking(job) or not pl.get("_verzending_bijwerken")
+            or v.get("soort") != "zelf" or not isinstance(v.get("cents"), int)):
+        return False
+    m = re.fullmatch(r"([am]?)(\d+)", str(pl.get("platform_listing_id") or "").strip().lower())
+    if not m:
+        return False
+    try:
+        import httpx
+        from backend.services.mp_enrich import UA, verzending_uit_html
+        r = httpx.get(f"https://www.2dehands.be/{m.group(1) or 'm'}{m.group(2)}",
+                      headers={"User-Agent": UA, "Accept": "text/html"},
+                      timeout=8, follow_redirects=True)
+        if r.status_code != 200:
+            return False
+        return verzending_uit_html(r.text) == {"soort": "zelf", "cents": v["cents"]}
+    except Exception as e:  # noqa: BLE001 — geen bewijs, dus gewoon een mislukking
+        logger.warning("2dehands %s niet na te kijken: %s", m.group(0), e)
+        return False
+
+
+def _betaalde_rubriek_bekend(db, user_id: str, platform: str, sleutel: str) -> bool:
+    """Weten we al dat deze rubriek bij deze verkoper geld kost?
+
+    WAAROM (13-09-2026, Egbert Brouwer). De rem in fail_job nam de wachtende
+    opdrachten in een betalende rubriek terug, maar alleen wat er op dat moment
+    stond. Hij klikte door: 8 van zijn 34 zetten werden ná die rem aangemaakt en
+    liepen er opnieuw op, en twee dagen na de eerste keer ging hij met dezelfde
+    rubrieken weer van voren af aan. Wat 2dehands al tegen hem had gezegd werd
+    dus vergeten.
+
+    Kost-geld is het laatste wat we in die rubriek zagen: een geslaagde plaatsing
+    daarna (er is weer een gratis plek) heft het op, net als tijd.
+    """
+    if not sleutel:
+        return False
+    grens = (datetime.now(timezone.utc) - _BETAALDE_RUBRIEK_GEHEUGEN).isoformat()
+    rijen = (db.table("jobs")
+             .select("status,created_at,done_at,result,payload->category,payload->mp_category,"
+                     "payload->_uitgeweken_van")
+             .eq("user_id", user_id).eq("platform", platform).eq("action", "create")
+             .in_("status", ["done", "error"]).gte("created_at", grens)
+             .order("created_at", desc=True).limit(1000).execute().data or [])
+    # Wat het laatst GEBEURDE telt, niet wat het laatst werd klaargezet. Bij een
+    # volle wachtrij gaan tientallen opdrachten in dezelfde seconde de rij in en
+    # lopen ze pas uren later af, in een andere volgorde. Gemeten bij De Juiste
+    # Toon: vier tapijten aangemaakt om 10:43:42, afgelopen om 10:47, 10:51,
+    # 11:01 en 11:46. Wie dan op aanmaaktijd sorteert leest een willekeurige van
+    # die vier als "het laatste wat we zagen", en een geslaagde plaatsing daar
+    # bovenop zet de rubriek weer open terwijl de betaalpagina later kwam.
+    rijen.sort(key=lambda r: str(r.get("done_at") or r.get("created_at") or ""), reverse=True)
+    for r in rijen:
+        # Uitgeweken naar de buurrubriek (_GRATIS_UITWIJK) omdat deze geld kostte:
+        # dat is het laatste wat we over deze rubriek weten.
+        if r.get("_uitgeweken_van") == sleutel:
+            return True
+        if _rubriek_sleutel({"category": r.get("category"),
+                             "mp_category": r.get("mp_category")}) != sleutel:
+            continue
+        if r.get("status") == "done":
+            return False
+        res = r.get("result") if isinstance(r.get("result"), dict) else {}
+        if _BETAALDE_RUBRIEK.search(f"{res.get('error') or ''} {res.get('error_oorspronkelijk') or ''}"):
+            return True
+    return False
+
+
+def _wijk_uit_naar_gratis_rubriek(db, user_id: str, job: dict) -> None:
+    """Zet een plaatsing in de gratis buurrubriek als de eigen rubriek al geld kost.
+
+    Zie _GRATIS_UITWIJK. Hier, vlak voor uitgifte, zodat een smartwatch die na
+    de eerste betaalmelding werd klaargezet niet eerst zelf tegen de betaalknop
+    aan hoeft te lopen. Lukt het niet, dan gaat hij in zijn eigen rubriek de
+    deur uit, precies zoals voorheen, en vangt fail_job hem op.
+    """
+    if job.get("action") != "create" or job.get("platform") not in ("marktplaats", "2dehands"):
+        return
+    pl = job.get("payload") if isinstance(job.get("payload"), dict) else {}
+    nieuw = _uitwijk_payload(pl)
+    if not nieuw:
+        return
+    try:
+        if not _betaalde_rubriek_bekend(db, user_id, job["platform"], _rubriek_sleutel(pl)):
+            return
+        db.table("jobs").update({"payload": nieuw}).eq("id", job["id"]).execute()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("job %s: uitwijken naar de gratis rubriek niet gelukt: %s", job.get("id"), e)
+        return
+    job["payload"] = nieuw
+    logger.info("job %s: %s kost geld bij %s, geplaatst in %s", job.get("id"),
+                nieuw["_uitgeweken_van"], user_id, _rubriek_sleutel(nieuw))
+
+
+def _zet_terug_in_gratis_rubriek(db, user_id: str, job_id: str, job: dict | None) -> bool:
+    """Een plaatsing die op een betalende rubriek stuitte: terug in de rij, in de buurrubriek.
+
+    Geeft True als dat gelukt is; dan hoort er geen fout en geen rem meer op.
+    Er is niets geplaatst en niets afgerekend (de extensie klikt nooit op
+    betalen), dus opnieuw proberen maakt geen dubbele advertentie. Wat in
+    dezelfde rubriek nog wacht gaat mee, anders loopt elke smartwatch eerst
+    zelf tegen de betaalknop aan voor hij uitwijkt.
+    """
+    if not job or job.get("action") != "create" or job.get("platform") not in ("marktplaats", "2dehands"):
+        return False
+    pl = job.get("payload") if isinstance(job.get("payload"), dict) else {}
+    nieuw = _uitwijk_payload(pl)
+    if not nieuw:
+        return False
+    sleutel = _rubriek_sleutel(pl)
+    try:
+        # Met een verse aanmaaktijd: een oude opdracht die terug op 'pending'
+        # gaat ruimt de driedagenveger anders nog dezelfde nacht op.
+        execute_with_retry(db.table("jobs").update({
+            "status": "pending", "payload": nieuw, "claimed_at": None, "result": None,
+            "done_at": None, "created_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("id", job_id))
+    except Exception:  # noqa: BLE001 — dan de gewone rem, zoals voorheen
+        logger.warning("Opdracht %s niet kunnen terugzetten in de gratis rubriek", job_id)
+        return False
+    verplaatst = 0
+    try:
+        wachtend = (db.table("jobs").select("id,action,payload").eq("user_id", user_id)
+                    .eq("platform", job["platform"]).eq("status", "pending")
+                    .execute().data or [])
+        for w in wachtend:
+            if w.get("id") == job_id or w.get("action") != "create":
+                continue
+            if _rubriek_sleutel(w.get("payload")) != sleutel:
+                continue
+            ander = _uitwijk_payload(w.get("payload"))
+            if not ander:
+                continue
+            db.table("jobs").update({"payload": ander}).eq("id", w["id"]).eq(
+                "status", "pending").execute()
+            verplaatst += 1
+    except Exception as e:  # noqa: BLE001 — de uitgifte wijkt de rest alsnog uit
+        logger.warning("Wachtrij in %s niet verplaatst voor %s: %s", sleutel, user_id, e)
+    logger.warning("Betalende rubriek %s op %s bij %s: opdracht %s en %d wachtende naar %s",
+                   sleutel, job["platform"], user_id, job_id, verplaatst, _rubriek_sleutel(nieuw))
+    return True
+
+
+def _weiger_bekende_betaalde_rubriek(db, user_id: str, job: dict) -> bool:
+    """Neem een 2dehands-plaatsing terug in een rubriek die al geld bleek te kosten.
+
+    Geeft True als de opdracht is teruggenomen. Alleen 2dehands: daar is elke
+    plaatsing een nieuw zoekertje. Op Marktplaats kan een 'create' de tweede
+    helft van een herplaatsing zijn, en die hier tegenhouden kost een advertentie.
+    """
+    if job.get("action") != "create" or job.get("platform") != "2dehands":
+        return False
+    pl = job.get("payload") if isinstance(job.get("payload"), dict) else {}
+    if pl.get("_refresh_rollback"):
+        return False
+    try:
+        if not _betaalde_rubriek_bekend(db, user_id, "2dehands", _rubriek_sleutel(pl)):
+            return False
+    except Exception as e:  # noqa: BLE001 — een rem mag nooit op een storing dichtvallen
+        logger.warning("job %s: betaalde rubriek niet na te gaan: %s", job.get("id"), e)
+        return False
+    reden = _melding_rubriek_vraagt_geld("2dehands", _rubrieknaam("", _rubriek_leesbaar(pl)) or None)
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        db.table("jobs").update({
+            "status": "cancelled",
+            "result": {"cancelled": "paid category", "error": reden},
+            "done_at": now,
+        }).eq("id", job["id"]).eq("status", "pending").execute()
+        if job.get("item_id"):
+            db.table("listings").update({"status": "error", "error_message": reden}).eq(
+                "item_id", job["item_id"]).eq("platform", "2dehands").eq("status", "pending").execute()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("job %s: betaalde rubriek niet kunnen terugnemen: %s", job.get("id"), e)
+        return False
+    logger.warning("job %s: 2dehands-rubriek %s kost al geld bij %s, niet uitgedeeld",
+                   job.get("id"), _rubriek_sleutel(pl), user_id)
+    return True
+
+
+def _staat_in_een_andere_taal(payload: dict, doeltaal: str, leest_als_andere_taal) -> bool:
+    """Staat deze advertentie in een andere taal dan het kanaal verwacht?
+
+    Samen wegen en niet los: een titel als "Vintage pijpenstandaard" is te kort
+    om een taal aan af te lezen, terwijl de omschrijving eronder glashelder is.
+    Bij twijfel False — dit mag alleen ingrijpen als het duidelijk mis is.
+
+    HIER STOND "LEEST DIT ALS ENGELS?" (tot 22-09-2026). Dat was de enige andere
+    taal die we kenden, en daarmee liet deze zeef Toons Duitse lederhose gewoon
+    door: die leest niet als Engels, dus was er in de ogen van deze functie niets
+    aan de hand — en de Duitse tekst kwam op marktplaats.nl. De vraag hoort te
+    zijn of de tekst in een ándere taal staat dan het kanaal verwacht, welke taal
+    dat ook is. Zie leest_als_andere_taal in services/crosslist.py voor de
+    gemeten drempel.
+    """
+    samen = f"{(payload or {}).get('title') or ''}\n{(payload or {}).get('description') or ''}"
+    return leest_als_andere_taal(samen, doeltaal)
+
+
+def _zet_taal_goed(db, jobs: list) -> int:
+    """De advertentie in de taal van het platform, vlak voordat hij de deur uitgaat.
+
+    WAAROM DIT ER IS (04-09-2026, Daniel). Marktplaats en 2dehands zijn
+    Nederlandstalig; de verkoper tikt zijn advertentie in het Engels in en de
+    publicatiestroom vertaalt hem. Die vertaling zat op drie plekken los
+    ingebouwd (publiceren, verversen, herplaatsen) en op een vierde plek niet:
+    de reddingsronde zette een 'create' klaar met de kale databaserij erin. Wat
+    daar doorheen glipte kwam gewoon in het Engels op Marktplaats te staan —
+    "(1357) Lilac Profuomo Shirt - Men 45 - New With Tags" — zonder foutmelding,
+    want er ging technisch niets mis.
+
+    De reddingsronde is gerepareerd, maar dat lost alleen het pad op dat we
+    kennen. Dit is de laatste zeef, op de enige plek waar élke opdracht
+    langskomt: hier gaat er precies één opdracht naar de extensie, en pas hier is
+    zeker dat hij ook echt gebruikt wordt. Zie ook _zet_kleur_goed hierboven,
+    dat op dezelfde plek en om dezelfde reden staat.
+
+    Herkennen doen we aan TAAL_VELD, dat elke localisatie in de payload zet.
+    Ontbreekt het (of staat er een andere taal in), dan vertalen we alsnog en
+    schrijven we het resultaat terug in de opdracht — anders zou dezelfde
+    opdracht bij elke poll opnieuw vertaald worden.
+
+    Alleen de Nederlandstalige kanalen. Op Vinted en Shopify gaat de tekst uit
+    zoals de verkoper hem zelf schreef, en die hoort hier niet alsnog door een
+    vertaling heen te gaan.
+    """
+    try:
+        from backend.services.crosslist import (TAAL_VELD, VertalingOnbeschikbaar,
+                                                leest_als_andere_taal, localiseer_sync,
+                                                taal_van_platform)
+    except Exception as e:  # noqa: BLE001 — het uitdelen gaat hoe dan ook door
+        logger.warning("taalzeef niet beschikbaar: %s", e)
+        return list(jobs or [])
+
+    door = []
+    for j in jobs or []:
+        if j.get("action") != "create" or not isinstance(j.get("payload"), dict):
+            door.append(j)
+            continue
+        try:
+            platform = j.get("platform")
+            doeltaal = taal_van_platform(platform)
+            if doeltaal != "nl":
+                door.append(j)
+                continue
+            payload = j["payload"]
+            # HET STEMPEL IS GEEN BEWIJS — WIJ KIJKEN NAAR DE TEKST ZELF.
+            #
+            # GEMETEN (12-09-2026, Toon van De Juiste Toon). Een Nederlandse
+            # tekst die opnieuw door "vertaal naar het Nederlands" ging kwam er
+            # in 3 van de 6 pogingen in het ENGELS uit: het model draait de
+            # richting om als er niets te vertalen valt. Die tekst kreeg gewoon
+            # TAAL_VELD "nl" mee, en deze zeef liet hem daarop door. Zo gingen
+            # 93 advertenties bij 7 verkopers in het Engels de deur uit zonder
+            # dat er ergens iets rood werd.
+            #
+            # Vanaf nu telt alleen wat er in de tekst staat. Ziet de tekst er
+            # overtuigend Engels uit, dan gaat hij hoe dan ook nog een keer door
+            # de localisatie, wat er ook op het stempel staat.
+            if payload.get(TAAL_VELD) == "nl" and not _staat_in_een_andere_taal(
+                    payload, doeltaal, leest_als_andere_taal):
+                door.append(j)
+                continue
+            nieuw = localiseer_sync(payload, platform)
+            # EN DAARNA KIJKEN WE NOG EEN KEER.
+            #
+            # Komt het er alsnog Engels uit, dan is de vertaling niet te
+            # vertrouwen en gaat deze advertentie NIET de deur uit. Hij blijft
+            # gewoon 'pending' en loopt vanzelf door zodra het wel lukt —
+            # dezelfde keuze als bij een vertaalstoring, om dezelfde reden.
+            #
+            # DIT IS IETS ANDERS DAN EEN VERTAALSTORING, EN DAT MOET DE MAIL OOK
+            # ZEGGEN (17-09-2026). De vertaaldienst deed het hier gewoon: het
+            # model gaf de Engelse tekst onvertaald terug. Dat liep tot nu toe
+            # door dezelfde melding als een lege API-rekening, dus stond er
+            # "vul je tegoed aan" in de mail terwijl daar niets mis mee was.
+            if _staat_in_een_andere_taal(nieuw, doeltaal, leest_als_andere_taal):
+                logger.error("job %s (%s) blijft wachten: de vertaling gaf de vreemde tekst terug",
+                             j.get("id"), j.get("platform"))
+                _meld_vertaalstoring_model(str(payload.get("title") or "")[:80])
+                continue
+            if nieuw.get("title") != payload.get("title"):
+                logger.info("job %s: titel alsnog vertaald voor %s (%r -> %r)",
+                            j.get("id"), platform,
+                            str(payload.get("title"))[:60], str(nieuw.get("title"))[:60])
+            j["payload"] = nieuw
+            db.table("jobs").update({"payload": nieuw}).eq("id", j["id"]).execute()
+            door.append(j)
+        except VertalingOnbeschikbaar as e:
+            # DE VERTAALDIENST LIGT PLAT — DEZE OPDRACHT BLIJFT STAAN.
+            #
+            # Hij gaat NIET de deur uit met de onvertaalde tekst en wordt ook
+            # niet op fout gezet: hij blijft gewoon 'pending' en gaat vanzelf
+            # alsnog lopen zodra de vertaling het weer doet. Zo komt er nooit
+            # een Engelse advertentie op een Nederlandse site te staan, en raakt
+            # de verkoper zijn werk ook niet kwijt. Zie VertalingOnbeschikbaar
+            # in backend/services/crosslist.py voor de meting die hierachter zit.
+            logger.error("job %s (%s) blijft wachten: %s", j.get("id"), j.get("platform"), e)
+            _meld_vertaalstoring(str(e))
+        except Exception as e:  # noqa: BLE001 — een andere hapering mag de uitgifte niet stoppen
+            logger.warning("job %s: taal niet kunnen goedzetten: %s", j.get("id"), e)
+            door.append(j)
+    return door
+
+
+# Eén waarschuwing per uur, niet één per opdracht. Een lege API-rekening raakt
+# elke wachtende advertentie tegelijk; zonder deze rem stond de mailbox vol.
+# Twee aparte klokken: een hikkend model mag een echte storing niet stilhouden.
+_vertaalstoring_gemeld_op: float = 0.0
+_modelstoring_gemeld_op: float = 0.0
+
+
+def _stuur_naar_eigenaar(onderwerp: str, tekst: str) -> None:
+    try:
+        from backend.services.email import send_email
+        from backend.config import settings
+        for adres in [a.strip() for a in (settings.owner_email or "").split(",") if a.strip()]:
+            send_email(onderwerp, tekst, to=adres)
+    except Exception as e:  # noqa: BLE001 — een mislukte waarschuwing mag niets blokkeren
+        logger.warning("kon vertaalstoring niet melden: %s", e)
+
+
+def _meld_vertaalstoring_model(titel: str) -> None:
+    """De vertaaldienst wérkt, maar het model geeft deze tekst onvertaald terug.
+
+    Aanvullen van het tegoed helpt hier niets, en dat moet er dus ook niet in
+    staan: de vorige versie van deze mail stuurde Daniel naar zijn Anthropic-
+    rekening terwijl die gewoon vol zat.
+    """
+    global _modelstoring_gemeld_op
+    import time
+    if time.time() - _modelstoring_gemeld_op < 3600:
+        return
+    _modelstoring_gemeld_op = time.time()
+    _stuur_naar_eigenaar(
+        "Omnivaleur: een advertentie krijgt zijn Nederlandse tekst niet rond",
+        "De vertaling werkt op zich, maar bij minstens een advertentie komt de "
+        "tekst onvertaald terug. Die advertentie gaat NIET de deur uit; hij blijft "
+        "in de wachtrij staan en gaat vanzelf alsnog lopen zodra de vertaling wel "
+        "lukt. Er komt dus geen Engelse tekst op Marktplaats of 2dehands te staan.\n\n"
+        "Dit is GEEN kwestie van het Anthropic-tegoed. Aanvullen helpt hier niet.\n\n"
+        f"Het gaat om: {titel}\n\n"
+        "Blijft dit bij dezelfde advertentie terugkomen, laat het dan nakijken.",
+    )
+
+
+def _meld_vertaalstoring(reden: str) -> None:
+    """De eigenaar moet dit binnen het uur weten: alles wat vertaald moet worden staat stil."""
+    global _vertaalstoring_gemeld_op
+    import time
+    if time.time() - _vertaalstoring_gemeld_op < 3600:
+        return
+    _vertaalstoring_gemeld_op = time.time()
+    _stuur_naar_eigenaar(
+        "Omnivaleur: vertaling ligt stil, advertenties wachten",
+        "De vertaling naar het Nederlands werkt op dit moment niet.\n\n"
+        "Advertenties die vertaald moeten worden gaan NIET de deur uit; ze "
+        "blijven in de wachtrij staan en lopen vanzelf door zodra dit is "
+        "opgelost. Er komt dus geen Engelse tekst op Marktplaats of "
+        "2dehands te staan.\n\n"
+        "Meestal is dit het Anthropic-tegoed. Vul het aan, dan lost de "
+        "wachtrij zichzelf op.\n\n"
+        f"Melding van de server: {reden}",
+    )
+
+
+# ── Wie is er als eerste aan de beurt? ────────────────────────────────────────
+#
+# WAAROM DIT ER IS (03-09-2026, Toon / De Juiste Toon). Om 02:33 zette de
+# nachtelijke verversing 50 opdrachten klaar. Toen hij 's middags zelf op
+# publiceren drukte, kwam die klik achteraan die rij te staan: de uitgifte
+# pakte simpelweg de oudste twintig. Met Calm mode aan (3 tot 8 minuten tussen
+# twee acties) is dat uren wachten op iets waar je net op geklikt hebt, en dat
+# voelt als "de knop doet niets".
+#
+# De volgorde is daarom niet meer "wie het eerst kwam" maar "wie het hardst
+# nodig heeft":
+#   0. een herplaatsing waarvan de OUDE advertentie al weg is. Die staat nu
+#      nergens online; alles wat dat verkort gaat voor.
+#   1. wat de verkoper zelf zojuist aanklikte. Iets wat nergens online staat
+#      gaat voor het opfrissen van iets wat al te koop staat.
+#   2. de nachtronde die al langer dan NACHTRONDE_GEDULD wacht.
+#   3. de nachtronde die nog moet beginnen met weghalen. Daar staat de
+#      advertentie gewoon nog online, dus die kan wachten.
+#   4. scans; die lezen alleen.
+# Binnen elke groep blijft het gewoon op volgorde van binnenkomst.
+#
+# De nachtronde verhongert niet: zodra het eigen werk op is komt groep 2/3 aan
+# de beurt, en een verwijdering die lang genoeg heeft gewacht schuift boven de
+# verse nachtronde en boven de scans uit.
+# 'extend' (2dehands verlengen) klikt een echte knop op de site: het telt als
+# schrijvend, dus één tegelijk en meegeteld in het ritme (calm mode).
+SCHRIJVEND = ("create", "delete", "content_refresh", "extend")
+NACHTRONDE_GEDULD = timedelta(hours=6)
+# Hoeveel opdrachten we volledig inlezen nadat de volgorde bepaald is. De
+# volgorde wordt over de HELE wachtrij bepaald (alleen de lichte velden), de
+# zware payloads halen we daarna alleen op voor deze kop. Zo kost het kiezen
+# niets extra's aan dataverkeer.
+WACHTRIJ_KOP = 25
+WACHTRIJ_MAX = 500
+# EEN VERKOOPCONTROLE DIE TE LANG WACHT, GAAT VOOR (19-10-2026, Janneke 31d28378).
+#
+# "De jas van Dirkje is gisteren verkocht via Vinted, maar niet uit Marktplaats
+# gehaald." Gemeten: haar Vinted-scan werd op 17-10 om 18:39 klaargezet en pas op
+# 18-10 om 19:25 opgepakt, ruim 24 uur later; twee minuten daarna was de verkoop
+# gezien en de jas van Marktplaats gehaald. In die 24 uur stond haar Vinted-rij vol
+# plaatsingen. Een scan kwam achter elke plaatsing (groep 4), en zolang er een
+# Vinted-plaatsing liep gaf de uitgifte voor Vinted helemaal niets (ook geen scan).
+# Een scan schrijft niets en de extensie draait hem naast de plaatsingen (zie
+# pollJobsEenRonde), dus wachten had nergens voor nodig. Vanaf hier gaat een scan
+# die zo lang wacht voor alles, ook als het kanaal bezig is.
+SCAN_VOORRANG_NA = timedelta(minutes=20)
+
+
+def _scan_achterstallig(j: dict, now_dt: datetime) -> bool:
+    if j.get("action") != "scan":
+        return False
+    gemaakt = _parse_ts(j.get("created_at"))
+    return bool(gemaakt and now_dt - gemaakt >= SCAN_VOORRANG_NA)
+
+
+# De lichte velden waarmee de volgorde over de hele wachtrij bepaald wordt. Uit de
+# payload alleen het ene tijdstip dat zegt of een plaatsing op zijn rubriek wacht.
+_LICHTE_VELDEN = ("id,action,platform,item_id,created_at,scheduled_for,"
+                  "rubriek_sinds:payload->>_rubriek_zoeken_sinds,"
+                  "rubriek_pogingen:payload->>_rubriek_pogingen,"
+                  "fotos_sinds:payload->>_fotos_wachten_sinds,"
+                  "sluit:payload->>_sluit")
+
+
+def _rubriek_mislukt(j: dict) -> int:
+    """Hoe vaak de rubrieksopzoeking voor deze wachtende plaatsing al mislukte.
+
+    Staat in de lichte velden (rubriek_pogingen) of, bij een volledige rij, in de
+    payload."""
+    pl = j.get("payload")
+    ruw = j.get("rubriek_pogingen")
+    if ruw is None and isinstance(pl, dict):
+        ruw = pl.get("_rubriek_pogingen")
+    try:
+        return int(ruw or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _wachtrij_volgorde(licht: list[dict], now_dt: datetime) -> list[dict]:
+    """De hele wachtrij op urgentie zetten (alleen met de lichte velden)."""
+    # Welke verwijderingen staan er nog te wachten? Staat de verwijdering die bij
+    # een herplaatsing hoort er niet meer bij, dan is ze al gelopen en is de oude
+    # advertentie hoogstwaarschijnlijk offline.
+    open_verwijderingen = {(j.get("item_id"), j.get("platform"))
+                           for j in licht if j.get("action") == "delete"}
+    herplaats_paren = {(j.get("item_id"), j.get("platform"))
+                       for j in licht
+                       if j.get("action") == "create" and j.get("scheduled_for")}
+
+    def groep(j: dict) -> int:
+        actie = j.get("action")
+        if _scan_achterstallig(j, now_dt):
+            return -1
+        if actie not in SCHRIJVEND:
+            return 4
+        # Verzendkosten bijwerken is onderhoud, net als de nachtronde (28-09-2026,
+        # Egbert): 235 bijwerkingen van gisteren stonden voor zijn 98 patches van
+        # vandaag, en een uur lang ging er niets nieuws online.
+        if _is_2dh_bijwerking(j):
+            return 3
+        # WIE OP ZIJN RUBRIEK WACHT, HOORT NIET IN DE KOP (03-10-2026, Egbert).
+        # 25 patches wachtten op hun Marktplaats-rubriek (de opzoeking vanaf de
+        # server faalde elke keer) en vulden precies de hele kop. Die worden bij
+        # het uitdelen allemaal teruggehouden, dus ging er een uur lang niets uit:
+        # niet zijn 82 andere plaatsingen, niet zijn 935 bijwerkingen, terwijl
+        # Chrome aanstond. Helemaal achteraan, ook achter scans en achter
+        # bijwerkingen die jonger zijn: ze vullen alleen de plekken die over zijn,
+        # en komen weer aan de beurt zodra de rij voor hen leeg is.
+        sinds = _parse_ts(j.get("rubriek_sinds"))
+        if actie == "create" and sinds and now_dt - sinds < _RUBRIEK_ZOEK_GEDULD:
+            return 5
+        # Wie op zijn foto's wacht, net zo (zie _wacht_op_fotos).
+        if _wacht_op_fotos(j, now_dt):
+            return 5
+        sleutel = (j.get("item_id"), j.get("platform"))
+        if actie == "create" and j.get("scheduled_for"):
+            return 3 if sleutel in open_verwijderingen else 0
+        if actie == "delete" and sleutel in herplaats_paren:
+            gemaakt = _parse_ts(j.get("created_at"))
+            if gemaakt and now_dt - gemaakt >= NACHTRONDE_GEDULD:
+                return 2          # lang genoeg gewacht, anders komt hij nooit
+            return 3
+        return 1
+
+    # BINNEN DE WACHTERS GAAT WIE HET MEEST MISLUKTE ACHTERAAN (03-10-2026, Egbert).
+    # Eén plaatsing waarvan de rubriek nooit te vinden was (13 pogingen in 39
+    # minuten) stond als oudste vooraan. Elke ronde werd alleen die geprobeerd, de
+    # opzoeking mislukte, en de rust van drie minuten hield de 24 andere tegen: die
+    # werden nooit geprobeerd, terwijl lokaal twee van de drie wel lukten.
+    volgorde = sorted(licht, key=lambda j: (
+        groep(j), _rubriek_mislukt(j) if groep(j) == 5 else 0, j.get("created_at") or ""))
+
+    # VERLENGINGEN OP URGENTIE (23-10-2026, Egbert bcdf9aa4). 824 verlengingen
+    # stonden op aanmaakvolgorde; gemeten 112 keer stond een zoekertje met meer
+    # dagen te gaan vóór een dringender. Alleen de verlengingen die nu aan de
+    # beurt zijn wisselen onderling van plek, op einddatum (payload._sluit); alles
+    # anders blijft precies waar het stond. Eén met een tijdstip in de toekomst
+    # blijft staan: de uitgifte slaat hem over en de kop zou leeg uitkomen.
+    nu_iso = now_dt.isoformat()
+    plekken = [i for i, j in enumerate(volgorde)
+               if j.get("action") == "extend" and j.get("sluit")
+               and (not j.get("scheduled_for") or j["scheduled_for"] <= nu_iso)]
+    if len(plekken) > 1:
+        dringend = sorted((volgorde[i] for i in plekken),
+                          key=lambda j: (j["sluit"], j.get("created_at") or ""))
+        for plek, j in zip(plekken, dringend):
+            volgorde[plek] = j
+    return volgorde
+
+
+def _ruim_dubbele_scans_op(db, licht: list[dict], now: str) -> list[dict]:
+    """Meer dan één wachtende scan op hetzelfde kanaal is altijd per ongeluk.
+
+    WAAROM (03-09-2026, Toon). Er stonden vier identieke Marktplaats-scans van
+    dezelfde seconde klaar, en op 02-09 zelfs dertien. Dat gebeurt als er niets
+    lijkt te gebeuren en iemand nog een keer drukt. Elke scan leest dan opnieuw
+    de hele voorraad; de tweede tot en met de dertiende leveren niets op en
+    houden alleen de rij bezet.
+
+    We houden de NIEUWSTE over, niet de oudste. In de payload van een scan zit
+    een momentopname van wat we al binnen hebben (`bekende_ids`, `tekst_bekend`,
+    zie imports.py). Die lijst is bij de jongste opdracht het meest bij, en juist
+    daarop bespaart de extensie haar verzoeken — bij Toon 52 pagina's in plaats
+    van 1.017.
+    """
+    gezien: set = set()
+    weg: list[str] = []
+    houden = []
+    for j in sorted(licht, key=lambda r: r.get("created_at") or "", reverse=True):
+        if j.get("action") != "scan":
+            houden.append(j)
+            continue
+        sleutel = j.get("platform")
+        if sleutel in gezien:
+            weg.append(j["id"])
+            continue
+        gezien.add(sleutel)
+        houden.append(j)
+    houden.sort(key=lambda r: r.get("created_at") or "")
+    for job_id in weg:
+        try:
+            db.table("jobs").update({
+                "status": "cancelled",
+                "result": {"cancelled": "Duplicate scan — an identical scan for this "
+                                        "marketplace was already queued."},
+                "done_at": now,
+            }).eq("id", job_id).execute()
+        except Exception as e:  # noqa: BLE001 — nooit de uitgifte omgooien
+            logger.warning("dubbele scan %s niet opgeruimd: %s", job_id, e)
+    if weg:
+        logger.info("%d dubbele scan(s) opgeruimd", len(weg))
+    return houden
+
+
+# ── Hoe snel loopt deze wachtrij ECHT? ───────────────────────────────────────
+#
+# WAAROM DIT ER IS (03-09-2026, Toon). Het dashboard belooft op zes plekken
+# "within ~15 seconds". Met Calm mode aan zit er 3 tot 8 minuten tussen twee
+# publicaties, en die schakelaar zit in de extensie: de server weet er niets
+# van en het dashboard dus ook niet. Toon keek naar een balk die zei dat het zo
+# ging beginnen, zag acht minuten lang niets, en meldde "er gebeurt eigenlijk
+# niets". Zijn opdrachten liepen gewoon.
+#
+# We kunnen het niet vragen — een nieuwe extensie is pas over weken bij hem —
+# maar we kunnen het METEN: het staat in de tijdstippen van werk dat al gedaan
+# is. Werkt vandaag, op de kopie die hij nu draait.
+TEMPO_KALM_DREMPEL = 150       # 2,5 min; zonder Calm mode is de tussentijd < 30s
+TEMPO_ONDERBREKING = 20 * 60   # groter gat = de computer stond uit, niet meetellen
+TEMPO_MONSTERS = 12
+STIL_VENSTER_UREN = 12         # waarover we de stille uren optellen
+STIL_MONSTERS = 500            # ruim boven een drukke dag (Toon: 503 in 3 dagen)
+# Het dashboard vraagt /active elke vier seconden op. Een extra databasevraag in
+# dat ritme is vijftien per minuut per open scherm, en de Supabase-client blokkeert
+# de lus terwijl hij wacht. Het tempo verandert langzaam, dus een minuut onthouden
+# kost niets en scheelt 95% van die vragen.
+TEMPO_GELDIG_SECONDEN = 60
+_tempo_cache: dict[str, tuple[float, dict]] = {}
+
+
+def _gemeten_tempo(db, user_id: str) -> dict:
+    """De echte tussentijd tussen twee schrijvende opdrachten, in seconden."""
+    leeg = {"seconds_between": None, "seconds_per_job": None,
+            "calm": False, "samples": 0}
+    nu = time.monotonic()
+    bewaard = _tempo_cache.get(user_id)
+    if bewaard and nu - bewaard[0] < TEMPO_GELDIG_SECONDEN:
+        return bewaard[1]
+    try:
+        grens = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()
+        rijen = (db.table("jobs").select("action,claimed_at,done_at")
+                 .eq("user_id", user_id).in_("action", list(SCHRIJVEND))
+                 .gte("claimed_at", grens).not_.is_("done_at", "null")
+                 .order("claimed_at", desc=True).limit(TEMPO_MONSTERS).execute().data or [])
+    except Exception as e:  # noqa: BLE001 — een schatting mag nooit een scherm slopen
+        logger.warning("tempo niet te meten voor %s: %s", user_id, e)
+        return leeg
+    rijen = [r for r in rijen if r.get("claimed_at") and r.get("done_at")]
+    rijen.sort(key=lambda r: r["claimed_at"])
+    gaten = []
+    # HOE LANG DUURT ÉÉN OPDRACHT ÉCHT?
+    #
+    # Het gat tussen twee opdrachten (klaar → volgende opgepakt) zegt hoe snel
+    # de extensie eráán begint. Het zegt niet hoe lang een wachtrij duurt: het
+    # werk zelf zit er niet in. Gemeten bij Toon (dejuistetoon) op 05-09-2026,
+    # 39 monsters uit twaalf uur: gat 16 s, werk 29 s, van start tot start 46 s.
+    # Wie met het gat rekent belooft dus bijna drie keer te snel — precies de
+    # soort belofte waar hij op 03-09 op afknapte.
+    cycli = []
+    for vorige, volgende in zip(rijen, rijen[1:]):
+        klaar = _parse_ts(vorige["done_at"])
+        begin = _parse_ts(vorige["claimed_at"])
+        start = _parse_ts(volgende["claimed_at"])
+        if not klaar or not start:
+            continue
+        gat = (start - klaar).total_seconds()
+        if 0 <= gat <= TEMPO_ONDERBREKING:
+            gaten.append(gat)
+            if begin:
+                cyclus = (start - begin).total_seconds()
+                if cyclus > 0:
+                    cycli.append(cyclus)
+    if len(gaten) < 3:
+        # Te weinig om iets over de snelheid te beweren. De stille uren tellen
+        # we wél: juist een computer die de halve dag slaapt levert nauwelijks
+        # monsters op, en dát is nu net wat de verkoper wil weten.
+        leeg.update(_stille_uren(db, user_id))
+        _tempo_cache[user_id] = (nu, leeg)
+        return leeg
+    gaten.sort()
+    cycli.sort()
+    midden = gaten[len(gaten) // 2]
+    uitkomst = {"seconds_between": int(midden),
+                "seconds_per_job": int(cycli[len(cycli) // 2]) if len(cycli) >= 3 else None,
+                "calm": midden >= TEMPO_KALM_DREMPEL,
+                "samples": len(gaten)}
+    uitkomst.update(_stille_uren(db, user_id))
+    _tempo_cache[user_id] = (nu, uitkomst)
+    return uitkomst
+
+
+def _stille_uren(db, user_id: str) -> dict:
+    """Hoe lang stond er werk te wachten terwijl er niets liep?
+
+    WAAROM (12-09-2026, De Juiste Toon). "Deze pc staat de hele dag aan en toch
+    zie ik nog steeds 50 stuks staan." Gemeten op zijn eigen rij: tussen 07:51
+    en 11:12 UTC werd er geen enkele opdracht opgepakt terwijl er honderd
+    klaarstonden, en daarna nog eens 54 minuten niet. In diezelfde uren liepen
+    er bij twee andere verkopers 46 en 24 opdrachten per uur door, dus de server
+    deelde gewoon uit. Zijn Chromebook sliep: de opdracht van 07:51 meldde zich
+    om 11:12 alsnog klaar, precies negen seconden na de eerstvolgende poll, en
+    ook het dashboard zelf had al die tijd niet gepolld (anders had de
+    opruimronde die vastzittende claim allang afgesloten).
+
+    Het tempo hierboven gooit zulke gaten er bewust uit — anders zou één nacht
+    de gemeten snelheid verzieken. Maar daarmee belooft de balk "deze 50 duren
+    een uur" terwijl het bij hem een hele dag werd. Die belofte is precies
+    waarom hij al vier keer meldde dat er "niets gebeurt". Dus meten we de stille
+    uren er apart bij: hoeveel tijd ging er verloren terwijl er werk lag.
+
+    Alleen een gat telt waarvan we ZEKER weten dat er werk stond te wachten: er
+    moet een opdracht zijn die al vóór het gat klaarstond en pas ná het gat aan
+    de beurt kwam (of nu nog wacht). Een rustige nacht met een lege rij telt dus
+    niet mee.
+
+    Kijk daarvoor NIET naar de opdracht die ná het gat werd opgepakt. Dat lijkt
+    logisch maar is fout: de wachtrij zet een verse klik vooraan (zie
+    _wachtrij_volgorde), dus wat er na een stilstand als eerste doorheen gaat is
+    juist vaak iets wat de verkoper zojuist zelf aanklikte. Op Toons echte rij
+    gaf die kortere weg 0 stille uren terwijl er ruim vier waren.
+    """
+    leeg = {"idle_seconds": 0, "idle_gaps": 0, "idle_since": None,
+            "done_last_hour": 0}
+    nu_dt = datetime.now(timezone.utc)
+    grens = nu_dt - timedelta(hours=STIL_VENSTER_UREN)
+    try:
+        # Ruimer ophalen dan het venster waarover we meten: een opdracht die om
+        # één uur 's nachts klaargezet werd en om elf uur 's ochtends pas liep,
+        # is juist het bewijs dat er werk lag te wachten.
+        rijen = (db.table("jobs").select("created_at,claimed_at,done_at,status")
+                 .eq("user_id", user_id).in_("action", list(SCHRIJVEND))
+                 .gte("created_at", (nu_dt - timedelta(hours=2 * STIL_VENSTER_UREN)).isoformat())
+                 .order("created_at").limit(STIL_MONSTERS).execute().data or [])
+    except Exception as e:  # noqa: BLE001 — een schatting mag nooit een scherm slopen
+        logger.warning("stille uren niet te meten voor %s: %s", user_id, e)
+        return leeg
+
+    werk = [(_parse_ts(r["created_at"]), _parse_ts(r.get("claimed_at")))
+            for r in rijen if r.get("created_at")]
+
+    def lag_er_werk(van, tot) -> bool:
+        return any(gemaakt <= van and (opgepakt is None or opgepakt >= (tot or nu_dt))
+                   for gemaakt, opgepakt in werk)
+
+    claims = sorted(t for _, t in werk if t and t >= grens)
+    stil, gaten, sinds = 0.0, 0, None
+    for vorige, start in zip(claims, claims[1:]):
+        gat = (start - vorige).total_seconds()
+        if gat > TEMPO_ONDERBREKING and lag_er_werk(vorige, start):
+            stil += gat
+            gaten += 1
+    # De staart: ligt er nú nog werk dat al klaarstond toen de laatste opdracht
+    # werd opgepakt, dan loopt het stille gat op dit moment nog door.
+    if claims:
+        laatste = claims[-1]
+        loopt = (nu_dt - laatste).total_seconds()
+        if loopt > TEMPO_ONDERBREKING and lag_er_werk(laatste, None):
+            stil += loopt
+            gaten += 1
+            sinds = laatste.isoformat()
+
+    uur_terug = nu_dt - timedelta(hours=1)
+    klaar = sum(1 for r in rijen
+                if r.get("done_at") and (_parse_ts(r["done_at"]) or grens) >= uur_terug)
+    return {"idle_seconds": int(stil), "idle_gaps": gaten,
+            "idle_since": sinds, "done_last_hour": klaar}
+
+
+def _geeft_teken_van_leven(job: dict, now_dt: datetime) -> bool:
+    """Loopt deze geclaimde opdracht NU echt, of hangt hij alleen nog?
+
+    Een scan meldt elke paar seconden zijn vordering. Blijft dat teken uit, dan
+    is de opdracht blijven hangen en mag hij niets meer tegenhouden — anders zou
+    één vastgelopen scan het verversen dagenlang stil kunnen leggen.
+    """
+    res = job.get("result")
+    stempels = [_parse_ts(job.get("claimed_at"))]
+    if isinstance(res, dict):
+        stempels.append(_parse_ts((res.get("_progress") or {}).get("at")))
+    laatste = max([t for t in stempels if t], default=None)
+    return bool(laatste and laatste >= now_dt - timedelta(minutes=STALE_CLAIM_MINUTES))
+
+
+def _is_verversing(job: dict) -> bool:
+    """Hoort deze opdracht bij het verversen/herplaatsen en niet bij een klik?
+
+    Verversen is onderhoud dat best een half uur kan wachten. Een publicatie
+    waar de verkoper zelf op drukte hoort nooit te wachten (zie
+    docs/kennisbank.md, "eigen klik gaat voor de nachtronde").
+    """
+    if job.get("action") in ("content_refresh", "extend"):
+        return True
+    payload = job.get("payload") if isinstance(job.get("payload"), dict) else {}
+    if job.get("action") == "delete" and "_refresh_rollback" in payload:
+        return True
+    # De herplaatsing zelf: de enige create met een tijdstip in de toekomst.
+    if job.get("action") == "create" and job.get("scheduled_for"):
+        return True
+    return False
+
+
+_BUNDEL = re.compile(r"bundel|bundle|kavel", re.IGNORECASE)
+
+
+def _vinted_pakket_voor(payload: dict, keuze) -> dict:
+    """Zet het gekozen pakketformaat in de opdracht, behalve bij een bundel.
+
+    De extensie klikt het formaat alleen aan als `package_size` er staat; zonder
+    blijft het bij wat Vinted zelf aanbeveelt."""
+    if keuze != "middel":
+        return payload
+    tekst = f"{payload.get('title') or ''} {payload.get('category') or ''}"
+    if _BUNDEL.search(tekst):
+        return payload
+    return {**payload, "package_size": "middel"}
+
+
+_KINDERSCHOEN_MAAT = re.compile(r"^\s*(\d{2}(?:[.,]5)?)\s*$")
+
+
+def _vinted_schoenmaat_als_eu(payload: dict) -> dict:
+    """Kinderschoenen krijgen op Vinted "EU 26" als maat (zie de uitgifte hieronder)."""
+    if (payload.get("category") or "").strip().lower() != "kinderen schoenen":
+        return payload
+    m = _KINDERSCHOEN_MAAT.match(str(payload.get("size") or ""))
+    if not m:
+        return payload
+    return {**payload, "size": "EU " + m.group(1).replace(".", ",")}
+
+
+@router.get("/pending")
+def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depends(require_active_subscription)):
+    db = get_db()
+    now_dt = datetime.now(timezone.utc)
+    versie_van_de_kopie = None   # wat de pollende extensie zelf zegt te zijn
+    # A poll WITH a platform is a real extension dispatch poll (the dashboard
+    # polls without one, just to count) — treat it as the extension's heartbeat
+    # so the "computer online" indicator works without any extension change.
+    if platform is not None:
+        _record_extension_heartbeat(db, user_id, request.headers.get("user-agent"),
+                                    versie=request.headers.get("x-omnivaleur-ext"))
+        # Een te oude kopie krijgt niets meer te doen.
+        #
+        # WAAROM (27-08-2026, Jaap): drie weken lang draaide bij hem 1.0.218
+        # terwijl de Web Store al op 1.0.249 stond. Die kopie NAM het werk wel
+        # aan — ze bleef staan op het "verkocht via Marktplaats?"-venster en
+        # maakte daarna advertenties zonder foto's en zonder tekst. Werk dat
+        # niet wordt opgepakt is zichtbaar; werk dat half wordt afgemaakt niet.
+        #
+        # De versie komt uit een kopstuk dat de extensie zelf meestuurt. Kopieen
+        # van voor 1.0.250 sturen dat kopstuk niet; die worden hier dus niet
+        # tegengehouden (we weten hun versie eenvoudigweg niet) — daarvoor staat
+        # de blokkerende melding in het dashboard. Vanaf 1.0.250 sluit deze
+        # controle het gat definitief.
+        gemeld = _kopstuk_versie(request.headers.get("x-omnivaleur-ext"))
+        versie_van_de_kopie = gemeld
+        if gemeld is not None and gemeld < MINIMALE_SCANVERSIE:
+            logger.warning(
+                "Geen werk uitgedeeld: extensie %s bij gebruiker %s ligt onder %s",
+                ".".join(map(str, gemeld)), user_id,
+                ".".join(map(str, MINIMALE_SCANVERSIE)),
+            )
+            return []
+        # EN EEN KOPIE DIE ZICHZELF NIET MEER BIJWERKT KRIJGT OOK NIETS.
+        #
+        # De harde ondergrens hierboven vangt alleen wat we ooit met de hand te
+        # laag hebben gezet. Toon (07-09-2026) zat er ruim bóven — 1.0.260 — en
+        # kreeg dus gewoon werk, terwijl elke reparatie van de tien dagen daarna
+        # bij hem niet bestond: de drie rubrieken waar hij op vastliep waren
+        # precies de drie die na 1.0.260 zijn toegevoegd. Zo'n kopie neemt werk
+        # aan en levert het half af, en de verkoper ziet alleen dat het "weer"
+        # niet werkt. Zie ACHTERSTAND_GRENS.
+        stil = _kopie_staat_stil(gemeld)
+        if stil:
+            achter, gepubliceerd = stil
+            logger.warning(
+                "Geen werk uitgedeeld: extensie %s bij gebruiker %s loopt %s "
+                "versies achter op %s en werkt zichzelf niet bij",
+                ".".join(map(str, gemeld)), user_id, achter, gepubliceerd,
+            )
+            return []
+    # First, rescue anything stuck 'claimed' from an interrupted run.
+    _recover_stale_claims(db, user_id, platform, now_dt)
+
+    # WERK DAT BEWUST WACHT MAG NOOIT VOORAAN IN DE RIJ STAAN (26-09-2026, Egbert).
+    # Verzendkosten van een 2dehands-zoekertje bijwerken kan pas vanaf 1.0.354, en
+    # niet meer zodra de vorige keer mislukte (_bijwerken_2dh_staat_stil). Er
+    # stonden er 178 klaar bij een kopie van 1.0.352. Die kregen de kop van de rij
+    # (WACHTRIJ_KOP, op volgorde van aanmaken), werden daarna allemaal
+    # overgeslagen, en een plaatsing die er achter kwam zou nooit meer uitgaan.
+    bijwerken_staat_stil = None  # pas opgevraagd als er zo'n opdracht in de rij staat
+
+    def bijwerking_moet_wachten(j: dict) -> bool:
+        nonlocal bijwerken_staat_stil
+        if j.get("action") != "content_refresh" or j.get("platform") != "2dehands":
+            return False
+        if versie_van_de_kopie is None or versie_van_de_kopie < MINIMALE_2DH_BIJWERK_VERSIE:
+            return True
+        if bijwerken_staat_stil is None:
+            bijwerken_staat_stil = _bijwerken_2dh_staat_stil(db, user_id)
+        return bijwerken_staat_stil
+
+    now = now_dt.isoformat()
+    if platform:
+        # ALLEEN de lichte velden over de HELE wachtrij: daarmee bepalen we de
+        # volgorde zonder ook maar één payload op te halen. Daarna lezen we
+        # alleen de kop volledig in — evenveel dataverkeer als de oude
+        # limit(20), maar dan wel de twintig die er echt toe doen.
+        licht = (db.table("jobs")
+                 .select(_LICHTE_VELDEN)
+                 .eq("user_id", user_id).eq("status", "pending").eq("platform", platform)
+                 .order("created_at").limit(WACHTRIJ_MAX).execute().data or [])
+        if len(licht) >= WACHTRIJ_MAX and any(_is_2dh_bijwerking(j) for j in licht):
+            # Een volle lezing kan uit alleen oude bijwerkingen bestaan, en dan
+            # valt de verse klik er buiten. Lees het eigen werk dan apart.
+            eigen = (db.table("jobs")
+                     .select(_LICHTE_VELDEN)
+                     .eq("user_id", user_id).eq("status", "pending").eq("platform", platform)
+                     .or_(_NIET_2DH_BIJWERKING)
+                     .order("created_at").limit(WACHTRIJ_MAX).execute().data or [])
+            licht = eigen + [j for j in licht if _is_2dh_bijwerking(j)][:WACHTRIJ_KOP]
+        licht = _ruim_dubbele_scans_op(db, licht, now)
+        licht = [j for j in licht if not bijwerking_moet_wachten(j)]
+        kop =[j["id"] for j in _wachtrij_volgorde(licht, now_dt)[:WACHTRIJ_KOP]]
+        rijen = []
+        if kop:
+            # Dezelfde afbakening als hierboven, plus de gekozen kop. Nooit een
+            # rij inladen die niet van deze gebruiker, dit kanaal en deze
+            # wachtrij is.
+            rijen = (db.table("jobs").select("*")
+                     .eq("user_id", user_id).eq("status", "pending").eq("platform", platform)
+                     .in_("id", kop).execute().data or [])
+            op_plek = {job_id: i for i, job_id in enumerate(kop)}
+            rijen.sort(key=lambda j: op_plek.get(j["id"], len(kop)))
+        result = SimpleNamespace(data=rijen)
+    else:
+        # Het dashboard telt hier. Verzendkosten bijwerken is onderhoud op de
+        # achtergrond, geen werk van de verkoper: zie _is_2dh_bijwerking.
+        result = (db.table("jobs").select("*").eq("user_id", user_id)
+                  .eq("status", "pending").or_(_NIET_2DH_BIJWERKING)
+                  .order("created_at").limit(20).execute())
+
+    # ÉÉN PER KANAAL, EN HOOGUIT DRIE KANALEN TEGELIJK (extension dispatch only).
+    #
+    # Elke opdracht stuurt een ECHT browser-tabblad aan. Hier stond tot 19-09-2026
+    # een slot op het hele account: er mocht er maar één tegelijk lopen, wát voor
+    # kanaal het ook was. De reden daarvoor was dat de extensie de lopende
+    # opdracht onder één sleutel per kanaal bewaarde, zodat een tweede tabblad de
+    # gegevens van het eerste overschreef en er advertenties online gingen met
+    # elkaars foto's, prijzen, titels en teksten.
+    #
+    # Die reden bestaat niet meer: elke opdracht hangt aan zijn eigen tabblad
+    # (`jobtab_<tabId>`) en het invulscript vraagt via GET_JOB de opdracht van
+    # ZIJN tabblad op. Wat overblijft is het echte bezwaar, en dat is per kanaal:
+    # twee formulieren van dezelfde site tegelijk. Dus staat het slot nu per
+    # kanaal, met een bovengrens op het totaal (MAX_PARALLELLE_PUBLICATIES).
+    #
+    # Het dashboard (dat /pending ZONDER platform aanroept, alleen om te tellen)
+    # wordt nooit geremd.
+    #
+    # NUANCE: alleen SCHRIJVENDE opdrachten blokkeren elkaar. Een scan ("reading
+    # your listings") leest alleen en loopt door de hele garderobe — dat duurt
+    # minuten. Zolang die als blokkade telde, kon je op publiceren drukken en
+    # gebeurde er simpelweg niets: geen tabblad, geen melding, alleen een oranje
+    # stip. Precies wat een gebruiker als "hij doet het niet" ervaart. Een scan
+    # tegelijk met één publicatie kan geen kwaad: elk tabblad heeft zijn eigen
+    # opdracht (jobtab_<tabId>), dus ze kunnen elkaars gegevens niet overschrijven.
+    #
+    # EEN UITZONDERING OP DIE NUANCE: VINTED + VERVERSEN. Vinted knijpt een
+    # sessie af die te veel verzoeken achter elkaar doet ("you are rate
+    # limited"). Een scan van een grote garderobe loopt daar minutenlang tegenaan
+    # het plafond, en een verversing die daar dwars doorheen begint, krijgt de
+    # dichte deur. Gemeten op 06-09-2026: scan van 365 advertenties bezig van
+    # 06:50 tot na 07:14, verversing gestart om 07:11:39, tabblad weg, oude
+    # advertentie bleef staan. Publiceren waar de verkoper zélf op drukte blijft
+    # gewoon doorgaan (zie _is_verversing) — die mag nooit stilvallen omdat er
+    # toevallig een leesronde loopt.
+    is_extension_dispatch = platform is not None
+    vinted_scan_bezig = False
+    bezette_kanalen: set[str] = set()   # kanalen waar op dit moment echt gepubliceerd wordt
+    # Staat dit kanaal op pauze na een onbewezen inlogverwijt, dan gaat er even
+    # niets uit. Alleen bij een echte poll van de extensie: het dashboard telt
+    # hier alleen, en een wachtrij die er staat hoort gewoon geteld te worden.
+    if is_extension_dispatch and _inlog_pauze_actief(db, user_id, platform, now_dt):
+        return []
+    if is_extension_dispatch:
+        for c in (
+            db.table("jobs").select("claimed_at,action,platform,result")
+            .eq("user_id", user_id).eq("status", "claimed").execute().data
+        ):
+            if c.get("action") not in SCHRIJVEND:
+                # Een lopende scan houdt niemand tegen. Alleen onthouden we van
+                # een Vinted-scan DAT hij loopt, voor de verversrem hieronder.
+                if (c.get("action") == "scan" and c.get("platform") == "vinted"
+                        and _geeft_teken_van_leven(c, now_dt)):
+                    vinted_scan_bezig = True
+                continue
+            ct = _parse_ts(c.get("claimed_at"))
+            if ct and ct >= now_dt - timedelta(minutes=STALE_CLAIM_MINUTES):
+                bezette_kanalen.add(c.get("platform"))
+        # Een Vinted-tabblad dat net op tijd is opgegeven kan nog plaatsen; zie
+        # _vinted_tabblad_werkt_nog. Geldt ook voor de beurtverdeling hieronder.
+        if "vinted" not in bezette_kanalen and _vinted_tabblad_werkt_nog(db, user_id, now_dt):
+            bezette_kanalen.add("vinted")
+        # NOOIT TWEE TABBLADEN OP HETZELFDE KANAAL. Dat blijft de harde regel:
+        # twee formulieren van dezelfde site tegelijk is waar de gegevens door
+        # elkaar konden lopen, en het is ook precies wat een platform als
+        # geautomatiseerd ritme leest.
+        # Maar wél naast elkaar op VERSCHILLENDE kanalen, tot de bovengrens.
+        if platform in bezette_kanalen or len(bezette_kanalen) >= MAX_PARALLELLE_PUBLICATIES:
+            # Behalve een verkoopcontrole die al te lang wacht: die loopt naast de
+            # plaatsing (zie SCAN_VOORRANG_NA). Hooguit één scan tegelijk.
+            if not vinted_scan_bezig:
+                scan = next((j for j in result.data if j.get("platform") == platform
+                             and _scan_achterstallig(j, now_dt)), None)
+                if scan:
+                    return [scan]
+            return []
+
+    # ── OM DE BEURT TUSSEN DE KANALEN ─────────────────────────────────────────
+    #
+    # Lynn (De Juiste Toon), 05-09-2026: "Marktplaats ging vandaag helemaal
+    # super. Naar tweedehands pakt ie nog niet." Gemeten: op 04-09 stond er om
+    # 14:08:09 één 2dehands-publicatie klaar die nooit is opgepakt (ze heeft hem
+    # om 18:23 zelf geannuleerd), terwijl er in diezelfde vier uur negen
+    # Marktplaats-publicaties doorheen gingen. Op haar drukke dagen ging er van
+    # de 75 en 98 publicaties telkens precies één naar 2dehands.
+    #
+    # De extensie vraagt de kanalen in een vaste volgorde, marktplaats altijd
+    # eerst, terwijl de rem hierboven voor álle kanalen tegelijk geldt: er mag er
+    # maar één tegelijk publiceren. Wie vooraan staat pakt dus elke vrijgekomen
+    # plek, en met een volle Marktplaats-rij kwam 2dehands nooit aan bod.
+    #
+    # De extensie deelt de beurt sinds 1.0.306 zelf eerlijk rond, maar een
+    # nieuwe versie is er pas na de Web Store en niet iedereen werkt bij. Daarom
+    # ook hier: heeft dit kanaal zojuist nog gepubliceerd en staat er op een
+    # ánder kanaal werk te wachten, dan geven we DAT werk terug. De extensie
+    # kijkt niet naar het kanaal dat ze vroeg maar naar het kanaal in de opdracht
+    # zelf (nagekeken tot en met de versies die nu bij klanten draaien), dus dit
+    # werkt ook op een kopie van weken oud.
+    #
+    # Bewust teruggeven en niet "even niets": een opdracht die om welke reden dan
+    # ook nooit kan lopen zou anders de hele wachtrij stil kunnen leggen. Wat we
+    # teruggeven wordt geclaimd, en daarmee lost het zichzelf op — het lukt, of
+    # het mislukt met een melding, en in beide gevallen is de rij weer vrij.
+    if is_extension_dispatch and any(j.get("action") in SCHRIJVEND for j in result.data):
+        try:
+            laatste = (db.table("jobs").select("platform,claimed_at,action")
+                       .eq("user_id", user_id).in_("action", list(SCHRIJVEND))
+                       .not_.is_("claimed_at", "null")
+                       .gte("claimed_at", (now_dt - timedelta(hours=2)).isoformat())
+                       .order("claimed_at", desc=True).limit(1).execute().data or [])
+            if laatste and laatste[0].get("platform") == platform:
+                anderen = (db.table("jobs").select("*")
+                           .eq("user_id", user_id).eq("status", "pending")
+                           .in_("action", list(SCHRIJVEND))
+                           .neq("platform", platform)
+                           .or_(f"scheduled_for.is.null,scheduled_for.lte.{now}")
+                           .order("created_at").limit(WACHTRIJ_KOP).execute().data or [])
+                # Een kanaal waar al een tabblad van openstaat is geen
+                # uitwijkmogelijkheid: dat zou alsnog het tweede formulier van
+                # dezelfde site openen. Sinds publicaties naast elkaar mogen
+                # lopen kan dat echt gebeuren, want een ander kanaal is nu
+                # gewoon aan het werk terwijl dit kanaal polt.
+                anderen = [j for j in anderen if j.get("platform") not in bezette_kanalen]
+                # EN GEEN BEURT AAN WERK DAT BEWUST STAAT TE WACHTEN (23-09-2026).
+                # Een 2dehands-plaatsing die op zijn Marktplaats-rubriek wacht
+                # wordt verderop teruggehouden (tot _RUBRIEK_ZOEK_GEDULD). Kreeg
+                # die de beurt, dan ging er dus niets uit, voor GEEN enkel kanaal:
+                # bij f8c0cce9 stonden 14 zulke zoekertjes vooraan en lagen zijn
+                # 13 Vinted-plaatsingen er uren achter stil, terwijl Chrome aan stond.
+                anderen = [j for j in anderen if not _wacht_op_rubriek(j, now_dt)
+                           and not _wacht_op_fotos(j, now_dt)
+                           and not bijwerking_moet_wachten(j)]
+                if anderen:
+                    logger.info("Beurt doorgegeven aan %s: %s had de vorige "
+                                "publicatie (gebruiker %s)",
+                                anderen[0].get("platform"), platform, user_id)
+                    result = SimpleNamespace(data=anderen)
+        except Exception as e:  # noqa: BLE001
+            # Kunnen we de beurt niet bepalen, dan delen we gewoon uit wat er voor
+            # dit kanaal klaarstond. Een oneerlijke volgorde is vervelend; niets
+            # uitdelen is erger.
+            logger.warning("Beurtverdeling overgeslagen (%s)", e)
+
+    # Jobs with a future scheduled_for (used to jitter relist recreates) aren't due yet.
+    due = [j for j in result.data if not j.get("scheduled_for") or j["scheduled_for"] <= now]
+
+    # A relist's "create" job (scheduled_for set) must never fire if the delete
+    # job it's paired with actually failed — otherwise the old listing stays
+    # live on the platform and this would create a duplicate. Hold/fail those
+    # instead of handing them to the extension.
+    # VERKOCHT IS VERKOCHT — HIER KOMT NIETS MEER DOORHEEN.
+    #
+    # Elke publicatie loopt langs dit punt: de gewone knop, de automatische
+    # verversing, het herstel van vastgelopen werk en de herkansing. Eerder werd
+    # er alleen bij het inplannen gekeken, en een opdracht kan uren in de wachtrij
+    # staan — verkoopt het artikel in die tijd op een ander kanaal, dan zette de
+    # extensie het daarna alsnog online. Ook een verkoop die pas ná het inplannen
+    # werd opgemerkt kwam er zo doorheen. Daarom hier, vlak voor het uitdelen, en
+    # niet bij het aanmaken.
+    # Ook de TWEELING telt mee. Dezelfde trui staat vaak twee keer in de
+    # voorraad (één keer per importbron, herkenbaar aan het nummer voor de
+    # titel). Verkocht op Vinted op rij A betekende niets voor rij B, en die werd
+    # daarna gewoon opnieuw op Marktplaats gezet. Zie backend/services/tweelingen.py.
+    verkocht_op: dict[str, list[str]] = {}
+    te_toetsen = [j["item_id"] for j in due
+                  if j["action"] == "create" and j.get("item_id")]
+    if te_toetsen:
+        try:
+            # GEBUNDELD (11-10-2026, Egbert bcdf9aa4): eerst per wachtende
+            # plaatsing twee losse vragen, bij 24 in de rij 48 vragen en 10 s
+            # wachten bij elke uitgifte. Nu het artikel en zijn tweelingen voor
+            # de hele rij tegelijk; zelfde uitkomst, zie familie_ids_veel.
+            from backend.services.tweelingen import familie_ids_veel
+            familie_van: dict[str, list[str]] = {}
+            gemaakt_op: dict[str, str] = {}
+            alle_ids: list[str] = []
+            unieke = list(dict.fromkeys(te_toetsen))
+            rij_van: dict[str, dict] = {}
+            for i in range(0, len(unieke), 200):
+                for rij in (db.table("items").select("id,user_id,title,sku,brand,created_at")
+                            .in_("id", unieke[i:i + 200]).execute().data or []):
+                    rij_van[rij["id"]] = rij
+            families = familie_ids_veel(db, list(rij_van.values()))
+            for iid in unieke:
+                rij = rij_van.get(iid)
+                fam = (families.get(iid) or [iid]) if rij else [iid]
+                familie_van[iid] = fam
+                if rij and rij.get("created_at"):
+                    gemaakt_op[iid] = rij["created_at"]
+                alle_ids += fam
+            verkocht_per_item: dict[str, list[tuple[str, object]]] = {}
+            for rij in (db.table("listings").select("item_id,platform,sold_at")
+                        .in_("item_id", list(dict.fromkeys(alle_ids)))
+                        .eq("status", "sold").execute().data or []):
+                verkocht_per_item.setdefault(rij["item_id"], []).append(
+                    (rij["platform"], rij.get("sold_at")))
+            for iid, fam in familie_van.items():
+                # De eigen verkoop telt altijd: dit exemplaar is weg.
+                kanalen = [p for p, _ in verkocht_per_item.get(iid, [])]
+                # De verkoop van een TWEELING telt alleen als dit artikel toen al
+                # bestond. Zie _is_nieuwe_voorraad hieronder.
+                for zuster in fam:
+                    if zuster == iid:
+                        continue
+                    for kanaal, verkocht_dat in verkocht_per_item.get(zuster, []):
+                        if _is_nieuwe_voorraad(gemaakt_op.get(iid), verkocht_dat):
+                            logger.info(
+                                "Verkoop van tweeling %s op %s telt niet voor %s: "
+                                "dat artikel is pas na die verkoop aangemaakt",
+                                zuster, kanaal, iid)
+                            continue
+                        kanalen.append(kanaal)
+                if kanalen:
+                    verkocht_op[iid] = kanalen
+        except Exception as e:  # noqa: BLE001
+            # Kunnen we het niet nakijken, dan delen we geen publicatiewerk uit.
+            # Een gemiste publicatie is een vertraging; een dubbelverkocht artikel
+            # is een boze koper op twee kanalen.
+            logger.warning("Verkoopcontrole voor publicatie mislukt (%s) — "
+                           "publicaties deze ronde overgeslagen", e)
+            due = [j for j in due if j["action"] != "create"]
+
+    ready = []
+    for j in due:
+        # Verzendkosten van een bestaand 2dehands-zoekertje: alleen naar een kopie
+        # die het kan, en niet meer zodra de vorige keer mislukte. Zie
+        # _bijwerken_2dh_staat_stil.
+        if platform is not None and bijwerking_moet_wachten(j):
+            logger.info("2dehands-bijwerking %s wacht (kopie %s, vorige mislukt: %s)",
+                        j["id"], versie_van_de_kopie, bijwerken_staat_stil)
+            continue
+        # Een 'extend'-opdracht gaat alleen naar een kopie die hem kent (1.0.318+).
+        # Een oudere kopie zou er een tweede advertentie van maken. De opdracht
+        # blijft 'pending' tot een bijgewerkte kopie polt.
+        if j.get("action") == "extend" and platform is not None:
+            if versie_van_de_kopie is None or versie_van_de_kopie < MINIMALE_EXTEND_VERSIE:
+                logger.info("Extend %s niet uitgedeeld: kopie %s kent 'extend' nog niet",
+                            j["id"], versie_van_de_kopie)
+                continue
+        if (platform is not None and j.get("platform") == "vinted"
+                and j.get("action") in ("create", "content_refresh")
+                and (versie_van_de_kopie is None or versie_van_de_kopie < MINIMALE_VINTED_PLAATS_VERSIE)):
+            logger.info("Vinted-%s %s niet uitgedeeld: kopie %s is ouder dan %s",
+                        j["action"], j["id"], versie_van_de_kopie,
+                        ".".join(map(str, MINIMALE_VINTED_PLAATS_VERSIE)))
+            continue
+        # content_refresh alleen op Marktplaats: daar vult de kopie het hele
+        # formulier opnieuw in; op 2dehands raakt hij alleen de verzendkosten.
+        if (platform is not None and MINIMALE_MP_BESCHRIJVING_VERSIE is not None
+                and (j.get("action") == "create" and j.get("platform") in ("marktplaats", "2dehands")
+                     or j.get("action") == "content_refresh" and j.get("platform") == "marktplaats")
+                and (versie_van_de_kopie is None or versie_van_de_kopie < MINIMALE_MP_BESCHRIJVING_VERSIE)):
+            logger.info("%s-%s %s niet uitgedeeld: kopie %s kent de nieuwe beschrijvingseditor niet",
+                        j["platform"], j["action"], j["id"], versie_van_de_kopie)
+            continue
+        # Alleen plaatsen kiest een rubriek; verwijderen (na een verkoop) of
+        # verlengen mag nooit wachten op een update.
+        rubriek_vanaf = _minimale_versie_voor_rubriek(j) if j.get("action") == "create" else None
+        if (platform is not None and rubriek_vanaf is not None
+                and (versie_van_de_kopie is None or versie_van_de_kopie < rubriek_vanaf)):
+            logger.info("%s %s niet uitgedeeld: kopie %s kent de rubriek %r nog niet",
+                        j["action"], j["id"], versie_van_de_kopie,
+                        (j.get("payload") or {}).get("category"))
+            continue
+        if platform is not None and _oude_kopie_leest_zakelijk_als_uitgelogd(
+                db, user_id, j, versie_van_de_kopie):
+            logger.info("%s %s niet uitgedeeld: kopie %s leest een zakelijk account als uitgelogd",
+                        j["action"], j["id"], versie_van_de_kopie)
+            continue
+        # Niet verversen op Vinted zolang de leesronde daar bezig is: samen zijn
+        # het twee stromen verzoeken naar dezelfde Vinted-sessie, en dan knijpt
+        # Vinted af. De opdracht blijft gewoon staan en komt bij de volgende
+        # poll (15 seconden) opnieuw langs; zodra de scan klaar is, gaat hij door.
+        if (vinted_scan_bezig and j.get("platform") == "vinted"
+                and _is_verversing(j)):
+            logger.info("Verversing %s (%s) wacht: er loopt een Vinted-scan "
+                        "voor gebruiker %s", j["id"], j["action"], user_id)
+            continue
+        if j["action"] == "create" and verkocht_op.get(j.get("item_id")):
+            kanalen = ", ".join(sorted(set(verkocht_op[j["item_id"]])))
+            reden = f"Item already sold on {kanalen} — not published again."
+            db.table("jobs").update({
+                "status": "cancelled",
+                "result": {"cancelled": reden},
+                "done_at": now,
+            }).eq("id", j["id"]).execute()
+            # DE ADVERTENTIERIJ MOET MEE (18-09-2026).
+            #
+            # Publiceren zet eerst een lege rij op 'pending' en maakt dan de
+            # opdracht. Werd die opdracht hier geannuleerd, dan bleef de rij
+            # eeuwig op 'pending' staan: het dashboard zei "Publishing…" voor
+            # werk dat nooit meer zou komen, en de verkoper zag nooit waaróm.
+            # Gemeten in Daniels eigen account: vier van zulke rijen, de oudste
+            # van 29-07. Alleen rijen zonder advertentienummer: een rij mét
+            # nummer hoort bij een advertentie die echt op het kanaal staat, en
+            # die mogen we niet afsluiten.
+            #
+            # 'delisted', NIET 'error' (01-10-2026). 'error' telt in het
+            # verkoopvangnet (verkoop_reconciliatie) en in delist_all_platforms
+            # als "kan nog online staan". De Juiste Toon (96e30080): een al op
+            # Vinted verkochte Lederhosen werd opnieuw aangeboden, hier terecht
+            # geannuleerd, en twaalf minuten later zette het vangnet voor deze
+            # nooit geplaatste rij een verwijdering klaar op Marktplaats en
+            # 2dehands. Zonder advertentienummer kon de extensie hem niet vinden,
+            # beide verwijderingen faalden, en fail_job zette de rij daarna op
+            # 'active': het dashboard toonde een verkocht artikel als online.
+            # Deze rij is nooit op het kanaal geweest, dus 'delisted' is zijn
+            # echte staat; de reden blijft erbij staan.
+            try:
+                db.table("listings").update(
+                    {"status": "delisted", "error_message": reden}
+                ).eq("item_id", j["item_id"]).eq("platform", j["platform"]) \
+                 .eq("status", "pending").is_("platform_listing_id", "null").execute()
+            except Exception as e:  # noqa: BLE001 — de annulering zelf is het belangrijkst
+                logger.warning("Kon de wachtende advertentierij van %s op %s niet "
+                               "afsluiten: %s", j["item_id"], j["platform"], e)
+            logger.info("Publicatie geannuleerd: item %s is al verkocht op %s",
+                        j["item_id"], kanalen)
+            continue
+        if j["action"] == "create" and j.get("scheduled_for"):
+            paired_delete = (
+                db.table("jobs")
+                .select("id,status,payload,result")
+                .eq("user_id", user_id)
+                .eq("item_id", j["item_id"])
+                .eq("platform", j["platform"])
+                .eq("action", "delete")
+                .lte("created_at", j["created_at"])
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+                .data
+            )
+            # "cancelled" telt hier hetzelfde als "error". Een verwijdering die
+            # is afgebroken gaat NOOIT meer lopen, dus een herplaatsing die op
+            # hem wacht bleef eeuwig "pending" staan: het scherm bleef melden
+            # "nieuwe advertentie over ~X min" terwijl er niets meer zou komen.
+            # Zo stond bij Pleun Aertssen (30-08-2026) een herplaatsing van
+            # 12:35 uur nog steeds te wachten op een verwijdering die al om
+            # 12:48 was afgebroken.
+            # WAS DIE "MISLUKKING" IN WERKELIJKHEID EEN GESLAAGDE VERWIJDERING?
+            #
+            # 15-09-2026. Extensie 1.0.329 eiste na een verwijdering naast de
+            # statuscode van het kanaal ook een tekst op de gerenderde pagina, en
+            # zocht die als "verlopen advertentie" terwijl Marktplaats "Deze
+            # advertentie is helaas verlopen" schrijft. Dus: kanaal geeft HTTP
+            # 410, advertentie is echt weg, opdracht komt binnen als mislukt, en
+            # hieronder werd de plaatsing daarop overgeslagen. 83 advertenties bij
+            # vier verkopers stonden daarna nergens meer.
+            #
+            # De extensie is gerepareerd (1.0.333), maar een verkoper werkt pas
+            # bij wanneer Chrome dat doet, en tot dat moment zou elke nachtronde
+            # het opnieuw doen. Daarom ook hier, waar wij het zelf in de hand
+            # hebben: draagt de mislukte verwijdering het bewijs dat het kanaal
+            # zelf 404/410 gaf, dan is de advertentie weg en gaat de plaatsing
+            # gewoon door.
+            if (paired_delete and paired_delete[0]["status"] == "error"
+                    and _kanaal_bevestigde_verwijdering(paired_delete[0])):
+                db.table("jobs").update({
+                    "status": "done",
+                    "result": {
+                        "note": "already_absent",
+                        "correctie": ("De verwijdering was gelukt: het kanaal gaf zelf 404/410. "
+                                      "Een oudere kopie van de uitbreiding herkende de tekst op "
+                                      "de verlopen pagina niet en meldde het als mislukt."),
+                        "oorspronkelijke_fout": (paired_delete[0].get("result") or {}).get("error"),
+                    },
+                }).eq("id", paired_delete[0]["id"]).eq("status", "error").execute()
+                logger.info("Verwijdering %s alsnog als gelukt geboekt (kanaal gaf 404/410); "
+                            "plaatsing %s gaat door", paired_delete[0]["id"], j["id"])
+                db.table("listings").update({
+                    "error_message": None,
+                }).eq("item_id", j["item_id"]).eq("platform", j["platform"]).execute()
+                paired_delete[0]["status"] = "done"
+
+            if paired_delete and paired_delete[0]["status"] in ("error", "cancelled"):
+                mislukt = paired_delete[0]["status"] == "error"
+                db.table("jobs").update({
+                    "status": "error",
+                    "result": {"error": "Skipped — the paired delist failed, so the old listing is still live; creating a new one would duplicate it."
+                                        if mislukt else
+                                        "Skipped — the paired delist was cancelled, so the old listing is still live and this recreate would duplicate it."},
+                    "done_at": now,
+                }).eq("id", j["id"]).execute()
+                # De verwijdering ging niet door, dus de OUDE advertentie staat er
+                # nog. Laat de regel op "active" staan — hij is nooit van het
+                # platform verdwenen en mag dus niet uit het dashboard vallen.
+                db.table("listings").update({
+                    "status": "active",
+                    "error_message": "Relist aborted: the old listing couldn't be removed, so it's still live and no duplicate was created. You can retry the relist.",
+                }).eq("item_id", j["item_id"]).eq("platform", j["platform"]).execute()
+                # EN de boekhouding terugdraaien. Zonder deze regel bleef de
+                # verversing meetellen: teller opgehoogd, veertien dagen
+                # afkoeling en een dagquotum opgesnoept — voor een verversing
+                # die aantoonbaar nooit heeft plaatsgevonden. Het dashboard zei
+                # dan "ververst" over een advertentie waar niets mee gebeurd is.
+                rollback = ((paired_delete[0].get("payload") or {}).get("_refresh_rollback"))
+                if rollback:
+                    try:
+                        from backend.services.relist import rollback_refresh
+                        rollback_refresh(rollback, user_id)
+                    except Exception as e:  # noqa: BLE001 — nooit de uitgifte blokkeren
+                        logger.warning("Kon de verversing van item %s niet terugdraaien: %s",
+                                       j["item_id"], e)
+                continue
+            # Delete not confirmed "done" yet (still pending/claimed, e.g. Chrome
+            # was closed and just reopened) — hold the create job rather than
+            # risk it firing before the old listing is actually gone. It stays
+            # "pending" and will be re-checked on the next poll.
+            if paired_delete and paired_delete[0]["status"] != "done":
+                continue
+        # Alleen bij een ECHTE poll van de extensie (die stuurt een platform mee).
+        # Het dashboard telt hier alleen opdrachten; dan weten we niet welke kopie
+        # er draait, en op dat niet-weten mag geen herplaatsing sneuvelen.
+        if j["action"] == "delete" and platform is not None:
+            reden = _herplaatsing_kansloos(db, user_id, j, versie_van_de_kopie)
+            if reden:
+                _neem_herplaatsing_terug(db, j, now, reden)
+                continue
+        ready.append(j)
+
+    # A relist's "create" job can sit queued for 45min-4h (the jittered
+    # recreate delay) before it's actually dispatched. Its payload price was
+    # snapshotted when the job was queued, so if the user edits the item's
+    # price in the frontend in the meantime, the stale snapshot would win and
+    # the relist would silently keep republishing the old price. Re-read the
+    # item's current price right before handing the job to the extension so
+    # the recreate always reflects what the user set, not what was true when
+    # the delay started.
+    #
+    # EN OM DEZELFDE REDEN DE STAAT VAN DE GOEDEREN, BIJ ÉLKE PUBLICATIE.
+    #
+    # WAAROM DIT ERBIJ MOEST (10-09-2026, Egbert Brouwer / Papa's Plectrums).
+    # Hij zette 561 zoekertjes klaar voor 2dehands. In de wachtrij staat een
+    # kopie van het artikel zoals het op het moment van klikken was, en dat is
+    # bij een grote bulk urenlang geleden: zijn rij was na twee uur nog 402 lang.
+    # Corrigeert hij in die tijd in het dashboard de staat — precies wat hij
+    # moest doen, want alles stond op "Zo goed als nieuw" — dan verandert dat aan
+    # de wachtende opdrachten niets en gaat elke volgende advertentie tóch met de
+    # oude, onjuiste staat online. Voor de verkoper is dat niet te onderscheiden
+    # van "hij luistert niet naar wat ik instel".
+    #
+    # Alleen de velden die de goederen beschrijven en die in het dashboard te
+    # wijzigen zijn. Titel, tekst, prijs en categorie blijven met rust: die
+    # kennen bewuste afwijkingen per opdracht (een prijs per kanaal, een
+    # vertaalde tekst, een categorie die van de advertentiepagina zelf is
+    # gelezen). Dezelfde vijf velden die de herplaatsroute al als waarheid van
+    # het artikel behandelt.
+    _UIT_HET_ARTIKEL = ("condition", "brand", "size", "color", "material")
+    verse_items = {}
+    te_verversen = sorted({j["item_id"] for j in ready
+                           if j["action"] == "create" and j.get("item_id")})
+    if te_verversen:
+        try:
+            for i in range(0, len(te_verversen), 200):
+                for rij in (db.table("items")
+                            .select("id,photo_urls," + ",".join(_UIT_HET_ARTIKEL))
+                            .in_("id", te_verversen[i:i + 200]).execute().data or []):
+                    verse_items[rij["id"]] = rij
+        except Exception as e:  # noqa: BLE001
+            # Lukt het niet, dan gaat de opdracht met zijn eigen kopie de deur
+            # uit. Een verouderd kenmerk is vervelend; niets uitdelen is erger.
+            logger.warning("Kenmerken niet ververst voor uitgifte (%s)", e)
+
+    for j in ready:
+        if j["action"] != "create" or not isinstance(j.get("payload"), dict):
+            continue
+        if j.get("scheduled_for"):
+            current = db.table("items").select("price").eq("id", j["item_id"]).execute().data
+            if current and current[0].get("price") not in (None, ""):
+                j["payload"]["price"] = current[0]["price"]
+        vers = verse_items.get(j.get("item_id")) or {}
+        for veld in _UIT_HET_ARTIKEL:
+            waarde = vers.get(veld)
+            if isinstance(waarde, str):
+                waarde = waarde.strip()
+            # Een leeg veld in het artikel overschrijft nooit iets wat de
+            # opdracht wél heeft: dat zou een advertentie juist armer maken.
+            if waarde and str(j["payload"].get(veld) or "") != str(waarde):
+                j["payload"][veld] = waarde
+        # De foto's ook: de kopie in de opdracht kan nog bronadressen dragen die
+        # intussen in onze opslag staan (zie _wacht_op_fotos). Alleen als het
+        # artikel er minder onbereikbare heeft en er niet armer van wordt.
+        verse_fotos = vers.get("photo_urls") or []
+        oude_fotos = j["payload"].get("photo_urls") or []
+        if (verse_fotos and len(verse_fotos) >= len(oude_fotos)
+                and _onbereikbare_fotos(verse_fotos) < _onbereikbare_fotos(oude_fotos)):
+            j["payload"]["photo_urls"] = verse_fotos
+
+    # EEN VASTE STAAT OP VINTED, ALS DE VERKOPER DAT WIL (16-10-2026, Toon).
+    # Na het verversen hierboven, anders zet de staat van het artikel hem terug.
+    # Hier en niet in de extensie: dan werkt het bij de eerstvolgende opdracht,
+    # ook op de kopie die hij vandaag draait. Zie instellingen.VINTED_STAAT.
+    if any(j["action"] == "create" and j.get("platform") == "vinted"
+           and isinstance(j.get("payload"), dict) for j in ready):
+        vast_pakket = None
+        try:
+            from backend.services.instellingen import VINTED_STAAT, VINTED_PAKKET, lees as _lees_instellingen
+            _inst = _lees_instellingen(user_id)
+            vaste_staat = _inst.get(VINTED_STAAT)
+            vast_pakket = _inst.get(VINTED_PAKKET)
+        except Exception as e:  # noqa: BLE001 — dan de staat van het artikel
+            logger.warning("Vaste Vinted-staat niet gelezen (%s)", e)
+            vaste_staat = None
+        if vast_pakket:
+            for j in ready:
+                if (j["action"] == "create" and j.get("platform") == "vinted"
+                        and isinstance(j.get("payload"), dict)):
+                    j["payload"] = _vinted_pakket_voor(j["payload"], vast_pakket)
+        if vaste_staat:
+            for j in ready:
+                if (j["action"] == "create" and j.get("platform") == "vinted"
+                        and isinstance(j.get("payload"), dict)):
+                    j["payload"]["condition"] = vaste_staat
+
+    # KINDERSCHOENEN OP VINTED: DE MAAT ALS "EU 26" (24-10-2026, Janneke).
+    # Vinted toont sinds 23-10 ~19:40 UTC bij Kinderen > Schoenen tegels als
+    # "EU 26" in plaats van "26"; de kopie 1.0.400 vond geen tegel en elke
+    # plaatsing eindigde in "Vul je maat in" (12x bij Janneke, 2x bij een
+    # nieuwe klant). De extensie leest "EU 26" op beide vormen goed, dus dit
+    # werkt vandaag, vóór 1.0.403 op de Web Store staat. Alleen de opdracht, nooit het artikel.
+    for j in ready:
+        if (j["action"] == "create" and j.get("platform") == "vinted"
+                and isinstance(j.get("payload"), dict)):
+            j["payload"] = _vinted_schoenmaat_als_eu(j["payload"])
+
+    # DE KLEUR GOEDZETTEN VLAK VOOR UITGIFTE.
+    #
+    # Marktplaats en 2dehands bieden alleen kale kleurnamen aan (Bruin, Rood,
+    # Wit); verkopers schrijven "bruine", "rode", "crème". Zo'n woord past op
+    # geen enkele optie, het verplichte veld blijft leeg, en dan doet de
+    # plaatsknop stil niets. Bij Toon raakte dat 175 van zijn 1.024 artikelen.
+    #
+    # De extensie kan dit sinds 1.0.282 zelf, maar die bereikt hem pas nadat de
+    # Chrome Web Store hem heeft goedgekeurd en Chrome hem heeft opgehaald —
+    # dagen tot weken. Hier gezet werkt het bij de eerstvolgende opdracht, ook op
+    # de kopie die hij vandaag draait. De extensie kiest daarna nog steeds uit
+    # wat er in die categorie echt in de lijst staat; dit maakt alleen de kans
+    # dat er iets past zo groot mogelijk.
+    #
+    # Alleen als we de kleur herkennen. Een woord dat we niet kennen blijft staan
+    # zoals de verkoper het schreef — nooit een verzonnen kleur. Vinted heeft een
+    # eigen kleurenlijst en blijft hier buiten.
+    _zet_kleur_goed(ready)
+    _vinted_titelgenoten_meegeven(db, user_id, ready)
+
+    # Wie het eerst geholpen wordt: de gebruiker. Een scan die toevallig eerder in
+    # de wachtrij kwam (bijvoorbeeld de uurlijkse controle) ging vóór een publicatie
+    # waar iemand net op geklikt heeft — en dan lijkt de knop kapot. Publiceren en
+    # verwijderen gaan nu altijd voor; scans vullen de rustige momenten op.
+    # En helemaal achteraan, ook achter scans: wie op zijn Marktplaats-rubriek staat
+    # te wachten (_zet_rubriek_van_marktplaats). Anders houdt één artikel waarvan
+    # de rubriek even niet op te vragen is de hele rij achter zich tegen, want er
+    # worden er maar vijf per ronde bekeken.
+    if is_extension_dispatch:
+        # Alleen de extensie wacht; het dashboard telt ze gewoon als wachtrij.
+        wachten = [j for j in ready if _wacht_op_fotos(j, now_dt)]
+        if wachten:
+            logger.info("%s plaatsing(en) wachten op foto's uit de webshop (gebruiker %s)",
+                        len(wachten), user_id)
+            ready = [j for j in ready if j not in wachten]
+        ready.sort(key=lambda j: (
+            1 if (isinstance(j.get("payload"), dict)
+                  and j["payload"].get("_rubriek_zoeken_sinds")) else 0,
+            _rubriek_mislukt(j) if (isinstance(j.get("payload"), dict)
+                                    and j["payload"].get("_rubriek_zoeken_sinds")) else 0,
+            -1 if _scan_achterstallig(j, now_dt) else 0 if j.get("action") in SCHRIJVEND else 1))
+
+    # Extension: exactly one job at a time. Dashboard: the whole queue, to count.
+    if not is_extension_dispatch:
+        return ready
+    # Pas hier, en niet een regel eerder: vertalen kost een gesprek met een
+    # dienst buiten de deur. Het dashboard telt alleen en krijgt niets vertaald,
+    # en van de wachtrij gaat er precies één opdracht doorheen — die ene die de
+    # extensie nu ook echt gaat uitvoeren.
+    #
+    # Ligt de vertaling plat, dan blijft die ene opdracht staan en proberen we de
+    # volgende. Anders zou één onvertaalbare advertentie vooraan de hele wachtrij
+    # blokkeren: alles erachter (ook wat al in het Nederlands staat) zou stilvallen.
+    for kandidaat in ready[:5]:
+        # EERST DE RUBRIEK, dan pas vertalen: vertalen kost een gesprek met een
+        # dienst buiten de deur, en een opdracht die hier blijft staan of wordt
+        # teruggenomen hoeft dat niet. Zie _zet_rubriek_van_marktplaats.
+        if not _zet_rubriek_van_marktplaats(db, user_id, kandidaat):
+            continue
+        # De verzendkosten die hij zelf op Marktplaats koos, in plaats van ons
+        # vaste Bpost-pakket. Houdt nooit iets tegen.
+        _zet_verzending_van_marktplaats(db, user_id, kandidaat)
+        _wijk_uit_naar_gratis_rubriek(db, user_id, kandidaat)
+        if _weiger_bekende_betaalde_rubriek(db, user_id, kandidaat):
+            continue
+        # Omnivaleur Light: de laatste zeef voor elk pad dat een 'create' klaarzet.
+        if neem_plaatsing_terug_boven_limiet(db, user_id, kandidaat):
+            continue
+        uit = _zet_taal_goed(db, [kandidaat])
+        if uit:
+            # NA de vertaling, want die levert een nieuwe tekst op waar het
+            # webadres gewoon weer in kan staan. Zie _haal_links_eruit.
+            _haal_links_eruit(db, uit)
+            _mp_titel_binnen_grens(db, uit)
+            _vinted_tekst_binnen_grens(db, uit)
+            # Als laatste: de stappen hierboven schrijven de opdracht terug in de
+            # database, en de rubriek met geslacht moet daar blijven staan.
+            _rubriek_voor_de_kopie(uit, versie_van_de_kopie)
+            return uit
+    return []
+
+
+# ── Welke extensieversie staat er in de Chrome Web Store? ────────────────────
+#
+# WAAROM DIT ER IS (01-09-2026, Egbert). Hij draaide 1.0.258 terwijl de Web Store
+# op 1.0.279 stond, en het dashboard zei al die tijd groen "Extension active".
+# De ondergrens hieronder (1.0.244) is een HARDE grens: alles daarboven gold als
+# in orde, ook eenentwintig versies achter. Chrome werkt een extensie normaal
+# vanzelf bij, maar alleen elke paar uur en alleen terwijl hij draait — en een
+# met de hand geladen kopie nooit. Wie dus achterloopt, hoort dat te horen.
+#
+# De enige eerlijke bron voor "wat kan hij nu installeren" is de Web Store zelf.
+# Dit is dezelfde vraag die Chrome stelt om te kijken of er een update is; het
+# antwoord is een doorverwijzing waarin de versie in de bestandsnaam staat
+# (..._1_0_279_0.crx). We halen de crx niet op — alleen de doorverwijzing.
+_WEBSTORE_EXT_ID = "gfaogapbhaacfbpdppdcmnkjndlphleh"
+_WEBSTORE_URL = (
+    "https://clients2.google.com/service/update2/crx"
+    "?response=redirect&acceptformat=crx3&prodversion=126.0"
+    f"&x=id%3D{_WEBSTORE_EXT_ID}%26installsource%3Dondemand%26uc"
+)
+_CRX_VERSIE = re.compile(r"_(\d+)_(\d+)_(\d+)(?:_(\d+))?\.crx", re.I)
+# Eén uur onthouden. Een nieuwe versie doorgeven mag best een uur duren; Google
+# elke paar seconden bevragen mag niet. Een mislukking onthouden we tien minuten,
+# zodat een storing bij Google geen bui van verzoeken oplevert.
+_WEBSTORE_CACHE = {"versie": None, "ts": 0.0, "ok": False}
+_WEBSTORE_TTL_OK = 3600
+_WEBSTORE_TTL_FOUT = 600
+
+
+def _gepubliceerde_extensieversie() -> str | None:
+    """De versie die op dit moment in de Chrome Web Store staat, of None."""
+    import time as _t
+    nu = _t.monotonic()
+    ttl = _WEBSTORE_TTL_OK if _WEBSTORE_CACHE["ok"] else _WEBSTORE_TTL_FOUT
+    if _WEBSTORE_CACHE["ts"] and (nu - _WEBSTORE_CACHE["ts"]) < ttl:
+        return _WEBSTORE_CACHE["versie"]
+    versie = None
+    try:
+        import httpx
+        # follow_redirects=False: we willen juist de doorverwijzing, niet het
+        # bestand. Zo halen we nooit een crx binnen — alleen een kopregel.
+        r = httpx.get(_WEBSTORE_URL, follow_redirects=False, timeout=8.0)
+        m = _CRX_VERSIE.search(r.headers.get("location") or "")
+        if m:
+            versie = f"{int(m.group(1))}.{int(m.group(2))}.{int(m.group(3))}"
+    except Exception as e:  # noqa: BLE001
+        logger.info("versie uit de Web Store ophalen mislukt: %s", e)
+    _WEBSTORE_CACHE.update(
+        versie=versie or _WEBSTORE_CACHE["versie"], ts=nu, ok=bool(versie)
+    )
+    return _WEBSTORE_CACHE["versie"]
+
+
+@router.get("/extension-version")
+def extension_version(user_id: str = Depends(get_current_user)):
+    """Welke extensieversie hoort erop te staan.
+
+    `minimum` is de harde grens: daaronder blokkeert het dashboard, want dan
+    kán het werk niet slagen. `published` is wat er nu in de Chrome Web Store
+    staat; daartussenin krijgt de verkoper een gewone bijwerkmelding die hij weg
+    kan klikken. Komt `published` niet binnen, dan is hij leeg en verandert er
+    niets aan wat het scherm laat zien.
+    """
+    return {
+        "published": _gepubliceerde_extensieversie(),
+        "minimum": ".".join(str(x) for x in MINIMALE_SCANVERSIE),
+        # Vanaf hoeveel versies achterstand het dashboard niet meer "er is een
+        # update" zegt maar "deze kopie werkt zichzelf niet bij". Meegegeven en
+        # niet in het scherm hard gezet, zodat er één grens is die klopt met wat
+        # de server doet: daarboven deelt hij geen werk meer uit.
+        "blokkeer_achterstand": ACHTERSTAND_GRENS,
+    }
+
+
+@router.get("/onboarding")
+def onboarding_status(user_id: str = Depends(get_current_user)):
+    """Hoe ver is deze verkoper met beginnen? Voedt de "Get started"-lijst op het
+    dashboard.
+
+    WAAROM (17-09-2026, Johan Kist). Na drie dagen had hij 24 advertenties
+    geïmporteerd, bij 23 gitaren elk kanaalicoon aangeklikt, en nog nergens iets
+    geplaatst. Hij dacht dat het gelukt was. Een lijst die afvinkt op wat er ECHT
+    gebeurde (niet op wat hij aanklikte) had dat meteen laten zien.
+
+    Elke stap is een feit uit de database, nooit een klik:
+    - extensie: de extensie heeft zich ooit gemeld;
+    - kanaal: een opdracht op een extensiekanaal is gelukt, dus hij is daar ingelogd;
+    - gepubliceerd: een plaatsing leverde echt een advertentie op (of eBay/Shopify,
+      die niet via opdrachten lopen maar ook niet te importeren zijn).
+    """
+    db = get_db()
+    uit = {"extensie": False, "kanaal": False, "gepubliceerd": False}
+    try:
+        uit["extensie"] = bool(db.table("extension_heartbeat").select("user_id")
+                               .eq("user_id", user_id).limit(1).execute().data)
+        # GEEN `result` VAN SCANS OPHALEN (06-10-2026). Een scanresultaat is
+        # honderden kilobytes groot, en dit antwoord gebruikte alleen dat van
+        # plaatsingen. Vijftig rijen met scans erbij kon zo megabytes per aanroep
+        # lezen, op een database die al op 0,5 GB geheugen draaide. Nu: een
+        # lichte vraag voor "kanaal", en alleen de uitkomst van plaatsingen voor
+        # "gepubliceerd".
+        platforms = ["marktplaats", "2dehands", "vinted", "facebook"]
+        uit["kanaal"] = bool(
+            db.table("jobs").select("id")
+            .eq("user_id", user_id).eq("status", "done")
+            .in_("platform", platforms).in_("action", ["create", "scan"])
+            .limit(1).execute().data)
+        plaatsingen = (db.table("jobs").select("result")
+                       .eq("user_id", user_id).eq("status", "done")
+                       .in_("platform", platforms).eq("action", "create")
+                       .order("done_at", desc=True).limit(50).execute().data or [])
+        uit["gepubliceerd"] = any(
+            isinstance(j.get("result"), dict)
+            and (j["result"].get("platform_listing_id") or j["result"].get("bevestigd"))
+            for j in plaatsingen)
+        if not uit["gepubliceerd"]:
+            items = [i["id"] for i in (db.table("items").select("id").eq("user_id", user_id)
+                                       .limit(500).execute().data or [])]
+            if items:
+                uit["gepubliceerd"] = bool(
+                    db.table("listings").select("id").in_("item_id", items[:200])
+                    .in_("platform", ["ebay", "shopify", "woocommerce"]).eq("status", "active")
+                    .limit(1).execute().data)
+    except Exception as e:  # noqa: BLE001 — een halve lijst is beter dan een kapot dashboard
+        logger.warning("onboarding-status voor %s niet compleet: %s", user_id, e)
+    return uit
+
+
+@router.get("/extension-status")
+def extension_status(user_id: str = Depends(get_current_user)):
+    """
+    Is a computer with the extension online for this user? Powers the dashboard
+    indicator so someone working from their phone knows whether their queued
+    publishes/relists will run now or just wait. Reads the heartbeat stamped by
+    the extension's own /pending polls.
+
+    Returns online=None ("unknown") when the heartbeat table doesn't exist yet,
+    so the frontend can simply hide the indicator instead of showing a wrong
+    "offline". online=False means we've never seen it, or not recently.
+    """
+    db = get_db()
+    # Eén vraag voor allebei. Dit scherm klopt elke 20 seconden aan bij iedereen
+    # die de app open heeft, en de server draait op één werker met een
+    # blokkerende databaseclient: een tweede vraag hier is een tweede wachtrij
+    # voor de hele site.
+    try:
+        row = (
+            db.table("extension_heartbeat")
+            .select("last_seen,ext_version")
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+            .data
+        )
+    except Exception:
+        # De waarschuwing over een verouderde kopie hoort óók zichtbaar te zijn
+        # als de hartslagtabel nog niet bestaat — dat is precies een account
+        # waar dit soort dingen ongemerkt misgaat.
+        return {"online": None, **_verouderde_extensie(db, user_id)}
+    oud = _verouderde_extensie(
+        db, user_id, hartslag_versie=(row or [{}])[0].get("ext_version"))
+
+    if not row or not row[0].get("last_seen"):
+        return {"online": False, "last_seen": None, "seconds_ago": None, **oud}
+
+    last_seen = _parse_ts(row[0]["last_seen"])
+    if not last_seen:
+        return {"online": False, "last_seen": None, "seconds_ago": None, **oud}
+
+    seconds_ago = int((datetime.now(timezone.utc) - last_seen).total_seconds())
+    return {
+        "online": seconds_ago <= EXTENSION_ONLINE_WINDOW_SECONDS,
+        "last_seen": last_seen.isoformat(),
+        "seconds_ago": max(0, seconds_ago),
+        **oud,
+    }
+
+
+_ZELF_LEZEN = object()
+
+
+def _verouderde_extensie(db, user_id: str, hartslag_versie=_ZELF_LEZEN) -> dict:
+    """Draait er ergens nog een oude kopie van de extensie mee?
+
+    Een tweede, met de hand geladen kopie beweegt niet mee met de Chrome Web
+    Store en blijft dus voor altijd op de versie van de dag dat hij is
+    neergezet. Hij haalt wél opdrachten uit dezelfde wachtrij, en bij een grote
+    winkel kan hij die niet aan. Dat is van buitenaf niet te zien — het lijkt op
+    "de app doet het soms wel en soms niet" (Egbert Brouwer, twee weken lang).
+
+    De extensie stempelt haar versie in elke foutmelding, dus we kunnen dit
+    aflezen uit werk dat al gedaan is. Geen extra tabel, geen migratie.
+
+    EN OOK ALS DIE KOPIE ZICH NIET MEER MELDT (09-09-2026, De Juiste Toon).
+    Hierboven stond alleen de harde ondergrens (1.0.244). Toons kopie zat daar
+    ruim boven — 1.0.260 — dus zei het dashboard hier niets, terwijl de uitgifte
+    diezelfde kopie al twee dagen géén werk meer gaf omdat ze 53 versies achter
+    de Web Store liep. Zijn wachtrij liep vol en het enige wat hij las was "je
+    extensie heeft zich niet gemeld, zet Chrome aan, dan pakt hij het vanzelf
+    op". Chrome aanzetten hielp niet en kon niet helpen: een met de hand
+    geladen kopie werkt zichzelf nooit bij.
+
+    Daarom kijken we eerst naar de versie uit de aanwezigheidsstempel. Die staat
+    er ook nog als de kopie al uren stil is, dus dit werkt juist wél op het
+    moment dat de verkoper zit te wachten.
+    """
+    draait = (_draaiende_extensieversie(db, user_id)
+              if hartslag_versie is _ZELF_LEZEN
+              else _kopstuk_versie(hartslag_versie))
+    stilstaand = _kopie_staat_stil(draait)
+    if stilstaand:
+        achter, gepubliceerd = stilstaand
+        return {
+            "outdated_extension": ".".join(map(str, draait)),
+            "published_extension": gepubliceerd,
+            "outdated_versies_achter": achter,
+            # Deze kopie krijgt van de uitgifte niets meer te doen. Het scherm
+            # mag dus niet zeggen dat de wachtrij vanzelf op gang komt.
+            "outdated_krijgt_geen_werk": True,
+        }
+    try:
+        grens = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+        rijen = (db.table("jobs").select("result")
+                 .eq("user_id", user_id).eq("status", "error")
+                 .gte("created_at", grens)
+                 .order("created_at", desc=True).limit(40).execute().data or [])
+    except Exception:  # noqa: BLE001 — een waarschuwing mag nooit de indicator slopen
+        return {}
+    oudste = None
+    for r in rijen:
+        res = r.get("result")
+        v = _extensie_versie((res or {}).get("error") if isinstance(res, dict) else res)
+        if v and v < MINIMALE_SCANVERSIE and (oudste is None or v < oudste):
+            oudste = v
+    if not oudste:
+        return {}
+    return {
+        "outdated_extension": ".".join(map(str, oudste)),
+        "published_extension": _gepubliceerde_extensieversie(),
+        # Onder de harde ondergrens deelt de uitgifte ook niets meer uit.
+        "outdated_krijgt_geen_werk": True,
+    }
+
+
+@router.get("/relist-status")
+def relist_status(user_id: str = Depends(get_current_user)):
+    """
+    In-progress relists for the dashboard's Refresh view: any scheduled recreate
+    ("create" job with a future/pending scheduled_for) plus the state of its
+    paired delete, so the UI can show "old listing removed, new one in ~X min".
+    """
+    db = get_db()
+    # Include recently-DONE recreates too, not just in-flight ones: when the
+    # extension finishes, the create job flips to "done" and would instantly drop
+    # out of this list — so the dashboard card vanished mid-"Publishing now" with
+    # no "it's live" confirmation, which read as "nothing happened / stuck". We
+    # keep a completed recreate around for a short window so the UI can show an
+    # explicit "✓ New listing is live" before clearing it.
+    JUST_DONE_WINDOW = timedelta(seconds=90)
+    now_dt = datetime.now(timezone.utc)
+    create_jobs = (
+        db.table("jobs")
+        .select("item_id,platform,status,scheduled_for,created_at,done_at,result")
+        .eq("user_id", user_id)
+        .eq("action", "create")
+        .in_("status", ["pending", "claimed", "done"])
+        # Alleen herplaatsingen dragen een scheduled_for, en hieronder wordt al
+        # het andere meteen weggegooid. Toch werd het eerst allemáál opgehaald —
+        # elke 15 seconden opnieuw, en die stapel groeit met elke publicatie mee.
+        # Filteren doet de database gratis; ophalen kost dataverkeer (01-09-2026).
+        .not_.is_("scheduled_for", "null")
+        .execute()
+        .data
+    )
+    out = []
+    for j in create_jobs:
+        if not j.get("scheduled_for"):
+            continue  # only relist recreates carry a scheduled_for
+        if j["status"] == "done":
+            done_at = _parse_ts(j.get("done_at"))
+            if not done_at or (now_dt - done_at) > JUST_DONE_WINDOW:
+                continue  # long-finished — no longer "in progress"
+        paired = (
+            db.table("jobs")
+            .select("status,result")
+            .eq("user_id", user_id)
+            .eq("item_id", j["item_id"])
+            .eq("platform", j["platform"])
+            .eq("action", "delete")
+            .lte("created_at", j["created_at"])
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+            .data
+        )
+        entry = {
+            "item_id": j["item_id"],
+            "platform": j["platform"],
+            "recreate_at": j["scheduled_for"],
+            "recreate_status": j["status"],
+            "delete_status": paired[0]["status"] if paired else None,
+            # Surface WHY the delist failed: without this the dashboard could
+            # only say "Failed", which hid a real bug for weeks.
+            "delete_error": (
+                ((paired[0].get("result") or {}).get("error") or None)
+                if paired and paired[0]["status"] == "error" else None
+            ),
+        }
+        # Hand the new listing's URL to the UI so the "live" confirmation can link
+        # straight to it.
+        if j["status"] == "done":
+            entry["recreate_url"] = (j.get("result") or {}).get("platform_listing_url")
+        out.append(entry)
+    return out
+
+
+# Hoeveel rijen de balk-lezing hooguit ophaalt. Staat hier met een naam omdat
+# de teller eronder moet weten wanneer hij de grens raakt.
+_ACTIEF_LIMIET = 50
+
+# Wat er wacht, per soort en kanaal, voor de balk op het dashboard. Egbert
+# (04-10-2026): "ik zie veel gebeuren op 2eHands in een geopend tabblad, zonder
+# dat ik weet wat er precies gebeurt en voor hoeveel advertenties". Boven de 50
+# kost dit een extra lezing van twee kleine kolommen; die bewaren we een minuut
+# per verkoper, want de balk vraagt elke vier seconden.
+_PER_SOORT_CACHE: dict[str, tuple[float, list]] = {}
+
+
+def _wachtrij_per_soort(db, user_id: str, queued: list, volledig: bool, now: str) -> list:
+    import time
+    if volledig:
+        rijen = queued
+    else:
+        gecachet = _PER_SOORT_CACHE.get(user_id)
+        if gecachet and time.monotonic() - gecachet[0] < 60:
+            return gecachet[1]
+        try:
+            rijen = fetch_all(lambda: db.table("jobs").select("id,action,platform")
+                              .eq("user_id", user_id).eq("status", "pending")
+                              .or_(f"scheduled_for.is.null,scheduled_for.lte.{now}"))
+        except Exception as e:  # noqa: BLE001 — een overzicht mag de balk nooit slopen
+            logger.warning("active_jobs: wachtrij per soort niet te lezen: %s", e)
+            return []
+    tel: dict[tuple, int] = {}
+    for j in rijen:
+        if _is_2dh_bijwerking(j):
+            continue
+        sleutel = (j.get("action") or "create", j.get("platform") or "")
+        tel[sleutel] = tel.get(sleutel, 0) + 1
+    uit = [{"action": a, "platform": p, "n": n}
+           for (a, p), n in sorted(tel.items(), key=lambda kv: -kv[1])]
+    if not volledig:
+        _PER_SOORT_CACHE[user_id] = (time.monotonic(), uit)
+    return uit
+
+
+@router.get("/active")
+def active_jobs(user_id: str = Depends(get_current_user)):
+    """
+    Everything the extension is either actively running or about to run, so the
+    dashboard can warn the user to stay hands-off while it works.
+
+    Two buckets:
+      - "working": jobs the extension claimed RECENTLY — a Chrome tab is genuinely
+        open and it's deleting/creating/scanning right now. Critically, we only
+        count a claim as "working" if it happened within the last few minutes: a
+        publish/delete finishes in seconds, so a job still "claimed" long after
+        that isn't being worked — it's stuck (Chrome was closed mid-run, the tab
+        failed, etc.). Without this window those abandoned claims made the
+        "extension is working — don't touch" banner show forever even though
+        nothing was happening.
+      - "queued": pending jobs that are due now (no future scheduled_for). These
+        will be picked up within one poll (~15s). Relist recreates sitting on a
+        future timer are deliberately excluded — nothing is happening yet, so
+        they shouldn't trip the "busy, don't touch" warning.
+    """
+    db = get_db()
+    rows = (
+        db.table("jobs")
+        .select("id,action,platform,item_id,status,scheduled_for,claimed_at,result")
+        .eq("user_id", user_id)
+        .in_("status", ["pending", "claimed"])
+        .order("created_at")
+        .limit(_ACTIEF_LIMIET)
+        .execute()
+        .data
+    )
+    now_dt = datetime.now(timezone.utc)
+    now = now_dt.isoformat()
+    # A genuinely active claim is very recent. Beyond this the run is stuck/abandoned.
+    active_cutoff = now_dt - timedelta(minutes=3)
+
+    def _fresh(ts) -> bool:
+        if not ts:
+            return False
+        try:
+            dt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            return False
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt >= active_cutoff
+
+    def _is_working(j) -> bool:
+        # Fresh claim = a publish/delete tab is open right now.
+        if _fresh(j.get("claimed_at")):
+            return True
+        # Long-running jobs (mainly Vinted scans) can legitimately run past the
+        # claim window, but they post live progress — treat a recent progress
+        # ping as "still working" so the tab stays flagged, while a claim with no
+        # recent activity at all is correctly treated as stuck and dropped.
+        prog = (j.get("result") or {}).get("_progress")
+        if isinstance(prog, dict) and _fresh(prog.get("at")):
+            return True
+        return False
+
+    # Settle anything stuck 'claimed' with no activity. The stale sweep used to run
+    # ONLY from /pending, i.e. only while the extension was still polling — but the
+    # cases that strand a job (content script hung on a Vinted colour panel, MV3
+    # service worker killed so armJobWatchdog's setTimeout never fires, Chrome
+    # closed) are exactly the cases where that poll may never come. The dashboard
+    # polls THIS endpoint every 4s, so sweeping here makes a stuck job go terminal
+    # on its own, with no user action. Anti-duplicate protection is unchanged: the
+    # sweep marks a create 'error' and never re-dispatches it.
+    if any(j["status"] == "claimed" and not _is_working(j) for j in rows):
+        try:
+            _recover_stale_claims(db, user_id, None, now_dt)
+        except Exception as e:  # never let the banner endpoint fail on a sweep
+            logger.warning(f"active_jobs: stale-claim sweep failed: {e}")
+
+    working, queued = [], []
+    for j in rows:
+        if j["status"] == "claimed":
+            # OOK EEN LOPENDE BIJWERKING IS GEEN WERK VAN DE VERKOPER (28-09-2026,
+            # Egbert). Het dashboard haalt de hele voorraad en alle advertenties
+            # opnieuw op zodra "working" leegloopt (pollActivity). Zijn 235
+            # verzendkost-bijwerkingen liepen er een per 9 seconden door: bij
+            # 5.533 artikelen zo'n 5 MB per keer, 33 MB per tien minuten, en om
+            # 13:05 lag de database eruit, voor iedereen.
+            if _is_2dh_bijwerking(j):
+                continue
+            if _is_working(j):
+                # Don't leak the raw progress/result blob to the client.
+                j.pop("result", None)
+                working.append(j)
+        elif _is_2dh_bijwerking(j):
+            continue
+        elif not j.get("scheduled_for") or j["scheduled_for"] <= now:
+            j.pop("result", None)
+            queued.append(j)
+    # HOEVEEL ER ECHT WACHTEN, NIET HOEVEEL WE ER OPHAALDEN.
+    #
+    # WAAROM (17-09-2026, Egbert Brouwer). Deze lezing stopt bij 50 rijen. Het
+    # scherm zette dat aantal in de kop ("50 jobs queued") en op de knop
+    # ("Clear queue (50)"), en die knop annuleerde precies de vijftig die hier
+    # terugkwamen. Er stonden er 168. Klik: vijftig weg, teller weer 50. Nog een
+    # klik: vijftig weg, teller weer 50. Van buitenaf gebeurde er dus letterlijk
+    # niets, twee keer op rij, en de 68 die overbleven stonden er een dag later
+    # nog. Zie ook /cancel-queued: die leegt de rij wel in een keer.
+    #
+    # Alleen tellen als we de grens ook echt raken. Bij iedereen met een normale
+    # rij kost dit geen enkele extra vraag aan de database.
+    queued_total = len(queued)
+    if len(rows) >= _ACTIEF_LIMIET:
+        try:
+            telling = (db.table("jobs").select("id", count="exact")
+                       .eq("user_id", user_id).eq("status", "pending")
+                       .or_(f"scheduled_for.is.null,scheduled_for.lte.{now}")
+                       .limit(1).execute())
+            onderhoud = (db.table("jobs").select("id", count="exact")
+                         .eq("user_id", user_id).eq("status", "pending")
+                         .eq("action", "content_refresh").eq("platform", "2dehands")
+                         .limit(1).execute())
+            if telling.count is not None:
+                queued_total = telling.count - (onderhoud.count or 0)
+        except Exception as e:  # noqa: BLE001 — een teller mag de balk nooit slopen
+            logger.warning("active_jobs: wachtrij niet te tellen: %s", e)
+    # Het gemeten tempo mee terug: het dashboard beloofde "within ~15 seconds"
+    # terwijl Calm mode er 3 tot 8 minuten van maakt. Zie _gemeten_tempo.
+    return {"working": working, "queued": queued, "queued_total": queued_total,
+            "per_soort": _wachtrij_per_soort(db, user_id, queued, len(rows) < _ACTIEF_LIMIET, now),
+            "pace": _gemeten_tempo(db, user_id)}
+
+
+@router.post("/reschedule-now")
+def reschedule_now(body: dict, user_id: str = Depends(require_active_subscription)):
+    """
+    Bring a scheduled relist recreate forward so it fires on the next poll —
+    clears the jittered delay for a specific item's still-pending "create" job.
+    Only touches the caller's own pending job. Body: {item_id, platform}.
+    """
+    db = get_db()
+    item_id = body.get("item_id")
+    platform = body.get("platform")
+    if not item_id or not platform:
+        raise HTTPException(status_code=400, detail="item_id and platform are required")
+    rows = (
+        db.table("jobs")
+        .select("id")
+        .eq("user_id", user_id)
+        .eq("item_id", item_id)
+        .eq("platform", platform)
+        .eq("action", "create")
+        .eq("status", "pending")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="No pending recreate job found for this item")
+    now = datetime.now(timezone.utc).isoformat()
+    db.table("jobs").update({"scheduled_for": now}).eq("id", rows[0]["id"]).execute()
+    return {"ok": True, "job_id": rows[0]["id"], "scheduled_for": now}
+
+
+@router.post("/relist-retry")
+async def relist_retry(body: dict, user_id: str = Depends(require_active_subscription)):
+    """
+    Retry a relist that failed at the delist step. The old listing is still live
+    on the platform (a failed delist removes nothing), so retrying is safe and is
+    exactly what the user wants after "Relist failed".
+
+    Ordering matters for correctness: we FIRST cancel any leftover delete/create
+    jobs from the failed attempt (a still-pending recreate would otherwise fire
+    later and duplicate the listing), reset the listing to a clean "active"
+    state, and only THEN queue a brand-new relist via refresh_listing().
+    """
+    item_id = body.get("item_id")
+    platform = body.get("platform")
+    if not item_id or not platform:
+        raise HTTPException(status_code=400, detail="item_id and platform are required")
+
+    # Vinted-herplaatsen uit: dan ook niets opschonen of annuleren, gewoon weigeren.
+    if platform == "vinted":
+        from backend.services import instellingen as _inst
+        if not _inst.vinted_herplaatsen_toegestaan(user_id):
+            raise HTTPException(status_code=400, detail=_inst.VINTED_HERPLAATSEN_UIT)
+
+    db = get_db()
+
+    # EERST DE BOEKHOUDING VAN DE MISLUKTE POGING TERUGDRAAIEN.
+    #
+    # WAAROM (30-08-2026, Pleun Aertssen). Een verversing hoogt de teller op,
+    # zet de afkoelperiode van veertien dagen en snoept een dagquotum op zodra
+    # hij in de wachtrij staat — vóórdat er iets gebeurd is. Mislukt de
+    # verwijdering, dan geeft `fail_job` dat allemaal terug. Maar bij een
+    # herkansing gebeurde dat niet, en dan botste de herkansing op de
+    # afkoelperiode die zijn eigen mislukte poging net had gezet:
+    #
+    #     "This listing was refreshed 0d ago. Wait 14d more."
+    #
+    # De opdrachten waren op dat moment al geannuleerd en de foutmelding was al
+    # gewist. Wat overbleef was een advertentie die volgens het dashboard net
+    # ververst was — teller op 1, geen foutmelding — terwijl er niets was
+    # gebeurd en er ook niets meer stond te gebeuren. Precies het beeld
+    # "foutmelding op het scherm, maar gemeld als gelukt".
+    laatste_delete = (
+        (await naast_de_lus(lambda: db.table("jobs")
+        .select("status,payload")
+        .eq("user_id", user_id)
+        .eq("item_id", item_id)
+        .eq("platform", platform)
+        .eq("action", "delete")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()))
+        .data
+        or []
+    )
+    vorige = laatste_delete[0] if laatste_delete else {}
+    # Alleen terugdraaien als die verwijdering NIET is gelukt. Was hij wél
+    # gelukt, dan is de advertentie echt van het platform gehaald en is de
+    # verversing echt gebeurd — die mag je niet terugdraaien.
+    rollback = ((vorige.get("payload") or {}).get("_refresh_rollback")
+                if vorige.get("status") != "done" else None)
+    if rollback:
+        from backend.services.relist import rollback_refresh
+        await naast_de_lus(lambda: rollback_refresh(rollback, user_id))
+
+    # Cancel any outstanding jobs from the failed relist so nothing fires twice.
+    # Only pending/claimed/error jobs — never a job that already completed ("done").
+    stale = (
+        (await naast_de_lus(lambda: db.table("jobs")
+        .select("id,status,result")
+        .eq("user_id", user_id)
+        .eq("item_id", item_id)
+        .eq("platform", platform)
+        .in_("action", ["delete", "create"])
+        .in_("status", ["pending", "claimed", "error"])
+        .execute()))
+        .data
+        or []
+    )
+    # MET REDEN, EN ZONDER DE OUDE FOUTMELDING TE WISSEN (08-09-2026).
+    #
+    # Hier stond een kale statuswijziging. Twee gevolgen, allebei gemeten: in het
+    # logboek stonden 77 afgebroken opdrachten met een leeg vakje "reden" — de
+    # verkoper zag "Cancelled" en niets erbij. En erger: een opdracht die op
+    # 'error' stond werd óók meegenomen, dus zodra iemand op "Retry" drukte was
+    # de uitleg waaróm het de vorige keer misging voorgoed weg. Precies de
+    # informatie die je nodig hebt als het een tweede keer misgaat.
+    for j in stale:
+        was_fout = j.get("status") == "error"
+        oude_reden = (j.get("result") or {}).get("error") if isinstance(j.get("result"), dict) else None
+        (await naast_de_lus(lambda j=j, was_fout=was_fout, oude_reden=oude_reden: db.table("jobs").update({
+            "status": "cancelled",
+            "done_at": datetime.now(timezone.utc).isoformat(),
+            "result": {
+                "cancelled": "Replaced by a new attempt you started from the dashboard.",
+                **({"eerdere_fout": oude_reden} if was_fout and oude_reden else {}),
+            },
+        }).eq("id", j["id"]).execute()))
+
+    # De advertentie staat nog gewoon live (een mislukte verwijdering haalt niets
+    # weg), dus "active" is zijn echte staat. De FOUTMELDING BLIJFT STAAN tot de
+    # nieuwe poging echt in de wachtrij staat: hem alvast wissen betekende dat
+    # een geweigerde herkansing een schoon scherm achterliet waarop niets meer
+    # te zien was van wat er misging.
+    (await naast_de_lus(lambda: db.table("listings").update({
+        "status": "active",
+    }).eq("item_id", item_id).eq("platform", platform).execute()))
+
+    from backend.services.relist import refresh_listing, RefreshError
+    from backend.services.crosslist import VertalingOnbeschikbaar
+    try:
+        result = await refresh_listing(item_id, platform, user_id, "relist")
+    except RefreshError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except VertalingOnbeschikbaar as e:
+        # 500, geen 503 — Cloudflare vervangt een 503 door zijn eigen
+        # storingspagina en dan leest de verkoper "de server was druk" in plaats
+        # van de echte reden. Zie crosslist_item in backend/api/items.py.
+        from backend.services.crosslist import NIETS_GEPLAATST_VERTALING
+        logger.warning("Vertaalstoring hield herplaatsing van %s tegen: %s", item_id, e)
+        raise HTTPException(status_code=500, detail=NIETS_GEPLAATST_VERTALING)
+
+    # Pas nu weg met de oude foutmelding: er staat een nieuwe poging klaar.
+    (await naast_de_lus(lambda: db.table("listings").update({
+        "error_message": None,
+    }).eq("item_id", item_id).eq("platform", platform).execute()))
+    return {"ok": True, **result}
+
+
+@router.post("/relist-cancel")
+def relist_cancel(body: dict, user_id: str = Depends(get_current_user)):
+    """
+    Cancel a relist that's still mid-flight and put the listing back where it was.
+
+    A relist is only safely reversible WHILE THE OLD LISTING IS STILL LIVE — i.e.
+    the paired "delete" job hasn't completed yet. In that window we cancel both the
+    (pending) delete and the (scheduled) recreate, roll back the cooldown/quota the
+    refresh optimistically spent, and flip the listing straight back to "active".
+    Nothing was ever removed from the platform, so this is a true no-op undo.
+
+    Once the delete HAS completed, the old listing is already gone from the
+    platform and there's nothing to restore — cancelling here would strand the
+    item off-platform forever (exactly the "my listing vanished" bug). So we
+    refuse and tell the UI to offer "Publish now" (reschedule-now) instead, which
+    brings the item back live immediately.
+    """
+    item_id = body.get("item_id")
+    platform = body.get("platform")
+    if not item_id or not platform:
+        raise HTTPException(status_code=400, detail="item_id and platform are required")
+
+    db = get_db()
+
+    # Most recent delete for this relist — its status tells us whether the old
+    # listing is still live (safe to undo) or already gone (can't undo).
+    del_rows = (
+        db.table("jobs")
+        .select("id,status,payload")
+        .eq("user_id", user_id)
+        .eq("item_id", item_id)
+        .eq("platform", platform)
+        .eq("action", "delete")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    delete_job = del_rows[0] if del_rows else None
+
+    if delete_job and delete_job["status"] == "done":
+        # Old listing already removed — a cancel can't bring it back. Steer the
+        # user to publish the new listing now instead of stranding the item.
+        raise HTTPException(
+            status_code=409,
+            detail="The old listing has already been removed, so this relist can't "
+                   "be cancelled without leaving your item offline. Use \"Publish now\" "
+                   "to bring it back live immediately.",
+        )
+
+    # Old listing is still live (delete pending/claimed/errored, or never ran).
+    # Cancel every outstanding job from this relist so nothing fires later.
+    outstanding = (
+        db.table("jobs")
+        .select("id,status,result")
+        .eq("user_id", user_id)
+        .eq("item_id", item_id)
+        .eq("platform", platform)
+        .in_("action", ["delete", "create"])
+        .in_("status", ["pending", "claimed", "error"])
+        .execute()
+        .data
+        or []
+    )
+    # Zelfde reden als bij relist_retry hierboven: een afgebroken opdracht zonder
+    # uitleg is in het logboek niet te onderscheiden van een storing, en een
+    # eerdere foutmelding mag niet verdwijnen omdat iemand op Cancel drukt.
+    for j in outstanding:
+        was_fout = j.get("status") == "error"
+        oude_reden = (j.get("result") or {}).get("error") if isinstance(j.get("result"), dict) else None
+        db.table("jobs").update({
+            "status": "cancelled",
+            "done_at": datetime.now(timezone.utc).isoformat(),
+            "result": {
+                "cancelled": "Cancelled by you from the dashboard.",
+                **({"eerdere_fout": oude_reden} if was_fout and oude_reden else {}),
+            },
+        }).eq("id", j["id"]).execute()
+
+    # Give back the cooldown + daily-quota slot the refresh spent up front, so a
+    # cancelled relist doesn't count against the user (same rollback the failed-job
+    # path uses).
+    rollback = ((delete_job or {}).get("payload") or {}).get("_refresh_rollback")
+    if rollback:
+        from backend.services.relist import rollback_refresh
+        rollback_refresh(rollback, user_id)
+
+    # The listing was flipped to "relisting" at enqueue time; nothing was ever
+    # removed, so "active" is its true state again. Clear any stale error banner.
+    db.table("listings").update({
+        "status": "active",
+        "error_message": None,
+    }).eq("item_id", item_id).eq("platform", platform).execute()
+
+    return {"ok": True, "cancelled": len(outstanding), "status": "active"}
+
+
+@router.post("/{job_id}/claim")
+def claim_job(job_id: str, user_id: str = Depends(get_current_user)):
+    db = get_db()
+    _record_extension_heartbeat(db, user_id)  # only the extension claims jobs
+    result = db.table("jobs").update({
+        "status": "claimed",
+        "claimed_at": datetime.now(timezone.utc).isoformat(),
+    }).eq("id", job_id).eq("user_id", user_id).eq("status", "pending").execute()
+    if not result.data:
+        raise HTTPException(status_code=409, detail="Job already claimed or not found")
+    return result.data[0]
+
+
+@router.post("/{job_id}/progress")
+def report_job_progress(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
+    """
+    Lightweight live-progress channel for long-running jobs (mainly scans). The
+    extension posts a small {stage, message, current, total} object at each phase;
+    the dashboard polls /status/{job_id} and renders it so the user can see exactly
+    what's happening and how far along it is. Stored in `result` under `_progress`.
+
+    ALLEEN OP EEN OPDRACHT DIE NOG LOOPT (18-09-2026, De Juiste Toon).
+
+    Hier stond een update zonder voorwaarde op de status, en die zette `result`
+    in zijn geheel op {"_progress": ...}. Een late ping wiste daarmee de fout van
+    een opdracht die allang klaar was. Gemeten bij hem: vijf mislukte plaatsingen
+    van 10:47 tot 11:46 kregen allemaal om 11:52:26 hetzelfde voortgangsbericht
+    en hielden daarna geen fouttekst meer over. Sinds 1 september overkwam dat 98
+    mislukte opdrachten, waarvan 57 op 2dehands.
+
+    Dat is duur, want elke rem leest die fouttekst: welke rubriek geld kost, of
+    een kanaal kansloos is, of de betaalpagina al eerder voorbijkwam. Zonder die
+    tekst weet de machine niets meer en probeert ze dezelfde rubriek opnieuw, en
+    op 2dehands is elke poging daar een bestelregel van EUR 9,00. Zijn tapijten
+    liepen er vijftien keer op vast.
+    """
+    db = get_db()
+    _record_extension_heartbeat(db, user_id)  # progress pings only come from the extension
+    db.table("jobs").update({
+        "result": {"_progress": {**body, "at": datetime.now(timezone.utc).isoformat()}},
+    }).eq("id", job_id).eq("user_id", user_id).in_("status", ["pending", "claimed"]).execute()
+    return {"ok": True}
+
+
+FB_EIGEN_ADVERTENTIES = "https://www.facebook.com/marketplace/you/selling"
+
+
+async def _rond_publicatie_af(db, job: dict, body: dict) -> None:
+    """Schrijf het resultaat van een geslaagde publicatie naar `listings`.
+
+    WELKE RIJ HOORT BIJ DEZE PUBLICATIE (31-08-2026).
+
+    Hier stond `.eq(item_id).eq(platform)` en dan meteen een update. Dat was
+    goed zolang één artikel hoogstens één advertentie per kanaal had — wat de
+    unieke index `listings_item_platform_unique` afdwong. Sinds dubbele rijen
+    samengevoegd kunnen worden (zie scripts/fix_listings_unique.sql) klopt die
+    aanname niet meer: één artikel draagt nu de acht Marktplaats-advertenties
+    van zijn acht voormalige kopieën.
+
+    De oude regel werkte ze dan ALLEMAAL bij met hetzelfde advertentienummer.
+    De database weigert dat sinds de indexwijziging (foutcode A1C211), maar het
+    was daarvóór net zo fout en alleen onzichtbaar: acht verschillende
+    advertenties kregen stilletjes hetzelfde nummer, en daarmee raakten we het
+    spoor van zeven ervan kwijt.
+
+    De juiste rij, in deze volgorde:
+      1. staat dit advertentienummer er al? Dan is dit een herhaalde of late
+         afronding van dezelfde publicatie — die rij bijwerken.
+      2. anders de rij die nog op een nummer wacht: door deze opdracht
+         aangemaakt en nog niet afgerond.
+      3. anders is dit een echt nieuwe advertentie en komt er een rij bij.
+    """
+    if body.get("platform_listing_id"):
+        rijen = (await naast_de_lus(lambda: db.table("listings")
+                                    .select("id,platform_listing_id,status")
+                                    .eq("item_id", job["item_id"])
+                                    .eq("platform", job["platform"]).execute())).data or []
+        doel = next((r for r in rijen
+                     if r.get("platform_listing_id") == body["platform_listing_id"]), None)
+        if doel is None:
+            doel = next((r for r in rijen if not r.get("platform_listing_id")), None)
+        if doel is None:
+            # DIT IS EEN HERPLAATSING: DE OUDE RIJ IS DE JUISTE (05-09-2026, Amanda).
+            #
+            # Bij herplaatsen blijft het oude advertentienummer op de rij staan
+            # terwijl de status op 'relisting' gaat. Geen van de twee regels
+            # hierboven vindt die rij, dus kwam er een tweede rij naast — en de
+            # oude bleef op 'relisting' hangen. De reddingsronde leest zo'n rij
+            # als "halverwege blijven steken" en zet er elke zes uur opnieuw een
+            # plaatsing voor klaar. Gemeten bij Amanda Haas: één hamsterknuffel
+            # stond met drie identieke advertenties tegelijk op Marktplaats.
+            #
+            # refresh_listing schrijft daarom nu in de opdracht welke rij deze
+            # plaatsing vervangt.
+            #
+            # WAAROM 'delisted' HIER OOK MEETELT (05-09-2026, gemeten op Daniels
+            # eigen account, artikel (1275)). De rij gaat bij het inplannen op
+            # 'relisting', maar zodra de extensie de oude advertentie heeft
+            # weggehaald zet _verwijderdoelen diezelfde rij op 'delisted'. Tegen
+            # de tijd dat de plaatsing binnenkomt staat er dus nooit meer
+            # 'relisting' — precies het geval waarin het mis ging. Alleen als de
+            # verwijdering mislukte bleef de rij op 'relisting' staan, en dat is
+            # het enige geval dat de vorige versie afving. 'active' blijft
+            # buiten schot: die rij hoort bij een advertentie die gewoon online
+            # staat, en die mogen we nooit overschrijven.
+            VERVANGBAAR = ("relisting", "delisted")
+            vervangt = ((job.get("payload") or {}).get("_vervangt_listing_id"))
+            if not vervangt:
+                # Opdrachten van vóór het merkteken (en alles wat al in de
+                # wachtrij stond) hebben het niet. De bijbehorende verwijdering
+                # weet het wél: die draagt het rij-id in _refresh_rollback.
+                vervangt = await _rij_van_de_gepaarde_verwijdering(db, job)
+            if vervangt:
+                doel = next((r for r in rijen
+                             if r["id"] == vervangt
+                             and r.get("status") in VERVANGBAAR), None)
+            if doel is None:
+                # Oudere opdrachten (nog zonder merkteken) en de reddingsronde:
+                # is er precies één rij die op zijn herplaatsing wacht, dan is
+                # dat hem. Bij twijfel (meer dan één) geen gok, dan komt er een
+                # rij bij zoals voorheen.
+                wachtend = [r for r in rijen if r.get("status") == "relisting"]
+                if len(wachtend) == 1:
+                    doel = wachtend[0]
+        if doel is not None:
+            (await naast_de_lus(lambda: db.table("listings").update({
+                "platform_listing_id": body["platform_listing_id"],
+                "platform_listing_url": body.get("platform_listing_url"),
+                "status": "active",
+                # This completion may arrive AFTER the job was marked failed
+                # (the user fixed the form by hand and published themselves —
+                # the extension's auto-detect then completes it late). Clear the
+                # stale error, otherwise the listing shows as live and broken at
+                # the same time.
+                "error_message": None,
+                "listed_at": datetime.now(timezone.utc).isoformat(),
+            }).eq("id", doel["id"]).execute()))
+        else:
+            (await naast_de_lus(lambda: db.table("listings").insert({
+                "item_id": job["item_id"],
+                "platform": job["platform"],
+                "platform_listing_id": body["platform_listing_id"],
+                "platform_listing_url": body.get("platform_listing_url"),
+                "status": "active",
+                "listed_at": datetime.now(timezone.utc).isoformat(),
+            }).execute()))
+        return
+
+    # Zonder advertentienummer: alleen de rij die op deze publicatie wachtte.
+    # Alle rijen van dit kanaal op 'error' zetten zou zeven lopende advertenties
+    # als kapot markeren omdat de achtste faalde.
+    wachtend = (await naast_de_lus(lambda: db.table("listings")
+                                   .select("id").eq("item_id", job["item_id"])
+                                   .eq("platform", job["platform"])
+                                   .is_("platform_listing_id", "null")
+                                   .execute())).data or []
+    if not wachtend:
+        return
+    # FACEBOOK GEEFT GEEN NUMMER TERUG (17-09-2026, Johan Kist). Na publiceren
+    # stuurt Facebook door naar "Jouw advertenties" en staat de nieuwe advertentie
+    # eerst in beoordeling, zonder eigen adres. Een geslaagde publicatie kwam hier
+    # dus ALTIJD zonder nummer binnen en werd rood. Omgekeerd meldde de extensie
+    # tot 1.0.338 ook "klaar" als Facebook na 15 seconden nog op het formulier
+    # stond, dus dat rood was evengoed nodig: niemand kon het verschil zien.
+    # Sinds 1.0.338 meldt de extensie alleen "klaar" als Facebook echt van het
+    # formulier wegging, en zegt ze erbij hoe ze dat zag (`bevestigd`).
+    if job["platform"] == "facebook" and body.get("bevestigd"):
+        (await naast_de_lus(lambda: db.table("listings").update({
+            "status": "active",
+            "error_message": None,
+            "platform_listing_url": body.get("platform_listing_url") or FB_EIGEN_ADVERTENTIES,
+            "listed_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("id", wachtend[0]["id"]).execute()))
+        return
+    melding = ("Facebook didn't confirm this listing, so we can't tell whether it went live. "
+               "Check Marketplace > Your listings: if it's there, click the Facebook icon of this "
+               "item and choose It is online. If it isn't, publish it again. Update the Omnivaleur "
+               "extension so this is checked for you."
+               if job["platform"] == "facebook" else
+               "Extension completed job but returned no platform_listing_id")
+    (await naast_de_lus(lambda: db.table("listings").update({
+        "status": "error",
+        "error_message": melding,
+    }).eq("id", wachtend[0]["id"]).execute()))
+
+
+# Statussen die een verwijderopdracht nooit mag overschrijven. Een bevestigde
+# verkoop en een al gestelde verkoopvraag zijn eindpunten, en een allang
+# afgemelde advertentie hoort niet terug te komen omdat een ÁNDERE advertentie
+# van hetzelfde artikel niet verwijderd kon worden.
+EINDSTATUSSEN = ("sold", "sold_unconfirmed", "delisted", "archived")
+
+# Hoe lang een gratis Marktplaats-advertentie blijft staan voor het platform hem
+# zelf weggooit. Is een verdwenen advertentie jónger dan dit, dan kan hij niet
+# vanzelf verlopen zijn en heeft iemand hem weggehaald — meestal de verkoper,
+# omdat het artikel verkocht is.
+ZELF_VERLOPEN_NA_DAGEN = 28
+
+
+async def _rij_van_de_gepaarde_verwijdering(db, job: dict):
+    """Welke advertentierij haalde de verwijdering weg die bij deze plaatsing hoort?
+
+    Een herplaatsing is twee opdrachten: eerst weghalen, dan plaatsen. De
+    verwijdering draagt het rij-id mee in `_refresh_rollback`; de plaatsing
+    kreeg dat pas op 05-09-2026. Alles wat op dat moment al in de wachtrij
+    stond mist het merkteken dus, en zonder deze terugval zou daar nog één
+    dubbele advertentie uit komen. Een handmatige verwijdering heeft geen
+    `_refresh_rollback` en levert hier dus niets op: alleen een herplaatsing
+    kan een rij overnemen.
+    """
+    try:
+        rijen = (await naast_de_lus(lambda: db.table("jobs")
+                 .select("payload,created_at")
+                 .eq("user_id", job["user_id"]).eq("item_id", job["item_id"])
+                 .eq("platform", job["platform"]).eq("action", "delete")
+                 .lte("created_at", job["created_at"])
+                 .order("created_at", desc=True).limit(1).execute())).data or []
+    except Exception:  # noqa: BLE001
+        return None
+    if not rijen:
+        return None
+    verwijdering = rijen[0]
+    # Een verwijdering van weken geleden hoort niet bij deze plaatsing.
+    begin, eind = _parse_ts(verwijdering.get("created_at")), _parse_ts(job.get("created_at"))
+    if begin and eind and (eind - begin) > timedelta(days=2):
+        return None
+    return ((verwijdering.get("payload") or {}).get("_refresh_rollback") or {}).get("listing_id")
+
+
+def _verwijderdoelen(db, job: dict) -> list[dict]:
+    """De advertentierij(en) die bij DEZE verwijderopdracht horen.
+
+    WAAROM DIT ER IS (01-09-2026, item 1288 en 1314). Een verwijdering werkte
+    élke advertentierij van dat artikel op dat kanaal bij. Eén artikel heeft daar
+    inmiddels tot zes rijen van: elke herplaatsing zet er een nieuwe bij. Gevolg:
+    een mislukte verwijdering zette OOK de rij van juni weer op 'actief', met de
+    datum van juni erbij. Die was daarmee meteen weer een kandidaat voor het
+    automatisch herplaatsen — dus werd hetzelfde artikel elke ronde opnieuw
+    weggehaald en geplaatst, dag na dag. Gemeten bij (1314): zes herplaatsingen
+    in vier dagen, terwijl de instelling op 30 dagen staat.
+
+    De verwijderopdracht weet precies welke rij hij te pakken had: hij draagt het
+    rij-id van de herplaatsing mee, en anders het advertentienummer. Alleen als
+    geen van beide bekend is vallen we terug op "alle rijen van dit kanaal", en
+    dan nog zonder de rijen die al een eindstatus hebben.
+    """
+    payload = job.get("payload") or {}
+    rij_id = (payload.get("_refresh_rollback") or {}).get("listing_id")
+    nummer = payload.get("platform_listing_id")
+    basis = (lambda: db.table("listings").select("id,status,listed_at,platform_listing_id")
+             .eq("item_id", job["item_id"]).eq("platform", job["platform"]))
+    if rij_id:
+        rijen = execute_with_retry(basis().eq("id", rij_id)).data or []
+        if rijen:
+            return rijen
+    if nummer:
+        rijen = execute_with_retry(basis().eq("platform_listing_id", nummer)).data or []
+        if rijen:
+            return rijen
+    alle = execute_with_retry(basis()).data or []
+    return [r for r in alle if r.get("status") not in EINDSTATUSSEN]
+
+
+async def _al_weg_voor_wij_er_waren(db, job: dict) -> bool:
+    """Advertentie was al weg toen we hem kwamen weghalen: verkocht, of verlopen?
+
+    WAAROM DIT ER IS (01-09-2026, Daniel over (1288) en (1314)). Bij het
+    herplaatsen haalt de extensie eerst de oude advertentie weg. Stond die er al
+    niet meer, dan gold dat als "doel bereikt" en plaatste stap twee vrolijk een
+    nieuwe. Precies wat er gebeurt bij een VERKOCHT artikel: de verkoper haalt de
+    advertentie weg, wij zien hem niet meer, en zetten hem opnieuw te koop. Elke
+    ronde opnieuw, want de verkoop wordt zo ook nooit opgemerkt.
+
+    Het onderscheid zit in de leeftijd. Marktplaats gooit een gratis advertentie
+    pas na dertig dagen zelf weg. Is de advertentie jonger dan dat en tóch weg,
+    dan kán het geen verlopen zijn en heeft iemand hem weggehaald. Dat is geen
+    bewijs van verkoop — de verkoper kan hem ook zelf hebben verwijderd — dus we
+    boeken niets, we vrágen het: de advertentie krijgt de status 'mogelijk
+    verkocht' die in het dashboard al een ja/nee-knop heeft, en de nieuwe
+    advertentie wordt niet geplaatst.
+
+    Is de advertentie wél oud genoeg om verlopen te zijn, dan verandert er niets
+    aan het oude gedrag: herplaatsen is dan juist de bedoeling.
+    """
+    if job["platform"] not in ("marktplaats", "2dehands"):
+        return False
+    # DE VERKOPER VROEG ZELF OM DEZE VERVANGING (17-09-2026, De Juiste Toon).
+    # Hij haalt oude zoekertjes met de hand weg op 2dehands (63 gemeten, allemaal
+    # HTTP 410) en zet daarna de bewerkte versie erop via "vervangen". Bij ons
+    # stonden die rijen nog op actief, met de importdatum als plaatsingsdatum, dus
+    # "te jong om te verlopen": de nieuwe plaatsing werd geannuleerd en hij kreeg
+    # "is dit verkocht?". Wie daar per ongeluk ja zegt, haalt het artikel van elk
+    # kanaal af. Deze vraag is er voor de automatische herplaatsronde, die niet
+    # weet of er iets verkocht is. Een vervanging die de verkoper zelf aanklikt
+    # (refresh_listing zonder eigen_quotum) weet dat wel.
+    if (job.get("payload") or {}).get("_handmatige_verversing") is True:
+        return False
+    doelen = await naast_de_lus(lambda: _verwijderdoelen(db, job))
+    jong = []
+    for rij in doelen:
+        if rij.get("status") in ("sold", "sold_unconfirmed"):
+            continue
+        geplaatst = rij.get("listed_at")
+        if not geplaatst:
+            return False        # zonder datum valt er niets te concluderen
+        try:
+            leeftijd = datetime.now(timezone.utc) - datetime.fromisoformat(geplaatst)
+        except (TypeError, ValueError):
+            return False
+        if leeftijd >= timedelta(days=ZELF_VERLOPEN_NA_DAGEN):
+            return False        # oud genoeg om vanzelf verlopen te zijn
+        jong.append(rij)
+    if not jong:
+        return False
+
+    # Staat dit artikel al ELDERS bevestigd op 'verkocht' (Vinted-order,
+    # Shopify/eBay-bestelling), dan is de verkoop geen vraag meer. De verdwenen
+    # advertentie op dit kanaal gaat dan rechtstreeks naar het archief in plaats
+    # van de verkoper opnieuw "is dit verkocht?" te vragen. Dit is precies het
+    # geval dat de reconciliatie-ronde oplevert: verkocht op A, nog een oude
+    # 'active'-rij op B.
+    verkochte_rijen = ((await naast_de_lus(lambda: db.table("listings")
+        .select("platform").eq("item_id", job["item_id"]).eq("status", "sold")
+        .execute())).data or [])
+    al_verkocht_elders = [r for r in verkochte_rijen if r.get("platform") != job["platform"]]
+    # En wie de vraag "is dit verkocht?" heeft uitgezet krijgt hem ook hier niet:
+    # dan is een verdwenen advertentie gewoon een verdwenen advertentie. Zie
+    # VERKOOPVRAAG in backend/services/instellingen.py.
+    from backend.services.instellingen import verkoopvraag_aan
+    eigenaar = job.get("user_id")
+    geen_vraag = bool(eigenaar) and not await naast_de_lus(
+        lambda: verkoopvraag_aan(eigenaar))
+    if al_verkocht_elders or geen_vraag:
+        for rij in jong:
+            (await naast_de_lus(lambda r=rij: db.table("listings").update({
+                "status": "delisted",
+                "error_message": None,
+                "last_checked": datetime.now(timezone.utc).isoformat(),
+            }).eq("id", r["id"]).execute()))
+        logger.info("[sold] item %s op %s: advertentie was al weg — %d rij(en) "
+                    "gearchiveerd, geen vraag gesteld (%s)",
+                    job["item_id"], job["platform"], len(jong),
+                    f"elders al verkocht op {al_verkocht_elders[0]['platform']}"
+                    if al_verkocht_elders else "de verkoopvraag staat uit")
+    else:
+        from backend.api.listings import VERDENKING_REDENEN
+        reden = VERDENKING_REDENEN["verdwenen_te_jong"]
+        for rij in jong:
+            (await naast_de_lus(lambda r=rij: db.table("listings").update({
+                "status": "sold_unconfirmed",
+                "error_message": reden,
+                "last_checked": datetime.now(timezone.utc).isoformat(),
+            }).eq("id", r["id"]).execute()))
+
+    # De nieuwe advertentie mag niet geplaatst worden zolang niet vaststaat dat
+    # het artikel nog te koop is. Zonder dit blijft de lus gewoon draaien: de
+    # herplaatsing staat immers al klaar in de wachtrij.
+    wachtend = ((await naast_de_lus(lambda: db.table("jobs").select("id")
+                .eq("item_id", job["item_id"]).eq("platform", job["platform"])
+                .eq("action", "create").in_("status", ["pending", "claimed"])
+                .gte("created_at", job["created_at"]).execute())).data or [])
+    for baan in wachtend:
+        (await naast_de_lus(lambda b=baan: db.table("jobs").update({
+            "status": "cancelled",
+            "done_at": datetime.now(timezone.utc).isoformat(),
+            "result": {"cancelled": (
+                "De oude advertentie was al van het platform af voordat wij hem "
+                "weghaalden, en daarvoor was hij te jong om vanzelf te verlopen. "
+                "Bevestig eerst in het dashboard of dit artikel verkocht is.")},
+        }).eq("id", b["id"]).execute()))
+
+    if wachtend:
+        logger.info("[sold] item %s op %s: %d herplaatsing(en) geannuleerd "
+                    "(advertentie was al weg en te jong om te verlopen)",
+                    job["item_id"], job["platform"], len(wachtend))
+    return True
+
+
+@router.post("/{job_id}/complete")
+async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
+    db = get_db()
+    _record_extension_heartbeat(db, user_id)  # only the extension completes jobs
+    job = eerste_rij(await naast_de_lus(lambda: db.table("jobs").select("*").eq("id", job_id).eq("user_id", user_id).limit(1).execute()))
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # The user explicitly cancelled this run — honour that and don't silently
+    # revive the listing to "active" if a late completion trickles in afterwards.
+    if job["status"] == "cancelled":
+        return {"ok": True, "status": "cancelled"}
+
+    # EERST OPSLAAN, DAN PAS "KLAAR" ZEGGEN.
+    #
+    # Een scan werd hier op 'done' gezet vóórdat de gevonden advertenties waren
+    # weggeschreven. Ging dat wegschrijven daarna stuk, dan zag de verkoper een
+    # geslaagde scan terwijl er niets bewaard was — en de volgende scan sloeg
+    # diezelfde advertenties over, want de opdracht stond immers op klaar.
+    # Gemeten bij Egbert Brouwer: drie scans op rij, elk 2.000 nieuwe
+    # advertenties, nul opgeslagen, scherm meldde "niets nieuws".
+    if job["action"] == "scan":
+        import asyncio
+        listings = body.get("listings", [])
+        try:
+            await asyncio.to_thread(_store_scan_results, db, job, listings)
+        except Exception as e:  # noqa: BLE001
+            logger.exception("Scan store failed for job %s (%d listings)", job_id, len(listings))
+            (await naast_de_lus(lambda: db.table("jobs").update({
+                "status": "error",
+                "result": {"error": f"Saving the scan results failed: {e}",
+                           "listings": listings},
+                "done_at": datetime.now(timezone.utc).isoformat(),
+            }).eq("id", job_id).execute()))
+            raise HTTPException(
+                status_code=500,
+                detail="The scan was fetched but saving it failed. Nothing was lost — run the scan again.")
+
+    # DE LAATSTE VOORTGANGSREGEL BEWAREN.
+    #
+    # Hier stond alleen `body`, en dat wist `_progress` uit. Gevolg: zodra een
+    # opdracht klaar was, was ook het spoor weg — wélke stap hoe lang duurde en
+    # hoe hard de klok van dat tabblad liep. Op 15-09-2026 kostte dat een hele
+    # meetronde: de plaatsing was klaar voor we hem konden uitlezen en het
+    # antwoord op "loopt hij door?" was daarmee verdwenen. Het is één regel om
+    # te bewaren en het is de enige plek waar dit spoor bestaat.
+    # EEN ADVERTENTIE DIE AL BIJ EEN ANDER ARTIKEL HOORT IS NIET DEZE (09-10-2026).
+    #
+    # De extensie zoekt bij twijfel op titel in de eigen kast ("al geplaatst",
+    # "tabblad weg maar hij staat er"). Bij twee stukken met dezelfde titel vindt
+    # ze dan de advertentie van het andere stuk, en daarmee hingen bij Janneke
+    # twee jassen aan één Vinted-advertentie terwijl de tweede nooit geplaatst
+    # was. Liever een eerlijke fout dan een koppeling die later de verkeerde
+    # advertentie laat weghalen.
+    if job["action"] == "create" and body.get("platform_listing_id"):
+        ander = await naast_de_lus(lambda: _advertentie_van_ander_artikel(db, job, body))
+        if ander:
+            kanaal = {"vinted": "Vinted", "marktplaats": "Marktplaats", "2dehands": "2dehands",
+                      "facebook": "Facebook"}.get(job["platform"], job["platform"])
+            logger.warning("job %s: %s-advertentie %s hoort al bij \"%s\"; niet gekoppeld",
+                           job_id, job["platform"], body["platform_listing_id"], ander)
+            await naast_de_lus(lambda: fail_job(job_id, {"error": (
+                f"Not placed on {kanaal}: the advert we found there belongs to \"{ander}\", "
+                f"another item with the same title, so it was not linked to this one. "
+                f"Publish this item again to give it its own advert.")}, user_id=user_id))
+            return {"ok": True, "status": "advert_belongs_to_other_item"}
+
+    # "STAAT AL ONLINE" BIJ TITELGENOTEN IS GEEN BEWIJS (16-10-2026, Janneke).
+    #
+    # De controle vooraf in de extensie koppelt een advertentie met precies
+    # dezelfde titel als "door de verkoper zelf geplaatst". Heeft de verkoper
+    # meer stukken met die titel, dan kan het net zo goed de advertentie van een
+    # ander stuk zijn waarvan de plaatsing "mislukte" maar die toch online kwam:
+    # zo hing de verkochte groene jas aan de blauwe fleece, en ging bij de
+    # verkoop de fleece van Marktplaats af. Een advertentie die nog bij niemand
+    # hoort vangt _advertentie_van_ander_artikel niet. Sinds 1.0.394 doet de
+    # extensie dit zelf niet meer bij titelgenoten; dit vangt de oudere kopieën.
+    # Een dubbele advertentie is te herstellen, een verkeerde koppeling haalt
+    # later het verkeerde stuk weg.
+    if (job["action"] == "create" and job["platform"] == "vinted"
+            and body.get("note") == "already_published_manually"
+            and await naast_de_lus(lambda: _heeft_titelgenoot(db, job))):
+        logger.warning("job %s: Vinted-advertentie %s niet gekoppeld, artikel heeft titelgenoten",
+                       job_id, body.get("platform_listing_id"))
+        await naast_de_lus(lambda: fail_job(job_id, {"error": (
+            "Not placed on Vinted: an advert with exactly this title is already on Vinted, "
+            "but you have more items with this title, so we can't tell whose advert it is "
+            "and did not link it. If it is this item's advert, mark it as listed with the "
+            "Vinted icon in the dashboard; otherwise publish again.")}, user_id=user_id))
+        return {"ok": True, "status": "title_twin_not_linked"}
+
+    oud_progress = (job.get("result") or {}).get("_progress") if isinstance(job.get("result"), dict) else None
+    nieuw_result = {**body} if isinstance(body, dict) else {"result": body}
+    if oud_progress and "_progress" not in nieuw_result:
+        nieuw_result["_progress"] = oud_progress
+    (await naast_de_lus(lambda: db.table("jobs").update({
+        "status": "done",
+        "result": nieuw_result,
+        "done_at": datetime.now(timezone.utc).isoformat(),
+    }).eq("id", job_id).execute()))
+
+    if job["action"] == "create":
+        await _rond_publicatie_af(db, job, body)
+        await naast_de_lus(lambda: _verzending_alsnog_bijwerken(db, job, body))
+
+    elif job["action"] == "delete":  # noqa: SIM114
+        # De extensie kan tijdens het verwijderen ontdekken dat de advertentie op
+        # DIT platform verkocht is (Vinted: is_closed; MP/2dehands: een
+        # "Verkocht"-label op de rij). Dan is verwijderen precies het verkeerde:
+        # we boeken de verkoop, waardoor het item uit "live" verdwijnt en juist de
+        # ándere platforms worden opgeruimd.
+        if body.get("sold_on_platform"):
+            from backend.services.crosslist import handle_item_sold
+            logger.info("[sold] delete job %s reported a sale on %s — booking it instead of deleting",
+                        job_id, job["platform"])
+            try:
+                # Bewijs: de extensie las op de advertentie zelf dat hij daar
+                # verkocht is (Vinted is_closed, of het "Verkocht"-label op het
+                # Marktplaats-overzicht). Dat zegt het kanaal, niet wij.
+                await handle_item_sold(job["item_id"], job["platform"], body.get("sold_price"),
+                                       bewijs=BEWIJS_KANAAL_ZEGT_VERKOCHT)
+            except Exception as e:  # noqa: BLE001
+                logger.warning("[sold] booking sale from delete job %s failed: %s", job_id, e)
+            return {"ok": True, "status": "sold_on_platform"}
+
+        # De advertentie stond er al niet meer toen de extensie hem kwam
+        # weghalen. Was hij te jong om vanzelf verlopen te zijn, dan heeft iemand
+        # hem weggehaald en is "verkocht?" de juiste vraag — geen herplaatsing.
+        if body.get("note") == "already_absent" and await _al_weg_voor_wij_er_waren(db, job):
+            return {"ok": True, "status": "possibly_sold"}
+
+        # Alleen de advertentie die deze opdracht te pakken had. Zie
+        # _verwijderdoelen: een artikel heeft er inmiddels meerdere.
+        for rij in await naast_de_lus(lambda: _verwijderdoelen(db, job)):
+            if rij.get("status") in ("sold", "sold_unconfirmed"):
+                continue        # een verkoop is een eindpunt, geen tussenstand
+            (await naast_de_lus(lambda r=rij: db.table("listings")
+                                .update({"status": "delisted"}).eq("id", r["id"]).execute()))
+
+        # If this delete is the first half of a relist, the extension may have
+        # snapshotted the full live listing before removing it (imported items
+        # otherwise carry almost no data). Merge that snapshot into the paired,
+        # still-pending recreate ("create") job so the new listing is a faithful
+        # copy instead of just title+price. Only fill fields that are actually
+        # present in the snapshot and missing/empty in the current payload.
+        captured = body.get("captured_listing") or {}
+        if captured:
+            paired = (
+                (await naast_de_lus(lambda: db.table("jobs")
+                .select("id,payload")
+                .eq("user_id", user_id)
+                .eq("item_id", job["item_id"])
+                .eq("platform", job["platform"])
+                .eq("action", "create")
+                .eq("status", "pending")
+                .gte("created_at", job["created_at"])
+                .order("created_at")
+                .limit(1)
+                .execute()))
+                .data
+            )
+            if paired:
+                payload = dict(paired[0].get("payload") or {})
+                for key in ("description", "brand", "size", "condition", "color", "material", "category", "gender"):
+                    val = captured.get(key)
+                    if val and not payload.get(key):
+                        payload[key] = val
+                # DE ECHTE CATEGORIE VAN DE ADVERTENTIE OVERSCHRIJFT WEL.
+                #
+                # Anders dan de velden hierboven is dit geen aanvulling maar een
+                # correctie: de categorie in de opdracht is geraden uit de titel,
+                # deze is letterlijk van de advertentiepagina van Marktplaats
+                # gelezen vlak voor we hem weghaalden. Amanda, 30-08-2026: na een
+                # verversing kwam alles in de verkeerde categorie terug, en op
+                # Marktplaats is dat achteraf niet te wijzigen.
+                cap_cat = captured.get("mp_category") or {}
+                if cap_cat.get("l1") and cap_cat.get("l2"):
+                    payload["mp_category"] = cap_cat
+                # Photos: prefer the fuller captured set (imports often keep only 1).
+                cap_photos = captured.get("photo_urls") or []
+                if len(cap_photos) > len(payload.get("photo_urls") or []):
+                    payload["photo_urls"] = cap_photos
+                # Price: the captured value is the real live Vinted price. The
+                # dashboard's jittered price can be wrong for imported items, so
+                # trust the captured one when present.
+                cap_price = captured.get("price")
+                if cap_price is not None:
+                    try:
+                        payload["price"] = float(cap_price)
+                    except (TypeError, ValueError):
+                        pass
+                (await naast_de_lus(lambda: db.table("jobs").update({"payload": payload}).eq("id", paired[0]["id"]).execute()))
+
+            # HET ITEM ZELF OOK BIJWERKEN.
+            #
+            # Een geïmporteerde advertentie kwam met één foto binnen: de zoeklijst
+            # van Marktplaats geeft alleen het omslagplaatje mee. Bij het
+            # verwijderen hebben we de advertentiepagina gezien en dáár staan ze
+            # allemaal. Zetten we die alleen in de plaatsingsopdracht, dan is het
+            # item volgende keer weer arm — en publiceren naar Vinted of eBay
+            # blijft dan ook met één foto gebeuren.
+            #
+            # Alleen als het item er zelf hooguit één had. Een verkoper die zijn
+            # foto's zelf heeft gekozen wordt hier nooit overruled.
+            #
+            # Hetzelfde geldt voor merk, maat, kleur en staat: die staan wél op de
+            # advertentie maar niet in de zoeklijst waaruit geïmporteerd wordt.
+            # Zolang ze leeg zijn weigert het dashboard te publiceren naar
+            # Marktplaats en 2dehands ("Vul merk en maat aan") — precies de
+            # melding die bij elke geïmporteerde advertentie stond.
+            cap_photos = captured.get("photo_urls") or []
+            try:
+                huidig = (eerste_rij(await naast_de_lus(lambda: db.table("items")
+                          .select("photo_urls,brand,size,color,condition")
+                          .eq("id", job["item_id"]).limit(1).execute())) or {})
+                patch = {}
+                if len(cap_photos) > 1 and len(huidig.get("photo_urls") or []) <= 1:
+                    patch["photo_urls"] = cap_photos
+                for veld in ("brand", "size", "color", "condition"):
+                    waarde = (captured.get(veld) or "")
+                    if isinstance(waarde, str):
+                        waarde = waarde.strip()
+                    if waarde and not str(huidig.get(veld) or "").strip():
+                        patch[veld] = waarde
+                if patch:
+                    (await naast_de_lus(lambda: db.table("items")
+                     .update(patch).eq("id", job["item_id"]).execute()))
+                    logger.info("[relist] item %s aangevuld uit de live advertentie: %s",
+                                job["item_id"], ", ".join(sorted(patch)))
+            except Exception as e:  # noqa: BLE001 — nooit de afronding laten vallen
+                logger.warning("[relist] kon gegevens niet terugschrijven naar item %s: %s",
+                               job["item_id"], e)
+
+    elif job["action"] == "content_refresh":
+        # Listing stays active — this is an in-place edit, not a new listing.
+        pass
+
+    elif job["action"] == "extend":
+        # 2dehands verlengen. Er is GEEN nieuwe advertentie en er is niets
+        # weggehaald, dus de status van de advertentierij blijft met rust.
+        #
+        # ALLEEN met bewijs schuift listed_at mee. De extensie stuurt de oude en
+        # de nieuwe vervaldatum mee; die moet echt ~4 weken verder liggen
+        # (`verlengd: true`). Zonder dat bewijs veranderen we niks — een
+        # "klaar"-melding zonder opgeschoven datum is geen verlenging (zie
+        # docs/kennisbank.md, "succes-nooit-uit-uitsluitingslijst"). listed_at
+        # blijft dan staan, zodat de volgende ronde het opnieuw probeert.
+        if body.get("verlengd") is True and body.get("new_close"):
+            rid = (job.get("payload") or {}).get("_listing_row_id")
+
+            def _schuif():
+                q = db.table("listings").update({
+                    "listed_at": datetime.now(timezone.utc).isoformat(),
+                    "error_message": None,
+                })
+                if rid:
+                    q = q.eq("id", rid)
+                else:
+                    q = (q.eq("item_id", job["item_id"]).eq("platform", "2dehands")
+                          .eq("status", "active"))
+                return q.execute()
+
+            (await naast_de_lus(_schuif))
+            logger.info("[extend] 2dehands zoekertje %s verlengd tot %s — listed_at bijgezet",
+                        job["item_id"], body.get("new_close"))
+        elif body.get("note") == "not_in_extend_window" and body.get("close"):
+            # Nog niet aan de beurt, maar nu weten we het echte einde: listed_at
+            # volgt de looptijd, zodat het venster op de goede dag opengaat.
+            from backend.services.crosslist import lijn_looptijd_uit
+            rid = (job.get("payload") or {}).get("_listing_row_id")
+            await naast_de_lus(lambda: lijn_looptijd_uit(rid, body.get("close")))
+        else:
+            logger.warning("[extend] job %s meldde klaar zonder bewijs dat de "
+                           "vervaldatum opschoof (%s) — listed_at ongemoeid",
+                           job_id, body.get("note"))
+        # De lijst "Loopt af" van 2dehands zelf (extensie 1.0.383+).
+        if isinstance(body.get("aflopend"), list):
+            from backend.services.crosslist import verleng_aflopende_2dehands
+            try:
+                await naast_de_lus(lambda: verleng_aflopende_2dehands(
+                    job.get("user_id"), body["aflopend"], job.get("item_id")))
+            except Exception as e:  # noqa: BLE001 — de verlenging zelf is al geboekt
+                logger.warning("[extend] aflopende zoekertjes van job %s niet ingepland: %s", job_id, e)
+
+    elif job["action"] == "scan":
+        # De kandidaten zijn hierboven al opgeslagen (vóór 'done'). Wat hier
+        # overblijft is de Vinted-nabewerking; die mag de scan niet laten
+        # mislukken als hij zelf hapert.
+        import asyncio
+        listings = body.get("listings", [])
+        if job["platform"] == "vinted":
+            await asyncio.to_thread(_sync_vinted_hidden, db, job, listings)
+            await _reconcile_vinted_sales(db, job, listings, body.get("scan_meta") or {})
+
+    return {"ok": True}
+
+
+def _sync_vinted_hidden(db, job, scraped: list[dict]):
+    """
+    Mirror Vinted's `is_hidden` onto our listings.
+
+    A hidden listing still exists and is still yours, but nobody can see or buy
+    it — so it must not sit in the dashboard next to what's genuinely for sale
+    (and it must not be counted as stale stock, which measures how long
+    something has been ON SALE without selling).
+
+    Unlike the sale reconcile this is safe on a PARTIAL snapshot: it only ever
+    changes listings whose id we actually saw, so a truncated scan simply
+    updates fewer rows instead of drawing a wrong conclusion from absence.
+    Hidden is fully reversible — unhide on Vinted and the next scan flips it
+    straight back to active.
+    """
+    if not scraped:
+        return
+
+    hidden_ids, visible_ids = set(), set()
+    for r in scraped:
+        pid = r.get("platform_listing_id")
+        if pid is None or r.get("is_closed"):
+            continue
+        (hidden_ids if r.get("is_hidden") else visible_ids).add(str(pid))
+    if not hidden_ids and not visible_ids:
+        return
+
+    item_ids = [it["id"] for it in fetch_all(
+        lambda: db.table("items").select("id").eq("user_id", job["user_id"]))]
+    if not item_ids:
+        return
+
+    rows = fetch_all_in(lambda: db.table("listings")
+                        .select("id,platform_listing_id,status")
+                        .eq("platform", "vinted")
+                        .in_("status", ["active", "relisting", "hidden"]),
+                        "item_id", item_ids)
+
+    to_hide, to_show = [], []
+    for l in rows:
+        pid = l.get("platform_listing_id")
+        if pid is None:
+            continue
+        pid = str(pid)
+        if pid in hidden_ids and l["status"] != "hidden":
+            to_hide.append(l["id"])
+        # Only un-hide on positive evidence that it's visible again.
+        elif pid in visible_ids and l["status"] == "hidden":
+            to_show.append(l["id"])
+
+    for ids, new_status in ((to_hide, "hidden"), (to_show, "active")):
+        if not ids:
+            continue
+        try:
+            update_in(lambda: db.table("listings"), "id", ids, {"status": new_status})
+        except Exception as e:
+            logger.warning(f"Vinted hidden sync ({new_status}) failed: {e}")
+    if to_hide or to_show:
+        logger.info(
+            "Vinted hidden sync for user %s: %d hidden, %d back to active",
+            job["user_id"], len(to_hide), len(to_show),
+        )
+
+
+# De rem op "weg uit de kast is verkocht". Verdwijnt er in één ronde meer dan dit
+# aandeel van de kast, dan gelooft de code de momentopname niet meer en vraagt ze
+# het aan de verkoper in plaats van overal af te melden. De ondergrens is er voor
+# kleine kasten, waar een tiende al bij twee advertenties bereikt is.
+VERDWIJN_AANDEEL = 0.10
+VERDWIJN_ONDERGRENS = 10
+
+# EEN VERSE ADVERTENTIE IS NOOIT "WEG" (09-10-2026, Janneke 31d28378). Haar
+# "Winterjas Noppies maat 98" kreeg "staat niet meer in je Vinted-kast" terwijl
+# hij gewoon online stond, "online for 0 dagen". Een scan leest de kast en meldt
+# pas minuten later; wat in die tussentijd geplaatst werd zat niet in de
+# momentopname. En een nieuwe Vinted-advertentie staat soms eerst even in
+# controle voor hij in de kast verschijnt. Daarom telt afwezigheid pas na een
+# dag. Een verkochte advertentie blijft op Vinted gewoon in de kast staan
+# (gesloten), dus een echte verkoop wordt hier niet door gemist.
+VERDWIJN_JONGER_DAN = timedelta(hours=24)
+
+
+def _te_jong_om_weg_te_zijn(listing: dict, nu: datetime) -> bool:
+    start = listing.get("listed_at") or listing.get("created_at")
+    if not start:
+        return False
+    try:
+        t = datetime.fromisoformat(str(start).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=timezone.utc)
+    return nu - t < VERDWIJN_JONGER_DAN
+
+
+async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict | None = None):
+    """
+    Vinted has no webhook and (deliberately, after a past incident with a stale
+    session) no server-side polling — so a Vinted sale is otherwise invisible
+    until the user notices it themselves. A COMPLETE wardrobe scan lets us spot
+    one: a listing Vinted marks `is_closed` has sold or ended, and one that has
+    vanished from the wardrobe entirely was deleted.
+
+    Two hard safety rules, both learned the hard way:
+
+    1. Only ever act on a COMPLETE snapshot. The scan used to read just the
+       newest 96 listings (Vinted caps per_page at 96, and the pager mistook
+       that short page for the last one). Every older listing therefore looked
+       "missing" and was marked sold — and handle_item_sold then delisted it
+       from every other platform. Absence is only meaningful if we truly saw
+       everything, so an incomplete scan reconciles nothing.
+
+    2. Absence is the weaker signal; `is_closed` is the real one. Sold listings
+       stay in the wardrobe, so the closed flag is what actually tells us.
+       Hidden listings are NOT sold — the seller just took them out of view —
+       so they're deliberately left alone.
+    """
+    if not scraped:
+        return
+
+    meta = scan_meta or {}
+    # No meta at all means an old extension build, whose snapshot we now know
+    # was truncated. Refuse rather than repeat the damage.
+    if not meta.get("complete"):
+        logger.warning(
+            "Vinted reconcile skipped for user %s — snapshot not complete (%s; %s of %s fetched). "
+            "Update the extension so sold-detection can run again.",
+            job["user_id"],
+            meta.get("truncated_reason") or "no scan_meta (old extension build)",
+            meta.get("fetched"), meta.get("total_entries"),
+        )
+        return
+
+    # Everything Vinted still knows about, and which of those are closed.
+    seen_ids: set[str] = set()
+    closed_ids: set[str] = set()
+    # Een advertentie zonder opgeslagen Vinted-nummer was tot nu toe onzichtbaar
+    # voor deze controle: geen nummer = geen match = verkoop gemist, en het item
+    # bleef bij "live" staan (en werd later alsnog "verwijderd" op Vinted).
+    # Daarom twee vervangende sleutels, allebei alleen geldig als ze binnen de
+    # garderobe naar precies één advertentie wijzen:
+    #   1. de titel, 1-op-1 vergeleken na normalisatie (accenten, leestekens,
+    #      hoofdletters en een eventuele "(1337)"-prefix doen niet mee);
+    #   2. dat nummer tussen haakjes, als de verkoper dat gebruikt.
+    # Dubbele titels of dubbele nummers worden bewust weggegooid: liever geen
+    # match dan het verkeerde item als verkocht boeken.
+    closed_id_by_sku: dict[str, str | None] = {}
+    closed_id_by_title: dict[str, str | None] = {}
+
+    # Dezelfde sleutels als waarmee de scan advertenties aan items koppelt — één
+    # definitie, zodat "verkocht herkennen" en "advertentie koppelen" nooit uit
+    # elkaar lopen.
+    _sku_of = _scan_sku
+    _norm_title = _scan_norm_title
+
+    def _register(index: dict, key: str, pid: str) -> None:
+        if not key:
+            return
+        # None = dubbel gezien, dus onbruikbaar als sleutel.
+        index[key] = pid if key not in index else (pid if index[key] == pid else None)
+
+    for r in scraped:
+        pid = r.get("platform_listing_id")
+        if pid is None:
+            continue
+        pid = str(pid)
+        seen_ids.add(pid)
+        if r.get("is_closed"):
+            closed_ids.add(pid)
+            _register(closed_id_by_title, _norm_title(r.get("title")), pid)
+            _register(closed_id_by_sku, _sku_of(r.get("title")), pid)
+
+    items_rows = fetch_all(
+        lambda: db.table("items").select("id,sku,title").eq("user_id", job["user_id"]))
+    item_ids = [it["id"] for it in items_rows]
+    items_by_id = {it["id"]: it for it in items_rows}
+    own_title_counts: dict[str, int] = {}
+    for it in items_rows:
+        key = _norm_title(it.get("title"))
+        if key:
+            own_title_counts[key] = own_title_counts.get(key, 0) + 1
+    if not item_ids:
+        return
+
+    # Plaatselijke import: listings.py leunt op dit bestand, dus bovenaan zou
+    # dit een kringetje worden (zelfde reden als bij 'verdwenen_te_jong').
+    from backend.api.listings import VERDENKING_REDENEN
+
+    # Waar staat dit artikel NOG te koop? Een advertentie die van Vinted af is
+    # maar elders gewoon online staat, is precies het geval waarin de verkoper
+    # iets moet beslissen; staat hij nergens anders meer, dan valt er niets te
+    # vragen en gaat hij zonder omhaal het archief in.
+    elders_levend: set[str] = set()
+    try:
+        for r in (await naast_de_lus(lambda: fetch_all_in(
+                lambda: db.table("listings").select("item_id")
+                .neq("platform", "vinted")
+                .in_("status", ["active", "relisting", "hidden", "pending"]),
+                "item_id", item_ids))):
+            elders_levend.add(r["item_id"])
+    except Exception as e:  # noqa: BLE001
+        # Niet fataal, maar wel bepalend: zonder deze lijst zouden we iedereen
+        # een vraag stellen die niets oplevert. Dan liever doen wat we altijd
+        # deden en archiveren.
+        logger.warning("Vinted reconcile: kon 'staat elders nog te koop' niet bepalen: %s", e)
+
+    active = await naast_de_lus(lambda: fetch_all_in(
+        lambda: db.table("listings")
+        .select("id,item_id,platform_listing_id,listed_at,created_at")
+        .eq("platform", "vinted")
+        # 'hidden' hoort erbij: een verborgen advertentie kan gewoon verkocht zijn
+        # (Vinted zet hem dan op closed), en die verkoop werd anders nooit gezien.
+        .in_("status", ["active", "relisting", "hidden"]),
+        "item_id", item_ids))
+    nu = datetime.now(timezone.utc)
+
+    # Stond hij als "weg uit de kast" op de vraag, maar ziet deze volledige scan
+    # hem gewoon open in de kast? Dan was de vraag onterecht: terug naar live,
+    # zonder dat de verkoper iets hoeft te doen ("Nee" zou hem archiveren).
+    try:
+        vraag_rijen = await naast_de_lus(lambda: fetch_all_in(
+            lambda: db.table("listings").select("id,platform_listing_id")
+            .eq("platform", "vinted").eq("status", "sold_unconfirmed")
+            .eq("error_message", VERDENKING_REDENEN["vinted_weg"]),
+            "item_id", item_ids))
+        terug = [r["id"] for r in vraag_rijen
+                 if r.get("platform_listing_id") is not None
+                 and str(r["platform_listing_id"]) in seen_ids
+                 and str(r["platform_listing_id"]) not in closed_ids]
+        if terug:
+            await naast_de_lus(lambda: update_in(
+                lambda: db.table("listings"), "id", terug,
+                {"status": "active", "error_message": None}))
+            logger.info("Vinted reconcile voor %s: %d onterechte verkoopvraag(en) terug naar live",
+                        job["user_id"], len(terug))
+    except Exception as e:  # noqa: BLE001 — herstel mag de rest niet tegenhouden
+        logger.warning("Vinted reconcile: kon onterechte verkoopvragen niet terugzetten: %s", e)
+    # Two very different signals, handled differently on purpose:
+    #   is_closed  → Vinted's own "sold/ended" flag. On Vinted a listing doesn't
+    #                expire on its own, so closed ≈ sold → book it as a sale.
+    #   vanished   → gone from a COMPLETE wardrobe with no sold flag. Could be sold
+    #                then removed, but could equally be manually deleted/expired.
+    #                We do NOT fabricate a sale from absence (that would inflate
+    #                revenue and cross-delist live listings). Instead we just take
+    #                it off "Live" → 'delisted', so it lands in Archived for the
+    #                user to confirm and mark sold themselves if it really sold.
+    newly_sold, set_aside, matched_without_id, gevraagd = 0, 0, 0, 0
+    verdwenen: list[dict] = []
+    for l in active:
+        pid = l.get("platform_listing_id")
+        if pid is None:
+            # Geen Vinted-nummer bekend: match op de SKU-prefix van de titel, en
+            # anders op de exacte titel. Alleen een POSITIEF "gesloten" kaartje
+            # telt — afwezigheid blijft betekenisloos, precies zoals hieronder.
+            item = items_by_id.get(l["item_id"]) or {}
+            title = _norm_title(item.get("title"))
+            # De titel is de gewone sleutel; het nummer tussen haakjes (of het
+            # SKU-veld) is een extra, voor wie dat gebruikt. Een titel die bij
+            # meerdere eigen items hoort is geen sleutel — dan liever niets doen.
+            hit = None
+            if title and own_title_counts.get(title) == 1:
+                hit = closed_id_by_title.get(title)
+            if not hit:
+                keys = [k for k in (str(item.get("sku") or "").strip().lower(),
+                                    _sku_of(item.get("title"))) if k]
+                hit = next((closed_id_by_sku[k] for k in keys if closed_id_by_sku.get(k)), None)
+            if not hit:
+                continue
+            matched_without_id += 1
+            # Meteen het nummer vastleggen, zodat de volgende ronde gewoon op id matcht.
+            try:
+                (await naast_de_lus(lambda: db.table("listings").update({"platform_listing_id": hit}).eq("id", l["id"]).execute()))
+            except Exception as e:  # noqa: BLE001
+                logger.warning("Vinted reconcile: could not backfill listing id for %s: %s", l["item_id"], e)
+            try:
+                await handle_item_sold(l["item_id"], "vinted",
+                                       bewijs=BEWIJS_KANAAL_ZEGT_VERKOCHT)
+                newly_sold += 1
+            except Exception as e:
+                logger.warning(f"Vinted sale reconcile failed for item {l['item_id']}: {e}")
+            continue
+        pid = str(pid)
+        if pid in closed_ids:
+            try:
+                await handle_item_sold(l["item_id"], "vinted",
+                                       bewijs=BEWIJS_KANAAL_ZEGT_VERKOCHT)
+                newly_sold += 1
+            except Exception as e:
+                logger.warning(f"Vinted sale reconcile failed for item {l['item_id']}: {e}")
+        elif pid not in seen_ids and not _te_jong_om_weg_te_zijn(l, nu):
+            verdwenen.append(l)
+
+    # ── WEG UIT DE KAST IS EEN VRAAG, GEEN VERKOOP OP VINTED ────────────────
+    #
+    # Een advertentie die uit de kast verdwenen is, is door de verkoper zelf
+    # weggehaald. Meestal omdat het artikel verkocht is — maar Vinted heeft
+    # nergens gezegd dat het DAAR verkocht is, en dat is precies het verschil.
+    #
+    # GEMETEN 17-09-2026 (Daniel, artikel 1313). Het artikel was op Shopify
+    # verkocht (bestelling #1079 van 06-09, EUR 14,99). De Vinted-advertentie
+    # was weggehaald, en daarmee stond de verkoop op 12-09 in de boeken als een
+    # Vinted-verkoop zonder bedrag. De omzet stond bij het verkeerde kanaal, de
+    # datum was zes dagen mis, en Shopify — waar de koper vandaan kwam — kreeg
+    # een verwijderopdracht.
+    #
+    # Daarom wordt afwezigheid weer wat het is: een aanwijzing. Staat het
+    # artikel nog ergens anders te koop, dan krijgt de verkoper de ja/nee-vraag
+    # (en bij "ja" gaat alsnog alles eraf, precies zoals voorheen, maar dan op
+    # het kanaal dat hij zelf aanwijst). Staat het nergens meer, dan valt er
+    # niets te vragen en gaat de rij het archief in.
+    grens = max(VERDWIJN_ONDERGRENS, int(len(active) * VERDWIJN_AANDEEL))
+    te_veel_ineens = len(verdwenen) > grens
+    if te_veel_ineens:
+        logger.warning(
+            "Vinted reconcile voor %s: %d van de %d advertenties ineens weg (rem staat op %d). "
+            "Dat is het beeld van een kapotte scan, niet van verkopen.",
+            job["user_id"], len(verdwenen), len(active), grens)
+
+    from backend.services.instellingen import verkoopvraag_aan
+    mag_vragen = (not job.get("user_id")) or await naast_de_lus(
+        lambda: verkoopvraag_aan(job["user_id"]))
+    for l in verdwenen:
+        vraag = mag_vragen and l["item_id"] in elders_levend
+        velden = ({"status": "sold_unconfirmed",
+                   "error_message": VERDENKING_REDENEN["vinted_weg"],
+                   "last_checked": datetime.now(timezone.utc).isoformat()}
+                  if vraag else {"status": "delisted"})
+        try:
+            (await naast_de_lus(lambda v=velden, i=l["item_id"]: db.table("listings").update(v) \
+                .eq("item_id", i).eq("platform", "vinted")
+                .in_("status", ["active", "relisting", "hidden"]).execute()))
+            if vraag:
+                gevraagd += 1
+            else:
+                set_aside += 1
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Vinted reconcile: could not archive vanished listing {l['item_id']}: {e}")
+    logger.info(
+        "[sold] Vinted reconcile for user %s: %d marked sold (is_closed, of which %d matched by SKU/title), "
+        "%d vanished → asked the seller, %d vanished → archived",
+        job["user_id"], newly_sold, matched_without_id, gevraagd, set_aside,
+    )
+
+
+def _fix_photo_url(u):
+    """
+    Repair a scraped image url that lost its protocol.
+
+    Marktplaats' own overview API returns protocol-relative urls ("//images.
+    marktplaats.com/…"). The extension turned those into
+    "https://www.marktplaats.nl//images.marktplaats.com/…" — a 404, so every
+    imported thumbnail was blank and the photo copy silently produced nothing.
+    Cheap to repair here, and it fixes the rows already stored as well.
+    """
+    if not isinstance(u, str):
+        return None
+    s = u.strip()
+    if not s:
+        return None
+    m = re.search(r"^https?://[^/]+//(.+)$", s)
+    if m and "." in m.group(1).split("/")[0]:
+        return "https://" + m.group(1)
+    if s.startswith("//"):
+        return "https:" + s
+    return s
+
+
+def _rijke_velden(row: dict, photo_urls, vorige: dict | None) -> dict:
+    """Wat er van deze gescande advertentie in de kandidaat komt te staan.
+
+    EEN SCAN MAG AANVULLEN EN BIJWERKEN, NOOIT LEEGHALEN.
+
+    Toon (dejuistetoon), 02-09-2026. Hier stond simpelweg
+    `"description": row.get("description") or None`. Vinted knijpt af tijdens
+    een scan — gemeten laat hij er zo'n vijftien per minuut door en geeft daarna
+    429 — dus komt een scan geregeld terug met een lege omschrijving voor een
+    advertentie waar de vórige scan er wél een vond. Die leegte ging er keihard
+    overheen. Nagemeten in zijn gegevens: 271 kandidaten stonden zonder tekst
+    terwijl het artikel dat eruit geïmporteerd was er wél een had — die tekst
+    kán alleen uit een eerdere scan zijn gekomen, dus die 271 zijn achteraf
+    gewist. Wie daarna importeerde kreeg een artikel zonder tekst, en zonder
+    tekst weigert het dashboard te publiceren naar Marktplaats, 2dehands en
+    Facebook: alles grijs, niets aanklikbaar.
+
+    Zuiver rekenwerk, geen database — zo is deze regel te testen zonder scan.
+    """
+    nieuw = {
+        "photo_urls": photo_urls or None,
+        "description": (row.get("description") or None),
+        "brand": (row.get("brand") or None),
+        "size": (row.get("size") or None),
+        "condition": (row.get("condition") or None),
+        "category": (row.get("category") or None),
+        "gender": (row.get("gender") or None),
+        "color": (row.get("color") or None),
+        "material": (row.get("material") or None),
+    }
+    if not vorige:
+        return nieuw
+    for veld, waarde in list(nieuw.items()):
+        if waarde:
+            continue  # de scan wéét iets — dat wint altijd
+        oud = vorige.get(veld)
+        if oud not in (None, "", [], {}):
+            nieuw[veld] = oud
+    return nieuw
+
+
+_BARCODE = re.compile(r"\d{8,14}")
+
+
+def _alleen_barcode(platform: str, titel: str, fotos: list) -> bool:
+    """Een Shopify-product dat alleen een barcode als naam heeft en geen foto.
+
+    WAAROM (07-10-2026, Goudlief): wie via bol verkoopt zet zulke producten in
+    Shopify met alleen de EAN; bol vult de rest aan. Op Marktplaats of Vinted
+    is het een advertentie zonder naam en foto, en hij wil ze daar ook niet.
+    Hij had er 245; "Import all" zette ze als lege artikelen in zijn voorraad.
+    Zo'n rij begint als genegeerd, niet als weg: "Show the ignored again" haalt
+    hem terug.
+    """
+    return (platform == "shopify" and not fotos
+            and bool(_BARCODE.fullmatch((titel or "").strip())))
+
+
+_GEZOCHT_VOOR = re.compile(r"^\W*(gezocht|gevraagd|wanted)\b", re.IGNORECASE)
+_GEZOCHT_ACHTER = re.compile(r"(?<!veel )(?<!zeer )(?<!erg )(?<!super )(?<!vaak )"
+                             r"\bgezocht\s*(?:$|[|:,!.()\[\]–—-])", re.IGNORECASE)
+
+
+def _zoekertje(platform: str, titel: str) -> bool:
+    """Een Marktplaats- of 2dehands-advertentie voor iets wat de verkoper ZOEKT.
+
+    WAAROM (14-10-2026, onboarding): Anton had "Pokémon kaarten gezocht" en
+    rambene "gezocht penplotter" en "Gezocht: XY-penplotter" tussen hun
+    voorraad staan; "Import all" maakte er artikelen van die daarna als te koop
+    naar Vinted zouden gaan. "Zeer gezocht" of "veel gezocht model" is
+    verkooptaal en blijft gewoon staan. Genegeerd, niet weg: "Show the ignored
+    again" haalt hem terug.
+    """
+    if platform not in ("marktplaats", "2dehands"):
+        return False
+    t = (titel or "").strip()
+    return bool(_GEZOCHT_VOOR.search(t) or _GEZOCHT_ACHTER.search(t))
+
+
+def _store_scan_results(db, job, scraped: list[dict]):
+    """
+    Persist scraped "my listings" cards as import_candidates for manual review.
+    Never touches the items/listings tables directly — a human links or
+    imports each candidate explicitly via /api/imports.
+    """
+    if not scraped:
+        return
+    from backend.api.imports import BACKFILL_FIELDS, _backfill_patch
+    from backend.services.tweelingen import prijs_wijkt_af
+
+    # Read the items ONCE, with every field the backfill needs. This used to be a
+    # select per candidate inside the loop below, so a 500-listing wardrobe meant
+    # ~1000 round-trips and "Saving to your dashboard…" sat there for minutes.
+    items = fetch_all(lambda: db.table("items").select(BACKFILL_FIELDS + ",title,sku,price").eq("user_id", job["user_id"]))
+    items_by_id = {it["id"]: it for it in items}
+    # Extra koppelsleutels: het SKU-nummer vooraan de titel en de titel zonder
+    # leestekens/accenten. Die overleven een vertaling of een kleine handmatige
+    # aanpassing op het platform, waar een exacte titelvergelijking op stukliep.
+    # Merk per item: waarmee _unique_index kan zien of twee kandidaten met
+    # hetzelfde nummer echt hetzelfde product zijn.
+    _merk_van = {it["id"]: str(it.get("brand") or "").strip().lower() for it in items}
+    _sku_index = _unique_index(
+        [(_scan_sku(it.get("title")), it["id"]) for it in items]
+        + [(str(it.get("sku") or "").strip().lower(), it["id"]) for it in items],
+        _merk_van,
+    )
+    _norm_title_index = _unique_index(
+        ((_scan_norm_title(it.get("title")), it["id"]) for it in items), _merk_van)
+    # (platform, listing id) → item_id, so a re-scan of an already-known listing
+    # links back to the exact same item. Scoped by the user's item ids because
+    # the listings table has no user_id column.
+    item_ids = [it["id"] for it in items]
+    listings_by_id = {}
+    # (item_id, platform) → de bestaande listing-rij, zodat we hieronder kunnen
+    # zien of het dashboard al wéét dat dit item op dit platform staat.
+    listing_by_item = {}
+    if item_ids:
+        # In brokken: met meer dan ~639 item-id's wordt de URL van dit filter te
+        # lang en gooit httpx een uitzondering (zie database.IN_BROK). Die knalde
+        # hier midden in het opslaan van een scan, waardoor GEEN ENKELE gevonden
+        # advertentie werd bewaard terwijl de opdracht al op "klaar" stond.
+        lrows = fetch_all_in(lambda: db.table("listings")
+                             .select("id,item_id,platform,status,platform_listing_id"),
+                             "item_id", item_ids)
+        for l in lrows:
+            pid = l.get("platform_listing_id")
+            if pid is not None and l.get("item_id"):
+                listings_by_id[(l.get("platform"), str(pid))] = l["item_id"]
+            if l.get("item_id"):
+                listing_by_item[(l["item_id"], l.get("platform"))] = l
+
+    # De titel die de extensie daadwerkelijk in het formulier zette (uit de
+    # publicatie-opdracht). Die staat op het platform, terwijl de itemtitel in
+    # het dashboard anders kan zijn (vertaald of ingekort) — daarom herkende hij
+    # zelf afgemaakte advertenties niet.
+    job_titles = {}
+    try:
+        jrows = fetch_all(lambda: db.table("jobs")
+                          .select("item_id,payload")
+                          .eq("user_id", job["user_id"])
+                          .eq("platform", job["platform"])
+                          .eq("action", "create"))
+        for j in jrows:
+            t = ((j.get("payload") or {}).get("title") or "").strip().lower()
+            t = " ".join(t.split())
+            if t and j.get("item_id"):
+                # Bij twijfel (twee items met dezelfde formuliertitel) liever geen
+                # koppeling dan de verkeerde.
+                job_titles[t] = None if t in job_titles and job_titles[t] != j["item_id"] else j["item_id"]
+    except Exception as e:
+        logger.warning(f"Scan store: could not read create-job titles: {e}")
+
+    # What we already decided about each candidate. The upsert below refreshes the
+    # scraped snapshot, but it must NOT undo a decision: it used to write
+    # status='pending' unconditionally, so a re-scan resurrected every listing you
+    # had already imported, linked or ignored straight back into the review list.
+    prior_status = {}
+    # Wat een EERDERE scan al wist. Dit is niet alleen de status: ook de
+    # omschrijving, het merk, de foto's.
+    #
+    # Toon (dejuistetoon), 02-09-2026: een tweede scan van dezelfde kast wiste de
+    # omschrijvingen van 271 advertenties. Vinted knijpt af — het detail-endpoint
+    # is dood (404) en de openbare pagina geeft na ~14 snelle verzoeken 429 — dus
+    # een scan komt regelmatig terug met een lege omschrijving voor advertenties
+    # waar de vorige scan er wél een vond. Die lege waarde werd hier keihard
+    # overheen geschreven. Wie daarna importeerde kreeg een artikel zonder tekst,
+    # en zonder tekst weigert het dashboard te publiceren naar Marktplaats,
+    # 2dehands en Facebook: alles grijs, niets aanklikbaar.
+    #
+    # Regel: een scan mag toevoegen en bijwerken, nooit leeghalen. Staat er een
+    # waarde en levert de nieuwe scan niets, dan blijft de oude staan.
+    prior_rich = {}
+    # fetch_all, niet één select: PostgREST geeft er stilzwijgend hooguit 1.000
+    # terug. Bij een verkoper met meer kandidaten kregen alle rijen daarboven
+    # opnieuw status 'pending' — advertenties die hij al geïmporteerd had,
+    # stonden daarna zó weer op de te-beoordelen lijst.
+    def _lees_vorige(kolommen: str):
+        return fetch_all(lambda: db.table("import_candidates")
+                         .select(kolommen)
+                         .eq("user_id", job["user_id"])
+                         .eq("platform", job["platform"]))
+    try:
+        prev = _lees_vorige("platform_listing_id,status," + ",".join(RICH_KEYS))
+    except Exception as e:
+        # Nog niet gemigreerde database: de rijke kolommen bestaan daar niet.
+        # Dan alleen de status lezen — beschermen kan niet wat er niet is.
+        logger.warning(f"Scan store: rich prior read failed ({e}); status only.")
+        prev = _lees_vorige("platform_listing_id,status")
+    for c in prev:
+        pid = c.get("platform_listing_id")
+        if pid is not None:
+            prior_status[str(pid)] = c.get("status") or "pending"
+            prior_rich[str(pid)] = {k: c[k] for k in RICH_KEYS if k in c}
+
+    rows = []          # candidate rows, upserted in bulk below
+    backfills = {}     # item_id -> merged patch, applied in bulk below
+    live_links = {}    # item_id -> listing data we saw live on this platform
+
+    for row in scraped:
+        platform_listing_id = row.get("platform_listing_id")
+        title = row.get("title") or ""
+        if not platform_listing_id:
+            continue
+        # Sold/ended and draft listings ride along in the scan payload purely so
+        # the sale reconcile can see them — nobody wants to import them. Without
+        # this a full wardrobe scan would dump every listing ever sold into the
+        # import queue for manual review.
+        if row.get("is_closed") or row.get("is_draft"):
+            continue
+        # Strongest signal: the exact same listing id already lives on an item.
+        # Otherwise a UNIQUE exact title match. Fuzzy matching wrongly links items
+        # differing only by size/colour/number (see imports._best_match), so a
+        # wrong suggestion is worse than none.
+        best_id = listings_by_id.get((job["platform"], str(platform_listing_id)))
+        if not best_id:
+            want = " ".join(title.lower().split())
+            title_matches = [it["id"] for it in items if " ".join((it.get("title") or "").lower().split()) == want and want]
+            best_id = title_matches[0] if len(title_matches) == 1 else None
+        if not best_id:
+            # Laatste, even harde sleutel: exact de titel die wij zelf in het
+            # formulier hebben gezet voor dit platform.
+            best_id = job_titles.get(" ".join(title.lower().split())) or None
+        if not best_id:
+            # Twee even harde, maar veel robuustere sleutels. Zonder deze bleef
+            # een advertentie die de gebruiker zélf plaatste (of die op het
+            # platform in het Nederlands staat terwijl het dashboard Engels is)
+            # ongekoppeld — en dan kan hij bij verkoop nergens automatisch
+            # weggehaald worden. Dubbel voorkomende sleutels tellen niet mee, dus
+            # liever geen koppeling dan de verkeerde.
+            best_id = _sku_index.get(_scan_sku(title)) or _norm_title_index.get(_scan_norm_title(title))
+        # ALLEEN DE TITEL GELIJK EN DE PRIJS NIET? DAN IS HET EEN ANDER STUK
+        # (16-10-2026, Janneke). Haar eigen oude Vinted-advertenties van 15 euro
+        # met een andere tekst hingen zo aan Shopify-artikelen van 25 tot 30 euro
+        # met dezelfde titel; vijf van de vijf hadden een andere prijs. Een
+        # nummer of hetzelfde advertentienummer weegt zwaarder en blijft staan.
+        if (best_id and not listings_by_id.get((job["platform"], str(platform_listing_id)))
+                and _sku_index.get(_scan_sku(title)) != best_id
+                and prijs_wijkt_af(row.get("price"), (items_by_id.get(best_id) or {}).get("price"))):
+            best_id = None
+        eigen_nummer = str(row.get("sku") or "").strip().lower()
+        if eigen_nummer and not listings_by_id.get((job["platform"], str(platform_listing_id))):
+            # Shopify geeft het artikelnummer los mee (services/shopify_scan.py);
+            # daar staat het niet vooraan de titel. Dat nummer gaat VOOR de
+            # titel, en een titel die bij een artikel met een ánder nummer hoort
+            # is geen koppeling. Revaleur, 24-09-2026: drie grijze Ralph Lauren
+            # vesten "Men XXL" met dezelfde titel werden samengevoegd tot één
+            # tweeling, dus product 1014 werd voorgesteld als artikel 945 terwijl
+            # artikel 1014 gewoon op Marktplaats en 2dehands stond. Na koppelen
+            # had een verkoop in de winkel 945 overal weggehaald en 1014 laten
+            # staan. 5 van de 12 "Twice in your Shopify store"-meldingen.
+            best_id = _sku_index.get(eigen_nummer) or (
+                None if _ander_nummer(items_by_id.get(best_id), eigen_nummer) else best_id)
+
+        # Dit item staat aantoonbaar live op dit platform (we hebben zijn kaartje
+        # net gezien). Zet dat vast in `listings`, zodat een handmatig geplaatste
+        # advertentie in het dashboard ook als "online" telt — voorheen bleef die
+        # onbekend en bood de app hem gewoon opnieuw aan om te publiceren.
+        if best_id:
+            live_links[best_id] = {
+                "platform_listing_id": str(platform_listing_id),
+                "platform_listing_url": row.get("platform_listing_url"),
+                "platform_listed_at": row.get("platform_listed_at"),
+            }
+
+        # If this scanned listing already belongs to an item, push the freshly
+        # scraped rich data straight into that item's empty fields. This is what
+        # makes a re-scan actually enrich already-imported items (description,
+        # colour, …) without the user having to re-import anything.
+        if best_id:
+            try:
+                current = items_by_id.get(best_id)
+                if current:
+                    patch = _backfill_patch(current, row)
+                    if patch:
+                        # Collect now, write later in one pass — and keep the local
+                        # copy in step so a second listing for the same item sees
+                        # the fields we're about to fill.
+                        backfills[best_id] = {**backfills.get(best_id, {}), **patch}
+                        current.update(patch)
+            except Exception as e:
+                logger.warning(f"Scan store: item backfill failed for {platform_listing_id}: {e}")
+
+        # `photo_urls` (the full ordered list) is the source of truth; keep the
+        # single `photo_url` populated too for the old thumbnail/UI path.
+        photo_urls = [u for u in (_fix_photo_url(u) for u in (row.get("photo_urls") or [])) if u]
+        if not photo_urls and row.get("photo_url"):
+            photo_urls = [u for u in [_fix_photo_url(row["photo_url"])] if u]
+        photo_url = _fix_photo_url(row.get("photo_url")) or (photo_urls[0] if photo_urls else None)
+
+        base = {
+            "user_id": job["user_id"],
+            "platform": job["platform"],
+            "platform_listing_id": platform_listing_id,
+            "platform_listing_url": row.get("platform_listing_url"),
+            "title": title,
+            "price": row.get("price"),
+            "photo_url": photo_url,
+            "suggested_item_id": best_id,
+            "platform_listed_at": row.get("platform_listed_at"),
+            # Keep whatever we already decided; only genuinely new rows start pending.
+            #
+            # EN "AL GEIMPORTEERD" IS GEEN BESLISSING MEER (05-09-2026, Amanda).
+            #
+            # Een advertentie die wij zelf zojuist hebben geplaatst of herplaatst
+            # heeft een nieuw advertentienummer, dus stond hij hier als "nieuw" en
+            # kwam hij op de te-beoordelen lijst. Bij Amanda stonden er zo 117
+            # advertenties te wachten, waarvan er 111 allang in haar overzicht
+            # stonden. De zes advertenties die ze ECHT zelf op Marktplaats had
+            # gezet verdronken daarin, en dat leest als "hij importeert mijn
+            # nieuwe advertenties niet".
+            #
+            # Hangt dit advertentienummer al aan een artikel, dan valt er niets te
+            # beslissen: het is gekoppeld. Alleen het nummer telt hier; een
+            # gelijkende titel is een vermoeden en geen bewijs.
+            #
+            # Een eerdere 'pending' is geen beslissing: die rij kan inmiddels
+            # gekoppeld zijn (Shopify, 23-09-2026: 12 "Same listing"-rijen bleven
+            # wachten). Alleen een echte keuze ('ignored', 'imported') wint.
+            "status": (
+                prior_status[str(platform_listing_id)]
+                if prior_status.get(str(platform_listing_id), "pending") != "pending"
+                else "linked" if listings_by_id.get((job["platform"], str(platform_listing_id)))
+                else "ignored" if _alleen_barcode(job["platform"], title, photo_urls)
+                else "ignored" if _zoekertje(job["platform"], title)
+                else "pending"),
+        }
+        # Full snapshot columns — only present once the schema migration has run.
+        # If they don't exist yet, PostgREST rejects the whole upsert, so retry
+        # with just the base fields so scanning never breaks on an un-migrated DB.
+        rich = _rijke_velden(row, photo_urls,
+                             prior_rich.get(str(platform_listing_id)))
+        # is_hidden is the newest optional column, so it gets its own tier: if only
+        # THAT one is missing we still want the description/brand/photos to land,
+        # instead of dropping every rich field over one absent column.
+        hidden = {"is_hidden": bool(row.get("is_hidden"))}
+        rows.append({**base, **rich, **hidden})
+
+    # ── Write everything in as few round-trips as possible ────────────────
+    # PostgREST upserts a whole list in one request, so a 500-listing wardrobe
+    # costs a handful of calls instead of 500. Chunked so no single request grows
+    # large enough for the gateway to time out on.
+    CHUNK = 100
+    bewaard = 0
+    for i in range(0, len(rows), CHUNK):
+        chunk = rows[i:i + CHUNK]
+        # Optional columns may not exist yet on an un-migrated database. Drop the
+        # newest tier first, then the whole rich snapshot — never the base fields.
+        for attempt in range(3):
+            drop = () if attempt == 0 else (("is_hidden",) if attempt == 1 else RICH_KEYS)
+            payload = [{k: v for k, v in r.items() if k not in drop} for r in chunk]
+            try:
+                db.table("import_candidates").upsert(
+                    payload, on_conflict="user_id,platform,platform_listing_id"
+                ).execute()
+                bewaard += len(chunk)
+                break
+            except Exception as e:
+                if attempt == 0:
+                    logger.warning(f"Scan store: is_hidden column missing ({e}); run the import_candidates ALTER migration.")
+                elif attempt == 1:
+                    logger.warning(f"Scan store: rich upsert failed ({e}); falling back to base fields. Run the import_candidates ALTER migration.")
+                else:
+                    # NIET stil doorlopen. Dit werd gelogd en verder genegeerd,
+                    # dus een mislukte opslag kwam bij de verkoper aan als een
+                    # geslaagde scan zonder resultaat — en de volgende scan sloeg
+                    # diezelfde advertenties over. Opwerpen, zodat de opdracht op
+                    # 'fout' gaat en opnieuw scannen daadwerkelijk helpt.
+                    logger.error(f"Scan store: base upsert failed for {len(chunk)} rows: {e}")
+                    raise RuntimeError(
+                        f"could not save {len(chunk)} of {len(rows)} scanned listings: {e}") from e
+
+    # Item backfills: one update per item that actually gained something, rather
+    # than a select+update per scanned listing. On a re-scan most items are
+    # already complete, so this is usually a handful of writes.
+    for item_id, patch in backfills.items():
+        try:
+            db.table("items").update(patch).eq("id", item_id).execute()
+        except Exception as e:
+            logger.warning(f"Scan store: item backfill failed for {item_id}: {e}")
+
+    # Live-koppelingen: markeer items die we zojuist op het platform zagen als
+    # daadwerkelijk online. Een 'sold' rij blijft met rust — die is bewust zo
+    # gezet en mag niet terug naar actief.
+    platform = job["platform"]
+    for item_id, link in live_links.items():
+        existing = listing_by_item.get((item_id, platform))
+        try:
+            if existing:
+                if existing.get("status") == "sold":
+                    continue
+                # EEN LOPENDE HERPLAATSING NIET AANRAKEN (06-09-2026, Daniel).
+                #
+                # Een herplaatsing zet de rij op 'relisting', haalt de oude
+                # advertentie weg en plant de nieuwe 45 min tot 4 uur later. Een
+                # scan die vlak daarvoor de garderobe las, ziet het oude
+                # advertentienummer nog wél staan — die momentopname is ouder
+                # dan de verwijdering. Verwerkte de scan dat hieronder, dan zette
+                # hij de rij terug op 'active' met het intussen verwijderde
+                # nummer én sloot hij de wachtende herplaatsopdracht af als "al
+                # online". Gevolg: het artikel stond nergens meer op Vinted,
+                # terwijl het dashboard "nieuwe advertentie staat live" meldde
+                # met een link naar een 404. De herplaatsing heeft zijn eigen
+                # afhandeling (de recreate-opdracht plus de reddingsronde in
+                # relist.py); de scan blijft eraf.
+                if existing.get("status") == "relisting":
+                    continue
+                if (existing.get("status") == "active"
+                        and str(existing.get("platform_listing_id") or "") == link["platform_listing_id"]):
+                    continue
+                # Staat er al een ander advertentienummer op dit item, dan is dit
+                # een TWEEDE advertentie van hetzelfde artikel (tien identieke
+                # blikjes = tien advertenties). Overschrijven maakte de vorige
+                # onvindbaar, en dan kan die bij verkoop nergens weg.
+                huidig = str(existing.get("platform_listing_id") or "")
+                if huidig and huidig != link["platform_listing_id"]:
+                    continue
+                db.table("listings").update({
+                    "status": "active",
+                    "error_message": None,
+                    "platform_listing_id": link["platform_listing_id"],
+                    "platform_listing_url": link["platform_listing_url"],
+                }).eq("id", existing["id"]).execute()
+            else:
+                db.table("listings").insert({
+                    "item_id": item_id,
+                    "platform": platform,
+                    "status": "active",
+                    "platform_listing_id": link["platform_listing_id"],
+                    "platform_listing_url": link["platform_listing_url"],
+                }).execute()
+        except Exception as e:
+            logger.warning(f"Scan store: live link failed for {item_id}/{platform}: {e}")
+
+        # We hebben deze advertentie zojuist LIVE gezien. Staat er dan nog een
+        # plaatsingsopdracht te wachten (bijvoorbeeld een republicatie die bleef
+        # hangen en die de verkoper daarom zelf heeft afgemaakt), dan moet die
+        # weg: anders komt er straks alsnog een tweede advertentie bij, en blijft
+        # het kaartje "Publishing now…" eeuwig staan.
+        try:
+            done = (
+                db.table("jobs").update({
+                    "status": "done",
+                    "done_at": datetime.now(timezone.utc).isoformat(),
+                    "result": {"note": "already live on the platform (seen by scan)",
+                               "platform_listing_id": link["platform_listing_id"],
+                               "platform_listing_url": link["platform_listing_url"]},
+                })
+                .eq("user_id", job["user_id"]).eq("item_id", item_id).eq("platform", platform)
+                .eq("action", "create").in_("status", ["pending", "claimed"])
+                # Alleen een blijven-hangen directe publicatie afsluiten, nooit
+                # een geplande herplaatsing (die draagt een scheduled_for). Die
+                # is een bewuste toekomstige actie, geen vastgelopen opdracht —
+                # afsluiten liet het artikel van het platform verdwijnen.
+                .is_("scheduled_for", "null")
+                .execute().data
+            )
+            if done:
+                logger.info("Scan store: closed %d queued publish job(s) for %s/%s — it's already live",
+                            len(done), item_id, platform)
+        except Exception as e:
+            logger.warning(f"Scan store: could not close queued create for {item_id}/{platform}: {e}")
+
+    logger.info(
+        "Scan store for user %s: %d/%d candidates upserted, %d items enriched",
+        job["user_id"], bewaard, len(rows), len(backfills),
+    )
+
+
+def _queue_scan(db, user_id: str, platform: str):
+    """Zet een scan-opdracht klaar (tenzij er al één wacht). Nooit fataal."""
+    from backend.api.imports import SCANNABLE_PLATFORMS
+    if platform not in SCANNABLE_PLATFORMS:
+        return
+    try:
+        existing = (db.table("jobs").select("id")
+                    .eq("user_id", user_id).eq("platform", platform).eq("action", "scan")
+                    .in_("status", ["pending", "claimed"]).limit(1).execute().data)
+        if existing:
+            return
+        db.table("jobs").insert({
+            "user_id": user_id, "item_id": None, "platform": platform,
+            "action": "scan", "status": "pending", "payload": {},
+        }).execute()
+    except Exception as e:
+        logger.warning(f"Could not queue follow-up scan for {platform}: {e}")
+
+
+# De melding die de bewaker van de extensie achterlaat als het invulscript zich
+# nooit heeft gemeld. Dat is geen "de pagina is veranderd": dat is "de pagina die
+# openging was het plaatsformulier niet".
+_TIJDSOVERSCHRIJDING = re.compile(r"timed out waiting for this .* job to finish", re.I)
+
+# Alle fouten die NIETS over dit ene artikel zeggen: het formulier ging niet open,
+# de sessie werd afgewezen, of de wachtrij is al gestopt. Een "vul de foto's in"
+# is een uitgelegde fout en hoort hier NIET bij — die zegt wél iets, en drie keer
+# dezelfde uitgelegde fout mag geen wachtrij wissen (zie test_kansloze_wachtrij).
+#
+# GEMETEN (07-09-2026, Egbert Brouwer). Van zijn 671 plaatsopdrachten voor
+# 2dehands is er nooit één geslaagd. De laatste tientallen wisselen tussen
+# "timed out", "not signed in" en "queue stopped" — drie verschijningsvormen van
+# hetzelfde: 2dehands.be laat dit account niet plaatsen via /plaats. De oude rem
+# keek alleen naar drie identieke "timed out" op rij en sloeg daardoor over.
+def _diag_uit_fout(fout) -> list | None:
+    """De diagnostiek die de extensie achter een foutmelding hangt, of None.
+
+    Vorm: `... | Diag: [ ... ] [extensie 1.0.329]`. raw_decode leest precies één
+    JSON-waarde en laat de rest staan. Dat moet ook: achter de diagnostiek staat
+    nog " [extensie 1.0.329]", en zoeken naar de laatste blokhaak pakte die erbij,
+    waarna het inlezen stilletjes faalde en het vangnet hieronder nul van de 83
+    echte gevallen herkende.
+    """
+    fout = str(fout or "")
+    merk = "| Diag: "
+    i = fout.find(merk)
+    if i < 0:
+        return None
+    try:
+        diag, _rest = json.JSONDecoder().raw_decode(fout[i + len(merk):])
+    except Exception:  # noqa: BLE001
+        return None
+    return diag if isinstance(diag, list) else None
+
+
+def _verwijdering_openbaar_bewezen(job: dict, fout) -> bool:
+    """Bevestigd verwijderd, tabblad daarna weg: toont de openbare pagina dat hij weg is?
+
+    WAAROM (05-10-2026, klant 26cf5471). Een herplaatsing van "Gouden oorbellen met
+    granaat": de extensie klikte Verwijderen, beantwoordde "Niet verkocht via
+    Marktplaats" en het venster ging dicht. Daarna was het werktabblad weg, en alle
+    drie de controles gaven "No tab with id". Geboekt als "Nothing was removed",
+    de plaatsing werd overgeslagen, en het artikel stond nergens meer: Marktplaats
+    gaf voor die advertentie 404/410.
+
+    Alleen dit ene geval: het venster is aantoonbaar beantwoord en de extensie
+    kreeg zelf geen antwoord van het kanaal (geen enkele statuscode). Dan kijkt de
+    server op www.marktplaats.nl/<nummer> (of 2dehands.be). Gemeten 05-10-2026:
+    een levende advertentie geeft daar 200, een verdwenen 404. Alleen 404/410 is
+    bewijs; een storing, blokkade of 200 laat het een mislukking.
+    """
+    if not job or job.get("action") != "delete":
+        return False
+    site = {"marktplaats": "www.marktplaats.nl", "2dehands": "www.2dehands.be"}.get(job.get("platform"))
+    m = re.fullmatch(r"m\d+", str((job.get("payload") or {}).get("platform_listing_id") or "").strip().lower())
+    diag = _diag_uit_fout(fout)
+    if not site or not m or diag is None:
+        return False
+    beantwoord = any(isinstance(d, dict) and d.get("fase") == "bevestigen" and d.get("clicked")
+                     for d in diag)
+    checks = [d for d in diag if isinstance(d, dict) and d.get("fase") == "fetch-check"]
+    if not beantwoord or not checks or any(d.get("status") is not None for d in checks):
+        return False
+    try:
+        import httpx
+        from backend.services.mp_enrich import UA
+        r = httpx.get(f"https://{site}/{m.group(0)}",
+                      headers={"User-Agent": UA, "Accept": "text/html"},
+                      timeout=8, follow_redirects=True)
+        return r.status_code in (404, 410)
+    except Exception as e:  # noqa: BLE001 — geen bewijs, dus gewoon een mislukking
+        logger.warning("%s %s niet na te kijken: %s", site, m.group(0), e)
+        return False
+
+
+def _kanaal_bevestigde_verwijdering(job: dict) -> bool:
+    """Zegt de diagnostiek van deze mislukte verwijdering dat het kanaal zelf 404/410 gaf?
+
+    Alleen dán is de advertentie aantoonbaar weg en mag de bijbehorende plaatsing
+    doorgaan. Bij twijfel false: een plaatsing naast een advertentie die nog live
+    staat is de duurste uitkomst die er is.
+
+    De extensie hangt haar diagnostiek achter de foutmelding als
+    `... | Diag: [ ... ] [extensie 1.0.329]`. We lezen die echt in plaats van er
+    een zoekterm doorheen te halen, zodat een advertentienummer dat toevallig
+    "410" bevat hier niets kan veroorzaken. Lukt het inlezen niet, dan doen we
+    niets.
+    """
+    diag = _diag_uit_fout((job.get("result") or {}).get("error"))
+    if diag is None:
+        return False
+    # De LAATSTE fetch-controle telt. Een eerdere poging kan nog van vóór het
+    # verwijderen komen; het gaat om wat het kanaal als laatste zei.
+    laatste = None
+    for stap in diag:
+        if isinstance(stap, dict) and stap.get("fase") == "fetch-check":
+            laatste = stap
+    return bool(laatste and laatste.get("status") in (404, 410))
+
+
+_ONDOORGROND = re.compile(
+    r"timed out waiting for this .* job to finish"
+    r"|not signed in to|je bent niet ingelogd"
+    r"|listing form never opened|form never opened|never opened"
+    r"|queue stopped|wachtrij .*gestopt|we stopped the .* queue",
+    re.I,
+)
+# Zoveel ondoorgronde mislukkingen zonder ooit één succes: dan is het kanaal
+# aantoonbaar kansloos voor dit account, ongeacht de exacte fouttekst.
+_KANSLOOS_DREMPEL = 10
+
+
+# DE BETAALMUUR VAN MARKTPLAATS / 2DEHANDS.
+#
+# GEMETEN OP 09-09-2026 in de opdrachten van Egbert Brouwer (papas-plectrums).
+# Zijn 2dehands liep niet vast op het formulier en niet op zijn inlog. Het
+# formulier ging open, werd ingevuld, en na de plaatsklik sprong het tabblad
+# naar https://www.2dehands.be/payments/orderOverview/index.html: de advertentie
+# werd een bestelregel van EUR 9,00 in plaats van een advertentie. Drie van zijn
+# opdrachten dragen dat adres letterlijk in hun foutmelding.
+#
+# Dit is een andere soort fout dan alle andere hier, en wel om deze reden: elke
+# nieuwe poging kost de verkoper geld. De gewone rem zet een kanaal op pauze en
+# laat er bewust één proefadvertentie per ronde doorheen, want alleen zo kan een
+# pauze zichzelf opheffen. Bij een betaalmuur is die proef juist het probleem:
+# hij is niet gratis. Zijn winkelmandje stond op 17 regels, EUR 153,00.
+#
+# Daarom telt één waarneming, en gaat het kanaal hard dicht in plaats van op
+# pauze. Alleen 2dehands of Marktplaats zelf kan dit veranderen, geen nieuwe
+# versie van onze extensie.
+_BETAALMUUR = re.compile(
+    r"(?:marktplaats\.nl|2dehands\.be)/payments/"
+    r"|does not let (?:this|your) account place adverts for free",
+    re.I,
+)
+
+
+# EEN LEEG ADRESBLOK OP HET FORMULIER, HERKEND AAN DE MELDING ZELF.
+#
+# Zowel de tekst van de site ("Geen postcode ingevuld",
+# "contactInformation.postCode=LEEG") als die van onze eigen weigering
+# (wachtOpPostcode in extension/content/shared.js) draagt het woord postcode.
+# Meer is er niet nodig, en meer moet het ook niet worden: dit patroon mag niet
+# aanslaan op een gewone tekst waarin het woord toevallig voorkomt, daarom
+# staat het aan een van deze vaste zinnen vast.
+# Lege fabrikantvelden, zoals de extensie ze meldt: "textAttribute[
+# manufacturerTradename]=LEEG". Alleen het veld met LEEG erachter telt.
+_FABRIKANT_LEEG = re.compile(r"textAttribute\[manufacturer\w*\]=LEEG")
+
+_GEEN_ADRES = re.compile(
+    r"postcode is still empty"
+    r"|geen postcode ingevuld"
+    r"|contactInformation\.postCode"
+    r"|geen adres op het formulier",
+    re.I,
+)
+
+
+# EEN BETALENDE RUBRIEK IS IETS ANDERS DAN EEN BETAALMUUR OP HET HELE KANAAL.
+#
+# GEMETEN OP 10-09-2026 in de opdrachten van Egbert Brouwer (papas-plectrums).
+# Van zijn bulk naar 2dehands mislukten er 24 met "Je hebt geen zoekertjesvorm
+# gekozen". Alle 24 stonden in dezelfde drie gitaarrubrieken (/plaats/728/746,
+# /747 en /748), de pagina meldde letterlijk "Dit is een betalende categorie",
+# de gratis keuze bestond daar niet ("Free option: knop niet gevonden") en de
+# plaatsknop heette "Naar betalen". In diezelfde drie rubrieken lukten de eerste
+# twee zoekertjes wél — elektrisch 13:06 en 13:07, akoestisch 13:09 en 13:17,
+# bas 13:10 en 13:56 — en pas daarna sloeg het om. Het gratis tegoed van die
+# rubriek was op.
+#
+# HET KANAAL ZELF WERKT DUS GEWOON. Op hetzelfde moment gingen zijn zoekertjes
+# in Behuizingen en koffers, Standaards en Toebehoren wél gratis online. Het
+# hele kanaal dichtzetten (_BETAALMUUR) zou hier 127 zoekertjes tegenhouden die
+# niets kosten. Daarom een eigen rem op alleen die ene rubriek.
+#
+# Dit herkent ook wat de kopie herkent die NU bij hem draait. Een nieuwe
+# extensie is bij een verkoper pas weken later binnen (de Chrome Web Store deed
+# er eerder drie weken over), en zijn huidige melding draagt de bewijzen al:
+# de zin van de pagina zelf en de naam van de knop.
+_BETAALDE_RUBRIEK = re.compile(
+    r"betalende (?:categorie|rubriek)"
+    r"|cat[ée]gorie payante"
+    r"|knop \"(?:Naar betalen|Betalen|Vers le paiement)\""
+    r"|charges for an advert in this category"
+    # Onze eigen uitleg (_melding_rubriek_vraagt_geld). Die komt in result.error
+    # te staan; wie later terugkijkt wat een rubriek kostte, moet hem herkennen.
+    r"|the site says this is a paid category"
+    # En die van _melding_advertentie_op_de_rekening: een advertentie die op de
+    # betaalpagina uitkwam terwijl het kanaal aantoonbaar wel gratis plaatst.
+    # Dat is dezelfde uitkomst voor die rubriek en hoort dus ook onthouden.
+    r"|put this advert on an order to be paid",
+    re.I,
+)
+
+
+# WANNEER IS EEN BETAALPAGINA HET HELE KANAAL, EN WANNEER DEZE ENE ADVERTENTIE.
+#
+# GEMETEN OP 18-09-2026 bij De Juiste Toon. Om 06:41 UTC kwam één advertentie
+# ("Wandkleed geborduurd 89/69 cm", rubriek wonen wanddecoraties) op de
+# betaalpagina van 2dehands uit. Twaalf minuten eerder, om 06:29, ging er nog
+# een advertentie van hem gewoon gratis online; de dag ervoor 200 stuks, in
+# totaal 219 ooit. Toch ging op die ene waarneming het hele kanaal dicht, werden
+# zijn 36 wachtende opdrachten teruggenomen en las hij: "That is why nothing has
+# ever gone online there."
+#
+# Dat was aantoonbaar onwaar, en het was de duurste soort onwaar: een dicht
+# kanaal kan daarna niet meer vanzelf opengaan. Een geblokkeerde publicatie
+# maakt geen opdracht meer aan, dus komt er ook nooit een nieuwe rij die het
+# oordeel kan herzien. Zonder ingreep met de hand was hij 2dehands kwijt.
+#
+# De regel is daarom: een betaalpagina sluit het hele kanaal alleen als dit
+# account hier nog NOOIT gratis een advertentie online kreeg — het geval van
+# Egbert Brouwer (806 pogingen, nul geplaatst, winkelmandje van EUR 153). Krijgt
+# het account hier wel gratis advertenties online, dan gaat deze waarneming over
+# deze ene rubriek, precies zoals bij "Dit is een betalende categorie", en
+# blijft de rest van de rij gewoon lopen. Pas als er NA de laatste geslaagde
+# plaatsing drie advertenties op de betaalpagina zijn uitgekomen is bewezen dat
+# het niet meer aan één rubriek ligt, en gaat het kanaal alsnog dicht. Drie
+# bestelregels (die niemand betaalt zolang je ze niet afrekent) zijn dat bewijs
+# waard; een kanaal wegnemen dat aantoonbaar werkt is dat niet.
+_BETAALMUUR_DREMPEL = 3
+
+
+def _laatste_gratis_plaatsing(db, user_id: str, platform: str):
+    """Wanneer kwam hier voor het laatst een advertentie GRATIS online?
+
+    Dit is het tegenbewijs bij een betaalpagina. Een kanaal dat dit account voor
+    elke advertentie geld vraagt zet er geen enkele gratis online; staat er een
+    geslaagde plaatsing, dan ging die betaalpagina over die ene advertentie.
+
+    Alleen create/content_refresh telt, om dezelfde reden als in
+    `_nooit_gelukt_op`: een geslaagde scan is geen plaatsing.
+    """
+    rijen = (db.table("jobs").select("done_at,created_at").eq("user_id", user_id)
+             .eq("platform", platform).eq("status", "done")
+             .in_("action", ["create", "content_refresh"])
+             .order("created_at", desc=True).limit(5).execute().data or [])
+    momenten = [t for t in (_parse_ts(r.get("done_at") or r.get("created_at"))
+                            for r in rijen) if t]
+    return max(momenten) if momenten else None
+
+
+def _betaalmuur_waarnemingen(db, user_id: str, platform: str) -> list:
+    """De momenten waarop een advertentie ECHT op de betaalpagina uitkwam.
+
+    EEN TERUGGENOMEN OPDRACHT IS GEEN WAARNEMING (18-09-2026, De Juiste Toon).
+    `_stop_wachtrij` schrijft de tekst van de betaalpagina op elke opdracht die
+    nog stond te wachten; bij hem waren dat er 36, terwijl er precies één
+    advertentie op die pagina is uitgekomen. Zouden die 36 meetellen, dan
+    vermenigvuldigt één waarneming zichzelf tot zevenendertig en haalt elke
+    drempel zichzelf. Herkenbaar aan wat `_stop_wachtrij` erbij schrijft:
+    result.cancelled == "queue stopped".
+    """
+    rijen = (db.table("jobs").select("done_at,created_at,result,payload")
+             .eq("user_id", user_id)
+             .eq("platform", platform).eq("action", "create")
+             .in_("status", ["error", "cancelled"])
+             .order("created_at", desc=True).limit(120).execute().data or [])
+    from backend.services.crosslist import _zonder_links  # laat: kringverwijzing
+    uit = []
+    for j in rijen:
+        res = j.get("result") or {}
+        if str(res.get("cancelled") or "") == "queue stopped":
+            continue
+        tekst = f"{res.get('error') or ''} {res.get('error_oorspronkelijk') or ''}"
+        if not _BETAALMUUR.search(tekst):
+            continue
+        # EEN MISLUKKING MET EEN VERKLAARDE OORZAAK TELT NIET MEE.
+        #
+        # De eerste betaalmuren die we zagen kwamen van een advertentie met een
+        # webadres in de tekst, en daar rekende 2dehands voor (zie _zonder_links
+        # in crosslist.py). Dat webadres halen we er nu uit voor we plaatsen, dus
+        # die mislukkingen zeggen niets meer over wat we nu zouden versturen.
+        tekstVanAdvertentie = str((j.get("payload") or {}).get("description") or "")
+        if tekstVanAdvertentie and _zonder_links(tekstVanAdvertentie) != tekstVanAdvertentie:
+            continue
+        # Een onleesbaar tijdstempel blijft een waarneming: hij telt mee voor
+        # "is hier ooit iets gratis geplaatst", alleen niet voor de drempel
+        # daarna. Wantrouw je eigen lege uitkomst, maar gooi hem niet weg.
+        uit.append(_parse_ts(j.get("done_at") or j.get("created_at")))
+    return uit
+
+
+def _kanaal_hard_dicht(db, user_id: str, platform: str, ook_nu: bool = False) -> bool:
+    """Vraagt dit kanaal dit account geld voor ELKE advertentie?
+
+    `ook_nu` telt de waarneming mee die op dit moment binnenkomt en nog niet in
+    de database staat: de opdracht die hem veroorzaakte is nog "claimed" en
+    wordt pas na deze afweging weggeschreven.
+
+    Zie de toelichting hierboven voor het waarom van de drempel.
+    """
+    try:
+        waarnemingen = _betaalmuur_waarnemingen(db, user_id, platform)
+        if ook_nu:
+            waarnemingen = [datetime.now(timezone.utc)] + waarnemingen
+        if not waarnemingen:
+            return False
+        laatste_succes = _laatste_gratis_plaatsing(db, user_id, platform)
+    except Exception:  # noqa: BLE001 - een rem mag nooit op een storing dichtvallen
+        return False
+    # Nooit een gratis advertentie online gekregen: dan is één waarneming genoeg,
+    # want er is niets dat het tegenspreekt. Ongewijzigd sinds 09-09-2026.
+    if laatste_succes is None:
+        return True
+    return sum(1 for w in waarnemingen
+               if w and w > laatste_succes) >= _BETAALMUUR_DREMPEL
+
+
+def _nooit_gelukt_op(db, user_id: str, platform: str) -> bool:
+    """Heeft deze verkoper op dit kanaal ooit iets GEPLAATST gekregen?
+
+    Dit is het verschil tussen "deze ene advertentie liep vast" en "dit kanaal
+    heeft bij hem nog nooit gewerkt". Alleen in het tweede geval mogen we de
+    hele wachtrij terugnemen.
+
+    ALLEEN create/content_refresh telt (07-09-2026, gemeten bij Egbert Brouwer).
+    Hij heeft twee geslaagde 2dehands-SCANS, en op grond daarvan zei deze functie
+    "het kanaal heeft ooit gewerkt" — waardoor de rem nooit aansloeg terwijl geen
+    van zijn 671 plaatsopdrachten ooit is geslaagd. Een scan is geen plaatsing.
+    """
+    return not (db.table("jobs").select("id").eq("user_id", user_id)
+                .eq("platform", platform).eq("status", "done")
+                .in_("action", ["create", "content_refresh"])
+                .limit(1).execute().data or [])
+
+
+def _kansloze_reeks(db, user_id: str, platform: str) -> bool:
+    """Drie keer op rij dezelfde stilte, en nog nooit één geslaagde plaatsing.
+
+    GEMETEN (03-09-2026, Egbert Brouwer / papas-plectrums). Hij zette 305
+    artikelen klaar voor 2dehands. Op 2dehands was hij niet ingelogd, dus gaf de
+    site op het plaatsadres HTTP 401 en ging het formulier nooit open. Elke
+    opdracht liep daardoor tegen de bewaker van drie minuten aan: 26 keer
+    dezelfde onbegrijpelijke melding, met nog 279 opdrachten erachter. De
+    extensie doet met opzet één opdracht tegelijk, dus dat waren zestien uur
+    waarin hij verder niets kon publiceren. Zijn woorden: "ik loop compleet vast".
+
+    Drie op rij is de rem: één keer kan pech zijn, drie keer op een kanaal dat
+    nog nooit heeft gewerkt is een patroon. Dat kost hem tien minuten in plaats
+    van zestien uur.
+    """
+    laatste = (db.table("jobs").select("status,result").eq("user_id", user_id)
+               .eq("platform", platform).eq("action", "create")
+               .in_("status", ["done", "error"])
+               .order("created_at", desc=True).limit(12).execute().data or [])
+    op_rij = 0
+    for j in laatste:
+        if j.get("status") == "done":
+            return False
+        if not _TIJDSOVERSCHRIJDING.search(str((j.get("result") or {}).get("error") or "")):
+            return False
+        op_rij += 1
+        if op_rij >= 3:
+            break
+    return op_rij >= 3 and _nooit_gelukt_op(db, user_id, platform)
+
+
+def _draaiende_extensieversie(db, user_id: str) -> tuple[int, int, int] | None:
+    """Welke kopie van de extensie draait er NU bij deze verkoper.
+
+    Uit de aanwezigheidsstempel, die elke ronde wordt bijgewerkt. None als we
+    het niet weten (kolom ontbreekt, nooit gepolst) — en "weet niet" mag nooit
+    een reden zijn om iets tegen te houden.
+    """
+    try:
+        rij = (db.table("extension_heartbeat").select("ext_version")
+               .eq("user_id", user_id).limit(1).execute().data or [])
+    except Exception:  # noqa: BLE001 — een onbekende versie is geen storing
+        return None
+    return _kopstuk_versie((rij[0] or {}).get("ext_version")) if rij else None
+
+
+def _verdient_nieuwe_kans(db, user_id: str, platform: str) -> bool:
+    """Mag dit kanaal ondanks de rem tóch weer open?
+
+    WAAROM DIT ER IS (08-09-2026, Egbert Brouwer). De rem hieronder was een deur
+    die alleen dichtging. Hij slaat aan zolang er nog nooit één plaatsing is
+    geslaagd, en hij houdt precies de poging tegen waarmee dat zou kunnen
+    veranderen. Gemeten gevolg: na 06-09 21:14 is er voor zijn 2dehands geen
+    enkele opdracht meer aangemaakt, ook niet nadat zijn kopie was bijgewerkt van
+    1.0.306 naar 1.0.311 — de versie waarin de twee gemeten oorzaken (een
+    doorverwijzing naar de inlogpagina die pas ná het injecteren kwam, en pauzes
+    die in een verborgen venster stilvielen) juist waren verholpen. Hij klikte
+    op publiceren en kreeg de melding van drie dagen eerder terug.
+
+    Een rem die zichzelf nooit meer kan opheffen is geen rem maar een muur.
+
+    De uitweg: elke foutmelding draagt het versiestempel van de extensie die hem
+    schreef. Draait er nu een nieuwere kopie dan die alle gestapelde
+    mislukkingen maakte, dan zeggen die mislukkingen niets over wat deze kopie
+    kan, en krijgt het kanaal een schone start. Weten we de draaiende versie
+    niet, of komen de stempels ermee overeen, dan blijft de rem staan.
+    """
+    draait = _draaiende_extensieversie(db, user_id)
+    if not draait:
+        return False
+    # VRAAG GERICHT OM DE GESTEMPELDE MELDINGEN (08-09-2026, gemeten bij Egbert
+    # Brouwer). Een door de rem teruggenomen opdracht draagt de tekst die de
+    # SERVER schreef, en daar staat geen versiestempel in. Bij hem waren dat er
+    # 622 op rij, dus in elk normaal venster (40, zelfs 200 rijen) was geen
+    # enkele versie te zien en greep deze uitweg niet. De stempels zitten op de
+    # meldingen die de extensie zelf schreef; die halen we hier expliciet op.
+    try:
+        rijen = (db.table("jobs").select("result").eq("user_id", user_id)
+                 .eq("platform", platform).eq("action", "create")
+                 .in_("status", ["error", "cancelled"])
+                 .filter("result->>error", "ilike", "%[extensie %")
+                 .order("created_at", desc=True).limit(10).execute().data or [])
+    except Exception:  # noqa: BLE001 — kan de database het filter niet, dan geen uitweg
+        return False
+    stempels = [v for v in (
+        _extensie_versie((j.get("result") or {}).get("error")) for j in rijen
+    ) if v]
+    # Geen enkel stempel gevonden: dan weten we niets over de kopie die dit
+    # veroorzaakte, en blijft de rem staan (de proefopdracht in crosslist zorgt
+    # dat dat nooit een muur wordt).
+    return bool(stempels) and draait > max(stempels)
+
+
+def _kanaal_kansloos(db, user_id: str, platform: str) -> bool:
+    """Is dit kanaal aantoonbaar kansloos voor dit account?
+
+    Twee ingangen, allebei vereisen dat er NOOIT één plaatsing is geslaagd:
+
+    1. Drie identieke tijdsoverschrijdingen op rij (`_kansloze_reeks`, ongewijzigd).
+    2. Tien of meer ondoorgronde mislukkingen (`_ONDOORGROND`) bij elkaar, ook
+       als ze van vorm wisselen. Egbert Brouwer: 671 pogingen voor 2dehands,
+       nul geslaagd, met "timed out", "not signed in" en "queue stopped" door
+       elkaar. Ingang 1 keek naar drie identieke op rij en zag dit patroon niet.
+
+    Een uitgelegde fout ("vul de foto's in") telt nooit mee: die zegt wél iets
+    over dit artikel, en drie ervan mogen geen wachtrij wissen.
+
+    En over alles heen: is de kopie die nu draait niet de kopie die deze
+    mislukkingen maakte, dan tellen ze niet meer mee. Zie _verdient_nieuwe_kans.
+    """
+    # DE BETAALMUUR GAAT VOOR, EN GAAT VOOR ALLES.
+    #
+    # Bewust vóór _nooit_gelukt_op en vóór _verdient_nieuwe_kans. Een nieuwere
+    # kopie van onze extensie is hier geen argument: 2dehands vraagt geld, en
+    # daar verandert onze versie niets aan. Zie _kanaal_hard_dicht.
+    if _kanaal_hard_dicht(db, user_id, platform):
+        return True
+    if not _nooit_gelukt_op(db, user_id, platform):
+        return False
+    recent = (db.table("jobs").select("status,result").eq("user_id", user_id)
+              .eq("platform", platform).eq("action", "create")
+              .in_("status", ["error", "cancelled"])
+              .order("created_at", desc=True).limit(40).execute().data or [])
+    ondoorgrond = [
+        j for j in recent
+        if _ONDOORGROND.search(str((j.get("result") or {}).get("error") or ""))
+        # EEN BETALENDE RUBRIEK IS EEN UITGELEGDE FOUT, GEEN RAADSEL.
+        # Zonder deze uitzondering zou een verkoper die met tien zoekertjes in
+        # één betalende rubriek begint zijn hele kanaal dicht zien gaan, terwijl
+        # elke gratis rubriek daarnaast het gewoon doet.
+        and not _BETAALDE_RUBRIEK.search(
+            f"{(j.get('result') or {}).get('error') or ''} "
+            f"{(j.get('result') or {}).get('error_oorspronkelijk') or ''}")
+    ]
+    if not (len(ondoorgrond) >= _KANSLOOS_DREMPEL
+            or _kansloze_reeks(db, user_id, platform)):
+        return False
+    return not _verdient_nieuwe_kans(db, user_id, platform)
+
+
+# Het adres waarop de verkoper zelf, in een klik, kan zien of hij is ingelogd.
+# GEMETEN op 03-09-2026 met een kale aanvraag zonder cookies: allebei deze
+# pagina's antwoorden dan met HTTP 401 en het kale woord "Unauthorized"
+# (twaalf bytes). Met een geldige sessie krijg je je advertentieoverzicht. Er
+# bestaat dus een test die geen uitleg nodig heeft en niet te misverstaan is,
+# en die hoort in de melding zelf te staan in plaats van in een mailwisseling.
+_CONTROLEPAGINA = {
+    "marktplaats": "https://www.marktplaats.nl/my-account/sell/index.html",
+    "2dehands": "https://www.2dehands.be/my-account/sell/index.html",
+}
+
+
+def _melding_geen_adres(platform: str, job: dict | None = None) -> str:
+    """Wat de verkoper leest als het adresblok op het formulier leeg bleef.
+
+    EEN LEEG ADRESVELD IS EEN ACCOUNTINSTELLING, GEEN STORING.
+
+    Marktplaats en 2dehands vullen de postcode zelf uit het account van de
+    verkoper. Wij typen daar bewust niets in: een verzonnen postcode zet de
+    advertentie in een willekeurige gemeente. Blijft het veld leeg, dan weigert
+    de extensie te plaatsen (`wachtOpPostcode` in extension/content/shared.js).
+
+    HIER STOND EERST EEN ADVIES DAT NERGENS HEEN LEIDDE (10-09-2026). De vorige
+    tekst zei: zet in je account op 2dehands niet een Belgische postcode maar
+    "Buitenland", met Nederland en je woonplaats erachter. Die instelling
+    bestaat niet. Nagemeten op een ingelogd 2dehands-account (10-09-2026): het
+    hele accountmenu heeft zeven onderdelen en geen instellingenscherm voor een
+    adres; Profiel > Contactgegevens kent precies drie velden, Naam, Postcode
+    (voorbeeld "1234", dus Belgisch) en Telefoonnummer. Marktplaats heeft exact
+    hetzelfde scherm, alleen met een Nederlandse postcode erin.
+
+    De keuze tussen binnen- en buitenland zit alleen op het zoekertje zelf. Op
+    het plaatsformulier staat "Je locatie: Belgie | Buitenland". Bij Belgie
+    staat er een veld contactInformation.postCode dat uit het account wordt
+    voorgevuld; klik je Buitenland, dan verdwijnt dat veld en komen er twee
+    lege verplichte velden voor terug: select#country en
+    contactInformation.foreignCity. Er is bij buitenland geen postcode.
+
+    Dat verklaart ook de vingerafdruk in het aanbod van De Juiste Toon: van zijn
+    458 zoekertjes staan er 402 op "Etten-Leur, Nederland", verdeeld over acht
+    spellingen van diezelfde woonplaats en een keer Mauritanie. Werd het adres
+    onthouden, dan was de spelling elke keer dezelfde geweest. Het wordt per
+    zoekertje opnieuw ingetypt, omdat het formulier het elke keer opnieuw vraagt.
+
+    DE UITWEG BESTAAT SINDS 11-09-2026, EN DE MELDING WIST HET NIET (16-09-2026).
+    Sinds 1.0.321 zet de extensie "Buitenland" met land en woonplaats zelf op het
+    zoekertje, uit Preferences > "Your location on Marktplaats & 2dehands". Deze
+    tekst bleef zeggen "zolang wij dat blok niet kunnen invullen" en stuurde naar
+    een Belgische postcode. Toon (De Juiste Toon) had dat blok leeg, dus al zijn
+    2dehands-plaatsingen van 11 tot en met 16 september strandden hierop, en de
+    melding wees hem nergens heen. Nu noemt hij de plek in Omnivaleur, en weet hij
+    of die al is ingevuld (dan is het advies anders).
+    """
+    if platform == "2dehands":
+        payload = (job or {}).get("payload") or {}
+        land = str(payload.get("location_country") or "").strip()
+        plaats = str(payload.get("location_city") or "").strip()
+        if land:
+            return (
+                "Er stond geen adres op het formulier, dus er is niets geplaatst. "
+                f"In Omnivaleur staat je locatie op {plaats or '(geen woonplaats)'}, "
+                f"{land}, maar het adresblok op 2dehands bleef toch leeg. Wij "
+                "verzinnen zelf nooit een adres, want een verzonnen postcode zet je "
+                "advertentie in een willekeurige gemeente.\n\n"
+                "Kijk bij Preferences > Your location on Marktplaats & 2dehands of "
+                "land en woonplaats kloppen en allebei zijn ingevuld. Woon je in "
+                "België, kies daar dan België en zet je postcode in je account op "
+                "2dehands.be; \"Buitenland\" is alleen voor wie buiten België woont.\n\n"
+                "De rest van je wachtrij voor dit kanaal is gepauzeerd, want elke "
+                "volgende advertentie loopt op precies dezelfde lege regel vast. "
+                "Druk daarna gewoon opnieuw op publiceren."
+            )
+        return (
+            "Er stond geen adres op het formulier, dus er is niets geplaatst. "
+            "2dehands vraagt op elk zoekertje waar je woont: een Belgische postcode "
+            "uit je account op die site, of \"Buitenland\" met land en woonplaats. "
+            "Dat laatste onthoudt 2dehands niet, en in je account is geen plek voor "
+            "een adres buiten België.\n\n"
+            "Woon je niet in België, vul dan in Omnivaleur één keer je land en "
+            "woonplaats in bij Preferences > Your location on Marktplaats & "
+            "2dehands. Dan zetten wij op elk zoekertje zelf \"Buitenland\" met jouw "
+            "land en woonplaats. Woon je wel in België, zet dan je postcode in je "
+            "profiel op 2dehands.be (Profiel > Contactgegevens > Postcode). Wij "
+            "verzinnen zelf nooit een adres, want een verzonnen postcode zet je "
+            "advertentie in een willekeurige gemeente.\n\n"
+            "De rest van je wachtrij voor dit kanaal is gepauzeerd, want elke "
+            "volgende advertentie loopt op precies dezelfde lege regel vast. "
+            "Zodra je locatie is ingevuld, druk je gewoon opnieuw op publiceren."
+        )
+    return (
+        "Er stond geen adres op het formulier, dus er is niets geplaatst. "
+        "Marktplaats haalt de postcode uit je account op die site, niet uit "
+        "Omnivaleur; wij vullen daar bewust niets in, want een verzonnen "
+        "postcode zet je advertentie in een willekeurige gemeente.\n\n"
+        "Vul je postcode een keer in bij Profiel > Contactgegevens > Postcode "
+        "op marktplaats.nl, dan vult het formulier zich daarna vanzelf en staat "
+        "je woonplaats op al je advertenties hetzelfde.\n\n"
+        "De rest van je wachtrij voor dit kanaal is gepauzeerd, want elke "
+        "volgende advertentie loopt op precies dezelfde lege regel vast. Zodra "
+        "de postcode er staat, druk je gewoon opnieuw op publiceren."
+    )
+
+
+def _melding_formulier_ging_niet_open(platform: str) -> str:
+    """Wat de verkoper leest als het plaatsformulier zich nooit meldde.
+
+    HIER STOND EERST EEN CONCLUSIE, EN DIE WAS FOUT (03-09-2026).
+
+    De eerste versie zei het zonder voorbehoud: "That is what it looks like when
+    you are not signed in". Het bewijs daarvoor was dat www.2dehands.be op het
+    plaatsadres HTTP 401 geeft zolang je niet bent ingelogd. Dat klopt, maar het
+    bewijst niets: www.marktplaats.nl doet op precies hetzelfde adres precies
+    hetzelfde, en daar publiceert dezelfde verkoper wel. Nagemeten, allebei 401,
+    twaalf bytes.
+
+    Egbert Brouwer kreeg die tekst op 275 artikelrijen te zien en mailde terug:
+    "Ik ben ingelogd op 2dehands, dus weet niet wat er nu mis gaat?" Hij had
+    gelijk. Zijn eigen scan van diezelfde ochtend meldde HTTP 200 op het
+    afgeschermde advertentie-overzicht, en dat antwoord krijg je alleen met een
+    geldige sessie.
+
+    Wat we wel weten is dit: het tabblad ging open en er kwam nooit een teken
+    van leven uit. Dat is de waarneming, en die schrijven we op. Welke van de
+    twee oorzaken het is kan hij in een klik zelf zien, en dat staat erbij.
+    """
+    site = {"marktplaats": "Marktplaats (marktplaats.nl)",
+            "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+    controle = _CONTROLEPAGINA.get(platform, "")
+    return (
+        f"The {site} listing form never opened: the page never reported back, so nothing was "
+        f"filled in and nothing was published. The rest of the queue for {site} has been stopped, "
+        f"so it will not keep repeating this for hours.\n\n"
+        f"One click tells you which of the two causes it is. Open this page in this browser:\n"
+        f"{controle}\n\n"
+        f"1. You see your own adverts page. Then you are signed in and the fault is on our side. "
+        f"You do not have to wait for us: press publish again. We always send one single test "
+        f"listing through, even while this channel is paused, and the extension now records "
+        f"every step it takes, so the next message names the exact step it stopped on instead "
+        f"of leaving us both guessing.\n"
+        f"2. You see the word \"Unauthorized\", or a login screen. Then you are not signed in to "
+        f"{site} in this browser. Marktplaats and 2dehands are separate sites with separate "
+        f"logins, so being signed in to one does not sign you in to the other. Go there, "
+        f"sign in, and publish again."
+    )
+
+
+def _melding_link_uit_advertentie(platform: str) -> str:
+    """Wat er op een advertentie staat die op de betaalmuur strandde door een link.
+
+    Dit is een andere boodschap dan _melding_kanaal_vraagt_geld: daar kan de
+    verkoper niets aan doen, hier is het opgelost en hoeft hij alleen opnieuw op
+    publiceren te klikken. Het verschil hardop zeggen is het hele punt: bij
+    Egbert Brouwer stonden er 116 rode regels die naar zijn inlog wezen terwijl
+    de oorzaak in zijn advertentietekst zat.
+    """
+    site = {"marktplaats": "Marktplaats (marktplaats.nl)",
+            "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+    betaalpagina = ("https://www.2dehands.be/payments/orderOverview/index.html"
+                    if platform == "2dehands"
+                    else "https://www.marktplaats.nl/payments/orderOverview/index.html")
+    return (
+        f"This one did not go online because the advert text contained your website address. "
+        f"{site} charges EUR 9 for an advert with a link in it, so instead of publishing it, it "
+        f"put the advert on an order to be paid. Nothing went online and nothing was paid.\n\n"
+        f"That is fixed: we now leave the website address and the email address out of adverts "
+        f"for {site}. The rest of your text stays exactly as it is, and your other channels are "
+        f"not touched. Press publish again and it goes through.\n\n"
+        f"One thing left for you: the adverts that ended up on that unpaid order are still there. "
+        f"Open this page and remove them with the bin icon, so nothing can be charged:\n"
+        f"{betaalpagina}"
+    )
+
+
+def _betaalpagina(platform: str) -> str:
+    return ("https://www.2dehands.be/payments/orderOverview/index.html"
+            if platform == "2dehands"
+            else "https://www.marktplaats.nl/payments/orderOverview/index.html")
+
+
+def _melding_advertentie_op_de_rekening(platform: str, rubriek: str | None,
+                                        sinds=None) -> str:
+    """Wat de verkoper leest als EEN advertentie op de betaalpagina uitkwam.
+
+    HET VERSCHIL MET _melding_kanaal_vraagt_geld (18-09-2026, De Juiste Toon).
+    Die tekst zegt "nothing has ever gone online there" en zet het kanaal uit.
+    Bij hem gingen er twaalf minuten eerder nog advertenties gratis online, en
+    219 in totaal. Dan is die zin onwaar en is het antwoord te zwaar: wat we
+    zagen is dat DEZE advertentie geld kost, en dat is een uitspraak over zijn
+    rubriek. Zelfde behandeling dus als "Dit is een betalende categorie".
+    """
+    site = {"marktplaats": "Marktplaats (marktplaats.nl)",
+            "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+    naam = f'"{rubriek}"' if rubriek else "that category"
+    wanneer = (f" The last one went online on {sinds.strftime('%d-%m-%Y')}." if sinds else "")
+    return (
+        f"This advert did not go online: {site} put this advert on an order to be paid instead "
+        f"of publishing it. Nothing was published, nothing was ordered, and we never click a "
+        f"payment button for you.\n\n"
+        f"This is not your account being blocked: your adverts do go online for free on {site}."
+        f"{wanneer} What this says is that {site} wants money for an advert in {naam}, so we "
+        f"stop only that category and leave the rest of your queue running.\n\n"
+        f"One thing for you: the advert that ended up on that unpaid order is still there. Open "
+        f"this page and remove it with the bin icon, so nothing can be charged:\n"
+        f"{_betaalpagina(platform)}\n\n"
+        f"Want these online anyway? Either place them yourself on {site} and pay per advert, or "
+        f"move the items to a category that is free there."
+    )
+
+
+def _melding_kanaal_vraagt_geld_voor(db, user_id: str, platform: str) -> str:
+    """Dezelfde melding, maar met de feiten van DIT account erin.
+
+    Zo komt de zin "nothing has ever gone online there" alleen in beeld als het
+    logboek dat ook zegt. Zie _melding_kanaal_vraagt_geld.
+    """
+    try:
+        sinds = _laatste_gratis_plaatsing(db, user_id, platform)
+    except Exception:  # noqa: BLE001 - liever geen datum dan een verkeerde bewering
+        sinds = None
+    return _melding_kanaal_vraagt_geld(platform, sinds)
+
+
+def _melding_kanaal_vraagt_geld(platform: str, sinds=None) -> str:
+    """Wat de verkoper leest als het kanaal geld vraagt voor elke advertentie.
+
+    Bewust een andere tekst dan de pauze hieronder, want het is een ander
+    verhaal: er komt geen proefadvertentie meer, en wachten heeft geen zin.
+
+    `sinds` is het moment waarop hier voor het laatst iets gratis online ging.
+    Staat dat er, dan mag de zin "nothing has ever gone online there" er niet in:
+    die was bij De Juiste Toon aantoonbaar onwaar (219 geplaatste advertenties).
+    """
+    site = {"marktplaats": "Marktplaats (marktplaats.nl)",
+            "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+    betaalpagina = _betaalpagina(platform)
+    verleden = (
+        f"Your adverts did go online there for free until {sinds.strftime('%d-%m-%Y')}; since "
+        f"then every one of them is put on that order instead."
+        if sinds else
+        "That is why nothing has ever gone online there."
+    )
+    return (
+        f"{site} does not let your account place adverts for free: it puts every advert on an "
+        f"order to be paid instead of publishing it. {verleden} This is not a rejection of this "
+        f"item, and nothing has been paid.\n\n"
+        f"{site} is switched off for your account, so we do not add anything else to that order. "
+        f"Open this page and remove the unpaid lines with the bin icon:\n{betaalpagina}\n\n"
+        f"Your other channels keep working and your items stay ready here. As soon as {site} "
+        f"lets your account place adverts for free, tell us and we switch the channel back on."
+    )
+
+
+def _rubrieknaam(fouttekst: str, rubriek: str | None) -> str:
+    """De rubriek zoals de VERKOPER hem kent, niet zoals wij hem opslaan.
+
+    Onze eigen naam is een sleutel ("muziek snaarinstrumenten gitaren
+    elektrisch"); dat leest als een foutcode. Het plaatsformulier zet zijn eigen
+    naam boven aan de pagina ("Gekozen categorie Muziek en Instrumenten Gitaren |
+    Elektrisch Wijzigen") en die staat al in de melding die de extensie meestuurt.
+    Die heeft dus altijd voorrang.
+    """
+    m = re.search(r"Gekozen categorie\s+(.{2,80}?)\s+Wijzigen", fouttekst or "")
+    if m:
+        return " ".join(m.group(1).split())
+    slug = " ".join(str(rubriek or "").split())
+    return slug[:1].upper() + slug[1:] if slug else ""
+
+
+def _melding_rubriek_vraagt_geld(platform: str, rubriek: str | None) -> str:
+    """Wat de verkoper leest als één rubriek geld vraagt en de rest gratis blijft.
+
+    Bewust een andere tekst dan _melding_kanaal_vraagt_geld: daar staat het hele
+    kanaal uit, hier gaat alles buiten deze rubriek gewoon door. Dat verschil
+    moet erin staan, anders leest hij "2dehands doet het niet" terwijl er op
+    hetzelfde moment zoekertjes van hem online gaan.
+    """
+    site = {"marktplaats": "Marktplaats (marktplaats.nl)",
+            "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+    naam = f'"{rubriek}"' if rubriek else "this category"
+    return (
+        f"{site} charges for adverts in {naam}: the site says this is a paid category, and it now "
+        f"puts every next advert there on an order to be paid instead of publishing it. Nothing "
+        f"was published, nothing was ordered, and we never click a payment button for you.\n\n"
+        f"We have taken the rest of your queue for {naam} back, so it does not fail one item at a "
+        f"time. Everything you have queued for other categories on {site} keeps going as normal.\n\n"
+        f"Want these online anyway? Either place them yourself on {site} and pay per advert, or "
+        f"move the items to a category that is free there."
+    )
+
+
+def _melding_kanaal_op_pauze(platform: str) -> str:
+    """Wat de verkoper leest als de rem dit kanaal op pauze heeft gezet.
+
+    WAAROM DIT EEN EIGEN TEKST IS (08-09-2026). Hier werd de melding van de
+    laatste mislukking hergebruikt, dus las Egbert Brouwer bij elke nieuwe klik
+    de fout van drie dagen eerder terug, met een controle die hij toen al had
+    gedaan. Dat leest als "er is niets veranderd", terwijl er wél iets is
+    veranderd: er staat nu een pauze, en er gaat één test doorheen.
+    """
+    site = {"marktplaats": "Marktplaats (marktplaats.nl)",
+            "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+    return (
+        f"{site} is on hold for your account: every publish so far has failed there and not one "
+        f"has ever gone through, so we are not queueing hundreds more. This is not a rejection of "
+        f"this item.\n\n"
+        f"One test listing IS being sent to {site} right now. If it goes through, the hold lifts "
+        f"by itself and everything else follows. If it fails, the message on that one item names "
+        f"the step it stopped on."
+    )
+
+
+# ── IS DEZE VERKOPER ZAKELIJK? DAT STAAT OPENBAAR OP ZIJN EIGEN ADVERTENTIE ──
+#
+# WAAROM DIT ER IS (15-09-2026, gemeten bij Egbert Brouwer, Papa's Plectrums).
+#
+# Het persoonlijke advertentieoverzicht (/my-account/sell/...) bestaat alleen voor
+# een PARTICULIER account. Is een verkoper zakelijk, dan is die pagina voor hem
+# dicht: 302 naar /identity/v2/login en 401 op de API, exact het beeld van een
+# uitgelogde bezoeker. Juist die pagina gebruikt de extensie als inlogcontrole,
+# dus kreeg hij "je bent niet ingelogd" terwijl hij gewoon was ingelogd. Voor de
+# derde keer.
+#
+# De extensie is gerepareerd (1.0.332 leest de kopbalk van de site zelf), maar die
+# is bij hem pas na de Web Store binnen en dat duurde eerder drie weken. Tot die
+# tijd is dit de enige plek die het verschil kan zien, en dat kan hier ook: het
+# verkoperstype staat OPENBAAR op zijn eigen advertentiepagina, zonder inlog.
+# Gemeten: bij hem "sellerType":"TRADER", bij een particuliere verkoper ernaast
+# "CONSUMER". Zo hoeven we het hem niet te vragen.
+#
+# Nooit raden: we zoeken op de titel van een advertentie die WIJ hebben geplaatst
+# en nemen alleen de treffer waarvan het advertentienummer klopt met wat wij
+# hebben opgeslagen. Vinden we die niet, dan is het antwoord "weet niet" en
+# verandert er niets aan de melding.
+_VERKOPERSOORT: dict = {}
+_SOORT_GELDIG = 6 * 3600          # een accountsoort verandert zelden
+_SOORT_ONBEKEND_GELDIG = 15 * 60  # maar "weet niet" mag snel opnieuw geprobeerd
+_SOORT_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+             "(KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36")
+
+
+def _verkoper_soort(db, user_id: str, platform: str) -> str | None:
+    """"TRADER" (zakelijk), "CONSUMER" (particulier) of None als we het niet zagen."""
+    sleutel = (user_id, platform)
+    bewaard = _VERKOPERSOORT.get(sleutel)
+    if bewaard:
+        soort, toen = bewaard
+        geldig = _SOORT_GELDIG if soort else _SOORT_ONBEKEND_GELDIG
+        if time.monotonic() - toen < geldig:
+            return soort
+    soort = None
+    try:
+        from backend.services.mp_enrich import ZOEK_PER_PLATFORM
+        import httpx
+        adres = ZOEK_PER_PLATFORM.get(platform)
+        if adres:
+            zoek_url, basis = adres
+            rijen = (db.table("jobs").select("payload,result")
+                     .eq("user_id", user_id).eq("platform", platform)
+                     .eq("action", "create").eq("status", "done")
+                     .order("done_at", desc=True).limit(8).execute().data or [])
+            kandidaten = [(((r.get("payload") or {}).get("title") or "").strip(),
+                           str(((r.get("result") or {}).get("platform_listing_id") or "")).strip())
+                          for r in rijen]
+            # OOK WAT HIJ ZELF AL ONLINE HAD (17-09-2026, Johan Kist). Hierboven
+            # staan alleen advertenties die WIJ plaatsten. Johan importeerde zijn
+            # 24 advertenties van zijn zakelijke Marktplaats en had er nog niet één
+            # via ons geplaatst, dus was het antwoord hier "weet niet". Daardoor
+            # mocht hij drie keer "vervangen" aanklikken, en elke verwijdering
+            # sneuvelde op het lege persoonlijke overzicht van een zakelijk account.
+            # Een geïmporteerde advertentie met nummer is net zo goed van hem.
+            if len([k for k in kandidaten if k[0] and k[1]]) < 3:
+                items = (db.table("items").select("id,title").eq("user_id", user_id)
+                         .limit(200).execute().data or [])
+                titel_van = {i["id"]: (i.get("title") or "").strip() for i in items}
+                if titel_van:
+                    eigen = (db.table("listings").select("item_id,platform_listing_id")
+                             .in_("item_id", list(titel_van)).eq("platform", platform)
+                             .eq("status", "active").not_.is_("platform_listing_id", "null")
+                             .limit(8).execute().data or [])
+                    kandidaten += [(titel_van.get(l["item_id"], ""), str(l["platform_listing_id"]).strip())
+                                   for l in eigen]
+            # Marktplaats schrijft hetzelfde nummer soms met een lettertje ervoor:
+            # "a1530276630" in de zoek-API tegenover "1530276630" bij de import.
+            kaal = lambda n: re.sub(r"^[a-z]", "", str(n or "").strip().lower())
+            with httpx.Client(timeout=8, follow_redirects=True,
+                              headers={"User-Agent": _SOORT_UA}) as client:
+                for titel, nummer in kandidaten[:8]:
+                    if not titel or not nummer:
+                        continue
+                    data = client.get(zoek_url, params={"query": titel, "limit": 30},
+                                      headers={"Accept": "application/json"}).json()
+                    treffer = next((l for l in (data.get("listings") or [])
+                                    if kaal(l.get("itemId")) == kaal(nummer)), None)
+                    if not treffer or not treffer.get("vipUrl"):
+                        continue
+                    pagina = client.get(basis + treffer["vipUrl"]).text
+                    gevonden = re.search(r'"sellerType"\s*:\s*"(\w+)"', pagina)
+                    if gevonden:
+                        soort = gevonden.group(1)
+                        break
+    except Exception as e:  # noqa: BLE001 — dit mag nooit een foutmelding opeten
+        logger.warning("verkoperstype niet vast te stellen voor %s/%s: %s", user_id, platform, e)
+        soort = None
+    _VERKOPERSOORT[sleutel] = (soort, time.monotonic())
+    if soort:
+        logger.info("verkoperstype %s op %s voor %s", soort, platform, user_id)
+    return soort
+
+
+def _is_zakelijk(db, job: dict | None, body: dict, user_id: str) -> bool | None:
+    """Alleen navragen als het ertoe doet: een inlogverwijt op Marktplaats/2dehands."""
+    if not job or job.get("platform") not in ("marktplaats", "2dehands"):
+        return None
+    fout = str((body or {}).get("error") or "")
+    if not (_CLAIM_NIET_INGELOGD.search(fout) or "appear to be signed in" in fout):
+        return None
+    soort = _verkoper_soort(db, user_id, job.get("platform") or "")
+    return True if soort == "TRADER" else (False if soort else None)
+
+
+def _melding_zakelijk_account(platform: str, reden: str) -> str:
+    site = {"marktplaats": "Marktplaats (marktplaats.nl)",
+            "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+    return (
+        f"Your {site} account is a business account. For a business account the personal "
+        f"\"My adverts\" page does not exist, and that is exactly the page our extension opens "
+        f"to check whether you are signed in. So it read your business account as a signed-out "
+        f"browser. You were signed in the whole time. This one is on us, not on you.\n\n"
+        f"Nothing was published and nothing was changed on {site}, and your queue is still there. "
+        f"It is fixed in extension version 1.0.332, which reads the site's own header instead, and "
+        f"your queue starts again by itself as soon as Chrome has picked that version up. You do "
+        f"not have to click your items again.\n\nThis is what we measured, word for word:\n\n{reden}"
+    )
+
+
+def _rechtgezette_foutmelding(job: dict | None, body: dict, versie, kansloos: bool = False,
+                              zakelijk: bool | None = None) -> dict:
+    """Welke foutmelding de verkoper te zien krijgt bij een mislukte opdracht.
+
+    Los van de database gehouden zodat hij te testen is — deze tekst is precies
+    wat een klant dagenlang de verkeerde kant op stuurde.
+
+    Twee rechtzettingen, in deze volgorde, en die volgorde is het hele punt:
+
+    1. WETEN WE DAT DE KOPIE TE OUD IS, DAN IS DAT HET ANTWOORD.
+       Dit stond er niet, en dat kostte twee klanten samen ruim dertig
+       foutmeldingen die de verkeerde kant op wezen. Nagemeten in het
+       opdrachtenlogboek op 29-08-2026:
+         Dennis (info@retrogameking.com)   14 mislukte scans vanaf 1.0.217/218
+         Egbert (info@papas-plectrums.nl)  11 mislukte scans vanaf 1.0.200/202/207
+       Beiden kregen "je bent niet ingelogd", en Egbert daarna "zet Admarkt aan"
+       — terwijl de server uit hun eigen versiestempel wist dat het aan de kopie
+       lag. Die wetenschap werd weggegooid zodra de twee herkansingen op waren.
+       Beiden zijn dagenlang hun inlog blijven controleren.
+       Dit geldt voor elk platform en elke soort opdracht; de herkansing in
+       fail_job blijft beperkt tot een scan, want een halve publicatie opnieuw
+       uitdelen is een ander risico. Een verkeerd antwoord is overal even schadelijk.
+
+    2. Tot 1.0.259 meldde de extensie bij een lege Marktplaats-scan altijd "je
+       bent niet ingelogd". Voor een zakelijke verkoper is dat aantoonbaar
+       onjuist: zijn persoonlijke overzicht IS leeg, zijn advertenties staan in
+       Admarkt, en het enige wat helpt is de Admarkt-schakelaar aanzetten. Een
+       nieuwe extensie staat pas dagen later bij hem op de computer, dus zetten
+       we die tekst hier recht voor iedereen die nog een oudere kopie draait.
+    """
+    fout = str((body or {}).get("error") or "")
+    # 0. DE BETAALMUUR BLIJFT STAAN ZOALS HIJ IS.
+    #
+    # Deze melding is de enige hier die op een GEMETEN adres berust: het
+    # tabblad kwam aantoonbaar uit op /payments/. Elke rechtzetting hieronder is
+    # een gok die het beter denkt te weten, en precies zo'n gok maakte hier drie
+    # weken lang "je bent misschien niet ingelogd" van. Niet meer aankomen.
+    if _BETAALMUUR.search(fout) or _BETAALDE_RUBRIEK.search(fout):
+        return dict(body or {})
+    # 3. HET FORMULIER GING NOOIT OPEN — zie _kansloze_reeks.
+    #    Bewust vóór de rest: dit is de enige rechtzetting die weet dat het
+    #    kanaal bij deze verkoper nog nooit heeft gewerkt, en dat weegt zwaarder
+    #    dan elke gok over wat er in het formulier is misgegaan.
+    if kansloos and (job or {}).get("action") == "create" and _ONDOORGROND.search(fout):
+        return {**(body or {}), "error_oorspronkelijk": fout,
+                "error": _melding_formulier_ging_niet_open((job or {}).get("platform") or "")}
+    if versie and versie < MINIMALE_SCANVERSIE:
+        return {**(body or {}), "error_oorspronkelijk": fout, "error": (
+            f"Deze opdracht is opgepakt door een verouderde kopie van de "
+            f"Omnivaleur-extensie (versie {'.'.join(map(str, versie))}; nodig is "
+            f"minstens {'.'.join(map(str, MINIMALE_SCANVERSIE))}). Die kopie kan dit "
+            f"werk niet afmaken, en wat ze meldt over inloggen klopt niet. Open "
+            f"chrome://extensions, zet \"Ontwikkelaarsmodus\" aan en verwijder elke "
+            f"met de hand geladen kopie van Omnivaleur; laat alleen de versie uit "
+            f"de Chrome Web Store staan en herstart Chrome.")}
+    _stil = _kopie_staat_stil(versie) if versie else None
+    if _stil:
+        achter, gepubliceerd = _stil
+        return {**(body or {}), "error_oorspronkelijk": fout, "error": (
+            f"Deze opdracht is opgepakt door een kopie van de Omnivaleur-extensie "
+            f"die zichzelf niet bijwerkt: versie {'.'.join(map(str, versie))}, terwijl "
+            f"{gepubliceerd} in de Chrome Web Store staat ({achter} versies "
+            f"achterstand). Chrome werkt een kopie uit de Web Store elke paar uur "
+            f"bij, dus deze is met de hand geladen. Open chrome://extensions, "
+            f"verwijder elke Omnivaleur die er staat, en installeer hem opnieuw uit "
+            f"de Chrome Web Store. Alles wat hierna misgaat is met die kopie niet "
+            f"te verhelpen.")}
+    # EEN LEEG ADRESVELD OP 2DEHANDS IS EEN ACCOUNTINSTELLING, GEEN STORING.
+    #
+    # 2dehands.be vult alleen de postcode uit het account; wij typen daar bewust
+    # niets in, want een verzonnen postcode zet de advertentie in een
+    # willekeurige Belgische gemeente. Is het veld leeg, dan weigert de extensie
+    # te plaatsen.
+    #
+    # LET OP, DIT IS NAGEMETEN OP 10-09-2026 EN NIET WAT HIER EERST STOND: het
+    # account biedt geen buitenland-adres aan. Profiel > Contactgegevens kent
+    # drie velden (Naam, Postcode met voorbeeld "1234", Telefoonnummer) en het
+    # accountmenu heeft verder geen instellingenscherm. De keuze
+    # "Belgie | Buitenland" bestaat alleen op het zoekertje: bij Belgie het veld
+    # contactInformation.postCode uit het account, bij Buitenland verdwijnt dat
+    # veld en komen select#country en contactInformation.foreignCity ervoor in de
+    # plaats, allebei leeg en verplicht. Wie in Nederland woont kan dus niets in
+    # zijn account zetten dat hier helpt; verwijs hem daar niet naar toe.
+    #
+    # Toon (dejuistetoon, 05-09 en 07-09-2026) vroeg er twee keer naar: "adres
+    # niet in Essen maar in Nederland". Zijn 402 zoekertjes op "Etten-Leur,
+    # Nederland" staan in acht spellingen: het formulier onthoudt het
+    # buitenlandblok niet, hij typt het elke keer opnieuw.
+    if _GEEN_ADRES.search(fout) and (job or {}).get("platform") in ("2dehands", "marktplaats"):
+        return {**(body or {}), "error_oorspronkelijk": fout,
+                "error": _melding_geen_adres((job or {}).get("platform") or "", job)}
+    # LEGE FABRIKANTVELDEN ZIJN EEN INSTELLING VAN DE VERKOPER (01-10-2026).
+    #
+    # JP MiniWheels (zakelijk Marktplaats-account) zette "Responsible party"
+    # in Preferences uit, 24 seconden voor zijn eerste plaatsing. Marktplaats
+    # eist die drie velden bij hem wel, en hij kreeg drie keer de ruwe
+    # formuliertekst "Dit veld is verplicht | textAttribute[manufacturer...]
+    # =LEEG" te zien. Die velden kan alleen hij invullen; zeg hem waar.
+    if (_FABRIKANT_LEEG.search(fout) and (job or {}).get("action") == "create"
+            and (job or {}).get("platform") in ("marktplaats", "2dehands")):
+        return {**(body or {}), "error_oorspronkelijk": fout, "error": (
+            "Not published: Marktplaats and 2dehands require the responsible party "
+            "on this listing (trade name, postal address and email), and those fields "
+            "were empty. Go to Preferences, under \"Responsible party\" fill in your "
+            "trade name, address and email once and tick \"Add these details to my "
+            "Marktplaats & 2dehands listings\", then publish again. Every next "
+            "listing carries them automatically.")}
+    # HET ANTWOORD DAT WE ZELF HEBBEN OPGEZOCHT GAAT VOOR (15-09-2026).
+    # Weten we uit zijn eigen openbare advertentie dat dit een zakelijk account
+    # is, dan is elk inlogverwijt hierboven onzin en hoeven we hem niets te
+    # vragen. Zie _verkoper_soort.
+    if zakelijk and (job or {}).get("platform") in ("marktplaats", "2dehands") and (
+            _CLAIM_NIET_INGELOGD.search(fout) or "appear to be signed in" in fout):
+        return {**(body or {}), "error_oorspronkelijk": fout,
+                "error": _melding_zakelijk_account((job or {}).get("platform") or "", fout)}
+    if ((job or {}).get("action") == "scan"
+            and (job or {}).get("platform") == "marktplaats"
+            and "appear to be signed in" in fout):
+        return {**(body or {}), "error_oorspronkelijk": fout, "error": (
+            "Je persoonlijke advertentieoverzicht op Marktplaats is leeg. Bij een "
+            "zakelijk account hoort dat zo: die advertenties staan in Admarkt, met "
+            "een eigen inlog. Klik op het Omnivaleur-icoon in je browserbalk en zet "
+            "\"Business account (Admarkt)\" aan, en start de scan opnieuw. Heb je een "
+            "gewoon particulier account, controleer dan of je op Marktplaats zelf "
+            "bent ingelogd.")}
+    return body or {}
+
+
+@router.post("/{job_id}/error")
+def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
+    db = get_db()
+    _record_extension_heartbeat(db, user_id)  # only the extension reports job errors
+    job = eerste_rij(db.table("jobs").select("item_id,platform,action,payload").eq("id", job_id).eq("user_id", user_id).limit(1).execute())
+
+    # Een verzendbijwerking op 2dehands die "mislukte" terwijl het zoekertje het
+    # nieuwe bedrag al toont, is gelukt. Anders zet één valse mislukking de hele
+    # reeks stil. Zie _bijwerking_staat_al_online.
+    if job and _is_2dh_bijwerking(job) and _bijwerking_staat_al_online(job):
+        execute_with_retry(db.table("jobs").update({
+            "status": "done",
+            "result": {"note": "openbare_pagina_klopt", "verzending_bijgewerkt": True,
+                       "melding_extensie": (body or {}).get("error")},
+            "done_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("id", job_id).eq("user_id", user_id))
+        logger.info("job %s: 2dehands-bijwerking meldde een fout, maar de openbare pagina "
+                    "toont het nieuwe bedrag al; afgerond als gelukt", job_id)
+        return {"ok": True, "completed": True, "reason": "public_page_already_shows_it"}
+
+    # Een verwijdering die bevestigd is, waarna het tabblad verdween voor de
+    # extensie kon nakijken, en die op de openbare pagina weg is, is gelukt.
+    # Anders slaat de uitgifte de herplaatsing over en staat het artikel nergens.
+    # Zie _verwijdering_openbaar_bewezen.
+    if job and _verwijdering_openbaar_bewezen(job, (body or {}).get("error")):
+        execute_with_retry(db.table("jobs").update({
+            "status": "done",
+            "result": {"note": "already_absent",
+                       "correctie": ("Het venster was beantwoord en daarna was het tabblad weg; "
+                                     "de openbare pagina van het kanaal gaf 404/410."),
+                       "oorspronkelijke_fout": (body or {}).get("error")},
+            "done_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("id", job_id).eq("user_id", user_id))
+        logger.info("job %s: verwijdering meldde een fout zonder antwoord van het kanaal, "
+                    "maar de openbare pagina is weg; afgerond als gelukt", job_id)
+        return {"ok": True, "completed": True, "reason": "public_page_gone"}
+
+    # Een scan die door een verouderde kopie van de extensie is opgepakt telt
+    # niet als mislukt: die kopie kán het werk gewoon niet. Terug in de wachtrij,
+    # zodat de bijgewerkte kopie hem alsnog oppakt. Zie MINIMALE_SCANVERSIE.
+    versie = _extensie_versie(body.get("error"))
+    if job and job["action"] == "scan" and versie and versie < MINIMALE_SCANVERSIE:
+        payload = dict(job.get("payload") or {})
+        pogingen = int(payload.get("_oude_extensie_pogingen") or 0)
+        if pogingen < MAX_HERKANSING_OUDE_EXTENSIE:
+            payload["_oude_extensie_pogingen"] = pogingen + 1
+            payload["_oude_extensie_versie"] = ".".join(map(str, versie))
+            execute_with_retry(db.table("jobs").update({
+                "status": "pending", "payload": payload, "claimed_at": None,
+            }).eq("id", job_id))
+            logger.info("Scan %s geweigerd door extensie %s (te oud) — terug in de wachtrij (%d/%d)",
+                        job_id, payload["_oude_extensie_versie"], pogingen + 1,
+                        MAX_HERKANSING_OUDE_EXTENSIE)
+            return {"ok": True, "requeued": True, "reason": "outdated_extension"}
+
+    # Alleen navragen als het er echt toe doet: een ondoorgronde mislukking op een
+    # publicatie (tijdsoverschrijding, inlogverwijt, wachtrij gestopt). Anders is
+    # dit een extra databasevraag bij elke foutmelding.
+    kansloos = False
+    if (job and job.get("action") == "create"
+            and _ONDOORGROND.search(str((body or {}).get("error") or ""))):
+        try:
+            kansloos = _kanaal_kansloos(db, user_id, job.get("platform") or "")
+        except Exception:
+            logger.warning("kansloze reeks niet vast te stellen voor %s", job_id)
+    zakelijk = _is_zakelijk(db, job, body, user_id)
+    body = _rechtgezette_foutmelding(job, body, versie, kansloos, zakelijk)
+
+    # EEN SMARTWATCH DIE GELD GAAT KOSTEN GAAT NAAR SPORTHORLOGES.
+    #
+    # Vóór beide remmen hieronder: die nemen de rest van de rubriek terug, en
+    # de betaalmuur kan zelfs het hele kanaal dichtzetten als dit de eerste
+    # plaatsing was. Dat Smartwatches vol is zegt niets over het kanaal en niets
+    # over Sporthorloges. Zie _GRATIS_UITWIJK.
+    if (job and job.get("action") == "create"
+            and (_BETAALMUUR.search(str((body or {}).get("error") or ""))
+                 or _BETAALDE_RUBRIEK.search(str((body or {}).get("error") or "")))
+            and _zet_terug_in_gratis_rubriek(db, user_id, job_id, job)):
+        return {"ok": True, "requeued": True, "reason": "free_neighbour_category"}
+
+    # DE BETAALMUUR STOPT DE RIJ METEEN, EN VANAF DE SERVER.
+    #
+    # Dit hoort hier en niet alleen in de extensie. Een nieuwe extensie is bij
+    # deze verkoper pas over weken binnen (de Chrome Web Store deed er eerder
+    # drie weken over), en tot die tijd is dit de enige plek die het kán zien.
+    # Het bewijs zit al in de melding die zijn huidige kopie stuurt: die zet het
+    # adres van het tabblad erbij, en dat adres was /payments/orderOverview.
+    #
+    # En het moet meteen gebeuren, niet na een drempel van drie of tien. Elke
+    # volgende opdracht in die rij is opnieuw EUR 9,00 in een bestelling waar
+    # niemand om heeft gevraagd. Zie _kanaal_hard_dicht.
+    if (job and job.get("action") in ("create", "content_refresh")
+            and job.get("platform") in ("marktplaats", "2dehands")
+            and _BETAALMUUR.search(str((body or {}).get("error") or ""))):
+        try:
+            kanaal = job.get("platform") or ""
+            # HET HELE KANAAL, OF ALLEEN DEZE RUBRIEK? Zie _kanaal_hard_dicht.
+            # Staat er een geslaagde plaatsing op dit kanaal, dan is "dit account
+            # plaatst hier niet gratis" aantoonbaar onwaar en gaat het over de
+            # rubriek van deze advertentie.
+            if _kanaal_hard_dicht(db, user_id, kanaal, ook_nu=True):
+                reden = _melding_kanaal_vraagt_geld_voor(db, user_id, kanaal)
+                body = {**body,
+                        "error_oorspronkelijk": body.get("error_oorspronkelijk") or body.get("error"),
+                        "error": reden}
+                aantal = _stop_wachtrij(db, user_id, kanaal, reden)
+                _gelijk_de_kansloze_muur(db, user_id, kanaal, reden)
+                logger.warning("Betaalmuur op %s bij %s: %d wachtende opdrachten teruggenomen",
+                               kanaal, user_id, aantal)
+            else:
+                rubriek = _rubriek_sleutel(job.get("payload"))
+                reden = _melding_advertentie_op_de_rekening(
+                    kanaal, _rubriek_leesbaar(job.get("payload")),
+                    _laatste_gratis_plaatsing(db, user_id, kanaal))
+                body = {**body,
+                        "error_oorspronkelijk": body.get("error_oorspronkelijk") or body.get("error"),
+                        "error": reden}
+                # Zonder rubriek valt er niets gericht te stoppen; dan blijft het
+                # bij deze ene uitgelegde melding. Zelfde afweging als bij
+                # _BETAALDE_RUBRIEK hieronder.
+                aantal = (_stop_wachtrij(db, user_id, kanaal, reden, rubriek=rubriek)
+                          if rubriek else 0)
+                logger.warning("Betaalpagina op %s (%s) bij %s: kanaal plaatst aantoonbaar "
+                               "gratis, %d wachtende opdrachten in die rubriek teruggenomen",
+                               kanaal, rubriek or "onbekend", user_id, aantal)
+        except Exception:  # noqa: BLE001 — een fout hier mag de foutmelding niet opeten
+            logger.warning("Betaalmuur: wachtrij niet teruggenomen voor %s/%s",
+                           user_id, job.get("platform"))
+
+    # EEN BETALENDE RUBRIEK STOPT ALLEEN DIE RUBRIEK.
+    #
+    # Zie _BETAALDE_RUBRIEK voor de meting. Dit moet hier op de server staan en
+    # niet alleen in de extensie: de kopie die nu bij deze verkoper draait meldt
+    # de bewijzen al ("Dit is een betalende categorie", knop "Naar betalen"),
+    # en een nieuwe extensie is bij hem pas weken later binnen.
+    #
+    # Bewust NA de betaalmuur-controle en met een uitsluiting erop: staat het
+    # hele kanaal al op slot, dan is dat het zwaardere en juistere antwoord.
+    fouttekst_nu = str((body or {}).get("error") or "")
+    if (job and job.get("action") in ("create", "content_refresh")
+            and job.get("platform") in ("marktplaats", "2dehands")
+            and not _BETAALMUUR.search(fouttekst_nu)
+            and _BETAALDE_RUBRIEK.search(fouttekst_nu)):
+        try:
+            # De rubriek die het formulier ECHT koos: staat de eigen
+            # Marktplaats-rubriek in de opdracht, dan die en niet de geraden
+            # categorie. Zie _rubriek_sleutel.
+            rubriek = _rubriek_sleutel(job.get("payload"))
+            reden = _melding_rubriek_vraagt_geld(
+                job["platform"],
+                _rubrieknaam(fouttekst_nu, _rubriek_leesbaar(job.get("payload"))) or None)
+            body = {**body,
+                    "error_oorspronkelijk": body.get("error_oorspronkelijk") or body.get("error"),
+                    "error": reden}
+            # Zonder rubriek valt er niets gericht te stoppen. Dan blijft het bij
+            # deze ene uitgelegde melding: de hele rij terugnemen op grond van
+            # één zoekertje in een onbekende rubriek zou meer kapotmaken dan het
+            # oplost.
+            aantal = (_stop_wachtrij(db, user_id, job["platform"], reden, rubriek=rubriek)
+                      if rubriek else 0)
+            logger.warning("Betalende rubriek op %s (%s) bij %s: %d wachtende opdrachten teruggenomen",
+                           job["platform"], rubriek or "onbekend", user_id, aantal)
+        except Exception:  # noqa: BLE001 — een rem mag de foutmelding niet opeten
+            logger.warning("Betalende rubriek: wachtrij niet teruggenomen voor %s/%s",
+                           user_id, job.get("platform"))
+
+    # EEN LEEG ADRESBLOK STOPT DE RIJ VOOR DAT KANAAL.
+    #
+    # GEMETEN 10-09-2026, De Juiste Toon: "ik ben nu ook op tweedehands aan het
+    # plaatsen, die komen niet door zoals die van mp wel doen". Tussen 18:00 en
+    # 18:03 mislukten zes plaatsingen op 2dehands achter elkaar met dezelfde
+    # reden (het adresblok bleef leeg), en er stonden er nog tien te wachten die
+    # allemaal op precies dezelfde regel zouden vastlopen. Elke poging houdt zijn
+    # browser twee minuten bezig en schrijvende opdrachten gaan één voor één, dus
+    # dat is een half uur waarin er niets anders kan.
+    #
+    # Het adres komt uit zijn account op die site en verandert niet doordat wij
+    # het nog een keer proberen. Eén uitgelegde melding en de rij op pauze is dus
+    # het hele juiste antwoord; publiceren zet hem weer aan. Zelfde afweging als
+    # bij de betaalmuur hierboven, en om dezelfde reden op de server: een nieuwe
+    # extensie is bij een verkoper pas weken later binnen.
+    if (job and job.get("action") in ("create", "content_refresh")
+            and job.get("platform") in ("marktplaats", "2dehands")
+            and not _BETAALMUUR.search(fouttekst_nu)
+            and _GEEN_ADRES.search(
+                f"{fouttekst_nu} {(body or {}).get('error_oorspronkelijk') or ''}")):
+        try:
+            reden = _melding_geen_adres(job.get("platform") or "", job)
+            body = {**body,
+                    "error_oorspronkelijk": body.get("error_oorspronkelijk") or body.get("error"),
+                    "error": reden}
+            aantal = _stop_wachtrij(db, user_id, job["platform"], reden)
+            logger.warning("Leeg adresblok op %s bij %s: %d wachtende opdrachten teruggenomen",
+                           job["platform"], user_id, aantal)
+        except Exception:  # noqa: BLE001 — een rem mag de foutmelding niet opeten
+            logger.warning("Leeg adres: wachtrij niet teruggenomen voor %s/%s",
+                           user_id, job.get("platform"))
+
+    # EEN MISLUKKING OP DE INLOG KOST DE OPDRACHT NIET.
+    #
+    # GEMETEN 15-09-2026. De pauze hierboven laat elke twintig minuten één
+    # proefplaatsing door. Liep die op hetzelfde inlogverwijt vast, dan werd hij
+    # 'error' — dus kostte elke ronde een tweede opdracht. Er is niets gebeurd op
+    # het kanaal en er is niets aan dit artikel mis: de opdracht hoort gewoon
+    # terug in de rij. De uitleg staat op de ene opdracht die de pauze draagt.
+    if (job and job.get("action") == "create"
+            and job.get("platform") in ("marktplaats", "2dehands")
+            and _CLAIM_NIET_INGELOGD.search(
+                f"{fouttekst_nu} {(body or {}).get('error_oorspronkelijk') or ''}")):
+        try:
+            execute_with_retry(db.table("jobs").update({
+                "status": "pending", "claimed_at": None, "result": None, "done_at": None,
+            }).eq("id", job_id))
+            _pauzeer_op_inlogverwijt(
+                db, user_id, job["platform"],
+                _reden_zonder_vals_verwijt(
+                    db, user_id, job["platform"], fouttekst_nu,
+                    ".".join(map(str, versie)) if versie else None))
+            logger.warning("Inlogverwijt op %s bij %s: opdracht %s terug in de rij, kanaal op pauze",
+                           job["platform"], user_id, job_id)
+            return {"ok": True, "paused": True}
+        except Exception:  # noqa: BLE001 — lukt dat niet, dan de gewone weg
+            logger.warning("Inlogverwijt: opdracht %s niet kunnen terugzetten", job_id)
+
+    # Deze vier bijwerkingen MOETEN aankomen. Viel de verbinding met de database
+    # weg, dan kreeg de extensie een 500 terug en bleef de opdracht op "claimed"
+    # staan — waarna de hele wachtrij stilstond en de verkoper zag dat "hij niks
+    # doet". Gemeten op 30-08-2026: twee van deze fouten binnen tien minuten.
+    # Herhalen mag hier, want het zijn vaste waarden op één opdracht: twee keer
+    # hetzelfde wegschrijven verandert niets. Bij een insert zou dat wél een
+    # tweede rij opleveren; die blijven daarom met rust.
+    execute_with_retry(db.table("jobs").update({
+        "status": "error",
+        "result": body,
+        "done_at": datetime.now(timezone.utc).isoformat(),
+    }).eq("id", job_id))
+    # A content-refresh or relist-delete bumped the listing's cooldown + daily
+    # quota at enqueue time; since the job failed, give both back.
+    rollback = ((job or {}).get("payload") or {}).get("_refresh_rollback")
+    if rollback:
+        from backend.services.relist import rollback_refresh
+        rollback_refresh(rollback, user_id)
+    if job and job["action"] == "create":
+        execute_with_retry(db.table("listings").update({
+            "status": "error",
+            "error_message": body.get("error", "Extension reported failure"),
+        }).eq("item_id", job["item_id"]).eq("platform", job["platform"]).eq("status", "pending"))
+        # EEN MISLUKTE HERPLAATSING MOET OOK TE ZIEN ZIJN (03-09-2026, Amanda).
+        #
+        # De regel hierboven raakt alleen een rij die op 'pending' staat — dat is
+        # een eerste publicatie. Bij een herplaatsing is de oude advertentie op
+        # dit moment al weggehaald en staat die rij op 'delisted'. Er werd dus
+        # NERGENS iets vastgelegd: het artikel had geen advertentie meer, geen
+        # foutmelding, geen bolletje, niets. Precies haar melding: "dan zie ik
+        # vervolgens niks in het overzicht bij mp, terwijl hij wel aangeeft een
+        # nieuwe advertentie te hebben geplaatst." Gemeten bij haar: elf
+        # artikelen in die stille toestand.
+        #
+        # De status wordt 'error' en niet 'active', want de advertentie is er
+        # echt niet meer; 'active' zou hem ook meteen weer kandidaat maken voor
+        # de volgende herplaatsronde. Alleen de rij die bij DEZE herplaatsing
+        # hoort, via dezelfde weg als bij een mislukte verwijdering.
+        _meld_mislukte_herplaatsing(db, user_id, job,
+                                    body.get("error", "Extension reported failure"))
+        # DE REST VAN DE RIJ HEEFT GEEN KANS MEER.
+        #
+        # Dit hoort hier en niet alleen in de extensie: een reparatie in de
+        # extensie bereikt een verkoper pas nadat Google hem heeft goedgekeurd
+        # en Chrome hem heeft opgehaald — bij Egbert duurde dat drie weken.
+        # Hier werkt hij vandaag, ook op de kopie die nu bij hem draait.
+        if kansloos:
+            reden = _melding_formulier_ging_niet_open(job["platform"])
+            _stop_wachtrij(db, user_id, job["platform"], reden)
+            # De wachtrij stoppen raakt alleen wat nóg wacht. Wie al tientallen
+            # rode balken had (Egbert: tien zichtbaar, honderden eerder) keek
+            # daarna tegen een muur van verschillende onbegrijpelijke teksten aan.
+            # Zet die allemaal op deze ene, uitgelegde reden.
+            _gelijk_de_kansloze_muur(db, user_id, job["platform"], reden)
+        # Een mislukte publicatie betekent vaak dat de gebruiker het formulier
+        # zelf heeft afgemaakt. Plan meteen een scan in, zodat de app binnen
+        # enkele minuten zelf ziet dat de advertentie tóch online staat in
+        # plaats van te wachten op de volgende ronde.
+        _queue_scan(db, user_id, job["platform"])
+    elif job and job["action"] == "delete":
+        # A failed delist means NOTHING was removed — the listing is still live on
+        # the platform. Setting it to "error" hid it from the dashboard's active
+        # views, so it looked deleted while it was actually still up (and, for a
+        # relist, left the item in limbo). Keep it "active" (its true state) and
+        # attach a visible message so the UI can offer a retry instead of hiding it.
+        #
+        # ALLEEN DE ADVERTENTIE DIE DEZE OPDRACHT TE PAKKEN HAD (01-09-2026).
+        # Dit werkte élke rij van dat artikel op dat kanaal bij, en daar zijn er
+        # inmiddels tot zes van — één per eerdere herplaatsing. Eén mislukte
+        # verwijdering zette ze dus allemaal terug op 'actief', mét hun oude
+        # plaatsingsdatum, waarna het automatisch herplaatsen ze meteen weer
+        # oppakte. Dat is de lus waardoor (1288) en (1314) dagelijks opnieuw
+        # geplaatst werden. Bovendien wiste het een al gestelde vraag
+        # "is dit verkocht?" weer uit. Zie _verwijderdoelen.
+        melding = body.get("error", "Delist failed — the listing is still live. You can retry.")
+        for rij in _verwijderdoelen(db, job):
+            if rij.get("status") in ("sold", "sold_unconfirmed"):
+                continue
+            execute_with_retry(db.table("listings").update({
+                "status": "active",
+                "error_message": melding,
+            }).eq("id", rij["id"]))
+    return {"ok": True}
+
+
+# Vanaf deze versie kan de extensie een advertentie zonder vraagprijs plaatsen
+# (ze zet de advertentievorm dan op "Bieden"). Zie extension/content/shared.js,
+# mpPrijsvorm. Dit is GEEN nieuwe ondergrens: alles wat een prijs heeft blijft op
+# elke kopie gewoon werken.
+KAN_BIEDEN_VANAF = (1, 0, 285)
+
+
+def _herplaatsing_kansloos(db, user_id: str, verwijderopdracht: dict,
+                           versie: tuple | None) -> str | None:
+    """Zou de plaatsing die bij DEZE verwijdering hoort zeker mislukken?
+
+    WAAROM DIT ER IS (03-09-2026, Amanda Haas). Van haar 479 artikelen hebben er
+    179 geen vraagprijs: op Marktplaats staan die als "Bieden". Een kopie van de
+    extensie van vóór 1.0.285 vult dan een leeg prijsveld in bij "Vraagprijs",
+    waarop Marktplaats weigert met "Geen prijs ingevuld". Op dat moment is de
+    oude advertentie al weg — elf van haar advertenties waren zo verdwenen.
+
+    De reparatie zit in de extensie, maar die bereikt haar pas nadat de Chrome
+    Web Store hem heeft goedgekeurd; bij een eerdere klant duurde dat drie weken.
+    Deze rem staat daarom hier: draait er nog een oudere kopie, dan gaat de
+    verwijdering niet door en blijft de advertentie gewoon staan. Zodra de
+    bijgewerkte kopie draait, loopt alles weer zoals bedoeld.
+
+    Een onbekende versie telt als oud: kopieën van vóór 1.0.250 sturen hun
+    versie niet mee, en die kunnen dit zeker niet.
+    """
+    if verwijderopdracht.get("platform") not in ("marktplaats", "2dehands"):
+        return None
+    if versie is not None and versie >= KAN_BIEDEN_VANAF:
+        return None
+    try:
+        paar = (db.table("jobs").select("id,payload")
+                .eq("user_id", user_id).eq("item_id", verwijderopdracht["item_id"])
+                .eq("platform", verwijderopdracht["platform"]).eq("action", "create")
+                .eq("status", "pending")
+                .gte("created_at", verwijderopdracht["created_at"])
+                .order("created_at").limit(1).execute().data or [])
+    except Exception as e:  # noqa: BLE001 — een rem mag nooit de uitgifte omgooien
+        logger.warning("kon de gepaarde plaatsing niet nakijken voor %s: %s",
+                       verwijderopdracht.get("id"), e)
+        return None
+    if not paar:
+        return None                      # losse verwijdering, geen herplaatsing
+    prijs = (paar[0].get("payload") or {}).get("price")
+    try:
+        heeft_prijs = float(prijs) > 0
+    except (TypeError, ValueError):
+        heeft_prijs = False
+    if heeft_prijs:
+        return None
+    return ("Relist skipped: this listing has no asking price (it runs as \"Bieden\" on "
+            "Marktplaats), and the extension on this computer cannot publish that yet. "
+            "Your listing is untouched and still live. Update the Omnivaleur extension "
+            "and it will refresh on the next round.")
+
+
+def _neem_herplaatsing_terug(db, verwijderopdracht: dict, now: str, reden: str) -> None:
+    """Verwijdering én de bijbehorende plaatsing terugnemen, advertentie blijft staan."""
+    ids = [verwijderopdracht["id"]]
+    try:
+        paar = (db.table("jobs").select("id")
+                .eq("user_id", verwijderopdracht["user_id"])
+                .eq("item_id", verwijderopdracht["item_id"])
+                .eq("platform", verwijderopdracht["platform"]).eq("action", "create")
+                .eq("status", "pending")
+                .gte("created_at", verwijderopdracht["created_at"])
+                .order("created_at").limit(1).execute().data or [])
+        ids += [r["id"] for r in paar]
+    except Exception as e:  # noqa: BLE001
+        logger.warning("gepaarde plaatsing niet gevonden bij het terugnemen: %s", e)
+    for job_id in ids:
+        try:
+            db.table("jobs").update({
+                "status": "cancelled", "result": {"cancelled": reden}, "done_at": now,
+            }).eq("id", job_id).execute()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("opdracht %s niet teruggenomen: %s", job_id, e)
+
+    # De verversbeurt en het dagquotum teruggeven: er is niets ververst.
+    rollback = (verwijderopdracht.get("payload") or {}).get("_refresh_rollback")
+    if rollback:
+        try:
+            from backend.services.relist import rollback_refresh
+            rollback_refresh(rollback, verwijderopdracht["user_id"])
+        except Exception as e:  # noqa: BLE001
+            logger.warning("verversbeurt niet teruggedraaid: %s", e)
+
+    # De advertentie stond op 'relisting' vanaf het inplannen. Er is niets
+    # weggehaald, dus 'active' is de waarheid — en de melding erbij, anders is
+    # het een stille niet-gebeurtenis.
+    for rij in _verwijderdoelen(db, verwijderopdracht):
+        if rij.get("status") in ("sold", "sold_unconfirmed"):
+            continue
+        try:
+            db.table("listings").update({
+                "status": "active", "error_message": reden,
+            }).eq("id", rij["id"]).execute()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("advertentie %s niet teruggezet: %s", rij.get("id"), e)
+    logger.info("Herplaatsing teruggenomen voor item %s op %s: %s",
+                verwijderopdracht.get("item_id"), verwijderopdracht.get("platform"), reden)
+
+
+def _meld_mislukte_herplaatsing(db, user_id: str, job: dict, melding: str) -> int:
+    """De weggehaalde advertentie van een mislukte herplaatsing zichtbaar maken.
+
+    Was dit een herplaatsing (er hoort een geslaagde verwijdering bij die vlak
+    hiervoor liep), dan is de oude advertentie weg en is er geen nieuwe gekomen.
+    Zonder deze regel blijft dat artikel achter zonder advertentie én zonder
+    uitleg — een doodlopende straat in het scherm.
+    """
+    try:
+        paar = (db.table("jobs").select("id,item_id,platform,payload,status,created_at")
+                .eq("user_id", user_id).eq("item_id", job["item_id"])
+                .eq("platform", job["platform"]).eq("action", "delete")
+                .lte("created_at", job["created_at"])
+                .order("created_at", desc=True).limit(1).execute().data or [])
+    except Exception as e:  # noqa: BLE001
+        logger.warning("mislukte herplaatsing niet te melden voor %s: %s", job.get("id"), e)
+        return 0
+    if not paar or paar[0].get("status") != "done":
+        return 0                      # geen herplaatsing, of er is niets weggehaald
+
+    uitleg = (f"{melding} — the old listing was already removed for this refresh, "
+              f"so this item is not live here right now. Publish it again, or mark "
+              f"it as listed if you finished the form yourself.")
+    geraakt = 0
+    for rij in _verwijderdoelen(db, paar[0]):
+        if rij.get("status") in ("sold", "sold_unconfirmed", "active"):
+            continue                  # verkocht of tóch nog live: afblijven
+        execute_with_retry(db.table("listings").update({
+            "status": "error",
+            "error_message": uitleg,
+        }).eq("id", rij["id"]))
+        geraakt += 1
+    return geraakt
+
+
+def _stop_wachtrij(db, user_id: str, platform: str, reden: str,
+                   rubriek: str | None = None) -> int:
+    """Neem alles terug wat nog voor dit kanaal in de wachtrij staat.
+
+    `rubriek` maakt er een gerichte rem van: dan blijft alleen wat in DIE
+    rubriek staat achterwege en gaat de rest van het kanaal gewoon door. Zie
+    _BETAALDE_RUBRIEK — een rubriek die geld kost zegt niets over de rubrieken
+    die gratis zijn, en die van iemand afnemen is schade in plaats van hulp.
+    """
+    wachtend = db.table("jobs").select("id,item_id,action,payload").eq(
+        "user_id", user_id).eq("platform", platform).eq("status", "pending").execute().data or []
+    if rubriek is not None:
+        doel = str(rubriek or "").strip().lower()
+        wachtend = [j for j in wachtend if _rubriek_sleutel(j.get("payload")) == doel]
+        # Een 2dehands-plaatsing van een artikel dat op Marktplaats staat krijgt
+        # pas bij uitgifte zijn eigen rubriek (_zet_rubriek_van_marktplaats). Een
+        # rem op een GERADEN rubriek zegt daar niets over: bij Egbert zou één
+        # mislukte "gitaar" anders honderden miniaturen terugnemen die in
+        # Verzamelen gewoon gratis online gaan. Die blijven staan; bij uitgifte
+        # wordt hun echte rubriek alsnog getoetst (_weiger_bekende_betaalde_rubriek).
+        if platform == "2dehands" and not doel.startswith("mp:") and wachtend:
+            ids = sorted({j["item_id"] for j in wachtend if j.get("item_id")})
+            op_marktplaats: set = set()
+            for i in range(0, len(ids), 200):
+                op_marktplaats |= {r["item_id"] for r in (db.table("listings")
+                                   .select("item_id").in_("item_id", ids[i:i + 200])
+                                   .eq("platform", "marktplaats").eq("status", "active")
+                                   .execute().data or [])}
+            wachtend = [j for j in wachtend if j.get("item_id") not in op_marktplaats]
+    if not wachtend:
+        return 0
+    now = datetime.now(timezone.utc).isoformat()
+    ids = [j["id"] for j in wachtend]
+    # Per brok bijwerken: boven ongeveer 640 id's breekt PostgREST het verzoek
+    # stil af op de lengte van de URL. Zie de kennisbank; dat heeft eerder
+    # scans, verkoopcontrole en herplaatsen kapotgemaakt.
+    for i in range(0, len(ids), 200):
+        execute_with_retry(db.table("jobs").update({
+            "status": "cancelled",
+            "result": {"cancelled": "queue stopped", "error": reden},
+            "done_at": now,
+        }).in_("id", ids[i:i + 200]))
+
+    # De advertentierijen die op deze opdrachten stonden te wachten horen niet
+    # op "bezig" te blijven staan: er is niets geplaatst. Met de reden erbij,
+    # want een leeg foutveld leest als een raadsel.
+    item_ids = sorted({j["item_id"] for j in wachtend
+                       if j.get("action") == "create" and j.get("item_id")})
+    for i in range(0, len(item_ids), 200):
+        execute_with_retry(db.table("listings").update({
+            "status": "error", "error_message": reden,
+        }).in_("item_id", item_ids[i:i + 200]).eq("platform", platform).eq("status", "pending"))
+
+    # Een herplaatsing leende bij het inplannen alvast uit de dagteller en de
+    # afkoeltijd. De ronde gaat niet door, dus dat gaat terug.
+    from backend.services.relist import rollback_refresh
+    for j in wachtend:
+        rollback = (j.get("payload") or {}).get("_refresh_rollback")
+        if rollback:
+            try:
+                rollback_refresh(rollback, user_id)
+            except Exception:
+                logger.warning("stop-wachtrij: teruggeven van de herplaatsteller mislukt voor %s", j["id"])
+
+    logger.warning("stop-wachtrij: %d opdrachten voor %s teruggenomen bij %s (%s)",
+                   len(ids), platform, user_id, reden[:120])
+    return len(ids)
+
+
+def _gelijk_de_kansloze_muur(db, user_id: str, platform: str, reden: str) -> int:
+    """Zet elke mislukte advertentie op dit kanaal op dezelfde uitgelegde reden.
+
+    WAAROM (07-09-2026, Egbert Brouwer). Zijn 671 mislukte plaatsopdrachten voor
+    2dehands lieten evenveel rode balken achter, met wisselende teksten: "timed
+    out", "not signed in", "queue stopped". Elke ronde een andere. Dat leest als
+    tien verschillende storingen terwijl het er één is: 2dehands laat dit account
+    niet plaatsen. `_stop_wachtrij` raakt alleen wat nóg wacht; deze functie zet
+    ook de al bestaande foutregels recht.
+
+    Alleen rijen zonder advertentienummer: die hebben nooit een advertentie gehad
+    en zijn dus echt kansloos. Een rij mét nummer is een levende advertentie en
+    blijft met rust.
+    """
+    try:
+        rijen = fetch_all(lambda: db.table("listings")
+                          .select("id,platform_listing_id,items!inner(user_id)")
+                          .eq("items.user_id", user_id)
+                          .eq("platform", platform).eq("status", "error"),
+                          page_size=1000)
+    except Exception as e:  # noqa: BLE001 — recht­zetten mag nooit fataal zijn
+        logger.warning("kansloze muur niet te lezen voor %s/%s: %s", user_id, platform, e)
+        return 0
+    ids = [r["id"] for r in rijen if not r.get("platform_listing_id")]
+    for i in range(0, len(ids), 200):
+        execute_with_retry(db.table("listings").update({
+            "error_message": reden,
+        }).in_("id", ids[i:i + 200]))
+    if ids:
+        logger.warning("kansloze muur gelijkgetrokken: %d rijen voor %s bij %s",
+                       len(ids), platform, user_id)
+    return len(ids)
+
+
+@router.post("/stop-platform")
+def stop_platform(body: dict, request: Request, user_id: str = Depends(get_current_user)):
+    """Neem in één keer alles terug wat nog voor één kanaal in de wachtrij staat.
+
+    WAAROM DIT BESTAAT (03-09-2026, gemeten bij Egbert Brouwer). Hij zette 152
+    artikelen tegelijk klaar voor Marktplaats én 2dehands. Op 2dehands was hij
+    niet ingelogd, dus ging daar het plaatsformulier nooit open. Elke opdracht
+    liep daardoor tegen de bewaker van drie minuten aan: 26 keer dezelfde
+    onbegrijpelijke melding, met nog 279 opdrachten erachter. De extensie doet
+    met opzet één opdracht tegelijk, dus dat was zestien uur waarin hij niets
+    anders kon publiceren. Zijn woorden: "ik loop compleet vast".
+
+    Weet de extensie zeker dat het formulier niet opengaat, dan heeft de rest
+    van de rij geen enkele kans meer. Die halen we hier in één keer weg, met de
+    reden erbij, zodat hij ziet wat er is gebeurd in plaats van het zestien uur
+    lang opnieuw te zien mislukken.
+    """
+    platform = str(body.get("platform") or "").strip()
+    if not platform:
+        raise HTTPException(status_code=400, detail="platform is required")
+    db = get_db()
+    ruw = str(body.get("reason") or "").strip() or _melding_formulier_ging_niet_open(platform)
+    # Zakelijk account? Dan is het verwijt aantoonbaar onzin en stellen we geen
+    # vraag meer aan de verkoper. Zie _verkoper_soort.
+    if (_CLAIM_NIET_INGELOGD.search(ruw)
+            and _verkoper_soort(db, user_id, platform) == "TRADER"):
+        logger.warning("stop-platform: inlogverwijt genegeerd, %s is zakelijk op %s",
+                       user_id, platform)
+        return {"ok": True, "paused": True, "zakelijk": True,
+                "cancelled": _pauzeer_op_inlogverwijt(
+                    db, user_id, platform, _melding_zakelijk_account(platform, ruw))}
+    reden = _reden_zonder_vals_verwijt(
+        db, user_id, platform, ruw, request.headers.get("x-omnivaleur-ext"))
+    # Een inlogverwijt wist geen wachtrij meer. Zie _pauzeer_op_inlogverwijt.
+    if _CLAIM_NIET_INGELOGD.search(ruw):
+        return {"ok": True, "cancelled": _pauzeer_op_inlogverwijt(db, user_id, platform, reden),
+                "paused": True}
+    # EEN BETAALPAGINA WIST DE RIJ NIET MEER ALS DIT KANAAL AANTOONBAAR GRATIS
+    # PLAATST (18-09-2026, De Juiste Toon). De extensie die nu bij verkopers
+    # draait roept dit eindpunt aan zodra een tabblad op /payments/ uitkomt. Bij
+    # hem nam dat 36 wachtende opdrachten weg terwijl er twaalf minuten eerder
+    # nog advertenties van hem gratis online gingen. De foutmelding die hierna
+    # binnenkomt (fail_job) zet de rem wel op die ene rubriek; dat is het
+    # kleinere en juistere antwoord, en het kost hem zijn rij niet.
+    if _BETAALMUUR.search(ruw) and not _kanaal_hard_dicht(db, user_id, platform, ook_nu=True):
+        logger.warning("stop-platform: betaalpagina op %s bij %s, maar dit kanaal plaatst "
+                       "aantoonbaar gratis — wachtrij blijft staan", platform, user_id)
+        return {"ok": True, "cancelled": 0, "gericht": True}
+    gestopt = _stop_wachtrij(db, user_id, platform, reden)
+    # Is het kanaal aantoonbaar kansloos, trek dan ook de al bestaande rode balken
+    # gelijk — anders blijft er een muur van oude, wisselende teksten staan naast
+    # de ene uitgelegde reden. Alleen bij bewezen kansloos: een eenmalige stop
+    # (tijdelijke storing) mag niet het hele overzicht herschrijven.
+    try:
+        if _kanaal_kansloos(db, user_id, platform):
+            _gelijk_de_kansloze_muur(db, user_id, platform,
+                                     _melding_formulier_ging_niet_open(platform))
+    except Exception:  # noqa: BLE001
+        logger.warning("stop-platform: kansloze-muur gelijktrekken mislukt voor %s/%s", user_id, platform)
+    return {"ok": True, "cancelled": gestopt}
+
+
+# Een "je bent niet ingelogd" dat de extensie meestuurt is een oordeel uit haar
+# eigen achtergrond, en dat oordeel is aantoonbaar fout geweest.
+# OOK DE SPRONG NAAR DE INLOGPAGINA IS EEN INLOGVERWIJT (09-10-2026, Goudlief).
+# De extensie meldt een werktabblad dat op /identity/v2/login uitkomt met haar
+# eigen zin ("that tab was sent to the ... login page", of "showed a login page
+# instead"). Die zin viel buiten dit patroon, dus ging hij langs de pauze heen
+# naar _stop_wachtrij: om 10:39 UTC verdwenen in één klap 337 Marktplaats- en
+# 342 2dehands-plaatsingen. Precies wat "tabblad-op-de-inlogpagina" in de
+# kennisbank verbiedt: zo'n waarneming wist nooit een wachtrij.
+_CLAIM_NIET_INGELOGD = re.compile(
+    r"you are not signed in to|je bent niet ingelogd"
+    r"|sent to the .{0,60}login page|showed a login page", re.I)
+
+# EEN INLOGVERWIJT WIST NOOIT MEER EEN WACHTRIJ.
+#
+# GEMETEN 14-09-2026 bij Egbert Brouwer. Zijn extensie meldde "niet ingelogd" en
+# daarop gingen 288 zoekertjes in vier seconden op geannuleerd. Daniel weet vrij
+# zeker dat hij gewoon ingelogd was, en de geschiedenis geeft hem gelijk: de oude
+# controle beschuldigde deze man 27 keer ten onrechte tussen 22-08 en 09-09.
+#
+# Wie er ook gelijk heeft, de straf klopt niet. Dit oordeel komt uit een meting
+# die wij van buitenaf niet kunnen natrekken, en zo'n meting mag geen 288
+# opdrachten opruimen. Daarom: het kanaal gaat op pauze en er sneuvelt één
+# opdracht, die de uitleg draagt. Na de pauze gaat er vanzelf weer één de deur
+# uit. Klopte het verwijt niet, dan loopt de hele rij daarna gewoon door zonder
+# dat hij iets hoeft aan te klikken; klopte het wel, dan kost het hem één
+# opdracht per twintig minuten in plaats van zijn hele voorraad in vier seconden.
+_INLOG_PAUZE = timedelta(minutes=20)
+_PAUZE_STEMPEL = "login unproven"
+
+
+def _inlog_pauze_actief(db, user_id: str, platform: str, nu: datetime) -> bool:
+    """Staat dit kanaal op pauze na een onbewezen inlogverwijt?"""
+    try:
+        rijen = (db.table("jobs").select("done_at,result")
+                 .eq("user_id", user_id).eq("platform", platform).eq("action", "create")
+                 .eq("status", "cancelled").order("done_at", desc=True)
+                 .limit(3).execute().data or [])
+    except Exception as e:  # noqa: BLE001 — een pauze mag nooit de uitgifte breken
+        logger.warning("inlogpauze niet na te gaan voor %s/%s: %s", user_id, platform, e)
+        return False
+    for r in rijen:
+        if ((r.get("result") or {}).get("cancelled") or "") != _PAUZE_STEMPEL:
+            continue
+        toen = _parse_ts(r.get("done_at"))
+        return bool(toen and nu - toen < _INLOG_PAUZE)
+    return False
+
+
+def _pauzeer_op_inlogverwijt(db, user_id: str, platform: str, reden: str) -> int:
+    """Eén opdracht draagt de uitleg, de rest blijft gewoon staan.
+
+    EEN OPDRACHT IN TOTAAL, NIET EEN PER RONDE (gemeten 15-09-2026). De eerste
+    versie annuleerde elke twintig minuten opnieuw een opdracht, en de mislukte
+    proefplaatsing erbij kostte er nog een. Bij Egbert liep dat de hele nacht
+    door. Bestaat de uitleg al, dan wordt alleen zijn tijdstempel bijgewerkt:
+    de pauze schuift op en er sneuvelt niets nieuws.
+    """
+    now = datetime.now(timezone.utc).isoformat()
+    grens = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    try:
+        staat_er = (db.table("jobs").select("id,result,done_at")
+                    .eq("user_id", user_id).eq("platform", platform).eq("action", "create")
+                    .eq("status", "cancelled").gte("done_at", grens)
+                    .order("done_at", desc=True).limit(5).execute().data or [])
+    except Exception:  # noqa: BLE001
+        staat_er = []
+    for r in staat_er:
+        if ((r.get("result") or {}).get("cancelled") or "") == _PAUZE_STEMPEL:
+            execute_with_retry(db.table("jobs").update({
+                "result": {"cancelled": _PAUZE_STEMPEL, "error": reden}, "done_at": now,
+            }).eq("id", r["id"]))
+            return 0
+    kop = (db.table("jobs").select("id,item_id")
+           .eq("user_id", user_id).eq("platform", platform).eq("action", "create")
+           .eq("status", "pending").order("created_at").limit(1).execute().data or [])
+    if not kop:
+        return 0
+    j = kop[0]
+    execute_with_retry(db.table("jobs").update({
+        "status": "cancelled",
+        "result": {"cancelled": _PAUZE_STEMPEL, "error": reden},
+        "done_at": now,
+    }).eq("id", j["id"]).eq("status", "pending"))
+    if j.get("item_id"):
+        execute_with_retry(db.table("listings").update({
+            "status": "error", "error_message": reden,
+        }).eq("item_id", j["item_id"]).eq("platform", platform).eq("status", "pending"))
+    logger.warning("inlogverwijt: %s/%s twintig minuten op pauze, rest blijft staan",
+                   user_id, platform)
+    return 1
+# Vanaf deze versie vraagt de extensie het na in een tabblad op de site zelf.
+# Alles daaronder oordeelt uitsluitend op de achtergrondmeting, en die is
+# aantoonbaar blind geweest, dus zo'n oordeel geven we nooit door.
+_VERSIE_MET_EIGEN_INLOGMETING = (1, 0, 308)
+
+
+def _laatste_eigen_meting(db, user_id: str, platform: str) -> str | None:
+    """Wanneer de browser van deze verkoper zélf bij zijn advertentieoverzicht kon.
+
+    De scan draait in een echt tabblad OP de site en vraagt daar het
+    afgeschermde /my-account/sell/api/listings op. HTTP 200 daar krijg je alleen
+    met een geldige sessie — dat is precies de aanname waar de inlogcontrole van
+    de extensie op gebouwd is. Geeft de tijd van de laatste 200 terug, of None.
+    """
+    try:
+        rijen = execute_with_retry(
+            # Alleen scan_meta uit het resultaat, niet het hele resultaat: een
+            # scanresultaat is honderden kilobytes en dit leest er tien (06-10-2026).
+            db.table("jobs").select("scan_meta:result->scan_meta,done_at,created_at")
+            .eq("user_id", user_id).eq("platform", platform)
+            .eq("action", "scan").eq("status", "done")
+            .order("created_at", desc=True).limit(10)
+        ).data or []
+    except Exception as e:  # noqa: BLE001 — geen meting is geen storing
+        logger.warning("Kon de eigen inlogmeting niet lezen voor %s/%s: %s", user_id, platform, e)
+        return None
+    grens = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
+    for r in rijen:
+        meta = r.get("scan_meta") or ((r.get("result") or {}).get("scan_meta")) or {}
+        wanneer = r.get("done_at") or r.get("created_at") or ""
+        if meta.get("api_status") == 200 and wanneer >= grens:
+            return wanneer
+    return None
+
+
+def _reden_zonder_vals_verwijt(db, user_id: str, platform: str, reden: str,
+                               kopstuk_versie=None) -> str:
+    """Laat de server geen verwijt doorgeven dat hij zelf kan weerleggen.
+
+    WAAROM DIT ER IS (07-09-2026, gemeten bij Egbert Brouwer).
+
+    De extensie kreeg op 06-09 om 21:07:48 vanuit haar service worker HTTP 401
+    van 2dehands, en nam daarop zijn hele wachtrij van 346 opdrachten terug met
+    de tekst dat hij niet was ingelogd. Dertien seconden eerder, om 21:07:35,
+    had zijn eigen browser vanuit een tabblad OP www.2dehands.be op precies
+    dezelfde URL HTTP 200 gekregen. Om 21:11 gebeurde hetzelfde nog een keer.
+    Hij was ingelogd, en het was de derde keer dat hij dit verwijt kreeg.
+
+    De extensie is gerepareerd (zij vraagt het nu na in een tabblad op de site
+    zelf), maar een nieuwe extensie is er pas na de Web Store en niet iedereen
+    werkt tegelijk bij. Deze rem staat daarom hier: de server weet uit de scans
+    van dezelfde verkoper of zijn browser wél bij zijn account kon, en weigert
+    dan het verwijt door te geven. De wachtrij stoppen doen we wél — anders
+    loopt hij opnieuw uren tegen dezelfde muur — maar met wat we echt weten.
+    """
+    if not _CLAIM_NIET_INGELOGD.search(reden or ""):
+        return reden
+    versie = _kopstuk_versie(kopstuk_versie)
+    oude_kopie = versie is not None and versie < _VERSIE_MET_EIGEN_INLOGMETING
+    wanneer = _laatste_eigen_meting(db, user_id, platform)
+    site = {"marktplaats": "Marktplaats (marktplaats.nl)",
+            "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+
+    # EEN KOPIE DIE HET ZELF METTE KRIJGT HET LAATSTE WOORD (14-09-2026).
+    # Vanaf 1.0.308 meet de extensie het op het moment zelf en op de site zelf:
+    # eerst in de achtergrond en daarna nog eens in een tabblad op de site, en
+    # pas als beide 401/403 geven zegt ze "niet ingelogd". Onze eigen scan is
+    # een momentopname van uren geleden, en die eroverheen leggen stuurde Egbert
+    # Brouwer precies de verkeerde kant op: 291 zoekertjes teruggenomen met de
+    # tekst "de fout ligt bij ons", terwijl onze laatste eigen meting van 33 uur
+    # eerder was en zijn 2dehands-sessie sindsdien gewoon verlopen kan zijn.
+    # De waarneming van zijn eigen browser gaat dus voor. Weten we iets wat er
+    # tegenin gaat, dan zeggen we dat erbij in plaats van in zijn plaats te
+    # concluderen.
+    if versie is not None and not oude_kopie:
+        if not wanneer:
+            return reden
+        # De twee metingen spreken elkaar tegen, en dan doen we geen uitspraak.
+        # Deze verkoper kreeg dit verwijt al drie keer ten onrechte; we leggen
+        # alleen naast elkaar wat we zien en stellen er een vraag bij.
+        controle = _CONTROLEPAGINA.get(platform, "")
+        return (
+            f"We stopped the {site} queue because your browser could not reach your {site} account "
+            f"page just now. We are NOT saying your account is signed out: our own check on "
+            f"{wanneer[:16].replace('T', ' ')} reached that same page fine (HTTP 200), and we have "
+            f"had this wrong before. So we would rather ask than guess.\n\n"
+            f"Open this page in this browser and tell us which of the two you see:\n{controle}\n\n"
+            f"1. Your own adverts page. Then you are signed in and the fault is ours, and we need "
+            f"to hear that, because we cannot see it from here.\n"
+            f"2. A login screen. Then sign in there and tell us; we put your queue back ourselves, "
+            f"so you do not have to click your items again.\n\n"
+            f"Nothing was published and nothing was changed on {site}. This is what we measured, "
+            f"word for word:\n\n{reden}"
+        )
+
+    if not wanneer and not oude_kopie:
+        return reden
+    logger.warning(
+        "stop-platform: verwijt 'niet ingelogd' geweigerd voor %s/%s (versie %s, eigen scan 200 op %s)",
+        user_id, platform, versie, wanneer)
+    if not wanneer:
+        # Geen recente eigen meting, maar wel een kopie waarvan we WETEN dat ze
+        # dit alleen uit haar achtergrond kan hebben. Dan doen we geen uitspraak
+        # en laten we hem het in één klik zelf zien.
+        controle = _CONTROLEPAGINA.get(platform, "")
+        return (
+            f"We stopped the {site} queue. The extension blamed your login, but the version you "
+            f"are running cannot tell that apart from a check of ours failing on its own, so we "
+            f"are not passing that on as the reason.\n\n"
+            f"One click tells you which of the two it is. Open this page in this browser:\n"
+            f"{controle}\n\n"
+            f"1. You see your own adverts page. Then you are signed in and the fault is ours. "
+            f"Please tell us, because we cannot see that from here.\n"
+            f"2. You see a login screen. Then sign in there and publish again.\n\n"
+            f"Nothing was published and nothing was changed on {site}."
+        )
+    return (
+        f"We stopped the {site} queue, but not for the reason the extension gave. It blamed your "
+        f"login. We do not believe that: your own browser reached your {site} account page on "
+        f"{wanneer[:16].replace('T', ' ')} (HTTP 200), and that only works with a valid session. "
+        f"So this is a fault on our side, not with your account.\n\n"
+        f"Nothing was published and nothing was changed on {site}. We have already fixed the check "
+        f"that got this wrong, and it reaches your browser with the next extension update. Until "
+        f"then the queue may stop again with this message, so please tell us if it does."
+    )
+
+
+@router.post("/{job_id}/cancel")
+def cancel_job(job_id: str, user_id: str = Depends(get_current_user)):
+    """
+    User-triggered abort of a still-running/queued job. Used when a publish run got
+    stuck — e.g. the extension picked a wrong category and the user touched the tab,
+    so the job never reaches complete/error and the "extension is working" banner
+    hangs while the item is NOT actually published. Cancelling settles the job so the
+    banner clears and the item correctly reads as not-listed.
+    """
+    db = get_db()
+    job = eerste_rij(db.table("jobs").select("*").eq("id", job_id).eq("user_id", user_id).limit(1).execute())
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    # Already finished — nothing to cancel; report where it landed.
+    if job["status"] in ("done", "error", "cancelled"):
+        return {"ok": True, "status": job["status"]}
+
+    now = datetime.now(timezone.utc).isoformat()
+
+    # De verwijdering van een HERPLAATSING annuleren betekent: de oude
+    # advertentie blijft gewoon online. Dan hoort de rij terug op 'active' en
+    # moet de gepaarde plaatsing mee vervallen. Bleef de rij op 'relisting'
+    # staan, dan zette de reddingsronde er zes uur later een kale plaatsing
+    # voor klaar, naast de advertentie die nooit weg was (Toon, 03-09-2026:
+    # drie kelims, drie dubbele plaatsingen in de wachtrij).
+    if job["action"] == "delete" and (job.get("payload") or {}).get("_refresh_rollback"):
+        _neem_herplaatsing_terug(
+            db, job, now,
+            "Cancelled by you: the old listing was never removed and is still live here. "
+            "Nothing was reposted.")
+        return {"ok": True, "status": "cancelled"}
+
+    db.table("jobs").update({
+        "status": "cancelled",
+        "result": {"cancelled": "by user"},
+        "done_at": now,
+    }).eq("id", job_id).execute()
+
+    # A content-refresh or relist-delete bumped the listing's cooldown/quota at enqueue
+    # time; hand it back since the run was aborted.
+    rollback = ((job.get("payload")) or {}).get("_refresh_rollback")
+    if rollback:
+        from backend.services.relist import rollback_refresh
+        rollback_refresh(rollback, user_id)
+
+    # For a create, drop the not-yet-confirmed "pending" listing so the item shows as
+    # not-listed (its true state) — the publish didn't complete. An already-active
+    # listing (a retry over a live one) is left untouched.
+    if job["action"] == "create":
+        db.table("listings").update({
+            "status": "error",
+            "error_message": "Publishing was cancelled — the item is not listed. Publish again, or mark it listed if it did go live.",
+        }).eq("item_id", job["item_id"]).eq("platform", job["platform"]).eq("status", "pending").execute()
+        # Vaak maakt de gebruiker de advertentie na een afbreking zelf af. Een
+        # scan erachteraan zorgt dat het dashboard dat vanzelf oppikt.
+        #
+        # ALLEEN als de extensie er ook echt aan begonnen was. Een opdracht die
+        # nooit is opgepakt heeft geen tabblad gehad en dus niets half
+        # achtergelaten; daar valt niets op te halen. Het scheelde bovendien een
+        # stortvloed: toen Toon op 04-09-2026 in één klik 39 wachtende
+        # publicaties weggooide, vroegen die 39 annuleringen tegelijk om een
+        # scan. De dubbelcontrole in _queue_scan leest en schrijft niet in
+        # dezelfde stap, dus vier daarvan glipten er samen doorheen en zijn
+        # wachtrij stond meteen weer vol met scans die niemand had gevraagd.
+        if job.get("claimed_at"):
+            _queue_scan(db, user_id, job["platform"])
+    return {"ok": True, "status": "cancelled"}
+
+
+@router.post("/cancel-queued")
+def cancel_queued_jobs(user_id: str = Depends(get_current_user)):
+    """De hele wachtrij leegmaken, en niet alleen het stukje dat het scherm zag.
+
+    WAAROM DIT BESTAAT (17-09-2026, Egbert Brouwer). "Clear queue" annuleerde tot
+    nu toe de opdrachten die /active had teruggegeven, en die lezing stopt bij 50
+    rijen. Hij had er 168 staan: twee keer klikken haalde er honderd weg, maar de
+    teller sprong elke keer terug naar 50 omdat er meteen weer vijftig in beeld
+    kwamen. Voor hem gebeurde er niets, en de 68 die overbleven stonden er een
+    dag later nog. Een knop die "leeg de rij" heet hoort de rij ook echt te
+    legen, in een keer, ongeacht hoe lang hij is.
+
+    Zelfde inhoud als /{job_id}/cancel, maar dan voor alles wat staat te wachten
+    en in een handvol vragen aan de database in plaats van een per opdracht. Dat
+    is niet alleen sneller: honderd gelijktijdige verzoeken vanuit de browser
+    liepen tegen een server aan die ze op een rij afhandelt, en wat daar sneuvelde
+    verdween geruisloos.
+
+    WAT WE HIER MET OPZET NIET DOEN: een scan inplannen. De losse annulering doet
+    dat voor een opdracht die al bezig was, omdat de verkoper de advertentie dan
+    vaak zelf afmaakt. Hier gaat het om werk dat nooit is begonnen, en op
+    04-09-2026 (Toon) leverde datzelfde reflexje bij 39 annuleringen tegelijk een
+    wachtrij vol ongevraagde scans op.
+    """
+    db = get_db()
+    now_dt = datetime.now(timezone.utc)
+    now = now_dt.isoformat()
+
+    # Alleen wat NU aan de beurt is. Een herplaatsing die over drie uur staat
+    # gepland telt het scherm ook niet mee, dus die mag deze knop niet weggooien.
+    rijen = fetch_all(
+        lambda: db.table("jobs")
+        .select("id,user_id,action,platform,item_id,payload,created_at")
+        .eq("user_id", user_id).eq("status", "pending")
+        .or_(f"scheduled_for.is.null,scheduled_for.lte.{now}"),
+        order_by="created_at")
+    if not rijen:
+        return {"ok": True, "cancelled": 0}
+
+    # 1. Herplaatsingen eerst, want daar hangt meer aan dan een status.
+    #    De verwijdering terugnemen betekent: de oude advertentie blijft online,
+    #    de rij gaat terug naar 'active' en de gepaarde plaatsing vervalt mee.
+    #    Zonder dit zet de reddingsronde er uren later een kale plaatsing naast.
+    for job in rijen:
+        if job["action"] == "delete" and (job.get("payload") or {}).get("_refresh_rollback"):
+            try:
+                _neem_herplaatsing_terug(
+                    db, job, now,
+                    "Cancelled by you: the old listing was never removed and is still live here. "
+                    "Nothing was reposted.")
+            except Exception as e:  # noqa: BLE001 — een moeilijke mag de rest niet tegenhouden
+                logger.warning("cancel-queued: herplaatsing %s niet teruggenomen: %s",
+                               job.get("id"), e)
+
+    # 2. De rest in blokken afsluiten. `status=pending` blijft als voorwaarde
+    #    staan: wat hierboven al is teruggenomen, en wat de extensie in deze
+    #    seconde nog oppakte, laten we met rust.
+    # Wat het scherm niet als wachtrij toont, gooit deze knop ook niet weg: zie
+    # _is_2dh_bijwerking. Egbert leegde op 26-09 twee keer zijn rij en haalde
+    # daarmee ongezien 204 verlagingen van zijn verzendkosten weg.
+    ids = [j["id"] for j in rijen if not _is_2dh_bijwerking(j)]
+    afgesloten = 0
+    for i in range(0, len(ids), 100):
+        brok = ids[i:i + 100]
+        try:
+            antwoord = (db.table("jobs").update({
+                "status": "cancelled",
+                "result": {"cancelled": "by user"},
+                "done_at": now,
+            }).in_("id", brok).eq("status", "pending").execute())
+            afgesloten += len(antwoord.data or [])
+        except Exception as e:  # noqa: BLE001
+            logger.warning("cancel-queued: blok niet afgesloten voor %s: %s", user_id, e)
+
+    # 3. Een verversbeurt of dagquotum dat bij het inplannen al was afgeboekt
+    #    teruggeven; er is niets ververst. (Verwijderopdrachten hierboven doen
+    #    dit zelf al.)
+    for job in rijen:
+        rollback = (job.get("payload") or {}).get("_refresh_rollback")
+        if rollback and job["action"] != "delete":
+            try:
+                from backend.services.relist import rollback_refresh
+                rollback_refresh(rollback, user_id)
+            except Exception as e:  # noqa: BLE001
+                logger.warning("cancel-queued: verversbeurt niet teruggedraaid: %s", e)
+
+    # 4. De nog niet bevestigde advertenties van geannuleerde plaatsingen op
+    #    'error' zetten, zodat het artikel laat zien wat waar is: niet geplaatst.
+    #    Een advertentie die al 'active' staat blijft ongemoeid.
+    per_kanaal: dict[str, list] = {}
+    for job in rijen:
+        if job["action"] == "create" and job.get("item_id"):
+            per_kanaal.setdefault(job["platform"], []).append(job["item_id"])
+    for platform, item_ids in per_kanaal.items():
+        item_ids = list(dict.fromkeys(item_ids))
+        for i in range(0, len(item_ids), 100):
+            try:
+                db.table("listings").update({
+                    "status": "error",
+                    "error_message": "Publishing was cancelled — the item is not listed. "
+                                     "Publish again, or mark it listed if it did go live.",
+                }).in_("item_id", item_ids[i:i + 100]).eq("platform", platform) \
+                  .eq("status", "pending").execute()
+            except Exception as e:  # noqa: BLE001
+                logger.warning("cancel-queued: advertenties niet bijgewerkt (%s): %s", platform, e)
+
+    logger.info("Wachtrij geleegd door gebruiker %s: %s van %s opdrachten",
+                user_id, afgesloten, len(ids))
+    return {"ok": True, "cancelled": afgesloten, "found": len(ids)}
+
+
+@router.get("/status/{job_id}")
+def get_job_status(job_id: str, user_id: str = Depends(get_current_user)):
+    db = get_db()
+    job = eerste_rij(db.table("jobs").select("*").eq("id", job_id).eq("user_id", user_id).limit(1).execute())
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
