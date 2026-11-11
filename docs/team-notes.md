@@ -19027,3 +19027,24 @@ Daniel vroeg een wekelijkse dinsdagroutine die 3 tot 4 animatievideo's maakt in 
 ## 11-11-2026: fotometing uitgesmeerd over dagen (Daniel akkoord)
 - `scripts/meet_fotoadvertentie.py` meet elke dag 18 artikelen (110 in totaal, 10 per betalende klant, per klant gelezen) met gemini-3.5-flash en gemini-3.1-flash-lite op de gratis laag (20 per dag voor het sterke model). Alleen lezen. Winkelnamen die als "merk" zijn ingevuld tellen niet mee en kleuren worden uit NL en EN naar een lijst gezet.
 - Dagelijks 11:15 via LaunchAgent `com.omnivaleur.fotometing` op Daniels Mac; de taak haalt zichzelf weg als de steekproef af is. Resultaten in ~/.omnivaleur/meting_foto/ (resultaten.jsonl, samenvatting.txt). Stoppen: `launchctl bootout gui/$(id -u)/com.omnivaleur.fotometing`. Eerste volledige dag: 12-11 (op 11-11 was de daglimiet al op).
+
+## 11-11-2026: vier plannen donker gebouwd, prijzen aangemaakt in Stripe (live)
+
+Besluit Daniel 11-11: "mag je donker bouwen" en "maak de prijzen aan in Stripe op mijn PC".
+
+Gebouwd (commit a285a0f7), allemaal achter schakelaar NIEUWE_PLANNEN_AAN (standaard uit, dan gedraagt de server zich als voorheen: alleen Light heeft grens 20):
+- backend/services/plannen.py: grenzen Light 20 (strikt), Pro 250, Plus 1.500 (beide +10% marge voor NIEUWE artikelen), Ultra onbeperkt. Prijs-id (maand en jaar) naar plan.
+- backend/services/light.py gebruikt die grenzen op alle drie de poorten, plan_uit_stripe herkent plus en ultra.
+- 14 dagen uitstel is NIET gebouwd: vraagt een plek om de eerste overschrijding te onthouden (migratie of Stripe-metadata). Eerst met Daniel afstemmen.
+- Checkout (api/billing.py, _prijs_voor_plan) kent Plus, Ultra en jaar nog niet.
+
+Stripe (live, account Omnivaleur), btw exclusief zoals Pro, Light inclusief zoals zijn maandprijs:
+- PLUS maand 29,99: price_1UaXwe09Y8J5okHsMiJfsAmQ  (STRIPE_PRICE_ID_PLUS)
+- PLUS jaar 299: price_1UaXwe09Y8J5okHsxjXl046S  (STRIPE_PRICE_ID_PLUS_JAAR)
+- ULTRA maand 49: price_1UaY4y09Y8J5okHsz2jRc4rm  (STRIPE_PRICE_ID_ULTRA)
+- ULTRA jaar 490: price_1UaY4y09Y8J5okHsTrtNnTJv  (STRIPE_PRICE_ID_ULTRA_JAAR)
+- PRO jaar 199: price_1UaYGI09Y8J5okHs3a0mJ12D  (STRIPE_PRICE_ID_PRO_JAAR)
+- LIGHT jaar 99 incl. btw: price_1UaYQP09Y8J5okHs8YmfoZMR  (STRIPE_PRICE_ID_LIGHT_JAAR)
+Producten: PLUS prod_VblTQvifvsxFFp, ULTRA prod_VblcT5XddL9JTJ (taxcode txcd_10000000 zoals Pro).
+Bestaande Pro maand 19,99 (price_1Tnjt109Y8J5okHsrrq20F49) blijft STRIPE_PRICE_ID; de oude 0,00-prijs op Pro is een restant.
+Nog niet in Railway gezet: dat doet Daniel pas wanneer checkout klaar is. Plus en Ultra zijn nog niet te koop (geen knop erheen).
