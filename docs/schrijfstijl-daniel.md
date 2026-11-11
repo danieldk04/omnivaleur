@@ -170,6 +170,7 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - 08-11-2026: Gekeken: 50 mails in Verzonden (3 dagen), 5 van Daniel, 5 al verwerkt; 0 nieuw, 0 met concept. Niets te leren.
 - 09-11-2026: Gekeken: 29 mails in Verzonden (3 dagen), 3 van Daniel, 2 al verwerkt; 1 nieuw, 0 met concept. Alleen een losse, informele samenwerkingsvraag aan een bestaande gebruiker ("Groetjes," en "Daniel." met punt, ";)"); geen stijlles.
 - 10-11-2026: Gekeken: 55 mails in Verzonden (3 dagen), 39 van Daniel, 1 al verwerkt; 38 nieuw, 38 met concept (4 woordelijk). Nieuw: terughaalmailreeks, vaste aanpassingen van zin "Eén zin is genoeg" en "dat is helemaal goed" (nu een regel onder Inhoud).
+- 11-11-2026: Gekeken: 45 mails in Verzonden (3 dagen), 39 van Daniel, 39 al verwerkt; 0 nieuw, 0 met concept. Niets te leren.
 
 ## 28-10-2026: geen schuld aantrekken (Daniel spreekt de regel uit)
 - Geen "sorry", "excuus", "dat lag aan ons", "dat was onze fout" of "belangrijk dat ik dit zeg", ook niet als de fout in ons systeem zat. Dit staat los van de oudere regel hierboven over een fout van ons: ook daar niet als bekentenis.
