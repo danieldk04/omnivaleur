@@ -978,7 +978,7 @@
       "pillar": "B",
       "format": "niche",
       "slug": "trading-card-reselling-automation",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "trading-cards-automatisering-voor-resellers",
       "priority": 110
     }
@@ -1999,6 +1999,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-calculate-profit-margin-reselling",
       "published_at": "2026-11-10T16:02:16.091344+00:00"
+    },
+    {
+      "keyword": "trading card reselling automation",
+      "slug": "trading-card-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "format": "niche",
+      "action": "created",
+      "url_path": "/reseller-tools/trading-card-reselling-automation",
+      "published_at": "2026-11-11T15:49:48.329513+00:00"
     }
   ]
 }
