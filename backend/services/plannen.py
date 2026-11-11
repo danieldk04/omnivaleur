@@ -9,6 +9,8 @@ de server zich precies als voor deze wijziging: alleen Light heeft een grens (20
 """
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 from backend.config import settings
 
 PLAN_LIGHT, PLAN_PRO, PLAN_PLUS, PLAN_ULTRA = "light", "pro", "plus", "ultra"
@@ -17,7 +19,14 @@ PLAN_LIGHT, PLAN_PRO, PLAN_PLUS, PLAN_ULTRA = "light", "pro", "plus", "ultra"
 GRENZEN = {PLAN_LIGHT: 20, PLAN_PRO: 250, PLAN_PLUS: 1500, PLAN_ULTRA: None}
 MARGE = 0.10                 # Light blijft strikt 20, zoals het nu live staat
 MET_MARGE = {PLAN_PRO, PLAN_PLUS}
-UITSTEL_DAGEN = 14           # (nog niet gebouwd: vraagt een plek om de overschrijding te onthouden)
+# Invoeringsuitstel: de grenzen van Pro en Plus gaan pas gelden UITSTEL_DAGEN na de start
+# van de nieuwe plannen. Wie dan boven zijn grens zit heeft zo twee weken om te kiezen. Dit is
+# bewust vast voor iedereen en niet per klant: per klant onthouden vraagt een kolom of een
+# schrijfactie vanuit de poll, en de limiet-poort draait bij elke opdracht. Daniel kan dit later
+# per klant maken als hij dat wil. Light blijft strikt 20 (staat nu al zo live).
+START_NIEUWE_PLANNEN = datetime(2027, 1, 1, tzinfo=timezone.utc)
+UITSTEL_DAGEN = 14
+GRENZEN_VANAF = START_NIEUWE_PLANNEN + timedelta(days=UITSTEL_DAGEN)
 
 # Prijs-id (maand of jaar) naar plan. Leeg = bestaat nog niet in Stripe.
 _PRIJS_VELDEN = (
@@ -39,7 +48,7 @@ def plan_uit_prijs_id(prijs_id: str | None) -> str:
     return PLAN_PRO
 
 
-def grens(plan: str | None) -> int | None:
+def grens(plan: str | None, nu: datetime | None = None) -> int | None:
     """Hoeveel actieve artikelen dit plan mag hebben voor een NIEUW artikel
     geweigerd wordt. None = geen grens.
 
@@ -51,6 +60,8 @@ def grens(plan: str | None) -> int | None:
     basis = GRENZEN.get(plan)
     if basis is None:
         return None
+    if plan != PLAN_LIGHT and (nu or datetime.now(timezone.utc)) < GRENZEN_VANAF:
+        return None          # invoeringsuitstel: nog niemand geweigerd
     return int(basis * (1 + MARGE)) if plan in MET_MARGE else basis
 
 
@@ -73,3 +84,27 @@ def keuze_beschikbaar(plan: str, jaar: bool = False) -> str | None:
         return None
     veld = (_JAAR_VELD if jaar else _MAAND_VELD)[plan]
     return (getattr(settings, veld, "") or "").strip() or None
+
+
+_RANG = {PLAN_LIGHT: 0, PLAN_PRO: 1, PLAN_PLUS: 2, PLAN_ULTRA: 3}
+
+
+def plan_en_jaar(prijs_id: str | None) -> tuple[str, bool]:
+    """(plan, is_jaar) bij een Stripe-prijs. Onbekend is ('pro', False)."""
+    pid = (prijs_id or "").strip()
+    if pid:
+        for plan, veld in _JAAR_VELD.items():
+            if pid == (getattr(settings, veld, "") or "").strip():
+                return plan, True
+    return plan_uit_prijs_id(pid), False
+
+
+def wissel_toegestaan(huidig: tuple[str, bool], doel: tuple[str, bool]) -> bool:
+    """Alleen omhoog, of van maand naar jaar binnen hetzelfde plan. Omlaag, terug
+    naar maand of een gelijke keuze gaan via het klantportaal."""
+    (p0, j0), (p1, j1) = huidig, doel
+    if (p0, j0) == (p1, j1) or p0 not in _RANG or p1 not in _RANG:
+        return False
+    if _RANG[p1] > _RANG[p0]:
+        return not (j0 and not j1)      # van jaar naar maand omhoog is een portaalzaak
+    return _RANG[p1] == _RANG[p0] and j1 and not j0

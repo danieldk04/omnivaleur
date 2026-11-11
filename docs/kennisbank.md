@@ -17,6 +17,17 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## proef-importeert-echte-stripe-sleutel
+
+*11-11-2026 — Een Stripe-proefscript dat backend.api.billing importeert zet stripe.api_key op de ECHTE sleutel uit .env; zet de testsleutel pas na die import en controleer livemode*
+
+Op 11-11-2026 maakte tests/proeven/stripe_proef_planwissel.py in de echte (live) Stripe een proefproduct, vijf prijzen en een proefklant aan. `import backend.api.billing` zet bij het importeren `stripe.api_key = settings.stripe_secret_key` (de echte sleutel uit .env) en overschreef de testsleutel die ik er eerder in had gezet. De livemode-controle stond VOOR de import en bewees dus niets. Er is niets afgeschreven (de test-betaalmethode pm_card_visa werd door live geweigerd, dus nooit een abonnement); klant verwijderd, product en prijzen gearchiveerd.
+
+**Why:** een controle op de testmodus die vóór een import staat die de sleutel overschrijft, geeft een vals gevoel van veiligheid, en Daniels echte Stripe is geen proefterrein.
+**How to apply:** in elk Stripe-proefscript de testsleutel zetten NA alle imports van backend-modules, en daarna `assert stripe.Balance.retrieve()["livemode"] is False` voor het eerste aanmaken. Zie "alleen-bouwen-wat-100-procent-zeker-werkt".
+
+---
+
 ## social-video-routine
 
 *10-11-2026 — 10-11: dinsdagroutine maakt 3-4 social video's in renno-stijl, leert van cijfers; pijplijn in scripts/video, recept in docs/video-recept.md*

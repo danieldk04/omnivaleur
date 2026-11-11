@@ -1,11 +1,15 @@
 """De vier plannen (donker gebouwd): met de schakelaar uit verandert er niets."""
 import pytest
 
+from datetime import datetime, timezone
+
 from backend.services import light, plannen
 
 
 def _zet(monkeypatch, aan, **ids):
     monkeypatch.setattr(plannen.settings, "nieuwe_plannen_aan", aan, raising=False)
+    # De meeste tests gaan over de grenzen zelf, dus daar is het uitstel voorbij.
+    monkeypatch.setattr(plannen, "GRENZEN_VANAF", datetime(2000, 1, 1, tzinfo=timezone.utc))
     for veld in ("stripe_price_id", "stripe_price_id_light", "stripe_price_id_plus", "stripe_price_id_ultra",
                  "stripe_price_id_light_jaar", "stripe_price_id_pro_jaar", "stripe_price_id_plus_jaar",
                  "stripe_price_id_ultra_jaar"):
@@ -141,3 +145,41 @@ def test_checkout_aan_maar_prijs_niet_ingesteld_geeft_fout_nooit_pro(monkeypatch
     monkeypatch.setattr(billing_api.settings, "stripe_price_id", "p_pro", raising=False)
     with pytest.raises(HTTPException):
         billing_api._prijs_voor_plan("plus")
+
+
+# ── Invoeringsuitstel en planwissel ──
+
+def test_uitstel_geen_grens_voor_pro_en_plus_voor_15_januari(monkeypatch):
+    _zet(monkeypatch, True)
+    monkeypatch.setattr(plannen, "GRENZEN_VANAF", plannen.START_NIEUWE_PLANNEN + plannen.timedelta(days=14))
+    voor = datetime(2027, 1, 14, 23, 59, tzinfo=timezone.utc)
+    na = datetime(2027, 1, 15, 0, 0, tzinfo=timezone.utc)
+    assert plannen.grens("pro", voor) is None and plannen.grens("plus", voor) is None
+    assert plannen.grens("pro", na) == 275 and plannen.grens("plus", na) == 1650
+    assert plannen.grens("light", voor) == 20          # Light staat nu al strikt
+    assert plannen.grens("ultra", na) is None
+
+
+def test_plan_en_jaar(monkeypatch):
+    _ids(monkeypatch)
+    assert plannen.plan_en_jaar("p_plus") == ("plus", False)
+    assert plannen.plan_en_jaar("p_pj") == ("plus", True)
+    assert plannen.plan_en_jaar("p_lj") == ("light", True)
+    assert plannen.plan_en_jaar("onbekend") == ("pro", False)
+
+
+@pytest.mark.parametrize("van,naar,mag", [
+    (("light", False), ("pro", False), True),
+    (("pro", False), ("ultra", False), True),
+    (("pro", False), ("pro", True), True),            # maand naar jaar, zelfde plan
+    (("pro", False), ("plus", True), True),
+    (("pro", True), ("plus", True), True),
+    (("pro", True), ("plus", False), False),          # jaar naar maand omhoog: portaal
+    (("plus", False), ("pro", False), False),         # omlaag: portaal
+    (("pro", True), ("pro", False), False),           # terug naar maand: portaal
+    (("pro", False), ("pro", False), False),          # niets veranderd
+    (("plus", True), ("light", True), False),
+    (("gek", False), ("pro", True), False),
+])
+def test_wissel_toegestaan(van, naar, mag):
+    assert plannen.wissel_toegestaan(van, naar) is mag

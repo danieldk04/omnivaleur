@@ -509,6 +509,53 @@ def upgrade_to_pro(user=Depends(get_current_user_full)):
             raise HTTPException(status_code=400, detail="Could not switch plans. Please use Manage subscription.")
 
 
+@router.post("/wijzig-plan")
+def wijzig_plan(user=Depends(get_current_user_full), body: dict = None):
+    """Hoger plan of jaarbetaling op hetzelfde abonnement: de klant betaalt het verschil.
+
+    Stripe verrekent wat nog over is van de oude prijs en rekent de nieuwe meteen af
+    (proration always_invoice). Alleen omhoog; omlaag of terug naar maand gaat via het
+    klantportaal. Pas bruikbaar als de nieuwe plannen aan staan.
+    """
+    from backend.services.plannen import keuze_beschikbaar, plan_en_jaar, wissel_toegestaan
+    if not settings.stripe_secret_key:
+        raise HTTPException(status_code=503, detail="Stripe is not configured")
+    plan = ((body or {}).get("plan") or "").lower()
+    jaar = ((body or {}).get("interval") or "").lower() in ("year", "yearly", "jaar")
+    doel_prijs = keuze_beschikbaar(plan, jaar)
+    if not doel_prijs:
+        raise HTTPException(status_code=503, detail="This plan is not available yet")
+    sub = _get_or_create_subscription(user.id)
+    sub_id = sub.get("stripe_subscription_id")
+    if not sub_id:
+        raise HTTPException(status_code=400, detail="No active subscription found")
+    try:
+        stripe_sub = stripe.Subscription.retrieve(sub_id)
+        # Server-SDK 10.x geeft een dict, nieuwere SDK's een object zonder .get.
+        stripe_sub = stripe_sub.to_dict() if hasattr(stripe_sub, "to_dict") else stripe_sub
+        regels = (stripe_sub.get("items") or {}).get("data") or []
+        if not regels or stripe_sub.get("status") not in ("active", "trialing"):
+            raise HTTPException(status_code=400, detail="No active subscription found")
+        prijs = regels[0].get("price") or {}
+        huidig = plan_en_jaar(prijs.get("id") if isinstance(prijs, dict) else getattr(prijs, "id", None))
+        if not wissel_toegestaan(huidig, (plan, jaar)):
+            raise HTTPException(status_code=400, detail="Use Manage subscription to make this change")
+        stripe.Subscription.modify(
+            sub_id,
+            items=[{"id": regels[0]["id"], "price": doel_prijs}],
+            proration_behavior="always_invoice",
+            metadata={"user_id": user.id, "plan": plan},
+        )
+        get_db().table("subscriptions").update({"plan": plan, "updated_at": _now()}).eq("user_id", user.id).execute()
+        invalidate_access_cache(user.id)
+        return {"changed": True, "plan": plan, "interval": "year" if jaar else "month"}
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Planwissel mislukt voor %s", user.id)
+        raise HTTPException(status_code=400, detail="Could not switch plans. Please use Manage subscription.")
+
+
 @router.post("/portal")
 async def customer_portal(user_id: str = Depends(get_current_user)):
     if not settings.stripe_secret_key:
