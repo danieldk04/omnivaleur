@@ -4641,7 +4641,13 @@
       }
       const brandSearch = zoekveld();
       if (brandSearch) {
-        fillInput(brandSearch, value);
+        // Alleen een input-gebeurtenis (11-11-2026): fillInput stuurt ook change en
+        // blur mee, en sinds Vinted de merklijst bij blur sluit (terug naar de
+        // pakketgrootte) vond de stap bij meisjeskleding geen enkele merkoptie.
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
+        brandSearch.dispatchEvent(new Event("focus", { bubbles: true }));
+        setter.call(brandSearch, value);
+        brandSearch.dispatchEvent(new Event("input", { bubbles: true }));
         await waitUntil(
           () => [...document.querySelectorAll('[class*="web_ui__Cell__title"]')]
             .some((e) => e.textContent.toLowerCase().includes(value.toLowerCase())),
