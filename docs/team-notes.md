@@ -19077,3 +19077,7 @@ Commit 4b1e3e8e. /api/billing/checkout accepteert nu plan (light, pro, plus, ult
 ## 11-11-2026: keuzeknoppen voor de nieuwe plannen in het dashboard (donker)
 
 Dashboard (frontend/app.html) toont Plus, Ultra, de keuze Per maand / Per jaar en voor actieve klanten "Meer ruimte nodig?" (upgrade betaalt het verschil, via /api/billing/wijzig-plan) alleen als /api/billing/status new_plans=true geeft. Dat is zo bij NIEUWE_PLANNEN_AAN aan plus de Plus- en Ultra-prijzen ingesteld. Nu uit: dashboard ongewijzigd. Eigenaardigheid: een jaarklant krijgt nog de knop "Jaarlijks betalen"; de server weigert dat netjes en verwijst naar het klantportaal (de huidige periode staat niet in /status). NL-vertaling toegevoegd, de echte functies draaien in Node bewezen (uit/aan/Ultra jaar/wissel). Nog niet gedaan: "Wat is er nieuw", rondleiding en maildraaiboek voor de livegang.
+
+## 11-11-2026: aankondiging voorbereid (concept, niets live)
+
+docs/aankondiging-nieuwe-plannen.md bevat mail A (vriendenactie), mail B (nieuwe plannen), de teksten voor het "Wat is er nieuw"-venster, het updatelogbericht, de rondleidingsstappen en de volgorde van livegang. Wacht op de meting van 19-11 voor wat over het AI-pakket gezegd mag worden. Open: aanzegtermijn prijswijziging in de voorwaarden nakijken, mail B per klant invullen voor de grote drie.
