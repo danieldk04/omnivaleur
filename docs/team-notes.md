@@ -19054,3 +19054,8 @@ Nog niet in Railway gezet: dat doet Daniel pas wanneer checkout klaar is. Plus e
 - nickspijkers100 (17e5c638, nieuw 10-11): verkoopt platenspelers (9) en voetbalshirts (3), 12 artikelen uit Vinted, alle 12 binnen 30 min op Marktplaats. Eén Marktplaats-scanfout "No tab with id" en een Vinted-scan open sinds 10-11 17:34: tabblad dicht en Chrome uit (klant). Welkomstmail verstuurd via onboarding_mail.py, met tip meer van Vinted in te lezen.
 - kjrmohamed (720924e6): ongewijzigd, 0 artikelen, geen extensie, proef loopt 12-11 af. Geen mailtje.
 - Mailrapport: 1 mail vorige dagen (kjrmohamed), 0 echt geopend, 0 klik, 0 antwoord.
+
+## 11-11-2026: platformcontrole, één afwijking gerepareerd (Claude)
+- Vinted meisjeskleding: de merkstap faalde 4 van 4 keer ("option not found"), gisteren ok. Mechanisme gemeten: de merklijst verschijnt bij die rubriek pas ~3,5 s na het typen, de code wachtte 2,5 s; daarnaast sloot een blur na het typen de lijst. Gerepareerd in extensie 1.0.420 (alleen input-gebeurtenis, wachttijd 9 s), test tests/test_vinted_merkzoeken_geen_blur.py faalt op de oude code. Nameting op de levende pagina: merk ok. Alleen de Web Store levert nog 1.0.419: Daniel moet de zip van 1.0.420 uploaden. Klanten raakten er hooguit het merk bij meisjeskleding door kwijt (niet gemeten per klant).
+- Overige Vinted (kinderen schoenen, sneakers, heren, baby, jongens, kookboek), Marktplaats en 2dehands (detectives, dieren en huisdieren, e-books): gelijk aan gisteren. E-books heeft geen staatveld (bewust, geen fout).
+- Let op: een stash "autostash" (oude vinted.js) is per ongeluk weggegooid bij het herstellen van mijn eigen werk; inhoud was verouderd, niets van waarde bekend.
