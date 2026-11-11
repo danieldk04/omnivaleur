@@ -19048,3 +19048,9 @@ Stripe (live, account Omnivaleur), btw exclusief zoals Pro, Light inclusief zoal
 Producten: PLUS prod_VblTQvifvsxFFp, ULTRA prod_VblcT5XddL9JTJ (taxcode txcd_10000000 zoals Pro).
 Bestaande Pro maand 19,99 (price_1Tnjt109Y8J5okHsrrq20F49) blijft STRIPE_PRICE_ID; de oude 0,00-prijs op Pro is een restant.
 Nog niet in Railway gezet: dat doet Daniel pas wanneer checkout klaar is. Plus en Ultra zijn nog niet te koop (geen knop erheen).
+
+## 11-11-2026: Onboarding nieuwe klanten (ochtend)
+- 2 accounts in de eerste week, 1 nieuw, geen creator. Web Store levert 1.0.419 (repo 1.0.420). Agenda: niets over deze klanten.
+- nickspijkers100 (17e5c638, nieuw 10-11): verkoopt platenspelers (9) en voetbalshirts (3), 12 artikelen uit Vinted, alle 12 binnen 30 min op Marktplaats. Eén Marktplaats-scanfout "No tab with id" en een Vinted-scan open sinds 10-11 17:34: tabblad dicht en Chrome uit (klant). Welkomstmail verstuurd via onboarding_mail.py, met tip meer van Vinted in te lezen.
+- kjrmohamed (720924e6): ongewijzigd, 0 artikelen, geen extensie, proef loopt 12-11 af. Geen mailtje.
+- Mailrapport: 1 mail vorige dagen (kjrmohamed), 0 echt geopend, 0 klik, 0 antwoord.
