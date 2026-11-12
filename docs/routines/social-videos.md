@@ -50,6 +50,9 @@ Noteer per account de laatste 10 video's: weergaven, likes, reacties, lengte, op
 seconde), type omgeving, wat het meeste engagement had. Zoek patronen, geen losse uitschieters. Bewaar de tabel in
 het leerlog.
 
+## Stap 2b: trends van nu (Daniel, 12-11-2026: uiterst creatief, inspelen op trends)
+Kijk elke week wat er nu leeft en kies er één tot twee die echt bij een reseller-pijn passen: TikTok Creative Center (trending hashtags, formats, in NL), Instagram Reels en YouTube Shorts in Daniels Chrome, Google Trends (Vinted, Marktplaats, reselling, thrift). Alleen lezen. Regels: de trend moet natuurlijk aan de pijn of belofte vast kunnen, geen geforceerde meme; niets over echte personen, politiek of gevoelige onderwerpen; niets wat Omnivaleur iets laat beloven wat niet klopt. Trendgeluiden uit de bibliotheek van een platform kan alleen Daniel in de app onder de video zetten: noem in het .txt-bestand welk geluid en waarom, en lever de video ook met een eigen passende muziekstijl zodat hij zonder trendgeluid ook klopt. Noteer in het leerlog welke trend je gebruikte en wat er gebeurde.
+
 ## Stap 3: leren
 Werk `docs/social-video-leerlog.md` bij: per video de hypothese, wat er gebeurde, en wat je daaruit als regel haalt.
 Regel pas als regel opnemen als hij in minstens twee video's of bij een duidelijk voorbeeldaccount terugkomt.
@@ -81,6 +84,9 @@ Als het als 'weer een AI-video' voelt is het fout, ook als alles technisch klopt
 3. Beeld: handheld wiebel, filmkorrel, minstens één hard cut, dikke duidelijke bijschriften, echt dashboard, geen eindkaart met bijschrift eroverheen.
 4. Wat je niet kunt beoordelen (hoe de stem klinkt) schrijf je als openstaand punt; Daniel luistert eerst. Platforms kunnen een label vragen voor synthetische stemmen: noem dat als Daniel plaatst.
 5. Mac met 8 GB: voor Chatterbox eerst Spotify en andere zware programma's sluiten en niets anders draaien (anders uren), dan pas renderen.
+
+## Muziek (Daniel, 12-11-2026: mag per video anders, passend bij de setting)
+Kies per video een stijl die bij de situatie past en wissel af: `sound3.py <werkmap> vN <omslagtijd> <stijl>` met stijl `warm` (vriendelijk), `lofi` (rustig verhaal, avond), `spanning` (alarm, rechtszaal), `speels` (komedie, kookshow), `rustig` (bijna alleen kamertoon, voor uitleg of eigen stem). Maak gerust een nieuwe stijl in `STIJLEN` voor een nieuwe setting. Muziek is in code gemaakt (geen rechten nodig). Geen gedownloade muziek of bibliotheekmuziek zonder duidelijke vrije licentie. Bed blijft ver onder de stem.
 
 ## Kwaliteitspoort (alles moet groen voor je aanlevert)
 1. Doorsteken: `node clip.mjs` geeft 0 frames (poppetje door laptop of meubel is een fout).

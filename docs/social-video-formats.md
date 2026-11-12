@@ -28,3 +28,6 @@ RESULTAAT (laat het eindresultaat zien), INZET (iets staat op het spel), VRAAG (
 2. Stem: `intonatie.py` toonspreiding minstens 4,5 halve tonen en wisselende pauzes; liever Daniels eigen stem als hij die inspreekt.
 3. Beeld: handheld wiebel aan, filmkorrel, minstens één hard cut, geen perfecte symmetrie, dikke duidelijke bijschriften, echt dashboard met echte cijfers van Daniel.
 4. Eerlijk over wat er niet te beoordelen is: ik kan niet horen. Daniel luistert als eerste.
+
+## Muziek en trends
+Muziekstijl per video kiezen bij de setting (zie routine, 'Muziek'). Trends van nu worden elke week gezocht (stap 2b) en als hooktype, geluid of vorm gebruikt als ze bij een echte pijn passen; het gebruikte trendgeluid staat per video in het .txt-bestand.
