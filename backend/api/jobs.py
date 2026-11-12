@@ -1275,7 +1275,38 @@ _UITWIJK_MP_NAAM = {"mp:1826/3045": "Sporthorloges",
                     "mp:504/536": "Woonaccessoires | Overige"}
 
 
-def _uitwijk_payload(payload) -> dict | None:
+# 2DEHANDS: DE MARKTPLAATS-RUBRIEK IS VOL, DUS TERUG NAAR ONZE EIGEN KEUZE.
+#
+# GEMETEN 12-11-2026 bij Voordeelsieraden (Mieneke, 09e089ec). Haar antieke
+# sieraden staan op Marktplaats in "Sieraden, Tassen en Uiterlijk | Antieke
+# sieraden" (1826/13) en onze plaatsing op 2dehands volgt die rubriek (zie
+# _zet_rubriek_van_marktplaats). Op 2dehands zit in die ene rubriek een grens van
+# ongeveer 250 gratis zoekertjes: de eerste betaalmelding kwam toen ze er 251 had,
+# en 104 plaatsingen sindsdien strandden erop ("charges for adverts in ...
+# Antieke sieraden"). Plaatst ze hetzelfde artikel tegelijk op beide kanalen, dan
+# volgt 2dehands niets (het staat nog niet op Marktplaats) en gaat het in onze
+# eigen keuze, bijvoorbeeld kettinghangers, waar nog plek is. Dat deed ze met de
+# hand, via offline halen.
+#
+# Daarom: is de Marktplaats-rubriek bij deze verkoper op 2dehands aantoonbaar
+# vol, dan plaatsen we in de rubriek die wij zelf uit het artikel afleidden. Dat
+# gebeurt alleen op 2dehands (op Marktplaats is dit dezelfde rubriek als de
+# verkoper koos), hooguit één keer per opdracht (_uitgeweken_van), en de stempel
+# _rubriek_niet_op_marktplaats houdt _zet_rubriek_van_marktplaats ervan af hem
+# er weer in te zetten.
+def _uitwijk_naar_eigen_rubriek(pl: dict, sleutel: str, platform: str | None) -> dict | None:
+    if platform != "2dehands" or not sleutel.startswith("mp:"):
+        return None
+    eigen = str(pl.get("category") or "").strip().lower()
+    if not eigen or eigen.startswith("mp:"):
+        return None
+    nieuw = {k: v for k, v in pl.items() if k != "mp_category"}
+    nieuw["_rubriek_niet_op_marktplaats"] = True
+    nieuw["_uitgeweken_van"] = sleutel
+    return nieuw
+
+
+def _uitwijk_payload(payload, platform: str | None = None) -> dict | None:
     """Dezelfde opdracht in de gratis buurrubriek, of None als die er niet is.
 
     Een opdracht wijkt hooguit één keer uit. Kost de buurrubriek óók geld, dan
@@ -1288,7 +1319,7 @@ def _uitwijk_payload(payload) -> dict | None:
     sleutel = _rubriek_sleutel(pl)
     doel = _GRATIS_UITWIJK.get(sleutel)
     if not doel:
-        return None
+        return _uitwijk_naar_eigen_rubriek(pl, sleutel, platform)
     nieuw = dict(pl)
     if doel.startswith("mp:"):
         # De extensie kiest de rubriek op deze twee nummers als ze er staan
@@ -1844,6 +1875,18 @@ def _betaalde_rubriek_bekend(db, user_id: str, platform: str, sleutel: str) -> b
     return False
 
 
+def _eigen_rubriek_kost_ook_geld(db, user_id: str, platform: str, nieuw: dict) -> bool:
+    """Is de rubriek waar _uitwijk_naar_eigen_rubriek naartoe wil zelf al vol?
+
+    Dan niet springen: er is geen gratis plek om naartoe te gaan, en de gewone
+    rem moet de rest van de rij terugnemen. Voor de vaste buurrubrieken
+    (smartwatch, tapijt) geldt dit niet; die zijn eerder gemeten.
+    """
+    if not nieuw.get("_rubriek_niet_op_marktplaats") or "mp_category" in nieuw:
+        return False
+    return _betaalde_rubriek_bekend(db, user_id, platform, _rubriek_sleutel(nieuw))
+
+
 def _wijk_uit_naar_gratis_rubriek(db, user_id: str, job: dict) -> None:
     """Zet een plaatsing in de gratis buurrubriek als de eigen rubriek al geld kost.
 
@@ -1855,11 +1898,13 @@ def _wijk_uit_naar_gratis_rubriek(db, user_id: str, job: dict) -> None:
     if job.get("action") != "create" or job.get("platform") not in ("marktplaats", "2dehands"):
         return
     pl = job.get("payload") if isinstance(job.get("payload"), dict) else {}
-    nieuw = _uitwijk_payload(pl)
+    nieuw = _uitwijk_payload(pl, job["platform"])
     if not nieuw:
         return
     try:
         if not _betaalde_rubriek_bekend(db, user_id, job["platform"], _rubriek_sleutel(pl)):
+            return
+        if _eigen_rubriek_kost_ook_geld(db, user_id, job["platform"], nieuw):
             return
         db.table("jobs").update({"payload": nieuw}).eq("id", job["id"]).execute()
     except Exception as e:  # noqa: BLE001
@@ -1882,8 +1927,14 @@ def _zet_terug_in_gratis_rubriek(db, user_id: str, job_id: str, job: dict | None
     if not job or job.get("action") != "create" or job.get("platform") not in ("marktplaats", "2dehands"):
         return False
     pl = job.get("payload") if isinstance(job.get("payload"), dict) else {}
-    nieuw = _uitwijk_payload(pl)
+    nieuw = _uitwijk_payload(pl, job["platform"])
     if not nieuw:
+        return False
+    try:
+        if _eigen_rubriek_kost_ook_geld(db, user_id, job["platform"], nieuw):
+            return False
+    except Exception as e:  # noqa: BLE001 — dan de gewone rem, zoals voorheen
+        logger.warning("job %s: eigen rubriek niet na te gaan: %s", job_id, e)
         return False
     sleutel = _rubriek_sleutel(pl)
     try:
@@ -1906,7 +1957,7 @@ def _zet_terug_in_gratis_rubriek(db, user_id: str, job_id: str, job: dict | None
                 continue
             if _rubriek_sleutel(w.get("payload")) != sleutel:
                 continue
-            ander = _uitwijk_payload(w.get("payload"))
+            ander = _uitwijk_payload(w.get("payload"), job["platform"])
             if not ander:
                 continue
             db.table("jobs").update({"payload": ander}).eq("id", w["id"]).eq(

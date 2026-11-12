@@ -19108,3 +19108,10 @@ Verstuurd 20, gereageerd 10 (50%), ja 1 (the_cooking_mommy, stuurde 06-11 een kw
 ## 12-11-2026: platformcontrole, geen afwijking (tweede poging)
 
 Chrome was bij de eerste poging niet verbonden, daarna wel. Vinted: kinderen schoenen, meisjes jas, sneakers dames, heren shirt, babykleding meisjes, jongens kleding: alle stappen ok (beschrijving valt in de proef uit, artefact; heren-proef eenmaal opnieuw wegens trage tabbladklok). Kookboek: maat en kleur NIET gelukt, bekend. Marktplaats boeken (economie, encyclopedieen, esoterie) en 2dehands encyclopedieen: titel, prijs, staat, maat, kleur, merk ok; halswijdte NIET en de beschrijvingsfout aan het eind zijn proefartefacten. Rubrieknamen verschillen van gisteren, geen stap viel anders uit. Niets geplaatst, tabblad gesloten.
+
+## 12-11-2026: Voordeelsieraden, 2dehands "charges for adverts" op plaatsen na Marktplaats (Mieneke 09e089ec)
+
+- Klacht: artikelen die op Marktplaats staan maar niet op 2dehands kregen bij Plaatsen steeds "charges for adverts in Sieraden, Tassen en Uiterlijk ..."; offline halen en tegelijk op beide plaatsen lukte wel.
+- Oorzaak bewezen in haar opdrachten: onze 2dehands-plaatsing volgt de Marktplaats-rubriek (Antieke sieraden, 1826/13). In die ene rubriek rekent 2dehands na ongeveer 250 actieve zoekertjes geld (eerste betaalmelding bij het 251e; 104 plaatsingen sinds 27-10 gestrand, tegen 240 gelukt). Tegelijk plaatsen volgt Marktplaats niet en gaat in onze eigen keuze (kettinghangers, ringen, enz.), waar nog plek is.
+- Reparatie (jobs.py, _uitwijk_naar_eigen_rubriek): op 2dehands, als de Marktplaats-rubriek aantoonbaar vol is, gaat de plaatsing in onze eigen rubriek (hooguit een sprong, alleen als die zelf niet vol is, Marktplaats ongemoeid). Voor-en-na bewezen in tests/test_2dehands_vol_rubriek_wijkt_uit_naar_eigen_keuze.py, en met haar echte opdrachten (alleen gelezen) naar oorbellen en armbanden.
+- Niet aangeraakt: haar 6 geannuleerde opdrachten van vandaag; ze moet Plaatsen opnieuw klikken (of Alles wissen). Open: de eigen rubriek wordt ook ooit vol (~250); dan geldt de gewone rem en melding.
