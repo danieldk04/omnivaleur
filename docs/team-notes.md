@@ -19096,3 +19096,11 @@ Verstuurd 20, gereageerd 10 (50%), ja 1 (the_cooking_mommy, stuurde 06-11 een kw
 - 09e089ec: om 14:30 1x titelveld niet gevonden op MP en 2dehands tegelijk, daarna alles weer gelukt; 1x 2dehands-verwijderen 403 (afgeknepen), niets weggehaald.
 - Klant-eigen wachtrijen: Goudlief ~720 wachtend, Chrome uit sinds 10-11 21:18 (2 opdrachten op claimed); 0b28c1ce en Janneke (31d28378) Chrome dagen uit; Janneke's Vinted-scan door de veger opgeruimd. 108 afgeblazen herplaatsingen omdat computers uit stonden.
 - Niet gemeten: Railway-log en fouten die alleen in de browser van de klant staan. /health ok (commit 4c2039d0).
+
+## 12-11-2026: Onboarding nieuwe klanten (ochtend)
+- Om 11:57 eerst afgebroken (klantfoutenronde had het slot), om 12:15 opnieuw gedraaid. 4 accounts in de eerste week, 2 nieuw, geen creator. Web Store levert 1.0.420. Agenda: niets over deze klanten.
+- sk8mom@live.nl (64a5c962, nieuw 12-11 01:28): e-mail nooit bevestigd, dus nooit ingelogd. Mailtje verstuurd: bevestigingslink zoeken (ook Ongewenst) of via wachtwoord vergeten een nieuwe link.
+- gahomi7062@micropaste.com (f7f00a82, nieuw 11-11 23:10): wegwerpadres, extensie 1.0.420 gemeld, 0 artikelen, voorkeuren nooit opgeslagen. Geen mailtje: zo'n adres verloopt na korte tijd, waarschijnlijk een tester.
+- nickspijkers100 (17e5c638): ongewijzigd sinds gisteren, Chrome stil sinds 10-11 16:46 (klant). Geen nieuw mailtje.
+- kjrmohamed (720924e6): ongewijzigd, proef loopt vanavond af. Geen mailtje.
+- Mailrapport: 2 mails vorige dagen, 0 echt geopend, 0 klik, 0 antwoord.
