@@ -33,3 +33,12 @@ Zwak: de luidste 3 seconden zijn maar 0,6 LU luider dan de rest (vlak, geen uits
 (4 van 7 referentiefilms hebben die), klank wat dof (1012 Hz tegen 1183 tot 3030 Hz bij de referenties), en volledig mono.
 Verbeterpunten voor de volgende video's: een stop-down van 0,2 tot 1 s vóór de grote wissel, een duidelijker piek in de laatste klap,
 iets helderder muziek, en mix op -14 LUFS controleren in plaats van aannemen.
+
+## Menselijker maken (12-11-2026, Daniel: "het lijken echt AI video's")
+Onderzocht: AI-video's verraden zich door een monotone stem zonder emotie, sjabloonopbouw, beelden die op elkaar lijken en een perfect vaste camera (bronnen zijn blogs, geen studies). Wat nu in de pijplijn zit:
+- Stem: Chatterbox (`~/chatterbox-venv`, `stemtest/gen.py`; vraagt `setuptools<81`) in plaats van Kokoro: toonspreiding 5,7 tot 6,1 halve tonen tegen 3,3, meer beweging. Op een Mac met 8 GB is hij zwaar: 2 tot 4 min per zin als er niets anders draait, uren bij geheugentekort. Eerst Spotify en andere zware programma's sluiten, nooit gelijk renderen of librosa draaien.
+- Script casual ("Okay, ...", "And honestly?"), `assemble.py` plakt de regels met wisselende pauzes (geen vaste 0,22 s) en bouwt bijschriften en `LINES` voor `retime`.
+- Beeld: dikke vette bijschriften met pop, handheld camerawiebel, meer filmkorrel, om de derde cut hard in plaats van zwiep, geen bijschrift over de eindkaart.
+- Geluid: `sound3.py` (bed zachter, geen blip per bijschrift, kamertoon), `mix.sh`, daarna limiter-ronde tot -14 LUFS en piek onder -3 dBFS.
+- Meten: `intonatie.py` (toonbereik, tempo, pauzes). Toonhoogte alleen zegt niet of het menselijk klinkt; ik kan niet horen. Stemgelijkheid tussen regels: cosinus 0,74 tot 0,91 (Chatterbox VoiceEncoder).
+- Echt menselijk blijft Daniels eigen stem. Opleveren: Downloads plus Drive-map `Omnivaleur/Social video's week 46`, nergens anders.

@@ -5,7 +5,10 @@ import { kf, lerp, easeOut, easeInOut, range, clamp, V, cam, place, shake } from
 import { std, rbox, pop, planeCard, wrap, logoTex, listingTex, bubbleTex, gradTex, typingPose, walkPose, cheer, K, Ll, Mm, Nn, s8, IMG } from './shots.js';
 import { courtroom, judgeStrike, labelTex, stampTex } from './week46.js';
 export { CAPTIONS, DURATION } from './cap.js';
-import { DURATION } from './cap.js';
+import { DURATION, LINES } from './cap.js';
+// shot times were written against the first voice-over; map them onto the new line timings
+const OLD_STARTS = [0, 1.585, 5.517, 8.297, 10.629, 12.428, 14.333], OLD_END = 15.49;
+const T = x => { const o = [...OLD_STARTS, OLD_END], n = [...LINES.map(l => l[0]), LINES[LINES.length - 1][1]]; for (let i = 0; i < o.length - 1; i++) if (x < o[i + 1] || i === o.length - 2) return n[i] + (x - o[i]) * (n[i + 1] - n[i]) / (o[i + 1] - o[i]); return x; };
 export const FADES = [];
 
 const bang = (t, t0) => Math.exp(-Math.pow((t - t0) * 14, 2));      // short pulse at the strike
@@ -84,4 +87,4 @@ export const SHOTS = [
   [6.8, 8.2, exhibit(['ebay.webp', 'shopify.webp'], ['EXHIBIT C', 'EXHIBIT D'], [0.0, 0.55])],
   [8.2, 9.3, G], [9.3, 10.5, H],
   [10.5, 11.5, K], [11.5, 12.4, Ll], [12.4, 13.3, Mm], [13.3, 14.3, Nn], [14.3, 15.7, P],
-].map(([start, end, b], i) => ({ start, end, build: wrap(b, end - start, i % 2 ? 1 : -1) })).concat([{ start: 15.7, end: DURATION + 1, build: s8 }]);
+].map(([start, end, b], i) => { const a = T(start), z = T(end); return { start: a, end: z, build: i % 3 === 2 ? b : wrap(b, z - a, i % 2 ? 1 : -1) }; }).concat([{ start: T(15.7), end: DURATION + 1, build: s8 }]);   // every third cut is a hard cut, the rest whip

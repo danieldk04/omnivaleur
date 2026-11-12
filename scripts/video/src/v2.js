@@ -4,7 +4,10 @@ import { kf, lerp, easeOut, easeInOut, range, clamp, V, cam, place } from './ani
 import { pop, planeCard, wrap, logoTex, listingTex, bubbleTex, checkTex, K, Ll, Mm, Nn, s8, PLATFORMS, rnd } from './shots.js';
 import { cookingStage, plate, pan, steam, labelTex } from './week46.js';
 export { CAPTIONS, DURATION } from './cap.js';
-import { DURATION } from './cap.js';
+import { DURATION, LINES } from './cap.js';
+// shot times were written against the first voice-over; map them onto the new line timings
+const OLD_STARTS = [0, 3.42, 6.648, 9.279, 10.928, 14.369], OLD_END = 17.08;
+const T = x => { const o = [...OLD_STARTS, OLD_END], n = [...LINES.map(l => l[0]), LINES[LINES.length - 1][1]]; for (let i = 0; i < o.length - 1; i++) if (x < o[i + 1] || i === o.length - 2) return n[i] + (x - o[i]) * (n[i + 1] - n[i]) / (o[i + 1] - o[i]); return x; };
 export const FADES = [];
 
 const TOP = 0.96;
@@ -92,4 +95,4 @@ export const SHOTS = [
   [9.2, 10.2, Mm], [10.2, 10.9, Ll],
   [10.9, 12.0, served([0, 1], 0, false)], [12.0, 13.1, served([2, 3], 2, false)], [13.1, 14.3, served([4], 4, true)],
   [14.3, 15.2, K], [15.2, 16.2, Nn], [16.2, 17.2, R12],
-].map(([start, end, b], i) => ({ start, end, build: wrap(b, end - start, i % 2 ? 1 : -1) })).concat([{ start: 17.2, end: DURATION + 1, build: s8 }]);
+].map(([start, end, b], i) => { const a = T(start), z = T(end); return { start: a, end: z, build: i % 3 === 2 ? b : wrap(b, z - a, i % 2 ? 1 : -1) }; }).concat([{ start: T(17.2), end: DURATION + 1, build: s8 }]);   // every third cut is a hard cut, the rest whip

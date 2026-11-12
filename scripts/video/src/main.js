@@ -93,7 +93,7 @@ const grade = new ShaderPass({
     void main(){ vec4 c = texture2D(tDiffuse, vUv);
       vec2 q = vUv - 0.5; q.x *= 0.5625;
       c.rgb *= 1.0 - uVig * smoothstep(0.18, 0.62, length(q));
-      c.rgb += (h(vUv*1280.0) - 0.5) * 0.018;
+      c.rgb += (h(vUv*1280.0) - 0.5) * 0.032;
       gl_FragColor = c; }`,
 });
 composer.addPass(renderPass);
@@ -122,6 +122,7 @@ window.renderAt = (t) => {
   const lt = t - def.start;
   const r = shot.update(lt, t) || {};
   const cam = shot.camera;
+  if (!shot.noHandheld) { const a = 0.007; cam.position.x += a * (Math.sin(t * 1.7) + 0.6 * Math.sin(t * 4.3 + 1)); cam.position.y += a * (Math.sin(t * 1.3 + 2) + 0.6 * Math.sin(t * 5.1)); cam.rotation.z += 0.005 * Math.sin(t * 1.1 + 0.5) + 0.002 * Math.sin(t * 6.7); }   // handheld drift, so the camera is never a perfect rail
   cam.aspect = W / H; cam.updateProjectionMatrix();
   shot.scene.userData.sky.position.copy(cam.position);
   renderPass.scene = bokeh.scene = shot.scene;
@@ -138,7 +139,8 @@ window.renderAt = (t) => {
   composer.render();
   // captions + fades
   const c = CAPTIONS.filter(c => t >= c[0]).pop();
-  capEl.textContent = c && (c[2] == null || t < c[2]) ? c[1] : '';
+  capEl.textContent = c && (c[2] == null || t < c[2]) && idx < SHOTS.length - 1 ? c[1] : '';   // no caption over the end card
+  capEl.style.transform = c ? `scale(${1 + 0.16 * Math.exp(-(t - c[0]) * 16)})` : 'none';
   let f = 0;
   for (const [a, b, c2, d] of FADES) if (t >= a && t < d) f = Math.max(f, t < b ? (t - a) / (b - a) : t < c2 ? 1 : (d - t) / (d - c2));
   fadeEl.style.opacity = f;

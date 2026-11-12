@@ -203,7 +203,7 @@ function s8() {
   const scene = new THREE.Scene(); scene.userData.sky = new THREE.Object3D();
   const m = new THREE.Mesh(new THREE.PlaneGeometry(2.25, 4), new THREE.MeshBasicMaterial({ map: endTex(), toneMapped: false })); scene.add(m);
   const c = cam(35);
-  return { scene, camera: c, update(t) { const z = kf(t, [[0, 6.9], [2.5, 6.4]], easeOut); place(c, [0, 0, z], [0, 0, 0]); m.scale.setScalar(1); return { bloom: 0.2 }; } };
+  return { scene, camera: c, update(t) { const z = kf(t, [[0, 6.9], [2.5, 6.4]], easeOut); place(c, [0, 0, z], [0, 0, 0]); m.scale.setScalar(1.14); return { bloom: 0.2 }; } };
 }
 
 

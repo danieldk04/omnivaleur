@@ -4,7 +4,10 @@ import { kf, lerp, easeOut, easeInOut, range, clamp, V, cam, place } from './ani
 import { pop, planeCard, wrap, logoTex, listingTex, checkTex, K, Ll, Mm, s8, PLATFORMS, rnd } from './shots.js';
 import { spaceScene, astronaut, satellite, labelTex, stampTex } from './week46.js';
 export { CAPTIONS, DURATION } from './cap.js';
-import { DURATION } from './cap.js';
+import { DURATION, LINES } from './cap.js';
+// shot times were written against the first voice-over; map them onto the new line timings
+const OLD_STARTS = [0, 2.119, 5.688, 8.34, 10.693, 13.431], OLD_END = 14.92;
+const T = x => { const o = [...OLD_STARTS, OLD_END], n = [...LINES.map(l => l[0]), LINES[LINES.length - 1][1]]; for (let i = 0; i < o.length - 1; i++) if (x < o[i + 1] || i === o.length - 2) return n[i] + (x - o[i]) * (n[i + 1] - n[i]) / (o[i + 1] - o[i]); return x; };
 export const FADES = [];
 
 function space(update, { fov = 40, red = false } = {}) {
@@ -73,4 +76,4 @@ export const SHOTS = [
   [0.0, 1.0, S1], [1.0, 2.1, S2], [2.1, 3.3, sats([0, 1], 0)], [3.3, 4.4, sats([2, 3], 0)], [4.4, 5.5, S5],
   [5.5, 7.0, swirl(0)], [7.0, 8.3, swirl(1.5)],
   [8.3, 9.4, K], [9.4, 10.5, Ll], [10.5, 11.5, Mm], [11.5, 13.4, S8], [13.4, 15.0, S9],
-].map(([start, end, b], i) => ({ start, end, build: wrap(b, end - start, i % 2 ? 1 : -1) })).concat([{ start: 15.0, end: DURATION + 1, build: s8 }]);
+].map(([start, end, b], i) => { const a = T(start), z = T(end); return { start: a, end: z, build: i % 3 === 2 ? b : wrap(b, z - a, i % 2 ? 1 : -1) }; }).concat([{ start: T(15.0), end: DURATION + 1, build: s8 }]);   // every third cut is a hard cut, the rest whip
