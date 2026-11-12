@@ -981,6 +981,66 @@
       "status": "published",
       "nl_slug": "trading-cards-automatisering-voor-resellers",
       "priority": 110
+    },
+    {
+      "keyword": "how to sell faster on eBay",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "how-to-sell-faster-on-ebay",
+      "status": "published",
+      "nl_slug": "sneller-verkopen-op-ebay-tips",
+      "priority": 111
+    },
+    {
+      "keyword": "Omnivaleur vs Flyp crosslisting",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "slug": "omnivaleur-vs-flyp-crosslisting",
+      "status": "pending",
+      "nl_slug": "omnivaleur-versus-flyp-vergelijking",
+      "priority": 112
+    },
+    {
+      "keyword": "Etsy shipping settings for resellers",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "etsy-shipping-settings-for-resellers",
+      "status": "pending",
+      "nl_slug": "etsy-verzendopties-instellen-voor-verkopers",
+      "priority": 113
+    },
+    {
+      "keyword": "when do you need a KvK number for reselling in Netherlands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "slug": "when-do-you-need-a-kvk-number-for-reselling-in-netherlands",
+      "status": "pending",
+      "nl_slug": "wanneer-kvk-nummer-nodig-voor-verkopen-nederland",
+      "priority": 114
+    },
+    {
+      "keyword": "how to build a reselling inventory from scratch",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "slug": "how-to-build-a-reselling-inventory-from-scratch",
+      "status": "pending",
+      "nl_slug": "voorraadbeheer-opbouwen-voor-wederverkoop",
+      "priority": 115
+    },
+    {
+      "keyword": "how to crosslist from Marktplaats to Shopify",
+      "region": "nl",
+      "pillar": "A",
+      "format": "combo",
+      "slug": "how-to-crosslist-from-marktplaats-to-shopify",
+      "status": "pending",
+      "nl_slug": "crosslisten-van-marktplaats-naar-shopify",
+      "priority": 116
     }
   ],
   "published": [
@@ -2009,6 +2069,16 @@
       "action": "created",
       "url_path": "/reseller-tools/trading-card-reselling-automation",
       "published_at": "2026-11-11T15:49:48.329513+00:00"
+    },
+    {
+      "keyword": "how to sell faster on eBay",
+      "slug": "how-to-sell-faster-on-ebay",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-sell-faster-on-ebay",
+      "published_at": "2026-11-12T16:32:26.274151+00:00"
     }
   ]
 }
