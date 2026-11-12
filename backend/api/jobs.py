@@ -2876,6 +2876,14 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                 # lopen kan dat echt gebeuren, want een ander kanaal is nu
                 # gewoon aan het werk terwijl dit kanaal polt.
                 anderen = [j for j in anderen if j.get("platform") not in bezette_kanalen]
+                # EN GEEN BEURT AAN EEN KANAAL OP INLOGPAUZE (12-11-2026, De Juiste
+                # Toon). Die pauze geldt bij de eigen poll van dat kanaal, maar via
+                # deze omweg kreeg de extensie het 2dehands-zoekertje toch, elke keer
+                # na een Marktplaats-opdracht: 245 keer pakken, "niet ingelogd",
+                # terug in de rij, op 11-11 tussen 21:35 en 22:58.
+                gepauzeerd = {p for p in {j.get("platform") for j in anderen}
+                              if p and _inlog_pauze_actief(db, user_id, p, now_dt)}
+                anderen = [j for j in anderen if j.get("platform") not in gepauzeerd]
                 # EN GEEN BEURT AAN WERK DAT BEWUST STAAT TE WACHTEN (23-09-2026).
                 # Een 2dehands-plaatsing die op zijn Marktplaats-rubriek wacht
                 # wordt verderop teruggehouden (tot _RUBRIEK_ZOEK_GEDULD). Kreeg
