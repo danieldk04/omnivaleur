@@ -6563,6 +6563,23 @@ def _is_zakelijk(db, job: dict | None, body: dict, user_id: str) -> bool | None:
     return True if soort == "TRADER" else (False if soort else None)
 
 
+# VANAF 1.0.332 KENT DE EXTENSIE ZELF HET VERSCHIL (12-11-2026, De Juiste Toon).
+# Sinds die versie leest ze de kopbalk van de site: zegt die "ingelogd" terwijl het
+# persoonlijke overzicht weigert, dan is het een zakelijk account en gaat de
+# plaatsing gewoon door. Meldt zo'n kopie toch "niet ingelogd", dan zei de kopbalk
+# zelf "uitgelogd". Dan klopt het verwijt, ook voor een zakelijke verkoper, en is de
+# tekst "u was de hele tijd ingelogd, dit ligt aan ons" onwaar. Toon kreeg hem op
+# 11-11 op een Windows-computer waar hij echt niet op 2dehands was ingelogd: zijn
+# 25 zoekertjes bleven 12 uur liggen en de melding stuurde hem de verkeerde kant op.
+_VERSIE_MET_KOPBALKMETING = (1, 0, 332)
+
+
+def _kopbalk_heeft_gesproken(versie, fout) -> bool:
+    """Komt dit inlogverwijt van een kopie die de kopbalk van de site zelf las?"""
+    return bool(versie and tuple(versie) >= _VERSIE_MET_KOPBALKMETING
+                and _CLAIM_NIET_INGELOGD.search(str(fout or "")))
+
+
 def _melding_zakelijk_account(platform: str, reden: str) -> str:
     site = {"marktplaats": "Marktplaats (marktplaats.nl)",
             "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
