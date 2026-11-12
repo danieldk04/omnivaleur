@@ -3400,7 +3400,14 @@ window.CL = (() => {
   function ringMaatUitTekst(item) {
     if (!item) return "";
     const isRing = /ring/i.test(String(item.category || ""));
-    if (item.size) return (isRing && _ringGroep(String(item.size), true)) || String(item.size);
+    if (item.size) {
+      if (!isRing) return String(item.size);
+      // Een eigen maat zonder diameter ("Kroon vorm", Mieneke 12-11-2026) is een
+      // vorm, geen maat: dan eerst de omschrijving ("ringmaat is 18(56)").
+      return _ringGroep(String(item.size), true)
+        || _ringGroep(`${item.title || ""} ${item.description || ""}`, false)
+        || String(item.size);
+    }
     if (!isRing) return "";
     return _ringGroep(`${item.title || ""} ${item.description || ""}`, false);
   }

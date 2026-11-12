@@ -43,6 +43,7 @@ eis("eigen maat '18.1 mm Ø' is 18 tot 19", maat(ring("", { size: "18.1 mm Ø" }
 eis("eigen maat '53.1 mm / 16.9 mm Ø' is Kleiner dan 17", maat(ring("", { size: "53.1 mm / 16.9 mm Ø" })) === "Kleiner dan 17");
 eis("eigen maat '19' is 19 tot 20", maat(ring("", { size: "19" })) === "19 tot 20");
 eis("eigen maat zonder diameter blijft", maat(ring("", { size: "Kroon vorm" })) === "Kroon vorm");
+eis("vorm als maat valt terug op ringmaat in de omschrijving (Kroon vorm, 12-11)", maat(ring("De ringmaat is 18(56), afmetingen ringkop 17x13mm", { size: "Kroon vorm" })) === "18 tot 19");
 eis("eigen maat 'Eén maat' blijft", maat(ring("", { size: "Eén maat" })) === "Eén maat");
 eis("geen ring: eigen maat blijft", maat({ category: "dames jassen", size: "38" }) === "38");
 eis("geen ringmaat in tekst: leeg, geen gok", maat(ring("Mooie ring met diamant")) === "");
