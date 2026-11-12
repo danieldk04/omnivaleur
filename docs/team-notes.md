@@ -19081,3 +19081,7 @@ Dashboard (frontend/app.html) toont Plus, Ultra, de keuze Per maand / Per jaar e
 ## 11-11-2026: aankondiging voorbereid (concept, niets live)
 
 docs/aankondiging-nieuwe-plannen.md bevat mail A (vriendenactie), mail B (nieuwe plannen), de teksten voor het "Wat is er nieuw"-venster, het updatelogbericht, de rondleidingsstappen en de volgorde van livegang. Wacht op de meting van 19-11 voor wat over het AI-pakket gezegd mag worden. Open: aanzegtermijn prijswijziging in de voorwaarden nakijken, mail B per klant invullen voor de grote drie.
+
+## 12-11-2026: platformcontrole niet gedraaid
+
+Claude in Chrome was niet verbonden (twee pogingen), dus geen proef op Vinted, Marktplaats en 2dehands. Niets gemeten, niets gewijzigd. 11-11 liep wel. Melden alleen als het twee dagen achter elkaar gebeurt.
