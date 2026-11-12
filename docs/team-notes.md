@@ -19085,3 +19085,6 @@ docs/aankondiging-nieuwe-plannen.md bevat mail A (vriendenactie), mail B (nieuwe
 ## 12-11-2026: platformcontrole niet gedraaid
 
 Claude in Chrome was niet verbonden (twee pogingen), dus geen proef op Vinted, Marktplaats en 2dehands. Niets gemeten, niets gewijzigd. 11-11 liep wel. Melden alleen als het twee dagen achter elkaar gebeurt.
+
+## 12-11-2026, creator-outreach stand
+Verstuurd 20, gereageerd 10 (50%), ja 1 (the_cooking_mommy, stuurde 06-11 een kwitantie voor gemaakte content), nee 9, open 10 (allemaal 16+ dagen, Zoho gecontroleerd, geen enkel antwoord). Per type onbekend 0 van 8, ugc 1 van 10, verkoper 0 van 2: steekproef te klein voor conclusies.
