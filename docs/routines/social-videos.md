@@ -1,7 +1,9 @@
 # Social video's maken en bijsturen (wekelijks, dinsdag)
 
-Opdracht van Daniel, 10-11-2026. Elke dinsdag lever je 3 tot 4 geanimeerde video's voor sociale media aan,
-in de stijl van het Instagramaccount renno.app, en je leert elke week van de cijfers van de week ervoor.
+Opdracht van Daniel, 10-11-2026. Elke dinsdag lever je 4 tot 5 video's voor sociale media aan met een GROTE variatie in format, hook, stem en situatie
+(catalogus: `docs/social-video-formats.md`), en je leert elke week van de cijfers van de week ervoor.
+Daniel, 12-11-2026: variatie en veel opties, leren van de echte data, altijd testen op maximale menselijkheid, hooks optimaliseren,
+over tijd vanzelf bij de best werkende opties uitkomen, en het mag nooit als AI-slop beoordeeld worden.
 Daniel plaatst zelf (TikTok, Instagram, YouTube Shorts, Threads, Pinterest). Jij levert aan en meet.
 Het gaat niet om views alleen: het doel is dat mensen aanmelden en betalen.
 
@@ -54,7 +56,10 @@ Regel pas als regel opnemen als hij in minstens twee video's of bij een duidelij
 Wat je niet kon meten schrijf je op als openstaand punt. Optimaliseer op deze volgorde: aanmeldingen en betalende
 klanten, dan bewaard en gedeeld, dan kijktijd en percentage bekeken, dan reacties, dan pas weergaven.
 
-## Stap 4: 3 tot 4 nieuwe video's maken
+## Stap 3b: meetdata vastleggen en kiezen
+Zet elke gemeten plaatsing (video, platform, cijfers uit stap 1) in `docs/social-video-metingen.csv` (format, hooktype, stem, lengte staan al bij het maken ingevuld). Instagram, TikTok, YouTube en Facebook zijn leidend (Schedchie eerst). Draai daarna `python3 scripts/video/format_scores.py`: het geeft per format, hooktype en stem een score (per platform genormaliseerd, aanmeldingen en betalend het zwaarst) en het advies voor deze week (ongeveer 60% winnaars met een andere hook of stem, 40% proberen). Minder dan 3 plaatsingen per format is 'onzeker': trek dan geen conclusie. Maak ook elke week één video in een format dat nog nooit is gemaakt.
+
+## Stap 4: 4 tot 5 nieuwe video's maken (grote variatie)
 Elke video heeft een eigen hypothese (andere haak, andere hoek, ander tempo, andere situatie) en een creatieve,
 vreemde situatie waarin het probleem terugkomt, zoals renno dat ook doet (bijvoorbeeld de ruimte, een
 rechtszaal, een kookshow, een sportcommentator). Niet steeds hetzelfde kamertje. Het product moet er wel steeds
@@ -69,6 +74,14 @@ echt in zitten: echt dashboard, echte platformlogo's, de belofte "list once, sel
 - Lengte 15 tot 25 seconden, 9:16, 1080x1920, haak in de eerste 2 seconden, afsluiter met omnivaleur.com.
 - Tekst volgens de huisregels: geen schuld aantrekken, Omnivaleur nooit als werkwoord ("crosslisten" is de actie).
 
+## Menselijkheidspoort (nieuw, 12-11-2026; eerst deze, dan de kwaliteitspoort)
+Als het als 'weer een AI-video' voelt is het fout, ook als alles technisch klopt.
+1. Script: `python3 scripts/video/slop_check.py <script.json>` groen. Casual, gesproken taal met samentrekkingen, korte zinnen, geen reclamewoorden, een echte inzet of herkenbare pijn in de eerste zin.
+2. Stem: Chatterbox (zie `docs/video-recept.md`, 'Menselijker maken'), eigen stem per video via een referentieclip, `intonatie.py` toonspreiding minstens 4,5 halve tonen, pauzes verschillend lang. Liever Daniels eigen stem als hij die aanlevert (format ECHT).
+3. Beeld: handheld wiebel, filmkorrel, minstens één hard cut, dikke duidelijke bijschriften, echt dashboard, geen eindkaart met bijschrift eroverheen.
+4. Wat je niet kunt beoordelen (hoe de stem klinkt) schrijf je als openstaand punt; Daniel luistert eerst. Platforms kunnen een label vragen voor synthetische stemmen: noem dat als Daniel plaatst.
+5. Mac met 8 GB: voor Chatterbox eerst Spotify en andere zware programma's sluiten en niets anders draaien (anders uren), dan pas renderen.
+
 ## Kwaliteitspoort (alles moet groen voor je aanlevert)
 1. Doorsteken: `node clip.mjs` geeft 0 frames (poppetje door laptop of meubel is een fout).
 2. Beeld: kijk minstens 5 stills per video (haak, drie midden, afsluiter), geen afgekapte tekst, geen lege plekken.
@@ -78,7 +91,8 @@ echt in zitten: echt dashboard, echte platformlogo's, de belofte "list once, sel
 5. Opnieuw gerenderd na elke wijziging; nooit een eerdere versie opsturen.
 
 ## Aanleveren
-Map `~/omnivaleur-videos/week-JJJJ-WW/`: per video `videoN.mp4` en `videoN.txt` met bijschrift, hashtags, titel voor
+Daniel, 12-11-2026: de eindbestanden komen ALLEEN in `~/Downloads` en in Drive `Omnivaleur/Social video's week WW` (Mac: `~/Library/CloudStorage/GoogleDrive-*/Mijn Drive/Omnivaleur/`); op alle andere plekken wis je de mp4's (werkmappen, tussenbestanden, mix- en silent-bestanden) zodra de levering klaar is. Daniel wist ze uit Downloads nadat hij ze heeft ingepland. Bestandsnamen: `omnivaleur-weekWW-<nr>-<naam>.mp4` plus `.txt`.
+Werkmap `~/omnivaleur-videos/week-JJJJ-WW/`: per video `videoN.mp4` en `videoN.txt` met bijschrift, hashtags, titel voor
 YouTube, beste plaatsmoment per platform, hypothese en wat je ermee wilt leren. Stuur de mp4's met SendUserFile en
 meld dat Daniel ze kan plaatsen. Zet een korte regel in `docs/team-notes.md`.
 
