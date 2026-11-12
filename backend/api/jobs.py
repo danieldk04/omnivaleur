@@ -7456,9 +7456,14 @@ _PAUZE_STEMPEL = "login unproven"
 def _inlog_pauze_actief(db, user_id: str, platform: str, nu: datetime) -> bool:
     """Staat dit kanaal op pauze na een onbewezen inlogverwijt?"""
     try:
+        # Zonder done_at niet meetellen: Postgres zet NULL VOORAAN bij aflopend
+        # sorteren. Bij Toon (11-11-2026) vulden drie oude "item sold elsewhere"-
+        # rijen zonder done_at de drie plekken, zag deze vraag het pauzestempel
+        # nooit en ging de pauze op Marktplaats nooit in.
         rijen = (db.table("jobs").select("done_at,result")
                  .eq("user_id", user_id).eq("platform", platform).eq("action", "create")
-                 .eq("status", "cancelled").order("done_at", desc=True)
+                 .eq("status", "cancelled").not_.is_("done_at", "null")
+                 .order("done_at", desc=True)
                  .limit(3).execute().data or [])
     except Exception as e:  # noqa: BLE001 — een pauze mag nooit de uitgifte breken
         logger.warning("inlogpauze niet na te gaan voor %s/%s: %s", user_id, platform, e)
