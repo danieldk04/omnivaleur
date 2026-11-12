@@ -19088,3 +19088,11 @@ Claude in Chrome was niet verbonden (twee pogingen), dus geen proef op Vinted, M
 
 ## 12-11-2026, creator-outreach stand
 Verstuurd 20, gereageerd 10 (50%), ja 1 (the_cooking_mommy, stuurde 06-11 een kwitantie voor gemaakte content), nee 9, open 10 (allemaal 16+ dagen, Zoho gecontroleerd, geen enkel antwoord). Per type onbekend 0 van 8, ugc 1 van 10, verkoper 0 van 2: steekproef te klein voor conclusies.
+
+## 12-11-2026: Dagelijkse klantfouten
+- Gemeten ~09:00 UTC over 24 uur: 992 afgeronde opdrachten bij 8 klanten, 28 fouten bij 4 klanten (gisteren 32 bij 5). Geen fout in onze code gevonden, geen reparatie.
+- Toon (96e30080) 19 van de 28: uitgelogd op Vinted (6x plaatsen, 10x scan), 2x 2dehands-overzicht leeg, 1x betaalde MP-rubriek, 1x zakelijk MP-account bij verversen, 1x Vinted-kleur leeg op een tapijt (sheet regel 24, wacht op besluit). Allemaal bekend en klant-eigen.
+- 3bfbed2c: 2dehands-foto's van img.omnivaleur.com om 11:24 even onbereikbaar, hetzelfde artikel ging om 20:33 wel online (foto nu 200). MP-plaatsing van (1288) faalt omdat de foto's nog op Marktplaats stonden bij een advertentie die sinds 01-09 weg is (404); de inhaalronde mp_fotos_inhalen kan die niet meer redden, nog 8 van 477 artikelen zo. Verder 1x tabblad dicht, 1x Vinted-scan foutpagina.
+- 09e089ec: om 14:30 1x titelveld niet gevonden op MP en 2dehands tegelijk, daarna alles weer gelukt; 1x 2dehands-verwijderen 403 (afgeknepen), niets weggehaald.
+- Klant-eigen wachtrijen: Goudlief ~720 wachtend, Chrome uit sinds 10-11 21:18 (2 opdrachten op claimed); 0b28c1ce en Janneke (31d28378) Chrome dagen uit; Janneke's Vinted-scan door de veger opgeruimd. 108 afgeblazen herplaatsingen omdat computers uit stonden.
+- Niet gemeten: Railway-log en fouten die alleen in de browser van de klant staan. /health ok (commit 4c2039d0).
