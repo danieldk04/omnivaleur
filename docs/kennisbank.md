@@ -17,6 +17,32 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## inlogpauze-lekte-via-de-beurt
+
+*12-11-2026 — "12-11 Toon: 2dehands-pauze lekte via \"beurt doorgeven\" (245x pakken/terug), MP-pauze zag stempel nooit door NULL vooraan, zakelijk-excuus loog bij 1.0.332+"*
+
+11-11-2026 avond, De Juiste Toon (96e30080) op een Windows-computer met Edge (IP 188.88.131.208, niet zijn
+Chromebook): niet ingelogd op 2dehands en Vinted. Zijn 25 zoekertjes bleven 12 uur liggen en gingen pas de
+volgende ochtend van de Chromebook de deur uit. Drie fouten van ons, gerepareerd 12-11 (backend/api/jobs.py,
+tests/test_inlogpauze_lekt_niet.py):
+
+1. De "beurt doorgeven" in get_pending_jobs gaf 2dehands-werk mee aan een Marktplaats-poll en keek niet naar de
+   inlogpauze van 2dehands. Gevolg: 245x claim, "niet ingelogd", /error zet terug op pending, opnieuw.
+2. `_inlog_pauze_actief` sorteerde geannuleerde rijen op done_at aflopend met limit 3. **Postgres zet NULL
+   vooraan bij DESC**; drie oude "item sold elsewhere"-rijen zonder done_at verdrongen het pauzestempel. De
+   nep-database in de proeven sorteerde None achteraan en zag het nooit. Nu `.not_.is_("done_at","null")`.
+3. Bij een TRADER herschreef de server elk inlogverwijt naar "u was de hele tijd ingelogd, dit ligt aan ons".
+   Dat gold alleen vóór 1.0.332; sinds die versie leest de extensie de kopbalk en is "niet ingelogd" waar.
+
+**Why:** de klant zag niets online komen en kreeg een melding die hem vertelde dat hij niets hoefde te doen.
+Het opgeofferde pauzestempel (één opdracht per kanaal) wordt nooit vanzelf herhaald.
+**How to apply:** bij "komt niet online" eerst de Railway-HTTP-log per klant-IP lezen (claim-lussen zijn daar
+direct zichtbaar, zie "gat-tussen-opdrachten-meten"); bij elke `.order(desc=True).limit(n)` op een kolom die
+NULL kan zijn de NULL-rijen uitsluiten; een nep-DB moet NULL sorteren zoals Postgres. Hoort bij
+"nep-database-geeft-alle-kolommen".
+
+---
+
 ## proef-importeert-echte-stripe-sleutel
 
 *11-11-2026 — Een Stripe-proefscript dat backend.api.billing importeert zet stripe.api_key op de ECHTE sleutel uit .env; zet de testsleutel pas na die import en controleer livemode*
