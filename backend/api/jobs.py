@@ -7366,6 +7366,8 @@ def stop_platform(body: dict, request: Request, user_id: str = Depends(get_curre
     # Zakelijk account? Dan is het verwijt aantoonbaar onzin en stellen we geen
     # vraag meer aan de verkoper. Zie _verkoper_soort.
     if (_CLAIM_NIET_INGELOGD.search(ruw)
+            and not _kopbalk_heeft_gesproken(
+                _kopstuk_versie(request.headers.get("x-omnivaleur-ext")), ruw)
             and _verkoper_soort(db, user_id, platform) == "TRADER"):
         logger.warning("stop-platform: inlogverwijt genegeerd, %s is zakelijk op %s",
                        user_id, platform)
