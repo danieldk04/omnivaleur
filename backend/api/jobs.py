@@ -6775,7 +6775,8 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
             kansloos = _kanaal_kansloos(db, user_id, job.get("platform") or "")
         except Exception:
             logger.warning("kansloze reeks niet vast te stellen voor %s", job_id)
-    zakelijk = _is_zakelijk(db, job, body, user_id)
+    zakelijk = (None if _kopbalk_heeft_gesproken(versie, (body or {}).get("error"))
+                else _is_zakelijk(db, job, body, user_id))
     body = _rechtgezette_foutmelding(job, body, versie, kansloos, zakelijk)
 
     # EEN SMARTWATCH DIE GELD GAAT KOSTEN GAAT NAAR SPORTHORLOGES.
