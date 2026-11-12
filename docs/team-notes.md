@@ -19104,3 +19104,7 @@ Verstuurd 20, gereageerd 10 (50%), ja 1 (the_cooking_mommy, stuurde 06-11 een kw
 - nickspijkers100 (17e5c638): ongewijzigd sinds gisteren, Chrome stil sinds 10-11 16:46 (klant). Geen nieuw mailtje.
 - kjrmohamed (720924e6): ongewijzigd, proef loopt vanavond af. Geen mailtje.
 - Mailrapport: 2 mails vorige dagen, 0 echt geopend, 0 klik, 0 antwoord.
+
+## 12-11-2026: platformcontrole, geen afwijking (tweede poging)
+
+Chrome was bij de eerste poging niet verbonden, daarna wel. Vinted: kinderen schoenen, meisjes jas, sneakers dames, heren shirt, babykleding meisjes, jongens kleding: alle stappen ok (beschrijving valt in de proef uit, artefact; heren-proef eenmaal opnieuw wegens trage tabbladklok). Kookboek: maat en kleur NIET gelukt, bekend. Marktplaats boeken (economie, encyclopedieen, esoterie) en 2dehands encyclopedieen: titel, prijs, staat, maat, kleur, merk ok; halswijdte NIET en de beschrijvingsfout aan het eind zijn proefartefacten. Rubrieknamen verschillen van gisteren, geen stap viel anders uit. Niets geplaatst, tabblad gesloten.
