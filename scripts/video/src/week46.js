@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { makeBlocky } from './blocky.js';
 import { kf, lerp, easeOut, easeInOut, range, clamp, V, cam, place, shake } from './anim.js';
-import { std, rbox, room, windowPane, desk, laptop, lamp, typingPose, seat, pop, planeCard, lights, logoTex, listingTex, checkTex, bubbleTex, canvasTex, rr, gradTex, walkPose, cheer, IMG, PLATFORMS, rnd, kitchen } from './shots.js';
+import { std, rbox, room, windowPane, desk, laptop, lamp, typingPose, seat, pop, planeCard, lights, logoTex, listingTex, checkTex, bubbleTex, canvasTex, rr, gradTex, walkPose, cheer, IMG, PLATFORMS, rnd, kitchen, ledTex } from './shots.js';
 
 export const labelTex = (txt, { bg = '#fff', fg = '#1b2a44', w = 640, h = 200, size = 72, font = '800' } = {}) => canvasTex(w, h, (g, W, H) => {
   g.fillStyle = bg; rr(g, 0, 0, W, H, 36); g.fill(); g.fillStyle = fg; g.font = `${font} ${size}px Montserrat, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, W / 2, H / 2 + 3);
@@ -74,3 +74,51 @@ export function astronaut() {
   return h;
 }
 export const satellite = (logoKey) => { const g = new THREE.Group(); g.add(rbox(0.2, 0.2, 0.2, 0.03, std(0xc9ced9, 0.4, { metalness: 0.5 }))); for (const sx of [-1, 1]) g.add(rbox(0.3, 0.012, 0.17, 0.004, std(0x2a4fa0, 0.3), [sx * 0.27, 0, 0])); const l = planeCard(logoTex(logoKey), 0.42, 0.26); l.position.set(0, 0.3, 0); g.add(l); g.userData.logo = l; return g; };
+
+// ---------- week 46 b: shared builders for the three example concepts ----------
+export const bigTex = (txt, { fg = '#fff', bg = null, size = 150, w = 900, h = 360, stroke = '#0b1530', sw = 22 } = {}) => canvasTex(w, h, (g, W, H) => {
+  if (bg) { g.fillStyle = bg; rr(g, 0, 0, W, H, 60); g.fill(); }
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; let sz = size; g.font = `900 ${sz}px Montserrat, sans-serif`; while (g.measureText(txt).width > W - 70 && sz > 30) { sz -= 4; g.font = `900 ${sz}px Montserrat, sans-serif`; }
+  g.strokeStyle = stroke; g.lineWidth = sw; g.strokeText(txt, W / 2, H / 2 + 6); g.fillStyle = fg; g.fillText(txt, W / 2, H / 2 + 6);
+});
+export function hoodieChar() {
+  const g = new THREE.Group(), col = std(0x2f6f7a, 0.8), dark = std(0x24565f, 0.85);
+  const solidOff = m => { m.userData.solid = false; return m; };
+  const body = solidOff(rbox(0.62, 0.72, 0.34, 0.12, col, [0, 0, 0])); g.add(body);
+  const hood = new THREE.Mesh(new THREE.SphereGeometry(0.22, 24, 16), dark); hood.scale.set(1.25, 0.8, 0.7); hood.position.set(0, 0.4, -0.08); hood.castShadow = true; g.add(hood);
+  const pocket = solidOff(rbox(0.38, 0.16, 0.03, 0.02, dark, [0, -0.2, 0.18])); g.add(pocket);
+  const slv = [-1, 1].map(s => { const m = solidOff(rbox(0.2, 0.52, 0.2, 0.08, col, [s * 0.4, -0.02, 0])); m.rotation.z = -s * 0.18; g.add(m); return m; });
+  const eyes = [-1, 1].map(s => { const w = new THREE.Mesh(new THREE.SphereGeometry(0.075, 18, 14), std(0xffffff, 0.3)); w.position.set(s * 0.12, 0.17, 0.17); w.scale.z = 0.6; g.add(w); const p = new THREE.Mesh(new THREE.SphereGeometry(0.036, 14, 10), std(0x0b0b10, 0.2)); p.position.set(0, 0, 0.05); w.add(p); return { w, p }; });
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.02, 0.01), new THREE.MeshStandardMaterial({ color: 0x3a1a14 })); mouth.position.set(0, 0.03, 0.18); g.add(mouth);
+  for (const s of [-1, 1]) { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.14, 8), std(0xe9eef5)); c.position.set(s * 0.07, -0.02, 0.18); g.add(c); }
+  return { g, body, slv, eyes, mouth };
+}
+// the 'sold once, gone everywhere' beat: four logo cards, the first gets a SOLD stamp, the rest pop away one by one
+export const soldPoof = (a0 = 0.2) => ({ makeStage }) => {
+  const scene = new THREE.Scene(); scene.userData.sky = new THREE.Object3D();
+  const bg = new THREE.Mesh(new THREE.PlaneGeometry(8, 12), new THREE.MeshBasicMaterial({ map: gradTex('#14233f', '#0c6a73'), toneMapped: false })); bg.position.z = -0.5; scene.add(bg);
+  const ks = ['vinted.png', 'marktplaats.png', 'ebay.webp', 'shopify.webp'], cs = ks.map((k, i) => { const m = planeCard(logoTex(k), 0.62, 0.39); m.position.set(0, 0.62 - i * 0.5, 0); scene.add(m); return m; });
+  const st = planeCard(stampTex('SOLD', '#19b36b'), 0.5, 0.19); st.position.set(0.1, 0.44, 0.05); st.rotation.z = -0.1; scene.add(st);
+  const gone = ks.map(() => { const m = new THREE.Mesh(new THREE.RingGeometry(0.05, 0.06, 32), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, toneMapped: false })); scene.add(m); return m; });
+  const c = cam(40);
+  return { scene, camera: c, update(t) {
+    cs.forEach((m, i) => { const tg = a0 + 0.55 + (i - 1) * 0.28, k = i ? clamp((t - tg) / 0.25) : 0; m.scale.setScalar(pop(t, i * 0.06, 0.2, 1.4) * (1 - easeOut(k)) + 0.0001); m.rotation.z = i ? k * 0.8 : 0; gone[i].visible = i > 0 && k > 0 && k < 1; gone[i].position.copy(m.position); gone[i].scale.setScalar(0.5 + k * 5); gone[i].material.opacity = 1 - k; });
+    st.scale.setScalar(pop(t, a0, 0.2, 2.2) * (t < a0 ? 0 : 1));
+    place(c, [0, 0.0, kf(t, [[0, 3.0], [1.6, 2.5]], easeInOut)], [0, 0.0, 0], Math.sin(t * 5) * 0.015);
+    return { bloom: 0.3 };
+  } };
+};
+// flat kinetic text card: lines = [[text, t0, colour, size]]; optional logo row
+export const kinetic = (lines, { bg = ['#14233f', '#0f6f78'], logos = [], shake = 0 } = {}) => ({ makeStage }) => {
+  const scene = new THREE.Scene(); scene.userData.sky = new THREE.Object3D();
+  const b = new THREE.Mesh(new THREE.PlaneGeometry(8, 12), new THREE.MeshBasicMaterial({ map: gradTex(bg[0], bg[1]), toneMapped: false })); b.position.z = -0.5; scene.add(b);
+  const ms = lines.map(([txt, t0, col, size], i) => { const m = planeCard(bigTex(txt, { fg: col || '#fff', size: (size || 150) * 1.9 }), 1.0, 0.4); m.position.set(0, 0.3 - i * 0.42, 0); scene.add(m); return m; });
+  const ls = logos.map((k, i) => { const m = planeCard(logoTex(k), 0.42, 0.26); m.position.set((i - (logos.length - 1) / 2) * 0.46, -0.62, 0.02); scene.add(m); return m; });
+  const c = cam(40);
+  return { scene, camera: c, update(t) {
+    ms.forEach((m, i) => { const t0 = lines[i][1]; m.scale.setScalar(pop(t, t0, 0.22, 1.9) * (t < t0 ? 0 : 1)); m.rotation.z = (i % 2 ? 1 : -1) * 0.03; });
+    ls.forEach((m, i) => { const t0 = 0.3 + i * 0.12; m.scale.setScalar(pop(t, t0, 0.2, 1.5) * (t < t0 ? 0 : 1)); });
+    place(c, [Math.sin(t * 20) * shake, Math.cos(t * 17) * shake, kf(t, [[0, 2.7], [1.5, 2.45]], easeOut)], [0, 0, 0]);
+    return { bloom: 0.35 };
+  } };
+};

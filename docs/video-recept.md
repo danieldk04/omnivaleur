@@ -42,3 +42,6 @@ Onderzocht: AI-video's verraden zich door een monotone stem zonder emotie, sjabl
 - Geluid: `sound3.py` (bed zachter, geen blip per bijschrift, kamertoon), `mix.sh`, daarna limiter-ronde tot -14 LUFS en piek onder -3 dBFS.
 - Meten: `intonatie.py` (toonbereik, tempo, pauzes). Toonhoogte alleen zegt niet of het menselijk klinkt; ik kan niet horen. Stemgelijkheid tussen regels: cosinus 0,74 tot 0,91 (Chatterbox VoiceEncoder).
 - Echt menselijk blijft Daniels eigen stem. Opleveren: Downloads plus Drive-map `Omnivaleur/Social video's week 46`, nergens anders.
+
+## Drie totaal verschillende formats (12-11-2026, Daniel: "duidelijkere story, sterkere haak")
+Uit het onderzoek (blogs, geen studies): resultaat of inzet in de eerste 1 tot 2 seconden, één functie per video, het echte scherm laten zien, een terugkerend personage (Duolingo-aanpak), en een verhaal met inzet, draai en einde. Gebouwd als `vA.js` (storytime met vriendin en samen eten), `vB.js` (demo eerst, geen poppetje, getallen en echt dashboard, 7 dagen gratis) en `vC.js` (hoodie met gezicht die twee keer verkocht is). Per video een andere stem: Chatterbox met een referentieclip van Kokoro (`stemtest/gen2.py`, `ref_X.wav`), dat houdt de stem gelijk binnen een video. Daniel kiest welke het wordt; de keuze en de meting van 17-11 horen in het leerlog.

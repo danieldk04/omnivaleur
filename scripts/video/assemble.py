@@ -6,7 +6,7 @@ Per regel: stilte aan de randen weg, zachte hoogdoorlaat, kleine wisselende temp
 src/cap.js (bijschriften uit Parakeet-woordtiming plus LINES voor de montage)."""
 import json, os, re, subprocess, sys, numpy as np, soundfile as sf, scipy.signal as ss
 work, sc, nr = sys.argv[1], json.load(open(sys.argv[2])), sys.argv[3]
-L = sc[nr]; rng = np.random.default_rng(int(nr) * 17); KIT = os.path.expanduser('~/claude-animation-skills/kit')
+L = sc[nr]; rng = np.random.default_rng(sum(map(ord, nr)) * 17); KIT = os.path.expanduser('~/claude-animation-skills/kit')
 out, info, t, SR = [], [], 0.0, 24000
 hp = ss.butter(2, 75 / (SR / 2), 'high')
 for i, s in enumerate(L):
