@@ -39,6 +39,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+import random
 import re
 
 from datetime import datetime, timezone
@@ -221,13 +223,23 @@ async def _verkoopvragen() -> dict:
 
     db = get_db()
     nu = datetime.now(timezone.utc).isoformat()
+    # DE RIJ SCHOOF NOOIT DOOR (13-11-2026, nickspijkers 17e5c638).
+    # Eerst werden de oudste 100 openstaande vragen gelezen en pas daarna op
+    # reden gefilterd. Een vraag die niet verloopt (verkocht-label, levende
+    # pagina) krijgt geen nieuwe last_checked, dus diezelfde oudste 100 kwamen
+    # elke ronde terug: gemeten 5 kandidaten erin, 140 vragen ouder dan zijn 9
+    # verlopen platen, die zo nooit aan de beurt kwamen. Nu filtert de vraag zelf
+    # op de reden en kiest elke ronde een willekeurige greep uit alle kandidaten.
+    voorvoegsel = os.path.commonprefix([VERDENKING_REDENEN["weg"],
+                                        VERDENKING_REDENEN["verdwenen_te_jong"]])
     try:
         rijen = ((await naast_de_lus(lambda: db.table("listings")
                  .select("id,item_id,platform,platform_listing_id,platform_listing_url,error_message")
                  .eq("status", "sold_unconfirmed")
                  .in_("platform", list(KANALEN))
+                 .like("error_message", voorvoegsel + "%")
                  .order("last_checked")
-                 .limit(MAX_PER_RONDE * 4)
+                 .limit(2000)
                  .execute())).data or [])
     except Exception as e:                       # noqa: BLE001
         logger.warning("verlopen-controle: openstaande vragen niet gelezen: %s", e)
@@ -243,6 +255,7 @@ async def _verkoopvragen() -> dict:
                   and str(r.get("error_message") or "").startswith((weg_reden, jong_reden))]
     if not kandidaten:
         return {"nagekeken": 0, "verlopen": 0}
+    random.shuffle(kandidaten)
 
     reden = VERDENKING_REDENEN["verlopen"]
     nagekeken = gearchiveerd = zonder_uitspraak = 0

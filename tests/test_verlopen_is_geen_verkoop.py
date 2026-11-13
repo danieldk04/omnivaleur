@@ -45,6 +45,7 @@ class _Q:
     def in_(self, k, v): self.in_filters[k] = list(v); return self
     def limit(self, _n): return self
     def order(self, *_a, **_k): return self
+    def like(self, *_a): return self   # reden wordt na het lezen nog eens gefilterd
 
     def execute(self):
         bron = self.db.items if self.tabel == "items" else self.db.listings
