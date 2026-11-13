@@ -22,6 +22,9 @@ Ontbreekt een van die mappen of werkt een skill niet: herstel het zelf (`gh repo
 Heb je een skill nodig die er niet is (bijvoorbeeld voor een stijl, een 3D-model, echt geluid, ondertiteling,
 videoknip), zoek hem, en lukt dat niet of kost het geld: zet het als actiepunt voor Daniel. Verzwijg dat nooit.
 
+## Schedchie-sleutel: terugkomen (Daniel, 13-11-2026)
+Daniel zit nog in de gratis proef van Schedchie; API-sleutels bestaan pas na zijn eerste betaalde factuur (verwacht rond 17-11 tot 24-11). Tot die tijd: Chrome-route, en vraag er niet over door. Controleer bij elke run of `~/.omnivaleur/schedchie-key.txt` bestaat; zo niet, zet dan in het rapport één actiepunt: "Schedchie-sleutel aanmaken (AI assistants, API keys, alleen lezen), zodra de eerste betaling erdoor is". Staat het bestand er, test dan `GET /v1/me`, daarna analytics, en schrap dit stukje uit de routine zodra het werkt.
+
 ## Stap 1: meten wat vorige week deed
 Alleen lezen. Daniel is in Chrome ingelogd (Claude in Chrome); voer nooit wachtwoorden in.
 0. Daniel plaatst alles via Schedchie (13-11-2026). Gebruik eerst de API: `https://api.schedchie.com/v1`, sleutel (alleen lezen: posts en analytics) in `~/.omnivaleur/schedchie-key.txt` (Daniel maakt hem aan in het dashboard onder AI assistants, API keys; hij verschijnt maar één keer; sleutels bestaan pas na de eerste betaalde factuur). Header `Authorization: Bearer <sleutel>`, `GET /v1/me` om te testen, `GET /v1/posts` (status en cursor) voor plaatsdatums, het analytics-pad staat in `https://www.schedchie.com/developers/openapi.v1.json`. Limieten: 120 per minuut, 60 ongecachte leesvragen per uur, antwoorden 5 minuten gecachet; geen webhooks, dus pollen. Alleen lezen; nooit posts aanmaken zonder dat Daniel erom vraagt. Zonder sleutel of bij een fout: de webinterface in Daniels Chrome (Schedchie, Daniels planner, alle accounts op één plek, hij is er in Chrome ingelogd): Analytics geeft per platform en per

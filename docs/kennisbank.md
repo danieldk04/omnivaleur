@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## schedchie-api-na-eerste-betaling
+
+*13-11-2026 — Schedchie-API-sleutel kan pas na de eerste betaalde factuur; Daniel zit 13-11 nog in de gratis proef; vanaf volgende week terugkomen*
+
+Daniel plaatst alle social video's via Schedchie. De API (api.schedchie.com/v1, docs op schedchie.com/developers) geeft pas sleutels na de eerste betaalde factuur; hij zit op 13-11-2026 nog in de gratis proef. Vanaf volgende week (rond 17 tot 24-11) terugkomen: vraag hem de alleen-lezen sleutel aan te maken en in `~/.omnivaleur/schedchie-key.txt` te zetten, test dan `GET /v1/me` en analytics.
+
+**Why:** Zonder sleutel moet de routine via Daniels Chrome meten, wat trager en kwetsbaarder is.
+
+**How to apply:** staat ook in `docs/routines/social-videos.md` (sectie "Schedchie-sleutel: terugkomen"); bij elke run kijken of het sleutelbestand er is, anders één actiepunt in het rapport. Zie "social-videos-variatie-data-menselijk".
+
+---
+
 ## social-videos-variatie-data-menselijk
 
 *13-11-2026 — Daniel 12-11: social video's moeten sterk variëren, leren van echte IG/TikTok/YT/FB-cijfers, altijd maximaal menselijk, nooit AI-slop; oplevering alleen Downloads plus Drive*
