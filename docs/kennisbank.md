@@ -19,13 +19,13 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ## social-videos-variatie-data-menselijk
 
-*12-11-2026 — Daniel 12-11: social video's moeten sterk variëren, leren van echte IG/TikTok/YT/FB-cijfers, altijd maximaal menselijk, nooit AI-slop; oplevering alleen Downloads plus Drive*
+*13-11-2026 — Daniel 12-11: social video's moeten sterk variëren, leren van echte IG/TikTok/YT/FB-cijfers, altijd maximaal menselijk, nooit AI-slop; oplevering alleen Downloads plus Drive*
 
 De wekelijkse social video-routine moet veel opties maken (storytime, uitleg, analogie, direct, demo, komedie, enzovoort), de hooks optimaliseren en over tijd vanzelf bij de best werkende formats uitkomen op basis van de echte cijfers van Instagram, TikTok, YouTube en Facebook. Test altijd op maximale menselijkheid in stem en beeld; het mag nooit als AI-slop gelden.
 
 **Why:** Daniel vond de eerste video's "echt AI" (stem, ondertitels, vaste camera). De drie voorbeelden A (storytime), B (demo eerst) en C (hoodie-komedie) vond hij goed; hij wil meer van dat soort en een lerend systeem.
 
-**How to apply:** catalogus `docs/social-video-formats.md`, metingen in `docs/social-video-metingen.csv`, keuze via `scripts/video/format_scores.py`, poort met `slop_check.py` en `intonatie.py` (zie `docs/routines/social-videos.md`). Eindbestanden alleen in Downloads en in Drive (Omnivaleur/Social video's week WW), overal anders wissen. Ik kan niet horen: Daniel luistert eerst. Zie "korter-en-zelf-regelen".
+**How to apply:** catalogus `docs/social-video-formats.md`, metingen in `docs/social-video-metingen.csv`, keuze via `scripts/video/format_scores.py`, poort met `slop_check.py` en `intonatie.py` (zie `docs/routines/social-videos.md`). Eindbestanden alleen in Downloads en in Drive onder Omnivaleur/Social media video's Claude/Week WW (één hoofdmap, per week een submap), overal anders wissen. Daniel plaatst alles via Schedchie (API: api.schedchie.com/v1, sleutel in ~/.omnivaleur/schedchie-key.txt, alleen lezen). Ik kan niet horen: Daniel luistert eerst. Zie "korter-en-zelf-regelen".
 
 ---
 
