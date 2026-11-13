@@ -19147,3 +19147,7 @@ Chrome was bij de eerste poging niet verbonden, daarna wel. Vinted: kinderen sch
 - 13-11-2026: Schedchie-API-sleutel pas na Daniels eerste betaling (nu nog gratis proef). Vanaf week 47 terugkomen; staat in de routine en in het geheugen.
 - 13-11-2026 (automatisch), social video's: geen nieuwe batch gemaakt; er staan zes ongeplaatste video's klaar, geen data, geen Schedchie-sleutel, Mac vol. Zie leerlog.
 - 13-11-2026 (herhaling na inloggen): Vinted 7 van 7 proeven, Marktplaats 3 rubrieken, 2dehands 2 rubrieken (film tv en media op 2dehands niet gedraaid: raw.githubusercontent gaf even een foutpagina). Geen afwijking tegenover 12-11; alleen de bekende artefacten (kookboek maat/kleur, halswijdte). De Nike-merkstap van de eerste run lukte nu wel, dus een trage-klok-artefact.
+
+## 13-11-2026 (automatisch): Terughaal opvolging
+- 37 van 38 verstuurd (ciaran202 ontbrak). Reacties: bankai2855 vroeg te stoppen (stond al in mail_unsubscribed, geen opvolging), jordi.waning (pakket werkt niet voor hen, Marktplaats lost hun retouren al op, antwoordconcept), retrogameking (kijken deze week, komen volgende week terug, wachten), tamboer.joost (Vinted-veiligheid gevraagd, Daniel gaf nieuwe proef tot 20-11, status trialing, "let's go").
+- 33 zwijgers: opvolgmail als Re:-concept bewaard (concepten/), Daniel verstuurt. Andere kanalen in data/schrijfstijl/terughaal/kanalen.md: bedrijfssite-contacten voor handelsonderneming038, delftsblaeu, dealbeter, steentjesmeester; 19 adressen zonder ander kanaal.
