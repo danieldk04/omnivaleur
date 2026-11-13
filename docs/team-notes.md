@@ -19159,3 +19159,4 @@ Chrome was bij de eerste poging niet verbonden, daarna wel. Vinted: kinderen sch
 - gahomi7062@micropaste.com (f7f00a82): wegwerpadres, 0 artikelen, extensie stil sinds 12-11 03:00. Geen mailtje.
 - kjrmohamed valt buiten het venster (proef gisteravond afgelopen).
 - Mailrapport: 3 mails, 0 echt geopend, 0 klik, 0 antwoord.
+- 13-11-2026, social video's op verzoek van Daniel: vijf nieuwe (MYTHE, LIJST, ANALOGIE, UITLEG, VOORNA) in Downloads en Drive (Social media video's Claude/Week 47). Tekstgedreven, dashboardbeelden van 10-11, nog niets geplaatst of gemeten. Zie leerlog.

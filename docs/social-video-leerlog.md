@@ -2,8 +2,16 @@
 
 Bijgehouden door de wekelijkse routine `docs/routines/social-videos.md`. Nieuwste bovenaan.
 
-## Week 47, run 13-11-2026: geen nieuwe video's, bewust
-Niets te meten: van de zes video's uit week 46 (drie rechtszaal/kookshow/ruimte, drie voorbeelden A, B, C) is niets geplaatst en Daniel koos nog niet. Schedchie-sleutel ontbreekt (verwacht na eerste betaling, rond 17-11 tot 24-11). Mac had 7,4 van 8 GB in gebruik, dus Chatterbox zou uren duren. Daarom geen nieuwe batch bovenop zes ongeplaatste video's. Advies format_scores: STORY, DEMO, SKIT, ANALOGIE (alles nog proberen). Volgende run: meten zodra Daniel geplaatst heeft.
+## Week 47, 13-11-2026: vijf nieuwe video's (Daniel vroeg om meer)
+Eerste run besloot niets te maken; Daniel zei daarna: maak ze, meer video's. Gemaakt in `~/omnivaleur-videos/week-2026-47/` (code `src/week47.js` plus `v1.js` tot `v5.js`, tijden volgen de stem via `montage()`; geluid via `sound4.py`).
+| Video | Format | Hook | Stem | Lengte | Luidheid |
+|---|---|---|---|---|---|
+| 1 stop-4x | MYTHE | BEWERING | man (ref_A) | 20,9 s | -13,5 LUFS |
+| 2 3-manieren | LIJST (nieuw) | GETAL | vrouw (ref_B) | 20,4 s | -13,0 |
+| 3 diner | ANALOGIE | ABSURD | Adam | 21,3 s | -14,6 |
+| 4 hoodie-twee-keer | UITLEG | VRAAG | Puck (ref_C) | 20,3 s | -13,4 |
+| 5 zelfde-avond | VOORNA | INZET | George | 21,1 s | -12,5 |
+Alle vijf: doorsteken 0, piek onder -3,2 dBFS. Slop-check groen op alle scripts (twee eerst rood: te lange zin, geen samentrekking; herschreven). Geen cijfers: niets uit week 46 is geplaatst, geen Schedchie-sleutel. Dashboardbeelden zijn die van 10-11 (niet vers vastgelegd). Beeld is tekstgedreven (geen poppetje) zodat het in uren kon op een Mac van 8 GB; Chatterbox kostte 1,5 tot 90 minuten per regel door geheugendruk. Openstaand: stem niet beluisterd, trendstap en voorbeeldaccounts niet gedaan, earshot-meting niet gedraaid, geen Nederlandse versie.
 
 ## Regels die Daniel zelf gaf (10-11-2026)
 - Stijl: renno.app. Een 3D blokpoppetje in uiteenlopende, creatieve situaties, schreefletters cursief in één zin, voice-over, zeer snelle sneden, echte dashboardbeelden.
