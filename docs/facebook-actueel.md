@@ -1,4 +1,4 @@
-# Facebook-actueel (bijgewerkt 12-11-2026)
+# Facebook-actueel (bijgewerkt 13-11-2026)
 
 Dit bestand wordt elke ochtend ververst door een routine en gaat voor op alles wat je eerder
 wist. Staat hier iets anders dan in je eigen kennis over een platform: dit bestand wint. Wat hier
@@ -6,7 +6,7 @@ niet staat en je niet zeker weet: zeg het als eigen ervaring of laat het weg. Zo
 (als dat aan staat) voor een vraag over regels of kosten, gebruik dan alleen bronnen van de
 laatste maanden en noem er niets uit als feit zonder dat de bron het zelf zegt.
 
-## Platformnieuws (laatst gecontroleerd 12-11-2026)
+## Platformnieuws (laatst gecontroleerd 13-11-2026)
 
 Vinted
 - Nieuwe voorwaarden sinds 8 oktober 2026: verkopers moeten ze accepteren om te blijven verkopen.
@@ -19,15 +19,17 @@ Vinted
 
 Marktplaats en 2dehands
 - Marktplaats' gebruiksvoorwaarden gelden in nieuwe versie sinds 22 juli 2026. Inhoud van de wijziging niet gevonden.
-- Geen andere nieuwe verkopersregels gevonden (controle 12-11).
+- Geen andere nieuwe verkopersregels gevonden (controle 13-11).
 
 eBay
 - Sinds 1 november 2026 geldt in de EU een nieuwe heffing van 2 euro voor douanebehandeling bij internationale bestellingen. Dat is een kostenpost voor de koper, niet voor de verkoper (volgens een vakblog, eBay noemt het bij International Shipping). Bij verkoop aan EU-kopers op afstand zijn ook productidentificatiecodes verplicht geworden (onbevestigd voor tweedehands).
 - Frankrijk en Italië: sinds september 2026 geen verkoopkosten meer voor particulieren, de kosten zitten nu bij de koper (kopersbescherming). Spanje is een voorspelling, geen aankondiging.
 - Duitsland: sinds juli 2026 vast 5% voor tweedehands in sommige rubrieken, alleen voor zakelijke accounts. Particulieren betalen daar sinds 2023 niets.
-- Nederland en België: geen wijziging gevonden (controle 12-11). Frankrijk, Italië en Spanje: een bron noemt wijzigingen per 16 oktober, inhoud onbevestigd.
+- Nederland en België: geen wijziging gevonden (controle 13-11). Frankrijk, Italië en Spanje: een bron noemt wijzigingen per 16 oktober, inhoud onbevestigd.
 
 ## Wat er bij Omnivaleur de afgelopen weken veranderde (alleen wat verkopers merken)
+- 12-11: Marktplaats/2dehands: zit een Marktplaats-rubriek vol (grens 250 advertenties), dan wijkt Omnivaleur uit naar een eigen rubriek.
+- 12-11: ringmaat: staat de maat als vorm (zoals Kroon vorm), dan pakt Omnivaleur de ringmaat uit de omschrijving (extensie 1.0.421).
 - 11-11: Vinted: de merkkeuze bij meisjeskleding vond soms geen merkoptie, dat is gerepareerd (extensie 1.0.420).
 - 10-11: WooCommerce: een stuk zonder voorraadtelling in een voorraadwinkel telt nu als uniek stuk.
 - 09-11: de controle op verlopen 2dehands-advertenties kijkt op de openbare pagina, zodat kansloze verlengpogingen wegblijven.
