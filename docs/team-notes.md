@@ -19131,3 +19131,10 @@ Chrome was bij de eerste poging niet verbonden, daarna wel. Vinted: kinderen sch
 
 ## 12-11-2026 (23:30, automatisch): Klantfouten
 - Marktplaats create "description could not be placed into the editor" (klant 26cf5471, 1x, extensie 1.0.420): de opdracht (antieke hanger) werd op 11-11 18:18 opgepakt, direct na de verwijdering, en pas 12-11 21:27 afgemeld: 27 uur hang. De computer sliep of Chrome stond dicht; bij wakker worden kon het oude tabblad de editor niet vullen. Zelfde klant plaatste 2 minuten later wel een ander artikel (21:29). Klant-eigen, geen codefout, niet gerepareerd. Open: het artikel staat nu offline (verwijdering was al klaar); de klant moet Plaatsen opnieuw klikken. Extensie is nu actief (laatst gezien 21:31).
+
+## 13-11-2026: Dagelijkse klantfouten
+- Gemeten ~08:00 UTC over 24 uur: 812 afgeronde opdrachten bij 10 klanten, 18 fouten bij 6 klanten (gisteren 28 bij 4). Alle 6 foutsoorten al beoordeeld door eerdere rondes, geen nieuwe, geen reparatie.
+- Reparatie van gisteren werkt: Mieneke (09e089ec) plaatste na de uitwijk-reparatie van 14:04 nog 49 artikelen op 2dehands zonder betaalmelding; enige fout daarna de ring "Kroon vorm" (gerepareerd in extensie 1.0.421, wacht op Web Store). Haar 46 afgeblazen 2dehands-plaatsingen van 12-11 09:15 (van vóór de reparatie) staan nog uit: ze moet Plaatsen opnieuw klikken.
+- 3bfbed2c: Vinted-scan sinds 12-11 17:18 elke half uur "niet ingelogd" (9x), geen Vinted-plaatsing gelukt sinds; klant-eigen. Toon (96e30080): 4x Vinted kleur leeg (sheet regel 24), 1x 2dehands-verlengen van verdwenen advertentie. bcdf9aa4 idem 1x. 26cf5471 en 17e5c638: de al gemelde losse gevallen.
+- Klant-eigen wachtrijen: Goudlief (5aae4954) ~800 wachtend, Chrome uit sinds 10-11; Toon 107 wachtend sinds 01:33 (Chrome uit sinds 00:45); 26cf5471 172 herplaatsingen, extensie laatst 06:10; Mieneke 40 verlengingen, Chrome uit sinds 20:51; 0b28c1ce en Janneke dagen uit.
+- Niet gemeten: Railway-log, fouten die alleen in de browser van de klant staan, en welke extensieversie klanten draaien (ext_version is leeg). /health ok (commit 73eb0327).
