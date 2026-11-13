@@ -19138,3 +19138,8 @@ Chrome was bij de eerste poging niet verbonden, daarna wel. Vinted: kinderen sch
 - 3bfbed2c: Vinted-scan sinds 12-11 17:18 elke half uur "niet ingelogd" (9x), geen Vinted-plaatsing gelukt sinds; klant-eigen. Toon (96e30080): 4x Vinted kleur leeg (sheet regel 24), 1x 2dehands-verlengen van verdwenen advertentie. bcdf9aa4 idem 1x. 26cf5471 en 17e5c638: de al gemelde losse gevallen.
 - Klant-eigen wachtrijen: Goudlief (5aae4954) ~800 wachtend, Chrome uit sinds 10-11; Toon 107 wachtend sinds 01:33 (Chrome uit sinds 00:45); 26cf5471 172 herplaatsingen, extensie laatst 06:10; Mieneke 40 verlengingen, Chrome uit sinds 20:51; 0b28c1ce en Janneke dagen uit.
 - Niet gemeten: Railway-log, fouten die alleen in de browser van de klant staan, en welke extensieversie klanten draaien (ext_version is leeg). /health ok (commit 73eb0327).
+
+## 13-11-2026 (automatisch): Platformcontrole, onvolledig
+- Alleen Vinted kinderen schoenen (EU 26) gedraaid; de overige 6 Vinted-proeven, Marktplaats en 2dehands niet (te weinig ruimte in de sessie). Uitslag niet bewaard met vergelijk.py.
+- Browser 2 van Claude in Chrome kwam op Vinted niet voorbij een lege session-refresh pagina; Browser 1 was wel ingelogd en werkte.
+- Kinderschoenen met merk Zara: alle stappen ok. Met merk Nike mislukte alleen de merkstap bij een trage tabbladklok (2.4/s); niet herhaald, dus niet bewezen of dat een artefact was. Geen reparatie gedaan.
