@@ -461,4 +461,4 @@ export const SHOTS = [
 ].map(([start, end, b], i) => ({ start, end, build: wrap(b, end - start, i % 2 ? 1 : -1) })).concat([{ start: 16.0, end: DURATION + 1, build: s8 }]);
 
 // exported for the week videos (shots_*.js)
-export { ledTex, std, rbox, room, windowPane, desk, laptop, lamp, typingPose, seat, pop, planeCard, wrap, lights, logoTex, listingTex, checkTex, bubbleTex, canvasTex, rr, gradTex, endTex, dashShot, K, Ll, Mm, Nn, Oo, F, parcel, walkPose, cheer, IMG, PLATFORMS, rnd, kitchen, s8, solveArms };
+export { street, bedroom, ledTex, std, rbox, room, windowPane, desk, laptop, lamp, typingPose, seat, pop, planeCard, wrap, lights, logoTex, listingTex, checkTex, bubbleTex, canvasTex, rr, gradTex, endTex, dashShot, K, Ll, Mm, Nn, Oo, F, parcel, walkPose, cheer, IMG, PLATFORMS, rnd, kitchen, s8, solveArms };

@@ -1,0 +1,22 @@
+import { shot, cm, put, person, P, SKIN, typer, walker, finale, logoCard, bubble, tag, sign, hoodieFace, buyer, montage, PL, PL5, K, Ll, Mm, Nn, Oo, kinetic, soldPoof, hoodieChar, planeCard, stampTex, pop, lerp, kf, easeOut, easeInOut, range, typingPose, seat, walkPose, cheer, parcel, rbox, std, laptop, THREE, cookingStage, plate, steam, labelTex, listingTex, makeBlocky } from './week47b.js';
+export { CAPTIONS, DURATION } from './cap.js';
+import { DURATION, LINES } from './cap.js';
+export const FADES = [];
+
+const CH = 0xf2f2f0, PK = 0xe58aa8, TL = 0x2f6f7a, GR = 0x5b7f5d, OR = 0xe8872a;
+const cook = (fn, dur = 2) => shot('cook', S => { S.host = S.scene.userData.host; S.fx = []; fn && fn(S); }, (t, S) => { const h = S.host; h.pose({ torso: [0.2, 0, 0], head: [0.05, Math.sin(t * 6) * 0.12, 0], lSh: [-0.9, 0, 0.3], rSh: [-1.0 + Math.sin(t * 9) * 0.35, 0, -0.3], lEl: [-0.8, 0, 0], rEl: [-1.1, 0, 0], mouth: Math.max(0, Math.sin(t * 12)) * 0.3, smile: 0 }); S.fx.forEach(f => f(t)); cm(S, t, [0.2, 1.4, 3.6], [-0.1, 1.5, 2.7], [0, 1.4, -0.3], 1.6); }, { fov: 42 });
+const A1 = cook(S => { PL.forEach((k, i) => S.fx.push(logoCard(S, k, -0.9 + i * 0.6, 2.4, -0.2, 0.5 + i * 0.55, 0.5, 0.31))); });
+const guest = (o = {}) => shot('dinner', S => { S.g = person({ hoodie: 0xe58aa8, hair: 0x5a3a2a, skin: SKIN.b, bun: true }); put(S, S.g, 0.78, 0, -Math.PI / 2); S.pl = []; for (let i = 0; i < (o.plates || 4); i++) { const p = plate(0xffffff); p.position.set(0.1 - i * 0.08, 0.8 + i * 0.04, 0.05 * (i % 2)); S.scene.add(p); } S.fx = []; if (o.tag) S.fx.push(tag(S, o.tag[0], 0, 1.7, 0.4, o.tag[1], o.tag[2] || {})); },
+  (t, S) => { (o.pose || P.sit)(S.g, t * 1.5, { smile: o.smile || 0, ...(o.px || {}) }); S.fx.forEach(f => f(t)); cm(S, t, o.a || [0.2, 1.35, 2.7], o.b || [0.5, 1.3, 2.2], [0.5, 1.05, 0], 1.6); }, { fov: 38 });
+const A2 = guest({ tag: ['FOR ONE GUEST', 0.3] });
+const row4 = shot('cook', S => { S.fx = []; S.c4 = PL.map((k, i) => { const h = person({ hoodie: [0x3c4b73, PK, TL, GR][i], hair: 0x14141a, skin: [SKIN.a, SKIN.b, SKIN.c, SKIN.d][i], cap: i === 2 ? OR : undefined, bun: i === 1 }); put(S, h, -1.1 + i * 0.73, 0.9, 0); S.fx.push(logoCard(S, k, -1.1 + i * 0.73, 2.0, 0.9, 0.1 + i * 0.45, 0.46, 0.29)); return h; }); },
+  (t, S) => { S.c4.forEach((h, i) => P.talk(h, t + i * 0.7, { lSh: [-0.9, 0, 0.3], lEl: [-1.2, 0, 0] })); S.fx.forEach(f => f(t)); cm(S, t, [0, 1.3, 5.0], [0, 1.25, 4.3], [0, 1.1, 0.9], 2.0); }, { fov: 44 });
+const solo = guest({ plates: 1, pose: (h, t) => P.sit(h, t, { mouth: Math.max(0, Math.sin(t * 6)) * 0.3, smile: 0 }), a: [0.2, 1.3, 2.4], b: [0.5, 1.25, 2.0] });
+const no = guest({ plates: 4, pose: P.shake, a: [0.2, 1.4, 2.6], b: [0.5, 1.4, 2.2], px: { drop: 0.28, lHip: [-1.5, 0.05, 0], lKn: [1.5, 0, 0], rHip: [-1.5, -0.05, 0], rKn: [1.5, 0, 0] } });
+const T1 = typer({ hoodie: 0x3c4b73, cards: true, clock: '23:58', cam: [[0.5, 1.5, 3.8], [-0.1, 1.45, 2.8], [0, 1.55, 0.3]] });
+const T2 = typer({ hoodie: 0x6b4630, skin: SKIN.e, glasses: true, slump: 0.2, clock: '00:41', cam: [[0.3, 1.45, 3.4], [0.2, 1.3, 2.7], [0.1, 1.4, 0.3]] });
+const S1 = cook(S => { S.pl = PL.map((k, i) => { const p = plate(0xffffff); S.scene.add(p); const lg = logoCard(S, k, 0, 0, 0, 0.1, 0.4, 0.25); return { p, k }; }); S.fx.push(t => { S.pl.forEach((o, i) => { const f = easeOut((t - 0.3 - i * 0.15) / 0.5); o.p.position.set(-1.0 + i * 0.67 + (1 - f) * -0.2, 0.96 + (1 - f) * 0.4, 0.45); o.p.scale.setScalar(t < 0.3 + i * 0.15 ? 0.0001 : 1); }); }); });
+const GG = guest({ plates: 2, pose: (h, t) => P.sit(h, t, { smile: 1, mouth: Math.max(0, Math.sin(t * 7)) * 0.2 }), a: [0.2, 1.35, 2.7], b: [0.5, 1.3, 2.3], tag: ['Seven days free', 0.3, { bg: '#57e0d6', fg: '#0b1530' }] });
+const END = shot('dinner', S => { S.g = person({ hoodie: 0xe58aa8, hair: 0x5a3a2a, skin: SKIN.b, bun: true }); put(S, S.g, 0.78, 0, -Math.PI / 2); S.ch = person({ hoodie: CH, skin: SKIN.d, glasses: true }); put(S, S.ch, -0.78, 0, Math.PI / 2); S.sg = sign(S, 0, 2.0, 0.2, 0.3); },
+  (t, S) => { P.sit(S.g, t * 1.5, { smile: 1, lSh: [-1.0 + Math.sin(t * 5) * 0.1, 0, 0.3], lEl: [-1.5, 0, 0] }); P.sit(S.ch, t * 1.5 + 2, { smile: 1, rSh: [-1.0 + Math.sin(t * 5) * 0.1, 0, -0.3], rEl: [-1.5, 0, 0] }); S.sg(t); cm(S, t, [0, 1.4, 5.4], [0, 1.4, 4.6], [0, 1.1, 0], 2.6, easeOut); }, { fov: 40, bloom: 0.7 });
+export const SHOTS = montage([[0, A1], [1, A2], [2, row4], [2.65, solo], [3, no], [4, T1], [4.5, T2], [5, S1], [5.55, Mm], [6, Oo]], LINES, DURATION, END);
