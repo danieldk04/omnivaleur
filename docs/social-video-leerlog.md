@@ -2,6 +2,9 @@
 
 Bijgehouden door de wekelijkse routine `docs/routines/social-videos.md`. Nieuwste bovenaan.
 
+## Week 47, run 13-11-2026: geen nieuwe video's, bewust
+Niets te meten: van de zes video's uit week 46 (drie rechtszaal/kookshow/ruimte, drie voorbeelden A, B, C) is niets geplaatst en Daniel koos nog niet. Schedchie-sleutel ontbreekt (verwacht na eerste betaling, rond 17-11 tot 24-11). Mac had 7,4 van 8 GB in gebruik, dus Chatterbox zou uren duren. Daarom geen nieuwe batch bovenop zes ongeplaatste video's. Advies format_scores: STORY, DEMO, SKIT, ANALOGIE (alles nog proberen). Volgende run: meten zodra Daniel geplaatst heeft.
+
 ## Regels die Daniel zelf gaf (10-11-2026)
 - Stijl: renno.app. Een 3D blokpoppetje in uiteenlopende, creatieve situaties, schreefletters cursief in één zin, voice-over, zeer snelle sneden, echte dashboardbeelden.
 - Het poppetje mag nooit door spullen heen lopen.

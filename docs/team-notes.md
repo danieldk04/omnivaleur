@@ -19145,3 +19145,4 @@ Chrome was bij de eerste poging niet verbonden, daarna wel. Vinted: kinderen sch
 - Kinderschoenen met merk Zara: alle stappen ok. Met merk Nike mislukte alleen de merkstap bij een trage tabbladklok (2.4/s); niet herhaald, dus niet bewezen of dat een artefact was. Geen reparatie gedaan.
 - 13-11-2026: Drive-map voor social video's is nu Omnivaleur/Social media video's Claude/Week WW. Daniel plaatst alles via Schedchie; API gedocumenteerd op schedchie.com/developers, sleutel nodig (hij maakt hem aan, alleen lezen).
 - 13-11-2026: Schedchie-API-sleutel pas na Daniels eerste betaling (nu nog gratis proef). Vanaf week 47 terugkomen; staat in de routine en in het geheugen.
+- 13-11-2026 (automatisch), social video's: geen nieuwe batch gemaakt; er staan zes ongeplaatste video's klaar, geen data, geen Schedchie-sleutel, Mac vol. Zie leerlog.
