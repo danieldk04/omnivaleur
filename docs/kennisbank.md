@@ -17,6 +17,17 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## verlopen-controle-rij-schoof-niet-door
+
+*13-11-2026 — 13-11: server-controle op verlopen MP/2dehands-advertenties zag elke ronde dezelfde oudste 100 vragen; eerst filteren in de vraag, dan pas limit*
+
+De verlopen-controle (backend/services/verlopen_controle.py) las `sold_unconfirmed` gesorteerd op last_checked met limit 100 en filterde pas daarna op reden. Rijen die niet verlopen krijgen geen nieuwe last_checked, dus dezelfde 100 kwamen elke ronde terug en nieuwere verlopen advertenties bleven "is dit verkocht?" vragen (nickspijkers, 9 platen, 13-11). Gerepareerd 29725e26.
+
+**Why:** een "oudste N eerst"-rij zonder dat het nakijken de sorteersleutel bijwerkt, schuift nooit door.
+**How to apply:** bij elke periodieke controle met order+limit: filter in de vraag zelf, en zorg dat een nagekeken rij achteraan sluit (sleutel bijwerken of willekeurige greep). Zie ook "verlopen-is-geen-verkoop".
+
+---
+
 ## schedchie-api-na-eerste-betaling
 
 *13-11-2026 — Schedchie-API-sleutel kan pas na de eerste betaalde factuur; Daniel zit 13-11 nog in de gratis proef; vanaf volgende week terugkomen*

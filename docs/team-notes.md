@@ -19151,3 +19151,11 @@ Chrome was bij de eerste poging niet verbonden, daarna wel. Vinted: kinderen sch
 ## 13-11-2026 (automatisch): Terughaal opvolging
 - 37 van 38 verstuurd (ciaran202 ontbrak). Reacties: bankai2855 vroeg te stoppen (stond al in mail_unsubscribed, geen opvolging), jordi.waning (pakket werkt niet voor hen, Marktplaats lost hun retouren al op, antwoordconcept), retrogameking (kijken deze week, komen volgende week terug, wachten), tamboer.joost (Vinted-veiligheid gevraagd, Daniel gaf nieuwe proef tot 20-11, status trialing, "let's go").
 - 33 zwijgers: opvolgmail als Re:-concept bewaard (concepten/), Daniel verstuurt. Andere kanalen in data/schrijfstijl/terughaal/kanalen.md: bedrijfssite-contacten voor handelsonderneming038, delftsblaeu, dealbeter, steentjesmeester; 19 adressen zonder ander kanaal.
+
+## 13-11-2026: Onboarding nieuwe klanten (ochtend)
+- 3 accounts in de eerste week, geen nieuwe, geen creator. Web Store levert 1.0.421.
+- nickspijkers100 (17e5c638): 12 artikelen op Vinted, 3 voetbalshirts op Marktplaats. Zijn 9 vinylplaten op Marktplaats geven sinds 12-11 HTTP 410 "Deze advertentie is helaas verlopen", maar stonden in het dashboard als "is dit verkocht?". Oorzaak: de verlopen-controle las de oudste 100 openstaande vragen en filterde pas daarna op reden; vragen die niet verlopen krijgen geen nieuwe last_checked, dus elke ronde dezelfde 100 (gemeten: 5 kandidaten erin, 140 vragen ouder dan de zijne). Gerepareerd in 29725e26 (filter op reden in de vraag, willekeurige greep van 25 uit alle 46 kandidaten); proef tests/test_verlopen_controle_rij_schuift_door.py faalt 2 van 2 op de oude code. Open: waarom de platen na een dag verliepen is niet bewezen (zelf verwijderd of door Marktplaats weggehaald); ze stonden in Audio > Platenspelers omdat onze rubriekenlijst geen platen kent. Op de te-bouwen-lijst gezet. Geen mailtje (gisteren 0 kliks, en een "plaats opnieuw" zou in dezelfde verkeerde rubriek gaan).
+- sk8mom@live.nl (64a5c962): nog steeds niet bevestigd, 0 artikelen. Gisteren gemaild, niets veranderd, geen nieuw mailtje.
+- gahomi7062@micropaste.com (f7f00a82): wegwerpadres, 0 artikelen, extensie stil sinds 12-11 03:00. Geen mailtje.
+- kjrmohamed valt buiten het venster (proef gisteravond afgelopen).
+- Mailrapport: 3 mails, 0 echt geopend, 0 klik, 0 antwoord.
