@@ -998,7 +998,7 @@
       "pillar": "C",
       "format": "competitor",
       "slug": "omnivaleur-vs-flyp-crosslisting",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "omnivaleur-versus-flyp-vergelijking",
       "priority": 112
     },
@@ -2079,6 +2079,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-sell-faster-on-ebay",
       "published_at": "2026-11-12T16:32:26.274151+00:00"
+    },
+    {
+      "keyword": "Omnivaleur vs Flyp crosslisting",
+      "slug": "omnivaleur-vs-flyp-crosslisting",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "action": "created",
+      "url_path": "/vs/omnivaleur-vs-flyp-crosslisting",
+      "published_at": "2026-11-13T15:52:12.008127+00:00"
     }
   ]
 }
