@@ -19160,3 +19160,10 @@ Chrome was bij de eerste poging niet verbonden, daarna wel. Vinted: kinderen sch
 - kjrmohamed valt buiten het venster (proef gisteravond afgelopen).
 - Mailrapport: 3 mails, 0 echt geopend, 0 klik, 0 antwoord.
 - 13-11-2026, social video's op verzoek van Daniel: vijf nieuwe (MYTHE, LIJST, ANALOGIE, UITLEG, VOORNA) in Downloads en Drive (Social media video's Claude/Week 47). Tekstgedreven, dashboardbeelden van 10-11, nog niets geplaatst of gemeten. Zie leerlog.
+
+## 14-11-2026: Dagelijkse klantfouten
+- Gemeten ~13:15 UTC over 24 uur: 1.322 afgeronde opdrachten bij 8 klanten. 583 fouten, waarvan 557 bij Goudlief (5aae4954): allemaal opdrachten die na 3 dagen wachten verliepen, Chrome uit sinds 10-11 (nog 323 wachtend). Klant-eigen.
+- Toon (96e30080): 4x Vinted niet ingelogd, 4x Vinted kleur leeg (bekend, te-bouwen regel 24), 1x Vinted verwijderen op een al op Vinted verkocht artikel, 1x 2dehands maat: de foulard "Azteken 222/120" staat sinds onze plaatsing van 15-09 op Marktplaats in Blouses en Tunieken, 2dehands volgt die rubriek en eist dan een kledingmaat (zelfde fout 18-09 en 20-10). Andere 24 foulards gingen goed. Niet gerepareerd: eenmalig artikel, oude rubriekkeuze, niet meer te reproduceren.
+- 19deaa3a: Marktplaats verwijderen gaf 401 (uitgelogd), plaatsing daarom terecht overgeslagen. 31d28378: 1 verlopen opdracht, extensie stil sinds 08-11. 26cf5471: 1 opdracht hangt op claimed sinds 13-11 06:10, extensie sindsdien stil.
+- Geen nieuwe foutsoort in onze code, geen reparatie. Alle 7 open foutsoorten beoordeeld als klant.
+- Open: /health toont sinds de herstart 427x Google 402 (tegoed op, besluit Daniel 11-11) en ook Claude als reserve 426x geen antwoord; vertalen loopt via Azure (140x goed). Gevolg voor rubriekkeuze niet gemeten. Niet gemeten: Railway-log en fouten die alleen in de browser van de klant staan.
