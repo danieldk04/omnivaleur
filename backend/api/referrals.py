@@ -177,7 +177,8 @@ def _landingspagina(request: Request) -> str:
     """
     talen = (request.headers.get("accept-language") or "").lower()
     eerste = talen.split(",")[0].strip()
-    return "nl.html" if eerste.startswith("nl") else "index.html"
+    # Meteen het nette adres: /index.html en /nl.html sturen zelf nog eens door.
+    return "nl" if eerste.startswith("nl") else ""
 
 
 class NieuweCode(BaseModel):
