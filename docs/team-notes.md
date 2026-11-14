@@ -19167,3 +19167,6 @@ Chrome was bij de eerste poging niet verbonden, daarna wel. Vinted: kinderen sch
 - 19deaa3a: Marktplaats verwijderen gaf 401 (uitgelogd), plaatsing daarom terecht overgeslagen. 31d28378: 1 verlopen opdracht, extensie stil sinds 08-11. 26cf5471: 1 opdracht hangt op claimed sinds 13-11 06:10, extensie sindsdien stil.
 - Geen nieuwe foutsoort in onze code, geen reparatie. Alle 7 open foutsoorten beoordeeld als klant.
 - Open: /health toont sinds de herstart 427x Google 402 (tegoed op, besluit Daniel 11-11) en ook Claude als reserve 426x geen antwoord; vertalen loopt via Azure (140x goed). Gevolg voor rubriekkeuze niet gemeten. Niet gemeten: Railway-log en fouten die alleen in de browser van de klant staan.
+
+## 14-11-2026 (automatisch): Platformcontrole, geen afwijking
+- Vinted 7 van 7 proeven (kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, babykleding meisjes, kookboek, jongens kleding), Marktplaats 3 rubrieken (filosofie, fotografie en design, gedichten en poezie), 2dehands 2 rubrieken (filosofie, fotografie en design). Alle stappen gelijk aan 13-11; alleen de bekende artefacten (kookboek maat/kleur leeg, halswijdte op Marktplaats, beschrijving). Geen reparatie nodig.
