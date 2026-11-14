@@ -1008,7 +1008,7 @@
       "pillar": "B",
       "format": "howto",
       "slug": "etsy-shipping-settings-for-resellers",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "etsy-verzendopties-instellen-voor-verkopers",
       "priority": 113
     },
@@ -2089,6 +2089,16 @@
       "action": "created",
       "url_path": "/vs/omnivaleur-vs-flyp-crosslisting",
       "published_at": "2026-11-13T15:52:12.008127+00:00"
+    },
+    {
+      "keyword": "Etsy shipping settings for resellers",
+      "slug": "etsy-shipping-settings-for-resellers",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "created",
+      "url_path": "/reseller-tools/etsy-shipping-settings-for-resellers",
+      "published_at": "2026-11-14T14:43:38.461733+00:00"
     }
   ]
 }
