@@ -9,8 +9,8 @@ uitmaakt staan tussen [NA METING]. Geen streepjes als leesteken, geen opmaakteke
 1. 19-11: uitkomst meting. Goed genoeg: AI-pakket mag in de trap. Niet goed: de trap belooft alleen maanden gratis.
 2. Railway: REFERRAL_KORTING_AAN aan. Eerst één echte ronde nakijken (de vriendenkorting zelf).
 3. Rond 1 december: mail A (vriendenactie) en het "Wat is er nieuw"-venster met rondleiding in het dashboard.
-4. Ruim voor 1 januari: mail B (nieuwe plannen) aan wie het raakt. Controleer eerst de algemene voorwaarden op de
-   aanzegtermijn voor een prijswijziging, dat heb ik niet kunnen nazien.
+4. Uiterlijk 1 december (liefst eerder): mail B (nieuwe plannen) aan wie een prijsverhoging krijgt. De algemene
+   voorwaarden (art. 5) eisen minstens 30 dagen vooraf per e-mail bij een prijsverhoging. Nagekeken 14-11.
 5. 1 januari: Plus- en Ultra-prijzen en NIEUWE_PLANNEN_AAN in Railway (de prijs-id's staan in team-notes van 11-11).
    Pro en Plus krijgen hun grens pas op 15 januari (invoeringsuitstel).
 
