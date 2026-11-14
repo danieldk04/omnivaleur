@@ -19192,3 +19192,4 @@ Chrome was bij de eerste poging niet verbonden, daarna wel. Vinted: kinderen sch
 - nickspijkers100 (17e5c638): 9 verlopen platen staan nu als delisted, de reparatie van 29725e26 werkt. 12 op Vinted, 3 op MP. Extensie stil sinds 12-11. Geen mailtje.
 - sk8mom@live.nl en gahomi7062@micropaste.com: niets veranderd, geen mailtje.
 - Mailrapport: 2 mails, 0 echt geopend, 0 klik, 0 antwoord.
+- 14-11 middag, op verzoek van Daniel: Janina (f0cead08) op complimentary gezet via scripts/gratis_toegang.py (oude rij bewaard in ~/.omnivaleur/backups). Antwoord op haar mail van 13-11 verstuurd (na ja van Daniel): gratis toegang staat, advertenties verborgen op Vinted, vast bedrag later bespreken.
