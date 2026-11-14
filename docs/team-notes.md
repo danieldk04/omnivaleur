@@ -19176,3 +19176,9 @@ Chrome was bij de eerste poging niet verbonden, daarna wel. Vinted: kinderen sch
 - Zwaarst geraakt: nieuwe proefklant f0cead08 (aangemeld 13-11 10:26, proef tot 20-11, Duitse Vinted-voorraad): 37 van 73 artikelen zonder rubriek, woordenlijst kende er 0. Met de gratis Google-sleutel en de echte nachtronde (herstel_rubrieken, vult alleen lege velden) zijn er 36 gevuld; 1 zonnebril blijft leeg. Oude waarden (leeg) bewaard in de scratchpad van deze sessie.
 - Janneke (31d28378) 256 zonder rubriek zijn "Instaverkoop/Unboxing"-regels, geen artikelen; niet aangeraakt.
 - Open, besluit Daniel: tegoed bijkopen of de server op de gratis sleutel zetten. Tot dan blijft elke nieuwe niet-Nederlandse import grotendeels zonder rubriek.
+
+## 14-11-2026: Server op de gratis Google-sleutel (besluit Daniel)
+- Daniel wilde geen Google-tegoed bijkopen ("1 euro per dag vind ik best veel"; echt was het minder dan 0,40 per dag). Azure plus woordenlijst als gratis alternatief getest: 0 van 37 (woordenlijst wil "dames"/"heren" in de tekst). Gratis Google-laag: 36 van 37.
+- GOOGLE_API_KEY op Railway is nu de gratis sleutel (vingerafdruk 279422aa op /health). Oude betaalde sleutel 27d2bcd9 bewaard op Daniels Mac in ~/.omnivaleur/gemini-betaald-oud.txt; terugzetten kan in een minuut.
+- Nagemeten na de deploy met de Railway-instellingen: 5 van 5 rubrieken goed (Duits, Frans, Engels, Nederlands). De sterke modellen zitten op 20 vragen per dag en vallen door naar flash-lite.
+- Grens: bij een grote bulkimport raakt de daglimiet op; die artikelen blijven tijdelijk leeg en de nachtronde (200 per nacht, alleen lege velden) vult aan. Google mag op de gratis laag de vragen gebruiken voor training (openbare advertentieteksten).

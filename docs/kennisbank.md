@@ -72,6 +72,15 @@ Claude-storing. Gevuld met herstel_rubrieken(user_id=...) en de gratis sleutel
 **How to apply:** staat Google op 402, tel per klant nieuwe artikelen zonder rubriek
 (items.category leeg, created_at recent); vooral niet-Nederlandse imports vallen weg.
 
+**14-11-2026: server op de GRATIS sleutel (Daniel: "Ja, zet om").** GOOGLE_API_KEY op
+Railway is nu de gratis-laagsleutel (vingerafdruk 279422aa, zelfde als
+~/.omnivaleur/gemini-gratis.txt, ook gebruikt door de fotometing). De oude betaalde
+sleutel 27d2bcd9 staat in ~/.omnivaleur/gemini-betaald-oud.txt (600). Terugdraaien:
+`railway variables --set GOOGLE_API_KEY=<inhoud van dat bestand>`. Gemeten na de deploy
+met railway run: 5 van 5 rubrieken goed; de flash-modellen geven 429 (20 per dag) en
+de vraag valt door naar flash-lite. Grote bulkimports lopen tegen de daglimiet aan; de
+nachtronde vult dan later aan. Reden: Daniel vond betalen (~0,40 per dag) te veel.
+
 ---
 
 ## social-video-altijd-poppetjes-in-situaties
