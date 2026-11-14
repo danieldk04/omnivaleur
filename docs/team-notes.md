@@ -19182,3 +19182,13 @@ Chrome was bij de eerste poging niet verbonden, daarna wel. Vinted: kinderen sch
 - GOOGLE_API_KEY op Railway is nu de gratis sleutel (vingerafdruk 279422aa op /health). Oude betaalde sleutel 27d2bcd9 bewaard op Daniels Mac in ~/.omnivaleur/gemini-betaald-oud.txt; terugzetten kan in een minuut.
 - Nagemeten na de deploy met de Railway-instellingen: 5 van 5 rubrieken goed (Duits, Frans, Engels, Nederlands). De sterke modellen zitten op 20 vragen per dag en vallen door naar flash-lite.
 - Grens: bij een grote bulkimport raakt de daglimiet op; die artikelen blijven tijdelijk leeg en de nachtronde (200 per nacht, alleen lege velden) vult aan. Google mag op de gratis laag de vragen gebruiken voor training (openbare advertentieteksten).
+
+## 14-11-2026: Onboarding nieuwe klanten (ochtend)
+- 4 accounts in de eerste week, 1 nieuw. Web Store levert 1.0.421.
+- CREATOR info@janinanoetzel.com (f0cead08, Janina, Instagram janina_no, Duitse Vinted-voorraad): 73 artikelen ingelezen, alle 75 Vinted-advertenties staan op Vinted zelf verborgen, nog niets geplaatst, extensie stil sinds 13-11 13:01 (1 scan wacht). Daniel mailde met haar 24-10 t/m 27-10 (25% commissie, gratis toegang beloofd, 50 euro voor een Reel na testen); haar mail van 13-11 11:38 staat nog zonder antwoord. Geen mailtje, briefing aan Daniel.
+- Linkfout gevonden en gerepareerd: /r/CODE stuurde naar /index.html?ref=CODE, en /index.html stuurt sinds a0570432 (24-09) met een 301 naar "/" zonder zoekstring. Gevolg: tabel referrals had 0 rijen op 92 kliks sinds 24-09, ook Janina (klik 10:25, aanmelding 10:26 UTC). Reparatie bda09742 + 702c2938: omleiding houdt de zoekstring, /r/ gaat direct naar / of /nl. Proef tests/test_verwijslink_houdt_code.py faalde 3 van 3 op de oude code; live nagemeten (/r/daniel eindigt op /?ref=daniel, ref.js bewaart de code in de browser).
+- Klantdata: Janina gekoppeld aan janina_no (voor: geen rij), commissie op janina_no van 0 naar 25% gezet volgens Daniels mail van 27-10. Gratis toegang NIET gezet: alleen bij Amanda mag de routine dat zelf.
+- Wie eerder via een creator- of klantlink kwam is niet meer terug te vinden: kliks bewaren geen gebruiker, alleen een ip-hash.
+- nickspijkers100 (17e5c638): 9 verlopen platen staan nu als delisted, de reparatie van 29725e26 werkt. 12 op Vinted, 3 op MP. Extensie stil sinds 12-11. Geen mailtje.
+- sk8mom@live.nl en gahomi7062@micropaste.com: niets veranderd, geen mailtje.
+- Mailrapport: 2 mails, 0 echt geopend, 0 klik, 0 antwoord.

@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## verwijslink-verloor-code
+
+*14-11-2026 — 24-09 tot 14-11-2026 raakte elke /r/-link zijn ?ref= kwijt door de 301 van /index.html naar /; 0 koppelingen op 92 kliks*
+
+/r/CODE stuurde naar /index.html?ref=CODE; sinds a0570432 (24-09-2026) stuurt /index.html met een vaste 301 naar "/" zonder zoekstring. ref.js zag nooit een code, referrals bleef leeg (0 op 92 kliks), ook creator Janina. Gerepareerd 14-11 (bda09742, 702c2938, proef tests/test_verwijslink_houdt_code.py).
+
+**Why:** een omleiding die de zoekstring weggooit sloopt stil alle herkomstmeting (ref en utm), en niemand merkt het omdat de kliks wel geteld worden.
+
+**How to apply:** meet herkomst altijd als koppeling (rijen in referrals), niet als kliks. Voeg je een omleiding toe, neem request.url.query mee. Zie ook "leadgen-op-conversie-niet-volume".
+
+---
+
 ## gemini-tegoed-op
 
 *14-11-2026 — Google 402 = tegoed op (24-09 en 31-10); 31-10 EUR 5,49 door Goudliefs bulk-crosslist van 2.588 artikelen, ~1.380 vertaalvragen à ~0,4 ct*

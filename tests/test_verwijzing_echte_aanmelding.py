@@ -237,7 +237,7 @@ def test_van_klik_tot_maand_voor_een_gewone_klant(wereld):
     # 1. Iemand klikt op de link van Anna.
     klik = w.klik("anna")
     assert klik.status_code == 302
-    assert klik.headers["location"] == "https://omnivaleur.com/nl.html?ref=anna"
+    assert klik.headers["location"] == "https://omnivaleur.com/nl?ref=anna"
     assert len(w.rijen("referral_clicks")) == 1
 
     # 2. Hij maakt een account met die code erbij.

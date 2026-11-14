@@ -59,13 +59,13 @@ def test_de_hele_keten_klik_aanmelding_status(klant, monkeypatch):
     klik = client.get("/r/daniel", follow_redirects=False,
                       headers={"accept-language": "en-GB,en;q=0.9"})
     assert klik.status_code == 302
-    assert klik.headers["location"] == "https://omnivaleur.com/index.html?ref=daniel"
+    assert klik.headers["location"] == "https://omnivaleur.com/?ref=daniel"
     assert len(db.data["referral_clicks"]) == 1
 
     # een Nederlandse bezoeker krijgt de Nederlandse pagina
     nl = client.get("/r/daniel", follow_redirects=False,
                     headers={"accept-language": "nl-NL,nl;q=0.9"})
-    assert nl.headers["location"] == "https://omnivaleur.com/nl.html?ref=daniel"
+    assert nl.headers["location"] == "https://omnivaleur.com/nl?ref=daniel"
 
     # 2. hij meldt zich aan met die code (dit doet /api/auth/register)
     from backend.api import referrals
