@@ -19170,3 +19170,9 @@ Chrome was bij de eerste poging niet verbonden, daarna wel. Vinted: kinderen sch
 
 ## 14-11-2026 (automatisch): Platformcontrole, geen afwijking
 - Vinted 7 van 7 proeven (kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, babykleding meisjes, kookboek, jongens kleding), Marktplaats 3 rubrieken (filosofie, fotografie en design, gedichten en poezie), 2dehands 2 rubrieken (filosofie, fotografie en design). Alle stappen gelijk aan 13-11; alleen de bekende artefacten (kookboek maat/kleur leeg, halswijdte op Marktplaats, beschrijving). Geen reparatie nodig.
+
+## 14-11-2026: Gevolg van leeg Google-tegoed op de rubriekkeuze (Claude, op vraag van Daniel)
+- Rubriekvragen gaan nooit naar Claude (kostenrem 09-10), dus sinds het Gemini-tegoed op is (11-11) krijgt een nieuw artikel alleen een rubriek als de woordenlijst hem kent. Nieuwe artikelen zonder rubriek: 10-11 26 van 65, 12-11 26 van 27, 13-11 39 van 90 (daarvoor bijna 0). Zonder rubriek kan een artikel nergens heen.
+- Zwaarst geraakt: nieuwe proefklant f0cead08 (aangemeld 13-11 10:26, proef tot 20-11, Duitse Vinted-voorraad): 37 van 73 artikelen zonder rubriek, woordenlijst kende er 0. Met de gratis Google-sleutel en de echte nachtronde (herstel_rubrieken, vult alleen lege velden) zijn er 36 gevuld; 1 zonnebril blijft leeg. Oude waarden (leeg) bewaard in de scratchpad van deze sessie.
+- Janneke (31d28378) 256 zonder rubriek zijn "Instaverkoop/Unboxing"-regels, geen artikelen; niet aangeraakt.
+- Open, besluit Daniel: tegoed bijkopen of de server op de gratis sleutel zetten. Tot dan blijft elke nieuwe niet-Nederlandse import grotendeels zonder rubriek.
