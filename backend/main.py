@@ -309,8 +309,11 @@ async def landing_en():
 
 
 def _vaste_omleiding(doel: str):
-    async def omleiding():
-        return RedirectResponse(doel, status_code=301)
+    # De zoekstring gaat mee: zonder ?ref= raakte elke verwijslink zijn code kwijt
+    # (24-09 tot 14-11-2026, 0 koppelingen op 92 kliks), en utm-tags ook.
+    async def omleiding(request: Request):
+        q = request.url.query
+        return RedirectResponse(f"{doel}?{q}" if q else doel, status_code=301)
     return omleiding
 
 
