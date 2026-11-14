@@ -19193,3 +19193,6 @@ Chrome was bij de eerste poging niet verbonden, daarna wel. Vinted: kinderen sch
 - sk8mom@live.nl en gahomi7062@micropaste.com: niets veranderd, geen mailtje.
 - Mailrapport: 2 mails, 0 echt geopend, 0 klik, 0 antwoord.
 - 14-11 middag, op verzoek van Daniel: Janina (f0cead08) op complimentary gezet via scripts/gratis_toegang.py (oude rij bewaard in ~/.omnivaleur/backups). Antwoord op haar mail van 13-11 verstuurd (na ja van Daniel): gratis toegang staat, advertenties verborgen op Vinted, vast bedrag later bespreken.
+
+## 14-11-2026 (23:00, automatisch): Klantfouten
+- fout-vinted-delete-7c5b4b02: 1 Vinted-verwijdering van Janneke (31d28378) verliep na 3 dagen wachten. Gemeten: extensie_heartbeat last_seen 08-11 22:12 UTC (versie 1.0.418), Chrome sindsdien niet meer open; de server mailde haar op 14-11 16:13 al dat de extensie offline is. Zelfde geval als de ochtendronde. Klant-eigen, geen reparatie.
