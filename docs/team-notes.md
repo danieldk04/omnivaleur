@@ -19216,3 +19216,9 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 
 ## 15-11-2026 (automatisch): Platformcontrole, geen afwijking
 - Vinted 7 van 7 proeven (kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, babykleding meisjes, kookboek, jongens kleding), Marktplaats 3 rubrieken (geschiedenis regio, vaderland, wereld), 2dehands 2 rubrieken (regio, vaderland). Alle stappen gelijk aan 14-11; alleen de bekende artefacten (kookboek maat/kleur leeg, halswijdte op Marktplaats, beschrijving). Geen reparatie nodig.
+
+## 15-11-2026 (09:45, automatisch): Klantfouten
+- 2dehands extend 47x (klant 1ba42900): 2dehands geeft HTTP 401 op het overzicht, de klant is daar uitgelogd (zelfde klant: Marktplaats-overzicht zonder advertenties). De extensie wijzigt dan bewust niets. Klant-eigen.
+- Marktplaats create 5x (19deaa3a, 1ba42900): overgeslagen omdat het gekoppelde verwijderen faalde op hetzelfde onleesbare overzicht; juist bedoeld, voorkomt dubbele advertenties. Klant-eigen.
+- "No tab with id" 2x (1ba42900, bcdf9aa4): tabblad verdween tijdens de opdracht, geen mechanisme aanwijsbaar. Onbekend, niet gerepareerd.
+- Geen codewijziging.
