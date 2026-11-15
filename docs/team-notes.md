@@ -19257,3 +19257,7 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 ## 15-11-2026 (automatisch): Klantfouten
 - fout-facebook-create-5ca12495: 1x bij klant cfe8c210, LEGO-set (nieuw met kaartje, speelgoed) om 13:55 UTC: "Could not set the Condition field". Een minuut eerder ging bij dezelfde klant een ander artikel met dezelfde staat en bijna dezelfde rubriek (speelgoed bouwstenen) wel door. Dus niet de staatwaarde of de rubriek; waarschijnlijk een kiezer die te laat openging of een formulier dat opnieuw tekende (selectCombo in facebook.js), maar niet bewezen. Niet gerepareerd, geen codewijziging.
 - Open: komt het terug, dan meten wat de Staat-kiezer op dat moment toont. De klant kan het artikel opnieuw laten plaatsen.
+
+## 15-11-2026 (automatisch): Klantfouten
+- fout-vinted-create-ce2924c6: 1x bij klant cfe8c210, LEGO GWP 40899 (speelgoed duplo en lego, geen maat, geen kleur, geen merk) om 14:21 UTC: "size (empty), colour (empty)". Het pad Kids > Toys > Blocks & building toys is bekend en werkte bij dezelfde klant 24 minuten eerder voor een ander bouwstenen-artikel (done 13:57). Dezelfde opdracht kwam om 14:23 UTC op done (tweede poging). Eenmalig; waarschijnlijk liet de categoriekeuze te laat los of tekende Vinted opnieuw, maar niet bewezen (de opdrachtuitkomst bewaart de formulierstand niet). Geen schade, niets te repareren, niet gewijzigd.
+- Open: komt het terug, dan eerst meten welke categorie het formulier op dat moment toonde.
