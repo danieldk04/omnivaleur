@@ -19232,3 +19232,6 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 ## 15-11-2026: overdracht volledig bijgewerkt voor het tweede account (Claude, op verzoek van Daniel)
 - Aanleiding: Daniel zit op 91% van zijn weekruimte en wil dat het tweede account als reserve in één keer up-to-date is en zelf start. `docs/overdracht.md` was van 28-10 en is herschreven tot 15-11: nieuwe plannen en vriendenactie (uit), Google gratis sleutel, startpoort, terughaalronde, open punten, routinetabel met wat alleen op Daniels Mac draait.
 - Afspraak: het tweede account werkt alleen in de cloud (repo, Supabase, Railway, GitHub, Stripe), raakt niets aan wat aan Daniels Mac hangt en maakt geen kopie van Mac-taken. Alleen `onboarding-middag` (10:00) en `middagronde` (14:00) horen daar te draaien. Kennisbank opnieuw geëxporteerd.
+
+## 15-11-2026 (13:00, automatisch): Klantfouten
+- fout-marktplaats-create-aadb0095: 1x bij Toon (96e30080) "tabblad gesloten voor de opdracht klaar was". Dat is de bewuste melding van de extensie als het werktabblad dichtgaat (background.js, chrome.tabs.onRemoved); iemand of Chrome sloot het tabblad. De Marktplaats-plaatsing van 11:36 UTC daarna is gewoon op done gekomen. Eenmalig, geen mechanisme in onze code aanwijsbaar. Klant-eigen, geen codewijziging.
