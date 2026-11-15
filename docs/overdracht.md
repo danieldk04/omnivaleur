@@ -1,24 +1,40 @@
 # Overdracht: lees dit als eerste
 
-Bijgewerkt 28-10-2026 door de sessie op Daniels Mac, op zijn verzoek ("dat jullie allebei
-op één lijn zitten, 100% gesynchroniseerd"). Daniel wil zelf geen acties hoeven uitvoeren:
-wat te doen is, doen de sessies zelf. Alles hieronder is gemeten op 28-10-2026, tenzij er
-een andere datum staat. Details en bewijs staan in `docs/team-notes.md` onder de genoemde
-kopjes; lessen in `docs/kennisbank.md`.
+Bijgewerkt 15-11-2026 door de sessie op Daniels Mac, op zijn verzoek: "dat hij in één keer
+up-to-date is en autonoom start". Vorige overdracht: 28-10. Alles hieronder is gemeten op
+15-11-2026, tenzij er een andere datum staat. Bewijs staat in `docs/team-notes.md` onder het
+genoemde kopje, lessen in `docs/kennisbank.md`. Daniel wil zelf geen acties hoeven uitvoeren:
+wat te doen is, doen de sessies zelf.
+
+## Eén regel boven alles: je zit op een andere computer
+
+Jouw machine is niet Daniels Mac. Dit account is een reserve voor als het hoofdaccount geen
+ruimte meer heeft. Daarom geldt:
+
+- Doe alleen werk dat in de cloud kan: de repo (git), de productiedatabase (Supabase),
+  Railway, GitHub, Stripe en de gewone webpagina's. Raak niets aan wat aan Daniels Mac hangt.
+- Bestaat een bestand of programma uit deze pagina niet op jouw machine (alles onder
+  `~/.omnivaleur/`, LaunchAgents, de Zoho-koppeling, Chrome met Daniels inlogs), probeer het
+  dan niet na te maken en ga er niet omheen. Sla die stap over en schrijf één regel in
+  `docs/team-notes.md`: wat je niet kon en waarom.
+- Maak nooit een tweede kopie van een taak die op de Mac draait (zie "Alleen Daniels Mac"),
+  want twee rondes die hetzelfde doen veroorzaken dubbele mails en dubbele reparaties.
+- Plaats, mail en betaal niets namens Daniel behalve wat de routinebestanden zelf toestaan.
 
 ## Wat je in je EERSTE sessie zelf doet, zonder te vragen
 
 1. `git pull`. Lees daarna deze pagina, de onderkant van `docs/team-notes.md` (alles sinds
-   15-10) en zoek in `docs/kennisbank.md` gericht op je onderwerp
-   (`grep -n "^## " docs/kennisbank.md`; nooit het hele bestand lezen).
-2. **Je lokale `.env` werkt waarschijnlijk niet meer.** Op 27-10 zijn na het Railway-lek alle
-   sleutels vernieuwd en de oude Supabase-sleutels (die met `ey...`) uitgezet. Sinds 28-10
-   staat RLS aan op 10 tabellen, dus met een publieke sleutel (`sb_publishable_`) zie je lege
-   lijsten zonder foutmelding. Je hebt de `sb_secret_`-sleutel nodig in `SUPABASE_KEY` en
-   `SUPABASE_SERVICE_KEY`, en `supabase>=2.16` (2.7.4 weigert de nieuwe sleutel met
-   "Invalid API key"). Controle: `python3 -c "from backend.database import get_db;
+   28-10; `grep -n "^## " docs/team-notes.md | tail -150`) en zoek in `docs/kennisbank.md`
+   gericht op je onderwerp (`grep -n "^## " docs/kennisbank.md`; nooit het hele bestand lezen).
+   Wat veranderde in de code: `git log --since="2026-10-28" --name-only --format='%h %ad %s' --date=short`.
+   Let op commits met "auto: update ...": daar zit echt werk achter.
+2. **Controleer je lokale `.env`.** Sinds 27-10 zijn alle sleutels vernieuwd. Je hebt de
+   `sb_secret_`-sleutel nodig in `SUPABASE_KEY` en `SUPABASE_SERVICE_KEY`, en `supabase>=2.16`.
+   Controle: `python3 -c "from backend.database import get_db;
    print(len(get_db().table('items').select('id').limit(1).execute().data))"` moet 1 geven.
-   Lege uitkomst = verkeerde sleutel, niet een lege database. Daniel heeft de sleutel.
+   Lege uitkomst is een verkeerde sleutel, geen lege database. Ontbreekt de sleutel: stop,
+   schrijf het in team-notes, en doe alleen nog het lezen van de repo. Daniel heeft de sleutel.
+   Een ontbrekende `MAIL_PASS` betekent: geen onboardingmails versturen (zie hieronder).
 3. Controleer je geplande taken (`list_scheduled_tasks`). Maak ontbrekende zelf aan, lokale
    tijd, met de tekst "Je werkt aan Omnivaleur in <jouw repomap>. Lees <bestand> in die repo
    en volg het precies. Rondenaam: <naam>.":
@@ -26,134 +42,156 @@ kopjes; lessen in `docs/kennisbank.md`.
      bestand `docs/routines/onboarding-nieuwe-klanten.md`, rondenaam `onboarding-middag`.
    - `omnivaleur-klantfouten-middagronde`, dagelijks 14:00,
      bestand `docs/routines/klantfouten.md`, rondenaam `middagronde`.
-   Let op: in team-notes staat sinds 20-10 geen enkele `onboarding-middag` of `middagronde`
-   meer. Jouw taken draaiden dus niet, of jouw account was niet actief. Alles daarna deed
-   Daniels Mac. Schrijf in team-notes dat ze weer staan, en push.
-4. Draai meteen een eerste keer wat vandaag nog niet gedraaid is (het gedeelde slot
+   Dit zijn de enige twee. Staan ze er al, laat ze staan. Schrijf in team-notes dat ze staan.
+   In team-notes staat sinds 20-10 geen enkele `onboarding-middag` of `middagronde`: alles
+   daarna deed Daniels Mac, dus jouw account draaide niet of was niet actief.
+4. Draai meteen een eerste keer wat vandaag nog niet gedraaid is. Het gedeelde slot
    `python3 scripts/klantfouten.py ronde begin <rondenaam>` zegt of een andere ronde bezig
-   is of net klaar was; bij exit 3 niet forceren).
+   is of net klaar was; bij exit 3 niet forceren. Sluit elke ronde af met `ronde klaar`,
+   ook bij afbreken.
 5. Noem in je eerste antwoord kort wat je gezien hebt (CLAUDE.md eist dat).
+6. Werk deze pagina bij als je iets afrondt of ontdekt dat hier iets niet meer klopt, en push.
 
-## Wat sinds de vorige overdracht (15-10) is afgerond
+## Wat er sinds 28-10 gebeurde (de lijn, niet elk detail)
 
-- **Toon (96e30080), foto's van SiteGround**: opgelost. Bronfoto's komen via de GitHub-taak
-  `.github/workflows/bronfotos.yml` binnen; 0 van zijn 1.624 artikelen wijzen nog naar
-  dejuistetoon.eu (was 241). Laatste run "Bronfoto's" groen (28-10 07:31 UTC). Vinted-woontextiel,
-  categoriestap, merk en staat zijn gerepareerd in 1.0.392 tot 1.0.394; vachten gaan bewust niet
-  meer naar Vinted (dierenhuid, 21-10); zijn WooCommerce-doorvoer staat op zijn verzoek uit (21-10).
-- **Te-bouwen-lijst in Drive**: gedaan op 20-10 vanaf Daniels account. Google Sheet
-  "Omnivaleur te bouwen" (zie CLAUDE.md, sectie "De centrale lijst"), bijwerken met
-  `scripts/te_bouwen.py lijst|voeg|wijzig`. `docs/te-bouwen.md` is alleen nog een verwijzing.
-- **Railway-lek (22 en 27-10)**: alle hoofdsleutels vernieuwd: Supabase, Google, Resend,
-  Anthropic, Stripe (webhook-endpoint nu `we_1UV6jq09Y8J5okHsXNO8szrl`, alle events
-  afgeleverd). GitHub-geheimen mee vervangen; `SUPABASE_KEY` op GitHub is op 28-10 09:08
-  vervangen, de Leadmachine draaide daarna zonder sleutelfout. Nog bewust niet vernieuwd:
-  R2, Cloudinary, Apify, SMTP, Resend-webhookgeheim, Shopify/eBay-geheimen, Google OAuth,
-  SECRET_KEY, ANALYTICS_DASHBOARD_TOKEN (team-notes 27-10).
-- **RLS aan** op 10 tabellen (28-10). `content_pages` bewust open (blogroutine op GitHub).
-- **Marktplaats veranderde de beschrijvingseditor (21-10)**: gerepareerd in 1.0.400; de server
-  geeft plaatswerk alleen aan een extensie die de nieuwe editor kent.
-- **Onboardingmails**: de routine verstuurt sinds 25-10 zelf, alleen via
-  `scripts/onboarding_mail.py stuur ... --echt` (harde controles in de code), en meet opens,
-  kliks, antwoorden en wat de klant daarna deed (`onboarding_mail.py rapport`).
-- **Platformcontrole** (dagelijks op Daniels Mac): uitgebreid op 25-10, vergelijkt elke stap met
-  gisteren en loopt drie extra Marktplaats-rubrieken per dag door.
-- **Creatorcommissie 25%** gebouwd en in productie bewezen (27 en 28-10): loopt zolang de
-  aangebrachte klant betaalt, kasboek `creator_commissie`, Daniel maakt zelf over.
-- **Account wissen en gegevens downloaden** (AVG, 15-10): kaart "Privacy & your data".
-- **Herplaatsen op vaste dagen en uur** (19-10, toezegging aan Voordeelsieraden) en de knop
-  Herplaatsen op het tabblad Verkocht (21-10, Janneke; een REV-kopie is nooit een dubbele, 25-10).
-- **eBay België** (20 en 21-10): per klant `extra_data.ebay_marktplaats`; een offer op EBAY_BE wordt
-  door eBay geaccepteerd, publiceren wacht op Daniels identiteitsverificatie bij eBay.
-- **Rubrieken zonder taalmodel (28-10)**:
-  - Nieuwe tak `hobby` met "hobby kledingapplicaties en strijkemblemen" (Marktplaats en
-    2dehands 1099/2855, gemeten) en een woordenlijst voor strijkemblemen en stropdassen
-    (`_strijkembleem_of_stropdas` in imports.py). De server stuurt de Marktplaats-nummers mee
-    (`_MP_NUMMERS_VAN_DE_SERVER` in jobs.py), dus Marktplaats en 2dehands werken met elke
-    extensie; Vinted wacht op 1.0.406 (`MINIMALE_HOBBY_VERSIE`).
-  - Het Shopify-producttype bepaalt bij het inlezen de rubriek (`rubriek_uit_producttype`):
-    251 sieraden bij Voordeelsieraden en Goudlief gevuld, terug te zetten uit
-    `~/.omnivaleur/backups/rubriek_uit_producttype_28-10.jsonl` (Daniels Mac).
-  - Rubriek overnemen van Vinted: bewust niet gebouwd, maar 11 van de 542 lege rubrieken
-    kwamen van Vinted.
-  - **Google-betaling aan** (Daniel, 28-10 ~11:15, 10 euro). Daarvoor gaf de gratis sleutel
-    2.606x HTTP 429 en 0x 200; de gratis portie ging op aan vertalen. Daarna antwoordde Google
-    weer (5 van 5). De nachtronde rubriekherstel (05:00, 200 per nacht) haalt de ~250 lege
-    rubrieken in. Claude doet bewust geen rubriekvragen (kosten, 09-10).
+**Nieuwe plannen en prijzen (besluiten 09 en 11-11, alles gebouwd maar UIT).**
+- Vier plannen op actieve artikelen: Light 9,99 tot 20, Pro 19,99 tot 250, Plus 29,99 tot
+  1.500, Ultra 49 onbeperkt (Etsy en nieuwe features later). Jaarbetaling: Light 99, Pro 199,
+  Plus 299, Ultra 490. Bestaande klanten gaan mee. De drie accounts boven 3.000 artikelen
+  stappen op: 1-1 tot 31-3 29,99, 1-4 tot 30-6 39, daarna 49. De grenzen van Pro en Plus gaan
+  pas gelden vanaf 15-01-2027, voor iedereen tegelijk. Light is al live strikt 20.
+- Stimulus tot 01-01-2027: 10 euro korting per betalende vriend per maand (nooit meer dan
+  50% van wat de vriend betaalt, telt alleen vanaf Pro), 1 betalende vriend geeft 2 gratis
+  maanden, 3 geven het AI-pakket. Gebouwd achter de vlag `REFERRAL_KORTING_AAN`, de nieuwe
+  plannen achter `NIEUWE_PLANNEN_AAN` (Railway-variabelen, beide uit). Prijzen bestaan al in
+  Stripe (live). Checkout, planwissel met verschil (`/api/billing/wijzig-plan`) en de
+  keuzeknoppen in het dashboard zijn klaar en bewezen in Stripe-testmodus.
+- **Zet geen vlag aan, verstuur geen aankondiging, bouw het AI-pakket niet af zonder Daniel.**
+  Eerst wacht de uitkomst van de fotometing (19-11, taak op Daniels Mac). De concepttekst van
+  de aankondiging staat in `docs/aankondiging-nieuwe-plannen.md`, niets is live.
+- **Valkuil (11-11)**: een Stripe-proef die `backend.api.billing` importeert pakt de ECHTE
+  sleutel uit `.env`. Zo ontstond een gearchiveerd product in de echte Stripe. Gebruik voor
+  proeven altijd expliciet de testsleutel (`tests/proeven/stripe_proef_*.py`), nooit de echte.
+- Regel van Daniel (09-11): alleen bouwen wat 100% zeker werkt, niets half uitrollen. Etsy is
+  geblokkeerd (Daniels eigen Etsy-account), dus geen Etsy-koppeling bouwen.
+
+**Taalmodellen, kosten en vertalen.**
+- Vertalen gaat sinds 02-11 eerst via Azure Translator (gratis laag), Gemini alleen voor
+  rubrieken en als reserve.
+- Het betaalde Gemini-tegoed raakte op 11-11 op. Sinds 14-11 draait de server op de
+  **gratis** Google-sleutel (vingerafdruk `279422aa` op `/health`); de oude betaalde sleutel
+  (`27d2bcd9`) ligt alleen op Daniels Mac. De sterke modellen hebben 20 vragen per dag; bij een
+  grote bulkimport blijven artikelen tijdelijk zonder rubriek en vult de nachtronde
+  (`herstel_rubrieken`, 200 per nacht, alleen lege velden) aan. Rubriekvragen gaan nooit naar
+  Claude (kostenrem 09-10). Zet de betaalde sleutel nooit terug zonder Daniels woord.
+
+**Dashboard en website.**
+- Startpoort voor nieuwe klanten (30-10, `frontend/poort.js`): dashboard blijft dicht tot
+  extensie, marktplaats-login en minstens één item er zijn. Wie al werkte komt er nooit in.
+- Nieuwe openbare site en nieuwe stijl voor dashboard en extensie (06-11, op één stylesheet).
+- 15-11: onder "je computer is online" staat nu per marktplaats wanneer de verkopen voor het
+  laatst zijn nagekeken (`backend/services/controle.py`; 2dehands via extensie 1.0.422).
+- Wijzig je klanttekst: altijd ook Nederlands (`scripts/i18n_extract.py`, zie CLAUDE.md).
+
+**Klantwerk dat doorloopt.**
+- Reparaties sinds 28-10, kort: Vinted-woontextiel zonder kleur krijgt automatisch
+  Meerkleurig of de kleur uit de titel (15-11, Toon); verwijscode-link `/r/CODE` verloor de
+  code door een omleiding en is hersteld (14-11); verkoop van een Woo-product met meerdere
+  stuks haalde het artikel overal weg (10-11, Toon); telefoonhouders en zilver/goud-
+  voorinvulling (Goudlief, Mieneke). Details per kopje in team-notes.
+- Toon (96e30080): afspraak van Daniel (11-11): wat hij zelf in Omnivaleur kan, blijft hij
+  zelf doen. Contact is voor support en fouten, niet om voor hem te werken.
+- Janina (f0cead08, creator, Duitse Vinted-voorraad): gratis toegang staat (14-11),
+  commissie 25%. Gratis toegang zet de routine alleen zelf bij Amanda, nergens anders.
+- Terughaalronde verlopen proefaccounts (09 tot 13-11): Daniel verstuurde 37 persoonlijke
+  mails, de opvolging staat als concept klaar; hij verstuurt. Wie vroeg te stoppen staat in
+  `mail_unsubscribed`. Twee accounts zijn Daniels eigen en worden nooit gemaild of meegeteld
+  (dkresellacademy@gmail.com, aertssen.pleun@gmail.com).
+- Monaim heeft nu niets met Omnivaleur te maken (09-11). Noem hem nooit in een reactie of
+  klanttekst.
 
 ## Wat nu open staat (niemand hoeft te wachten op Daniel tenzij er "beslissing" staat)
 
-- **Extensie in de Web Store**: de Web Store levert 1.0.404, de repo staat op 1.0.406.
-  1.0.405 (Vinted "Meerkleurig" op een Engelse pagina) en 1.0.406 (strijkemblemen op Vinted)
-  zitten samen in `dist/omnivaleur-extension-1.0.406.zip`. Uploaden kan alleen met Daniels
-  Google-account in het Chrome Web Store-dashboard.
-- **Controle Google-kosten**: eenmalige taak `omnivaleur-google-kosten-check` op Daniels Mac,
-  31-10 10:00. Meet de kosten, of Google antwoordt en hoeveel rubrieken nog leeg zijn (was 252).
-- **Janneke (31d28378)**: Vinted heeft haar account tot en met 31-10 stilgezet (reden niet
-  bewezen; tempo tot 50 plaatsingen per avond, gedeelde foto's). Advies: niets forceren tot
-  1-11, daarna rustig hervatten met Calm mode. Haar 158 lege rubrieken (titels als
-  "* Accessoires", geen producttype) wachten op de rubriekvraag.
-- **Goudlief (5aae4954, Dahli)**: sinds 28-10 Pro (tot 28-11). Hij wil alles ook via Omnivaleur op
-  Marktplaats, naast zijn eigen Marktplaats Pro-feed (loopt t/m 31-12-2026); de 996 tegengehouden
-  opdrachten staan weer in de rij, 260 bestaande dubbelen blijven staan. Zijn keuze, niets aan doen.
-- **Delftsblaeu (eac0cccc)**: mailpauze tot en met 29-10 (`MAIL_PAUZE_TOT` in email.py), daarna
-  vanzelf normaal.
-- **Egbert (bcdf9aa4)**: 28 artikelen met een verkeerd geraden rubriek (babykleding, unisex
-  accessoires) niet aangepast: klantdata, beslissing Daniel.
-- **Klant-eigen, niet repareren**: 26cf5471 en f8c0cce9 niet ingelogd op Vinted (scans falen);
-  0b28c1ce, 1ba42900, 96e30080, 12fc61d0 met computer of extensie uit terwijl werk wacht.
+- **Extensie in de Web Store**: de Web Store levert 1.0.421, de repo staat op 1.0.422
+  (`dist/omnivaleur-extension-1.0.422.zip`). Uploaden kan alleen met Daniels Google-account.
+- **Tijdgebonden**: 19-11 uitkomst fotometing AI-pakket (Mac); 26-11 SEO-nameting (Mac);
+  1-12 kosten- en doelenronde (Mac); 15-01-2027 grenzen Pro en Plus gaan gelden.
+- **Beslissing Daniel**: wanneer de nieuwe plannen en de vriendenactie live gaan, en de
+  aankondiging. Niet zelf aanzetten.
+- **Niet opnieuw nagekeken sinds 28-10, dus alleen een startpunt**: Janneke (31d28378, Vinted
+  stond tot 31-10 stil), Goudlief (5aae4954, wacht op extensie 1.0.419 of nieuwer, telefoon-
+  koorden), Egbert (bcdf9aa4, 28 artikelen met een geraden rubriek: klantdata, beslissing
+  Daniel), Mieneke (09e089ec, 12-11: 2dehands rekent kosten bij plaatsen na Marktplaats).
+  Lees hun kopjes in team-notes en meet zelf opnieuw voor je iets aanneemt.
+- **Klant-eigen, niet repareren**: klanten die niet ingelogd zijn op een marktplaats of
+  waarvan computer of extensie uit staat terwijl werk wacht.
 - Rode proeven die al rood waren vóór 28-10 (niet van ons werk): 8 Python
-  (test_veger_geeft_de_echte_reden 3, test_vinted_eigen_slottekst 4, test_vinted_vaste_staat 1;
+  (test_veger_geeft_de_echte_reden, test_vinted_eigen_slottekst, test_vinted_vaste_staat;
   test_vinted_na_klik_zoeken soms) en 19 JS-proeven. test_antwoord_uit_de_code hoort bij de
-  AI-klantenservice die sinds 06-09 uit staat.
-- Op de planning, niet zelf oppakken: rubriekvraag kleiner maken (~9.000 tokens per product);
-  AI-titels (`backend/services/titel_ai.py`, gebouwd, niet aangesloten). Zie de te-bouwen-sheet.
+  AI-klantenservice die sinds 06-09 uit staat. Meet voor je werk wat al rood was.
+- Op de planning, niet zelf oppakken: alles in de Drive-sheet "Omnivaleur te bouwen"
+  (`scripts/te_bouwen.py lijst`), o.a. rubriekvraag kleiner maken, AI-titels
+  (`backend/services/titel_ai.py`, gebouwd, niet aangesloten), kanalen.
 
 ## De vaste routines (alles staat als bestand in de repo)
 
 | Routine | Wie / wanneer | Bestand |
 |---|---|---|
-| Klantfouten | Daniels Mac 08:00 (`ochtendronde`), jouw account 14:00 (`middagronde`) | `docs/routines/klantfouten.md` |
-| Onboarding nieuwe klanten, verstuurt zelf het mailtje | Daniels Mac 11:00 (`onboarding-ochtend`), jouw account 10:00 (`onboarding-middag`) | `docs/routines/onboarding-nieuwe-klanten.md` |
-| Platformcontrole Vinted, Marktplaats, 2dehands | Daniels Mac 10:00 | geplande taak `omnivaleur-platformcontrole`, scripts in `scripts/platformcontrole/` |
-| Kosten bijhouden (Drive-sheet "Kosten en doelen (Omnivaleur en Revaleur)") | Daniels Mac, 1e van de maand | `docs/routines/kosten-bijhouden.md` |
-| Schrijfstijl leren uit Daniels verzonden mail | Alleen Daniels Mac (Zoho), dagelijks 07:15 | `docs/schrijfstijl-daniel.md` |
-| Creator-outreach status | Daniels Mac, maandag en donderdag 09:00 | `.claude/skills/creator-outreach/SKILL.md` |
+| Klantfouten | Daniels Mac 08:00 (`ochtendronde`), **jouw account 14:00** (`middagronde`) | `docs/routines/klantfouten.md` |
+| Onboarding nieuwe klanten | Daniels Mac 11:00 (`onboarding-ochtend`), **jouw account 10:00** (`onboarding-middag`) | `docs/routines/onboarding-nieuwe-klanten.md` |
+| Platformcontrole Vinted, Marktplaats, 2dehands | Alleen Daniels Mac 10:00 (Chrome) | `docs/routines/platformcontrole.md` |
+| Kosten en doelen (Drive-sheet "Kosten en doelen (Omnivaleur en Revaleur)") | Alleen Daniels Mac, 1e van de maand | `docs/routines/kosten-bijhouden.md` |
+| Schrijfstijl leren uit Daniels mail | Alleen Daniels Mac (Zoho), 07:15 | `docs/schrijfstijl-daniel.md` |
+| Creator-outreach status | Alleen Daniels Mac, ma en do 09:00 | `.claude/skills/creator-outreach/SKILL.md` |
+| Facebook-reactiebot bijwerken (alleen lezen) | Alleen Daniels Mac, 07:30 | `docs/routines/facebook-reactiebot.md` |
+| Social video's | Alleen Daniels Mac, dinsdag 09:30 | `docs/routines/social-videos.md` |
+| Reageren op X, Indie Hackers, Facebook, Instagram | Alleen Daniels vastgepinde gesprek | `docs/routines/social-reageren.md` |
+| Fotometing AI-pakket | Alleen Daniels Mac (LaunchAgent, haalt zichzelf weg) | `scripts/meet_fotoadvertentie.py` |
+
+Onboardingmails: alleen `scripts/onboarding_mail.py stuur ... --echt` (harde controles in de
+code), en alleen als `MAIL_PASS` in jouw `.env` staat. Staat die er niet, zet de mail dan
+klaar in team-notes en verstuur niets; Daniels Mac pakt het in zijn ronde op.
 
 Alle dagelijkse rondes delen één slot, dus twee rondes doen nooit tegelijk hetzelfde. Wat een
 vorige ronde als gerepareerd noteerde, repareer je niet opnieuw: je meet alleen of het weg is.
-Sluit elke ronde af met `ronde klaar`, ook bij afbreken.
 
-Alleen op Daniels Mac, bewust niet bij jou: de Zoho-mailkoppeling (`zoho-mail`, zijn mailbox),
-de agenda, en de back-ups in `~/.omnivaleur/backups/`.
+## Alleen Daniels Mac, bewust niet bij jou
+
+De Zoho-mailkoppeling (zijn mailbox), de agenda, Chrome met zijn inlogs (platformcontrole,
+Facebook, social, Web Store), de map `~/.omnivaleur/` (back-ups, sleutels, meetresultaten,
+`gemini-betaald-oud.txt`), de LaunchAgents, de map `data/schrijfstijl/` en `data/social/`
+(buiten git), en alles wat plaatst of verstuurt op sociale media. Op jouw machine bestaat dit
+niet en hoort het ook niet te bestaan.
 
 ## Werkafspraken die overal gelden
 
 - Antwoord Nederlands, gewone taal, de vier blokjes (wat er aan de hand was, wat er nu
-  veranderd is, zekerheid in %, actiepunten met `[NU/DEZE WEEK/OOIT/OVERSLAAN, tijd]`).
-  Nooit een gedachtestreepje als leesteken. Daniel wil zo min mogelijk zelf doen: geef hem
-  alleen wat echt alleen hij kan.
+  veranderd is, zekerheid in %, actiepunten met `[NU/DEZE WEEK/OOIT/OVERSLAAN, tijd]`), kort,
+  één scherm. Nooit een gedachtestreepje als leesteken. Daniel wil zo min mogelijk zelf doen:
+  geef hem alleen wat echt alleen hij kan.
 - "Waarschijnlijk goed" bestaat niet: oorzaak bewijzen, echte code draaien, voor-en-na-proef
-  (oude versie laten falen). Een lege meting eerst wantrouwen.
+  (oude versie laten falen). Een lege meting eerst wantrouwen. Alleen bouwen wat 100% zeker
+  werkt.
 - Elke wijziging aan klanttekst: ook in het Nederlands (`python3 scripts/i18n_extract.py`,
-  daarna `--versie`; zie CLAUDE.md). De GitHub-proef kleurt anders rood.
-- De auto-push-hook zet elke Edit los live (kennisbank: "auto-push-zet-tussenstand-live"), ook
-  halve tussenstanden: op 28-10 stond een te brede woordenlijstregel een uur live voordat de
-  proeven klaar waren. Werk in kleine, werkende stappen, of schrijf het bestand in één keer.
-  Een voor-proef draai je dus tegen de commit van vóór je eerste Edit, niet tegen HEAD.
+  daarna `--versie`). De GitHub-proef kleurt anders rood.
+- Klantberichten: nooit "sorry", "ligt aan ons" of "onze fout". Eerst het goede nieuws, dan
+  neutraal wat er speelde en wat de klant nu kan. Concept in de chat, eerst
+  `docs/schrijfstijl-daniel.md` lezen.
+- De auto-push-hook zet elke Edit los live, ook halve tussenstanden (kennisbank:
+  "auto-push-zet-tussenstand-live"). Werk in kleine, werkende stappen, of schrijf het bestand
+  in één keer. Een voor-proef draai je tegen de commit van vóór je eerste Edit, niet HEAD.
 - Meten op de productiedatabase: nooit een zware telling over meerdere klanten, alleen per
   user_id of in brokken (kennisbank: "meten-op-de-productiedatabase"). Supabase geeft
   maximaal 1.000 rijen per vraag: tel grote accounts met `.range()`.
 - Klantdata: alleen lege velden vullen uit een bewezen bron, oude waarde eerst bewaren, nooit
-  wissen (kennisbank: "klantdata-niet-op-eigen-initiatief"). Klantmails van Daniel: concept in
-  de chat, eerst `docs/schrijfstijl-daniel.md` lezen, concept bewaren met
-  `scripts/schrijfstijl_leren.py concept`. Onboardingmails gaan alleen via het script.
+  wissen (kennisbank: "klantdata-niet-op-eigen-initiatief").
 - Een klantwens of besluit hoort meteen in de te-bouwen-sheet (CLAUDE.md).
 - Leer je iets nieuws dat ook op Daniels account moet gelden: geheugenbestand schrijven,
   `python3 scripts/export_kennisbank.py`, committen. Beslissing of afspraak: dagboekregel in
   `docs/team-notes.md`, pushen.
 - Zuinig met tokens: batchen, gericht lezen, geen subagents tenzij Daniel erom vraagt.
 
-Prijs en product in het kort: EUR 19,99 per maand (Pro), 5 kanalen, 7 dagen proef plus 2
-respijt; Omnivaleur Light EUR 9,99 tot 20 actieve artikelen. Details in de kennisbank
-(`omnivaleur-demovideo-en-prijs`, `proefperiode-en-toegangsslot`, `omnivaleur-light-plan`).
+Prijs en product vandaag live: EUR 19,99 per maand (Pro), 5 kanalen, 7 dagen proef plus 2
+respijt; Omnivaleur Light EUR 9,99 tot 20 actieve artikelen. De nieuwe plannen staan uit (zie
+boven). Details in de kennisbank (`omnivaleur-demovideo-en-prijs`, `proefperiode-en-toegangsslot`,
+`omnivaleur-light-plan`).
