@@ -19196,3 +19196,11 @@ Chrome was bij de eerste poging niet verbonden, daarna wel. Vinted: kinderen sch
 
 ## 14-11-2026 (23:00, automatisch): Klantfouten
 - fout-vinted-delete-7c5b4b02: 1 Vinted-verwijdering van Janneke (31d28378) verliep na 3 dagen wachten. Gemeten: extensie_heartbeat last_seen 08-11 22:12 UTC (versie 1.0.418), Chrome sindsdien niet meer open; de server mailde haar op 14-11 16:13 al dat de extensie offline is. Zelfde geval als de ochtendronde. Klant-eigen, geen reparatie.
+
+## 15-11-2026: Dagelijkse klantfouten
+- Gemeten ~08:20 UTC over 24 uur: 1.364 afgeronde opdrachten bij 11 klanten, 33 fouten en 146 afgeblazen (Goudlief en 0b28c1ce, Chrome uit). Niets nieuws in onze code, geen reparatie.
+- Verlopen na 3 dagen wachten (klant-eigen, Chrome uit): Janneke 31d28378 8x (stil sinds 08-11), 1ba42900 2x (stil sinds 12-11), Goudlief 1x (stil sinds 10-11).
+- Toon (96e30080): 4x Vinted kleur leeg (bekend, te-bouwen), 1x Vinted niet ingelogd, 2x Vinted verwijderen niet bevestigd, 1x de 2dehands-foulard met kledingmaat (zelfde als 14-11). 19deaa3a: MP-overzicht onleesbaar, plaatsing terecht overgeslagen.
+- bcdf9aa4: 1 van 714 verlengingen gaf "did not run ({})", de enige in 21 dagen; geen mechanisme aanwijsbaar, beoordeeld als onbekend. De nachtronde maakt een nieuwe opdracht.
+- Grote wachtrijen (26cf5471 261, Goudlief 291, Janneke 162, 0b28c1ce 109) staan allemaal bij een extensie die stil is; 26cf5471 sinds 14-11 22:09, het is zondagochtend.
+- /health: Google op de gratis sleutel 279422aa, 103 antwoorden en 435x 429 sinds de herstart (daglimiet), 24x geen antwoord. Gevolg op lege rubrieken vandaag niet gemeten. Niet gemeten: Railway-log en fouten die alleen in de browser van de klant staan.
