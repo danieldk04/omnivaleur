@@ -10916,7 +10916,7 @@ function renderExtensionStatus() {
     el.style.display = 'flex';
     if (data.online) {
       el.className = 'comp-status comp-status-online';
-      el.innerHTML = `<span class="comp-dot"></span><div><b>Your computer is online.</b> Queued publishes and relists run automatically — you can manage everything from your phone.</div>`;
+      el.innerHTML = `<span class="comp-dot"></span><div><b>Your computer is online.</b> Queued publishes and relists run automatically — you can manage everything from your phone.${_controleRegel(data)}</div>`;
     } else {
       const ago = data.last_seen ? ` (last online ${fmtSeenAgo(data.seconds_ago)})` : '';
       el.className = 'comp-status comp-status-offline';
