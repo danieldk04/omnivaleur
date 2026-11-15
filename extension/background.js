@@ -9140,6 +9140,9 @@ async function checkSoldListings() {
       }
       const soldTitles = soldAds.map(a => (a.title || "").toLowerCase().trim()).filter(Boolean);
       console.log(`[Omnivaleur][sold] ${platform}: ${ads.length} ad cards scraped, ${soldAds.length} carry a sold/reserved label`);
+      // Alleen een overzicht dat echt advertenties toonde telt als nagekeken: een
+      // leeg of niet ingelogd overzicht zegt niets over verkochte artikelen.
+      if (ads.length > 0) meldControle(platform);
 
       // ADVERTENTIES DIE HELEMAAL NIET IN HET OVERZICHT STAAN.
       //
