@@ -176,6 +176,7 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - 12-11-2026: Gekeken: 45 mails in Verzonden (3 dagen), 39 van Daniel, 38 al verwerkt; 1 nieuw, 1 met concept (niet vergelijkbaar, concept was de terughaalmail, het antwoord ging over Vinted-relisten). Wel bevestigd: eerlijk antwoord zonder garantie over wat Vinted verbiedt, met Nederlandse dashboardnamen en gebogen aanhalingstekens, "Groetjes," lege regel "Daniel" zonder punt; geen nieuwe regel.
 - 13-11-2026: Gekeken: 12 mails in Verzonden (3 dagen), 4 van Daniel, 1 al verwerkt; 3 nieuw, 2 met concept (1 niet vergelijkbaar, concept was de terughaalmail). Nieuw: "Goed nieuws:" en "Wat er speelde:" weer geschrapt (onder Nog te leren), korting-antwoord en Trustpilot-vraag bij opzeggen.
 - 14-11-2026: Gekeken: 78 mails in Verzonden (3 dagen), 6 van Daniel, 4 al verwerkt; 2 nieuw, 2 met concept (1 niet vergelijkbaar, concept was de terughaalmail). Nieuw: opvolgmail met "Goedemorgen" en eigen controlezin vooraan (onder Nog te leren).
+- 15-11-2026: Gekeken: 79 mails in Verzonden (3 dagen), 6 van Daniel, 5 al verwerkt; 1 nieuw, 0 met concept. Alleen bevestigd: uitleg met dubbelepunt-labels, Nederlandse dashboardnamen, gebogen aanhalingstekens, "Hoi Voornaam,", slot "Laat me weten als je verder nog ergens tegenaan loopt!" en "Groetjes," lege regel "Daniel"; geen nieuwe regel.
 
 
 ## 28-10-2026: geen schuld aantrekken (Daniel spreekt de regel uit)
