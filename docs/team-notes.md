@@ -19235,3 +19235,8 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 
 ## 15-11-2026 (13:00, automatisch): Klantfouten
 - fout-marktplaats-create-aadb0095: 1x bij Toon (96e30080) "tabblad gesloten voor de opdracht klaar was". Dat is de bewuste melding van de extensie als het werktabblad dichtgaat (background.js, chrome.tabs.onRemoved); iemand of Chrome sloot het tabblad. De Marktplaats-plaatsing van 11:36 UTC daarna is gewoon op done gekomen. Eenmalig, geen mechanisme in onze code aanwijsbaar. Klant-eigen, geen codewijziging.
+
+## 15-11-2026 (14:30, automatisch): Klantfouten
+- fout-marktplaats-create-c1475594: 1x bij Toon (96e30080), "Lederhosen Dames" (item 275ef9fd, merk "Gaudi", rubriek broeken). Plaatsing van 05:45 UTC liep pas 11:57 af met "left empty on the form: brand"; het gekoppelde verwijderen was al gedaan, dus de advertentie staat nu niet online. Eerder op 12-09 stond hij wel op MP.
+- Oorzaak niet bewezen. Wat wel vaststaat: de merkkiezer (_mwFillBrand, background.js) vindt "Gaudi" niet en geeft false, waarna verifyMpGroupFields de advertentie tegenhoudt; er is voor deze kiezer geen terugval op "Overige merken" zoals bij een gewone keuzelijst. Of de kiezer zo'n optie biedt, of dat het merk gewoon traag laadde, is zonder live Marktplaats-proef niet te meten. Niet gerepareerd. Zelfde patroon als Goudlief "Crossbodytassen" eerder (open punt).
+- Open: eerst meten wat de merkkiezer bij een onbekend merk toont (live, ingelogd), dan pas een terugval bouwen. Toon kan de opdracht opnieuw laten plaatsen; het merk "Gaudi" hoeft niet te kloppen met de lijst.
