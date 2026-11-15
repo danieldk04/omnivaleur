@@ -110,7 +110,45 @@ def test_het_eindpunt_bewaart_en_weigert_onbekend(monkeypatch):
         asyncio.run(J.meld_platform_controle({}, user_id=U))
 
 
-def test_extension_status_noemt_de_controletijden(monkeypatch):
+class _StatusQ:
+    def __init__(self, db, naam): self.db, self.naam, self.f = db, naam, {}
+    def select(self, *a): return self
+    def eq(self, k, v): self.f[k] = v; return self
+    def in_(self, *a): return self
+    def limit(self, *a): return self
+    def order(self, *a, **k): return self
+    def gte(self, *a): return self
+
+    def execute(self):
+        if self.naam == "extension_heartbeat":
+            return type("R", (), {"data": [{"last_seen": datetime.now(timezone.utc).isoformat(),
+                                            "ext_version": "1.0.421"}]})()
+        if self.naam == "platform_credentials":
+            extra = self.db.rijen.get((self.f.get("user_id"), self.f.get("platform")))
+            return type("R", (), {"data": [{"extra_data": extra}] if extra is not None else []})()
+        return type("R", (), {"data": []})()
+
+
+class _StatusDb(_Db):
+    def table(self, naam): return _StatusQ(self, naam)
+
+
+def test_extension_status_geeft_de_controletijden_mee(monkeypatch):
+    db = _StatusDb()
+    db.rijen[(U, "_controle")] = {"marktplaats": "2026-11-15T10:00:00+00:00"}
+    monkeypatch.setattr(J, "get_db", lambda: db)
+    monkeypatch.setattr(controle, "get_db", lambda: db)
+    uit = J.extension_status(user_id=U)
+    assert uit["online"] is True
+    assert uit["gecontroleerd"] == {"marktplaats": "2026-11-15T10:00:00+00:00"}
+    # Een andere verkoper krijgt de tijden van deze niet te zien.
+    controle._cache.clear()
+    assert J.extension_status(user_id=ANDER)["gecontroleerd"] == {}
+
+
+def test_een_afgeronde_scan_gebruikt_de_database_van_de_aanroep():
+    """Op 15-11 gebruikte de stempel in complete_job de echte database, ook in
+    tests met een nagebouwde: dat deed echte netwerkvragen (de volledige set
+    duurde 13 minuten in plaats van 3) en kon een rij in productie zetten."""
     import inspect
-    bron = inspect.getsource(J.extension_status)
-    assert '"gecontroleerd": controle.lees(user_id, db)' in bron
+    assert 'controle.zet(user_id, job.get("platform"), db)' in inspect.getsource(J.complete_job)

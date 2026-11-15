@@ -3995,5 +3995,9 @@
  "/ year incl. VAT": "/ jaar incl. btw",
  "/ year excl. VAT": "/ jaar excl. btw",
  "This plan is not available yet": "Dit plan is nog niet beschikbaar",
- "Use Manage subscription to make this change": "Gebruik Abonnement beheren om deze wijziging door te voeren"
+ "Use Manage subscription to make this change": "Gebruik Abonnement beheren om deze wijziging door te voeren",
+ "Queued publishes and relists run automatically — you can manage everything from your phone.{0}": "Geplande plaatsingen en herplaatsingen lopen automatisch; je kunt alles vanaf je telefoon regelen.{0}",
+ "{0} as soon as you open Chrome — with the Omnivaleur extension — on your computer.{1}": "{0} zodra je Chrome opent, met de Omnivaleur-extensie, op je computer.{1}",
+ "Last checked for sales: {0}": "Laatst nagekeken op verkopen: {0}",
+ "{0} no check reported yet": "{0} nog geen controle gemeld"
 }
