@@ -4563,6 +4563,10 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
             raise HTTPException(
                 status_code=500,
                 detail="The scan was fetched but saving it failed. Nothing was lost — run the scan again.")
+        # Een afgeronde scan is ook een controle: het dashboard laat per
+        # marktplaats zien wanneer er voor het laatst is nagekeken.
+        from backend.services import controle
+        await naast_de_lus(lambda: controle.zet(user_id, job.get("platform")))
 
     # DE LAATSTE VOORTGANGSREGEL BEWAREN.
     #
