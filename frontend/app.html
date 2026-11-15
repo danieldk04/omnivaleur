@@ -10957,10 +10957,36 @@ function renderExtensionStatus() {
         queued
           ? `Your ${queued} queued action${queued === 1 ? '' : 's'} will run`
           : 'Anything you queue from your phone will run'
-      } as soon as you open Chrome — with the Omnivaleur extension — on your computer.</div>`;
+      } as soon as you open Chrome — with the Omnivaleur extension — on your computer.${_controleRegel(data)}</div>`;
     }
     if (oud) el.innerHTML += extraOudeExtensieMelding(data);
   });
+}
+
+// WANNEER IS ELKE MARKTPLAATS VOOR HET LAATST NAGEKEKEN (15-11-2026).
+//
+// "Je computer is online" zegt niet wat er is nagekeken. Wie een koper antwoordt
+// wil weten of de verkoopcontrole van Marktplaats een uur geleden liep, of dat er
+// sinds gisteren niets meer is nagekeken en het artikel misschien al elders
+// verkocht is. De server levert per kanaal het laatste echt afgeronde moment
+// (`gecontroleerd`, zie backend/services/controle.py). Alleen kanalen waar deze
+// verkoper artikelen heeft; zonder gegevens (oudere server of extensie) niets,
+// want een verzonnen "nog niet nagekeken" is erger dan geen regel.
+function _controleRegel(data) {
+  const gez = data && data.gecontroleerd;
+  if (!gez || typeof gez !== 'object') return '';
+  const heeft = new Set((state.listings || []).map(l => l.platform));
+  const namen = { marktplaats: 'Marktplaats', '2dehands': '2dehands', vinted: 'Vinted' };
+  const delen = [];
+  for (const k of Object.keys(namen)) {
+    if (!heeft.has(k)) continue;
+    const t = gez[k] ? new Date(gez[k]).getTime() : NaN;
+    delen.push(Number.isFinite(t)
+      ? `${namen[k]} ${fmtSeenAgo(Math.max(0, Math.round((Date.now() - t) / 1000)))}`
+      : `${namen[k]} not checked yet`);
+  }
+  if (!delen.length) return '';
+  return `<div style="margin-top:4px;font-size:12px;opacity:.8">Last checked for sales: ${delen.join(' · ')}</div>`;
 }
 
 // DE MELDING MOET DE VERSIE NOEMEN DIE ER VANDAAG HOORT TE STAAN.
