@@ -840,6 +840,42 @@ def _advertentie_van_ander_artikel(db, job: dict, body: dict) -> str | None:
     return (ander[0].get("title") or "another item") if ander else None
 
 
+# Woontextiel: plaids, dekens, kleden, tapijten, kussens, spreien. Gemeten op de
+# rubrieknamen in Toons kast ("wonen plaids en woondekens", "wonen tapijten en
+# kleden", "antiek kleden en textiel").
+_WOONTEXTIEL = re.compile(
+    r"plaid|deken|kleed|kleden|tapijt|kussen|textiel|sprei|gordijn|beddengoed|dekbed",
+    re.I,
+)
+
+
+def _vinted_meerkleurig_vangnet(jobs: list) -> int:
+    """Vinted eist een kleur bij woontextiel. Heeft het artikel geen kleur en
+    staat er ook in de titel geen, dan sturen we "Various" (Meerkleurig) mee.
+
+    Waarom (Daniel, 15-11-2026, "ja zet erin"): Toon kwam in een maand met 14
+    dekens en kleden niet op Vinted door een lege kleur, en zette ze daarna zelf
+    op Meerkleurig, waarna ze wel online kwamen (09-11 en 10-11 gemeten). Alleen
+    in de uitgaande opdracht; het artikel zelf blijft ongemoeid.
+    """
+    gezet = 0
+    for j in jobs or []:
+        pl = j.get("payload")
+        if j.get("platform") != "vinted" or j.get("action") != "create":
+            continue
+        if not isinstance(pl, dict) or str(pl.get("color") or "").strip():
+            continue
+        if not _WOONTEXTIEL.search(str(pl.get("category") or "")):
+            continue
+        woorden = re.findall(r"[a-zà-ÿ]+", str(pl.get("title") or "").lower())
+        if any(canonieke_kleur(w) for w in woorden):
+            continue  # de extensie haalt de kleur zelf uit de titel
+        pl["color"] = "Various"
+        logger.info("job %s: Vinted woontextiel zonder kleur -> Various", j.get("id"))
+        gezet += 1
+    return gezet
+
+
 def _zet_kleur_goed(jobs: list) -> int:
     """Zet de kleur in elke uitgaande opdracht om naar de naam die Marktplaats
     aanbiedt. Geeft terug hoeveel er zijn aangepast.
