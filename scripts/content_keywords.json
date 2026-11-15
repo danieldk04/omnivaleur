@@ -1018,7 +1018,7 @@
       "pillar": "B",
       "format": "money_rules",
       "slug": "when-do-you-need-a-kvk-number-for-reselling-in-netherlands",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "wanneer-kvk-nummer-nodig-voor-verkopen-nederland",
       "priority": 114
     },
@@ -2099,6 +2099,16 @@
       "action": "created",
       "url_path": "/reseller-tools/etsy-shipping-settings-for-resellers",
       "published_at": "2026-11-14T14:43:38.461733+00:00"
+    },
+    {
+      "keyword": "when do you need a KvK number for reselling in Netherlands",
+      "slug": "when-do-you-need-a-kvk-number-for-reselling-in-netherlands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "action": "created",
+      "url_path": "/reseller-tools/when-do-you-need-a-kvk-number-for-reselling-in-netherlands",
+      "published_at": "2026-11-15T15:13:17.672001+00:00"
     }
   ]
 }
