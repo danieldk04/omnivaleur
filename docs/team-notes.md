@@ -19228,3 +19228,7 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - CREATOR info@janinanoetzel.com (f0cead08, Janina): niets veranderd sinds 14-11. 73 artikelen, 75 Vinted-advertenties verborgen, nog niets geplaatst, extensie stil sinds 13-11 13:01. Daniel antwoordde haar 14-11 16:11, dus geen mailtje.
 - nickspijkers100 (17e5c638), sk8mom@live.nl, gahomi7062@micropaste.com: niets veranderd, extensies stil of nooit bevestigd, geen mailtje.
 - Mailrapport: 2 mails, 0 echt geopend, 0 klik, 0 antwoord. Geen reparatie, geen mail verstuurd.
+
+## 15-11-2026: overdracht volledig bijgewerkt voor het tweede account (Claude, op verzoek van Daniel)
+- Aanleiding: Daniel zit op 91% van zijn weekruimte en wil dat het tweede account als reserve in één keer up-to-date is en zelf start. `docs/overdracht.md` was van 28-10 en is herschreven tot 15-11: nieuwe plannen en vriendenactie (uit), Google gratis sleutel, startpoort, terughaalronde, open punten, routinetabel met wat alleen op Daniels Mac draait.
+- Afspraak: het tweede account werkt alleen in de cloud (repo, Supabase, Railway, GitHub, Stripe), raakt niets aan wat aan Daniels Mac hangt en maakt geen kopie van Mac-taken. Alleen `onboarding-middag` (10:00) en `middagronde` (14:00) horen daar te draaien. Kennisbank opnieuw geëxporteerd.
