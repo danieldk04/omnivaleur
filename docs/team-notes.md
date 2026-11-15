@@ -19222,3 +19222,9 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Marktplaats create 5x (19deaa3a, 1ba42900): overgeslagen omdat het gekoppelde verwijderen faalde op hetzelfde onleesbare overzicht; juist bedoeld, voorkomt dubbele advertenties. Klant-eigen.
 - "No tab with id" 2x (1ba42900, bcdf9aa4): tabblad verdween tijdens de opdracht, geen mechanisme aanwijsbaar. Onbekend, niet gerepareerd.
 - Geen codewijziging.
+
+## 15-11-2026: Onboarding nieuwe klanten (ochtend)
+- 4 accounts in de eerste week, geen nieuwe. Web Store levert 1.0.421, repo 1.0.422.
+- CREATOR info@janinanoetzel.com (f0cead08, Janina): niets veranderd sinds 14-11. 73 artikelen, 75 Vinted-advertenties verborgen, nog niets geplaatst, extensie stil sinds 13-11 13:01. Daniel antwoordde haar 14-11 16:11, dus geen mailtje.
+- nickspijkers100 (17e5c638), sk8mom@live.nl, gahomi7062@micropaste.com: niets veranderd, extensies stil of nooit bevestigd, geen mailtje.
+- Mailrapport: 2 mails, 0 echt geopend, 0 klik, 0 antwoord. Geen reparatie, geen mail verstuurd.
