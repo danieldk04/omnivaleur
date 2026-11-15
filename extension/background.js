@@ -9074,6 +9074,20 @@ async function triggerVintedAutoScan() {
   }
 }
 
+// Meld de server dat de verkoopcontrole van dit kanaal echt iets heeft gelezen,
+// zodat het dashboard per marktplaats kan tonen wanneer er voor het laatst is
+// nagekeken. Nooit blokkerend en nooit een fout: de controle zelf gaat voor.
+async function meldControle(platform) {
+  try {
+    const serverUrl = await getServerUrl();
+    const headers = await getAuthHeaders();
+    if (!headers.Authorization) return;
+    await fetch(`${serverUrl}/api/jobs/platform-check`, {
+      method: "POST", headers, body: JSON.stringify({ platform }),
+    });
+  } catch (_) { /* geen stempel is beter dan een kapotte controle */ }
+}
+
 async function checkSoldListings() {
   const serverUrl = await getServerUrl();
   const soldUrls = {
