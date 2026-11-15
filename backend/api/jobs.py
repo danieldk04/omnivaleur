@@ -3549,12 +3549,29 @@ def extension_status(user_id: str = Depends(get_current_user)):
         return {"online": False, "last_seen": None, "seconds_ago": None, **oud}
 
     seconds_ago = int((datetime.now(timezone.utc) - last_seen).total_seconds())
+    from backend.services import controle
     return {
         "online": seconds_ago <= EXTENSION_ONLINE_WINDOW_SECONDS,
         "last_seen": last_seen.isoformat(),
         "seconds_ago": max(0, seconds_ago),
+        # Per marktplaats wanneer er echt is nagekeken (zie services/controle.py).
+        "gecontroleerd": controle.lees(user_id, db),
         **oud,
     }
+
+
+@router.post("/platform-check")
+async def meld_platform_controle(body: dict, user_id: str = Depends(get_current_user)):
+    """De extensie meldt: de verkoopcontrole van dit kanaal is zojuist echt
+    afgerond. Alleen bekende kanalen; een controle die niets kon lezen meldt zich
+    niet aan (dat bewaakt de extensie), anders zegt het dashboard 'net nagekeken'
+    terwijl er niets is nagekeken."""
+    from backend.services import controle
+    kanaal = (body or {}).get("platform")
+    if kanaal not in controle.KANALEN:
+        raise HTTPException(status_code=422, detail="Unknown platform")
+    bewaard = await naast_de_lus(lambda: controle.zet(user_id, kanaal))
+    return {"ok": bool(bewaard)}
 
 
 _ZELF_LEZEN = object()
