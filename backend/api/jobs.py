@@ -5,7 +5,7 @@ from backend.services.light import neem_plaatsing_terug_boven_limiet
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.api.imports import _backfill_item_from_candidate
 from backend.services.crosslist import handle_item_sold, BEWIJS_KANAAL_ZEGT_VERKOCHT
-from backend.services.kleur import normaliseer_kleur
+from backend.services.kleur import normaliseer_kleur, canonieke_kleur
 from datetime import datetime, timezone, timedelta
 from types import SimpleNamespace
 import logging
@@ -851,7 +851,8 @@ _WOONTEXTIEL = re.compile(
 
 def _vinted_meerkleurig_vangnet(jobs: list) -> int:
     """Vinted eist een kleur bij woontextiel. Heeft het artikel geen kleur en
-    staat er ook in de titel geen, dan sturen we "Various" (Meerkleurig) mee.
+    staat er een in de titel, dan sturen we die mee, en anders "Various"
+    (Meerkleurig).
 
     Waarom (Daniel, 15-11-2026, "ja zet erin"): Toon kwam in een maand met 14
     dekens en kleden niet op Vinted door een lege kleur, en zette ze daarna zelf
@@ -867,11 +868,15 @@ def _vinted_meerkleurig_vangnet(jobs: list) -> int:
             continue
         if not _WOONTEXTIEL.search(str(pl.get("category") or "")):
             continue
-        woorden = re.findall(r"[a-zà-ÿ]+", str(pl.get("title") or "").lower())
-        if any(canonieke_kleur(w) for w in woorden):
-            continue  # de extensie haalt de kleur zelf uit de titel
-        pl["color"] = "Various"
-        logger.info("job %s: Vinted woontextiel zonder kleur -> Various", j.get("id"))
+        # Eerst een kleur uit de titel ("roodbruin", "lindegroen", "kleurrijk"):
+        # de extensie kent die woorden niet allemaal, de server wel.
+        uit_titel: list[str] = []
+        for w in re.findall(r"[a-zà-ÿ]+", str(pl.get("title") or "").lower()):
+            k = canonieke_kleur(w)
+            if k and k not in uit_titel:
+                uit_titel.append(k)
+        pl["color"] = ", ".join(uit_titel[:2]) or "Various"
+        logger.info("job %s: Vinted woontextiel zonder kleur -> %s", j.get("id"), pl["color"])
         gezet += 1
     return gezet
 
@@ -3346,6 +3351,7 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # zoals de verkoper het schreef — nooit een verzonnen kleur. Vinted heeft een
     # eigen kleurenlijst en blijft hier buiten.
     _zet_kleur_goed(ready)
+    _vinted_meerkleurig_vangnet(ready)
     _vinted_titelgenoten_meegeven(db, user_id, ready)
 
     # Wie het eerst geholpen wordt: de gebruiker. Een scan die toevallig eerder in
@@ -4602,7 +4608,7 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
         # Een afgeronde scan is ook een controle: het dashboard laat per
         # marktplaats zien wanneer er voor het laatst is nagekeken.
         from backend.services import controle
-        await naast_de_lus(lambda: controle.zet(user_id, job.get("platform")))
+        await naast_de_lus(lambda: controle.zet(user_id, job.get("platform"), db))
 
     # DE LAATSTE VOORTGANGSREGEL BEWAREN.
     #
