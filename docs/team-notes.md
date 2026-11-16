@@ -19282,3 +19282,8 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Gedraaid om 08:03 UTC, vlak na de ochtendronde (10befad7). 16 foutsoorten in 24 uur, 0 open: alles al beoordeeld, niets nieuws sinds de ochtendronde.
 - Wachtrij nagemeten: de twee klanten die nu online zijn (26cf5471, 96e30080) werken hun MP-verversingen af, elke twee minuten een verwijder/plaats-paar, geen rem. De overige wachtrijen (onder meer 5aae4954 568, bcdf9aa4 259, 0b28c1ce 200) staan stil omdat hun extensie uren tot dagen offline is: klant-eigen. Eén opdracht op claimed, net begonnen.
 - /health ok op 10befad7. Geen reparatie, geen codewijziging. Niet gemeten: fouten die alleen in de browser van de klant staan.
+
+## 16-11-2026 (middag): Kennisoverdracht als routine (Daniel)
+- Daniel: overdracht moet 1 op 1 kloppen en elke sessie en elke dag bijgehouden worden, door beide ontwikkelaars. Gedaan: overdracht.md bijgewerkt tot 16-11 (klantstand 15-16 november, terughaal opvolging, social video-stand, python3.13, schijf 94%), nieuw `docs/routines/kennisoverdracht.md`, sectie bovenaan CLAUDE.md, geplande taak `omnivaleur-kennisoverdracht-avond` (22:30, tweede account).
+- Nog te doen op Daniels hoofdaccount: taak `omnivaleur-kennisoverdracht-ochtend` (07:45) aanmaken; staat beschreven in de routine.
+- Gemeten: deze sessie draait onder /Users/Danie en ziet ~/.omnivaleur en alle scheduled-tasks-mappen van Daniel, dus waarschijnlijk dezelfde Mac. Niet bewezen. Niet gecontroleerd: MAIL_PASS in .env (controle geweigerd door de beveiligingsfilter).
