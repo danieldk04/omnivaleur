@@ -19350,3 +19350,8 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Daniels eigen account (3bfbed2c): 2dehands-plaatsing Suitsupply-vest (1323) wacht sinds 10:19 UTC op zijn Marktplaats-rubriek (_rubriek_zoeken_sinds, 55 pogingen); gaat volgens ontwerp uiterlijk 16:19 UTC alsnog uit. Geen fout.
 - Overig wachtend werk (5aae4954, 0b28c1ce, f0cead08, Janneke 31d28378, 1ba42900, cfe8c210, 8f91a370): extensie sinds gisteren of langer stil, klant-eigen.
 - Niets gerepareerd, geen commit nodig buiten deze notitie.
+
+## 16-11-2026 (16:30, automatisch): Klantfouten
+- Soort fout-vinted-create-5d3424e2: 1 keer, Toon (96e30080), 16-11 14:21 UTC, extensie 1.0.423, vloerkleed "Kleed vloerkleed geel bruin franjes 147/68" (rubriek wonen tapijten en kleden). Vinted-formulier bleef leeg: geen rubriek, geen prijs, 0 foto's vastgehouden. Marktplaats en 2dehands van hetzelfde artikel gingen om 14:19 wel goed.
+- Gemeten: dezelfde rubriek en hetzelfde pad (Home, Textiles, Rugs & mats, Rugs) lukten bij Toon op 11-11 (twee kleden) en 15-11 22:00, dus de rubrieklijst is niet kapot. Het formulier zelf was al leeg toen er gecontroleerd werd; de oorzaak (formulier niet geladen of door Vinted teruggezet) is niet aan te wijzen, de uitslag bewaart geen stappenlogboek.
+- Niet gerepareerd: geen bewezen oorzaak, eenmalig. Oordeel: onbekend. Open: komt dit bij een tweede vloerkleed terug, dan de stappen in de uitslag bewaren (laatste stap) en zien of het vullen van de rubriek wel gestart is.
