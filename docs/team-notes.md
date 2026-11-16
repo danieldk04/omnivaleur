@@ -19265,3 +19265,9 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 ## 15-11-2026 (17:10, automatisch): Klantfouten
 - fout-marktplaats-delete-cf538d73: 1x bij klant 31d28378, verversing (verwijderen en opnieuw plaatsen) van "Jas Name It maat 56" (m2454868264). Dezelfde klant verwerkte om 16:16 tot 16:18 UTC drie verwijder/plaats-paren zonder fout. Deze delete werd 16:29 geclaimd, duurde 18 minuten en eindigde met "Advert page: fetch: Failed to fetch": de extensie kon op dat moment geen verbinding met Marktplaats maken (computer in slaap, netwerk of tijdelijke blokkade). Het veiligheidspad deed wat het moet: niets verwijderd, advertentie staat nog actief, de bijbehorende nieuwe plaatsing blijft pending (geen dubbele). Geen mechanisme in onze code aanwijsbaar, eenmalig. Geen codewijziging.
 - Open: komt het bij dezelfde klant terug, dan de duur tussen claim en fout meten (marktplaats_rem of slaapstand).
+
+## 16-11-2026: Dagelijkse klantfouten
+- Gemeten ~08:00 UTC over 24 uur: 1.243 afgeronde opdrachten bij 10 klanten, 101 fouten. Bijna alles was gisteren al beoordeeld door de middagrondes (1ba42900 uitgelogd op 2dehands 52x, Toon Bieden-zoekertjes, Facebook Staat-veld, MP "Not published" bij Toon). Geen reparatie, geen codewijziging.
+- Nieuw: Toon (96e30080) kelim KEXL33, MP en Vinted 23:58 "None of the 5 photos": foto's staan alleen op images.marktplaats.com (import 05-09, voor de spiegelreparatie a614bf0a), de advertentie is weg en de adressen geven nu 404 (zelf nagemeten). Niet te herstellen door ons; Toon moet foto's opnieuw toevoegen. Bij Toon staan nog 20 van 1.688 artikelen alleen op Marktplaats-fotoadressen.
+- Nieuw: 26cf5471 MP-plaatsing time-out: geclaimd 22:01, laatste stap 03:26, fout pas 07:12. Computer sliep, eenmalig, klant-eigen.
+- Geen opdrachten langer dan 30 minuten op claimed. /health ok op c43739af. Niet gemeten: Railway-log en fouten die alleen in de browser van de klant staan.
