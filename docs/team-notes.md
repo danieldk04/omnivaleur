@@ -19277,3 +19277,8 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Beide geplande taken stonden er al en staan aan: omnivaleur-onboarding-nieuwe-klanten-middag (10:05) en omnivaleur-klantfouten-middagronde (14:05). Niets dubbel aangemaakt.
 - Klantfouten van vandaag stond al in team-notes (08:00 UTC), dus geen eerste ronde nodig; kale lezing: 16 foutsoorten, 0 open. Onboarding draait vanzelf om 10:05.
 - Niet gecontroleerd: of MAIL_PASS in .env staat (die controle werd geweigerd). Tot dat vaststaat verstuurt deze account geen onboardingmails.
+
+## 16-11-2026 (middag): Dagelijkse klantfouten
+- Gedraaid om 08:03 UTC, vlak na de ochtendronde (10befad7). 16 foutsoorten in 24 uur, 0 open: alles al beoordeeld, niets nieuws sinds de ochtendronde.
+- Wachtrij nagemeten: de twee klanten die nu online zijn (26cf5471, 96e30080) werken hun MP-verversingen af, elke twee minuten een verwijder/plaats-paar, geen rem. De overige wachtrijen (onder meer 5aae4954 568, bcdf9aa4 259, 0b28c1ce 200) staan stil omdat hun extensie uren tot dagen offline is: klant-eigen. Eén opdracht op claimed, net begonnen.
+- /health ok op 10befad7. Geen reparatie, geen codewijziging. Niet gemeten: fouten die alleen in de browser van de klant staan.
