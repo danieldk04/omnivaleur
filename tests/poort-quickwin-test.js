@@ -37,6 +37,10 @@ ok("artikel dat al live staat valt af", t.P.besteArtikel({ gekozen: ["marktplaat
 t = bouw({}, { items: [item("a")], listings: [] }, { missingFieldsForPlatform: klaar });
 ok("Marktplaats gaat voor Vinted", t.P.besteArtikel({ gekozen: ["vinted", "marktplaats"], nietIngelogd: [] }).kanaal === "marktplaats");
 
+t = bouw({}, { items: [item("v", { photo_urls: ["https://images1.vinted.net/a.jpeg"] }), item("e", { photo_urls: ["https://img.omnivaleur.com/a.jpg"] })], listings: [] }, { missingFieldsForPlatform: klaar });
+ok("Marktplaats: eerst het artikel met eigen foto's, niet de Vinted-fotolink", t.P.besteArtikel({ gekozen: ["marktplaats"], nietIngelogd: [] }).item.id === "e");
+ok("Vinted zelf mag wel een Vinted-foto", t.P.besteArtikel({ gekozen: ["vinted"], nietIngelogd: [] }).item.id === "v");
+
 console.log("2. Automatisch inlezen");
 let aantal = 0, scherm = null;
 t = bouw({}, { items: [], listings: [] }, { importAllesBezig: false, importeerAlleKanalen: () => { aantal++; return Promise.resolve(); }, showView: (v) => { scherm = v; } });

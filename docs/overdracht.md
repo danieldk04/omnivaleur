@@ -124,6 +124,16 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
 
 ## Wat nu open staat (niemand hoeft te wachten op Daniel tenzij er "beslissing" staat)
 
+- 16-11: quick win voor nieuwe klanten gebouwd en live (poort.js, account.py). Meting: van 22
+  aanmelders in 30 dagen kwam 45% nooit bij een artikel, eerste artikel pas na 30 tot 150 min.
+  Nu: inlezen start vanzelf zodra extensie en login kloppen (elke 10 min opnieuw zolang er geen
+  artikel is), dan staat er één artikel klaar met "Place it now" (Marktplaats, 2dehands, Vinted,
+  geen Facebook; alleen artikelen zonder ontbrekende velden; eigen foto's eerst), na 10 min vast
+  een knop "Help me" (mail naar Daniel, antwoordadres de klant), en op de telefoon mailt de server
+  de link naar de computer. NOG NIET GEZIEN met een echt nieuw account in Chrome; de proef
+  hierna is de eerstvolgende aanmelder. Open: de mail na een uur stilstand en de extensie
+  forceren te updaten zijn niet gebouwd. Proefklok blijft vanaf aanmelding (Daniel besloot).
+
 - **Nieuw sinds 16-11: verlopen advertenties zijn zichtbaar** (klokje op het kanaalicoon, tabblad
   Expired bij Items, regel onder de kanaaltegel, popup en rondleiding; team-notes "verlopen
   advertenties zichtbaar"). Nog te doen door wie eerst werkt: op telefoonbreedte nalopen, en de

@@ -19359,3 +19359,15 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 ## 16-11-2026: mail "prijswijziging op 2dehands staat stil" bij Toon was geen storing
 - Dezelfde opdracht (ccbac237, 15-11) als de mail van gisteren: "2dehands edit form shows no price field", zoekertje Bieden/zie omschrijving zonder vraagprijs. Klant-eigen. De rem hield Toons twee andere prijswijzigingen vast en mailde elke 24 uur opnieuw.
 - Gerepareerd in `_bijwerken_2dh_staat_stil` (jobs.py): een prijsfout met "shows no price field" telt niet mee voor de rem en geeft geen mail. Proef in tests/test_2dehands_verzendkosten_bijwerken.py faalt op de oude code. Echte aanroep op Toons account: rem nu open, geen mail. Echte prijsfouten houden de rem nog steeds dicht.
+
+## 16-11-2026: Etsy API-app aangevraagd (Daniel)
+- Daniel diende zelf de aanvraag "omnivaleur" in op etsy.com/developers (app naam omnivaleur). Status: Pending Personal Approval, sleutel nog niet actief, geen melding bij afwijzing. Limiet 5 QPS en 5K QPD. De sleutel en het geheim staan bewust NIET in de repo; Daniel heeft ze.
+- Risico's uit de API Terms, nog niet getoetst door Etsy: art. 4 (geen vergoeding vragen voor het Etsy-deel; wij vragen 19,99 per maand), art. 4 (API niet primair gebruiken om verkeer van Etsy weg te sturen), art. 1 (opslag: itemcontent max 6 uur oud, overig 24 uur; wij bewaren geimporteerde artikelen langer).
+- Voor livegang verplicht: trademarktekst "The term 'Etsy' is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.", zichtbaar contactmailadres, voorwaarden en privacybeleid, alleen API (nooit scrapen in de extensie).
+- Plan: wachten op goedkeuring, eerst plaatsen naar Etsy en verkopen syncen, niet bouwen voor akkoord.
+
+## 16-11-2026: Quick win in de eerste minuten voor nieuwe klanten (Daniel)
+- Meting (22 aanmelders, 30 dagen): 10 van 22 nul artikelen, 8 installeerden de extensie nooit, 1 van 12 met voorraad betaalt, eerste artikel na 30 tot 150 min. Zeker: de aantallen. Onbekend: waarom 5 klanten met gelukte plaatsingen niet betaalden.
+- Daniel koos: automatisch inlezen, eerste plaatsing met één knop en een kleine goedkeuring, hulp bij stilstand, extensiedrempel (link per mail), minder fouten in week 1. Niet: eenklik-koppelingen, proefklok vanaf eerste artikel (blijft vanaf aanmelding). Idee voor later (Uitgesteld in de sheet): verkooptips per artikel uit onze verkoopdata.
+- Gebouwd in frontend/poort.js en backend/api/account.py (twee eindpunten, tests/test_nieuwe_klant_hulp.py en tests/poort-quickwin-test.js). Niet gezien met een echt nieuw account.
+

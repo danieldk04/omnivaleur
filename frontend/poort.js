@@ -402,8 +402,13 @@
     const levend = new Set((S.listings || []).filter((l) => l.status === "active").map((l) => l.item_id));
     const kandidaten = S.items.filter((i) => !i.sold && i.status !== "sold" && !levend.has(i.id)
       && Number(i.price) > 0 && i.photo_urls && i.photo_urls.length && String(i.description || "").trim());
+    // Foto's die nog bij Vinted zelf staan laten zich op Marktplaats niet ophalen
+    // (12fc61d0: "None of the 11 photos could be downloaded"). Liever eerst een artikel
+    // met eigen foto's, zodat de eerste plaatsing niet op een foutmelding eindigt.
+    const vintedFoto = (i) => /vinted\.net/.test(String((i.photo_urls || [])[0] || ""));
     for (const p of volgorde) {
-      for (const i of kandidaten) {
+      const lijst = p === "vinted" ? kandidaten : [...kandidaten].sort((a, b) => vintedFoto(a) - vintedFoto(b));
+      for (const i of lijst) {
         let ontbreekt = [1];
         try { ontbreekt = mf(i, p); } catch (e) { /* telt als niet klaar */ }
         if (!ontbreekt.length) return { item: i, kanaal: p };
