@@ -24,22 +24,24 @@ const item = (id, o) => Object.assign({ id, title: "Jas " + id, price: 25, descr
 const klaar = () => [];
 
 console.log("1. Beste artikel voor de eerste plaatsing");
+const ING = (...p) => Object.fromEntries(p.map((k) => [k, { ingelogd: true }]));
 let t = bouw({}, { items: [item("a", { price: 0 }), item("b", { photo_urls: [] }), item("c")], listings: [] },
   { missingFieldsForPlatform: (i, p) => (i.id === "c" ? [] : ["x"]) });
-let b = t.P.besteArtikel({ gekozen: ["marktplaats"], nietIngelogd: [] });
+let b = t.P.besteArtikel({ kanalen: ING("marktplaats") });
 ok("kiest het artikel met foto, prijs en niets ontbrekend", b && b.item.id === "c" && b.kanaal === "marktplaats", b);
-ok("geen kanaal gekozen: geen artikel", t.P.besteArtikel({ gekozen: [], nietIngelogd: [] }) === null);
-ok("kanaal bewezen uitgelogd: geen artikel", t.P.besteArtikel({ gekozen: ["marktplaats"], nietIngelogd: ["marktplaats"] }) === null);
+ok("geen ingelogd kanaal: geen artikel", t.P.besteArtikel({ kanalen: {} }) === null);
+ok("kanaal bewezen uitgelogd: geen artikel", t.P.besteArtikel({ kanalen: { marktplaats: { ingelogd: false } } }) === null);
 t = bouw({}, { items: [item("a")], listings: [] }, { missingFieldsForPlatform: () => ["category"] });
-ok("alles mist iets: geen artikel (nooit meteen een foutmelding)", t.P.besteArtikel({ gekozen: ["vinted"], nietIngelogd: [] }) === null);
-t = bouw({}, { items: [item("a")], listings: [{ item_id: "a", status: "active" }] }, { missingFieldsForPlatform: klaar });
-ok("artikel dat al live staat valt af", t.P.besteArtikel({ gekozen: ["marktplaats"], nietIngelogd: [] }) === null);
+ok("alles mist iets: geen artikel (nooit meteen een foutmelding)", t.P.besteArtikel({ kanalen: ING("vinted") }) === null);
+t = bouw({}, { items: [item("a")], listings: [{ item_id: "a", platform: "marktplaats", status: "active" }] }, { missingFieldsForPlatform: klaar });
+ok("al live op Marktplaats: valt daar af", t.P.besteArtikel({ kanalen: ING("marktplaats") }) === null);
+b = t.P.besteArtikel({ kanalen: ING("marktplaats", "2dehands") });
+ok("maar mag wel naar 2dehands (de echte winst na een Marktplaats-import)", b && b.kanaal === "2dehands", b);
 t = bouw({}, { items: [item("a")], listings: [] }, { missingFieldsForPlatform: klaar });
-ok("Marktplaats gaat voor Vinted", t.P.besteArtikel({ gekozen: ["vinted", "marktplaats"], nietIngelogd: [] }).kanaal === "marktplaats");
-
+ok("Marktplaats gaat voor Vinted", t.P.besteArtikel({ kanalen: ING("vinted", "marktplaats") }).kanaal === "marktplaats");
 t = bouw({}, { items: [item("v", { photo_urls: ["https://images1.vinted.net/a.jpeg"] }), item("e", { photo_urls: ["https://img.omnivaleur.com/a.jpg"] })], listings: [] }, { missingFieldsForPlatform: klaar });
-ok("Marktplaats: eerst het artikel met eigen foto's, niet de Vinted-fotolink", t.P.besteArtikel({ gekozen: ["marktplaats"], nietIngelogd: [] }).item.id === "e");
-ok("Vinted zelf mag wel een Vinted-foto", t.P.besteArtikel({ gekozen: ["vinted"], nietIngelogd: [] }).item.id === "v");
+ok("Marktplaats: eerst het artikel met eigen foto's, niet de Vinted-fotolink", t.P.besteArtikel({ kanalen: ING("marktplaats") }).item.id === "e");
+ok("Vinted zelf mag wel een Vinted-foto", t.P.besteArtikel({ kanalen: ING("vinted") }).item.id === "v");
 
 console.log("2. Automatisch inlezen");
 let aantal = 0, scherm = null;

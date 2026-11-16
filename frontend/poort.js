@@ -396,17 +396,21 @@
   P.besteArtikel = function (f) {
     const S = g("state"); const mf = g("missingFieldsForPlatform");
     if (!S || !Array.isArray(S.items) || typeof mf !== "function") return null;
-    const kan = (f && f.gekozen ? f.gekozen : []).filter((p) => SCANBAAR.includes(p));
-    const ingelogd = (p) => !((f && f.nietIngelogd) || []).includes(p);
-    const volgorde = ["marktplaats", "2dehands", "vinted"].filter((p) => kan.includes(p) && ingelogd(p));
-    const levend = new Set((S.listings || []).filter((l) => l.status === "active").map((l) => l.item_id));
-    const kandidaten = S.items.filter((i) => !i.sold && i.status !== "sold" && !levend.has(i.id)
+    // Waar mag het heen? Elk kanaal waar de extensie bewezen is ingelogd. Een klant die net zijn
+    // Marktplaats las heeft die artikelen daar al staan: de winst zit op een ANDER kanaal
+    // (16-11-2026, gemeten op Daniels eigen import van 253 artikelen: allemaal al live op MP).
+    const kanalen = (f && f.kanalen) || {};
+    const volgorde = ["marktplaats", "2dehands", "vinted"].filter((p) => kanalen[p] && kanalen[p].ingelogd === true);
+    const liveOp = (p) => new Set((S.listings || []).filter((l) => l.platform === p && ["active", "pending", "publishing"].includes(l.status)).map((l) => l.item_id));
+    const basis = S.items.filter((i) => !i.sold && i.status !== "sold"
       && Number(i.price) > 0 && i.photo_urls && i.photo_urls.length && String(i.description || "").trim());
     // Foto's die nog bij Vinted zelf staan laten zich op Marktplaats niet ophalen
     // (12fc61d0: "None of the 11 photos could be downloaded"). Liever eerst een artikel
     // met eigen foto's, zodat de eerste plaatsing niet op een foutmelding eindigt.
     const vintedFoto = (i) => /vinted\.net/.test(String((i.photo_urls || [])[0] || ""));
     for (const p of volgorde) {
+      const live = liveOp(p);
+      const kandidaten = basis.filter((i) => !live.has(i.id));
       const lijst = p === "vinted" ? kandidaten : [...kandidaten].sort((a, b) => vintedFoto(a) - vintedFoto(b));
       for (const i of lijst) {
         let ontbreekt = [1];
