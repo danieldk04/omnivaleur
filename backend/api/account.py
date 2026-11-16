@@ -237,3 +237,108 @@ async def verwijder_mijn_account(body: WisVerzoek, user=Depends(get_current_user
         )
     logger.info("Account %s gewist: %s", user.id, uitkomst)
     return {"ok": True}
+
+
+# ── Eerste minuten van een nieuwe klant (Daniel, 16-11-2026) ──────────────────
+# Meting: 36% van de aanmelders installeerde de extensie nooit, en wie vastliep
+# kwam bij Daniel terecht. Twee kleine hulpjes: de link naar de eigen computer
+# mailen (voor wie zich op de telefoon aanmeldde) en om hulp kunnen vragen.
+import time as _time
+
+_LINK_MAILS: dict[str, list[float]] = {}
+_HULP_VRAGEN: dict[str, float] = {}
+LINK_LIMIET = 3          # per klant per uur
+HULP_PAUZE_S = 6 * 3600  # één hulpvraag per zes uur per klant
+APP_LINK = "https://omnivaleur.com/app"
+
+
+def _link_mogelijk(uid: str, nu: float) -> bool:
+    recent = [t for t in _LINK_MAILS.get(uid, []) if nu - t < 3600]
+    _LINK_MAILS[uid] = recent
+    if len(recent) >= LINK_LIMIET:
+        return False
+    recent.append(nu)
+    return True
+
+
+def link_mail() -> tuple[str, str]:
+    onderwerp = "Je link naar Omnivaleur / Your link to Omnivaleur"
+    tekst = f"""Hoi,
+
+Open deze link in Google Chrome op je computer en log in met hetzelfde account:
+{APP_LINK}
+
+Daar installeer je in een paar klikken de extensie, en daarna leest Omnivaleur je
+advertenties zelf in. Op je telefoon kun je daarna alles bekijken.
+
+Loop je ergens op vast? Beantwoord gewoon deze mail.
+
+Groet,
+Daniel
+Oprichter, Omnivaleur
+
+
+In English:
+
+Hi,
+
+Open this link in Google Chrome on your computer and sign in with the same account:
+{APP_LINK}
+
+You install the extension there in a few clicks, and after that Omnivaleur reads your
+adverts by itself. On your phone you can look at everything afterwards.
+
+Stuck somewhere? Just reply to this email.
+
+Best regards,
+Daniel
+Founder, Omnivaleur
+"""
+    return onderwerp, tekst
+
+
+@router.post("/link-naar-computer")
+async def link_naar_computer(user=Depends(get_current_user_full)):
+    from backend.services.email import send_email_checked
+    if not user.email:
+        raise HTTPException(status_code=400, detail="No email address on this account")
+    if not _link_mogelijk(user.id, _time.time()):
+        raise HTTPException(status_code=429, detail="The link was just sent. Check your inbox and spam folder.")
+    onderwerp, tekst = link_mail()
+    try:
+        await asyncio.to_thread(send_email_checked, onderwerp, tekst, user.email)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("link naar computer niet verstuurd naar %s: %s", user.id, e)
+        _LINK_MAILS.get(user.id, []).clear()
+        raise HTTPException(status_code=502, detail="The email could not be sent right now. Use Copy link instead.")
+    return {"ok": True}
+
+
+class HulpVraag(BaseModel):
+    fase: str = ""
+    sub: str = ""
+
+
+@router.post("/hulp-vragen")
+async def hulp_vragen(body: HulpVraag, user=Depends(get_current_user_full)):
+    """Een nieuwe klant die vastzit drukt op 'Ik help je'. Daniel krijgt een mail
+    met het adres, de fase waar hij vastzit en wanneer hij zich aanmeldde."""
+    from backend.services.email import send_email_checked
+    nu = _time.time()
+    if nu - _HULP_VRAGEN.get(user.id, 0) < HULP_PAUZE_S:
+        return {"ok": True, "al_gevraagd": True}
+    _HULP_VRAGEN[user.id] = nu
+    fase = (body.fase or "onbekend")[:30]
+    sub = (body.sub or "")[:30]
+    tekst = (f"Een nieuwe klant vraagt om hulp.\n\nAdres: {user.email}\nGebruiker: {user.id}\n"
+             f"Aangemeld: {getattr(user, 'created_at', None)}\nVast bij: {fase} {sub}\n\n"
+             f"Beantwoord deze mail om hem direct te helpen.")
+    try:
+        await asyncio.to_thread(send_email_checked, f"Hulpvraag nieuwe klant: {user.email}", tekst,
+                                None, user.email)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("hulpvraag van %s niet verstuurd: %s", user.id, e)
+        _HULP_VRAGEN.pop(user.id, None)
+        raise HTTPException(status_code=502, detail="Your request could not be sent. Email us at the address on this page instead.")
+    return {"ok": True}
+

@@ -195,7 +195,6 @@
     const link = "https://omnivaleur.com/app";
     if (r.sub === "telefoon" || r.sub === "andere") {
       const tel = r.sub === "telefoon";
-      const mail = opslag.lees("cl_email") || "";
       return `<div>
           <h2>${tel ? "Continue on your computer" : "Open this page in Chrome"}</h2>
           <p>${tel
@@ -203,7 +202,7 @@
             : "Omnivaleur needs Google Chrome on a computer to place your adverts. Safari and Firefox can't run the extension."}</p>
           <ul class="pt-lijst"><li><i>1</i><span>Open <b>omnivaleur.com/app</b> in Chrome on your computer.</span></li><li><i>2</i><span>Sign in with the same account. This page continues from there.</span></li></ul>
           <div style="display:flex;gap:10px;flex-wrap:wrap">
-            ${tel && mail ? `<a class="pt-groot" href="mailto:${esc(mail)}?subject=${encodeURIComponent("Omnivaleur link")}&body=${encodeURIComponent(link)}">Email me the link</a>` : ""}
+            ${tel ? `<button class="pt-groot" id="pt-link-knop" onclick="OBPoort.mailLink()">Email me the link</button>` : ""}
             <button class="pt-licht" onclick="OBPoort.kopieer()">Copy link</button>
           </div></div>${beeldChrome("Chrome on your computer")}`;
     }
@@ -250,6 +249,50 @@
       </div>`;
   }
 
+  // ── Hulp als je vastzit (Daniel, 16-11-2026) ────────────────────────────────
+  // Na tien minuten in dezelfde stap komt er een knop: één druk en Daniel krijgt
+  // een mail met wie het is en waar hij vastzit.
+  const VAST_NA_MS = 10 * 60 * 1000;
+  let faseSleutel = "", faseSinds = Date.now(), hulpGevraagd = false;
+  function vastZit() { return Date.now() - faseSinds > VAST_NA_MS; }
+  function hulpBlok() {
+    if (!vastZit()) return "";
+    return `<div class="pt-kaart" style="grid-template-columns:1fr;margin-top:16px;padding:18px 22px">
+      ${hulpGevraagd ? "<p style='margin:0'><b>Thanks, we got your request.</b> You will get an email soon with the next step.</p>"
+        : `<p style="margin:0 0 10px"><b>Stuck on this step?</b> Press the button and we help you get your first advert online.</p>
+           <button class="pt-groot" style="padding:10px 20px;font-size:13px" onclick="OBPoort.hulpVragen()">Help me, please</button>`}
+    </div>`;
+  }
+  P.hulpVragen = async function () {
+    try {
+      const api = g("API"), fetcher = g("apiFetch");
+      const res = await fetcher(`${api}/api/account/hulp-vragen`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fase: huidig.fase || "", sub: huidig.sub || "" }),
+      });
+      if (!res.ok) throw new Error("http " + res.status);
+      hulpGevraagd = true;
+    } catch (e) {
+      const t = g("showToast"); if (typeof t === "function") t("Could not send your request. Email info@omnivaleur.com instead.");
+    }
+    P.tik();
+  };
+  P.mailLink = async function () {
+    const knop = document.getElementById("pt-link-knop");
+    const t = g("showToast");
+    if (knop) { knop.disabled = true; knop.textContent = "Sending…"; }
+    try {
+      const api = g("API"), fetcher = g("apiFetch");
+      const res = await fetcher(`${api}/api/account/link-naar-computer`, { method: "POST" });
+      if (!res.ok) { let d = null; try { d = await res.json(); } catch (e) { /* geen json */ } throw new Error((d && d.detail) || "http " + res.status); }
+      if (knop) knop.textContent = "Link sent, check your inbox";
+      if (typeof t === "function") t("We emailed you the link. Open it in Chrome on your computer.");
+    } catch (e) {
+      if (knop) { knop.disabled = false; knop.textContent = "Email me the link"; }
+      if (typeof t === "function") t(String(e.message || "Could not send the email. Use Copy link instead."));
+    }
+  };
+
   function overlayHtml(r, f) {
     const pas = STAP_NAMEN.map((t, i) => {
       const nr = i + 1;
@@ -261,6 +304,7 @@
         <p class="pt-belofte">Four short steps and your first advert is on another marketplace. The dashboard opens as soon as the first two are done.</p>
         <div class="pt-lijn">${pas}</div>
         <div class="pt-kaart">${r.fase === "extensie" ? inhoudExtensie(r) : inhoudKanalen(r, f)}</div>
+        ${hulpBlok()}
         <div class="pt-voet">Stuck? <a onclick="OBPoort.helpOpen()">Open Help</a> or <a href="mailto:info@omnivaleur.com">email us</a>. We reply within one business day.</div>
       </div>`;
   }
@@ -306,6 +350,8 @@
     if (wijsDoel) { wijsDoel.classList.remove("pt-wijs"); wijsDoel = null; }
   }
   function coach(html) {
+    if (html && vastZit() && !hulpGevraagd) html += `<div class="pt-cb" style="margin-top:10px"><button class="btn btn-sm btn-outline" onclick="OBPoort.hulpVragen()">Stuck? Help me</button></div>`;
+    else if (html && hulpGevraagd) html += `<p style="margin-top:8px"><b>Thanks, we got your request.</b></p>`;
     let el = document.getElementById("ob-coach");
     if (!html) { if (el) el.style.display = "none"; return; }
     if (!el) { el = document.createElement("div"); el.id = "ob-coach"; document.body.appendChild(el); }
@@ -457,6 +503,8 @@
       laatsteFeiten = f;
       const r = P.fase(f);
       huidig = r;
+      const sl = r.fase + "|" + (r.sub || "");
+      if (sl !== faseSleutel) { faseSleutel = sl; faseSinds = Date.now(); }
       const view = actieveView();
       // Mag hij hier nog zijn? Zo niet: naar waar het wel mag.
       if (view && !P.toegestaan(r.fase, view) && view !== P.terugval(r.fase)) { const sv = g("showView"); if (typeof sv === "function") sv(P.terugval(r.fase)); }
