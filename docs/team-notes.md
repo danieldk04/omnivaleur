@@ -19382,3 +19382,7 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Fout van mij: een eerste meting op jobs zonder user_id liep in een statement timeout. Alleen per user_id meten (zie meten-op-de-productiedatabase).
 - Open: nog geen echte scan met 1.0.425; de hele flow is niet gezien met een echt nieuw account, want een account aanmaken en bevestigen kan ik niet.
 
+
+## 16-11-2026 (18:00, automatisch): Klantfouten
+- Soort fout-shopify-scan-b18675c1: 1 keer, nieuwe klant 6e0fe673, 15:22 UTC (16:22 NL). Ze had Shopify aangevinkt zonder winkel te koppelen (geen enkele Shopify-koppeling in platform_credentials); de gelijktijdige Marktplaats- en 2dehands-scan van haar gingen wel goed. Daarna geen nieuwe opdrachten van haar.
+- Oorzaak is dezelfde die in commit 220fd5bd (16:27 NL, vijf minuten na haar fout) al is gerepareerd: `importKanaalBeschikbaar` in frontend/app.html laat Shopify en WooCommerce alleen nog meegaan na koppelen. Geen nieuwe wijziging nodig, niet opnieuw getest met een nieuw account. Oordeel: gerepareerd.
