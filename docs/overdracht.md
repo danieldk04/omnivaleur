@@ -124,6 +124,10 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
 
 ## Wat nu open staat (niemand hoeft te wachten op Daniel tenzij er "beslissing" staat)
 
+- **Nieuw sinds 16-11: verlopen advertenties zijn zichtbaar** (klokje op het kanaalicoon, tabblad
+  Expired bij Items, regel onder de kanaaltegel, popup en rondleiding; team-notes "verlopen
+  advertenties zichtbaar"). Nog te doen door wie eerst werkt: op telefoonbreedte nalopen, en de
+  Drive-kopie van `docs/klantenservice-brein.md` bijwerken (Drive-koppeling had geen verbinding).
 - **Controleren op 17-11-2026, door wie er dan als eerste werkt**: Daniels eigen account
   (3bfbed2c) kreeg sinds 19-09 geen verlengingen en herplaatsingen omdat de poort van de
   nachtrondes de eigenaar niet kende (gerepareerd 16-11, d801091d, team-notes "eigenaar-poort").

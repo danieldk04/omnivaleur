@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=6edef51ccf"></script>
+<script src="/i18n.js?v=ab14179ec5"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -246,6 +246,12 @@ tr.selected td { background: #dde8fd; }
 .pm-dot-icon.s-none { background: #eaf1f6; border-color: #d0d8e1; opacity: .45; }
 /* Staat er wél op, maar via een dubbele rij van hetzelfde artikel. */
 .pm-dot-icon.s-twin { background: #dfe8f6; border-color: #d0d8e1; }
+/* Verlopen op het platform zelf: grijs, maar wel herkenbaar (16-11-2026). */
+.pm-dot-icon.s-expired { background: #eaf1f6; border-color: #aab6c4; }
+.pm-dot-icon.s-expired > svg, .pm-dot-icon.s-expired > img { opacity: .5; }
+.pm-dot-icon.s-expired .pm-dot-badge { background: #485363; color: #fff; }
+.pm-dot-icon.s-expired .pm-dot-badge svg { width: 8px; height: 8px; }
+.platform-stat-check.verlopen { color: #485363; text-decoration: underline; cursor: pointer; }
 .pm-dot-icon .pm-dot-badge { position: absolute; bottom: -3px; right: -3px; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid #fff; font-size: 7px; display: flex; align-items: center; justify-content: center; font-weight: 800; line-height: 1; }
 .pm-dot-icon.s-active .pm-dot-badge { background: #005f3a; color: #fff; }
 .pm-dot-icon.s-pending .pm-dot-badge { background: #7b4800; color: #fff; }
@@ -1058,16 +1064,16 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           <div style="width:58px;height:58px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.25);font-size:32px"><img src="/assets/site/mark.png" alt="" width="44" height="24"></div>
           <div>
             <div style="font-size:11px;font-weight:900;opacity:.85">What's new</div>
-            <div id="nieuws-titel" style="font-size:24px;font-weight:900;letter-spacing:-.4px;line-height:1.15">A fresh new look</div>
+            <div id="nieuws-titel" style="font-size:24px;font-weight:900;letter-spacing:-.4px;line-height:1.15">See what has expired</div>
           </div>
         </div>
       </div>
       <div style="padding:20px 28px 22px">
-        <div style="font-size:14px;color:#15284b;line-height:1.6;margin-bottom:14px">Your dashboard now has the same look as our new website.</div>
+        <div style="font-size:14px;color:#15284b;line-height:1.6;margin-bottom:14px">Adverts on Marktplaats and 2dehands run out by themselves. Your dashboard now shows you which ones.</div>
         <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
-          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-check"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>Everything is where it was.</b> Same menu, same screens, same buttons.</div></div>
-          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-list"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>Calmer and easier to read.</b> New colours and a new typeface, nothing flashy.</div></div>
-          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-shield"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>Nothing changed in how it works.</b> Your items, listings and settings are untouched.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-clock"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>A clock on the platform icon.</b> Grey with a small clock means expired there, not sold.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-list"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>A new tab Expired under Items.</b> Everything that ran out, in one list.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-refresh"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>Back online in one click.</b> Per item, or tick several and publish them together.</div></div>
         </div>
         <div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:16px">Curious what else we built, and how fast? Open <a href="#" onclick="sluitNieuws();showView('nieuw');return false">What's new</a> in the menu for the full timeline.</div>
         <!-- Knoppen blijven onderin staan, ook als de lijst op een telefoon moet scrollen. -->
@@ -1087,6 +1093,12 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
        waarvan het doel niet in beeld is (telefoon, lege lijst) wordt overgeslagen.
        De teksten staan hier als HTML, zodat de vertaallaag ze vindt. -->
   <div id="rondleiding-stappen" hidden>
+    <section data-tour="verlopen-zichtbaar">
+    <div data-view="items" data-doel=".items-tab[data-tab='expired']"><b>New: the tab Expired.</b> It lists every item whose advert ran out on Marktplaats or 2dehands by itself.</div>
+    <div data-view="items" data-doel="#items-body .pm-dot:first-child"><b>The platform icons.</b> Grey with a small clock means the advert expired there and was not sold. Click it to put it back online.</div>
+    <div data-view="dashboard" data-doel="#platform-breakdown"><b>Expired adverts per platform.</b> Click that line under a platform to open the list.</div>
+    <div data-view="dashboard" data-doel=".nav-item[data-view='nieuw']">All our updates live here, newest first. Come back any time.</div>
+    </section>
     <section data-tour="nieuw-jasje">
     <div data-view="dashboard" data-doel=".nav-item[data-view='items']"><b>The menu</b> is exactly where it was. Every screen still has the same name.</div>
     <div data-view="dashboard" data-doel=".stat:has(#stat-unpublished)"><b>Your numbers</b> are in the same place too, just easier to read.</div>
@@ -1434,11 +1446,13 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           <button class="items-tab" data-tab="hidden" onclick="setItemsTab('hidden')">Hidden <span class="items-tab-count" id="tabcount-hidden">0</span></button>
           <button class="items-tab" data-tab="sold" onclick="setItemsTab('sold')">Sold <span class="items-tab-count" id="tabcount-sold">0</span></button>
           <button class="items-tab" data-tab="archived" onclick="setItemsTab('archived')">Archived <span class="items-tab-count" id="tabcount-archived">0</span></button>
+          <button class="items-tab" data-tab="expired" onclick="setItemsTab('expired')" title="Adverts that ran out on Marktplaats or 2dehands by themselves">Expired <span class="items-tab-count" id="tabcount-expired">0</span></button>
         </div>
         <!-- "Is dit verkocht?" — advertenties die van het platform verdwenen zijn of
              daar als verkocht staan. Bewust een vraag en geen conclusie: op
              Marktplaats betekent verdwenen ook "verlopen", en automatisch boeken
              zou een nog levend artikel overal weghalen. -->
+        <div class="items-tab-hint" id="items-tab-hint-expired" style="display:none">These adverts ran out on the platform by themselves. They were not sold. Press Put back online on a row, or tick several rows and choose Publish.</div>
         <div id="sold-confirm-bar" style="display:none"></div>
         <div id="duplicate-bar" style="display:none"></div>
         <!-- Alles wat op een kanaal mislukte, in één balk met één knop. De knop om
@@ -2665,7 +2679,14 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           <button class="upd-chip" data-cat="plans" onclick="filterUpdates('plans')">Plans</button>
         </div>
         <div class="upd-lijst" id="upd-lijst">
-        <article class="upd upd-nieuw" data-id="2026-11-nieuw-jasje" data-datum="2026-11-06" data-cat="dashboard">
+        <article class="upd upd-nieuw" data-id="2026-11-verlopen-zichtbaar" data-datum="2026-11-16" data-cat="dashboard">
+          <div class="upd-punt"></div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Dashboard</span></div>
+          <h3>See which adverts have expired</h3>
+          <p>Marktplaats and 2dehands take an advert offline by themselves after a few weeks. Your dashboard now shows that as its own state: a grey platform icon with a small clock, a new tab Expired under Items, and a line under the platform tile on your dashboard. One click puts the advert back online.</p>
+          <div class="upd-acties"><button class="btn btn-sm btn-ghost" onclick="startRondleiding('verlopen-zichtbaar')">Show me in my dashboard</button></div>
+        </article>
+        <article class="upd" data-id="2026-11-nieuw-jasje" data-datum="2026-11-06" data-cat="dashboard">
           <div class="upd-punt"></div>
           <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Dashboard</span></div>
           <h3>A fresh new look</h3>
@@ -5969,6 +5990,7 @@ function renderDashboard() {
         <div class="platform-stat-count">${count}</div>
         <div class="platform-stat-label">${PLATFORM_LABELS[p]}</div>
         <div class="platform-stat-check" data-controle="${p}"></div>
+        <div class="platform-stat-check verlopen" data-verlopen="${p}" style="display:none" onclick="event.stopPropagation();toonVerlopen('${p}')"></div>
       </div>
     </div>`;
   }).join('');
@@ -6024,9 +6046,9 @@ async function toonImportSeintje() {
 // nieuws_gezien, dus ook op een andere computer) én in deze browser (voor als
 // de server even niet bereikbaar is). Nooit tonen zolang de instellingen niet
 // binnen zijn: dan weten we niet of hij hem al zag.
-const NIEUWS_ID = '2026-11-nieuw-jasje';
-const NIEUWS_TOUR = 'nieuw-jasje';
-const NIEUWS_SINDS = '2026-11-06';
+const NIEUWS_ID = '2026-11-verlopen-zichtbaar';
+const NIEUWS_TOUR = 'verlopen-zichtbaar';
+const NIEUWS_SINDS = '2026-11-16';
 let _nieuwsGetoond = false;
 function _nieuwsAlGezien() {
   if ((state.settings || {}).nieuws_gezien === NIEUWS_ID) return true;
@@ -6242,6 +6264,59 @@ function renderListingBadges(itemId) {
   return renderPlatformMatrix(itemId);
 }
 
+// VERLOPEN IS IETS ANDERS DAN ZELF OFFLINE GEHAALD (Daniel, 16-11-2026).
+//
+// Marktplaats en 2dehands halen een advertentie na een aantal weken zelf weg. De
+// extensie en de server herkennen dat aan de pagina, die letterlijk "verlopen"
+// zegt, en zetten de advertentie op 'delisted' met de vaste reden uit
+// VERDENKING_REDENEN["verlopen"] (backend/api/listings.py). Die reden werd
+// nergens getoond: verlopen zag er precies zo uit als zelf offline gehaald, en
+// wie wilde weten wat er verlopen was kon dat nergens terugvinden.
+// tests/test_verlopen_in_dashboard.py bewaakt dat deze herkenning en de tekst
+// van de server bij elkaar blijven.
+const VERLOPEN_REDEN = /op het platform zelf verlopen/;
+function isVerlopen(l) {
+  return !!l && l.status === 'delisted' && VERLOPEN_REDEN.test(l.error_message || '');
+}
+
+// Per artikel: op welke kanalen is de advertentie verlopen en staat er sindsdien
+// niets nieuws? Geeft Map(itemId -> { kanaal: advertentie }). Een kanaal telt
+// niet als er daar een advertentie leeft, loopt of verkocht is, als er een
+// plaatsing voor klaarstaat, of als de laatste weggehaalde advertentie daar
+// juist níet verlopen was (dan haalde de verkoper hem later zelf weg).
+function verlopenPerItem() {
+  const NIET_WEG = ['active', 'hidden', 'pending', 'queued', 'claimed', 'relisting', 'sold', 'sold_unconfirmed', 'error'];
+  const tijd = l => new Date(l.last_checked || l.listed_at || l.created_at || 0).getTime() || 0;
+  const bezet = new Set(), verkocht = new Set(), laatste = new Map();
+  for (const l of (state.listings || [])) {
+    const k = l.item_id + '|' + l.platform;
+    if (l.status === 'sold') verkocht.add(l.item_id);
+    if (NIET_WEG.includes(l.status)) { bezet.add(k); continue; }
+    if (l.status !== 'delisted') continue;
+    const cur = laatste.get(k);
+    if (!cur || tijd(l) > tijd(cur)) laatste.set(k, l);
+  }
+  for (const j of (state.jobs || [])) {
+    if (j.item_id && (j.action === 'create' || !j.action) && ['pending', 'queued', 'claimed'].includes(j.status)) {
+      bezet.add(j.item_id + '|' + j.platform);
+    }
+  }
+  const bestaat = new Set((state.items || []).map(i => i.id));
+  const uit = new Map();
+  for (const [k, l] of laatste) {
+    if (bezet.has(k) || verkocht.has(l.item_id) || !bestaat.has(l.item_id) || !isVerlopen(l)) continue;
+    if (!uit.has(l.item_id)) uit.set(l.item_id, {});
+    uit.get(l.item_id)[l.platform] = l;
+  }
+  return uit;
+}
+
+function verlopenDatum(l) {
+  const t = new Date(l && l.last_checked || 0);
+  return Number.isFinite(t.getTime()) && t.getTime() > 0
+    ? t.toLocaleDateString(document.documentElement.lang === 'nl' ? 'nl-NL' : 'en-GB', { day: 'numeric', month: 'short' }) : '';
+}
+
 function renderPlatformMatrix(itemId) {
   const itemListings = state.listings.filter(l => l.item_id === itemId);
   const pendingJobs  = state.jobs.filter(j => j.item_id === itemId && j.status === 'pending');
@@ -6282,6 +6357,8 @@ function renderPlatformMatrix(itemId) {
 
   const SHORT = { marktplaats: 'MP', '2dehands': '2dh', vinted: 'V', facebook: 'FB', ebay: 'eBay', etsy: 'Etsy', shopify: 'Shpfy', woocommerce: 'Woo' };
 
+  const verlopenHier = verlopenPerItem().get(itemId) || {};
+
   const dots = PLATFORMS.map(p => {
     const icon = PLATFORM_ICONS[p];
     const label = SHORT[p] || p;
@@ -6297,6 +6374,11 @@ function renderPlatformMatrix(itemId) {
     } else if (l && l.status === 'error') {
       cls = 's-error'; badge = '!';
       tip = l.error_message ? `${PLATFORM_LABELS[p]}: ${l.error_message}` : `${PLATFORM_LABELS[p]}: failed — publish again`;
+    } else if (verlopenHier[p] && !bySister[p]) {
+      cls = 's-expired'; badge = '<svg class="ic" aria-hidden="true"><use href="#ic-clock"/></svg>';
+      const dag = verlopenDatum(verlopenHier[p]);
+      tip = dag ? `${PLATFORM_LABELS[p]}: expired on the platform, seen on ${dag}. Not sold. Click to put it back online`
+                : `${PLATFORM_LABELS[p]}: expired on the platform. Not sold. Click to put it back online`;
     } else if (bySister[p]) {
       cls = 's-twin'; badge = '⧉';
       tip = `${PLATFORM_LABELS[p]}: already listed here — but under a duplicate copy of this item.`
@@ -6327,6 +6409,7 @@ function renderPlatformMatrix(itemId) {
       : `kanaalKeuze('${itemId}','${p}')`;
     const klikTip = isBusy ? tip + ' — click if it is already live, to mark it listed and clear this'
       : isError ? tip + '. Click to see what you can do'
+      : cls === 's-expired' ? tip
       : `${PLATFORM_LABELS[p]}: not listed — click to publish it here`;
     // Groen met een adres: één klik opent de advertentie zelf. "Hij is geplaatst
     // maar ik zie hem niet" kwam steeds terug (Toon 03-09, klantmail 05-09-2026);
@@ -6458,7 +6541,10 @@ async function kanaalAlOnline(itemId, platform) {
 //   live     — at least one listing currently up for sale
 //   archived — was online, isn't now, didn't sell (the dead stock)
 //   todo     — never made it online: no listings, or only queued/failed ones
-const ITEMS_TABS = ['live', 'todo', 'hidden', 'sold', 'archived'];
+// 'expired' is geen eigen vakje maar een doorsnede: een artikel waarvan de
+// Marktplaats-advertentie verliep terwijl hij op Vinted nog live staat, blijft
+// ook gewoon onder Live staan. Zie verlopenPerItem().
+const ITEMS_TABS = ['live', 'todo', 'hidden', 'sold', 'archived', 'expired'];
 // Items that have a publish in flight (you just pressed List): a listing that's
 // pending/queued/claimed, or a create job still waiting for the extension. Kept
 // as a module-level set so renderItemsTable can badge those rows "Publishing…".
@@ -6530,7 +6616,9 @@ function classifyItems() {
     tabOf.set(item.id, tab);
     counts[tab]++;
   }
-  return { tabOf, counts };
+  const verlopen = verlopenPerItem();
+  counts.expired = verlopen.size;
+  return { tabOf, counts, verlopen };
 }
 
 let itemsTab = 'live';
@@ -6593,20 +6681,23 @@ function applyFilters(resetPage) {
   const todoFilter = waarde('filter-todo');
   const sortBy = waarde('filter-sort') === 'all' ? 'recent' : waarde('filter-sort');
 
-  const { tabOf, counts } = classifyItems();
+  const { tabOf, counts, verlopen } = classifyItems();
   for (const t of ITEMS_TABS) document.getElementById('tabcount-' + t).textContent = counts[t];
+  const verlopenHint = document.getElementById('items-tab-hint-expired');
+  if (verlopenHint) verlopenHint.style.display = itemsTab === 'expired' && counts.expired ? '' : 'none';
   document.querySelectorAll('.items-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === itemsTab));
 
   // "Hoe houd ik overzicht wat al op 2eHands staat?" (Egbert, 02-10-2026): naast
   // "op kanaal X" ook "nog niet op kanaal X".
   const nietOp = platformFilter.startsWith('niet:') ? platformFilter.slice(5) : '';
   const opKanaal = nietOp || platformFilter;
-  const platformItemIds = platformFilter !== 'all'
-    ? new Set(state.listings.filter(l => l.platform === opKanaal && l.status === 'active').map(l => l.item_id))
-    : null;
+  // Op het tabblad Verlopen betekent "op kanaal X": daar verlopen.
+  const platformItemIds = platformFilter === 'all' ? null
+    : itemsTab === 'expired' ? new Set([...verlopen].filter(([, k]) => k[opKanaal]).map(([id]) => id))
+    : new Set(state.listings.filter(l => l.platform === opKanaal && l.status === 'active').map(l => l.item_id));
 
   const filtered = state.items.filter(item => {
-    if (tabOf.get(item.id) !== itemsTab) return false;
+    if (itemsTab === 'expired' ? !verlopen.has(item.id) : tabOf.get(item.id) !== itemsTab) return false;
     if (platformItemIds && (nietOp ? platformItemIds.has(item.id) : !platformItemIds.has(item.id))) return false;
     // Elk woord los, in elke volgorde (Janneke, 08-10-2026): "winterjas noppies"
     // zocht die twee woorden aaneen en vond dus niets, terwijl ze haar
@@ -6848,6 +6939,7 @@ const EMPTY_TAB = {
   hidden:   { h: 'Nothing hidden', p: 'Listings you hide on a platform show up here — they still exist, but no buyer can see them.' },
   sold:     { h: 'No sales here yet', p: 'Items marked sold land here, and count towards your Analytics.' },
   archived: { h: 'Nothing archived', p: 'Items you delisted without selling end up here, ready to relist.' },
+  expired:  { h: 'Nothing expired', p: 'Adverts that run out on Marktplaats or 2dehands by themselves show up here, so you can put them back online.' },
 };
 
 // Actions that make sense for the tab you're looking at. The old row offered all
@@ -6858,6 +6950,10 @@ function itemActions(item) {
   const edit = `<button class="btn btn-sm btn-outline" onclick="editItem('${item.id}')" style="margin-left:4px">Edit</button>`;
   if (itemsTab === 'sold') {
     return `<div class="row-actions"><button class="btn btn-sm btn-primary" onclick="relistSold('${item.id}', this)" title="Put another one up for sale. This sale stays in your numbers.">Relist</button>${edit}</div>`;
+  }
+  if (itemsTab === 'expired') {
+    const kanaal = Object.keys(verlopenPerItem().get(item.id) || {})[0] || '';
+    return `<div class="row-actions"><button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}','${kanaal}')" title="Publish this item again on the platform where the advert expired">Put back online</button>${edit}</div>`;
   }
   if (itemsTab === 'archived') {
     return `<div class="row-actions"><button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}')" title="Put this item back up for sale">Relist</button>${edit}</div>`;
@@ -11007,6 +11103,37 @@ function vulControleTegels() {
     el.classList.toggle('oud', r.oud);
     if (el.getAttribute('data-controle') === 'facebook') el.title = 'The sales check for Facebook is in beta. It may miss a sale. Sold something on Facebook? Mark it as sold here yourself.';
   });
+  vulVerlopenTegels();
+}
+
+// Onder dezelfde tegel: hoeveel advertenties op dit kanaal vanzelf verlopen zijn
+// en nog niet terug online staan. Geen regel als er niets verlopen is.
+function vulVerlopenTegels() {
+  const per = {};
+  const week = Date.now() - 7 * 86400000;
+  for (const kanalen of verlopenPerItem().values()) {
+    for (const [p, l] of Object.entries(kanalen)) {
+      const t = per[p] || (per[p] = { alle: 0, week: 0 });
+      t.alle++;
+      if (new Date(l.last_checked || 0).getTime() >= week) t.week++;
+    }
+  }
+  document.querySelectorAll('[data-verlopen]').forEach(el => {
+    const t = per[el.getAttribute('data-verlopen')];
+    el.style.display = t ? '' : 'none';
+    // Getal en tekst elk in een eigen element: de vertaallaag vertaalt per stukje.
+    el.innerHTML = !t ? ''
+      : t.week ? `<span translate="no">${t.week}</span> <span>expired this week</span>`
+      : `<span translate="no">${t.alle}</span> <span>expired</span>`;
+    el.title = 'Adverts that ran out on the platform by themselves. Click to see them.';
+  });
+}
+
+function toonVerlopen(platform) {
+  showView('items');
+  const kies = document.getElementById('filter-platform');
+  if (kies) kies.value = platform && [...kies.options].some(o => o.value === platform) ? platform : 'all';
+  setItemsTab('expired');
 }
 
 // DE MELDING MOET DE VERSIE NOEMEN DIE ER VANDAAG HOORT TE STAAN.
