@@ -4062,5 +4062,6 @@
  "Could not send it right now. Try again in a minute.": "Versturen lukt nu niet. Probeer het over een minuut opnieuw.",
  "We are reading your adverts from the sites you picked. A big shop takes a few minutes. Keep this tab open; you do not have to click anything.": "We lezen je advertenties in van de sites die je koos. Een grote winkel duurt een paar minuten. Laat dit tabblad open staan; je hoeft nergens op te klikken.",
  "Your Shopify store isn't connected yet. Connect it under Platforms first.": "Je Shopify-winkel is nog niet gekoppeld. Koppel hem eerst onder Platforms.",
- "Waiting for your other channel to finish first…": "Wacht tot je andere kanaal klaar is…"
+ "Waiting for your other channel to finish first…": "Wacht tot je andere kanaal klaar is…",
+ "Only a running Marktplaats or 2dehands scan can send a first batch": "Alleen een lopende Marktplaats- of 2dehands-scan kan een eerste batch sturen"
 }
