@@ -132,8 +132,8 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
   een knop "Help me" (mail naar Daniel, antwoordadres de klant), en op de telefoon mailt de server
   de link naar de computer. NOG NIET GEZIEN met een echt nieuw account in Chrome; de proef
   hierna is de eerstvolgende aanmelder. Mail na een uur stilstand ook gebouwd
-  (backend/services/stil_na_aanmelding.py, elk uur, één keer per klant, overdag). Open: de extensie
-  forceren te updaten is niet gebouwd. Proefklok blijft vanaf aanmelding (Daniel besloot).
+  (backend/services/stil_na_aanmelding.py, elk uur, één keer per klant, overdag). Extensie forceren te updaten
+  bewust niet gebouwd: de 22 aanmelders draaiden 1.0.400 tot 1.0.423, boven de ondergrens; ze werden stil, ze waren niet oud. Proefklok blijft vanaf aanmelding (Daniel besloot).
 
 - **Nieuw sinds 16-11: verlopen advertenties zijn zichtbaar** (klokje op het kanaalicoon, tabblad
   Expired bij Items, regel onder de kanaaltegel, popup en rondleiding; team-notes "verlopen
