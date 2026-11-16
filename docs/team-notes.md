@@ -19309,3 +19309,7 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Daniel: de verkoopcontrole werkt toch voor alle platforms. Klopt: Shopify (`shopify_orders.py`) en WooCommerce (`woocommerce_orders.py`) lopen elke 5 min bestellingen na, eBay wordt door `polling.py` bevraagd. Ze zetten alleen geen stempel; mijn eerdere zin "Shopify en eBay hebben geen verkoopcontrole" was een onbewezen aanname en onjuist.
 - Nu stempelen ze na een geslaagde ronde (`controle.zet`, kanalen shopify, woocommerce, ebay erbij) en toont elke tegel op het dashboard het tijdstip. Marktplaats en 2dehands stempelt alleen de extensie, niet de server-poll (een 200 zonder echte sessie zegt niets). Voor-en-na: `tests/test_controle_alle_kanalen.py` faalt 4 van 6 op de oude code.
 - Facebook heeft nergens in de code een verkoopcontrole; de tegel zegt dat nu eerlijk. Open: bouwen kan niet bewezen worden zonder Facebook-login.
+
+## 16-11-2026 (10:10): Onboarding nieuwe klanten (middag, tweede keer)
+- De middagtaak draaide vandaag twee keer (09:06 en 10:05). Tweede ronde: zes klanten, niets veranderd sinds 09:06, geen mailtjes.
+- Creator Janina (f0cead08) mailde 09:43: haar 73 artikelen staan verborgen door Vinted-vakantiestand; ze vraagt of die stand ook Marktplaats verbergt. Nee: onze code zet bij Vinted-vakantiestand alleen de Vinted-advertenties op verborgen, andere kanalen blijven zichtbaar. Antwoord klaargezet voor Daniel; wens "vakantiestand over alle kanalen" op de te-bouwen-lijst (Overwegen).
