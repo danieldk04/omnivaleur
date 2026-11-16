@@ -139,8 +139,10 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
   LEGO maat/kleur: eenmalig, onbewezen. Nieuwe proefklant Janina (f0cead08) staat op
   gratis toegang met 25% commissie, nog niets geplaatst. tamboer.joost: nieuwe proef tot 20-11.
 - **Terughaal opvolging (13-11)**: 33 zwijgers hebben een opvolgmail als concept klaarstaan
-  in `data/schrijfstijl/terughaal/concepten/`; Daniel verstuurt. Antwoordconcept voor
-  jordi.waning ook. Kanalen zonder mail staan in `kanalen.md` daar.
+  (volgens team-notes 13-11 "concepten/"; die map bestaat niet in `data/schrijfstijl/terughaal/`,
+  daar staan alleen `mails.txt`, `mails.json`, `niet_mailen.json`, `kanalen.md`; of ze in
+  Daniels Zoho staan is niet gecontroleerd, die koppeling hoort bij zijn account). Daniel
+  verstuurt. Antwoordconcept voor jordi.waning ook. Kanalen zonder mail: `kanalen.md`.
 - **Social video's**: week 47 heeft vijf video's klaar in Drive (Social media video's
   Claude/Week 47), nog niets geplaatst of gemeten. Schedchie-API-sleutel pas na Daniels eerste
   betaling; vanaf week 47 opnieuw vragen. Daniel plaatst alles zelf.
