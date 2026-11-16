@@ -10978,10 +10978,7 @@ function renderExtensionStatus() {
 // verkoper artikelen heeft; zonder gegevens (oudere server of extensie) niets,
 // want een verzonnen "nog niet nagekeken" is erger dan geen regel.
 function _controleTegel(data, p) {
-  // Facebook heeft geen automatische verkoopcontrole: dat eerlijk zeggen is beter
-  // dan zwijgen, want een verkoop daar moet de verkoper zelf melden.
-  if (p === 'facebook') return { html: '<span>No automatic sales check</span>', oud: true };
-  if (!['marktplaats', '2dehands', 'vinted', 'shopify', 'woocommerce', 'ebay'].includes(p)) return { html: '', oud: false };
+  if (!['marktplaats', '2dehands', 'vinted', 'shopify', 'woocommerce', 'ebay', 'facebook'].includes(p)) return { html: '', oud: false };
   // Geen gegevens van de server (oudere server of storing): geen regel. Een
   // verzonnen "nog niet nagekeken" is erger dan niets.
   if (!data || typeof data.gecontroleerd !== 'object' || !data.gecontroleerd) return { html: '', oud: false };

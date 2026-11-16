@@ -143,4 +143,17 @@ def test_woocommerce_stempelt_na_de_ronde_en_niet_bij_een_fout(monkeypatch, stem
 
 
 def test_alle_kanalen_staan_in_de_toegestane_lijst():
-    assert {"shopify", "woocommerce", "ebay"} <= set(controle.KANALEN)
+    assert {"shopify", "woocommerce", "ebay", "facebook"} <= set(controle.KANALEN)
+
+
+def test_facebook_verkoopcontrole_hangt_aan_beide_startplekken_en_meldt_alleen():
+    """De extensie draait de Facebook-controle op dezelfde twee plekken als
+    Marktplaats, en meldt ter bevestiging: nooit zelf afmelden. De leesfunctie
+    is op een nagebouwde pagina bewezen (16-11-2026); de echte Facebook-pagina
+    is nog niet gezien, daarom stempelt hij alleen bij echt gelezen kaarten."""
+    bron = (ROOT / "extension" / "background.js").read_text(encoding="utf-8")
+    assert bron.count("checkVintedOrders(); checkFacebookSold();") == 2
+    fn = bron.split("async function checkFacebookSold()")[1].split("\n}\n")[0]
+    assert "meldMogelijkeVerkopen(" in fn and "handle_item_sold" not in fn
+    assert 'meldControle("facebook", "leeg")' in fn
+    assert fn.index('meldControle("facebook", "leeg")') < fn.index('meldControle("facebook");')

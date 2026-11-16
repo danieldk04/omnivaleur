@@ -38,7 +38,7 @@ RIJ = "_controle"
 
 # Alleen kanalen waarvoor een verkoopcontrole bestaat. Een verzonnen naam van
 # buiten mag nooit een nieuwe sleutel in de rij zetten.
-KANALEN = ("marktplaats", "2dehands", "vinted", "shopify", "woocommerce", "ebay")
+KANALEN = ("marktplaats", "2dehands", "vinted", "shopify", "woocommerce", "ebay", "facebook")
 
 _CACHE_SECONDEN = 60.0
 _cache: dict[str, tuple[float, dict]] = {}

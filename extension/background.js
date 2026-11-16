@@ -2642,7 +2642,7 @@ async function teVroegNaStart(minuten) {
 chrome.alarms.onAlarm.addListener((alarm) => {
   switch (alarm.name) {
     case "start-sold":
-      magStilScannenNu().then((mag) => { if (mag) { checkSoldListings(); checkVintedOrders(); } });
+      magStilScannenNu().then((mag) => { if (mag) { checkSoldListings(); checkVintedOrders(); checkFacebookSold(); } });
       break;
     case "start-notif":
       magStilScannenNu().then((mag) => { if (mag) scanNotifications(); });
@@ -9037,7 +9037,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     // Niet vlak na het opstarten (dan doet de wekker start-sold het) en niet
     // tijdens het werken van de verkoper — zie magStilScannenNu.
     teVroegNaStart(3).then((vroeg) => (vroeg ? false : magStilScannenNu()))
-      .then((mag) => { if (mag) { checkSoldListings(); checkVintedOrders(); } });
+      .then((mag) => { if (mag) { checkSoldListings(); checkVintedOrders(); checkFacebookSold(); } });
   }
 });
 
@@ -9295,6 +9295,112 @@ async function checkSoldListings() {
     } catch (e) {
       console.error(`[Omnivaleur][sold] sold-check error (${platform}):`, e);
     }
+  }
+}
+
+// ── Facebook Marketplace: verkocht-label op "Jouw advertenties" (16-11-2026) ──
+// Facebook had nergens een verkoopcontrole. Dit leest de eigen verkooppagina en
+// MELDT (nooit zelf afmelden) advertenties met een verkocht-label ter bevestiging,
+// precies zoals Marktplaats. Een kaart is het kleinste blok rond één
+// advertentielink, zodat het label van de buurkaart nooit meetelt. Alleen een
+// pagina die echt kaarten toonde zet een stempel; een lege pagina meldt "leeg".
+async function facebookKaartenUitPagina() {
+  // Wachten tot de pagina zich gevuld heeft (max ~12 s), net als bij Marktplaats.
+  for (let i = 0; i < 24 && !document.querySelector('a[href*="/marketplace/item/"]'); i++) {
+    await new Promise(r => setTimeout(r, 500));
+  }
+  const ids = a => (/\/marketplace\/item\/(\d{6,})/.exec(a.href) || [])[1];
+  const kaarten = {};
+  document.querySelectorAll('a[href*="/marketplace/item/"]').forEach(a => {
+    const id = ids(a);
+    if (!id || kaarten[id]) return;
+    let blok = a;
+    while (blok.parentElement && blok.parentElement !== document.body) {
+      const ouder = blok.parentElement;
+      const andere = [...ouder.querySelectorAll('a[href*="/marketplace/item/"]')]
+        .some(x => ids(x) && ids(x) !== id);
+      if (andere) break;
+      blok = ouder;
+    }
+    // Tekstknopen aan elkaar met een spatie: innerText plakt "€5" en "Verkocht"
+    // aan elkaar als ze in losse spans staan, en dan mist het woord zijn grens.
+    const tekstVan = (el) => {
+      const knopen = [];
+      const lopen = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      while (lopen.nextNode()) knopen.push(lopen.currentNode.nodeValue);
+      return knopen.join(" ").replace(/\s+/g, " ").trim();
+    };
+    const tekst = tekstVan(blok);
+    const titels = [...blok.querySelectorAll('a[href*="/marketplace/item/"]')].filter(x => ids(x) === id)
+      .map(x => tekstVan(x) || (x.getAttribute("aria-label") || "").trim()).filter(Boolean);
+    // Het verkocht-woord telt alleen buiten de titel: "Sold out"-achtige titels
+    // mogen geen verkoop melden.
+    const zonderTitel = titels.reduce((t, x) => t.split(x).join(" "), tekst);
+    kaarten[id] = { id, tekst, sold: /\b(verkocht|sold)\b/i.test(zonderTitel) };
+  });
+  return Object.values(kaarten);
+}
+
+function scrapeFacebookVerkoop(url) {
+  return new Promise((resolve) => {
+    stilTabblad(url, (tab) => {
+      if (!tab) { resolve([]); return; }
+      const tabId = tab.id;
+      const onUpdated = (id, info) => {
+        if (id !== tabId || info.status !== "complete") return;
+        chrome.tabs.onUpdated.removeListener(onUpdated);
+        chrome.scripting.executeScript({
+          target: { tabId }, world: "MAIN",
+          func: facebookKaartenUitPagina,
+        }, (res) => { sluitWerkTabblad(tabId); resolve(res?.[0]?.result || []); });
+      };
+      chrome.tabs.onUpdated.addListener(onUpdated);
+      setTimeout(() => { chrome.tabs.onUpdated.removeListener(onUpdated); sluitWerkTabblad(tabId); resolve([]); }, 40000);
+    });
+  });
+}
+
+// Welke actieve Facebook-advertentie hoort bij welke kaart? Op het opgeslagen
+// advertentienummer, anders op het artikelnummer "(1234)" in de kaarttekst. Een
+// nummer dat bij twee advertenties past telt niet: dan liever niets melden.
+function facebookKoppel(actief, kaarten) {
+  const perId = new Map(kaarten.map(k => [k.id, k]));
+  const uit = [];
+  for (const l of actief) {
+    let kaart = l.platform_listing_id ? perId.get(String(l.platform_listing_id)) : null;
+    if (!kaart) {
+      const sku = l.sku || (/^\s*\(([^)]{1,24})\)/.exec(l.title || "") || [])[1];
+      if (!sku) continue;
+      const naald = `(${String(sku).trim()})`;
+      const raak = kaarten.filter(k => k.tekst.includes(naald));
+      if (raak.length === 1) kaart = raak[0];
+    }
+    if (kaart && kaart.sold) uit.push(l);
+  }
+  return uit;
+}
+
+async function checkFacebookSold() {
+  try {
+    const serverUrl = await getServerUrl();
+    const headers = await getAuthHeaders();
+    if (!headers.Authorization) return;
+    const resp = await fetch(`${serverUrl}/api/listings/?platform=facebook`, { headers }).catch(() => null);
+    if (!resp?.ok) return;
+    const actief = (await resp.json()).filter(l => l.platform === "facebook"
+      && ["active", "hidden", "relisting"].includes(l.status));
+    if (!actief.length) return;
+    const kaarten = await scrapeFacebookVerkoop("https://www.facebook.com/marketplace/you/selling");
+    console.log(`[Omnivaleur][sold] facebook: ${kaarten.length} kaarten, ${kaarten.filter(k => k.sold).length} met verkocht-label`);
+    if (!kaarten.length) { meldControle("facebook", "leeg"); return; }
+    meldControle("facebook");
+    const teMelden = facebookKoppel(actief, kaarten).map(l => ({
+      item_id: l.item_id, platform: "facebook",
+      platform_listing_id: l.platform_listing_id || null, title: l.title, reden: "label",
+    }));
+    if (teMelden.length) await meldMogelijkeVerkopen(serverUrl, teMelden);
+  } catch (e) {
+    console.error("[Omnivaleur][sold] facebook-controle mislukt:", e);
   }
 }
 
