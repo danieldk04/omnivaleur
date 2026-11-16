@@ -124,6 +124,14 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
 
 ## Wat nu open staat (niemand hoeft te wachten op Daniel tenzij er "beslissing" staat)
 
+- **Gepland voor 17-11-2026, door wie er dan als eerste werkt (Daniel, 16-11)**: in Google Analytics
+  (property Omnivaleur, Beheer > Gebeurtenissen > tabblad Recente gebeurtenissen) de gebeurtenis
+  `echte_bezoeker` markeren als belangrijke gebeurtenis (ster ervoor). Hij staat sinds 16-11 live op / en /nl
+  en verschijnt pas na een eerste echt bezoek; staat hij er nog niet, probeer het een dag later. Moet je
+  Google-login hebben en zie je het welkomstscherm voor een nieuw account: NIET op "Meting starten" klikken,
+  het is dan het verkeerde account; vraag Daniel in te loggen. Daarna: kijk in beheer ("Landen, 28 dagen")
+  of NL+BE naast de rest klopt, en meld het in team-notes. Daarna dit punt hier weghalen.
+  Achtergrond: US/China/Singapore waren machines (20% of minder betrokken), zie team-notes 16-11.
 - **Extensie in de Web Store**: de Web Store levert 1.0.421, de repo staat op 1.0.422
   (`dist/omnivaleur-extension-1.0.422.zip`). Uploaden kan alleen met Daniels Google-account.
 - **Tijdgebonden**: 19-11 uitkomst fotometing AI-pakket (Mac); 26-11 SEO-nameting (Mac);
