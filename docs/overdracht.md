@@ -23,6 +23,13 @@ ruimte meer heeft. Daarom geldt:
   want twee rondes die hetzelfde doen veroorzaken dubbele mails en dubbele reparaties.
 - Plaats, mail en betaal niets namens Daniel behalve wat de routinebestanden zelf toestaan.
 
+**Gemeten 16-11 op het tweede account:** de sessie draait onder `/Users/Danie` en ziet
+`~/.omnivaleur/` en `~/.claude/scheduled-tasks/` van Daniel, dus waarschijnlijk dezelfde Mac
+onder een tweede Claude-account (niet bewezen). De regel hierboven blijft gelden: raak
+niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/python3`
+(3.13 met supabase 2.31); de standaard `python3` is 3.14 zonder httpx. Schijf is 94% vol
+(13 GB vrij), let op bij video's of grote bestanden.
+
 ## Wat je in je EERSTE sessie zelf doet, zonder te vragen
 
 1. `git pull`. Lees daarna deze pagina, de onderkant van `docs/team-notes.md` (alles sinds
