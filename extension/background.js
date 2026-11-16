@@ -5912,6 +5912,17 @@ async function bgExtend2dh(job, serverUrl, keten = null) {
         laden = true;
         continue;
       }
+      // Chrome geeft "geen resultaat" (undefined) als de pagina tijdens het script
+      // ververst of wordt vervangen, zonder fout. Dat is geen "niet gelukt": opnieuw
+      // laden en meten. Zat de klik er al doorheen, dan ziet de volgende meting een
+      // einddatum 21+ dagen weg en meldt hij als al verlengd.
+      if (poging < 3 && (uit === undefined || uit === null)) {
+        console.log(`[Omnivaleur] bgExtend2dh: leeg antwoord van de pagina bij ${itemId}, opnieuw (${poging})`);
+        await sleep(5000);
+        await stuurWerkTabbladNaar(tabId, overviewUrl).catch(() => {});
+        laden = true;
+        continue;
+      }
       if (poging < 3 && uit && uit.step === "read" && uit.fetchError) {
         await sleep(5000);
         await stuurWerkTabbladNaar(tabId, overviewUrl).catch(() => {});

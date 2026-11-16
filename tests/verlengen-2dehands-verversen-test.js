@@ -15,7 +15,7 @@ const vm = require("vm");
 const { execFileSync } = require("child_process");
 
 // Vast commitnummer van vóór de reparatie. NOOIT HEAD (auto-push-hook).
-const OUDE_COMMIT = "9a363988";
+const OUDE_COMMIT = "9ef76485";
 const ROOT = path.join(__dirname, "..");
 let mislukt = 0;
 function check(naam, ok, uitleg) {
@@ -69,6 +69,7 @@ function maakZand(bron, ads, storing) {
   zand.wachtendAantal = () => 0;
   zand.sluitWerkTabblad = () => {};
   zand._klokTabbladen = new Set();
+  zand.startOntdooiTeller = () => {};
   zand.stuurWerkTabbladNaar = async () => {};
   zand.execInTab = async (_t, fn, args = []) => {
     if (storing === "voor-klik" && storingen) { storingen--; throw new Error("Frame with ID 0 was removed."); }
