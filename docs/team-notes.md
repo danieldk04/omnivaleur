@@ -19271,3 +19271,9 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Nieuw: Toon (96e30080) kelim KEXL33, MP en Vinted 23:58 "None of the 5 photos": foto's staan alleen op images.marktplaats.com (import 05-09, voor de spiegelreparatie a614bf0a), de advertentie is weg en de adressen geven nu 404 (zelf nagemeten). Niet te herstellen door ons; Toon moet foto's opnieuw toevoegen. Bij Toon staan nog 20 van 1.688 artikelen alleen op Marktplaats-fotoadressen.
 - Nieuw: 26cf5471 MP-plaatsing time-out: geclaimd 22:01, laatste stap 03:26, fout pas 07:12. Computer sliep, eenmalig, klant-eigen.
 - Geen opdrachten langer dan 30 minuten op claimed. /health ok op c43739af. Niet gemeten: Railway-log en fouten die alleen in de browser van de klant staan.
+
+## 16-11-2026 (09:05): Tweede account, eerste sessie
+- Overdracht gelezen, git pull was al actueel. Database-sleutel klopt (items-vraag gaf 1). Met de standaard python3 (3.14) ontbreekt httpx; python3.13 uit /usr/local/bin werkt.
+- Beide geplande taken stonden er al en staan aan: omnivaleur-onboarding-nieuwe-klanten-middag (10:05) en omnivaleur-klantfouten-middagronde (14:05). Niets dubbel aangemaakt.
+- Klantfouten van vandaag stond al in team-notes (08:00 UTC), dus geen eerste ronde nodig; kale lezing: 16 foutsoorten, 0 open. Onboarding draait vanzelf om 10:05.
+- Niet gecontroleerd: of MAIL_PASS in .env staat (die controle werd geweigerd). Tot dat vaststaat verstuurt deze account geen onboardingmails.
