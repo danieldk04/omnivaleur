@@ -19370,4 +19370,4 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Meting (22 aanmelders, 30 dagen): 10 van 22 nul artikelen, 8 installeerden de extensie nooit, 1 van 12 met voorraad betaalt, eerste artikel na 30 tot 150 min. Zeker: de aantallen. Onbekend: waarom 5 klanten met gelukte plaatsingen niet betaalden.
 - Daniel koos: automatisch inlezen, eerste plaatsing met één knop en een kleine goedkeuring, hulp bij stilstand, extensiedrempel (link per mail), minder fouten in week 1. Niet: eenklik-koppelingen, proefklok vanaf eerste artikel (blijft vanaf aanmelding). Idee voor later (Uitgesteld in de sheet): verkooptips per artikel uit onze verkoopdata.
 - Gebouwd in frontend/poort.js en backend/api/account.py (twee eindpunten, tests/test_nieuwe_klant_hulp.py en tests/poort-quickwin-test.js). Niet gezien met een echt nieuw account.
-
+- Daarna ook de mail na een uur stilstand (stil_na_aanmelding.py, tests/test_stil_na_aanmelding.py): lopende proef, 1 tot 48 uur oud, nog geen artikel of gelukte opdracht, één keer, overdag. Nog nooit een echte mail verstuurd.

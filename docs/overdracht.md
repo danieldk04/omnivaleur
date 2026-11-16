@@ -131,8 +131,9 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
   geen Facebook; alleen artikelen zonder ontbrekende velden; eigen foto's eerst), na 10 min vast
   een knop "Help me" (mail naar Daniel, antwoordadres de klant), en op de telefoon mailt de server
   de link naar de computer. NOG NIET GEZIEN met een echt nieuw account in Chrome; de proef
-  hierna is de eerstvolgende aanmelder. Open: de mail na een uur stilstand en de extensie
-  forceren te updaten zijn niet gebouwd. Proefklok blijft vanaf aanmelding (Daniel besloot).
+  hierna is de eerstvolgende aanmelder. Mail na een uur stilstand ook gebouwd
+  (backend/services/stil_na_aanmelding.py, elk uur, één keer per klant, overdag). Open: de extensie
+  forceren te updaten is niet gebouwd. Proefklok blijft vanaf aanmelding (Daniel besloot).
 
 - **Nieuw sinds 16-11: verlopen advertenties zijn zichtbaar** (klokje op het kanaalicoon, tabblad
   Expired bij Items, regel onder de kanaaltegel, popup en rondleiding; team-notes "verlopen

@@ -257,6 +257,16 @@ def start_scheduler():
         id="import_herinnering",
         replace_existing=True,
     )
+    # Eén mail voor wie zich een uur geleden aanmeldde en nog niets in beeld heeft
+    # (quick win nieuwe klanten, 16-11-2026). Elk uur; de functie kijkt zelf wie.
+    from backend.services.stil_na_aanmelding import mail_wie_stil_zit
+    _scheduler.add_job(
+        _off_the_request_loop(mail_wie_stil_zit),
+        "interval",
+        hours=1,
+        id="stil_na_aanmelding",
+        replace_existing=True,
+    )
     # Werk dat halverwege bleef steken weer vlot trekken. Elke zes uur is vaak
     # genoeg: een advertentie die tussen verwijderen en terugplaatsen hangt is
     # weg bij het platform, dus dat mag geen dagen duren.
