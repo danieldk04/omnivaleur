@@ -19376,3 +19376,9 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Aanleiding: Daniels eigen proef met 257 Marktplaats-advertenties: na 4 minuten pas 41 binnen, 2dehands gaf onterecht "geen antwoord van de extensie" (wachtte achter Marktplaats), en alle 253 geïmporteerde artikelen hadden geen merk en maat (Plaatsen bleef dicht voor 176 en 191 artikelen).
 - Gedaan: extensie 1.0.424 (3 tegelijk, eerste 20 vooruit, merk en maat uit pagina of titel), eindpunt scan-deel, dashboard importeert de eerste batch meteen. Gebouwd en getest met nagebouwde browser (tests/extension-snelle-scan-test.js, tests/test_scan_deel.py); het kenmerkenblok is op echte Marktplaats-pagina's gecontroleerd. Niet gedaan: een echte scan met 1.0.424, want die vraagt eerst een Web Store-upload door Daniel.
 
+## 16-11-2026 (avond): Eerste doorloop als nieuwe klant op Daniels account
+- Gemeten na extensie 1.0.424: scan van 257 advertenties duurde 81 seconden (was 4+ min voor 41), merk en maat nu bij bijna alles gevuld (5 en 17 van 154 leeg, was 0 van 253). Maar 85 artikelen kwamen zonder omschrijving en met één foto binnen: met drie tegelijk geeft de pagina soms niets terug.
+- Gerepareerd in 1.0.425 (gebouwd, wacht op upload): tweede leesronde één voor één voor artikelen zonder tekst, budget 8 minuten, en in scan_meta staat enrichment_retry (nodig, hersteld, nog_zonder_tekst) zodat de volgende scan laat zien of het werkt. Dashboard: voortgangsbalk per kanaal en in de kaart, geen pijl tijdens automatisch inlezen.
+- Fout van mij: een eerste meting op jobs zonder user_id liep in een statement timeout. Alleen per user_id meten (zie meten-op-de-productiedatabase).
+- Open: nog geen echte scan met 1.0.425; de hele flow is niet gezien met een echt nieuw account, want een account aanmaken en bevestigen kan ik niet.
+
