@@ -175,6 +175,7 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
 | Social video's | Alleen Daniels Mac, dinsdag 09:30 | `docs/routines/social-videos.md` |
 | Reageren op X, Indie Hackers, Facebook, Instagram | Alleen Daniels vastgepinde gesprek | `docs/routines/social-reageren.md` |
 | Fotometing AI-pakket | Alleen Daniels Mac (LaunchAgent, haalt zichzelf weg) | `scripts/meet_fotoadvertentie.py` |
+| Kennisoverdracht (overdracht.md gelijk houden) | Aan het eind van elke sessie; dagelijks 07:45 Daniels hoofdaccount, 22:30 tweede account | `docs/routines/kennisoverdracht.md` |
 
 Onboardingmails: alleen `scripts/onboarding_mail.py stuur ... --echt` (harde controles in de
 code), en alleen als `MAIL_PASS` in jouw `.env` staat. Staat die er niet, zet de mail dan
