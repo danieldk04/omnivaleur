@@ -135,6 +135,15 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
   (backend/services/stil_na_aanmelding.py, elk uur, één keer per klant, overdag). Extensie forceren te updaten
   bewust niet gebouwd: de 22 aanmelders draaiden 1.0.400 tot 1.0.423, boven de ondergrens; ze werden stil, ze waren niet oud. Proefklok blijft vanaf aanmelding (Daniel besloot).
 
+- 16-11 later: import sneller en completer (extensie 1.0.424, gebouwd in dist/, WACHT OP UPLOAD door Daniel
+  naar de Chrome Web Store). Marktplaats/2dehands lezen advertenties nu 3 tegelijk, sturen de eerste 20 na
+  ongeveer een halve minuut vooruit via POST /api/jobs/{id}/scan-deel (alleen kandidaten), het dashboard
+  importeert die meteen (wachtOpScan, deel_klaar) zodat "Plaats nu" kan; merk en maat komen uit het
+  "attr"-blok van de advertentiepagina (Merk, size) of uit "Heren M" in de titel. Gemeten op Daniels
+  eigen 253 geïmporteerde artikelen: 0 met merk of maat, 176 missen merk en 191 maat voor 2dehands; die
+  worden bij een nieuwe scan met 1.0.424 aangevuld (bestaande backfill). Niet gezien met een echte scan.
+  Dashboard (live): API-kanalen alleen na koppelen, wachtende scan telt niet als stilstand, eerste
+  plaatsing kiest per kanaal een artikel dat daar nog niet staat.
 - **Nieuw sinds 16-11: verlopen advertenties zijn zichtbaar** (klokje op het kanaalicoon, tabblad
   Expired bij Items, regel onder de kanaaltegel, popup en rondleiding; team-notes "verlopen
   advertenties zichtbaar"). Nog te doen door wie eerst werkt: op telefoonbreedte nalopen, en de

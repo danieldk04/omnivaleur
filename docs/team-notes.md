@@ -19371,3 +19371,8 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Daniel koos: automatisch inlezen, eerste plaatsing met één knop en een kleine goedkeuring, hulp bij stilstand, extensiedrempel (link per mail), minder fouten in week 1. Niet: eenklik-koppelingen, proefklok vanaf eerste artikel (blijft vanaf aanmelding). Idee voor later (Uitgesteld in de sheet): verkooptips per artikel uit onze verkoopdata.
 - Gebouwd in frontend/poort.js en backend/api/account.py (twee eindpunten, tests/test_nieuwe_klant_hulp.py en tests/poort-quickwin-test.js). Niet gezien met een echt nieuw account.
 - Daarna ook de mail na een uur stilstand (stil_na_aanmelding.py, tests/test_stil_na_aanmelding.py): lopende proef, 1 tot 48 uur oud, nog geen artikel of gelukte opdracht, één keer, overdag. Nog nooit een echte mail verstuurd.
+
+## 16-11-2026 (later): Import sneller, merk en maat, eerste batch (Daniel)
+- Aanleiding: Daniels eigen proef met 257 Marktplaats-advertenties: na 4 minuten pas 41 binnen, 2dehands gaf onterecht "geen antwoord van de extensie" (wachtte achter Marktplaats), en alle 253 geïmporteerde artikelen hadden geen merk en maat (Plaatsen bleef dicht voor 176 en 191 artikelen).
+- Gedaan: extensie 1.0.424 (3 tegelijk, eerste 20 vooruit, merk en maat uit pagina of titel), eindpunt scan-deel, dashboard importeert de eerste batch meteen. Gebouwd en getest met nagebouwde browser (tests/extension-snelle-scan-test.js, tests/test_scan_deel.py); het kenmerkenblok is op echte Marktplaats-pagina's gecontroleerd. Niet gedaan: een echte scan met 1.0.424, want die vraagt eerst een Web Store-upload door Daniel.
+
