@@ -2861,7 +2861,6 @@
  "Your eBay listings will fail to publish until you set this.": "Je eBay-advertenties kunnen niet geplaatst worden tot je dit instelt.",
  "Your eBay listings will publish from here.": "Je eBay-advertenties worden vanaf hier geplaatst.",
  "Your eBay seller account is not finished yet. Complete it on eBay (identity and bank account) before you can list:": "Je eBay-verkopersaccount is nog niet af. Maak het af op eBay (identiteit en bankrekening) voordat je kunt plaatsen:",
- "Your email address hasn't been confirmed yet. Check your inbox for the confirmation link.": "Je e-mailadres is nog niet bevestigd. Kijk in je inbox voor de bevestigingslink.",
  "Your extension has not checked in{0}, so nothing will start": "Je extensie heeft zich niet gemeld{0}, dus er begint niets",
  "Your extension has not checked in{0}, so nothing will start ({1}). Open Chrome on the computer you use for Omnivaleur and make sure the Omnivaleur extension is switched on at": "Je extensie heeft zich niet gemeld{0}, dus er begint niets ({1}). Open Chrome op de computer die je voor Omnivaleur gebruikt en zorg dat de Omnivaleur-extensie aan staat bij",
  "Your extension is out of date": "Je extensie is verouderd",
@@ -4056,5 +4055,10 @@
  "Link sent, check your inbox": "Link verstuurd, kijk in je inbox",
  "We emailed you the link. Open it in Chrome on your computer.": "We hebben je de link gemaild. Open hem in Chrome op je computer.",
  "Could not send the email. Use Copy link instead.": "De mail kon niet worden verstuurd. Gebruik Link kopiëren.",
- "Stuck? Help me": "Zit je vast? Help me"
+ "Stuck? Help me": "Zit je vast? Help me",
+ "Your email address hasn't been confirmed yet. Check your inbox, spam folder and other tabs for the confirmation link.": "Je e-mailadres is nog niet bevestigd. Kijk voor de bevestigingslink in je inbox, je spammap en andere tabbladen van je mail.",
+ "Can't find it? Look in your spam or junk folder, and in other tabs such as Promotions, Updates or Social. It can take a few minutes.": "Kun je hem niet vinden? Kijk in je spam of ongewenste mail, en in andere tabbladen zoals Promoties, Updates of Sociaal. Het kan een paar minuten duren.",
+ "Send the email again": "Stuur de mail opnieuw",
+ "Sent again. Check your spam folder too.": "Opnieuw verstuurd. Kijk ook in je spammap.",
+ "Could not send it right now. Try again in a minute.": "Versturen lukt nu niet. Probeer het over een minuut opnieuw."
 }

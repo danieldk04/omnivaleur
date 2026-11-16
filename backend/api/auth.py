@@ -169,7 +169,7 @@ async def login(body: AuthRequest):
         if "not confirmed" in laag or "email_not_confirmed" in laag:
             raise HTTPException(
                 status_code=403,
-                detail="Your email address hasn't been confirmed yet. Check your inbox for the confirmation link.",
+                detail="Your email address hasn't been confirmed yet. Check your inbox, spam folder and other tabs for the confirmation link.",
             )
         if "invalid login credentials" not in laag and "invalid" not in laag:
             # Iets anders ging stuk (verbinding, Supabase zelf). Dat is geen

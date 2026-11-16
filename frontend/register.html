@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=0a33a20dde"></script>
+<script src="/i18n.js?v=45d974642d"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Create account — Omnivaleur</title>
 <meta name="description" content="Start your 7-day free trial of Omnivaleur. No credit card required. Publish to Marktplaats, 2dehands, Vinted, eBay, Shopify and WooCommerce at once.">
@@ -54,7 +54,10 @@
   </div>
 
   <div id="error" class="error"></div>
-  <div id="success" class="success">Account created!<br>Check your email to confirm your account.</div>
+  <div id="success" class="success">Account created!<br>Check your email to confirm your account.
+    <p style="margin:10px 0 0;font-size:13px">Can't find it? Look in your spam or junk folder, and in other tabs such as Promotions, Updates or Social. It can take a few minutes.</p>
+    <p style="margin:10px 0 0;font-size:13px"><a href="#" id="resend-link" style="text-decoration:underline">Send the email again</a> <span id="resend-note"></span></p>
+  </div>
 
   <form id="form" onsubmit="doRegister(event)">
     <div class="field">
@@ -154,6 +157,17 @@ async function doRegister(e) {
     } catch (e) { /* tracking mag nooit de registratie blokkeren */ }
     document.getElementById('form').style.display = 'none';
     document.getElementById('success').style.display = 'block';
+    // Wie de mail niet vindt (spam, andere tab) kan hem hier opnieuw laten sturen.
+    var rl = document.getElementById('resend-link');
+    if (rl) rl.onclick = async function (e) {
+      e.preventDefault();
+      var note = document.getElementById('resend-note');
+      note.textContent = 'Sending…';
+      try {
+        await fetch(`${API}/api/auth/resend-confirmation`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+        note.textContent = 'Sent again. Check your spam folder too.';
+      } catch (err) { note.textContent = 'Could not send it right now. Try again in a minute.'; }
+    };
   } catch (err) {
     errEl.textContent = err.message;
     errEl.style.display = 'block';
