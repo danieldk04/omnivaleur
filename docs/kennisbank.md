@@ -17,6 +17,36 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## eigenaar-poort-nachtrondes
+
+*16-11-2026 — "16-11: Daniels eigen account (3bfbed2c) staat op trial_expired; _mag_nog_werken kende de eigenaar-vrijstelling niet, dus geen verlengingen of herplaatsingen sinds 19-09"*
+
+Er zijn twee poorten voor "mag dit account werken": `check_access` (voordeur, laat de
+eigenaar via `is_owner_email` altijd door) en `_mag_nog_werken` in
+`backend/services/crosslist.py` (de nachtrondes voor Marktplaats-herplaatsen en
+2dehands-verlengen, sinds 19-09-2026). De tweede keek alleen naar de rij in
+`subscriptions`. Daniels eigen account (3bfbed2c, Revaleur) staat daar op
+`trial_expired` sinds 05-08, dus de rondes sloegen hem stil over terwijl zijn extensie
+gewoon werk kreeg en de schakelaar `auto_relist` aan stond. Gemeten 16-11: laatste
+2dehands-verlenging 17-09, nul automatische Marktplaats-herplaatsingen; hij kreeg wel
+de afloopmails van de platforms. Sinds 16-11 vraagt `_mag_nog_werken` bij een nee het
+adres op en laat de eigenaar door (proef `tests/test_eigenaar_mag_nog_werken.py`).
+
+**Why:** een vrijstelling die op één plek staat geldt niet vanzelf op de andere; en "proef
+verlopen, betaalmuur" in een klantfoutenronde (04-11) over dit account was dus een verkeerde
+lezing van dezelfde rij.
+
+**How to apply:** lees voor Daniels eigen account nooit de abonnementsrij als waarheid;
+vraag de code (`_mag_nog_werken(uid)`, `check_access`). Nieuwe poort op abonnement: altijd
+de eigenaar meenemen. Een 2dehands-proef kan direct: zet voor alleen zijn account een
+`extend` met `_peiling: True` klaar, de extensie brengt de lijst "Loopt af" mee en de server
+plant de rest (16-11: 31 zoekertjes, binnen 20 s opgepakt). De Marktplaats-ronde loopt op
+een interval van 6 uur dat bij elke deploy opnieuw begint, dus overdag met veel pushes
+draait hij pas in de eerste stille 6 uur. Zie "proefperiode-en-toegangsslot",
+"2dehands-importdatum-is-geen-plaatsingsdatum", "auto-push-zet-tussenstand-live".
+
+---
+
 ## verwijslink-verloor-code
 
 *14-11-2026 — 24-09 tot 14-11-2026 raakte elke /r/-link zijn ?ref= kwijt door de 301 van /index.html naar /; 0 koppelingen op 92 kliks*

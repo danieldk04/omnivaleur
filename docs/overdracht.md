@@ -124,6 +124,12 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
 
 ## Wat nu open staat (niemand hoeft te wachten op Daniel tenzij er "beslissing" staat)
 
+- **Controleren op 17-11-2026, door wie er dan als eerste werkt**: Daniels eigen account
+  (3bfbed2c) kreeg sinds 19-09 geen verlengingen en herplaatsingen omdat de poort van de
+  nachtrondes de eigenaar niet kende (gerepareerd 16-11, d801091d, team-notes "eigenaar-poort").
+  2dehands is bewezen (31 verlengingen ingepland en lopend op 16-11). Marktplaats nog niet: kijk
+  of er op dat account opdrachten van de nachtronde staan (verwijderen plus plaatsen, hooguit
+  ~25 per dag). Staan ze er niet, zoek dan verder in `relist_expiring_marktplaats`.
 - **Gepland voor 17-11-2026, door wie er dan als eerste werkt (Daniel, 16-11)**: in Google Analytics
   (property Omnivaleur, Beheer > Gebeurtenissen > tabblad Recente gebeurtenissen) de gebeurtenis
   `echte_bezoeker` markeren als belangrijke gebeurtenis (ster ervoor). Hij staat sinds 16-11 live op / en /nl
