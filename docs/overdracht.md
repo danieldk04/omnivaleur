@@ -60,6 +60,9 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
    ook bij afbreken.
 5. Noem in je eerste antwoord kort wat je gezien hebt (CLAUDE.md eist dat).
 6. Werk deze pagina bij als je iets afrondt of ontdekt dat hier iets niet meer klopt, en push.
+   Aan het eind van elke sessie volg je `docs/routines/kennisoverdracht.md`. Ontbreekt jouw
+   dagelijkse taak (`omnivaleur-kennisoverdracht-avond` 22:30 op het tweede account,
+   `omnivaleur-kennisoverdracht-ochtend` 07:45 op Daniels hoofdaccount), maak hem dan aan.
 
 ## Wat er sinds 28-10 gebeurde (de lijn, niet elk detail)
 
