@@ -132,14 +132,15 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
   het is dan het verkeerde account; vraag Daniel in te loggen. Daarna: kijk in beheer ("Landen, 28 dagen")
   of NL+BE naast de rest klopt, en meld het in team-notes. Daarna dit punt hier weghalen.
   Achtergrond: US/China/Singapore waren machines (20% of minder betrokken), zie team-notes 16-11.
-- **Ook 17-11, GA4 (Daniel, 16-11)**: Stripe op de lijst ongewenste verwijzingen zetten (Beheer > Gegevensstromen >
-  Omnivaleur > Taginstellingen configureren > Ongewenste verwijzingen vermelden: checkout.stripe.com). Nu telt een
-  klant die terugkomt van de betaalpagina als nieuwe sessie met bron Stripe (16 sessies in 7 dagen) en verdwijnt de
-  echte bron. De automatische safety-check weigerde deze klik op 16-11, vraag Daniel of de modus dat toelaat.
-- **Open, Cloudflare 16-11**: 157k van 314k verzoeken per 24 uur zijn 4xx, 234k zijn `/api/jobs/pending`
-  (extensies, elke 15 s per platform). Welke 4xx-code het is (401, 402, 422?) is niet gemeten: dat kan met het
-  filter pad + statuscode in Cloudflare of het Railway-log. Vermoeden, niet bewezen: klanten met afgelopen proef of
-  zonder inlog blijven pollen. Meet eerst, pas dan iets wijzigen.
+- **GA4 en Stripe, nagekeken 16-11**: `stripe.com` staat al in Ongewenste verwijzingen (Google-tag, Instellingen).
+  Niets gewijzigd. Toch stonden er in de 7 dagen daarvoor 16 sessies met bron checkout.stripe.com: meet over
+  een week opnieuw (Verkeersacquisitie, bron/medium). Komen er dan nog steeds nieuwe bij, dan werkt de lijst
+  niet voor de gtag in de HTML en is er een echt probleem.
+- **Cloudflare 4xx, gemeten 16-11 (24 uur)**: 152.7k van de 157.8k fouten zijn **422** = extensie zonder
+  inlog (Authorization-kop ontbreekt; zie kennisbank), de rest 404 4.1k, 401 756. De extensie blijft dan
+  elke ~15 s vier kanalen vragen (`pollJobsEenRonde`, `extension/background.js`). Kost de server vrijwel niets
+  (geweigerd voor de database), dus GEEN spoed. Wil je het wegnemen: in `pollJobsEenRonde` overslaan zonder
+  Authorization-kop, test op de echte extensie, en dan pas een Web Store-versie (Daniel uploadt).
 - **Extensie in de Web Store**: de Web Store levert 1.0.421, de repo staat op 1.0.422
   (`dist/omnivaleur-extension-1.0.422.zip`). Uploaden kan alleen met Daniels Google-account.
 - **Tijdgebonden**: 19-11 uitkomst fotometing AI-pakket (Mac); 26-11 SEO-nameting (Mac);
