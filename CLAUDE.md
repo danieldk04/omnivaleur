@@ -5,6 +5,16 @@ Code session opened against this repo — on any of Daniel's machines or
 Anthropic accounts. That makes it the right place for anything that must
 never depend on which account happens to be running.
 
+## Kennisoverdracht bijhouden: elke sessie en elke dag (Daniel, 16-11-2026)
+
+Twee ontwikkelaars werken aan dit project en moeten altijd exact weten waar de ander
+gebleven is. Daarom: aan het eind van elke sessie waarin je iets bouwde, repareerde,
+besliste of ontdekte dat iets niet meer klopte, werk je `docs/overdracht.md` bij volgens
+[docs/routines/kennisoverdracht.md](docs/routines/kennisoverdracht.md), zonder dat Daniel
+erom vraagt, en push. Daarnaast draait er per account een dagelijkse taak
+(`omnivaleur-kennisoverdracht-avond` 22:30 tweede account, `omnivaleur-kennisoverdracht-ochtend`
+07:45 Daniels hoofdaccount). Ontbreekt jouw taak, maak hem dan aan.
+
 ## EERSTE STAP op een ander account dan Daniels: docs/overdracht.md
 
 Lees [docs/overdracht.md](docs/overdracht.md) als allereerste, nog voor je de opdracht
