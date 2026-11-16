@@ -68,9 +68,12 @@ function maakZand(bron, ads, storing) {
   zand.zetWerkStatus = async () => {};
   zand.wachtendAantal = () => 0;
   zand.sluitWerkTabblad = () => {};
+  zand._klokTabbladen = new Set();
   zand.stuurWerkTabbladNaar = async () => {};
   zand.execInTab = async (_t, fn, args = []) => {
     if (storing === "voor-klik" && storingen) { storingen--; throw new Error("Frame with ID 0 was removed."); }
+    if (storing === "leeg-voor" && storingen && args.length === 2) { storingen--; return undefined; }
+    if (storing === "leeg-na" && storingen && args.length === 2) { storingen--; await fn(...args); return undefined; }
     try { return await fn(...args); }
     catch (e) { if (e.message === "__frame__") throw new Error("Frame with ID 0 was removed."); throw e; }
   };
@@ -96,6 +99,8 @@ async function proef(naam, bron) {
     ["na-klik", "pagina ververst vlak na de klik"],
     ["voor-klik", "pagina ververst tijdens het lezen"],
     ["fetch", "eerste lezing Failed to fetch"],
+    ["leeg-voor", "pagina geeft een leeg antwoord (ververst tijdens het script)"],
+    ["leeg-na", "klik lukt, daarna leeg antwoord door verversing"],
   ]) {
     const z = await draai(bron, ads, storing);
     const klaar = z.finalise.find((f) => f.kind === "complete");
