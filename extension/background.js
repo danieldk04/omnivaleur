@@ -9077,13 +9077,13 @@ async function triggerVintedAutoScan() {
 // Meld de server dat de verkoopcontrole van dit kanaal echt iets heeft gelezen,
 // zodat het dashboard per marktplaats kan tonen wanneer er voor het laatst is
 // nagekeken. Nooit blokkerend en nooit een fout: de controle zelf gaat voor.
-async function meldControle(platform) {
+async function meldControle(platform, uitkomst) {
   try {
     const serverUrl = await getServerUrl();
     const headers = await getAuthHeaders();
     if (!headers.Authorization) return;
     await fetch(`${serverUrl}/api/jobs/platform-check`, {
-      method: "POST", headers, body: JSON.stringify({ platform }),
+      method: "POST", headers, body: JSON.stringify(uitkomst ? { platform, uitkomst } : { platform }),
     });
   } catch (_) { /* geen stempel is beter dan een kapotte controle */ }
 }
@@ -9102,6 +9102,7 @@ async function checkSoldListings() {
       const resp = await fetch(`${serverUrl}/api/listings/?platform=${platform}`, { headers: authHeaders }).catch(() => null);
       if (!resp?.ok) {
         console.warn(`[Omnivaleur][sold] ${platform}: could not fetch active listings (HTTP ${resp?.status || "no response"}) — skipping`);
+        meldControle(platform, "fout");
         continue;
       }
       const allListings = await resp.json();
@@ -9142,7 +9143,9 @@ async function checkSoldListings() {
       console.log(`[Omnivaleur][sold] ${platform}: ${ads.length} ad cards scraped, ${soldAds.length} carry a sold/reserved label`);
       // Alleen een overzicht dat echt advertenties toonde telt als nagekeken: een
       // leeg of niet ingelogd overzicht zegt niets over verkochte artikelen.
-      if (ads.length > 0) meldControle(platform);
+      // Een leeg overzicht meldt zich als poging, zodat het dashboard kan zeggen
+      // waarom er geen stempel is (16-11-2026).
+      meldControle(platform, ads.length > 0 ? undefined : "leeg");
 
       // ADVERTENTIES DIE HELEMAAL NIET IN HET OVERZICHT STAAN.
       //
@@ -9431,7 +9434,12 @@ function scrapeMarktplaatsAds(url, platform) {
         chrome.scripting.executeScript({
           target: { tabId },
           world: "MAIN",
-          func: () => {
+          func: async () => {
+            // De overzichtspagina vult zich na "complete" nog zelf met kaarten.
+            // Eerst wachten tot er een advertentie staat (max ~12 s), anders
+            // lezen we een leeg overzicht en volgt nooit een controle (16-11-2026).
+            const zichtbaar = () => [...document.querySelectorAll('a[href]')].some(a => /\/(m\d{6,})/.test(a.href));
+            for (let i = 0; i < 24 && !zichtbaar(); i++) await new Promise(r => setTimeout(r, 500));
             const byId = {};
             document.querySelectorAll('a[href]').forEach(a => {
               const m = a.href.match(/\/(m\d{6,})/);

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=61beb1fb94"></script>
+<script src="/i18n.js?v=a4de9928bf"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -139,6 +139,8 @@ a { color: inherit; text-decoration: none; }
 .platform-stat:hover { border-color: var(--blue); box-shadow: 0 4px 16px rgba(6,73,199,.1); transform: translateY(-1px); }
 .platform-stat-count { font-size: 22px; font-weight: 800; color: var(--text); }
 .platform-stat-label { font-size: 11px; color: var(--muted); margin-top: 1px; font-weight: 500; }
+.platform-stat-check { font-size: 10px; color: var(--muted); margin-top: 3px; line-height: 1.3; }
+.platform-stat-check.oud { color: #7b4800; }
 
 /* ── Cards ──────────────────────────────────────────────────────── */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
@@ -993,7 +995,6 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
       <div class="ext-dot" id="ext-dot"></div>
       <span id="ext-label">Loading...</span>
     </div>
-    <div id="ext-controle" style="display:none;color:rgba(255,255,255,.45);font-size:11px;line-height:1.55;padding:0 0 6px"></div>
     <div data-taalkeuze style="color:rgba(255,255,255,.55);font-size:11px;margin-top:8px"></div>
     <button id="logout-btn" onclick="SESSIE.wisAlles(); window.location.href='/'" style="background:transparent;border:none;color:rgba(255,255,255,.3);font-size:11px;cursor:pointer;padding:4px 0;margin-top:6px;text-align:left;width:100%;">← Log out</button>
   </div>
@@ -5967,9 +5968,11 @@ function renderDashboard() {
       <div>
         <div class="platform-stat-count">${count}</div>
         <div class="platform-stat-label">${PLATFORM_LABELS[p]}</div>
+        <div class="platform-stat-check" data-controle="${p}"></div>
       </div>
     </div>`;
   }).join('');
+  vulControleTegels();
 
   // Recent items table
   const rows = state.items.slice(0, 8).map(item => `<tr>
@@ -10875,13 +10878,7 @@ async function loadExtensionStatus() {
 
 function renderExtensionStatus() {
   const data = state.extStatus;
-  // Ook op de computer zichtbaar: onderin de zijbalk (het blok hieronder is daar verborgen).
-  const sbControle = document.getElementById('ext-controle');
-  if (sbControle) {
-    const h = _controleHtml(data);
-    sbControle.innerHTML = h;
-    sbControle.style.display = h ? 'block' : 'none';
-  }
+  vulControleTegels();
   const queued = (state.jobs || []).length;
   // Een tweede, met de hand geïnstalleerde kopie van de extensie beweegt niet
   // mee met de Chrome Web Store en blijft dus hangen op de versie van de dag
@@ -10924,7 +10921,7 @@ function renderExtensionStatus() {
     el.style.display = 'flex';
     if (data.online) {
       el.className = 'comp-status comp-status-online';
-      el.innerHTML = `<span class="comp-dot"></span><div><b>Your computer is online.</b> Queued publishes and relists run automatically — you can manage everything from your phone.${_controleRegel(data)}</div>`;
+      el.innerHTML = `<span class="comp-dot"></span><div><b>Your computer is online.</b> Queued publishes and relists run automatically — you can manage everything from your phone.</div>`;
     } else {
       const ago = data.last_seen ? ` (last online ${fmtSeenAgo(data.seconds_ago)})` : '';
       el.className = 'comp-status comp-status-offline';
@@ -10965,7 +10962,7 @@ function renderExtensionStatus() {
         queued
           ? `Your ${queued} queued action${queued === 1 ? '' : 's'} will run`
           : 'Anything you queue from your phone will run'
-      } as soon as you open Chrome — with the Omnivaleur extension — on your computer.${_controleRegel(data)}</div>`;
+      } as soon as you open Chrome — with the Omnivaleur extension — on your computer.</div>`;
     }
     if (oud) el.innerHTML += extraOudeExtensieMelding(data);
   });
@@ -10980,35 +10977,33 @@ function renderExtensionStatus() {
 // (`gecontroleerd`, zie backend/services/controle.py). Alleen kanalen waar deze
 // verkoper artikelen heeft; zonder gegevens (oudere server of extensie) niets,
 // want een verzonnen "nog niet nagekeken" is erger dan geen regel.
-function _controleHtml(data) {
-  const gez = data && data.gecontroleerd;
-  if (!gez || typeof gez !== 'object') return '';
-  const heeft = new Set((state.listings || []).map(l => l.platform));
-  const namen = { marktplaats: 'Marktplaats', '2dehands': '2dehands', vinted: 'Vinted' };
-  const delen = [];
-  let eenGemeld = false;
-  for (const k of Object.keys(namen)) {
-    if (!heeft.has(k)) continue;
-    const t = gez[k] ? new Date(gez[k]).getTime() : NaN;
-    if (Number.isFinite(t)) eenGemeld = true;
-    // Elk stukje tekst staat in een eigen element, zodat de vertaallaag "12m ago"
-    // en "no check reported yet" los kan vertalen (nooit half vertalen).
-    const tekst = Number.isFinite(t)
-      ? fmtSeenAgo(Math.max(0, Math.round((Date.now() - t) / 1000)))
-      : 'no check reported yet';
-    delen.push(`<span translate="no">${namen[k]}</span> <span>${tekst}</span>`);
+function _controleTegel(data, p) {
+  if (!['marktplaats', '2dehands', 'vinted'].includes(p)) return { html: '', oud: false };
+  // Geen gegevens van de server (oudere server of storing): geen regel. Een
+  // verzonnen "nog niet nagekeken" is erger dan niets.
+  if (!data || typeof data.gecontroleerd !== 'object' || !data.gecontroleerd) return { html: '', oud: false };
+  const t = data.gecontroleerd[p] ? new Date(data.gecontroleerd[p]).getTime() : NaN;
+  const poging = (data.controle_pogingen || {})[p];
+  const tp = poging && poging.tijd ? new Date(poging.tijd).getTime() : NaN;
+  const ago = ms => fmtSeenAgo(Math.max(0, Math.round((Date.now() - ms) / 1000)));
+  // Elk stukje tekst in een eigen element, zodat de vertaallaag "12m ago" los
+  // kan vertalen (nooit half vertalen).
+  if (Number.isFinite(t) && !(Number.isFinite(tp) && tp > t)) return { html: `<span>Sales checked</span> <span>${ago(t)}</span>`, oud: false };
+  if (Number.isFinite(tp)) {
+    const wat = poging.reden === 'fout' ? 'Last check failed' : 'Last check saw no listings';
+    return { html: `<span>${wat}</span> <span>${ago(tp)}</span>`, oud: true };
   }
-  // Nog geen enkele controle gemeld (bijvoorbeeld een extensie van vóór deze
-  // regel): dan zou "nog niet nagekeken" bij elk kanaal onwaar zijn, want de
-  // controle draait wel, ze meldt zich alleen nog niet. Dan liever geen regel.
-  if (!delen.length || !eenGemeld) return '';
-  return `<span>Last checked for sales:</span> ${delen.join(' · ')}`;
+  return { html: '<span>Not checked yet</span>', oud: true };
 }
 
-// De regel in het statusblok (alleen zichtbaar op een telefoon, zie .comp-status).
-function _controleRegel(data) {
-  const h = _controleHtml(data);
-  return h ? `<div style="margin-top:4px;font-size:12px;opacity:.8">${h}</div>` : '';
+// Onder elke marktplaats-tegel op het dashboard (16-11-2026, verhuisd van de
+// zijbalk linksonder). Aanroepbaar zodra de tegels of de status er zijn.
+function vulControleTegels() {
+  document.querySelectorAll('[data-controle]').forEach(el => {
+    const r = _controleTegel(state.extStatus, el.getAttribute('data-controle'));
+    el.innerHTML = r.html;
+    el.classList.toggle('oud', r.oud);
+  });
 }
 
 // DE MELDING MOET DE VERSIE NOEMEN DIE ER VANDAAG HOORT TE STAAN.

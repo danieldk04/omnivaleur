@@ -100,3 +100,55 @@ def zet(user_id: str, kanaal: str, db=None, nu: datetime | None = None) -> bool:
         return False
     _cache[user_id] = (time.monotonic(), dict(waarden))
     return True
+
+
+# ── Pogingen die niets konden lezen (16-11-2026) ──────────────────────────────
+# Een controle die niets las zet geen stempel (zie boven). Maar zonder meer weet
+# de verkoper niet WAAROM zijn kanaal "nog niet nagekeken" is: ligt het aan een
+# leeg overzicht, aan uitloggen, of loopt de controle helemaal niet? Daarom
+# bewaren we ook de laatste mislukte poging, los van de stempels (andere rij,
+# zodat de stempels zelf nooit vervuilen).
+POGING_RIJ = "_controle_poging"
+POGING_REDENEN = ("leeg", "fout")
+_poging_cache: dict[str, tuple[float, dict]] = {}
+
+
+def lees_pogingen(user_id: str, db=None) -> dict:
+    """{kanaal: {"tijd": iso, "reden": "leeg"|"fout"}}. Storing = lege lijst."""
+    vast = _poging_cache.get(user_id)
+    if vast and time.monotonic() - vast[0] < _CACHE_SECONDEN:
+        return dict(vast[1])
+    try:
+        rij = ((db or get_db()).table("platform_credentials").select("extra_data")
+               .eq("user_id", user_id).eq("platform", POGING_RIJ).limit(1).execute().data or [])
+    except Exception as e:  # noqa: BLE001
+        logger.warning("controlepogingen niet gelezen voor %s: %s", user_id, e)
+        return {}
+    rauw = rij[0].get("extra_data") if rij else None
+    uit: dict[str, dict] = {}
+    if isinstance(rauw, dict):
+        for kanaal in KANALEN:
+            w = rauw.get(kanaal)
+            if isinstance(w, dict) and w.get("reden") in POGING_REDENEN and _schoon({kanaal: w.get("tijd")}):
+                uit[kanaal] = {"tijd": w["tijd"], "reden": w["reden"]}
+    _poging_cache[user_id] = (time.monotonic(), uit)
+    return dict(uit)
+
+
+def zet_poging(user_id: str, kanaal: str, reden: str, db=None, nu: datetime | None = None) -> bool:
+    if kanaal not in KANALEN or reden not in POGING_REDENEN:
+        return False
+    _poging_cache.pop(user_id, None)
+    waarden = lees_pogingen(user_id, db)
+    waarden[kanaal] = {"tijd": (nu or datetime.now(timezone.utc)).isoformat(), "reden": reden}
+    try:
+        (db or get_db()).table("platform_credentials").upsert(
+            {"user_id": user_id, "platform": POGING_RIJ, "extra_data": waarden},
+            on_conflict="user_id,platform",
+        ).execute()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("controlepoging niet bewaard voor %s/%s: %s", user_id, kanaal, e)
+        _poging_cache.pop(user_id, None)
+        return False
+    _poging_cache[user_id] = (time.monotonic(), dict(waarden))
+    return True

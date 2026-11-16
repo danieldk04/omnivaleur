@@ -3598,6 +3598,8 @@ def extension_status(user_id: str = Depends(get_current_user)):
         "seconds_ago": max(0, seconds_ago),
         # Per marktplaats wanneer er echt is nagekeken (zie services/controle.py).
         "gecontroleerd": controle.lees(user_id, db),
+        # Laatste poging die niets kon lezen, met reden (leeg overzicht / fout).
+        "controle_pogingen": controle.lees_pogingen(user_id, db),
         **oud,
     }
 
@@ -3612,6 +3614,10 @@ async def meld_platform_controle(body: dict, user_id: str = Depends(get_current_
     kanaal = (body or {}).get("platform")
     if kanaal not in controle.KANALEN:
         raise HTTPException(status_code=422, detail="Unknown platform")
+    uitkomst = (body or {}).get("uitkomst")
+    if uitkomst in controle.POGING_REDENEN:
+        bewaard = await naast_de_lus(lambda: controle.zet_poging(user_id, kanaal, uitkomst))
+        return {"ok": bool(bewaard)}
     bewaard = await naast_de_lus(lambda: controle.zet(user_id, kanaal))
     return {"ok": bool(bewaard)}
 
