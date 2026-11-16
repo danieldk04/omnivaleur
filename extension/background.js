@@ -8634,7 +8634,7 @@ async function bgScanMp2dh(job, serverUrl) {
     // houdt gewoon zijn titel/prijs/foto uit het overzicht en wordt bij een
     // volgende scan alsnog verrijkt. Onvolledig binnen is oneindig veel beter
     // dan compleet kwijt.
-    const VERRIJK_BUDGET_MS = 4 * 60 * 1000;
+    const VERRIJK_BUDGET_MS = 8 * 60 * 1000;
     // SNELHEID (Daniel, 16-11-2026): 257 advertenties kostten 2 tot 5 seconden per stuk
     // omdat ze één voor één werden gelezen, en pas na afloop kwam er iets binnen. Nu
     // drie tegelijk (de pagina's zijn gewone leesverzoeken, met dezelfde terugval bij 429
@@ -8782,6 +8782,29 @@ async function bgScanMp2dh(job, serverUrl) {
         }
         await sleep(150); // gentle, and keeps the worker warm
       }
+      // TWEEDE RONDE, EEN VOOR EEN (16-11-2026). Gemeten op Daniels eigen scan van 257 advertenties:
+      // met drie tegelijk was de scan in 81 seconden klaar, maar 85 artikelen kwamen zonder omschrijving
+      // en met één foto binnen (de pagina gaf een afwijzing of lege tekst). Wat nu nog geen tekst heeft
+      // proberen we rustig opnieuw, één per keer, binnen dezelfde tijdgrens.
+      const zonderTekst = teVerrijken.filter((x) => !x.description);
+      let hersteld = 0;
+      for (let k = 0; k < zonderTekst.length; k++) {
+        if (Date.now() - startedAt > VERRIJK_BUDGET_MS) break;
+        const e2 = await lees(zonderTekst[k]);
+        if (e2 && e2.description) { pasToe(zonderTekst[k], e2); hersteld++; }
+        if (k % 10 === 0) {
+          try {
+            await reportProgress(serverUrl, job.id, {
+              stage: "enriching", message: `Fetching details ${total - zonderTekst.length + k + 1}/${total}…`,
+              current: Math.min(total, total - zonderTekst.length + k + 1), total,
+              ...(eersteBatchVerstuurd ? { deel_klaar: Math.min(EERSTE_BATCH, total) } : {}),
+            });
+          } catch (_) { /* versiering */ }
+        }
+        await sleep(500);
+      }
+      result.meta = { ...(result.meta || {}), enrichment_retry: { nodig: zonderTekst.length, hersteld,
+        nog_zonder_tekst: teVerrijken.filter((x) => !x.description).length } };
     } catch (e) {
       // Komt er hier tóch iets doorheen, leg dan vast hoe ver we kwamen. Anders
       // ziet een halve oogst er precies zo uit als een hele.
