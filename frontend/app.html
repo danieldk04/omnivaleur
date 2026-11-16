@@ -9735,6 +9735,7 @@ function clearImportProgress() {
 // per kanaal (de server koppelt alleen wat zeker is), daarna de dubbelcontrole
 // over de hele voorraad. Wat niet zeker is blijft staan als vraag.
 let importAllesBezig = false;
+let deelImportBezig = false; // eerste batch tijdens een lopende scan
 const importAllesStand = {}; // platform -> { stage, message, klaar, fout, gevonden }
 
 function laatsteImportRonde() {
@@ -9888,6 +9889,17 @@ async function wachtOpScan(platform, jobId) {
         const nu = `${prog.stage || ''}|${prog.current || 0}|${prog.total || 0}|${prog.message || ''}`;
         if (nu !== sig) { sig = nu; laatsteBeweging = Date.now(); }
         renderImportAlles();
+        // De eerste advertenties zijn al binnen terwijl de rest nog gelezen wordt (extensie 1.0.424):
+        // neem ze nu al over, zodat een nieuwe klant meteen een eerste artikel kan plaatsen
+        // (Daniel, 16-11-2026: 257 advertenties duurden minuten). De rest volgt na de scan.
+        if (prog.deel_klaar && !st.deelGedaan && !deelImportBezig && !(state.items || []).length) {
+          st.deelGedaan = true; deelImportBezig = true;
+          try {
+            await bulkImportAllCandidates({ stil: true, platforms: [platform] });
+            await loadAll();
+          } catch (_) { /* de import na de scan pakt alles alsnog op */ }
+          deelImportBezig = false;
+        }
       }
     }
     // De extensie leest één kanaal tegelijk. Staat deze opdracht nog te wachten

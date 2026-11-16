@@ -4218,6 +4218,35 @@ def claim_job(job_id: str, user_id: str = Depends(get_current_user)):
     return result.data[0]
 
 
+@router.post("/{job_id}/scan-deel")
+async def scan_deel(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
+    """De eerste verrijkte advertenties van een lopende scan, vooruit gestuurd.
+
+    WAAROM (Daniel, 16-11-2026): bij 257 advertenties duurt een scan minuten en pas na
+    afloop kwam er iets binnen. De extensie stuurt nu de eerste 20 meteen mee zodat een
+    nieuwe klant kan beginnen terwijl de rest doorloopt. Zelfde opslag als bij het afronden
+    (`_store_scan_results`): alleen kandidaten, nooit items of advertenties. Het afronden
+    slaat later alles nog eens op; dat is veilig omdat kandidaten op platform-id staan.
+    Alleen voor een scan die nog loopt, en nooit voor Vinted (dat afronden doet daar meer).
+    """
+    import asyncio
+    db = get_db()
+    _record_extension_heartbeat(db, user_id)
+    job = eerste_rij(await naast_de_lus(lambda: db.table("jobs").select("*").eq("id", job_id)
+                                        .eq("user_id", user_id).limit(1).execute()))
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.get("action") != "scan" or job.get("platform") not in ("marktplaats", "2dehands"):
+        raise HTTPException(status_code=400, detail="Only a running Marktplaats or 2dehands scan can send a first batch")
+    if job.get("status") not in ("pending", "claimed"):
+        return {"ok": True, "opgeslagen": 0}
+    listings = body.get("listings") or []
+    if not isinstance(listings, list) or not listings:
+        return {"ok": True, "opgeslagen": 0}
+    await asyncio.to_thread(_store_scan_results, db, job, listings[:60])
+    return {"ok": True, "opgeslagen": min(len(listings), 60)}
+
+
 @router.post("/{job_id}/progress")
 def report_job_progress(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
     """

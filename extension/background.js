@@ -8635,19 +8635,18 @@ async function bgScanMp2dh(job, serverUrl) {
     // volgende scan alsnog verrijkt. Onvolledig binnen is oneindig veel beter
     // dan compleet kwijt.
     const VERRIJK_BUDGET_MS = 4 * 60 * 1000;
+    // SNELHEID (Daniel, 16-11-2026): 257 advertenties kostten 2 tot 5 seconden per stuk
+    // omdat ze één voor één werden gelezen, en pas na afloop kwam er iets binnen. Nu
+    // drie tegelijk (de pagina's zijn gewone leesverzoeken, met dezelfde terugval bij 429
+    // als voorheen), en de eerste 20 gaan al na een halve minuut naar de server zodat
+    // een nieuwe klant meteen kan beginnen terwijl de rest doorloopt.
+    const PARALLEL = 3;
+    const EERSTE_BATCH = 20;
+    let eersteBatchVerstuurd = false;
     let afgekaptOpTijd = 0;
-    try {
-      for (let i = 0; i < teVerrijken.length; i++) {
-        if (Date.now() - startedAt > VERRIJK_BUDGET_MS) {
-          afgekaptOpTijd = teVerrijken.length - i;
-          console.warn(`[Omnivaleur] verrijken afgekapt op tijd: ${enriched} gedaan, `
-            + `${afgekaptOpTijd} blijven staan voor een volgende scan.`);
-          break;
-        }
-        const it = teVerrijken[i];
-        let e = null;
-        try {
-          e = await execInTab(tabId, async (url) => {
+    const lees = async (it) => {
+      try {
+        return await execInTab(tabId, async (url) => {
             const nap = ms => new Promise(r => setTimeout(r, ms));
             for (let attempt = 0; attempt < 3; attempt++) {
               try {
@@ -8694,42 +8693,88 @@ async function bgScanMp2dh(job, serverUrl) {
                 // artikelen daardoor als "Nieuw met kaartje" in haar voorraad.
                 const cm = html.match(/"conditie"\s*:\s*"([a-z0-9-]{2,40})"/i);
                 const condition = cm ? cm[1].replace(/-/g, " ") : "";
-                return { description: description.trim().slice(0, 20000), photo_urls: [...new Set(photos)], condition };
+                // Merk en maat staan in het kenmerkenblok van de pagina ("attr":{...,"Merk":"..."}).
+                // Zonder dit kwam elke geïmporteerde Marktplaats-kleding zonder merk en maat
+                // binnen en bleef Plaatsen dicht ("Voeg merk, maat toe", Daniel 16-11-2026).
+                let merk = "", maat = "";
+                try {
+                  const am = html.match(/"attr"\s*:\s*(\{[^{}]*\})/);
+                  if (am) {
+                    const at = JSON.parse(am[1]);
+                    merk = String(at["Merk"] || at["merk"] || "").trim();
+                    for (const k of Object.keys(at)) {
+                      if (/^(kleding ?maat|schoenmaat|maat|size)$/i.test(k)) { maat = String(at[k] || "").trim().replace(/^maat\s+/i, ""); break; }
+                    }
+                  }
+                } catch (_) { /* kenmerken zijn een extra, nooit een reden om te falen */ }
+                return { description: description.trim().slice(0, 20000), photo_urls: [...new Set(photos)], condition, brand: merk.slice(0, 100), size: maat.slice(0, 20) };
               } catch (e3) {
                 await nap(500 * Math.pow(2, attempt));
               }
             }
             return null;
           }, [it.platform_listing_url]);
-        } catch (e4) { e = null; }
-
-        if (e) {
-          enriched++;
-          if (e.description) it.description = e.description;
-          if (e.condition && !it.condition) it.condition = e.condition;
-          if (e.photo_urls && e.photo_urls.length) {
-            it.photo_urls = e.photo_urls;
-            it.photo_url = it.photo_url || e.photo_urls[0];
-          }
+      } catch (e4) { return null; }
+    };
+    const pasToe = (it, e) => {
+      if (!e) return;
+      enriched++;
+      if (e.description) it.description = e.description;
+      if (e.condition && !it.condition) it.condition = e.condition;
+      if (e.brand && !it.brand) it.brand = e.brand;
+      if (e.size && !it.size) it.size = e.size;
+      if (e.photo_urls && e.photo_urls.length) {
+        it.photo_urls = e.photo_urls;
+        it.photo_url = it.photo_url || e.photo_urls[0];
+      }
+    };
+    // Staat er geen maat in de kenmerken, dan alleen een maat die de verkoper zelf in de titel
+    // koppelde aan Heren/Dames/Jongens/Meisjes/Unisex ("... - Heren M - ..."). Geen gok op losse letters.
+    const maatUitTitel = (titel) => {
+      const m = String(titel || "").match(/\b(?:Heren|Dames|Jongens|Meisjes|Unisex)\s+(XXS|XS|S|M|L|XL|XXL|XXXL|3XL|4XL|\d{2})\b/i);
+      return m ? m[1].toUpperCase() : "";
+    };
+    try {
+      for (let i = 0; i < teVerrijken.length; i += PARALLEL) {
+        if (Date.now() - startedAt > VERRIJK_BUDGET_MS) {
+          afgekaptOpTijd = teVerrijken.length - i;
+          console.warn(`[Omnivaleur] verrijken afgekapt op tijd: ${enriched} gedaan, `
+            + `${afgekaptOpTijd} blijven staan voor een volgende scan.`);
+          break;
         }
-        // Voortgang melden is versiering, geen werk. Toch stond deze aanroep
-        // KAAL in de lus: één mislukte melding — een hik op de server, een 500
-        // — vloog naar de vangst hieronder en gooide de verrijking van ALLE
-        // resterende advertenties weg. De scan meldde zich daarna gewoon als
-        // geslaagd. Bij een verkoper met 1.245 advertenties kwamen zo de laatste
-        // 304 binnen met één foto en zonder tekst, zonder dat iemand iets zag.
-        //
-        // En niet meer bij elke advertentie: dat waren 1.245 schrijfacties naar
-        // de server voor een voortgangsbalk. Elke tiende is genoeg, en dat is
-        // meteen tien keer minder kans dat het misgaat.
-        if (i % 10 === 0 || i === teVerrijken.length - 1) {
-          const perItem = ((Date.now() - startedAt) / 1000) / (i + 1);
+        const groep = teVerrijken.slice(i, i + PARALLEL);
+        const uitkomsten = await Promise.all(groep.map(lees));
+        groep.forEach((it, k) => { pasToe(it, uitkomsten[k]); if (!it.size) { const mt = maatUitTitel(it.title); if (mt) it.size = mt; } });
+        const klaar = Math.min(i + PARALLEL, teVerrijken.length);
+        // De eerste batch meteen naar de server. Mislukt dat, dan loopt de scan gewoon door:
+        // het is een versnelling, geen voorwaarde.
+        if (!eersteBatchVerstuurd && klaar >= Math.min(EERSTE_BATCH, teVerrijken.length)) {
+          eersteBatchVerstuurd = true;
+          try {
+            const headers = await getAuthHeaders();
+            const r = await fetch(`${serverUrl}/api/jobs/${job.id}/scan-deel`, {
+              method: "POST", headers,
+              body: JSON.stringify({ listings: teVerrijken.slice(0, klaar) }),
+            });
+            if (r.ok) {
+              await reportProgress(serverUrl, job.id, {
+                stage: "enriching", message: `Fetching details ${klaar}/${total}…`,
+                current: klaar, total, deel_klaar: klaar,
+              });
+            }
+          } catch (e5) { console.warn("[Omnivaleur] eerste batch niet vooruit gestuurd (gaat gewoon door):", e5); }
+        }
+        // Voortgang melden is versiering, geen werk; mislukt het, dan gaat de scan door.
+        // Niet bij elke advertentie maar ongeveer elke tien (zie 1.245-advertenties-geval).
+        if (Math.floor(i / 10) !== Math.floor((i + PARALLEL) / 10) || klaar >= teVerrijken.length) {
+          const perItem = ((Date.now() - startedAt) / 1000) / klaar;
           try {
             await reportProgress(serverUrl, job.id, {
               stage: "enriching",
-              message: `Fetching details ${i + 1}/${total}…`,
-              current: i + 1, total,
-              eta_seconds: Math.max(0, Math.round(perItem * (total - i - 1))),
+              message: `Fetching details ${klaar}/${total}…`,
+              current: klaar, total,
+              eta_seconds: Math.max(0, Math.round(perItem * (total - klaar))),
+              ...(eersteBatchVerstuurd ? { deel_klaar: Math.min(EERSTE_BATCH, total) } : {}),
             });
           } catch (e3) {
             console.warn("[Omnivaleur] voortgang niet gemeld (gaat gewoon door):", e3);
