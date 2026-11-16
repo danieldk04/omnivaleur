@@ -4034,5 +4034,13 @@
  "expired": "verlopen",
  "Adverts that ran out on the platform by themselves. Click to see them.": "Advertenties die op het kanaal vanzelf afliepen. Klik om ze te bekijken.",
  "Grey with a small clock means the advert expired there and was not sold. Click it to put it back online.": "Grijs met een klokje betekent dat de advertentie daar verlopen is en niet verkocht. Klik erop om hem weer online te zetten.",
- "The platform icons.": "De kanaaliconen."
+ "The platform icons.": "De kanaaliconen.",
+ "Placing…": "Bezig met plaatsen…",
+ "Queued: the extension starts right away": "In de wachtrij: de extensie begint meteen",
+ "Reading your adverts now": "We lezen je advertenties nu in",
+ "We are reading your adverts from the sites you picked. This takes a minute or two; you do not have to click anything.": "We lezen je advertenties in van de sites die je koos. Dat duurt een minuut of twee. Je hoeft nergens op te klikken.",
+ "Place your first advert": "Plaats je eerste advertentie",
+ "Place it now": "Plaats nu",
+ "Choose another item": "Kies een ander artikel",
+ "Goes live on": "Komt online op"
 }

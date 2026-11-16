@@ -313,17 +313,107 @@
     el.style.display = "block";
   }
 
+  // ── Quick win (Daniel, 16-11-2026) ───────────────────────────────────────────
+  // Meting: van 22 aanmelders in 30 dagen kwam 45% nooit bij een artikel en duurde
+  // het eerste artikel 30 tot 150 minuten. Daarom doet de poort twee dingen zelf:
+  // zodra de extensie en de login kloppen begint het inlezen zonder klik, en zodra
+  // er voorraad is staat er één artikel klaar met één knop "Place it now".
+  const SCANBAAR = ["marktplaats", "2dehands", "vinted"];
+  const AUTO_SLEUTEL = "ob-auto-import-om";
+  const AUTO_HERHAAL_MS = 10 * 60 * 1000;
+  let autoGestart = false;
+
+  function autoImportKan() {
+    const bezig = g("importAllesBezig");
+    const fn = g("importeerAlleKanalen");
+    return typeof fn === "function" && !bezig;
+  }
+  // Start het inlezen één keer per tien minuten zolang er nog geen artikel is.
+  P.autoImport = function (f) {
+    try {
+      if (autoGestart || !autoImportKan()) return;
+      const kanalen = (f.gekozen || []).filter((p) => SCANBAAR.includes(p));
+      if (!kanalen.length) return;
+      const laatst = Number(opslag.lees(AUTO_SLEUTEL) || 0);
+      if (laatst && Date.now() - laatst < AUTO_HERHAAL_MS) return;
+      autoGestart = true;
+      opslag.zet(AUTO_SLEUTEL, String(Date.now()));
+      opslag.zet("importKanalen", JSON.stringify(kanalen));
+      const sv = g("showView"); if (typeof sv === "function" && actieveView() !== "import") sv("import");
+      const run = g("importeerAlleKanalen");
+      Promise.resolve(run()).catch(() => {}).then(() => { autoGestart = false; P.tik(); });
+    } catch (e) { autoGestart = false; }
+  };
+
+  // Het beste eerste artikel: foto, prijs en omschrijving aanwezig en voor het
+  // kanaal niets ontbrekend. Zo ziet de klant nooit meteen een foutmelding.
+  P.besteArtikel = function (f) {
+    const S = g("state"); const mf = g("missingFieldsForPlatform");
+    if (!S || !Array.isArray(S.items) || typeof mf !== "function") return null;
+    const kan = (f && f.gekozen ? f.gekozen : []).filter((p) => SCANBAAR.includes(p));
+    const ingelogd = (p) => !((f && f.nietIngelogd) || []).includes(p);
+    const volgorde = ["marktplaats", "2dehands", "vinted"].filter((p) => kan.includes(p) && ingelogd(p));
+    const levend = new Set((S.listings || []).filter((l) => l.status === "active").map((l) => l.item_id));
+    const kandidaten = S.items.filter((i) => !i.sold && i.status !== "sold" && !levend.has(i.id)
+      && Number(i.price) > 0 && i.photo_urls && i.photo_urls.length && String(i.description || "").trim());
+    for (const p of volgorde) {
+      for (const i of kandidaten) {
+        let ontbreekt = [1];
+        try { ontbreekt = mf(i, p); } catch (e) { /* telt als niet klaar */ }
+        if (!ontbreekt.length) return { item: i, kanaal: p };
+      }
+    }
+    return null;
+  };
+
+  P.plaatsEerste = async function () {
+    const f = laatsteFeiten; const b = f && P.besteArtikel(f);
+    if (!b) { const sv = g("showView"); if (typeof sv === "function") sv("items"); return; }
+    const knop = document.getElementById("pt-plaats-knop");
+    if (knop) { knop.disabled = true; knop.textContent = "Placing…"; }
+    try {
+      const api = g("API"), fetcher = g("apiFetch");
+      const res = await fetcher(`${api}/api/items/${b.item.id}/crosslist`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ platforms: [b.kanaal] }),
+      });
+      const t = g("showToast");
+      if (!res.ok) { const oc = g("openCrosslist"); if (typeof oc === "function") oc(b.item.id, b.kanaal); return; }
+      if (typeof t === "function") t("Queued: the extension starts right away");
+      const nx = g("nudgeExtension"); if (typeof nx === "function") nx();
+      const la = g("loadAll"); if (typeof la === "function") await la();
+    } catch (e) {
+      const oc = g("openCrosslist"); if (typeof oc === "function") oc(b.item.id, b.kanaal);
+    }
+    P.tik();
+  };
+
   function tekenCoach(r) {
     const view = actieveView();
     if (r.fase === "items") {
       const opImport = view === "import";
-      coach(`<div class="pt-cs">Step 3 of 4</div><b class="pt-ct">Add your items</b>
-        <p>Import the adverts you already have on Marktplaats, 2dehands or Vinted, or create one with <b>New item</b>. The next step opens as soon as there is one item.</p>
+      const bezig = !!g("importAllesBezig");
+      coach(`<div class="pt-cs">Step 3 of 4</div><b class="pt-ct">${bezig ? "Reading your adverts now" : "Add your items"}</b>
+        <p>${bezig ? "We are reading your adverts from the sites you picked. This takes a minute or two; you do not have to click anything." : "Import the adverts you already have on Marktplaats, 2dehands or Vinted, or create one with <b>New item</b>. The next step opens as soon as there is one item."}</p>
         ${opImport ? "" : `<div class="pt-cb"><button class="pt-groot" style="padding:10px 20px;font-size:13px" onclick="showView('import')">Go to Import</button></div>`}`);
       pijl(opImport ? "#import-scan-grid" : ".nav-item[data-view='import']", opImport ? "Tick where you sell" : "Open Import", opImport ? ID("import-scan-grid", ">") + " :last-child" : null);
       return;
     }
-    // plaatsen
+    // plaatsen: één artikel klaar met één knop
+    const b = P.besteArtikel(laatsteFeiten);
+    if (b) {
+      const namen = { marktplaats: "Marktplaats", "2dehands": "2dehands", vinted: "Vinted" };
+      const foto = esc(b.item.photo_urls[0]);
+      coach(`<div class="pt-cs">Step 4 of 4</div><b class="pt-ct">Place your first advert</b>
+        <div style="display:flex;gap:12px;align-items:center;margin:10px 0 12px">
+          <img src="${foto}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:6px;flex:none">
+          <div style="font-size:13px;line-height:1.4"><b translate="no">${esc(b.item.title)}</b><br><span translate="no">&euro;${esc(b.item.price)}</span> <span>Goes live on</span> <b translate="no">${esc(namen[b.kanaal])}</b></div>
+        </div>
+        <div class="pt-cb"><button id="pt-plaats-knop" class="pt-groot" style="padding:10px 20px;font-size:13px" onclick="OBPoort.plaatsEerste()">Place it now</button>
+        <button class="btn btn-sm btn-outline" style="margin-left:8px" onclick="showView('items')">Choose another item</button></div>`);
+      wisPijl();
+      return;
+    }
     const sel = view === "dashboard" ? ID("dashboard-items-body", ".btn-primary")
       : view === "items" ? ID("items-body", ".btn-primary") : ".nav-item[data-view='items']";
     coach(`<div class="pt-cs">Step 4 of 4</div><b class="pt-ct">Publish your first item</b>
@@ -382,6 +472,7 @@
         ov.style.display = "none";
         if (r.fase === "items" || r.fase === "plaatsen") tekenCoach(r); else { coach(null); wisPijl(); }
       }
+      if (r.fase === "items") P.autoImport(f);
       // Slotjes in het menu bij wat nog dicht is.
       document.querySelectorAll(".sidebar .nav-item[data-view]").forEach((n) =>
         n.classList.toggle("pt-slot", !P.toegestaan(r.fase, n.dataset.view) && r.fase !== "vrij"));
