@@ -3133,11 +3133,17 @@ def _mag_nog_werken(uid: str) -> bool:
         # keek alleen naar de abonnementsrij, dus de nachtrondes sloegen hem
         # over: nul verlengingen op 2dehands sinds 17-09 en nul automatische
         # herplaatsingen op Marktplaats, met de schakelaar aan.
-        from backend.services.billing import is_owner_email
-        from backend.database import get_admin_db
-        gebruiker = get_admin_db().auth.admin.get_user_by_id(uid)
-        email = gebruiker.user.email if gebruiker and gebruiker.user else None
-        return is_owner_email(email)
+        # Lukt het opzoeken van het adres niet, dan blijft het oordeel van de
+        # abonnementsrij staan: die was hier al duidelijk 'nee'.
+        try:
+            from backend.services.billing import is_owner_email
+            from backend.database import get_admin_db
+            gebruiker = get_admin_db().auth.admin.get_user_by_id(uid)
+            email = gebruiker.user.email if gebruiker and gebruiker.user else None
+            return is_owner_email(email)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("eigenaar niet na te gaan voor %s: %s", uid, e)
+            return False
     except Exception as e:  # noqa: BLE001
         logger.warning("abonnement niet na te gaan voor %s: %s — werk gaat gewoon door", uid, e)
         return True
