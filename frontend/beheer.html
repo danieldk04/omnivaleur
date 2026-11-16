@@ -220,6 +220,8 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
         <div class="staafjes" id="web-grafiek"></div></div>
       <div class="kaart"><div class="label">Waar bezoekers vandaan komen</div>
         <table id="web-kanalen"></table></div>
+      <div class="kaart"><div class="label">Landen, 28 dagen: NL en BE naast de rest</div>
+        <table id="web-landen"></table></div>
     </div>
 
     <h2>Wat je hiermee kunt doen</h2>
@@ -775,6 +777,14 @@ function toonWebsite(d) {
   tabel('web-kanalen', ['Kanaal', 'Bezoeken', 'Bezoekers'], a.kanalen || [],
     (r) => `<tr><td>${veilig(r.sessionDefaultChannelGroup || '—')}</td>
       <td class="num">${getal(r.sessions)}</td><td class="num">${getal(r.activeUsers)}</td></tr>`);
+  const ld = a.landen || {};
+  const landrijen = [
+    {land: 'NL + BE samen', ...(ld.nl_be || {})},
+    {land: 'Rest van de wereld', ...(ld.rest || {})},
+    ...(ld.per_land || []).map((r) => ({land: r.countryId, sessies: r.sessions, gebruikers: r.activeUsers, betrokken: r.engagedSessions})),
+  ];
+  tabel('web-landen', ['Land', 'Bezoeken', 'Betrokken'], landrijen,
+    (r) => `<tr><td>${veilig(r.land || '—')}</td><td class="num">${getal(r.sessies)}</td><td class="num">${getal(r.betrokken)}</td></tr>`);
   tabel('web-kansen', ['Zoekterm', 'Getoond', 'Positie'], z.kansen || [],
     (r) => `<tr><td>${veilig(r.term)}</td><td class="num">${getal(r.vertoningen)}</td>
       <td class="num">${r.positie}</td></tr>`);

@@ -19294,3 +19294,8 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Facebook bij cfe8c210: niet eenmalig zoals de klantfoutenronde van 15-11 dacht. 7 van 8 plaatsingen op 15-11 faalden op "Could not set the Condition field" (LEGO nieuw, Switch goed, smartwatch redelijk, drie verschillende Facebook-rubrieken); alleen de eerste (13:54) lukte, met dezelfde rubriek en staat als de tweede die een minuut later faalde. Dus niet de staatwaarde of rubriek; iets wat na de eerste plaatsing anders is op het formulier (bijvoorbeeld een bewaard concept), maar niet bewezen. Zonder Facebook-account niet live te meten; niet gerepareerd. Dit is de enige klant die Facebook gebruikte sinds september (11 opdrachten, 1 gelukt). Oordeel op onbekend gezet.
 - NIEUW jurresnoeijer22@gmail.com (5cf1e617): 14 uur oud, geen extensie, 0 artikelen. Introductiemailtje verstuurd.
 - CREATOR info@janinanoetzel.com, nickspijkers100, sk8mom, gahomi7062: niets veranderd, geen mailtje. Nick zijn proef loopt 17-11 af.
+
+## 16-11-2026: Bezoekers uit de VS zijn machines (Indie Hackers-vraag)
+- GA4 28 dagen: VS 283 gebruikers, 20% betrokken, 17 s; China 7%, Singapore 5%. Nederland 237, 59%, 8 min. Verkeer komt uit Google (160 sessies/7d), niet uit social (17). Cloudflare-verkeer is vooral extensie/API.
+- Gebouwd: GA4-gebeurtenis `echte_bezoeker` op / en /nl (15 s zichtbaar + scroll/klik; getest: zonder actie 0, met scroll 1). Beheerscherm toont NL+BE naast de rest (`landen`). Nederlandse korte links ig-nl, tt-nl, yt-nl wijzen nu naar /nl (stonden op /).
+- Open: Cloudflare per netwerk (ASN) niet gemeten; `echte_bezoeker` nog als sleutelgebeurtenis markeren in GA4.

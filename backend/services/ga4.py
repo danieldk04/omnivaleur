@@ -355,3 +355,14 @@ def mail_naar_videopagina(start: str, end: str) -> dict | None:
         if met_aanmeldingen:
             uit["aanmeldingen"] += r.get("keyEvents:sign_up", 0)
     return uit
+
+
+def by_country(start: str, end: str, limit: int = 60) -> list[dict]:
+    """Sessies, gebruikers en betrokken sessies per land. Een land met veel
+    sessies maar nauwelijks betrokken sessies is verkeer van machines."""
+    rows = _run(
+        dimensions=["countryId"],
+        metrics=["sessions", "activeUsers", "engagedSessions"],
+        start=start, end=end, limit=limit,
+    )
+    return sorted(rows, key=lambda r: r.get("sessions", 0), reverse=True)

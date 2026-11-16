@@ -43,13 +43,13 @@ KANAAL_LINKS: list[dict] = [
      "pad": "/", "source": "threads", "medium": "social", "campagne": "bio-en",
      "kort": "th"},
     {"kanaal": "Instagram", "taal": "NL", "profiel": "https://www.instagram.com/omnivaleurnl/",
-     "pad": "/", "source": "instagram", "medium": "social", "campagne": "bio-nl",
+     "pad": "/nl", "source": "instagram", "medium": "social", "campagne": "bio-nl",
      "kort": "ig-nl"},
     {"kanaal": "TikTok", "taal": "NL", "profiel": "https://www.tiktok.com/@omni.valeur",
-     "pad": "/", "source": "tiktok", "medium": "social", "campagne": "bio-nl",
+     "pad": "/nl", "source": "tiktok", "medium": "social", "campagne": "bio-nl",
      "kort": "tt-nl"},
     {"kanaal": "YouTube", "taal": "NL", "profiel": "https://www.youtube.com/@OmnivaleurNL",
-     "pad": "/", "source": "youtube", "medium": "social", "campagne": "bio-nl",
+     "pad": "/nl", "source": "youtube", "medium": "social", "campagne": "bio-nl",
      "kort": "yt-nl"},
 ]
 

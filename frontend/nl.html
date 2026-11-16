@@ -88,6 +88,17 @@
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-VJ5BVD3GCH');
+  // Echte bezoeker: pas na 15 s zichtbaar op de pagina EN een scroll, klik of
+  // aanraking. Robots die alleen de HTML ophalen of zonder gedrag laden, halen dit nooit.
+  (function(){
+    var klaar=false, tijd=false, actie=false;
+    function check(){ if(klaar||!tijd||!actie) return; klaar=true; gtag('event','echte_bezoeker'); }
+    ['scroll','click','touchstart','keydown'].forEach(function(e){
+      addEventListener(e,function(){ actie=true; check(); },{passive:true,once:true});
+    });
+    setTimeout(function(){ if(document.visibilityState==='visible'){ tijd=true; check(); }
+      else addEventListener('visibilitychange',function v(){ if(document.visibilityState==='visible'){ removeEventListener('visibilitychange',v); setTimeout(function(){tijd=true;check();},15000);} }); },15000);
+  })();
 </script>
 </head>
 <body>

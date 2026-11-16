@@ -84,6 +84,19 @@ def _tijd(waarde) -> datetime | None:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
+
+def _landen_split(rijen: list[dict]) -> dict:
+    """NL en BE apart van de rest: het kleine ware getal naast het grote."""
+    def som(sel):
+        r = [x for x in sel]
+        return {"sessies": sum(int(x.get("sessions") or 0) for x in r),
+                "gebruikers": sum(int(x.get("activeUsers") or 0) for x in r),
+                "betrokken": sum(int(x.get("engagedSessions") or 0) for x in r)}
+    nlbe = [x for x in rijen if x.get("countryId") in ("NL", "BE")]
+    rest = [x for x in rijen if x.get("countryId") not in ("NL", "BE")]
+    return {"nl_be": som(nlbe), "rest": som(rest), "per_land": rijen[:10]}
+
+
 def _dagen_tot(waarde) -> int | None:
     dt = _tijd(waarde)
     return None if dt is None else (dt - _nu()).days
@@ -906,6 +919,7 @@ def website(user=Depends(get_current_user_full)):
                 "per_dag": [{"dag": d, "aantal": int(a)} for d, a in sorted(per_dag.items())],
                 "landingspaginas": (ga4.top_landing_pages(nu_start, nu_eind, limit=10) or [])[:10],
                 "kanalen": (ga4.channels(nu_start, nu_eind) or [])[:8],
+                "landen": _landen_split(ga4.by_country(_dag(28), _dag(1)) or []),
                 "social": sorted(({"platform": k, "bezoeken": v} for k, v in sociaal.items()),
                                  key=lambda r: -r["bezoeken"]),
             }
