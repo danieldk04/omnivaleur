@@ -558,3 +558,14 @@ def test_na_een_herstart_komt_dezelfde_mail_niet_opnieuw(monkeypatch, _geen_echt
     monkeypatch.setattr(J, "_bijwerking_stil_gemeld", {})   # de server is herstart
     J._meld_bijwerking_staat_stil(USER, "j1")
     assert len(_geen_echte_mail) == 1, "de database onthoudt het, ook na een deploy"
+
+
+def test_zoekertje_zonder_prijsveld_houdt_de_rem_niet_dicht_en_geeft_geen_mail(_geen_echte_mail):
+    """Toon, 15-11-2026: Bieden-zoekertje zonder vraagprijs gaf elke dag dezelfde mail."""
+    fout = {**_OUDE_PRIJSFOUT, "id": "zonder-prijs", "done_at": _tijd(5), "created_at": _tijd(6),
+            "claimed_at": _tijd(6),
+            "fout": "Error: The 2dehands edit form shows no price field (a listing without an asking price), so nothing was changed."}
+    assert J._bijwerken_2dh_staat_stil(_db([], [fout]), USER, prijs=True) is False
+    assert _geen_echte_mail == []
+    echt = {**fout, "id": "echt", "fout": "Error: price could not be read (undefined)"}
+    assert J._bijwerken_2dh_staat_stil(_db([], [echt]), USER, prijs=True) is True

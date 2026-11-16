@@ -1716,6 +1716,8 @@ _NIET_GEWONE_PLAATSING = "action.neq.create,scheduled_for.not.is.null"
 # worden alleen nog naar een kopie van 1.0.417 of nieuwer uitgedeeld. Zo'n oude
 # fout mag de rem niet eeuwig dicht houden (Amanda, 8f91a370, 09-11-2026).
 _PRIJS_FOUTEN_VANAF = "2026-11-05T16:34:25+00:00"
+# Tekst uit extension/content/tweedehands.js als het wijzigformulier geen prijsveld heeft.
+_GEEN_PRIJSVELD = "shows no price field"
 
 
 def _bijwerken_2dh_staat_stil(db, user_id: str, prijs: bool = False) -> bool:
@@ -1735,7 +1737,7 @@ def _bijwerken_2dh_staat_stil(db, user_id: str, prijs: bool = False) -> bool:
     """
     try:
         rijen = (db.table("jobs")
-                 .select("id,status,created_at,claimed_at,done_at,prijs:payload->>_prijs_bijwerken")
+                 .select("id,status,created_at,claimed_at,done_at,prijs:payload->>_prijs_bijwerken,fout:result->>error")
                  .eq("user_id", user_id).eq("platform", "2dehands")
                  .eq("action", "content_refresh").in_("status", ["done", "error"])
                  .order("created_at", desc=True).limit(50).execute().data or [])
@@ -1750,6 +1752,13 @@ def _bijwerken_2dh_staat_stil(db, user_id: str, prijs: bool = False) -> bool:
     if prijs:
         rijen = [r for r in rijen
                  if r.get("status") != "error" or tijdstip(r) >= _PRIJS_FOUTEN_VANAF]
+    # Een zoekertje zonder vraagprijs (Bieden, "zie omschrijving") heeft geen
+    # prijsveld om te wijzigen. Dat is geen storing van ons of van de reeks: de rest
+    # zou hetzelfde melden of gewoon lukken. Zonder dit uitzondering bleef Toon
+    # (96e30080, 15-11-2026) elke dag dezelfde mail geven en wachtten zijn andere
+    # prijswijzigingen op een rem die niets tegenhield.
+    if prijs:
+        rijen = [r for r in rijen if _GEEN_PRIJSVELD not in str(r.get("fout") or "")]
     if not rijen:
         return False
     # Wat het laatst AFLIEP telt, niet wat het laatst werd klaargezet: een reeks
