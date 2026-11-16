@@ -3125,7 +3125,19 @@ def _mag_nog_werken(uid: str) -> bool:
         from backend.services.billing import evaluate_access
         sub = eerste_rij(get_db().table("subscriptions").select("*")
                          .eq("user_id", uid).limit(1).execute())
-        return bool(evaluate_access(sub).get("allowed"))
+        if evaluate_access(sub).get("allowed"):
+            return True
+        # De eigenaar mag altijd, net als bij check_access aan de voordeur.
+        # WAAROM (16-11-2026): Daniels eigen account staat op 'trial_expired'.
+        # De server gaf zijn extensie gewoon werk (eigenaar), maar deze poort
+        # keek alleen naar de abonnementsrij, dus de nachtrondes sloegen hem
+        # over: nul verlengingen op 2dehands sinds 17-09 en nul automatische
+        # herplaatsingen op Marktplaats, met de schakelaar aan.
+        from backend.services.billing import is_owner_email
+        from backend.database import get_admin_db
+        gebruiker = get_admin_db().auth.admin.get_user_by_id(uid)
+        email = gebruiker.user.email if gebruiker and gebruiker.user else None
+        return is_owner_email(email)
     except Exception as e:  # noqa: BLE001
         logger.warning("abonnement niet na te gaan voor %s: %s — werk gaat gewoon door", uid, e)
         return True
