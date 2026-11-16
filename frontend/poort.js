@@ -448,10 +448,23 @@
     if (r.fase === "items") {
       const opImport = view === "import";
       const bezig = !!g("importAllesBezig");
-      coach(`<b class="pt-ct">${bezig ? "Reading your adverts now" : "Add your items"}</b>
+      // Hoe ver is het? Eén balk uit de voortgang van het kanaal dat het meeste doet.
+      let balk = "";
+      try {
+        const stand = g("importAllesStand") || {};
+        const regels = Object.entries(stand).filter(([p, x]) => p !== "_import" && x && x.total);
+        if (bezig && regels.length) {
+          const x = regels.sort((a, b) => b[1].total - a[1].total)[0][1];
+          const pct = Math.max(3, Math.min(99, Math.round(100 * (x.current || 0) / x.total)));
+          balk = `<div style="height:8px;background:#dfe5f1;border-radius:4px;overflow:hidden;margin:10px 0 4px"><div style="height:100%;width:${pct}%;background:#3d35c4;border-radius:4px;transition:width .4s"></div></div>`;
+        }
+      } catch (e) { /* een balk is versiering */ }
+      coach(`<b class="pt-ct">${bezig ? "Reading your adverts now" : "Add your items"}</b>${balk}
         <p>${bezig ? "We are reading your adverts from the sites you picked. A big shop takes a few minutes. Keep this tab open; you do not have to click anything." : "Import the adverts you already have on Marktplaats, 2dehands or Vinted, or create one with <b>New item</b>. The next step opens as soon as there is one item."}</p>
         ${opImport ? "" : `<div class="pt-cb"><button class="pt-groot" style="padding:10px 20px;font-size:13px" onclick="showView('import')">Go to Import</button></div>`}`);
-      pijl(opImport ? "#import-scan-grid" : ".nav-item[data-view='import']", opImport ? "Tick where you sell" : "Open Import", opImport ? ID("import-scan-grid", ">") + " :last-child" : null);
+      // Tijdens het automatisch inlezen is er niets te kiezen: dan geen pijl.
+      if (bezig) wisPijl();
+      else pijl(opImport ? "#import-scan-grid" : ".nav-item[data-view='import']", opImport ? "Tick where you sell" : "Open Import", opImport ? ID("import-scan-grid", ">") + " :last-child" : null);
       return;
     }
     // plaatsen: één artikel klaar met één knop
