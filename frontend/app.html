@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=45d974642d"></script>
+<script src="/i18n.js?v=61416f2aff"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -9619,13 +9619,21 @@ let importCreateCandidateId = null; // set while the item modal is creating an i
 // een import en wist daarna niet of het klopte. Nu vinkt hij aan waar hij
 // verkoopt en doet één knop de rest. Het vinkje is een gemak per browser;
 // zonder bewaarde keuze staan de kanalen aan waar hij al advertenties heeft.
+// Shopify en WooCommerce lezen we via hun API en alleen na koppelen (Platforms).
+// Zonder koppeling is er niets te lezen: dan hoort het kanaal hier niet te staan
+// en nooit mee te gaan in een import (Daniel, 16-11-2026: een nieuwe klant had
+// Shopify aangevinkt en kreeg "your store isn't connected").
+function importKanaalBeschikbaar(p) {
+  if (!IMPORT_SCANNABLE[p]) return false;
+  return !SERVER_SCANS.has(p) || (state.connected || []).includes(p);
+}
 function importKanalen() {
   try {
     const bewaard = JSON.parse(localStorage.getItem('importKanalen') || 'null');
-    if (Array.isArray(bewaard)) return bewaard.filter(p => IMPORT_SCANNABLE[p]);
+    if (Array.isArray(bewaard)) return bewaard.filter(importKanaalBeschikbaar);
   } catch (_) {}
   const op = new Set((state.listings || []).map(l => l.platform));
-  return Object.keys(IMPORT_SCANNABLE).filter(p => IMPORT_SCANNABLE[p] && op.has(p));
+  return Object.keys(IMPORT_SCANNABLE).filter(p => importKanaalBeschikbaar(p) && op.has(p));
 }
 
 function zetImportKanaal(p, aan) {
@@ -9638,7 +9646,7 @@ function zetImportKanaal(p, aan) {
 function renderImportScanButtons() {
   const gekozen = new Set(importKanalen());
   const bezig = importAllesBezig || Object.values(scanningPlatforms).some(Boolean);
-  const kan = Object.keys(IMPORT_SCANNABLE).filter(p => IMPORT_SCANNABLE[p]);
+  const kan = Object.keys(IMPORT_SCANNABLE).filter(importKanaalBeschikbaar);
   const straks = Object.keys(IMPORT_SCANNABLE).filter(p => !IMPORT_SCANNABLE[p]);
   const chips = kan.map(p => {
     const aan = gekozen.has(p);
@@ -9814,7 +9822,7 @@ function renderImportAlles() {
       const icoon = st.fout ? '⚠' : st.klaar ? '✓' : '<span class="spinner" style="width:11px;height:11px;border-width:2px;display:inline-block"></span>';
       const tekst = st.fout ? st.fout : st.klaar ? (st.gevonden != null ? `${st.gevonden} new listing${st.gevonden === 1 ? '' : 's'} found` : 'read')
         : (st.message || SCAN_STAGE_LABELS[st.stage || 'queued'] || 'Reading…')
-          + (st.total ? ` (${st.current || 0} / ${st.total})` : '');
+          + (st.total && !/\d+\s*\/\s*\d+/.test(st.message || '') ? ` (${st.current || 0} / ${st.total})` : '');
       return `<div style="display:flex;gap:8px;align-items:center;font-size:12.5px">
         <span style="width:16px;text-align:center">${icoon}</span>
         <b style="min-width:90px">${esc(naam(p))}</b>
@@ -9881,6 +9889,18 @@ async function wachtOpScan(platform, jobId) {
         if (nu !== sig) { sig = nu; laatsteBeweging = Date.now(); }
         renderImportAlles();
       }
+    }
+    // De extensie leest één kanaal tegelijk. Staat deze opdracht nog te wachten
+    // terwijl een ander kanaal van deze ronde bezig is, dan is er niets mis: hij
+    // is aan de beurt na dat kanaal. Zonder dit gaf 2dehands na 3 minuten "geen
+    // antwoord van de extensie" terwijl Marktplaats nog 257 advertenties las
+    // (Daniel, 16-11-2026).
+    const ander = Object.entries(importAllesStand).some(([p, x]) =>
+      p !== platform && p !== '_import' && !x.klaar && !x.fout && !SERVER_SCANS.has(p));
+    if (ander && job && job.status === 'pending') {
+      laatsteBeweging = Date.now();
+      st.message = 'Waiting for your other channel to finish first…';
+      renderImportAlles();
     }
     if (Date.now() - laatsteBeweging > STALL_MS || Date.now() - start > MAX_MS) {
       return { ok: false, fout: SERVER_SCANS.has(platform)
@@ -16352,6 +16372,6 @@ function renderAnalytics(force) {
   })();
 </script>
 <script src="/onboarding.js?v=20261106a"></script>
-<script src="/poort.js?v=20261116a"></script>
+<script src="/poort.js?v=20261116b"></script>
 </body>
 </html>

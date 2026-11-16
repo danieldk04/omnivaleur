@@ -444,8 +444,8 @@
     if (r.fase === "items") {
       const opImport = view === "import";
       const bezig = !!g("importAllesBezig");
-      coach(`<div class="pt-cs">Step 3 of 4</div><b class="pt-ct">${bezig ? "Reading your adverts now" : "Add your items"}</b>
-        <p>${bezig ? "We are reading your adverts from the sites you picked. This takes a minute or two; you do not have to click anything." : "Import the adverts you already have on Marktplaats, 2dehands or Vinted, or create one with <b>New item</b>. The next step opens as soon as there is one item."}</p>
+      coach(`<b class="pt-ct">${bezig ? "Reading your adverts now" : "Add your items"}</b>
+        <p>${bezig ? "We are reading your adverts from the sites you picked. A big shop takes a few minutes. Keep this tab open; you do not have to click anything." : "Import the adverts you already have on Marktplaats, 2dehands or Vinted, or create one with <b>New item</b>. The next step opens as soon as there is one item."}</p>
         ${opImport ? "" : `<div class="pt-cb"><button class="pt-groot" style="padding:10px 20px;font-size:13px" onclick="showView('import')">Go to Import</button></div>`}`);
       pijl(opImport ? "#import-scan-grid" : ".nav-item[data-view='import']", opImport ? "Tick where you sell" : "Open Import", opImport ? ID("import-scan-grid", ">") + " :last-child" : null);
       return;
@@ -455,7 +455,7 @@
     if (b) {
       const namen = { marktplaats: "Marktplaats", "2dehands": "2dehands", vinted: "Vinted" };
       const foto = esc(b.item.photo_urls[0]);
-      coach(`<div class="pt-cs">Step 4 of 4</div><b class="pt-ct">Place your first advert</b>
+      coach(`<b class="pt-ct">Place your first advert</b>
         <div style="display:flex;gap:12px;align-items:center;margin:10px 0 12px">
           <img src="${foto}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:6px;flex:none">
           <div style="font-size:13px;line-height:1.4"><b translate="no">${esc(b.item.title)}</b><br><span translate="no">&euro;${esc(b.item.price)}</span> <span>Goes live on</span> <b translate="no">${esc(namen[b.kanaal])}</b></div>
@@ -467,7 +467,7 @@
     }
     const sel = view === "dashboard" ? ID("dashboard-items-body", ".btn-primary")
       : view === "items" ? ID("items-body", ".btn-primary") : ".nav-item[data-view='items']";
-    coach(`<div class="pt-cs">Step 4 of 4</div><b class="pt-ct">Publish your first item</b>
+    coach(`<b class="pt-ct">Publish your first item</b>
       <p>Press <b>Publish</b> on an item, tick a marketplace and confirm. The icon turns orange while the extension works and <b>green once the advert is really online</b>.</p>`);
     pijl(sel, view === "dashboard" || view === "items" ? "Press Publish" : "Go to your items");
   }

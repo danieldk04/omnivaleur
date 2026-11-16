@@ -4037,7 +4037,6 @@
  "Placing…": "Bezig met plaatsen…",
  "Queued: the extension starts right away": "In de wachtrij: de extensie begint meteen",
  "Reading your adverts now": "We lezen je advertenties nu in",
- "We are reading your adverts from the sites you picked. This takes a minute or two; you do not have to click anything.": "We lezen je advertenties in van de sites die je koos. Dat duurt een minuut of twee. Je hoeft nergens op te klikken.",
  "Place your first advert": "Plaats je eerste advertentie",
  "Place it now": "Plaats nu",
  "Choose another item": "Kies een ander artikel",
@@ -4060,5 +4059,8 @@
  "Can't find it? Look in your spam or junk folder, and in other tabs such as Promotions, Updates or Social. It can take a few minutes.": "Kun je hem niet vinden? Kijk in je spam of ongewenste mail, en in andere tabbladen zoals Promoties, Updates of Sociaal. Het kan een paar minuten duren.",
  "Send the email again": "Stuur de mail opnieuw",
  "Sent again. Check your spam folder too.": "Opnieuw verstuurd. Kijk ook in je spammap.",
- "Could not send it right now. Try again in a minute.": "Versturen lukt nu niet. Probeer het over een minuut opnieuw."
+ "Could not send it right now. Try again in a minute.": "Versturen lukt nu niet. Probeer het over een minuut opnieuw.",
+ "We are reading your adverts from the sites you picked. A big shop takes a few minutes. Keep this tab open; you do not have to click anything.": "We lezen je advertenties in van de sites die je koos. Een grote winkel duurt een paar minuten. Laat dit tabblad open staan; je hoeft nergens op te klikken.",
+ "Your Shopify store isn't connected yet. Connect it under Platforms first.": "Je Shopify-winkel is nog niet gekoppeld. Koppel hem eerst onder Platforms.",
+ "Waiting for your other channel to finish first…": "Wacht tot je andere kanaal klaar is…"
 }
