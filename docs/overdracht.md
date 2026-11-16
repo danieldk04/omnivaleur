@@ -128,6 +128,22 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
   (`dist/omnivaleur-extension-1.0.422.zip`). Uploaden kan alleen met Daniels Google-account.
 - **Tijdgebonden**: 19-11 uitkomst fotometing AI-pakket (Mac); 26-11 SEO-nameting (Mac);
   1-12 kosten- en doelenronde (Mac); 15-01-2027 grenzen Pro en Plus gaan gelden.
+- **Klanten, stand 15-16 november (nog niet opgelost, meet opnieuw voor je iets aanneemt)**:
+  Toon (96e30080): kelim KEXL33 heeft foto's alleen op Marktplaats-adressen die nu 404
+  geven, 20 van 1.688 artikelen zitten zo (Toon moet foto's opnieuw toevoegen); merk "Gaudi"
+  vindt de Marktplaats-merkkiezer niet en er is geen terugval (open: eerst meten wat de
+  kiezer toont); MP "Not published" zonder rood veld 2x op tapijten, oorzaak niet bewezen;
+  Bieden-zoekertjes (prijs 1,00) geven bewust "geen prijsveld", klant-eigen. Janneke
+  (31d28378), 1ba42900, Goudlief, bcdf9aa4, 0b28c1ce: extensie dagen offline, wachtrijen
+  groeien, klant-eigen. 1ba42900 is op 2dehands uitgelogd. Facebook Staat-veld en Vinted
+  LEGO maat/kleur: eenmalig, onbewezen. Nieuwe proefklant Janina (f0cead08) staat op
+  gratis toegang met 25% commissie, nog niets geplaatst. tamboer.joost: nieuwe proef tot 20-11.
+- **Terughaal opvolging (13-11)**: 33 zwijgers hebben een opvolgmail als concept klaarstaan
+  in `data/schrijfstijl/terughaal/concepten/`; Daniel verstuurt. Antwoordconcept voor
+  jordi.waning ook. Kanalen zonder mail staan in `kanalen.md` daar.
+- **Social video's**: week 47 heeft vijf video's klaar in Drive (Social media video's
+  Claude/Week 47), nog niets geplaatst of gemeten. Schedchie-API-sleutel pas na Daniels eerste
+  betaling; vanaf week 47 opnieuw vragen. Daniel plaatst alles zelf.
 - **Beslissing Daniel**: wanneer de nieuwe plannen en de vriendenactie live gaan, en de
   aankondiging. Niet zelf aanzetten.
 - **Niet opnieuw nagekeken sinds 28-10, dus alleen een startpunt**: Janneke (31d28378, Vinted
