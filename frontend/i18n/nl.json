@@ -4004,5 +4004,8 @@
  "Last check failed": "Laatste controle mislukt",
  "Last check saw no listings": "Laatste controle zag geen advertenties",
  "Not checked yet": "Nog niet nagekeken",
- "No automatic sales check": "Geen automatische verkoopcontrole"
+ "No automatic sales check": "Geen automatische verkoopcontrole",
+ "The sales check for Facebook is in beta too.": "De verkoopcontrole voor Facebook is ook nog in bèta.",
+ "It may miss a sale or find nothing. Sold something on Facebook? Mark the item as sold here yourself, so it comes off the other marketplaces.": "Hij kan een verkoop missen of niets vinden. Iets verkocht op Facebook? Zet het artikel hier zelf op verkocht, dan gaat het ook van de andere marktplaatsen af.",
+ "The sales check for Facebook is in beta. It may miss a sale. Sold something on Facebook? Mark it as sold here yourself.": "De verkoopcontrole voor Facebook is in bèta. Hij kan een verkoop missen. Iets verkocht op Facebook? Zet het hier zelf op verkocht."
 }

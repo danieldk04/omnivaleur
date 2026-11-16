@@ -19325,3 +19325,6 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Nagemeten op 2dehands: voor alleen zijn account de peiling klaargezet die de ronde zou zetten (09:20 UTC). Binnen 20 s opgepakt, einddatum 19-11 naar 17-12 (28 dagen), 2dehands gaf zelf 31 aflopende zoekertjes mee en de server plande er 31 in. Eindstand staat in de overdracht.
 - Niet gemeten: de Marktplaats-ronde. Die loopt op een interval van 6 uur dat bij elke deploy opnieuw begint; vandaag wordt er veel gepusht, dus hij draait pas na 6 stille uren. Te controleren op 17-11: staan er op 3bfbed2c Marktplaats-opdrachten (verwijderen plus plaatsen) van de nachtronde. Ook niet gemeten: of de 79 oude Marktplaats-rijen echt nog online staan (opgeslagen adres geeft 401 zonder inlog; 1 van 12 gaf 200).
 - De zin "3bfbed2c proef verlopen (betaalmuur)" in de klantfoutenronde van 04-11 was een verkeerde lezing van dezelfde rij: de eigenaar heeft geen betaalmuur.
+
+## 16-11-2026: Facebook-verkoopcontrole gemarkeerd als bèta
+- Daniel: Facebook is bèta en de gebruiker moet weten dat de verkoopcontrole daar ook niet 100% is. Op de Platforms-pagina staat in het Facebook-kader nu dat de verkoopcontrole in bèta is en dat een verkoop zelf op verkocht gezet moet worden. De Facebook-tegel op het dashboard toont "Beta ·" voor de regel, met uitleg bij hoveren.

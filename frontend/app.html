@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=1d2547670c"></script>
+<script src="/i18n.js?v=6edef51ccf"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -7829,6 +7829,7 @@ function renderPlatforms() {
     <strong>Facebook Marketplace is still in a test phase.</strong> It works, but Facebook doesn't allow tools that place adverts for you.
     So there is a chance Facebook blocks your account. Want to be safe? Use a separate Facebook account, or skip Facebook.
     Sold something? Check that the advert is gone from Facebook; if not, remove it yourself.
+    <strong>The sales check for Facebook is in beta too.</strong> It may miss a sale or find nothing. Sold something on Facebook? Mark the item as sold here yourself, so it comes off the other marketplaces.
   </div>`;
   document.getElementById('platforms-body').innerHTML = html + facebookNote;
   if (state.connected.includes('ebay')) { loadEbayShipFrom(); loadEbayGereedheid(); loadEbayMarktplaats(); }
@@ -10988,12 +10989,13 @@ function _controleTegel(data, p) {
   const ago = ms => fmtSeenAgo(Math.max(0, Math.round((Date.now() - ms) / 1000)));
   // Elk stukje tekst in een eigen element, zodat de vertaallaag "12m ago" los
   // kan vertalen (nooit half vertalen).
-  if (Number.isFinite(t) && !(Number.isFinite(tp) && tp > t)) return { html: `<span>Sales checked</span> <span>${ago(t)}</span>`, oud: false };
+  const beta = p === 'facebook' ? '<span style="font-weight:700">Beta</span> · ' : '';
+  if (Number.isFinite(t) && !(Number.isFinite(tp) && tp > t)) return { html: beta + `<span>Sales checked</span> <span>${ago(t)}</span>`, oud: false };
   if (Number.isFinite(tp)) {
     const wat = poging.reden === 'fout' ? 'Last check failed' : 'Last check saw no listings';
-    return { html: `<span>${wat}</span> <span>${ago(tp)}</span>`, oud: true };
+    return { html: beta + `<span>${wat}</span> <span>${ago(tp)}</span>`, oud: true };
   }
-  return { html: '<span>Not checked yet</span>', oud: true };
+  return { html: beta + '<span>Not checked yet</span>', oud: true };
 }
 
 // Onder elke marktplaats-tegel op het dashboard (16-11-2026, verhuisd van de
@@ -11003,6 +11005,7 @@ function vulControleTegels() {
     const r = _controleTegel(state.extStatus, el.getAttribute('data-controle'));
     el.innerHTML = r.html;
     el.classList.toggle('oud', r.oud);
+    if (el.getAttribute('data-controle') === 'facebook') el.title = 'The sales check for Facebook is in beta. It may miss a sale. Sold something on Facebook? Mark it as sold here yourself.';
   });
 }
 
