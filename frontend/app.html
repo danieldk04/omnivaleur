@@ -10604,12 +10604,13 @@ async function bulkImportAllCandidates(opties = {}) {
     if (teVullen && heeftMp) {
       setBusyText(`Import done — fetching the missing price/description for ${teVullen} item(s)…`);
       try {
-        // Vier rondes, geen zestig. Een import van duizenden advertenties zou
+        // Vier rondes, geen zestig (twaalf bij de automatische import van een nieuwe klant: gemeten op
+        // Daniels 253 artikelen bleven er na vier rondes 85 zonder omschrijving staan, na meer rondes 0). Een import van duizenden advertenties zou
         // hem anders nog tien minuten voor een wachtscherm zetten. Wat na deze
         // rondes overblijft haalt de server zelf op — elk kwartier een ronde —
         // dus dat hoeft hij hier niet uit te zitten.
         const r = await vulUitMarktplaats((t, pr) => setBusyText(
-          `Fetching missing details… ${t} description(s) and ${pr} price(s) so far`), 4);
+          `Fetching missing details… ${t} description(s) and ${pr} price(s) so far`), opties.stil ? 12 : 4);
         state.items = await fetchAllItems();
         applyFilters(false);
         const over = (state.items || []).filter(mistKernGegevens).length;
