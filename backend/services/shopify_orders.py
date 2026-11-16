@@ -192,6 +192,10 @@ async def controleer_shopify_verkopen() -> dict:
                 herkans=True))
         except Exception as e:  # noqa: BLE001
             logger.warning("shopify-verkoopcontrole: merkteken van %s niet bijgewerkt: %s", shop, e)
+        # De bestellingen zijn echt opgehaald en afgehandeld: het dashboard mag
+        # zeggen dat Shopify nu is nagekeken (zie services/controle.py).
+        from backend.services import controle
+        await naast_de_lus(lambda uid=rij["user_id"]: controle.zet(uid, "shopify", db))
 
     if verwerkt:
         logger.info("shopify-verkoopcontrole: %d verkoop/verkopen afgehandeld", verwerkt)

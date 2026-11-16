@@ -4003,5 +4003,6 @@
  "Sales checked": "Verkopen nagekeken",
  "Last check failed": "Laatste controle mislukt",
  "Last check saw no listings": "Laatste controle zag geen advertenties",
- "Not checked yet": "Nog niet nagekeken"
+ "Not checked yet": "Nog niet nagekeken",
+ "No automatic sales check": "Geen automatische verkoopcontrole"
 }

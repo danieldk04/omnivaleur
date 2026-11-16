@@ -141,6 +141,9 @@ async def controleer_winkel(db, rij: dict, nu: datetime) -> int:
     await naast_de_lus(lambda: db.table("platform_credentials")
                        .update({"extra_data": {**basis, "orders_gezien_tot": nieuw}})
                        .eq("user_id", user_id).eq("platform", PLATFORM).execute(), herkans=True)
+    # Echt nagekeken: het dashboard toont het tijdstip (services/controle.py).
+    from backend.services import controle
+    await naast_de_lus(lambda: controle.zet(user_id, "woocommerce", db))
     return verwerkt
 
 

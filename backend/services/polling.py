@@ -145,8 +145,20 @@ async def poll_platform_statuses():
         except Exception as e:  # noqa: BLE001 — een stempel is geen reden om te stoppen
             logger.warning("Kon overgeslagen listings niet stempelen: %s", e)
 
+    # Per verkoper en kanaal één keer stempelen, alleen voor eBay: daar antwoordt
+    # de eigen API van eBay met een echt oordeel. Bij Marktplaats en 2dehands
+    # stempelt de extensie (een 200 zonder echte sessie zegt daar niets).
+    gelezen: set[tuple[str, str]] = set()
     for listing, credentials in pollable:
-        await _check_one(listing, credentials)
+        if await _check_one(listing, credentials) and listing["platform"] == "ebay":
+            gelezen.add((owners[listing["item_id"]], "ebay"))
+    if gelezen:
+        from backend.services import controle
+        for uid, kanaal in gelezen:
+            try:
+                await asyncio.to_thread(controle.zet, uid, kanaal, db)
+            except Exception as e:  # noqa: BLE001
+                logger.warning("controlestempel %s/%s niet gezet: %s", uid[:8], kanaal, e)
 
 
 async def _check_one(listing: dict, credentials: dict):
@@ -166,6 +178,7 @@ async def _check_one(listing: dict, credentials: dict):
     platform_name = listing["platform"]
     velden: dict = {"last_checked": datetime.now(timezone.utc).isoformat()}
     naderhand = None
+    echt_gelezen = False  # het kanaal gaf een echt antwoord (active of sold)
 
     # Marktplaats en 2dehands melden een handverkoop niet betrouwbaar: een
     # verkochte advertentie ziet er voor de server vaak net zo uit als een
@@ -206,6 +219,7 @@ async def _check_one(listing: dict, credentials: dict):
     try:
         platform = get_platform(platform_name)
         status = await platform.get_listing_status(extern_id, credentials)
+        echt_gelezen = status in ("active", "sold")
 
         if status == "sold" and platform_name in ZACHT_SIGNAAL:
             if listing.get("status") != "sold_unconfirmed":
@@ -253,6 +267,7 @@ async def _check_one(listing: dict, credentials: dict):
                                    bewijs=BEWIJS_KANAAL_ZEGT_VERKOCHT)
         except Exception as e:  # noqa: BLE001
             logger.error(f"Poll: afmelden van item {naderhand} mislukt: {e}")
+    return echt_gelezen
 
 
 # ---------------------------------------------------------------------------
