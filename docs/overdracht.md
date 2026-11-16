@@ -1,6 +1,6 @@
 # Overdracht: lees dit als eerste
 
-Bijgewerkt 16-11-2026 (middag) door het tweede account, op verzoek van Daniel: "1 op 1 met
+Bijgewerkt 16-11-2026 (avond 22:30, geplande taak) door het tweede account. Eerder die dag op verzoek van Daniel: "1 op 1 met
 wat je kunt zien, en dit elke sessie en elke dag bijhouden". Basis was de overdracht van
 15-11 (Daniels Mac), vorige daarvoor 28-10. Alles hieronder is gemeten op 15 of 16-11-2026,
 tenzij er een andere datum staat. Hoe je dit bestand zelf bijhoudt:
@@ -171,8 +171,17 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
   elke ~15 s vier kanalen vragen (`pollJobsEenRonde`, `extension/background.js`). Kost de server vrijwel niets
   (geweigerd voor de database), dus GEEN spoed. Wil je het wegnemen: in `pollJobsEenRonde` overslaan zonder
   Authorization-kop, test op de echte extensie, en dan pas een Web Store-versie (Daniel uploadt).
-- **Extensie in de Web Store**: de Web Store levert 1.0.421, de repo staat op 1.0.422
-  (`dist/omnivaleur-extension-1.0.422.zip`). Uploaden kan alleen met Daniels Google-account.
+- **Extensie in de Web Store** (stand 16-11 avond): repo en manifest staan op 1.0.426. Nieuw
+  sinds 1.0.424: 1.0.425 (tweede leesronde voor artikelen zonder omschrijving) en 1.0.426
+  (2dehands verlengen herlaadt de pagina bij een leeg antwoord; proef
+  `tests/verlengen-2dehands-verversen-test.js`). Wat de Web Store nu levert is niet gecontroleerd
+  (laatst bekend 1.0.421). Uploaden kan alleen met Daniels Google-account: Daniel, zip in `dist/`.
+  Open: de tests verlengen-2dehands-gericht-lezen en loopt-af falen al voor 1.0.426 (nagebouwde
+  omgeving mist _klokTabbladen), niemand heeft ze gerepareerd.
+- 16-11 avond: automatische import doet nu twaalf aanvulrondes voor omschrijving en prijs,
+  voortgangsbalk bij import (commit 131a9e5c, 91597261). Eerste echte scan met 1.0.425 of 1.0.426
+  is nog niet gezien (open voor wie eerst werkt). Shopify zonder koppeling aangevinkt gaf
+  een scanfout bij een nieuwe klant; al gerepareerd in 220fd5bd. Server draait commit ef67b846.
 - **Tijdgebonden**: 19-11 uitkomst fotometing AI-pakket (Mac); 26-11 SEO-nameting (Mac);
   1-12 kosten- en doelenronde (Mac); 15-01-2027 grenzen Pro en Plus gaan gelden.
 - **Klanten, stand 15-16 november (nog niet opgelost, meet opnieuw voor je iets aanneemt)**:
