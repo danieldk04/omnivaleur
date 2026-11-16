@@ -1,8 +1,10 @@
 # Overdracht: lees dit als eerste
 
-Bijgewerkt 15-11-2026 door de sessie op Daniels Mac, op zijn verzoek: "dat hij in één keer
-up-to-date is en autonoom start". Vorige overdracht: 28-10. Alles hieronder is gemeten op
-15-11-2026, tenzij er een andere datum staat. Bewijs staat in `docs/team-notes.md` onder het
+Bijgewerkt 16-11-2026 (middag) door het tweede account, op verzoek van Daniel: "1 op 1 met
+wat je kunt zien, en dit elke sessie en elke dag bijhouden". Basis was de overdracht van
+15-11 (Daniels Mac), vorige daarvoor 28-10. Alles hieronder is gemeten op 15 of 16-11-2026,
+tenzij er een andere datum staat. Hoe je dit bestand zelf bijhoudt:
+`docs/routines/kennisoverdracht.md` (aan het eind van elke sessie, plus een dagelijkse taak). Bewijs staat in `docs/team-notes.md` onder het
 genoemde kopje, lessen in `docs/kennisbank.md`. Daniel wil zelf geen acties hoeven uitvoeren:
 wat te doen is, doen de sessies zelf.
 
