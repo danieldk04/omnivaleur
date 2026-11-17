@@ -124,6 +124,17 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
 
 ## Wat nu open staat (niemand hoeft te wachten op Daniel tenzij er "beslissing" staat)
 
+- **GA4, gedaan 17-11 (Daniel, tip van een Indie Hackers-lezer), voor de andere developer:** (1) `echte_bezoeker` staat als
+  belangrijke gebeurtenis; het gegevensfilter "Internal Traffic" stond al op Actief en sluit `traffic_type = internal` uit.
+  (2) Nieuwe gebeurtenis `verkoper_intentie` (klik op aanmelden, inloggen of prijzen, één keer per pagina, parameter `doel`) op / en
+  /nl. **Jij mag hem als sleutelgebeurtenis aanvinken zodra hij in GA4 verschijnt** (Beheer, Gebeurtenissen, Recente gebeurtenissen,
+  ster ernaast; hij verschijnt pas na de eerste klik, dus klik zelf een keer op "Start free trial" op omnivaleur.com/?intern=0 of
+  vraag Daniel). De GA4 van Daniel is bereikbaar in de ingelogde browser van de sessie, property Omnivaleur, stream 15253103769.
+  (3) Eigen verkeer: bewust geen IP-regel (Daniels IPv4 en IPv6 wisselen) maar een apparaatvlag: omnivaleur.com/?intern=1 op een
+  eigen apparaat zet `traffic_type=internal` mee in alle pagina's (?intern=0 haalt het weg). Zet dit ook op jouw eigen browsers
+  voordat je het dashboard of de site test, anders tellen je proefaanmeldingen mee. Tests: tests/verkoper-intentie-test.js en
+  tests/ga4-intern-verkeer-test.js. Les van de lezer: 47 van 48 Search Console-klikken zijn merknaamzoekers, GA4 telt die als organisch
+  terwijl een post of groep de aanleiding was; beoordeel posts dus niet alleen op GA4, en laat analytics een paar weken met rust.
 - **EERSTE KLUS VOOR DE ANDERE DEVELOPER (Daniel, 17-11): de hele eerste-minuten-loop doorlopen met een vers account en alles
   rechtzetten wat rommelig of onduidelijk is.** Daniel kan dat niet op het tweede account en jij wel: jij kijkt mee
   op zijn account. Uitgangspunt van Daniel, onthoud het: elke nieuwe klant heeft haast, heeft een minuscule aandachtsspanne,
