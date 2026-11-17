@@ -21,11 +21,24 @@ Niets verzinnen: een cijfer staat hier alleen als het gemeten is, met datum en b
   is een belofte inmiddels meetbaar, zet dat bovenaan overdracht.md bij "Wat nu open staat".
 - Gebruik dit bestand ook als Daniel vraagt "waar kan ik over schrijven", nog voor je zelf zoekt.
 
+## Hoe de routine hiermee werkt (Daniel, 17-11-2026)
+- **Reacties beantwoorden.** De reageerronde (`data/social/ronde-prompt.txt`, blok BUILD IN PUBLIC) leest elke ronde
+  de reacties onder Daniels laatste posts op X, Indie Hackers en Bluesky en beantwoordt wat nog geen antwoord heeft,
+  in zijn stijl. Wat al afgehandeld is staat in `data/social/bip-gezien.json` (beheerd door `scripts/bip_reacties.py`).
+- **Vastleggen.** Elke vraag, elk idee en elke toezegging uit zo'n reactie komt hier, met de postlink.
+- **Terugkomdatum.** Belooft Daniel of de routine iets ("ik kijk over 3 dagen") dan komt er een rij in de tabel
+  hieronder met de datum in de kolom "Terugkom op". `python3 scripts/bip_reacties.py due` toont wat aan de beurt is.
+- **Ochtendrapport.** De eerste keer dat de ronde-cron per dag in het gesprek afgaat (vanaf 08:00) staat bovenaan
+  een rapport: nieuwe reacties en vragen, wat beantwoord is, beloften die vandaag aan de beurt zijn (met de meting),
+  en een paar ideeën voor zijn post van vandaag uit deze lijst.
+- Na het melden zet je bij de belofte de status op "Gemeld op <datum>" en zo nodig een nieuwe terugkomdatum.
+
 ## Open beloften aan de lezers
 
-| Datum | Post | Wat is beloofd | Meting die nodig is | Status |
-|---|---|---|---|---|
-| 16-11-2026 | Dag 163, "quick win voor nieuwe gebruikers" | Terugkomen met wat het doet in de komende weken (inventaris start vanzelf, 1 klik plaatsen van het beste artikel, helpknop na 10 minuten, gemailde link naar de computer) | Mediane tijd van aanmelding tot eerste live advertentie, voor en na 16-11 (zie `docs/routines/onboarding-nieuwe-klanten.md`, onboarding-tempo). Daarnaast: hoe vaak de helpknop wordt aangeklikt | Open. Vanaf ~30-11 meetbaar |
+| Datum | Post | Wat is beloofd | Meting die nodig is | Terugkom op | Status |
+|---|---|---|---|---|---|
+| 16-11-2026 | Dag 163, "quick win voor nieuwe gebruikers" | Terugkomen met wat het doet in de komende weken (inventaris start vanzelf, 1 klik plaatsen van het beste artikel, helpknop na 10 minuten, gemailde link naar de computer) | Mediane tijd van aanmelding tot eerste live advertentie, voor en na 16-11 (zie `docs/routines/onboarding-nieuwe-klanten.md`, onboarding-tempo). Daarnaast: hoe vaak de helpknop wordt aangeklikt | 30-11-2026 | Open. Vanaf ~30-11 meetbaar |
+| 15-11-2026 | Dag 162, Search Console van /nl | Daniel liet de /nl-titel voorlopig staan en zei dat hij terugkomt zodra echte taakzoekopdrachten (zoals 'tegelijk plaatsen op Marktplaats en Vinted') in Search Console verschijnen (Five Hands Studio, 16-11: 'Worth a re-check once you start seeing task-style queries') | Search Console /nl: aantal klikken van zoekopdrachten die niet 'omnivaleur' bevatten, voor en na | 24-11-2026 | Open (voorlopige datum, eerste herkijk) |
 
 ## Ideeën uit reacties
 
@@ -38,6 +51,9 @@ Niets verzinnen: een cijfer staat hier alleen als het gemeten is, met datum en b
 | 16-11-2026 | LiranBlumenberg | Kies één land en één marktplaatsenpaar, zoek handmatig verkopers die vragen hoe ze niet dubbel hoeven te plaatsen; verkeerscijfers van dag 162 bewijzen niet welke bezoekers bots zijn | Content-onderwerp: wat bots en echte bezoekers uit het verkeer scheidt. Volg apart: gesprek, aanmelding, eerste crosslist | Idee |
 | 16-11-2026 | dgknght | Benieuwd hoe de helpknop uitpakt | Update schrijven met hoe vaak hij wordt geklikt en of die klikkers blijven | Wacht op meting |
 | 16-11-2026 | (afgekapt, auteur onbekend) | Meet de mediane tijd van aanmelding tot eerste live advertentie, voor en na de wijziging | Zelfde meting als de open belofte hierboven | Wacht op volledige tekst |
+
+## Gezien in reacties, geen actie nodig (17-11-2026)
+- Gabriel Lora (Dag 162): benieuwd wat het evenement oplevert, vooral uit Duitsland. Sluitopmerking, niet beantwoord. Als er een evenement in de planning staat: update schrijven met de cijfers uit Duitsland.
 
 ## Ideeën voor eigen updates (nog niet aangekondigd)
 - Voor-en-na van de eerste-minuten-loop met een vers account (zie overdracht.md, onboarding-tempo).
