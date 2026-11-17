@@ -311,6 +311,49 @@ def _samenvatting(report: dict) -> str:
 # ---------------------------------------------------------------------------
 # Opmaak
 # ---------------------------------------------------------------------------
+def _onboarding_regels(ob: dict | None) -> list[tuple[str, str, str, str]] | None:
+    """(groep, klanten, live binnen 24 uur, mediaan tot live) voor VOOR en NA, plus None bij geen meting."""
+    if not ob or ob.get("fout"):
+        return None
+    uit = []
+    for naam, sleutel in (("Voor 16 nov", "voor"), ("Na 16 nov", "na")):
+        g = ob[sleutel]
+        live = g["eerste_live"]
+        b24 = live["binnen"]["24u"]
+        pct = f"{b24['pct']}% ({b24['aantal']} van {b24['van']})" if b24["pct"] is not None else "nog te vroeg"
+        med = f"{live['mediaan_uur']} uur" if live["mediaan_uur"] is not None else "nog niemand"
+        uit.append((naam, str(g["klanten"]), pct, med))
+    return uit
+
+
+def _onboarding_noot(ob: dict) -> str:
+    n = ob["na"]["klanten"]
+    if ob["na"]["waarschuwing"]:
+        return (f"Nog maar {n} klant{'en' if n != 1 else ''} na de wijziging. Pas vanaf 10 is een "
+                f"vergelijking iets waard.")
+    return "Genoeg klanten om te vergelijken. Kijk vooral naar het percentage binnen 24 uur."
+
+
+def _onboarding_blok(ob: dict | None) -> str:
+    regels = _onboarding_regels(ob)
+    if not regels:
+        return ""
+    koppen = "".join(
+        f'<td style="padding:10px;text-align:{a};font-size:12px;color:{GRIJS};font-weight:700;">{t}</td>'
+        for t, a in (("", "left"), ("Klanten", "right"), ("Live binnen 24 uur", "right"),
+                     ("Mediaan tot live", "right")))
+    rijen = "".join(
+        f'<tr><td style="padding:10px;border-top:1px solid {LIJN};color:{INKT};">{n}</td>'
+        f'<td style="padding:10px;border-top:1px solid {LIJN};text-align:right;">{k}</td>'
+        f'<td style="padding:10px;border-top:1px solid {LIJN};text-align:right;font-weight:700;">{p}</td>'
+        f'<td style="padding:10px;border-top:1px solid {LIJN};text-align:right;">{m}</td></tr>'
+        for n, k, p, m in regels)
+    return (_kopje("Snellere onboarding: werkt het?")
+            + f'<table width="100%" cellpadding="0" cellspacing="0" role="presentation" '
+              f'style="font-size:14px;"><tr style="background:{VLAK};">{koppen}</tr>{rijen}</table>'
+            + f'<div style="font-size:12px;color:{GRIJS};padding-top:8px;">{_onboarding_noot(ob)}</div>')
+
+
 def render_html(report: dict) -> str:
     this_s, this_e = report["period"]["this"]
     seo = report.get("seo") or {}
@@ -411,6 +454,10 @@ def render_html(report: dict) -> str:
         if posts_blok:
             delen.append(_rij(posts_blok, padding="0 24px 20px 24px"))
 
+    ob_blok = _onboarding_blok(report.get("onboarding"))
+    if ob_blok:
+        delen.append(_rij(ob_blok, padding="0 24px 20px 24px"))
+
     # Knop + voet
     delen.append(
         f'<table width="100%" cellpadding="0" cellspacing="0" role="presentation" '
@@ -459,6 +506,12 @@ def render_text(report: dict) -> str:
                 staat = (f"{nl_getal(p['views'])} weergaven, {p['posts_count']} posts, "
                          f"{p['engagement']} reacties ({p['engagement_rate']}%)")
             r.append(f"  • {p['platform']}: {staat}")
+
+    ob = _onboarding_regels(report.get("onboarding"))
+    if ob:
+        r += ["", "Snellere onboarding: werkt het?"]
+        r += [f"  {n}: {k} klanten, live binnen 24 uur {p}, mediaan tot live {m}" for n, k, p, m in ob]
+        r.append(f"  {_onboarding_noot(report['onboarding'])}")
 
     if report.get("actions"):
         r += ["", "Wat ik deze week zou doen:"]

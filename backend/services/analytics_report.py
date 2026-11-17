@@ -493,7 +493,19 @@ def build_report(today: date | None = None, include_social: bool = False, dagen:
     else:
         social_content = {"connected": social_scrape.is_configured(), "deferred": True}
 
+    # Tempo van de onboarding: per klant een paar kleine vragen, dus alleen voor de
+    # zondagsmail (include_social), niet voor elke dashboardweergave.
+    onboarding = None
+    if include_social:
+        try:
+            from backend.services import onboarding_tempo
+            onboarding = onboarding_tempo.meet(90)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Onboarding-tempo niet gemeten: %s", e)
+            onboarding = {"fout": str(e)}
+
     report = {
+        "onboarding": onboarding,
         "period": {"this": win["this"], "prev": win["prev"], "dagen": dagen, "vorige": win["vorige"]},
         "seo": seo,
         "channels": channels,
