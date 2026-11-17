@@ -273,6 +273,17 @@ nieuwe klanten of problemen: twee zinnen.
 Meld eerlijk wat je niet kon zien: fouten die alleen in de browser van de klant staan en
 nooit naar de server gaan, en alles wat de Web Store nog niet heeft uitgeleverd.
 
+## Stap 6b: tempo van de onboarding meten (elke maandag, Daniel 17-11-2026)
+
+Draai `python3.13 scripts/onboarding_tempo.py` en zet de regels VOOR en NA in je rapport en
+in `docs/team-notes.md` (één regel met datum). Het meet de tijd van aanmelding tot eerste
+opdracht, eerste artikel en eerste live advertentie, voor en na de versnelde onboarding van
+16-11-2026 14:51 UTC. Beginstand (17-11, 57 klanten ervoor): eerste live mediaan 1,6 uur bij
+19 van 57 die dat bereikten; binnen 24 uur live 28%, binnen 72 uur 29%. Zolang NA minder dan
+10 klanten heeft staat er "weinig klanten": meld dat, trek geen conclusie. Pas bij 10 of
+meer klanten na de wijziging de vergelijking als uitkomst geven, en altijd de percentages
+"binnen 24 uur" naast de mediaan, want de mediaan telt alleen wie het haalde.
+
 ## Laatste stap: de centrale lijst bijwerken
 
 Heeft een klant vandaag iets gevraagd wat we niet hebben, of is er iets gebouwd of besloten
