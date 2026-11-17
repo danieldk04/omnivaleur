@@ -19438,3 +19438,9 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Regels: antwoorden alleen als er een vraag of nieuw punt staat (sluitopmerkingen niet), Indie Hackers altijd met AI-vinkje en binnen het dagplafond van 3, nooit een cijfer verzinnen, nooit Monaim noemen. Eerste ronde 17-11: Bluesky 1 antwoord (Serhii), X geen reacties van anderen, Indie Hackers alles al beantwoord (twee sluitopmerkingen overgeslagen).
 - Open: het ochtendrapport is nog niet in een echte nieuwe ochtend gezien (eerste keer 18-11 in het gesprek).
 
+
+## 17-11-2026 (ochtend, 09:00 UTC): Dagelijkse klantfouten
+- Geen nieuwe fouten sinds de middagronde van 07:58 UTC: 6 mislukte opdrachten in 24 uur, alle 6 al beoordeeld (laatste om 06:37, de MP foto-time-out van 8f91a370). Geen opdrachten langer dan 30 min geclaimd, geen betaalslot bij actieve klanten. bcdf9aa4 werkt zijn verlengrij af (124 in 2 uur); de overige wachtrijen horen bij klanten wier Chrome uit staat.
+- Nieuwe rubriekronde (rubriek_groepen) nagemeten in de Railway-logs: elke ronde vult 383 tot 391 van 400 artikelen. Door de reeks deploys (18 tussen 08:32 en 09:16 UTC, elk zet de eerste ronde op start + 4 min) draaide hij maar 3 keer in 45 min in plaats van 9. Backlog is toch weggewerkt: nog 12 artikelen zonder rubriek in 72 uur (26cf5471 10, 3eeceb51 2). Niets aan veranderd; let op bij een dag met veel pushes.
+- 422 op POST /api/jobs/643c8028/error: een oude extensiekopie van 5aae4954 meldt een fout op een scan van 09-10 die al klaar is. Server weigert terecht, klant-eigen.
+- Niets gerepareerd. Extensie 1.0.426 staat nog bij geen klant (wacht op Web Store).
