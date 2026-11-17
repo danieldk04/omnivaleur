@@ -525,7 +525,7 @@
       // uploaden, titel, rubriek, maat, staat, prijs), niet de 15 van de website.
       const min = meer * 5;
       const tijd = min >= 90 ? Math.round(min / 60) : min;
-      const winst = meer >= 4 ? `<br><b translate="no">${meer}</b> <span>more items are ready. Placing them by hand takes about</span> <b translate="no">${tijd}</b> <span>${min >= 90 ? "hours" : "minutes"}.</span> <span>Here it takes a few minutes.</span>` : "";
+      const winst = meer >= 4 ? `<br><b translate="no">${meer}</b> <span>more items are ready. Placing them by hand takes about</span> <b translate="no">${tijd}</b> ${min >= 90 ? "<span>hours. Here it takes a few minutes.</span>" : "<span>minutes. Here it takes a few minutes.</span>"}` : "";
       kaart("It's live!", `Your advert is online on <b translate="no">${naam}</b>. <span>One click instead of about 5 minutes by hand.</span>${winst}`,
         `<button class="pt-groot" style="padding:10px 20px;font-size:13px" onclick="OBPoort.volgende()">Place the next one</button>
          <button class="btn btn-sm btn-outline" style="margin-left:8px" onclick="OBPoort.sluitNet();showView('items')">See your items</button>`);
