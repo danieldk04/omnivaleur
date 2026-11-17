@@ -116,6 +116,7 @@
     .pt-pas b{width:22px;height:22px;border-radius:50%;background:#d0d8e1;color:#485363;display:flex;align-items:center;justify-content:center;font-size:12px}
     .pt-pas.nu{border-color:#0649c7;color:#0a1936;box-shadow:0 0 0 4px rgba(6,73,199,.12)}
     .pt-pas.nu b{background:#0649c7;color:#fff}
+    @keyframes pt-glij{from{margin-left:0}to{margin-left:40%}}
     .pt-pas.klaar{color:#005f3a;border-color:#d8f7e6;background:#d8f7e6}
     .pt-pas.klaar b{background:#005f3a;color:#fff}
     .pt-kaart{background:#fff;border:1px solid var(--border,#d0d8e1);border-radius:8px;padding:28px;display:grid;grid-template-columns:1.1fr 1fr;gap:28px;box-shadow:0 10px 40px rgba(10,25,54,.07)}
@@ -474,6 +475,8 @@
       });
       const t = g("showToast");
       if (!res.ok) { herstelKnop(knop); const oc = g("openCrosslist"); if (typeof oc === "function") oc(b.item.id, b.kanaal); return; }
+      P.kaartAan = false;
+      P.net = { id: b.item.id, kanaal: b.kanaal, titel: b.item.title, foto: (b.item.photo_urls || [])[0] || "", sinds: Date.now() };
       if (typeof t === "function") t("Queued: the extension starts right away");
       const nx = g("nudgeExtension"); if (typeof nx === "function") nx();
       const la = g("loadAll"); if (typeof la === "function") await la();
@@ -485,6 +488,48 @@
   };
   // Een knop die na een mislukte poging grijs op "Placing…" blijft staan laat de klant vastzitten.
   function herstelKnop(knop) { if (knop) { knop.disabled = false; knop.textContent = "Place it now"; } }
+
+  // Na "Place it now": één kaart die laat zien wat er gebeurt, en bij succes de volgende stap.
+  // Zonder dit sprong de kaart meteen naar een volgend artikel en zag de klant nooit dat het gelukt was.
+  let laatsteLaad = 0;
+  function tekenNet() {
+    const n = P.net;
+    if (!n || Date.now() - n.sinds > 30 * 60 * 1000) { P.net = null; return false; }
+    const S = g("state") || {};
+    const namen = { marktplaats: "Marktplaats", "2dehands": "2dehands", vinted: "Vinted" };
+    const naam = esc(namen[n.kanaal] || n.kanaal);
+    const rij = (S.listings || []).filter((l) => l.item_id === n.id && l.platform === n.kanaal)[0];
+    const st = rij ? rij.status : "pending";
+    const bezigSt = ["pending", "publishing", "relisting", "queued"].includes(st);
+    if (bezigSt && Date.now() - laatsteLaad > 8000) { laatsteLaad = Date.now(); const la = g("loadAll"); if (typeof la === "function") Promise.resolve(la()).catch(() => {}); }
+    const foto = n.foto ? `<img src="${esc(n.foto)}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:6px;flex:none">` : "";
+    const kop = (t) => `<b class="pt-ct">${t}</b>`;
+    const kaart = (t, tekst, knoppen) => coach(`${kop(t)}
+      <div style="display:flex;gap:12px;align-items:center;margin:10px 0 12px">${foto}
+        <div style="font-size:13px;line-height:1.4"><b translate="no">${esc(n.titel)}</b><br>${tekst}</div></div>
+      <div class="pt-cb">${knoppen}</div>`);
+    if (st === "active") {
+      kaart("It's live!", `Your advert is online on <b translate="no">${naam}</b>. That was one click.`,
+        `<button class="pt-groot" style="padding:10px 20px;font-size:13px" onclick="OBPoort.volgende()">Place the next one</button>
+         <button class="btn btn-sm btn-outline" style="margin-left:8px" onclick="OBPoort.sluitNet();showView('items')">See your items</button>`);
+    } else if (bezigSt) {
+      kaart("Placing your advert…", `Going live on <b translate="no">${naam}</b> now. Takes about a minute. Keep this tab open.
+        <div style="height:6px;background:#dfe5f1;border-radius:3px;overflow:hidden;margin-top:8px"><div style="height:100%;width:60%;background:#3d35c4;border-radius:3px;animation:pt-glij 1.6s ease-in-out infinite alternate"></div></div>`, "");
+    } else {
+      kaart("That did not go through", `We could not place it on <b translate="no">${naam}</b>. Nothing is lost.`,
+        `<button class="pt-groot" style="padding:10px 20px;font-size:13px" onclick="OBPoort.volgende()">Try another item</button>`);
+    }
+    wisPijl();
+    return true;
+  }
+  P.sluitNet = function () { P.net = null; P.tik(); };
+  P.volgende = function () {
+    P.net = null;
+    // Vraagt het volgende artikel eerst de drie gegevens, laat dan de kaart met het formulier zien.
+    const b = laatsteFeiten && P.besteArtikel(laatsteFeiten);
+    if (b && b.nodigGegevens) { P.kaartAan = true; P.tik(); return; }
+    P.plaatsEerste();
+  };
 
   function tekenCoach(r) {
     const view = actieveView();
@@ -594,7 +639,8 @@
         coach(null); wisPijl();
       } else {
         ov.style.display = "none";
-        if (r.fase === "items" || r.fase === "plaatsen") tekenCoach(r); else { coach(null); wisPijl(); }
+        if (P.net && tekenNet()) { /* net geplaatst: die kaart gaat voor */ }
+        else if (r.fase === "items" || r.fase === "plaatsen" || P.kaartAan) tekenCoach(r); else { coach(null); wisPijl(); }
       }
       if (r.fase === "items") P.autoImport(f);
       // Slotjes in het menu bij wat nog dicht is.
