@@ -19474,3 +19474,7 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Zit in 1.0.427 (versie niet verhoogd, want nog niet geupload). Was de dist al gebouwd, dan opnieuw bouwen voor de upload.
 - Niet bekend: welke andere rubrieken Esther mist (ze noemde alleen servies/retro), en welke Vinted-velden ze zelf invulde. Gevraagd in het conceptantwoord.
 - Test-opmerking: 11 Python-tests (test_category_taxonomy) falen ook zonder deze wijziging in deze cloudomgeving (ontbrekende afhankelijkheden); niet onderzocht.
+
+## 17-11-2026: Facebook Marketplace live controleren kan niet, Daniels account heeft geen Marketplace
+- Gemeten in Daniels eigen Chrome (ingelogd): facebook.com/marketplace/you/selling stuurt door naar /marketplace/ineligible/. Facebook geeft zijn account geen Marketplace (helpcentrum: leeftijdsbevestiging in de app of beperkt account). Dus plaatsen en verkoopherkenning zijn hier niet live te testen, ook niet door een sessie met browser.
+- Open en onbewezen: (1) 7 van 8 Facebook-plaatsingen bij cfe8c210 faalden op "Could not set the Condition field" (15-11); (2) `checkFacebookSold` (extensie 1.0.423) is alleen op een nagebouwde pagina bewezen. Facebook blijft bèta. Echt bewijs vraagt een Facebook-account mét Marketplace of de poging-melding van een klant.
