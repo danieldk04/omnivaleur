@@ -43,6 +43,16 @@ t = bouw({}, { items: [item("v", { photo_urls: ["https://images1.vinted.net/a.jp
 ok("Marktplaats: eerst het artikel met eigen foto's, niet de Vinted-fotolink", t.P.besteArtikel({ kanalen: ING("marktplaats") }).item.id === "e");
 ok("Vinted zelf mag wel een Vinted-foto", t.P.besteArtikel({ kanalen: ING("vinted") }).item.id === "v");
 
+// Verantwoordelijke partij (17-11-2026): zonder die gegevens weigert Marktplaats/2dehands te plaatsen.
+t = bouw({}, { items: [item("a")], listings: [] }, { missingFieldsForPlatform: klaar, fabrikantCompleet: () => false });
+b = t.P.besteArtikel({ kanalen: ING("vinted", "marktplaats", "2dehands") });
+ok("gegevens leeg: eerst Vinted, daar is niets voor nodig", b && b.kanaal === "vinted" && b.nodigGegevens === false, b);
+b = t.P.besteArtikel({ kanalen: ING("marktplaats", "2dehands") });
+ok("gegevens leeg en alleen MP/2dehands: kaart vraagt ze zelf", b && b.kanaal === "marktplaats" && b.nodigGegevens === true, b);
+t = bouw({}, { items: [item("a")], listings: [] }, { missingFieldsForPlatform: klaar, fabrikantCompleet: () => true });
+b = t.P.besteArtikel({ kanalen: ING("vinted", "marktplaats") });
+ok("gegevens ingevuld: Marktplaats gaat weer voor, zonder vraag", b && b.kanaal === "marktplaats" && b.nodigGegevens === false, b);
+
 console.log("2. Automatisch inlezen");
 let aantal = 0, scherm = null;
 t = bouw({}, { items: [], listings: [] }, { importAllesBezig: false, importeerAlleKanalen: () => { aantal++; return Promise.resolve(); }, showView: (v) => { scherm = v; } });

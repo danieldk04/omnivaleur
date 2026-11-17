@@ -411,17 +411,54 @@
     // (12fc61d0: "None of the 11 photos could be downloaded"). Liever eerst een artikel
     // met eigen foto's, zodat de eerste plaatsing niet op een foutmelding eindigt.
     const vintedFoto = (i) => /vinted\.net/.test(String((i.photo_urls || [])[0] || ""));
-    for (const p of volgorde) {
-      const live = liveOp(p);
-      const kandidaten = basis.filter((i) => !live.has(i.id));
-      const lijst = p === "vinted" ? kandidaten : [...kandidaten].sort((a, b) => vintedFoto(a) - vintedFoto(b));
-      for (const i of lijst) {
-        let ontbreekt = [1];
-        try { ontbreekt = mf(i, p); } catch (e) { /* telt als niet klaar */ }
-        if (!ontbreekt.length) return { item: i, kanaal: p };
+    // Marktplaats en 2dehands weigeren te plaatsen zolang de verantwoordelijke partij leeg is
+    // (17-11-2026, eerste doorloop als nieuwe klant: de kaart beloofde 2dehands en het venster
+    // erna zei "hier niet mogelijk"). Dus: eerst een kanaal waar niets voor nodig is (Vinted),
+    // en pas als dat er niet is een kanaal waarvoor de kaart die drie gegevens zelf vraagt.
+    const fabOk = g("fabrikantCompleet");
+    const gegevensNodig = (p) => (p === "marktplaats" || p === "2dehands") && typeof fabOk === "function" && !fabOk();
+    const zoek = (lijstKanalen, nodig) => {
+      for (const p of lijstKanalen) {
+        const live = liveOp(p);
+        const kandidaten = basis.filter((i) => !live.has(i.id));
+        const lijst = p === "vinted" ? kandidaten : [...kandidaten].sort((a, b) => vintedFoto(a) - vintedFoto(b));
+        for (const i of lijst) {
+          let ontbreekt = [1];
+          try { ontbreekt = mf(i, p); } catch (e) { /* telt als niet klaar */ }
+          if (!ontbreekt.length) return { item: i, kanaal: p, nodigGegevens: nodig };
+        }
       }
+      return null;
+    };
+    return zoek(volgorde.filter((p) => !gegevensNodig(p)), false)
+        || zoek(volgorde.filter(gegevensNodig), true);
+  };
+
+  // De drie gegevens die Marktplaats en 2dehands eisen, ter plekke gevraagd op de kaart.
+  const invul = { n: "", a: "", e: "" };
+  P.invulNoteer = function (veld, waarde) { invul[veld] = waarde; };
+  P.bewaarEnPlaats = async function () {
+    const melding = document.getElementById("pt-fab-melding");
+    const say = (t) => { if (melding) melding.textContent = t; };
+    const n = invul.n.trim(), a = invul.a.trim(), e = invul.e.trim();
+    if (!n || !a || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) { say("Fill in all three, with a valid email address."); return; }
+    const knop = document.getElementById("pt-plaats-knop");
+    if (knop) { knop.disabled = true; knop.textContent = "Saving…"; }
+    try {
+      const api = g("API"), fetcher = g("apiFetch");
+      const res = await fetcher(`${api}/api/items/settings`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fabrikant_naam: n, fabrikant_adres: a, fabrikant_email: e }),
+      });
+      if (!res.ok) throw new Error("save");
+      const data = await res.json();
+      const S = g("state"); if (S) S.settings = { ...(S.settings || {}), ...data };
+    } catch (err) {
+      say("Could not save. Check your connection and try again.");
+      if (knop) { knop.disabled = false; knop.textContent = "Save and place"; }
+      return;
     }
-    return null;
+    P.plaatsEerste();
   };
 
   P.plaatsEerste = async function () {
@@ -436,15 +473,18 @@
         body: JSON.stringify({ platforms: [b.kanaal] }),
       });
       const t = g("showToast");
-      if (!res.ok) { const oc = g("openCrosslist"); if (typeof oc === "function") oc(b.item.id, b.kanaal); return; }
+      if (!res.ok) { herstelKnop(knop); const oc = g("openCrosslist"); if (typeof oc === "function") oc(b.item.id, b.kanaal); return; }
       if (typeof t === "function") t("Queued: the extension starts right away");
       const nx = g("nudgeExtension"); if (typeof nx === "function") nx();
       const la = g("loadAll"); if (typeof la === "function") await la();
     } catch (e) {
+      herstelKnop(knop);
       const oc = g("openCrosslist"); if (typeof oc === "function") oc(b.item.id, b.kanaal);
     }
     P.tik();
   };
+  // Een knop die na een mislukte poging grijs op "Placing…" blijft staan laat de klant vastzitten.
+  function herstelKnop(knop) { if (knop) { knop.disabled = false; knop.textContent = "Place it now"; } }
 
   function tekenCoach(r) {
     const view = actieveView();
@@ -480,8 +520,19 @@
           <img src="${foto}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:6px;flex:none">
           <div style="font-size:13px;line-height:1.4"><b translate="no">${esc(b.item.title)}</b><br><span translate="no">&euro;${esc(b.item.price)}</span> <span>Goes live on</span> <b translate="no">${esc(namen[b.kanaal])}</b></div>
         </div>
-        <div class="pt-cb"><button id="pt-plaats-knop" class="pt-groot" style="padding:10px 20px;font-size:13px" onclick="OBPoort.plaatsEerste()">Place it now</button>
+        ${b.nodigGegevens ? `<p style="font-size:12px;margin:0 0 8px">One quick thing, once: the EU requires a responsible party on every ${esc(namen[b.kanaal])} advert. After this, every advert is one click.</p>
+        <input id="pt-fab-n" placeholder="Your name or shop name" oninput="OBPoort.invulNoteer('n',this.value)" style="width:100%;margin-bottom:6px;padding:7px 9px;border:1px solid #cfd6e6;border-radius:6px;font-size:13px">
+        <input id="pt-fab-a" placeholder="Street, number, postcode, city" oninput="OBPoort.invulNoteer('a',this.value)" style="width:100%;margin-bottom:6px;padding:7px 9px;border:1px solid #cfd6e6;border-radius:6px;font-size:13px">
+        <input id="pt-fab-e" type="email" placeholder="Email address" oninput="OBPoort.invulNoteer('e',this.value)" style="width:100%;margin-bottom:6px;padding:7px 9px;border:1px solid #cfd6e6;border-radius:6px;font-size:13px">
+        <div id="pt-fab-melding" style="font-size:12px;color:#b3261e;min-height:14px"></div>` : ""}
+        <div class="pt-cb"><button id="pt-plaats-knop" class="pt-groot" style="padding:10px 20px;font-size:13px" onclick="${b.nodigGegevens ? "OBPoort.bewaarEnPlaats()" : "OBPoort.plaatsEerste()"}">${b.nodigGegevens ? "Save and place" : "Place it now"}</button>
         <button class="btn btn-sm btn-outline" style="margin-left:8px" onclick="showView('items')">Choose another item</button></div>`);
+      if (b.nodigGegevens) {
+        // Een herteken (bijvoorbeeld de hulpknop na tien minuten) mag wat er al getypt is niet wissen.
+        let mail = invul.e;
+        if (!mail) { try { mail = (window.SESSIE && SESSIE.lees("cl_email")) || ""; } catch (e) { mail = ""; } invul.e = mail; }
+        [["pt-fab-n", invul.n], ["pt-fab-a", invul.a], ["pt-fab-e", invul.e]].forEach(([id, w]) => { const el = document.getElementById(id); if (el && !el.value) el.value = w; });
+      }
       wisPijl();
       return;
     }

@@ -4064,5 +4064,11 @@
  "Your Shopify store isn't connected yet. Connect it under Platforms first.": "Je Shopify-winkel is nog niet gekoppeld. Koppel hem eerst onder Platforms.",
  "Waiting for your other channel to finish first…": "Wacht tot je andere kanaal klaar is…",
  "Only a running Marktplaats or 2dehands scan can send a first batch": "Alleen een lopende Marktplaats- of 2dehands-scan kan een eerste batch sturen",
- "Account created": "Account aangemaakt"
+ "Account created": "Account aangemaakt",
+ "Fill in all three, with a valid email address.": "Vul alle drie in, met een geldig e-mailadres.",
+ "Could not save. Check your connection and try again.": "Opslaan lukte niet. Controleer je verbinding en probeer het opnieuw.",
+ "Save and place": "Bewaar en plaats",
+ "One quick thing, once: the EU requires a responsible party on every {0} advert. After this, every advert is one click.": "Eén ding, eenmalig: de EU eist een verantwoordelijke partij bij elke advertentie op {0}. Daarna is elke advertentie één klik.",
+ "Your name or shop name": "Je naam of winkelnaam",
+ "Street, number, postcode, city": "Straat, huisnummer, postcode, plaats"
 }
