@@ -1310,6 +1310,148 @@ def _lees_rubriekantwoord(raw: str, *, toegestaan=None, alleen_zeker: bool = Fal
     return {"gender": tak, "category": category}
 
 
+def _bouw_rubrieksprompt(title, description, brand) -> str:
+    """De volledige rubriekvraag voor één artikel. Eén bron, zodat de vraag per
+    artikel en de groepsvraag (services/rubriek_groepen) nooit uit elkaar lopen."""
+    taxonomy_lines = "\n".join(
+        f"  {g}: {_rubrieken_voor_de_vraag(cats)}" for g, cats in _TAXONOMY.items()
+    )
+    return (
+        "You categorise second-hand listings for a Dutch marketplace. Most are"
+        " clothing; the rest are musical instruments, antiques, art and"
+        " collectables, home goods, jewellery, video games, phones, audio, TV and"
+        " photo equipment, computers, books, toys, bikes, sports equipment,"
+        " household appliances, or tools and DIY supplies.\n\n"
+        f"Brand: {brand or 'unknown'}\n"
+        f"Title: {title or ''}\n"
+        f"Description: {(description or '')[:1500]}\n\n"
+        "Pick the single best gender and category from this exact taxonomy:\n"
+        f"{taxonomy_lines}\n\n"
+        "Rules:\n"
+        "- The category MUST be copied verbatim from the list for the gender you pick.\n"
+        "- WHAT the garment is comes from the title and description ONLY. The brand\n"
+        "  never decides that: Puma shoes are shoes, Nike trousers are trousers.\n"
+        "  Use the brand only to choose between a sporty and a casual variant of the\n"
+        "  SAME garment (e.g. Gymshark shorts = sportbroeken rather than shorts).\n"
+        "- Footwear (shoes, sneakers, trainers, boots, loafers, heels, sandals) always\n"
+        "  goes in a footwear category, whatever the brand is.\n"
+        "- Loafers, moccasins, penny loafers and boat shoes are NOT formal shoes:\n"
+        '  they belong in the plain shoes category ("heren schoenen" /\n'
+        '  "schoenen dames"). Only laced dress shoes (oxford, derby, brogue) are\n'
+        '  "heren formele schoenen".\n'
+        "- Athletic shorts belong in a sportbroeken category, NOT shorts or jeans.\n"
+        "- If gender is not stated or implied, use unisex where a sensible unisex\n"
+        "  category exists; otherwise pick the most likely gender.\n"
+        "- Set confidence low if you are guessing about what the garment is.\n"
+        '- The "muziek" branch is for musical instruments, their parts and their\n'
+        "  accessories (a guitar, a plectrum, a case, a cable), plus official band and\n"
+        "  artist merchandise that is NOT worn as clothing: iron-on and sew-on patches,\n"
+        "  pins, key rings, posters, flags, stickers, tapestries. Those go in\n"
+        '  "muziek artiesten en merchandise", never in a clothing or jewellery\n'
+        "  category. A band T-shirt, a festival hoodie or anything else you wear is\n"
+        "  clothing, never muziek.\n"
+        '  When you pick a "muziek" category, gender must be "muziek" too.\n'
+        '- The "antiek" branch is for antiques, art and collectables: silverware,\n'
+        "  cutlery, porcelain, vases, paintings, clocks, brocante, decorative objects.\n"
+        "  DECIDE ON WHAT IT IS, NOT WHAT IT IS MADE OF. Anything a person WEARS is\n"
+        '  jewellery and belongs in the "sieraden" branch, however old or silver:\n'
+        "  a ring, a bracelet, a necklace, earrings, a brooch, a watch. Anything you\n"
+        "  put on a table, a wall or a shelf is antiek: a serving spoon, a ginger jar\n"
+        "  spoon, a candlestick, a vase, a plate. Modern mass-produced homeware is\n"
+        "  NOT antiek.\n"
+        '  When you pick an "antiek" category, gender must be "antiek" too.\n'
+        '- The "wonen" branch is home, garden and Christmas: chairs, bar stools,\n'
+        "  armchairs, garden sets, tables, curtains, rugs, cushions, lamps,\n"
+        "  mirrors, planters, parasols, terrace heaters and Christmas\n"
+        "  decorations. This is ordinary modern homeware — genuinely old or\n"
+        '  collectable pieces belong in "antiek" instead.\n'
+        '  When you pick a "wonen" category, gender must be "wonen" too.\n'
+        "- Costumes, fancy dress and folk dress are NEVER everyday clothing: lederhosen,\n"
+        "  dirndl, Tyrolean outfits, carnival and Halloween outfits, cosplay and mascot\n"
+        "  suits all go in a verkleedkleding category, never in shorts, trousers, jeans\n"
+        "  or dresses.\n"
+        "- The Dutch word \"kleed\" is ambiguous and must NEVER be guessed. In Flemish\n"
+        "  it means a DRESS; in the Netherlands it usually means a RUG (vloerkleed,\n"
+        "  tapijt). Decide only if the rest of the text makes it obvious (a size like\n"
+        "  200x300 or the word tapijt means a rug; a clothing size, a brand of clothing\n"
+        "  or words like mouwen/taille mean a dress). With nothing else to go on,\n"
+        '  a Dutch listing means a rug: pick "wonen tapijten en kleden". It is never\n'
+        "  a bag.\n"
+        '- A "grand foulard" (also written grandfoulard) is NOT a scarf and NOT an\n'
+        "  accessory: in the Dutch second-hand trade it is a large piece of home\n"
+        "  textile — a throw, bedspread, sofa or wall cloth, often 150-300 cm wide.\n"
+        '  It belongs in the "wonen" branch, normally "wonen plaids en woondekens".\n'
+        '  A plain "foulard" without "grand" IS a scarf and stays an accessory.\n'
+        '- The "sieraden" branch covers jewellery, watches, bags, suitcases, wallets\n'
+        "  and sunglasses. Pick it for anything worn or carried as an accessory.\n"
+        '  When you pick a "sieraden" category, gender must be "sieraden" too.\n'
+        '- The "games" branch is video games, game consoles and their accessories, per\n'
+        '  platform: a game disc or cartridge goes in "games <platform>", the machine\n'
+        '  itself in "games console <platform>", a controller in "games controllers\n'
+        '  <platform>", other accessories in "games accessoires ...", VR headsets in\n'
+        '  "games virtual reality". Board games are NOT "games" (see speelgoed).\n'
+        '  When you pick a "games" category, gender must be "games" too.\n'
+        '- The "electronics" branch is mobile and landline phones and their accessories:\n'
+        "  phones by brand, phone cases, chargers, power banks, earphones, phone holders,\n"
+        "  walkie-talkies. Smartwatches are jewellery (sieraden), tablets are computers.\n"
+        '  When you pick an "electronics" category, gender must be "electronics" too.\n'
+        '- The "audio" branch is audio, TV and photo: speakers, headphones,\n'
+        "  amplifiers and receivers, turntables, radios, televisions, projectors,\n"
+        "  cameras, lenses, drones, binoculars. A guitar amplifier or effects pedal\n"
+        '  is "muziek", not audio. When you pick an "audio" category, gender must be\n'
+        '  "audio" too.\n'
+        '- The "computers" branch is computers, laptops, tablets, e-readers, computer\n'
+        "  parts, monitors, keyboards, mice, printers, scanners, networking gear and\n"
+        '  software. Tablets go in a tablets category: an iPad in "computers apple\n'
+        '  ipads", a Galaxy Tab in "computers android tablets", a Surface in\n'
+        '  "computers windows tablets"; "computers apple desktops" is only an iMac,\n'
+        '  Mac mini or Mac Pro. When you pick a "computers" category, gender must be\n'
+        '  "computers" too.\n'
+        '- The "boeken" branch is books, comics, magazines and audiobooks: pick the\n'
+        "  genre or subject. Only a genuinely old book or bible (the text says antique,\n"
+        '  or a year before about 1950) goes in "boeken antieke boeken en bijbels".\n'
+        '  When you pick a "boeken" category, gender must be "boeken" too.\n'
+        '- The "speelgoed" branch is toys and games for play: LEGO, Duplo, Playmobil,\n'
+        '  Any LEGO or Duplo set goes in "speelgoed duplo en lego"; "speelgoed bouwstenen"\n'
+        '  is other brands of building blocks.\n'
+        "  dolls, soft toys, toy vehicles, board games, card games, puzzles, trading\n"
+        "  cards (Pokemon, Magic, Yu-Gi-Oh), model kits, model cars and model trains,\n"
+        "  radio-controlled models, outdoor toys and trampolines. Only toys the text\n"
+        '  calls old or antique (antiek, blikken speelgoed, a year before about 1970)\n'
+        '  go in "antiek speelgoed". When you pick a "speelgoed" category, gender must\n'
+        '  be "speelgoed" too.\n'
+        '- The "fietsen" branch is bicycles, e-bikes, kids\' bikes and bicycle parts and\n'
+        "  accessories (locks, lights, bags, helmets, child seats, bike racks). Cycling\n"
+        "  clothing is clothing, mopeds and scooters have no category here.\n"
+        '  When you pick a "fietsen" category, gender must be "fietsen" too.\n'
+        '- The "hobby" branch is iron-on and sew-on patches, appliques and iron-on\n'
+        '  letters that are NOT band or artist merchandise (those go in "muziek artiesten\n'
+        '  en merchandise"). When you pick a "hobby" category, gender must be "hobby" too.\n'
+        '- The "sportartikelen" branch is sports EQUIPMENT: rackets, balls, fitness\n'
+        "  machines and weights, yoga mats, skis, snowboards, surfboards, golf clubs,\n"
+        '  "sportartikelen fitnessapparatuur" is machines (treadmill, exercise bike, rowing\n'
+        '  machine, home gym); dumbbells, kettlebells, weights, bands and mats go in\n'
+        '  "sportartikelen fitnessmaterialen".\n'
+        "  darts, boxing gloves. Sports clothing and sports shoes stay clothing.\n"
+        '  When you pick a "sportartikelen" category, gender must be "sportartikelen" too.\n'
+        '- The "witgoed" branch is household appliances: washing machines, dryers,\n'
+        "  fridges, freezers, dishwashers, ovens, coffee machines, air fryers, kettles,\n"
+        "  blenders, vacuum cleaners, irons, fans, and personal care appliances.\n"
+        '  When you pick a "witgoed" category, gender must be "witgoed" too.\n'
+        '- The "klussen" branch is tools and DIY: power tools, hand tools, ladders,\n'
+        "  workbenches, painting supplies, protective gear, and building materials\n"
+        "  (wood, tiles, doors, sanitary ware, pipes, cables).\n"
+        '  When you pick a "klussen" category, gender must be "klussen" too.\n'
+        "- SOME ITEMS STILL FIT NONE OF THESE BRANCHES, and then the answer is none:\n"
+        "  car and motorbike parts, mopeds and scooters, pet supplies, prams, car seats\n"
+        "  and other baby gear, films, CDs, DVDs and records, tickets, coins and stamps.\n"
+        '  For those respond {"gender":"none","category":"none","confidence":"high"}.\n'
+        '  Never put them in "antiek" or "wonen" because nothing else fits: a modern\n'
+        "  item is never antique, and an appliance or tool is not home decoration.\n\n"
+        'Respond with ONLY JSON: {"gender":"...","category":"...","confidence":"high|medium|low"}'
+    )
+
+
 async def _classify_with_claude(title: str | None, description: str | None,
                                 brand: str | None) -> dict:
     """
@@ -1332,143 +1474,7 @@ async def _classify_with_claude(title: str | None, description: str | None,
         # trage vraag een bulk-import nooit laat bevriezen; daarna de woordenlijst.
         client = None
 
-        taxonomy_lines = "\n".join(
-            f"  {g}: {_rubrieken_voor_de_vraag(cats)}" for g, cats in _TAXONOMY.items()
-        )
-        prompt = (
-            "You categorise second-hand listings for a Dutch marketplace. Most are"
-            " clothing; the rest are musical instruments, antiques, art and"
-            " collectables, home goods, jewellery, video games, phones, audio, TV and"
-            " photo equipment, computers, books, toys, bikes, sports equipment,"
-            " household appliances, or tools and DIY supplies.\n\n"
-            f"Brand: {brand or 'unknown'}\n"
-            f"Title: {title or ''}\n"
-            f"Description: {(description or '')[:1500]}\n\n"
-            "Pick the single best gender and category from this exact taxonomy:\n"
-            f"{taxonomy_lines}\n\n"
-            "Rules:\n"
-            "- The category MUST be copied verbatim from the list for the gender you pick.\n"
-            "- WHAT the garment is comes from the title and description ONLY. The brand\n"
-            "  never decides that: Puma shoes are shoes, Nike trousers are trousers.\n"
-            "  Use the brand only to choose between a sporty and a casual variant of the\n"
-            "  SAME garment (e.g. Gymshark shorts = sportbroeken rather than shorts).\n"
-            "- Footwear (shoes, sneakers, trainers, boots, loafers, heels, sandals) always\n"
-            "  goes in a footwear category, whatever the brand is.\n"
-            "- Loafers, moccasins, penny loafers and boat shoes are NOT formal shoes:\n"
-            '  they belong in the plain shoes category ("heren schoenen" /\n'
-            '  "schoenen dames"). Only laced dress shoes (oxford, derby, brogue) are\n'
-            '  "heren formele schoenen".\n'
-            "- Athletic shorts belong in a sportbroeken category, NOT shorts or jeans.\n"
-            "- If gender is not stated or implied, use unisex where a sensible unisex\n"
-            "  category exists; otherwise pick the most likely gender.\n"
-            "- Set confidence low if you are guessing about what the garment is.\n"
-            '- The "muziek" branch is for musical instruments, their parts and their\n'
-            "  accessories (a guitar, a plectrum, a case, a cable), plus official band and\n"
-            "  artist merchandise that is NOT worn as clothing: iron-on and sew-on patches,\n"
-            "  pins, key rings, posters, flags, stickers, tapestries. Those go in\n"
-            '  "muziek artiesten en merchandise", never in a clothing or jewellery\n'
-            "  category. A band T-shirt, a festival hoodie or anything else you wear is\n"
-            "  clothing, never muziek.\n"
-            '  When you pick a "muziek" category, gender must be "muziek" too.\n'
-            '- The "antiek" branch is for antiques, art and collectables: silverware,\n'
-            "  cutlery, porcelain, vases, paintings, clocks, brocante, decorative objects.\n"
-            "  DECIDE ON WHAT IT IS, NOT WHAT IT IS MADE OF. Anything a person WEARS is\n"
-            '  jewellery and belongs in the "sieraden" branch, however old or silver:\n'
-            "  a ring, a bracelet, a necklace, earrings, a brooch, a watch. Anything you\n"
-            "  put on a table, a wall or a shelf is antiek: a serving spoon, a ginger jar\n"
-            "  spoon, a candlestick, a vase, a plate. Modern mass-produced homeware is\n"
-            "  NOT antiek.\n"
-            '  When you pick an "antiek" category, gender must be "antiek" too.\n'
-            '- The "wonen" branch is home, garden and Christmas: chairs, bar stools,\n'
-            "  armchairs, garden sets, tables, curtains, rugs, cushions, lamps,\n"
-            "  mirrors, planters, parasols, terrace heaters and Christmas\n"
-            "  decorations. This is ordinary modern homeware — genuinely old or\n"
-            '  collectable pieces belong in "antiek" instead.\n'
-            '  When you pick a "wonen" category, gender must be "wonen" too.\n'
-            "- Costumes, fancy dress and folk dress are NEVER everyday clothing: lederhosen,\n"
-            "  dirndl, Tyrolean outfits, carnival and Halloween outfits, cosplay and mascot\n"
-            "  suits all go in a verkleedkleding category, never in shorts, trousers, jeans\n"
-            "  or dresses.\n"
-            "- The Dutch word \"kleed\" is ambiguous and must NEVER be guessed. In Flemish\n"
-            "  it means a DRESS; in the Netherlands it usually means a RUG (vloerkleed,\n"
-            "  tapijt). Decide only if the rest of the text makes it obvious (a size like\n"
-            "  200x300 or the word tapijt means a rug; a clothing size, a brand of clothing\n"
-            "  or words like mouwen/taille mean a dress). With nothing else to go on,\n"
-            '  a Dutch listing means a rug: pick "wonen tapijten en kleden". It is never\n'
-            "  a bag.\n"
-            '- A "grand foulard" (also written grandfoulard) is NOT a scarf and NOT an\n'
-            "  accessory: in the Dutch second-hand trade it is a large piece of home\n"
-            "  textile — a throw, bedspread, sofa or wall cloth, often 150-300 cm wide.\n"
-            '  It belongs in the "wonen" branch, normally "wonen plaids en woondekens".\n'
-            '  A plain "foulard" without "grand" IS a scarf and stays an accessory.\n'
-            '- The "sieraden" branch covers jewellery, watches, bags, suitcases, wallets\n'
-            "  and sunglasses. Pick it for anything worn or carried as an accessory.\n"
-            '  When you pick a "sieraden" category, gender must be "sieraden" too.\n'
-            '- The "games" branch is video games, game consoles and their accessories, per\n'
-            '  platform: a game disc or cartridge goes in "games <platform>", the machine\n'
-            '  itself in "games console <platform>", a controller in "games controllers\n'
-            '  <platform>", other accessories in "games accessoires ...", VR headsets in\n'
-            '  "games virtual reality". Board games are NOT "games" (see speelgoed).\n'
-            '  When you pick a "games" category, gender must be "games" too.\n'
-            '- The "electronics" branch is mobile and landline phones and their accessories:\n'
-            "  phones by brand, phone cases, chargers, power banks, earphones, phone holders,\n"
-            "  walkie-talkies. Smartwatches are jewellery (sieraden), tablets are computers.\n"
-            '  When you pick an "electronics" category, gender must be "electronics" too.\n'
-            '- The "audio" branch is audio, TV and photo: speakers, headphones,\n'
-            "  amplifiers and receivers, turntables, radios, televisions, projectors,\n"
-            "  cameras, lenses, drones, binoculars. A guitar amplifier or effects pedal\n"
-            '  is "muziek", not audio. When you pick an "audio" category, gender must be\n'
-            '  "audio" too.\n'
-            '- The "computers" branch is computers, laptops, tablets, e-readers, computer\n'
-            "  parts, monitors, keyboards, mice, printers, scanners, networking gear and\n"
-            '  software. Tablets go in a tablets category: an iPad in "computers apple\n'
-            '  ipads", a Galaxy Tab in "computers android tablets", a Surface in\n'
-            '  "computers windows tablets"; "computers apple desktops" is only an iMac,\n'
-            '  Mac mini or Mac Pro. When you pick a "computers" category, gender must be\n'
-            '  "computers" too.\n'
-            '- The "boeken" branch is books, comics, magazines and audiobooks: pick the\n'
-            "  genre or subject. Only a genuinely old book or bible (the text says antique,\n"
-            '  or a year before about 1950) goes in "boeken antieke boeken en bijbels".\n'
-            '  When you pick a "boeken" category, gender must be "boeken" too.\n'
-            '- The "speelgoed" branch is toys and games for play: LEGO, Duplo, Playmobil,\n'
-            '  Any LEGO or Duplo set goes in "speelgoed duplo en lego"; "speelgoed bouwstenen"\n'
-            '  is other brands of building blocks.\n'
-            "  dolls, soft toys, toy vehicles, board games, card games, puzzles, trading\n"
-            "  cards (Pokemon, Magic, Yu-Gi-Oh), model kits, model cars and model trains,\n"
-            "  radio-controlled models, outdoor toys and trampolines. Only toys the text\n"
-            '  calls old or antique (antiek, blikken speelgoed, a year before about 1970)\n'
-            '  go in "antiek speelgoed". When you pick a "speelgoed" category, gender must\n'
-            '  be "speelgoed" too.\n'
-            '- The "fietsen" branch is bicycles, e-bikes, kids\' bikes and bicycle parts and\n'
-            "  accessories (locks, lights, bags, helmets, child seats, bike racks). Cycling\n"
-            "  clothing is clothing, mopeds and scooters have no category here.\n"
-            '  When you pick a "fietsen" category, gender must be "fietsen" too.\n'
-            '- The "hobby" branch is iron-on and sew-on patches, appliques and iron-on\n'
-            '  letters that are NOT band or artist merchandise (those go in "muziek artiesten\n'
-            '  en merchandise"). When you pick a "hobby" category, gender must be "hobby" too.\n'
-            '- The "sportartikelen" branch is sports EQUIPMENT: rackets, balls, fitness\n'
-            "  machines and weights, yoga mats, skis, snowboards, surfboards, golf clubs,\n"
-            '  "sportartikelen fitnessapparatuur" is machines (treadmill, exercise bike, rowing\n'
-            '  machine, home gym); dumbbells, kettlebells, weights, bands and mats go in\n'
-            '  "sportartikelen fitnessmaterialen".\n'
-            "  darts, boxing gloves. Sports clothing and sports shoes stay clothing.\n"
-            '  When you pick a "sportartikelen" category, gender must be "sportartikelen" too.\n'
-            '- The "witgoed" branch is household appliances: washing machines, dryers,\n'
-            "  fridges, freezers, dishwashers, ovens, coffee machines, air fryers, kettles,\n"
-            "  blenders, vacuum cleaners, irons, fans, and personal care appliances.\n"
-            '  When you pick a "witgoed" category, gender must be "witgoed" too.\n'
-            '- The "klussen" branch is tools and DIY: power tools, hand tools, ladders,\n'
-            "  workbenches, painting supplies, protective gear, and building materials\n"
-            "  (wood, tiles, doors, sanitary ware, pipes, cables).\n"
-            '  When you pick a "klussen" category, gender must be "klussen" too.\n'
-            "- SOME ITEMS STILL FIT NONE OF THESE BRANCHES, and then the answer is none:\n"
-            "  car and motorbike parts, mopeds and scooters, pet supplies, prams, car seats\n"
-            "  and other baby gear, films, CDs, DVDs and records, tickets, coins and stamps.\n"
-            '  For those respond {"gender":"none","category":"none","confidence":"high"}.\n'
-            '  Never put them in "antiek" or "wonen" because nothing else fits: a modern\n'
-            "  item is never antique, and an appliance or tool is not home decoration.\n\n"
-            'Respond with ONLY JSON: {"gender":"...","category":"...","confidence":"high|medium|low"}'
-        )
+        prompt = _bouw_rubrieksprompt(title, description, brand)
         # KLEDING EERST MET EEN KORTE VRAAG (Daniel, 08-10-2026: tegoed sparen).
         # De volledige vraag is ~9.000 tokens, vooral de 469 rubrieken van
         # takken als boeken en klussen. Is het herkenbaar kleding, schoenen of
