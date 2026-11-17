@@ -19421,3 +19421,6 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Gebouwd: GA4-gebeurtenis `verkoper_intentie` (klik op aanmelden, inloggen of prijzen, één keer per pagina, met doel) op / en /nl; en intern verkeer via een apparaatvlag: open omnivaleur.com/?intern=1 op elk eigen apparaat, dan sturen alle pagina's traffic_type=internal mee (?intern=0 haalt het weg). Bewust geen IP-regel: Daniels IPv4 en IPv6 wisselen. Tests: tests/verkoper-intentie-test.js, tests/ga4-intern-verkeer-test.js.
 - Open: Daniel opent ?intern=1 op zijn apparaten; `verkoper_intentie` is nog niet als sleutelgebeurtenis gemarkeerd (verschijnt pas in GA4 nadat hij een keer is afgegaan).
 - 17-11-2026 (later): Gemini-meting voor de groepsvraag toch al gedaan, omdat Google weer antwoordde. Zelfde 80 artikelen: Haiku 99% geldig, 81% zelfde tak, 54% exact; Google 98%, 82%, 42%. Ze kiezen bij 44 van 80 dezelfde rubriek. Besluit: Haiku blijft, Google-eerst niet gebouwd (bespaart ~13 cent per import, kiest minder consistent). Script: scripts/meet_groepsvraag_gemini.py.
+
+## 17-11-2026 (avond, automatisch): Kennisoverdracht
+- Kennisoverdracht 17-11: niets nieuws sinds de overdracht van 09:51. Server op e840e558, extensie 1.0.426 in repo.
