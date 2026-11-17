@@ -532,6 +532,22 @@ def start_scheduler():
         coalesce=True,
         next_run_time=_dt2.now() + _td2(minutes=3),
     )
+    # Lege rubrieken van NIEUWE artikelen, elke 5 minuten, twintig per vraag aan
+    # Claude Haiku (17-11-2026: $0,0004 per artikel tegen $0,0095 per losse vraag).
+    # Een nieuwe klant zag 267 van 294 artikelen zonder rubriek omdat de gratis
+    # Google-limiet op was; zonder rubriek kan hij niets plaatsen. Zie
+    # services/rubriek_groepen.
+    from backend.services.rubriek_groepen import vul_rubrieken_in_groepen
+    _scheduler.add_job(
+        _off_the_request_loop(vul_rubrieken_in_groepen),
+        "interval",
+        minutes=5,
+        id="rubrieken_in_groepen",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        next_run_time=_dt2.now() + _td2(minutes=4),
+    )
     # Nieuwe Shopify-producten die buiten Omnivaleur om worden toegevoegd —
     # bulkimport, handmatig in het winkelbeheer — zelf herkennen. Zonder deze
     # ronde blijft de koppeling die net na het verbinden gebeurt (zie
