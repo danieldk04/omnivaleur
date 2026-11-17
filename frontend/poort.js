@@ -574,7 +574,7 @@
       if (b.nodigGegevens) {
         // Een herteken (bijvoorbeeld de hulpknop na tien minuten) mag wat er al getypt is niet wissen.
         let mail = invul.e;
-        if (!mail) { try { mail = (window.SESSIE && SESSIE.lees("cl_email")) || ""; } catch (e) { mail = ""; } invul.e = mail; }
+        if (!mail) { try { const se = g("SESSIE"); mail = (se && se.lees("cl_email")) || ""; } catch (e) { mail = ""; } invul.e = mail; }
         [["pt-fab-n", invul.n], ["pt-fab-a", invul.a], ["pt-fab-e", invul.e]].forEach(([id, w]) => { const el = document.getElementById(id); if (el && !el.value) el.value = w; });
       }
       wisPijl();
