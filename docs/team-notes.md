@@ -19487,3 +19487,7 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Gevolg: Etsy als kanaal en de belofte "Etsy zodra die er is" in de Ultra-regel van mail B zijn niet te garanderen. Niet bouwen voor Etsy.
 - Aanzegtermijn prijsverhoging (voorwaarden art. 5): 30 dagen per e-mail, dus mail B uiterlijk 01-12-2026. Nagekeken 14-11.
 - Vervolg: eerst vragen waarom (antwoord op die mail, via etsy.com/help), niets omzeilen, geen nieuw account of andere naam. Een nieuwe aanvraag alleen met eerlijke omschrijving (dienst voor meerdere verkopers).
+
+## 17-11-2026 (13:00, automatisch): Klantfouten
+- Marktplaats delete "No tab with id" (96e30080, 2x, laatst 11:11 UTC): het werktabblad verdween 12 seconden na de start (gemeten job 81b6d579). Dezelfde artikelen zijn daarna opnieuw gevraagd en 5 van 5 keer gelukt (11:14 tot 11:23, MP en 2dehands). Dus zelfherstellend; waarschijnlijk tabblad door de klant of Chrome gesloten. Niet aangepast, geen aanwijzing voor fout in onze code.
+- Vinted create timeout (3eeceb51, Esther, item 94f18780, extensie 1.0.424): echte mislukking, niet vals. Laatste stap "Selecteer de staat, Vul je staat in, Kies maximaal 2 kleuren, Vul je kleur in" terwijl het artikel staat (fair) en kleur (Orange) heeft. Rubriek keukenbenodigdheden had in 1.0.424 nog geen vast Vinted-pad (zie vorige kopje, keukenPad zit pas in 1.0.427). Oorzaak niet bewezen, niet gerepareerd: reproduceren vraagt een echte plaatsing op Esthers Vinted. Open: na upload van 1.0.427 opnieuw laten plaatsen en kijken of staat en kleur nu wel gevuld worden.
