@@ -39,7 +39,10 @@ pagina die klopt "op dit moment". Deze routine houdt hem 1 op 1 gelijk aan de we
    - Routinetabel: klopt wie wat draait nog?
 5. Beslissingen en afspraken ook als dagboekregel onderaan `docs/team-notes.md`.
    Nieuwe les: geheugenbestand, daarna `python3 scripts/export_kennisbank.py`.
-6. Commit en push naar main (`git add docs/overdracht.md docs/team-notes.md docs/kennisbank.md`,
+5b. Kijk `docs/build-in-public-ideeen.md` na (Daniel, 17-11-2026): voeg toe wat uit Indie Hackers-reacties
+   of Daniels posts kwam (beloften, vragen, ideeën), en zet bovenaan overdracht.md bij "Wat nu open staat"
+   elke belofte die nu meetbaar is. Daniel houdt een dagelijkse build-in-public bij en gebruikt dit voor zijn updates.
+6. Commit en push naar main (`git add docs/overdracht.md docs/team-notes.md docs/kennisbank.md docs/build-in-public-ideeen.md`,
    alleen die). Verandert er niets, schrijf dan één regel in team-notes "kennisoverdracht
    <datum>: niets nieuws" en niets anders.
 

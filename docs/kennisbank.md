@@ -17,6 +17,17 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## build-in-public-ideeenlijst
+
+*17-11-2026 — Daniel houdt dagelijks build in public bij op Indie Hackers (dag 163 op 16-11-2026); beloften en reactie-ideeën gaan in docs/build-in-public-ideeen.md*
+
+Daniel schrijft elke dag een build-in-public post op Indie Hackers. Wat reageerders vragen, voorstellen of benieuwd naar zijn (vooral effect van iets wat hij aankondigde) legt Claude vast in `docs/build-in-public-ideeen.md`, zonder dat hij erom vraagt.
+
+**Why:** hij wil er later een update over kunnen schrijven, en de andere developer (en de dagelijkse reageerroutine) moet dezelfde lijst zien. Gevraagd op 17-11-2026.
+**How to apply:** lees je reacties op zijn posts, voeg regels toe (beloften, ideeën, status) en vink bij de kennisoverdracht na wat meetbaar is geworden. Claims van reageerders over platforms: markeren als niet gecontroleerd. Zie "rapportage-in-gewone-taal".
+
+---
+
 ## nieuwe-klant-heeft-haast
 
 *16-11-2026 — "16-11: ga ervan uit dat elke nieuwe klant haast heeft en niets uitzoekt; eerste resultaat direct zichtbaar, voortgang zichtbaar, nooit verantwoordelijkheid bij de klant leggen"*

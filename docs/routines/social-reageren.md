@@ -81,3 +81,9 @@ Bij ongeveer één op de vijf reacties. Staat de naam al in Daniels bio, dan hoe
 ## Risico dat Daniel kent
 X mag automatische reacties beperken of het account blokkeren. Daarom de lage aantallen, het tempo, geen links en geen
 herhaalde tekst. Merkt de routine een waarschuwing of verminderd bereik: direct stoppen en melden.
+
+## Build in public: ideeënlijst bijhouden (Daniel, 17-11-2026)
+Lees je reacties onder Daniels eigen posts, of onder een post waar hij iets aankondigde, leg dan vast in
+`docs/build-in-public-ideeen.md` wat mensen vragen, voorstellen of benieuwd naar zijn ("ik ben benieuwd wat X doet").
+Dat wordt materiaal voor zijn dagelijkse update (hij zit op dag 163). Een belofte van Daniel ("ik meld me terug")
+komt in de tabel met open beloften. Doe het in dezelfde beurt, zonder dat hij erom vraagt.

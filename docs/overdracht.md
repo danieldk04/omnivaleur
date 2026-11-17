@@ -5,7 +5,7 @@ wat je kunt zien, en dit elke sessie en elke dag bijhouden". Basis was de overdr
 15-11 (Daniels Mac), vorige daarvoor 28-10. Alles hieronder is gemeten op 15 of 16-11-2026,
 tenzij er een andere datum staat. Hoe je dit bestand zelf bijhoudt:
 `docs/routines/kennisoverdracht.md` (aan het eind van elke sessie, plus een dagelijkse taak). Bewijs staat in `docs/team-notes.md` onder het
-genoemde kopje, lessen in `docs/kennisbank.md`. Daniel wil zelf geen acties hoeven uitvoeren:
+genoemde kopje, lessen in `docs/kennisbank.md`. Build in public (Daniel, dag 163 op 16-11): open beloften aan lezers en ideeën uit Indie Hackers-reacties staan in `docs/build-in-public-ideeen.md`; vul dat aan en kijk het na bij elke overdracht. Daniel wil zelf geen acties hoeven uitvoeren:
 wat te doen is, doen de sessies zelf.
 
 ## Eén regel boven alles: je zit op een andere computer
