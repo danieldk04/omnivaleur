@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=4f72374fae"></script>
+<script src="/i18n.js?v=f71e8a7cb5"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -9981,6 +9981,7 @@ async function importeerAlleKanalen() {
     importAllesBezig = false;
     for (const k of Object.keys(importAllesStand)) delete importAllesStand[k];
     renderImportScanButtons();
+    try { loadImportSummary(); } catch (_) { /* samenvatting is bijzaak */ }
   }
 }
 
@@ -10228,7 +10229,7 @@ async function loadImportSummary() {
   // Staat er niets meer open, zeg dan WAAROM de lijst leeg is: de scan werkte.
   box.style.display = '';
   box.innerHTML = `<div class="imp-voet">
-      ${pending ? '' : '<b style="color:var(--text)">Nothing left to review.</b> '}Scans found ${s.total} listing${s.total === 1 ? '' : 's'} (${esc(platforms)}), ${done} of them are in your items.
+      ${pending ? '' : (typeof importAllesBezig !== 'undefined' && importAllesBezig ? '<b style="color:var(--text)">Still reading your adverts.</b> ' : '<b style="color:var(--text)">Nothing left to review.</b> ')}Scans found ${s.total} listing${s.total === 1 ? '' : 's'} (${esc(platforms)}), ${done} of them are in your items.
       ${done ? `<button class="imp-link" onclick="showView('items');setItemsTab('live')">See them in Items</button>` : ''}
       ${reopenable ? `<button class="imp-link" onclick="reopenImportCandidates()">Show the ${reopenable} ignored or failed again</button>` : ''}
     </div>`;
