@@ -19400,3 +19400,8 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Oorzaak niet bewezen: acht avif-foto's van 92 tot 308 KB (geen groot-bestandprobleem zoals 30-09), een avif-artikel van dezelfde klant ging 16-11 08:12 wel goed, en dit is de enige foto-time-out in 573 mislukte Marktplaats/2dehands-plaatsingen over 14 dagen. Niets gerepareerd, geen opdracht opnieuw klaargezet. Oordeel: onbekend. Komt het terug bij dezelfde klant, dan eerst de foto-upload in de extensie meten.
 - Verder geen vastlopers (geen opdracht langer dan 30 min geclaimd), geen betaalslot bij actieve klanten. Grote wachtrijen (bcdf9aa4 200+ verlengingen, 5aae4954, 0b28c1ce) horen bij klanten wier Chrome uit staat (laatste hartslag 00:20 UTC of dagen geleden). 3bfbed2c heeft werk staan maar een verlopen proef.
 - Extensie 1.0.426 (2dehands-verlengfix van gisteren) is nog bij geen enkele klant binnen: hoogste versie in hartslagen is 1.0.425. Wacht op de Web Store-upload.
+
+## 17-11-2026: Onboarding-tempo wordt vastgelegd (Daniel)
+- Vraag: heeft de versnelde onboarding van 16-11 (14:51 UTC) effect? Nieuw: scripts/onboarding_tempo.py meet aanmelding tot eerste opdracht, eerste artikel en eerste live advertentie, voor en na die tijd en per aanmeldweek. Draait uit bestaande tijdstempels, dus ook achteraf. Onboarding-routine draait het elke maandag (stap 6b).
+- Beginstand 17-11 (57 klanten ervoor): eerste live mediaan 1,6 u bij 19 van 57 die dat haalden; binnen 24 u live 28%, binnen 72 u 29%. Na de wijziging pas 2 klanten: te weinig voor een uitspraak (minimaal 10).
+- Beperking: de extensie slaat alleen "laatst gezien" op, niet "eerste keer verbonden"; eerste gelukte opdracht is de vervanger.
