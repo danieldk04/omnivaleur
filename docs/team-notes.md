@@ -19424,3 +19424,6 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 
 ## 17-11-2026 (avond, automatisch): Kennisoverdracht
 - Kennisoverdracht 17-11: niets nieuws sinds de overdracht van 09:51. Server op e840e558, extensie 1.0.426 in repo.
+
+## 17-11-2026: Social video-run, niets geplaatst
+- Schedchie toont geen enkele video van week 46 of 47 als geplaatst (alleen tekstposts 3-11 en 10-11). Geen nieuwe video's gemaakt, geen cijfers. Zie docs/social-video-leerlog.md.

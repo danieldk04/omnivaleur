@@ -2,6 +2,9 @@
 
 Bijgehouden door de wekelijkse routine `docs/routines/social-videos.md`. Nieuwste bovenaan.
 
+## Week 47, dinsdag 17-11-2026 (automatische run): geen nieuwe video's, geen cijfers
+Schedchie (Daniels Chrome) toont maar 2 geplaatste posts, van 3-11 en 10-11 (tekstposts, geen van onze video's). Geen enkele video uit week 46 of 47 is ingepland of geplaatst, dus er is niets te meten en geen conclusie per format mogelijk (alles 'onzeker', minder dan 3 plaatsingen). Schedchie-sleutel bestaat nog niet. Besluit: niet nog vijf video's erbij op een stapel van acht ongeplaatste; leren begint pas zodra er plaatsingen zijn. Machine ook ongeschikt voor een render nu: vrijwel geen vrij geheugen, Spotify draait, 6,4 GB schijf vrij.
+
 ## Week 47, 13-11-2026: vijf nieuwe video's (Daniel vroeg om meer)
 Eerste run besloot niets te maken; Daniel zei daarna: maak ze, meer video's. Gemaakt in `~/omnivaleur-videos/week-2026-47/` (code `src/week47.js` plus `v1.js` tot `v5.js`, tijden volgen de stem via `montage()`; geluid via `sound4.py`).
 | Video | Format | Hook | Stem | Lengte | Luidheid |
