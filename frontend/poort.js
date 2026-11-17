@@ -506,6 +506,7 @@
       // status error, daarna door de scan als active herkend, advertentie bestond echt). Vijf minuten
       // geen mislukking tonen, want een klant die "niet gelukt" leest plaatst hem dubbel.
       : (n.kanaal === "vinted" && Date.now() - n.sinds < 5 * 60 * 1000) ? "pending"
+      : (n.kanaal === "vinted") ? "onzeker"
       : "error";
     const bezigSt = ["pending", "publishing", "relisting", "queued"].includes(st);
     if (bezigSt && Date.now() - laatsteLaad > 8000) { laatsteLaad = Date.now(); const la = g("loadAll"); if (typeof la === "function") Promise.resolve(la()).catch(() => {}); }
@@ -522,6 +523,9 @@
     } else if (bezigSt) {
       kaart("Placing your advert…", `Going live on <b translate="no">${naam}</b> now. Takes about a minute. Keep this tab open.
         <div style="height:6px;background:#dfe5f1;border-radius:3px;overflow:hidden;margin-top:8px"><div style="height:100%;width:60%;background:#3d35c4;border-radius:3px;animation:pt-glij 1.6s ease-in-out infinite alternate"></div></div>`, "");
+    } else if (st === "onzeker") {
+      kaart("Waiting for Vinted to confirm", `Vinted is slow to confirm <b translate="no">${naam}</b>. It turns green here as soon as we see it online. Check your Vinted account if it takes long.`,
+        `<button class="btn btn-sm btn-outline" onclick="OBPoort.sluitNet();showView('items')">See your items</button>`);
     } else {
       kaart("That did not go through", `We could not place it on <b translate="no">${naam}</b>. Nothing is lost.`,
         `<button class="pt-groot" style="padding:10px 20px;font-size:13px" onclick="OBPoort.volgende()">Try another item</button>`);
