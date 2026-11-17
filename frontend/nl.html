@@ -99,6 +99,21 @@
     setTimeout(function(){ if(document.visibilityState==='visible'){ tijd=true; check(); }
       else addEventListener('visibilitychange',function v(){ if(document.visibilityState==='visible'){ removeEventListener('visibilitychange',v); setTimeout(function(){tijd=true;check();},15000);} }); },15000);
   })();
+  // Verkoper-intentie (17-11-2026, tip Indie Hackers): een klik op aanmelden, inloggen, het dashboard of
+  // de prijzen. Nieuwsgierige developers blijven ook 15 s en scrollen; wie hierop klikt is een verkoper
+  // die iets wil. Eén keer per pagina, met het soort doel erbij.
+  (function(){
+    var gedaan=false;
+    addEventListener('click',function(e){
+      if(gedaan) return;
+      var a=e.target&&e.target.closest?e.target.closest('a'):null;
+      if(!a) return;
+      var h=(a.getAttribute('href')||'').toLowerCase();
+      var doel=/register|signup|sign-up/.test(h)?'aanmelden':/\/app|login/.test(h)?'inloggen':/pricing|prijs|#prijs/.test(h)?'prijzen':'';
+      if(!doel) return;
+      gedaan=true; gtag('event','verkoper_intentie',{doel:doel});
+    },{capture:true,passive:true});
+  })();
 </script>
 </head>
 <body>
