@@ -200,13 +200,8 @@ async def vul_rubrieken_in_groepen(uren: int = TERUGKIJKEN_UREN, limiet: int = P
     """Vul de lege rubrieken van recente artikelen in, twintig tegelijk. Bedoeld
     voor elke paar minuten: een nieuwe klant ziet zijn artikelen dan binnen
     minuten klaar voor plaatsing, ook als de gratis Google-limiet op is."""
-    from backend.services.categorie_herstel import (
-        MAX_POGINGEN, _TELLER, _geef_bewerkte_artikelen_een_nieuwe_kans, _schrijf_pogingen)
+    from backend.services.categorie_herstel import MAX_POGINGEN, _TELLER, _schrijf_pogingen
     db = get_db()
-    try:
-        _geef_bewerkte_artikelen_een_nieuwe_kans(db, None)
-    except Exception:  # noqa: BLE001
-        pass
     items = await asyncio.to_thread(_lees_kandidaten, db, uren, limiet)
     if not items:
         return {"gelezen": 0, "gevuld": 0, "geen_antwoord": 0}
