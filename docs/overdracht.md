@@ -305,3 +305,6 @@ Prijs en product vandaag live: EUR 19,99 per maand (Pro), 5 kanalen, 7 dagen pro
 respijt; Omnivaleur Light EUR 9,99 tot 20 actieve artikelen. De nieuwe plannen staan uit (zie
 boven). Details in de kennisbank (`omnivaleur-demovideo-en-prijs`, `proefperiode-en-toegangsslot`,
 `omnivaleur-light-plan`).
+
+## 17-11-2026: rubrieken in groepen
+- Nieuwe job `rubrieken_in_groepen` (elke 5 min, backend/services/rubriek_groepen.py). Eerste echte ronde op de server: 400 bekeken, 390 gevuld. Open: Gemini-eerst nog niet gemeten, nog niet gezien bij een echt nieuw account.

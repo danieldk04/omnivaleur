@@ -17,6 +17,17 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## rubrieken-in-groepen-van-twintig
+
+*17-11-2026 — 17-11 nieuwe klant 267/294 zonder rubriek; gratis Google op (429) + Claude uit; nu groepsvraag Haiku 20 per vraag, 22x goedkoper, elke 5 min*
+
+Nieuwe klant 3eeceb51 kon niets plaatsen: 267 van 294 artikelen zonder rubriek, want de gratis Google-sleutel geeft elke dag vroeg 429 en rubriekvragen mogen bewust niet naar Claude ("echt veel te duur", 09-10). Elke losse vraag draagt 8.300 tokens rubriekenlijst mee: $0,0095 per artikel. Twintig artikelen per vraag met de lijst in de systeemtekst: $0,0004 per artikel, zelfde kwaliteit (zelfde tak 86 tot 90%). 40 per vraag gaf meer mislukkingen.
+
+**Why:** een eerste stap die misgaat doodt de motivatie van een nieuwe klant; Daniel accepteert kosten zolang ze laag blijven.
+**How to apply:** backend/services/rubriek_groepen.py draait elke 5 min op artikelen van de laatste 72 uur, dagplafond 3000. Vraagtekst staat in imports._bouw_rubrieksprompt. Meten kan alleen via `npx -y @railway/cli run python3 script.py` (lokale Anthropic-sleutel ongeldig). Open: Gemini-eerst voor groepsvragen nog niet gemeten. Zie "gemini-tegoed-op".
+
+---
+
 ## build-in-public-ideeenlijst
 
 *17-11-2026 — Daniel houdt dagelijks build in public bij op Indie Hackers (dag 163 op 16-11-2026); beloften en reactie-ideeën gaan in docs/build-in-public-ideeen.md*
