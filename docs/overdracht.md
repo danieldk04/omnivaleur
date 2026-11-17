@@ -1,6 +1,6 @@
 # Overdracht: lees dit als eerste
 
-Bijgewerkt 16-11-2026 (avond 22:30, geplande taak) door het tweede account. Eerder die dag op verzoek van Daniel: "1 op 1 met
+Bijgewerkt 17-11-2026 (op verzoek van Daniel, voor de overdracht) door Daniels hoofdaccount; daarvoor 16-11-2026 22:30 door het tweede account. Eerder die dag op verzoek van Daniel: "1 op 1 met
 wat je kunt zien, en dit elke sessie en elke dag bijhouden". Basis was de overdracht van
 15-11 (Daniels Mac), vorige daarvoor 28-10. Alles hieronder is gemeten op 15 of 16-11-2026,
 tenzij er een andere datum staat. Hoe je dit bestand zelf bijhoudt:
@@ -123,6 +123,29 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
   klanttekst.
 
 ## Wat nu open staat (niemand hoeft te wachten op Daniel tenzij er "beslissing" staat)
+
+- **EERSTE KLUS VOOR DE ANDERE DEVELOPER (Daniel, 17-11): de hele eerste-minuten-loop doorlopen met een vers account en alles
+  rechtzetten wat rommelig of onduidelijk is.** Daniel kan dat niet op het tweede account en jij wel: jij kijkt mee
+  op zijn account. Uitgangspunt van Daniel, onthoud het: elke nieuwe klant heeft haast, heeft een minuscule aandachtsspanne,
+  wil in twee minuten zien "dit werkt voor mij" en je legt nooit verantwoordelijkheid bij de klant (geheugen
+  `nieuwe-klant-heeft-haast`). Beoordeel elke stap als iemand die Omnivaleur nog nooit zag.
+  Wat al staat (alles live, 16 en 17-11): poort.js start het inlezen vanzelf, "Plaats nu" kiest één artikel per kanaal,
+  hulpknop na 10 min, link naar de computer per mail, stilstandmail na een uur (stil_na_aanmelding.py), voortgangsbalk,
+  "Account aangemaakt" vooraf afgevinkt, extensie 1.0.424 tot 1.0.426 (3 tegelijk lezen, eerste 20 vooruit via
+  /api/jobs/{id}/scan-deel, merk en maat uit de pagina, tweede leesronde, ruimer budget).
+  Daniels testaccount: uid `ac7a394f-f25b-4c0d-8187-0743ea27a13a` (aangemeld 16-11 16:24 UTC). Stand 17-11: geen extensie
+  gemeld (heartbeat leeg), 0 artikelen, 0 opdrachten, de stilstandmail is wel uitgegaan (19:21 UTC, drie uur te laat omdat elke
+  deploy de uurklok van de planner terugzet). Meet ALLEEN per user_id (kennisbank: meten-op-de-productiedatabase), nooit jobs zonder
+  user_id: een eerste meting zonder filter liep op 16-11 in een statement timeout.
+  Wat je doet, in volgorde: (1) installeer de extensie in jouw Chrome en log in op dat account, (2) loop de poort af en let op
+  tekst, taalmix, lege omschrijvingen, tijd tot het eerste artikel, voortgang die je ziet, meldingen die een nieuweling niet snapt,
+  (3) plaats het eerste artikel met "Plaats nu" en meet of het echt online staat, (4) reken elke fout na met voor-en-na-proef.
+  Open punten die Daniel al kent: de extensie haalt bij ~197 van 257 artikelen de omschrijving niet zelf op (de aanvulstap
+  in het dashboard doet dat, nu 12 rondes; oorzaak niet gevonden, scan_meta.enrichment_retry laat het zien); de
+  oude Engelse aanvulmelding blijft zichtbaar na een eerdere import; lege omschrijvingen worden na import niet geblokkeerd;
+  maat ontbreekt bij 13 van 253; het "hoe ziet het eruit op het andere kanaal"-voorbeeld bij Plaats nu is niet gebouwd (idee
+  van een Indie Hackers-lezer); uurklok van de planner reset bij deploy (interval-taken zonder vaste tijd).
+  Daarna in de te-bouwen-sheet: regel "Quick win in 2 minuten" bijwerken.
 
 - 16-11: quick win voor nieuwe klanten gebouwd en live (poort.js, account.py). Meting: van 22
   aanmelders in 30 dagen kwam 45% nooit bij een artikel, eerste artikel pas na 30 tot 150 min.

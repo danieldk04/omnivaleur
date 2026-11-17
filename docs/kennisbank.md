@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## nieuwe-klant-heeft-haast
+
+*16-11-2026 — "16-11: ga ervan uit dat elke nieuwe klant haast heeft en niets uitzoekt; eerste resultaat direct zichtbaar, voortgang zichtbaar, nooit verantwoordelijkheid bij de klant leggen"*
+
+Daniel, 16-11-2026: "je moet ervan uitgaan dat iedereen die dit opent haast heeft en direct wil zien: dit werkt voor mij of niet. Heel kleine attention span." En: "leg de verantwoordelijkheid niet bij de klant, want dan gebeurt er niks."
+
+**Why:** van 22 aanmelders in 30 dagen kwam 45% nooit bij een artikel; wie moest kiezen, klikken of wachten haakte af. Daniel kent het product en ziet de fouten niet meer; een nieuwe klant ziet elke rare melding, taalmix of lege omschrijving.
+
+**How to apply:** elke onboardingstap beoordelen vanuit iemand die het nooit zag: doet het systeem het zelf, zie je voortgang, kost het minder dan twee minuten, staat er niets half vertaald of technisch? Zelf de hele loop doorlopen in de browser (zijn account staat open, demo mag ook) voor je "klaar" zegt. Zie "startpoort-voor-nieuwe-klanten" en "trechter-aanmelding-tot-betalend-27-09".
+
+---
+
 ## eigenaar-poort-nachtrondes
 
 *16-11-2026 — "16-11: Daniels eigen account (3bfbed2c) staat op trial_expired; _mag_nog_werken kende de eigenaar-vrijstelling niet, dus geen verlengingen of herplaatsingen sinds 19-09"*

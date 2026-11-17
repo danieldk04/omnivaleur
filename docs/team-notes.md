@@ -19405,3 +19405,8 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Vraag: heeft de versnelde onboarding van 16-11 (14:51 UTC) effect? Nieuw: scripts/onboarding_tempo.py meet aanmelding tot eerste opdracht, eerste artikel en eerste live advertentie, voor en na die tijd en per aanmeldweek. Draait uit bestaande tijdstempels, dus ook achteraf. Onboarding-routine draait het elke maandag (stap 6b).
 - Beginstand 17-11 (57 klanten ervoor): eerste live mediaan 1,6 u bij 19 van 57 die dat haalden; binnen 24 u live 28%, binnen 72 u 29%. Na de wijziging pas 2 klanten: te weinig voor een uitspraak (minimaal 10).
 - Beperking: de extensie slaat alleen "laatst gezien" op, niet "eerste keer verbonden"; eerste gelukte opdracht is de vervanger.
+
+## 17-11-2026: Eerste-minuten-loop gaat naar de andere developer (Daniel)
+- Daniel kan het verse testaccount niet op het tweede account volgen; de andere developer kan wel meekijken op zijn account. Daarom is de volledige doorloop als nieuwe klant (extensie installeren, poort, inlezen, Plaats nu, meten) als eerste klus in docs/overdracht.md gezet, met de stand van het testaccount en de open punten.
+- Uitgangspunt van Daniel: elke nieuwe klant heeft haast en wil direct zien dat het werkt; nooit verantwoordelijkheid bij de klant leggen. Staat ook in de geheugenlijst als nieuwe-klant-heeft-haast.
+
