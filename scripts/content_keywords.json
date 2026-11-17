@@ -1028,7 +1028,7 @@
       "pillar": "B",
       "format": "strategy",
       "slug": "how-to-build-a-reselling-inventory-from-scratch",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "voorraadbeheer-opbouwen-voor-wederverkoop",
       "priority": 115
     },
@@ -2109,6 +2109,16 @@
       "action": "created",
       "url_path": "/reseller-tools/when-do-you-need-a-kvk-number-for-reselling-in-netherlands",
       "published_at": "2026-11-15T15:13:17.672001+00:00"
+    },
+    {
+      "keyword": "how to build a reselling inventory from scratch",
+      "slug": "how-to-build-a-reselling-inventory-from-scratch",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-build-a-reselling-inventory-from-scratch",
+      "published_at": "2026-11-17T17:18:55.723035+00:00"
     }
   ]
 }
