@@ -19481,3 +19481,9 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 
 ## 17-11-2026: Besluit Daniel, Facebook laten liggen
 - Geen Facebook-testaccount regelen; Facebook-plaatsen en verkoopherkenning blijven bèta en ongetest live. Routines hoeven Facebook niet meer na te lopen tenzij een klant erover klaagt.
+
+## 17-11-2026: Etsy wees de API-aanvraag af (Daniel)
+- Etsy mailde dat ze "op dit moment" geen API-toegang geven voor de app omnivaleur. Genoemde mogelijke redenen, zonder te zeggen welke: onduidelijk beoogd gebruik, lijkt namens een app van een derde partij ingediend, of voldoet anderszins niet aan de toegangsvereisten.
+- Gevolg: Etsy als kanaal en de belofte "Etsy zodra die er is" in de Ultra-regel van mail B zijn niet te garanderen. Niet bouwen voor Etsy.
+- Aanzegtermijn prijsverhoging (voorwaarden art. 5): 30 dagen per e-mail, dus mail B uiterlijk 01-12-2026. Nagekeken 14-11.
+- Vervolg: eerst vragen waarom (antwoord op die mail, via etsy.com/help), niets omzeilen, geen nieuw account of andere naam. Een nieuwe aanvraag alleen met eerlijke omschrijving (dienst voor meerdere verkopers).
