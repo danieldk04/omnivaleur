@@ -3569,6 +3569,62 @@
     return hit ? hit[1] : null;
   }
 
+  // KEUKENRUBRIEKEN HEBBEN EEN VAST VINTED-PAD (17-11-2026, Esther, hetisvintastisch).
+  //
+  // Servies, bestek, keukenbenodigdheden en potten en pannen liepen alleen via het
+  // zoekvak met "tableware" op een Nederlandse Vinted, waar Vinted zelf uit de foto
+  // koos (zelfde fout als bij woontextiel op 16-10). Paden uit Vinteds eigen boom
+  // (tests/fixtures/vinted_catalogus_en_15-10-2026.json); elk pad eindigt op een blad.
+  // Het soort stuk komt uit de titel; herkennen we niets, dan het meest algemene blad.
+  // De lijsten staan IN de functie: een const op dit niveau bestaat tijdens het
+  // invullen nog niet (zie "VERPLAATST NAAR HIER").
+  function keukenPad(cat, item) {
+    const t = `${item?.title || ""} ${item?.title_en || ""}`.toLowerCase();
+    if (cat === "wonen servies") {
+      const SOORTEN = [
+        [/theepot|koffiepot|teapot|coffee ?pot/, ["Home", "Tableware", "Serveware", "Coffee pots & teapots"]],
+        [/suikerpot|suikerkom|melkkan|melkkannetje|sugar bowl|milk jug|creamer/, ["Home", "Tableware", "Serveware", "Sugar bowls & milk jugs"]],
+        [/zout.{0,12}peper|peper.{0,12}zout|salt.{0,8}pepper/, ["Home", "Tableware", "Serveware", "Salt & pepper sets"]],
+        [/dienblad|\btray\b/, ["Home", "Tableware", "Serveware", "Trays"]],
+        [/onderzetter|coaster/, ["Home", "Tableware", "Serveware", "Coasters"]],
+        [/schenkkan|\bkan\b|karaf|\bjug\b|pitcher/, ["Home", "Tableware", "Serveware", "Jugs"]],
+        [/wijnglas|champagne|stemmed|coupe\b/, ["Home", "Tableware", "Drinkware", "Stemmed glasses"]],
+        [/\bkop\b|\bkopje|\bkoffiekop|\bmok\b|\bbeker\b|\bmug\b|\bcup\b|kop en schotel|kop & schotel|tasse/, ["Home", "Tableware", "Drinkware", "Cups & mugs"]],
+        [/\bglas\b|\bglazen\b|tumbler|waterglas|borrelglas/, ["Home", "Tableware", "Drinkware", "Tumblers"]],
+        [/dinerservies|serviesset|servies set|koffieservies|theeservies|dinner set|tea set|coffee set|\bservies\b.*\b(delig|pers)/, ["Home", "Tableware", "Dinnerware", "Dinner sets"]],
+        [/\bbord\b|\bborden\b|ontbijtbord|dinerbord|\bplate\b|\bplates\b/, ["Home", "Tableware", "Dinnerware", "Plates"]],
+        [/\bkom\b|\bkommen\b|\bschaaltje|\bbowl\b/, ["Home", "Tableware", "Dinnerware", "Bowls"]],
+        [/schaal|serveer|schotel|\bdish\b|serving/, ["Home", "Tableware", "Serveware", "Serving dishes"]],
+      ];
+      const hit = SOORTEN.find(([re]) => re.test(t));
+      return hit ? hit[1] : ["Home", "Tableware", "Serveware", "Speciality serveware"];
+    }
+    if (cat === "wonen bestek") {
+      if (/\bvork|\bvorken|\bfork/.test(t)) return ["Home", "Tableware", "Cutlery", "Forks"];
+      if (/lepel|lepels|\bspoon/.test(t)) return ["Home", "Tableware", "Cutlery", "Spoons"];
+      if (/\bmes\b|\bmessen\b|tafelmes|\bknife|\bknives/.test(t)) return ["Home", "Tableware", "Cutlery", "Table knives"];
+      return ["Home", "Tableware", "Cutlery", "Cutlery sets"];
+    }
+    if (cat === "wonen potten en pannen") {
+      if (/bakplaat|bakblik|cakevorm|bakvorm|springvorm|\bmould|baking/.test(t)) return ["Home", "Cookware & bakeware", "Baking moulds"];
+      if (/ovenschaal|braadslede|braadpan|roasting|oven dish/.test(t)) return ["Home", "Cookware & bakeware", "Oven & roasting dishes"];
+      if (/\bpannen\b|\bpan\b|koekenpan|braadpan|wok|frying/.test(t)) return ["Home", "Cookware & bakeware", "Pans"];
+      if (/\bpot\b|\bpotten\b|kookpot|soeppan|steelpan|\bpot\b|\bpots\b/.test(t)) return ["Home", "Cookware & bakeware", "Pots"];
+      return ["Home", "Cookware & bakeware", "Speciality cookware & bakeware"];
+    }
+    if (cat === "wonen keukenbenodigdheden") {
+      if (/snijplank|chopping|cutting board/.test(t)) return ["Home", "Kitchen tools", "Chopping boards"];
+      if (/weegschaal|keukenweegschaal|scale/.test(t)) return ["Home", "Kitchen tools", "Kitchen scales"];
+      if (/zeef|vergiet|colander|strainer|\bsieve/.test(t)) return ["Home", "Kitchen tools", "Colanders, sieves & strainers"];
+      if (/mengkom|mixing bowl/.test(t)) return ["Home", "Kitchen tools", "Mixing bowls"];
+      if (/maatbeker|maatlepel|measuring/.test(t)) return ["Home", "Kitchen tools", "Measuring cups & spoons"];
+      if (/voorraadpot|bewaarbak|bewaardoos|storage|trommel|\bblik\b/.test(t)) return ["Home", "Kitchen tools", "Food storage"];
+      if (/spatel|garde|schep|tang|pollepel|houten lepel|keukengerei|utensil|ladle|whisk|spatula/.test(t)) return ["Home", "Kitchen tools", "Cooking utensils"];
+      return ["Home", "Kitchen tools", "Speciality kitchen tools"];
+    }
+    return null;
+  }
+
   function kinderPad(cat, item) {
     if (cat === "kinderen tassen") {
       const t = `${item?.title || ""} ${item?.description || ""} ${item?.title_en || ""}`.toLowerCase();
@@ -3638,7 +3694,8 @@
 
   async function walkVintedCategoryPath(item, cat, gender) {
     let pad = (typeof kinderPad === "function" && kinderPad(cat, item))
-      || (typeof textielPad === "function" && textielPad(cat, item)) || vintedPathFor(cat, gender);
+      || (typeof textielPad === "function" && textielPad(cat, item))
+      || (typeof keukenPad === "function" && keukenPad(cat, item)) || vintedPathFor(cat, gender);
     if (!pad) return false;
     const kind = pad[0] === "Kids";
     const inp = qs('input[data-testid="catalog-select-dropdown-input"]');

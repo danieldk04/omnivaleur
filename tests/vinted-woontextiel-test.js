@@ -69,6 +69,19 @@ function maatKiezer(bron) {
     ["antiek kleden en textiel", "Vintage brocante tafelkleed antiek bloemen pa", "Home > Textiles > Table linen > Tablecloths"],
     ["wonen wanddecoraties", "Leuk wandkleed met franjes 147/77 cm", "Home > Textiles > Tapestries"],
     ["wonen wanddecoraties", "Rode Handgeweven Kelim - Wandkleed / Tafellop", "Home > Textiles > Tapestries"],
+    // Keukenrubrieken (17-11-2026, Esther): vaste paden uit Vinteds eigen boom.
+    ["wonen servies", "Vintage kop en schotel bijenmotief", "Home > Tableware > Drinkware > Cups & mugs"],
+    ["wonen servies", "Retro dinerservies 12 personen", "Home > Tableware > Dinnerware > Dinner sets"],
+    ["wonen servies", "Ontbijtbord jaren 70 oranje", "Home > Tableware > Dinnerware > Plates"],
+    ["wonen servies", "Koffiepot bruin retro", "Home > Tableware > Serveware > Coffee pots & teapots"],
+    ["wonen servies", "Mooie serveerschaal", "Home > Tableware > Serveware > Serving dishes"],
+    ["wonen servies", "Iets onbekends", "Home > Tableware > Serveware > Speciality serveware"],
+    ["wonen bestek", "Zilverkleurig bestek 24 delig", "Home > Tableware > Cutlery > Cutlery sets"],
+    ["wonen bestek", "Vintage vorken set", "Home > Tableware > Cutlery > Forks"],
+    ["wonen potten en pannen", "Koekenpan gietijzer", "Home > Cookware & bakeware > Pans"],
+    ["wonen potten en pannen", "Emaille kookpot", "Home > Cookware & bakeware > Pots"],
+    ["wonen keukenbenodigdheden", "Houten snijplank", "Home > Kitchen tools > Chopping boards"],
+    ["wonen keukenbenodigdheden", "Retro keukenweegschaal", "Home > Kitchen tools > Kitchen scales"],
   ];
   console.log("Categorie op een Nederlandse Vinted, Vinted raadt een kinderslaapzak:");
   for (const [cat, titel, verwacht] of gevallen) {
