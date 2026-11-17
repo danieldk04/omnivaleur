@@ -19427,3 +19427,7 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 
 ## 17-11-2026: Social video-run, niets geplaatst
 - Schedchie toont geen enkele video van week 46 of 47 als geplaatst (alleen tekstposts 3-11 en 10-11). Geen nieuwe video's gemaakt, geen cijfers. Zie docs/social-video-leerlog.md.
+
+## 17-11-2026 (10:10, automatisch): Platformcontrole, onvolledig, geen conclusie
+- De Mac draaide met load average 125 (net opgestart, Google Drive synchroniseert op 80% CPU); Chrome-aanroepen liepen drie keer in een time-out en de pagina-klok in Vinted stond op 0,4 tot 1,3 per seconde. Alleen Vinted kinderen schoenen en meisjes kleding gestart; meisjes niet afgerond.
+- Kinderen schoenen (twee runs): categorie, conditie, maat, merk, kleur "NIET gelukt" tegenover alles ok op 15-11. Op de pagina stond Vinteds eigen voorstel "Textbooks & study materials" (uit de proeffoto) in het categorieveld. Niet bewezen of dat een echte afwijking is of een artefact van de trage klok; niet gerepareerd, niets bewaard met vergelijk.py (uitslag onbetrouwbaar). Volgende run opnieuw, bij een lage load; blijft de categoriestap dan falen met gender "kinderen", dan is het echt (let op de voorstellenlogica in walkVintedCategoryPath).
