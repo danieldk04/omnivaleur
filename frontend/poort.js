@@ -294,10 +294,13 @@
   };
 
   function overlayHtml(r, f) {
-    const pas = STAP_NAMEN.map((t, i) => {
+    // Voorsprong tonen (endowed progress): "Account created" staat er al afgevinkt, dus de klant
+    // begint bij stap 2 van 5 in plaats van bij 1 van 4. Mensen maken liever af wat al half af is
+    // (autowasstudie: 19% tegen 34%; tip van een lezer op Indie Hackers, 17-11-2026).
+    const pas = `<div class="pt-pas klaar"><b>✓</b>Account created</div>` + STAP_NAMEN.map((t, i) => {
       const nr = i + 1;
       const klas = nr < r.nr ? "klaar" : nr === r.nr ? "nu" : "";
-      return `<div class="pt-pas ${klas}"><b>${nr < r.nr ? "✓" : nr}</b>${t}</div>`;
+      return `<div class="pt-pas ${klas}"><b>${nr < r.nr ? "✓" : nr + 1}</b>${t}</div>`;
     }).join("");
     return `<div class="pt-wrap">
         <div class="pt-kop"><h1>Welcome to Omnivaleur</h1></div>
