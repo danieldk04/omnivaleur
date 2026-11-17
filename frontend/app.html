@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=841884a1b6"></script>
+<script src="/i18n.js?v=f1915b13e4"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -2830,7 +2830,7 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           <div class="upd-punt"></div>
           <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Channels</span></div>
           <h3>Facebook Marketplace (beta)</h3>
-          <p>Publish to Facebook Marketplace too, in a test phase and at your own risk.</p>
+          <p>Publish to Facebook Marketplace too, in a test phase. There is no guarantee it works first time: Facebook decides, and you will probably need to take some steps yourself.</p>
         </article>
         <article class="upd" data-id="2026-06-start" data-datum="2026-06-29" data-cat="channels">
           <div class="upd-punt"></div>
@@ -7921,11 +7921,12 @@ function renderPlatforms() {
       ${extra}${kanaal ? kanaal.regel : ''}
     </div>`;
   }).join('');
-  const facebookNote = `<div style="font-size:12px;color:#7b4800;background:#fbe9c6;border-radius:8px;padding:10px 12px;margin-top:10px">
-    <strong>Facebook Marketplace is still in a test phase.</strong> It works, but Facebook doesn't allow tools that place adverts for you.
-    So there is a chance Facebook blocks your account. Want to be safe? Use a separate Facebook account, or skip Facebook.
-    Sold something? Check that the advert is gone from Facebook; if not, remove it yourself.
-    <strong>The sales check for Facebook is in beta too.</strong> It may miss a sale or find nothing. Sold something on Facebook? Mark the item as sold here yourself, so it comes off the other marketplaces.
+  const facebookNote = `<div style="font-size:12px;color:#7b4800;background:#fbe9c6;border-radius:8px;padding:10px 12px;margin-top:10px;line-height:1.5">
+    <strong>Facebook Marketplace is in beta. We can't promise it works first time.</strong>
+    <p style="margin:6px 0 0">Facebook decides whether it works, not us. It changes its forms without warning and doesn't allow tools that place adverts for you, so we have no influence on whether a listing goes through, or on whether Facebook blocks your account.</p>
+    <p style="margin:6px 0 0">Expect to take some steps yourself when you publish to Facebook: finish a step on Facebook, publish again, or check that the advert is online under Marketplace › Your listings.</p>
+    <p style="margin:6px 0 0">Want to be safe? Use a separate Facebook account, or skip Facebook.</p>
+    <p style="margin:6px 0 0"><strong>The sales check for Facebook is in beta too.</strong> It may miss a sale or find nothing. Sold something on Facebook? Mark the item as sold here yourself, so it comes off the other marketplaces, and check that the advert is gone from Facebook. If not, remove it yourself.</p>
   </div>`;
   document.getElementById('platforms-body').innerHTML = html + facebookNote;
   if (state.connected.includes('ebay')) { loadEbayShipFrom(); loadEbayGereedheid(); loadEbayMarktplaats(); }
@@ -12389,7 +12390,7 @@ function renderPlatformCheckboxes(containerId, itemId) {
       </label>`;
     }
     const betaTag = BETA_PLATFORMS.has(p)
-      ? ` <span style="font-size:10px;font-weight:600;color:#7b4800;background:#fbe9c6;border-radius:4px;padding:1px 5px" title="Beta — Facebook does not officially allow automated listing. Risk of account suspension. Use at your own risk.">BETA · at your own risk</span>`
+      ? ` <span style="font-size:10px;font-weight:600;color:#7b4800;background:#fbe9c6;border-radius:4px;padding:1px 5px" title="Beta: Facebook decides whether this works, not us. It can fail, you will probably need to take a few steps yourself, and Facebook may block your account because it does not allow automated listing. Use at your own risk.">BETA · no guarantee</span>`
       : '';
     return `<label class="platform-checkbox">
       <input type="checkbox" value="${p}">

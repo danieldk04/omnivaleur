@@ -471,7 +471,8 @@
     ]],
     ["facebook", "Facebook Marketplace", "Beta", [
       "<b>You need:</b> a personal Facebook profile (a Page can't use Marketplace), signed in to in the same Chrome.",
-      "<b>Beta:</b> Facebook doesn't allow automated listing and may flag accounts. Use it deliberately, preferably with a separate account.",
+      "<b>Beta, no guarantee:</b> whether Facebook Marketplace works is up to Facebook, not us. It changes its forms without warning, doesn't allow automated listing and may flag accounts. Use it deliberately, preferably with a separate account.",
+      "Expect to take some steps yourself when publishing: finish a step on Facebook, publish again, or mark an advert as online or sold by hand.",
       "A new advert sits in review for a while. Check <b>Marketplace › Your listings</b> to see it.",
     ]],
     ["ebay", "eBay", "Connect", [
@@ -525,6 +526,8 @@
       "Check two things. Marktplaats and 2dehands have separate logins, so you may be signed in to one and not the other. And if your account was turned into a <b>business account</b>, your personal “My adverts” page is empty, which can look like being signed out. Turn on <b>Business account (Admarkt)</b> in the extension popup; your queue stays where it is."],
     ["Publishing", "2dehands asks for payment",
       "Some 2dehands categories are paid after a few free adverts. Omnivaleur stops at that screen and never pays for you; the item shows a red icon with the reason. Decide per item whether you want to pay on 2dehands, or leave 2dehands off for those items."],
+    ["Publishing", "Will Facebook Marketplace work first time?",
+      "We can't promise that. Facebook Marketplace is in beta and Facebook decides what works: it changes its forms without warning and doesn't allow tools that place adverts for you. So you will probably need to take some steps yourself, such as finishing a step on Facebook, publishing again, or checking <b>Marketplace › Your listings</b>. The sales check for Facebook is in beta too: mark a Facebook sale as sold here yourself."],
     ["Publishing", "Facebook says done, but I can't find my advert",
       "Look under <b>Marketplace › Your listings</b>: a new advert sits in review there for a while. Is it there? Click the Facebook icon on the item and choose <b>It is online</b>. Not there? Publish again. From extension 1.0.338 Omnivaleur only says done when Facebook confirms it."],
     ["Publishing", "Vinted keeps asking for the condition, or says the text is too long",

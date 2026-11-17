@@ -245,6 +245,7 @@
         <p>Omnivaleur publishes <b>as you</b>, so you need to be signed in to each marketplace in <b>this same Chrome</b>. Marktplaats and 2dehands are separate sites with separate logins. Tick yours, open each one, sign in, and come back: the status updates by itself.</p>
         <div class="pt-chips">${chips}</div>
         ${rijen}
+        ${gekozen.includes("facebook") ? `<p style="background:#fbe9c6;color:#7b4800;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;margin:8px 0 0"><b>Facebook Marketplace is in beta.</b> We can't promise it works first time: Facebook decides, not us, so you will probably need to take a few steps yourself when you publish there.</p>` : ""}
         ${(r.ontbreekt || []).length ? `<p style="color:#a51f1b;font-weight:650;margin-top:6px"><span>You are not signed in to ${r.ontbreekt.map(naam).join(" and ")} in this browser.</span> <span>Sign in there, then come back.</span></p>` : ""}
         <button class="pt-groot" ${geblokkeerd ? "disabled" : ""} onclick="OBPoort.bevestig()">${gekozen.length ? "I am signed in, continue" : "Tick at least one marketplace"}</button>
       </div>`;
