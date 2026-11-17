@@ -502,6 +502,10 @@
     const rijen = (S.listings || []).filter((l) => l.item_id === n.id && l.platform === n.kanaal);
     const st = rijen.some((l) => l.status === "active") ? "active"
       : (!rijen.length || rijen.some((l) => ["pending", "publishing", "relisting", "queued"].includes(l.status))) ? "pending"
+      // Vinted meldt soms "niet geplaatst" terwijl de advertentie wel online komt (17-11-2026, demo-account:
+      // status error, daarna door de scan als active herkend, advertentie bestond echt). Vijf minuten
+      // geen mislukking tonen, want een klant die "niet gelukt" leest plaatst hem dubbel.
+      : (n.kanaal === "vinted" && Date.now() - n.sinds < 5 * 60 * 1000) ? "pending"
       : "error";
     const bezigSt = ["pending", "publishing", "relisting", "queued"].includes(st);
     if (bezigSt && Date.now() - laatsteLaad > 8000) { laatsteLaad = Date.now(); const la = g("loadAll"); if (typeof la === "function") Promise.resolve(la()).catch(() => {}); }
