@@ -19394,3 +19394,9 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 
 ## 16-11-2026 (22:30, automatisch): Kennisoverdracht
 - overdracht.md bijgewerkt: extensie 1.0.426 in repo (Web Store niet gecontroleerd), import-aanvulrondes, 2dehands-verlengfix, server op ef67b846. Open: echte scan met 1.0.425/426 nog niet gezien; twee oude testen rood.
+
+## 17-11-2026 (middag): Dagelijkse klantfouten
+- 1 open soort, 1 klant: fout-marktplaats-create-acb487d3, klant 8f91a370, 06:37 UTC, herplaatsing van "Cast Iron T-shirt Lange Mouwen" (artikel 9a95c51f): "Uploading the photos took too long". De verwijdering liep om 05:42 goed (openbare pagina m2434312236 geeft 410), de nieuwe plaatsing niet, dus het artikel staat nu niet op Marktplaats (wel op 2dehands en eBay). Het dashboard toont het als fout met de uitleg "publish it again".
+- Oorzaak niet bewezen: acht avif-foto's van 92 tot 308 KB (geen groot-bestandprobleem zoals 30-09), een avif-artikel van dezelfde klant ging 16-11 08:12 wel goed, en dit is de enige foto-time-out in 573 mislukte Marktplaats/2dehands-plaatsingen over 14 dagen. Niets gerepareerd, geen opdracht opnieuw klaargezet. Oordeel: onbekend. Komt het terug bij dezelfde klant, dan eerst de foto-upload in de extensie meten.
+- Verder geen vastlopers (geen opdracht langer dan 30 min geclaimd), geen betaalslot bij actieve klanten. Grote wachtrijen (bcdf9aa4 200+ verlengingen, 5aae4954, 0b28c1ce) horen bij klanten wier Chrome uit staat (laatste hartslag 00:20 UTC of dagen geleden). 3bfbed2c heeft werk staan maar een verlopen proef.
+- Extensie 1.0.426 (2dehands-verlengfix van gisteren) is nog bij geen enkele klant binnen: hoogste versie in hartslagen is 1.0.425. Wacht op de Web Store-upload.
