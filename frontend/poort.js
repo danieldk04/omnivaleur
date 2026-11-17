@@ -497,8 +497,12 @@
     const S = g("state") || {};
     const namen = { marktplaats: "Marktplaats", "2dehands": "2dehands", vinted: "Vinted" };
     const naam = esc(namen[n.kanaal] || n.kanaal);
-    const rij = (S.listings || []).filter((l) => l.item_id === n.id && l.platform === n.kanaal)[0];
-    const st = rij ? rij.status : "pending";
+    // Eén artikel kan meerdere rijen op een kanaal hebben (bijvoorbeeld een oude "mogelijk verkocht"
+    // uit de import naast de nieuwe plaatsing). Een levende rij wint, dan een lopende, anders de fout.
+    const rijen = (S.listings || []).filter((l) => l.item_id === n.id && l.platform === n.kanaal);
+    const st = rijen.some((l) => l.status === "active") ? "active"
+      : (!rijen.length || rijen.some((l) => ["pending", "publishing", "relisting", "queued"].includes(l.status))) ? "pending"
+      : "error";
     const bezigSt = ["pending", "publishing", "relisting", "queued"].includes(st);
     if (bezigSt && Date.now() - laatsteLaad > 8000) { laatsteLaad = Date.now(); const la = g("loadAll"); if (typeof la === "function") Promise.resolve(la()).catch(() => {}); }
     const foto = n.foto ? `<img src="${esc(n.foto)}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:6px;flex:none">` : "";
