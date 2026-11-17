@@ -46,9 +46,11 @@ ok("Vinted zelf mag wel een Vinted-foto", t.P.besteArtikel({ kanalen: ING("vinte
 // Verantwoordelijke partij (17-11-2026): zonder die gegevens weigert Marktplaats/2dehands te plaatsen.
 t = bouw({}, { items: [item("a")], listings: [] }, { missingFieldsForPlatform: klaar, fabrikantCompleet: () => false });
 b = t.P.besteArtikel({ kanalen: ING("vinted", "marktplaats", "2dehands") });
-ok("gegevens leeg: eerst Vinted, daar is niets voor nodig", b && b.kanaal === "vinted" && b.nodigGegevens === false, b);
+ok("gegevens leeg: Marktplaats blijft eerste, de kaart vraagt de gegevens zelf", b && b.kanaal === "marktplaats" && b.nodigGegevens === true, b);
 b = t.P.besteArtikel({ kanalen: ING("marktplaats", "2dehands") });
 ok("gegevens leeg en alleen MP/2dehands: kaart vraagt ze zelf", b && b.kanaal === "marktplaats" && b.nodigGegevens === true, b);
+t = bouw({}, { items: [item("a"), item("b")], listings: [{ item_id: "a", platform: "marktplaats", status: "error" }] }, { missingFieldsForPlatform: klaar, fabrikantCompleet: () => true });
+ok("artikel met fout op dit kanaal wordt niet opnieuw voorgesteld", t.P.besteArtikel({ kanalen: ING("marktplaats") }).item.id === "b");
 t = bouw({}, { items: [item("a")], listings: [] }, { missingFieldsForPlatform: klaar, fabrikantCompleet: () => true });
 b = t.P.besteArtikel({ kanalen: ING("vinted", "marktplaats") });
 ok("gegevens ingevuld: Marktplaats gaat weer voor, zonder vraag", b && b.kanaal === "marktplaats" && b.nodigGegevens === false, b);

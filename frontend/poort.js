@@ -414,25 +414,24 @@
     const vintedFoto = (i) => /vinted\.net/.test(String((i.photo_urls || [])[0] || ""));
     // Marktplaats en 2dehands weigeren te plaatsen zolang de verantwoordelijke partij leeg is
     // (17-11-2026, eerste doorloop als nieuwe klant: de kaart beloofde 2dehands en het venster
-    // erna zei "hier niet mogelijk"). Dus: eerst een kanaal waar niets voor nodig is (Vinted),
-    // en pas als dat er niet is een kanaal waarvoor de kaart die drie gegevens zelf vraagt.
+    // erna zei "hier niet mogelijk"). De kaart vraagt die drie gegevens dan zelf, op de kaart.
+    // Vinted voorrang geven werd geprobeerd en bleek slechter: het Vinted-formulier eist maat,
+    // staat en kleur en de eerste plaatsing van het testaccount strandde daar (status error).
     const fabOk = g("fabrikantCompleet");
     const gegevensNodig = (p) => (p === "marktplaats" || p === "2dehands") && typeof fabOk === "function" && !fabOk();
-    const zoek = (lijstKanalen, nodig) => {
-      for (const p of lijstKanalen) {
-        const live = liveOp(p);
-        const kandidaten = basis.filter((i) => !live.has(i.id));
-        const lijst = p === "vinted" ? kandidaten : [...kandidaten].sort((a, b) => vintedFoto(a) - vintedFoto(b));
-        for (const i of lijst) {
-          let ontbreekt = [1];
-          try { ontbreekt = mf(i, p); } catch (e) { /* telt als niet klaar */ }
-          if (!ontbreekt.length) return { item: i, kanaal: p, nodigGegevens: nodig };
-        }
+    // Een artikel dat op dit kanaal al een fout gaf niet nog eens als "eerste advertentie" voorstellen.
+    const misluktOp = (p) => new Set((S.listings || []).filter((l) => l.platform === p && l.status === "error").map((l) => l.item_id));
+    for (const p of volgorde) {
+      const live = liveOp(p), fout = misluktOp(p);
+      const kandidaten = basis.filter((i) => !live.has(i.id) && !fout.has(i.id));
+      const lijst = p === "vinted" ? kandidaten : [...kandidaten].sort((a, b) => vintedFoto(a) - vintedFoto(b));
+      for (const i of lijst) {
+        let ontbreekt = [1];
+        try { ontbreekt = mf(i, p); } catch (e) { /* telt als niet klaar */ }
+        if (!ontbreekt.length) return { item: i, kanaal: p, nodigGegevens: gegevensNodig(p) };
       }
-      return null;
-    };
-    return zoek(volgorde.filter((p) => !gegevensNodig(p)), false)
-        || zoek(volgorde.filter(gegevensNodig), true);
+    }
+    return null;
   };
 
   // De drie gegevens die Marktplaats en 2dehands eisen, ter plekke gevraagd op de kaart.
