@@ -599,6 +599,10 @@ const MP_CATEGORIES = {
   "wonen hanglampen":                            { cat1: 504, cat3: 1258 },   // Hanglampen
   "wonen kandelaars en kaarsen":                 { cat1: 504, cat3: 1510 },   // Kandelaars en Kaarsen
   "wonen tafelkleden":                           { cat1: 504, cat3: 3120 },   // Tafelkleden
+  "wonen servies":                              { cat1: 504, cat3: 1262 },   // Servies
+  "wonen bestek":                               { cat1: 504, cat3: 1941 },   // Bestek
+  "wonen keukenbenodigdheden":                  { cat1: 504, cat3: 1257 },   // Keukenbenodigdheden
+  "wonen potten en pannen":                     { cat1: 504, cat3: 1511 },   // Potten en Pannen
   "wonen overige huis en inrichting":            { cat1: 504, cat3: 526 },   // Overige Huis en Inrichting
   "wonen kerst":                                 { cat1: 428, cat3: 436 },   // Kerst
 

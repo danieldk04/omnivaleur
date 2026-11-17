@@ -123,12 +123,28 @@ MINIMALE_LUIERTASSEN_VERSIE = (1, 0, 398)
 # Marktplaats zelf mee (_MP_NUMMERS_VAN_DE_SERVER), en die volgt elke kopie al.
 # Alleen Vinted wacht, want een oudere kopie leest de tak daar als kleding.
 MINIMALE_HOBBY_VERSIE = (1, 0, 406)
+# De keukenrubrieken onder wonen (servies, bestek, keukenbenodigdheden, potten en
+# pannen) bestaan in de extensie vanaf 1.0.427 (17-11-2026, Esther, hetisvintastisch:
+# "ik zie geen rubriek met servies"). Marktplaats en 2dehands krijgen de nummers van
+# de server mee (hieronder) en hoeven niet te wachten; alleen Vinted wacht.
+MINIMALE_KEUKEN_VERSIE = (1, 0, 427)
+_KEUKEN_RUBRIEKEN = ("wonen servies", "wonen bestek", "wonen keukenbenodigdheden",
+                     "wonen potten en pannen")
 _RUBRIEK_VANAF_VERSIE = {"kinderen tassen": MINIMALE_KINDERTASSEN_VERSIE,
                          "kinderen luiertassen": MINIMALE_LUIERTASSEN_VERSIE,
-                         "hobby kledingapplicaties en strijkemblemen": MINIMALE_HOBBY_VERSIE}
+                         "hobby kledingapplicaties en strijkemblemen": MINIMALE_HOBBY_VERSIE,
+                         **{k: MINIMALE_KEUKEN_VERSIE for k in _KEUKEN_RUBRIEKEN}}
 # Gemeten 28-10-2026 op marktplaats.nl/q/strijkembleem: 60 van de ~70 staan in
 # Hobby en Vrije tijd (1099) > Kledingapplicaties en Hotfix (2855).
 _MP_NUMMERS_VAN_DE_SERVER = {
+    # Nagemeten 17-11-2026 via de openbare zoek-API van marktplaats.nl en 2dehands.be:
+    # Huis en Inrichting (504) > Keuken | Servies / Bestek / Keukenbenodigdheden / Potten en Pannen.
+    "wonen servies": {"l1": 504, "l2": 1262, "l1_naam": "Huis en Inrichting", "l2_naam": "Servies"},
+    "wonen bestek": {"l1": 504, "l2": 1941, "l1_naam": "Huis en Inrichting", "l2_naam": "Bestek"},
+    "wonen keukenbenodigdheden": {"l1": 504, "l2": 1257, "l1_naam": "Huis en Inrichting",
+                                  "l2_naam": "Keukenbenodigdheden"},
+    "wonen potten en pannen": {"l1": 504, "l2": 1511, "l1_naam": "Huis en Inrichting",
+                               "l2_naam": "Potten en Pannen"},
     "hobby kledingapplicaties en strijkemblemen": {
         "l1": 1099, "l2": 2855, "l1_naam": "Hobby en Vrije tijd",
         "l2_naam": "Kledingapplicaties en Hotfix"},

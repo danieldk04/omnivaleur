@@ -1,0 +1,11054 @@
+importScripts("analytics.js", "content/vinted_prijs_main.js");
+
+// Terugvalklok. Chrome staat geen kortere wekker toe dan een halve minuut, dus
+// deze 15 wordt in de praktijk 30 — daarom is dit alleen het vangnet. Het echte
+// startsein komt van het dashboard (POLL_NOW), meteen nadat er werk is
+// klaargezet, en van de ronde zelf zolang die werk blijft vinden.
+const POLL_INTERVAL_SECONDS = 15;
+
+// Platforms this extension handles (API platforms like eBay/Etsy are server-side)
+// "facebook" = Facebook Marketplace (BETA, best-effort — see content/facebook.js)
+const EXTENSION_PLATFORMS = ["marktplaats", "2dehands", "vinted", "facebook"];
+
+// Marktplaats files children's clothing by SIZE: the L3 "type" under Babykleding
+// and Kinderkleding literally IS the size (Maat 50 … Maat 176), with no boy/girl
+// split at all. So for those two buckets cat3 has to be resolved from the item's
+// own size instead of being a constant. IDs read from the live SYI picker.
+const MP_BABY_SIZES = {   // Kinderen en Baby's > Babykleding (bucketId 150)
+  50: 568, 56: 569, 62: 570, 68: 571, 74: 572, 80: 573, 86: 574,
+};
+const MP_KIDS_SIZES = {   // Kinderen en Baby's > Kinderkleding (bucketId 153)
+  92: 582, 98: 583, 104: 584, 110: 585, 116: 586, 122: 587, 128: 588,
+  134: 589, 140: 590, 146: 591, 152: 592, 158: 593, 164: 594, 170: 595, 176: 596,
+};
+
+// Marktplaats category map: item.category → {cat1, cat3, bucketId}
+// cat1=621 = Dames Kleding, cat1=385 = Heren Kleding
+// Verified Marktplaats SYI category IDs (from actual URLs)
+// Dames: cat1=621, bucketId=162 | Heren: cat1=1776, bucketId=169
+const MP_CATEGORIES = {
+  // === KLEDING | DAMES (cat1 621) ===
+  // Alle cat3-waarden hieronder zijn de echte Marktplaats-type-ID's, opgehaald
+  // uit de categorieboom van Marktplaats zelf (searchCategoryOptions onder
+  // l1CategoryId=621), niet gegokt. Waar eerder geen exacte match bestond stond
+  // een noodgreep die inhoudelijk fout was: rokken, broeken en shorts gingen
+  // allemaal als Spijkerbroeken en Jeans de deur uit, sportkleding als
+  // Winterjas, en t-shirts als Blouse.
+  // bucketId 162 = de groep "Kleding", 164 = "Schoenen en Sokken".
+  "jeans":                  { cat1: 621,  cat3: 636,  bucketId: 162 },  // Spijkerbroeken en Jeans
+  "spijkerbroeken":         { cat1: 621,  cat3: 636,  bucketId: 162 },
+  "broeken":                { cat1: 621,  cat3: 629,  bucketId: 162 },  // Broeken en Pantalons
+  "shorts":                 { cat1: 621,  cat3: 629,  bucketId: 162 },
+  "leggings":               { cat1: 621,  cat3: 629,  bucketId: 162 },
+  "rokken":                 { cat1: 621,  cat3: 635,  bucketId: 162 },  // Rokken
+  "jurken":                 { cat1: 621,  cat3: 631,  bucketId: 162 },  // Jurken
+  "jurken casual":          { cat1: 621,  cat3: 631,  bucketId: 162 },
+  "jurken feest":           { cat1: 621,  cat3: 631,  bucketId: 162 },
+  "blouses":                { cat1: 621,  cat3: 628,  bucketId: 162 },  // Blouses en Tunieken
+  "blouses en tunieken":    { cat1: 621,  cat3: 628,  bucketId: 162 },
+  "t-shirts":               { cat1: 621,  cat3: 637,  bucketId: 162 },  // T-shirts
+  "tops":                   { cat1: 621,  cat3: 638,  bucketId: 162 },  // Tops
+  "polo's":                 { cat1: 621,  cat3: 638,  bucketId: 162 },  // Dames kennen geen Polo's-type
+  "polo":                   { cat1: 621,  cat3: 638,  bucketId: 162 },
+  "truien":                 { cat1: 621,  cat3: 640,  bucketId: 162 },  // Truien en Vesten
+  "truien / vesten":        { cat1: 621,  cat3: 640,  bucketId: 162 },
+  "vesten":                 { cat1: 621,  cat3: 640,  bucketId: 162 },
+  "hoodies":                { cat1: 621,  cat3: 640,  bucketId: 162 },
+  "unisex truien":          { cat1: 621,  cat3: 640,  bucketId: 162 },
+  "jassen":                 { cat1: 621,  cat3: 2784, bucketId: 162 },  // Jassen | Winter
+  "jassen | winter":        { cat1: 621,  cat3: 2784, bucketId: 162 },
+  "unisex jassen":          { cat1: 621,  cat3: 2784, bucketId: 162 },
+  // Sportkleding heeft een eigen type (798). Alles wat sport is hoort daar, niet
+  // bij de winterjassen waar het eerder belandde.
+  "sportkleding":           { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "sportbroeken":           { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "sportleggings":          { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "sport bh":               { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "sportjassen":            { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "yoga kleding":           { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "hardloopkleding":        { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "gymkleding":             { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "yogakleding":            { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "sport tops":             { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "trainingspakken":        { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "wielrenkleding":         { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "voetbalkleding":         { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "skikleding":             { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "unisex sportkleding":    { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "unisex wielrenkleding":  { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "unisex trainingspakken": { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "unisex hardloopkleding": { cat1: 621,  cat3: 798,  bucketId: 162 },
+  // Badmode en ondergoed hebben op Marktplaats hun eigen groep náást "Kleding",
+  // en die groeps-id (bucketId) is niet uit de openbare boom te lezen. Tot die
+  // geverifieerd is blijven deze staan waar ze stonden; fout, maar wél een
+  // categorie die het formulier accepteert. Zie het openstaande punt hierover.
+  "zwemkleding":            { cat1: 621,  cat3: 631,  bucketId: 162 },
+  "badkleding":             { cat1: 621,  cat3: 631,  bucketId: 162 },
+  "ondergoed":              { cat1: 621,  cat3: 631,  bucketId: 162 },
+  // Carnaval, verkleedkleding en klederdracht. Zonder deze regel viel een dirndl
+  // of lederhose terug op broeken en jeans.
+  //
+  // GEVERIFIEERD in een ingelogde browser op 30-08-2026, niet gegokt en niet op
+  // een HTTP 200 afgegaan: /plaats/621/623?bucketId=162 toont in het
+  // plaatsformulier "Kleding | Dames > Kleding > Carnavalskleding en
+  // Feestkleding", en /plaats/1776/2031?bucketId=169 hetzelfde onder Heren.
+  "verkleedkleding":        { cat1: 621,  cat3: 623,  bucketId: 162 },  // Carnavalskleding en Feestkleding
+  "unisex verkleedkleding": { cat1: 621,  cat3: 623,  bucketId: 162 },
+  "accessoires dames":      { cat1: 621,  cat3: 628,  bucketId: 162 },
+  "unisex accessoires":     { cat1: 621,  cat3: 628,  bucketId: 162 },
+  // Schoenen: één type (625) voor alle soorten, Marktplaats splitst niet verder.
+  "schoenen":               { cat1: 621,  cat3: 625,  bucketId: 164 },
+  "schoenen dames":         { cat1: 621,  cat3: 625,  bucketId: 164 },
+  "sneakers dames":         { cat1: 621,  cat3: 625,  bucketId: 164 },
+  "hakken":                 { cat1: 621,  cat3: 625,  bucketId: 164 },
+  "laarzen dames":          { cat1: 621,  cat3: 625,  bucketId: 164 },
+  "sandalen":               { cat1: 621,  cat3: 625,  bucketId: 164 },
+  "unisex schoenen":        { cat1: 621,  cat3: 625,  bucketId: 164 },
+
+  // === KLEDING | HEREN (cat1 1776) ===
+  // Idem: echte type-ID's uit de boom onder l1CategoryId=1776. Overhemden,
+  // Polo's, T-shirts, Sportkleding, Broeken en Kostuums bestaan allemaal als
+  // eigen type — ze werden alleen niet gebruikt, waardoor elk overhemd als
+  // "Truien en Vesten" en elke chino als "Spijkerbroeken en Jeans" werd geplaatst.
+  // bucketId 169 = groep "Kleding", 171 = "Schoenen en Sokken".
+  "heren jeans":            { cat1: 1776, cat3: 1497, bucketId: 169 },  // Spijkerbroeken en Jeans
+  "heren spijkerbroeken":   { cat1: 1776, cat3: 1497, bucketId: 169 },
+  "heren broeken":          { cat1: 1776, cat3: 646,  bucketId: 169 },  // Broeken en Pantalons
+  "heren chinos":           { cat1: 1776, cat3: 646,  bucketId: 169 },
+  "heren shorts":           { cat1: 1776, cat3: 646,  bucketId: 169 },
+  "heren overhemden":       { cat1: 1776, cat3: 649,  bucketId: 169 },  // Overhemden
+  "heren polo's":           { cat1: 1776, cat3: 2790, bucketId: 169 },  // Polo's
+  "heren polo":             { cat1: 1776, cat3: 2790, bucketId: 169 },
+  "heren verkleedkleding":  { cat1: 1776, cat3: 2031, bucketId: 169 },  // Carnavalskleding en Feestkleding
+  "heren t-shirts":         { cat1: 1776, cat3: 651,  bucketId: 169 },  // T-shirts
+  "heren t-shirts / polo":  { cat1: 1776, cat3: 651,  bucketId: 169 },
+  "heren truien":           { cat1: 1776, cat3: 652,  bucketId: 169 },  // Truien en Vesten
+  "heren truien / vesten":  { cat1: 1776, cat3: 652,  bucketId: 169 },
+  "heren vesten":           { cat1: 1776, cat3: 652,  bucketId: 169 },
+  "heren hoodies":          { cat1: 1776, cat3: 652,  bucketId: 169 },
+  "heren jassen":           { cat1: 1776, cat3: 2788, bucketId: 169 },  // Jassen | Winter
+  "heren jassen | winter":  { cat1: 1776, cat3: 2788, bucketId: 169 },
+  "heren pakken":           { cat1: 1776, cat3: 648,  bucketId: 169 },  // Kostuums en Colberts
+  "heren sportkleding":     { cat1: 1776, cat3: 1779, bucketId: 169 },  // Sportkleding
+  "heren sportbroeken":     { cat1: 1776, cat3: 1779, bucketId: 169 },
+  "heren sportjassen":      { cat1: 1776, cat3: 1779, bucketId: 169 },
+  "heren sport tops":       { cat1: 1776, cat3: 1779, bucketId: 169 },
+  "heren hardloopkleding":  { cat1: 1776, cat3: 1779, bucketId: 169 },
+  "heren gymkleding":       { cat1: 1776, cat3: 1779, bucketId: 169 },
+  "heren voetbalkleding":   { cat1: 1776, cat3: 1779, bucketId: 169 },
+  "heren wielrenkleding":   { cat1: 1776, cat3: 1779, bucketId: 169 },
+  "heren trainingspakken":  { cat1: 1776, cat3: 1779, bucketId: 169 },
+  "heren skikleding":       { cat1: 1776, cat3: 1779, bucketId: 169 },
+  // Zie de opmerking bij dames: badmode, ondergoed en accessoires zitten in een
+  // andere groep, waarvan de id nog niet geverifieerd is.
+  "heren zwembroeken":      { cat1: 1776, cat3: 1497, bucketId: 169 },
+  "heren ondergoed":        { cat1: 1776, cat3: 1497, bucketId: 169 },
+  "heren accessoires":      { cat1: 1776, cat3: 652,  bucketId: 169 },
+  // Schoenen: één type (642) voor alle soorten.
+  "heren schoenen":         { cat1: 1776, cat3: 642,  bucketId: 171 },
+  "heren sneakers":         { cat1: 1776, cat3: 642,  bucketId: 171 },
+  "heren formele schoenen": { cat1: 1776, cat3: 642,  bucketId: 171 },
+  "heren laarzen":          { cat1: 1776, cat3: 642,  bucketId: 171 },
+
+  // === KINDEREN EN BABY'S (cat1=565) ===
+  // These were all pointing at cat1=428 with bucketId=127. 428 is "Diversen"
+  // (Feesten, Levensmiddelen, Zorg, …) — NOT Kinderkleding, and bucketId 127
+  // doesn't exist under it. Verified live 2026-07: /plaats/428/429?bucketId=127,
+  // /430 and /432 all return HTTP 400 ("deze pagina kan niet getoond worden"),
+  // and /431 ("meisjes kleding") silently resolved to
+  // Diversen > Modeltreinen > Brommobielen en Scootmobielen — a PAID category.
+  // So every children's listing either failed outright or was posted as a
+  // mobility scooter.
+  //
+  // The real tree is cat1=565 "Kinderen en Baby's", and Marktplaats files
+  // children's clothing by SIZE, not by boy/girl — the L3 "type" IS the size
+  // (Maat 50…Maat 176). Hence sizeMap below: cat3 is resolved from item.size at
+  // publish time (see mpCategoryUrl), with cat3 as the fallback when the item has
+  // no size or an unrecognised one.
+  // -- Babykleding (bucketId 150): maten 50-86
+  "babykleding":            { cat1: 565, bucketId: 150, cat3: 575, sizeMap: MP_BABY_SIZES },
+  // -- Kinderkleding (bucketId 153): maten 92-176
+  "peuterkleding":          { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  "jongens kleding":        { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  "meisjes kleding":        { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  "tieners jongens":        { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  "tieners meisjes":        { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  "kinderen sportkleding":  { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  "kinderen wielrenkleding":{ cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  "kinderen voetbalkleding":{ cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  "kinderen zwemkleding":   { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  // Schoenen en Sokken is its own type, so no size lookup.
+  "kinderen schoenen":      { cat1: 565, bucketId: 153, cat3: 598 },
+  // Mode-accessoires (bucketId 427) has exactly two types: baby and kind.
+  "kinderen accessoires":   { cat1: 565, bucketId: 427, cat3: 3136 },
+  // Kindertassen en -rugzakjes: Marktplaats heeft geen eigen kindertassenrubriek;
+  // gemeten 17-10-2026 in het plaatsformulier (/plaats/565/3136?bucketId=427 =
+  // "Kinderen en Baby's | Kindermode-accessoires", niet betaald). De andere optie,
+  // Tassen | Rugtassen (1826), is de volwassen tak.
+  "kinderen tassen":        { cat1: 565, bucketId: 427, cat3: 3136 },
+
+  // === SIERADEN, TASSEN EN UITERLIJK (cat1=1826) ===
+  // Non-clothing, same prefix scheme as "games "/"electronics ". Exists because a
+  // watch has no home in the clothing taxonomy: it could only be filed under an
+  // "accessoires" key, which maps to Kleding | Dames (cat1 621) — so every watch,
+  // ring and handbag landed in women's clothing accessories.
+  // IDs read straight from the live SYI category picker on marktplaats.nl
+  // (verified 2026-07, not guessed): cat1 1826, bucketId = the L2 subcategory,
+  // cat3 = the L3 "type". Confirmed loading as "Horloges | Dames" for 1826/16?bucketId=199.
+  // -- Horloges (bucketId 199)
+  "sieraden horloges dames":    { cat1: 1826, cat3: 16,   bucketId: 199 },
+  "sieraden horloges heren":    { cat1: 1826, cat3: 1831, bucketId: 199 },
+  "sieraden horloges kinderen": { cat1: 1826, cat3: 2797, bucketId: 199 },
+  "sieraden horloges antiek":   { cat1: 1826, cat3: 4,    bucketId: 199 },
+  "sieraden smartwatch":        { cat1: 1826, cat3: 3041, bucketId: 199 },
+  "sieraden sporthorloge":      { cat1: 1826, cat3: 3045, bucketId: 199 },
+  "sieraden activity tracker":  { cat1: 1826, cat3: 3042, bucketId: 199 },
+  // -- Sieraden (bucketId 200)
+  "sieraden kettingen":         { cat1: 1826, cat3: 18,   bucketId: 200 },
+  "sieraden kettinghangers":    { cat1: 1826, cat3: 2136, bucketId: 200 },
+  "sieraden armbanden":         { cat1: 1826, cat3: 1827, bucketId: 200 },
+  "sieraden ringen":            { cat1: 1826, cat3: 22,   bucketId: 200 },
+  "sieraden oorbellen":         { cat1: 1826, cat3: 19,   bucketId: 200 },
+  "sieraden bedels":            { cat1: 1826, cat3: 17,   bucketId: 200 },
+  "sieraden broches":           { cat1: 1826, cat3: 1829, bucketId: 200 },
+  "sieraden enkelbandjes":      { cat1: 1826, cat3: 2137, bucketId: 200 },
+  "sieraden kindersieraden":    { cat1: 1826, cat3: 2138, bucketId: 200 },
+  "sieraden antiek":            { cat1: 1826, cat3: 13,   bucketId: 200 },
+  // -- Tassen en Koffers (bucketId 201)
+  "sieraden damestassen":       { cat1: 1826, cat3: 626,  bucketId: 201 },
+  "sieraden schoudertassen":    { cat1: 1826, cat3: 1840, bucketId: 201 },
+  "sieraden rugtassen":         { cat1: 1826, cat3: 1838, bucketId: 201 },
+  "sieraden reistassen":        { cat1: 1826, cat3: 1837, bucketId: 201 },
+  "sieraden sporttassen":       { cat1: 1826, cat3: 3151, bucketId: 201 },
+  "sieraden koffers":           { cat1: 1826, cat3: 1348, bucketId: 201 },
+  // -- Accessoires (bucketId 197) en Zonnebrillen (bucketId 203)
+  "sieraden portemonnees":      { cat1: 1826, cat3: 1836, bucketId: 197 },
+  "sieraden zonnebril dames":   { cat1: 1826, cat3: 627,  bucketId: 203 },
+  "sieraden zonnebril heren":   { cat1: 1826, cat3: 645,  bucketId: 203 },
+
+  // === GAMES (cat1=356 "Spelcomputers en Games") ===
+  // Non-clothing. URL form is /plaats/{cat1}/{cat3}?bucketId={bucketId}, where
+  // for this branch bucketId = the L2 platform subcategory and cat3 = the L3
+  // console-generation "type". Both are mandatory in Marktplaats' sell flow, so
+  // every game category is pinned to a specific generation. IDs read straight
+  // from the live SYI category picker (verified, not guessed).
+  // -- PlayStation games (bucketId 205 = "Games | Sony PlayStation")
+  "games playstation 5":    { cat1: 356, cat3: 2952, bucketId: 205 },
+  "games playstation 4":    { cat1: 356, cat3: 2889, bucketId: 205 },
+  "games playstation 3":    { cat1: 356, cat3: 1735, bucketId: 205 },
+  "games playstation 2":    { cat1: 356, cat3: 1734, bucketId: 205 },
+  "games playstation 1":    { cat1: 356, cat3: 367,  bucketId: 205 },
+  "games psp":              { cat1: 356, cat3: 1660, bucketId: 205 },
+  "games ps vita":          { cat1: 356, cat3: 2890, bucketId: 205 },
+  // -- Nintendo games (bucketId 204 = "Games | Nintendo")
+  "games nintendo switch":  { cat1: 356, cat3: 2942, bucketId: 204 },
+  "games nintendo wii u":   { cat1: 356, cat3: 2888, bucketId: 204 },
+  "games nintendo wii":     { cat1: 356, cat3: 1630, bucketId: 204 },
+  "games nintendo 3ds":     { cat1: 356, cat3: 2887, bucketId: 204 },
+  "games nintendo ds":      { cat1: 356, cat3: 1659, bucketId: 204 },
+  "games gamecube":         { cat1: 356, cat3: 1730, bucketId: 204 },
+  "games nintendo 64":      { cat1: 356, cat3: 1733, bucketId: 204 },
+  "games snes":             { cat1: 356, cat3: 1732, bucketId: 204 },
+  "games nes":              { cat1: 356, cat3: 1731, bucketId: 204 },
+  "games gameboy":          { cat1: 356, cat3: 363,  bucketId: 204 },
+  // -- Xbox games (bucketId 206 = "Games | Xbox")
+  "games xbox series":      { cat1: 356, cat3: 2953, bucketId: 206 },
+  "games xbox one":         { cat1: 356, cat3: 2891, bucketId: 206 },
+  "games xbox 360":         { cat1: 356, cat3: 1631, bucketId: 206 },
+  "games xbox original":    { cat1: 356, cat3: 368,  bucketId: 206 },
+  // -- Other games (bucketId 207 = "Games | Overige")
+  "games pc":               { cat1: 356, cat3: 365,  bucketId: 207 },
+  "games sega":             { cat1: 356, cat3: 366,  bucketId: 207 },
+  "games atari":            { cat1: 356, cat3: 1729, bucketId: 207 },
+  "games overige":          { cat1: 356, cat3: 364,  bucketId: 207 },
+
+  // === GAME CONSOLES — hardware (cat1=356, but the "Spelcomputers" L2 buckets
+  // 208-211, distinct from the "Games" software buckets 204-207 above). Same
+  // URL form /plaats/{cat1}/{cat3}?bucketId={bucketId}. IDs read live from the
+  // SYI category picker (verified). These share the "games " non-clothing prefix.
+  // -- PlayStation consoles (bucketId 209 = "Spelcomputers | Sony PlayStation")
+  "games console playstation 5": { cat1: 356, cat3: 2954, bucketId: 209 },
+  "games console playstation 4": { cat1: 356, cat3: 2894, bucketId: 209 },
+  "games console playstation 3": { cat1: 356, cat3: 1741, bucketId: 209 },
+  "games console playstation 2": { cat1: 356, cat3: 1740, bucketId: 209 },
+  "games console playstation 1": { cat1: 356, cat3: 347,  bucketId: 209 },
+  "games console ps vita":       { cat1: 356, cat3: 2895, bucketId: 209 },
+  "games console psp":           { cat1: 356, cat3: 1656, bucketId: 209 },
+  // -- Nintendo consoles (bucketId 208 = "Spelcomputers | Nintendo")
+  "games console nintendo switch":      { cat1: 356, cat3: 2943, bucketId: 208 },
+  "games console nintendo switch lite": { cat1: 356, cat3: 2946, bucketId: 208 },
+  "games console nintendo wii u":       { cat1: 356, cat3: 2893, bucketId: 208 },
+  "games console nintendo wii":         { cat1: 356, cat3: 1628, bucketId: 208 },
+  "games console nintendo 3ds":         { cat1: 356, cat3: 2892, bucketId: 208 },
+  "games console nintendo ds":          { cat1: 356, cat3: 1655, bucketId: 208 },
+  "games console gamecube":             { cat1: 356, cat3: 1736, bucketId: 208 },
+  "games console nintendo 64":          { cat1: 356, cat3: 1739, bucketId: 208 },
+  "games console snes":                 { cat1: 356, cat3: 1738, bucketId: 208 },
+  "games console nes":                  { cat1: 356, cat3: 1737, bucketId: 208 },
+  "games console gameboy":              { cat1: 356, cat3: 346,  bucketId: 208 },
+  // -- Xbox consoles (bucketId 210 = "Spelcomputers | Xbox")
+  "games console xbox series":   { cat1: 356, cat3: 2955, bucketId: 210 },
+  "games console xbox one":      { cat1: 356, cat3: 2896, bucketId: 210 },
+  "games console xbox 360":      { cat1: 356, cat3: 1629, bucketId: 210 },
+  "games console xbox original": { cat1: 356, cat3: 349,  bucketId: 210 },
+  // -- Other consoles (bucketId 211 = "Spelcomputers | Overige")
+  "games console sega":    { cat1: 356, cat3: 348,  bucketId: 211 },
+  "games console atari":   { cat1: 356, cat3: 345,  bucketId: 211 },
+  "games console overige": { cat1: 356, cat3: 1743, bucketId: 211 },
+
+  // === ELECTRONICS — mobile phones (cat1=820 "Telecommunicatie", L2 bucketId
+  // 225 = "Mobiele telefoons", cat3 = phone brand). Same URL form. IDs read live
+  // from the SYI picker (verified: /plaats/820/1953?bucketId=225 = Apple iPhone).
+  // Recognised as non-clothing by the "electronics " prefix.
+  "electronics telefoon apple iphone": { cat1: 820, cat3: 1953, bucketId: 225 },
+  "electronics telefoon samsung":      { cat1: 820, cat3: 841,  bucketId: 225 },
+  "electronics telefoon huawei":       { cat1: 820, cat3: 2897, bucketId: 225 },
+  "electronics telefoon sony":         { cat1: 820, cat3: 843,  bucketId: 225 },
+  "electronics telefoon nokia":        { cat1: 820, cat3: 836,  bucketId: 225 },
+  "electronics telefoon lg":           { cat1: 820, cat3: 1632, bucketId: 225 },
+  "electronics telefoon motorola":     { cat1: 820, cat3: 834,  bucketId: 225 },
+  "electronics telefoon htc":          { cat1: 820, cat3: 1685, bucketId: 225 },
+  "electronics telefoon blackberry":   { cat1: 820, cat3: 1954, bucketId: 225 },
+  "electronics telefoon overige":      { cat1: 820, cat3: 837,  bucketId: 225 },
+
+  // === AUDIO, TV EN FOTO (cat1 31) ===
+  // Herkenbaar aan het "audio "-voorvoegsel. TWEE niveaus, net als muziek en
+  // antiek: dus GEEN bucketId — met een bucketId erbij antwoordt Marktplaats
+  // met HTTP 400. Elke cat3 hieronder komt uit searchCategoryOptions van
+  // /l/audio-tv-en-foto/ (l1=31), waar id en naam in hetzelfde record staan;
+  // een id kan dus niet bij de verkeerde naam belanden.
+  //
+  // Daarbovenop op 27-08-2026 alle 68 langs een TWEEDE, onafhankelijke bron
+  // gelegd: /lrp/api/search met l2CategoryId={cat3} gaf voor elk id echte
+  // advertenties terug die zelf datzelfde categoryId dragen, met titels die bij
+  // de naam horen (38 = luidsprekers, 37 = koptelefoons, 33 = buizenversterkers).
+  // 68 van 68, geen enkele leeg of afwijkend.
+  //
+  // Op 27-08-2026 in een INGELOGDE browser bevestigd, en niet steekproefsgewijs:
+  // alle 68 opgehaald via /plaats/31/{cat3} en de "categoryName" uit het
+  // antwoord vergeleken met de naam die Marktplaats zelf aan dat id hangt.
+  // 68 van 68 gelijk. Zonder bucketId, zoals bij muziek en antiek.
+  //
+  // Wat daarbij opviel: deze tak heeft wél kenmerkvelden (bij Luidsprekers Type,
+  // Wattage, Merk, Handelsnaam fabrikant). Alleen titel, beschrijving en foto's
+  // zijn verplicht — de kenmerken zijn een kwaliteitsduwtje ("1 / 8 ingevuld").
+  // Merk en conditie vullen we al (fillBrandField/selectCondition zijn algemeen,
+  // niet kleding-only). Type en Wattage blijven leeg; net als destijds bij
+  // sportkleding betekent dat: wie op zo'n filter zoekt, ziet de advertentie niet.
+  // Wil je dat oplossen, dan is mpSportType() het model om na te volgen.
+  // Let op: /plaats/ geeft zonder login HTTP 401 vóór enige controle van de URL —
+  // ook /plaats/99999/38 geeft exact hetzelfde 401. Uit een statuscode valt hier
+  // dus niets af te leiden; alleen de gerenderde categorienaam telt.
+  // 2dehands gebruikt dezelfde ids.
+  "audio luidsprekers":                  { cat1: 31, cat3: 38 },
+  "audio soundbars":                     { cat1: 31, cat3: 3053 },
+  "audio koptelefoons":                  { cat1: 31, cat3: 37 },
+  "audio versterkers en receivers":      { cat1: 31, cat3: 46 },
+  "audio buizenversterkers":             { cat1: 31, cat3: 33 },
+  "audio tuners":                        { cat1: 31, cat3: 45 },
+  "audio stereo sets":                   { cat1: 31, cat3: 36 },
+  "audio home cinema sets":              { cat1: 31, cat3: 1116 },
+  "audio platenspelers":                 { cat1: 31, cat3: 42 },
+  "audio cd spelers":                    { cat1: 31, cat3: 35 },
+  "audio blu ray spelers":               { cat1: 31, cat3: 2665 },
+  "audio dvd spelers":                   { cat1: 31, cat3: 1114 },
+  "audio videospelers":                  { cat1: 31, cat3: 1133 },
+  "audio cassettedecks":                 { cat1: 31, cat3: 2036 },
+  "audio bandrecorders":                 { cat1: 31, cat3: 32 },
+  "audio radio s":                       { cat1: 31, cat3: 43 },
+  "audio walkmans en discmans":          { cat1: 31, cat3: 47 },
+  "audio mp3 spelers ipod":              { cat1: 31, cat3: 40 },
+  "audio mp3 spelers overige":           { cat1: 31, cat3: 1649 },
+  "audio mp4 spelers":                   { cat1: 31, cat3: 2615 },
+  "audio mp3 accessoires ipod":          { cat1: 31, cat3: 1723 },
+  "audio mp3 accessoires overige":       { cat1: 31, cat3: 1452 },
+  "audio mediaspelers":                  { cat1: 31, cat3: 2668 },
+  "audio karaoke apparatuur":            { cat1: 31, cat3: 2833 },
+  "audio professionele audio en video":  { cat1: 31, cat3: 1117 },
+  "audio televisies":                    { cat1: 31, cat3: 1120 },
+  "audio vintage televisies":            { cat1: 31, cat3: 1121 },
+  "audio televisiebeugels":              { cat1: 31, cat3: 1453 },
+  "audio televisie accessoires":         { cat1: 31, cat3: 3058 },
+  "audio afstandsbedieningen":           { cat1: 31, cat3: 2617 },
+  "audio decoders en harddiskrecorders": { cat1: 31, cat3: 1722 },
+  "audio schotelantennes":               { cat1: 31, cat3: 1118 },
+  "audio audio en tv kabels":            { cat1: 31, cat3: 1106 },
+  "audio converters":                    { cat1: 31, cat3: 3052 },
+  "audio opladers":                      { cat1: 31, cat3: 1724 },
+  "audio accu s en batterijen":          { cat1: 31, cat3: 2035 },
+  "audio beamers":                       { cat1: 31, cat3: 1132 },
+  "audio beamer accessoires":            { cat1: 31, cat3: 3056 },
+  "audio projectieschermen":             { cat1: 31, cat3: 3055 },
+  "audio diaprojectors":                 { cat1: 31, cat3: 2666 },
+  "audio videobewaking":                 { cat1: 31, cat3: 1129 },
+  "audio drones":                        { cat1: 31, cat3: 3057 },
+  "audio actiecamera s":                 { cat1: 31, cat3: 2834 },
+  "audio fotocamera s digitaal":         { cat1: 31, cat3: 487 },
+  "audio fotocamera s analoog":          { cat1: 31, cat3: 480 },
+  "audio onderwatercamera s":            { cat1: 31, cat3: 497 },
+  "audio videocamera s digitaal":        { cat1: 31, cat3: 1131 },
+  "audio videocamera s analoog":         { cat1: 31, cat3: 1130 },
+  "audio lenzen en objectieven":         { cat1: 31, cat3: 495 },
+  "audio filters":                       { cat1: 31, cat3: 1720 },
+  "audio flitsers":                      { cat1: 31, cat3: 489 },
+  "audio statieven en balhoofden":       { cat1: 31, cat3: 500 },
+  "audio fototassen":                    { cat1: 31, cat3: 1484 },
+  "audio geheugenkaarten":               { cat1: 31, cat3: 493 },
+  "audio fotografie accu s":             { cat1: 31, cat3: 1360 },
+  "audio fotostudio en toebehoren":      { cat1: 31, cat3: 1400 },
+  "audio professionele fotoapparatuur":  { cat1: 31, cat3: 501 },
+  "audio doka toebehoren":               { cat1: 31, cat3: 488 },
+  "audio filmrollen":                    { cat1: 31, cat3: 1115 },
+  "audio fotopapier":                    { cat1: 31, cat3: 1721 },
+  "audio fotolijsten":                   { cat1: 31, cat3: 1483 },
+  "audio digitale fotolijsten":          { cat1: 31, cat3: 2667 },
+  "audio fotoalbums en accessoires":     { cat1: 31, cat3: 3059 },
+  "audio verrekijkers":                  { cat1: 31, cat3: 503 },
+  "audio telescopen":                    { cat1: 31, cat3: 502 },
+  "audio microscopen":                   { cat1: 31, cat3: 496 },
+  "audio weerstations en barometers":    { cat1: 31, cat3: 1725 },
+  "audio overige audio tv en foto":      { cat1: 31, cat3: 41 },
+
+  // === MUZIEK EN INSTRUMENTEN (cat1 728) ===
+  // Herkenbaar aan het "muziek "-voorvoegsel, net als de electronics-tak.
+  // LET OP: deze tak is maar TWEE niveaus diep, kleding is er drie. Daarom
+  // staat hier geen bucketId: /plaats/728/{cat3} is de juiste vorm en met een
+  // bucketId erbij antwoordt Marktplaats met HTTP 400. Alle 52 ids zijn op
+  // 13-08-2026 in een ingelogde browser nagelopen tegen de categorienaam die
+  // Marktplaats zelf rendert — niet tegen een HTTP-status. 2dehands gebruikt
+  // exact dezelfde ids.
+  // Antiek en Kunst: twee niveaus, geen bucketId (net als muziek). Geverifieerd
+  // in een ingelogde browser op 18-08-2026 — /plaats/1/2614 toont
+  // "Antiek en Kunst > Goud en Zilver", /plaats/1/2 toont "Bestek".
+  "antiek curiosa en brocante": { cat1: 1, cat3: 15 },
+  "antiek glas en kristal": { cat1: 1, cat3: 1648 },
+  "kunst schilderijen klassiek": { cat1: 1, cat3: 25 },
+  "antiek vazen": { cat1: 1, cat3: 14 },
+  "antiek keramiek en aardewerk": { cat1: 1, cat3: 1502 },
+  "antiek overige antiek": { cat1: 1, cat3: 9 },
+  "antiek woonaccessoires": { cat1: 1, cat3: 1500 },
+  "antiek porselein": { cat1: 1, cat3: 10 },
+  "antiek servies los": { cat1: 1, cat3: 12 },
+  "kunst beelden en houtsnijwerken": { cat1: 1, cat3: 23 },
+  "antiek meubels stoelen en banken": { cat1: 1, cat3: 1505 },
+  "antiek lampen": { cat1: 1, cat3: 7 },
+  "kunst schilderijen modern": { cat1: 1, cat3: 1845 },
+  "antiek wandborden en tegels": { cat1: 1, cat3: 1104 },
+  "kunst etsen en gravures": { cat1: 1, cat3: 1105 },
+  "antiek koper en brons": { cat1: 1, cat3: 1647 },
+  "antiek bestek": { cat1: 1, cat3: 2 },
+  "antiek boeken en bijbels": { cat1: 1, cat3: 3 },
+  "antiek klokken": { cat1: 1, cat3: 6 },
+  "antiek meubels kasten": { cat1: 1, cat3: 5 },
+  "antiek speelgoed": { cat1: 1, cat3: 1507 },
+  "kunst niet westerse kunst": { cat1: 1, cat3: 1844 },
+  "antiek schalen": { cat1: 1, cat3: 1103 },
+  "antiek meubels tafels": { cat1: 1, cat3: 1506 },
+  "antiek gereedschap en instrumenten": { cat1: 1, cat3: 1501 },
+  "kunst schilderijen abstract": { cat1: 1, cat3: 1846 },
+  "antiek religie": { cat1: 1, cat3: 1102 },
+  "kunst designobjecten": { cat1: 1, cat3: 1508 },
+  "antiek emaille": { cat1: 1, cat3: 1100 },
+  "antiek goud en zilver": { cat1: 1, cat3: 2614 },
+  "kunst litho s en zeefdrukken": { cat1: 1, cat3: 27 },
+  "kunst tekeningen en foto s": { cat1: 1, cat3: 26 },
+  "antiek keukenbenodigdheden": { cat1: 1, cat3: 1842 },
+  "antiek servies compleet": { cat1: 1, cat3: 1843 },
+  "antiek kandelaars": { cat1: 1, cat3: 2661 },
+  "antiek spiegels": { cat1: 1, cat3: 2663 },
+  "antiek tin": { cat1: 1, cat3: 2664 },
+  "antiek kleden en textiel": { cat1: 1, cat3: 2118 },
+  "kunst overige kunst": { cat1: 1, cat3: 24 },
+  "antiek kantoor en zakelijk": { cat1: 1, cat3: 1841 },
+  "antiek schoolplaten": { cat1: 1, cat3: 2662 },
+  "antiek kleding en accessoires": { cat1: 1, cat3: 1503 },
+  "antiek naaimachines": { cat1: 1, cat3: 1101 },
+  "antiek tv s en audio": { cat1: 1, cat3: 11 },
+  "antiek meubels bedden": { cat1: 1, cat3: 1504 },
+
+  "muziek accordeons":                                  { cat1: 728, cat3: 729 },   // Accordeons
+  "muziek behuizingen en koffers":                      { cat1: 728, cat3: 730 },   // Behuizingen en Koffers
+  "muziek blaasinstrumenten blokfluiten":               { cat1: 728, cat3: 1713 },   // Blaasinstrumenten | Blokfluiten
+  "muziek blaasinstrumenten didgeridoos":               { cat1: 728, cat3: 2885 },   // Blaasinstrumenten | Didgeridoos
+  "muziek blaasinstrumenten dwarsfluiten en piccolo's": { cat1: 728, cat3: 743 },   // Blaasinstrumenten | Dwarsfluiten en Piccolo's
+  "muziek blaasinstrumenten hobo's":                    { cat1: 728, cat3: 1764 },   // Blaasinstrumenten | Hobo's
+  "muziek blaasinstrumenten hoorns":                    { cat1: 728, cat3: 1765 },   // Blaasinstrumenten | Hoorns
+  "muziek blaasinstrumenten klarinetten":               { cat1: 728, cat3: 771 },   // Blaasinstrumenten | Klarinetten
+  "muziek blaasinstrumenten mondharmonica's":           { cat1: 728, cat3: 1714 },   // Blaasinstrumenten | Mondharmonica's
+  "muziek blaasinstrumenten overige":                   { cat1: 728, cat3: 763 },   // Blaasinstrumenten | Overige
+  "muziek blaasinstrumenten saxofoons":                 { cat1: 728, cat3: 1766 },   // Blaasinstrumenten | Saxofoons
+  "muziek blaasinstrumenten trombones":                 { cat1: 728, cat3: 1767 },   // Blaasinstrumenten | Trombones
+  "muziek blaasinstrumenten trompetten":                { cat1: 728, cat3: 779 },   // Blaasinstrumenten | Trompetten
+  "muziek blaasinstrumenten tuba's":                    { cat1: 728, cat3: 1768 },   // Blaasinstrumenten | Tuba's
+  "muziek bladmuziek":                                  { cat1: 728, cat3: 731 },   // Bladmuziek
+  "muziek dj-sets en draaitafels":                      { cat1: 728, cat3: 738 },   // Dj-sets en Draaitafels
+  "muziek draaiorgels":                                 { cat1: 728, cat3: 1769 },   // Draaiorgels
+  "muziek drumcomputers":                               { cat1: 728, cat3: 1402 },   // Drumcomputers
+  "muziek drumstellen en slagwerk":                     { cat1: 728, cat3: 742 },   // Drumstellen en Slagwerk
+  "muziek effecten":                                    { cat1: 728, cat3: 744 },   // Effecten
+  "muziek instrumenten onderdelen":                     { cat1: 728, cat3: 1716 },   // Instrumenten | Onderdelen
+  "muziek instrumenten toebehoren":                     { cat1: 728, cat3: 1717 },   // Instrumenten | Toebehoren
+  "muziek kabels en stekkers":                          { cat1: 728, cat3: 2135 },   // Kabels en Stekkers
+  "muziek keyboards":                                   { cat1: 728, cat3: 751 },   // Keyboards
+  "muziek licht en laser":                              { cat1: 728, cat3: 754 },   // Licht en Laser
+  "muziek mengpanelen":                                 { cat1: 728, cat3: 756 },   // Mengpanelen
+  "muziek microfoons":                                  { cat1: 728, cat3: 757 },   // Microfoons
+  "muziek midi-apparatuur":                             { cat1: 728, cat3: 758 },   // Midi-apparatuur
+  "muziek orgels":                                      { cat1: 728, cat3: 761 },   // Orgels
+  "muziek orkestbanden":                                { cat1: 728, cat3: 762 },   // Orkestbanden
+  "muziek overige muziek en instrumenten":              { cat1: 728, cat3: 764 },   // Overige Muziek en Instrumenten
+  "muziek percussie":                                   { cat1: 728, cat3: 739 },   // Percussie
+  "muziek piano's":                                     { cat1: 728, cat3: 765 },   // Piano's
+  "muziek samplers":                                    { cat1: 728, cat3: 770 },   // Samplers
+  "muziek snaarinstrumenten banjo's":                   { cat1: 728, cat3: 1770 },   // Snaarinstrumenten | Banjo's
+  "muziek snaarinstrumenten gitaren akoestisch":        { cat1: 728, cat3: 746 },   // Snaarinstrumenten | Gitaren | Akoestisch
+  "muziek snaarinstrumenten gitaren bas":               { cat1: 728, cat3: 747 },   // Snaarinstrumenten | Gitaren | Bas
+  "muziek snaarinstrumenten gitaren elektrisch":        { cat1: 728, cat3: 748 },   // Snaarinstrumenten | Gitaren | Elektrisch
+  "muziek snaarinstrumenten harpen":                    { cat1: 728, cat3: 2886 },   // Snaarinstrumenten | Harpen
+  "muziek snaarinstrumenten klavecimbels":              { cat1: 728, cat3: 1771 },   // Snaarinstrumenten | Klavecimbels
+  "muziek snaarinstrumenten mandolines":                { cat1: 728, cat3: 1772 },   // Snaarinstrumenten | Mandolines
+  "muziek snaarinstrumenten overige":                   { cat1: 728, cat3: 1370 },   // Snaarinstrumenten | Overige
+  "muziek soundmodules":                                { cat1: 728, cat3: 772 },   // Soundmodules
+  "muziek standaards":                                  { cat1: 728, cat3: 774 },   // Standaards
+  "muziek strijkinstrumenten cello's":                  { cat1: 728, cat3: 1773 },   // Strijkinstrumenten | Cello's
+  "muziek strijkinstrumenten contrabassen":             { cat1: 728, cat3: 1774 },   // Strijkinstrumenten | Contrabassen
+  "muziek strijkinstrumenten overige":                  { cat1: 728, cat3: 1775 },   // Strijkinstrumenten | Overige
+  "muziek strijkinstrumenten violen en altviolen":      { cat1: 728, cat3: 1371 },   // Strijkinstrumenten | Violen en Altviolen
+  "muziek synthesizers":                                { cat1: 728, cat3: 777 },   // Synthesizers
+  "muziek theaterbelichting":                           { cat1: 728, cat3: 2631 },   // Theaterbelichting
+  "muziek versterkers bas en gitaar":                   { cat1: 728, cat3: 745 },   // Versterkers | Bas en Gitaar
+  "muziek versterkers keyboard, monitor en pa":         { cat1: 728, cat3: 768 },   // Versterkers | Keyboard, Monitor en PA
+
+  // ── HUIS, TUIN EN KERST ────────────────────────────────────────────────
+  // Herkenbaar aan het "wonen "-voorvoegsel. Drie takken van Marktplaats onder
+  // één noemer: Tuin en Terras (1847), Huis en Inrichting (504) en Kerst, dat
+  // bij Marktplaats onder Diversen (428) hangt en niet bij wonen.
+  //
+  // Alle 40 ids zijn op 21-08-2026 opgehaald uit de categorieboom van
+  // Marktplaats zelf (searchCategoryOptions per l1CategoryId) en stuk voor stuk
+  // vergeleken met de naam die Marktplaats teruggeeft — niet geraden en niet op
+  // een HTTP-status afgegaan, want een fout pad geeft daar gewoon 200.
+  //
+  // Twee niveaus, dus GEEN bucketId (zoals muziek en antiek). Met een bucketId
+  // erbij antwoordt /plaats/{cat1}/{cat3} met HTTP 400.
+  "wonen tuinmeubel accessoires":                { cat1: 1847, cat3: 1864 },   // Tuinmeubel-accessoires
+  "wonen parasols":                              { cat1: 1847, cat3: 3009 },   // Parasols
+  "wonen tuinstoelen":                           { cat1: 1847, cat3: 3001 },   // Tuinstoelen
+  "wonen tuintafels":                            { cat1: 1847, cat3: 3002 },   // Tuintafels
+  "wonen tuinsets en loungesets":                { cat1: 1847, cat3: 278 },   // Tuinsets en Loungesets
+  "wonen tuinbanken":                            { cat1: 1847, cat3: 3004 },   // Tuinbanken
+  "wonen ligbedden":                             { cat1: 1847, cat3: 3005 },   // Ligbedden
+  "wonen bloembakken en plantenbakken":          { cat1: 1847, cat3: 1852 },   // Bloembakken en Plantenbakken
+  "wonen bloempotten":                           { cat1: 1847, cat3: 1442 },   // Bloempotten
+  "wonen buitenverlichting":                     { cat1: 1847, cat3: 281 },   // Buitenverlichting
+  "wonen vuurkorven":                            { cat1: 1847, cat3: 2964 },   // Vuurkorven
+  "wonen terrasverwarmers":                      { cat1: 1847, cat3: 2811 },   // Terrasverwarmers
+  "wonen partytenten":                           { cat1: 1847, cat3: 1858 },   // Partytenten
+  "wonen overkappingen":                         { cat1: 1847, cat3: 2901 },   // Overkappingen
+  "wonen schaduwdoeken":                         { cat1: 1847, cat3: 3008 },   // Schaduwdoeken
+  "wonen zonneschermen":                         { cat1: 1847, cat3: 288 },   // Zonneschermen
+  "wonen hangmatten":                            { cat1: 1847, cat3: 3006 },   // Hangmatten
+  "wonen picknicktafels":                        { cat1: 1847, cat3: 3003 },   // Picknicktafels
+  "wonen gordijnen en lamellen":                 { cat1: 504, cat3: 512 },   // Gordijnen en Lamellen
+  "wonen barkrukken":                            { cat1: 504, cat3: 2128 },   // Barkrukken
+  "wonen stoelen":                               { cat1: 504, cat3: 530 },   // Stoelen
+  "wonen krukjes":                               { cat1: 504, cat3: 3203 },   // Krukjes
+  "wonen fauteuils":                             { cat1: 504, cat3: 1940 },   // Fauteuils
+  "wonen eettafels":                             { cat1: 504, cat3: 1949 },   // Eettafels
+  "wonen salontafels":                           { cat1: 504, cat3: 527 },   // Salontafels
+  "wonen bijzettafels":                          { cat1: 504, cat3: 2758 },   // Bijzettafels
+  "wonen tapijten en kleden":                    { cat1: 504, cat3: 533 },   // Tapijten en Kleden
+  "wonen kussens":                               { cat1: 504, cat3: 2768 },   // Kussens
+  "wonen plaids en woondekens":                  { cat1: 504, cat3: 2870 },   // Plaids en Woondekens
+  // Marktplaats heeft geen eigen rubriek voor schapen-, rendier- of koeienvachten;
+  // verkopers zetten ze zelf onder Woonaccessoires | Overige (536). Spreien horen
+  // onder Slaapkamer | Beddengoed (525). Beide id's en hun ouder (504) zijn
+  // 28-08-2026 nagekeken in de openbare categorieboom van Marktplaats zelf,
+  // niet geraden. Zonder deze twee bleef woontextiel deels onplaatsbaar.
+  "wonen vachten":                               { cat1: 504, cat3: 536 },   // Woonaccessoires | Overige
+  "wonen beddengoed":                            { cat1: 504, cat3: 525 },   // Slaapkamer | Beddengoed
+  "wonen vazen":                                 { cat1: 504, cat3: 1516 },   // Vazen
+  "wonen spiegels":                              { cat1: 504, cat3: 529 },   // Spiegels
+  "wonen wanddecoraties":                        { cat1: 504, cat3: 2875 },   // Wanddecoraties
+  "wonen kunstplanten":                          { cat1: 504, cat3: 3121 },   // Kunstplanten en Kunstbloemen
+  "wonen tafellampen":                           { cat1: 504, cat3: 1260 },   // Tafellampen
+  "wonen vloerlampen":                           { cat1: 504, cat3: 1259 },   // Vloerlampen
+  "wonen hanglampen":                            { cat1: 504, cat3: 1258 },   // Hanglampen
+  "wonen kandelaars en kaarsen":                 { cat1: 504, cat3: 1510 },   // Kandelaars en Kaarsen
+  "wonen tafelkleden":                           { cat1: 504, cat3: 3120 },   // Tafelkleden
+  "wonen overige huis en inrichting":            { cat1: 504, cat3: 526 },   // Overige Huis en Inrichting
+  "wonen kerst":                                 { cat1: 428, cat3: 436 },   // Kerst
+
+  // === BOEKEN, SPEELGOED, FIETSEN, WITGOED, KLUSSEN, COMPUTERS, SPORT (24-09-2026) ===
+  // Plus accessoires/controllers/VR bij games en de rest van Telecommunicatie bij
+  // electronics. Elk nummer komt uit het plaatsformulier van Marktplaats zelf
+  // (/plaats/api/v1/category-aggregate/{l1}/buckets/{b}/categories), en elk
+  // adres /plaats/{cat1}/{cat3}?bucketId={b} is daarna opgevraagd en gaf precies
+  // deze rubriek terug. Diensten (reparaties, vakmensen) zitten er bewust niet in.
+  // --- boeken ---
+  "boeken gezondheid en voeding": { cat1: 201, cat3: 219, bucketId: 33 },
+  "boeken kookboeken": { cat1: 201, cat3: 216, bucketId: 33 },
+  "boeken geschiedenis regio": { cat1: 201, cat3: 1881, bucketId: 34 },
+  "boeken geschiedenis vaderland": { cat1: 201, cat3: 211, bucketId: 34 },
+  "boeken geschiedenis wereld": { cat1: 201, cat3: 1882, bucketId: 34 },
+  "boeken historische romans": { cat1: 201, cat3: 1883, bucketId: 34 },
+  "boeken oorlog en militair": { cat1: 201, cat3: 2119, bucketId: 34 },
+  "boeken politiek en maatschappij": { cat1: 201, cat3: 1466, bucketId: 34 },
+  "boeken baby s en peuters": { cat1: 201, cat3: 1464, bucketId: 35 },
+  "boeken kleuters": { cat1: 201, cat3: 1465, bucketId: 35 },
+  "boeken jeugd onder 10 jaar": { cat1: 201, cat3: 215, bucketId: 35 },
+  "boeken jeugd 10 tot 12 jaar": { cat1: 201, cat3: 1884, bucketId: 35 },
+  "boeken jeugd 13 jaar en ouder": { cat1: 201, cat3: 1885, bucketId: 35 },
+  "boeken film tv en media": { cat1: 201, cat3: 1461, bucketId: 36 },
+  "boeken architectuur": { cat1: 201, cat3: 1886, bucketId: 36 },
+  "boeken beeldend": { cat1: 201, cat3: 1887, bucketId: 36 },
+  "boeken dans en theater": { cat1: 201, cat3: 1888, bucketId: 36 },
+  "boeken fotografie en design": { cat1: 201, cat3: 217, bucketId: 36 },
+  "boeken muziek": { cat1: 201, cat3: 220, bucketId: 36 },
+  "boeken avontuur en actie": { cat1: 201, cat3: 204, bucketId: 37 },
+  "boeken chicklit": { cat1: 201, cat3: 1878, bucketId: 37 },
+  "boeken detectives": { cat1: 201, cat3: 207, bucketId: 37 },
+  "boeken literatuur": { cat1: 201, cat3: 218, bucketId: 37 },
+  "boeken romans": { cat1: 201, cat3: 224, bucketId: 37 },
+  "boeken fantasy": { cat1: 201, cat3: 225, bucketId: 37 },
+  "boeken science fiction": { cat1: 201, cat3: 2688, bucketId: 37 },
+  "boeken sprookjes en fabels": { cat1: 201, cat3: 2687, bucketId: 37 },
+  "boeken thrillers": { cat1: 201, cat3: 236, bucketId: 37 },
+  "boeken advies hulp en training": { cat1: 201, cat3: 2835, bucketId: 38 },
+  "boeken economie en marketing": { cat1: 201, cat3: 1460, bucketId: 38 },
+  "boeken encyclopedieen": { cat1: 201, cat3: 209, bucketId: 38 },
+  "boeken esoterie en spiritualiteit": { cat1: 201, cat3: 210, bucketId: 38 },
+  "boeken filosofie": { cat1: 201, cat3: 1462, bucketId: 38 },
+  "boeken godsdienst en theologie": { cat1: 201, cat3: 212, bucketId: 38 },
+  "boeken informatica en computer": { cat1: 201, cat3: 214, bucketId: 38 },
+  "boeken psychologie": { cat1: 201, cat3: 222, bucketId: 38 },
+  "boeken schoolboeken": { cat1: 201, cat3: 1652, bucketId: 38 },
+  "boeken studie en cursus": { cat1: 201, cat3: 228, bucketId: 38 },
+  "boeken techniek": { cat1: 201, cat3: 235, bucketId: 38 },
+  "boeken wetenschap": { cat1: 201, cat3: 1468, bucketId: 38 },
+  "boeken zwangerschap en opvoeding": { cat1: 201, cat3: 1892, bucketId: 38 },
+  "boeken auto s boeken": { cat1: 201, cat3: 203, bucketId: 39 },
+  "boeken auto s folders": { cat1: 201, cat3: 2692, bucketId: 39 },
+  "boeken auto s handleidingen": { cat1: 201, cat3: 61, bucketId: 39 },
+  "boeken dieren en huisdieren": { cat1: 201, cat3: 1879, bucketId: 39 },
+  "boeken hobby en vrije tijd": { cat1: 201, cat3: 213, bucketId: 39 },
+  "boeken mode": { cat1: 201, cat3: 2618, bucketId: 39 },
+  "boeken motoren": { cat1: 201, cat3: 2691, bucketId: 39 },
+  "boeken motoren handleidingen": { cat1: 201, cat3: 688, bucketId: 39 },
+  "boeken natuur": { cat1: 201, cat3: 208, bucketId: 39 },
+  "boeken sportboeken": { cat1: 201, cat3: 226, bucketId: 39 },
+  "boeken vervoer en transport": { cat1: 201, cat3: 2689, bucketId: 39 },
+  "boeken wonen en tuinieren": { cat1: 201, cat3: 1891, bucketId: 39 },
+  "boeken stripboeken": { cat1: 201, cat3: 227, bucketId: 40 },
+  "boeken comics": { cat1: 201, cat3: 1459, bucketId: 40 },
+  "boeken reisgidsen": { cat1: 201, cat3: 223, bucketId: 41 },
+  "boeken reisverhalen": { cat1: 201, cat3: 1890, bucketId: 41 },
+  "boeken streekboeken en streekromans": { cat1: 201, cat3: 1467, bucketId: 41 },
+  "boeken taal duits": { cat1: 201, cat3: 229, bucketId: 41 },
+  "boeken taal engels": { cat1: 201, cat3: 230, bucketId: 41 },
+  "boeken taal frans": { cat1: 201, cat3: 231, bucketId: 41 },
+  "boeken taal spaans": { cat1: 201, cat3: 233, bucketId: 41 },
+  "boeken taal overige talen": { cat1: 201, cat3: 232, bucketId: 41 },
+  "boeken woordenboeken": { cat1: 201, cat3: 238, bucketId: 41 },
+  "boeken antieke boeken en bijbels": { cat1: 201, cat3: 3, bucketId: 42 },
+  "boeken atlassen en landkaarten": { cat1: 201, cat3: 202, bucketId: 42 },
+  "boeken biografieen": { cat1: 201, cat3: 205, bucketId: 42 },
+  "boeken boekenweekgeschenken": { cat1: 201, cat3: 1877, bucketId: 42 },
+  "boeken catalogussen en folders": { cat1: 201, cat3: 206, bucketId: 42 },
+  "boeken e-books": { cat1: 201, cat3: 2690, bucketId: 42 },
+  "boeken essays en columns": { cat1: 201, cat3: 1880, bucketId: 42 },
+  "boeken gedichten en poezie": { cat1: 201, cat3: 1463, bucketId: 42 },
+  "boeken humor": { cat1: 201, cat3: 1620, bucketId: 42 },
+  "boeken luisterboeken": { cat1: 201, cat3: 1889, bucketId: 42 },
+  "boeken partijen": { cat1: 201, cat3: 2694, bucketId: 42 },
+  "boeken prentenboeken en plaatjesalbums": { cat1: 201, cat3: 2693, bucketId: 42 },
+  "boeken tijdschriften en kranten": { cat1: 201, cat3: 237, bucketId: 42 },
+  "boeken overige boeken": { cat1: 201, cat3: 221, bucketId: 42 },
+  // --- speelgoed ---
+  "speelgoed actiefiguren": { cat1: 565, cat3: 1490, bucketId: 156 },
+  "speelgoed babyspeelgoed": { cat1: 565, cat3: 1491, bucketId: 156 },
+  "speelgoed badspeelgoed": { cat1: 565, cat3: 3144, bucketId: 156 },
+  "speelgoed bouwstenen": { cat1: 565, cat3: 2157, bucketId: 156 },
+  "speelgoed duplo en lego": { cat1: 565, cat3: 611, bucketId: 156 },
+  "speelgoed educatief en creatief": { cat1: 565, cat3: 1492, bucketId: 156 },
+  "speelgoed fisher-price": { cat1: 565, cat3: 608, bucketId: 156 },
+  "speelgoed hobbelfiguren": { cat1: 565, cat3: 3143, bucketId: 156 },
+  "speelgoed houten speelgoed": { cat1: 565, cat3: 1674, bucketId: 156 },
+  "speelgoed kinderpuzzels": { cat1: 565, cat3: 615, bucketId: 156 },
+  "speelgoed knuffels en pluche": { cat1: 565, cat3: 610, bucketId: 156 },
+  "speelgoed my little pony": { cat1: 565, cat3: 2879, bucketId: 156 },
+  "speelgoed playmobil": { cat1: 565, cat3: 613, bucketId: 156 },
+  "speelgoed poppen": { cat1: 565, cat3: 614, bucketId: 156 },
+  "speelgoed poppenhuizen": { cat1: 565, cat3: 2783, bucketId: 156 },
+  "speelgoed racebanen": { cat1: 565, cat3: 616, bucketId: 156 },
+  "speelgoed speelgoedvoertuigen": { cat1: 565, cat3: 2131, bucketId: 156 },
+  "speelgoed speelhuisjes": { cat1: 565, cat3: 3011, bucketId: 156 },
+  "speelgoed speelkeukens": { cat1: 565, cat3: 3139, bucketId: 156 },
+  "speelgoed speelkleden": { cat1: 565, cat3: 3142, bucketId: 156 },
+  "speelgoed speeltafels": { cat1: 565, cat3: 3145, bucketId: 156 },
+  "speelgoed speeltenten": { cat1: 565, cat3: 3141, bucketId: 156 },
+  "speelgoed thomas de trein": { cat1: 565, cat3: 2880, bucketId: 156 },
+  "speelgoed voetbaltafels": { cat1: 565, cat3: 3140, bucketId: 156 },
+  "speelgoed vtech": { cat1: 565, cat3: 2778, bucketId: 156 },
+  "speelgoed overig binnenspeelgoed": { cat1: 565, cat3: 612, bucketId: 156 },
+  "speelgoed accuvoertuigen": { cat1: 565, cat3: 3131, bucketId: 157 },
+  "speelgoed actiespeelgoed": { cat1: 565, cat3: 2878, bucketId: 157 },
+  "speelgoed los buitenspeelgoed": { cat1: 565, cat3: 2779, bucketId: 157 },
+  "speelgoed opblaasfiguren": { cat1: 565, cat3: 3130, bucketId: 157 },
+  "speelgoed rolschaatsen": { cat1: 565, cat3: 617, bucketId: 157 },
+  "speelgoed skelters": { cat1: 565, cat3: 618, bucketId: 157 },
+  "speelgoed sleeen": { cat1: 565, cat3: 3133, bucketId: 157 },
+  "speelgoed speeltoestellen": { cat1: 565, cat3: 607, bucketId: 157 },
+  "speelgoed springkussens": { cat1: 565, cat3: 3132, bucketId: 157 },
+  "speelgoed steps": { cat1: 565, cat3: 465, bucketId: 157 },
+  "speelgoed trampolines": { cat1: 565, cat3: 2780, bucketId: 157 },
+  "speelgoed voertuigen en loopfietsen": { cat1: 565, cat3: 2781, bucketId: 157 },
+  "speelgoed zandbakken": { cat1: 565, cat3: 2782, bucketId: 157 },
+  "speelgoed zwembaden": { cat1: 565, cat3: 819, bucketId: 157 },
+  "speelgoed denksport en puzzels": { cat1: 1099, cat3: 1969, bucketId: 129 },
+  "speelgoed bordspellen": { cat1: 1099, cat3: 1233, bucketId: 129 },
+  "speelgoed kaartspellen": { cat1: 1099, cat3: 2743, bucketId: 129 },
+  "speelgoed overige gezelschapsspellen": { cat1: 1099, cat3: 2744, bucketId: 129 },
+  "speelgoed wargaming": { cat1: 1099, cat3: 1449, bucketId: 129 },
+  "speelgoed magic the gathering": { cat1: 1099, cat3: 919, bucketId: 130 },
+  "speelgoed pokemon": { cat1: 1099, cat3: 930, bucketId: 130 },
+  "speelgoed yu-gi-oh": { cat1: 1099, cat3: 949, bucketId: 130 },
+  "speelgoed overige verzamelkaartspellen": { cat1: 1099, cat3: 1976, bucketId: 130 },
+  "speelgoed modelbouw auto s en voertuigen": { cat1: 1099, cat3: 1237, bucketId: 125 },
+  "speelgoed modelbouw boten en schepen": { cat1: 1099, cat3: 2750, bucketId: 125 },
+  "speelgoed modelbouw figuren en diorama s": { cat1: 1099, cat3: 2751, bucketId: 125 },
+  "speelgoed modelbouw vliegtuigen en helikopters": { cat1: 1099, cat3: 2752, bucketId: 125 },
+  "speelgoed modelbouw overige": { cat1: 1099, cat3: 2753, bucketId: 125 },
+  "speelgoed radiografisch auto s": { cat1: 1099, cat3: 2034, bucketId: 125 },
+  "speelgoed radiografisch helikopters en quadcopters": { cat1: 1099, cat3: 2754, bucketId: 125 },
+  "speelgoed radiografisch vliegtuigen": { cat1: 1099, cat3: 2856, bucketId: 125 },
+  "speelgoed radiografisch overige": { cat1: 1099, cat3: 2755, bucketId: 125 },
+  "speelgoed modelauto s schaal 1 5 tot 1 12": { cat1: 1099, cat3: 2127, bucketId: 126 },
+  "speelgoed modelauto s schaal 1 18": { cat1: 1099, cat3: 921, bucketId: 126 },
+  "speelgoed modelauto s schaal 1 24": { cat1: 1099, cat3: 2746, bucketId: 126 },
+  "speelgoed modelauto s schaal 1 32": { cat1: 1099, cat3: 2747, bucketId: 126 },
+  "speelgoed modelauto s schaal 1 43": { cat1: 1099, cat3: 1972, bucketId: 126 },
+  "speelgoed modelauto s schaal 1 50": { cat1: 1099, cat3: 2033, bucketId: 126 },
+  "speelgoed modelauto s schaal 1 87": { cat1: 1099, cat3: 2748, bucketId: 126 },
+  "speelgoed modelauto s overige schalen": { cat1: 1099, cat3: 2749, bucketId: 126 },
+  "speelgoed modeltreinen h0": { cat1: 1099, cat3: 1238, bucketId: 127 },
+  "speelgoed modeltreinen n-spoor": { cat1: 1099, cat3: 2627, bucketId: 127 },
+  "speelgoed modeltreinen overige schalen": { cat1: 1099, cat3: 2756, bucketId: 127 },
+  // --- fietsen ---
+  "fietsen bakfietsen": { cat1: 445, cat3: 446, bucketId: 113 },
+  "fietsen crossfietsen en bmx": { cat1: 445, cat3: 1621, bucketId: 113 },
+  "fietsen cruisers en lowriders": { cat1: 445, cat3: 1667, bucketId: 113 },
+  "fietsen driewielfietsen": { cat1: 445, cat3: 449, bucketId: 113 },
+  "fietsen eenwielers": { cat1: 445, cat3: 3106, bucketId: 113 },
+  "fietsen elektrische fietsen": { cat1: 445, cat3: 451, bucketId: 113 },
+  "fietsen ligfietsen": { cat1: 445, cat3: 458, bucketId: 113 },
+  "fietsen mountainbikes en atb": { cat1: 445, cat3: 460, bucketId: 113 },
+  "fietsen oldtimers": { cat1: 445, cat3: 2026, bucketId: 113 },
+  "fietsen racefietsen": { cat1: 445, cat3: 464, bucketId: 113 },
+  "fietsen tandems": { cat1: 445, cat3: 466, bucketId: 113 },
+  "fietsen vouwfietsen": { cat1: 445, cat3: 467, bucketId: 113 },
+  "fietsen damesfietsen": { cat1: 445, cat3: 447, bucketId: 114 },
+  "fietsen moederfietsen": { cat1: 445, cat3: 1916, bucketId: 114 },
+  "fietsen omafietsen": { cat1: 445, cat3: 461, bucketId: 114 },
+  "fietsen sportfietsen dames": { cat1: 445, cat3: 448, bucketId: 114 },
+  "fietsen herenfietsen": { cat1: 445, cat3: 453, bucketId: 115 },
+  "fietsen sportfietsen heren": { cat1: 445, cat3: 454, bucketId: 115 },
+  "fietsen driewielers": { cat1: 445, cat3: 456, bucketId: 116 },
+  "fietsen jongensfietsen": { cat1: 445, cat3: 455, bucketId: 116 },
+  "fietsen kinderfietsjes": { cat1: 445, cat3: 1917, bucketId: 116 },
+  "fietsen meisjesfietsen": { cat1: 445, cat3: 459, bucketId: 116 },
+  "fietsen aanhangers en karren": { cat1: 445, cat3: 450, bucketId: 112 },
+  "fietsen bagagedragers": { cat1: 445, cat3: 3108, bucketId: 112 },
+  "fietsen buggydragers": { cat1: 445, cat3: 3110, bucketId: 112 },
+  "fietsen fietsaccu s": { cat1: 445, cat3: 3107, bucketId: 112 },
+  "fietsen fietsbellen": { cat1: 445, cat3: 3116, bucketId: 112 },
+  "fietsen fietscomputers": { cat1: 445, cat3: 3112, bucketId: 112 },
+  "fietsen fietsendragers": { cat1: 445, cat3: 3065, bucketId: 112 },
+  "fietsen fietsenrekken": { cat1: 445, cat3: 3115, bucketId: 112 },
+  "fietsen fietsgereedschap": { cat1: 445, cat3: 3109, bucketId: 112 },
+  "fietsen fietshelmen": { cat1: 445, cat3: 2736, bucketId: 112 },
+  "fietsen fietsmanden": { cat1: 445, cat3: 1918, bucketId: 112 },
+  "fietsen fietsonderdelen": { cat1: 445, cat3: 462, bucketId: 112 },
+  "fietsen fietspompen": { cat1: 445, cat3: 3113, bucketId: 112 },
+  "fietsen fietssloten": { cat1: 445, cat3: 3114, bucketId: 112 },
+  "fietsen fietsstoeltjes": { cat1: 445, cat3: 457, bucketId: 112 },
+  "fietsen fietstassen": { cat1: 445, cat3: 1666, bucketId: 112 },
+  "fietsen fietsverlichting": { cat1: 445, cat3: 3111, bucketId: 112 },
+  "fietsen overige fietsaccessoires": { cat1: 445, cat3: 1919, bucketId: 112 },
+  "fietsen overige fietsen": { cat1: 445, cat3: 463, bucketId: 119 },
+  // --- witgoed ---
+  "witgoed airco s": { cat1: 537, cat3: 561, bucketId: 282 },
+  "witgoed luchtbehandelingsapparatuur": { cat1: 537, cat3: 3166, bucketId: 282 },
+  "witgoed stofzuigers": { cat1: 537, cat3: 556, bucketId: 282 },
+  "witgoed stoomapparaten": { cat1: 537, cat3: 3168, bucketId: 282 },
+  "witgoed strijkijzers en strijkplanken": { cat1: 537, cat3: 557, bucketId: 282 },
+  "witgoed ventilatoren": { cat1: 537, cat3: 3167, bucketId: 282 },
+  "witgoed was-droogcombinaties": { cat1: 537, cat3: 3170, bucketId: 282 },
+  "witgoed wasdrogers": { cat1: 537, cat3: 562, bucketId: 282 },
+  "witgoed wasmachines": { cat1: 537, cat3: 563, bucketId: 282 },
+  "witgoed waterontharders": { cat1: 537, cat3: 3169, bucketId: 282 },
+  "witgoed afzuigkappen": { cat1: 537, cat3: 538, bucketId: 283 },
+  "witgoed airfryers": { cat1: 537, cat3: 3177, bucketId: 283 },
+  "witgoed blenders": { cat1: 537, cat3: 3181, bucketId: 283 },
+  "witgoed broodbakmachines": { cat1: 537, cat3: 1979, bucketId: 283 },
+  "witgoed broodroosters": { cat1: 537, cat3: 1980, bucketId: 283 },
+  "witgoed bruiswatermachines": { cat1: 537, cat3: 3185, bucketId: 283 },
+  "witgoed contactgrills": { cat1: 537, cat3: 3184, bucketId: 283 },
+  "witgoed eierkokers": { cat1: 537, cat3: 3179, bucketId: 283 },
+  "witgoed fonduesets": { cat1: 537, cat3: 3171, bucketId: 283 },
+  "witgoed fornuizen": { cat1: 537, cat3: 542, bucketId: 283 },
+  "witgoed frituurpannen": { cat1: 537, cat3: 541, bucketId: 283 },
+  "witgoed gourmetstellen": { cat1: 537, cat3: 1981, bucketId: 283 },
+  "witgoed grillplaten": { cat1: 537, cat3: 3173, bucketId: 283 },
+  "witgoed ijsmachines": { cat1: 537, cat3: 3175, bucketId: 283 },
+  "witgoed juicers": { cat1: 537, cat3: 3183, bucketId: 283 },
+  "witgoed keukenmixers": { cat1: 537, cat3: 543, bucketId: 283 },
+  "witgoed koelkasten en ijskasten": { cat1: 537, cat3: 544, bucketId: 283 },
+  "witgoed koffiezetapparaten": { cat1: 537, cat3: 545, bucketId: 283 },
+  "witgoed koffiemachine-accessoires": { cat1: 537, cat3: 3182, bucketId: 283 },
+  "witgoed kookplaten": { cat1: 537, cat3: 546, bucketId: 283 },
+  "witgoed magnetrons": { cat1: 537, cat3: 548, bucketId: 283 },
+  "witgoed melkopschuimers": { cat1: 537, cat3: 3180, bucketId: 283 },
+  "witgoed ovens": { cat1: 537, cat3: 552, bucketId: 283 },
+  "witgoed rijstkokers": { cat1: 537, cat3: 3178, bucketId: 283 },
+  "witgoed slowcookers": { cat1: 537, cat3: 3174, bucketId: 283 },
+  "witgoed thuistaps": { cat1: 537, cat3: 1457, bucketId: 283 },
+  "witgoed vaatwasmachines": { cat1: 537, cat3: 560, bucketId: 283 },
+  "witgoed vriezers en diepvrieskisten": { cat1: 537, cat3: 540, bucketId: 283 },
+  "witgoed wafelijzers": { cat1: 537, cat3: 3172, bucketId: 283 },
+  "witgoed waterkoelers": { cat1: 537, cat3: 3176, bucketId: 283 },
+  "witgoed waterkokers": { cat1: 537, cat3: 1983, bucketId: 283 },
+  "witgoed onderdelen en toebehoren": { cat1: 537, cat3: 1982, bucketId: 284 },
+  "witgoed persoonlijke verzorgingsapparatuur": { cat1: 537, cat3: 554, bucketId: 285 },
+  "witgoed weegschalen": { cat1: 537, cat3: 564, bucketId: 285 },
+  "witgoed wekkers": { cat1: 537, cat3: 1458, bucketId: 285 },
+  "witgoed zonnebanken en gezichtsbruiners": { cat1: 537, cat3: 1359, bucketId: 285 },
+  "witgoed overige witgoed en apparatuur": { cat1: 537, cat3: 553, bucketId: 286 },
+  // --- klussen ---
+  "klussen steigers": { cat1: 239, cat3: 269, bucketId: 98 },
+  "klussen dakbedekking": { cat1: 239, cat3: 270, bucketId: 98 },
+  "klussen gereedschapskisten": { cat1: 239, cat3: 3103, bucketId: 100 },
+  "klussen handgereedschap": { cat1: 239, cat3: 247, bucketId: 100 },
+  "klussen kruiwagens": { cat1: 239, cat3: 2998, bucketId: 100 },
+  "klussen ladders en trappen": { cat1: 239, cat3: 257, bucketId: 100 },
+  "klussen meetapparatuur": { cat1: 239, cat3: 1399, bucketId: 100 },
+  "klussen tekentafels": { cat1: 239, cat3: 271, bucketId: 100 },
+  "klussen transportwagens": { cat1: 239, cat3: 2623, bucketId: 100 },
+  "klussen werkbanken": { cat1: 239, cat3: 261, bucketId: 100 },
+  "klussen betonmolens": { cat1: 239, cat3: 3102, bucketId: 101 },
+  "klussen boormachines": { cat1: 239, cat3: 242, bucketId: 101 },
+  "klussen compressors": { cat1: 239, cat3: 243, bucketId: 101 },
+  "klussen draaibanken": { cat1: 239, cat3: 245, bucketId: 101 },
+  "klussen freesmachines": { cat1: 239, cat3: 2990, bucketId: 101 },
+  "klussen hogedrukreinigers": { cat1: 239, cat3: 2988, bucketId: 101 },
+  "klussen lasapparaten": { cat1: 239, cat3: 258, bucketId: 101 },
+  "klussen lieren en takels": { cat1: 239, cat3: 3049, bucketId: 101 },
+  "klussen motoren": { cat1: 239, cat3: 1350, bucketId: 101 },
+  "klussen onderdelen machines": { cat1: 239, cat3: 1710, bucketId: 101 },
+  "klussen reinigingsmachines": { cat1: 239, cat3: 264, bucketId: 101 },
+  "klussen schaafmachines": { cat1: 239, cat3: 3104, bucketId: 101 },
+  "klussen schuurmachines": { cat1: 239, cat3: 268, bucketId: 101 },
+  "klussen slijpmachines": { cat1: 239, cat3: 2733, bucketId: 101 },
+  "klussen weegschalen": { cat1: 239, cat3: 285, bucketId: 101 },
+  "klussen zaagmachines": { cat1: 239, cat3: 287, bucketId: 101 },
+  "klussen overige machines": { cat1: 239, cat3: 259, bucketId: 101 },
+  "klussen buizen en afvoer": { cat1: 239, cat3: 1395, bucketId: 102 },
+  "klussen hang- en sluitwerk": { cat1: 239, cat3: 1869, bucketId: 102 },
+  "klussen hout en planken": { cat1: 239, cat3: 252, bucketId: 102 },
+  "klussen ijzerwaren en bevestigingsmiddelen": { cat1: 239, cat3: 2621, bucketId: 102 },
+  "klussen isolatie en afdichting": { cat1: 239, cat3: 1870, bucketId: 102 },
+  "klussen kratten en dozen": { cat1: 239, cat3: 256, bucketId: 102 },
+  "klussen metalen": { cat1: 239, cat3: 260, bucketId: 102 },
+  "klussen metselstenen": { cat1: 239, cat3: 2624, bucketId: 102 },
+  "klussen platen en panelen": { cat1: 239, cat3: 263, bucketId: 102 },
+  "klussen plinten en afwerking": { cat1: 239, cat3: 1872, bucketId: 102 },
+  "klussen vloerdelen en plavuizen": { cat1: 239, cat3: 284, bucketId: 102 },
+  "klussen zeil en folie": { cat1: 239, cat3: 1876, bucketId: 102 },
+  "klussen zwenkwielen": { cat1: 239, cat3: 2852, bucketId: 102 },
+  "klussen alarmsystemen": { cat1: 239, cat3: 1866, bucketId: 103 },
+  "klussen deuren en horren": { cat1: 239, cat3: 244, bucketId: 103 },
+  "klussen glas en ramen": { cat1: 239, cat3: 249, bucketId: 103 },
+  "klussen kozijnen en schuifpuien": { cat1: 239, cat3: 254, bucketId: 103 },
+  "klussen rolluiken": { cat1: 239, cat3: 265, bucketId: 103 },
+  "klussen sanitair": { cat1: 239, cat3: 266, bucketId: 104 },
+  "klussen tegels": { cat1: 239, cat3: 1873, bucketId: 104 },
+  "klussen schildersmaterialen": { cat1: 239, cat3: 267, bucketId: 105 },
+  "klussen verf beits en lak": { cat1: 239, cat3: 1875, bucketId: 105 },
+  "klussen bouwverlichting": { cat1: 239, cat3: 1185, bucketId: 106 },
+  "klussen elektra en kabels": { cat1: 239, cat3: 1867, bucketId: 106 },
+  "klussen geisers en boilers": { cat1: 239, cat3: 246, bucketId: 107 },
+  "klussen thermostaten": { cat1: 239, cat3: 3105, bucketId: 107 },
+  "klussen ventilatie en afzuiging": { cat1: 239, cat3: 1874, bucketId: 107 },
+  "klussen verwarming en radiatoren": { cat1: 239, cat3: 282, bucketId: 107 },
+  "klussen adembescherming": { cat1: 239, cat3: 3199, bucketId: 433 },
+  "klussen gehoorbeschermers": { cat1: 239, cat3: 3198, bucketId: 433 },
+  "klussen laskappen": { cat1: 239, cat3: 3197, bucketId: 433 },
+  "klussen veiligheidsbrillen": { cat1: 239, cat3: 3101, bucketId: 433 },
+  "klussen veiligheidshelmen": { cat1: 239, cat3: 3201, bucketId: 433 },
+  "klussen veiligheidskleding": { cat1: 239, cat3: 3200, bucketId: 433 },
+  "klussen werkkleding": { cat1: 239, cat3: 1856, bucketId: 433 },
+  "klussen overige doe-het-zelf en verbouw": { cat1: 239, cat3: 262, bucketId: 108 },
+  // --- computers ---
+  "computers barebones": { cat1: 322, cat3: 3016, bucketId: 58 },
+  "computers computerbehuizingen": { cat1: 322, cat3: 326, bucketId: 58 },
+  "computers computerkoelers": { cat1: 322, cat3: 3018, bucketId: 58 },
+  "computers geheugenkaartlezers": { cat1: 322, cat3: 3014, bucketId: 58 },
+  "computers geluidskaarten": { cat1: 322, cat3: 3013, bucketId: 58 },
+  "computers harde schijven": { cat1: 322, cat3: 333, bucketId: 58 },
+  "computers interne voedingen": { cat1: 322, cat3: 3019, bucketId: 58 },
+  "computers moederborden": { cat1: 322, cat3: 335, bucketId: 58 },
+  "computers nas": { cat1: 322, cat3: 3017, bucketId: 58 },
+  "computers netwerkkaarten": { cat1: 322, cat3: 3015, bucketId: 58 },
+  "computers processors": { cat1: 322, cat3: 343, bucketId: 58 },
+  "computers ram geheugen": { cat1: 322, cat3: 331, bucketId: 58 },
+  "computers serverkasten": { cat1: 322, cat3: 3012, bucketId: 58 },
+  "computers videokaarten": { cat1: 322, cat3: 353, bucketId: 58 },
+  "computers apple desktops": { cat1: 322, cat3: 324, bucketId: 59 },
+  "computers desktop pc s": { cat1: 322, cat3: 328, bucketId: 59 },
+  "computers servers": { cat1: 322, cat3: 1417, bucketId: 59 },
+  "computers vintage computers": { cat1: 322, cat3: 327, bucketId: 59 },
+  "computers laptop accu s": { cat1: 322, cat3: 2724, bucketId: 61 },
+  "computers apple macbooks": { cat1: 322, cat3: 325, bucketId: 61 },
+  "computers chromebooks": { cat1: 322, cat3: 3020, bucketId: 61 },
+  "computers laptophoezen": { cat1: 322, cat3: 3030, bucketId: 61 },
+  "computers laptop-opladers": { cat1: 322, cat3: 1653, bucketId: 61 },
+  "computers laptopstandaarden": { cat1: 322, cat3: 3029, bucketId: 61 },
+  "computers laptoptafels": { cat1: 322, cat3: 3028, bucketId: 61 },
+  "computers laptoptassen": { cat1: 322, cat3: 1654, bucketId: 61 },
+  "computers windows laptops": { cat1: 322, cat3: 339, bucketId: 61 },
+  "computers accesspoints": { cat1: 322, cat3: 3022, bucketId: 424 },
+  "computers isdn en adsl": { cat1: 322, cat3: 827, bucketId: 424 },
+  "computers netwerk switches": { cat1: 322, cat3: 338, bucketId: 424 },
+  "computers pc- en netwerkkabels": { cat1: 322, cat3: 1658, bucketId: 424 },
+  "computers powerlines": { cat1: 322, cat3: 3023, bucketId: 424 },
+  "computers wifi-versterkers": { cat1: 322, cat3: 3024, bucketId: 424 },
+  "computers beschrijfbare discs": { cat1: 322, cat3: 1415, bucketId: 62 },
+  "computers usb sticks": { cat1: 322, cat3: 1418, bucketId: 62 },
+  "computers labelprinters": { cat1: 322, cat3: 3032, bucketId: 425 },
+  "computers pocketprinters": { cat1: 322, cat3: 3033, bucketId: 425 },
+  "computers printers": { cat1: 322, cat3: 342, bucketId: 425 },
+  "computers printerbenodigdheden": { cat1: 322, cat3: 1416, bucketId: 425 },
+  "computers 3d printers": { cat1: 322, cat3: 2842, bucketId: 425 },
+  "computers 3d-printerbenodigheden": { cat1: 322, cat3: 3034, bucketId: 425 },
+  "computers scanners": { cat1: 322, cat3: 344, bucketId: 425 },
+  "computers capture cards": { cat1: 322, cat3: 3086, bucketId: 63 },
+  "computers dockingstations": { cat1: 322, cat3: 3038, bucketId: 63 },
+  "computers headsets": { cat1: 322, cat3: 3037, bucketId: 63 },
+  "computers joysticks": { cat1: 322, cat3: 3036, bucketId: 63 },
+  "computers monitoren": { cat1: 322, cat3: 336, bucketId: 63 },
+  "computers muismatten": { cat1: 322, cat3: 3035, bucketId: 63 },
+  "computers muizen": { cat1: 322, cat3: 1727, bucketId: 63 },
+  "computers noodvoedingen ups": { cat1: 322, cat3: 2841, bucketId: 63 },
+  "computers optische drives": { cat1: 322, cat3: 350, bucketId: 63 },
+  "computers pc speakers": { cat1: 322, cat3: 332, bucketId: 63 },
+  "computers presenters": { cat1: 322, cat3: 3027, bucketId: 63 },
+  "computers routers en modems": { cat1: 322, cat3: 334, bucketId: 63 },
+  "computers toetsenborden": { cat1: 322, cat3: 352, bucketId: 63 },
+  "computers webcams": { cat1: 322, cat3: 354, bucketId: 63 },
+  "computers antivirus- en beveiligingssoftware": { cat1: 322, cat3: 371, bucketId: 64 },
+  "computers audio software": { cat1: 322, cat3: 373, bucketId: 64 },
+  "computers besturingssoftware": { cat1: 322, cat3: 359, bucketId: 64 },
+  "computers educatie- en cursussoftware": { cat1: 322, cat3: 1475, bucketId: 64 },
+  "computers navigatiesoftware": { cat1: 322, cat3: 1477, bucketId: 64 },
+  "computers office-software": { cat1: 322, cat3: 3039, bucketId: 64 },
+  "computers ontwerp- en bewerkingssoftware": { cat1: 322, cat3: 369, bucketId: 64 },
+  "computers android tablets": { cat1: 322, cat3: 2844, bucketId: 65 },
+  "computers apple ipads": { cat1: 322, cat3: 2722, bucketId: 65 },
+  "computers e-readers": { cat1: 322, cat3: 2620, bucketId: 65 },
+  "computers tablet-hoezen": { cat1: 322, cat3: 2847, bucketId: 65 },
+  "computers tekentablets": { cat1: 322, cat3: 3031, bucketId: 65 },
+  "computers windows tablets": { cat1: 322, cat3: 2723, bucketId: 65 },
+  "computers overige computers en software": { cat1: 322, cat3: 341, bucketId: 66 },
+  // --- sportartikelen ---
+  "sportartikelen badminton": { cat1: 784, cat3: 785, bucketId: 212 },
+  "sportartikelen basketbal": { cat1: 784, cat3: 786, bucketId: 212 },
+  "sportartikelen bowlen": { cat1: 784, cat3: 790, bucketId: 212 },
+  "sportartikelen golf": { cat1: 784, cat3: 794, bucketId: 212 },
+  "sportartikelen handbal": { cat1: 784, cat3: 1781, bucketId: 212 },
+  "sportartikelen hockey": { cat1: 784, cat3: 796, bucketId: 212 },
+  "sportartikelen honkbal en softbal": { cat1: 784, cat3: 1782, bucketId: 212 },
+  "sportartikelen korfbal": { cat1: 784, cat3: 1385, bucketId: 212 },
+  "sportartikelen padel": { cat1: 784, cat3: 3152, bucketId: 212 },
+  "sportartikelen rugby": { cat1: 784, cat3: 804, bucketId: 212 },
+  "sportartikelen squash": { cat1: 784, cat3: 811, bucketId: 212 },
+  "sportartikelen tafeltennis": { cat1: 784, cat3: 812, bucketId: 212 },
+  "sportartikelen tennis": { cat1: 784, cat3: 813, bucketId: 212 },
+  "sportartikelen voetbal": { cat1: 784, cat3: 816, bucketId: 212 },
+  "sportartikelen volleybal": { cat1: 784, cat3: 1783, bucketId: 212 },
+  "sportartikelen ballet": { cat1: 784, cat3: 1780, bucketId: 215 },
+  "sportartikelen dansen": { cat1: 784, cat3: 3154, bucketId: 215 },
+  "sportartikelen fitnessapparatuur": { cat1: 784, cat3: 803, bucketId: 215 },
+  "sportartikelen fitnessmaterialen": { cat1: 784, cat3: 793, bucketId: 215 },
+  "sportartikelen turnen": { cat1: 784, cat3: 1445, bucketId: 215 },
+  "sportartikelen yoga en pilates": { cat1: 784, cat3: 3155, bucketId: 215 },
+  "sportartikelen bergsport en wandelen": { cat1: 784, cat3: 787, bucketId: 217 },
+  "sportartikelen klimsport": { cat1: 784, cat3: 3156, bucketId: 217 },
+  "sportartikelen loopsport en atletiek": { cat1: 784, cat3: 799, bucketId: 217 },
+  "sportartikelen skateboarden": { cat1: 784, cat3: 1444, bucketId: 217 },
+  "sportartikelen skeelers": { cat1: 784, cat3: 807, bucketId: 217 },
+  "sportartikelen wielrennen": { cat1: 784, cat3: 792, bucketId: 217 },
+  "sportartikelen biljarten en poolen": { cat1: 784, cat3: 789, bucketId: 213 },
+  "sportartikelen darts": { cat1: 784, cat3: 791, bucketId: 213 },
+  "sportartikelen handboogschieten": { cat1: 784, cat3: 2139, bucketId: 213 },
+  "sportartikelen schietsport-accessoires": { cat1: 784, cat3: 3153, bucketId: 213 },
+  "sportartikelen karting": { cat1: 784, cat3: 797, bucketId: 218 },
+  "sportartikelen paardrijkleding": { cat1: 784, cat3: 1486, bucketId: 218 },
+  "sportartikelen vliegeren": { cat1: 784, cat3: 815, bucketId: 218 },
+  "sportartikelen zweefvliegen en paragliding": { cat1: 784, cat3: 818, bucketId: 218 },
+  "sportartikelen bidons": { cat1: 784, cat3: 3158, bucketId: 222 },
+  "sportartikelen hartslagmeters": { cat1: 784, cat3: 795, bucketId: 222 },
+  "sportartikelen hoelahoeps": { cat1: 784, cat3: 3159, bucketId: 222 },
+  "sportartikelen springtouwen": { cat1: 784, cat3: 3160, bucketId: 222 },
+  "sportartikelen boksen": { cat1: 784, cat3: 3157, bucketId: 219 },
+  "sportartikelen vechtsporten en zelfverdediging": { cat1: 784, cat3: 814, bucketId: 219 },
+  "sportartikelen duiken": { cat1: 784, cat3: 982, bucketId: 428 },
+  "sportartikelen golfsurfen": { cat1: 784, cat3: 1961, bucketId: 428 },
+  "sportartikelen kitesurfen": { cat1: 784, cat3: 1404, bucketId: 428 },
+  "sportartikelen snorkelen": { cat1: 784, cat3: 3162, bucketId: 428 },
+  "sportartikelen suppen": { cat1: 784, cat3: 3163, bucketId: 428 },
+  "sportartikelen wakeboarden": { cat1: 784, cat3: 2636, bucketId: 428 },
+  "sportartikelen waterpolo": { cat1: 784, cat3: 3161, bucketId: 428 },
+  "sportartikelen waterski s": { cat1: 784, cat3: 1455, bucketId: 428 },
+  "sportartikelen windsurfen": { cat1: 784, cat3: 995, bucketId: 428 },
+  "sportartikelen wingsurfen": { cat1: 784, cat3: 3195, bucketId: 428 },
+  "sportartikelen gezondheidsproducten en wellness": { cat1: 784, cat3: 1386, bucketId: 220 },
+  "sportartikelen massageproducten": { cat1: 784, cat3: 800, bucketId: 220 },
+  "sportartikelen sauna": { cat1: 784, cat3: 805, bucketId: 220 },
+  "sportartikelen ijshockey": { cat1: 784, cat3: 2140, bucketId: 221 },
+  "sportartikelen schaatsen": { cat1: 784, cat3: 806, bucketId: 221 },
+  "sportartikelen skien en langlaufen": { cat1: 784, cat3: 808, bucketId: 221 },
+  "sportartikelen snowboarden": { cat1: 784, cat3: 809, bucketId: 221 },
+  "sportartikelen overige sport en fitness": { cat1: 784, cat3: 801, bucketId: 434 },
+  // --- games ---
+  "games accessoires nintendo console": { cat1: 356, cat3: 2800, bucketId: 300 },
+  "games accessoires nintendo portable": { cat1: 356, cat3: 2799, bucketId: 300 },
+  "games accessoires playstation console": { cat1: 356, cat3: 2801, bucketId: 301 },
+  "games accessoires playstation portable": { cat1: 356, cat3: 2802, bucketId: 301 },
+  "games accessoires xbox": { cat1: 356, cat3: 2803, bucketId: 302 },
+  "games accessoires overige": { cat1: 356, cat3: 1657, bucketId: 303 },
+  "games controllers nintendo": { cat1: 356, cat3: 2800, bucketId: 300 },
+  "games controllers playstation": { cat1: 356, cat3: 2801, bucketId: 301 },
+  "games controllers xbox": { cat1: 356, cat3: 2803, bucketId: 302 },
+  "games virtual reality": { cat1: 356, cat3: 2945, bucketId: 415 },
+  // --- electronics ---
+  "electronics telefoon sagem": { cat1: 820, cat3: 840, bucketId: 225 },
+  "electronics telefoon siemens": { cat1: 820, cat3: 842, bucketId: 225 },
+  "electronics telefoon pda s": { cat1: 820, cat3: 340, bucketId: 225 },
+  "electronics hoesjes apple iphone": { cat1: 820, cat3: 829, bucketId: 226 },
+  "electronics hoesjes blackberry": { cat1: 820, cat3: 2804, bucketId: 226 },
+  "electronics hoesjes htc": { cat1: 820, cat3: 2805, bucketId: 226 },
+  "electronics hoesjes nokia": { cat1: 820, cat3: 2806, bucketId: 226 },
+  "electronics hoesjes samsung": { cat1: 820, cat3: 2807, bucketId: 226 },
+  "electronics hoesjes overige merken": { cat1: 820, cat3: 2808, bucketId: 226 },
+  "electronics powerbanks": { cat1: 820, cat3: 3040, bucketId: 226 },
+  "electronics autoladers": { cat1: 820, cat3: 3047, bucketId: 227 },
+  "electronics batterijen en accu s": { cat1: 820, cat3: 1683, bucketId: 227 },
+  "electronics oordopjes": { cat1: 820, cat3: 1956, bucketId: 227 },
+  "electronics pda-toebehoren": { cat1: 820, cat3: 1684, bucketId: 227 },
+  "electronics prepaidkaarten en simkaarten": { cat1: 820, cat3: 846, bucketId: 227 },
+  "electronics telefoonsoftware": { cat1: 820, cat3: 1958, bucketId: 227 },
+  "electronics telefoon-opladers": { cat1: 820, cat3: 1957, bucketId: 227 },
+  "electronics telefoonhouders": { cat1: 820, cat3: 3046, bucketId: 227 },
+  "electronics toebehoren en onderdelen": { cat1: 820, cat3: 1959, bucketId: 227 },
+  "electronics antwoordapparaten": { cat1: 820, cat3: 822, bucketId: 228 },
+  "electronics draadloze handsets": { cat1: 820, cat3: 851, bucketId: 228 },
+  "electronics niet-draadloze handsets": { cat1: 820, cat3: 852, bucketId: 228 },
+  "electronics telefooncentrales": { cat1: 820, cat3: 850, bucketId: 228 },
+  "electronics wearable-accessoires": { cat1: 820, cat3: 3043, bucketId: 426 },
+  "electronics datacommunicatie": { cat1: 820, cat3: 1454, bucketId: 223 },
+  "electronics faxen": { cat1: 820, cat3: 826, bucketId: 223 },
+  "electronics antennes en masten": { cat1: 820, cat3: 821, bucketId: 229 },
+  "electronics portofoons en walkie-talkies": { cat1: 820, cat3: 845, bucketId: 229 },
+  "electronics radioscanners": { cat1: 820, cat3: 848, bucketId: 229 },
+  "electronics zenders en ontvangers": { cat1: 820, cat3: 855, bucketId: 229 },
+  "electronics carkits": { cat1: 820, cat3: 825, bucketId: 230 },
+  "electronics overige telecommunicatie": { cat1: 820, cat3: 844, bucketId: 230 },
+};
+// NOTE: there is deliberately no catch-all default category. There used to be
+// one (dames jeans), and it meant any item whose category didn't resolve got
+// published as women's jeans — a MyProtein sport short included. Publishing to a
+// wrong category is worse than not publishing: it's visible to buyers, hurts
+// reach, and the user never learns it happened. Unresolved category now fails
+// the job with an actionable message instead (see getMpSyiUrl).
+
+function getDeleteUrl(platform, payload) {
+  // /v/listing/{id} bestaat NIET bij Marktplaats/2dehands — die geeft altijd
+  // 404, ook voor een levende advertentie. De verwijderklus opende dus een
+  // foutpagina, vond daar geen Verwijder-knop en moest terugvallen op zoeken in
+  // het overzicht. /seller/view/{id} is de pagina die het wél doet, met de knop
+  // erop.
+  if (platform === "marktplaats") {
+    if (payload?.platform_listing_id) return `https://www.marktplaats.nl/seller/view/${payload.platform_listing_id}`;
+    if (payload?.platform_listing_url) return payload.platform_listing_url;
+    return "https://www.marktplaats.nl";
+  }
+  if (platform === "2dehands") {
+    if (payload?.platform_listing_id) return `https://www.2dehands.be/seller/view/${payload.platform_listing_id}`;
+    if (payload?.platform_listing_url) return payload.platform_listing_url;
+    return "https://www.2dehands.be";
+  }
+  if (platform === "vinted") {
+    // A Vinted account lives on ONE country domain (e.g. vinted.nl) and the
+    // item + its /api/v2 endpoints only exist on that same origin. Opening
+    // vinted.com for a .nl item shows a page but its API 404s — which the
+    // delete-verification would misread as "already deleted". So always use
+    // the stored listing URL (which carries the real .nl/.be/… origin).
+    if (payload?.platform_listing_url) return payload.platform_listing_url;
+    return payload?.platform_listing_id
+      ? `https://www.vinted.com/items/${payload.platform_listing_id}`
+      : null;
+  }
+  if (platform === "facebook") {
+    // Beta: open the exact item page when we captured it at publish time,
+    // otherwise the seller's "Your listings" page so the content script can
+    // find it by title. FB item pages look like /marketplace/item/{id}.
+    if (payload?.platform_listing_url) return payload.platform_listing_url;
+    if (payload?.platform_listing_id) return `https://www.facebook.com/marketplace/item/${payload.platform_listing_id}`;
+    return "https://www.facebook.com/marketplace/you/selling";
+  }
+  return null;
+}
+
+function getEditUrl(platform, payload) {
+  // Content-refresh only supported for Vinted today — light in-place edit
+  // (price/photo-order nudge) to refresh the listing's "updated" signal.
+  // Derive the edit URL from the stored listing URL's real origin (see the
+  // domain note in getDeleteUrl) rather than hardcoding vinted.com.
+  if (platform === "vinted") {
+    if (!payload?.platform_listing_id) return null;
+    let origin = "https://www.vinted.com";
+    if (payload.platform_listing_url) {
+      try { origin = new URL(payload.platform_listing_url).origin; } catch (e) {}
+    }
+    return `${origin}/items/${payload.platform_listing_id}/edit`;
+  }
+  // 2dehands (26-09-2026): alleen de verzendkosten van een zoekertje dat al
+  // online staat, zie verzendingBijwerken in content/tweedehands.js. Het
+  // wijzigformulier staat op /plaats/m{id}/edit (live afgelezen).
+  if (platform === "2dehands") {
+    const m = String(payload?.platform_listing_id || "").match(/^m?(\d+)$/i);
+    return m ? `https://www.2dehands.be/plaats/m${m[1]}/edit` : null;
+  }
+  return null;
+}
+
+// Is de wijziging aan dit 2dehands-zoekertje opgeslagen? Na een geslaagde opslag
+// verlaat 2dehands het wijzigformulier en landt op /seller/view/m{id} met "Je
+// zoekertje is aangepast" (live gemeten 26-09-2026). Alleen na onze klik op
+// Opslaan, en alleen op DEZELFDE advertentie: het formulier zelf
+// (/plaats/m{id}/edit) draagt hetzelfde nummer en telt dus nooit.
+function bewerkingOpgeslagen2dh(url, meta) {
+  if (!meta || meta.platform !== "2dehands" || meta.action !== "content_refresh"
+      || !meta.submitClicked) return false;
+  const lid = String(meta.payload?.platform_listing_id || "").replace(/^m/i, "");
+  if (!/^\d+$/.test(lid)) return false;
+  let pad;
+  try { pad = new URL(url).pathname; } catch (_) { return false; }
+  if (/\/plaats\//.test(pad)) return false;
+  const m = pad.match(/\/m(\d+)(?:[-/]|$)/);
+  return !!m && m[1] === lid;
+}
+
+// Thrown when an item's category can't be mapped to a real platform category.
+// Distinct from a runtime failure: nothing is broken, the item just needs a
+// category from the user — so it's reported as a normal job error with a clear
+// instruction rather than retried.
+class CategoryUnresolvedError extends Error {
+  constructor(message) {
+    // Zet de extensieversie in de melding. Zonder dat is een categorie die de
+    // server wél kent en de extensie niet, niet te onderscheiden van een oude
+    // extensie die nog draait — en dat kostte precies één misdiagnose.
+    let v = "";
+    try { v = ` [extensie ${chrome.runtime.getManifest().version}]`; } catch (_) {}
+    super(message + v);
+    this.name = "CategoryUnresolvedError";
+    this.needsUserInput = true;
+  }
+}
+
+// De omgekeerde weg door MP_CATEGORIES: van de twee nummers die Marktplaats
+// zelf op een advertentie zet terug naar onze eigen regel.
+//
+// Waarom dat nodig is: aan onze regel hangt het bucketId (de groep in het
+// plaatsformulier) en bij kinderkleding een maat-afhankelijke onderverdeling.
+// Kennen we het paar, dan bouwen we het adres dus op de bewezen manier; kennen
+// we het niet — munten, postzegels, boeken, alles buiten onze lijst — dan gaan
+// we rechtstreeks op de twee nummers af.
+//
+// Eén keer opbouwen en bewaren: deze functie draait bij elke plaatsing.
+let _mpOpNummer = null;
+function mpCategorieOpNummer(l1, l2) {
+  if (!_mpOpNummer) {
+    _mpOpNummer = new Map();
+    for (const regel of Object.values(MP_CATEGORIES)) {
+      if (!regel || regel.cat1 == null || regel.cat3 == null) continue;
+      const sleutel = `${regel.cat1}/${regel.cat3}`;
+      // De eerste die we tegenkomen wint. Meerdere sleutels wijzen naar dezelfde
+      // Marktplaats-categorie ("jeans" en "spijkerbroeken"), en die leveren
+      // hetzelfde adres op — welke het wordt maakt dus niet uit.
+      if (!_mpOpNummer.has(sleutel)) _mpOpNummer.set(sleutel, regel);
+    }
+  }
+  return _mpOpNummer.get(`${l1}/${l2}`) || null;
+}
+
+function getMpSyiUrl(platform, item) {
+  // Vinted has a simple listing flow — no category-based URLs needed.
+  // Open the create form on the account's real country domain when known
+  // (a relist carries _create_origin recovered from the old listing URL),
+  // otherwise fall back to vinted.com. Opening the wrong domain would create
+  // the new listing on the wrong catalog.
+  if (platform === "vinted") {
+    const origin = item?._create_origin || "https://www.vinted.com";
+    return `${origin}/items/new`;
+  }
+
+  // Facebook Marketplace (beta): single create-item form, no category-based URL.
+  // The content script fills category/condition/etc. inside the form.
+  if (platform === "facebook") {
+    return "https://www.facebook.com/marketplace/create/item";
+  }
+
+  const base = platform === "marktplaats"
+    ? "https://www.marktplaats.nl/plaats"
+    : "https://www.2dehands.be/plaats";
+
+  // DE ECHTE CATEGORIE VAN DE OUDE ADVERTENTIE GAAT VOOR.
+  //
+  // Bij een verversing haalt de server vlak vóór het verwijderen op in welke
+  // categorie de advertentie stond (l1/l2, letterlijk van de advertentiepagina
+  // van Marktplaats). Die is per definitie beter dan wat wij uit de titel
+  // kunnen afleiden: onze eigen lijst dekt kleding, wonen, antiek, muziek en
+  // sieraden, en Amanda verkoopt daarnaast munten, bankbiljetten en boeken.
+  // Voor die takken bestond er geen goede doos en werd het altijd de verkeerde.
+  //
+  // Kennen we het paar zelf ook (dan hoort er een bucketId bij, en bij
+  // kinderkleding een maat-afhankelijk type), dan gebruiken we onze eigen regel
+  // — dat adres is bewezen. Kennen we het niet, dan gaan we op de twee nummers
+  // van Marktplaats af, zonder bucketId; precies de vorm die de tweeniveau-
+  // takken (muziek) al gebruiken.
+  const mpCat = item?.mp_category;
+  const eigenPaar = (mpCat && mpCat.l1 && mpCat.l2)
+    ? mpCategorieOpNummer(mpCat.l1, mpCat.l2) : null;
+  if (mpCat && mpCat.l1 && mpCat.l2 && !eigenPaar) {
+    return `${base}/${mpCat.l1}/${mpCat.l2}?title=`;
+  }
+
+  const cat = (item?.category || "").toLowerCase().trim();
+  // Imported items often have no gender/category saved at all (only title +
+  // 1 photo carry over) — item.gender is then empty and this used to silently
+  // fall through to MP_DEFAULT (Dames Jeans), regardless of what the item
+  // actually is. Recover gender from the title itself before giving up, since
+  // that's usually the one field an imported item does have.
+  let gender = (item?.gender || "").toLowerCase().trim();
+  if (!gender) {
+    const t = (item?.title || "").toLowerCase();
+    if (/\bheren\b|\bmen'?s\b|\bmannen\b/.test(t)) gender = "heren";
+    else if (/\bdames\b|\bwomen'?s\b|\bvrouwen\b/.test(t)) gender = "dames";
+  }
+
+  // Kennen we het paar van Marktplaats zelf ook? Dan die regel, want daar hangt
+  // het bucketId aan (en bij kinderkleding de maat-afhankelijke onderverdeling).
+  let c = eigenPaar;
+
+  // When gender is heren, always try heren-prefixed first so "truien / vesten" + heren → Heren
+  if (c) { /* de advertentie zelf heeft het al gezegd */ }
+  else if (gender === "heren") {
+    c = MP_CATEGORIES[`heren ${cat}`] || MP_CATEGORIES[cat];
+    // A dames category (cat1=621) for a heren item is a mismatch, not a result.
+    if (c && c.cat1 === 621) c = null;
+  } else {
+    c = MP_CATEGORIES[cat];
+  }
+
+  if (!c) {
+    throw new CategoryUnresolvedError(
+      cat
+        ? `Category "${cat}"${gender ? ` (${gender})` : ""} doesn't map to a ${platform} category. Set the category on this item and publish again.`
+        : `This item has no category set, so it can't be published to ${platform} without guessing. Set a category on the item and publish again.`
+    );
+  }
+
+  // Children's clothing: the L3 type is the size (see MP_BABY_SIZES). Read the
+  // size off the item; fall back to the bucket's "Overige" type when the item has
+  // no size or a non-numeric one (e.g. "4-5 jaar"), which is a real, valid
+  // category — never a wrong one.
+  let cat3 = c.cat3;
+  if (c.sizeMap) {
+    const resolved = mpKidsSizeCat3(item?.size, c.sizeMap);
+    if (resolved) cat3 = resolved;
+  }
+
+  // A three-level branch (all clothing) needs its bucketId; a two-level branch
+  // (music) has none, and sending one anyway makes Marktplaats answer HTTP 400.
+  return c.bucketId == null
+    ? `${base}/${c.cat1}/${cat3}?title=`
+    : `${base}/${c.cat1}/${cat3}?bucketId=${c.bucketId}&title=`;
+}
+
+// Map a stored size onto a Marktplaats children's size type id.
+// Handles "104", "maat 104", "104/110" and "3-4 jaar" (years → cm, the standard
+// EU sizing: 92 = 2 yrs, then +6cm per year). Returns null when nothing matches,
+// so the caller can use the bucket's "Overige" type rather than guess.
+function mpKidsSizeCat3(size, sizeMap) {
+  const raw = String(size || "").toLowerCase().trim();
+  if (!raw) return null;
+
+  const known = Object.keys(sizeMap).map(Number).sort((a, b) => a - b);
+  const nearest = (cm) => {
+    // Marktplaats only has discrete sizes; snap to the nearest one, but never
+    // across a gap bigger than one step (so a 200cm "size" isn't forced to 176).
+    let best = null;
+    for (const k of known) {
+      if (best === null || Math.abs(k - cm) < Math.abs(best - cm)) best = k;
+    }
+    return best !== null && Math.abs(best - cm) <= 6 ? sizeMap[best] : null;
+  };
+
+  // "3 jaar" / "3-4 jaar" / "3y" → cm. Take the LOWER bound so a 3-4 lands on 98,
+  // matching how these garments are actually labelled.
+  const years = raw.match(/(\d{1,2})\s*(?:-\s*\d{1,2}\s*)?(?:jaar|jr|y|yrs|years)\b/);
+  if (years) return nearest(92 + (parseInt(years[1], 10) - 2) * 6);
+
+  // First number in the string: "104", "maat 104", "104/110", "110 cm".
+  const num = raw.match(/\d{2,3}/);
+  if (num) return nearest(parseInt(num[0], 10));
+
+  return null;
+}
+
+// ── Calm mode ──────────────────────────────────────────────────────────────
+// Wat een geautomatiseerd account verraadt is RITME, niet aantal. Twintig
+// advertenties die in twee minuten achter elkaar verschijnen zien er anders uit
+// dan twintig advertenties verspreid over een middag — terwijl het eindresultaat
+// hetzelfde is. Calm mode koopt die rust: publicaties komen 3 tot 8 minuten uit
+// elkaar (willekeurig, want een vaste tussenpoos is óók een patroon) en de
+// verkocht-controle gaat van elke tien minuten naar één keer per uur.
+//
+// Alleen SCHRIJVENDE opdrachten worden vertraagd. Een scan leest alleen en is
+// niet zichtbaar voor het platform; die tegenhouden zou de gebruiker laten
+// wachten zonder dat het iets veiliger maakt.
+const CALM_MIN_MS = 3 * 60 * 1000;
+const CALM_MAX_MS = 8 * 60 * 1000;
+// PER KANAAL, NIET VOOR DE HELE EXTENSIE (19-09-2026). Wat een platform als
+// ritme ziet is wat er OP DAT PLATFORM gebeurt; Marktplaats ziet niet wat er op
+// Vinted staat te gebeuren. Met één klok voor alles zou Calm mode bovendien het
+// naast elkaar publiceren meteen weer ongedaan maken: de eerste publicatie zette
+// dan de klok voor alle kanalen tegelijk stil.
+const CALM_SLEUTEL = "calmVolgendeNa";                    // oude, kanaalloze sleutel
+const calmSleutel = (platform) => `${CALM_SLEUTEL}_${platform || "alles"}`;
+const SCHRIJVENDE_ACTIES = new Set(["create", "delete", "content_refresh", "extend"]);
+// Zonder Calm mode stond hier helemaal geen rem: een grote stapel te herplaatsen
+// advertenties liep in één ronde achter elkaar door, en dan wisselt het werkvenster
+// tientallen keren per minuut van tabblad. Dat venster is wel unfocused, maar niet
+// elk Windows/Chrome-versie respecteert dat bij elke update — de gebruiker zag zijn
+// scherm dan continu wegflitsen. Deze korte pauze geldt ALTIJD, Calm mode of niet,
+// en kost bij een normale klus niets: een herplaatsing duurt zelf al seconden.
+const MIN_GAP_MS = 4000;
+
+async function calmAan() {
+  try {
+    const s = await chrome.storage.sync.get("calmMode");
+    return !!s.calmMode;
+  } catch (_) { return false; }
+}
+
+// Mag er nu een schrijvende opdracht draaien? In de opslag, niet in het geheugen:
+// een service worker wordt door Chrome doodgemaakt zodra hij even niets doet, en
+// dan zou de wachttijd elke keer opnieuw op nul beginnen.
+async function calmMagNu(platform) {
+  if (!await calmAan()) return true;
+  const sleutel = calmSleutel(platform);
+  try {
+    const s = await chrome.storage.local.get([sleutel, CALM_SLEUTEL]);
+    // De oude sleutel telt nog mee zolang hij er staat: een kopie die net is
+    // bijgewerkt terwijl er een wachttijd liep, hoort die wachttijd uit te zitten.
+    const na = Math.max(s[sleutel] || 0, s[CALM_SLEUTEL] || 0);
+    return Date.now() >= na;
+  } catch (_) { return true; }
+}
+
+async function calmVolgendeInplannen(platform) {
+  if (!await calmAan()) return;
+  const wacht = CALM_MIN_MS + Math.floor(Math.random() * (CALM_MAX_MS - CALM_MIN_MS));
+  try {
+    await chrome.storage.local.set({ [calmSleutel(platform)]: Date.now() + wacht });
+    console.log(`[Omnivaleur] Calm mode: volgende publicatie op ${platform} over ${Math.round(wacht / 60000)} min`);
+  } catch (_) {}
+}
+
+// De verkocht-controle draait op een alarm, en dat moet opnieuw gezet worden
+// zodra de schakelaar omgaat — een alarm verandert niet vanzelf van tempo.
+async function calmAlarmBijwerken() {
+  const minuten = await calmAan() ? 60 : 10;
+  try { await chrome.alarms.create("sold-check", { periodInMinutes: minuten }); } catch (_) {}
+}
+
+chrome.storage.onChanged.addListener((wijzigingen, gebied) => {
+  if (gebied === "sync" && wijzigingen.calmMode) {
+    calmAlarmBijwerken();
+    // Uitzetten mag meteen effect hebben: geen reden iemand te laten wachten op
+    // een rem die hij zojuist heeft losgelaten.
+    if (!wijzigingen.calmMode.newValue) {
+      chrome.storage.local.remove(
+        [CALM_SLEUTEL, ...EXTENSION_PLATFORMS.map(calmSleutel)]);
+    }
+  }
+});
+
+// HET WERK-TABBLAD UIT DE VRIES HALEN.
+//
+// GEMETEN OP 15-09-2026, in Daniels eigen browser, met de klokmeting die elke
+// stap meestuurt. Bij de eerste stap van een plaatsing stond er:
+//
+//   stap title: ok [klok 0.0/s +1973ms visible+focus]
+//
+// Nul tikken van de pagina-klok, én een pauze via de Web Worker die bijna twee
+// seconden uitliep. Dat tweede is beslissend: een afgeknepen klok laat de Worker
+// ongemoeid, dus hier lag de pagina zélf stil. Chrome bevriest een tabblad dat
+// niet in beeld is (Page Lifecycle "frozen"), en dan staat álles stil: onze
+// pauzes, Vinteds formulier, de foto-upload. Daniel: "ik moest weer switchen,
+// anders gebeurde er niks." Zodra hij het tabblad aanklikte sprong de meting
+// naar 9,8 tikken per seconde en liep de rest van de plaatsing vlot door.
+//
+// Doen alsof de pagina zichtbaar is (setFocusEmulationEnabled) verandert alleen
+// wat de pagina rapporteert, niet dat Chrome haar invriest. Het commando dat dat
+// wél terugdraait is Page.setWebLifecycleState "active". Eén keer is niet
+// genoeg: Chrome mag opnieuw invriezen, dus dit klopt elke halve minuut aan
+// zolang er een werk-tabblad met een klus in staat.
+//
+// De wekker is met opzet een chrome.alarm en geen setInterval: bevriest de
+// pagina, dan komt er ook geen bericht meer binnen dat de service worker wakker
+// houdt, en dan zou een setInterval juist stilvallen op het moment dat hij
+// nodig is.
+const ONTDOOI_WEKKER = "ontdooi-werktabbladen";
+chrome.alarms.create(ONTDOOI_WEKKER, { periodInMinutes: 0.5 });
+
+async function ontdooiWerkTabbladen() {
+  let tabIds = [];
+  try {
+    const alles = await chrome.storage.local.get(null);
+    tabIds = Object.keys(alles)
+      .filter((k) => k.startsWith("jobtab_"))
+      .map((k) => Number(k.slice("jobtab_".length)))
+      .filter((n) => Number.isFinite(n));
+  } catch (_) { return; }
+  // Ook de verwijder- en verlengtabbladen (zie bgDeleteMp2dh): die hebben geen
+  // jobtab_-gegevens, maar bevriezen net zo goed.
+  for (const t of _klokTabbladen) if (!tabIds.includes(t)) tabIds.push(t);
+  for (const tabId of tabIds) {
+    // Geen koppeling meer? Dan is de klok ook weg. Dat gebeurt als de verkoper op
+    // "Annuleren" drukt in Chrome's gele balk, of als Chrome de service worker
+    // opnieuw heeft gestart. Eerst herstellen, dan pas ontdooien: zonder klok
+    // heeft ontdooien geen zin, en hierdoor duurt zo'n terugval hooguit tien
+    // seconden in plaats van de hele klus.
+    if (!_vroegGekoppeld.has(tabId)) { await verzekerKlok(tabId); }
+    if (!_vroegGekoppeld.has(tabId)) continue;   // zonder koppeling geen commando
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    if (!tab) continue;
+    if (tab.active) continue;                    // in beeld: Chrome bevriest niets
+    try {
+      chrome.debugger.sendCommand({ tabId }, "Page.setWebLifecycleState",
+        { state: "active" }, () => {
+          // De uitkomst NIET wegslikken. Een commando dat stil weigert is
+          // hetzelfde als geen reparatie, en dat mag niet onzichtbaar blijven:
+          // het gaat mee in de voortgang van de opdracht.
+          const fout = chrome.runtime.lastError;
+          const staat = _klokAangezet.get(tabId) || "aan";
+          const n = (String(staat).match(/ontdooid (\d+)/) || [])[1];
+          _klokAangezet.set(tabId, fout
+            ? `ontdooien weigert: ${fout.message}`.slice(0, 80)
+            : `aan, ontdooid ${(Number(n) || 0) + 1}x`);
+        });
+    } catch (_) { /* koppeling weg: dan werkt het zoals vroeger, alleen trager */ }
+  }
+}
+
+// EEN ALARM MAG NIET VAKER DAN ELKE DERTIG SECONDEN, EN DAT IS TE TRAAG.
+//
+// Gemeten bij Daniel op 15-09-2026, met de hartslag uit 1.0.335: een pauze van
+// vijftien seconden liep 45 seconden uit, dus het tabblad lag tussendoor bijna
+// een minuut stil. Wie pas na dertig seconden komt ontdooien is dan de helft van
+// de tijd te laat. Daarom loopt er tijdens een klus ook een gewone teller van
+// tien seconden. Die stopt zodra de service worker wordt afgebroken; het alarm
+// hierboven is precies daarvoor het vangnet en wekt hem weer.
+let _ontdooiTeller = null;
+function startOntdooiTeller() {
+  if (_ontdooiTeller != null) return;
+  _ontdooiTeller = setInterval(() => {
+    chrome.storage.local.get(null).then((alles) => {
+      const heeftWerk = _klokTabbladen.size > 0
+        || Object.keys(alles).some((k) => k.startsWith("jobtab_"));
+      if (!heeftWerk) { clearInterval(_ontdooiTeller); _ontdooiTeller = null; return; }
+      ontdooiWerkTabbladen();
+    }).catch(() => {});
+  }, 10000);
+}
+
+chrome.alarms.create("poll", { periodInMinutes: POLL_INTERVAL_SECONDS / 60 });
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "poll") pollJobs();
+  if (alarm.name === ONTDOOI_WEKKER) ontdooiWerkTabbladen();
+});
+
+// Also poll immediately on install/startup
+chrome.runtime.onInstalled.addListener(pollJobs);
+
+
+// Meteen bij het opstarten of bijwerken: restanten van eerdere versies opruimen.
+// Dat zijn de lege vensters die zich onderin de balk opstapelden.
+chrome.runtime.onInstalled.addListener(() => { opruimenBijStart(); });
+chrome.runtime.onStartup.addListener(() => { opruimenBijStart(); });
+
+async function opruimenBijStart() {
+  try {
+    const houden = await vindEnOpruimenWerkvensters();
+    if (houden != null) await setWorkerWindowId(houden);
+  } catch (_) { /* niet erg — de eerstvolgende klus ruimt ook op */ }
+}
+
+chrome.runtime.onInstalled.addListener((details) => {
+  gaEvent(details.reason === "install" ? "extension_installed" : "extension_updated", {
+    version: chrome.runtime.getManifest().version,
+  });
+});
+
+async function getServerUrl() {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get({ serverUrl: "https://omnivaleur.com" }, (s) => {
+      let url = s.serverUrl.replace(/\/$/, "");
+      if (url === "https://api.omnivaleur.com") {
+        // Stale value from before the domain consolidation — migrate it.
+        url = "https://omnivaleur.com";
+        chrome.storage.sync.set({ serverUrl: url });
+      }
+      resolve(url);
+    });
+  });
+}
+
+// ── Inlogbewijs: opslag is device-gebonden, nooit gesynct ────────────────────
+//
+// authToken + refreshToken stonden in chrome.storage.sync. Dat leek handig
+// ("log één keer in"), maar Supabase geeft een refresh-token dat exact één keer
+// mag: bij elk gebruik komt er een nieuw token terug en wordt het oude
+// ongeldig. storage.sync deelt datzelfde token met ELKE Chrome waar Daniel is
+// ingelogd (andere computer, ander profiel). Ververst de ene kopie, dan zit de
+// andere kopie meteen met een dood token, en Supabase' beveiliging trekt bij
+// dat "hergebruik" de HELE sessie in — beide kopieën vliegen eruit. Datzelfde
+// gebeurt op één machine als Chrome de service worker afknijpt tussen "nieuw
+// token opgehaald" en "opgeslagen".
+//
+// Daarom: het inlogbewijs hoort in storage.local (blijft op deze machine), met
+// een eenmalige verhuizing van wat er nog in sync staat. Voorkeuren als
+// calmMode/deliveryMode blijven wél in sync — die mogen mee reizen.
+const TOKEN_KEYS = ["authToken", "refreshToken", "userEmail"];
+
+function _tget(keys) {
+  return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
+}
+function _tset(patch) {
+  return new Promise((resolve) => chrome.storage.local.set(patch, resolve));
+}
+function _tremove(keys) {
+  return new Promise((resolve) => chrome.storage.local.remove(keys, resolve));
+}
+
+// Eenmalig: haal een bestaand inlogbewijs uit sync naar local en wis het uit
+// sync, zodat de fan-out naar andere machines stopt. Draait bij elke start; is
+// een no-op zodra local het bewijs heeft.
+let _tokenMigratieKlaar = null;
+function migrateTokensFromSync() {
+  if (_tokenMigratieKlaar) return _tokenMigratieKlaar;
+  _tokenMigratieKlaar = new Promise((resolve) => {
+    chrome.storage.local.get(["authToken"], (local) => {
+      chrome.storage.sync.get(TOKEN_KEYS, (synced) => {
+        const heeftSync = synced && (synced.authToken || synced.refreshToken);
+        if (!local.authToken && heeftSync) {
+          chrome.storage.local.set(synced, () => {
+            chrome.storage.sync.remove(TOKEN_KEYS, () => resolve());
+          });
+        } else if (heeftSync) {
+          // local is leidend; ruim de oude synckopie hoe dan ook op.
+          chrome.storage.sync.remove(TOKEN_KEYS, () => resolve());
+        } else {
+          resolve();
+        }
+      });
+    });
+  });
+  return _tokenMigratieKlaar;
+}
+migrateTokensFromSync();
+
+// DE SESSIE VAN HET KANAAL ZELF: ONTHOUDEN, EN LATEN ZIEN.
+//
+// GEMETEN 15-09-2026 (Egbert Brouwer / Papa's Plectrums). Zijn 231 zoekertjes
+// voor 2dehands stonden sinds 13-09 stil. Zijn browser heeft daar geen sessie
+// meer: het werktabblad kwam op https://www.2dehands.be/identity/v2/login uit
+// en /my-account/sell/api/listings gaf 401 — op 14-09 elf keer en op 15-09 om
+// 12:02 UTC nog een keer, op versie 1.0.329, dus met incognito uitgesloten
+// (hij heeft geen incognitovenster open en de extensie mag daar niet eens
+// draaien). Tussen 13-09 07:00 en 11:40 UTC gingen op datzelfde kanaal 127
+// advertenties gewoon online, dus de sessie is daarna verlopen.
+//
+// WAAROM HIJ HET NIET WIST. Dit uitklapvenster zei al die tijd "Extension
+// active — ready to publish" en het dashboard zei niets over 2dehands. Hij
+// stuurde er een foto van als bewijs dat alles goed stond. Het oordeel leefde
+// alleen in een variabele die met de service worker meestierf, dus wat de
+// extensie wist kwam nergens terecht. Nu staat het in storage.local en kunnen
+// het uitklapvenster, de knop in de balk en het dashboard het tonen vóórdat hij
+// honderden artikelen klaarzet.
+//
+// ALLEEN BEWEZEN UITSLAGEN KOMEN HIER BINNEN. Een 200 uit de achtergrond
+// bewijst een sessie (dat adres is afgeschermd), maar een 401 uit de
+// achtergrond bewijst niets: op 06-09-2026 gaf dezelfde URL binnen dertien
+// seconden 200 vanuit een tabblad en 401 vanuit de service worker. "Niet
+// ingelogd" mag dus alleen uit de meting in een tabblad op de site zelf komen.
+const KANAAL_SESSIE_SLEUTEL = "kanaalSessie";
+
+function kanaalNaam(platform) {
+  try { return SITE_NAAM[platform] || platform; } catch (_) { return platform; }
+}
+
+async function onthoudKanaalSessie(platform, ingelogd, extra = {}) {
+  if (ingelogd !== true && ingelogd !== false) return;   // "weet niet" is geen uitslag
+  try {
+    const s = await chrome.storage.local.get(KANAAL_SESSIE_SLEUTEL);
+    const alles = { ...(s[KANAAL_SESSIE_SLEUTEL] || {}) };
+    const vorige = alles[platform] || {};
+    alles[platform] = {
+      ingelogd,
+      status: extra.status == null ? null : extra.status,
+      url: extra.url || null,
+      at: Date.now(),
+      // Sinds wanneer het zo staat. Zonder dit leest "niet ingelogd" hetzelfde
+      // of het nu vijf minuten of twee dagen duurt, en juist dat verschil is
+      // wat de verkoper moet zien.
+      sinds: (vorige.ingelogd === ingelogd && vorige.sinds) ? vorige.sinds : Date.now(),
+    };
+    await chrome.storage.local.set({ [KANAAL_SESSIE_SLEUTEL]: alles });
+  } catch (_) { /* niet bewaard = niets getoond; nooit een fout naar de verkoper */ }
+  refreshAuthBadge();
+}
+
+async function leesKanaalSessies() {
+  try {
+    const s = await chrome.storage.local.get(KANAAL_SESSIE_SLEUTEL);
+    return s[KANAAL_SESSIE_SLEUTEL] || {};
+  } catch (_) { return {}; }
+}
+
+// Without a token every request goes out unauthenticated, gets a 401 and no job
+// is ever picked up — silently. The popup shows this, but only if you think to
+// open it, so surface it on the toolbar icon itself instead.
+function refreshAuthBadge() {
+  migrateTokensFromSync().then(() => chrome.storage.local.get(
+    ["authToken", KANAAL_SESSIE_SLEUTEL], (s) => {
+    if (!s.authToken) {
+      chrome.action.setBadgeText({ text: "!" });
+      chrome.action.setBadgeBackgroundColor({ color: "#dc2626" });
+      chrome.action.setTitle({
+        title: "Omnivaleur — not logged in. Nothing will be published until you log in.",
+      });
+      return;
+    }
+    // Ingelogd bij Omnivaleur, maar niet bij het kanaal waar het werk heen moet.
+    // Dat is precies de toestand waarin Egbert Brouwer twee dagen lang een groen
+    // vinkje zag terwijl er 231 zoekertjes stilstonden.
+    const uit = Object.entries(s[KANAAL_SESSIE_SLEUTEL] || {})
+      .filter(([, v]) => v && v.ingelogd === false)
+      .map(([p]) => kanaalNaam(p));
+    if (uit.length) {
+      chrome.action.setBadgeText({ text: "!" });
+      chrome.action.setBadgeBackgroundColor({ color: "#dc2626" });
+      chrome.action.setTitle({
+        title: `Omnivaleur — you are not signed in to ${uit.join(" and ")} in this browser. `
+          + `Nothing is published there until you sign in. Click for details.`,
+      });
+      return;
+    }
+    chrome.action.setBadgeText({ text: "" });
+    chrome.action.setTitle({ title: "Omnivaleur" });
+  }));
+}
+
+refreshAuthBadge();
+chrome.runtime.onStartup.addListener(refreshAuthBadge);
+chrome.runtime.onInstalled.addListener(refreshAuthBadge);
+
+// Content scripts are only injected into pages loaded AFTER install, so someone
+// who installs the extension with their dashboard already open would sit there
+// signed out, with the dashboard telling them to install what they just
+// installed — until they happened to reload. Inject the bridge into any open
+// Omnivaleur tab so it syncs the token and announces itself immediately.
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.tabs.query({ url: ["https://omnivaleur.com/*", "https://www.omnivaleur.com/*"] }, (tabs) => {
+    for (const t of tabs || []) {
+      chrome.scripting.executeScript(
+        { target: { tabId: t.id }, files: ["content/webapp_sync.js"] },
+        () => { void chrome.runtime.lastError; }  // tab may have navigated away
+      );
+    }
+  });
+});
+// Covers the popup's own login/logout, which writes the token directly.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.authToken) refreshAuthBadge();
+});
+
+// Seconds before a JWT's own expiry at which we proactively refresh. A slow
+// background job (e.g. the Vinted sold scan) can run for many seconds, so we
+// refresh with margin rather than let a call start on a token about to die.
+const TOKEN_REFRESH_MARGIN_S = 120;
+let _refreshInFlight = null;
+
+// Leest uitsluitend het inlogbewijs — dat staat sinds deze versie in
+// storage.local (zie de uitleg hoger). De naam bleef _sget om de aanroepen
+// hieronder ongemoeid te laten.
+function _sget(keys) {
+  return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
+}
+
+// Decode a JWT's `exp` (seconds since epoch) without verifying — we only need to
+// know whether it's about to expire, not to trust it.
+function _jwtExp(token) {
+  try {
+    const p = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return typeof p.exp === "number" ? p.exp : null;
+  } catch (e) { return null; }
+}
+
+// Exchange the stored refresh token for a fresh access token via the backend.
+// Deduped so a burst of parallel calls triggers a single refresh. Returns the
+// new access token, or null if we can't refresh (no refresh token / rejected).
+// Een refresh-token mag bij Supabase precies één keer. Knijpt Chrome de service
+// worker af net nadat we een vers token ophaalden maar vóór we het opsloegen,
+// dan probeert de volgende wake het met het oude, nu dode token — en dat trekt
+// de sessie in. Daarom leggen we vlak vóór de aanroep vast dát we verversen, en
+// slaan we een tweede ronde binnen dit venster over: het verse token staat dan
+// al in local.
+const REFRESH_COOLDOWN_MS = 20000;
+
+async function refreshAccessToken() {
+  if (_refreshInFlight) return _refreshInFlight;
+  _refreshInFlight = (async () => {
+    const { refreshToken, _refreshAt } = await _tget(["refreshToken", "_refreshAt"]);
+    if (!refreshToken) return null;
+
+    // Kort geleden al ververst (mogelijk door een worker die daarna gekild is)?
+    // Niet opnieuw met wat inmiddels een dood token kan zijn; geef terug wat er
+    // nu staat.
+    if (_refreshAt && Date.now() - _refreshAt < REFRESH_COOLDOWN_MS) {
+      const { authToken } = await _tget(["authToken"]);
+      if (authToken) return authToken;
+    }
+
+    try {
+      await _tset({ _refreshAt: Date.now() });
+      const serverUrl = await getServerUrl();
+      const res = await fetch(`${serverUrl}/api/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      if (!res.ok) {
+        console.warn(`[Omnivaleur] token refresh failed HTTP ${res.status}`);
+        // 503 = alleen een verbindingshik; token laten staan en later opnieuw.
+        if (res.status === 401 || res.status === 403) {
+          // Voordat we het bewijs weggooien: staat er inmiddels een ANDER
+          // refresh-token (een parallelle context heeft net geroteerd)? Dan is
+          // niet de sessie dood maar hebben wij een verouderd token gebruikt —
+          // niet uitloggen.
+          const nu = await _tget(["refreshToken"]);
+          if (nu.refreshToken && nu.refreshToken !== refreshToken) {
+            console.log("[Omnivaleur] refresh 401 op oud token; nieuwer token aanwezig, niet uitloggen");
+            return nu.authToken || null;
+          }
+          await _tremove(["authToken", "refreshToken", "_refreshAt"]);
+          try {
+            await chrome.action.setBadgeText({ text: "!" });
+            await chrome.action.setBadgeBackgroundColor({ color: "#dc2626" });
+            await chrome.action.setTitle({ title: "Omnivaleur — sign in again to keep publishing" });
+          } catch (_) {}
+        }
+        return null;
+      }
+      const data = await res.json();
+      if (!data.access_token) return null;
+      const patch = { authToken: data.access_token, _refreshAt: Date.now() };
+      if (data.refresh_token) patch.refreshToken = data.refresh_token; // rotation
+      await _tset(patch);
+      // En terug naar het dashboard, want die sleutel is van ons samen. Zie de
+      // uitleg bij stuurTokenNaarDashboard.
+      stuurTokenNaarDashboard(data.access_token, data.refresh_token);
+      try { await chrome.action.setBadgeText({ text: "" }); } catch (_) {}
+      console.log("[Omnivaleur] access token refreshed");
+      return data.access_token;
+    } catch (e) {
+      console.warn("[Omnivaleur] token refresh error:", e);
+      return null;
+    }
+  })().finally(() => { _refreshInFlight = null; });
+  return _refreshInFlight;
+}
+
+// ── DE VERSE SLEUTEL MOET TERUG NAAR HET DASHBOARD ───────────────────────────
+//
+// WAAROM DIT ER IS (13-09-2026, Egbert Brouwer en Daniel zelf: "als ik een
+// tijdje niks doe word ik uitgelogd").
+//
+// De vernieuwsleutel van Supabase mag precies één keer gebruikt worden: bij elk
+// gebruik komt er een nieuwe terug en is de oude dood. Het dashboard geeft die
+// sleutel bij het inloggen aan ons door (content/webapp_sync.js) zodat wij ook
+// kunnen werken als er geen tabblad openstaat. Vanaf onze eerste vernieuwing
+// draagt het dashboard dus een sleutel die niet meer bestaat. Dat valt daar pas
+// op als het toegangsbewijs verloopt, en dan vliegt de verkoper eruit — precies
+// het "ik word uitgelogd als ik even niets doe".
+//
+// Dus: elke keer dat wij hem doordraaien, schuiven we het verse bewijs terug
+// naar elk openstaand dashboard. Er is geen tabblad open, geen probleem: dan
+// leest de pagina bij het laden gewoon weer wat er staat, en die sleutel is dan
+// de onze — die blijft geldig zolang wij de enige zijn die hem gebruikt.
+async function stuurTokenNaarDashboard(token, refresh) {
+  if (!token) return;
+  try {
+    const tabbladen = await chrome.tabs.query({
+      url: ["https://omnivaleur.com/*", "https://www.omnivaleur.com/*"],
+    });
+    for (const tab of tabbladen) {
+      try {
+        chrome.tabs.sendMessage(tab.id, { type: "TOKEN_VERNIEUWD", token, refresh },
+                                () => chrome.runtime.lastError);
+      } catch (_) { /* tabblad sluit net */ }
+    }
+  } catch (_) { /* geen tabs-recht of geen venster: niets aan de hand */ }
+}
+
+async function getAuthHeaders() {
+  const { authToken, refreshToken } = await _sget(["authToken", "refreshToken"]);
+  let token = authToken;
+  // Proactively refresh if the token is missing/expired/about-to-expire and we
+  // have a refresh token. This is what keeps long background jobs from failing
+  // with "Sessie verlopen" mid-run.
+  const exp = token ? _jwtExp(token) : null;
+  const soon = exp != null && exp - Date.now() / 1000 < TOKEN_REFRESH_MARGIN_S;
+  if (refreshToken && (!token || soon)) {
+    const fresh = await refreshAccessToken();
+    if (fresh) token = fresh;
+  }
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  // Vertel de server bij ELK verzoek wie we zijn. Zonder dit kon een kopie van
+  // maanden oud gewoon werk blijven ophalen en half afleveren; de server had
+  // geen enkele manier om dat te zien, want een oude kopie stempelt haar versie
+  // alleen in foutmeldingen — en juist deze gevallen liepen vast zonder fout.
+  try { headers["X-Omnivaleur-Ext"] = chrome.runtime.getManifest().version; } catch (_) {}
+  return headers;
+}
+
+// ── Reliable job finalisation ─────────────────────────────────────────────
+// A /complete that silently fails is worse than a job that never ran: the work
+// IS done on the platform, but the backend still sees the job as claimed and
+// _recover_stale_claims resets it to pending — so the dashboard shows it queued
+// forever, and a create job gets flagged as a possible duplicate. These calls
+// used to be `await fetch(...)` with no .ok check, so a 401/5xx/offline blip was
+// invisible. Now: verify the response, retry with backoff, and persist anything
+// still unsent so an MV3 worker kill can't drop it.
+const FINALISE_QUEUE_KEY = "pendingFinalisations";
+const FINALISE_MAX_ATTEMPTS = 4;
+
+async function _postFinalise(serverUrl, jobId, kind, body) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${serverUrl}/api/jobs/${jobId}/${kind}`, {
+    method: "POST", headers, body: JSON.stringify(body || {}),
+  });
+  // 404 = job is already gone/finalised server-side; treat as settled, not a
+  // failure, so we don't retry forever on a job the backend has moved past.
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`${kind} returned HTTP ${res.status}`);
+  }
+  return true;
+}
+
+function _queueGet() {
+  return new Promise(r => chrome.storage.local.get([FINALISE_QUEUE_KEY], s => r(s[FINALISE_QUEUE_KEY] || [])));
+}
+function _queueSet(list) {
+  return new Promise(r => chrome.storage.local.set({ [FINALISE_QUEUE_KEY]: list }, r));
+}
+
+async function _queueAdd(entry) {
+  const list = await _queueGet();
+  if (list.some(e => e.jobId === entry.jobId && e.kind === entry.kind)) return;
+  list.push(entry);
+  await _queueSet(list);
+}
+async function _queueRemove(jobId, kind) {
+  await _queueSet((await _queueGet()).filter(e => !(e.jobId === jobId && e.kind === kind)));
+}
+
+// Finalise a job (complete/error), retrying transient failures. Resolves true if
+// the backend confirmed it; false if it was handed to the persistent queue.
+async function finaliseJob(serverUrl, jobId, kind, body) {
+  for (let attempt = 1; attempt <= FINALISE_MAX_ATTEMPTS; attempt++) {
+    try {
+      await _postFinalise(serverUrl, jobId, kind, body);
+      await _queueRemove(jobId, kind);
+      return true;
+    } catch (e) {
+      if (attempt === FINALISE_MAX_ATTEMPTS) {
+        console.warn(`[Omnivaleur] ${kind} for job ${jobId} failed after ${attempt} attempts (${e.message}) — queued for retry`);
+        await _queueAdd({ jobId, kind, body: body || {}, serverUrl, queuedAt: Date.now() });
+        return false;
+      }
+      await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
+    }
+  }
+  return false;
+}
+
+// Drain anything the retries above couldn't deliver. Runs on every poll tick and
+// on startup, so a completion survives Chrome restarting or the token being
+// refreshed after it expired mid-run.
+async function flushFinaliseQueue() {
+  const list = await _queueGet();
+  if (!list.length) return;
+  for (const e of list) {
+    try {
+      await _postFinalise(e.serverUrl, e.jobId, e.kind, e.body);
+      await _queueRemove(e.jobId, e.kind);
+      console.log(`[Omnivaleur] flushed queued ${e.kind} for job ${e.jobId}`);
+    } catch (err) { /* stays queued for the next tick */ }
+  }
+}
+chrome.runtime.onStartup.addListener(flushFinaliseQueue);
+
+// Post a small live-progress update for a running job so the dashboard can show
+// the user exactly what's happening. Fire-and-forget: never let a progress ping
+// (or its failure) slow down or break the actual scan.
+async function reportProgress(serverUrl, jobId, progress) {
+  try {
+    const headers = await getAuthHeaders();
+    await fetch(`${serverUrl}/api/jobs/${jobId}/progress`, {
+      method: "POST", headers, body: JSON.stringify(progress),
+    });
+  } catch (e) { /* progress is best-effort */ }
+}
+
+// ── Elke stap van het invulformulier naar de server ────────────────────────
+//
+// GEMETEN, EN DIT IS WAAROM (08-09-2026, Egbert Brouwer / papas-plectrums).
+// 671 plaatsopdrachten voor 2dehands, nul geslaagd, en na afloop was er geen
+// enkel gegeven over waar het misging: alle 51 bewaarde foutmeldingen zeggen
+// letterlijk hetzelfde ("no response after 3 minutes") en in geen van die
+// opdrachten staat één stap opgeschreven. De stappen gingen namelijk alleen
+// naar de console van een venster dat niemand openhad. Een scan meldt zijn
+// voortgang wél; een plaatsing deed dat niet, en juist daar liep het vast.
+//
+// Vanaf nu schrijft elke stap zich weg bij de opdracht zelf. Dan is "hij liep
+// vast" niet langer het eindpunt van het onderzoek maar het begin: we zien of
+// hij bij de titel, de foto's of het plaatsen bleef staan.
+const _laatsteStapKlok = new Map();     // tabId -> tijdstip laatste verzending
+function meldStapAanServer(tabId, tekst) {
+  if (tabId == null) return;
+  const sleutel = `jobtab_${tabId}`;
+  chrome.storage.local.get(sleutel, (s) => {
+    const meta = s[sleutel];
+    if (!meta || !meta.jobId || !meta.serverUrl) return;
+    const stap = String(tekst || "").slice(0, 200);
+    // In de opdracht zelf bewaren, zodat de bewaker straks kan zeggen wáár het
+    // ophield in plaats van alleen dát het ophield.
+    chrome.storage.local.set({ [sleutel]: { ...meta, laatsteStap: stap, laatsteStapAt: Date.now() } });
+    // Naar de server hoeft niet elke regel: bij een vastloper is de laatste
+    // regel de interessante, en die komt hier vanzelf als laatste langs.
+    const nu = Date.now();
+    // De EERSTE stap van een tabblad gaat er altijd door. Die is de
+    // waardevolste van allemaal: hij bewijst dat het invulscript niet alleen
+    // geladen is maar ook echt begonnen. Pas daarna knijpen we af.
+    const vorig = _laatsteStapKlok.get(tabId);
+    if (vorig != null && nu - vorig < 1200) return;
+    _laatsteStapKlok.set(tabId, nu);
+    reportProgress(meta.serverUrl, meta.jobId, {
+      stap, platform: meta.platform, actie: meta.action || "create",
+      versie: chrome.runtime.getManifest().version,
+      klok: _klokAangezet.get(tabId) || "niet gevraagd",
+    });
+  });
+}
+
+// De klussen lopen bewust één voor één (één tabblad tegelijk — twee tegelijk
+// haalde de gegevens van twee advertenties door elkaar). Maar zodra er één klaar
+// was, wachtte de volgende tot de eerstvolgende ronde: bij drie platforms waren
+// dat drie stiltes van maximaal een halve minuut bovenop het echte werk. Daarom
+// gaat er direct nóg een ronde overheen zolang er in de vorige ronde werk is
+// verzet. De klussen blijven strikt achter elkaar lopen; alleen het wachten
+// ertussen is weg.
+//
+// `_pollLoopt` voorkomt dat het dashboard-porren en de klok tegelijk gaan
+// pollen — twee rondes door elkaar zouden dezelfde klus twee keer kunnen
+// oppakken. Wie tegen een lopende ronde aanloopt, vraagt gewoon om nog een ronde
+// erna.
+let _pollLoopt = false;
+let _pollNogmaals = false;
+// EEN RONDE DIE BLIJFT HANGEN MAG DE WACHTRIJ NIET STILLEGGEN (10-10-2026, Janneke).
+//
+// Haar extensie had zich 19 uur niet gemeld terwijl Chrome openstond en het
+// dashboard haar versie (1.0.376) gewoon zag. De hartslag komt alleen uit deze
+// ronde (de /pending-vraag). Blijft één await hierin hangen, bijvoorbeeld een
+// fetch zonder antwoord na het slapen van de Mac, dan bleef _pollLoopt voor
+// altijd true; de wekker houdt de service worker elke halve minuut wakker, dus
+// er kwam ook geen herstart die het geheugen wiste. Elke volgende tik zei dan
+// "er loopt al een ronde" en deed niets. Nu: een ronde die langer dan
+// POLL_RONDE_MAX_MS bezig is, telt niet meer als lopend. Dubbel werk kan daarna
+// niet: de server geeft een opdracht maar één keer uit, en schrijvende
+// opdrachten houden hun eigen rem per kanaal (_lopendePublicaties).
+const POLL_RONDE_MAX_MS = 5 * 60 * 1000;
+const POLL_FETCH_MAX_MS = 30 * 1000;
+let _pollSinds = 0;
+let _pollRondeNr = 0;
+// Welke platforms op dit moment een scan draaien. Zonder deze rem zou elke
+// pollronde er nóg één starten, want een scan blokkeert de wachtrij niet meer.
+const _lopendeScans = new Set();
+
+// ── KANALEN NAAST ELKAAR (19-09-2026) ───────────────────────────────────────
+//
+// Publiceren liep één voor één, over alle kanalen heen. Gemeten bij Daniel over
+// tien dagen: een opdracht die op een andere moest wachten stond er 289 seconden
+// (mediaan) voor stil, terwijl het invullen zelf 108 seconden kost op
+// Marktplaats, 147 op 2dehands en 354 op Vinted. Wie op drie kanalen tegelijk
+// publiceert wacht dus zes tot tien minuten op iets wat niets met elkaar te
+// maken heeft.
+//
+// Waarom het kán: elke opdracht hangt aan zijn eigen tabblad (`jobtab_<tabId>`)
+// en het invulscript vraagt via GET_JOB de opdracht van ZIJN tabblad op. De
+// oude reden voor één-tegelijk (twee tabbladen deelden één opslagplek) bestaat
+// dus niet meer. Wat blijft is: nooit twee formulieren van DEZELFDE site.
+//
+// Gemeten dat het ook wérkt: een werk-tabblad dat niet het actieve tabblad is
+// houdt vol tempo zolang `Emulation.setFocusEmulationEnabled` eraan staat, en
+// dat zet zetDoorlopendeKlok bij elk schrijvend tabblad aan. Zie
+// tests/parallel-tabbladen-echt-test.mjs.
+//
+// Deze lijst is alleen een rem tegen dubbel werk binnen één service worker; de
+// echte bewaker staat op de server, die per kanaal maar één verse claim uitgeeft.
+const MAX_PARALLELLE_PUBLICATIES = 3;
+const _lopendePublicaties = new Set();
+
+// Tabbladen die er niet meer zijn, maar wél nog een lopende opdracht in de
+// administratie hebben staan. Bij netjes sluiten vangt tabs.onRemoved dat af,
+// maar bij een crash van Chrome of een herstart van de extensie draait die
+// listener niet — en dan blijft de opdracht "bezig" en ligt de wachtrij stil.
+// Deze controle draait vóór elke pollronde en meldt zulke wezen alsnog af.
+async function reconcileOrphanJobTabs() {
+  let all;
+  try {
+    all = await chrome.storage.local.get(null);
+  } catch { return; }
+  for (const [key, meta] of Object.entries(all)) {
+    if (!key.startsWith("jobtab_") || !meta || !meta.jobId) continue;
+    if (meta.awaitingManualFinish) continue;  // bewust opengelaten voor de gebruiker
+    const tabId = Number(key.slice("jobtab_".length));
+    let leeft = true;
+    try { await chrome.tabs.get(tabId); } catch { leeft = false; }
+    if (leeft) continue;
+    console.warn(`[Omnivaleur] Job ${meta.jobId} (${meta.platform}) has no tab any more — reporting it so the queue keeps moving.`);
+    await chrome.storage.local.remove(key);
+    clearJobWatchdog(tabId);
+    await finaliseJob(meta.serverUrl, meta.jobId, "error", {
+      error: `The tab this ${meta.platform} job was working in disappeared (closed, or Chrome restarted) before it finished. `
+        + `Check the platform, then publish again — or click the platform icon in the dashboard to mark it as listed.`,
+    }).catch(() => {});
+  }
+}
+
+async function pollJobs() {
+  if (_pollLoopt && Date.now() - _pollSinds < POLL_RONDE_MAX_MS) { _pollNogmaals = true; return; }
+  if (_pollLoopt) console.warn(`[Omnivaleur] Pollronde hing al ${Math.round((Date.now() - _pollSinds) / 1000)}s; nieuwe ronde.`);
+  _pollLoopt = true;
+  _pollSinds = Date.now();
+  const mijnRonde = ++_pollRondeNr;
+  try {
+    await reconcileOrphanJobTabs();
+    // Bovengrens puur als noodrem: blijft de server werk aanbieden dat nooit
+    // afrondt, dan valt hij terug op de gewone klok in plaats van rond te tollen.
+    for (let ronde = 0; ronde < 25; ronde++) {
+      _pollNogmaals = false;
+      const verzet = await pollJobsEenRonde();
+      if (!verzet && !_pollNogmaals) break;
+    }
+  } finally {
+    // Alleen de eigen ronde geeft het slot vrij: een hangende ronde die toch nog
+    // afloopt, mag de ronde die het van haar overnam niet openzetten.
+    if (mijnRonde === _pollRondeNr) _pollLoopt = false;
+  }
+}
+
+// ── OM DE BEURT, ANDERS KOMT DE ONDERSTE NOOIT AAN BOD ─────────────────────
+//
+// Lynn (De Juiste Toon), 05-09-2026: "Marktplaats ging vandaag helemaal super,
+// niks op aan te merken. Naar tweedehands pakt ie nog niet."
+//
+// Gemeten in haar eigen opdrachten. Op 04-09 stond er om 14:08:09 één
+// 2dehands-publicatie klaar. Die is NOOIT opgepakt — ze is om 18:23 met de hand
+// geannuleerd. In diezelfde vier uur werden er wél Marktplaats-publicaties
+// opgepakt, om 14:09:55, 14:14:30, 14:17:51, 14:25:01, 14:31:32, 14:35:02,
+// 14:42:33, 14:46:02 en 14:54:03. Over de hele week: op de dagen dat er een
+// Marktplaats-rij stond, ging er van de 75 en 98 publicaties telkens precies
+// één naar 2dehands.
+//
+// De oorzaak zat hier. Deze ronde liep de platforms in een VASTE volgorde af,
+// marktplaats altijd eerst, terwijl twee remmen die erachter zitten voor álle
+// platforms tegelijk gelden: calm mode heeft één klok voor de hele extensie, en
+// de server geeft niets uit zolang er ergens een publicatie loopt. Wie als
+// eerste in de rij staat, pakt dus elke keer de vrijgekomen plek. Met een volle
+// Marktplaats-wachtrij kwam 2dehands (en daarachter Vinted en Facebook)
+// nooit aan de beurt.
+//
+// Vandaar: de volgorde draait. Wie een publicatie heeft mogen doen, geeft de
+// beurt door aan het volgende platform. Een platform dat niets te doen heeft
+// houdt niemand op — de beurt schuift alleen op als er ook echt gepubliceerd is,
+// dus een kanaal dat wacht houdt zijn plek tot het aan bod komt.
+const PLATFORM_BEURT_SLEUTEL = "platformBeurt";
+
+async function platformsOpBeurt() {
+  let start = 0;
+  try {
+    const s = await chrome.storage.local.get(PLATFORM_BEURT_SLEUTEL);
+    start = Number(s[PLATFORM_BEURT_SLEUTEL]) || 0;
+  } catch (_) {}
+  const n = EXTENSION_PLATFORMS.length;
+  start = ((start % n) + n) % n;
+  return EXTENSION_PLATFORMS.slice(start).concat(EXTENSION_PLATFORMS.slice(0, start));
+}
+
+async function beurtDoorgeven(platform) {
+  const i = EXTENSION_PLATFORMS.indexOf(platform);
+  if (i < 0) return;
+  try {
+    await chrome.storage.local.set({
+      [PLATFORM_BEURT_SLEUTEL]: (i + 1) % EXTENSION_PLATFORMS.length,
+    });
+  } catch (_) {}
+}
+
+// Eén ronde langs alle platforms. Geeft terug of er werk is verzet.
+// ── DE COMPUTER MAG NIET GAAN SLAPEN ZOLANG ER WERK KLAARSTAAT ────────────
+//
+// WAAROM DIT ER IS (13-09-2026, Egbert Brouwer, Papa's Plectrums)
+//
+// "Als ik even van de computer wegloop stopt het plaatsen vrij snel daarna, en
+// het gaat pas weer verder als ik opnieuw inlog." Er bestond bij ons geen enkele
+// klok die daarop lijkt, dus is het nagemeten in zijn eigen opdrachten van
+// 13-09: hij publiceerde door tot 08:05:58 en daarna stond alles stil tot
+// 09:21:53. Precies op dat tijdstip meldde zich een opdracht klaar die om
+// 07:40:43 was begonnen. Een tabblad dat ruim anderhalf uur bevroren staat en
+// bij de eerste seconde daarna gewoon afmaakt, is geen tijdslimiet en geen
+// storing: dat is Windows dat in slaap valt en weer wakker wordt.
+//
+// Chrome mag dat tegenhouden. "system" houdt alleen de machine aan en laat het
+// scherm gewoon uitgaan, en we vragen het uitsluitend zolang de server ook echt
+// opdrachten klaar heeft staan die NU aan de beurt zijn — een herplaatsing die
+// voor vanmiddag staat ingepland telt niet mee, want /pending geeft die pas
+// terug als hij aan de beurt is. Zodra de rij leeg is mag hij binnen vijftien
+// seconden alsnog gaan slapen.
+//
+// Zonder de aanvraag telkens te herhalen zou dit niet werken: de service worker
+// wordt na ~30 seconden stilte weggegooid en begint daarna zonder geheugen. Hij
+// kost niets, dus hij gaat elke ronde opnieuw mee.
+function wakkerHouden(aan) {
+  try {
+    if (aan) chrome.power.requestKeepAwake("system");
+    else chrome.power.releaseKeepAwake();
+  } catch (_) {}
+}
+
+async function pollJobsEenRonde() {
+  let verzet = false;
+  let werkKlaar = false;
+  const serverUrl = await getServerUrl();
+  // Deliver any completions a previous run couldn't confirm BEFORE asking for
+  // pending work — otherwise the backend hands us back a job we already did.
+  await flushFinaliseQueue();
+  const headers = await getAuthHeaders();
+  // LEGE KANALEN ACHTERAAN IN DE RONDE (11-10-2026, Egbert bcdf9aa4).
+  //
+  // Na elke verlenging schoof de beurt naar Vinted, dan Facebook, dan
+  // Marktplaats: drie vragen aan de server van ~1 s, alle drie leeg, voordat
+  // 2dehands weer aan bod kwam (Railway-verzoeklog). Een kanaal dat bij de vorige
+  // vraag niets had, komt nu na de kanalen met werk. Het wordt in dezelfde
+  // ronde nog steeds gevraagd, dus nieuw werk daar blijft niet liggen, en tussen
+  // kanalen MET werk blijft de beurt precies zoals hij was. Na een herstart van
+  // de service worker weten we niets en geldt de gewone volgorde.
+  const bekendLeeg = (p) => {
+    const stand = _wachtrijStand[p];
+    return !!stand && Object.keys(stand).length === 0;
+  };
+  const opBeurt = await platformsOpBeurt();
+  const volgorde = opBeurt.filter((p) => !bekendLeeg(p)).concat(opBeurt.filter(bekendLeeg));
+  for (const platform of volgorde) {
+    // Op dit kanaal staat al een formulier open: niets vragen. De server weigert
+    // het ook (zie MAX_PARALLELLE_PUBLICATIES), maar dan hebben we het verzoek al
+    // gedaan — en bij vier kanalen elke ronde is dat zonde.
+    if (_lopendePublicaties.has(platform)) continue;
+    try {
+      const res = await fetch(`${serverUrl}/api/jobs/pending?platform=${platform}`, { headers, signal: AbortSignal.timeout(POLL_FETCH_MAX_MS) });
+      if (!res.ok) continue;
+      const jobs = await res.json();
+      if (Array.isArray(jobs) && jobs.length) werkKlaar = true;
+      if (Array.isArray(jobs)) {
+        const stand = {};
+        for (const j of jobs) stand[j.action] = (stand[j.action] || 0) + 1;
+        _wachtrijStand[platform] = stand;
+      }
+      for (const job of jobs) {
+        // Een scan leest je hele garderobe uit en duurt minuten. Zolang de ronde
+        // dáárop stond te wachten, werd er in die tijd niets gepubliceerd: je
+        // klikte op publiceren en er ging niet eens een tabblad open. Een scan
+        // loopt nu naast de rest door — hij schrijft niets, en elk tabblad heeft
+        // zijn eigen opdracht, dus ze kunnen elkaar niet in de weg zitten.
+        if (job.action === "scan") {
+          // Hooguit één scan tegelijk, ongeacht het platform: meer tabbladen
+          // tegelijk maakt Chrome alleen maar trager.
+          if (_lopendeScans.size > 0) continue;
+          _lopendeScans.add(job.platform);
+          processJob(job, serverUrl)
+            .catch((e) => {
+              console.error(`Omnivaleur scan ${job.id} (${job.platform}) threw:`, e);
+              return reportError(job.id, serverUrl, `Extension error: ${e?.message || e}`).catch(() => {});
+            })
+            .finally(() => _lopendeScans.delete(job.platform));
+          continue;
+        }
+        const schrijvend = SCHRIJVENDE_ACTIES.has(job.action);
+        // LET OP: job.platform, niet platform. De server mag een opdracht van een
+        // ÁNDER kanaal teruggeven (de beurtverdeling daar), en dan hoort de
+        // administratie hieronder over dát kanaal te gaan.
+        const kanaal = job.platform || platform;
+
+        if (!schrijvend) {
+          verzet = true;
+          try {
+            await processJob(job, serverUrl);
+          } catch (e) {
+            console.error(`Omnivaleur job ${job.id} (${job.action}/${kanaal}) threw:`, e);
+            try { await reportError(job.id, serverUrl, `Extension error: ${e?.message || e}`); }
+            catch (e2) { console.error("Omnivaleur: failed to report job error:", e2); }
+          }
+          continue;
+        }
+
+        // Calm mode: de opdracht blijft gewoon klaarstaan, hij begint alleen
+        // later. Niets gaat verloren; de gebruiker ziet hem in het dashboard
+        // in de wachtrij staan.
+        if (!(await calmMagNu(kanaal))) continue;
+        if (_lopendePublicaties.has(kanaal)) continue;          // dit kanaal is al bezig
+        if (_lopendePublicaties.size >= MAX_PARALLELLE_PUBLICATIES) break;
+
+        verzet = true;
+        _lopendePublicaties.add(kanaal);
+        await calmVolgendeInplannen(kanaal);
+        // NIET afwachten: dit kanaal gaat zijn eigen gang, zodat de volgende
+        // kanalen in deze ronde meteen aan de beurt komen. De opdracht zelf blijft
+        // strikt één-tabblad-per-kanaal; de server bewaakt dat ook.
+        processJob(job, serverUrl)
+          .catch(async (e) => {
+            // Last line of defence. processJob claims the job BEFORE doing any
+            // work, and the backend refuses to dispatch anything on this channel
+            // while a job sits claimed. So an unhandled throw here used to freeze
+            // the queue until the 5-minute stale sweep, which then killed the job
+            // as "interrupted" rather than telling the user what actually went
+            // wrong. Report it against this job and keep going.
+            console.error(`Omnivaleur job ${job.id} (${job.action}/${kanaal}) threw:`, e);
+            try { await reportError(job.id, serverUrl, `Extension error: ${e?.message || e}`); }
+            catch (e2) { console.error("Omnivaleur: failed to report job error:", e2); }
+          })
+          .finally(() => {
+            _lopendePublicaties.delete(kanaal);
+            // Meteen kijken of er op dit kanaal nog meer klaarstaat. Zonder deze
+            // regel zou de volgende opdracht op de gewone klok wachten, en dat is
+            // precies het gat dat we hier aan het weghalen zijn. De korte pauze is
+            // MIN_GAP_MS: zie daar waarom er altijd even rust tussen twee
+            // tabbladen van hetzelfde kanaal zit.
+            setTimeout(() => { pollJobs(); }, MIN_GAP_MS);
+          });
+        // Eén publicatie per kanaal per ronde, dan is het volgende kanaal aan de
+        // beurt. Zonder deze rem draaide de hele Marktplaats-wachtrij leeg
+        // voordat 2dehands ook maar één keer werd gevraagd.
+        await beurtDoorgeven(kanaal);
+        break;
+      }
+    } catch (e) {
+      console.error(`Omnivaleur poll error (${platform}):`, e);
+    }
+  }
+  // DE COMPUTER MAG OOK NIET GAAN SLAPEN TERWIJL ER NOG IETS LOOPT (19-09-2026).
+  //
+  // Hiervoor wachtte deze ronde op de publicatie zelf, dus stond er tijdens het
+  // werk per definitie werk klaar. Nu de kanalen naast elkaar lopen is de ronde
+  // meteen klaar terwijl de tabbladen nog aan het invullen zijn — en dan zou hier
+  // de wakkerhouding worden losgelaten en de laptop alsnog in slaap vallen met
+  // drie halve advertenties open. Zie de toelichting bij wakkerHouden.
+  wakkerHouden(werkKlaar || _lopendePublicaties.size > 0 || _lopendeScans.size > 0);
+  return verzet;
+}
+
+// ── Dedicated worker window ────────────────────────────────────────────────
+// Every automation tab used to spawn into — and yank focus from — whatever the
+// user was doing, so a single publish threw several tabs in their face. Instead
+// we keep ONE reused, UNFOCUSED worker window and open all automation tabs there:
+// the window never comes to the front (no focus theft, no interleaving with the
+// user's own tabs), yet each tab is still the ACTIVE tab of that window, so it
+// stays visible and Chrome doesn't throttle its form-filling timers the way it
+// would a truly hidden background tab. Closing the window just makes the next job
+// open a fresh one.
+//
+// The window id MUST live in chrome.storage.session, not in a module variable.
+// An MV3 service worker is evicted after ~30s idle, and every automation trigger
+// here (15s job poll, 10-min sold-check, 15-min notification scan, hourly Vinted
+// scan) wakes a FRESH worker with all module state reset. With the id in memory
+// each of those woke up believing no worker window existed and created another
+// one — which is why users ended up with a pile of Marktplaats/2dehands/Vinted
+// windows. storage.session survives worker eviction (and is cleared on browser
+// restart, exactly the lifetime we want), so all scans now share one window.
+const WORKER_WIN_KEY = "workerWindowId";
+// Small and out of the way: the user minimises it once and it STAYS minimised,
+// because we never focus it and never call windows.update on it.
+const WORKER_WIN_SIZE = { width: 1000, height: 800 };
+
+async function getWorkerWindowId() {
+  try {
+    const { [WORKER_WIN_KEY]: id } = await chrome.storage.session.get(WORKER_WIN_KEY);
+    if (id == null) return null;
+    // Verify it still exists — the user may have closed it while the worker slept.
+    await chrome.windows.get(id);
+    return id;
+  } catch {
+    return null;
+  }
+}
+
+function setWorkerWindowId(id) {
+  return chrome.storage.session.set({ [WORKER_WIN_KEY]: id }).catch(() => {});
+}
+
+// Eén vast, leeg "anker"-tabblad in het werkvenster.
+//
+// Zonder dit tabblad verdween het hele venster zodra het laatste job-tabblad
+// dichtging, en werd er bij de volgende klus (of bij de volgende controle op
+// verkopen/berichten, elke 10 tot 15 minuten) opnieuw een venster geopend. Dat
+// is wat de gebruiker als "steeds weer die tabbladen" ziet. Met het anker
+// blijft er precies één venster bestaan zolang de browser open is: het wordt
+// hooguit uit- en weer ingeklapt.
+//
+// Meegenomen effect: het venster kan nu niet meer halverwege een klus
+// omvallen doordat het vorige tabblad net iets te laat dichtging.
+// Het anker is een eigen paginaatje van de extensie in plaats van een lege
+// pagina. Daarmee is het venster ONMISKENBAAR van ons: we kunnen het altijd
+// terugvinden, ook nadat de extensie is bijgewerkt of opnieuw is gestart.
+//
+// Dat was precies het lek. Het venster-nummer werd alleen in het werkgeheugen
+// van de extensie bewaard, en dat wordt bij elke update gewist. Het oude venster
+// bleef dan gewoon staan terwijl de extensie dacht dat ze er geen had — en maakte
+// er een nieuwe bij. Na een dag bijwerken stonden er zeven, acht vensters.
+const KEEPER_URL = chrome.runtime.getURL("keeper.html");
+
+async function ensureKeeperTab(winId) {
+  try {
+    const tabs = await chrome.tabs.query({ windowId: winId });
+    if (tabs.some(t => t.pinned && (t.url === KEEPER_URL || t.pendingUrl === KEEPER_URL))) return;
+    await chrome.tabs.create({ url: KEEPER_URL, windowId: winId, pinned: true, active: false });
+  } catch (_) { /* venster net weg — volgende klus maakt een nieuw venster */ }
+}
+
+// Zoek ons werkvenster terug aan het anker-tabblad, zonder op het geheugen te
+// vertrouwen. Staan er meerdere (restanten van eerdere versies), dan houden we er
+// één over en ruimen we de rest op — maar alleen als daar niets anders in staat
+// dan het anker zelf, zodat er nooit werk van de gebruiker verloren gaat.
+async function vindEnOpruimenWerkvensters() {
+  let ankers = [];
+  try { ankers = await chrome.tabs.query({ url: KEEPER_URL }); } catch (_) { return null; }
+  // Vensters van vóór deze versie hadden een gewone lege pagina als anker. Die
+  // staan nu verweesd op de balk; ze horen ook opgeruimd te worden. Alleen als
+  // ALLES in dat venster leeg is — dan kan het niets van de gebruiker zijn.
+  let oud = [];
+  try {
+    const blanco = await chrome.tabs.query({ url: "about:blank" });
+    for (const winId of [...new Set(blanco.map(t => t.windowId))]) {
+      const tabs = await chrome.tabs.query({ windowId: winId }).catch(() => []);
+      if (tabs.length && tabs.every(t => t.url === "about:blank" || !t.url)) oud.push(winId);
+    }
+  } catch (_) { /* niet erg */ }
+  for (const winId of oud) {
+    console.log(`[Omnivaleur] leeg werkvenster van een vorige versie (${winId}) opgeruimd`);
+    await chrome.windows.remove(winId).catch(() => {});
+  }
+  if (!ankers.length) return null;
+  const vensters = [...new Set(ankers.map(t => t.windowId))];
+  if (vensters.length === 1) return vensters[0];
+
+  // Voorkeur voor het venster waar op dit moment nog werk in staat.
+  let houden = vensters[0];
+  for (const winId of vensters) {
+    const tabs = await chrome.tabs.query({ windowId: winId }).catch(() => []);
+    if (tabs.some(t => t.url !== KEEPER_URL && !t.pinned)) { houden = winId; break; }
+  }
+  for (const winId of vensters) {
+    if (winId === houden) continue;
+    const tabs = await chrome.tabs.query({ windowId: winId }).catch(() => []);
+    const alleenAnker = tabs.length > 0 && tabs.every(t => t.url === KEEPER_URL || t.pendingUrl === KEEPER_URL);
+    if (alleenAnker) {
+      console.log(`[Omnivaleur] leeg werkvenster ${winId} opgeruimd (er was er al één)`);
+      await chrome.windows.remove(winId).catch(() => {});
+    }
+  }
+  return houden;
+}
+
+// Klapt het werkvenster vanzelf weer in zodra er geen klus meer in draait, zodat
+// het na het plaatsen niet over het werk van de gebruiker blijft staan.
+let _minimiseTimer = null;
+
+function scheduleWorkerWindowMinimise() {
+  if (_minimiseTimer) clearTimeout(_minimiseTimer);
+  _minimiseTimer = setTimeout(async () => {
+    _minimiseTimer = null;
+    try {
+      const id = await getWorkerWindowId();
+      if (id == null) return;
+      const tabs = await chrome.tabs.query({ windowId: id });
+      // Alleen als er echt niets meer draait: alleen het anker-tabblad over.
+      if (tabs.some(t => !t.pinned || t.url !== KEEPER_URL)) return;
+      const win = await chrome.windows.get(id);
+      if (win.state === "minimized") return;
+      if (!(await veiligOmWerkvensterTeMinimaliseren(id))) return;
+      await chrome.windows.update(id, { state: "minimized" }).catch(() => {});
+    } catch (_) { /* niets aan de hand */ }
+  }, 4000);
+}
+
+chrome.tabs.onRemoved.addListener((_tabId, info) => {
+  _onzeTabbladen.delete(_tabId);
+  getWorkerWindowId().then((id) => {
+    if (id != null && id === info.windowId && !info.isWindowClosing) scheduleWorkerWindowMinimise();
+  }).catch(() => {});
+});
+
+chrome.windows.onRemoved.addListener((winId) => {
+  chrome.storage.session.get(WORKER_WIN_KEY).then(({ [WORKER_WIN_KEY]: id }) => {
+    if (id === winId) chrome.storage.session.remove(WORKER_WIN_KEY);
+  }).catch(() => {});
+});
+
+// Two triggers can fire in the same worker (e.g. sold-check and notif-scan land
+// together, each opening a tab per platform). Without this chain they would all
+// see "no window yet" and race to create one — the same multi-window bug, only
+// within a single wake-up. Serialising means the first call creates the window
+// and the rest reuse it.
+let _workerWindowChain = Promise.resolve();
+
+// opts.silent → run MINIMISED, fully out of sight.
+//
+// Only safe for the recurring housekeeping scans (sold-check, notifications,
+// Vinted wardrobe), because a minimised window's tabs count as hidden and Chrome
+// then clamps their timers to >=1s (and to 1/min past five minutes). Those scans
+// do their real work in one page-side fetch to the site's own JSON API, so slower
+// timers cost nothing. The publish/delete flows are the opposite — long chains of
+// short waits while filling a form — so they run in a normal (still unfocused)
+// window, and un-minimise it if a scan left it minimised. Jobs are dispatched
+// strictly one at a time, so the two modes can never fight over the window.
+// Automatische achtergrondscans openen hun venster ALTIJD geminimaliseerd.
+//
+// De verkoop-controle en het tellen van berichten draaien uit zichzelf, elk uur,
+// zonder dat de verkoper er iets voor doet. Die openden een gewoon venster, en
+// dat is precies wat een verkoper beschreef: "als ik internet open, dan flitst
+// die drie of vier keer weg en dan opent hij tweedehands.be, en dan kom ik er
+// niet meer tussen". Werk dat jij niet gevraagd hebt mag je scherm niet afpakken.
+function openStilWerkTabblad(url, callback) {
+  return openWorkerTab(url, callback, { silent: true });
+}
+
+// STIL WERK OPENT NOOIT MEER EEN EIGEN VENSTER.
+//
+// Een geminimaliseerd venster is niet onzichtbaar. Chrome tekent het eerst en
+// klapt het daarna in, en op een Mac zie je dat als een flits. Eén keer is
+// vervelend, elk kwartier is onwerkbaar — gemeten klacht: "mijn scherm flitst
+// nog steeds 4 a 5 keer weg, om de ca. 15 minuten". Bovendien sluit de verkoper
+// dat venstertje, waarna de volgende ronde er weer een maakt: een flits die
+// zichzelf in stand houdt.
+//
+// Een achtergrond-tabblad in het venster waar hij tóch al werkt flitst niet, pakt
+// de aandacht niet en verdwijnt weer zodra de scan klaar is. Alleen als er geen
+// enkel gewoon venster is (Chrome draait dan op de achtergrond) valt het terug
+// op het oude gedrag.
+
+// Een werk-tabblad openen dat we mógen aansturen.
+//
+// Eerst leeg openen, dan koppelen, dan pas navigeren. Andersom is te laat:
+// zodra Marktplaats geladen is weigert Chrome de koppeling (zie koppelVroeg).
+async function maakWerkTabblad(opties, url, extra = {}) {
+  const tab = await chrome.tabs.create({ ...opties, url: "about:blank" });
+  _onzeTabbladen.add(tab.id);
+  // Chrome mag dit tabblad niet wegbezuinigen (Memory Saver / discard) terwijl
+  // de klus nog loopt: dan sterft het content-script halverwege het invullen.
+  chrome.tabs.update(tab.id, { autoDiscardable: false }).catch(() => {});
+  await koppelVroeg(tab.id, url, !!extra.klokVast);
+  await chrome.tabs.update(tab.id, { url });
+  // Een nieuw tabblad haalt het venster op macOS terug in beeld.
+  await houdWerkvensterGeminimaliseerd();
+  return tab;
+}
+
+// NOOIT IN EEN INCOGNITOVENSTER WERKEN.
+//
+// GEMETEN 14-09-2026 (Egbert Brouwer). Zijn werktabblad kreeg van 2dehands een
+// 302 naar /identity/v2/login en een 401 op het verkopersoverzicht. Precies dat
+// krijgt een browser ZONDER cookies: nagemeten met een kale aanvraag geeft
+// dezelfde 302 naar dezelfde pagina. Zijn tabblad zag dus geen sessie, terwijl
+// hij gewoon ingelogd was.
+//
+// Hier stond `vensters.find(...)` zonder te kijken of het venster incognito is.
+// Staat de extensie aan in incognito (de verkoper zet dat zelf aan) en heeft hij
+// zo'n venster open, dan landt elk werktabblad daarin: een eigen koekjespot,
+// altijd leeg. Publiceren lukt dan nooit, en het meldt zich als "je bent niet
+// ingelogd" — het verwijt dat deze man al 27 keer ten onrechte kreeg.
+//
+// Een incognitovenster is dus geen bruikbaar venster. Is er geen enkel gewoon
+// venster, dan valt het terug op ons eigen werkvenster (dat is nooit incognito).
+async function openAchtergrondTabblad(url, extra = {}) {
+  try {
+    const vensters = (await chrome.windows.getAll({ windowTypes: ["normal"] }))
+      .filter(w => !w.incognito);
+    const bruikbaar = vensters.find(w => w.state !== "minimized") || vensters[0];
+    if (bruikbaar) {
+      return await maakWerkTabblad({ windowId: bruikbaar.id, active: false }, url, extra);
+    }
+  } catch (_) { /* val terug op het werkvenster */ }
+  return null;
+}
+
+// Achtergrondwerk hoort te wachten tot de verkoper even niet aan het werk is.
+// Er is geen enkele reden om precies tijdens het typen een tabblad te openen:
+// deze scans hebben nergens haast mee. Na drie overgeslagen rondes gaat het toch
+// door, anders zouden de cijfers bij iemand die de hele dag doorwerkt nooit meer
+// bijwerken.
+// RUSTIG OPSTARTEN.
+//
+// Bij het starten van Chrome vuurde alles tegelijk: de verkoopcontrole, het
+// tellen van berichten, de garderobescan en de wachtrij met publicaties. Vier
+// dingen die alle vier een tabblad willen, binnen een paar seconden. Dat is wat
+// je ziet als "meerdere vensters tegelijk" zodra je je profiel opent, en het is
+// ook precies het moment waarop de verkoper zijn browser wil gebruiken.
+// Niets hiervan heeft haast; alles wordt uitgesmeerd over de eerste minuten.
+const STARTTIJD_SLEUTEL = "browserStartOp";
+
+async function markeerStart() {
+  await chrome.storage.session.set({ [STARTTIJD_SLEUTEL]: Date.now() }).catch(() => {});
+}
+chrome.runtime.onStartup.addListener(() => { markeerStart().then(planStartWerk); });
+chrome.runtime.onInstalled.addListener(() => { markeerStart().then(planStartWerk); });
+
+// Hoe lang geleden Chrome startte. Onbekend (bijvoorbeeld na het herladen van
+// de service worker) telt als "lang geleden": dan houden we niets tegen.
+async function msSindsStart() {
+  try {
+    const { [STARTTIJD_SLEUTEL]: t } = await chrome.storage.session.get(STARTTIJD_SLEUTEL);
+    return t ? Date.now() - t : Infinity;
+  } catch { return Infinity; }
+}
+
+// Wachten doen we met een wekker, niet met setTimeout: een service worker in
+// Manifest V3 wordt na een halve minuut stilte afgeschoten, dus een pauze van
+// vijf minuten met setTimeout haalt het eind nooit.
+const START_WEKKERS = {
+  "start-sold": 3,
+  "start-notif": 5,
+  "start-vinted": 7,
+};
+
+function planStartWerk() {
+  for (const [naam, minuten] of Object.entries(START_WEKKERS)) {
+    chrome.alarms.create(naam, { delayInMinutes: minuten });
+  }
+}
+
+// Draait dit werk te kort na het opstarten? Dan slaan we deze ronde over; de
+// wekker hierboven pakt het straks alsnog op.
+async function teVroegNaStart(minuten) {
+  return (await msSindsStart()) < minuten * 60000;
+}
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  switch (alarm.name) {
+    case "start-sold":
+      magStilScannenNu().then((mag) => { if (mag) { checkSoldListings(); checkVintedOrders(); } });
+      break;
+    case "start-notif":
+      magStilScannenNu().then((mag) => { if (mag) scanNotifications(); });
+      break;
+    case "start-vinted": triggerVintedAutoScan(); break;
+  }
+});
+
+const DRUK_SLEUTEL = "scanUitgesteld";
+const MAX_UITGESTELD = 3;
+
+async function magStilScannenNu() {
+  let staat = "idle";
+  try { staat = await chrome.idle.queryState(60); } catch (_) { return true; }
+  if (staat !== "active") {
+    await chrome.storage.session.set({ [DRUK_SLEUTEL]: 0 }).catch(() => {});
+    return true;
+  }
+  const { [DRUK_SLEUTEL]: n = 0 } = await chrome.storage.session.get(DRUK_SLEUTEL).catch(() => ({}));
+  if (n >= MAX_UITGESTELD) {
+    await chrome.storage.session.set({ [DRUK_SLEUTEL]: 0 }).catch(() => {});
+    return true;
+  }
+  await chrome.storage.session.set({ [DRUK_SLEUTEL]: n + 1 }).catch(() => {});
+  return false;
+}
+
+// Eerst een achtergrond-tabblad in een bestaand venster; lukt dat niet, dan pas
+// het oude, geminimaliseerde werkvenster. Sinds 06-09-2026 doet openWorkerTab
+// precies hetzelfde, dus dit is nog maar een naam voor die ene route.
+function stilTabblad(url, callback) {
+  openWorkerTab(url, callback, { silent: true });
+}
+
+
+// "SITE VERLATEN?" MAG NOOIT MEER IN BEELD KOMEN.
+//
+// Marktplaats en 2dehands hangen aan hun plaatsformulier een bevestigingsvraag
+// bij het weggaan. Sluiten wij zo'n tabblad — na een geplaatste advertentie, of
+// nadat een opdracht is afgerond — dan stelt Chrome die vraag aan de verkoper.
+// Zolang hij niet klikt staat álles stil, ook het tabblad waarin op dat moment
+// het volgende formulier wordt ingevuld: twee tabbladen van dezelfde site delen
+// één proces. Dat is exact de melding "ik moet elke keer zelf op Verlaten
+// drukken, en dan publiceert hij meteen".
+//
+// content/unload_guard.js draait in elke marktplaats/2dehands/vinted-pagina en
+// onthoudt die meldingen zonder ze te blokkeren. Hier, vlak voor wij zelf het
+// tabblad sluiten of wegsturen, zetten we ze uit. Doet de verkoper het zelf,
+// dan krijgt hij zijn waarschuwing gewoon.
+async function ontwapenAfsluitvraag(tabId) {
+  if (tabId == null) return;
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId }, world: "MAIN",
+      func: () => {
+        try { if (window.__ovDisarmUnload) return window.__ovDisarmUnload(); } catch (_) {}
+        try { window.onbeforeunload = null; } catch (_) {}
+        return 0;
+      },
+    });
+  } catch (_) { /* tabblad al weg, of geen toegang: dan gewoon sluiten */ }
+}
+
+// Een werk-tabblad sluiten zonder dat de verkoper er iets van merkt.
+// HET WERKVENSTER MOET GEMINIMALISEERD BLIJVEN.
+//
+// Eén keer minimaliseren is niet genoeg gebleken. Op macOS zet Chrome het venster
+// terug zodra er een tabblad in wordt geopend of het laatste tabblad sluit —
+// precies de twee momenten waarop de verkoper het scherm zag opklappen ("hij
+// opent nog steeds een venster, op het einde"). Deze functie kost niets als het
+// venster al klein staat en wordt daarom na elk van die momenten aangeroepen.
+// MINIMALISEREN MAG NOOIT HET VENSTER VAN DE VERKOPER RAKEN (Toon, 06-09-2026).
+//
+// Op macOS pakt chrome.windows.update(id, {state:"minimized"}) geregeld het
+// venster dat vooraan staat in plaats van het venster met dat id. Zolang ons
+// werkvenster het enige venster is (Chrome draait onzichtbaar op de achtergrond)
+// kan dat geen kwaad. Staat er wél een gewoon venster van de verkoper vooraan,
+// dan laten we ons werkvenster met rust: het is toch al onzichtbaar (het is
+// nooit gefocust) en de kans dat we per ongeluk zíjn scherm wegklappen weegt
+// niet op tegen een venster dat hij toch niet ziet.
+// Tabbladen die wij zelf openden. Een verse opdracht staat nog niet als
+// `jobtab_<id>` in de opslag (dat gebeurt pas als de klus wordt uitgedeeld), en
+// zonder deze lijst zou ons eigen werkvenster in dat gaatje voor "van de
+// verkoper" doorgaan en dus zichtbaar blijven staan.
+const _onzeTabbladen = new Set();
+
+// IS DIT VENSTER NOG VAN ONS? (Daniel, 20-09-2026)
+//
+// Staat Chrome zonder vensters (op een Mac doodgewoon: rode kruisje) dan maakt
+// de extensie zelf een klein werkvenster met een vast anker-tabblad. Klikt de
+// verkoper daarna op het Chrome-icoon in de Dock, dan zet macOS precies dat
+// geminimaliseerde venster terug — en werkt hij vanaf dat moment IN ons
+// werkvenster. Het nummer stond nog in ons geheugen, dus bij elk werk-tabblad
+// dat erbij kwam klapten wij het weer in. Met zijn dashboard erin: "iedere keer
+// als ik een item publiceer minimaliseert hij het hele tabblad waarin ik bezig
+// ben, zowel het dashboard als de twee publicaties."
+//
+// Een venster is dus alleen van ons zolang er niets anders in staat dan ons
+// anker-tabblad en de tabbladen die wij zelf voor een opdracht openden. Zodra de
+// verkoper er één eigen tabblad in heeft, is het zijn venster en blijven we
+// eraf. Bij twijfel (een fout bij het uitlezen) ook: afblijven.
+async function vensterIsAlleenVanOns(winId) {
+  try {
+    const tabs = await chrome.tabs.query({ windowId: winId });
+    if (!tabs.length) return false;
+    const alles = await chrome.storage.local.get(null);
+    const vanOns = new Set(Object.keys(alles)
+      .filter((k) => k.startsWith("jobtab_"))
+      .map((k) => Number(k.slice("jobtab_".length))));
+    return tabs.every((t) =>
+      t.url === KEEPER_URL || t.pendingUrl === KEEPER_URL
+      || vanOns.has(t.id) || _onzeTabbladen.has(t.id));
+  } catch (_) {
+    return false;
+  }
+}
+
+async function veiligOmWerkvensterTeMinimaliseren(werkId) {
+  try {
+    if (!(await vensterIsAlleenVanOns(werkId))) return false;
+    const laatst = await chrome.windows.getLastFocused().catch(() => null);
+    if (!laatst || laatst.id === werkId) return true;
+    if (laatst.state === "minimized") return true;
+    return false; // een gewoon venster staat vooraan — afblijven
+  } catch (_) {
+    return false;
+  }
+}
+
+async function houdWerkvensterGeminimaliseerd() {
+  try {
+    const id = await getWorkerWindowId();
+    if (id == null) return;
+    const win = await chrome.windows.get(id).catch(() => null);
+    if (!win || win.state === "minimized") return;
+    if (!(await veiligOmWerkvensterTeMinimaliseren(id))) return;
+    await chrome.windows.update(id, { state: "minimized", focused: false }).catch(() => {});
+  } catch (_) { /* nooit een klus laten vallen om een venster */ }
+}
+
+function sluitWerkTabblad(tabId, vertragingMs = 0) {
+  if (tabId == null) return;
+  const sluit = () => {
+    ontwapenAfsluitvraag(tabId).finally(() => chrome.tabs.remove(tabId).catch(() => {}))
+      .finally(() => houdWerkvensterGeminimaliseerd());
+  };
+  if (vertragingMs > 0) setTimeout(sluit, vertragingMs);
+  else sluit();
+}
+
+// Een werk-tabblad naar een ander adres sturen. Ook een navigatie laat het
+// formulier "wil je echt weg?" vragen, dus dezelfde ontwapening vooraf.
+async function stuurWerkTabbladNaar(tabId, url) {
+  await ontwapenAfsluitvraag(tabId);
+  return new Promise((res, rej) => chrome.tabs.update(tabId, { url }, () =>
+    chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res()));
+}
+
+// Tabbladen waar we al aan gekoppeld zijn (zie koppelVroeg).
+const _vroegGekoppeld = new Set();
+// Werk-tabbladen zonder jobtab_-gegevens (de achtergrondklussen verwijderen en
+// verlengen) die tóch de hele klus een lopende klok nodig hebben. Zie
+// bgDeleteMp2dh, en verzekerKlok die hier na elke paginawissel naar kijkt.
+const _klokTabbladen = new Set();
+chrome.tabs.onRemoved.addListener((tabId) => _klokTabbladen.delete(tabId));
+
+// KOPPELEN TERWIJL HET TABBLAD NOG LEEG IS.
+//
+// Chrome weigert een debugger-koppeling zodra er ergens in het tabblad een
+// stukje van een ándere extensie zit: "Cannot access a chrome-extension:// URL
+// of different extension". Op een volle Marktplaats-pagina met advertenties en
+// meeleesextensies is dat kennelijk het geval — gemeten op 21-08-2026, twee
+// koppelwegen, allebei geweigerd, op een doodgewone marktplaats.nl-pagina.
+//
+// Een leeg tabblad (about:blank) mag Chrome wél, en de koppeling blijft daarna
+// gewoon staan als het tabblad naar Marktplaats navigeert. Dus koppelen we
+// meteen bij het openen, vóór er iets geladen is.
+// Alleen het plaatsformulier van Marktplaats/2dehands heeft de echte
+// toetsaanslag nodig (het verborgen omschrijvingsveld — zie typEchteToets).
+// Overal elders is de koppeling puur schade: Chrome zet dan de gele balk
+// "'Omnivaleur' is begonnen met foutopsporing voor deze browser" boven het
+// venster van de verkoper.
+// Het inlogadres van Marktplaats en 2dehands. Waargenomen op 05-09-2026:
+// /plaats/728/748 zonder sessie kwam uit op
+// https://www.2dehands.be/identity/v2/login?target=%2Fplaats%2F728%2F748
+const MP_LOGINPAGINA = /\/identity\/v\d+\/login|\/identity\/login|\/account\/login\b/i;
+
+// DE BETAALPAGINA VAN MARKTPLAATS / 2DEHANDS.
+//
+// GEMETEN OP 09-09-2026 (Egbert Brouwer / papas-plectrums), en dit was drie
+// weken lang de echte oorzaak achter een melding die iets heel anders zei.
+// Zijn plaatsopdrachten liepen NIET vast op het formulier. Het formulier ging
+// open, werd volledig ingevuld, en na de plaatsklik stuurde 2dehands.be het
+// tabblad naar https://www.2dehands.be/payments/orderOverview/index.html.
+// Letterlijk uit zijn eigen opdrachten:
+//   [tab op https://www.2dehands.be/payments/orderOverview/index.html,
+//    4 invulveld(en), invulscript geladen: nee]
+//   [laatste stap: "plaatsen: op de knop geklikt, wachten op de advertentie"]
+// De advertentie ging dus niet online maar werd een bestelregel van EUR 9,00
+// ("Websitevermelding") in een openstaande bestelling. Wij stonden ondertussen
+// drie minuten te wachten op een advertentie-adres dat nooit komt, meldden
+// daarna "het formulier ging nooit open, je bent misschien niet ingelogd" en
+// stuurden hem naar zijn inlogpagina. Hij was gewoon ingelogd.
+//
+// Erger nog: de rem die het kanaal op pauze zette liet elke ronde bewust één
+// proefadvertentie door. Elke proef was weer EUR 9,00 in diezelfde bestelling.
+// Hij mailde een winkelmandje met 17 regels, EUR 153,00 in totaal.
+//
+// Een betaalpagina is daarom geen vastloper en geen inlogprobleem. Het is een
+// antwoord: dit account plaatst hier niet gratis. Dat is meteen beslissend, en
+// het kanaal gaat hard dicht in plaats van op pauze met proefadvertenties.
+const MP_BETAALPAGINA = /^https:\/\/(?:www\.)?(?:marktplaats\.nl|2dehands\.be)\/payments\//i;
+
+// Alleen een plaatsing kan op de betaalpagina uitkomen; verwijderen en scannen
+// niet. Zo kan een toevallige betaalpagina nooit een scan om zeep helpen.
+function betaalmuurRaaktDezeOpdracht(meta) {
+  if (!meta) return false;
+  if (meta.platform !== "marktplaats" && meta.platform !== "2dehands") return false;
+  const actie = meta.action || "create";
+  return actie === "create" || actie === "content_refresh";
+}
+
+// Wat de verkoper leest als het kanaal om geld vraagt, en wat er met de
+// wachtrij gebeurt. Eén plek, want de bewaker en de adresbewaking komen er
+// allebei op uit.
+async function meldBetaalmuur(tabId, meta, ruwAdres) {
+  const site = SITE_NAAM[meta.platform] || meta.platform;
+  const adres = String(ruwAdres || "").split("?")[0];
+  const geklikt = !!meta.submitClicked;
+  const melding =
+    `${site} does not let this account place adverts for free. `
+    + (geklikt
+        ? `The form was filled in and published, but instead of going online the advert was `
+          + `added to an unpaid ${site} order. `
+        : `${site} sent that tab straight to its payment page instead of to the listing form. `)
+    + `Nothing went online, and nothing has been paid.\n\n`
+    + `${site} is now switched off for your account, so no further adverts are added to that `
+    + `order. Open this page and remove the unpaid lines with the bin icon:\n${adres}\n\n`
+    + `Your other channels keep working, and your items stay ready here. As soon as ${site} `
+    + `lets your account place adverts for free, tell us and we switch the channel back on. `
+    + `[tabblad kwam uit op ${adres}] [extensie ${chrome.runtime.getManifest().version}]`;
+  clearJobWatchdog(tabId);
+  await chrome.storage.local.remove(`jobtab_${tabId}`);
+  await stopPlatformWachtrij(meta.serverUrl, meta.platform, melding).catch(() => {});
+  await reportError(meta.jobId, meta.serverUrl, melding).catch(() => {});
+  sluitWerkTabblad(tabId);
+}
+
+const HEEFT_TOETSEN_NODIG = /^https:\/\/(?:www\.)?(?:marktplaats\.nl|2dehands\.be)\/plaats\b/i;
+
+// HET VINTED-FORMULIER LOOPT STIL ZODRA JE HET TABBLAD NIET IN BEELD HEBT.
+//
+// GEMETEN OP 15-09-2026, in een echte Chrome, na Daniels melding: "er gebeurt
+// niks in dat tabblad totdat ik er zelf naartoe klik, dan gaat ie weer verder".
+// In een tabblad dat niet in beeld staat knijpt Chrome elke setTimeout van de
+// PAGINA af tot één per seconde, en na vijf minuten verborgen nog veel verder.
+// Onze eigen pauzes lopen sinds 1.0.309 via een Web Worker en hebben daar geen
+// last van, maar Vinted's eigen formulier draait volledig op die pagina-klok:
+// elke keuzelijst, elke suggestie en elke controle wacht op een timer die bijna
+// stilstaat. Vandaar "er gebeurt niks".
+//
+// HIER STOND EEN AANNAME DIE NIET KLOPTE (rechtgezet 18-09-2026).
+//
+// "Marktplaats had dit nooit, want daar hangt de debugger al aan het tabblad en
+// dat zet de rem uit." Dat is op 18-09 weerlegd door een meting uit Daniels
+// eigen browser: een 2dehands-formulier mét debugger meldde "klokstand: 0,1/s
+// +23546ms hidden". Aanhechten haalt de rem er niet af; alleen de focus-emulatie
+// hieronder doet dat. Marktplaats leek sneller omdat het formulier korter is,
+// niet omdat de klok er wél liep. Zie zetDoorlopendeKlok.
+//
+// Uit de echte opdrachten van klanten: plaatsen op Marktplaats duurt 38 seconden
+// (mediaan van 120), op Vinted 234 seconden (mediaan van 94), met uitschieters
+// tot 80 minuten.
+//
+// Daarom koppelen we ook aan het Vinted-formulier. Niet om te typen, maar om de
+// rem eraf te halen. De prijs is Chrome's gele balk boven dat venster, dezelfde
+// die bij elke Marktplaats-plaatsing al verschijnt; die verdwijnt zodra de
+// opdracht klaar is. Scannen en verwijderen blijven ongekoppeld: die doen hun
+// werk via Vinted's eigen API en hebben geen formulierklok nodig.
+const VINTED_FORMULIER_KLOK = /^https:\/\/(?:www\.)?vinted\.[a-z]{2,3}(?:\.[a-z]{2})?\/items\/(?:new|\d+\/edit)\b/i;
+
+// Alles wat een debugger-koppeling nodig heeft, om wat voor reden ook.
+function koppelingNodig(url) {
+  const u = String(url || "");
+  return HEEFT_TOETSEN_NODIG.test(u) || VINTED_FORMULIER_KLOK.test(u);
+}
+
+// DE KLOK VAN EEN VERBORGEN TABBLAD WEER LATEN LOPEN.
+//
+// GEMETEN OP 15-09-2026 in een echte Chrome, met een testpagina die elke 15
+// seconden doorgeeft hoe vaak haar klok tikte. Een tabblad dat niet in beeld
+// staat (zoals ál onze werk-tabbladen):
+//
+//   in beeld                     : 150 tikken per 15 sec
+//   verborgen                    :  15 tikken per 15 sec
+//   verborgen, na 5 minuten      :   0 tot 1 tik per 15 sec  ← hier gebeurt niks meer
+//   verborgen + deze opdracht    : 147 tikken per 15 sec
+//
+// Dat laatste is de reparatie. `Emulation.setFocusEmulationEnabled` vertelt de
+// pagina dat ze in beeld staat; Chrome haalt dan de rem eraf en tekent weer.
+// Het tabblad zelf blijft gewoon op de achtergrond, de verkoper ziet er niets
+// van. Gemeten blijft dit staan over een navigatie heen, dus het mag hier al —
+// vóór het tabblad naar het formulier gaat.
+//
+// Wat NIET hielp, ook gemeten: alleen de debugger aanhechten (0 tot 1 tik),
+// Page.enable (0 tot 1), Page.startScreencast (0 tot 1), een stil geluidje, een
+// open websocket, een Web Lock. En Emulation.setPageVisibilityOverride bestaat
+// niet meer in Chrome.
+// Is de opdracht hierboven ook echt aangekomen? Dat hoort in de voortgang te
+// staan, anders is "het werkt niet bij mij" weer een verhaal zonder meting.
+const _klokAangezet = new Map();
+chrome.tabs.onRemoved.addListener((tabId) => _klokAangezet.delete(tabId));
+
+async function zetDoorlopendeKlok(tabId, url, altijd = false) {
+  // OOK MARKTPLAATS EN 2DEHANDS. GEMETEN OP 18-09-2026, LIVE.
+  //
+  // Hierboven staat sinds 15-09: "Marktplaats had dit nooit, want daar hangt de
+  // debugger al aan het tabblad en dat zet de rem uit." Dat klopt niet. Daniel:
+  // "op marktplaats publiceerde hij weer niet zonder mijn invloed — naar het
+  // tabblad gaan en zelf op publish drukken." Zijn 2dehands-opdracht stuurde op
+  // dat moment deze voortgang door, uit zijn eigen browser, mét debugger:
+  //
+  //     klokstand: 0.1/s +23546ms hidden
+  //
+  // Eén tik per tien seconden in plaats van tien per seconde, en een korte pauze
+  // die 23,5 seconde uitliep. Aanhechten alleen haalt de rem er dus níét af —
+  // precies wat de meting van 15-09 ook al zei ("alleen de debugger aanhechten:
+  // 0 tot 1 tik"). Wat het wél doet is Emulation.setFocusEmulationEnabled, en
+  // dat gebeurde alleen op het Vinted-formulier.
+  //
+  // Gevolg voor de verkoper: het formulier staat stil tot hij zelf naar het
+  // tabblad klikt. Zijn publicatie van 16:02 duurde 5 minuten 20, tegen een
+  // mediaan van 25 seconden over zijn eigen 98 geslaagde Marktplaats-
+  // publicaties. De debugger hangt er op die twee kanalen toch al aan voor de
+  // echte toetsaanslag, dus dit kost geen extra gele balk.
+  if (!altijd && !koppelingNodig(String(url || ""))) return;
+  await new Promise((res) => {
+    try {
+      chrome.debugger.sendCommand({ tabId }, "Emulation.setFocusEmulationEnabled",
+        { enabled: true }, () => {
+          if (chrome.runtime.lastError) {
+            // Een Chrome die deze opdracht niet kent hoort de klus niet te laten
+            // vallen: dan werkt het zoals vroeger, alleen trager.
+            console.warn("[Omnivaleur] klok aanzetten mislukt:",
+                         chrome.runtime.lastError.message);
+            _klokAangezet.set(tabId, "mislukt: " + chrome.runtime.lastError.message);
+          } else {
+            _klokAangezet.set(tabId, "aan");
+          }
+          // En meteen uit de vries: wachten op de eerste wekker zou de eerste
+          // dertig seconden van de klus alsnog stil laten liggen.
+          try {
+            chrome.debugger.sendCommand({ tabId }, "Page.setWebLifecycleState",
+              { state: "active" }, () => { void chrome.runtime.lastError; });
+          } catch (_) { /* niet fataal */ }
+          res();
+        });
+    } catch (e) {
+      console.warn("[Omnivaleur] klok aanzetten mislukt:", e && e.message);
+      res();
+    }
+  });
+}
+
+async function koppelVroeg(tabId, url, altijd = false) {
+  try {
+    // GEEN GELE BALK WAAR HIJ NIETS OPLOST (30-08-2026).
+    //
+    // Deze koppeling stond bij ELK werk-tabblad aan: scannen, Vinted, eBay,
+    // verwijderen. Chrome zet daar een balk voor neer die eruitziet als een
+    // storing, mét een knop "Annuleren" die de koppeling verbreekt. Amanda
+    // stuurde er een foto van als "een foutmelding wat betreft de browser" —
+    // terwijl er niets aan de hand was. Nu koppelen we alleen nog waar het
+    // écht nodig is: het plaatsformulier van Marktplaats en 2dehands, en het
+    // Vinted-formulier (zie VINTED_FORMULIER_KLOK — daar is de koppeling het
+    // enige wat de klok van de pagina aan de praat houdt).
+    if (!altijd && url && !koppelingNodig(url)) return false;
+    if (_vroegGekoppeld.has(tabId)) return true;
+    if (!(await heeftDebugger())) return false;
+    await new Promise((res, rej) => chrome.debugger.attach({ tabId }, "1.3", () => {
+      chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res();
+    }));
+    _vroegGekoppeld.add(tabId);
+    // Een fout hier mag de koppeling zelf nooit ongedaan maken: die is al gelukt
+    // en Marktplaats heeft haar nodig om te kunnen typen.
+    try { await zetDoorlopendeKlok(tabId, url, altijd); } catch (_) { /* dan alleen trager */ }
+    return true;
+  } catch (e) {
+    console.warn("[Omnivaleur] vroeg koppelen mislukt:", e.message);
+    return false;
+  }
+}
+
+// DE KLOK MOET AAN BLIJVEN, DE HELE KLUS LANG.
+//
+// Eén keer aanzetten bij het openen van het tabblad is niet genoeg. Er zijn drie
+// manieren waarop de rem er tussentijds weer op gaat:
+//
+//   1. het tabblad navigeert (van het lege tabblad naar de site, en bij
+//      Marktplaats van het formulier naar de advertentiepagina);
+//   2. de verkoper drukt op "Annuleren" in Chrome's gele balk, waarmee hij de
+//      koppeling verbreekt (Egbert Brouwer, 04-09-2026);
+//   3. Chrome breekt de service worker af en start hem opnieuw, waarna onze
+//      lijst met gekoppelde tabbladen leeg is.
+//
+// In alle drie de gevallen valt de klok terug naar nul tikken per seconde en
+// staat het formulier stil tot de verkoper er zelf naartoe klikt. Daarom wordt
+// de klok na ELKE paginawissel opnieuw gezet, en wordt er zo nodig opnieuw
+// gekoppeld. Het commando is idempotent; twee keer aanzetten kost niets.
+async function verzekerKlok(tabId) {
+  try {
+    const sleutel = `jobtab_${tabId}`;
+    const { [sleutel]: meta } = await chrome.storage.local.get(sleutel);
+    if (!(meta && meta.klokVast) && !_klokTabbladen.has(tabId)) return;
+    if (!_vroegGekoppeld.has(tabId)) {
+      if (!(await heeftDebugger())) return;
+      const gelukt = await new Promise((res) => {
+        try {
+          chrome.debugger.attach({ tabId }, "1.3", () => {
+            const f = chrome.runtime.lastError;
+            // "Already attached" is geen fout: dan zijn wij het zelf, uit een
+            // vorig leven van de service worker.
+            res(!f || /already attached/i.test(f.message || ""));
+          });
+        } catch (_) { res(false); }
+      });
+      if (!gelukt) return;
+      _vroegGekoppeld.add(tabId);
+    }
+    await zetDoorlopendeKlok(tabId, null, true);
+  } catch (_) { /* dan werkt het zoals vroeger, alleen trager */ }
+}
+
+chrome.tabs.onUpdated.addListener((tabId, info) => {
+  if (info.status === "loading" || info.status === "complete") verzekerKlok(tabId);
+});
+
+function ontkoppelVroeg(tabId) {
+  if (!_vroegGekoppeld.has(tabId)) return;
+  _vroegGekoppeld.delete(tabId);
+  try { chrome.debugger.detach({ tabId }); } catch (_) {}
+}
+
+chrome.tabs.onRemoved.addListener((tabId) => _vroegGekoppeld.delete(tabId));
+
+// Sluit de verkoper het werk-tabblad, dan is dat het duidelijkste teken dat hij
+// klaar is met wat hij zelf deed. Meteen kijken of de advertentie er staat,
+// in plaats van tot de volgende wekker te wachten.
+chrome.tabs.onRemoved.addListener((tabId) => {
+  const key = `jobtab_${tabId}`;
+  chrome.storage.local.get(key).then(({ [key]: meta }) => {
+    if (!meta || !meta.awaitingManualFinish) return;
+    return fireJobWatchdog(tabId);
+  }).catch(() => {});
+});
+
+// DE KNOP "ANNULEREN" IN DE GELE BALK (04-09-2026).
+//
+// Chrome zet boven het venster een balk "'Omnivaleur' is begonnen met
+// foutopsporing voor deze browser", mét een knop Annuleren. Egbert Brouwer
+// stuurde er een foto van met een pijl naar precies die knop. Wie hem indrukt
+// verbreekt de koppeling — en daar hing tot nu toe niets aan vast: onze lijst
+// dacht nog dat we vastzaten, dus klikEcht stuurde zijn muisklik het niets in
+// en typEchteToets sloeg het opnieuw koppelen over. Gevolg: het formulier staat
+// volledig ingevuld op het scherm en er wordt nooit op Plaatsen gedrukt.
+//
+// Nu houden we het bij, zodat de volgende klik gewoon opnieuw koppelt.
+chrome.debugger.onDetach.addListener((bron) => {
+  if (bron && bron.tabId != null && _vroegGekoppeld.delete(bron.tabId)) {
+    console.warn("[Omnivaleur] debugger-koppeling verbroken op tab", bron.tabId);
+  }
+});
+
+function openWorkerTab(url, callback, opts = {}) {
+  // EERST EEN ACHTERGROND-TABBLAD IN HET VENSTER WAAR HIJ TOCH AL ZIT.
+  //
+  // Toon (Mac, 06-09-2026): "elke keer als ik iets plaats valt mijn scherm weg."
+  // Oorzaak: publiceren opende een apart venster en minimaliseerde dat daarna.
+  // Op macOS pakt chrome.windows.update({state:"minimized"}) geregeld het venster
+  // dat op dat moment vooraan staat — dat is net het venster van de verkoper. Ook
+  // op Windows en ChromeOS is dat aparte venster een flits die de aandacht pakt.
+  //
+  // De scans (verkoopcontrole, berichten tellen) draaiden dit probleem al weg door
+  // hun werk te doen in een niet-actief tabblad in een venster dat er toch al is:
+  // dat flitst niet, komt nooit naar voren, en er wordt nergens een venster
+  // geminimaliseerd. Publiceren gaat nu net zo. Alleen als er echt geen enkel
+  // gewoon venster is (Chrome draait dan onzichtbaar op de achtergrond, niemand
+  // kijkt) valt het terug op het oude geminimaliseerde werkvenster.
+  // HET VINTED-FORMULIER KREEG HIER EEN EIGEN VENSTER. DAT IS ERUIT (18-09-2026).
+  //
+  // De reden was een meting van 15-09: "een tabblad dat in zijn eigen venster
+  // vooraan staat houdt vol tempo, ook geminimaliseerd, 92 tikken in 10
+  // seconden". Die meting duurde tien seconden, en dat is precies te kort: het
+  // afknijpen begint pas na ruim een minuut. Over negen minuten gemeten, in een
+  // echte Chrome op deze machine (tests/klok-varianten-echt-test.mjs):
+  //
+  //   achtergrondtabblad, kaal                    : 0,0 tikken/s na 1,5 min
+  //   achtergrondtabblad + alleen de debugger      : 0,0 tikken/s
+  //   EIGEN VENSTER, ingeklapt, actief tabblad     : 0,0 tikken/s   ← de oude weg
+  //   achtergrondtabblad + focus-emulatie          : 9,7 tikken/s, negen minuten lang
+  //   eigen venster + focus-emulatie               : 9,7 tikken/s
+  //
+  // Het venster doet er dus niets toe; alleen Emulation.setFocusEmulationEnabled
+  // doet er iets toe. Daniels eigen Vinted-opdrachten bevestigen het: in dat
+  // eigen venster meldden ze "klokstand: 0.0/s +44995ms" en duurden ze 1210,
+  // 1341 en 1690 seconden. Het venster kostte hem dus alleen maar een venster
+  // ("vinted opent nog steeds in een ander venster in plaats van een tabblad").
+  // Vinted gaat daarom net als Marktplaats en 2dehands naar een achtergrond-
+  // tabblad in het venster waar hij toch al werkt.
+
+  openAchtergrondTabblad(url, opts).then((tab) => {
+    if (tab) { callback(tab); return; }
+    _workerWindowChain = _workerWindowChain
+      .then(() => openWorkerTabInner(url, opts))
+      .then(
+        t => callback(t),
+        err => { console.error("[Omnivaleur] openWorkerTab failed:", err); callback(null); }
+      );
+  }).catch((err) => {
+    console.error("[Omnivaleur] openAchtergrondTabblad failed:", err);
+    _workerWindowChain = _workerWindowChain
+      .then(() => openWorkerTabInner(url, opts))
+      .then(
+        t => callback(t),
+        e => { console.error("[Omnivaleur] openWorkerTab failed:", e); callback(null); }
+      );
+  });
+}
+
+async function openWorkerTabInner(url, opts = {}) {
+  // HET WERKVENSTER KOMT NOOIT MEER IN BEELD.
+  //
+  // Hier stond: scans ingeklapt, publiceren in een gewoon venster. Gevolg: bij
+  // elke advertentie klapte het venster weer open over het werk van de verkoper
+  // heen — "elke keer komt het scherm in beeld waar hij aan het listen is".
+  // Publiceren hoort net zo onzichtbaar te zijn als de scans.
+  //
+  // De prijs is bekend en aanvaard: Chrome vertraagt korte pauzes in een
+  // verborgen tabblad tot een seconde, dus invullen duurt wat langer. In de
+  // praktijk gebeurde dat toch al — een venster dat achter de vensters van de
+  // verkoper ligt, telt op een Mac ook als verborgen. Elke logregel uit het
+  // formulier zet de bewaker opnieuw op scherp, dus trager werk wordt niet
+  // afgebroken.
+  const wantState = "minimized";
+  let existing = await getWorkerWindowId();
+  if (existing == null) {
+    // Geen nummer in het geheugen (bijvoorbeeld na een update): kijk of ons
+    // venster er nog staat vóór we er een nieuwe bij maken.
+    existing = await vindEnOpruimenWerkvensters();
+    if (existing != null) await setWorkerWindowId(existing);
+  }
+  if (existing != null) {
+    try {
+      const win = await chrome.windows.get(existing);
+      if (win.state !== wantState && await vensterIsAlleenVanOns(existing)) {
+        // focused:false keeps this from ever pulling the user out of their work.
+        // En alleen als dit venster nog echt van ons is: zit de verkoper erin te
+        // werken, dan gebruiken we het wel, maar klappen we het nooit in.
+        await chrome.windows.update(existing, { state: wantState, focused: false }).catch(() => {});
+      }
+      // active:true is scoped to THAT window, so it never steals focus from the
+      // user's foreground window — and does not un-minimise it either.
+      await ensureKeeperTab(existing);
+      const tab = await maakWerkTabblad({ windowId: existing, active: true }, url, opts);
+      // Het vorige job-tabblad wordt pas 2 seconden NA afronding gesloten. Valt
+      // dat samen met het openen van het volgende, dan sluit Chrome het venster
+      // (laatste tabblad weg) en neemt het nieuwe tabblad meteen mee — het
+      // content-script sterft dan halverwege het invullen. Dat is precies waarom
+      // twee platforms achter elkaar misging en één platform alleen wel lukte.
+      // Controleer of het tabblad de tearing-down overleefde; anders een vers
+      // venster.
+      await new Promise(r => setTimeout(r, 150));
+      const alive = await chrome.tabs.get(tab.id).catch(() => null);
+      if (alive) return tab;
+      await chrome.storage.session.remove(WORKER_WIN_KEY).catch(() => {});
+    } catch {
+      await chrome.storage.session.remove(WORKER_WIN_KEY).catch(() => {});
+    }
+  }
+  try {
+    // Chrome rejects state:"minimized" combined with an explicit size (and, on
+    // some versions, with focused), so the minimised window is created bare and
+    // degrades to a normal unfocused window rather than failing the whole job.
+    // Leeg openen en pas daarna navigeren: alleen op een leeg tabblad laat
+    // Chrome ons aan de toetsen komen (zie koppelVroeg).
+    const leeg = "about:blank";
+    const w = await chrome.windows.create({ url: leeg, focused: false, state: "minimized" })
+      .catch(() => chrome.windows.create({ url: leeg, state: "minimized" }))
+      .catch(() => chrome.windows.create({ url: leeg, focused: false, ...WORKER_WIN_SIZE }));
+    if (!w || !w.tabs || !w.tabs[0]) throw new Error("no tab in new window");
+    // NOG EEN KEER MINIMALISEREN, EXPLICIET.
+    //
+    // Op macOS weigert Chrome windows.create met state:"minimized" regelmatig;
+    // dan valt hij hierboven terug op een gewoon venster en pópt er elke ronde
+    // een Marktplaats-scherm open over het werk van de verkoper heen — ook als
+    // hij het net zelf had geminimaliseerd. windows.update accepteert die stand
+    // wél, ook direct na het aanmaken.
+    await chrome.windows.update(w.id, { state: "minimized", focused: false }).catch(() => {});
+    await setWorkerWindowId(w.id);
+    // Anker erbij: vanaf nu blijft dit ene venster bestaan in plaats van bij
+    // elke klus opnieuw op te poppen.
+    await ensureKeeperTab(w.id);
+    await koppelVroeg(w.tabs[0].id, url, !!opts.klokVast);
+    await chrome.tabs.update(w.tabs[0].id, { url });
+    // Navigeren kan het venster terugzetten; nog één keer wegduwen kost niets.
+    await chrome.windows.update(w.id, { state: "minimized", focused: false }).catch(() => {});
+    return w.tabs[0];
+  } catch {
+    // Window creation blocked (rare) — fall back to a plain background tab so
+    // the job still runs rather than failing outright.
+    return await maakWerkTabblad({ active: false }, url, opts);
+  }
+}
+
+// WAT ALS CHROME ONS DE SITE NIET LAAT ZIEN? (05-09-2026, Amanda Haas)
+//
+// In Chrome kun je per extensie instellen wanneer hij een site mag lezen: "Op
+// alle sites", "Op specifieke sites" of "Als je erop klikt". Staat hij op dat
+// laatste, dan moet de verkoper bij ELKE nieuwe pagina eerst op het icoontje
+// rechts van de adresbalk klikken. Onze werk-tabbladen openen zichzelf, dus dan
+// gebeurt er domweg niets: geen invulstap, geen foutmelding, en na drie minuten
+// "Extension timed out waiting for this job to finish". Amanda beschreef precies
+// dat: "moet er dan wel voor achter de pc blijven hangen".
+//
+// Chrome geeft dit gewoon eerlijk terug via permissions.contains(). Weten we het
+// zeker, dan stoppen we meteen met een leesbare uitleg in plaats van de verkoper
+// drie minuten te laten wachten op niets. Bij twijfel (een uitzondering, een
+// onbekend kanaal) gaat de opdracht gewoon door — deze rem mag nooit werk
+// tegenhouden dat het wél zou doen.
+const SITE_ORIGINS = {
+  marktplaats: ["https://www.marktplaats.nl/*"],
+  "2dehands":  ["https://www.2dehands.be/*"],
+  vinted:      ["https://www.vinted.nl/*", "https://www.vinted.be/*",
+                "https://www.vinted.com/*", "https://www.vinted.de/*",
+                "https://www.vinted.fr/*"],
+  facebook:    ["https://www.facebook.com/*"],
+};
+
+const GEEN_SITETOEGANG =
+  "Chrome laat Omnivaleur deze site alleen zien als je zelf op het icoontje "
+  + "klikt, dus het werk-tabblad bleef leeg. Er is niets geplaatst of verwijderd. "
+  + "Zet het eenmalig goed: klik rechts van de adresbalk op het puzzelstukje, dan "
+  + "op de drie puntjes naast Omnivaleur, \"Deze extensie kan lezen en wijzigen\" "
+  + "→ \"Op alle sites\". Daarna loopt de wachtrij vanzelf door.";
+
+async function siteToegangOntbreekt(platform, payload) {
+  let origins = SITE_ORIGINS[platform];
+  if (!origins) return false;              // onbekend kanaal: nooit tegenhouden
+  // Vinted leeft op één landdomein per account. Weten we welk, dan is dat het
+  // enige dat telt; anders is één van de landen genoeg.
+  const eigen = (payload || {})._create_origin;
+  if (platform === "vinted" && eigen) {
+    try { origins = [`${new URL(eigen).origin}/*`]; } catch (_) { /* laat staan */ }
+  }
+  try {
+    for (const o of origins) {
+      if (await chrome.permissions.contains({ origins: [o] })) return false;
+    }
+    return true;                            // Chrome zegt met zoveel woorden nee
+  } catch (_) {
+    return false;                           // niet kunnen vragen is geen bewijs
+  }
+}
+
+async function processJob(job, serverUrl) {
+  const headers = await getAuthHeaders();
+  // Claim job first
+  const claimRes = await fetch(`${serverUrl}/api/jobs/${job.id}/claim`, { method: "POST", headers });
+  if (!claimRes.ok) return;
+
+  // Eerst: mág deze kopie de site van dit kanaal überhaupt lezen? Zo niet, dan
+  // heeft doorgaan geen enkele zin en kost het de verkoper drie minuten stilte.
+  if (await siteToegangOntbreekt(job.platform, job.payload)) {
+    await reportError(job.id, serverUrl, GEEN_SITETOEGANG);
+    return;
+  }
+
+  gaEvent("job_started", { action: job.action, platform: job.platform });
+
+  // MP/2dh delete: fully background-driven, no content script needed
+  if (job.action === "delete" && (job.platform === "marktplaats" || job.platform === "2dehands")) {
+    try {
+      await bgDeleteMp2dh(job, serverUrl);
+    } catch (e) {
+      await reportError(job.id, serverUrl, String(e));
+    }
+    return;
+  }
+
+  // 2dehands verlengen: één klik op de verlengknop van het eigen overzicht.
+  // NOOIT weghalen, nooit opnieuw plaatsen — verlengen is gratis, opnieuw
+  // plaatsen kost in een betalende rubriek geld. Volledig vanuit de achtergrond,
+  // net als delete/scan.
+  if (job.action === "extend" && job.platform === "2dehands") {
+    try {
+      await bgExtend2dh(job, serverUrl);
+    } catch (e) {
+      await reportError(job.id, serverUrl, String(e));
+    }
+    return;
+  }
+
+  // Vinted delete: also background-driven. Vinted redirects the seller away
+  // from the item page right after confirming delete, which destroys any
+  // content-script mid-verification (leaving the job stuck "claimed" and the
+  // paired relist recreate blocked forever). The background worker survives
+  // that navigation, so verification + /complete happen reliably here.
+  if (job.action === "delete" && job.platform === "vinted") {
+    try {
+      await bgDeleteVinted(job, serverUrl);
+    } catch (e) {
+      await reportError(job.id, serverUrl, String(e));
+    }
+    return;
+  }
+
+  // Scan: read the user's own "my listings" page, report candidates for manual review
+  if (job.action === "scan") {
+    try {
+      if (job.platform === "vinted") await bgScanVinted(job, serverUrl);
+      else await bgScanMp2dh(job, serverUrl);
+    } catch (e) {
+      await reportError(job.id, serverUrl, String(e));
+    }
+    return;
+  }
+
+  // ── IS HIJ WEL INGELOGD OP VINTED? ────────────────────────────────────────
+  //
+  // Budgetheld, 01-09-2026: het dashboard zette een groen vinkje bij een
+  // advertentie die helemaal niet op hun Vinted-profiel stond. De klant was op
+  // dat moment niet ingelogd op Vinted.
+  //
+  // Uitgelogd levert Vinted op /items/new gewoon een pagina op — geen 401, geen
+  // doorverwijzing die wij herkennen. Het invulscript loopt dan over een
+  // formulier dat er niet is: elke stap mislukt stil (step() logt en gaat door),
+  // de eindcontrole vindt geen veld en klaagt dus ook niet (een veld dat niet
+  // bestaat is niet leeg), en daarna is elk /items/{cijfers} in de adresbalk
+  // genoeg om de opdracht af te melden als geplaatst. Vandaar het vinkje bij
+  // niets.
+  //
+  // Deze controle is het enige eerlijke antwoord op "ben je ingelogd": het
+  // gaat langs Vinted's eigen endpoint, met de cookies van de browser. Komt daar
+  // geen gebruiker uit, dan openen we geen tabblad en melden we de opdracht af
+  // als mislukt, met wat de verkoper moet doen. Kunnen we het niet vaststellen
+  // (netwerk, endpoint veranderd), dan gaat het gewoon door — een onzekere
+  // controle mag geen werk tegenhouden.
+  if (job.platform === "vinted" && job.action !== "scan") {
+    const klaar = await vintedOriginKlaarzetten(job);
+    if (!klaar.ok) { await reportError(job.id, serverUrl, klaar.melding); return; }
+  }
+
+  // Hetzelfde voor Marktplaats en 2dehands, en om dezelfde reden: zonder sessie
+  // stuurt de site het plaatsadres door naar haar inlogpagina, waar ons
+  // invulscript niet draait. Zie mpSessie voor de meting.
+  if ((job.platform === "marktplaats" || job.platform === "2dehands")
+      && (job.action === "create" || job.action === "content_refresh")) {
+    const klaar = await mpPlaatsenKlaarzetten(job, serverUrl);
+    if (!klaar.ok) { await reportError(job.id, serverUrl, klaar.melding); return; }
+  }
+
+  let url;
+  try {
+    url = job.action === "delete" ? getDeleteUrl(job.platform, job.payload)
+      : job.action === "content_refresh" ? getEditUrl(job.platform, job.payload)
+      : getMpSyiUrl(job.platform, job.payload);
+  } catch (e) {
+    // An unresolved category lands here. Report it against this job only — an
+    // uncaught throw would escape processJob and silently abandon every other
+    // job in this poll round.
+    await reportError(job.id, serverUrl, e.message || String(e));
+    return;
+  }
+  if (!url) {
+    await reportError(job.id, serverUrl, "No URL configured for " + job.platform + " action=" + job.action);
+    return;
+  }
+
+  console.log(`[Omnivaleur v${chrome.runtime.getManifest().version}] Opening tab for ${job.platform} job ${job.id}: ${url}`);
+  // Een klus die iets SCHRIJFT vult een formulier in: honderden kleine pauzes,
+  // keuzelijsten en knoppen die allemaal op de klok van de pagina wachten. Die
+  // klok moet dus vastgezet worden, wat voor pagina het ook is. Scannen doet zijn
+  // werk in één aanvraag aan de site zelf en merkt van een trage klok niets, dus
+  // dat blijft zonder koppeling en dus zonder Chrome's gele balk.
+  const klokVast = SCHRIJVENDE_ACTIES.has(job.action);
+  openWorkerTab(url, (tab) => {
+    if (!tab) {
+      reportError(job.id, serverUrl, "tabs.create failed: could not open a tab");
+      return;
+    }
+    // PER-TAB job storage — the whole job, keyed by THIS tab's id. The content
+    // script asks the background for its own tab's job (GET_JOB). This replaces
+    // the old single job_<platform> slot, where a second same-platform tab
+    // overwrote the first tab's job data, so two listings published with each
+    // other's photos, prices, titles and descriptions. Per-tab keying makes that
+    // impossible even if two tabs ever run at once.
+    chrome.storage.local.set({
+      [`jobtab_${tab.id}`]: { ...job, jobId: job.id, serverUrl, startedAt: Date.now(), klokVast },
+    });
+    startOntdooiTeller();
+    armJobWatchdog(tab.id);
+    // Het tabblad navigeert hierna nog naar de site zelf; de klok hoort daarna
+    // opnieuw vastgezet te worden. Meteen één keer, en daarna bij elke wissel.
+    if (klokVast) verzekerKlok(tab.id);
+  }, { klokVast });
+}
+
+// ── Per-tab watchdog for content-script-driven jobs ────────────────────────
+// Facebook (beta, unstable selectors) and any other tab-based job can hang
+// without ever calling JOB_DONE/JOB_ERROR — e.g. getJob() never resolves, or
+// fillForm() gets stuck in a wait loop on a form Facebook changed. Because the
+// extension dispatches strictly ONE job at a time, a single silently-hung tab
+// used to freeze the ENTIRE queue (every platform) until the server's 5-minute
+// stale-claim sweep finally reset it — with no visible error in the meantime.
+// This watchdog force-fails the job itself after a shorter timeout so the
+// queue keeps moving and the user gets an actionable error immediately.
+const JOB_TAB_TIMEOUT_MIN = 3; // minutes — generous for slow forms, short vs. the 5-min server sweep
+const JOB_WATCHDOG_PREFIX = "jobwd_";
+
+// Backed by chrome.alarms, NOT setTimeout: an MV3 service worker is evicted when
+// idle, which silently cancelled the old timer — precisely in the situations that
+// strand a job (content script hung, Chrome idle, worker killed). An alarm wakes
+// the worker back up, so the timeout actually fires.
+function armJobWatchdog(tabId) {
+  chrome.alarms.create(`${JOB_WATCHDOG_PREFIX}${tabId}`, { delayInMinutes: JOB_TAB_TIMEOUT_MIN });
+}
+
+// BLIJVEN KIJKEN OF HIJ HET ZELF AFMAAKT (05-09-2026, Daniel).
+//
+// De bewaker hierboven is een eenmalige wekker. Ging een plaatsing over in
+// "maak hem zelf af", dan werd die wekker nooit opnieuw gezet, en dus keek er
+// daarna niemand meer of de advertentie er alsnog stond. Daniel plaatste zijn
+// coltrui met de hand en het kaartje bleef "Publishing now…" zeggen. De
+// controle bestond dus wel, maar er ging nooit meer een wekker af die hem
+// aanriep. Nu kijkt hij elke twee minuten, een half uur lang.
+const MANUELE_CONTROLE_MIN = 2;
+const MANUELE_CONTROLES_MAX = 15;
+function armManueleControle(tabId) {
+  chrome.alarms.create(`${JOB_WATCHDOG_PREFIX}${tabId}`,
+    { delayInMinutes: MANUELE_CONTROLE_MIN, periodInMinutes: MANUELE_CONTROLE_MIN });
+}
+
+// ── "Het formulier is nooit opengegaan" ────────────────────────────────────
+//
+// GEMETEN, NIET GEGOKT (03-09-2026, Egbert Brouwer / papas-plectrums).
+// Van zijn 305 opdrachten voor 2dehands is er nooit één geslaagd: 26 werden er
+// door de bewaker hieronder afgebroken na exact drie minuten, telkens zonder
+// één teken van leven uit het tabblad, en 279 stonden er nog achter. Zijn
+// Marktplaats-opdrachten uit diezelfde ronde liepen wél door (15 scans, geen
+// plaatsingen: naar Marktplaats is er nooit één opdracht aangemaakt), en
+// bij andere verkopers slaagde 2dehands in dezelfde periode 97 keer. Het
+// verschil zit dus niet in onze code en niet in de categorie, maar in de site:
+// www.2dehands.be antwoordt op het plaatsadres met HTTP 401 zolang je daar niet
+// bent ingelogd (nagemeten op 03-09-2026: twaalf bytes platte tekst, geen
+// formulier). Op zo'n pagina draait ons invulscript helemaal niet, dus meldt
+// niemand iets terug en loopt de bewaker af.
+//
+// Marktplaats.nl en 2dehands.be zijn twee aparte sites met twee aparte
+// inlogsessies. Wie op de een is ingelogd, is dat op de ander niet vanzelf.
+//
+// Dat verschil is nu zichtbaar: heeft het invulscript zich gemeld, dan is het
+// formulier echt opengegaan en is er iets ánders misgegaan. Heeft het zich niet
+// gemeld, dan is de pagina nooit het formulier geweest — en dan is elke
+// volgende opdracht op dat kanaal net zo kansloos.
+const NIET_GESTART_PREFIX = "nietgestart_";
+const NIET_GESTART_GRENS = 2;   // pas na twee op rij: één keer kan pech zijn
+
+const SITE_NAAM = {
+  marktplaats: "Marktplaats (marktplaats.nl)",
+  "2dehands": "2dehands (2dehands.be)",
+  vinted: "Vinted",
+  facebook: "Facebook Marketplace",
+};
+
+// Neem in één keer alles terug wat nog voor dit kanaal in de wachtrij staat.
+// Zonder dit bleef de rij hem 279 keer hetzelfde vertellen, drie en een halve
+// minuut per keer: zestien uur waarin hij niets anders kon publiceren, want de
+// extensie doet met opzet één opdracht tegelijk.
+async function stopPlatformWachtrij(serverUrl, platform, reden) {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${serverUrl}/api/jobs/stop-platform`, {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ platform, reason: reden }),
+    });
+    const data = await res.json().catch(() => ({}));
+    console.warn(`[Omnivaleur] ${platform}: wachtrij gestopt, ${data.cancelled ?? "?"} opdrachten teruggenomen.`);
+  } catch (e) {
+    console.error("[Omnivaleur] Wachtrij stoppen mislukt:", e);
+  }
+}
+
+// Wat er op dat tabblad te zien was, gemeten in plaats van aangenomen.
+//
+// HIER STOND EEN CONCLUSIE, EN DIE WAS FOUT (03-09-2026). De vorige versie zei
+// zonder voorbehoud "dat is hoe het eruitziet als je niet bent ingelogd".
+// Egbert Brouwer kreeg die tekst dertig keer en was gewoon ingelogd. Wat we
+// hadden was: het tabblad ging open en er kwam nooit iets terug. Dat is een
+// waarneming van niets, en daar hoort geen oorzaak bij.
+//
+// Deze functie kijkt daarom eerst in het tabblad zelf. Dat kan: scannen doet
+// hetzelfde en dat werkt bij hem wél. Het beslissende gegeven is het stempel
+// dat content/shared.js achterlaat. Staat het er, dan is ons invulscript
+// geladen en ligt het aan ons. Staat het er niet en zegt de pagina
+// "Unauthorized" of vraagt ze om een wachtwoord, dan is het de inlog. Staat er
+// iets anders, dan schrijven we op wat er stond in plaats van te gokken.
+async function bekijkVastgelopenTabblad(tabId) {
+  try {
+    const [res] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        const tekst = (document.body?.innerText || "").trim();
+        return {
+          url: String(location.href).split("?")[0],
+          titel: (document.title || "").slice(0, 120),
+          begin: tekst.slice(0, 200),
+          stempel: document.documentElement?.getAttribute("data-omnivaleur-cs") || null,
+          velden: document.querySelectorAll("input, textarea, [contenteditable=true]").length,
+          wachtwoordveld: !!document.querySelector('input[type="password"]'),
+        };
+      },
+    });
+    return res?.result || null;
+  } catch (e) {
+    console.warn("[Omnivaleur] Kon het vastgelopen tabblad niet bekijken:", e);
+    return null;
+  }
+}
+
+async function meldNooitBegonnen(tabId, meta, snapshot) {
+  const site = SITE_NAAM[meta.platform] || meta.platform;
+  // Al gekeken (de bewaker geeft zijn momentopname door)? Dan die gebruiken: het
+  // tabblad kan inmiddels dicht zijn en een tweede blik levert dan niets op.
+  const f = snapshot || await bekijkVastgelopenTabblad(tabId);
+
+  const feiten = (f
+    ? ` [pagina: ${f.url}, titel ${JSON.stringify(f.titel)}, ${f.velden} invulveld(en), `
+      + `invulscript geladen: ${f.stempel ? f.stempel : "nee"}${f.begin ? `, begint met ${JSON.stringify(f.begin.slice(0, 80))}` : ""}]`
+    : " [het tabblad was al weg voordat we konden kijken]")
+    + (meta.laatsteStap ? ` [laatste stap: ${JSON.stringify(String(meta.laatsteStap).slice(0, 120))}]` : "");
+
+  let tekst;
+  if (f && f.stempel) {
+    // Ons eigen script stond er wel degelijk. Dan is het onze fout, en dat mag
+    // een verkoper gewoon horen in plaats van naar zijn login gestuurd worden.
+    tekst =
+      `The ${site} listing form opened and our filling script did load, but it never got as far as `
+      + `filling anything in. That is a fault on our side, not with your account or your login. `
+      + `Nothing was published and nothing was changed on ${site}.` + feiten;
+  } else if (f && /\/marketplace\/(?:[^/]+\/)*create\/limit_reached/i.test(f.url || "")) {
+    // FACEBOOK ZEGT ZELF NEE (03-10-2026, klant f8c0cce9). Het tabblad naar
+    // /marketplace/create/item kwam uit op /marketplace/np/create/limit_reached/:
+    // Facebook laat dit account voorlopig geen nieuwe advertentie plaatsen. Hier
+    // stond dan "we could not tell … please send them to us", terwijl het adres
+    // het antwoord al gaf. Dat is een grens van Facebook, niet van ons.
+    tekst =
+      `Facebook did not let this account create a new listing: it showed its "limit reached" page `
+      + `instead of the listing form. Facebook sets that limit itself, not Omnivaleur. Nothing was `
+      + `published. Try again later; Facebook decides when the limit is lifted.` + feiten;
+  } else if (f && (f.wachtwoordveld || /unauthorized|inloggen|log in|sign in/i.test(f.begin || ""))) {
+    tekst =
+      `The ${site} listing form never opened: that browser tab showed a login page instead. `
+      + `Marktplaats and 2dehands are separate sites with separate logins, so being signed in to `
+      + `one does not sign you in to the other. Open ${site}, sign in, and publish again.` + feiten;
+  } else {
+    tekst =
+      `The ${site} listing form never opened: the page never reported back, so nothing was filled `
+      + `in and nothing was published. We could not tell from here whether that page was a login `
+      + `screen or something else, so the details we did see are below. Please send them to us.`
+      + feiten;
+  }
+
+  await reportError(meta.jobId, meta.serverUrl, tekst).catch(() => {});
+  // Er valt hier niets met de hand af te maken — er staat geen formulier. Het
+  // tabblad openhouden levert alleen een stapel foutpagina's op.
+  await chrome.storage.local.remove(`jobtab_${tabId}`);
+  sluitWerkTabblad(tabId);
+
+  const sleutel = `${NIET_GESTART_PREFIX}${meta.platform}`;
+  const opgeslagen = await chrome.storage.local.get(sleutel);
+  const opRij = (Number(opgeslagen[sleutel]) || 0) + 1;
+  await chrome.storage.local.set({ [sleutel]: opRij });
+  if (opRij >= NIET_GESTART_GRENS) {
+    await chrome.storage.local.remove(sleutel);
+    await stopPlatformWachtrij(meta.serverUrl, meta.platform, tekst);
+  }
+}
+
+// Hoe lang een opdracht in totaal mag doen over zijn tab. Ruim onder de vijf
+// minuten waarop de server een niet-afgemelde opdracht terugneemt.
+// RUIMER SINDS DE KANALEN NAAST ELKAAR LOPEN (19-09-2026).
+//
+// Hier stond 4,5 minuut. Dat was al krap: gemeten over tien dagen bij Daniel
+// duurt een Vinted-plaatsing 354 seconden (mediaan) en uitschieters 565. Die
+// haalden het alleen doordat de bewaker bij Vinted eerst kijkt of de advertentie
+// er tóch staat. Nu er drie tabbladen tegelijk kunnen werken, wordt elk van hen
+// iets trager, en dan zou deze grens goede plaatsingen gaan afkappen — met een
+// rode melding bij een advertentie die gewoon bezig was.
+//
+// De echte bewaking verandert niet: drie minuten zonder één teken van leven uit
+// het tabblad blijft "vastgelopen". Dit is alleen de bovengrens voor een tabblad
+// dat wél doorwerkt.
+const JOB_MAX_LIFETIME_MS = 9 * 60 * 1000;
+
+// Teken van leven vanuit de tab: bewaker opnieuw opspannen, tenzij de opdracht
+// al te lang loopt of al aan de gebruiker is teruggegeven.
+function keepJobAlive(tabId) {
+  if (tabId == null) return;
+  chrome.storage.local.get(`jobtab_${tabId}`, (s) => {
+    const meta = s[`jobtab_${tabId}`];
+    if (!meta || meta.awaitingManualFinish) return;
+    if (meta.startedAt && Date.now() - meta.startedAt > JOB_MAX_LIFETIME_MS) return;
+    armJobWatchdog(tabId);
+  });
+}
+
+function clearJobWatchdog(tabId) {
+  if (tabId == null) return;
+  chrome.alarms.clear(`${JOB_WATCHDOG_PREFIX}${tabId}`);
+}
+
+// Staat deze advertentie inmiddels gewoon op Vinted?
+//
+// De bevestiging "hij staat online" komt normaal uit het tabblad zelf, maar
+// Vinted gooit bij het plaatsen de pagina om — en dan is het script dat de
+// melding moest sturen al weg. Daarom kijkt de achtergrond hier zelf in de
+// garderobe van de gebruiker, met dezelfde inlog als de browser. Vinden we de
+// titel terug, dan is de advertentie geplaatst en melden we hem gewoon af, in
+// plaats van een fout te tonen bij iets dat gelukt is.
+// Titel vergelijkbaar maken: kleine letters, alleen letters en cijfers.
+function _vintedTitelSleutel(t) {
+  return String(t || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+// Hetzelfde, maar zonder een voorloopnummer als "(1327) ". Dat nummer staat wel
+// in het dashboard en niet altijd op het platform (of andersom), en op dat
+// verschil liep de exacte vergelijking stuk.
+function _vintedTitelZonderSku(t) {
+  return _vintedTitelSleutel(String(t || "").replace(/^\s*\([^)]{1,24}\)\s*/, ""));
+}
+
+// OP WELK VINTED-DOMEIN IS DEZE VERKOPER INGELOGD? (04-09-2026, gemeten)
+//
+// Een Vinted-account leeft op één landdomein, en cookies reizen niet mee:
+// vinted.nl en vinted.com zijn losse domeinen met losse sessies. Gemeten op
+// 04-09-2026: https://www.vinted.com/api/v2/users/current geeft 401 zonder
+// enige doorverwijzing naar het landdomein. Wie dus op vinted.nl is ingelogd,
+// is voor vinted.com een vreemde.
+//
+// Daar liep de inlogcontrole op stuk. Een eerste plaatsing draagt geen
+// _create_origin — dat zet alleen een herplaatsing, afgeleid uit het oude
+// advertentieadres (backend/services/relist.py) — dus viel de controle terug op
+// vinted.com, kreeg netjes 401 en meldde "je bent niet ingelogd op Vinted" aan
+// iemand die zichtbaar was ingelogd op vinted.nl. Er werd niets geplaatst.
+//
+// Dezelfde aanname zat in het adres van het plaatsformulier zelf: vinted.com
+// /items/new stuurt een uitgelogde bezoeker door naar
+// /member/register/select_type (gemeten: HTTP 200 op dat registratieadres), dus
+// ook zonder de controle viel daar niets in te vullen.
+//
+// Daarom zoeken we het domein op in plaats van het te gokken, en geven we dat
+// door aan de rest van de opdracht.
+const VINTED_ORIGINS = [
+  "https://www.vinted.nl", "https://www.vinted.be", "https://www.vinted.de",
+  "https://www.vinted.fr", "https://www.vinted.com",
+];
+const vintedKaalDomein = (o) => String(o || "").replace(/^https:\/\/(www\.)?/, "");
+
+// Onthouden wat we vonden. Vijf vragen per opdracht is zonde als het antwoord
+// een kwartier lang hetzelfde is; de gevonden waarde wordt hoe dan ook opnieuw
+// nagelopen voordat hij gebruikt wordt.
+let _vintedOriginCache = null;                 // { origin, at }
+const VINTED_ORIGIN_TTL_MS = 15 * 60 * 1000;
+
+// Geeft het origin waar een sessie leeft, `false` als élk domein hardop zegt dat
+// er niemand is ingelogd, en `null` als we het niet konden vaststellen (netwerk,
+// onderhoud). Bij `null` gaat het werk gewoon door: een onzekere controle mag
+// nooit werk tegenhouden.
+async function vintedIngelogdOrigin(voorkeur) {
+  const kandidaten = [];
+  const zet = (o) => { if (o && !kandidaten.includes(o)) kandidaten.push(o); };
+  zet(voorkeur);
+  if (_vintedOriginCache && Date.now() - _vintedOriginCache.at < VINTED_ORIGIN_TTL_MS) {
+    zet(_vintedOriginCache.origin);
+  }
+  for (const o of VINTED_ORIGINS) zet(o);
+
+  let ergensOnzeker = false;
+  for (const origin of kandidaten) {
+    const uitslag = await vintedIngelogd(origin);
+    if (uitslag === true) { _vintedOriginCache = { origin, at: Date.now() }; return origin; }
+    if (uitslag === null) ergensOnzeker = true;
+  }
+  _vintedOriginCache = null;
+  return ergensOnzeker ? null : false;
+}
+
+// Hetzelfde, maar dan gemeten vanuit een tabblad op Vinted zelf. Wordt alleen
+// gebruikt als de achtergrondmeting op élk domein "nee" zegt, dus vlak voordat
+// we iemand zijn plaatsing zouden weigeren. Uitslag kort onthouden: dit kost
+// tabbladen en het antwoord verandert niet per opdracht.
+let _vintedEerstepartij = null;                 // { origin: string|false, at }
+
+async function vintedEerstepartijOrigin(voorkeur) {
+  // Alleen een JA wordt onthouden. Een "nee" bleef tot 1.0.376 tien minuten
+  // staan, en dan weigerde elke plaatsing in die tijd met "je bent niet
+  // ingelogd", ook nadat de verkoper opnieuw had ingelogd (Janneke 31d28378,
+  // 09-10-2026: "Hij blijft deze melding geven. Ik ben wel ingelogd").
+  if (_vintedEerstepartij && _vintedEerstepartij.origin
+      && Date.now() - _vintedEerstepartij.at < EERSTEPARTIJ_TTL_MS) {
+    return _vintedEerstepartij.origin;
+  }
+  const kandidaten = [];
+  const zet = (o) => { if (o && !kandidaten.includes(o)) kandidaten.push(o); };
+  zet(voorkeur);
+  for (const o of VINTED_ORIGINS) zet(o);
+
+  let ergensOnzeker = false;
+  for (const origin of kandidaten) {
+    const oordeel = await vintedIngelogdInTabblad(origin);
+    if (oordeel === true) {
+      _vintedEerstepartij = { origin, at: Date.now() };
+      _vintedOriginCache = { origin, at: Date.now() };
+      return origin;
+    }
+    if (oordeel === null) ergensOnzeker = true;
+  }
+  // Konden we het ergens niet vaststellen, dan is dit geen "nee". Een onzekere
+  // controle mag nooit een publicatie tegenhouden, en al helemaal geen verwijt
+  // opleveren.
+  _vintedEerstepartij = null;
+  return ergensOnzeker ? null : false;
+}
+
+// INGELOGD OP VINTED, GEMETEN IN EEN TABBLAD OP VINTED ZELF (1.0.377).
+//
+// /api/v2/users/current alleen was niet genoeg. Vinted werkt met een kortlevend
+// toegangskoekje dat de site zelf ververst zodra je er rondklikt. Is dat koekje
+// verlopen, dan geeft de API 401 aan iemand die gewoon is ingelogd (Janneke
+// 31d28378, 09-10-2026). Daarom:
+//   1. de API; ja = ja;
+//   2. bij 401 even wachten (de geopende pagina ververst het koekje) en nog eens;
+//   3. het plaatsformulier zelf: een uitgelogde bezoeker wordt doorgestuurd naar
+//      /member/... (inloggen/registreren). Blijft hij op /items/new, dan is de
+//      sessie er en lag het alleen aan het koekje.
+// Alleen als API en formulier allebei "uitgelogd" zeggen is het nee. Een
+// incognitovenster zegt niets (eigen, lege koekjespot): dan weten we het niet.
+async function vintedIngelogdInTabblad(origin) {
+  let tabId = null;
+  try {
+    tabId = await new Promise((res, rej) =>
+      openWorkerTab(`${origin}/`, t => t ? res(t.id) : rej(new Error("geen tabblad")), { silent: true })
+    );
+    await waitForTabLoad(tabId);
+    try {
+      const t = await chrome.tabs.get(tabId);
+      if (t && t.incognito) return null;
+    } catch (_) { /* geen venstergegevens: gewoon meten */ }
+    const uit = await execInTab(tabId, async () => {
+      const vraag = async () => {
+        try {
+          const r = await fetch("/api/v2/users/current", { headers: { Accept: "application/json" }, credentials: "include" });
+          const b = r.ok ? await r.json().catch(() => null) : null;
+          return { status: r.status, id: b && b.user && b.user.id ? b.user.id : null };
+        } catch (_) { return { status: null, id: null }; }
+      };
+      let api = await vraag();
+      if (!api.id && (api.status === 401 || api.status === 403)) {
+        await new Promise(r => setTimeout(r, 4000));
+        api = await vraag();
+      }
+      let formulier = null;
+      if (!api.id) {
+        try {
+          const r = await fetch("/items/new", { credentials: "include", redirect: "follow" });
+          formulier = { status: r.status, url: String(r.url || "") };
+        } catch (_) { /* weet niet */ }
+      }
+      return { api, formulier };
+    }, []);
+    return vintedOordeel(uit);
+  } catch (e) {
+    console.warn("[Omnivaleur] Vinted-inlogcontrole in tabblad mislukt:", e);
+    return null;
+  } finally {
+    if (tabId != null) sluitWerkTabblad(tabId);
+  }
+}
+
+// true = ingelogd, false = zeker uitgelogd, null = weet niet. Los gezet zodat
+// de proef hem zonder browser kan nalopen.
+function vintedOordeel(uit) {
+  if (!uit || !uit.api) return null;
+  if (uit.api.id) return true;
+  const f = uit.formulier;
+  if (!f || !f.status) return null;
+  let pad = "";
+  try { pad = new URL(f.url).pathname; } catch (_) { pad = f.url; }
+  const naarInloggen = /^\/(?:member\/|signup|login|session)/.test(pad);
+  if (f.status === 200 && /^\/items\/new/.test(pad)) return true;
+  if (naarInloggen && (uit.api.status === 401 || uit.api.status === 403)) return false;
+  return null;
+}
+
+// Zet de opdracht klaar op het domein waar de verkoper echt is ingelogd, en
+// zeg het alleen dan af als geen enkel domein een sessie kent. Het gevonden
+// origin gaat in _create_origin, want daar leest getMpSyiUrl het uit: zo opent
+// het plaatsformulier op vinted.nl in plaats van op vinted.com.
+async function vintedOriginKlaarzetten(job) {
+  let voorkeur = job.payload && job.payload._create_origin;
+  if (!voorkeur && job.payload && job.payload.platform_listing_url) {
+    try { voorkeur = new URL(job.payload.platform_listing_url).origin; } catch (_) {}
+  }
+  let gevonden = await vintedIngelogdOrigin(voorkeur);
+  if (gevonden === false) {
+    // Dezelfde blinde hoek als bij Marktplaats/2dehands (zie MP_OVERZICHT_URL):
+    // een weigering die uit deze service worker komt is een vermoeden, geen
+    // oordeel. Vinted is er nog nooit op betrapt, maar de meting zit in precies
+    // dezelfde context, en de prijs van een fout oordeel is iemands hele
+    // wachtrij plus het verwijt dat hij niet is ingelogd terwijl hij dat wel is.
+    // Daarom eerst nog een ronde vanuit een echt tabblad op Vinted zelf.
+    gevonden = await vintedEerstepartijOrigin(voorkeur);
+  }
+  if (gevonden === false) {
+    return { ok: false, melding:
+      "You are not signed in to Vinted in this browser, so nothing was published. " +
+      "We checked " + VINTED_ORIGINS.map(vintedKaalDomein).join(", ") + ", both in the " +
+      "background and in a tab on Vinted itself. " +
+      "Open Vinted, log in there, and publish again." };
+  }
+  if (typeof gevonden === "string") {
+    if (!job.payload) job.payload = {};
+    job.payload._create_origin = gevonden;
+  }
+  return { ok: true, origin: typeof gevonden === "string" ? gevonden : null };
+}
+
+// Ingelogd op Vinted, ja/nee/onbekend. `null` = niet vast te stellen.
+//
+// credentials:"include" is hier geen sierlijkheid maar de kern: we willen exact
+// weten wat de browser van de verkoper te zien krijgt, met zijn eigen cookies.
+async function vintedIngelogd(origin) {
+  try {
+    const res = await fetch(`${origin}/api/v2/users/current`, {
+      headers: { Accept: "application/json" }, credentials: "include",
+    });
+    if (res.status === 401 || res.status === 403) return false;
+    if (!res.ok) return null;                       // 5xx, onderhoud: niet ons oordeel
+    const data = await res.json().catch(() => null);
+    if (!data) return null;
+    return data.user && data.user.id ? true : false;
+  } catch (_) {
+    return null;                                    // geen netwerk: laat het werk door
+  }
+}
+
+// ── Ingelogd op Marktplaats / 2dehands? ────────────────────────────────────
+//
+// GEMETEN OP 05-09-2026, IN EEN ECHTE BROWSER (Egbert Brouwer, papas-plectrums).
+//
+// Zijn 305 opdrachten voor 2dehands zijn alle 305 mislukt, en steeds op dezelfde
+// manier: het tabblad ging open, er kwam nooit een teken van leven uit, en na
+// exact drie minuten sloeg de bewaker toe. Nul voortgangsberichten, altijd
+// 195 tot 230 seconden. Bij andere verkopers duurt een geslaagde plaatsing op
+// 2dehands 10 tot 50 seconden. Het lag dus niet aan traagheid en niet aan de
+// categorie: zijn categorienummers (728/748, muziek) bestaan op 2dehands.be
+// precies zoals op marktplaats.nl, nagemeten via de openbare zoek-API.
+//
+// WAT ER WEL GEBEURT. Vraag je https://www.2dehands.be/plaats/728/748 op zonder
+// sessie, dan krijg je in een browser GEEN foutpagina maar een doorverwijzing
+// naar https://www.2dehands.be/identity/v2/login?target=... Ons invulscript
+// luistert alleen op /plaats/*, dus op die inlogpagina draait het niet, meldt
+// niemand iets terug, en wacht de bewaker drie minuten op stilte.
+//
+// De vorige verklaring ("het plaatsadres geeft 401") klopte alleen voor een
+// kale aanvraag zonder cookies, en verklaarde niets: www.marktplaats.nl doet op
+// hetzelfde adres exact hetzelfde.
+//
+// DE CONTROLE ZELF. /my-account/sell/api/listings is afgeschermd: zonder sessie
+// 401 met twaalf bytes "Unauthorized", met sessie 200.
+//
+// LET OP, EN DIT IS DE DUURSTE LES VAN DEZE HELE MAAND: die 401 is GEEN eerlijk
+// nee. Hij betekent ook "dit overzicht is niet van jou", en dat is precies wat
+// een ZAKELIJK account krijgt — daar staan de advertenties in Admarkt. Gemeten
+// bij Egbert Brouwer: op 13-09-2026 gaf dit adres hem nog 200 met 109
+// advertenties, vanaf 14-09 401, en zijn openbare advertentiepagina zegt
+// sindsdien "sellerType":"TRADER" waar een particuliere verkoper "CONSUMER"
+// zegt. Zijn inlog was al die tijd in orde; wij namen 231 opdrachten terug.
+//
+// Dit adres mag daarom alleen nog JA zeggen. Het NEE komt uit de kopbalk van de
+// site zelf, zie eerstepartijStatus.
+//
+// Weten we het niet zeker (netwerkfout, 5xx, onderhoud), dan gaat het werk
+// gewoon door. Een onzekere controle mag nooit een publicatie tegenhouden.
+const MP_SESSIE_URL = {
+  marktplaats: "https://www.marktplaats.nl/my-account/sell/api/listings?batchNumber=1&batchSize=1",
+  "2dehands": "https://www.2dehands.be/my-account/sell/api/listings?batchNumber=1&batchSize=1",
+};
+const MP_INLOG_URL = {
+  marktplaats: "https://www.marktplaats.nl",
+  "2dehands": "https://www.2dehands.be",
+};
+const MP_OVERZICHT_URL = {
+  marktplaats: "https://www.marktplaats.nl/my-account/sell/index.html",
+  "2dehands": "https://www.2dehands.be/my-account/sell/index.html",
+};
+
+// EEN "JE BENT NIET INGELOGD" MAG NOOIT UIT DE ACHTERGROND KOMEN.
+//
+// GEMETEN OP 06-09-2026 IN DE BROWSER VAN EGBERT BROUWER, TWEE KEER BINNEN
+// VIER MINUTEN, OP DEZELFDE URL:
+//
+//   21:07:35  vanuit een tabblad OP www.2dehands.be:  HTTP 200
+//   21:07:48  dertien seconden later, vanuit deze service worker:  HTTP 401
+//   21:11:22  weer 200 vanuit het tabblad
+//   21:11:27  vijf seconden later weer 401 vanuit de service worker
+//
+// Zelfde browser, zelfde koekjes, zelfde minuut, tegengesteld antwoord. Die 200
+// is precies de meting waar deze controle op gebouwd is ("zonder sessie 401, met
+// sessie 200"), dus hij WAS ingelogd — en op grond van de 401 is zijn hele
+// wachtrij van 346 opdrachten teruggenomen met de tekst dat hij niet ingelogd
+// was. Dat was de derde keer dat deze man dat verwijt kreeg terwijl hij gelijk
+// had.
+//
+// Waarom 2dehands een verzoek uit een extensie anders behandelt dan hetzelfde
+// verzoek uit haar eigen pagina weten we niet, en dat hoeft ook niet: het punt
+// is dat wij het van buitenaf niet kunnen zien aankomen. Op www.marktplaats.nl
+// gaat diezelfde achtergrondmeting bij andere verkopers wél goed (gemeten:
+// tientallen geslaagde plaatsingen per dag), dus "bij ons werkt het" bewijst
+// niets over de volgende site of de volgende maand.
+//
+// Daarom mag de achtergrondmeting alleen nog "misschien niet" zeggen. Het
+// oordeel valt in een echt tabblad op de site zelf: de enige context waarvan
+// gemeten is dat hij de sessie ziet. Alleen als díe weigert houden we werk
+// tegen. Kost dat een tabblad? Ja, maar alleen op het moment dat we op het punt
+// staan iemand zijn hele wachtrij af te nemen.
+const EERSTEPARTIJ_TTL_MS = 10 * 60 * 1000;
+const _eerstepartijOordeel = {};        // platform -> { ingelogd, status, url, at }
+
+// Vraagt het de site vanuit een tabblad op die site zelf, met de cookies die
+// haar eigen pagina's ook krijgen. `null` als we het niet konden vaststellen —
+// en dat is nooit een reden om werk tegen te houden.
+async function eerstepartijStatus(startUrl, pad) {
+  let tabId = null;
+  try {
+    tabId = await new Promise((res, rej) =>
+      openWorkerTab(startUrl, t => t ? res(t.id) : rej(new Error("geen tabblad")), { silent: true })
+    );
+    await waitForTabLoad(tabId);
+    return await execInTab(tabId, async (p) => {
+      let status = null, body = null;
+      try {
+        const res = await fetch(p, { headers: { Accept: "application/json" }, credentials: "include" });
+        status = res.status;
+        if (res.ok) body = await res.json().catch(() => null);
+      } catch (_) { /* netwerk: status blijft null, dus "weet niet" */ }
+      // DE KOPBALK VAN DE SITE ZELF. DIT IS DE ENIGE NEUTRALE INLOGBRON.
+      //
+      // WAAROM DIT ERBIJ MOEST (15-09-2026, gemeten, Egbert Brouwer).
+      // Het persoonlijke advertentieoverzicht hierboven is GEEN eerlijke
+      // inlogvraag. Het bestaat alleen voor een particulier account. Wordt een
+      // verkoper door Marktplaats of 2dehands omgezet naar een ZAKELIJK account,
+      // dan is datzelfde adres voor hem dicht: /my-account/sell/index.html
+      // verwijst door naar /identity/v2/login en de API geeft 401 — precies wat
+      // een uitgelogde bezoeker ook krijgt. Wij lazen dat als "je bent niet
+      // ingelogd", namen zijn hele wachtrij terug en stuurden hem naar een
+      // inlogscherm waar niets mis mee was.
+      //
+      // Gemeten bij hem: op 13-09 om 09:24 gaf dat overzicht nog HTTP 200 met 109
+      // advertenties, en vanaf 14-09 18:08 elke keer 401. Zijn advertentiepagina
+      // op 2dehands zegt sindsdien "sellerType":"TRADER" (een particuliere
+      // verkoper ernaast zegt "CONSUMER"). Er is dus niets met zijn inlog
+      // gebeurd: zijn account is zakelijk geworden.
+      //
+      // De kopbalk van de homepagina is wél neutraal: die is voor beide soorten
+      // accounts hetzelfde en staat als "userDetails":{"isLoggedIn":true|false}
+      // in de HTML van de pagina (gemeten op www.marktplaats.nl en www.2dehands.be,
+      // beide precies één keer per pagina). Dat is letterlijk wat de verkoper
+      // zelf in zijn scherm ziet staan. Deze fetch gaat vanuit een tabblad op de
+      // site zelf en is dus gewoon eigen verkeer met zijn eigen koekjes.
+      let header = null;
+      try {
+        const hres = await fetch("/", { credentials: "include" });
+        if (hres.ok) {
+          const html = await hres.text();
+          // Niet vastpinnen op de volgorde van de sleutels: bij een ingelogde
+          // verkoper staan er in dat blokje meer velden (naam, ongelezen
+          // berichten) en die kunnen er vóór staan. Gemeten staat "isLoggedIn"
+          // precies één keer op de hele pagina, op allebei de sites. Staan er
+          // toch meer en spreken ze elkaar tegen, dan zeggen we liever niets.
+          const treffers = Array.from(html.matchAll(/"isLoggedIn"\s*:\s*(true|false)/g))
+            .map((m) => m[1] === "true");
+          if (treffers.length && treffers.every((v) => v === treffers[0])) header = treffers[0];
+        }
+      } catch (_) { /* dan blijft het "weet niet", en dat houdt nooit werk tegen */ }
+      // Waar de browser uiteindelijk belandde. Bij een uitgelogde bezoeker is dat
+      // de inlogpagina, en dat is het bewijs dat we tot nu toe nooit hadden.
+      return { status, body, header, url: String(location.href).split("?")[0] };
+    }, [pad]).then(async (uit) => {
+      // En in WAT VOOR venster we keken. Een incognitotabblad heeft zijn eigen,
+      // altijd lege koekjespot: dan zegt een 401 niets over zijn inlog. Sinds
+      // 14-09-2026 wordt zo'n venster niet meer gekozen, maar als het toch
+      // gebeurt moet het in de melding staan en niet te raden zijn.
+      try {
+        const t = await chrome.tabs.get(tabId);
+        return { ...(uit || {}), incognito: !!(t && t.incognito) };
+      } catch (_) { return uit; }
+    });
+  } catch (e) {
+    console.warn("[Omnivaleur] Eerstepartij-inlogcontrole mislukt:", e);
+    return null;
+  } finally {
+    if (tabId != null) sluitWerkTabblad(tabId);
+  }
+}
+
+// Ingelogd op Marktplaats / 2dehands, gemeten op de site zelf.
+async function mpIngelogdOpDeSiteZelf(platform) {
+  const bewaard = _eerstepartijOordeel[platform];
+  if (bewaard && Date.now() - bewaard.at < EERSTEPARTIJ_TTL_MS) return bewaard;
+
+  const start = MP_OVERZICHT_URL[platform];
+  const pad = String(MP_SESSIE_URL[platform] || "").replace(/^https:\/\/[^/]+/, "");
+  if (!start || !pad) return { ingelogd: null, status: null, url: null, at: Date.now() };
+
+  const uit = await eerstepartijStatus(start, pad);
+  const status = uit && uit.status != null ? uit.status : null;
+  // In een incognitovenster zegt een weigering niets over zijn inlog: die pot is
+  // per definitie leeg. Dan geen oordeel, en het werk gaat gewoon door.
+  const blind = !!(uit && uit.incognito);
+  // De kopbalk wint van het overzicht, altijd. Zegt de site zelf dat hij is
+  // ingelogd, dan IS hij ingelogd en betekent een 401 op het persoonlijke
+  // overzicht alleen dat dat overzicht niet van hem is: zakelijk account.
+  // Zegt de kopbalk niets (oude pagina-opbouw, netwerkhikje), dan mag een 401
+  // hier geen oordeel meer worden — dan weten we het gewoon niet.
+  const header = uit && typeof uit.header === "boolean" ? uit.header : null;
+  const geweigerd = status === 401 || status === 403;
+  const oordeel = {
+    ingelogd: blind ? null
+      : header === true ? true
+      : header === false ? false
+      : status === 200 ? true : null,
+    zakelijk: header === true && geweigerd,
+    header,
+    status,
+    url: (uit && uit.url) || null,
+    incognito: blind,
+    at: Date.now(),
+  };
+  // Alleen een uitslag onthouden, geen "weet niet": anders zwijgen we tien
+  // minuten lang over een netwerkhikje.
+  if (oordeel.ingelogd !== null) {
+    _eerstepartijOordeel[platform] = oordeel;
+    // En buiten deze service worker om, want die wordt na een halve minuut
+    // stilte afgeschoten en neemt _eerstepartijOordeel mee. Dit is de meting in
+    // een tabblad op de site zelf, dus de enige die "je bent niet ingelogd" mag
+    // zeggen; zie KANAAL_SESSIE_SLEUTEL.
+    onthoudKanaalSessie(platform, oordeel.ingelogd, { status, url: oordeel.url });
+  }
+  return oordeel;
+}
+
+// DE VERKOPER IS INGELOGD, EN HET DASHBOARD MOET HET ZIEN (07-10-2026, Janneke).
+//
+// Een kanaalsessie werd alleen vastgelegd tijdens echt werk (plaatsen, scannen).
+// Een nieuwe klant die nog niets had geplaatst stond daardoor op Platforms met
+// "Uses your Chrome login" en "no adverts yet", ook al was ze op Marktplaats en
+// Vinted gewoon ingelogd. Nu meten we dat zodra het dashboard opent.
+// Alleen bewezen uitslagen: een 200 op een afgeschermd adres (achtergrond) bewijst
+// "ja"; "nee" komt alleen uit een tabblad op de site zelf, en alleen als er nog
+// geen meting is of de laatste ouder is dan een half uur.
+const SESSIE_METING_VERS_MS = 30 * 60 * 1000;
+const SESSIE_METING_PAUZE_MS = 60 * 1000;
+let _sessieMeetLoopt = false;
+let _sessieMeetKlaarOm = 0;
+
+async function meetKanaalSessiesVoorDashboard() {
+  if (_sessieMeetLoopt || Date.now() < _sessieMeetKlaarOm) return;
+  _sessieMeetLoopt = true;
+  try {
+    const verseMeting = async (platform) => {
+      const stand = (await leesKanaalSessies())[platform];
+      return !!(stand && Date.now() - (stand.at || 0) < SESSIE_METING_VERS_MS);
+    };
+    // 1. Goedkoop en zonder tabblad: alleen een 200 telt.
+    for (const platform of ["marktplaats", "2dehands"]) {
+      await mpSessie(platform).catch(() => {});
+    }
+    let vintedOrigin = null;
+    try { vintedOrigin = await vintedIngelogdOrigin(null); } catch (_) {}
+    if (typeof vintedOrigin === "string") {
+      await onthoudKanaalSessie("vinted", true, { status: 200, url: vintedOrigin });
+    }
+    // 2. Zonder bewijs en zonder verse meting: kijk op de site zelf. Een zakelijk
+    // Marktplaats-account krijgt op het persoonlijke adres een 401 en kan alleen
+    // zo herkend worden (zie mpIngelogdOpDeSiteZelf).
+    const mpStand = (await leesKanaalSessies()).marktplaats;
+    if (!(mpStand && mpStand.ingelogd === true) && !(await verseMeting("marktplaats"))) {
+      await mpIngelogdOpDeSiteZelf("marktplaats").catch(() => {});
+    }
+    const vStand = (await leesKanaalSessies()).vinted;
+    if (!(vStand && vStand.ingelogd === true) && !(await verseMeting("vinted"))) {
+      const o = await vintedEerstepartijOrigin(null).catch(() => null);
+      if (typeof o === "string") await onthoudKanaalSessie("vinted", true, { status: 200, url: o });
+      else if (o === false) await onthoudKanaalSessie("vinted", false, { status: 401 });
+    }
+  } finally {
+    _sessieMeetLoopt = false;
+    _sessieMeetKlaarOm = Date.now() + SESSIE_METING_PAUZE_MS;
+  }
+}
+
+async function mpSessie(platform) {
+  const url = MP_SESSIE_URL[platform];
+  if (!url) return { ingelogd: null, status: null };
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" }, credentials: "include",
+    });
+    if (res.status === 401 || res.status === 403) return { ingelogd: false, status: res.status };
+    if (!res.ok) return { ingelogd: null, status: res.status };
+    // Dit adres is afgeschermd: zonder geldige sessie is het 401. Een 200 is dus
+    // hard bewijs dat de sessie er is, ook al is de 401 uit deze zelfde meting
+    // aantoonbaar onbetrouwbaar (06-09-2026). Daarom alleen het ja vastleggen.
+    onthoudKanaalSessie(platform, true, { status: res.status });
+    return { ingelogd: true, status: res.status };
+  } catch (_) {
+    return { ingelogd: null, status: null };   // geen netwerk: laat het werk door
+  }
+}
+
+function mpNietIngelogdMelding(platform, meting) {
+  const site = SITE_NAAM[platform] || platform;
+  const status = meting && meting.status != null ? meting.status : "?";
+  const waar = meting && meting.url
+    ? ` We opened your ${site} account page in this browser and it ended up at ${meting.url}.`
+    : "";
+  const venster = meting && meting.incognito
+    ? " NOTE: that check ran in an incognito window, which has its own empty cookie jar,"
+      + " so it says nothing about your account."
+    : "";
+  return (
+    `You are not signed in to ${site} in this browser, so nothing was published. `
+    + `We checked twice: once in the background and once in a tab on ${site} itself, `
+    + `and the site refused both times (HTTP ${status}).${waar} Marktplaats and `
+    + `2dehands are separate sites with separate logins, so being signed in to one does not `
+    + `sign you in to the other. Open ${MP_INLOG_URL[platform]}, sign in there, and publish again.`
+    + venster
+  );
+}
+
+// Mag deze plaatsopdracht een tabblad openen?
+//
+// Nee betekent: geen tabblad, geen drie minuten wachten, en de rest van de
+// wachtrij voor dit kanaal meteen stilgezet. Zonder dat laatste blijft hij
+// honderden keren hetzelfde proberen: bij Egbert stonden er 274 opdrachten
+// achter die stuk voor stuk kansloos waren.
+async function mpPlaatsenKlaarzetten(job, serverUrl) {
+  const achtergrond = await mpSessie(job.platform);
+  if (achtergrond.ingelogd !== false) return { ok: true };
+
+  // De achtergrond zegt "nee". Dat is een vermoeden, geen oordeel: laat de site
+  // het nog een keer zeggen vanuit haar eigen pagina. Zie de meting bij
+  // MP_OVERZICHT_URL — daar liepen deze twee antwoorden dertien seconden uit
+  // elkaar en was de achtergrond degene die het mis had.
+  const echt = await mpIngelogdOpDeSiteZelf(job.platform);
+  // ZAKELIJK ACCOUNT: INGELOGD, MAAR ZIJN OVERZICHT IS EEN ANDER OVERZICHT.
+  // De site zegt in haar eigen kopbalk dat hij is ingelogd en weigert tegelijk
+  // het persoonlijke advertentieoverzicht. Dat is geen inlogprobleem en mag
+  // nooit een wachtrij kosten; de poging gaat gewoon door en wat er dan echt
+  // misgaat staat daarna in de opdracht zelf. Loopt een kanaal werkelijk dood,
+  // dan pakt de rem op de server dat na tien ondoorgronde mislukkingen alsnog.
+  if (echt.zakelijk) {
+    console.warn(
+      `[Omnivaleur] ${job.platform}: de kopbalk zegt ingelogd, het persoonlijke `
+      + `overzicht geeft HTTP ${echt.status}. Dat is het beeld van een zakelijk `
+      + `account, niet van een uitgelogde verkoper. De opdracht gaat door.`
+    );
+    return { ok: true };
+  }
+  if (echt.ingelogd !== false) {
+    console.warn(
+      `[Omnivaleur] ${job.platform}: de achtergrondmeting kreeg HTTP ${achtergrond.status}, `
+      + `maar op de site zelf ${echt.status == null ? "kregen we geen antwoord" : `HTTP ${echt.status}`}. `
+      + `De achtergrondmeting telt niet mee; de opdracht gaat gewoon door.`
+    );
+    return { ok: true };
+  }
+  const melding = mpNietIngelogdMelding(job.platform, echt);
+  await stopPlatformWachtrij(serverUrl, job.platform, melding).catch(() => {});
+  return { ok: false, melding };
+}
+
+// Is advertentie {listingId} er een van deze verkoper zelf?
+// true / false / null (niet vast te stellen).
+//
+// WAAROM DIT ER IS (01-09-2026, gemeten). De automatische herkenning hieronder
+// (chrome.tabs.onUpdated) neemt ELK advertentie-adres dat in het werk-tabblad
+// verschijnt voor "onze zojuist geplaatste advertentie". Zolang de extensie het
+// tabblad bestuurt klopt dat. Maar is de verkoper niet ingelogd op Vinted, dan
+// stuurt Vinted /items/new door naar /member/register/select_type (nagemeten op
+// 01-09-2026: HTTP 200, geen foutmelding, geen plaatsformulier). Er valt daar
+// niets in te vullen, dus gaat hij zelf klikken — en het tabblad blijft drie
+// minuten open. Eén klik op een willekeurige advertentie levert
+// /items/12345-een-slug op, en dát adres werd afgemeld als "geplaatst". Groen
+// vinkje bij de advertentie van een vreemde, en bij een latere verwijdering
+// wijst dat nummer naar diens advertentie. Precies wat Budgetheld zag.
+//
+// DE GRENS LIGT BEWUST BIJ "INGELOGD", NIET BIJ "STAAT IN DE KAST".
+//
+// Vinted laat een net geplaatste advertentie eerst door een controle lopen; hij
+// verschijnt pas een minuut of twee later in de kast (daarom polst
+// resolveCreatedVintedItem 90 seconden). "Nog niet in de kast" mag dus nooit
+// "niet van jou" betekenen — dan zouden we een échte publicatie weggooien, en
+// dat komt bij de verkoper terug als een mogelijk dubbele advertentie.
+// Uitgelogd is wél beslissend: wie niet is ingelogd, kan onmogelijk zojuist iets
+// geplaatst hebben. Dat is precies het geval dat we moeten tegenhouden, en het
+// is met één vraag vast te stellen.
+async function bgVintedEigenAdvertentie(origin, listingId, item) {
+  const want = String(listingId);
+  const ingelogd = await vintedIngelogd(origin);
+  if (ingelogd === false) return false;   // uitgelogd: nooit van hem
+  if (ingelogd !== true) return null;     // niet vast te stellen: laat het door
+
+  // Wel ingelogd. Staat hij in de kast, dan is het een advertentie van hemzelf —
+  // maar dat is niet genoeg. Nagemeten op 01-09-2026 in de echte database:
+  // artikel (1353) Dark Green Suitsupply Cardigan droeg het nummer van (1352)
+  // Navy Suitsupply Zip Vest. Beide van dezelfde verkoper, dus een eigendoms-
+  // controle alleen had dit doorgelaten. Daarom vergelijken we ook de titel: die
+  // van de kast hoort bij het artikel dat we zojuist plaatsten. Klopt dat niet,
+  // dan is dit de verkeerde advertentie en melden we niets af.
+  //
+  // Staat hij nog niet in de kast (Vinted's controle duurt een minuut of twee),
+  // dan zegt dat niets en geven we 'onbekend' terug — een echte publicatie mag
+  // hier nooit sneuvelen.
+  try {
+    const me = await fetch(`${origin}/api/v2/users/current`, {
+      headers: { Accept: "application/json" }, credentials: "include",
+    });
+    if (!me.ok) return null;
+    const userId = (await me.json())?.user?.id;
+    if (!userId) return null;
+    const res = await fetch(
+      `${origin}/api/v2/wardrobe/${userId}/items?order=newest_first&page=1&per_page=50`,
+      { headers: { Accept: "application/json" }, credentials: "include" });
+    if (!res.ok) return null;
+    const items = (await res.json())?.items || [];
+    const gevonden = items.find((it) => String(it.id) === want);
+    // OUDER DAN DE HELE EERSTE PAGINA? DAN IS HIJ NIET ZOJUIST GEPLAATST
+    // (14-10-2026, Amanda 8f91a370). We lezen alleen de 50 nieuwste, dus een
+    // oude advertentie van haarzelf viel hier als "nog niet geregistreerd"
+    // door. Een Vinted-opdracht van 12-10 voor een ONLY-jurk werd zo afgemeld
+    // met het nummer van haar PME-spijkerbroek van 20-08 (plek 117 in haar
+    // kast van 240). Vinted-nummers lopen op: een nummer onder het laagste van
+    // een volle pagina is ouder dan haar 50 nieuwste advertenties.
+    if (!gevonden && items.length >= 50) {
+      const laagste = Math.min(...items.map((it) => Number(it.id)).filter(Number.isFinite));
+      if (Number.isFinite(laagste) && Number(want) < laagste) return false;
+    }
+    if (!gevonden) return null;                 // nog niet geregistreerd: laat door
+    if (!item) return true;                     // niets om mee te vergelijken
+    return vintedTitelHoortBij(gevonden.title, item) ? true : false;
+  } catch (_) {
+    return null;
+  }
+}
+
+// Hoort deze Vinted-titel bij dit dashboarditem? Ruimhartig, want Vinted toont de
+// VERTAALDE titel en kapt lange titels af: het volstaat dat een van onze titels
+// (met of zonder het SKU-nummer vooraan) erin voorkomt of ermee begint. Alleen
+// als geen enkele vorm past, noemen we het een andere advertentie.
+function vintedTitelHoortBij(vintedTitel, item) {
+  const kaal = (t) => String(t || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const zonderSku = (t) => kaal(String(t || "").replace(/^\s*\([^)]{1,24}\)\s*/, ""));
+  const hun = kaal(vintedTitel);
+  if (!hun) return true;                        // geen titel gekregen: niet ons oordeel
+  const onze = [item.title, item.title_en, item.title_nl].filter(Boolean);
+  if (!onze.length) return true;
+  for (const t of onze) {
+    for (const vorm of [kaal(t), zonderSku(t)]) {
+      if (!vorm) continue;
+      if (hun.includes(vorm) || vorm.includes(hun)) return true;
+      const kop = vorm.slice(0, Math.max(12, Math.floor(vorm.length / 2)));
+      if (kop && hun.startsWith(kop)) return true;
+    }
+  }
+  // Het SKU-nummer is het hardste bewijs dat er is: dat vertaalt niet mee.
+  const onsSku = (String(item.title || "").match(/^\s*\((\d{1,6})\)/) || [])[1];
+  const hunSku = (String(vintedTitel || "").match(/^\s*\(?(\d{1,6})\)?\b/) || [])[1];
+  if (onsSku && hunSku) return onsSku === hunSku;
+  return false;
+}
+
+// VINTED'S CATEGORIEBOOM, PER TAAL (15-10-2026, Janneke).
+//
+// Het invulscript kiest de categorie op Engelse namen ("Kids", "Girls
+// clothing"). Op een Vinted in het Nederlands heten die regels "Kinderen" en
+// "Meisjeskleding", en dan koos het script nooit iets: Vinted gokte de
+// categorie zelf uit de foto, en bij tienermaten gokte het "Dames". Gevolg:
+// "Kies een subcategorie" of "Vul je maat in", en een meisjesjas bij de
+// jongenskleding. Elke regel in de kiezer draagt wel een vast nummer
+// (id="catalog-1195"), in elke taal hetzelfde. Hier halen we de boom op met
+// die nummers, zodat het script een Nederlandse regel als Engelse kan lezen.
+//
+// ZONDER INLOG, MET OPZET. ?locale=en via de sessie van de verkoper zet haar
+// Vinted-sessie op Engels (gemeten: de volgende vraag zonder locale kwam daarna
+// ook in het Engels terug). credentials "omit" geeft een eigen, lege sessie.
+// Vorm: { id: [naam, ouder-id] }.
+const _vintedCatalogusGeheugen = new Map();
+async function vintedCatalogus(origin, taal) {
+  if (!/^https:\/\/www\.vinted\.[a-z.]{2,6}$/.test(String(origin || ""))) return null;
+  taal = String(taal || "en").toLowerCase().replace(/[^a-z]/g, "").slice(0, 5) || "en";
+  const sleutel = `vinted_catalogus_${origin}_${taal}`;
+  const vers = (x) => x && x.boom && Date.now() - x.at < 24 * 3600 * 1000;
+  if (vers(_vintedCatalogusGeheugen.get(sleutel))) return _vintedCatalogusGeheugen.get(sleutel).boom;
+  try {
+    const s = await chrome.storage.session.get(sleutel);
+    if (vers(s[sleutel])) { _vintedCatalogusGeheugen.set(sleutel, s[sleutel]); return s[sleutel].boom; }
+  } catch (_) {}
+  const stop = new AbortController();
+  const klok = setTimeout(() => stop.abort(), 12000);
+  try {
+    const r = await fetch(`${origin}/api/v2/item_upload/catalogs?locale=${taal}`, {
+      credentials: "omit", headers: { Accept: "application/json" }, signal: stop.signal,
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    const boom = {};
+    const loop = (lijst, ouder) => {
+      for (const c of lijst || []) {
+        if (c && c.id != null) { boom[c.id] = [String(c.title || ""), ouder]; loop(c.catalogs, c.id); }
+      }
+    };
+    loop(d && d.catalogs, 0);
+    if (Object.keys(boom).length < 100) return null;   // geen echte boom
+    const rij = { at: Date.now(), boom };
+    _vintedCatalogusGeheugen.set(sleutel, rij);
+    try { await chrome.storage.session.set({ [sleutel]: rij }); } catch (_) {}
+    return boom;
+  } catch (e) {
+    console.warn("[Omnivaleur] Vinted-catalogus niet op te halen:", e?.message || e);
+    return null;
+  } finally {
+    clearTimeout(klok);
+  }
+}
+
+// Prijs van een kastadvertentie tegen die van het artikel; onbekend is geen
+// tegenspraak, een cent verschil wel. Zelfde regel als vintedPrijsKlopt in
+// content/vinted.js.
+function _vintedPrijsKlopt(it, item) {
+  const ruw = it && (it.price && typeof it.price === "object" ? it.price.amount : it.price);
+  const hun = Number(String(ruw ?? "").replace(",", "."));
+  const onze = Number(String(item && item.price != null ? item.price : "").replace(",", "."));
+  if (ruw == null || ruw === "" || !Number.isFinite(hun) || hun <= 0) return true;
+  if (!Number.isFinite(onze) || onze <= 0) return true;
+  return Math.abs(hun - onze) < 0.01;
+}
+
+async function bgVindVintedAdvertentie(item) {
+  const titel = _vintedTitelSleutel(item?.title);
+  if (!titel) return null;
+  const titelKaal = _vintedTitelZonderSku(item?.title);
+  const origins = [item?._create_origin, ...VINTED_ORIGINS].filter(Boolean);
+  for (const origin of [...new Set(origins)]) {
+    try {
+      const me = await fetch(`${origin}/api/v2/users/current`, {
+        headers: { Accept: "application/json" }, credentials: "include",
+      });
+      if (!me.ok) continue;
+      const userId = (await me.json())?.user?.id;
+      if (!userId) continue;
+      const res = await fetch(
+        `${origin}/api/v2/wardrobe/${userId}/items?order=newest_first&page=1&per_page=50`,
+        { headers: { Accept: "application/json" }, credentials: "include" });
+      if (!res.ok) continue;
+      const items = (await res.json())?.items || [];
+      // Niet die van een ánder artikel met dezelfde titel: zie
+      // _vinted_titelgenoten_meegeven in backend/api/jobs.py (Janneke, 09-10-2026).
+      const bezet = new Set((item?._vinted_bezet || []).map(String));
+      // TITELGENOTEN: heeft de verkoper meer stukken met deze titel, dan zegt een
+      // gelijke titel niet wiens advertentie het is. Een "mislukte" plaatsing van
+      // een ander stuk kan gewoon online staan, en die hing dan aan dit artikel
+      // (Janneke, 15-10-2026: de verkochte groene jas hing aan de blauwe fleece,
+      // de fleece ging van Marktplaats af). Hier is geen hard bewijs te halen,
+      // dus niet koppelen; de verkoper kan hem zelf als geplaatst aanvinken.
+      const genoten = Number(item?._vinted_titelgenoten || 0) > 0 || bezet.size > 0
+        || items.filter((it) => _vintedTitelZonderSku(it.title) === titelKaal).length > 1;
+      if (genoten) return null;
+      const levend = items.filter((it) => !it.is_closed && !it.is_draft && !bezet.has(String(it.id))
+                                         && _vintedPrijsKlopt(it, item));
+      // Streng naar soepel, en elke stap moet PRECIES EEN kandidaat opleveren.
+      // Bij twijfel liever niets koppelen dan de verkeerde advertentie: een
+      // verkeerde koppeling betekent later de verkeerde advertentie weghalen.
+      const uniek = (lijst) => (lijst.length === 1 ? lijst[0] : null);
+      const hit =
+        uniek(levend.filter((it) => _vintedTitelSleutel(it.title) === titel)) ||
+        uniek(levend.filter((it) => _vintedTitelZonderSku(it.title) === titelKaal)) ||
+        // Vinted kapt lange titels af; dan is de zijne een begin van de onze.
+        (titelKaal.length >= 20
+          ? uniek(levend.filter((it) => {
+              const k = _vintedTitelZonderSku(it.title);
+              return k.length >= 20 && (titelKaal.startsWith(k) || k.startsWith(titelKaal));
+            }))
+          : null);
+      if (hit) return { id: String(hit.id), url: hit.url || `${origin}/items/${hit.id}` };
+    } catch (_) { /* volgende domein */ }
+  }
+  return null;
+}
+
+async function fireJobWatchdog(tabId) {
+  const key = `jobtab_${tabId}`;
+  const stored = await chrome.storage.local.get(key);
+  const meta = stored[key];
+  if (!meta) return; // already resolved (JOB_DONE/JOB_ERROR cleared it)
+  // A job deliberately handed back to the user to finish by hand is already
+  // reported as an error and its tab is kept open on purpose — force-failing it
+  // again would close the very tab they're still typing in.
+  //
+  // MAAR: hier stond alleen `return`, en daarmee keek er daarna NOOIT meer
+  // iemand of de verkoper het zelf had afgemaakt. Maakte hij de advertentie
+  // vervolgens met de hand af op Vinted, dan bleef het kaartje voor altijd
+  // oranje "nog niet geplaatst" staan terwijl de advertentie gewoon online
+  // stond. Gemeld op 26-08-2026, en het is precies het geval waarvoor deze
+  // overdracht bedoeld is — dus juist hier hoort de controle thuis.
+  if (meta.awaitingManualFinish) {
+    if (meta.platform === "vinted" && (meta.action || "create") === "create") {
+      const zelfGedaan = await bgVindVintedAdvertentie(meta.payload || meta).catch(() => null);
+      if (zelfGedaan) {
+        console.log(`[Omnivaleur] "${(meta.payload || meta).title}" is door de verkoper zelf afgemaakt op Vinted (${zelfGedaan.id}) — alsnog als geplaatst afgemeld.`);
+        await finaliseJob(meta.serverUrl, meta.jobId, "complete", {
+          platform_listing_id: zelfGedaan.id, platform_listing_url: zelfGedaan.url,
+        });
+        chrome.alarms.clear(`${JOB_WATCHDOG_PREFIX}${tabId}`);
+        await chrome.storage.local.remove(key);
+        return;
+      }
+      const gedaan = (meta.manueleControles || 0) + 1;
+      if (gedaan >= MANUELE_CONTROLES_MAX) {
+        // Na een half uur houdt het op. De opdracht blijft staan met de knop
+        // "ik heb hem zelf geplaatst" in het dashboard; eeuwig doorkijken kost
+        // alleen maar Vinted-verkeer.
+        chrome.alarms.clear(`${JOB_WATCHDOG_PREFIX}${tabId}`);
+      }
+      await chrome.storage.local.set({ [key]: { ...meta, manueleControles: gedaan } });
+    }
+    return;  // nooit force-failen: hij is misschien nog aan het typen
+  }
+  // Nooit een teken van leven uit het tabblad: dan is het formulier niet
+  // opengegaan. Zie de toelichting bij meldNooitBegonnen — dit is een andere
+  // storing dan "het formulier liep vast", en hij vraagt om een ander antwoord.
+  // NOG BEZIG? DAN NIET AFBREKEN (14-10-2026, Janneke).
+  //
+  // De bewaker gaf elke plaatsing precies 3 minuten, ook als het invulscript
+  // net nog een stap meldde. Op een trage Mac (haar Intel-Mac met Chrome 128)
+  // duurt alleen de eerste prijsvraag al 12 tot 20 s op onze snelle proefmachine.
+  // Heeft het script in de laatste 90 s iets gemeld, dan krijgt het 2 minuten
+  // extra, hooguit drie keer. De server wacht zelf 5 minuten op vooruitgang,
+  // dus die grijpt daar niet tussendoor in.
+  if (meta.scriptSeen && meta.laatsteStapAt && Date.now() - meta.laatsteStapAt < 90000
+      && (meta.verlengd || 0) < 3) {
+    await chrome.storage.local.set({ [key]: { ...meta, verlengd: (meta.verlengd || 0) + 1 } });
+    chrome.alarms.create(`${JOB_WATCHDOG_PREFIX}${tabId}`, { delayInMinutes: 2 });
+    console.log(`[Omnivaleur] Watchdog: job ${meta.jobId} meldt nog vooruitgang; 2 minuten extra (${(meta.verlengd || 0) + 1}/3)`);
+    return;
+  }
+  if (!meta.scriptSeen) {
+    console.warn(`[Omnivaleur] Watchdog: job ${meta.jobId} (${meta.platform}) — het invulscript heeft zich nooit gemeld; het formulier is niet opengegaan.`);
+    await meldNooitBegonnen(tabId, meta);
+    return;
+  }
+  console.warn(`[Omnivaleur] Watchdog: job ${meta.jobId} (${meta.platform}) on tab ${tabId} did not finish in time — force-failing.`);
+  // Eerst kijken of het misschien gewoon gelukt is. Niets is verwarrender dan een
+  // rode melding bij een advertentie die gewoon online staat.
+  if (meta.platform === "vinted" && (meta.action || "create") === "create") {
+    const gevonden = await bgVindVintedAdvertentie(meta.payload || meta).catch(() => null);
+    if (gevonden) {
+      console.log(`[Omnivaleur] Watchdog: "${(meta.payload || meta).title}" staat wél op Vinted (${gevonden.id}) — als geplaatst afgemeld.`);
+      await finaliseJob(meta.serverUrl, meta.jobId, "complete", {
+        platform_listing_id: gevonden.id, platform_listing_url: gevonden.url,
+      }).catch(() => {});
+      await chrome.storage.local.remove(key);
+      sluitWerkTabblad(tabId);
+      return;
+    }
+  }
+  // WAT STOND ER OP HET TABBLAD OP HET MOMENT VAN AFBREKEN? (07-09-2026)
+  //
+  // scriptSeen zegt alleen dat ons script óóit is geladen, niet dat het formulier
+  // er nog is. Bij Egbert Brouwer laadde het script en stuurde 2dehands de pagina
+  // daarna naar de inlogpagina; de melding zei dan "de pagina is misschien
+  // veranderd" en niemand wist waarheen. Kijk hier daarom hetzelfde als
+  // meldNooitBegonnen doet, en zeg het adres erbij. Zit het tabblad op een inlog-
+  // of verificatiepagina, dan is dat de echte oorzaak: behandel het als "formulier
+  // ging nooit open" (stopt ook de rest van de wachtrij).
+  //
+  // Alleen voor Marktplaats/2dehands: dat zijn de kanalen met het /plaats-formulier
+  // dat naar de inlogpagina kan doorspringen. Vinted en Facebook hebben hun eigen
+  // afhandeling hierboven en hieronder.
+  const magKijken = meta.platform === "marktplaats" || meta.platform === "2dehands";
+  const snap = magKijken ? await bekijkVastgelopenTabblad(tabId) : null;
+  const opInlog = snap && (snap.wachtwoordveld
+      || MP_LOGINPAGINA.test(snap.url || "")
+      || /unauthorized|inloggen|log ?in|sign ?in|verifieer je|verify your (account|business|identity)/i.test(snap.begin || ""));
+  if (opInlog) {
+    console.warn(`[Omnivaleur] Watchdog: job ${meta.jobId} (${meta.platform}) — tabblad staat op een inlog/verificatiepagina (${snap.url}); behandeld als "formulier ging nooit open".`);
+    await meldNooitBegonnen(tabId, meta, snap);
+    return;
+  }
+  // EN STAAT HET TABBLAD OP DE BETAALPAGINA? (09-09-2026)
+  //
+  // De adresbewaking hierboven vangt de sprong normaal live op, maar een
+  // slapende service worker mist chrome.tabs.onUpdated. Dan is dit het vangnet:
+  // de bewaker kijkt zelf in het tabblad, en een betaalpagina is daar net zo
+  // beslissend als een inlogpagina. Zonder dit vangnet werd het alsnog "de
+  // pagina is misschien veranderd".
+  if (snap && MP_BETAALPAGINA.test(snap.url || "") && betaalmuurRaaktDezeOpdracht(meta)) {
+    console.warn(`[Omnivaleur] Watchdog: job ${meta.jobId} (${meta.platform}) — tabblad staat op de betaalpagina (${snap.url}); het account plaatst hier niet gratis.`);
+    await meldBetaalmuur(tabId, meta, snap.url);
+    return;
+  }
+  // WAAR HIELD HET OP? Zonder dit was elke tijdsoverschrijding letterlijk
+  // dezelfde zin, 671 keer bij één verkoper, zonder één aanwijzing. Zie
+  // meldStapAanServer.
+  const stap = meta.laatsteStap
+    ? ` [laatste stap: ${JSON.stringify(String(meta.laatsteStap).slice(0, 120))}`
+      + `${meta.laatsteStapAt ? `, ${Math.round((Date.now() - meta.laatsteStapAt) / 1000)}s geleden` : ""}]`
+    : " [er is geen enkele stap gemeld: het invulscript is nooit aan het formulier begonnen]";
+  const feiten = (!magKijken ? ""
+    : snap
+      ? ` [tab op ${snap.url}, titel ${JSON.stringify((snap.titel || "").slice(0, 60))}, `
+        + `${snap.velden} invulveld(en), invulscript geladen: ${snap.stempel || "nee"}]`
+      : " [het tabblad was al weg voordat we konden kijken]") + stap;
+  try {
+    await reportError(meta.jobId, meta.serverUrl,
+      `Extension timed out waiting for this ${meta.platform} job to finish (no response after ${JOB_TAB_TIMEOUT_MIN} minutes). ` +
+      `The page may have changed, needs a manual step, or the extension lost track of the tab. ` +
+      `Check the tab if it's still open, then publish again.` + feiten);
+  } catch (e) {
+    console.error("[Omnivaleur] Watchdog: failed to report timeout error:", e);
+  }
+  // A timed-out CREATE is usually half-filled and finishable by hand, so keep its
+  // tab open and keep the meta alive: closing it would throw away the user's work
+  // and, worse, leave the manual-publish auto-detect with nothing to match on — so
+  // a listing they finished themselves would stay "not posted" in the dashboard.
+  if ((meta.action || "create") === "create") {
+    chrome.storage.local.set({ [key]: { ...meta, awaitingManualFinish: true, manueleControles: 0 } });
+    // Vanaf hier is dit tabblad van de verkoper. Onze koppeling heeft haar werk
+    // gedaan, dus de gele foutopsporingsbalk hoort weg te zijn op het moment dat
+    // hij ernaar gaat kijken.
+    ontkoppelVroeg(tabId);
+    armManueleControle(tabId);
+    return;
+  }
+  chrome.storage.local.remove(key);
+  sluitWerkTabblad(tabId);
+}
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (!alarm.name.startsWith(JOB_WATCHDOG_PREFIX)) return;
+  fireJobWatchdog(Number(alarm.name.slice(JOB_WATCHDOG_PREFIX.length)));
+});
+
+// ── Background-driven delete for Marktplaats / 2dehands ───────────────────
+// Navigates: homepage → clicks "Mijn [platform]" nav link → finds listing by
+// title on the overview → clicks options → clicks Verwijder → confirms.
+// No content script needed — all via executeScript from background.
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VINTED: DE ADVERTENTIE WEGHALEN
+//
+// WAAROM DIT EEN APARTE FUNCTIE MET VASTE TEKSTEN IS (30-08-2026)
+// Bij één verkoper mislukten acht verversingen op rij met "still in your
+// wardrobe after confirming delete". Haar advertenties stonden aantoonbaar nog
+// online, dus er was echt niets weggehaald. De oorzaak zat in twee aannames:
+//
+//   1. De knop werd alleen als /^delete$/ gezocht. Op vinted.nl heet hij
+//      "Verwijderen", op .fr/.be "Supprimer", op .de "Löschen".
+//   2. Werd het bevestigingsvenster niet herkend, dan zocht de bevestiging in
+//      de HELE pagina en pakte hij het EERSTE element dat op "verwijderen"
+//      leek — en dat is de knop op de pagina zelf. Die werd dus twee keer
+//      aangeklikt, het venster ging open en weer dicht, en er gebeurde niets.
+//      Op .fr en .de is dat gegarandeerd mis: daar heet de bevestigknop
+//      LETTERLIJK hetzelfde als de knop op de pagina ("Supprimer", "Löschen").
+//
+// De teksten hieronder zijn geen gok. Ze komen uit Vinted's eigen tekstenboek,
+// dat in elke artikelpagina meegestuurd wordt, opgehaald op 30-08-2026 voor
+// vinted.nl, .be, .fr, .de en .com:
+//
+//   item.actions.delete                    → de knop op de pagina
+//   item.deletion_modal.actions.delete     → "Bevestigen en verwijderen"
+//   item.deletion_modal.actions.delete_v2  → "Ja, verwijderen"  (tweede variant)
+//   item.deletion_modal.actions.cancel     → "Annuleren"
+//   item.deletion_modal.title(_v2)         → de titel van het venster
+//
+// Er is GEEN stap waarin Vinted om een reden vraagt; het is één venster.
+async function _mwVintedVerwijderen() {
+  const WEG = ["verwijderen", "supprimer", "löschen", "loschen", "delete",
+               "eliminar", "elimina", "usuń", "usun", "ištrinti", "smazat"];
+  const BEVESTIG = [
+    "bevestigen en verwijderen", "ja, verwijderen",
+    "confirmer et supprimer", "supprimer",
+    "bestätigen und löschen", "bestatigen und loschen", "löschen", "loschen",
+    "confirm and delete", "delete", "verwijderen",
+    "confirmar y eliminar", "eliminar", "conferma ed elimina", "elimina",
+    "ja", "yes", "oui",
+  ];
+  const ANNULEER = ["annuleren", "annuler", "abbrechen", "cancel", "cancelar",
+                    "annulla", "terug", "back", "sluiten", "close", "nee", "no", "non"];
+  const TITELS = ["artikel verwijderen", "advertentie verwijderen",
+                  "supprimer l'article", "artikel löschen", "artikel loschen",
+                  "delete item", "eliminar artículo", "elimina l'oggetto"];
+  const VENSTERKEUS = '[role="dialog"], [role="alertdialog"], [aria-modal="true"], '
+                    + '[data-testid*="modal"], [data-testid*="dialog"], .ReactModal__Content';
+  // Cookie- en toestemmingsschermen dragen exact dezelfde kenmerken als een
+  // echt venster (role="dialog", aria-modal="true") en blijven ná wegklikken
+  // gewoon in de pagina staan, onzichtbaar. Op vinted.nl hangt OneTrust als
+  // 179e blok in de body, dus vóór het verwijdervenster dat React er pas later
+  // onderaan bij hangt: "het eerste venster op de pagina" was daardoor ALTIJD
+  // het cookiescherm en nooit het scherm met "Bevestigen en verwijderen".
+  // Daarin staat geen enkele bevestigknop, dus de verwijdering strandde terwijl
+  // de verkoper het venster gewoon open zag staan (gemeten 10-09-2026).
+  const TOESTEMMING = '#onetrust-consent-sdk, #onetrust-banner-sdk, #onetrust-pc-sdk, '
+                    + '#didomi-host, #usercentrics-root, [id*="cookie" i], [class*="cookie" i], '
+                    + '[id*="consent" i], [class*="consent" i], [id*="didomi" i]';
+
+  // ALLES WAT DEZE FUNCTIE GEBRUIKT MOET HIERBINNEN STAAN.
+  //
+  // Chrome injecteert alleen déze functie in de pagina; de rest van
+  // background.js bestaat daar niet. Stond de hulpfunctie hieronder los, dan
+  // gooide de pagina meteen een ReferenceError en kreeg de verkoper altijd
+  // "Delete control not found" te zien, ongeacht wat er op het scherm stond.
+  // Dat is op 30-08-2026 precies zo misgegaan. tests/test_vinted_verwijderknop.py
+  // bewaakt dat er niets van buiten wordt aangeroepen.
+  const tekst = e => (e.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+  const kaal = t => t.replace(/[?!.]+$/, "").trim();
+  const zichtbaar = e => e.offsetParent !== null || e.getClientRects().length > 0;
+  const knoppen = w => [...w.querySelectorAll('button, a, [role="menuitem"], [role="button"]')];
+  const isToestemming = e => !!(e.closest && e.closest(TOESTEMMING));
+  const isFotoKnop = t => /media-select|photo|image/i.test(t || "");
+  const isAnnuleer = e => {
+    const t = kaal(tekst(e));
+    const id = (e.dataset && e.dataset.testid) || "";
+    return ANNULEER.includes(t) || /cancel|cancelation|cancellation/i.test(id);
+  };
+  const isWeg = e => {
+    const id = (e.dataset && e.dataset.testid) || "";
+    if (isAnnuleer(e) || isFotoKnop(id)) return false;
+    return WEG.includes(kaal(tekst(e))) || id.includes("delete");
+  };
+
+  // Wachten zonder klokje.
+  //
+  // Deze functie draait in een tabblad dat de verkoper niet op het scherm heeft.
+  // Chrome rekt daar élke setTimeout op tot minstens een seconde, en zodra dat
+  // tabblad vijf minuten onzichtbaar is nog maar één keer per minuut. Een reeks
+  // korte pauzes werd zo minuten lang: het venster stond op het scherm te
+  // wachten en er gebeurde pas iets zodra de verkoper naar dat tabblad ging.
+  // Een MutationObserver wordt niet geknepen: die meldt zich zodra de pagina
+  // echt verandert. Het klokje bewaakt hier alleen nog de uiterste grens.
+  const wachtOp = (voorwaarde, limietMs = 6000) => new Promise((klaar) => {
+    let af = false;
+    const check = () => { try { return !!voorwaarde(); } catch (_) { return false; } };
+    const stop = (v) => {
+      if (af) return;
+      af = true;
+      try { obs.disconnect(); } catch (_) {}
+      clearTimeout(limiet);
+      klaar(v);
+    };
+    if (check()) return klaar(true);
+    const obs = new MutationObserver(() => { if (check()) stop(true); });
+    try {
+      obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
+    } catch (_) {}
+    const limiet = setTimeout(() => stop(check()), limietMs);
+  });
+
+  // Alle vensters die écht van Vinted zijn, jongste eerst: een echt venster
+  // wordt onderaan de body gehangen, dus achteraan in de pagina.
+  const echteVensters = () => [...document.querySelectorAll(VENSTERKEUS)]
+    .filter(v => !isToestemming(v))
+    .reverse();
+
+  const schermbeeld = () => {
+    const uitVensters = echteVensters().flatMap(v => knoppen(v));
+    const lijst = (uitVensters.length ? uitVensters : knoppen(document))
+      .filter(e => zichtbaar(e) && !isToestemming(e));
+    return lijst.slice(-25)
+      .map(e => tekst(e).slice(0, 30) + (e.dataset && e.dataset.testid ? `#${e.dataset.testid}` : ""))
+      .filter(Boolean).join(" | ").slice(0, 400);
+  };
+
+  // De bevestigknop, in volgorde van betrouwbaarheid: eerst het exacte
+  // kenmerk dat Vinted zijn eigen knop geeft, dan pas op tekst binnen een echt
+  // venster, en als laatste de hele pagina van achteren naar voren.
+  const zoekBevestig = (del) => {
+    const bruikbaar = e => e && e !== del && !e.disabled && !isToestemming(e)
+      && !isAnnuleer(e) && !isFotoKnop((e.dataset && e.dataset.testid) || "");
+    const exact = [...document.querySelectorAll('[data-testid="item-delete-confirmation-button"]')]
+      .find(e => bruikbaar(e) && zichtbaar(e));
+    if (exact) return exact;
+    for (const v of echteVensters()) {
+      const k = knoppen(v).reverse()
+        .find(e => bruikbaar(e) && zichtbaar(e) && BEVESTIG.includes(kaal(tekst(e))));
+      if (k) return k;
+    }
+    return knoppen(document).reverse()
+      .find(e => bruikbaar(e) && zichtbaar(e) && BEVESTIG.includes(kaal(tekst(e)))) || null;
+  };
+
+  // 0) WACHTEN OP DE VERWIJDERKNOP ZELF, niet op "er staat íets".
+  //
+  // Vinted bouwt de artikelpagina met JavaScript op, maar niet in één keer: de
+  // kopregel (logo, berichten, meldingen, "Verkopen") staat er meteen, de
+  // knoppen van het artikel zelf pas een tel later. Wachten tot er "een knop"
+  // staat is daardoor onmiddellijk klaar en zegt niets. Op 10-09-2026 kwam de
+  // melding "Delete control not found" terug met precies en alleen die
+  // kopregelknoppen erin, terwijl advertentie 9419472843 gewoon te verwijderen
+  // was: er werd te vroeg gekeken. Dus wachten op de knop waar het om gaat.
+  // Staat hij er al, dan kost dit niets; staat hij er niet, dan meldt de pagina
+  // zelf wanneer hij komt (geen klokje, dat wordt in een verborgen tabblad
+  // afgeknepen).
+  const menuKeus = '[data-testid="item-actions-button"], [data-testid="item-menu-button"], '
+                 + '[data-testid="item-page-actions-dropdown-button"], [data-testid*="kebab"], '
+                 + 'button[aria-label*="more" i], button[aria-label*="actions" i], '
+                 + 'button[aria-label*="options" i]';
+  const zoekWeg = () => knoppen(document).find(e => zichtbaar(e) && isWeg(e));
+  const zoekMenu = () => document.querySelector(menuKeus);
+
+  // 0b) EEN KNOP DIE ER STAAT IS NOG GEEN KNOP DIE WERKT.
+  //
+  // Vinted stuurt de artikelpagina als kant-en-klare HTML mee; React maakt de
+  // knoppen pas een paar seconden later klikbaar ("hydratie"). Een klik in dat
+  // gat verdwijnt zonder spoor. Op 24-09-2026 (klant 3bfbed2c, advertentie
+  // 9618700667) werd de verwijderknop zo aangeklikt, verscheen er geen venster
+  // en luidde de melding "Confirm-delete button not found". Nagemeten op de
+  // echte vinted.nl-pagina: de knoppen stonden er 3 tot 5 seconden voordat ze
+  // leefden; twee klikken in dat gat deden niets, een klik erna wel. Een
+  // levende knop draagt React's eigen kenmerk (__reactProps$…), dus daarop
+  // wachten, op dezelfde manier als hierboven: de pagina meldt elke wijziging,
+  // en na de grens wordt nog één keer gekeken. Komt het kenmerk nooit, dan
+  // klikken we na de grens gewoon, zoals vroeger.
+  const leeft = e => !!e && Object.keys(e).some(k => k.startsWith("__reactProps$"));
+  const wachtTotLevend = (vind, limietMs = 20000) => wachtOp(() => leeft(vind()), limietMs);
+
+  // 1) De knop op de pagina zelf, eventueel achter het menu met de drie puntjes.
+  await wachtOp(() => !!zoekWeg() || !!zoekMenu(), 15000);
+  await wachtTotLevend(() => zoekWeg() || zoekMenu());
+  let del = zoekWeg();
+  if (!del) {
+    const menuknop = zoekMenu();
+    if (menuknop) {
+      menuknop.click();
+      await wachtOp(() => !!zoekWeg(), 8000);
+      del = zoekWeg();
+    }
+  }
+  if (!del) return { clickedDelete: false, opScherm: schermbeeld(),
+                     aantalKnoppen: knoppen(document).filter(zichtbaar).length };
+  del.scrollIntoView({ block: "center" });
+  del.click();
+
+  // 2) Wachten tot de bevestigknop er echt staat. De melding komt van de
+  //    pagina zelf, niet van een klokje, dus dit gaat in een verborgen tabblad
+  //    even snel als op het scherm.
+  await wachtOp(() => !!zoekBevestig(del), 8000);
+  // Geen venster: de klik viel waarschijnlijk toch in het gat hierboven. Staat
+  // de knop er nog, dan één keer opnieuw zodra hij leeft.
+  if (!zoekBevestig(del) && del.isConnected) {
+    await wachtTotLevend(() => del, 10000);
+    del.click();
+    await wachtOp(() => !!zoekBevestig(del), 8000);
+  }
+  const bevestig = zoekBevestig(del);
+  const venster = echteVensters().find(v => zichtbaar(v)
+    || knoppen(v).some(zichtbaar)
+    || [...v.querySelectorAll("h1,h2,h3,h4,[class*='title' i]")].some(k => TITELS.includes(kaal(tekst(k)))));
+  if (!bevestig) return { clickedDelete: true, clickedConfirm: false, venster: !!venster,
+                          opScherm: schermbeeld() };
+  bevestig.scrollIntoView({ block: "center" });
+  bevestig.click();
+  // Het venster verdwijnt zodra Vinted de verwijdering aanneemt; dat is het
+  // teken om terug te geven, niet een vaste pauze.
+  await wachtOp(() => !zoekBevestig(del), 6000);
+  return { clickedDelete: true, clickedConfirm: true, venster: !!venster,
+           bevestigd: kaal(tekst(bevestig)) };
+}
+
+function execInTab(tabId, func, args = []) {
+  return new Promise((resolve, reject) => {
+    chrome.scripting.executeScript(
+      { target: { tabId }, world: "MAIN", func, args },
+      results => chrome.runtime.lastError
+        ? reject(new Error(chrome.runtime.lastError.message))
+        : resolve(results?.[0]?.result)
+    );
+  });
+}
+
+// STATUSBALK IN HET WERKTABBLAD. (04-10-2026, Egbert bcdf9aa4)
+//
+// Het tabblad klikte zelf door "Toon 50 volgende" met alleen laadpuntjes in
+// beeld: hij zag veel gebeuren en wist niet wat, of voor hoeveel advertenties.
+// Nu staat onderin het tabblad wat er gebeurt en hoeveel. Elke verversing wist
+// de balk, dus elke update zet hem opnieuw neer. Mislukt het plaatsen, dan
+// verandert er niets aan het werk zelf.
+const _werkRegel1 = new Map();   // tabId -> bovenste regel (wat doen we)
+let _wachtrijStand = {};         // platform -> { actie: aantal wachtend }
+
+function wachtendAantal(platform, actie) {
+  return ((_wachtrijStand[platform] || {})[actie]) || 0;
+}
+
+async function zetWerkStatus(tabId, regel1, regel2) {
+  if (regel1 != null) _werkRegel1.set(tabId, regel1);
+  const r1 = _werkRegel1.get(tabId) || "";
+  try {
+    await execInTab(tabId, (a, b) => {
+      let el = document.getElementById("omnivaleur-werkstatus");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "omnivaleur-werkstatus";
+        el.setAttribute("translate", "no");
+        el.style.cssText = "position:fixed;left:50%;bottom:16px;transform:translateX(-50%);" +
+          "z-index:2147483647;background:#1b1f3b;color:#fff;font:600 14px/1.4 system-ui,sans-serif;" +
+          "padding:10px 18px;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.35);" +
+          "pointer-events:none;text-align:center;max-width:90vw";
+        (document.body || document.documentElement).appendChild(el);
+      }
+      el.textContent = "";
+      const t1 = document.createElement("div");
+      t1.textContent = "Omnivaleur: " + a;
+      el.appendChild(t1);
+      if (b) {
+        const t2 = document.createElement("div");
+        t2.style.cssText = "font-weight:400;opacity:.85";
+        t2.textContent = b;
+        el.appendChild(t2);
+      }
+    }, [r1, regel2 || ""]);
+  } catch (e) { /* tabblad weg of pagina bezig: de balk is bijzaak */ }
+}
+
+function waitForTabLoad(tabId, timeoutMs = 20000) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      chrome.tabs.onUpdated.removeListener(fn);
+      resolve(); // resolve on timeout so execution continues
+    }, timeoutMs);
+    function fn(id, info) {
+      if (id !== tabId || info.status !== "complete") return;
+      chrome.tabs.onUpdated.removeListener(fn);
+      clearTimeout(timer);
+      resolve();
+    }
+    chrome.tabs.onUpdated.addListener(fn);
+    // Also check if already complete
+    chrome.tabs.get(tabId, t => {
+      // lastError MOET gelezen worden, ook als we niets met de fout doen: anders
+      // schreeuwt Chrome "Unchecked runtime.lastError: No tab with id" in de
+      // console zodra het tabblad al weg is, wat als losse fout overkomt terwijl
+      // het hier gewoon betekent dat we niets meer hoeven te wachten.
+      if (chrome.runtime.lastError) {
+        chrome.tabs.onUpdated.removeListener(fn);
+        clearTimeout(timer);
+        resolve();
+        return;
+      }
+      if (t && t.status === "complete") {
+        chrome.tabs.onUpdated.removeListener(fn);
+        clearTimeout(timer);
+        resolve();
+      }
+    });
+  });
+}
+
+// The MP/2dehands seller overview renders only the FIRST 50 ads and hides the
+// rest behind a "Toon 50 volgende advertenties." button. Anything past #50 is
+// simply not in the DOM — and both the delete and the scan below read a missing
+// row as "this listing is already gone", so a delete silently completed while
+// the ad stayed live (verified live 2026-07: 129 ads on the account, 50
+// rendered). Click through until the button is gone so the whole shop is loaded.
+async function expandMp2dhOverview(tabId, opts = {}) {
+  // ALLEEN DE ZOEKERTJES DIE AFLOPEN. (07-10-2026, Egbert bcdf9aa4)
+  //
+  // Elke verlengopdracht klapte zijn hele overzicht van 2.437 zoekertjes open
+  // (~49 klikken) om er één knop in te vinden: ~5 minuten per verlenging, en
+  // de klant zag het overzicht bij elke opdracht van voren af aan beginnen.
+  // 2dehands heeft zelf een filter "Loopt af" (select Dropdown-filterOpStatus,
+  // waarde "expiring"; de pagina vraagt dan de API met inExpirationWindow=true).
+  // Daarin staan precies de zoekertjes met een verlengknop (nagemeten op
+  // account Revaleur: 4 van 93, dezelfde 4 die de API EXPIRING noemt). Het
+  // filter blijft niet hangen na verversen, de klant ziet er later niets van.
+  // Lukt het filter niet, of staat de knop er dan niet, dan het oude pad.
+  const verlengId = opts.verlengId || null;
+  const heeftKnop = (id) => execInTab(tabId,
+    (i) => !!document.querySelector(`a[href="#verlengen"][data-ad-id="${i}"]`), [id]).catch(() => false);
+  if (verlengId) {
+    const filter = await execInTab(tabId, async () => {
+      const s = document.getElementById("Dropdown-filterOpStatus");
+      if (!s || ![...s.options].some(o => o.value === "expiring")) return null;
+      let totaal = null;
+      try {
+        const r = await fetch("/my-account/sell/api/listings?batchNumber=1&batchSize=1&inExpirationWindow=true",
+          { headers: { Accept: "application/json" }, credentials: "include" });
+        const d = await r.json();
+        if (typeof d.totalNumberOfResults === "number") totaal = d.totalNumberOfResults;
+      } catch (e) { /* totaal onbekend, dan wachten we op de vaste tijd */ }
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value").set.call(s, "expiring");
+      s.dispatchEvent(new Event("change", { bubbles: true }));
+      return { totaal };
+    }).catch(() => null);
+    if (filter) {
+      // Wachten tot de gefilterde lijst er staat: eerst is hij even leeg.
+      const verwacht = filter.totaal == null ? null : Math.min(50, filter.totaal);
+      for (let t = 0; t < 40; t++) {
+        await new Promise(r => setTimeout(r, 500));
+        if (verwacht == null) { if (t >= 7) break; continue; }
+        const n = await execInTab(tabId, () =>
+          new Set([...document.querySelectorAll("[data-ad-id]")].map(e => e.getAttribute("data-ad-id"))).size
+        ).catch(() => -1);
+        if (n === verwacht && (verwacht > 0 || t >= 3)) break;
+      }
+      await klapOpen(filter.totaal, "Je aflopende zoekertjes openklappen");
+      if (await heeftKnop(verlengId)) return;
+      // Geen knop in de gefilterde lijst. Staat het zoekertje ook niet bij
+      // de aflopende, dan valt er niets te klikken en beslist de meting in
+      // bgExtend2dh (al verlengd, nog niet in het venster, weg). Alleen als
+      // 2dehands hem wél aflopend noemt, het hele overzicht als vangnet.
+      const aflopend = await execInTab(tabId, async (id) => {
+        try {
+          for (let b = 1; b <= 50; b++) {
+            const r = await fetch(`/my-account/sell/api/listings?batchNumber=${b}&batchSize=100&inExpirationWindow=true`,
+              { headers: { Accept: "application/json" }, credentials: "include" });
+            if (!r.ok) return null;
+            const ads = (await r.json()).ads || [];
+            if (ads.some(a => String(a.itemId) === id)) return true;
+            if (ads.length < 100) return false;
+          }
+          return null;
+        } catch (e) { return null; }
+      }, [verlengId]).catch(() => null);
+      if (aflopend === false) return;
+      await stuurWerkTabbladNaar(tabId, "https://www.2dehands.be/my-account/sell/index.html").catch(() => {});
+      await waitForTabLoad(tabId);
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+  await klapOpen(undefined, "Je zoekertjes openklappen");
+
+  async function klapOpen(bekendTotaal, label) {
+  // Elke klik op "Toon 50 volgende" laadt 50 zoekertjes erbij. Tot 03-10-2026
+  // stopte dit na 40 klikken (2.050 rijen, "far beyond any real shop"), maar
+  // klant bcdf9aa4 heeft er 2.437. Zijn oudste zoekertjes, precies de zoekertjes
+  // die verlopen, stonden nooit op het scherm: verlengen vond geen knop, en een
+  // verwijdercontrole las zo'n afwezige rij als "weg". Nu tot 400 klikken
+  // (20.000 rijen); de knop verdwijnt vanzelf als alles er staat.
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  let leeg = 0;
+  // Totaal voor de statusbalk; mislukt het lezen, dan laten we alleen het
+  // aantal geladen zoekertjes zien.
+  const totaal = bekendTotaal !== undefined ? bekendTotaal : await execInTab(tabId, async () => {
+    try {
+      const r = await fetch("/my-account/sell/api/listings?batchNumber=1&batchSize=1",
+        { headers: { Accept: "application/json" }, credentials: "include" });
+      const d = await r.json();
+      return d.totalNumberOfResults || null;
+    } catch (e) { return null; }
+  }).catch(() => null);
+  for (let i = 0; i < 400; i++) {
+    const geladen = totaal ? Math.min(50 * (i + 1), totaal) : 50 * (i + 1);
+    // Staat de knop die we zoeken er al, dan hoeft de rest niet open.
+    if (verlengId && await heeftKnop(verlengId)) return;
+    await zetWerkStatus(tabId, null,
+      totaal ? `${label}: ${geladen} van ${totaal}`
+             : `${label}: ${geladen}+`);
+    const clicked = await execInTab(tabId, () => {
+      const btn = [...document.querySelectorAll("button")]
+        .find(b => /toon\s+\d+\s+volgende/i.test(b.textContent || "") && !b.disabled);
+      if (!btn) return false;
+      btn.click();
+      return true;
+    });
+    if (!clicked) {
+      // Een knop die even uitgeschakeld is terwijl de vorige portie laadt is
+      // nog geen einde van de lijst: twee keer extra kijken voor we stoppen.
+      if (++leeg > 2) return;
+      await sleep(1500);
+      continue;
+    }
+    leeg = 0;
+    await sleep(1200); // let the next batch render before looking again
+  }
+  }
+}
+
+// WAT EEN ADVERTENTIEPAGINA ZEGT ALS DE ADVERTENTIE ER NIET MEER IS.
+//
+// Gemeten op 15-09-2026 op de échte pagina's van beide kanalen, omdat het raden
+// hier een verkoper 57 advertenties heeft gekost. Marktplaats zet er "Deze
+// advertentie is helaas verlopen" neer, 2dehands "Dit zoekertje is helaas
+// verlopen". De controle hieronder zocht tot vandaag naar "verlopen
+// advertentie" — dezelfde twee woorden andersom — en vond dus nooit iets. Elke
+// gelukte verwijdering werd daardoor als mislukking geboekt, de bijbehorende
+// nieuwe plaatsing werd overgeslagen ("de oude staat nog live"), en de
+// advertentie stond daarna nergens meer: niet op Marktplaats en niet in de
+// wachtrij. Op 15-09-2026 gebeurde dat 57 keer op één account; van die 57 stond
+// er nul nog op Marktplaats.
+//
+// Eén bron, als tekst doorgegeven aan elke controle: deze controles draaien in
+// de pagina zelf (chrome.scripting) en kunnen niet bij variabelen van de
+// achtergrondpagina, dus zonder doorgeven groeien er opnieuw vier kopieën die
+// uit elkaar lopen.
+const WEG_TEKST_BRON =
+  "(advertentie|zoekertje)\\s*(is)?\\s*(helaas)?\\s*" +
+  "(verlopen|verwijderd|niet meer beschikbaar|niet gevonden|bestaat niet)" +
+  "|niet meer beschikbaar|pagina niet gevonden|no longer available|not available|not found";
+// Alleen bruikbaar op de ruwe HTML: het blok dat Marktplaats én 2dehands om een
+// verlopen advertentie heen zetten. Taalonafhankelijk, en nagemeten op allebei
+// de kanten: het staat op een verlopen pagina en niet op een levende.
+const WEG_MARKER_BRON = "expired-listing-root|expiredlisting-module";
+
+// Een advertentie verwijderen vanaf haar EIGEN pagina (/seller/view/{id}).
+//
+// Nodig voor verkopers van wie de advertenties niet op de gewone "Mijn
+// advertenties"-pagina staan — zakelijke accounts bijvoorbeeld. Die pagina
+// vinden we op advertentienummer, dus hier is geen titelvergelijking nodig en
+// kan er per definitie geen verkeerde advertentie geraakt worden.
+//
+// Geeft true terug als er aantoonbaar iets is verwijderd. Bij twijfel false:
+// "waarschijnlijk weg" melden als succes is de gevaarlijkste uitkomst, want dan
+// wordt er een tweede advertentie naast de eerste geplaatst.
+// Wat er op de advertentiepagina stond toen het verwijderen niet lukte. Reist
+// mee in de foutmelding, want zonder dat is elke mislukking dezelfde ene zin.
+let _laatsteVerwijderpagina = "niet gekeken";
+// Wat elke bevestigings- en weg-check stap precies zag: welke knop, welke
+// HTTP-status, welke tekst matchte. Reist mee naar het dashboard, ook bij een
+// gemeld succes — want de mislukkingen die we nog niet begrijpen zagen er tot
+// nu toe ALLEMAAL hetzelfde uit ("deleted_via_ad_page"), en dat vertelt niets.
+let _laatsteVerwijderDiag = [];
+
+// ── HET BEVESTIGVENSTER VAN MARKTPLAATS/2DEHANDS, OP ÉÉN PLEK ───────────────
+//
+// Er zijn twee verwijderroutes — via het overzicht en via de advertentiepagina
+// zelf — en allebei hadden hun eigen lijstje met JA-woorden. Die lijstjes waren
+// uit elkaar gegroeid: de route via het overzicht kende het kale "Ja", de route
+// via de advertentiepagina alleen "ja, verwijderen". Marktplaats zet er "Ja".
+//
+// Gemeten bij De Juiste Toon (20-09-2026, uit haar eigen diagnostiek): het
+// venster ging open met de knoppen ["", "Annuleren", "Ja"], er werd niets
+// geklikt ("clicked": false), het venster bleef gewoon openstaan en daarna zei
+// de controle terecht dat de advertentie er nog stond. Gevolg: vijf tapijten
+// die sinds 14-09 elke nacht opnieuw stukliepen, want een herplaatsing die zijn
+// oude advertentie niet weg krijgt, plaatst bewust geen nieuwe.
+//
+// Deze functie draait IN DE PAGINA (execInTab stuurt hem als tekst mee), dus
+// hij mag niets gebruiken van buiten: alles komt via zijn twee argumenten.
+const BEVESTIG_JA_BRON = "^(ja|yes|verwijder(en)?|ja,? verwijder(en)?|bevestig(en)?|yes,? delete|delete|remove|confirm|doorgaan|ok)\\b";
+const BEVESTIG_NEE_BRON = "^(annuleren|annuleer|cancel|nee|no|terug|back|sluiten|close|niet nu|later)\\b";
+
+function _bevestigInVenster(jaBron, neeBron) {
+  const JA = new RegExp(jaBron, "i");
+  const NEE = new RegExp(neeBron, "i");
+  // getClientRects in plaats van offsetParent: een venster staat vaak op
+  // position:fixed, en dan is offsetParent null terwijl de knop gewoon op het
+  // scherm staat.
+  const zichtbaar = (el) => !!el && el.getClientRects().length > 0
+    && !el.disabled && el.getAttribute("aria-disabled") !== "true";
+  const naam = (el) => ((el.textContent || "").replace(/\s+/g, " ").trim()
+    || (el.getAttribute("aria-label") || "").trim());
+  const venster = [...document.querySelectorAll('.ReactModalPortal, [role="dialog"], [aria-modal="true"]')]
+    .find((el) => el.getClientRects().length > 0 && (el.innerText || "").trim());
+  if (!venster) return { open: false };
+  const knoppen = [...venster.querySelectorAll('button, a[role="button"], [role="button"]')].filter(zichtbaar);
+  const labels = knoppen.map(naam).slice(0, 12);
+  const venstertekst = (venster.innerText || "").replace(/\s+/g, " ").trim().slice(0, 300);
+  const overig = knoppen.filter((b) => naam(b) && !NEE.test(naam(b)));
+  const kies =
+    // 1. De verkoopvraag ("Heb je dit verkocht via Marktplaats?") krijgt altijd
+    //    het antwoord NEE: ja klikken boekt een verkoop die er niet was.
+    knoppen.find((b) => /niet\s+verkocht/i.test(naam(b)))
+    // 1b. "Wil je jouw advertentie direct verwijderen, of pas verwijderen na de
+    //    huidige periode?" met de knoppen "Direct" en "Automatisch" (gemeten
+    //    10-10-2026 in de diagnostiek van drie deurbellen die niet weg gingen).
+    //    Geen van beide woorden stond in JA, en met twee knoppen over greep
+    //    regel 3 ook niet: het venster bleef staan, de herplaatsing stopte.
+    //    Altijd "Direct": wij verwijderen omdat het elders verkocht is of
+    //    opnieuw geplaatst wordt, en "Automatisch" laat de advertentie nog
+    //    weken online staan.
+    || (/direct\s+verwijder/i.test(venstertekst)
+        ? knoppen.find((b) => /^direct( verwijderen)?$/i.test(naam(b))) : null)
+    // 2. De gewone bevestiging. Nooit een knop die annuleert, sluit of teruggaat.
+    || knoppen.find((b) => JA.test(naam(b)) && !NEE.test(naam(b)))
+    // 3. Laatste redmiddel: blijft er precies één knop over die niet annuleert,
+    //    en gaat dit venster niet over verkopen, dan is dat de bevestiging. Zo
+    //    blijft een hernoemde knop niet opnieuw jarenlang hangen.
+    || (!/verkocht|sold/i.test(venstertekst) && overig.length === 1 ? overig[0] : null);
+  if (!kies) return { open: true, clicked: false, labels, venstertekst };
+  kies.click();
+  return { open: true, clicked: true, picked: naam(kies), labels, venstertekst };
+}
+
+async function verwijderViaAdvertentiepagina(tabId, adUrl, platform) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  try {
+    await stuurWerkTabbladNaar(tabId, adUrl);
+    await waitForTabLoad(tabId);
+    await sleep(2500);
+
+    const geklikt = await execInTab(tabId, async () => {
+      const zichtbaar = el => el && el.offsetParent !== null && !el.disabled;
+      const tekst = el => (el.textContent || "").replace(/\s+/g, " ").trim();
+      // Alleen een knop die letterlijk verwijderen zegt. "Verkocht", "Bewerken"
+      // en "Omhoog bellen" staan er vlak naast en mogen nooit geraakt worden.
+      const WEG = /^(verwijder(en)?|advertentie verwijderen|delete|remove)( \(\d+\))?$/i;
+      const knoppen = [...document.querySelectorAll('button, a[role="button"], [role="button"]')];
+      const knop = knoppen.filter(zichtbaar).find(b => WEG.test(tekst(b)));
+      if (!knop) return { ok: false, gezien: knoppen.filter(zichtbaar).map(tekst).slice(0, 12) };
+      knop.click();
+      return { ok: true };
+    });
+    if (!geklikt || !geklikt.ok) {
+      // WELKE KNOPPEN STONDEN ER DAN WEL?
+      //
+      // Dit stond alleen in de console van de verkoper, en daar kijkt niemand.
+      // Gevolg: 360 mislukte verwijderopdrachten in een week met exact dezelfde
+      // zin "de verwijderknop kon niet worden gebruikt", en geen enkele manier
+      // om te zien of de knop anders heet, achter een menu zit, of er helemaal
+      // niet is. Nu reist die lijst mee naar het dashboard.
+      const gezien = (geklikt && geklikt.gezien || []).join(" / ") || "geen enkele knop";
+      console.log("[Omnivaleur] geen verwijderknop op de advertentiepagina:", gezien);
+      _laatsteVerwijderpagina = gezien;
+      return false;
+    }
+
+    // Bevestigen. Twee verschillende vensters mogelijk: een simpel "weet je het
+    // zeker"-venstertje, ÓF (zoals ook bij de gewone lijst-verwijderroute
+    // ontdekt) "Heb je '<titel>' verkocht via Marktplaats?" met precies twee
+    // knoppen — "Niet verkocht via Marktplaats" en "Verkocht via Marktplaats".
+    // Die laatste tekst matcht geen van de oude JA-woorden (geen "verwijder",
+    // "ja", "bevestig", "delete", "confirm"), dus die knop werd nooit gevonden
+    // en het venster bleef gewoon openstaan — de advertentie werd nooit
+    // verwijderd. Zelfde oorzaak, zelfde oplossing als daar: eerst "niet
+    // verkocht" beantwoorden (verkeerd antwoord boekt een valse verkoop), dan
+    // een eventueel vervolgscherm afhandelen.
+    await sleep(1200);
+    const CONFIRM_STEPS = 3;
+    const diag = [];
+    for (let stap = 0; stap < CONFIRM_STEPS; stap++) {
+      // Dezelfde keuze als de route via het overzicht, uit dezelfde functie.
+      // Wat er stond wordt ook zonder klik vastgelegd (labels + venstertekst):
+      // als een venster ooit geen van onze woorden draagt, is dat de enige plek
+      // waar dat zichtbaar wordt.
+      const res = await execInTab(tabId, _bevestigInVenster, [BEVESTIG_JA_BRON, BEVESTIG_NEE_BRON])
+        .catch(e => ({ open: null, clicked: false, error: String(e) }));
+      diag.push({ fase: "bevestigen", stap, ...res });
+      if (!res || !res.open) break;
+      if (!res.clicked) break; // geen herkenbare knop meer — niets forceren
+      await sleep(1500);
+    }
+    await sleep(1500);
+
+    // Nakijken, niet aannemen — maar wel het juiste signaal geloven.
+    //
+    // Een fetch() haalt de ruwe HTML op VÓÓR React draait, dus een TEKSTcontrole
+    // daarop kan alles missen wat de pagina pas na JavaScript toont. Dat was de
+    // reden om er een tweede, gerenderde controle naast te zetten. Maar een
+    // HTTP-STATUS is geen tekst uit een half geladen pagina: 404 of 410 komt van
+    // de server van Marktplaats zelf en betekent dat deze advertentie er niet
+    // meer is. Die eiste hier tot vandaag alsnog een tekstbevestiging, en als
+    // die tekst dan niet herkend werd (zie WEG_TEKST_BRON hierboven) werd een
+    // gelukte verwijdering als mislukking geboekt.
+    //
+    // Dus: statuscode = bewijs, meteen klaar. Een tekstmatch in de ruwe HTML
+    // blijft wat hij was: een aanwijzing die de gerenderde pagina moet bevestigen.
+    //
+    // Een 403 of 429 is geen antwoord maar een blokkade: het kanaal knijpt ons
+    // af omdat er net veel verzoeken waren. Gemeten 27-09-2026 bij een
+    // verkoper die twee artikelen op Vinted verkocht: vier verwijderingen
+    // binnen een minuut, het venster werd netjes beantwoord, en daarna gaven
+    // marktplaats.nl en 2dehands.be allebei drie keer 403 met twee seconden
+    // ertussen. Geboekt als "Nothing was removed", terwijl drie van de vier
+    // advertenties aantoonbaar uit de openbare verkoperslijst waren (in de 30
+    // dagen daarvoor gaf dezelfde controle na een verwijdering 16 keer 410).
+    // Bij een blokkade wachten we dus langer en kijken we vaker; bewijs blijft
+    // eis. Elke wachttijd blijft onder de 30 seconden waarna Chrome een stille
+    // achtergrond stillegt.
+    const BLOKKADE_WACHT_MS = [10000, 20000, 25000, 25000, 25000];
+    for (let poging = 0; ; poging++) {
+      const fetchRes = await execInTab(tabId, async (u, wegBron, markerBron) => {
+        const WEG = new RegExp(wegBron);
+        const MARKER = new RegExp(markerBron);
+        try {
+          const r = await fetch(u, { credentials: "include", redirect: "follow" });
+          if (r.status === 404 || r.status === 410) return { weg: true, status: r.status, via: "status" };
+          if (!r.ok) return { weg: false, status: r.status, via: "not-ok" };
+          const html = (await r.text()).toLowerCase();
+          const marker = MARKER.exec(html);
+          if (marker) return { weg: true, status: r.status, via: `marker:${marker[0]}`, htmlLen: html.length };
+          const m = WEG.exec(html);
+          return { weg: !!m, status: r.status, via: m ? `text:${m[0]}` : "no-match", htmlLen: html.length };
+        } catch (e) { return { weg: false, via: "error", error: String(e) }; }
+      }, [adUrl, WEG_TEKST_BRON, WEG_MARKER_BRON]).catch(e => ({ weg: false, via: "exec-error", error: String(e) }));
+      diag.push({ fase: "fetch-check", poging, ...fetchRes });
+
+      // De server zegt zelf dat deze advertentie weg is (404/410), of de pagina
+      // draagt het verlopen-blok dat alleen op een verdwenen advertentie staat.
+      // Daar hoeft niets meer naast: doorvragen kan het antwoord alleen nog
+      // maar bederven.
+      if (fetchRes && fetchRes.weg && /^(status|marker:)/.test(String(fetchRes.via || ""))) {
+        console.log("[Omnivaleur] verwijderen bevestigd door de server zelf:", JSON.stringify(diag));
+        _laatsteVerwijderDiag = diag;
+        return true;
+      }
+
+      if (fetchRes && fetchRes.weg) {
+        await stuurWerkTabbladNaar(tabId, adUrl);
+        await waitForTabLoad(tabId);
+        await sleep(1500);
+        const domRes = await execInTab(tabId, (u, wegBron) => {
+          const tekst = (document.body.innerText || "").toLowerCase();
+          const m = new RegExp(wegBron).exec(tekst);
+          return { url: location.href, textHit: m ? m[0] : null };
+        }, [adUrl, WEG_TEKST_BRON]).catch(e => ({ error: String(e) }));
+        diag.push({ fase: "dom-tegencontrole", poging, ...domRes });
+
+        if (domRes && domRes.textHit) {
+          console.log("[Omnivaleur] verwijderen bevestigd, fetch en DOM eens:", JSON.stringify(diag));
+          _laatsteVerwijderDiag = diag;
+          return true;
+        }
+        console.log("[Omnivaleur] fetch zei 'weg', echte pagina sprak tegen — genegeerd:", JSON.stringify(diag));
+      }
+      const geblokkeerd = !!fetchRes && (fetchRes.status === 403 || fetchRes.status === 429);
+      if (poging >= (geblokkeerd ? BLOKKADE_WACHT_MS.length : 2)) break;
+      await sleep(geblokkeerd ? BLOKKADE_WACHT_MS[Math.min(poging, BLOKKADE_WACHT_MS.length - 1)] : 2000);
+    }
+    console.log("[Omnivaleur] verwijderen niet aantoonbaar gelukt:", JSON.stringify(diag));
+    _laatsteVerwijderDiag = diag;
+    return false;
+  } catch (e) {
+    console.error("[Omnivaleur] verwijderen via advertentiepagina mislukt:", e);
+    _laatsteVerwijderDiag = [{ fase: "exception", error: String(e) }];
+    return false;
+  }
+}
+
+// ── De advertentie vastleggen VOORDAT hij weggehaald wordt ────────────────
+//
+// WAAROM DIT ER MOET ZIJN.
+//
+// Herplaatsen is: weghalen en opnieuw plaatsen. De nieuwe advertentie wordt
+// gebouwd uit wat er in Omnivaleur over het item bekend is — en van een
+// geïmporteerde advertentie is dat maar ÉÉN foto. Marktplaats geeft in zijn
+// zoeklijst namelijk alleen het omslagplaatje mee, niet de hele reeks. Gevolg:
+// een advertentie met negen foto's kwam met één foto terug. Precies de melding
+// "bij het herplaatsen neemt hij elke keer maar één foto mee".
+//
+// De volledige reeks staat wél op de advertentiepagina zelf, en die pagina
+// hebben we op dit moment gewoon voor ons — vlak voor het verwijderen. We lezen
+// de miniaturen uit de galerij (dat is meteen de juiste volgorde, dus de
+// omslagfoto blijft de omslagfoto) en vragen van elke foto de grootste versie
+// op. De server zet ze in de al klaarstaande plaatsingsopdracht.
+const MP_FOTO_REGEL = "ecg_mp_eps$_86";   // grootste versie; live nagemeten
+
+async function mpAdvertentieSnapshot(tabId) {
+  try {
+    const snap = await execInTab(tabId, async (regel) => {
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const uitUrl = (waarde) => {
+        const m = /url\(\s*["']?([^"')]+)/i.exec(waarde || "");
+        return m ? m[1] : null;
+      };
+      // Miniaturen dragen "Foto 3 van 9", dus de pagina zegt zelf hoeveel het er
+      // zijn. Zolang we er minder zien blijven we even wachten: de galerij wordt
+      // pas na het laden opgebouwd.
+      const lees = () => {
+        const knoppen = [...document.querySelectorAll('[class*="Thumbnails-module-item"]')];
+        const urls = [];
+        for (const k of knoppen) {
+          const u = uitUrl(k.style && k.style.backgroundImage) ||
+                    uitUrl(getComputedStyle(k).backgroundImage) ||
+                    (k.querySelector("img") || {}).src;
+          if (u) urls.push(u);
+        }
+        if (!urls.length) {
+          // Advertentie met één foto: dan tekent Marktplaats geen miniatuurrij.
+          const hoofd = [...document.querySelectorAll("img")]
+            .map((i) => i.src || "")
+            .filter((u) => /images\.(?:marktplaats|2dehands)\.com\/api\/v1\/[^/]+\/images\//.test(u));
+          urls.push(...hoofd);
+        }
+        return urls;
+      };
+      let totaal = 0;
+      const label = [...document.querySelectorAll('[aria-label*="van"]')]
+        .map((e) => /(\d+)\s+van\s+(\d+)/.exec(e.getAttribute("aria-label") || ""))
+        .find(Boolean);
+      if (label) totaal = parseInt(label[2], 10) || 0;
+
+      let beste = [];
+      for (let poging = 0; poging < 10; poging++) {
+        const nu = lees();
+        if (nu.length > beste.length) beste = nu;
+        if (totaal && beste.length >= totaal) break;
+        if (!totaal && beste.length) break;
+        // Miniaturen verderop in de rij worden pas geladen als ze in beeld
+        // komen. Even langsscrollen dus, anders houden we er vijf van negen.
+        const rij = document.querySelectorAll('[class*="Thumbnails-module-item"]');
+        if (rij.length) {
+          try { rij[rij.length - 1].scrollIntoView({ block: "nearest" }); } catch (_) {}
+        }
+        await sleep(500);
+      }
+
+      // Grootste versie opvragen en dubbele eruit: dezelfde foto staat vaak in
+      // meerdere maten in de pagina.
+      const gezien = new Set();
+      const fotos = [];
+      for (let u of beste) {
+        if (!u) continue;
+        if (u.startsWith("//")) u = "https:" + u;
+        if (!/^https?:\/\//.test(u)) continue;
+        const m = /\/images\/([0-9a-f-]{16,})/i.exec(u);
+        const sleutel = m ? m[1] : u;
+        if (gezien.has(sleutel)) continue;
+        gezien.add(sleutel);
+        fotos.push(u.split("?")[0] + "?rule=" + regel);
+      }
+
+      // "Kenmerken" van de advertentie zelf. Precies de velden waar het
+      // dashboard om vraagt bij een geïmporteerde advertentie ("Vul merk en maat
+      // aan voor Marktplaats & 2dehands") — ze stonden altijd al op de
+      // advertentie, alleen niet in de zoeklijst waaruit geïmporteerd wordt.
+      const kenmerk = {};
+      for (const rij of document.querySelectorAll('[class*="Attributes-module-item"]')) {
+        const label = (rij.querySelector('[class*="Attributes-module-label"]') || {}).innerText;
+        const waarde = (rij.querySelector('[class*="Attributes-module-value"]') || {}).innerText;
+        if (label && waarde) kenmerk[label.trim().toLowerCase()] = waarde.trim();
+      }
+      const conditieNaarOns = (w) => {
+        const t = (w || "").toLowerCase().replace(/-/g, " ");
+        if (!t) return "";
+        if (t.includes("niet werkend") || t.includes("werkt niet")) return "poor";
+        if (t.includes("nieuw met")) return "new_with_tags";
+        if (t.includes("zo goed als nieuw")) return "good";
+        if (t.includes("nieuw")) return "new";
+        if (t.includes("beschadigd") || t.includes("defect")) return "poor";
+        if (t.includes("gebruikt") || t.includes("gedragen")) return "fair";
+        return "";
+      };
+      // Marktplaats zet maten soms in emmertjes ("Maat 46/48 (XL) of groter",
+      // "Overige maten"). Alleen een maat die ook op een ander platform een maat
+      // ís nemen we over; een emmertje zou daar onzin worden.
+      const maatUit = (w) => {
+        const t = (w || "").trim();
+        if (!t) return "";
+        const m = /\b(XXXS|XXS|XS|S|M|L|XL|XXL|XXXL|XXXXL)\b/i.exec(t);
+        if (m) return m[1].toUpperCase();
+        const n = /^\s*(\d{2,3})\s*$/.exec(t);
+        return n ? n[1] : "";
+      };
+
+      // DE CATEGORIE WAAR DEZE ADVERTENTIE ECHT IN STAAT.
+      //
+      // Marktplaats zet hem gewoon in de pagina:
+      //   "l1CategoryId":1784,"l1CategoryName":"Postzegels en Munten",
+      //   "l2CategoryId":1789,"l2CategoryName":"Bankbiljetten | Afrika"
+      // Bij een verversing plaatsen we hem daarmee terug waar hij stond, in
+      // plaats van in de categorie die wij uit de titel hebben geraden. Amanda
+      // meldde precies dat: "hij zet deze dan in de verkeerde categorie. Dit
+      // kun je bij MP niet aanpassen."
+      const mp_category = (() => {
+        try {
+          const bron = document.documentElement.innerHTML;
+          const nr = (naam) => {
+            const m = new RegExp('"' + naam + '"\\s*:\\s*"?(\\d+)"?').exec(bron);
+            return m ? parseInt(m[1], 10) : null;
+          };
+          const tekst = (naam) => {
+            const m = new RegExp('"' + naam + '"\\s*:\\s*"([^"]{1,120})"').exec(bron);
+            return m ? m[1] : "";
+          };
+          const l1 = nr("l1CategoryId"), l2 = nr("l2CategoryId");
+          if (!l1 || !l2) return null;
+          return { l1, l2, l1_naam: tekst("l1CategoryName"), l2_naam: tekst("l2CategoryName") };
+        } catch (e) { return null; }
+      })();
+
+      const blok = document.querySelector('[class*="Description-module-description"]');
+      return {
+        photo_urls: fotos,
+        foto_totaal: totaal || fotos.length,
+        description: blok ? (blok.innerText || "").trim().slice(0, 20000) : "",
+        brand: kenmerk["merk"] || "",
+        size: maatUit(kenmerk["maat"] || kenmerk["kledingmaat"] || ""),
+        color: kenmerk["kleur"] || "",
+        condition: conditieNaarOns(kenmerk["conditie"] || kenmerk["staat"] || ""),
+        mp_category,
+      };
+    }, [MP_FOTO_REGEL]);
+    if (!snap) return {};
+    if (!Array.isArray(snap.photo_urls) || !snap.photo_urls.length) {
+      console.log("[Omnivaleur] snapshot: geen foto's gevonden op de advertentiepagina");
+      snap.photo_urls = [];
+    }
+    console.log(`[Omnivaleur] snapshot: ${snap.photo_urls.length} van ${snap.foto_totaal} foto('s) vastgelegd`);
+    return snap;
+  } catch (e) {
+    console.warn("[Omnivaleur] snapshot mislukt:", e && e.message);
+    return {};
+  }
+}
+
+// ── 2DEHANDS: EEN BIJNA VERLOPEN ZOEKERTJE VERLENGEN ───────────────────────
+//
+// Gemeten op het ingelogde account Revaleur, 10-09-2026:
+//  - het eigen overzicht is https://www.2dehands.be/my-account/sell/index.html
+//  - dat overzicht heeft een JSON-bron /my-account/sell/api/listings met per
+//    zoekertje { itemId, status, closeDate, reserved }. status "EXPIRING" is
+//    precies het zoekertje dat een "Verlengen"-knop toont (3 van 49 bij Daniel).
+//  - die knop is <a href="#verlengen" data-ad-id="m..."> in de statuskolom.
+//  - klikken verlengt METEEN, zonder bevestiging. Daarna opent een venster
+//    "Zoekertje is verlengd" met een BETAALDE knop "Plaats bovenaan" (EUR 0,24)
+//    en een knop "Sluiten". De betaalde knop raken we NOOIT aan.
+//  - ná het verlengen staat closeDate exact 28 dagen verder en is status ACTIVE.
+//    Twee echte advertenties zo verlengd, allebei +28 dagen, EUR 0,00.
+//
+// NOOIT weghalen, nooit opnieuw plaatsen (zie "herplaatsen-verliest-advertenties"
+// en docs/team-notes.md 10-09-2026). Het bewijs dat telt is de nieuwe closeDate,
+// niet "geen foutmelding" (zie "succes-nooit-uit-uitsluitingslijst").
+async function bgExtend2dh(job, serverUrl) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const payload = job.payload || {};
+  const itemId = String(payload.platform_listing_id || "").trim();
+  const overviewUrl = "https://www.2dehands.be/my-account/sell/index.html";
+
+  if (!/^m\d{6,}$/.test(itemId)) {
+    throw new Error(`No 2dehands listing id on this extend job (got "${itemId}") — nothing to extend.`);
+  }
+
+  // Klok vast, om dezelfde reden als bij bgDeleteMp2dh: ook verlengen wacht op
+  // stukjes code in de pagina en houdt zolang het kanaal bezet.
+  const tabId = await new Promise((res, rej) =>
+    openWorkerTab(overviewUrl, t =>
+      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true, klokVast: true }
+    )
+  );
+  _klokTabbladen.add(tabId);
+  startOntdooiTeller();
+
+  // WELKE ZOEKERTJES LOPEN AF, VOLGENS 2DEHANDS ZELF. (11-10-2026, Lynn 96e30080)
+  //
+  // De server raadde het venster uit listed_at. Bij een geimporteerd zoekertje is
+  // dat de importdatum, niet de dag waarop het echt geplaatst is: het venster
+  // kwam te laat en het zoekertje verliep (gemeten bij Lynn: 4 van 11 oude rijen
+  // verlopen, tien rode verlengfouten). 2dehands weet het precies: de lijst
+  // "Loopt af" (inExpirationWindow=true) met per zoekertje de closeDate. Elke
+  // verlengopdracht stuurt die lijst mee; de server zet er meteen opdrachten
+  // voor klaar. null = niet gelezen, en dan beslist de server niets.
+  async function leesAflopende2dh(tabId) {
+    return execInTab(tabId, async () => {
+      const uit = [];
+      for (let b = 1; b <= 20; b++) {
+        const r = await fetch(`/my-account/sell/api/listings?batchNumber=${b}&batchSize=100&inExpirationWindow=true`,
+          { headers: { Accept: "application/json" }, credentials: "include" });
+        if (!r.ok) return null;
+        const ads = (await r.json()).ads || [];
+        for (const a of ads) {
+          if (a && a.itemId) uit.push({ id: String(a.itemId), close: a.closeDate || null, status: a.status || null });
+        }
+        if (ads.length < 100) return uit;
+      }
+      return uit;
+    }).catch(() => null);
+  }
+
+  // Elke afgeronde verlenging neemt de lijst "Loopt af" mee (zie leesAflopende2dh).
+  const klaar = async (body) => {
+    const aflopend = await leesAflopende2dh(tabId);
+    await finaliseJob(serverUrl, job.id, "complete", aflopend ? { ...body, aflopend } : body);
+  };
+
+  // DE PAGINA MAG ONDER ONS VERVERSEN. (04-10-2026, Egbert bcdf9aa4)
+  //
+  // Bij 2.437 zoekertjes duurt openklappen plus lezen minuten. Ververst het
+  // tabblad in die tijd (computer net wakker, 2dehands vernieuwt de sessie),
+  // dan breekt Chrome het script af met "Frame with ID 0 was removed", en een
+  // eerste fetch na het wakker worden geeft "Failed to fetch". Allebei zeggen
+  // ze niets over het zoekertje. Dus: pagina opnieuw laten laden en opnieuw
+  // meten. Een klik die vóór het verversen al werkte zien we dan terug als een
+  // vervaldatum ver in de toekomst (zie alVerlengd hieronder).
+  const meet = async () => {
+    await waitForTabLoad(tabId);
+    await sleep(3000);                 // let React render the list
+    await zetWerkStatus(tabId,
+      `Zoekertje verlengen (${wachtendAantal("2dehands", "extend")} verlengopdrachten in de wachtrij)`);
+    // Alleen de aflopende zoekertjes, tot de knop van dit zoekertje er staat.
+    await expandMp2dhOverview(tabId, { verlengId: itemId });
+    await zetWerkStatus(tabId, null, "Het juiste zoekertje zoeken en verlengen");
+    return execInTab(tabId, async (wantId) => {
+      const nap = ms => new Promise(r => setTimeout(r, ms));
+      // Bladeren tot het zoekertje er is. Alleen de eerste 200 lezen gaf op
+      // 28-09-2026 bij een klant met 625 zoekertjes 40 keer "not in your
+      // overview" voor advertenties die gewoon live stonden. batchNumber is
+      // 1-based (zie de import hieronder, die hetzelfde overzicht leest).
+      //
+      // NIET DE HELE LIJST, TWEE KEER PER VERLENGING. (11-10-2026, Egbert bcdf9aa4)
+      //
+      // Dat lezen (vóór de klik en erna, als bewijs) bladerde van voren af aan
+      // door alle zoekertjes. De lijst staat nieuwste eerst, dus de zoekertjes
+      // die verlopen staan achteraan: bij 2.437 zoekertjes 25 bladzijden, twee
+      // keer. Gemeten in zijn opdrachten op 1.0.376: elke verlenging 73 tot 84 s,
+      // terwijl het filter de knop al in een paar seconden vond. Nu eerst de
+      // korte lijst "Loopt af" (vóór de klik staat hij daar), dan gericht naar
+      // de juiste bladzijde: de lijst loopt op itemId van hoog naar laag
+      // (nagemeten op Revaleur, 101 van 101), dus halveren vindt hem in een
+      // paar stappen. Klopt die volgorde ergens niet, of vinden we hem zo niet,
+      // dan het oude pad: alles lezen. "Niet gevonden" komt dus nog steeds
+      // alleen uit een volledige lezing.
+      const haal = async (batch, extra = "") => {
+        const r = await fetch(`/my-account/sell/api/listings?batchNumber=${batch}&batchSize=100${extra}`,
+          { headers: { Accept: "application/json" }, credentials: "include" });
+        if (!r.ok) return { httpError: r.status };
+        return { d: await r.json() };
+      };
+      const nr = (id) => Number(String(id).replace(/^m/, ""));
+      const zoekGericht = async (eerstAflopend) => {
+        if (eerstAflopend) {
+          for (let batch = 1; batch <= 20; batch++) {
+            const x = await haal(batch, "&inExpirationWindow=true");
+            if (x.httpError) break;
+            const ads = x.d.ads || [];
+            const ad = ads.find((a) => String(a.itemId) === wantId);
+            if (ad) return { total: x.d.totalNumberOfResults || ads.length, ad };
+            if (ads.length < 100) break;
+          }
+        }
+        const doel = nr(wantId);
+        if (!Number.isFinite(doel)) return null;
+        const eerste = await haal(1);
+        if (eerste.httpError) return null;
+        const totaal = eerste.d.totalNumberOfResults;
+        if (typeof totaal !== "number" || totaal < 1) return null;
+        const bekijk = (d) => {
+          const ads = d.ads || [];
+          const ids = ads.map((a) => nr(a.itemId));
+          if (!ads.length || ids.some((v, i) => !Number.isFinite(v) || (i > 0 && ids[i - 1] <= v))) return { mis: true };
+          const ad = ads.find((a) => String(a.itemId) === wantId);
+          if (ad) return { ad };
+          if (doel > ids[0]) return { eerder: true };
+          if (doel < ids[ids.length - 1]) return { later: true };
+          return { mis: true };                 // binnen deze bladzijde, toch niet gevonden
+        };
+        let b = bekijk(eerste.d);
+        if (b.ad) return { total: totaal, ad: b.ad };
+        if (!b.later) return null;
+        let lo = 2, hi = Math.ceil(totaal / 100);
+        for (let stap = 0; stap < 20 && lo <= hi; stap++) {
+          const mid = Math.floor((lo + hi) / 2);
+          const x = await haal(mid);
+          if (x.httpError) return null;
+          b = bekijk(x.d);
+          if (b.ad) return { total: totaal, ad: b.ad };
+          if (b.mis) return null;
+          if (b.eerder) hi = mid - 1; else lo = mid + 1;
+          await nap(150);
+        }
+        return null;
+      };
+      const readOne = async (eerstAflopend) => {
+        try {
+          const snel = await zoekGericht(eerstAflopend);
+          if (snel) return snel;
+        } catch (e) { /* dan het oude pad hieronder */ }
+        try {
+          const gezien = new Set();
+          for (let batch = 1; batch <= 50; batch++) {
+            const r = await fetch(`/my-account/sell/api/listings?batchNumber=${batch}&batchSize=100`,
+              { headers: { Accept: "application/json" }, credentials: "include" });
+            // Ook een haperende latere bladzijde is "niet gelezen", nooit "niet gevonden".
+            if (!r.ok) return { httpError: r.status };
+            const d = await r.json();
+            const ads = d.ads || [];
+            let nieuw = 0;
+            for (const a of ads) {
+              const id = String(a.itemId);
+              if (id === wantId) return { total: gezien.size + 1, ad: a };
+              if (!gezien.has(id)) { gezien.add(id); nieuw++; }
+            }
+            if (!ads.length || !nieuw) break;
+            if (d.totalNumberOfResults != null && gezien.size >= d.totalNumberOfResults) break;
+            await nap(250);
+          }
+          return { total: gezien.size, ad: null };
+        } catch (e) { return { fetchError: String(e && e.message || e) }; }
+      };
+
+      const before = await readOne(true);
+      if (before.httpError) return { step: "read", httpError: before.httpError };
+      if (before.fetchError) return { step: "read", fetchError: before.fetchError };
+      // Leeg overzicht bewijst niets (uitgelogd? markup veranderd?). Nooit
+      // "al verlengd" gokken op een lege lijst.
+      if (!before.total) return { step: "read", empty: true };
+      if (!before.ad) return { step: "read", notFound: true, total: before.total };
+
+      const ad = before.ad;
+      const closeBefore = ad.closeDate || null;
+      if (ad.reserved) return { reserved: true, closeDate: closeBefore };
+
+      // Niet in het verlengvenster: 2dehands laat pas ~7 dagen voor het einde
+      // verlengen, en dan pas staat er een knop. Geen fout, niets te doen.
+      if (ad.status !== "EXPIRING") {
+        return { notExpiring: true, status: ad.status, closeDate: closeBefore };
+      }
+
+      // Alleen de verlengknop van DIT zoekertje (data-ad-id), en verder niets —
+      // zeker niet de betaalde knop in het venster dat daarna opent.
+      const link = document.querySelector(`a[href="#verlengen"][data-ad-id="${wantId}"]`);
+      if (!link) return { noButton: true, status: ad.status };
+      link.scrollIntoView({ block: "center" });
+      link.click();
+      await nap(3500);
+
+      const after = await readOne(false);
+      const closeAfter = (after && after.ad && after.ad.closeDate) || null;
+      let shiftDays = null;
+      if (closeBefore && closeAfter) {
+        shiftDays = Math.round((new Date(closeAfter) - new Date(closeBefore)) / 86400000);
+      }
+      return {
+        clicked: true, closeBefore, closeAfter, shiftDays,
+        statusAfter: (after && after.ad && after.ad.status) || null,
+      };
+    }, [itemId]);
+  };
+
+  try {
+    let uit;
+    for (let poging = 1; ; poging++) {
+      try {
+        uit = await meet();
+      } catch (e) {
+        if (poging >= 3 || !/frame with id \d+ was removed|frame was removed/i.test(String(e?.message || e))) throw e;
+        console.log(`[Omnivaleur] bgExtend2dh: overzicht ververste tijdens het meten van ${itemId}, opnieuw (${poging})`);
+        await sleep(5000);
+        continue;
+      }
+      if (poging < 3 && uit && uit.step === "read" && uit.fetchError) {
+        await sleep(5000);
+        await stuurWerkTabbladNaar(tabId, overviewUrl).catch(() => {});
+        continue;
+      }
+      break;
+    }
+
+    if (uit && uit.step === "read" && (uit.empty || uit.httpError || uit.fetchError)) {
+      throw new Error(
+        `Couldn't read your 2dehands listings overview ` +
+        `(${uit.httpError ? "HTTP " + uit.httpError : uit.fetchError || "no ads rendered"}). ` +
+        `Make sure you're still logged in on 2dehands. Nothing was changed.`
+      );
+    }
+    if (uit && uit.notFound) {
+      throw new Error(
+        `Listing ${itemId} is not in your 2dehands overview (${uit.total} listings read). ` +
+        `Nothing was changed — it may have been removed or sold.`
+      );
+    }
+    if (uit && uit.reserved) {
+      await klaar({ note: "reserved_not_extended" });
+      return;
+    }
+    // Al verlengd: deze opdracht geldt alleen voor zoekertjes van 22+ dagen oud,
+    // die hooguit een week voor zich hebben. Ligt het einde nog 21+ dagen weg,
+    // dan is hij al verlengd (door een eerdere klik vlak voor een verversing, of
+    // door de verkoper zelf). Melden als verlengd, anders schuift listed_at nooit
+    // op en komt er elke nacht een nutteloze opdracht bij.
+    const dagenTeGaan = uit && uit.closeDate
+      ? (new Date(uit.closeDate) - Date.now()) / 86400000 : null;
+    if (uit && uit.notExpiring && dagenTeGaan != null && dagenTeGaan >= 21) {
+      await klaar({
+        verlengd: true, note: "already_extended", new_close: uit.closeDate, status: uit.status || null,
+      });
+      return;
+    }
+    if (uit && uit.notExpiring) {
+      await klaar({ note: "not_in_extend_window", status: uit.status || null, close: uit.closeDate || null });
+      return;
+    }
+    if (uit && uit.noButton) {
+      throw new Error(
+        `Listing ${itemId} shows as expiring on 2dehands but the "Verlengen" button could not be found. ` +
+        `Nothing was changed — try again.`
+      );
+    }
+    if (!uit || !uit.clicked) {
+      throw new Error(`2dehands extend for ${itemId} did not run (${JSON.stringify(uit || {})}).`);
+    }
+
+    // HET BEWIJS: de nieuwe vervaldatum ligt echt ~4 weken verder. 28 is normaal;
+    // 21 als ondergrens laat wat speling voor een zoekertje dat al een paar
+    // dagen "verlopen" was.
+    if (uit.shiftDays == null || uit.shiftDays < 21) {
+      throw new Error(
+        `Clicked "Verlengen" on 2dehands listing ${itemId} but its expiry date did not move ` +
+        `(${uit.closeBefore || "?"} -> ${uit.closeAfter || "?"}, ` +
+        `${uit.shiftDays == null ? "unknown" : uit.shiftDays + " days"}). ` +
+        `Treating this as a failure — nothing is confirmed extended.`
+      );
+    }
+
+    console.log(`[Omnivaleur] bgExtend2dh: ${itemId} verlengd ${uit.closeBefore} -> ${uit.closeAfter} (+${uit.shiftDays}d)`);
+    await klaar({
+      verlengd: true, note: "extended",
+      old_close: uit.closeBefore, new_close: uit.closeAfter, shift_days: uit.shiftDays,
+    });
+  } finally {
+    sluitWerkTabblad(tabId, 2500);
+  }
+}
+
+
+async function bgDeleteMp2dh(job, serverUrl) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const platform = job.platform;
+  const payload = job.payload || {};
+  // De VOLLEDIGE titel — hij werd hier op 35 tekens afgekapt, en dan kan een
+  // 1-op-1 vergelijking met de titel op de pagina per definitie nooit kloppen.
+  const title = (payload.title || "").trim();
+  const listingId = payload.platform_listing_id || "";
+  // Het nummer waarmee elke advertentie begint: uit het SKU-veld, of anders uit
+  // de "(1337)"-prefix die de verkoper zelf in de titel zet.
+  const sku = String(payload.sku || (/^\s*\(([^)]{1,24})\)/.exec(payload.title || "") || [])[1] || "").trim();
+
+  // Navigate directly to the seller's listings overview
+  const overviewUrl = platform === "marktplaats"
+    ? "https://www.marktplaats.nl/my-account/sell/index.html"
+    : "https://www.2dehands.be/my-account/sell/index.html";
+
+  // De echte advertentiepagina, als we die hebben. Daar staan alle foto's; op
+  // het overzicht staat alleen het omslagplaatje.
+  const adUrl = String(payload.platform_listing_url || "").trim();
+  const startUrl = /^https:\/\/(?:www\.)?(?:marktplaats\.nl|2dehands\.be)\/v\//.test(adUrl)
+    ? adUrl : overviewUrl;
+
+  // DE KLOK MOET OOK BIJ HET VERWIJDEREN AAN (16-10-2026, klant 26cf5471).
+  //
+  // Dit tabblad werkt via stukjes code ín de pagina (miniaturen tellen,
+  // "Toon 50 volgende", het bevestigvenster, de controle of hij weg is), en die
+  // wachten op de klok van de pagina. Zonder focus-emulatie staat die klok in een
+  // tabblad dat niet in beeld is na anderhalve minuut op 0,0 tikken per seconde
+  // (tests/klok-varianten-echt-test.mjs), en dan wacht execInTab tot iemand het
+  // venster in beeld haalt. Bij deze klant bleef zo het eerste verwijderen na het
+  // wakker worden van de computer 81 minuten hangen, en zolang dat duurde vroeg de
+  // extensie Marktplaats niets meer (_lopendePublicaties): 85 herplaatsingen
+  // stonden stil. Plaatsingen in datzelfde venster hadden de klok wél en liepen
+  // binnen een halve minuut na het wakker worden door. Zelfde reparatie als bij
+  // het Vinted-verwijderen op 21-09-2026: klokVast, en na elke paginawissel
+  // opnieuw zetten (verzekerKlok via _klokTabbladen).
+  const tabId = await new Promise((res, rej) =>
+    openWorkerTab(startUrl, t =>
+      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true, klokVast: true }
+    )
+  );
+  _klokTabbladen.add(tabId);
+  startOntdooiTeller();
+
+  let snapshot = {};
+  try {
+    await waitForTabLoad(tabId);
+    if (startUrl !== overviewUrl) {
+      await sleep(1500);
+      snapshot = await mpAdvertentieSnapshot(tabId);
+      await stuurWerkTabbladNaar(tabId, overviewUrl);
+      await waitForTabLoad(tabId);
+    }
+    await sleep(3000); // let React fully render listings
+    await zetWerkStatus(tabId,
+      `Advertentie verwijderen (${wachtendAantal(platform, "delete")} verwijderopdrachten in de wachtrij)`);
+    await expandMp2dhOverview(tabId); // load ALL ads, not just the first 50
+
+    // Find the listing's row and SELECT its checkbox. The "Mijn zoekertjes"
+    // overview has NO per-card kebab/options menu — deletion is bulk-style:
+    // tick the row's checkbox, then click the single red "Verwijder" button at
+    // the top of the list, then confirm. (The old code hunted for an options
+    // button that doesn't exist, clicked the last card button — "Omhoog
+    // bellen"/"Sneller verkopen" — and removed nothing.)
+    const findResult = await execInTab(tabId, (rawTitle, listingId, wantSku) => {
+      // How many ads the page actually rendered. This is what separates "this
+      // listing is genuinely gone" from "the page never loaded / we're logged
+      // out / the markup changed" — the two used to be indistinguishable, and
+      // the second was silently reported as a successful delete.
+      const rendered = new Set(
+        [...document.querySelectorAll('a[href*="/v/"], a[href*="/seller/view/"]')]
+          .map(a => ((a.getAttribute("href") || "").match(/(m\d{6,})/) || [])[1])
+          .filter(Boolean)
+      ).size;
+
+      const rowFor = el => {
+        // Walk up until we reach an ancestor row that holds the row's OWN
+        // selection checkbox. Every row also contains hidden feature checkboxes
+        // ("Bel omhoog" = input#up-call-select-<adId>), so match the selection
+        // one explicitly instead of taking whichever checkbox comes first.
+        let n = el;
+        for (let i = 0; i < 12 && n; i++) {
+          const cb = n.querySelector('input.verkopen-select, input[data-testid="select-ad-checkbox"]');
+          if (cb) return cb;
+          n = n.parentElement;
+        }
+        return null;
+      };
+
+      // Anchor on the listing ID first. Every row's own links carry it
+      // (/v/kleding-heren/schoenen/m2423718603-1333-grijze-…), so it identifies
+      // exactly one ad — unlike the title text, which is translated per
+      // platform, SKU-prefixed and truncated on the page, and which matched on
+      // its first 18 characters only (two "Grijze Profuomo …" ads collide).
+      let checkbox = null;
+      if (listingId) {
+        // The selection checkbox carries the ad id itself (data-ad-id="m2423718603"),
+        // so go straight to it — no DOM walking, no ambiguity.
+        checkbox = document.querySelector(`input.verkopen-select[data-ad-id="${listingId}"]`);
+        if (!checkbox) {
+          for (const a of document.querySelectorAll(`a[href*="${listingId}"]`)) {
+            checkbox = rowFor(a);
+            if (checkbox) break;
+          }
+        }
+      }
+
+      const leaves = () => [...document.querySelectorAll("a, h1, h2, h3, span, p, div")]
+        .filter(el => el.children.length === 0 && el.textContent.trim());
+
+      // Zonder advertentienummer: 1-op-1 op de titel. Hoofdletters, accenten,
+      // leestekens, dubbele spaties en een eventuele "(1337)"-prefix doen niet
+      // mee; de rest moet exact kloppen. De oude vergelijking keek naar de eerste
+      // 18 tekens met "bevat" — die vond óf niets (de titel op de pagina is
+      // vertaald) óf de verkeerde advertentie.
+      const norm = s => (s || "")
+        .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/^\s*\([^)]{1,24}\)\s*/, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+      const want = norm(rawTitle);
+      let matchedBy = listingId && checkbox ? "id" : null;
+      let ambiguous = false;
+
+      if (!checkbox && wantSku) {
+        const needle = `(${String(wantSku).trim().toLowerCase()})`;
+        const hits = leaves().filter(e =>
+          e.textContent.replace(/\s+/g, " ").trim().toLowerCase().startsWith(needle));
+        const boxes = [...new Set(hits.map(rowFor).filter(Boolean))];
+        if (boxes.length === 1) { checkbox = boxes[0]; matchedBy = "sku"; }
+        else if (boxes.length > 1) ambiguous = true;
+      }
+
+      if (!checkbox && !ambiguous && want) {
+        const boxes = [...new Set(
+          leaves().filter(el => norm(el.textContent) === want).map(rowFor).filter(Boolean)
+        )];
+        if (boxes.length === 1) { checkbox = boxes[0]; matchedBy = "title"; }
+        else if (boxes.length > 1) ambiguous = true;
+      }
+
+      // Laatste kans: de pagina kapt lange titels af met "…". Dan telt een begin
+      // dat exact op onze titel past, mits het er maar één is.
+      if (!checkbox && !ambiguous && want.length >= 12) {
+        const boxes = [...new Set(
+          leaves()
+            .map(el => ({ el, t: norm(el.textContent) }))
+            .filter(x => x.t.length >= 12 && want.startsWith(x.t))
+            .map(x => rowFor(x.el)).filter(Boolean)
+        )];
+        if (boxes.length === 1) { checkbox = boxes[0]; matchedBy = "title-truncated"; }
+        else if (boxes.length > 1) ambiguous = true;
+      }
+
+      if (ambiguous && !checkbox) return { found: false, ambiguous: true, rendered };
+      if (!checkbox) return { found: false, rendered };
+
+      // Draagt juist DEZE rij een verkocht-label? Dan is verwijderen het
+      // verkeerde antwoord: de advertentie is via dit platform verkocht en dat
+      // moet geboekt worden. Bewust streng: alleen een los labeltje dat exact
+      // "verkocht"/"gereserveerd" is telt, zodat knoppen als "Verkocht? Meld
+      // het" nooit voor een valse verkoop kunnen zorgen.
+      let soldOnPlatform = false;
+      const rowScope = checkbox.closest('article, li, tr') || checkbox.parentElement;
+      if (rowScope) {
+        soldOnPlatform = [...rowScope.querySelectorAll("span, div, p, strong, b, em")]
+          .filter(el => el.children.length === 0)
+          .some(el => /^(verkocht|gereserveerd|sold|reserved)$/i.test(el.textContent.replace(/\s+/g, " ").trim()));
+      }
+      if (soldOnPlatform) return { found: true, rendered, matchedBy, soldOnPlatform: true };
+
+      if (!checkbox.checked) {
+        checkbox.click();
+        // Some React lists ignore a bare .click() — nudge with events too.
+        checkbox.dispatchEvent(new Event("input", { bubbles: true }));
+        checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      return { found: true, rendered, matchedBy, selected: !!checkbox.checked };
+    }, [title, listingId, sku]);
+
+    if (!findResult?.found) {
+      // An empty overview proves nothing — we can't tell "already sold/removed"
+      // from "not logged in" or "markup changed", and guessing "gone" here is
+      // what marked listings delisted in the dashboard while they stayed live.
+      //
+      // MET EEN ADVERTENTIENUMMER GAAN WE DOOR NAAR DE ADVERTENTIEPAGINA.
+      // Een zakelijk account heeft altijd een leeg overzicht (het overzicht is
+      // van het particuliere account), en daar hield de verwijdering hier op
+      // terwijl de route verderop, op nummer via de eigen advertentiepagina, bij
+      // zakelijke verkopers honderden keren gelukt is (gemeten 28-09-2026: zes
+      // zakelijke accounts, bij elk "deleted_via_ad_page"; 0b28c1ce kreeg
+      // daarnaast 14 keer deze melding). Die route kan niet de verkeerde
+      // advertentie raken en meldt alleen succes op bewijs (404/410 of het
+      // verlopen-blok), dus een uitgelogde verkoper krijgt nog steeds een fout.
+      if (!findResult?.rendered && !listingId) {
+        throw new Error(
+          `Couldn't read your ${platform} listings overview — no ads rendered on ${overviewUrl}. ` +
+          `Make sure you're still logged in on ${platform}. Nothing was deleted.`
+        );
+      }
+      if (findResult.ambiguous) {
+        // Twee advertenties met exact dezelfde titel: gokken zou de verkeerde
+        // verwijderen. Liever eerlijk stoppen.
+        throw new Error(
+          `There are several ${platform} listings with the title "${title}". ` +
+          `Nothing was removed, to avoid deleting the wrong one — ` +
+          `delete it by hand, or link the right listing via its URL.`
+        );
+      }
+      // Niet gevonden tussen de advertenties die wél renderden. Dat betekende
+      // tot nu toe meteen "hij is al weg" — en dus meldde het dashboard hem als
+      // verwijderd terwijl hij gewoon nog online stond (bijvoorbeeld omdat de
+      // advertentie onder een ander tabblad/filter van het overzicht valt).
+      // Daarom eerst de advertentiepagina zelf opvragen: geeft die nog een
+      // levende advertentie, dan is dit een echte fout, geen succes.
+      // De verkoperspagina is de enige vorm die op een id alléén betrouwbaar
+      // antwoordt. /v/listing/{id} en /v/a/{id} geven ALTIJD 404 — ook voor een
+      // advertentie die gewoon online staat — en precies dat las deze controle
+      // als bewijs dat hij weg was. Resultaat: het dashboard zette hem op
+      // "verwijderd" terwijl hij bij Marktplaats nog gewoon te koop stond.
+      const origin = new URL(overviewUrl).origin;
+      const opgeslagen = payload.platform_listing_url || "";
+      const adUrl = listingId ? `${origin}/seller/view/${listingId}`
+                  : (/\/v\//.test(opgeslagen) ? opgeslagen : "");
+      // WAT DE ADVERTENTIEPAGINA ANTWOORDDE REIST MEE IN DE FOUTMELDING.
+      // 30-09-2026, Zilverwebsite (26cf5471): 55 herplaatsingen in 17 minuten
+      // strandden hier op "gave no answer either", en achteraf was niet te
+      // zeggen of Marktplaats blokkeerde (403, zie verwijderViaAdvertentiepagina),
+      // de verkoper uitgelogd was of het tabblad wegviel. Alles gaf null.
+      const peiling = adUrl ? await execInTab(tabId, async (u, wegBron, markerBron) => {
+        try {
+          const r = await fetch(u, { credentials: "include", redirect: "follow" });
+          const waar = `HTTP ${r.status}` + (r.redirected ? ` via ${new URL(r.url).pathname}` : "");
+          if (r.status === 404 || r.status === 410) return { live: false, antwoord: waar };
+          if (!r.ok) return { live: null, antwoord: waar }; // niets bewezen
+          const html = (await r.text()).toLowerCase();
+          if (new RegExp(markerBron).test(html)) return { live: false, antwoord: waar };
+          if (new RegExp(wegBron).test(html)) return { live: false, antwoord: waar };
+          return { live: true, antwoord: waar };
+        } catch (e) { return { live: null, antwoord: `fetch: ${String(e?.message || e).slice(0, 80)}` }; }
+      }, [adUrl, WEG_TEKST_BRON, WEG_MARKER_BRON])
+        .catch((e) => ({ live: null, antwoord: `tab: ${String(e?.message || e).slice(0, 80)}` }))
+        : { live: null, antwoord: "no advert number" };
+      const live = peiling?.live ?? null;
+      const antwoordStaart = ` | Advert page: ${peiling?.antwoord || "no answer"}`;
+
+      if (live === true) {
+        // NIET IN HET OVERZICHT, MAAR WEL ONLINE: VERWIJDER HEM DAN OP ZIJN
+        // EIGEN PAGINA.
+        //
+        // Dit gaf tot nu toe een foutmelding en verder niets, en daarmee stond
+        // de hele herplaatsing stil: de verwijderstap faalde, dus de opnieuw-
+        // plaatsen-stap werd overgeslagen ("de oude staat nog live, een nieuwe
+        // zou dubbelen"). Gemeten bij een verkoper met een zakelijk account:
+        // zijn 1.221 advertenties staan gewoon online, maar niet op de gewone
+        // "Mijn advertenties"-pagina, waardoor elke herplaatsing hierop strandde.
+        //
+        // De advertentiepagina zelf heeft wél een verwijderknop, en die pagina
+        // vinden we op nummer — dus zonder titelvergelijking en zonder overzicht.
+        console.log(`[Omnivaleur] bgDelete: "${title}" niet in het overzicht maar wel online — via ${adUrl}`);
+        const gelukt = await verwijderViaAdvertentiepagina(tabId, adUrl, platform);
+        if (gelukt) {
+          // De diagnostiek reist mee, ook bij succes: een gemeld succes dat
+          // later toch niet klopte, liet tot nu toe geen spoor na — elke
+          // mislukking zag er identiek uit ("deleted_via_ad_page").
+          // De vastgelegde advertentie reist ook hier mee, net als onderaan bij
+          // de route via het overzicht: bij een herplaatsing zet de server die
+          // fotoreeks in de plaatsing die hierna volgt.
+          const vastgelegd = snapshot && ((snapshot.photo_urls || []).length || snapshot.brand ||
+                                          snapshot.size || snapshot.description);
+          await finaliseJob(serverUrl, job.id, "complete", {
+            note: "deleted_via_ad_page",
+            verify_diag: _laatsteVerwijderDiag,
+            ...(vastgelegd ? { captured_listing: snapshot } : {}),
+          });
+          return;
+        }
+        throw new Error(
+          `"${title}" cannot be found in your ${platform} listings overview, and the delete button on its ` +
+          `own page (${adUrl}) could not be used either. Nothing was removed — delete it by hand, or check ` +
+          `that you are signed in to the right account. | Buttons on that page: ${_laatsteVerwijderpagina} ` +
+          `| Diag: ${JSON.stringify(_laatsteVerwijderDiag)}`
+        );
+      }
+      if (live !== false) {
+        // Onbewezen is géén succes. "Waarschijnlijk weg" melden als verwijderd is
+        // de gevaarlijkste uitkomst van de drie: de verkoper denkt dat hij eraf
+        // staat, en hij staat er nog.
+        if (!findResult?.rendered) {
+          throw new Error(
+            `Couldn't read your ${platform} listings overview — no ads rendered on ${overviewUrl}, ` +
+            `and the advert's own page gave no answer either. Make sure you're still logged in on ${platform}. Nothing was deleted.` +
+            antwoordStaart
+          );
+        }
+        throw new Error(
+          `"${title}" cannot be found in your ${platform} listings overview, and we could not verify ` +
+          `whether it is still online. Nothing was removed — check it by hand on ${platform}.` +
+          antwoordStaart
+        );
+      }
+      // Aantoonbaar weg = doel bereikt.
+      console.log(`[Omnivaleur] bgDelete: "${title}" not among ${findResult.rendered} ${platform} ads and confirmed gone — marking done`);
+      await finaliseJob(serverUrl, job.id, "complete", { note: "already_absent" });
+      return;
+    }
+    if (findResult.soldOnPlatform) {
+      console.log(`[Omnivaleur] bgDelete: "${title}" carries a sold label on ${platform} — reporting the sale instead of deleting`);
+      await finaliseJob(serverUrl, job.id, "complete", { sold_on_platform: true, note: "sold_label_on_overview" });
+      return;
+    }
+    if (!findResult.selected) {
+      throw new Error(`Found "${title}" but couldn't tick its checkbox to delete it.`);
+    }
+    console.log(`[Omnivaleur] bgDelete: matched "${title}" on ${platform} by ${findResult.matchedBy || "unknown"}`);
+
+    await sleep(600);
+
+    // Click the top "Verwijder" (trash) button — now enabled by the selection.
+    // The label carries a count once something is selected ("Verwijder (1)"), so
+    // an exact-text match found nothing and the delete silently never started.
+    const clickedDelete = await execInTab(tabId, () => {
+      // ALLEEN DE KNOP DIE ÉCHT VERWIJDERT.
+      //
+      // Hier stond "de eerste knop waarvan de tekst met verwijder begint". Dat
+      // is één woord te ruim: alles wat "Verwijder <iets>" heet — een opgeslagen
+      // zoekopdracht, een filter, een bericht — staat vaak hoger op de pagina en
+      // won dus altijd. Er werd dan netjes geklikt, er kwam geen venster, en de
+      // verversing eindigde met "de advertentie staat er nog" zonder dat iemand
+      // kon zien dat de verkeerde knop was geraakt.
+      //
+      // De echte knop is de bulk-knop boven de lijst, en die is te herkennen:
+      // zijn tekst is precies "Verwijder"/"Verwijderen", eventueel met de
+      // telling die Marktplaats erbij zet zodra er iets is aangevinkt
+      // ("Verwijder (1)"). Een knop mét telling wint altijd van een knop zonder.
+      const zichtbaar = e => !e.disabled && e.getAttribute("aria-disabled") !== "true"
+        && e.getClientRects().length > 0;
+      const tekst = e => (e.textContent || "").replace(/\s+/g, " ").trim();
+      const PRECIES = /^(🗑\s*)?verwijder(en)?(\s*\(\d+\))?$/i;
+      const knoppen = [...document.querySelectorAll('button, a, [role="button"]')].filter(zichtbaar);
+      const passend = knoppen.filter(e => PRECIES.test(tekst(e)));
+      const el = passend.find(e => /\(\d+\)/.test(tekst(e))) || passend[0];
+      if (el) { el.click(); return { ok: true, geklikt: tekst(el) }; }
+      return { ok: false, gezien: knoppen.map(tekst).filter(Boolean).slice(0, 15) };
+    });
+
+    if (!clickedDelete || !clickedDelete.ok) {
+      // Welke knoppen stonden er dan wél? Zonder die lijst is elke mislukking
+      // dezelfde ene zin en valt er niets aan te repareren. Zelfde les als bij
+      // de verwijderknop op de advertentiepagina zelf.
+      const gezien = (clickedDelete && clickedDelete.gezien || []).join(" / ") || "geen enkele knop";
+      throw new Error(
+        `The ${platform} "Verwijder" button above the list could not be used — the selection may not have ` +
+        `registered, or the button was renamed. Nothing was deleted. | Buttons on that page: ${gezien}`
+      );
+    }
+    console.log(`[Omnivaleur] bgDelete: klikte "${clickedDelete.geklikt}"`);
+
+    await sleep(900);
+
+    // Confirm dialog. Verified live 2026-07 on marktplaats.nl: clicking the top
+    // Verwijder opens a ReactModal asking "Heb je "<titel>" verkocht via
+    // Marktplaats?" with exactly two buttons — "Niet verkocht via Marktplaats"
+    // and "Verkocht via Marktplaats". NEITHER contains "verwijderen", so the old
+    // regex matched nothing inside the dialog. On top of that the old scope
+    // selector's [class*="odal"] matched <body class="ReactModal__Body--open">
+    // first, so "scope" became the whole page and the search fell back to the
+    // toolbar's own Verwijder button. The modal simply stayed open and NOTHING
+    // was ever deleted — the same silent failure for the delist AND for the
+    // relist ("hard refresh"), whose first step is this delete.
+    //
+    // We always answer "Niet verkocht via <platform>": every delete we drive is
+    // either a sold-elsewhere delist or a relist, so the ad was not sold through
+    // this platform. Clicking the other button would file a false sale on the
+    // user's account.
+    const CONFIRM_STEPS = 3; // MP has added follow-up screens before; handle a short chain
+    for (let step = 0; step < CONFIRM_STEPS; step++) {
+      // Dezelfde keuze als de route via de advertentiepagina, uit dezelfde
+      // functie — daar zat het gat: twee lijstjes JA-woorden die uit elkaar
+      // groeiden. Zie _bevestigInVenster.
+      const res = await execInTab(tabId, _bevestigInVenster, [BEVESTIG_JA_BRON, BEVESTIG_NEE_BRON]);
+
+      if (!res || !res.open) break; // dialog gone — either answered, or none appeared
+      if (!res.clicked) {
+        throw new Error(
+          `The ${platform} delete dialog had no button this extension recognises ` +
+          `(saw: ${(res.labels || []).join(" | ") || "no buttons"}). Nothing was deleted — ` +
+          `${platform} likely changed this screen.`
+        );
+      }
+      console.log(`[Omnivaleur] bgDelete: confirm step ${step + 1} → clicked "${res.picked}"`);
+      await sleep(1500);
+    }
+
+    // NAKIJKEN OP DE ADVERTENTIE ZELF, ALS WE HAAR NUMMER HEBBEN.
+    //
+    // Het overzicht is een wankele getuige bij een grote verkoper: het rendert
+    // vijftig advertenties per keer en wij klikken maximaal veertig keer door.
+    // Boven de tweeduizend advertenties staat de onze dus gewoon niet in beeld,
+    // en "ik zie hem niet meer" betekent daar niets. Bij Egbert (5.540
+    // advertenties) en Jaap (1.284) is dat de dagelijkse werkelijkheid.
+    //
+    // De advertentiepagina zelf antwoordt wél eenduidig, en die vinden we op
+    // nummer. Geeft die aantoonbaar "weg", dan zijn we klaar; zegt hij dat de
+    // advertentie nog leeft, dan is er niets verwijderd. Alleen als hij géén
+    // uitsluitsel geeft vallen we terug op het overzicht hieronder.
+    if (listingId) {
+      const origin = new URL(overviewUrl).origin;
+      const eigenUrl = `${origin}/seller/view/${listingId}`;
+      for (let poging = 0; poging < 3; poging++) {
+        const weg = await execInTab(tabId, async (u, wegBron, markerBron) => {
+          try {
+            const r = await fetch(u, { credentials: "include", redirect: "follow" });
+            if (r.status === 404 || r.status === 410) return true;
+            if (!r.ok) return null;
+            const html = (await r.text()).toLowerCase();
+            if (new RegExp(markerBron).test(html)) return true;
+            if (new RegExp(wegBron).test(html)) return true;
+            return false;
+          } catch (e) { return null; }
+        }, [eigenUrl, WEG_TEKST_BRON, WEG_MARKER_BRON]).catch(() => null);
+        if (weg === true) {
+          const iets0 = snapshot && ((snapshot.photo_urls || []).length || snapshot.brand ||
+                                     snapshot.size || snapshot.description);
+          await finaliseJob(serverUrl, job.id, "complete", iets0 ? { captured_listing: snapshot } : {});
+          console.log(`[Omnivaleur] bgDelete success (op de advertentiepagina bevestigd): ${platform} "${title}"`);
+          return;
+        }
+        if (weg === false && poging === 2) {
+          throw new Error(
+            `"${title}" is still online on ${platform} (${eigenUrl}) after confirming the delete — ` +
+            `nothing was removed, so no new listing was created. Check it by hand.`
+          );
+        }
+        if (weg === false) { await sleep(2000); continue; }
+        break; // geen uitsluitsel: het overzicht hieronder beslist
+      }
+    }
+
+    // Verify the listing is actually gone before reporting success — without
+    // this the job was marked "done" (DB set to "delisted") even when nothing
+    // was removed. Reload the overview to be sure it's not a stale DOM.
+    await new Promise(res => chrome.tabs.reload(tabId, {}, res));
+    await waitForTabLoad(tabId);
+    await sleep(2500);
+    // Expand here too: only the first 50 ads render, so on a shop with more than
+    // that an ad sitting at #51+ is simply absent from the DOM — which this check
+    // would read as "successfully deleted" and report a false success.
+    await zetWerkStatus(tabId, "Controleren of de advertentie weg is");
+    await expandMp2dhOverview(tabId);
+
+    const naControle = await execInTab(tabId, (rawTitle, listingId, wantSku) => {
+      // HOEVEEL ADVERTENTIES RENDERDE DEZE PAGINA?
+      //
+      // Precies dezelfde telling als bij het zoeken hierboven, en om precies
+      // dezelfde reden — maar die stond hier niet, en dát is het gat waar de
+      // dubbele advertenties uit kwamen. Na het bevestigen wordt het overzicht
+      // herladen; valt de sessie daar weg, laadt de pagina te traag, of geeft
+      // Marktplaats een foutpagina, dan staat er geen enkele advertentie op het
+      // scherm. "Onze advertentie staat er niet meer" werd dan gelezen als
+      // "verwijderd", de opdracht werd als geslaagd gemeld, en de tweede helft
+      // van de verversing plaatste er een nieuwe naast — terwijl de oude gewoon
+      // online stond. Vandaar: "aantal op Marktplaats is gegroeid".
+      const rendered = new Set(
+        [...document.querySelectorAll('a[href*="/v/"], a[href*="/seller/view/"]')]
+          .map(a => ((a.getAttribute("href") || "").match(/(m\d{6,})/) || [])[1])
+          .filter(Boolean)
+      ).size;
+      const norm = s => (s || "")
+        .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/^\s*\([^)]{1,24}\)\s*/, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+      const leaves = [...document.querySelectorAll("a, h1, h2, h3, span, p, div")]
+        .filter(el => el.children.length === 0 && el.textContent.trim());
+      // Dezelfde sleutels als bij het zoeken, zodat "weg" ook echt weg betekent
+      // en niet "onder een net iets andere titel niet teruggevonden".
+      const aanwezig = (() => {
+        if (listingId && document.querySelector(`a[href*="${listingId}"]`)) return true;
+        if (wantSku) {
+          const needle = `(${String(wantSku).trim().toLowerCase()})`;
+          if (leaves.some(e => e.textContent.replace(/\s+/g, " ").trim().toLowerCase().startsWith(needle))) return true;
+        }
+        const want = norm(rawTitle);
+        if (!want) return false;
+        return leaves.some(el => {
+          const t = norm(el.textContent);
+          return t && (t === want || (t.length >= 12 && want.startsWith(t)));
+        });
+      })();
+      return { aanwezig, rendered };
+    }, [title, listingId, sku]);
+
+    if (naControle && naControle.aanwezig) {
+      throw new Error(`Listing "${title}" still visible on ${overviewUrl} after confirming delete — removal was not verified`);
+    }
+    if ((!naControle || !naControle.rendered) && (findResult.rendered || 0) > 1) {
+      // Geen enkele advertentie op het scherm bewijst niets. Dit als succes
+      // melden is de duurste fout die dit bestand kan maken: de server zet de
+      // advertentie op "verwijderd" en plaatst er daarna een tweede naast.
+      //
+      // We vergelijken met het aantal van VÓÓR het verwijderen, want nul kan ook
+      // eerlijk zijn: wie zijn laatste advertentie ververst houdt een leeg
+      // overzicht over. Stonden er eerst meer, dan hoort er nu ook nog wat te
+      // staan — en is leeg dus een weggevallen sessie of een pagina die niet
+      // laadde, niet een geslaagde verwijdering.
+      throw new Error(
+        `Couldn't confirm the removal: your ${platform} listings overview came back empty right after ` +
+        `deleting, while it showed ${findResult.rendered} ads a moment earlier. That usually means the page ` +
+        `didn't load or you were signed out — so we can't tell whether "${title}" is really gone. ` +
+        `Check it by hand on ${platform}; no new listing was created.`
+      );
+    }
+
+    // De vastgelegde advertentie gaat mee: de server zet de volledige fotoreeks
+    // in de plaatsingsopdracht die hierna volgt (het tweede deel van een
+    // herplaatsing). Zonder dit komt een geïmporteerde advertentie met één foto
+    // terug.
+    const iets = snapshot && ((snapshot.photo_urls || []).length || snapshot.brand ||
+                             snapshot.size || snapshot.description);
+    await finaliseJob(serverUrl, job.id, "complete", iets ? { captured_listing: snapshot } : {});
+    console.log(`[Omnivaleur] bgDelete success: ${platform} listing "${title}"`);
+
+  } finally {
+    sluitWerkTabblad(tabId, 2500);
+  }
+}
+
+// ── Background-driven delete for Vinted ───────────────────────────────────
+// Opens the listing on its real country origin, verifies it's in the user's
+// wardrobe (ground truth), clicks Delete + confirm, then verifies it's gone
+// from the wardrobe — all from the background worker so Vinted's post-delete
+// redirect can't kill the flow mid-verification.
+// Resolve a Vinted numeric item id from a listing TITLE when no
+// platform_listing_id is known (e.g. items the user marked "published" by hand).
+// Mirrors bgScanVinted: open the wardrobe on the real country origin, find the
+// member id, page the whole wardrobe and match the title with a resilient
+// first-N-chars startsWith/includes compare (titles may be truncated/decorated).
+// Returns { id, origin } or { id: null }.
+async function resolveVintedIdByTitle(title, sku) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const tabId = await new Promise((res, rej) =>
+    openWorkerTab("https://www.vinted.nl/", t =>
+      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true }
+    )
+  );
+  try {
+    await waitForTabLoad(tabId);
+    await sleep(2500);
+
+    // Open the account menu — the numeric member id (/member/{id}) and the real
+    // country origin are only exposed once the avatar dropdown is opened.
+    await execInTab(tabId, () => {
+      document.querySelector('#user-menu-button, [data-testid="user-menu-button"]')?.click();
+    });
+    await sleep(600);
+
+    const idInfo = await execInTab(tabId, () => {
+      let userId = null, origin = null;
+      for (const link of document.querySelectorAll('a[href*="/member/"]')) {
+        const m = (link.getAttribute("href") || "").match(/\/member\/(\d+)(?:[/?]|$)/);
+        if (m) {
+          userId = m[1];
+          try { origin = new URL(link.getAttribute("href"), location.href).origin; } catch (e) { origin = location.origin; }
+          break;
+        }
+      }
+      return { userId, origin };
+    });
+
+    if (!idInfo?.userId) return { id: null };
+
+    // Navigate to the home-country origin so the wardrobe fetch is same-origin.
+    const currentTab = await new Promise(res => chrome.tabs.get(tabId, res));
+    if (idInfo.origin && currentTab?.url && new URL(currentTab.url).origin !== idInfo.origin) {
+      await stuurWerkTabbladNaar(tabId, idInfo.origin + "/");
+      await waitForTabLoad(tabId);
+      await sleep(1500);
+    }
+
+    const found = await execInTab(tabId, async (userId, wantTitle, wantSku) => {
+      // 1-op-1 op de titel: hoofdletters, accenten, leestekens, dubbele spaties
+      // en een eventuele "(1337)"-prefix doen niet mee, de rest moet exact gelijk
+      // zijn. Dat werkt ook voor verkopers die geen nummer in hun titel zetten.
+      // (Vroeger werd op de eerste 20 tekens vergeleken met "bevat", waardoor
+      // twee "Beige Profuomo …"-advertenties door elkaar liepen.)
+      const norm = s => (s || "")
+        .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/^\s*\([^)]{1,24}\)\s*/, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+      const want = norm(wantTitle);
+      const sku = String(wantSku || "").trim().toLowerCase();
+      const skuOf = t => {
+        const m = /^\s*\(([^)]{1,24})\)/.exec(t || "");
+        return m ? m[1].trim().toLowerCase() : "";
+      };
+      // Alles verzamelen en pas aan het eind beslissen: twee advertenties met
+      // dezelfde titel betekent geen match, geen gok.
+      const byTitle = [], bySku = [];
+      try {
+        for (let page = 1; page <= 60; page++) {
+          const res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=${page}&per_page=96`, { headers: { Accept: "application/json" } });
+          if (!res.ok) return null;
+          const data = await res.json();
+          if (data.code && data.code !== 0) return null;
+          const items = data.items || [];
+          for (const it of items) {
+            const entry = { id: String(it.id), closed: !!it.is_closed };
+            if (want && norm(it.title) === want) byTitle.push(entry);
+            if (sku && skuOf(it.title) === sku) bySku.push(entry);
+          }
+          const pg = data.pagination || {};
+          if (items.length === 0) break;
+          if (pg.total_pages && page >= pg.total_pages) break;
+          if (!pg.total_pages && items.length < 96) break;
+        }
+        // Het nummer wint als het er is (exacter dan een titel), daarna de titel.
+        if (bySku.length === 1) return bySku[0];
+        if (byTitle.length === 1) return byTitle[0];
+        if (bySku.length > 1 || byTitle.length > 1) return { ambiguous: true };
+        return null;
+      } catch (e) { return null; }
+    }, [idInfo.userId, title, sku || ""]);
+
+    if (found?.ambiguous) return { id: null, ambiguous: true, origin: idInfo.origin };
+    return { id: found?.id || null, closed: !!found?.closed, origin: idInfo.origin };
+  } finally {
+    sluitWerkTabblad(tabId, 2500);
+  }
+}
+
+// Draait IN het tabblad: wie ben ik op deze Vinted, en wat zegt mijn kast over
+// deze advertentie? Alles wat deze functie gebruikt staat hierbinnen — Chrome
+// injecteert alleen deze functie, de rest van background.js bestaat daar niet.
+// Terug: { userId, present, closed }. present === null betekent "niet kunnen
+// lezen" en is nooit hetzelfde als "niet aanwezig".
+async function _mwVintedKast(lid) {
+  const slaap = ms => new Promise(r => setTimeout(r, ms));
+  let userId = null;
+  // Eerst Vinted's eigen antwoord op "wie ben ik". Dat is één vraag, hij hangt
+  // niet aan de opmaak van de pagina en niet aan een uitklapmenu dat in een
+  // verborgen tabblad soms niet opengaat. Op 05-09-2026 liep het daar mis: de
+  // startpagina gaf geen /member/-link, en de verkoper kreeg te horen dat hij
+  // niet ingelogd was terwijl hij dat wel was.
+  try {
+    const res = await fetch("/api/v2/users/current", { headers: { Accept: "application/json" }, credentials: "include" });
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (data && data.user && data.user.id) userId = String(data.user.id);
+    }
+  } catch (e) {}
+  const zoek = () => {
+    for (const a of document.querySelectorAll('a[href*="/member/"]')) {
+      const m = (a.getAttribute("href") || "").match(/\/member\/(\d+)/);
+      if (m) return m[1];
+    }
+    return null;
+  };
+  if (!userId) userId = zoek();
+  if (!userId) {
+    document.querySelector('#user-menu-button, [data-testid="user-menu-button"]')?.click();
+    await slaap(700);
+    userId = zoek();
+  }
+  if (!userId) return { userId: null, present: null };
+  try {
+    for (let page = 1; page <= 60; page++) {
+      const res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=${page}&per_page=96`, { headers: { Accept: "application/json" } });
+      if (!res.ok) return { userId, present: null };
+      const data = await res.json();
+      if (data.code && data.code !== 0) return { userId, present: null };
+      const items = data.items || [];
+      const mijn = items.find(it => String(it.id) === String(lid));
+      if (mijn) return { userId, present: true, closed: !!mijn.is_closed };
+      const pg = data.pagination || {};
+      if (items.length === 0) return { userId, present: false };
+      if (pg.total_pages && page >= pg.total_pages) return { userId, present: false };
+      if (!pg.total_pages && items.length < 96) return { userId, present: false };
+    }
+    return { userId, present: null };
+  } catch (e) { return { userId, present: null }; }
+}
+
+async function bgDeleteVinted(job, serverUrl) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const payload = job.payload || {};
+  let listingId = payload.platform_listing_id;
+  let resolvedOrigin = "";
+  // Fallback: no id (e.g. a listing the user marked "published" by hand) — locate
+  // it in the wardrobe by title, then run the existing delete-by-id flow verbatim.
+  if (!listingId) {
+    const title = (payload.title || "").trim();
+    if (!title) throw new Error("Vinted delete: no platform_listing_id and no title in payload");
+    const vintedSku = payload.sku || (/^\s*\(([^)]{1,24})\)/.exec(title) || [])[1] || "";
+    const resolved = await resolveVintedIdByTitle(title, vintedSku);
+    if (resolved?.ambiguous) {
+      throw new Error(
+        `You have several Vinted listings with the title "${title}". Nothing was removed, ` +
+        `to avoid deleting the wrong one — link the right listing via its URL.`
+      );
+    }
+    if (!resolved?.id) {
+      throw new Error(`Could not locate "${title}" on Vinted to delist it. Open the listing on Vinted and use "mark as published" (paste its link) so it can be delisted.`);
+    }
+    // Al verkocht op Vinted: niet verwijderen, maar de verkoop melden. De server
+    // boekt hem dan als verkocht en ruimt juist de ándere platforms op.
+    if (resolved.closed) {
+      console.log(`[Omnivaleur] bgDeleteVinted: "${title}" is closed (sold/ended) on Vinted — reporting the sale instead of deleting`);
+      await finaliseJob(serverUrl, job.id, "complete", { sold_on_platform: true, note: "vinted_is_closed" });
+      return;
+    }
+    listingId = resolved.id;
+    resolvedOrigin = resolved.origin || "";
+  }
+  const url = payload.platform_listing_url
+    || (resolvedOrigin ? `${resolvedOrigin}/items/${listingId}` : `https://www.vinted.com/items/${listingId}`);
+
+  // DE KLOK MOET HIER OOK AAN. (Daniel, 21-09-2026, artikel 795)
+  //
+  // Elke andere schrijvende klus krijgt `klokVast` mee (zie SCHRIJVENDE_ACTIES:
+  // create, delete, content_refresh, extend), want zonder focus-emulatie valt
+  // een achtergrond-tabblad terug naar 0,0 tikken per seconde na anderhalve
+  // minuut — dat staat hierboven bij openWorkerTab, negen minuten lang gemeten.
+  // Het verwijderen op Vinted opent zijn eigen tabblad en sloeg die vlag als
+  // enige over. Gevolg: tegen de tijd dat we op de verwijderknop willen klikken
+  // ligt de pagina al stil, en komt de melding "Delete control not found" terug
+  // met precies de knoppen die een bezoeker ziet (kopregel, hartje) en geen
+  // enkele knop van de eigenaar. Het ligt niet aan de opmaak van Vinted: hun
+  // eigen bestanden dragen `item-delete-button` en `item-delete-confirmation-button`
+  // nog gewoon, nagekeken op 21-09-2026, en daar zoeken wij op.
+  //
+  // De koppeling moet op het lege tabblad gebeuren, vóór Vinted geladen is —
+  // daarom via de optie en niet achteraf.
+  const tabId = await new Promise((res, rej) =>
+    openWorkerTab(url, t =>
+      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true, klokVast: true }
+    )
+  );
+
+  try {
+    await waitForTabLoad(tabId);
+    await zetDoorlopendeKlok(tabId, null, true).catch(() => {});
+    await sleep(2500);
+
+    // 1) Ground truth BEFORE: find member id and confirm the item is live in
+    //    the user's own wardrobe on this origin.
+    const before = await execInTab(tabId, async (lid) => {
+      async function findUserId() {
+        let id = null;
+        // Vinted's eigen antwoord op "wie ben ik" gaat voor: dat hangt niet aan
+        // de opmaak van de pagina en niet aan een uitklapmenu dat in een
+        // verborgen tabblad soms niet opengaat. Zelfde reden als in
+        // _mwVintedKast; zie tests/vinted-lidnummer-test.js.
+        try {
+          const res = await fetch("/api/v2/users/current", { headers: { Accept: "application/json" }, credentials: "include" });
+          if (res.ok) {
+            const data = await res.json().catch(() => null);
+            if (data && data.user && data.user.id) return String(data.user.id);
+          }
+        } catch (e) {}
+        for (const a of document.querySelectorAll('a[href*="/member/"]')) {
+          const m = (a.getAttribute("href") || "").match(/\/member\/(\d+)/);
+          if (m) { id = m[1]; break; }
+        }
+        if (id) return id;
+        document.querySelector('#user-menu-button, [data-testid="user-menu-button"]')?.click();
+        await new Promise(r => setTimeout(r, 600));
+        for (const a of document.querySelectorAll('a[href*="/member/"]')) {
+          const m = (a.getAttribute("href") || "").match(/\/member\/(\d+)/);
+          if (m) { id = m[1]; break; }
+        }
+        return id;
+      }
+      const userId = await findUserId();
+      if (!userId) {
+        // Geen lidnummer op de pagina heeft twee heel verschillende oorzaken:
+        // uitgelogd, of de advertentie bestaat niet meer (Vinted serveert dan
+        // een 404-pagina zonder menu). Die twee zijn niet uit elkaar te houden
+        // aan de DOM, en "je bent niet ingelogd" tegen iemand die wél ingelogd
+        // is stuurt hem een uur de verkeerde kant op. De statuscode van de
+        // pagina zelf is wel eenduidig en taalonafhankelijk.
+        let httpStatus = 0;
+        try {
+          const r = await fetch(location.href, { headers: { Accept: "text/html" }, redirect: "follow" });
+          httpStatus = r.status;
+        } catch (e) { httpStatus = 0; }
+        return { userId: null, httpStatus };
+      }
+      // Page through the WHOLE wardrobe. Vinted caps per_page at 96 server-side
+      // and silently ignores anything larger, so the old single "per_page=200"
+      // call only ever proved the 96 NEWEST listings. Any older listing looked
+      // absent, which aborted its delete with "not in your wardrobe" while the
+      // listing was in fact live — verified live 2026-07: item 8557510561 sits
+      // on page 2 of a 536-item wardrobe. Only a full walk may return false.
+      // Niet in de kast heeft twee heel verschillende betekenissen: de
+      // advertentie is weg (dan is de verwijderstap gewoon klaar), of hij hoort
+      // bij een ander account (dan moeten we van hem afblijven). De statuscode
+      // van de advertentiepagina zelf zegt welke van de twee: 404 = weg.
+      // Zonder dit liep een herplaatsing dood op "not in your wardrobe" terwijl
+      // de advertentie aantoonbaar niet meer bestond (Daniel, 05-09-2026).
+      const paginaStatus = async () => {
+        try {
+          const r = await fetch(location.href, { headers: { Accept: "text/html" }, redirect: "follow" });
+          return r.status;
+        } catch (e) { return 0; }
+      };
+      const wegOfVreemd = async () => ({ userId, present: false, httpStatus: await paginaStatus() });
+      // Kast onleesbaar vanaf déze pagina. Op de 404-pagina van een verdwenen
+      // advertentie is dat de gewone gang: die pagina ververst Vinted's
+      // sessiesleutel niet, en de kast-API antwoordt daar 401 waar de
+      // startpagina 200 geeft (gemeten 29-09-2026 op item 10141774015, De Juiste
+      // Toon). De statuscode gaat mee, zodat de 404-route hieronder de kast
+      // vanaf de startpagina leest in plaats van op te geven.
+      const onleesbaar = async () => ({ userId, present: null, httpStatus: await paginaStatus() });
+      try {
+        for (let page = 1; page <= 60; page++) {
+          const res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=${page}&per_page=96`, { headers: { Accept: "application/json" } });
+          if (!res.ok) return await onleesbaar();
+          const data = await res.json();
+          if (data.code && data.code !== 0) return await onleesbaar();
+          const items = data.items || [];
+          const mine = items.find(it => String(it.id) === String(lid));
+          // is_closed = Vinted's own "sold or ended" flag. A sold listing stays
+          // in the wardrobe, so this is the only way to tell it apart from one
+          // that's still for sale — and it must never be deleted.
+          if (mine) return { userId, present: true, closed: !!mine.is_closed };
+          const pg = data.pagination || {};
+          if (items.length === 0) return await wegOfVreemd();
+          if (pg.total_pages && page >= pg.total_pages) return await wegOfVreemd();
+          if (!pg.total_pages && items.length < 96) return await wegOfVreemd();
+        }
+        return { userId, present: null };  // never saw the end — don't claim absent
+      } catch (e) { return await onleesbaar(); }
+    }, [listingId]);
+
+    // Ook mét lidnummer: een 404-pagina waarop de kast niet te lezen was, gaat
+    // dezelfde weg. Anders bleef een verkochte of weggehaalde advertentie
+    // eindeloos op "Could not read your Vinted wardrobe" hangen (29-09-2026).
+    if ((!before?.userId || before?.present === null) && before?.httpStatus === 404) {
+      // De advertentiepagina bestaat niet meer. Dat is nog geen antwoord op de
+      // vraag wát er gebeurd is, en het verschil is groot: verkocht hoort als
+      // verkoop geboekt te worden, weggehaald mag gewoon opnieuw geplaatst.
+      // Vinted's eigen kast weet het, maar die is alleen te lezen vanaf een
+      // pagina die wél bestaat — dus eerst naar de startpagina van hetzelfde
+      // land. Zonder deze stap is een 404 niet te onderscheiden van uitgelogd,
+      // en liep de herplaatsing dood op een melding over inloggen (Daniel,
+      // 05-09-2026, twee artikelen op rij).
+      const itemOrigin = new URL(url).origin;
+      await stuurWerkTabbladNaar(tabId, itemOrigin + "/");
+      await waitForTabLoad(tabId);
+      await zetDoorlopendeKlok(tabId, null, true).catch(() => {});
+      await sleep(2000);
+      let kast = await execInTab(tabId, _mwVintedKast, [listingId]);
+      // Geen sessie op dít domein hoeft niet te betekenen dat hij uitgelogd is:
+      // een sessie op vinted.nl weet niets van vinted.com en omgekeerd. Dus het
+      // domein zoeken waar hij wél is ingelogd, en daar nog één keer kijken.
+      if (!kast?.userId) {
+        const ander = await vintedIngelogdOrigin(itemOrigin).catch(() => null);
+        if (ander && ander !== itemOrigin) {
+          await stuurWerkTabbladNaar(tabId, ander + "/");
+          await waitForTabLoad(tabId);
+          await zetDoorlopendeKlok(tabId, null, true).catch(() => {});
+          await sleep(2000);
+          kast = await execInTab(tabId, _mwVintedKast, [listingId]);
+        }
+      }
+      if (!kast?.userId) {
+        throw new Error(`Could not determine your Vinted member id — make sure you're logged into this Vinted account.`);
+      }
+      if (kast.present === null) {
+        throw new Error(`Could not read your Vinted wardrobe to check item ${listingId} — aborting to avoid an unverified delete.`);
+      }
+      if (kast.present && kast.closed) {
+        console.log(`[Omnivaleur] bgDeleteVinted: item ${listingId} page is gone but the wardrobe says sold/ended — reporting the sale`);
+        await finaliseJob(serverUrl, job.id, "complete", { sold_on_platform: true, note: "vinted_is_closed" });
+        return;
+      }
+      if (kast.present) {
+        throw new Error(`Vinted listing ${listingId} gives "Page not found" but is still in your wardrobe — nothing was removed. Try again later.`);
+      }
+      // Weg is weg: het doel van deze stap is bereikt. Als geslaagd afmelden,
+      // zodat de herplaatsing gewoon doorloopt in plaats van dood te lopen.
+      console.log(`[Omnivaleur] bgDeleteVinted: item ${listingId} bestaat niet meer op Vinted en staat niet in de kast — als al weg afgemeld`);
+      await finaliseJob(serverUrl, job.id, "complete", { note: "already_absent" });
+      return;
+    }
+    if (!before?.userId) throw new Error(`Could not determine your Vinted member id on the item page — make sure you're logged into this Vinted account.`);
+    if (before.present === null) throw new Error(`Could not read your Vinted wardrobe to verify item ${listingId} — aborting to avoid an unverified delete.`);
+    if (before.present === false && before.httpStatus === 404) {
+      // Advertentiepagina bestaat niet meer én hij staat niet in de kast: weg
+      // is weg, en dat is precies het doel van deze stap. Afmelden als geslaagd
+      // zodat de herplaatsing doorloopt in plaats van dood te lopen.
+      console.log(`[Omnivaleur] bgDeleteVinted: item ${listingId} bestaat niet meer op Vinted en staat niet in de kast — als al weg afgemeld`);
+      await finaliseJob(serverUrl, job.id, "complete", { note: "already_absent" });
+      return;
+    }
+    if (before.present === false) throw new Error(`Vinted item ${listingId} is not in your wardrobe — it may already be gone or belong to a different account; nothing to delete.`);
+    if (before.closed) {
+      // Verkocht (of beëindigd) op Vinted zelf: weghalen is fout — de verkoop
+      // hoort erbij. Melden, dan boekt de server hem als verkocht.
+      console.log(`[Omnivaleur] bgDeleteVinted: item ${listingId} is closed (sold/ended) on Vinted — reporting the sale instead of deleting`);
+      await finaliseJob(serverUrl, job.id, "complete", { sold_on_platform: true, note: "vinted_is_closed" });
+      return;
+    }
+
+    // 1b) Snapshot the FULL live listing BEFORE deleting. Imported items carry
+    //     almost no data in the dashboard, so we recover everything (all photos,
+    //     description, brand, size, condition, colour, material, category) from
+    //     Vinted itself and feed it into the paired recreate job. Combine the
+    //     wardrobe item object (photos, brand, size, catalog) with DOM scraping
+    //     (description, attribute rows, category breadcrumb) — best-effort per
+    //     field. If this is a relist, complete_job merges it into the create job.
+    const snapshot = await execInTab(tabId, async (userId, lid) => {
+      const out = { photo_urls: [], description: "", brand: "", size: "", condition: "", color: "", material: "", category: "", gender: "", price: null, _raw: null };
+      // Wardrobe object for this item — the ONLY reliable structured source.
+      // Whole-page DOM scraping is avoided for brand/size/description because
+      // the item page also renders "Member's items" and a stats line, which
+      // produced junk ("Menu", "17 views 0 favourites") in the first attempt.
+      // Paged for the same reason as the presence check above (per_page caps at
+      // 96): without this an older listing's snapshot came back empty and the
+      // paired recreate would republish it stripped of photos/description.
+      let it = null;
+      try {
+        for (let page = 1; page <= 60 && !it; page++) {
+          const res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=${page}&per_page=96`, { headers: { Accept: "application/json" } });
+          if (!res.ok) break;
+          const data = await res.json();
+          const items = data.items || [];
+          it = items.find(x => String(x.id) === String(lid)) || null;
+          if (it) break;
+          const pg = data.pagination || {};
+          if (items.length === 0) break;
+          if (pg.total_pages && page >= pg.total_pages) break;
+          if (!pg.total_pages && items.length < 96) break;
+        }
+      } catch (e) {}
+      if (it) {
+        // Keep the raw object (trimmed) so we can map any field names precisely.
+        try {
+          const clone = JSON.parse(JSON.stringify(it));
+          if (clone.photos) clone.photos = `[${clone.photos.length} photos]`;
+          out._raw = clone;
+        } catch (e) {}
+        const photos = (it.photos || []).map(p => p.full_size_url || p.url).filter(Boolean);
+        if (photos.length) out.photo_urls = photos;
+        else if (it.photo?.url) out.photo_urls = [it.photo.url];
+        // Field names verified live 2026-07 against a real wardrobe object:
+        // brand:"Ralph Lauren", size:"L", status:"Very good",
+        // price:{amount,currency_code}, photos:[{url,full_size_url}].
+        // The verified name comes FIRST; the alternates behind it are legacy
+        // guesses kept only as a cushion if Vinted renames a field.
+        out.brand = it.brand || it.brand_title || it.brand_dto?.title || "";
+        out.size = it.size || it.size_title || "";
+        out.condition = it.status || it.status_title || "";
+        out.description = it.description || "";
+        const pr = it.price?.amount ?? it.price ?? it.total_item_price?.amount;
+        if (pr != null && !isNaN(Number(pr))) out.price = Number(pr);
+        // Colour + material are NOT on the wardrobe object at all (confirmed
+        // live) — they only exist in the page's attribute rows, scraped below.
+        out.color = it.color1 || it.color1_title || it.colour || "";
+      }
+      // Description: never on the wardrobe object, so it comes from the DOM.
+      // [itemprop="description"] is THIS item's description — the loose
+      // "any leaf element with >25 chars" fallback is dangerous here because the
+      // page also renders other_user_items-*--description blocks for the
+      // seller's OTHER listings, and could republish a different item's text.
+      // Collapsed descriptions append a "... more" expander to innerText but do
+      // NOT truncate it (verified live: 540 chars collapsed = 531 + "\n... more",
+      // identical text after expanding), so stripping the suffix is lossless.
+      if (!out.description) {
+        const dEl = document.querySelector('[itemprop="description"]');
+        const raw = (dEl?.innerText || "").trim();
+        if (raw) out.description = raw.replace(/\s*\n?\.{3}\s*(more|meer|minder|less)\s*$/i, "").trim().slice(0, 1000);
+      }
+      // Colour + material: the wardrobe object often omits these, but scraping
+      // the item's OWN attribute rows worked. Scope to the details container
+      // that holds "Condition"/"Material" so we never pick up "Member's items".
+      const scopeRow = (labels) => {
+        // Find the attribute table/list: the ancestor that contains a leaf
+        // element whose text is exactly "Material" or "Condition".
+        let container = null;
+        for (const el of document.querySelectorAll('*')) {
+          if (el.children.length === 0 && /^(material|condition|colour|color)$/i.test(el.textContent.trim())) {
+            container = el.closest('dl, ul, table, [class*="Details" i], [data-testid*="attributes" i]') || el.parentElement?.parentElement;
+            if (container) break;
+          }
+        }
+        const root = container || document;
+        for (const lab of labels) {
+          for (const el of root.querySelectorAll('*')) {
+            if (el.children.length === 0 && new RegExp("^\\s*" + lab + "\\s*$", "i").test(el.textContent)) {
+              const sib = el.nextElementSibling || el.parentElement?.nextElementSibling;
+              const v = (sib?.textContent || "").trim();
+              if (v && v.length < 40 && !/^(menu|home|catalog)$/i.test(v)) return v;
+            }
+          }
+        }
+        return "";
+      };
+      // Broader row scrape (the original approach that reliably found Grey/Wool)
+      // — used only as a fallback for colour/material, which are single-word
+      // values easy to sanity-check, so junk like "Menu" is filtered out.
+      const rowValue = (labels) => {
+        const rows = [...document.querySelectorAll('[data-testid*="item-attributes"] *, dl div, div[class*="Cell"], li, tr')];
+        for (const lab of labels) {
+          const re = new RegExp("^\\s*" + lab + "\\s*[:\\-]?\\s*(.+)$", "i");
+          for (const el of rows) {
+            const m = (el.textContent || "").trim().match(re);
+            const v = m && m[1] ? m[1].trim() : "";
+            if (v && v.length < 30 && !/menu|home|catalog|view|favourite|€|\d{2,}|\bcm\b/i.test(v)) return v;
+          }
+        }
+        return "";
+      };
+      // Vinted gives every attribute row an exact testid (verified live 2026-07):
+      //   item-attributes-color    -> "Colour\nNavy"
+      //   item-attributes-material -> "Material\nCotton"
+      //   item-attributes-status   -> "Condition\nVery good"
+      // Read those directly — the label/sibling walking below only ever ran on
+      // guessed label text and returned nothing for colour and material, so both
+      // were silently lost on every relist. Each row renders "Label\nValue", so
+      // drop the first line and keep the rest.
+      const attrValue = (testid) => {
+        const el = document.querySelector(`[data-testid="item-attributes-${testid}"]`);
+        const lines = (el?.innerText || "").split("\n").map(s => s.trim()).filter(Boolean);
+        return lines.length > 1 ? lines.slice(1).join(" ") : "";
+      };
+      if (!out.color) out.color = attrValue("color") || scopeRow(["Colour", "Color", "Kleur"]) || rowValue(["Colour", "Color", "Kleur"]);
+      out.material = attrValue("material") || scopeRow(["Material", "Materiaal"]) || rowValue(["Material", "Materiaal"]);
+      if (!out.condition) out.condition = attrValue("status");
+      if (!out.size) out.size = attrValue("size");
+      // Category + gender from the breadcrumb (e.g. Women / Clothing / Jumpers & sweaters / ...).
+      const crumbs = [...document.querySelectorAll('nav a, [class*="breadcrumb" i] a, [data-testid*="breadcrumb"] a')]
+        .map(a => a.textContent.trim()).filter(Boolean);
+      if (crumbs.length) {
+        const g = crumbs[0].toLowerCase();
+        if (/women|dames/.test(g)) out.gender = "dames";
+        else if (/men|heren/.test(g)) out.gender = "heren";
+        // The most specific meaningful crumb (skip Home/Catalog and the item title itself).
+        const meaningful = crumbs.filter(c => !/^(home|catalog|vinted)$/i.test(c));
+        if (meaningful.length >= 2) out.category = meaningful[meaningful.length - 1];
+      }
+      return out;
+    }, [before.userId, listingId]);
+
+    // 2) Click Delete, then confirm. "Confirm and delete" is multi-word, so
+    //    match on containing confirm/delete and never the Cancel button.
+    //
+    // DE PAGINA MAG ONDER ONS VERDWIJNEN. (30-09-2026, De Juiste Toon)
+    //
+    // Na de bevestigklik haalt Vinted de advertentie weg en stuurt het tabblad
+    // door. Gebeurt dat terwijl ons script nog op het verdwijnen van het venster
+    // wacht, dan breekt Chrome het af met "Frame with ID 0 was removed". De
+    // verwijdering is dan juist gelukt: advertentie 8791506164 stond om 13:03 in
+    // de kast, de opdracht meldde om 13:44 deze fout, en de pagina gaf daarna
+    // 404. Hetzelfde op 29-09 met 10141774015. Dus geen fout gooien, maar de
+    // kast hieronder laten beslissen, net als bij een knop die niet reageerde.
+    let clicked;
+    try {
+      clicked = await execInTab(tabId, _mwVintedVerwijderen);
+    } catch (e) {
+      if (!/frame with id \d+ was removed|frame was removed/i.test(String(e?.message || e))) throw e;
+      console.log(`[Omnivaleur] bgDeleteVinted: pagina van ${listingId} verdween tijdens het klikken — de kast beslist of hij weg is`);
+      clicked = { clickedDelete: true, clickedConfirm: true, weggestuurd: true };
+      await waitForTabLoad(tabId);
+    }
+
+    // De knoppen die er wél stonden gaan mee in de melding. Anders is dit
+    // achteraf niet na te lopen zonder toegang tot het account van de verkoper.
+    const opScherm = clicked?.opScherm ? ` Zichtbaar op het scherm: ${clicked.opScherm}` : "";
+    // De knop is een aanwijzing, de kast is het bewijs. Op 05-09-2026 meldde
+    // een herplaatsing "Delete control not found" terwijl advertentie
+    // 7606902151 daarna aantoonbaar weg was (404 op vinted.nl én .com), en aan
+    // het begin van diezelfde ronde stond hij nog gewoon in de kast — anders
+    // was de melding "not in your wardrobe" geweest. Wie hier op de knop
+    // afgaat, zegt "er is niets weggehaald, je advertentie staat nog online"
+    // tegen iemand van wie de advertentie net weg is, en breekt de
+    // herplaatsing af: het artikel blijft dan van álle kanten af. Dus: eerst
+    // nameten, en pas klagen over de knop als hij er echt nog staat.
+    // TWEEDE ROUTE ALS DE KNOP HET NIET DOET.
+    //
+    // Klikken hangt aan de opmaak van Vinted, en die verandert zonder
+    // aankondiging: elke keer dat hij verschuift staat de herplaatsing stil tot
+    // er weken later een nieuwe extensie bij de verkoper is. Vinted verwijdert
+    // zelf via een eigen adres, POST /api/v2/items/{id}/delete. Dat adres is op
+    // 10-09-2026 nagemeten: het bestaat (403 "access_denied" zonder sessie,
+    // terwijl een verzonnen adres 404 met een foutpagina geeft). Vanuit de
+    // ingelogde pagina gaat de sessie gewoon mee.
+    //
+    // Dit is een tweede kans, geen bewijs: of de advertentie écht weg is beslist
+    // de kast hieronder, net als bij de knop. Lukt het adres niet, dan verandert
+    // er niets aan de melding.
+    let apiPoging = null;
+    if (!clicked?.clickedConfirm) {
+      // WAAROM DEZE ROUTE OP 403 STRANDDE (gemeten 21-09-2026).
+      //
+      // Het adres klopt: Vinted's eigen pagina roept `deleteItem` aan als
+      // `api.post("/items/{id}/delete")`, letterlijk terug te vinden in hun
+      // bestanden. Alleen haalden wij het beveiligingstoken uit
+      // `<meta name="csrf-token">`, en dat blokje bestaat niet meer sinds hun
+      // site op Next.js draait — op een echte artikelpagina staat het er niet.
+      // Zonder token weigert Vinted elke POST met 403, ook met een geldige
+      // sessie: lezen (`/api/v2/users/current`) gaat gewoon door, schrijven
+      // niet. Daarom nu alles aflopen wat een token kan dragen, en in de
+      // melding zetten waar het vandaan kwam en welke koekjes er stonden.
+      // Anders is een volgende 403 weer niet na te lopen.
+      apiPoging = await execInTab(tabId, async (lid) => {
+        const koekjes = document.cookie.split("; ").filter(Boolean).map((c) => {
+          const i = c.indexOf("=");
+          return i < 0 ? [c, ""] : [c.slice(0, i), decodeURIComponent(c.slice(i + 1))];
+        });
+        const uitCookie = (naam) => (koekjes.find(([k]) => k === naam) || [])[1] || "";
+        const bronnen = [];
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        if (meta && meta.getAttribute("content")) bronnen.push(["meta", meta.getAttribute("content")]);
+        for (const [k, v] of koekjes) if (/csrf|xsrf/i.test(k) && v) bronnen.push(["koekje:" + k, v]);
+        // De lading die Next.js in de pagina zet draagt het token van de
+        // ingelogde gebruiker zodra Vinted er een meegeeft.
+        try {
+          const brok = (self.__next_f || [])
+            .map((x) => (Array.isArray(x) ? x[1] : x))
+            .filter((x) => typeof x === "string").join("");
+          const m = brok.match(/"(?:csrf_?[tT]oken|csrfToken)"\s*:\s*"([^"]{8,200})"/);
+          if (m) bronnen.push(["pagina", m[1]]);
+        } catch (_) {}
+        const anon = uitCookie("anon_id");
+        const namen = koekjes.map(([k]) => k).filter((k) => /csrf|xsrf|anon|session|sid/i.test(k));
+        const pogingen = bronnen.length ? bronnen : [["geen", ""]];
+        let laatste = null;
+        for (const [bron, token] of pogingen) {
+          const kop = { Accept: "application/json", "Content-Type": "application/json",
+                        "X-Requested-With": "XMLHttpRequest" };
+          if (token) kop["X-CSRF-Token"] = token;
+          if (anon) kop["X-Anon-Id"] = anon;
+          try {
+            const r = await fetch(`/api/v2/items/${lid}/delete`,
+                                  { method: "POST", headers: kop, credentials: "include", body: "{}" });
+            laatste = { status: r.status, ok: r.ok, bron, bronnen: pogingen.map((b) => b[0]), koekjes: namen };
+            if (r.ok) return laatste;
+          } catch (e) {
+            laatste = { status: 0, ok: false, bron, bronnen: pogingen.map((b) => b[0]),
+                        koekjes: namen, fout: String(e).slice(0, 120) };
+          }
+        }
+        return laatste;
+      }, [listingId]);
+      console.log(`[Omnivaleur] bgDeleteVinted: de knop lukte niet, tweede route via Vinted's eigen verwijder-adres →`, apiPoging);
+      await sleep(1500);
+    }
+    const tweedeRoute = apiPoging
+      ? ` Tweede route (Vinted's eigen verwijder-adres) gaf ${apiPoging.status}`
+        + ` met token uit ${apiPoging.bron || "geen"}`
+        + (apiPoging.koekjes && apiPoging.koekjes.length ? ` (koekjes: ${apiPoging.koekjes.join(",")})` : " (geen koekjes met een token)")
+        + "."
+      : "";
+
+    const knopMislukt = !clicked?.clickedDelete
+      ? `Delete control not found on Vinted item page for ID ${listingId} — Vinted may have changed its layout.${opScherm}${tweedeRoute}`
+      : !clicked.clickedConfirm
+        ? `Confirm-delete button not found on Vinted for ID ${listingId} — deletion was not confirmed.${opScherm}${tweedeRoute}`
+        : "";
+
+    // 3) Give Vinted a moment to process + redirect, then verify the item is
+    //    gone from the wardrobe. The tab is now on some page of the SAME
+    //    origin, so the wardrobe fetch still works. Poll a few times.
+    await sleep(2500);
+    let goneAfter = false;
+    for (let i = 0; i < 5; i++) {
+      // Paged — and this one matters most: with the old single-page fetch an
+      // older listing was ALWAYS absent from page 1, so a delete that never
+      // happened verified as "gone" and the recreate then duplicated the still
+      // live listing. A false "gone" is worse than a failed relist.
+      const present = await execInTab(tabId, async (userId, lid) => {
+        try {
+          for (let page = 1; page <= 60; page++) {
+            const res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=${page}&per_page=96`, { headers: { Accept: "application/json" } });
+            if (!res.ok) return null;
+            const data = await res.json();
+            if (data.code && data.code !== 0) return null;
+            const items = data.items || [];
+            if (items.some(it => String(it.id) === String(lid))) return true;
+            const pg = data.pagination || {};
+            if (items.length === 0) return false;
+            if (pg.total_pages && page >= pg.total_pages) return false;
+            if (!pg.total_pages && items.length < 96) return false;
+          }
+          return null;
+        } catch (e) { return null; }
+      }, [before.userId, listingId]).catch(() => null);  // doorsturing nog bezig: straks opnieuw
+      if (present === false) { goneAfter = true; break; }
+      await sleep(1800);
+    }
+    if (!goneAfter && knopMislukt) throw new Error(knopMislukt);
+    if (!goneAfter) {
+      const rest = await execInTab(tabId, async () => {
+        const v = document.querySelector('[role="dialog"], [role="alertdialog"], [data-testid*="modal"], .ReactModal__Content');
+        if (!v) return "";
+        return [...v.querySelectorAll('button, a, [role="button"], [role="radio"], input[type="radio"]')]
+          .map(e => (e.textContent || e.value || "").trim().slice(0, 30) + (e.dataset.testid ? `#${e.dataset.testid}` : ""))
+          .filter(Boolean).join(" | ").slice(0, 400);
+      }).catch(() => "");
+      // Staat er nog een venster open, dan is de bevestiging niet afgerond en
+      // zegt dít precies welke knop er nog wachtte.
+      throw new Error(`Vinted listing ${listingId} still in your wardrobe after confirming delete — removal was not verified.`
+        + (rest ? ` Er stond nog een venster open met: ${rest}` : ""));
+    }
+
+    // The captured listing snapshot lets the backend enrich the paired relist
+    // recreate job (imported items otherwise lack this data).
+    if (knopMislukt) console.warn(`[Omnivaleur] bgDeleteVinted: ${knopMislukt} — maar ${listingId} is wél uit de kast verdwenen; als geslaagd afgemeld.`);
+    await finaliseJob(serverUrl, job.id, "complete", { captured_listing: snapshot });
+    console.log(`[Omnivaleur] bgDeleteVinted success: listing ${listingId}`, snapshot);
+  } finally {
+    sluitWerkTabblad(tabId, 2500);
+  }
+}
+
+// ── Scan: read existing listings the user already has on a platform ───────
+// Read-only — only reports candidates to /api/imports for manual review,
+// never touches items/listings directly.
+
+async function bgScanVinted(job, serverUrl) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const tabId = await new Promise((res, rej) =>
+    openWorkerTab("https://www.vinted.nl/", t =>
+      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true }
+    )
+  );
+  try {
+    await reportProgress(serverUrl, job.id, { stage: "opening", message: "Opening Vinted…", current: 0, total: 0 });
+    await waitForTabLoad(tabId);
+    await sleep(2500);
+
+    await reportProgress(serverUrl, job.id, { stage: "account", message: "Finding your Vinted account…", current: 0, total: 0 });
+    // Find the numeric member id AND the real country origin (Vinted links to
+    // your home country domain, e.g. vinted.nl, even from the .com entry page —
+    // the items API only exists on that same origin, not on vinted.com).
+    //
+    // The member id used to be scraped from a /member/{id} link that only appears
+    // after the avatar dropdown opens — a single 600ms wait that missed often
+    // (this was the "Could not find member id" error that silently killed
+    // sold-detection). Now we retry with growing waits and several sources:
+    // open the menu, read anchor links, and — as a fallback — dig the id out of
+    // the page's embedded JSON (Vinted ships it in the bootstrap data), which
+    // doesn't depend on the dropdown rendering in time.
+    let idInfo = { userId: null, origin: null };
+    for (let attempt = 0; attempt < 4 && !idInfo.userId; attempt++) {
+      await execInTab(tabId, () => {
+        document.querySelector('#user-menu-button, [data-testid="user-menu-button"], header [aria-haspopup="true"]')?.click();
+      });
+      await sleep(500 + attempt * 700); // 500 / 1200 / 1900 / 2600ms
+      idInfo = await execInTab(tabId, () => {
+        // 1) The /member/{id} link (present once the dropdown is open).
+        for (const link of document.querySelectorAll('a[href*="/member/"]')) {
+          const href = link.getAttribute("href") || "";
+          const m = href.match(/\/member\/(\d+)(?:[/?]|$)/);
+          if (m) {
+            let origin;
+            try { origin = new URL(href, location.href).origin; } catch (e) { origin = location.origin; }
+            return { userId: m[1], origin };
+          }
+        }
+        // 2) Fallback: Vinted embeds the logged-in user's id in the page's
+        //    bootstrap JSON — independent of any dropdown rendering.
+        const html = document.documentElement.innerHTML;
+        let m = html.match(/"user"\s*:\s*\{[^}]*?"id"\s*:\s*(\d+)/)
+             || html.match(/"user_id"\s*:\s*(\d+)/)
+             || html.match(/\\?"current_user_id\\?"\s*:\s*(\d+)/)
+             || html.match(/\/member\/(\d+)/);
+        if (m) return { userId: m[1], origin: location.origin };
+        return { userId: null, origin: null };
+      });
+    }
+
+    if (!idInfo?.userId) throw new Error("Could not find your logged-in Vinted account (member id) — make sure you're logged into Vinted in this browser tab.");
+
+    // If the member link points at a different country domain, navigate there
+    // so the items fetch is same-origin (and actually has the right catalog).
+    const currentTab = await new Promise(res => chrome.tabs.get(tabId, res));
+    if (idInfo.origin && currentTab?.url && new URL(currentTab.url).origin !== idInfo.origin) {
+      await stuurWerkTabbladNaar(tabId, idInfo.origin + "/");
+      await waitForTabLoad(tabId);
+      await sleep(1500);
+    }
+
+    const userId = idInfo.userId;
+    await reportProgress(serverUrl, job.id, { stage: "listing", message: "Reading your listings…", current: 0, total: 0 });
+    const result = await execInTab(tabId, async (userId) => {
+      const nap = ms => new Promise(r => setTimeout(r, ms));
+      // Page through the WHOLE wardrobe.
+      //
+      // Vinted CAPS per_page at 96 and silently ignores anything larger. The old
+      // code asked for 200 and then stopped as soon as a page came back "short"
+      // (< 200) — which page 1 always is. So every scan read exactly the newest
+      // 96 listings and quietly dropped the rest; a 518-item wardrobe imported
+      // 96. Never infer the last page from the size we ASKED for: use the size
+      // the server actually used, plus its own pagination metadata.
+      const PER_PAGE = 96;          // Vinted's real maximum
+      const MAX_PAGES = 200;        // safety net only (≈19k listings)
+      const rawItems = [];
+      const seenIds = new Set();    // newest_first can shift under us between pages
+      let totalEntries = null;      // what Vinted says the wardrobe holds
+      let totalPages = null;
+      let pagesRead = 0;
+      let truncatedReason = null;   // non-null ⇒ the snapshot is INCOMPLETE
+
+      for (let page = 1; page <= MAX_PAGES; page++) {
+        let res, data;
+        // Retry each page a couple of times so one transient hiccup mid-paging
+        // doesn't truncate the scan.
+        for (let attempt = 0; attempt < 3; attempt++) {
+          res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=${page}&per_page=${PER_PAGE}`, {
+            headers: { Accept: "application/json" },
+          });
+          if (res.ok) break;
+          if (res.status !== 429 && res.status < 500) break; // real client error — don't retry
+          await nap(1000 * Math.pow(2, attempt));
+        }
+        if (!res.ok) {
+          // First page failing is fatal; a later page failing means we have a
+          // PARTIAL wardrobe — record that, because a partial snapshot must
+          // never be treated as "everything that's still live".
+          if (page === 1) return { error: `Vinted returned HTTP ${res.status} while listing your items (user id ${userId}, ${location.origin}).` };
+          truncatedReason = `page ${page} returned HTTP ${res.status}`;
+          break;
+        }
+        data = await res.json();
+        if (data.code && data.code !== 0) {
+          if (page === 1) return { error: `Vinted API error: ${data.message_code || data.code}` };
+          truncatedReason = `page ${page} returned API code ${data.message_code || data.code}`;
+          break;
+        }
+        const pag = data.pagination || null;
+        if (pag) {
+          if (pag.total_entries != null) totalEntries = pag.total_entries;
+          if (pag.total_pages != null) totalPages = pag.total_pages;
+        }
+        const pageItems = data.items || [];
+        for (const it of pageItems) {
+          if (it && it.id != null && !seenIds.has(it.id)) { seenIds.add(it.id); rawItems.push(it); }
+        }
+        pagesRead = page;
+
+        if (!pageItems.length) break;                       // ran off the end
+        if (totalPages != null && page >= totalPages) break; // server says we're done
+        // No metadata to go on: fall back to the size the SERVER used for this
+        // page, not the size we requested.
+        if (totalPages == null && pageItems.length < (pag?.per_page || PER_PAGE)) break;
+        if (page === MAX_PAGES) truncatedReason = `hit the ${MAX_PAGES}-page safety cap`;
+        await nap(300); // gentle pacing between pages
+      }
+
+      // Cross-check against Vinted's own count. If they disagree, the snapshot
+      // is not authoritative and the server must not use it to decide what sold.
+      if (!truncatedReason && totalEntries != null && rawItems.length < totalEntries) {
+        truncatedReason = `fetched ${rawItems.length} of ${totalEntries} listings`;
+      }
+
+      const items = rawItems.map(it => {
+        const priceObj = it.price || it.total_item_price;
+        const price = priceObj && priceObj.amount != null ? Number(priceObj.amount)
+          : (typeof it.price === "number" ? it.price : null);
+        // Full ordered photo list — the whole point of a rich import. Keep the
+        // single photo_url too for the old thumbnail path.
+        const photoUrls = (it.photos || []).map(p => p.full_size_url || p.url).filter(Boolean);
+        const photo = it.photo?.url || photoUrls[0] || null;
+        if (!photoUrls.length && photo) photoUrls.push(photo);
+        // Vinted returns the original upload time as a unix-seconds timestamp
+        // (field name has varied across API versions) — best-effort pick.
+        const listedTs = it.created_at_ts || it.photo?.high_resolution?.timestamp || it.photos?.[0]?.high_resolution?.timestamp || null;
+        // Everything the wardrobe object carries for free — mirrors the field
+        // mapping used by the pre-delete snapshot so imports land fully populated.
+        return {
+          platform_listing_id: String(it.id),
+          title: it.title || "",
+          price,
+          photo_url: photo,
+          photo_urls: photoUrls,
+          description: it.description || "",
+          brand: it.brand_title || it.brand_dto?.title || it.brand || "",
+          size: it.size_title || it.size || "",
+          condition: it.status || it.status_title || "",
+          color: it.color1 || it.color1_title || it.colour || "",
+          platform_listing_url: it.url || `${location.origin}/items/${it.id}`,
+          platform_listed_at: listedTs ? new Date(listedTs * 1000).toISOString() : null,
+          // Vinted's own state flags. Sold/ended listings STAY in the wardrobe
+          // as is_closed — they don't vanish — so these are what tells us a
+          // listing is really gone, instead of inferring it from absence.
+          is_closed: !!it.is_closed,
+          is_hidden: !!it.is_hidden,
+          is_draft: !!it.is_draft,
+        };
+      });
+      return {
+        items,
+        // Everything the server needs to judge how much to trust this snapshot.
+        meta: {
+          complete: !truncatedReason,
+          truncated_reason: truncatedReason,
+          total_entries: totalEntries,
+          fetched: rawItems.length,
+          pages_read: pagesRead,
+        },
+      };
+    }, [userId]);
+
+    if (!result) throw new Error("Vinted scan returned nothing — page may not have loaded correctly.");
+    if (result.error) throw new Error(result.error);
+
+    // The wardrobe LIST endpoint omits description + colour/material and
+    // sometimes the photos array. Fetch each item's detail (same-origin, cheap)
+    // to fill those in, so an import lands fully populated.
+    //
+    // CRITICAL: do this as one short executeScript PER ITEM, driven from the
+    // service worker — not a single 50s executeScript. An MV3 service worker
+    // that sits idle awaiting one long call gets terminated by Chrome before it
+    // returns, which would abort the whole scan (no /complete, no candidates).
+    // A quick call every ~200ms keeps the worker alive. The whole enrichment is
+    // wrapped so ANY failure just ships the list-only data — the scan always
+    // completes.
+    // Only enrich listings that are actually still for sale. Sold/ended ones are
+    // still in the wardrobe (is_closed) and are shipped to the server for the
+    // sale reconcile, but nobody is going to import them — fetching a detail
+    // page for each would triple the scan time for data no one reads.
+    // WAT WE AL HEBBEN, SLAAN WE OVER.
+    //
+    // Toon (dejuistetoon), 02-09-2026. Vinted heeft een budget: gemeten geeft
+    // hij na een bui verzoeken 429 en laat daarna nog maar een handvol per
+    // halve minuut door. Deze lus haalde élke scan alle ruim duizend
+    // advertentiepagina's opnieuw op, ook die waarvan de tekst allang in het
+    // dashboard stond — dus was het budget op vóór de advertenties die het
+    // echt nodig hadden aan de beurt waren. Zijn drie scans van dezelfde kast
+    // gaven 52, 776 en 507 advertenties zonder tekst.
+    //
+    // De server stuurt nu mee van welke nummers hij de tekst al heeft
+    // (payload.tekst_bekend). Bij Toon zakt dat van 1.017 naar 52 pagina's.
+    // Ontbreekt de lijst (oudere server), dan doen we gewoon wat we altijd deden.
+    const alBekend = new Set((job.payload?.tekst_bekend || []).map(String));
+    const openStaand = result.items.filter(it => !it.is_closed && !it.is_draft);
+    const toEnrich = openStaand.filter(it => !alBekend.has(String(it.platform_listing_id)));
+    const total = toEnrich.length;
+    const skipped = result.items.length - total;
+    const overgeslagen = openStaand.length - toEnrich.length;
+    await reportProgress(serverUrl, job.id, {
+      stage: "enriching",
+      message: overgeslagen
+        ? `Found ${result.items.length} listings — ${overgeslagen} already have their text, fetching ${total}…`
+        : `Found ${result.items.length} listings (${total} still for sale) — fetching full details…`,
+      current: 0, total,
+    });
+    let enriched = 0;
+    try {
+      const sleep = ms => new Promise(r => setTimeout(r, ms));
+      const startedAt = Date.now();
+      const noDesc = [];
+      let idx = 0;
+      let apiDood = false;   // /api/v2/items/{id} bleek 404 — niet meer proberen
+      let knepen = 0;        // 429's op rij; MAX_KNEPEN keer = stoppen voor nu
+      const MAX_KNEPEN = 3;
+      for (const it of toEnrich) {
+        let d = null;
+        try {
+          d = await execInTab(tabId, async (id, apiDood) => {
+            const nap = ms => new Promise(r => setTimeout(r, ms));
+            const out = { _status: null, _err: null, _tries: 0, description: "", color: "", material: "", brand: "", size: "", condition: "", photo_urls: [] };
+            // Try the JSON detail endpoint (same-origin, carries the full
+            // description that the wardrobe list omits). We try the DEFAULT
+            // (localized) endpoint first — that's exactly what Vinted's item
+            // page uses and what the seller sees, so it always carries the
+            // visible description. `?localize=false` is only a fallback: for
+            // some items it returns a null description, which was the bug.
+            // GEEN VERZOEKEN VERSPILLEN AAN EEN DOOD ADRES.
+            //
+            // Gemeten 02-09-2026: /api/v2/items/{id} geeft 404, allebei de
+            // varianten, ook zonder inloggen. Vinted heeft dit endpoint eruit
+            // gehaald. Toch werden er per advertentie eerst twee verzoeken aan
+            // besteed — en die tellen gewoon mee in Vinted's budget, dus was
+            // twee derde van het budget op vóór de pagina aan de beurt was
+            // waar de tekst wél op staat. In Toons eigen scanlogboek is dat
+            // letterlijk terug te zien: "9739740557(api404/pg429)".
+            //
+            // Blijkt het bij de eerste advertentie 404, dan slaat de rest van
+            // deze scan de API over en gaat meteen naar de pagina. Komt hij ooit
+            // terug, dan pakken we hem vanzelf weer op.
+            const urls = apiDood ? [] : [`/api/v2/items/${id}`, `/api/v2/items/${id}?localize=false`];
+            for (const url of urls) {
+              // Retry each variant with exponential backoff on rate-limits
+              // (429/5xx) or an empty body — throttling is transient.
+              for (let attempt = 0; attempt < 3; attempt++) {
+                out._tries = (out._tries || 0) + 1;
+                try {
+                  const res = await fetch(url, {
+                    headers: { Accept: "application/json" }, credentials: "include",
+                  });
+                  out._status = res.status;
+                  if (res.ok) {
+                    const data = await res.json();
+                    const item = data.item || data || {};
+                    // Only overwrite fields we don't have yet, so a good value
+                    // from the first URL isn't wiped by an empty one from the second.
+                    if (!out.description) out.description = item.description || item.description_text || "";
+                    if (!out.color) out.color = item.color1 || item.color1_title || item.colour || "";
+                    if (!out.material) out.material = item.material || item.material_title || "";
+                    if (!out.brand) out.brand = item.brand_title || item.brand_dto?.title || item.brand || "";
+                    if (!out.size) out.size = item.size_title || item.size || "";
+                    if (!out.condition) out.condition = item.status || item.status_title || "";
+                    if (!out.photo_urls.length) out.photo_urls = (item.photos || []).map(p => p.full_size_url || p.url).filter(Boolean);
+                    out._err = null;
+                    break; // this variant answered; move to next URL only if still no desc
+                  } else if (res.status !== 429 && res.status < 500) {
+                    break; // a real client error (404/403) won't fix itself
+                  }
+                  out._err = null;
+                } catch (e) { out._err = String(e && e.message || e); }
+                if (attempt < 2) {
+                  const retryAfter = out._status === 429 ? 1500 : 400;
+                  await nap(retryAfter * Math.pow(2, attempt)); // 400/800 or 1500/3000
+                }
+              }
+              if (out.description) break; // got the description — no need for the other variant
+            }
+            // Fallback: if the API gave us no description, scrape it from the
+            // public item page. Vinted renders the description into the page's
+            // meta description / embedded JSON, which is reliable even when the
+            // JSON API misbehaves. Retry this too — it hits the same limiter.
+            if (!out.description) {
+              for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                  const pageRes = await fetch(`/items/${id}`, { credentials: "include" });
+                  out._pageStatus = pageRes.status;
+                  if (pageRes.ok) {
+                    const html = await pageRes.text();
+                    const decode = s => { try { return JSON.parse('"' + s.replace(/"/g, '\\"') + '"'); } catch (e2) { return s; } };
+                    // The embedded JSON often contains SEVERAL "description":"…"
+                    // fields — the first is frequently an empty SEO/catalog stub.
+                    // Collect them all and keep the longest non-empty one, so an
+                    // early `"description":""` no longer makes us give up.
+                    let best = "";
+                    for (const mm of html.matchAll(/"description":"((?:[^"\\]|\\.)*)"/g)) {
+                      const val = decode(mm[1]);
+                      if (val && val.length > best.length) best = val;
+                    }
+                    // og:description as a secondary source (usually a shorter
+                    // teaser, so only use it if the JSON gave us nothing).
+                    if (!best) {
+                      const og = html.match(/<meta[^>]+(?:property|name)=["'](?:og:description|description)["'][^>]+content=["']([^"']+)["']/i);
+                      if (og && og[1]) best = decode(og[1]);
+                    }
+                    out._pageDescLen = best.length;
+                    if (best) { out.description = best; out._src = "page"; break; }
+                    break; // page loaded but genuinely no description text found
+                  } else if (pageRes.status !== 429 && pageRes.status < 500) {
+                    break;
+                  }
+                } catch (e) { /* fallback best-effort */ }
+                if (attempt < 2) await nap(1000 * Math.pow(2, attempt));
+              }
+            }
+            return out;
+          }, [it.platform_listing_id, apiDood]);
+        } catch (e) { d = null; }
+        // Geeft de API 404, dan is dat geen pech bij déze advertentie maar een
+        // adres dat Vinted heeft weggehaald. Vanaf nu overslaan, zodat het
+        // budget naar de pagina gaat die de tekst wél draagt.
+        if (!apiDood && d && d._status === 404) {
+          apiDood = true;
+          console.log("[Omnivaleur] Vinted item-API geeft 404 — rest van deze scan direct via de pagina");
+        }
+        // One-time diagnostic on the first item so we can see exactly what Vinted
+        // returned (visible in the service-worker console AND surfaced to the UI).
+        if (idx === 0 && d) {
+          console.log("[Omnivaleur] detail-debug", { status: d._status, err: d._err, tries: d._tries, descLen: (d.description || "").length, src: d._src || "api" });
+          await reportProgress(serverUrl, job.id, {
+            stage: "enriching", message: `Found ${total} listings — fetching full details…`,
+            current: 0, total,
+            debug: `detail HTTP ${d._status ?? "?"}${d._err ? " err:" + d._err : ""} · ${d._tries || 1} tr · desc ${(d.description || "").length} chars (${d._src || "api"})`,
+          });
+        }
+        // Collect a compact record for every item that ended up with no
+        // description, so we can see exactly what Vinted returned for the
+        // stubborn ones (deterministic failures, not throttling).
+        if (d && !d.description) {
+          noDesc.push(`${it.platform_listing_id}(api${d._status ?? "?"}/pg${d._pageStatus ?? "-"}${d._pageDescLen != null ? ":" + d._pageDescLen : ""})`);
+        }
+        if (d) {
+          enriched++;
+          if (d.description) it.description = d.description;
+          if (d.color) it.color = d.color;
+          if (d.material) it.material = d.material;
+          if (d.brand && !it.brand) it.brand = d.brand;
+          if (d.size && !it.size) it.size = d.size;
+          if (d.condition && !it.condition) it.condition = d.condition;
+          if (d.photo_urls && d.photo_urls.length) {
+            it.photo_urls = d.photo_urls;
+            it.photo_url = it.photo_url || d.photo_urls[0];
+          }
+        }
+        idx++;
+        // Estimate remaining time from the average per-item pace so the user
+        // sees a real "~N sec left", updated live as it goes.
+        const elapsed = (Date.now() - startedAt) / 1000;
+        const perItem = elapsed / idx;
+        const etaSeconds = Math.max(0, Math.round(perItem * (total - idx)));
+        await reportProgress(serverUrl, job.id, {
+          stage: "enriching",
+          message: `Fetching details ${idx}/${total}…`,
+          current: idx, total, eta_seconds: etaSeconds,
+        });
+        // TEMPO, GEMETEN IN PLAATS VAN GESCHAT (02-09-2026).
+        //
+        // Vinted's advertentiepagina laat een bui van zo'n twintig verzoeken
+        // toe en geeft daarna 429. Na een pauze van een halve minuut komen er
+        // maar twee doorheen voordat hij weer dichtgaat. Hier stond 1.200 ms
+        // als "harder terugtrekken" — dat is voor deze rem niets, dus liep een
+        // grote scan na de eerste 429 gewoon leeg door te vragen: honderden
+        // advertenties zonder tekst, en dat werden vroeger de lege waarden die
+        // over de goede heen gingen.
+        //
+        // Nu: bij een 429 dertig seconden wachten. Blijft hij dichtzitten, dan
+        // stoppen we met verrijken en leveren we op wat we wél hebben. De
+        // volgende scan pakt precies de rest op, want de server stuurt mee wat
+        // hij al heeft (tekst_bekend) — zo komt het in een paar rondes rond in
+        // plaats van elke keer opnieuw op dezelfde muur te lopen.
+        const geknepen = d && (d._status === 429 || d._pageStatus === 429);
+        if (geknepen) {
+          knepen++;
+          if (knepen >= MAX_KNEPEN) {
+            console.warn(`[Omnivaleur] Vinted blijft afknijpen na ${idx}/${total} — rest volgende scan`);
+            await reportProgress(serverUrl, job.id, {
+              stage: "enriching",
+              message: `Vinted is rate-limiting — got ${enriched} of ${total}, the rest follows on the next scan`,
+              current: idx, total,
+            });
+            break;
+          }
+          await sleep(30000);
+        } else {
+          knepen = 0;
+          await sleep(200); // keeps the SW warm either way
+        }
+      }
+      // Surface which listings still lack a description and what Vinted returned
+      // for them (api<status>/pg<status>:<pageDescLen>) — visible in the panel.
+      if (noDesc.length) {
+        console.log("[Omnivaleur] no-desc items:", noDesc.join(" "));
+        await reportProgress(serverUrl, job.id, {
+          stage: "enriching", message: `${enriched}/${total} enriched — ${noDesc.length} without description`,
+          current: total, total,
+          debug: `no desc (${noDesc.length}): ${noDesc.slice(0, 12).join(" ")}`,
+        });
+        await sleep(1200); // give the panel a beat to poll this before "saving" overwrites it
+      }
+    } catch (e) {
+      console.warn("[Omnivaleur] Vinted enrichment aborted, sending list data only:", e);
+    }
+
+    await reportProgress(serverUrl, job.id, {
+      stage: "saving", message: "Saving to your dashboard…", current: total, total,
+    });
+    // scan_meta travels with the results: the server uses `complete` to decide
+    // whether this snapshot may be trusted to mark listings as sold.
+    await finaliseJob(serverUrl, job.id, "complete", {
+      listings: result.items,
+      scan_meta: result.meta || null,
+    });
+    console.log(
+      `[Omnivaleur] Vinted scan: ${result.items.length} listings ` +
+      `(${total} for sale, ${skipped} closed/draft, enriched ${enriched}) ` +
+      `complete=${result.meta?.complete} ${result.meta?.truncated_reason || ""}`
+    );
+  } finally {
+    sluitWerkTabblad(tabId, 2500);
+  }
+}
+
+// Why a Marktplaats/2dehands scan came back with nothing.
+//
+// The old message ("are you logged in on this account?") was a guess, and it
+// sent a business seller looking for a login problem he didn't have: a Pro /
+// zakelijk account manages its adverts in the separate Admarkt console, so the
+// personal "my listings" overview this scan reads is genuinely empty for him.
+// Say which of the three it is, because the fix is different every time.
+function mpEmptyScanReason(meta, platform) {
+  const site = platform === "marktplaats" ? "Marktplaats" : "2dehands";
+  // ALTIJD de waargenomen feiten erbij. Zonder dit was elke mislukte scan
+  // dezelfde ene zin, en stond er in het opdrachtenlogboek van de server
+  // twintig keer exact dezelfde tekst — waaruit niet valt op te maken of de
+  // overzichtspagina 401 gaf, of hij gewoon leeg was, of de Admarkt-schakelaar
+  // uitstond. Dat kostte bij Egbert Brouwer een week aan gokwerk.
+  const feiten =
+    ` [overzicht: API ${meta.api_status ?? "geen antwoord"}, ` +
+    `${meta.fetched ?? 0} advertenties, ingelogd op ${site}: ${meta.signed_in ? "ja" : "nee"}` +
+    (platform === "marktplaats"
+      ? `, Admarkt-schakelaar: ${meta.admarkt_toegestaan ? "aan" : "uit"}` : "") + `]`;
+
+  // DE BELANGRIJKSTE AFSLAG, EN HIJ STOND VROEGER ONDERAAN.
+  //
+  // Voor een zakelijke verkoper is het persoonlijke "Mijn advertenties"-
+  // overzicht van www.marktplaats.nl per definitie leeg: zijn advertenties
+  // staan in Admarkt, met een EIGEN inlog. Zo iemand is dus tegelijk "niet
+  // ingelogd op www" én volkomen in orde. Staat de Admarkt-schakelaar dan uit,
+  // dan kan Omnivaleur nergens kijken — en dat is het enige wat hij kan
+  // oplossen. De oude volgorde zette "je bent niet ingelogd" er als eerste
+  // overheen, waardoor die ene bruikbare aanwijzing nooit in beeld kwam.
+  if (platform === "marktplaats" && !meta.admarkt_toegestaan) {
+    return (meta.admarkt_ooit_aan
+      ? `De Admarkt-schakelaar staat uit — eerder stond hij aan. Chrome zet zo'n `
+        + `toestemming soms terug na een update van de extensie of een herstart. `
+      : `Je persoonlijke advertentieoverzicht op ${site} is leeg. Dat is precies `
+        + `hoe een zakelijk account eruitziet: die advertenties staan in Admarkt. `)
+      + `Klik op het Omnivaleur-icoon in je browserbalk en zet "Business account `
+      + `(Admarkt)" aan, en start de scan opnieuw. Heb je een gewoon particulier `
+      + `account, controleer dan of je op ${site} zelf bent ingelogd.` + feiten;
+  }
+
+  // Pas hier mag "je bent niet ingelogd" klinken: Admarkt staat aan (op 2dehands
+  // ligt die toestemming vast in het manifest, dus daar staat hij altijd aan) én
+  // ${site} weigerde ons echt.
+  if (meta.api_status === 401 || meta.api_status === 403) {
+    // VOLGORDE IS HIER HET HELE PUNT (15-09-2026). Deze foutcode betekent twee
+    // dingen tegelijk: je bent uitgelogd, OF je account is zakelijk geworden en
+    // dan bestaat dit persoonlijke overzicht niet meer voor jou. Het tweede is
+    // het geval waar we drie keer overheen zijn gelopen, dus het staat vooraan.
+    return `${site} geeft je persoonlijke advertentieoverzicht niet vrij `
+      + `(foutcode ${meta.api_status}). Dat hoort zo bij een zakelijk account: die `
+      + `advertenties staan in Admarkt, niet in het persoonlijke overzicht. Ben je `
+      + `zakelijk geworden op ${site}, dan is er niets mis en halen we ze daar op. `
+      + `Heb je een gewoon particulier account, controleer dan of je op ${site} `
+      + `bent ingelogd en start de scan opnieuw.` + feiten;
+  }
+  // EEN 200 IS HET BEWIJS DAT DE INLOG WERD GEACCEPTEERD (03-09-2026).
+  //
+  // Dit is de belangrijkste afslag van deze functie, en hij ontbrak. Het
+  // advertentie-overzicht (/my-account/sell/api/listings) is afgeschermd:
+  // zonder geldige sessie antwoordt het met HTTP 401, twaalf bytes "Unauthorized".
+  // Nagemeten met een kale aanvraag zonder cookies, op 2dehands.be én op
+  // marktplaats.nl — allebei 401. Krijgen wij dus een 200, dan heeft de site
+  // die verkoper herkend en is hij per definitie ingelogd.
+  //
+  // Egbert Brouwer kreeg "You don't appear to be signed in to 2dehands" terwijl
+  // in diezelfde melding "API 200" stond. Hij was ingelogd; hij had daar alleen
+  // nog nooit een advertentie geplaatst, dus was de lijst leeg. Die ene zin
+  // stuurde hem, en ons, een week de verkeerde kant op.
+  if (meta.api_status === 200) {
+    if (meta.total_entries) {
+      return `${site} says your account has ${meta.total_entries} advert(s), but we could not read `
+        + `a single one of them. That is a problem on our side, not with your login — `
+        + `please report it so we can fix it.` + feiten;
+    }
+    return `You are signed in to ${site} — it recognised your account and answered us — but there `
+      + `are no adverts on it, so there is nothing to import. If you do have adverts running on `
+      + `${site}, they belong to a different account than the one you are signed in with in this `
+      + `browser.` + feiten;
+  }
+  if (meta.signed_in === false) {
+    return `You don't appear to be signed in to ${site} in this browser. `
+      + `Open ${site}, sign in, and run the scan again.` + feiten;
+  }
+  return `Signed in fine, but ${site} shows no adverts on your personal "my listings" page. `
+    + `If you do have adverts running, they are almost certainly managed through Admarkt — `
+    + `${site}' separate console for business sellers.` + feiten;
+}
+
+// ── Admarkt ────────────────────────────────────────────────────────────────
+// De zakelijke kant van Marktplaats. Een verkoper met een zakelijk account
+// beheert zijn advertenties op admarkt.marktplaats.nl en zijn persoonlijke
+// "Mijn advertenties"-pagina is dan leeg — gemeten geval: 5.540 advertenties in
+// Admarkt tegenover nul in het gewone overzicht.
+//
+// WAAROM WE HET ADRES NIET INTIKKEN. Ik heb geen zakelijk account en kan die
+// pagina dus niet zelf bekijken; een geraden API-adres was een gok geweest die
+// bij de eerste de beste wijziging omvalt. In plaats daarvan laat deze code de
+// pagina gewoon zichzelf laden en kijkt daarna in `performance` welke verzoeken
+// hij daarbij heeft gedaan. Dat is geen gok maar een waarneming: we halen
+// precies dezelfde gegevens op als de pagina zelf. Wat hij gebruikt heeft komt
+// mee terug in `meta`, zodat we het daarna hard kunnen vastleggen.
+// `optional_host_permissions` in het manifest staat er om twee redenen, en beide
+// zijn belangrijk genoeg om hier vast te leggen (in het manifest zelf kan geen
+// commentaar staan — een zelfverzonnen "//"-sleutel is een onbekende sleutel en
+// dat is precies het soort ding waar een winkelcontrole op afknapt):
+//   1. Een update die een nieuwe VASTE host-toestemming toevoegt, zet Chrome bij
+//      iedere bestaande gebruiker de extensie stil tot hij hem accepteert.
+//   2. Alleen zakelijke verkopers hebben Admarkt nodig.
+// TWEE TENANTS, NIET EEN (gemeten 10-09-2026). In deze code stond jarenlang de
+// aanname dat alleen Marktplaats een Admarkt heeft; in mpEmptyScanReason stond
+// dat er zelfs met zoveel woorden. Dat klopt niet. `https://admarkt.2dehands.be/`
+// bestaat en stuurt door naar de 2dehands-login met een EIGEN OAuth-console voor
+// de Belgische tenant (client_id=twhbe_console, scope console_ro console_rw).
+// Gevolg van de oude aanname: een zakelijke verkoper op 2dehands heeft daar een
+// leeg persoonlijk overzicht, precies zoals op Marktplaats, en kreeg van ons
+// "je bent niet ingelogd" terwijl er niets mis was.
+const ADMARKT_ORIGINS = {
+  marktplaats: "https://admarkt.marktplaats.nl",
+  "2dehands": "https://admarkt.2dehands.be",
+};
+function admarktOrigin(platform) {
+  return ADMARKT_ORIGINS[platform] || ADMARKT_ORIGINS.marktplaats;
+}
+
+// Dekt een match-patroon uit het manifest dit adres?
+//
+// WAAROM DIT ERBIJ MOET. Voor Marktplaats is de Admarkt-toestemming optioneel en
+// vraagt de schakelaar in de popup hem op. Voor 2dehands is dat niet nodig: het
+// manifest heeft `https://*.2dehands.be/*` al vast staan en dat dekt
+// admarkt.2dehands.be. Toch mag deze code niet alleen op
+// `chrome.permissions.contains` leunen: geeft die om wat voor reden dan ook
+// `false` terug op een adres dat het manifest wel degelijk dekt, dan slaan we de
+// Belgische Admarkt stil over en is er niets aan te zien. Deze functie is de
+// tweede, controleerbare bron.
+function patroonDektOrigin(patroon, origin) {
+  const m = /^(\*|https?):\/\/([^\/]+)\/(.*)$/.exec(String(patroon || ""));
+  if (!m) return false;
+  const [, schema, host] = m;
+  const u = new URL(origin);
+  if (schema !== "*" && `${schema}:` !== u.protocol) return false;
+  if (host === "*") return true;
+  if (host.startsWith("*.")) {
+    const kaal = host.slice(2);
+    return u.hostname === kaal || u.hostname.endsWith(`.${kaal}`);
+  }
+  return u.hostname === host;
+}
+
+function manifestDektOrigin(origin) {
+  try {
+    const m = chrome.runtime.getManifest() || {};
+    return (m.host_permissions || []).some(p => patroonDektOrigin(p, origin));
+  } catch (_) { return false; }
+}
+// Exact de vorm die een zakelijk account zelf gebruikt (waargenomen bij Egbert
+// Brouwer, 15-08-2026). De datumgrenzen staan er BEWUST in: zonder start- en
+// einddatum weet ik niet welke standaardperiode de pagina kiest, en een lijst
+// die stilletjes maar één maand beslaat lijkt op "bijna niks gevonden".
+function admarktUrl(platform) {
+  const eind = new Date();
+  const start = new Date(eind.getTime() - 365 * 86400000);
+  const d = x => x.toISOString().slice(0, 10);
+  return `${admarktOrigin(platform)}/advertisements?startDate=${d(start)}&endDate=${d(eind)}`
+       + `&dateOption=last-365-days`;
+}
+
+// Hoeveel advertenties we in één keer meenemen. Een zakelijk account kan er
+// tienduizenden hebben; alles in één ronde ophalen levert een scan op die lijkt
+// te hangen. Elke volgende scan begint waar de vorige ophield (zie scan_offset),
+// dus dit is een lading per keer en niet een plafond.
+const ADMARKT_MAX = 2000;
+
+async function admarktToegestaan(platform) {
+  const origin = admarktOrigin(platform);
+  // ALLEEN VOOR 2DEHANDS de korte weg. Daar ligt de toestemming vast in het
+  // manifest (via https://*.2dehands.be/*) en is er geen schakelaar, dus valt er
+  // niets te vragen. Op MARKTPLAATS blijft alles precies zoals het was: daar is
+  // `permissions.contains` niet alleen een toestemming maar ook het opt-in-sein
+  // van de schakelaar in de popup, en daar hangt de hele Admarkt-import van
+  // Egbert Brouwer aan. Die weg raak ik hier niet aan.
+  if (platform === "2dehands" && manifestDektOrigin(origin)) return true;
+  try {
+    const mag = await chrome.permissions.contains({ origins: [`${origin}/*`] });
+    // Onthouden DAT hij ooit aan stond. Een optionele toestemming kan in Chrome
+    // stilletjes verdwijnen (update van de extensie, ander profiel, tweede
+    // kopie). Zonder dit geheugen is "uit" niet te onderscheiden van "nooit
+    // aangezet", en dat verschil bepaalt wat de verkoper moet doen.
+    if (mag) { try { await chrome.storage.local.set({ admarkt_ooit_aan: true }); } catch (_) {} }
+    return mag;
+  } catch (_) { return false; }
+}
+
+async function admarktOoitAan() {
+  try { return !!(await chrome.storage.local.get("admarkt_ooit_aan")).admarkt_ooit_aan; }
+  catch (_) { return false; }
+}
+
+// WANNEER KIJKEN WE IN ADMARKT?
+//
+// Vroeger hing dat aan één ding: de optionele toestemming voor
+// admarkt.marktplaats.nl. Dat is te wankel gebleken. Zo'n toestemming kan in
+// Chrome verdwijnen zonder dat de verkoper er iets voor doet — een update, een
+// tweede kopie van de extensie, een ander profiel — en dan valt de hele
+// Admarkt-kant stil. Bij Egbert Brouwer gebeurde dat tussen 27-08 11:09 (2.000
+// nieuwe advertenties binnengehaald) en 27-08 20:35 (vanaf dan twintig keer
+// "je bent niet ingelogd"). Hij heeft niets aangeraakt.
+//
+// Twee dingen zijn daarom veranderd. De toestemming staat sinds 1.0.258 vast in
+// het manifest (via https://*.marktplaats.nl/*), dus hij kan niet meer
+// wegvallen. En de keuze om in Admarkt te kijken is nu een gewone voorkeur MET
+// een vangnet: staat het persoonlijke overzicht leeg, dan kijken we sowieso in
+// Admarkt. Precies het geval van een zakelijke verkoper — en het kost een
+// particuliere verkoper niets, want die scan liep daar toch al op een fout uit.
+async function admarktVoorkeurAan() {
+  try {
+    const opgeslagen = await chrome.storage.local.get(["admarkt_aan", "admarkt_ooit_aan"]);
+    if (typeof opgeslagen.admarkt_aan === "boolean") return opgeslagen.admarkt_aan;
+    return !!opgeslagen.admarkt_ooit_aan;   // wie hem ooit aanzette, houdt hem aan
+  } catch (_) { return false; }
+}
+
+// Wie de schakelaar met de hand UIT zette, meent dat.
+//
+// Op Marktplaats regelde de toestemming dat vanzelf: uitzetten haalt hem weg en
+// dan mogen we er sowieso niet kijken. Op 2dehands ligt de toestemming vast in
+// het manifest, dus daar is dit de enige plek waar een "nee" nog telt. Zonder
+// deze regel zou het vangnet hieronder ("persoonlijk overzicht leeg, dan maar in
+// Admarkt kijken") die keuze overrulen.
+async function admarktUitgezet() {
+  try { return (await chrome.storage.local.get("admarkt_aan")).admarkt_aan === false; }
+  catch (_) { return false; }
+}
+
+async function admarktMeenemen(persoonlijkGevonden, platform) {
+  if (!await admarktToegestaan(platform)) return false;
+  if (await admarktUitgezet()) return false;
+  if (persoonlijkGevonden === 0) return true;
+  return await admarktVoorkeurAan();
+}
+
+// De meekijker moet vóór de pagina-code draaien, en dat kan alleen met een
+// aangemeld script — executeScript komt altijd te laat, want dan heeft de app
+// haar gegevens al binnen. Aanmelden kan pas als de toestemming er is, dus dit
+// gebeurt bij het opstarten en meteen nadat de gebruiker de schakelaar omzet.
+const ADMARKT_SCRIPT_ID = "omnivaleur-admarkt";
+// Het id van de Marktplaats-meekijker blijft ONGEWIJZIGD. Chrome bewaart
+// aangemelde scripts over herstarts heen; hernoemen zou bij iedereen die hem al
+// heeft een tweede kopie opleveren die tegelijk meekijkt.
+function admarktScriptId(platform) {
+  return platform === "2dehands" ? `${ADMARKT_SCRIPT_ID}-2dehands` : ADMARKT_SCRIPT_ID;
+}
+
+async function zorgVoorAdmarktMeekijker(platform) {
+  if (!await admarktToegestaan(platform)) return false;
+  const scriptId = admarktScriptId(platform);
+  try {
+    const al = await chrome.scripting.getRegisteredContentScripts({ ids: [scriptId] });
+    if (al && al.length) return true;
+  } catch (_) {}
+  try {
+    await chrome.scripting.registerContentScripts([{
+      id: scriptId,
+      matches: [`${admarktOrigin(platform)}/*`],
+      js: ["content/admarkt_sniffer.js"],
+      runAt: "document_start",
+      world: "MAIN",
+      persistAcrossSessions: true,
+    }]);
+    return true;
+  } catch (e) {
+    console.warn("[Omnivaleur] Admarkt-meekijker niet aangemeld:", e);
+    return false;
+  }
+}
+
+async function zorgVoorAlleAdmarktMeekijkers() {
+  for (const platform of Object.keys(ADMARKT_ORIGINS)) {
+    await zorgVoorAdmarktMeekijker(platform);
+  }
+}
+
+chrome.runtime.onStartup.addListener(() => { zorgVoorAlleAdmarktMeekijkers(); });
+chrome.runtime.onInstalled.addListener(() => { zorgVoorAlleAdmarktMeekijkers(); });
+// De schakelaar in de popup vraagt de toestemming; dit vangt het moment daarna.
+if (chrome.permissions && chrome.permissions.onAdded) {
+  chrome.permissions.onAdded.addListener(() => { zorgVoorAlleAdmarktMeekijkers(); });
+}
+if (chrome.permissions && chrome.permissions.onRemoved) {
+  chrome.permissions.onRemoved.addListener(async () => {
+    // Alleen afmelden wat echt niet meer mag. De Belgische meekijker hangt aan
+    // een VASTE toestemming uit het manifest; die hier blind mee afmelden zou
+    // hem stilzetten omdat iemand de Marktplaats-schakelaar uitzette.
+    for (const platform of Object.keys(ADMARKT_ORIGINS)) {
+      if (await admarktToegestaan(platform)) continue;
+      try { await chrome.scripting.unregisterContentScripts({ ids: [admarktScriptId(platform)] }); } catch (_) {}
+    }
+  });
+}
+
+async function bgScanAdmarkt(job, serverUrl) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const platform = job.platform === "2dehands" ? "2dehands" : "marktplaats";
+  // Zeker weten dat de meekijker klaarstaat vóór het tabblad opengaat; anders
+  // heeft de pagina haar gegevens al binnen tegen de tijd dat wij kijken.
+  await zorgVoorAdmarktMeekijker(platform);
+
+  const tabId = await new Promise((res, rej) =>
+    openWorkerTab(admarktUrl(platform), t =>
+      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true }
+    )
+  );
+
+  try {
+    await waitForTabLoad(tabId);
+    await sleep(6000);   // Admarkt rendert traag; de lijst komt na de pagina
+
+    // Waar de vorige scan ophield. Zonder dit begon elke scan weer bij
+    // advertentie 1 en kwam er niets nieuws bij, terwijl hij wel "klaar" meldde.
+    const OVERSLAAN = Math.max(0, Number((job.payload || {}).scan_offset) || 0);
+    // De nummers die de server al kent. Betrouwbaarder dan tellen: Admarkt geeft
+    // zijn advertenties niet elke keer in dezelfde volgorde terug, dus "sla de
+    // eerste 250 over" leverde drie scans lang exact dezelfde 250 op.
+    const BEKEND = Array.isArray((job.payload || {}).bekende_ids)
+      ? (job.payload || {}).bekende_ids.map(String) : [];
+
+    const result = await execInTab(tabId, async (MAX, OVERSLAAN, BEKEND) => {
+      const alBekend = new Set(BEKEND || []);
+      // Admarkt praat tRPC: /api/trpc/<procedure>?batch=1&input=<json>, GET, op
+      // de sessiecookie van de ingelogde verkoper. Waargenomen en uitgeprobeerd
+      // op een echt zakelijk account (16-08-2026), niet geraden — raden kan hier
+      // ook niet: élk onbekend PAD geeft HTTP 200 met de gewone pagina terug.
+      // Een onbekende PROCEDURE geeft wél netjes 404, en dat is precies hoe
+      // ad.getAds gevonden is.
+      const roep = async (procedure, invoer) => {
+        const url = `/api/trpc/${procedure}?batch=1&input=`
+          + encodeURIComponent(JSON.stringify({ "0": invoer }));
+        const res = await fetch(url, { headers: { Accept: "application/json" },
+                                       credentials: "include" });
+        const type = res.headers.get("content-type") || "";
+        if (!res.ok || !/json/i.test(type)) {
+          throw new Error(`${procedure} → HTTP ${res.status} ${type.split(";")[0]}`);
+        }
+        const body = await res.json();
+        if (body && body[0] && body[0].error) {
+          throw new Error(`${procedure} → ${String(body[0].error.message).slice(0, 200)}`);
+        }
+        return body[0].result.data;
+      };
+
+      const stappen = [];
+      const items = [];
+      let totaal = 0;
+      let gezien = 0;   // hoeveel live advertenties we al voorbij hebben laten gaan
+
+      // ALLES HIERONDER MOET ALS WAARDE TERUGKOMEN, NOOIT ALS EXCEPTION.
+      // Chrome laat een injectie die een afgewezen belofte teruggeeft stil op
+      // `undefined` uitkomen: de échte reden (HTTP 401, html in plaats van
+      // json, een procedurenaam die op de Belgische tenant anders heet)
+      // verdween dan spoorloos en de klant las "Admarkt returned no live
+      // adverts" terwijl er nooit iets gevraagd wás. Gemeten bij klant
+      // 4c30200f op 22-09-2026: drie keer die tekst met steps=[none] en
+      // page="?" — en `stappen` krijgt zijn eerste regel dírect na de eerste
+      // aanroep, dus een lege `stappen` bewijst dat die aanroep afbrak. Hij
+      // klikte daarna nog twee keer opnieuw, want de tekst gaf hem niets.
+      try {
+        // GEEN ADMARKT-SESSIE: DAN STAAN WE OP DE INLOGPAGINA (29-09-2026).
+        // Zonder Marktplaats-inlog stuurt Admarkt door naar
+        // www.marktplaats.nl/identity/v2/login. Een tRPC-aanroep daar geeft
+        // 404 text/plain, en de klant las "campaign.getAllCampaigns → HTTP 404"
+        // (klant 82b13998, particulier, twee keer). Wat er echt aan de hand is:
+        // niet ingelogd. Dat zeggen we dan ook, vóór er iets gevraagd wordt.
+        const hier = new URL(location.href);
+        if (!/^admarkt\./.test(hier.hostname) || /\/identity\/|\/login/i.test(hier.pathname)) {
+          return { fout: "login page", meta: {
+            stappen, pagina_titel: (document.title || "").slice(0, 120),
+            adres: (location.href || "").slice(0, 200),
+          } };
+        }
+        // Advertenties hangen altijd onder een campagne; er is er minstens één,
+        // ook bij wie er nooit een heeft aangemaakt ("Campagne zonder titel").
+        const campagnes = (await roep("campaign.getAllCampaigns", {})).campaigns || [];
+        stappen.push(`campagnes: ${campagnes.length}`);
+        if (!campagnes.length) {
+          // Nul campagnes bestaat niet op een echt zakelijk account. Dit is dus
+          // geen lege voorraad maar de verkeerde sessie, en dat hoort er ook te
+          // staan in plaats van "geen advertenties".
+          return { fout: "no campaigns on this account", meta: {
+            stappen, pagina_titel: (document.title || "").slice(0, 120),
+            adres: (location.href || "").slice(0, 200),
+          } };
+        }
+
+        for (const c of campagnes) {
+          let token = null;
+          for (let pagina = 0; pagina < 250; pagina++) {
+            const invoer = { campaignId: c.id };
+            if (token) invoer.pageToken = token;
+            const data = await roep("ad.getAds", invoer);
+            const ads = data.ads || [];
+            // Alleen op de EERSTE pagina meetellen. data.count is het totaal van
+            // de hele campagne, niet van deze pagina — bij elke volgende pagina
+            // er nog eens bij optellen maakte van 5.534 advertenties er 16.602.
+            if (pagina === 0 && typeof data.count === "number") totaal += data.count;
+
+            for (const ad of ads) {
+              // Alleen wat live staat; gepauzeerd of verwijderd hoort niet als
+              // bestaande advertentie geïmporteerd te worden.
+              if (ad.status && ad.status !== "ACTIVE") continue;
+              // Alles wat een eerdere scan al heeft opgehaald overslaan, zodat deze
+              // ronde echt de vólgende lading oplevert.
+              gezien++;
+              // Kennen we hem al? Dan overslaan, waar hij ook in de rij stond.
+              // Alleen als de server geen lijst meestuurde vallen we terug op de
+              // oude telling (oudere server, of de lijst kon niet opgehaald worden).
+              if (alBekend.size) {
+                if (alBekend.has(String(ad.id))) continue;
+              } else if (gezien <= OVERSLAAN) {
+                continue;
+              }
+              const fotos = (ad.images || [])
+                .filter(i => i && i.status !== "ERROR")
+                .map(i => {
+                  const l = i.links || {};
+                  const beste = l["1024x1024"] || l["726x726"] || l["498x498"] || i.src;
+                  return !beste ? null
+                    : beste.startsWith("//") ? `https:${beste}` : beste;
+                })
+                .filter(Boolean);
+
+              items.push({
+                platform_listing_id: String(ad.id),
+                title: ad.title || "",
+                // Admarkt kent GEEN prijs en GEEN omschrijving: het zijn advertenties
+                // die naar de eigen webwinkel van de verkoper wijzen, niet naar een
+                // Marktplaats-advertentie. Hier iets verzinnen zou erger zijn dan
+                // leeg laten — de verkoper vult dit zelf aan bij het bevestigen.
+                price: null,
+                photo_url: fotos[0] || null,
+                photo_urls: fotos,
+                category_name: "",
+                category_id: ad.categoryId != null ? String(ad.categoryId) : "",
+                status: ad.status || "",
+                // Bewust GEEN platform_listing_url: het enige adres dat Admarkt
+                // geeft is de webwinkel van de verkoper. Dat als advertentielink
+                // opslaan zou later een verkeerde pagina openen of verwijderen.
+              });
+              if (items.length >= MAX) break;
+            }
+
+            stappen.push(`campagne ${c.id} pagina ${pagina + 1}: ${ads.length} adv`);
+            token = data.nextPageToken || null;
+            if (!token || !ads.length || items.length >= MAX) break;
+            await new Promise(r => setTimeout(r, 200));
+          }
+          if (items.length >= MAX) break;
+        }
+
+        return {
+          items,
+          meta: {
+            bron: "trpc ad.getAds",
+            totaal,
+            gevonden: items.length,
+            overgeslagen: alBekend.size || OVERSLAAN,
+            rest: Math.max(0, totaal - (alBekend.size || 0) - items.length),
+            stappen: stappen.slice(0, 25),
+            zonder_prijs: items.length,
+            pagina_titel: (document.title || "").slice(0, 120),
+          },
+        };
+      } catch (e) {
+        // De reden komt als WAARDE terug; zie het blok hierboven.
+        return { fout: String((e && e.message) || e).slice(0, 300), meta: {
+          stappen, pagina_titel: (document.title || "").slice(0, 120),
+          adres: (location.href || "").slice(0, 200),
+        } };
+      }
+    }, [ADMARKT_MAX, OVERSLAAN, BEKEND]);
+
+    console.log("[Omnivaleur] Admarkt:", JSON.stringify(result?.meta || {}));
+
+    const site = platform === "2dehands" ? "2dehands.be" : "marktplaats.nl";
+
+    // De scan kwam ergens op vast te zitten en heeft dat zelf verteld. Die
+    // reden hoort bij de klant te komen, want "geen advertenties gevonden"
+    // stuurt hem de verkeerde kant op: hij gaat zijn Admarkt nakijken terwijl
+    // het antwoord is dat hij niet ingelogd is of dat de site iets veranderde.
+    if (result && result.fout) {
+      const m = result.meta || {};
+      const sporen =
+        ` page="${m.pagina_titel || "?"}" url=${m.adres || "?"} ` +
+        `steps=[${(m.stappen || []).join(" | ") || "none"}]`;
+      if (result.fout === "login page") {
+        const naam = platform === "2dehands" ? "2dehands" : "Marktplaats";
+        const e = new Error(
+          `You are not signed in to ${naam} in this browser: Admarkt sent us to the ` +
+          `${naam} login page. Nothing was imported. Open ${site}, sign in, and run ` +
+          `the scan again.` + sporen
+        );
+        e.admarktNietIngelogd = true;
+        throw e;
+      }
+      if (result.fout === "no campaigns on this account") {
+        throw new Error(
+          `Admarkt (${site}) shows no campaigns at all for this session, and every ` +
+          `business account has at least one. This almost always means the browser ` +
+          `is signed in to a different ${site} account than the business one, or the ` +
+          `Admarkt session expired. Sign in to Admarkt in this browser and try again.` +
+          sporen
+        );
+      }
+      throw new Error(
+        `Admarkt (${site}) could not be read: ${result.fout}. Nothing was imported. ` +
+        `If this says HTTP 401 or 403 you are not signed in to Admarkt in this browser.` +
+        sporen
+      );
+    }
+
+    // Geen enkel antwoord: het werktabblad was weg voor de scan klaar was.
+    if (!result) {
+      throw new Error(
+        `Admarkt (${site}) gave no answer at all: the work tab closed before the ` +
+        `scan could finish. Nothing was imported. This usually means the browser ` +
+        `window was closed or the computer went to sleep during the import.`
+      );
+    }
+
+    if (!result.items || !result.items.length) {
+      const m = result.meta || {};
+      // Niets nieuws terwijl we al een deel binnen hadden: dan zijn we gewoon
+      // aan het eind. Dat is klaar, geen fout.
+      if ((OVERSLAAN > 0 || BEKEND.length) && m.totaal) return { items: [], meta: { ...m, klaar: true } };
+      // Admarkt antwoordde, de campagne bestaat, er staat alleen niets live in.
+      // Dat is een leeg account, geen inlogprobleem (Janneke, 07-10-2026: ingelogd,
+      // kreeg toch "returned no live adverts"). De aanroeper rondt dit netjes af
+      // als het persoonlijke overzicht met een 200 ook niets zegt.
+      const leeg = new Error(
+        `Admarkt returned no live adverts. page="${m.pagina_titel || "?"}" ` +
+        `steps=[${(m.stappen || []).join(" | ") || "none"}]`
+      );
+      leeg.admarktLeeg = true;
+      throw leeg;
+    }
+    return result;
+  } finally {
+    sluitWerkTabblad(tabId, 2500);
+  }
+}
+
+async function bgScanMp2dh(job, serverUrl) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const platform = job.platform;
+  const overviewUrl = platform === "marktplaats"
+    ? "https://www.marktplaats.nl/my-account/sell/index.html"
+    : "https://www.2dehands.be/my-account/sell/index.html";
+
+  const tabId = await new Promise((res, rej) =>
+    openWorkerTab(overviewUrl, t =>
+      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true }
+    )
+  );
+
+  try {
+    await waitForTabLoad(tabId);
+    await zetWerkStatus(tabId, "Je zoekertjes inlezen (alleen lezen, er wordt niets gewijzigd)");
+    await sleep(3000); // let React fully render listings
+
+    const result = await execInTab(tabId, async () => {
+      const nap = ms => new Promise(r => setTimeout(r, ms));
+      // Marktplaats returns its image urls PROTOCOL-relative ("//images.markt…").
+      // Treating those as a site-relative path produced
+      // "https://www.marktplaats.nl//images.marktplaats.com/…" — a 404, so every
+      // imported thumbnail was blank.
+      const abs = u => !u ? null
+        : u.startsWith("http") ? u
+        : u.startsWith("//") ? `https:${u}`
+        : `${location.origin}${u.startsWith("/") ? "" : "/"}${u}`;
+
+      // ── Primary: the page's own JSON API ──────────────────────────────
+      // The overview is React-rendered and only ever paints ~50 rows, so
+      // scraping the DOM could never see a bigger account (127 listings here).
+      // It feeds from /my-account/sell/api/listings, which returns
+      // { ads: [...], totalNumberOfResults: N } and pages via
+      // batchNumber (1-BASED — batch 0 and 1 both return the first page)
+      // and batchSize. Verified live: batchSize is honoured up to at least 200.
+      const API = "/my-account/sell/api/listings";
+      const BATCH = 100;
+      const MAX_BATCHES = 200;
+      const byId = new Map();
+      let totalExpected = null;
+      let truncatedReason = null;
+      let apiStatus = null;      // the HTTP status the overview API actually gave us
+
+      try {
+        for (let batch = 1; batch <= MAX_BATCHES; batch++) {
+          let res = null;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            res = await fetch(`${API}?batchNumber=${batch}&batchSize=${BATCH}`, {
+              headers: { Accept: "application/json" }, credentials: "include",
+            });
+            if (res.ok) break;
+            if (res.status !== 429 && res.status < 500) break;
+            await nap(1000 * Math.pow(2, attempt));
+          }
+          if (res) apiStatus = res.status;
+          if (!res || !res.ok) {
+            if (batch === 1) { truncatedReason = `API HTTP ${res ? res.status : "?"}`; break; }
+            truncatedReason = `batch ${batch} returned HTTP ${res.status}`;
+            break;
+          }
+          const data = await res.json();
+          if (data.totalNumberOfResults != null) totalExpected = data.totalNumberOfResults;
+          const ads = data.ads || [];
+          let added = 0;
+          for (const ad of ads) {
+            const id = ad.itemId;
+            if (!id || byId.has(id)) continue;
+            byId.set(id, {
+              platform_listing_id: String(id),
+              title: ad.title || "",
+              // priceCents is an integer in cents — /100, never parsed from text.
+              price: ad.priceCents != null ? Number(ad.priceCents) / 100 : null,
+              photo_url: abs(ad.primaryImageUrl),
+              platform_listing_url: abs(ad.vipUrl || ad.sVipUrl),
+              category_name: ad.categoryName || "",
+              is_reserved: !!ad.reserved,
+              status: ad.status || "",
+            });
+            added++;
+          }
+          if (!ads.length) break;                                   // ran off the end
+          if (totalExpected != null && byId.size >= totalExpected) break;  // got them all
+          if (!added) break;                                        // no new ids — stop rather than loop
+          if (batch === MAX_BATCHES) truncatedReason = `hit the ${MAX_BATCHES}-batch safety cap`;
+          await nap(250);
+        }
+      } catch (e) {
+        truncatedReason = `API error: ${String(e && e.message || e)}`;
+      }
+
+      // ── Fallback: read whatever the page rendered ─────────────────────
+      // Only if the API gave us nothing (different market, endpoint moved).
+      // NOTE the container is div.row.ad-listing — the old code looked for
+      // "li, article", which this page simply has none of, so it found zero.
+      let usedFallback = false;
+      if (!byId.size) {
+        usedFallback = true;
+        const rows = document.querySelectorAll("div.row.ad-listing");
+        const cards = rows.length ? [...rows] : [...document.querySelectorAll("li, article, div")].filter(el =>
+          el.querySelectorAll('a[href*="/v/"]').length === 1 && /€\s?\d/.test(el.textContent));
+        for (const card of cards) {
+          const link = card.querySelector('a[href*="/v/"]');
+          if (!link) continue;
+          const href = link.getAttribute("href") || "";
+          const id = (href.match(/(m\d{6,})/) || [])[1];
+          if (!id || byId.has(id)) continue;
+          const titleEl = [...card.querySelectorAll("*")].find(el =>
+            el.children.length === 0 && el.textContent.trim().length > 5 && el.textContent.trim().length < 120);
+          const priceMatch = card.textContent.match(/€\s?([\d.,]+)/);
+          const img = card.querySelector("img");
+          byId.set(id, {
+            platform_listing_id: id,
+            title: (titleEl?.textContent || "").trim(),
+            price: priceMatch ? Number(priceMatch[1].replace(/\./g, "").replace(",", ".")) : null,
+            photo_url: img?.src || null,
+            platform_listing_url: abs(href),
+          });
+        }
+        // The DOM only ever holds the rendered page, so this is never complete
+        // unless it happens to match the total the page advertises.
+        const shown = (document.body.innerText.match(/advertenties\s*\((\d+)\)/i) || [])[1];
+        if (shown != null) totalExpected = Number(shown);
+        if (!truncatedReason) truncatedReason = "read from the page instead of the API";
+      }
+
+      const items = [...byId.values()];
+      if (!truncatedReason && totalExpected != null && items.length < totalExpected) {
+        truncatedReason = `found ${items.length} of ${totalExpected} listings`;
+      }
+      return {
+        items,
+        meta: {
+          complete: !truncatedReason,
+          truncated_reason: truncatedReason,
+          total_entries: totalExpected,
+          fetched: items.length,
+          source: usedFallback ? "dom" : "api",
+          api_status: apiStatus,
+          // Alleen of we überhaupt ingelogd zijn. Of dit een zakelijk account
+          // is, valt hier niet betrouwbaar aan de paginatekst af te lezen — dat
+          // is geprobeerd en het gaf een verkeerd antwoord.
+          // GEMETEN OP 03-09-2026, EN HET WAS FOUT.
+          //
+          // Deze zin stond er met alleen Marktplaats-woorden in, maar hij draait
+          // óók op 2dehands. Een verkoper die daar keurig was ingelogd kreeg
+          // daardoor "je bent niet ingelogd op 2dehands" te horen — Egbert
+          // Brouwer, en hij mailde terug dat hij wél was ingelogd. Hij had
+          // gelijk. Zie mpEmptyScanReason: wat de site ANTWOORDT weegt vanaf nu
+          // zwaarder dan welk woord er toevallig op de pagina staat.
+          signed_in: /uitloggen|log ?uit|afmelden|mijn marktplaats|mijn 2dehands|my account/i
+            .test(document.body.innerText || ""),
+        },
+      };
+    });
+
+    if (!result || !result.items) throw new Error("Could not read your listings overview — page structure may have changed.");
+
+    // Alleen het JA komt hiervandaan. Een 200 op het persoonlijke overzicht
+    // bewijst de sessie, en dan weet het uitklapvenster het al bij de scan.
+    //
+    // HET NEE IS HIER WEGGEHAALD (15-09-2026). Een 401 op dit overzicht betekent
+    // twee heel verschillende dingen: uitgelogd, of een ZAKELIJK account waarvoor
+    // dit overzicht niet bestaat. Van buitenaf zijn die twee hier niet uit elkaar
+    // te houden, en het verschil kostte Egbert Brouwer zijn hele wachtrij. Wie
+    // wel uitgelogd is wordt gevonden door mpIngelogdOpDeSiteZelf: die leest de
+    // kopbalk van de site, en die is voor beide soorten accounts hetzelfde.
+    const _apiStatus = result.meta && result.meta.api_status;
+    if (_apiStatus === 200) onthoudKanaalSessie(job.platform, true, { status: 200 });
+
+    // Niets op het persoonlijke overzicht? Dan kijken we in Admarkt.
+    //
+    // HIER STOND EERST "en wel ingelogd", en dat maakte deze hele stap
+    // onbereikbaar voor precies de mensen voor wie hij gebouwd is. Admarkt heeft
+    // een ÉÉGEN inlog: een zakelijke verkoper kan prima in Admarkt zitten en
+    // tegelijk uitgelogd zijn op www.marktplaats.nl. Die kreeg dan "je bent niet
+    // ingelogd" te zien terwijl er niets mis was met zijn inlog — Egbert
+    // Brouwer, 16-08-2026. Of we op www ingelogd zijn zegt niets over Admarkt,
+    // dus dat mag deze stap niet tegenhouden.
+    // ALTIJD ook Admarkt meenemen als de gebruiker dat aanheeft, niet alleen
+    // wanneer het persoonlijke overzicht helemaal niets vindt.
+    //
+    // Egbert Brouwer (26-08-2026): zijn persoonlijke overzicht vindt wél iets
+    // (~1000 advertenties) — dus deze stap sloeg vroeger altijd over, terwijl
+    // de overige duizenden van zijn 5.534 advertenties uitsluitend via Admarkt
+    // te vinden zijn. "Niets nieuws" op het persoonlijke overzicht werd dan
+    // gemeld als "klaar, niets meer te doen" terwijl er nog duizenden open
+    // stonden. Persoonlijke advertenties en Admarkt-advertenties zitten in
+    // een andere nummerreeks (zie backend/services/mp_enrich.py), dus
+    // samenvoegen op advertentienummer kan hier geen dubbele opleveren.
+    let admarktFout = null;
+    let admarktNietIngelogd = false;
+    let admarktKlaar = false;
+    if (await admarktMeenemen(result.items.length, platform)) {
+      await reportProgress(serverUrl, job.id, {
+        stage: "scanning",
+        message: result.items.length
+          ? `${result.items.length} op je persoonlijke overzicht — nu ook Admarkt erbij…`
+          : "Nothing on your personal overview — checking Admarkt…",
+        current: 0, total: 0,
+      });
+      try {
+        const via = await bgScanAdmarkt(job, serverUrl);
+        const bekend = new Set(result.items.map(it => it.platform_listing_id));
+        for (const it of via.items) {
+          if (!bekend.has(it.platform_listing_id)) result.items.push(it);
+        }
+        result.meta = {
+          ...result.meta, ...via.meta,
+          source: result.items.length && via.items.length ? "personal+admarkt" : (via.items.length ? "admarkt" : result.meta?.source),
+        };
+        // Admarkt heeft alles al gehad wat wij kennen. Dat is KLAAR, geen fout —
+        // en zeker geen inlogprobleem. Voor een zakelijk account is het
+        // persoonlijke overzicht altijd leeg, dus zonder deze afslag viel deze
+        // ronde hieronder door naar "You don't appear to be signed in to
+        // Marktplaats", terwijl er niets aan de hand was. Egbert Brouwer kreeg
+        // die melding 18 keer en ging telkens zijn login controleren.
+        admarktKlaar = !!via.meta?.klaar;
+      } catch (e) {
+        // Admarkt zelf gaf niets. Die melding is specifieker dan "geen
+        // advertenties gevonden", dus die willen we terugzien — maar alleen
+        // als het persoonlijke overzicht OOK niets had; anders verdringt een
+        // Admarkt-foutmelding een prima geslaagde persoonlijke scan.
+        if (!result.items.length) {
+          admarktFout = String(e && e.message ? e.message : e);
+          admarktNietIngelogd = !!(e && (e.admarktNietIngelogd || e.admarktLeeg));
+        }
+        else console.warn("[Omnivaleur] Admarkt-scan naast persoonlijk overzicht mislukt:", e);
+      }
+    }
+
+    if (!result.items.length && admarktKlaar) {
+      // Netjes afronden met nul nieuwe advertenties: het scherm meldt dan
+      // "alles is al binnen" in plaats van een verzonnen fout.
+      await finaliseJob(serverUrl, job.id, "complete", {
+        listings: [], scan_meta: { ...(result.meta || {}), klaar: true },
+      });
+      console.log("[Omnivaleur] Admarkt: niets nieuws meer — scan afgerond.");
+      return;
+    }
+    if (!result.items.length) {
+      const echtLeeg = result.meta?.api_status === 200 && !result.meta?.total_entries;
+      // Een mislukte Admarkt-ronde is op MARKTPLAATS de beste aanwijzing die we
+      // hebben, want daar zette de verkoper de schakelaar zelf aan: hij verwacht
+      // dat daar iets staat. Op 2DEHANDS kijken we er sinds 1.0.316 ongevraagd,
+      // omdat de toestemming vastligt in het manifest. Dan mag een lege
+      // Admarkt-console geen rode fout worden bij iemand die daar simpelweg
+      // particulier verkoopt en van wie 2dehands zelf al zei dat hij nul
+      // advertenties heeft. Dat zou de stille afronding van 03-09-2026 weer
+      // ongedaan maken.
+      // Zelfde geldt op Marktplaats als Admarkt ons naar de inlogpagina stuurde
+      // terwijl het persoonlijke overzicht met een 200 zei dat er niets staat:
+      // een particulier zonder advertenties, geen storing.
+      if (admarktFout && !((platform === "2dehands" || admarktNietIngelogd) && echtLeeg)) {
+        throw new Error(`Admarkt: ${admarktFout}`);
+      }
+      const admarktAan = await admarktMeenemen(0, platform);
+      // EEN LEEG ACCOUNT IS GEEN STORING (03-09-2026).
+      //
+      // Wie op 2dehands nog nooit iets heeft geplaatst, hééft daar geen
+      // advertenties. Dat meldden we als rode fout met de tekst "je bent niet
+      // ingelogd" erbij, en dat is twee keer onwaar. Voorwaarde om het rustig
+      // af te ronden: de site gaf een 200 (dus de inlog werd geaccepteerd) én
+      // zegt zelf dat er niets staat. Zegt hij een aantal en lezen wij er nul,
+      // dan is er wél iets stuk en blijft het een fout — zie mpEmptyScanReason.
+      const admarktKanNogWat = !admarktAan;
+      if (echtLeeg && !admarktKanNogWat) {
+        await finaliseJob(serverUrl, job.id, "complete", {
+          listings: [], scan_meta: { ...(result.meta || {}), klaar: true, leeg_account: true },
+        });
+        console.log(`[Omnivaleur] ${platform}: ingelogd, maar dit account heeft daar geen advertenties — scan netjes afgerond.`);
+        return;
+      }
+      throw new Error(mpEmptyScanReason({
+        ...(result.meta || {}),
+        admarkt_toegestaan: admarktAan,
+        admarkt_ooit_aan: await admarktOoitAan(),
+      }, platform));
+    }
+    // De verrijking hieronder haalt elke advertentiepagina op VANUIT dit tabblad,
+    // en dat tabblad staat op www.marktplaats.nl. Voor een advertentie waarvan de
+    // link op een ander domein staat (admarkt.marktplaats.nl) is dat een
+    // cross-origin verzoek: die wordt geweigerd en levert stilzwijgend niets op.
+    // Bij een Admarkt-scan zou daardoor ELKE advertentie zonder prijs en zonder
+    // omschrijving binnenkomen — een import die er compleet uitziet maar leeg is.
+    // Dat is erger dan een eerlijke melding, dus we controleren het vooraf.
+    const tabOrigin = platform === "marktplaats"
+      ? "https://www.marktplaats.nl" : "https://www.2dehands.be";
+    const teVerrijken = result.items.filter(it => {
+      if (!it.platform_listing_url) return false;
+      try { return new URL(it.platform_listing_url).origin === tabOrigin; }
+      catch (_) { return false; }
+    });
+    const buitenBereik = result.items.length - teVerrijken.length;
+    if (buitenBereik) {
+      console.warn(`[Omnivaleur] ${buitenBereik}/${result.items.length} listings sit on `
+        + `another domain than ${tabOrigin} — cannot fetch their details from here.`);
+      result.meta = { ...(result.meta || {}), enrichment_skipped: buitenBereik };
+    }
+
+    await reportProgress(serverUrl, job.id, {
+      stage: "enriching",
+      message: `Found ${result.items.length} listings — fetching full details…`,
+      current: 0, total: teVerrijken.length,
+    });
+
+    // The overview cards only expose title/price/thumbnail. Enrich each listing
+    // by fetching its own page (same-origin) and reading the JSON-LD Product +
+    // description block, so the import carries the full description and every
+    // photo — not just the first one. Best-effort per listing: any failure just
+    // leaves that candidate with the basic card data.
+    // One SHORT executeScript per listing, driven from here — never a single
+    // long one. An MV3 service worker awaiting one multi-minute call gets
+    // terminated by Chrome, which would kill the whole scan before it reports
+    // anything. (The old code did all of them in one call, capped at 100, so a
+    // bigger account was silently cut off AND at risk of being killed.)
+    const total = teVerrijken.length;
+    let enriched = 0;
+    const startedAt = Date.now();
+    // HARDE TIJDGRENS OP HET VERRIJKEN.
+    //
+    // Hier stond niets, en dat was de laatste val voor een grote winkel. Elke
+    // advertentie kost een eigen aanvraag; gemeten bij Egbert Brouwer
+    // (26-08-2026): 95 advertenties duurden "meerdere minuten", dus ~2-3
+    // seconden per stuk. Bij zijn ~1000 persoonlijke advertenties is dat een
+    // half uur tot een uur onafgebroken doorwerken in een achtergrondtabblad.
+    // Wat er dan misging is erger dan traag: brak er onderweg iets af (Chrome
+    // die de service worker opruimt, een hangende aanvraag, de gebruiker die
+    // het tabblad sluit), dan werd er NIETS teruggestuurd en was al het werk
+    // weg — "na 95 items krijg ik weer een timeout", en daarna begon alles
+    // opnieuw bij nul.
+    //
+    // Nu kappen we op tijd af en sturen we op wat er wél klaar is. De rest
+    // houdt gewoon zijn titel/prijs/foto uit het overzicht en wordt bij een
+    // volgende scan alsnog verrijkt. Onvolledig binnen is oneindig veel beter
+    // dan compleet kwijt.
+    const VERRIJK_BUDGET_MS = 4 * 60 * 1000;
+    let afgekaptOpTijd = 0;
+    try {
+      for (let i = 0; i < teVerrijken.length; i++) {
+        if (Date.now() - startedAt > VERRIJK_BUDGET_MS) {
+          afgekaptOpTijd = teVerrijken.length - i;
+          console.warn(`[Omnivaleur] verrijken afgekapt op tijd: ${enriched} gedaan, `
+            + `${afgekaptOpTijd} blijven staan voor een volgende scan.`);
+          break;
+        }
+        const it = teVerrijken[i];
+        let e = null;
+        try {
+          e = await execInTab(tabId, async (url) => {
+            const nap = ms => new Promise(r => setTimeout(r, ms));
+            for (let attempt = 0; attempt < 3; attempt++) {
+              try {
+                const res = await fetch(url, { headers: { Accept: "text/html" }, credentials: "include" });
+                if (!res.ok) {
+                  if (res.status !== 429 && res.status < 500) return null;
+                  await nap(800 * Math.pow(2, attempt));
+                  continue;
+                }
+                const html = await res.text();
+                const decode = s => { try { return JSON.parse('"' + s.replace(/"/g, '\\"') + '"'); } catch (e2) { return s; } };
+                const unesc = s => s.replace(/\\u002F/gi, "/").replace(/\\\//g, "/");
+
+                // The listing page is client-rendered: there is NO JSON-LD and no
+                // description element in the fetched HTML (the old code looked for
+                // both and always came back empty). The text IS there, inside the
+                // embedded __CONFIG__ state. Several "description" keys exist — UI
+                // chrome like menu entries and shipping options — so take the
+                // LONGEST, which is reliably the advert itself.
+                let description = "";
+                for (const m of html.matchAll(/"description"\s*:\s*"((?:[^"\\]|\\.)*)"/g)) {
+                  const v = decode(m[1]);
+                  if (v && v.length > description.length) description = v;
+                }
+
+                // Photos live in an "imageUrls" array as protocol-relative,
+                // /-escaped URLs with a "$_" size-rule placeholder.
+                const photos = [];
+                const im = html.match(/"imageUrls"\s*:\s*\[([^\]]*)\]/);
+                if (im) {
+                  for (const m of im[1].matchAll(/"((?:[^"\\]|\\.)*)"/g)) {
+                    let u = unesc(decode(m[1]));
+                    if (!u) continue;
+                    if (u.startsWith("//")) u = "https:" + u;
+                    u = u.replace(/\$_/, "85"); // large variant
+                    if (/^https?:\/\//.test(u)) photos.push(u);
+                  }
+                }
+                // De staat die de verkoper zelf koos staat als slug in dezelfde
+                // pagina: "conditie":"zo-goed-als-nieuw" / "gedragen" /
+                // "niet-werkend". Zonder dit kwam elke Marktplaats-kandidaat
+                // zonder staat binnen en kreeg hij de standaard van de lading:
+                // bij amandaonline001 (06-10-2026) stonden 19 gedragen of kapotte
+                // artikelen daardoor als "Nieuw met kaartje" in haar voorraad.
+                const cm = html.match(/"conditie"\s*:\s*"([a-z0-9-]{2,40})"/i);
+                const condition = cm ? cm[1].replace(/-/g, " ") : "";
+                return { description: description.trim().slice(0, 20000), photo_urls: [...new Set(photos)], condition };
+              } catch (e3) {
+                await nap(500 * Math.pow(2, attempt));
+              }
+            }
+            return null;
+          }, [it.platform_listing_url]);
+        } catch (e4) { e = null; }
+
+        if (e) {
+          enriched++;
+          if (e.description) it.description = e.description;
+          if (e.condition && !it.condition) it.condition = e.condition;
+          if (e.photo_urls && e.photo_urls.length) {
+            it.photo_urls = e.photo_urls;
+            it.photo_url = it.photo_url || e.photo_urls[0];
+          }
+        }
+        // Voortgang melden is versiering, geen werk. Toch stond deze aanroep
+        // KAAL in de lus: één mislukte melding — een hik op de server, een 500
+        // — vloog naar de vangst hieronder en gooide de verrijking van ALLE
+        // resterende advertenties weg. De scan meldde zich daarna gewoon als
+        // geslaagd. Bij een verkoper met 1.245 advertenties kwamen zo de laatste
+        // 304 binnen met één foto en zonder tekst, zonder dat iemand iets zag.
+        //
+        // En niet meer bij elke advertentie: dat waren 1.245 schrijfacties naar
+        // de server voor een voortgangsbalk. Elke tiende is genoeg, en dat is
+        // meteen tien keer minder kans dat het misgaat.
+        if (i % 10 === 0 || i === teVerrijken.length - 1) {
+          const perItem = ((Date.now() - startedAt) / 1000) / (i + 1);
+          try {
+            await reportProgress(serverUrl, job.id, {
+              stage: "enriching",
+              message: `Fetching details ${i + 1}/${total}…`,
+              current: i + 1, total,
+              eta_seconds: Math.max(0, Math.round(perItem * (total - i - 1))),
+            });
+          } catch (e3) {
+            console.warn("[Omnivaleur] voortgang niet gemeld (gaat gewoon door):", e3);
+          }
+        }
+        await sleep(150); // gentle, and keeps the worker warm
+      }
+    } catch (e) {
+      // Komt er hier tóch iets doorheen, leg dan vast hoe ver we kwamen. Anders
+      // ziet een halve oogst er precies zo uit als een hele.
+      console.warn(`[Omnivaleur] ${platform} enrichment aborted at ${enriched}/${total}:`, e);
+      result.meta = { ...(result.meta || {}), enrichment_aborted_at: enriched,
+                      enrichment_error: String(e && e.message || e).slice(0, 200) };
+    }
+    // Op tijd afgekapt is geen fout, maar het scherm hoort het wel te weten:
+    // "compleet" mag dit niet heten zolang er nog advertenties op hun tekst en
+    // prijs wachten.
+    if (afgekaptOpTijd) {
+      result.meta = {
+        ...(result.meta || {}),
+        complete: false,
+        enrichment_remaining: afgekaptOpTijd,
+        truncated_reason: `${enriched} van ${total} advertenties verrijkt binnen de tijd; `
+          + `${afgekaptOpTijd} volgen bij een volgende scan`,
+      };
+    }
+
+    await reportProgress(serverUrl, job.id, {
+      stage: "saving", message: "Saving to your dashboard…", current: total, total,
+    });
+    await finaliseJob(serverUrl, job.id, "complete", {
+      listings: result.items,
+      scan_meta: result.meta || null,
+    });
+    console.log(
+      `[Omnivaleur] ${platform} scan: ${total} listings (enriched ${enriched}) ` +
+      `via ${result.meta?.source} complete=${result.meta?.complete} ${result.meta?.truncated_reason || ""}`
+    );
+  } finally {
+    sluitWerkTabblad(tabId, 2500);
+  }
+}
+
+// Closing a job tab means that job's meta is dead. Without this, jobtab_ keys
+// pile up forever — and because Chrome reuses tab ids after a restart, a brand
+// new tab could inherit a stale entry and complete the wrong job.
+//
+// Sluit de gebruiker (of Chrome) dat tabblad terwijl de opdracht nog loopt, dan
+// meldde niemand dat af: de opdracht bleef server-side "claimed" staan, en omdat
+// er bewust maar één opdracht tegelijk draait lag ALLES stil tot de server hem na
+// vijf minuten opruimde. Vandaar dat het dashboard "publishing…" bleef tonen en
+// opnieuw crosslisten niets deed. Nu melden we het sluiten meteen, zodat de
+// wachtrij binnen seconden weer loopt en de gebruiker ziet wat er gebeurde.
+chrome.tabs.onRemoved.addListener((tabId) => {
+  const key = `jobtab_${tabId}`;
+  chrome.storage.local.get(key, (s) => {
+    const meta = s[key];
+    chrome.storage.local.remove(key);
+    clearJobWatchdog(tabId);
+    // awaitingManualFinish = al als fout gemeld en bewust opengelaten voor een
+    // handmatige afronding; die opdracht nog eens afmelden heeft geen zin.
+    if (!meta || !meta.jobId || meta.awaitingManualFinish) return;
+    console.warn(`[Omnivaleur] Tab ${tabId} closed while job ${meta.jobId} (${meta.platform}) was running — checking the platform before reporting.`);
+    // Sloot het tabblad omdat Vinted na het plaatsen doornavigeerde? Kijk dan
+    // eerst of de advertentie er gewoon staat, vóór we een fout melden.
+    (async () => {
+      if (meta.platform === "vinted" && (meta.action || "create") === "create") {
+        const gevonden = await bgVindVintedAdvertentie(meta.payload || meta).catch(() => null);
+        if (gevonden) {
+          console.log(`[Omnivaleur] Tabblad weg, maar de advertentie staat op Vinted (${gevonden.id}) — als geplaatst afgemeld.`);
+          await finaliseJob(meta.serverUrl, meta.jobId, "complete", {
+            platform_listing_id: gevonden.id, platform_listing_url: gevonden.url,
+          }).catch(() => {});
+          return;
+        }
+      }
+      await meldTabblad(meta);
+    })();
+  });
+});
+
+function meldTabblad(meta) {
+    return finaliseJob(meta.serverUrl, meta.jobId, "error", {
+      error: `The tab this ${meta.platform} job was working in was closed before it finished. `
+        + `Nothing was published (or it wasn't confirmed) — check the platform, then publish again, `
+        + `or click the platform icon in the dashboard to mark it as listed.`,
+    }).catch(() => {});
+}
+
+// ── Auto-detect manual publish ─────────────────────────────────────────────
+// When the user manually clicks "Plaatsen" after an error, the tab URL changes
+// to the listing URL. We detect this and auto-complete the job.
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
+  if (!changeInfo.url) return;
+  const key = `jobtab_${tabId}`;
+  const stored = await chrome.storage.local.get(key);
+  const meta = stored[key];
+  if (!meta) return;
+  // OP DE INLOGPAGINA BELAND IN PLAATS VAN OP HET FORMULIER.
+  //
+  // Dan is er niets meer te wachten: ons invulscript luistert alleen op
+  // /plaats/*, dus daar meldt zich nooit iemand en loopt de bewaker drie
+  // minuten leeg. Dat is precies wat Egbert Brouwer 305 keer overkwam. Zeg het
+  // meteen, mét het adres waar het tabblad werkelijk terechtkwam, in plaats van
+  // stilte en daarna een gok.
+  //
+  // GEEN `!meta.scriptSeen` MEER (07-09-2026, gemeten bij Egbert Brouwer). Zijn
+  // 2dehands is een one-page app: het formulier laadt, ons invulscript injecteert
+  // (scriptSeen wordt true), en PAS DAARNA stuurt 2dehands.be de pagina door naar
+  // /identity/v2/login. Met de oude voorwaarde werd die doorverwijzing genegeerd
+  // zodra het script geladen was, en liep de opdracht alsnog drie minuten leeg.
+  // Een sprong naar de inlogpagina is beslissend, of ons script er nu al stond of
+  // niet: een geslaagde plaatsing landt op /v/.../m123 of /seller/view, nooit op
+  // een inlog-URL.
+  if (MP_LOGINPAGINA.test(changeInfo.url)
+      && (meta.platform === "marktplaats" || meta.platform === "2dehands")) {
+    const site = SITE_NAAM[meta.platform] || meta.platform;
+    clearJobWatchdog(tabId);
+    await chrome.storage.local.remove(key);
+    const melding =
+      `The ${site} listing form never opened: that tab was sent to the ${site} login `
+      + `page, so nothing was filled in and nothing was published. ${site} and the other `
+      + `Marktplaats-family sites have separate logins, so being signed in to one does not `
+      + `sign you in here. Open ${site}, sign in, and publish again. `
+      + `[tabblad kwam uit op ${String(changeInfo.url).split("?")[0]}]`;
+    await stopPlatformWachtrij(meta.serverUrl, meta.platform, melding).catch(() => {});
+    await reportError(meta.jobId, meta.serverUrl, melding).catch(() => {});
+    sluitWerkTabblad(tabId);
+    return;
+  }
+
+  // NAAR DE BETAALPAGINA GESTUURD IN PLAATS VAN NAAR DE ADVERTENTIE.
+  //
+  // Zie MP_BETAALPAGINA. Dit moet hier gebeuren en niet in het invulscript: de
+  // plaatsklik navigeert de pagina weg, en daarmee is het invulscript dood
+  // voordat het iets kan melden. De adresbewaking hier is het enige dat de
+  // sprong nog ziet. Meteen melden scheelt bovendien drie minuten stilte per
+  // artikel, en die drie minuten waren precies de tijd waarin de volgende
+  // proefadvertentie alweer in de bestelling belandde.
+  if (MP_BETAALPAGINA.test(changeInfo.url) && betaalmuurRaaktDezeOpdracht(meta)) {
+    console.warn(`[Omnivaleur] ${meta.platform}: tabblad ging naar de betaalpagina `
+      + `(${changeInfo.url}) — het account plaatst hier niet gratis. Kanaal gestopt.`);
+    await meldBetaalmuur(tabId, meta, changeInfo.url);
+    return;
+  }
+
+  // VINTED-BEWERKING OPGESLAGEN, MAAR HET SCRIPT KON HET NIET MEER ZEGGEN
+  // (22-09-2026, klant d25f18a2). Negen prijswijzigingen stonden als "timed out
+  // after 3 minutes" in het dashboard, met als laatste stap "prijs gezet". Op
+  // Vinted zelf stonden alle negen nieuwe prijzen gewoon online (20 → 17,99
+  // enz., om 15:30 nog de oude). De opslagklik stuurt het tabblad weg van
+  // /items/{id}/edit en daarmee sterft het invulscript voordat het JOB_DONE
+  // stuurt; precies wat de create hieronder al beschrijft. Dus: is er op
+  // Opslaan geklikt en landt het tabblad op dezelfde advertentie (niet /edit),
+  // dan ging het opslaan door. Vinted verlaat het bewerkformulier alleen na
+  // een geslaagde opslag.
+  if (meta.platform === "vinted" && meta.action === "content_refresh") {
+    const lid = String(meta.payload?.platform_listing_id || "");
+    const m2 = changeInfo.url.match(/\/items\/(\d+)(?:-[^/?#]*)?(?:[?#]|$)/);
+    if (meta.submitClicked && lid && m2 && m2[1] === lid) {
+      console.log(`[Omnivaleur] Vinted-bewerking ${lid} opgeslagen (tabblad verliet het formulier) — afgemeld.`);
+      clearJobWatchdog(tabId);
+      await chrome.storage.local.remove([key, `job_${meta.platform}`]);
+      await finaliseJob(meta.serverUrl, meta.jobId, "complete", { note: "saved_navigated" });
+      sluitWerkTabblad(tabId, 2000);
+    }
+    return;
+  }
+
+  // 2DEHANDS-BIJWERKING OPGESLAGEN (26-09-2026). Zelfde reden als bij Vinted
+  // hierboven: de opslagklik kan het tabblad wegsturen voordat het script
+  // JOB_DONE stuurt. Zie bewerkingOpgeslagen2dh.
+  if (meta.platform === "2dehands" && meta.action === "content_refresh") {
+    if (bewerkingOpgeslagen2dh(changeInfo.url, meta)) {
+      console.log(`[Omnivaleur] 2dehands-bijwerking ${meta.payload?.platform_listing_id} opgeslagen (tabblad verliet het formulier) — afgemeld.`);
+      clearJobWatchdog(tabId);
+      await chrome.storage.local.remove([key, `job_${meta.platform}`]);
+      await finaliseJob(meta.serverUrl, meta.jobId, "complete",
+        { note: "saved_navigated", verzending_bijgewerkt: true });
+      sluitWerkTabblad(tabId, 2000);
+    }
+    return;
+  }
+
+  // This auto-detect is a safety net for a manual publish — only meaningful for
+  // a create. Other actions are completed by their own content script.
+  if (meta.action && meta.action !== "create") return;
+
+  const url = changeInfo.url;
+  // Vinted listing ids are plain digits (/items/9331465721), so the m-prefixed
+  // Marktplaats/2dehands patterns never match them. Without a Vinted-specific
+  // pattern the create job stays stuck "claimed" after publish, because Vinted's
+  // post-Upload navigation tears down the content script before it can send
+  // JOB_DONE.
+  //
+  // BUT: while the content script is still filling the form, Vinted assigns the
+  // in-progress listing a DRAFT url — /items/{id}/edit or a bare /items/{id} —
+  // long before it's actually published. A loose /items/{digits} match fired on
+  // that draft url, marked the create job "complete" with the draft id, and
+  // closed the tab before anything was really done. A genuinely PUBLISHED Vinted
+  // item always redirects to its slugged canonical url (/items/{id}-{slug}), so
+  // require that hyphen-slug shape: it never matches /items/new, /items/{id}/edit
+  // or a bare draft /items/{id}, only the real post-publish page.
+  //
+  // Die strenge eis geldt alleen zolang de extensie zélf nog bezig is. Zodra een
+  // job aan de gebruiker is teruggegeven (awaitingManualFinish), vult niemand
+  // meer automatisch iets in, en dan is er geen draft-url meer die per ongeluk
+  // kan matchen. Vinted landt na een handmatige "Upload" lang niet altijd op de
+  // slug-url — vaak op een kale /items/{id} — en dan bleef de advertentie in het
+  // dashboard staan als mislukt terwijl hij gewoon online stond. Daarom in die
+  // situatie ook de kale vorm accepteren, maar nooit /items/new of .../edit.
+  // NA EEN HANDMATIGE UPLOAD LANDT VINTED OP DE KAST, NIET OP DE ADVERTENTIE
+  // (31-08-2026, waargenomen: https://www.vinted.com/member/35817973).
+  //
+  // Alle patronen hieronder zoeken een advertentie-id in het adres. Dat adres
+  // krijgt de verkoper na een handmatige "Upload" helemaal niet te zien: hij
+  // wordt naar zijn eigen kastpagina gestuurd. Er viel dus niets te matchen, en
+  // de advertentie bleef in het dashboard staan als niet-geplaatst terwijl hij
+  // gewoon online stond.
+  //
+  // Op die kastpagina weten we het antwoord wél: de garderobe zelf. Die zoeker
+  // koppelt alleen bij PRECIES één kandidaat (zie bgVindVintedAdvertentie), dus
+  // bij twijfel gebeurt er niets — een verkeerde koppeling zou later de
+  // verkeerde advertentie weghalen.
+  if (meta.platform === "vinted" && meta.awaitingManualFinish
+      && /\/member\/\d+/.test(url)) {
+    const zelfGedaan = await bgVindVintedAdvertentie(meta.payload || meta).catch(() => null);
+    if (!zelfGedaan) return;   // niets gevonden: laat de opdracht met rust
+    console.log(`[Omnivaleur] Handmatig geplaatst op Vinted (${zelfGedaan.id}) — alsnog als geplaatst afgemeld.`);
+    clearJobWatchdog(tabId);
+    chrome.storage.local.remove([key, `job_${meta.platform}`]);
+    await finaliseJob(meta.serverUrl, meta.jobId, "complete", {
+      platform_listing_id: zelfGedaan.id, platform_listing_url: zelfGedaan.url,
+    });
+    return;
+  }
+
+  let m;
+  if (meta.platform === "vinted") {
+    m = url.match(/\/items\/(\d+)-[a-z0-9]/i);
+    if (!m && (meta.awaitingManualFinish || meta.submitClicked)) {
+      m = url.match(/\/items\/(\d+)(?:[/?#]|$)/);
+      if (m && /\/items\/\d+\/(edit|new)\b/i.test(url)) m = null;
+    }
+  } else {
+    m = url.match(/\/seller\/view\/(m\d+)/) ||
+         url.match(/\/v\/[^/]+\/(m\d+)/) ||
+         url.match(/[?&](m\d{6,})/) ||
+         url.match(/(m\d{8,})/);
+  }
+  if (!m) return;
+
+  const listingId = m[1];
+
+  // Alleen afmelden als deze advertentie aantoonbaar van deze verkoper is.
+  // Zie de toelichting bij bgVintedEigenAdvertentie: zonder dit werd een
+  // willekeurige advertentie waar de verkoper op klikte afgemeld als de zijne.
+  if (meta.platform === "vinted") {
+    const vanHem = await bgVintedEigenAdvertentie(new URL(url).origin, listingId, meta.payload || meta);
+    if (vanHem === false) {
+      console.log(`[Omnivaleur] /items/${listingId} staat niet in de kast van deze verkoper — niet afgemeld.`);
+      return;
+    }
+  }
+
+  console.log(`[Omnivaleur] Auto-detected listing after publish: ${listingId} (${meta.platform})`);
+
+  // Clear stored job
+  clearJobWatchdog(tabId);
+  chrome.storage.local.remove([key, `job_${meta.platform}`]);
+
+  // Zelfde reden als in getDeleteUrl: /v/listing/{id} is een dode link. Liever
+  // de echte pagina waar we na het plaatsen op staan; kunnen we die niet lezen,
+  // dan de verkoperspagina, want die werkt altijd.
+  const gelandeUrl = /\/v\//.test(url) ? url.split("?")[0] : null;
+  const listingUrl = meta.platform === "marktplaats"
+    ? (gelandeUrl || `https://www.marktplaats.nl/seller/view/${listingId}`)
+    : meta.platform === "2dehands"
+    ? (gelandeUrl || `https://www.2dehands.be/seller/view/${listingId}`)
+    : meta.platform === "vinted"
+    ? `${new URL(url).origin}/items/${listingId}`
+    : null;
+
+  // Critical path: this is the ONLY completion signal for a create job, and a
+  // create is not retry-safe server-side — a lost completion gets surfaced to
+  // the user as a possible duplicate. Retry hard, and queue if still unsent.
+  await finaliseJob(meta.serverUrl, meta.jobId, "complete", {
+    platform_listing_id: listingId, platform_listing_url: listingUrl,
+  });
+
+  sluitWerkTabblad(tabId, 2000);
+});
+
+// ── Autonomous sold detection + cross-platform delist ─────────────────────
+// Every poll cycle also checks for sold items and triggers auto-delist.
+chrome.alarms.create("sold-check", { periodInMinutes: 10 });
+// En meteen op de juiste stand zetten als Calm mode aan staat.
+calmAlarmBijwerken();
+chrome.runtime.onStartup.addListener(() => { calmAlarmBijwerken(); });
+chrome.runtime.onInstalled.addListener(() => { calmAlarmBijwerken(); });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "sold-check") {
+    // Niet vlak na het opstarten (dan doet de wekker start-sold het) en niet
+    // tijdens het werken van de verkoper — zie magStilScannenNu.
+    teVroegNaStart(3).then((vroeg) => (vroeg ? false : magStilScannenNu()))
+      .then((mag) => { if (mag) { checkSoldListings(); checkVintedOrders(); } });
+  }
+});
+
+// Vinted has no webhook and no server-side polling (a stale session once let
+// server-side Vinted polling mass-delist live listings by mistake, so that
+// path stays permanently disabled). The only reliable, safe signal for "this
+// Vinted item sold" is the extension's own wardrobe scan, run from the
+// user's real logged-in session. Without a recurring trigger, that scan only
+// ever ran when the user manually clicked "scan" — so a Vinted sale could sit
+// undetected (and the item still listed elsewhere) indefinitely. This queues
+// a scan job every hour; the existing 15s job poller picks it up and runs it
+// like any other job, and the backend reconciles sold items once it completes.
+chrome.alarms.create("vinted-auto-scan", { periodInMinutes: 60 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "vinted-auto-scan") triggerVintedAutoScan();
+});
+
+
+// Alarms only fire after their first period, so kick a sold-check once on
+// startup too (delayed a little so auth/session is ready).
+function kickSoldCheck() { /* zie START_WEKKERS: gebeurt via de wekker start-sold */ }
+chrome.runtime.onInstalled.addListener(kickSoldCheck);
+chrome.runtime.onStartup.addListener(kickSoldCheck);
+
+async function triggerVintedAutoScan() {
+  try {
+    const serverUrl = await getServerUrl();
+    const headers = await getAuthHeaders();
+    if (!headers.Authorization) return; // not logged into the extension yet
+    await fetch(`${serverUrl}/api/scan/vinted`, { method: "POST", headers });
+    // Job is now pending — the regular 15s pollJobs() loop dispatches it.
+  } catch (e) {
+    console.error("[Omnivaleur] vinted-auto-scan trigger failed:", e);
+  }
+}
+
+async function checkSoldListings() {
+  const serverUrl = await getServerUrl();
+  const soldUrls = {
+    marktplaats: "https://www.marktplaats.nl/mijn-marktplaats/advertenties",
+    "2dehands":  "https://www.2dehands.be/mijn-2dehands/advertenties",
+  };
+
+  for (const [platform, soldUrl] of Object.entries(soldUrls)) {
+    try {
+      // Fetch active listings for this platform from backend
+      const authHeaders = await getAuthHeaders();
+      const resp = await fetch(`${serverUrl}/api/listings/?platform=${platform}`, { headers: authHeaders }).catch(() => null);
+      if (!resp?.ok) {
+        console.warn(`[Omnivaleur][sold] ${platform}: could not fetch active listings (HTTP ${resp?.status || "no response"}) — skipping`);
+        continue;
+      }
+      const allListings = await resp.json();
+      // Ook 'hidden' en 'relisting': ook zo'n advertentie kan gewoon verkocht
+      // zijn, en die verkoop werd tot nu toe nooit opgemerkt.
+      const active = allListings.filter(l =>
+        l.platform === platform && ["active", "hidden", "relisting"].includes(l.status));
+      const withId = active.filter(l => l.platform_listing_id);
+      const withoutId = active.filter(l => !l.platform_listing_id);
+      console.log(`[Omnivaleur][sold] ${platform}: ${active.length} active listings (${withId.length} with a platform id, ${withoutId.length} without an id → matched by title)`);
+      if (!active.length) continue;
+
+      // Scrape the ads overview and read each ad's SOLD marker. We only act on a
+      // POSITIVE "verkocht/gereserveerd" label — never on a listing merely being
+      // absent, which on Marktplaats also means "expired" (auto-relisted later)
+      // and would wrongly delist a still-live item everywhere. Fail-safe: if no
+      // ad shows a sold label, nothing happens.
+      console.log(`[Omnivaleur][sold] ${platform}: opening sold-overview ${soldUrl}`);
+      const ads = await scrapeMarktplaatsAds(soldUrl, platform);
+      const soldAds = ads.filter(a => a.sold);
+      const soldIds = new Set(soldAds.map(a => a.id).filter(Boolean));
+      // Titels van verkochte advertenties, genormaliseerd voor een 1-op-1
+      // vergelijking (voor advertenties zonder opgeslagen nummer). Komt een titel
+      // twee keer voor, dan is hij als sleutel onbruikbaar — dan liever niets
+      // boeken dan het verkeerde item verkocht melden.
+      const normTitle = s => (s || "")
+        .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/^\s*\([^)]{1,24}\)\s*/, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+      const soldTitleCount = new Map();
+      for (const a of soldAds) {
+        const t = normTitle(a.title);
+        if (t) soldTitleCount.set(t, (soldTitleCount.get(t) || 0) + 1);
+      }
+      const soldTitles = soldAds.map(a => (a.title || "").toLowerCase().trim()).filter(Boolean);
+      console.log(`[Omnivaleur][sold] ${platform}: ${ads.length} ad cards scraped, ${soldAds.length} carry a sold/reserved label`);
+
+      // ADVERTENTIES DIE HELEMAAL NIET IN HET OVERZICHT STAAN.
+      //
+      // Bij een zakelijk account staan de advertenties niet op de gewone "Mijn
+      // advertenties"-pagina. Gemeten bij een verkoper met 1.221 advertenties:
+      // geen enkele stond in dat overzicht, dus werd er ook nooit een verkoop
+      // opgemerkt en bleef het item op alle andere kanalen gewoon te koop staan.
+      //
+      // Voor die advertenties kijken we op hun eigen pagina. Alleen een expliciet
+      // "verkocht" of "gereserveerd" telt; enkel verdwenen zijn telt niet, want
+      // dat betekent op Marktplaats ook "verlopen" en dan zou een nog levend item
+      // overal worden weggehaald.
+      const gezien = new Set(ads.map(a => a.id).filter(Boolean));
+      // HARDE VOORWAARDE. Leverde het overzicht geen enkele advertentie op, dan
+      // weten we niet of er advertenties ontbreken of dat de pagina niet geladen
+      // is (uitgelogd, opmaak gewijzigd, trage verbinding). Dan lijkt ALLES
+      // verdwenen en zouden we de verkoper honderden verkoopvragen sturen.
+      // Absentie zegt alleen iets als we echt gekeken hebben.
+      if (!ads.length) {
+        console.warn(`[Omnivaleur][sold] ${platform}: het overzicht gaf 0 advertenties — deze ronde wordt niets als verdwenen geteld.`);
+      } else {
+        const gemist = withId.filter(l => !gezien.has(l.platform_listing_id));
+        const staat = await verdenkingen();
+        // Advertenties die we WEL terugzagen: elke verdenking daarop vervalt.
+        for (const l of withId) {
+          if (gezien.has(l.platform_listing_id)) delete staat[`${platform}:${l.platform_listing_id}`];
+        }
+        if (gemist.length) {
+          console.log(`[Omnivaleur][sold] ${platform}: ${gemist.length} advertentie(s) niet in het overzicht — eigen pagina nakijken`);
+          // Niet het hele bestand per beurt: dat zijn duizenden aanvragen. Een
+          // vaste hap per ronde houdt het rustig. Wél elke ronde een STUK
+          // VERDEROP, anders werden bij een groot account eeuwig dezelfde
+          // veertig nagekeken en kwam de rest nooit aan de beurt.
+          const HAP = 40;
+          const startSleutel = `mogelijk_verkocht_start_${platform}`;
+          let start = 0;
+          try { start = (await chrome.storage.local.get(startSleutel))?.[startSleutel] || 0; } catch (_) {}
+          if (start >= gemist.length) start = 0;
+          const beurt = gemist.slice(start, start + HAP);
+          try { await chrome.storage.local.set({ [startSleutel]: start + beurt.length }); } catch (_) {}
+
+          const teBevestigen = [];
+          const tellers = { verkocht: 0, verlopen: 0, weg: 0, leeft: 0, onbekend: 0 };
+          let nagekeken = 0;
+          for (const l of beurt) {
+            // Rustig aan: veertig aanvragen achter elkaar op volle snelheid is
+            // precies waar Marktplaats met een 403 op reageert.
+            if (nagekeken) await new Promise(r => setTimeout(r, 250));
+            const sleutel = `${platform}:${l.platform_listing_id}`;
+            const oordeel = await bekijkEigenPagina(platform, l.platform_listing_id);
+            nagekeken++;
+            tellers[oordeel] = (tellers[oordeel] || 0) + 1;
+            const regel = { item_id: l.item_id, platform,
+                            platform_listing_id: l.platform_listing_id,
+                            title: l.title };
+            if (oordeel === "verkocht") {
+              // Bewijs op de pagina zelf. Geen tweede ronde nodig.
+              delete staat[sleutel];
+              teBevestigen.push({ ...regel, reden: "label" });
+            } else if (oordeel === "verlopen") {
+              // De advertentie zegt zelf dat hij verlopen is. Dat is bewijs, dus
+              // geen tweede ronde — en het is geen verkoop, dus de server maakt
+              // er geen vraag van maar archiveert hem. Zie bekijkEigenPagina.
+              delete staat[sleutel];
+              teBevestigen.push({ ...regel, reden: "verlopen" });
+            } else if (oordeel === "weg") {
+              const eerder = staat[sleutel];
+              const nu = Date.now();
+              if (eerder && nu - eerder.eerst >= VERDENKING_MIN_MINUTEN * 60000) {
+                delete staat[sleutel];
+                teBevestigen.push({ ...regel, reden: "weg" });
+              } else if (!eerder) {
+                staat[sleutel] = { eerst: nu, n: 1 };
+              }
+            } else {
+              // "leeft" of "onbekend": niets bewezen, dus geen verdenking laten
+              // staan die op een storing of op een nog levende advertentie berust.
+              delete staat[sleutel];
+            }
+            // Vijf keer achter elkaar niets kunnen vaststellen betekent dat er
+            // iets mis is met de sessie of de verbinding, niet dat er advertenties
+            // verdwenen zijn. Dan deze ronde stoppen in plaats van doorbeuken.
+            if (nagekeken >= 5 && tellers.onbekend === nagekeken) {
+              console.warn(`[Omnivaleur][sold] ${platform}: eerste ${nagekeken} pagina's gaven geen uitsluitsel (uitgelogd of geblokkeerd) — ronde afgebroken.`);
+              break;
+            }
+          }
+          await verdenkingenOpslaan(staat);
+          console.log(`[Omnivaleur][sold] ${platform}: ${beurt.length} eigen pagina(s) nagekeken vanaf ${start} →`, tellers);
+          if (teBevestigen.length) {
+            // Melden, niet afmelden. De verkoper bevestigt het zelf in het
+            // dashboard; pas dan gaat het item van de andere kanalen af.
+            console.log(`[Omnivaleur][sold] ${platform}: ${teBevestigen.length} advertentie(s) ter bevestiging doorgegeven`);
+            await meldMogelijkeVerkopen(serverUrl, teBevestigen);
+          }
+        } else {
+          await verdenkingenOpslaan(staat);
+        }
+      }
+
+      if (!soldAds.length) continue;
+
+      // SINDS 07-09-2026 (Daniel): een "verkocht"-label op de Marktplaats-/
+      // 2dehands-advertentie MELDEN we ter bevestiging, we boeken en verwijderen
+      // niet meteen. Een handverkoop is voor die platforms geen harde melding —
+      // een verkochte advertentie ziet er vaak net zo uit als een verlopen — en
+      // het artikel van álle andere kanalen afhalen is onherstelbaar. De
+      // verkoper bevestigt het zelf in het dashboard (zelfde ja/nee-vraag als
+      // bij een verdwenen advertentie). Een echte order op Shopify/eBay blijft
+      // wél automatisch, want daar staat een koper met een bon achter.
+      const teMelden = [];
+      for (const listing of active) {
+        // Match a sold ad either by exact platform id, or — for listings without
+        // an id — by a resilient title match against a POSITIVELY sold ad. We
+        // NEVER infer a sale from absence; only a positive sold label acts.
+        let isSold = listing.platform_listing_id && soldIds.has(listing.platform_listing_id);
+        // Zonder platform-id: eerst de SKU-prefix "(1337)" waarmee elke door deze
+        // app geplaatste advertentie begint — exact en uniek. Pas daarna de
+        // titelvergelijking, die op vertaalde of afgekapte titels kan missen.
+        const listingSku = listing.sku
+          || (/^\s*\(([^)]{1,24})\)/.exec(listing.title || "") || [])[1] || "";
+        if (!isSold && !listing.platform_listing_id && listingSku) {
+          const needle = `(${String(listingSku).trim().toLowerCase()})`;
+          isSold = soldTitles.some(st => st.startsWith(needle));
+          if (isSold) console.log(`[Omnivaleur][sold] ${platform}: matched sold ad by SKU ${listingSku} for "${listing.title}" (no platform id)`);
+        }
+        if (!isSold && !listing.platform_listing_id && listing.title) {
+          // 1-op-1 op de titel, en alleen als die titel bij precies één verkochte
+          // advertentie hoort. (Vroeger: eerste 20 tekens met "bevat" — dat kon
+          // het verkeerde item als verkocht boeken.)
+          const key = normTitle(listing.title);
+          isSold = !!key && soldTitleCount.get(key) === 1;
+          if (isSold) console.log(`[Omnivaleur][sold] ${platform}: matched sold ad by TITLE for "${listing.title}" (no platform id)`);
+        }
+        if (isSold) {
+          teMelden.push({
+            item_id: listing.item_id, platform,
+            platform_listing_id: listing.platform_listing_id || null,
+            title: listing.title, reden: "label",
+          });
+        }
+      }
+      if (teMelden.length) {
+        console.log(`[Omnivaleur][sold] ${platform}: ${teMelden.length} advertentie(s) met verkocht-label → ter bevestiging aan de verkoper`);
+        await meldMogelijkeVerkopen(serverUrl, teMelden);
+      }
+    } catch (e) {
+      console.error(`[Omnivaleur][sold] sold-check error (${platform}):`, e);
+    }
+  }
+}
+
+// Scrape each ad card on the Marktplaats/2dehands "my ads" overview and report
+// whether it carries an explicit SOLD/RESERVED label. Returns [{id, title, sold}].
+// The title lets us match sold ads to listings that have no platform id.
+// Staat DEZE advertentie als verkocht of gereserveerd op haar eigen pagina?
+//
+// Voor verkopers van wie de advertenties niet in het gewone overzicht staan —
+// zakelijke accounts. Alleen de pagina ophalen, geen tabblad en geen klikken.
+//
+// BEWUST GEEN AUTOMATISCHE AFMELDING OP DEZE UITKOMST.
+// Een verkeerde "verkocht" haalt het item van alle andere kanalen af, en dat is
+// onherstelbaar werk voor de verkoper. De opmaak van een verkochte advertentie
+// op deze pagina is niet nagekeken: zonder ingelogde zakelijke sessie geeft hij
+// 401, dus er is geen enkel echt voorbeeld om tegen te toetsen. Tot dat er is
+// wordt de uitkomst alleen gemeld, zodat de verkoper het zelf bevestigt.
+// Raden op een pagina die je nooit gezien hebt is precies hoe je iemands
+// voorraad sloopt.
+async function meldMogelijkeVerkopen(serverUrl, regels) {
+  try {
+    const headers = await getAuthHeaders();
+    if (!headers.Authorization) return;
+    await fetch(`${serverUrl}/api/listings/possibly-sold`, {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ listings: regels }),
+    });
+  } catch (e) {
+    console.warn("[Omnivaleur][sold] mogelijke verkopen niet doorgegeven:", e);
+  }
+}
+
+// Wat zegt de advertentie zelf? Vijf uitkomsten, bewust uit elkaar gehouden —
+// ze leiden tot heel verschillende conclusies:
+//
+//   "verkocht"  De pagina draagt zelf het label verkocht/gereserveerd. Het
+//               sterkste bewijs dat er is; hier hoeft niets bevestigd te worden
+//               met een tweede ronde.
+//   "verlopen"  De pagina zegt zélf dat de advertentie verlopen is ("Dit
+//               zoekertje is helaas verlopen", of het verlopen-blok dat beide
+//               platforms eromheen zetten). Dat is GEEN verkoop en hoort dus
+//               nooit als verkoopvraag bij de verkoper terecht te komen.
+//   "weg"       De advertentie bestaat niet meer en de pagina zegt niet waarom
+//               (404, of doorgestuurd naar iets anders dan deze advertentie).
+//               Dat kan verkocht zijn, maar ook zelf weggehaald — dus vragen.
+//   "leeft"     Staat er nog gewoon. Elke verdenking vervalt.
+//   "onbekend"  401/403 (zakelijk account zonder sessie), serverfout, of geen
+//               verbinding. Niets bewezen, dus niets doen — en vooral geen
+//               verdenking laten staan die op een storing berust.
+//
+// WAAROM "verlopen" APART STAAT (19-09-2026, Lynn van De Juiste Toon).
+// Zij kreeg tientallen keren "Not found on the platform any more" te zien bij
+// zoekertjes die ze daarna gewoon terugvond op 2dehands. Allebei waar: de
+// advertentie is van de zoekresultaten af, maar haar eigen pagina staat er nog
+// mét foto's en tekst, met het stempel VERLOPEN erop. Gemeten op haar account:
+// van de 74 gemelde 2dehands-zoekertjes gaven er 55 een HTTP 410 met precies
+// die tekst erop, en nul van de vijf bewezen levende advertenties deed dat.
+// Verlopen is geen verkoop, dus het is ook geen vraag.
+// Zelfde meting als bij WEG_TEKST_BRON: "advertentie is helaas verlopen" (en op
+// 2dehands "zoekertje is helaas verlopen") viel hier buiten, dus een verlopen
+// advertentie gold als "leeft".
+const NIET_MEER_BESCHIKBAAR = new RegExp(WEG_MARKER_BRON + "|" + WEG_TEKST_BRON);
+// Alleen het bewijs dat de advertentie VERLOPEN is, niet "weg" in het algemeen.
+// Het blok eromheen (taalonafhankelijk, gemeten op beide kanten) en de zin die
+// Marktplaats en 2dehands erin zetten.
+const IS_VERLOPEN = new RegExp(
+  WEG_MARKER_BRON + "|(advertentie|zoekertje)\\s*(is)?\\s*(helaas)?\\s*verlopen");
+
+async function bekijkEigenPagina(platform, advertentieId) {
+  if (!advertentieId) return "onbekend";
+  const basis = platform === "marktplaats" ? "https://www.marktplaats.nl" : "https://www.2dehands.be";
+  const url = `${basis}/seller/view/${advertentieId}`;
+  try {
+    const r = await fetch(url, { credentials: "include", redirect: "follow" });
+    // 410 is precies wat een verlopen advertentie geeft, en de pagina zelf zegt
+    // het er nog bij. Die tekst NIET lezen was de fout: dan ging een verlopen
+    // zoekertje als "misschien verkocht" de deur uit.
+    if (r.status === 404 || r.status === 410) {
+      let body = "";
+      try { body = (await r.text()).toLowerCase(); } catch (_) { body = ""; }
+      return IS_VERLOPEN.test(body) ? "verlopen" : "weg";
+    }
+    if (!r.ok) return "onbekend";                  // 401/403/5xx: niets bewezen
+    // Doorgestuurd naar iets anders dan deze advertentie (meestal de homepage of
+    // een zoekpagina) betekent bij Marktplaats: deze advertentie bestaat niet meer.
+    if (r.redirected && !String(r.url || "").includes(String(advertentieId))) return "weg";
+    const html = (await r.text()).toLowerCase();
+    // Het label eerst: dat is bewijs, de rest is gevolgtrekking.
+    if (/(^|[^a-z])(verkocht|gereserveerd)([^a-z]|$)/.test(html)
+        && !/verkochte\s+artikelen|verkocht\?|meld het/.test(html)) return "verkocht";
+    if (IS_VERLOPEN.test(html)) return "verlopen";
+    if (NIET_MEER_BESCHIKBAAR.test(html)) return "weg";
+    // Een echte advertentiepagina noemt het advertentienummer. Staat dat er niet
+    // in, dan kijken we niet naar deze advertentie en concluderen we niets.
+    return html.includes(String(advertentieId).toLowerCase()) ? "leeft" : "onbekend";
+  } catch (e) {
+    return "onbekend";                             // niets bewezen is geen verkoop
+  }
+}
+
+// ── Verdenkingen die twee rondes moeten standhouden ────────────────────────
+// "Weg" is het zwakke signaal: een hik in het ophalen, een uitgelogde sessie of
+// een trage pagina mag nooit tot een verkoopvraag leiden. Daarom telt een
+// advertentie pas als "mogelijk verkocht" wanneer hij in TWEE aparte rondes,
+// minstens een half uur uit elkaar, verdwenen was. Ziet een ronde hem weer
+// staan, dan vervalt de telling meteen.
+const VERDENKING_SLEUTEL = "mogelijk_verkocht_verdenkingen";
+const VERDENKING_MIN_MINUTEN = 30;
+const VERDENKING_VERVALT_DAGEN = 14;
+
+async function verdenkingen() {
+  try {
+    const o = await chrome.storage.local.get(VERDENKING_SLEUTEL);
+    return o?.[VERDENKING_SLEUTEL] && typeof o[VERDENKING_SLEUTEL] === "object" ? o[VERDENKING_SLEUTEL] : {};
+  } catch (_) { return {}; }
+}
+
+async function verdenkingenOpslaan(staat) {
+  const grens = Date.now() - VERDENKING_VERVALT_DAGEN * 86400000;
+  for (const [k, v] of Object.entries(staat)) {
+    if (!v || !v.eerst || v.eerst < grens) delete staat[k];
+  }
+  try { await chrome.storage.local.set({ [VERDENKING_SLEUTEL]: staat }); } catch (_) {}
+}
+
+function scrapeMarktplaatsAds(url, platform) {
+  return new Promise((resolve) => {
+    stilTabblad(url, (tab) => {
+      if (!tab) { resolve([]); return; }
+      const tabId = tab.id;
+
+      const onUpdated = (id, info) => {
+        if (id !== tabId || info.status !== "complete") return;
+        chrome.tabs.onUpdated.removeListener(onUpdated);
+
+        chrome.scripting.executeScript({
+          target: { tabId },
+          world: "MAIN",
+          func: () => {
+            const byId = {};
+            document.querySelectorAll('a[href]').forEach(a => {
+              const m = a.href.match(/\/(m\d{6,})/);
+              if (!m) return;
+              const id = m[1];
+              const card = a.closest('article, li, [class*="listing" i], [class*="ad" i]') || a.parentElement || a;
+              const raw = card.innerText || "";
+              const text = raw.toLowerCase();
+              const sold = /\bverkocht\b|\bgereserveerd\b|\bsold\b|\breserved\b/.test(text);
+              // Prefer the link's own text as the title, fall back to the card's first line.
+              const title = (a.innerText || raw.split("\n")[0] || "").trim();
+              const prev = byId[id];
+              if (!prev) byId[id] = { id, title, sold };
+              else { if (sold) prev.sold = true; if (!prev.title && title) prev.title = title; }
+            });
+            const ads = Object.values(byId);
+            // Diagnostic: if NOTHING shows a sold label, capture what the page
+            // structure / section labels actually look like so we can confirm
+            // whether sold ads even live on this view (they may sit behind a
+            // separate status filter/tab). Also dump a couple of raw card texts.
+            let diag = null;
+            if (!ads.some(x => x.sold)) {
+              const labels = [...document.querySelectorAll('nav a, [role="tab"], button, [class*="tab" i], [class*="filter" i]')]
+                .map(el => (el.innerText || "").replace(/\s+/g, " ").trim())
+                .filter(t => t && t.length < 40).slice(0, 25);
+              const sampleCards = [...document.querySelectorAll('article, li[class*="listing" i], [class*="ad" i]')]
+                .map(el => (el.innerText || "").replace(/\s+/g, " ").trim()).filter(Boolean).slice(0, 3);
+              diag = { pageTitle: document.title, tabOrFilterLabels: labels, sampleCards };
+            }
+            return { ads, diag };
+          },
+        }, (results) => {
+          sluitWerkTabblad(tabId);
+          const out = results?.[0]?.result || { ads: [], diag: null };
+          const ads = out.ads || [];
+          console.log(`[Omnivaleur][sold] ${platform}: scraper found ${ads.length} ad cards (sold-labelled: ${ads.filter(a => a.sold).length})`);
+          if (out.diag) {
+            console.warn(`[Omnivaleur][sold] ${platform}: ZERO sold labels on this page. This is the PRIME SUSPECT — sold ads may live behind a separate status filter/tab, so this default overview never shows them. Page structure follows so we can find the right view:`);
+            console.warn(`[Omnivaleur][sold] ${platform}: tab/filter labels on page:`, out.diag.tabOrFilterLabels);
+            console.warn(`[Omnivaleur][sold] ${platform}: sample raw card text:`, out.diag.sampleCards);
+          }
+          resolve(ads);
+        });
+      };
+
+      chrome.tabs.onUpdated.addListener(onUpdated);
+      setTimeout(() => {
+        chrome.tabs.onUpdated.removeListener(onUpdated);
+        sluitWerkTabblad(tabId);
+        resolve([]);
+      }, 30000);
+    });
+  });
+}
+
+// ── Vinted sales from the seller's own "My orders → Sold" page ─────────────
+// Authoritative (Vinted itself says the order sold) and carries the amount
+// actually received — far better than inferring a sale from a wardrobe
+// disappearance. Each order's title embeds our "(1234)" SKU, which the backend
+// matches EXACTLY + uniquely, so a bad scrape can't touch the wrong item.
+async function checkVintedOrders() {
+  try {
+    const serverUrl = await getServerUrl();
+    const authHeaders = await getAuthHeaders();
+    if (!authHeaders.Authorization) return; // not logged into the extension yet
+    const ordersUrl = "https://www.vinted.nl/my_orders";
+    console.log(`[Omnivaleur][sold] Vinted: opening orders page ${ordersUrl}`);
+    const orders = await scrapeVintedOrders(ordersUrl);
+    console.log(`[Omnivaleur][sold] Vinted: ${orders.length} order(s) with a parseable (SKU) scraped:`, orders);
+    if (!orders.length) {
+      console.warn("[Omnivaleur][sold] Vinted: no orders scraped — either no sales, not logged in, or the orders-page selectors no longer match (see scraper logs above)");
+      return;
+    }
+    // Re-fetch headers here (not the ones captured before the multi-second
+    // scrape): getAuthHeaders proactively refreshes, so the POST always goes out
+    // with a token that isn't about to expire — this is what fixed the
+    // "reconcile → 401 Sessie verlopen" the scan kept hitting.
+    const postHeaders = await getAuthHeaders();
+    const r = await fetch(`${serverUrl}/api/listings/reconcile-vinted-orders`, {
+      method: "POST",
+      headers: postHeaders,
+      body: JSON.stringify({ orders }),
+    }).catch(e => { console.error("[Omnivaleur][sold] Vinted reconcile POST failed:", e); return null; });
+    let bodyText = "";
+    try { bodyText = r ? await r.text() : ""; } catch (_) {}
+    console.log(`[Omnivaleur][sold] Vinted: POST /api/listings/reconcile-vinted-orders → HTTP ${r?.status ?? "no response"} body=${bodyText}`);
+  } catch (e) {
+    console.error("[Omnivaleur][sold] checkVintedOrders error:", e);
+  }
+}
+
+function scrapeVintedOrders(url) {
+  return new Promise((resolve) => {
+    stilTabblad(url, (tab) => {
+      if (!tab) { resolve([]); return; }
+      const tabId = tab.id;
+
+      const onUpdated = (id, info) => {
+        if (id !== tabId || info.status !== "complete") return;
+        chrome.tabs.onUpdated.removeListener(onUpdated);
+
+        // Give the SPA a moment to render the orders list, then scrape.
+        setTimeout(() => {
+          chrome.scripting.executeScript({
+            target: { tabId },
+            world: "MAIN",
+            func: () => {
+              // Each order row links to its conversation (/inbox/…). Vinted has,
+              // however, changed this markup before, so we look for order rows via
+              // several selectors and de-duplicate. A row only ever counts as a
+              // sale when it has a parseable "(1234)" SKU AND is not cancelled/
+              // refunded — so a broader net can't create a false positive.
+              const selectors = [
+                'a[href*="/inbox/"]',
+                'a[href*="/order"]',
+                'a[href*="/transaction"]',
+                '[class*="order" i]',
+                '[data-testid*="order" i]',
+              ];
+              const anchors = new Set();
+              const selectorHits = {};
+              selectors.forEach(sel => {
+                const found = document.querySelectorAll(sel);
+                selectorHits[sel] = found.length;
+                found.forEach(el => anchors.add(el));
+              });
+
+              // De datum die Vinted bij de bestelling toont. ZONDER deze datum
+              // krijgt elke bestelling die wij voor het eerst zien de klok van
+              // dit moment — en dan landt na een stille periode de omzet van
+              // weken op één dag (gemeten 30-08-2026: twaalf verkopen binnen
+              // twaalf seconden). Meerdere kandidaten, van hard naar zacht: het
+              // datetime-attribuut is machineleesbaar, een title-attribuut komt
+              // daarna, dan de tekst van een datumveld. De server neemt de eerste
+              // die hij met zekerheid kan lezen en gokt nooit.
+              const datumKandidaten = (row) => {
+                const uit = [];
+                row.querySelectorAll('time[datetime]').forEach(t => uit.push(t.getAttribute('datetime')));
+                row.querySelectorAll('time, [datetime], [title], [data-testid*="date" i], [class*="date" i], [class*="time" i]').forEach(el => {
+                  const attr = el.getAttribute('datetime') || el.getAttribute('title');
+                  if (attr) uit.push(attr);
+                  const txt = (el.innerText || "").replace(/\s+/g, " ").trim();
+                  if (txt && txt.length <= 40) uit.push(txt);
+                });
+                return [...new Set(uit.filter(Boolean))].slice(0, 8);
+              };
+
+              const rows = {};
+              anchors.forEach(el => {
+                const row = el.closest('div, li, article') || el;
+                const text = (row.innerText || el.innerText || "").replace(/\s+/g, " ").trim();
+                if (!text) return;
+                const skuM = text.match(/\((\d{3,6})\)/);
+                // Zonder "(1234)" in de tekst was deze rij tot nu toe waardeloos:
+                // verkopers die geen nummer in hun titel zetten hadden hier dus
+                // nooit iets aan. Nu gaat de hele rijtekst mee en zoekt de server
+                // er de bijbehorende titel bij (alleen als die uniek is).
+                const priceM = text.match(/€\s?(\d+(?:[.,]\d{2})?)/);
+                const cancelled = /cancel|refund|geannuleerd|terugbetaal|retour/i.test(text);
+                const sold = !cancelled;
+                const key = skuM ? `sku:${skuM[1]}` : `txt:${text.slice(0, 160)}`;
+                const entry = {
+                  sku: skuM ? skuM[1] : null,
+                  text: text.slice(0, 300),
+                  price: priceM ? priceM[1] : null,
+                  date: datumKandidaten(row),
+                  sold,
+                };
+                const prev = rows[key];
+                // Keep the sold entry (with price) over a cancelled one for the same row.
+                if (!prev || (sold && !prev.sold)) {
+                  rows[key] = entry;
+                } else if (sold && prev.sold) {
+                  if (!prev.price && priceM) prev.price = priceM[1];
+                  if (!prev.date?.length && entry.date.length) prev.date = entry.date;
+                }
+              });
+              return { orders: Object.values(rows), selectorHits, rowCandidates: anchors.size };
+            },
+          }, (results) => {
+            sluitWerkTabblad(tabId);
+            const out = results?.[0]?.result || { orders: [], selectorHits: {}, rowCandidates: 0 };
+            const orders = out.orders || [];
+            console.log(`[Omnivaleur][sold] Vinted: selector hits`, out.selectorHits, `→ ${out.rowCandidates} candidate row(s), ${orders.length} order row(s) (${orders.filter(o => o.sku).length} with a (SKU), sold: ${orders.filter(o => o.sold).length}, met datum: ${orders.filter(o => o.date?.length).length})`);
+            if (orders.length && !orders.some(o => o.date?.length)) {
+              console.warn("[Omnivaleur][sold] Vinted: GEEN datumveld gevonden op de bestellingenpagina. Nieuwe verkopen krijgen dan de datum van vandaag; de opmaak van de pagina is waarschijnlijk gewijzigd.");
+            }
+            resolve(orders);
+          });
+        }, 2500);
+      };
+
+      chrome.tabs.onUpdated.addListener(onUpdated);
+      setTimeout(() => {
+        chrome.tabs.onUpdated.removeListener(onUpdated);
+        sluitWerkTabblad(tabId);
+        resolve([]);
+      }, 30000);
+    });
+  });
+}
+
+// ── Activity notifications: unread messages + open bids/offers ────────────
+// The marketplaces we automate have no seller API for messages/bids, so the
+// only reliable read is the user's own logged-in session. Every 15 min we open
+// each platform's messages page in a background tab, read the unread badge and
+// bid indicators from the DOM, and report the counts to the backend so the
+// dashboard can surface "3 new offers on Marktplaats" in one place. We never
+// read message CONTENTS — only counts. Reply/accept still happens on-platform.
+const NOTIF_SCAN_MINUTES = 10;
+
+// Where to open the messages/bids view per platform, and the deep link we hand
+// the dashboard so the user can jump straight there. (Vinted's inbox lives at
+// /inbox — /member/messages 404s.)
+const NOTIF_SOURCES = {
+  marktplaats: "https://www.marktplaats.nl/messages",
+  "2dehands": "https://www.2dehands.be/messages",
+};
+
+chrome.alarms.create("notif-scan", { periodInMinutes: NOTIF_SCAN_MINUTES });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "notif-scan") {
+    teVroegNaStart(5).then((vroeg) => vroeg ? false : magStilScannenNu())
+      .then((mag) => { if (mag) scanNotifications(); });
+  }
+});
+
+
+
+async function scanNotifications() {
+  const serverUrl = await getServerUrl();
+  const headers = await getAuthHeaders();
+  if (!headers.Authorization) return; // not logged into the extension yet
+
+  const melden = async (platform, counts, deepLink) => {
+    if (!counts) return; // niet ingelogd / niet gelezen — vorige stand laten staan
+    await fetch(`${serverUrl}/api/notifications/report`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        platform,
+        messages: counts.messages,
+        offers: counts.offers,
+        deep_link: deepLink,
+      }),
+    }).catch((e) => console.error(`[Omnivaleur] notif report failed (${platform}):`, e));
+  };
+
+  // Vinted heeft er geen tabblad voor nodig: de inbox is een gewone JSON-oproep
+  // met dezelfde inlog als de browser. Dat scheelt niet alleen een tabblad elk
+  // kwartier — het lost ook een echte fout op. De scan opende altijd vinted.nl,
+  // terwijl een Belgische verkoper op vinted.be zit. Daar was hij niet ingelogd,
+  // dus kwam er nooit een getal binnen en bleef "Berichten" leeg terwijl er wél
+  // berichten stonden.
+  try {
+    const v = await bgVintedInbox();
+    if (v) await melden("vinted", v.counts, `${v.origin}/inbox`);
+  } catch (e) {
+    console.error("[Omnivaleur] notif-scan error (vinted):", e);
+  }
+
+  for (const [platform, url] of Object.entries(NOTIF_SOURCES)) {
+    try {
+      const counts = await scrapeNotificationCounts(url, platform);
+      await melden(platform, counts, url);
+      await meldVerkochtUitBerichten(serverUrl, headers, platform, counts?.sold);
+    } catch (e) {
+      console.error(`[Omnivaleur] notif-scan error (${platform}):`, e);
+    }
+  }
+}
+
+// De verkocht-badges uit de berichtenlijst doorgeven. Dit is de enige plek waar
+// Marktplaats een handmatige verkoop wél hardop zegt: op de advertentie zelf
+// komt nooit een label te staan, want die haal je gewoon weg.
+//
+// Alleen doorgeven, niet beslissen. De server kijkt of het artikel nog ergens te
+// koop staat en boekt alleen dan — een gesprek van maanden geleden houdt zijn
+// badge voor eeuwig, dus zonder die controle zou elke ronde dezelfde oude
+// verkopen opnieuw melden.
+async function meldVerkochtUitBerichten(serverUrl, headers, platform, sold) {
+  if (!Array.isArray(sold) || !sold.length) return;
+  console.log(`[Omnivaleur][sold] ${platform}: ${sold.length} gesprek(ken) met een verkocht-badge`, sold.map(s => s.sku));
+  const r = await fetch(`${serverUrl}/api/listings/sold-from-messages`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ platform, sold }),
+  }).catch((e) => { console.error("[Omnivaleur][sold] sold-from-messages POST failed:", e); return null; });
+  if (r?.ok) {
+    const uit = await r.json().catch(() => ({}));
+    console.log(`[Omnivaleur][sold] ${platform}: ${uit.booked ?? 0} verkoop/verkopen geboekt, ${uit.skipped ?? 0} overgeslagen`);
+  }
+}
+
+// Leest de Vinted-inbox rechtstreeks, op het domein waar deze verkoper echt is
+// ingelogd. Geeft null als we nergens een geldige sessie vinden — dan blijft de
+// vorige stand staan in plaats van dat er een nul wordt gemeld.
+async function bgVintedInbox() {
+  for (const origin of VINTED_ORIGINS) {
+    try {
+      const me = await fetch(`${origin}/api/v2/users/current`, {
+        headers: { Accept: "application/json" }, credentials: "include",
+      });
+      if (!me.ok) continue;
+      const r = await fetch(`${origin}/api/v2/inbox?page=1&per_page=50`, {
+        headers: { Accept: "application/json" }, credentials: "include",
+      });
+      if (!r.ok) continue;
+      const j = await r.json();
+      const convos = Array.isArray(j.conversations) ? j.conversations : [];
+      const ongelezen = convos.filter((c) => c && c.unread);
+      return {
+        origin,
+        counts: { messages: ongelezen.length, offers: ongelezen.filter(vintedLijktBod).length },
+      };
+    } catch (_) { /* volgend domein proberen */ }
+  }
+  return null;
+}
+
+// Wat telt als een bod op Vinted.
+//
+// Dit stond eerder op /would you (sell|take)|sell (it|this)|prijsvoorstel|€\s?\d/ —
+// en dat laatste stuk sloeg aan op ELK bedrag. De omschrijving van een gesprek
+// op Vinted is de titel plus de prijs van het artikel, dus vrijwel elk ongelezen
+// gesprek werd als bod geteld. Zelfde soort fout als "aangeboden" op
+// Marktplaats: verzonnen getallen maken alle andere cijfers verdacht. Alleen
+// nog echte bod-bewoordingen. Liever een bod missen dan er een verzinnen — het
+// aantal berichten klopt hoe dan ook, en daar klikt hij toch op door.
+const VINTED_BOD_RE = /\bbod\b|\bbieding\b|prijsvoorstel|\bofferte\b|\boffer\b|would you (sell|take)|make an offer|\bproposition\b/i;
+function vintedLijktBod(c) {
+  return VINTED_BOD_RE.test(String((c && c.description) || ""));
+}
+
+// Opens the messages page in a background tab and reads counts from the DOM.
+// Returns {messages, offers} or null if we couldn't read a logged-in page.
+// NOTE: the selectors below are best-effort against the platforms' current
+// markup and MUST be re-verified against a live logged-in session when a
+// platform changes its layout — a miss degrades to null (no update), never a
+// wrong number.
+function scrapeNotificationCounts(url, platform) {
+  return new Promise((resolve) => {
+    stilTabblad(url, (tab) => {
+      if (!tab) { resolve(null); return; }
+      const tabId = tab.id;
+      let settled = false;
+      const finish = (val) => {
+        if (settled) return;
+        settled = true;
+        chrome.tabs.onUpdated.removeListener(onUpdated);
+        sluitWerkTabblad(tabId);
+        resolve(val);
+      };
+
+      const onUpdated = (id, info) => {
+        if (id !== tabId || info.status !== "complete") return;
+        chrome.tabs.onUpdated.removeListener(onUpdated);
+        // Give the SPA a moment to render its message list after load.
+        setTimeout(() => {
+          chrome.scripting.executeScript(
+            { target: { tabId }, world: "MAIN", args: [platform], func: _mwReadNotifCounts },
+            (results) => {
+              const val = results?.[0]?.result;
+              finish(val && typeof val.messages === "number" ? val : null);
+            }
+          );
+        }, 3000);
+      };
+
+      chrome.tabs.onUpdated.addListener(onUpdated);
+      setTimeout(() => finish(null), 30000); // hard timeout
+    });
+  });
+}
+
+// Injected into the platform page (MAIN world). Counts unread conversations and
+// open bids/offers. Selectors/endpoints verified against the live logged-in
+// sites (2026-07). Defensive: on a login wall / failed read it returns null so
+// we never overwrite the stored snapshot with a bogus 0. Async: Vinted is read
+// from its own JSON API (runs in the vinted.nl context, so cookies are sent).
+async function _mwReadNotifCounts(platform) {
+  // Marktplaats / 2dehands share one codebase (hashed CSS-module class names).
+  // A conversation row is `ConversationItem-module-root-*`; an UNREAD row shows
+  // its latest-message preview in the strong/bold body style; a bid surfaces as
+  // "Bod" in the preview text.
+  const rows = document.querySelectorAll('[class*="ConversationItem-module-root"]');
+  if (!rows.length) {
+    // No rows AND a visible login prompt → not signed in; else just empty inbox.
+    const txt = (document.body.innerText || "").toLowerCase();
+    if (/inloggen|log ?in|aanmelden/.test(txt) && !/bericht/.test(txt)) return null;
+    return { messages: 0, offers: 0 };
+  }
+  // On MP/2dehands a bid shows up literally as "bod" in the preview; the strict
+  // word match avoids counting ordinary item prices as offers (verified).
+  // Woordgrenzen aan BEIDE kanten. Zonder de grens ervoor matchte "geboden"
+  // binnen "aangeboden" en "bieding" binnen "aanbieding" — twee woorden die in
+  // vrijwel elke advertentietekst staan. Gemeten geval 18-08-2026: een verkoper
+  // met bieden UIT zag vijf biedingen op zijn dashboard staan die niet bestonden.
+  // Verzonnen getallen zijn erger dan geen getallen: ze maken alle andere
+  // cijfers verdacht.
+  const MP_OFFER_RE = /\bbod\b|\bgeboden\b|\bbieding\b|\bbiedingen\b/i;
+  let messages = 0;
+  let offers = 0;
+  // DE VERKOCHT-BADGE IN DE BERICHTENLIJST.
+  //
+  // Waarom dit hier staat (01-09-2026, Daniel): "de enige manier dat ik zelf kan
+  // controleren of iets op Marktplaats echt verkocht is, is via de verkocht
+  // badge". Die badge staat op het gesprek, niet op de advertentie — dat is
+  // precies waarom wij hem nooit zagen. Wij keken naar het advertentie-overzicht,
+  // en daar verdwijnt een handmatig verkocht artikel gewoon zonder label.
+  //
+  // Even streng als bij het verwijderen: alleen een LOS labeltje dat exact
+  // "verkocht" is telt. Het woord in een berichtvoorbeeld ("Is deze nog te koop?
+  // Verkocht?") mag nooit een verkoop boeken. En de sleutel is het nummer
+  // waarmee elke door deze app geplaatste titel begint — "(1308)" — want de
+  // titel zelf staat afgekapt in de lijst.
+  const sold = [];
+  const gezien = new Set();
+  // Een bod telt alleen mee als het gesprek ONGELEZEN is. Eerder werd elke rij
+  // geteld, ook gesprekken van maanden geleden die allang afgehandeld waren.
+  // Daardoor stonden er structureel meer "biedingen" dan "berichten" op het
+  // dashboard — een getal waar niets meer achter zat om te doen.
+  rows.forEach((r) => {
+    // Verkocht-badge: los labeltje, exacte tekst, geen kindelementen.
+    const verkocht = [...r.querySelectorAll("span, div, p, strong, b, em")]
+      .filter((el) => el.children.length === 0)
+      .some((el) => /^verkocht!?$/i.test((el.textContent || "").replace(/\s+/g, " ").trim()));
+    if (verkocht) {
+      // Het nummer waar de advertentietitel mee begint. Alleen aan het BEGIN van
+      // een regel, zodat een nummer uit een berichttekst ("ik bied 1300") of een
+      // jaartal er niet voor door kan gaan.
+      const m = /(?:^|\n)\s*\((\d{1,6})\)\s*(.{0,80})/.exec(r.innerText || r.textContent || "");
+      if (m && !gezien.has(m[1])) {
+        gezien.add(m[1]);
+        sold.push({ sku: m[1], title: `(${m[1]}) ${(m[2] || "").trim()}` });
+      }
+    }
+    const ongelezen = !!r.querySelector('[class*="u-textStyleBodySmallStrong"]');
+    if (!ongelezen) return;
+    messages++;
+    if (MP_OFFER_RE.test(r.textContent || "")) offers++;
+  });
+  return { messages, offers, sold };
+}
+
+// ---- Main-world helpers (injected via chrome.scripting, bypasses page CSP) ----
+
+// Het formulier valideert NIET op de zichtbare editor maar op een verborgen
+// veld (description_nl-BE / description_nl-NL). Live gemeten: de Lexical-editor
+// vullen laat dat veld leeg achter, en dan blijft "Geen zoekertjestekst
+// ingevuld" staan hoeveel tekst er ook zichtbaar is. Dit veld staat onder
+// React-beheer, dus zetten via de eigen setter plus een input-gebeurtenis —
+// precies zoals React zelf een toetsaanslag verwerkt.
+// Er staat niet altijd één zo'n veld op het formulier: op 2dehands komen
+// description_nl-BE en description_nl-NL naast elkaar voor, en welke van de twee
+// de validatie leest verschilt per categorie. Alleen de eerste vullen liet de
+// andere leeg — precies het willekeurige "geen zoekertjestekst ingevuld".
+// Daarom vullen we ze allemaal.
+//
+// Let op: chrome.scripting.executeScript injecteert alléén de functie zelf —
+// hulpfuncties uit dit bestand bestaan niet in de pagina. Alles staat daarom
+// opzettelijk binnenin.
+function _mwFillHiddenDescription(descText) {
+  // Breed op naam zoeken. De oude, strakke lijst eiste letterlijk
+  // "description_nl-…" of "description". Heette het veld op dit formulier iets
+  // anders (description_fr-BE, listing.description, Description), dan vonden we
+  // NIETS — en dan meldde de controle "prima, dit platform heeft dat veld niet"
+  // terwijl er in werkelijkheid nooit iets was ingevuld. Precies zo kon 2dehands
+  // blijven zeggen "Geen zoekertjestekst ingevuld".
+  const SEL = 'input[name*="escription" i], textarea[name*="escription" i], '
+            + 'input[id*="escription" i], textarea[id*="escription" i]';
+  // Alleen echte tekstvelden. De brede naamzoektocht hierboven mag nooit een
+  // keuzerondje, een aantal of een knop met de advertentietekst volschrijven.
+  const _bruikbaar = (v) => {
+    if (v.disabled || v.readOnly) return false;
+    const t = (v.type || "text").toLowerCase();
+    if (!(v instanceof HTMLTextAreaElement || t === "text" || t === "hidden")) return false;
+    // "description" moet een heel woord zijn. Zo vangen we description_nl-BE,
+    // description_fr-BE en listing.description, maar schrijven we nooit per
+    // ongeluk in een veld als descriptionType of descriptionCount.
+    return /(^|[^a-z])description([^a-z]|$)/i.test(v.name || v.id || "");
+  };
+  const velden = [...document.querySelectorAll(SEL)].filter(_bruikbaar);
+  if (!velden.length) return false;
+  const zet = (veld) => {
+    const proto = veld instanceof HTMLTextAreaElement
+      ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+    Object.getOwnPropertyDescriptor(proto, "value").set.call(veld, descText);
+    veld.dispatchEvent(new Event("input", { bubbles: true }));
+    veld.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+  velden.forEach(zet);
+  return velden.every((v) => (v.value || "").trim().length > 0);
+}
+
+
+// ── ECHT TYPEN, ALS LAATSTE REDMIDDEL ─────────────────────────────────────
+//
+// WAAROM DIT BESTAAT — live gemeten op het Marktplaats-plaatsformulier
+// (21-08-2026, ingelogd account, categorie sieraden):
+//   * de tekst staat zichtbaar in de editor en óók in Lexical's eigen
+//     editorstaat, en tóch meldt het formulier "Geen advertentietekst
+//     ingevuld";
+//   * het verborgen veld description_nl-NL wordt door React bestuurd en heeft
+//     geen onChange — wat wij erin zetten wordt bij de volgende hertekening
+//     gewoon overschreven;
+//   * execCommand, een nagemaakte beforeinput/input, een nagemaakt plakken en
+//     blur() veranderen de staat van het formulier NIET;
+//   * één echte toetsaanslag in het veld werkt wel, en neemt dan meteen alles
+//     mee wat er al stond. Precies wat de verkoper doet als hij een spatie
+//     typt en de melding ziet verdwijnen.
+//
+// Het verschil is `isTrusted`: alles wat een script zelf afvuurt draagt dat
+// stempel niet, en Marktplaats kijkt ernaar. De énige manier om vanuit een
+// extensie een echte toetsaanslag te maken is de debugger-API van Chrome.
+// Daarom staat die permissie NIET standaard aan: hij wordt pas gevraagd als
+// het formulier daadwerkelijk blijft klagen, en hij wordt meteen na gebruik
+// weer losgelaten.
+// Chrome staat "debugger" NIET toe als optionele permissie: chrome.permissions
+// .request() doet er domweg niets mee en de schakelaar in het menu bleef dus
+// dood. Hij staat daarom in de vaste permissies, en de schakelaar hieronder is
+// een gewone voorkeur: staat hij uit, dan raken we de debugger niet aan.
+async function heeftDebugger() {
+  try {
+    const s = await chrome.storage.sync.get("magTypen");
+    return s.magTypen !== false;   // standaard aan: zonder dit plaatst Marktplaats niet
+  } catch (_) {
+    return true;
+  }
+}
+
+async function typEchteToets(tabId, tekst) {
+  if (!(await heeftDebugger())) return "geen-toestemming";
+  const doel = { tabId };
+  const stuur = (methode, params) => new Promise((res, rej) => {
+    chrome.debugger.sendCommand(doel, methode, params, (r) => {
+      chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res(r);
+    });
+  });
+  // Waar koppelen we eigenlijk aan? Een verkeerd tabblad geeft een melding die
+  // nergens op slaat ("Cannot access a chrome-extension:// URL of different
+  // extension") en dan zoek je in de verkeerde hoek. Eerst kijken wat het ís.
+  const tab = await chrome.tabs.get(tabId).catch(() => null);
+  const adres = (tab && tab.url) || "";
+  if (!/^https?:/i.test(adres)) {
+    return `verkeerd tabblad (${adres ? adres.slice(0, 60) : "geen adres"})`;
+  }
+  const koppel = (waar) => new Promise((res, rej) => chrome.debugger.attach(waar, "1.3", () => {
+    chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res();
+  }));
+  // Al gekoppeld bij het openen van het tabblad? Dan hoeft het niet nog eens —
+  // en dat is precies de koppeling die wél lukt.
+  const alGekoppeld = _vroegGekoppeld.has(tabId);
+  try {
+    if (!alGekoppeld) await koppel(doel);
+  } catch (eerste) {
+    // Tweede weg: koppelen op het doel-ID in plaats van op het tabblad-nummer.
+    // Chrome geeft bij een tabblad soms een melding over een extensie-adres die
+    // niets met dit tabblad te maken heeft; via het doel-ID speelt dat niet.
+    try {
+      const doelen = await new Promise((r) => chrome.debugger.getTargets(r));
+      const t = (doelen || []).find((d) => d.tabId === tabId && d.type === "page");
+      if (!t) throw eerste;
+      await koppel({ targetId: t.id });
+      doel.targetId = t.id;
+      delete doel.tabId;
+    } catch (e) {
+    // Zit er al een ander opsporingsprogramma op dit tabblad — de DevTools van
+    // de verkoper, of een andere extensie die hetzelfde doet — dan weigert
+    // Chrome een tweede. Melden mét het adres, anders is het niet te plaatsen.
+    let bezet = "";
+    try {
+      const doelen = await new Promise((r) => chrome.debugger.getTargets(r));
+      const t = (doelen || []).find((d) => d.tabId === tabId);
+      if (t && t.attached) bezet = " (er zit al een opsporingsprogramma op dit tabblad)";
+    } catch (_) {}
+      return `niet gekoppeld: ${eerste.message} / ${e.message}${bezet} — tab ${adres.slice(0, 50)}`;
+    }
+  }
+  try {
+    // Chrome schuift de pagina omlaag zodra hij de gele "wordt opgespoord"-balk
+    // toont. Meten we de plek van het veld daarvóór, dan klikken we ernaast en
+    // komt de toetsaanslag nergens terecht. Even wachten dus.
+    await new Promise((r) => setTimeout(r, 700));
+    // Eerst een echte klik in het veld: zonder cursor in de editor komt een
+    // toetsaanslag nergens terecht. De plek komt uit de pagina zelf.
+    const [{ result }] = await chrome.scripting.executeScript({
+      target: { tabId }, world: "MAIN",
+      func: (sel) => {
+        const el = document.querySelector(sel);
+        if (!el) return null;
+        const e = el.isContentEditable ? el : (el.querySelector('[contenteditable="true"]') || el);
+        e.scrollIntoView({ block: "center" });
+        const r = e.getBoundingClientRect();
+        return { x: Math.round(r.left + Math.min(r.width - 8, 40)), y: Math.round(r.top + r.height - 12) };
+      },
+      args: ['[data-testid="text-editor-input_nl-NL"], [data-testid="text-editor-input_nl-BE"], [contenteditable="true"]'],
+    });
+    if (!result) return "veld niet gevonden";
+    for (const type of ["mousePressed", "mouseReleased"]) {
+      await stuur("Input.dispatchMouseEvent", {
+        type, x: result.x, y: result.y, button: "left", clickCount: 1,
+      });
+    }
+    // Eén spatie, echt getypt. Meer is niet nodig: het formulier neemt hierna
+    // de hele tekst over die er al stond. Drie vormen achter elkaar, want welke
+    // een site accepteert verschilt: rawKeyDown+char is hoe Chrome zelf een
+    // tekstaanslag doorgeeft, insertText is de kortste weg.
+    await stuur("Input.dispatchKeyEvent", { type: "rawKeyDown", key: " ", code: "Space", windowsVirtualKeyCode: 32, nativeVirtualKeyCode: 32 });
+    await stuur("Input.dispatchKeyEvent", { type: "char", key: " ", text: " ", unmodifiedText: " " });
+    await stuur("Input.dispatchKeyEvent", { type: "keyUp", key: " ", code: "Space", windowsVirtualKeyCode: 32, nativeVirtualKeyCode: 32 });
+    await new Promise((r) => setTimeout(r, 250));
+    await stuur("Input.insertText", { text: " " });
+    return `getypt op ${result.x},${result.y}`;
+  } catch (e) {
+    return `mislukt: ${e.message}`;
+  } finally {
+    // De koppeling van bij het openen laten we staan; die is voor het hele
+    // tabblad en wordt opgeruimd als het tabblad sluit.
+    if (!alGekoppeld) { try { chrome.debugger.detach(doel); } catch (_) {} }
+  }
+}
+
+
+// ECHT KLIKKEN, met dezelfde koppeling als het echte typen.
+//
+// Marktplaats negeert een klik die van een script komt, net zoals het een
+// getypte letter negeert. Gemeten 21-08-2026: formulier volledig ingevuld, geen
+// enkel veld rood, knop "Plaats je advertentie" gewoon aanwezig en niet
+// uitgeschakeld — en na onze klik gebeurde er niets. Met een echte muisklik op
+// dezelfde plek wél.
+async function klikEcht(tabId, selector) {
+  if (!(await heeftDebugger())) return "geen-toestemming";
+  // HET VENSTER MOET ZICHTBAAR ZIJN.
+  //
+  // Het werkvenster staat geminimaliseerd, zodat de verkoper er geen last van
+  // heeft. Een pagina in zo'n venster is voor de browser "verborgen"
+  // (document.hidden), en dat is precies het soort ding waar een formulier op
+  // kan besluiten dat er geen echte gebruiker aan het werk is. Typen kwam er wél
+  // doorheen, de plaatsknop niet — dus dit moet uitgesloten worden. Even
+  // terugzetten, klikken, en daarna weer weg: de verkoper ziet hooguit een flits.
+  let hersteld = null;
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    const win = await chrome.windows.get(tab.windowId);
+    if (win.state === "minimized") {
+      hersteld = { id: win.id, state: win.state };
+      await chrome.windows.update(win.id, { state: "normal", focused: false });
+      await new Promise((r) => setTimeout(r, 600));
+    }
+  } catch (_) {}
+  if (!_vroegGekoppeld.has(tabId)) {
+    // Koppeling weg: de verkoper drukte op Annuleren in de gele balk, of het
+    // tabblad navigeerde ertussenuit. Nog één poging, want anders blijft het
+    // zoekertje ingevuld-maar-ongeplaatst staan.
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    if (!(await koppelVroeg(tabId, tab && tab.url))) return "niet gekoppeld";
+  }
+  const doel = { tabId };
+  const stuur = (methode, params) => new Promise((res, rej) => {
+    chrome.debugger.sendCommand(doel, methode, params, (r) => {
+      chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res(r);
+    });
+  });
+  try {
+    const [{ result }] = await chrome.scripting.executeScript({
+      target: { tabId }, world: "MAIN",
+      func: (sel) => {
+        const el = document.querySelector(sel);
+        if (!el) return null;
+        const knop = el.tagName === "BUTTON" ? el : (el.querySelector("button") || el);
+        knop.scrollIntoView({ block: "center" });
+        const r = knop.getBoundingClientRect();
+        if (!r.width || !r.height) return null;
+        const x = Math.round(r.left + r.width / 2), y = Math.round(r.top + r.height / 2);
+        // Wat zit er op die plek? Een klik op de juiste coördinaten is nog geen
+        // klik op de juiste knop: een balk onderaan of een reclamelaag ligt er
+        // zo overheen, en dan klikken we op niets. Zonder deze controle blijft
+        // "geklikt, maar er gebeurde niets" onverklaarbaar.
+        const opDiePlek = document.elementFromPoint(x, y);
+        const raakt = opDiePlek && (opDiePlek === knop || knop.contains(opDiePlek) || opDiePlek.contains(knop));
+        return {
+          x, y, raakt,
+          binnenBeeld: y > 0 && y < innerHeight && x > 0 && x < innerWidth,
+          hoogte: innerHeight, breedte: innerWidth,
+          erop: opDiePlek ? (opDiePlek.tagName + "." + String(opDiePlek.className || "").split(" ")[0]).slice(0, 40) : "niets",
+          zichtbaar: document.visibilityState + (document.hasFocus() ? "+focus" : "-focus"),
+        };
+      },
+      args: [selector],
+    });
+    if (!result) return "knop niet gevonden";
+    if (!result.binnenBeeld) {
+      return `knop buiten beeld (${result.x},${result.y} in venster ${result.breedte}x${result.hoogte})`;
+    }
+    await new Promise((r) => setTimeout(r, 300));
+    await stuur("Input.dispatchMouseEvent", { type: "mouseMoved", x: result.x, y: result.y, buttons: 0 });
+    await stuur("Input.dispatchMouseEvent", { type: "mousePressed", x: result.x, y: result.y, button: "left", buttons: 1, clickCount: 1 });
+    await stuur("Input.dispatchMouseEvent", { type: "mouseReleased", x: result.x, y: result.y, button: "left", buttons: 0, clickCount: 1 });
+    return `geklikt op ${result.x},${result.y} (venster ${result.breedte}x${result.hoogte}`
+         + `, zichtbaarheid ${result.zichtbaar}${hersteld ? ", venster teruggezet" : ""}`
+         + `, daar ligt ${result.erop}${result.raakt ? " = de knop" : " — NIET de knop"})`;
+  } catch (e) {
+    return `mislukt: ${e.message}`;
+  } finally {
+    // Het venster weer wegzetten zoals het stond.
+    if (hersteld) {
+      setTimeout(async () => {
+        // In die 25 seconden kan de verkoper dit venster naar zich toe getrokken
+        // hebben. Dan is het zijn venster en blijft het staan.
+        if (!(await veiligOmWerkvensterTeMinimaliseren(hersteld.id))) return;
+        chrome.windows.update(hersteld.id, { state: "minimized" }).catch(() => {});
+      }, 25000);
+    }
+  }
+}
+
+
+// WAT MARKTPLAATS ZÉLF ALS BESCHRIJVING HEEFT.
+//
+// Het verborgen veld description_nl-NL heeft twee waarden: die in de DOM (wat
+// wij erin zetten) en die in de eigen staat van de pagina (wat React vasthoudt).
+// Alleen die tweede telt bij het plaatsen. Live gemeten op 21-08-2026: tekst
+// erin zetten geeft DOM 449 en staat 0 — en dan doet de plaatsknop niets, zonder
+// klacht en zonder rood veld. Echt typen geeft beide 158, en dan plaatst hij.
+function _mwEchteBeschrijvingLengte() {
+  const el = document.querySelector('input[name*="escription" i], textarea[name*="escription" i]');
+  if (!el) return -1;
+  const sleutel = Object.keys(el).find((k) => k.startsWith("__reactProps"));
+  const staat = sleutel ? (el[sleutel] || {}).value : null;
+  return typeof staat === "string" ? staat.length : -1;
+}
+
+// Leest terug wat het formulier zélf als beschrijving beschouwt. Eén leeg veld
+// is genoeg om afgekeurd te worden, dus dan melden we leeg.
+function _mwHiddenDescriptionValue() {
+  // Breed op naam zoeken. De oude, strakke lijst eiste letterlijk
+  // "description_nl-…" of "description". Heette het veld op dit formulier iets
+  // anders (description_fr-BE, listing.description, Description), dan vonden we
+  // NIETS — en dan meldde de controle "prima, dit platform heeft dat veld niet"
+  // terwijl er in werkelijkheid nooit iets was ingevuld. Precies zo kon 2dehands
+  // blijven zeggen "Geen zoekertjestekst ingevuld".
+  const SEL = 'input[name*="escription" i], textarea[name*="escription" i], '
+            + 'input[id*="escription" i], textarea[id*="escription" i]';
+  // Alleen echte tekstvelden. De brede naamzoektocht hierboven mag nooit een
+  // keuzerondje, een aantal of een knop met de advertentietekst volschrijven.
+  const _bruikbaar = (v) => {
+    if (v.disabled || v.readOnly) return false;
+    const t = (v.type || "text").toLowerCase();
+    if (!(v instanceof HTMLTextAreaElement || t === "text" || t === "hidden")) return false;
+    // "description" moet een heel woord zijn. Zo vangen we description_nl-BE,
+    // description_fr-BE en listing.description, maar schrijven we nooit per
+    // ongeluk in een veld als descriptionType of descriptionCount.
+    return /(^|[^a-z])description([^a-z]|$)/i.test(v.name || v.id || "");
+  };
+  const velden = [...document.querySelectorAll(SEL)].filter(_bruikbaar);
+  if (!velden.length) return null;
+  if (velden.some((v) => (v.value || "").trim().length === 0)) return "";
+  return velden[0].value || "";
+}
+
+// Vertelt wat er op DIT formulier daadwerkelijk staat. Zonder dit blijft elke
+// afkeuring giswerk: we weten dan niet of het veld ontbreekt, leeg is, of anders
+// heet. De uitkomst gaat mee in de foutmelding, zodat die in het dashboard staat
+// in plaats van in een console die niemand opent.
+function _mwDescribeDescriptionFields() {
+  const SEL = 'input[name*="escription" i], textarea[name*="escription" i], '
+            + 'input[id*="escription" i], textarea[id*="escription" i]';
+  const velden = [...document.querySelectorAll(SEL)].map((v) => {
+    const naam = v.name || v.id || "(naamloos)";
+    const t = (v.type || "text").toLowerCase();
+    return `${naam}[${t}]=${(v.value || "").trim().length}`;
+  });
+  const editors = [...document.querySelectorAll('[contenteditable="true"]')]
+    .map((e) => (e.innerText || "").trim().length);
+  return `velden: ${velden.join(", ") || "GEEN"} | editors: ${editors.join(", ") || "GEEN"}`;
+}
+
+// Het verborgen veld raakt niet één keer leeg maar telkens opnieuw: elke
+// hertekening van het formulier (foto klaar, kenmerk gekozen, merk-venster
+// dicht, veld verlaten) kan het wissen. Eenmalig vullen was daarom altijd een
+// gok — vandaar dat het "heel random" misging. Deze bewaker zet het veld terug
+// zodra het leeg raakt, tot en met het plaatsen. Hij schrijft uitsluitend als
+// het veld leeg is, dus tekst die het formulier er zelf in zet blijft staan.
+function _mwEnforceDescription(descText, durationMs) {
+  // Breed op naam zoeken. De oude, strakke lijst eiste letterlijk
+  // "description_nl-…" of "description". Heette het veld op dit formulier iets
+  // anders (description_fr-BE, listing.description, Description), dan vonden we
+  // NIETS — en dan meldde de controle "prima, dit platform heeft dat veld niet"
+  // terwijl er in werkelijkheid nooit iets was ingevuld. Precies zo kon 2dehands
+  // blijven zeggen "Geen zoekertjestekst ingevuld".
+  const SEL = 'input[name*="escription" i], textarea[name*="escription" i], '
+            + 'input[id*="escription" i], textarea[id*="escription" i]';
+  // Alleen echte tekstvelden. De brede naamzoektocht hierboven mag nooit een
+  // keuzerondje, een aantal of een knop met de advertentietekst volschrijven.
+  const _bruikbaar = (v) => {
+    if (v.disabled || v.readOnly) return false;
+    const t = (v.type || "text").toLowerCase();
+    if (!(v instanceof HTMLTextAreaElement || t === "text" || t === "hidden")) return false;
+    // "description" moet een heel woord zijn. Zo vangen we description_nl-BE,
+    // description_fr-BE en listing.description, maar schrijven we nooit per
+    // ongeluk in een veld als descriptionType of descriptionCount.
+    return /(^|[^a-z])description([^a-z]|$)/i.test(v.name || v.id || "");
+  };
+  try { clearInterval(window.__ovDescKeeper); } catch (_) {}
+  const einde = Date.now() + (durationMs || 300000);
+  const herstel = () => {
+    if (Date.now() > einde) { try { clearInterval(window.__ovDescKeeper); } catch (_) {} return; }
+    for (const veld of document.querySelectorAll(SEL)) {
+      if (!_bruikbaar(veld) || (veld.value || "").trim().length > 0) continue;
+      const proto = veld instanceof HTMLTextAreaElement
+        ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+      Object.getOwnPropertyDescriptor(proto, "value").set.call(veld, descText);
+      veld.dispatchEvent(new Event("input", { bubbles: true }));
+      veld.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  };
+  herstel();
+  window.__ovDescKeeper = setInterval(herstel, 250);
+  return true;
+}
+
+// ── WAAR HET FORMULIER DE BESCHRIJVING ÉCHT BEWAART ───────────────────────
+//
+// Live gemeten op 04-09-2026, ingelogd, op zowel www.2dehands.be/plaats/… als
+// www.marktplaats.nl/plaats/… (categorie Heren > Truien en Vesten):
+//
+//   * het plaatsformulier is een react-hook-form; de waarde waarop het
+//     valideert staat in `control._formValues.description`;
+//   * de zichtbare Lexical-editor vullen (onze FILL_DESC) zet 48 tekens in
+//     beeld en laat `_formValues.description` op 0 staan;
+//   * het verborgen veld `description_nl-BE` erin zetten helpt niet: React
+//     kent die waarde niet (`__reactProps.value` blijft leeg) en het formulier
+//     leest hem niet;
+//   * `document.execCommand("insertText")` doet in deze editor helemaal niets
+//     (de tekst wordt niet langer), en Lexical's eigen insertText maakt de
+//     editor wél langer maar `_formValues` niet;
+//   * het formulier zelf laten valideren (handleSubmit met eigen callbacks, dus
+//     zonder te plaatsen) gaf met een gevulde editor en lege `_formValues` de
+//     fout op `description` — precies "Geen zoekertjestekst ingevuld" — en na
+//     alléén `_formValues.description` te vullen viel `description` uit de
+//     foutenlijst weg. Dat is de voor-en-na-proef op de plek waar de klacht
+//     vandaan komt.
+//
+// Daarom schrijven we hier rechtstreeks in de staat van het formulier. Dat is
+// wat een echte toetsaanslag indirect ook bereikt, maar zonder debugger-koppeling,
+// zonder gele balk en zonder muiscoördinaten die ernaast kunnen zitten.
+//
+// Let op: chrome.scripting.executeScript injecteert alléén de functie zelf, dus
+// de zoeker staat opzettelijk in elke functie opnieuw.
+function _mwZetFormulierBeschrijving(descText) {
+  const _vind = () => {
+    const starts = [
+      document.querySelector('[data-testid^="text-editor-input"]'),
+      document.querySelector('input[name^="title_"]'),
+      document.querySelector("form"),
+    ].filter(Boolean);
+    for (const start of starts) {
+      const fk = Object.keys(start).find((k) => k.startsWith("__reactFiber"));
+      if (!fk) continue;
+      let f = start[fk], d = 0;
+      while (f && d < 40) {
+        let ms = f.memoizedState, i = 0;
+        while (ms && i < 40) {
+          const s = ms.memoizedState;
+          const k = (s && s.current && typeof s.current === "object") ? s.current : s;
+          if (k && typeof k === "object" && k._formValues && k._fields) return k;
+          ms = ms.next; i++;
+        }
+        f = f.return; d++;
+      }
+    }
+    return null;
+  };
+  const c = _vind();
+  if (!c) return -1;                       // geen react-hook-form: niets te doen
+  if (!("description" in c._formValues) && !(c._fields || {}).description) return -1;
+  try {
+    c._formValues.description = descText;
+    const veld = (c._fields || {}).description;
+    if (veld && veld._f) veld._f.value = descText;
+    return String(c._formValues.description || "").length;
+  } catch (_) {
+    return -1;
+  }
+}
+
+// Leest terug wat het formulier zélf als beschrijving vasthoudt. Dit is de enige
+// harde waarheid: de zichtbare editor en het verborgen veld zeggen allebei niets
+// over wat er bij het plaatsen wordt gecontroleerd.
+function _mwLeesFormulierBeschrijving() {
+  const _vind = () => {
+    const starts = [
+      document.querySelector('[data-testid^="text-editor-input"]'),
+      document.querySelector('input[name^="title_"]'),
+      document.querySelector("form"),
+    ].filter(Boolean);
+    for (const start of starts) {
+      const fk = Object.keys(start).find((k) => k.startsWith("__reactFiber"));
+      if (!fk) continue;
+      let f = start[fk], d = 0;
+      while (f && d < 40) {
+        let ms = f.memoizedState, i = 0;
+        while (ms && i < 40) {
+          const s = ms.memoizedState;
+          const k = (s && s.current && typeof s.current === "object") ? s.current : s;
+          if (k && typeof k === "object" && k._formValues && k._fields) return k;
+          ms = ms.next; i++;
+        }
+        f = f.return; d++;
+      }
+    }
+    return null;
+  };
+  const c = _vind();
+  if (!c) return -1;
+  try { return String(c._formValues.description || "").length; } catch (_) { return -1; }
+}
+
+// De staat van het formulier raakt niet één keer leeg maar telkens opnieuw: elke
+// hertekening (foto klaar, kenmerk gekozen, merk-venster dicht) kan de
+// beschrijving terugzetten op leeg. Deze bewaker zet hem terug zodra hij leeg is,
+// tot en met het plaatsen. Hij schrijft uitsluitend als de waarde leeg is, dus
+// tekst die het formulier er zelf in zet blijft staan.
+function _mwBewaakFormulierBeschrijving(descText, durationMs) {
+  const _vind = () => {
+    const starts = [
+      document.querySelector('[data-testid^="text-editor-input"]'),
+      document.querySelector('input[name^="title_"]'),
+      document.querySelector("form"),
+    ].filter(Boolean);
+    for (const start of starts) {
+      const fk = Object.keys(start).find((k) => k.startsWith("__reactFiber"));
+      if (!fk) continue;
+      let f = start[fk], d = 0;
+      while (f && d < 40) {
+        let ms = f.memoizedState, i = 0;
+        while (ms && i < 40) {
+          const s = ms.memoizedState;
+          const k = (s && s.current && typeof s.current === "object") ? s.current : s;
+          if (k && typeof k === "object" && k._formValues && k._fields) return k;
+          ms = ms.next; i++;
+        }
+        f = f.return; d++;
+      }
+    }
+    return null;
+  };
+  try { clearInterval(window.__ovFormDescKeeper); } catch (_) {}
+  const einde = Date.now() + (durationMs || 300000);
+  const herstel = () => {
+    if (Date.now() > einde) { try { clearInterval(window.__ovFormDescKeeper); } catch (_) {} return; }
+    const c = _vind();
+    if (!c) return;
+    try {
+      if (String(c._formValues.description || "").trim().length > 0) return;
+      c._formValues.description = descText;
+      const veld = (c._fields || {}).description;
+      if (veld && veld._f) veld._f.value = descText;
+    } catch (_) {}
+  };
+  herstel();
+  window.__ovFormDescKeeper = setInterval(herstel, 250);
+  return true;
+}
+
+
+// Marktplaats beschouwde de advertentietekst als leeg terwijl hij zichtbaar in de
+// editor stond — en één zelf getypte spatie liet de melding meteen verdwijnen.
+// Dat is het bewijs dat het formulier niet naar de inhoud kijkt maar naar een
+// échte toetsaanslag: pas dan merkt het formulier het veld als "aangeraakt" aan
+// en loopt zijn eigen controle opnieuw. Alles wat wij tot nu toe deden zet de
+// tekst neer zonder ooit zo'n aanslag te veroorzaken.
+//
+// execCommand("insertText") is de enige manier om dat vanuit een script wél te
+// doen: Chrome vuurt daarbij dezelfde native beforeinput/input af als een echte
+// toets. We typen precies wat de gebruiker met de hand deed — één spatie aan het
+// eind — en laten hem staan, want juist dat bleek te werken.
+function _mwNudgeDescription(selector) {
+  const found = document.querySelector(selector);
+  if (!found) return false;
+  const el = found.isContentEditable ? found
+    : (found.querySelector('[contenteditable="true"]') || found);
+  const voor = (el.innerText || el.value || "").length;
+  el.scrollIntoView({ block: "center" });
+  el.focus();
+  try {
+    // Cursor helemaal achteraan, anders landt de spatie middenin de tekst.
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    r.collapse(false);
+    const s = getSelection();
+    s.removeAllRanges();
+    s.addRange(r);
+  } catch (_) {}
+  let ok = false;
+  try { ok = document.execCommand("insertText", false, " "); } catch (_) {}
+  const na = (el.innerText || el.value || "").length;
+  return ok && na > voor;
+}
+
+// _mwSetVintedPrice staat in content/vinted_prijs_main.js (bovenaan ingeladen).
+
+// Wat houdt het FORMULIER zelf op dit moment als prijs vast? Dit is de vraag
+// waarop de eindcontrole voor het plaatsen afgaat. Alleen naar de rode regel
+// kijken was fout: die bleef staan bij een prijs die er gewoon in stond, en dan
+// werd er helemaal niets geplaatst.
+function _mwLeesVintedPrijs(selector) {
+  const el = document.querySelector(selector);
+  if (!el) return { gevonden: false };
+  const num = (v) => {
+    const n = parseFloat(String(v ?? "").replace(/[^\d.,]/g, "").replace(",", "."));
+    return isFinite(n) ? n : NaN;
+  };
+  let form = NaN;
+  try {
+    for (const k in el) {
+      if (k.startsWith("__reactProps$") && el[k] && el[k].value != null) { form = num(el[k].value); break; }
+    }
+    if (!isFinite(form)) {
+      for (const k in el) {
+        if (!k.startsWith("__reactFiber$")) continue;
+        let f = el[k];
+        for (let i = 0; i < 8 && f; i++, f = f.return) {
+          if (f.memoizedProps && f.memoizedProps.value != null) { form = num(f.memoizedProps.value); break; }
+        }
+        if (isFinite(form)) break;
+      }
+    }
+  } catch (_) {}
+  return { gevonden: true, dom: num(el.value), form: isFinite(form) ? form : null };
+}
+
+async function _mwFillDescription(selector, descText) {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const found = document.querySelector(selector);
+  if (!found) return false;
+  // Wijst de selector naar een omhulsel in plaats van het bewerkbare veld zelf,
+  // dan gaan focus en execCommand naar het verkeerde element en landt er niets.
+  const el = found.isContentEditable ? found
+    : (found.querySelector('[contenteditable="true"]') || found);
+
+  el.scrollIntoView({ block: "center" });
+  el.focus();
+  // GEEN KLOKJE VOOR DE LEXICAL-ROUTE (24-09-2026, Daniel). In een tabblad dat
+  // Chrome op de achtergrond afknijpt tikt de klok eens per minuut, en in die
+  // ene tik gaat ook de wachttijd van runInMainWorld af. Elk klokje hier kostte
+  // dus de hele stap, terwijl Lexical's eigen update de tekst meteen neerzet.
+  // Alleen de routes die echt tijd nodig hebben wachten nog.
+  // Zie tests/beschrijving-in-stilgezet-tabblad-test.js.
+
+  // Een écht <textarea>/<input> (Vinted) is geen rich-text editor. Alle routes
+  // hieronder meten of het gelukt is via innerText/textContent — en dat geeft bij
+  // een textarea de ORIGINELE opmaak terug, niet de getypte waarde. Daardoor zag
+  // elke poging "leeg", vielen we door tot de laatste return en meldde de
+  // beschrijvingstap "kon niet in de editor worden gezet" terwijl het veld gewoon
+  // te vullen is. Vandaar: form-velden krijgen hun eigen, korte route.
+  if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+    await sleep(150);
+    const want = descText;
+    const proto = el instanceof HTMLTextAreaElement
+      ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
+    const gevuld = () => (el.value || "").trim() === want.trim();
+
+    // 1. React's eigen value-setter + input/change: dit is de manier waarop een
+    //    React-gecontroleerd veld een externe waarde accepteert.
+    try {
+      setter.call(el, want);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+      await sleep(150);
+      if (gevuld()) return true;
+    } catch (_) {}
+
+    // 2. Echt "typen": selecteer alles en laat Chrome zelf de native
+    //    beforeinput/input afvuren. Velden die stap 1 terugdraaien nemen dit wel.
+    try {
+      el.focus();
+      el.select?.();
+      document.execCommand("insertText", false, want);
+      await sleep(200);
+      if (gevuld()) return true;
+    } catch (_) {}
+
+    // 3. Plakken, met een echte DataTransfer.
+    try {
+      el.focus();
+      el.select?.();
+      const dt = new DataTransfer();
+      dt.setData("text/plain", want);
+      el.dispatchEvent(new ClipboardEvent("paste", {
+        clipboardData: dt, bubbles: true, cancelable: true,
+      }));
+      await sleep(250);
+      if (gevuld()) return true;
+    } catch (_) {}
+
+    // Iets is beter dan niets: alleen als er écht tekst staat melden we succes.
+    return (el.value || "").trim().length > 0;
+  }
+
+  // Lexical hangt __lexicalEditor niet altijd op het element dat we selecteren.
+  // Op 2dehands zit hij op een ouder of een kind, waardoor we hem niet vonden en
+  // terugvielen op textContent — die "ja, er staat tekst" zei terwijl de editor
+  // zelf leeg was. Het zoekertje ging dan de deur uit en 2dehands weigerde met
+  // "Geen zoekertjestekst ingevuld", met een zichtbaar gevulde beschrijving.
+  function findLexical() {
+    for (let n = el; n; n = n.parentElement) {
+      if (n.__lexicalEditor) return n.__lexicalEditor;
+    }
+    for (const n of el.querySelectorAll("*")) {
+      if (n.__lexicalEditor) return n.__lexicalEditor;
+    }
+    return null;
+  }
+
+  // Verify via Lexical EditorState, not DOM textContent.
+  // DOM can have stale content from earlier fills; EditorState is what validation reads.
+  function lexHasText() {
+    const lex = findLexical();
+    // Geen Lexical gevonden? Dan is dit geen Lexical-editor en is de DOM wél de
+    // waarheid. Alleen dán mag textContent tellen.
+    if (!lex) return el.textContent.trim().length > 0;
+    try {
+      for (const [, node] of (lex._editorState?._nodeMap || new Map())) {
+        if (typeof node.__text === "string" && node.__text.trim().length > 0) return true;
+      }
+      return false;
+    } catch (_) {
+      return el.textContent.trim().length > 0;
+    }
+  }
+
+  // Normalise newlines so line-splitting is consistent across platforms/sources.
+  const _lines = descText.replace(/\r\n?/g, "\n").split("\n");
+
+  // Verifying only that SOME text landed is not enough: Marktplaats's editor
+  // silently ignores execCommand("insertParagraph"), so every line got
+  // concatenated into one glued paragraph ("…kopen!Dit item…") while lexHasText()
+  // still reported success — which is exactly how descriptions shipped as one
+  // solid block. Require the line structure to survive too, otherwise fall
+  // through to the strategies/approaches below that build real paragraphs.
+  const _wantLines = _lines.filter((l) => l.trim().length > 0).length;
+  function structureOk() {
+    if (!lexHasText()) return false;
+    if (_wantLines <= 1) return true;
+    const got = (el.innerText || "").split("\n").filter((l) => l.trim().length > 0).length;
+    return got >= _wantLines;
+  }
+
+  // Zet de cursor IN het veld. Zonder eigen selectie doet execCommand op
+  // 2dehands helemaal niets (live gemeten: leeg veld, lege editorstaat) en werkt
+  // ook "selectAll" + "delete" niet — tekst stapelde zich dan op in plaats van
+  // vervangen te worden.
+  function placeCaret(collapse) {
+    el.focus();
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    if (collapse) r.collapse(false);
+    const s = getSelection();
+    s.removeAllRanges();
+    s.addRange(r);
+  }
+
+  // ── Aanpak 1: Lexical's eigen update-API ──────────────────────────────────
+  // Live gemeten op 2dehands: dit is de enige manier die het veld schoon
+  // leegmaakt én echte alinea's oplevert in de editorstaat waar de site zijn
+  // validatie op baseert. execCommand stond hier eerst voorop en liet daar zowel
+  // een lege editorstaat ("Geen zoekertjestekst ingevuld") als aan elkaar
+  // geplakte zinnen achter.
+  {
+    const lexApi = findLexical();
+    const PClass = lexApi?._nodes?.get("paragraph")?.klass;
+    const TClass = lexApi?._nodes?.get("text")?.klass;
+    if (lexApi && typeof lexApi.update === "function" && PClass && TClass) {
+      try {
+        await new Promise((resolve) => {
+          lexApi.update(() => {
+            const root = lexApi._editorState?._nodeMap?.get("root");
+            if (!root) return;
+            let c = root.getFirstChild?.();
+            while (c) { const n = c.getNextSibling?.(); try { c.remove?.(); } catch (_) {} c = n; }
+            for (const line of _lines) {
+              const p = new PClass();
+              if (line.length > 0) p.append(new TClass(line));
+              root.append(p);
+            }
+          }, { discrete: true, onUpdate: resolve });
+          setTimeout(resolve, 800);
+        });
+        if (structureOk()) return true;
+        await sleep(250);
+        if (structureOk()) return true;
+      } catch (_) {}
+    }
+  }
+
+  // ── Aanpak 2: ClipboardEvent paste ────────────────────────────────────────
+  // Een echte plakactie draagt de regeleindes mee in text/plain. Live gemeten
+  // als enige execCommand-vrije route die alinea's overhoudt.
+  try {
+    const dt = new DataTransfer();
+    dt.setData("text/plain", descText);
+    placeCaret(false); // hele inhoud geselecteerd: de plak vervangt hem
+    el.dispatchEvent(new ClipboardEvent("paste", {
+      clipboardData: dt, bubbles: true, cancelable: true,
+    }));
+    await sleep(400);
+    if (structureOk()) return true;
+  } catch (_) {}
+
+  // ── Aanpak 3: execCommand ─────────────────────────────────────────────────
+  // execCommand fires a REAL native beforeinput event that Chrome and Lexical
+  // both handle natively. InputEvent.dataTransfer is always null for synthetic
+  // events in Chrome — execCommand bypasses that problem entirely.
+  //
+  // CRITICAL: insert LINE BY LINE. Passing the whole multi-line string to a
+  // single insertText makes Lexical collapse every "\n", gluing all sentences
+  // together. We insert each line and separate them with a real line break so
+  // paragraph breaks survive exactly as written. Editors disagree on which
+  // break command they honour, so try each and keep the one that actually works.
+  try {
+    const breakStrategies = [
+      () => document.execCommand("insertParagraph", false, null),
+      () => document.execCommand("insertText", false, "\n"),
+      () => document.execCommand("insertLineBreak", false, null),
+      () => document.execCommand("insertHTML", false, "<br>"),
+    ];
+    for (const insertBreak of breakStrategies) {
+      placeCaret(false);
+      document.execCommand("delete", false, null);
+      placeCaret(true);
+      for (let i = 0; i < _lines.length; i++) {
+        if (i > 0) { try { insertBreak(); } catch (_) {} }
+        if (_lines[i].length > 0) document.execCommand("insertText", false, _lines[i]);
+      }
+      await sleep(300);
+      if (structureOk()) return true;
+      if (_wantLines <= 1) break; // single-line text — nothing structural to recover
+    }
+  } catch (_) {}
+
+  // ── Aanpak 4: line-by-line insertText beforeinput ────────────────────────
+  // Synthetic InputEvent with insertText — Lexical handles this type correctly
+  // because 'data' is a plain string property (unlike dataTransfer which Chrome
+  // always nulls out on synthetic events).
+  try {
+    el.focus();
+    document.execCommand("selectAll", false, null);
+    el.dispatchEvent(new InputEvent("beforeinput", {
+      inputType: "deleteContentBackward", bubbles: true, cancelable: true,
+    }));
+    await sleep(80);
+    for (const [i, line] of _lines.entries()) {
+      if (i > 0) {
+        el.dispatchEvent(new InputEvent("beforeinput", {
+          inputType: "insertParagraph", bubbles: true, cancelable: true,
+        }));
+        await sleep(15);
+      }
+      if (line.length > 0) {
+        el.dispatchEvent(new InputEvent("beforeinput", {
+          inputType: "insertText", data: line, bubbles: true, cancelable: true,
+        }));
+        await sleep(15);
+      }
+    }
+    await sleep(300);
+    if (structureOk()) return true;
+  } catch (_) {}
+
+  // Every strategy failed to keep the paragraph structure. Text that landed at
+  // all still beats an empty description, so report on content as a last resort.
+  return lexHasText();
+}
+
+// Het formulier achter de editor pikt de tekst pas op als het veld verlaten
+// wordt. Wij vulden en klikten meteen op Plaatsen, waardoor 2dehands bleef
+// zeggen "Geen zoekertjestekst ingevuld" terwijl de tekst zichtbaar in de
+// editor stond. Marktplaats leest wél direct mee, dus daar viel het niet op.
+function _mwBlurDescription(selector) {
+  const found = document.querySelector(selector);
+  if (!found) return false;
+  const el = found.isContentEditable ? found
+    : (found.querySelector('[contenteditable="true"]') || found);
+  for (const type of ["input", "change"]) {
+    el.dispatchEvent(new Event(type, { bubbles: true }));
+  }
+  el.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+  el.blur();
+  document.body.click();
+  return true;
+}
+
+async function _mwFillBrand(brand) {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // Defined INSIDE this function on purpose: chrome.scripting.executeScript
+  // serialises `func` on its own, so anything it calls must live in the same
+  // function body — a top-level helper would be undefined in the page.
+  async function _mwCloseBrandModal() {
+    const getModal = () =>
+      document.querySelector(".ReactModal__Content") || document.querySelector('[role="dialog"]');
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const modal = getModal();
+      if (!modal) return true;
+      const closeBtn = [...modal.querySelectorAll("button")].find((b) => {
+        const label = (b.getAttribute("aria-label") || "").toLowerCase();
+        return b.offsetParent !== null && (label.includes("close") || label.includes("sluit"));
+      });
+      if (closeBtn) closeBtn.click();
+      else {
+        modal.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        document.querySelector(".ReactModal__Overlay")?.click();
+      }
+      await sleep(400);
+    }
+    return !getModal();
+  }
+  const brandLower = brand.toLowerCase().trim();
+
+  // The "Merk" field is an input that does NOT accept typed text (React resets its
+  // value to ""). Clicking it opens a ReactModal containing brand "pills"
+  // (button.hz-Pill). The value is only committed by clicking a pill — that's why
+  // typing + dispatching events never worked. Verified live on marktplaats.nl.
+  const trigger =
+    document.querySelector('input[data-testid^="attribute-autocomplete-"]') ||
+    document.querySelector('input[name^="textAttribute[brand"]') ||
+    document.querySelector('input[name="textAttribute[clothingBrand]"]');
+  if (!trigger) return false;
+
+  // Idempotent: if the brand is already selected, do NOT reopen the picker.
+  // Clicking the already-selected pill toggles it OFF (verified live), which is
+  // exactly what wiped the brand when submitListing re-applied it before submit.
+  const current = (trigger.value || "").trim().toLowerCase();
+  if (current && (current === brandLower || current.includes(brandLower) || brandLower.includes(current))) {
+    return true;
+  }
+
+  const getModal = () =>
+    document.querySelector(".ReactModal__Content") ||
+    document.querySelector('[role="dialog"]');
+
+  // Open the brand modal (retry once if it doesn't appear)
+  trigger.scrollIntoView({ block: "center" });
+  trigger.focus();
+  trigger.click();
+  await sleep(700);
+  let modal = getModal();
+  if (!modal) { trigger.click(); await sleep(700); modal = getModal(); }
+  if (!modal) return false;
+
+  const findPill = (root) => {
+    const items = [...root.querySelectorAll('button, [role="option"], li')]
+      .filter((e) => e.offsetParent !== null && e.textContent.trim());
+    return (
+      items.find((e) => e.textContent.trim().toLowerCase() === brandLower) ||
+      items.find((e) => e.textContent.trim().toLowerCase().includes(brandLower))
+    );
+  };
+
+  // Try a direct match among the initially shown popular brands
+  let pill = findPill(modal);
+
+  // Otherwise type into the modal search to filter (execCommand goes through the
+  // native input pipeline that this search field reads — verified live)
+  if (!pill) {
+    const search =
+      modal.querySelector('input[data-testid="autocomplete-Merk"]') ||
+      modal.querySelector('input[type="text"]') ||
+      modal.querySelector("input");
+    if (search) {
+      search.focus();
+      await sleep(60);
+      document.execCommand("selectAll", false, null);
+      document.execCommand("insertText", false, brand);
+      const deadline = Date.now() + 3000;
+      while (Date.now() < deadline && !pill) {
+        await sleep(150);
+        pill = findPill(modal);
+      }
+    }
+  }
+
+  if (pill) {
+    pill.scrollIntoView({ block: "nearest" });
+    pill.click();
+    await sleep(400);
+    if ((trigger.value || "").trim().length > 0) {
+      await _mwCloseBrandModal();
+      return true;
+    }
+  }
+
+  // Nothing matched (or the click didn't commit). Closing the modal is NOT
+  // optional: ReactModal marks the rest of the page inert while it's open, so a
+  // modal left behind silently swallowed every field after Merk — manufacturer,
+  // delivery and the bid price all stayed empty with no error anywhere. A bare
+  // Escape on `document` is not enough; ReactModal listens on its own node.
+  await _mwCloseBrandModal();
+  return false;
+}
+
+
+// Content scripts call this when done
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.type === "SYNC_TOKEN" && msg.token) {
+    const patch = { authToken: msg.token, userEmail: msg.email || "" };
+    // Only overwrite the stored refresh token when the page actually sent one —
+    // an older dashboard build syncs just the access token, and we must not wipe
+    // a good refresh token we already have.
+    if (msg.refresh) patch.refreshToken = msg.refresh;
+    // Vers token van het dashboard: de verversteller resetten zodat de cooldown
+    // een echte refresh met dit nieuwe token niet tegenhoudt.
+    patch._refreshAt = 0;
+    chrome.storage.local.set(patch, () => {
+      sendResponse({ ok: true });
+      pollJobs();
+    });
+    return true;
+  }
+
+  // Het dashboard heeft zojuist werk klaargezet — nu kijken in plaats van tot de
+  // volgende ronde wachten. Dat scheelt per klus tot een halve minuut waarin er
+  // zichtbaar niets gebeurde. Loopt er al een klus, dan verandert dit niets: de
+  // server geeft niets vrij zolang er iets geclaimd is.
+  if (msg.type === "POLL_NOW") {
+    pollJobs();
+    sendResponse({ ok: true });
+    return true;
+  }
+
+  // Lets the dashboard show what's actually wrong (not installed vs. signed out)
+  // instead of assuming everything is fine. Deliberately reports only whether a
+  // token exists and which account it belongs to — never the token itself.
+  if (msg.type === "GET_AUTH_STATE") {
+    chrome.storage.local.get(["authToken", "userEmail", KANAAL_SESSIE_SLEUTEL], (s) => {
+      // Het dashboard kijkt: meet ondertussen of deze browser op de kanalen is
+      // ingelogd, zodat Platforms "Signed in" kan tonen (Janneke, 07-10-2026).
+      if (s.authToken) meetKanaalSessiesVoorDashboard().catch(() => {});
+      sendResponse({
+        signedIn: !!s.authToken,
+        email: s.userEmail || "",
+        // Per kanaal: heeft DEZE browser daar een sessie? Het dashboard heeft
+        // geen andere manier om dat te weten, en het is het antwoord op
+        // "waarom staat mijn wachtrij voor 2dehands stil".
+        kanalen: s[KANAAL_SESSIE_SLEUTEL] || {},
+      });
+    });
+    return true;
+  }
+
+  // Opnieuw kijken of de sessie er inmiddels weer is. Dit is de goedkope
+  // achtergrondmeting zonder tabblad: die mag alleen "ja" zeggen (een 200 op een
+  // afgeschermd adres bewijst de sessie), en dat is hier precies genoeg — we
+  // willen de waarschuwing kunnen wegnemen zodra hij weer ingelogd is, niet
+  // twintig minuten wachten tot de volgende poging. Een "nee" verandert niets.
+  if (msg.type === "HERMEET_KANAAL_SESSIE") {
+    leesKanaalSessies().then(async (kanalen) => {
+      for (const [platform, stand] of Object.entries(kanalen)) {
+        if (stand && stand.ingelogd === false) await mpSessie(platform).catch(() => {});
+      }
+      sendResponse({ kanalen: await leesKanaalSessies() });
+    });
+    return true;
+  }
+
+  // Het uitklapvenster vraagt hetzelfde, maar zonder de rest.
+  if (msg.type === "GET_KANAAL_SESSIE") {
+    chrome.storage.local.get(KANAAL_SESSIE_SLEUTEL, (s) => {
+      sendResponse({ kanalen: s[KANAAL_SESSIE_SLEUTEL] || {} });
+    });
+    return true;
+  }
+
+  // A content script asks for ITS OWN tab's job (keyed by tab id), so two tabs
+  // can never read each other's data. Returns null if not ready yet — the
+  // content script retries briefly to cover the tab-open race.
+  if (msg.type === "GET_JOB") {
+    const key = `jobtab_${sender.tab?.id}`;
+    chrome.storage.local.get(key, (s) => {
+      const meta = s[key] || null;
+      // HET ENIGE HARDE BEWIJS DAT HET FORMULIER ECHT OPENGING.
+      // Dit script staat in de manifest alleen op het plaatsformulier zelf. Op
+      // een foutpagina of een inlogscherm draait het niet en komt deze vraag
+      // dus nooit. De bewaker gebruikt dat verschil, zie meldNooitBegonnen.
+      if (meta && !meta.scriptSeen) {
+        chrome.storage.local.set({ [key]: { ...meta, scriptSeen: true } });
+        if (meta.platform) chrome.storage.local.remove(`${NIET_GESTART_PREFIX}${meta.platform}`);
+      }
+      sendResponse({ job: meta });
+    });
+    return true;
+  }
+
+  // "Er is op Plaatsen/Upload geklikt." Vanaf dat moment is elk advertentie-adres
+  // in dit tabblad een echte, geplaatste advertentie — ook zonder de nette naam
+  // in de URL. Zie de toelichting bij de klik zelf in shared.js.
+  if (msg.type === "SUBMIT_CLICKED") {
+    const key = `jobtab_${sender.tab?.id}`;
+    chrome.storage.local.get(key, (s) => {
+      const meta = s[key];
+      if (meta) chrome.storage.local.set({ [key]: { ...meta, submitClicked: true } });
+      sendResponse(true);
+    });
+    return true;
+  }
+
+  // ONTWAPEN VLAK VOOR DE PLAATSKLIK.
+  //
+  // De plaatsknop stuurt de pagina weg, en het formulier van Marktplaats hangt
+  // aan dat wegnavigeren een "Site verlaten? Wijzigingen die je hebt aangebracht
+  // worden mogelijk niet opgeslagen". Chrome toont die vraag aan de verkoper en
+  // zet ALLES stil tot hij klikt — ook het volgende tabblad, want twee tabbladen
+  // van dezelfde site delen één proces. Jaap (Zilverwebsite) meldde het exact zo:
+  // "als ik hier handmatig op leave klik, wordt de advertentie geplaatst".
+  //
+  // De wacht in content/unload_guard.js werd tot nu toe alleen aangeroepen als
+  // WIJ een tabblad sloten of wegstuurden. De navigatie die de plaatsknop zelf
+  // veroorzaakt viel daar buiten. Dat gat is dit.
+  if (msg.type === "ONTWAPEN_AFSLUITVRAAG") {
+    ontwapenAfsluitvraag(sender.tab?.id).finally(() => sendResponse(true));
+    return true;
+  }
+
+  if (msg.type === "FILL_DESC") {
+    console.log("[Omnivaleur] FILL_DESC received, tab:", sender.tab?.id, "text len:", msg.text?.length);
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id },
+      world: "MAIN",
+      func: _mwFillDescription,
+      args: [msg.selector, msg.text],
+    }, (results) => {
+      if (chrome.runtime.lastError) {
+        console.error("[Omnivaleur] FILL_DESC failed:", chrome.runtime.lastError.message);
+        sendResponse(false);
+      } else {
+        console.log("[Omnivaleur] FILL_DESC result:", results?.[0]?.result);
+        sendResponse(results?.[0]?.result ?? false);
+      }
+    });
+    return true;
+  }
+
+  // Vinted's categorieboom in een bepaalde taal, voor het invulscript. Zie
+  // vintedCatalogus hieronder en "VINTED IN ELKE TAAL" in content/vinted.js.
+  if (msg.type === "VINTED_CATALOGUS") {
+    vintedCatalogus(msg.origin, msg.taal).then(sendResponse, () => sendResponse(null));
+    return true;
+  }
+
+  // Prijs zetten vanuit de pagina zelf (zie _mwSetVintedPrice).
+  // De wekker voor sleep() in de invulscripts (zie shared.js): een service
+  // worker is geen tabblad en wordt dus niet afgeknepen.
+  if (msg.type === "OV_WEKKER") {
+    setTimeout(() => { try { sendResponse(true); } catch (_) {} },
+      Math.max(0, Math.min(Number(msg.ms) || 0, 25000)));
+    return true;
+  }
+  if (msg.type === "SET_PRICE_MAIN") {
+    // NOOIT ONBEPERKT WACHTEN (12-10-2026, Janneke). Elke automatische
+    // Vinted-plaatsing die bij haar mislukte (11 keer sinds 10-10, extensie
+    // 1.0.374 tot 1.0.383, Chrome 128) stopte precies hier: laatste regel
+    // "stap category: ok", daarna drie minuten niets en een concept van EUR 0
+    // op Vinted. Deze vraag was de enige naar de pagina zonder tijdslimiet. Nu
+    // antwoordt de achtergrond zelf na twintig seconden, op zijn eigen klok die
+    // niet van de pagina afhangt, en neemt het invulscript de gewone typroute.
+    let beantwoord = false;
+    const antwoord = (r) => { if (beantwoord) return; beantwoord = true; sendResponse(r); };
+    setTimeout(() => antwoord({ ok: false, reason: "geen antwoord van de pagina binnen 20 s" }), 20000);
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id },
+      world: "MAIN",
+      func: _mwSetVintedPrice,
+      args: [msg.selector, msg.values],
+    }, (results) => {
+      const sendResponse = antwoord;
+      if (chrome.runtime.lastError) {
+        console.error("[Omnivaleur] SET_PRICE_MAIN failed:", chrome.runtime.lastError.message);
+        sendResponse({ ok: false, reason: chrome.runtime.lastError.message });
+      } else {
+        console.log("[Omnivaleur] SET_PRICE_MAIN result:", results?.[0]?.result);
+        sendResponse(results?.[0]?.result ?? { ok: false, reason: "no-result" });
+      }
+    });
+    return true;
+  }
+
+  // Leest terug welke prijs het formulier zelf vasthoudt. De eindcontrole voor
+  // het plaatsen gaat hierop af in plaats van op de rode regel onder het veld.
+  if (msg.type === "READ_PRICE_MAIN") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id },
+      world: "MAIN",
+      func: _mwLeesVintedPrijs,
+      args: [msg.selector],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse(null);
+      else sendResponse(results?.[0]?.result ?? null);
+    });
+    return true;
+  }
+
+  // Het formulier praat mee in dit log: de console van de tab zelf is weg zodra
+  // de tab dichtgaat, deze niet.
+  //
+  // Elke logregel is meteen een teken van leven. De bewaker sloeg namelijk toe
+  // terwijl het formulier gewoon nog aan het werk was: het invullen kostte net
+  // te lang, de opdracht werd afgebroken vlak vóór het plaatsen en het zoekertje
+  // bleef ingevuld-maar-ongeplaatst staan. Zolang er gewerkt wordt schuiven we
+  // de bewaker dus op — maar nooit voorbij de grens waarop de server de opdracht
+  // zelf terugneemt, want dan zou hij een tweede keer uitgezet worden.
+  if (msg.type === "LOG") {
+    console.log(`[Omnivaleur][formulier] ${msg.text}`);
+    keepJobAlive(sender.tab?.id);
+    meldStapAanServer(sender.tab?.id, msg.text);
+    sendResponse(true);
+    return true;
+  }
+
+  // Vult het verborgen veld waar de validatie op afgaat.
+  if (msg.type === "FILL_HIDDEN_DESC") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: "MAIN",
+      func: _mwFillHiddenDescription, args: [msg.text],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse(false);
+      else sendResponse(results?.[0]?.result ?? false);
+    });
+    return true;
+  }
+
+  // Houdt het verborgen beschrijvingsveld gevuld zolang het formulier openstaat.
+  if (msg.type === "ENFORCE_DESC") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: "MAIN",
+      func: _mwEnforceDescription, args: [msg.text, msg.durationMs || 300000],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse(false);
+      else sendResponse(results?.[0]?.result ?? false);
+    });
+    return true;
+  }
+
+  // Laatste redmiddel: een echte toetsaanslag via de debugger-API.
+  if (msg.type === "ECHTE_DESC_LENGTE") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: "MAIN", func: _mwEchteBeschrijvingLengte,
+    }, (r) => {
+      if (chrome.runtime.lastError) sendResponse(-1);
+      else sendResponse(r?.[0]?.result ?? -1);
+    });
+    return true;
+  }
+
+  if (msg.type === "KLIK_ECHT") {
+    klikEcht(sender.tab.id, msg.selector).then((uit) => sendResponse(uit));
+    return true;
+  }
+
+  if (msg.type === "TYPE_ECHT") {
+    typEchteToets(sender.tab.id, msg.text || " ").then((uitkomst) => sendResponse(uitkomst));
+    return true;
+  }
+
+  // Heeft de gebruiker het echte-toetsenbord-recht al gegeven?
+  if (msg.type === "HEEFT_DEBUGGER") {
+    heeftDebugger().then((ja) => sendResponse(ja));
+    return true;
+  }
+
+  if (msg.type === "READ_HIDDEN_DESC") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: "MAIN",
+      func: _mwHiddenDescriptionValue, args: [],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse(null);
+      else sendResponse(results?.[0]?.result ?? null);
+    });
+    return true;
+  }
+
+  // Zet de beschrijving in de staat van het formulier zelf — zie
+  // _mwZetFormulierBeschrijving. Dit is de plek waar de validatie op afgaat.
+  if (msg.type === "FILL_FORM_DESC") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: "MAIN",
+      func: _mwZetFormulierBeschrijving, args: [msg.text],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse(-1);
+      else sendResponse(results?.[0]?.result ?? -1);
+    });
+    return true;
+  }
+
+  // Leest terug hoeveel tekens het formulier zelf als beschrijving vasthoudt.
+  if (msg.type === "READ_FORM_DESC") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: "MAIN",
+      func: _mwLeesFormulierBeschrijving, args: [],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse(-1);
+      else sendResponse(results?.[0]?.result ?? -1);
+    });
+    return true;
+  }
+
+  // Houdt die staat gevuld zolang het formulier openstaat.
+  if (msg.type === "ENFORCE_FORM_DESC") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: "MAIN",
+      func: _mwBewaakFormulierBeschrijving, args: [msg.text, msg.durationMs || 300000],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse(false);
+      else sendResponse(results?.[0]?.result ?? false);
+    });
+    return true;
+  }
+
+  // Leest terug wat er echt op het formulier staat — zie _mwDescribeDescriptionFields.
+  if (msg.type === "DESCRIBE_DESC") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: "MAIN",
+      func: _mwDescribeDescriptionFields, args: [],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse("(niet leesbaar)");
+      else sendResponse(results?.[0]?.result ?? "(leeg)");
+    });
+    return true;
+  }
+
+  // Typt één echte spatie in de editor — zie _mwNudgeDescription.
+  if (msg.type === "NUDGE_DESC") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: "MAIN",
+      func: _mwNudgeDescription, args: [msg.selector],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse(false);
+      else sendResponse(results?.[0]?.result ?? false);
+    });
+    return true;
+  }
+
+  if (msg.type === "BLUR_DESC") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id },
+      world: "MAIN",
+      func: _mwBlurDescription,
+      args: [msg.selector],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse(false);
+      else sendResponse(results?.[0]?.result ?? false);
+    });
+    return true;
+  }
+
+  if (msg.type === "FILL_BRAND") {
+    console.log("[Omnivaleur] FILL_BRAND received, brand:", msg.brand);
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id },
+      world: "MAIN",
+      func: _mwFillBrand,
+      args: [msg.brand],
+    }, (results) => {
+      if (chrome.runtime.lastError) {
+        console.error("[Omnivaleur] FILL_BRAND failed:", chrome.runtime.lastError.message);
+        sendResponse(false);
+      } else {
+        console.log("[Omnivaleur] FILL_BRAND result:", results?.[0]?.result);
+        sendResponse(results?.[0]?.result ?? false);
+      }
+    });
+    return true;
+  }
+
+  // Photo download of last resort. A content script's fetch carries the PAGE's
+  // origin (marktplaats.nl), so a photo host that doesn't allow that origin fails
+  // in the page no matter what — and the photo silently never made it onto the
+  // listing. The service worker fetches under the extension's own origin, which
+  // is not bound by the marketplace's CORS relationship with the photo host.
+  if (msg.type === "FETCH_PHOTO") {
+    (async () => {
+      try {
+        const resp = await fetch(msg.url);
+        if (!resp.ok) { sendResponse({ ok: false, error: `HTTP ${resp.status}` }); return; }
+        const buf = new Uint8Array(await resp.arrayBuffer());
+        // Blobs can't cross the message boundary — hand over a data: URL, which
+        // the content script turns straight back into a File. Encoded in chunks
+        // because String.fromCharCode(...buf) blows the argument limit on any
+        // real photo.
+        let bin = "";
+        for (let i = 0; i < buf.length; i += 0x8000) {
+          bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+        }
+        const mime = resp.headers.get("content-type") || "image/jpeg";
+        sendResponse({ ok: true, dataUrl: `data:${mime};base64,${btoa(bin)}` });
+      } catch (e) {
+        console.error("[Omnivaleur] FETCH_PHOTO failed:", msg.url, e);
+        sendResponse({ ok: false, error: String(e?.message || e) });
+      }
+    })();
+    return true;
+  }
+
+  if (msg.type === "JOB_DONE") {
+    const { platform, jobId, serverUrl, result } = msg;
+    // Clean up and close regardless of whether the completion landed on the
+    // first try — finaliseJob queues it if not. Previously both of these hung
+    // off .then(), so a failed fetch also stranded the tab open forever.
+    finaliseJob(serverUrl, jobId, "complete", result).finally(() => {
+      clearJobWatchdog(sender.tab?.id);
+      chrome.storage.local.remove([`job_${platform}`, `jobtab_${sender.tab?.id}`]);
+      // Keep tab open 2s so user can see the listing was created
+      if (sender.tab?.id) sluitWerkTabblad(sender.tab.id, 2000);
+    });
+    sendResponse({ ok: true });
+  }
+
+  if (msg.type === "JOB_ERROR") {
+    const { platform, jobId, serverUrl, error } = msg;
+    finaliseJob(serverUrl, jobId, "error", { error }).finally(() => {
+      // De bewaker stond hier helemaal uit, zodat hij het tabblad niet zou
+      // sluiten waar de verkoper nog in typt. Bijeffect: de controle "heeft hij
+      // het zelf afgemaakt?" in fireJobWatchdog liep daardoor NOOIT meer — die
+      // zit juist achter awaitingManualFinish en kan niets force-failen. Hem
+      // opnieuw opwinden is dus veilig én nodig; sluiten doet hij daar niet.
+      clearJobWatchdog(sender.tab?.id);
+      // Keep the tab OPEN so the user can review the filled form and finish
+      // manually. Closing it here loses all the work that was filled in.
+      //
+      // Crucially, KEEP jobtab_${tabId} too. The onUpdated auto-detect listener
+      // exists precisely to catch that manual "Plaatsen" click and complete the
+      // job — but it bails when the meta is gone. Deleting it here meant a
+      // manually-finished listing went live on the platform while Omnivaleur
+      // still had it as failed: published, but invisible in the dashboard.
+      // /complete has no status guard, so a later completion cleanly overrides
+      // this error. Orphaned keys are cleaned up by the tabs.onRemoved listener.
+      chrome.storage.local.remove([`job_${platform}`]);
+      if (sender.tab?.id) {
+        chrome.storage.local.get(`jobtab_${sender.tab.id}`, (s) => {
+          const meta = s[`jobtab_${sender.tab.id}`];
+          if (meta) {
+            chrome.storage.local.set({
+              [`jobtab_${sender.tab.id}`]: { ...meta, awaitingManualFinish: true },
+            }, () => {
+              // Zie hierboven: vanaf hier mag de bewaker alleen nog kijken of de
+              // verkoper het zelf heeft afgemaakt. En het tabblad is nu van hem:
+              // geen gele foutopsporingsbalk meer boven zijn scherm.
+              ontkoppelVroeg(sender.tab.id);
+              if ((meta.action || "create") === "create") armJobWatchdog(sender.tab.id);
+            });
+          }
+        });
+      }
+    });
+    sendResponse({ ok: true });
+  }
+  return true;
+});
+
+async function reportError(jobId, serverUrl, error) {
+  gaEvent("job_error", {});
+  // Zet de extensieversie in ÉLKE foutmelding, niet alleen bij een onbekende
+  // categorie. Een keer draaide er stilletjes een oudere versie terug en toen
+  // leek een allang opgeloste fout weer terug te zijn — we hebben een ronde
+  // verloren aan het uitzoeken welke versie er nu eigenlijk draaide.
+  let tekst = String(error && error.message ? error.message : error);
+  if (!/\[extensie /.test(tekst)) {
+    try { tekst += ` [extensie ${chrome.runtime.getManifest().version}]`; } catch (_) {}
+  }
+  // Same reliability need as /complete: a dropped error report leaves the job
+  // claimed until the stale-claim sweep guesses at what happened.
+  await finaliseJob(serverUrl, jobId, "error", { error: tekst });
+}
+
+
+// ── Zichzelf bijwerken, zonder dat de verkoper er iets voor hoeft te doen ────
+//
+// WAAROM DIT ER IS (05-09-2026, Toon via Naoufal). Chrome werkt een extensie
+// alleen bij terwijl hij draait, en dan nog eens per paar uur. Wie Chrome twee
+// keer per week openklapt hangt dus dagen achter zonder dat hij het weet. Op
+// 05-09-2026 gemeten: van de negen verkopers waarvan we de versie konden
+// aflezen draaide er niet één de versie uit de Web Store, en de oudste zat op
+// 1.0.260 terwijl 1.0.303 klaarstond. Drieënveertig versies achter.
+//
+// Het dashboard zei dat al (de gele melding linksonder), maar zeggen is geen
+// oplossing: de verkoper moet er dan zelf iets mee, en dat doet hij niet.
+//
+// Hieronder vragen we het Chrome elk uur zelf. Vindt hij een nieuwe versie, dan
+// haalt hij die binnen en herstarten we onszelf, waarmee de nieuwe versie in
+// gebruik komt. De verkoper merkt er niets van.
+const UPDATE_CHECK_MINUTEN = 60;
+// Hoe lang we op zijn hoogst wachten met herstarten omdat er nog werk loopt.
+// Blijft er na een dag nog steeds werk hangen, dan is dát het probleem en
+// herstarten we alsnog: een vastgelopen wachtrij mag geen oude versie
+// conserveren.
+// Was 24 uur. Janneke (10-10-2026) draaide 1.0.374 terwijl 1.0.376 klaarstond:
+// haar mislukte Vinted-plaatsingen lieten elk een tabblad open voor "maak hem
+// zelf af", met een controle-wekker van een half uur, en zolang er zo'n wekker
+// stond mocht de extensie niet herstarten. Een nieuwe mislukking zette een
+// nieuwe wekker, dus de oude versie (met de fout) hield zichzelf in stand.
+const UPDATE_UITSTEL_MAX_MS = 2 * 60 * 60 * 1000;
+let _updateWachtSinds = 0;
+// Het wachten staat ook in de opslag. Alleen in het geheugen ging het bij elke
+// herstart van de service worker verloren, en dan begon de twee uur opnieuw
+// (Janneke, 15-10-2026: haar motor viel elk kwartier even stil).
+const UPDATE_WACHT_SLEUTEL = "updateWachtSinds";
+
+async function updateWachtSinds() {
+  if (_updateWachtSinds) return _updateWachtSinds;
+  try {
+    const { [UPDATE_WACHT_SLEUTEL]: w } = await chrome.storage.local.get(UPDATE_WACHT_SLEUTEL);
+    const nu = chrome.runtime.getManifest().version;
+    // Vastgelegd door een oudere versie: die update is dus binnen. Of we
+    // herstartten al en draaien nog steeds dezelfde versie: dan stond er toch
+    // niets klaar, en vragen we het Chrome gewoon opnieuw.
+    if (w && w.versie === nu && !w.herstart) _updateWachtSinds = w.sinds;
+    else if (w) await chrome.storage.local.remove(UPDATE_WACHT_SLEUTEL);
+  } catch (_) { /* dan wachten we vanaf nu */ }
+  return _updateWachtSinds;
+}
+
+async function legUpdateWachtenVast(extra) {
+  try {
+    await chrome.storage.local.set({ [UPDATE_WACHT_SLEUTEL]: {
+      sinds: _updateWachtSinds, versie: chrome.runtime.getManifest().version, ...extra,
+    } });
+  } catch (_) { /* het geheugen heeft hem nog */ }
+}
+
+// Herstarten mag NOOIT midden in een klus. Een tabblad dat halverwege een
+// plaatsing wordt losgelaten kost een advertentie, en die fout kennen we al
+// (zie de herplaatsings-notities in docs/team-notes.md).
+async function magNuHerstarten() {
+  if (_pollLoopt || _lopendeScans.size > 0) return false;
+  try {
+    const alarmen = await chrome.alarms.getAll();
+    // Elk lopend job-tabblad heeft een waakhond-alarm. Staat er één, dan is er
+    // werk onderweg.
+    // Een tabblad dat al aan de verkoper is teruggegeven ("maak hem zelf af")
+    // telt niet als lopend werk: zijn opdracht is al als fout gemeld, en het
+    // tabblad zelf blijft gewoon open staan na de herstart.
+    const wekkers = alarmen.filter((a) => a.name.startsWith(JOB_WATCHDOG_PREFIX));
+    const opslag = wekkers.length ? await chrome.storage.local.get(null) : {};
+    const lopend = wekkers.some((a) => {
+      const meta = opslag[`jobtab_${a.name.slice(JOB_WATCHDOG_PREFIX.length)}`];
+      return !(meta && meta.awaitingManualFinish);
+    });
+    if (lopend) return false;
+  } catch (_) { return false; }
+  return true;
+}
+
+async function herstartAlsHetKan(reden) {
+  if (!(await updateWachtSinds())) {
+    _updateWachtSinds = Date.now();
+    await legUpdateWachtenVast();
+  }
+  const tochMaar = (Date.now() - _updateWachtSinds) > UPDATE_UITSTEL_MAX_MS;
+  if (!(await magNuHerstarten()) && !tochMaar) {
+    console.log(`[Omnivaleur] nieuwe versie klaar (${reden}), maar er loopt werk — later opnieuw`);
+    return;
+  }
+  console.log(`[Omnivaleur] nieuwe versie klaar (${reden}) — extensie herstart zichzelf`);
+  await legUpdateWachtenVast({ herstart: true });
+  try { chrome.runtime.reload(); } catch (_) { /* dan bij de volgende ronde */ }
+}
+
+async function controleerOpNieuweVersie() {
+  // Staat er al een update klaar die we alleen niet konden installeren omdat er
+  // werk liep, dan is opnieuw vragen zinloos: gewoon nog eens proberen.
+  if (await updateWachtSinds()) { await herstartAlsHetKan("wachtend"); return; }
+  try {
+    const { status } = await chrome.runtime.requestUpdateCheck();
+    if (status === "update_available") await herstartAlsHetKan("gevonden");
+  } catch (_) {
+    // Een met de hand geladen kopie kan dit niet, en Chrome knijpt de vraag af
+    // als je hem te vaak stelt. Beide zijn geen storing.
+  }
+}
+
+// Chrome kan de update ook uit zichzelf vinden. Standaard wacht hij dan tot de
+// browser opnieuw start — bij iemand die Chrome nooit afsluit is dat nooit.
+chrome.runtime.onUpdateAvailable.addListener(() => { herstartAlsHetKan("gemeld"); });
+
+// Alleen zetten als hij er nog niet staat. Deze regel draait bij elke start van
+// de service worker, en chrome.alarms.create met een bestaande naam vervangt de
+// wekker: het eerste afgaan schoof dan telkens een uur op. Janneke (15-10-2026)
+// zat zo drie dagen op 1.0.384; haar motor herstartte elk kwartier, dus de
+// controle ging nooit af. Proef: tests/update-wekker-echt-test.mjs.
+chrome.alarms.get("update-check").then((a) => {
+  if (!a) chrome.alarms.create("update-check", { periodInMinutes: UPDATE_CHECK_MINUTEN });
+}).catch(() => {});
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "update-check") controleerOpNieuweVersie();
+});

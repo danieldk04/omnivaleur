@@ -142,6 +142,10 @@ _TITLE_NOISE = {
 
 
 _NIEUWE_TAK_EN_TYPE = {
+    "wonen servies": "Tableware",
+    "wonen bestek": "Cutlery",
+    "wonen keukenbenodigdheden": "Kitchenware",
+    "wonen potten en pannen": "Cookware",
     "boeken gezondheid en voeding": "Book",
     "boeken kookboeken": "Cookbook",
     "boeken geschiedenis regio": "Book",
