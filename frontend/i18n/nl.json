@@ -4093,5 +4093,9 @@
  "hours. Here it takes minutes.": "uur. Hier kost het minuten.",
  "One click instead of about 15 minutes by hand.": "Eén klik in plaats van ongeveer 15 minuten met de hand.",
  "Here it takes a few minutes.": "Hier kost het een paar minuten.",
- "One click instead of about 5 minutes by hand.": "Eén klik in plaats van ongeveer 5 minuten met de hand."
+ "One click instead of about 5 minutes by hand.": "Eén klik in plaats van ongeveer 5 minuten met de hand.",
+ "minutes": "minuten",
+ "hours": "uur",
+ "minutes.": "minuten.",
+ "hours.": "uur."
 }
