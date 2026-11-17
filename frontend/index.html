@@ -86,7 +86,7 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-  gtag('config', 'G-VJ5BVD3GCH');
+  gtag('config', 'G-VJ5BVD3GCH', (function(){try{if(/[?&]intern=1/.test(location.search))localStorage.setItem('ov_intern','1');if(/[?&]intern=0/.test(location.search))localStorage.removeItem('ov_intern');return localStorage.getItem('ov_intern')==='1'?{traffic_type:'internal'}:{};}catch(e){return{};}})());
   // Echte bezoeker: pas na 15 s zichtbaar op de pagina EN een scroll, klik of
   // aanraking. Robots die alleen de HTML ophalen of zonder gedrag laden, halen dit nooit.
   (function(){
