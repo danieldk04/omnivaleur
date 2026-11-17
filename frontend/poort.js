@@ -521,9 +521,12 @@
       // rekening hier. Telt alleen artikelen die dit kanaal nog niet hebben.
       const live = new Set((S.listings || []).filter((l) => l.platform === n.kanaal && ["active", "pending", "publishing"].includes(l.status)).map((l) => l.item_id));
       const meer = (S.items || []).filter((i) => !i.sold && i.status !== "sold" && !live.has(i.id)).length;
-      const uren = Math.round((meer * 15) / 60);
-      const winst = meer >= 4 ? `<br><b translate="no">${meer}</b> <span>more items are ready. Placing them by hand takes about</span> <b translate="no">${uren}</b> <span>hours. Here it takes minutes.</span>` : "";
-      kaart("It's live!", `Your advert is online on <b translate="no">${naam}</b>. <span>One click instead of about 15 minutes by hand.</span>${winst}`,
+      // Voorzichtige schatting: ~5 minuten per artikel per extra kanaal met de hand (foto's opslaan en
+      // uploaden, titel, rubriek, maat, staat, prijs), niet de 15 van de website.
+      const min = meer * 5;
+      const tijd = min >= 90 ? Math.round(min / 60) : min;
+      const winst = meer >= 4 ? `<br><b translate="no">${meer}</b> <span>more items are ready. Placing them by hand takes about</span> <b translate="no">${tijd}</b> ${min >= 90 ? "<span>hours. Here it takes a few minutes.</span>" : "<span>minutes. Here it takes a few minutes.</span>"}` : "";
+      kaart("It's live!", `Your advert is online on <b translate="no">${naam}</b>. <span>One click instead of about 5 minutes by hand.</span>${winst}`,
         `<button class="pt-groot" style="padding:10px 20px;font-size:13px" onclick="OBPoort.volgende()">Place the next one</button>
          <button class="btn btn-sm btn-outline" style="margin-left:8px" onclick="OBPoort.sluitNet();showView('items')">See your items</button>`);
     } else if (bezigSt) {
