@@ -19512,3 +19512,8 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - NIEUW engbersdylan69@gmail.com (Dylan, c0570d1b): aangemeld 17-11 22:09, 13 uur later geen extensie en nul artikelen, nooit eerder contact (geen koude mail, postvak leeg, niet in agenda). Welkomstmailtje "Je account op Omnivaleur" verstuurd via onboarding_mail.py.
 - Esther (3eeceb51): 1.0.427, 149 MP en 119 Vinted actief; geen nieuwe Vinted-create sinds de fout op 94f18780 (17-11 10:10), dus keukenPad nog niet gemeten. In gesprek met Daniel, geen mailtje.
 - Demo-account 8faba317: computer uit sinds 17-11 14:01. Creator Janina (f0cead08): extensie stil sinds 13-11, geen reactie op Daniel van 16-11. Jurre, sk8mom, gahomi7062: niets veranderd, geen mailtjes. Niets gerepareerd.
+
+## 18-11-2026: Joost Tamboer, Verversen op Vinted loopt vast op kleur en maat (extensie 1.0.428)
+- Joost (mail 17-11, 3 artikelen via Verversen): Vinted bleef hangen, kleur en maat kwamen niet over. Past bij de knop-wijziging van Vinted (zie vorig kopje): keuzevelden zijn `<button>`, de extensie zocht `input`.
+- Fix stond al op main (26e3298, vinted.js). Nu extensie bumped naar 1.0.428 zodat klanten hem krijgen. Gemeten: de `.value`-shim geeft op knoppen de gekozen tekst (leeg bij placeholder), op inputs en andere knoppen niets veranderd (Chromium, losse proef). Volledige Vinted-testronde en echte plaatsing op een knop-account NIET afgerond.
+- Open (Daniel): 1.0.428 bouwen (`scripts/build-extension.sh`) en uploaden; daarna Joost laten verversen en meten.
