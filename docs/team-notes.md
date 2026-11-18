@@ -19512,3 +19512,13 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - NIEUW engbersdylan69@gmail.com (Dylan, c0570d1b): aangemeld 17-11 22:09, 13 uur later geen extensie en nul artikelen, nooit eerder contact (geen koude mail, postvak leeg, niet in agenda). Welkomstmailtje "Je account op Omnivaleur" verstuurd via onboarding_mail.py.
 - Esther (3eeceb51): 1.0.427, 149 MP en 119 Vinted actief; geen nieuwe Vinted-create sinds de fout op 94f18780 (17-11 10:10), dus keukenPad nog niet gemeten. In gesprek met Daniel, geen mailtje.
 - Demo-account 8faba317: computer uit sinds 17-11 14:01. Creator Janina (f0cead08): extensie stil sinds 13-11, geen reactie op Daniel van 16-11. Jurre, sk8mom, gahomi7062: niets veranderd, geen mailtjes. Niets gerepareerd.
+
+## 18-11-2026: Omschrijving uit Shopify, opsommingen en vraag/antwoord (Mieneke, Voordeelsieraden)
+- Mieneke vroeg om koppen, vet en opsommingen. Marktplaats, 2dehands, Vinted en Facebook hebben een plat tekstveld, dus vet en koppen kunnen niet; opsommingen wel als "- ".
+- Gemeten bug in `_platte_tekst` (shopify_importer.py): `<li><p>tekst</p></li>` werd "-", regelovergang, tekst, witregel; een vet gedrukte vraag direct gevolgd door het antwoord werd "...?Ja". Beide exact nagebouwd met de oude commit ea4a1d07 en gerepareerd: nu "- tekst" op één regel, en vraag en antwoord op aparte regels. Echte HTML van haar testartikel niet gezien, de proef gebruikt de gangbare Shopify-opmaak. Bestaande, al geïmporteerde artikelen houden de oude tekst tot ze opnieuw worden geïmporteerd.
+
+## 18-11-2026: Etsy, reacties Indie Hackers (Daniel)
+- Daniel plaatste de afwijzing openbaar (dag 164) en stuurde Etsy de vraag om de reden; nog geen antwoord. Statusregel "bezwaar ingediend 17-11, geen datum" is nuttig voor wie ernaar vraagt.
+- Les uit reacties: Etsy laat alleen vintage (20+ jaar), handgemaakt en hobbymateriaal toe. Onze Etsy-vragers (Vintiq, Bobby Pin Boutique Vintage, Voordeelsieraden, automobilia) verkopen vintage of antiek, dus het gebruik past; dat is het sterkste argument voor een nieuwe aanvraag. Gewone tweedehands kleding kan niet naar Etsy.
+- Mogelijke redenen tot nu toe, niet bevestigd: Personal App voor een dienst voor meerdere verkopers; "Etsy" in naam of landingspagina zonder trademarktekst. Nakijken voor een nieuwe aanvraag.
+- Bruikbaar vangnet: Etsy-klaar exportbestand (titel max 140 tekens, 13 tags van max 20 tekens, vintage-vlag). Extensieroute alleen als laatste, API-voorwaarden verbieden scrapen.
