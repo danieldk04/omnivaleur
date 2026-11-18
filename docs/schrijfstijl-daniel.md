@@ -181,6 +181,7 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - 15-11-2026: Gekeken: 79 mails in Verzonden (3 dagen), 6 van Daniel, 5 al verwerkt; 1 nieuw, 0 met concept. Alleen bevestigd: uitleg met dubbelepunt-labels, Nederlandse dashboardnamen, gebogen aanhalingstekens, "Hoi Voornaam,", slot "Laat me weten als je verder nog ergens tegenaan loopt!" en "Groetjes," lege regel "Daniel"; geen nieuwe regel.
 - 16-11-2026: Gekeken: 76 mails in Verzonden (3 dagen), 5 van Daniel, 3 al verwerkt; 2 nieuw, 0 met concept. Alleen bevestigd: "Goedemorgen Voornaam," bij een uitleg na nalopen van een account, uitleg met dubbelepunt-labels, Nederlandse dashboardnamen, gebogen apostrof, slot ":)" bij een gewone uitleg; geen nieuwe regel.
 - 17-11-2026: Gekeken: 22 mails in Verzonden (laatste 3 dagen), 12 van Daniel, 3 al verwerkt; 9 nieuw, 5 met concept (3 niet vergelijkbaar). Nieuw: ":)" bij fout van ons weer geschrapt (4e keer), "Goed nieuws:" weer geschrapt (4e keer), vervolgbelofte "Morgen kijk ik na" geschrapt (onder Nog te leren).
+- 18-11-2026: Gekeken: 21 mails in Verzonden (3 dagen), 14 van Daniel, 11 al verwerkt; 2 nieuw, 2 met concept (1 niet vergelijkbaar, zelfde oude concept). Nieuw: rubrieknaam in concept aangepast aan wat er echt staat, verwijzing naar Help-video (1x, onder Nog te leren).
 
 
 ## 28-10-2026: geen schuld aantrekken (Daniel spreekt de regel uit)
