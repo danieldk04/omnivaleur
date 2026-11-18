@@ -2,6 +2,31 @@
 (async () => {
   const PLATFORM = "vinted";
 
+  // 18-11-2026 (platformcontrole): Vinted toont de keuzevelden (rubriek, staat, merk, maat,
+  // kleur, materiaal) bij een deel van de accounts niet meer als <input> maar als <button>
+  // met de gekozen tekst in een span. De hele stroom leest `.value` van die velden om te
+  // weten of ze gevuld zijn. Een knop geeft daar altijd "", dus geef hem de getoonde tekst
+  // (leeg zolang het plaatsvervangertje staat). Alleen voor de keuzeknoppen, niets anders.
+  try {
+    const nat = Object.getOwnPropertyDescriptor(HTMLButtonElement.prototype, "value");
+    if (nat && !HTMLButtonElement.prototype.__ovKeuzeWaarde) {
+      Object.defineProperty(HTMLButtonElement.prototype, "__ovKeuzeWaarde", { value: true });
+      Object.defineProperty(HTMLButtonElement.prototype, "value", {
+        configurable: true,
+        get() {
+          const tid = this.getAttribute && this.getAttribute("data-testid");
+          if (tid && /-input$/.test(tid) && /^(category-|catalog-|brand-|color-)/.test(tid)) {
+            if (this.hasAttribute("data-placeholder")) return "";
+            const sp = this.querySelector('[data-testid$="--value"]');
+            return sp ? (sp.textContent || "").trim() : "";
+          }
+          return nat.get.call(this);
+        },
+        set(v) { nat.set.call(this, v); },
+      });
+    }
+  } catch (e) { /* zonder shim blijft het oude gedrag */ }
+
   // Maps source-platform condition values (English keys, Dutch values) → Vinted English labels.
   // Marktplaats scale: zo goed als nieuw > goed > redelijk > beschadigd
   // Vinted scale: New with tags > New without tags > Very good > Good > Satisfactory
@@ -1621,11 +1646,11 @@
   // Precies dat gebeurde bij de kleur: de kleurstap viel meteen om op zijn eigen
   // veldnaam en heeft nooit ook maar één klik gedaan — vandaar dat geen enkele
   // verbetering aan het aanklikken verschil maakte. Zet nieuwe waarden hier.
-  const COLOUR_TRIGGER_SEL = 'input[data-testid="color-select-dropdown-input"]';
-  const OTHER_TRIGGER_SEL = 'input[data-testid="category-material-multi-list-input"],'
-    + 'input[data-testid="category-condition-single-list-input"],'
-    + 'input[data-testid="brand-select-dropdown-input"],'
-    + 'input[data-testid^="category-size"]';
+  const COLOUR_TRIGGER_SEL = ':is(input,button)[data-testid="color-select-dropdown-input"]';
+  const OTHER_TRIGGER_SEL = ':is(input,button)[data-testid="category-material-multi-list-input"],'
+    + ':is(input,button)[data-testid="category-condition-single-list-input"],'
+    + ':is(input,button)[data-testid="brand-select-dropdown-input"],'
+    + ':is(input,button)[data-testid^="category-size"]';
   // Matching these by a loose "delete" substring would delete a photo instead of
   // the listing — verified live 2026-07. Always exclude them.
   const isPhotoDeleteTestid = (tid) => /media-select|grid-delete-button|image-wrapper/i.test(tid || "");
@@ -1829,7 +1854,7 @@
     'input[data-testid="title--input"]',
     'textarea[data-testid="description--input"]',
     'input[data-testid="price-input--input"]',
-    'input[data-testid="catalog-select-dropdown-input"]',
+    ':is(input,button)[data-testid="catalog-select-dropdown-input"]',
   ];
   const isProtected = (el) => !!el && PROTECTED.some((s) => el.matches?.(s));
 
@@ -1880,8 +1905,8 @@
       // welke waarde het niet lukte — een stille mislukking kostte alleen maar
       // tijd, want het formulier ging tóch niet door de validatie.
       const gaps = [];
-      const sizeEl = qs('input[data-testid="category-size-single-grid-input"]');
-      const colEl = qs('input[data-testid="color-select-dropdown-input"]');
+      const sizeEl = qs(':is(input,button)[data-testid="category-size-single-grid-input"]');
+      const colEl = qs(':is(input,button)[data-testid="color-select-dropdown-input"]');
       const descEl = qs('textarea[data-testid="description--input"]');
       const prijsFout = priceErrorVinted();
       // DE RODE REGEL ALLEEN HOUDT HET PLAATSEN NIET MEER TEGEN (04-09-2026).
@@ -2081,8 +2106,8 @@
   // zelf heeft staan blijft onaangeroerd, ook bij een prijswijziging.
   async function topUpRequiredFieldsVinted(item) {
     const gevuld = [];
-    const maatVeld = () => qs('input[data-testid="category-size-single-grid-input"]')
-      || [...document.querySelectorAll('input[data-testid^="category-size"][data-testid$="-input"]')]
+    const maatVeld = () => qs(':is(input,button)[data-testid="category-size-single-grid-input"]')
+      || [...document.querySelectorAll(':is(input,button)[data-testid^="category-size"][data-testid$="-input"]')]
         .find(e => e.offsetParent) || null;
 
     if (maatVeld() && !sizeIsFilledVinted() && String(item.size || "").trim()) {
@@ -2178,14 +2203,14 @@
   // Welke velden waar Vinted op blokkeert staan op dit moment zichtbaar leeg.
   function emptyRequiredFieldsVinted() {
     const leeg = [];
-    const maat = qs('input[data-testid="category-size-single-grid-input"]')
-      || [...document.querySelectorAll('input[data-testid^="category-size"][data-testid$="-input"]')]
+    const maat = qs(':is(input,button)[data-testid="category-size-single-grid-input"]')
+      || [...document.querySelectorAll(':is(input,button)[data-testid^="category-size"][data-testid$="-input"]')]
         .find(e => e.offsetParent);
     if (maat && !(maat.value || "").trim()) leeg.push("size");
     for (const [naam, sel] of [
-      ["colour",    'input[data-testid="color-select-dropdown-input"]'],
-      ["condition", 'input[data-testid="category-condition-single-list-input"]'],
-      ["category",  'input[data-testid="catalog-select-dropdown-input"]'],
+      ["colour",    ':is(input,button)[data-testid="color-select-dropdown-input"]'],
+      ["condition", ':is(input,button)[data-testid="category-condition-single-list-input"]'],
+      ["category",  ':is(input,button)[data-testid="catalog-select-dropdown-input"]'],
     ]) {
       const el = qs(sel);
       if (el && el.offsetParent !== null && !(el.value || "").trim()) leeg.push(naam);
@@ -2685,8 +2710,8 @@
   // Has Vinted accepted a size? Its size trigger is a readonly input whose value
   // holds the chosen size ("M"), empty as long as the field is untouched.
   function sizeIsFilledVinted() {
-    const el = document.querySelector('input[data-testid="category-size-single-grid-input"]')
-      || [...document.querySelectorAll('input[data-testid^="category-size"][data-testid$="-input"]')]
+    const el = document.querySelector(':is(input,button)[data-testid="category-size-single-grid-input"]')
+      || [...document.querySelectorAll(':is(input,button)[data-testid^="category-size"][data-testid$="-input"]')]
         .find(e => e.offsetParent);
     return !!(el && (el.value || "").trim());
   }
@@ -2719,7 +2744,7 @@
     return zonderGetal.length === 1 ? zonderGetal[0][1] : -1;
   }
   async function fillAfmetingMaatVinted(item) {
-    const trigger = qs('input[data-testid="category-size-single-grid-input"]');
+    const trigger = qs(':is(input,button)[data-testid="category-size-single-grid-input"]');
     if (!trigger) return false;
     const opties = () => {
       const scope = (document.querySelector('[data-testid="category-size-single-grid-content"]')
@@ -2764,7 +2789,7 @@
     return new RegExp(`(^|[^\\p{L}\\p{N}])${esc}($|[^\\p{L}\\p{N}])`, "u").test(tekst);
   }
   async function geenMerkVinted(item) {
-    const veld = () => qs('input[data-testid="brand-select-dropdown-input"]');
+    const veld = () => qs(':is(input,button)[data-testid="brand-select-dropdown-input"]');
     await waitUntil(() => !!veld(), 3000);
     const el = veld();
     if (!el) return true; // deze rubriek heeft geen merkveld
@@ -2873,7 +2898,7 @@
       if (!item.size) {
         // Geen maat, maar wel een maatveld: woontextiel vraagt een afmeting.
         for (let attempt = 0; attempt < 3 && !sizeIsFilledVinted(); attempt++) {
-          if (!qs('input[data-testid="category-size-single-grid-input"]')) { await sleep(800); continue; }
+          if (!qs(':is(input,button)[data-testid="category-size-single-grid-input"]')) { await sleep(800); continue; }
           if (await fillAfmetingMaatVinted(item)) return true;
           await sleep(800);
         }
@@ -2894,7 +2919,7 @@
     // Colour accordion only commits when another attribute trigger is realClicked.
     // Always open the material trigger to commit the colour selection.
     await sleep(200);
-    const matTriggerEl = qs('input[data-testid="category-material-multi-list-input"]');
+    const matTriggerEl = qs(':is(input,button)[data-testid="category-material-multi-list-input"]');
     // Scroll first: a click on an off-screen trigger is ignored by Vinted.
     if (matTriggerEl) { matTriggerEl.scrollIntoView({ block: "center" }); await sleep(250); realClickEl(matTriggerEl); await sleep(700); }
     if (item.material) {
@@ -2961,15 +2986,15 @@
       const titleEl = qs('input[data-testid="title--input"]');
       const descEl  = qs('textarea[data-testid="description--input"]');
       const priceEl = qs('input[data-testid="price-input--input"]');
-      const sizeEl  = qs('input[data-testid="category-size-single-grid-input"]');
-      const colEl   = qs('input[data-testid="color-select-dropdown-input"]');
+      const sizeEl  = qs(':is(input,button)[data-testid="category-size-single-grid-input"]');
+      const colEl   = qs(':is(input,button)[data-testid="color-select-dropdown-input"]');
       // DE STAAT HOORT HIER OOK BIJ (17-09-2026, Johan Kist). De staat werd maar
       // één keer geprobeerd, meteen na de prijs. Tekent Vinted het veld pas later
       // (het hangt aan de categorie), dan vond die ene poging niets en stond het
       // veld bij het plaatsen leeg: "Vul je staat in om verder te gaan". Bij Johan
       // zes gitaren op één middag, bij twee andere verkopers vier keer. Maat en
       // kleur werden hier al opnieuw geprobeerd; de staat nooit.
-      const condEl  = qs('input[data-testid="category-condition-single-list-input"]');
+      const condEl  = qs(':is(input,button)[data-testid="category-condition-single-list-input"]');
 
       const missing = [];
       if (titleEl && titleEl.value !== wantTitle) missing.push("title");
@@ -3673,7 +3698,7 @@
   // kent alleen kledingpaden. Dit is dezelfde afdaling, nu ook voor alles wat
   // via zoeken wordt gekozen.
   async function kiesRestSubcategorie(item, maxNiveaus = 3) {
-    const inp = qs('input[data-testid="catalog-select-dropdown-input"]');
+    const inp = qs(':is(input,button)[data-testid="catalog-select-dropdown-input"]');
     if (!inp) return false;
     const tekst = `${item.title || ""} ${item.description || ""} ${item.title_en || ""}`.toLowerCase();
     const kind = typeof KIND_KLEDING !== "undefined"
@@ -3698,7 +3723,7 @@
       || (typeof keukenPad === "function" && keukenPad(cat, item)) || vintedPathFor(cat, gender);
     if (!pad) return false;
     const kind = pad[0] === "Kids";
-    const inp = qs('input[data-testid="catalog-select-dropdown-input"]');
+    const inp = qs(':is(input,button)[data-testid="catalog-select-dropdown-input"]');
     if (!inp) return false;
     const cellen = () => [...document.querySelectorAll('[class*="Cell__clickable"]')]
       .filter((e) => e.offsetParent !== null);
@@ -3839,7 +3864,7 @@
   async function fillCategoryVinted(item) {
     const cat = (item.category || "").toLowerCase().trim();
     const gender = (item.gender || "").toLowerCase().trim(); // "heren"/"dames" if present
-    const inp = qs('input[data-testid="catalog-select-dropdown-input"]');
+    const inp = qs(':is(input,button)[data-testid="catalog-select-dropdown-input"]');
     if (!inp) return false;
     // De boom met regelnummers, zodat een Vinted in elke taal werkt (zie
     // "VINTED IN ELKE TAAL"). Lukt dat niet, dan gaat alles zoals vroeger.
@@ -4211,7 +4236,7 @@
 
   // Confirm the committed category text actually reflects our item; warn if not.
   function verifyCategory(hints, wantWomen) {
-    const display = (qs('input[data-testid="catalog-select-dropdown-input"]')?.value
+    const display = (qs(':is(input,button)[data-testid="catalog-select-dropdown-input"]')?.value
       || document.querySelector('[data-testid="catalog-select-dropdown"]')?.textContent
       || "").toLowerCase();
     if (!display) return false;
@@ -4670,7 +4695,7 @@
       for (const key of keys) {
         const testId = ATTR_FIELD_MAP[key];
         if (!testId) continue;
-        const el = document.querySelector(`input[data-testid="${testId}"]`);
+        const el = document.querySelector(`:is(input,button)[data-testid="${testId}"]`);
         if (el && el.offsetParent) return el;
       }
       // Size renders as a grid for some categories and as a plain dropdown/list
@@ -4678,7 +4703,7 @@
       // meant the whole size step silently gave up on those categories — and a
       // failed size step used to leave a panel open that then broke colour too.
       if (isSize) {
-        return [...document.querySelectorAll('input[data-testid^="category-size"][data-testid$="-input"]')]
+        return [...document.querySelectorAll(':is(input,button)[data-testid^="category-size"][data-testid$="-input"]')]
           .find(el => el.offsetParent) || null;
       }
       return null;
