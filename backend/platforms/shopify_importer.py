@@ -1245,8 +1245,22 @@ def _platte_tekst(ruwe_html: str) -> str:
     tekst = str(ruwe_html or "")
     if not tekst.strip():
         return ""
+    # Een opsommingspunt is één regel: Shopify-editors zetten vaak <li><p>..</p></li>,
+    # en dan werd het "-", regelovergang, tekst, witregel (Mieneke, 18-11-2026).
+    def _opsomming(m):
+        binnen = m.group(1)
+        if re.search(r"<\s*li\b", binnen, flags=re.I):
+            return m.group(0)  # geneste lijst: oude route
+        binnen = re.sub(r"<\s*br\s*/?\s*>", " ", binnen, flags=re.I)
+        binnen = re.sub(r"<[^>]+>", "", binnen)
+        binnen = re.sub(r"\s+", " ", binnen).strip()
+        return f"\n- {binnen}" if binnen else ""
+
+    tekst = re.sub(r"<\s*li\b[^>]*>(.*?)</\s*li\s*>", _opsomming, tekst, flags=re.I | re.S)
+    # Vraag in vet direct gevolgd door het antwoord ("...?Ja, dit...") krijgt een regelovergang.
+    tekst = re.sub(r"\?\s*</\s*(?:strong|b)\s*>[ \t]*(?=[^\s<])", "?\n", tekst, flags=re.I)
     tekst = re.sub(r"<\s*br\s*/?\s*>", "\n", tekst, flags=re.I)
-    tekst = re.sub(r"</\s*(p|div|li|h[1-6]|tr)\s*>", "\n", tekst, flags=re.I)
+    tekst = re.sub(r"</\s*(p|div|li|h[1-6]|tr|dt|dd|summary|ul|ol|dl|details)\s*>", "\n", tekst, flags=re.I)
     tekst = re.sub(r"<\s*li[^>]*>", "- ", tekst, flags=re.I)
     tekst = re.sub(r"<\s*(p|div|h[1-6]|tr)\b[^>]*>", "\n", tekst, flags=re.I)
     tekst = re.sub(r"<[^>]+>", "", tekst)
