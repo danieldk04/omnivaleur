@@ -19494,3 +19494,11 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 
 ## 17-11-2026 (14:00, automatisch): Klantfouten
 - Marktplaats create "Timeout: input[name="title_nl-NL"]" (96e30080, 1x, job 10bd1c6a, 11:51 UTC, extensie 1.0.426): het titelveld verscheen niet binnen de 20 s van `waitForEl` (marktplaats.js fillForm). Gemeten: 36 creates van deze klant op 17-11 gingen goed, ook de direct ervoor en erna (11:48 en 11:52); dit was de enige. Het artikel (Zigzag Granny Deken, prijswijziging via delete+create) was om 11:48 op Marktplaats verwijderd en de nieuwe plaatsing mislukte, dus dat stuk staat daar nu offline tot een nieuwe create. Oorzaak niet bewezen (trage pagina, tussenscherm of Chrome-hapering), dus niet aangepast. Open: nakijken of dit artikel op Marktplaats opnieuw wordt geplaatst; bij herhaling de paginastand loggen bij een time-out.
+
+## 18-11-2026: Dagelijkse klantfouten (ochtendronde)
+- 1.262 opdrachten in 24 uur, 13 fouten bij 5 klanten. Geen fout in onze code gevonden, niets gerepareerd.
+- Vinted scan "member id" (6x, 3 klanten) en Vinted create "loginpagina" (8f91a370): klant uitgelogd op Vinted. Vinted create met rode velden merk/maat/staat (8f91a370, 8faba317): artikel mist die gegevens.
+- Marktplaats delete "No tab with id" (2x, 96e30080 en 09e089ec) en MP create "tabblad gesloten" (Esther, 12:43): tabblad weg tijdens het werk; zelfde beeld als gisteren, niet opnieuw gezien na 12:43.
+- Zigzag Granny Deken (96e30080, titelveld-timeout van gisteren): staat opnieuw in de wachtrij als delete+create sinds 02:35, wacht op de computer van de klant.
+- Esther (3eeceb51) draait nu 1.0.427 (met keukenPad), maar heeft het mislukte Vinted-artikel 94f18780 nog niet opnieuw geplaatst. Open: meten zodra ze dat doet.
+- Wachtrij: ~1.050 opdrachten wachten bij 14 klanten (nachtelijke herplaatsing 25+25 per klant, 2dehands-verlengingen). Alle hartslagen van gisteravond of eerder, behalve 26cf5471 die nu werkt (laatste klaar 07:45 UTC). Dus computers uit, geen storing. 5aae4954 en 0b28c1ce zijn al dagen stil (10-11 en 07-11), offline-mail is verstuurd.
