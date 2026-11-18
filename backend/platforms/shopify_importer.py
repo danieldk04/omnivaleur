@@ -1250,7 +1250,7 @@ def _platte_tekst(ruwe_html: str) -> str:
     def _opsomming(m):
         binnen = m.group(1)
         if re.search(r"<\s*li\b", binnen, flags=re.I):
-            return m.group(0)  # geneste lijst: oude route
+            return "\n" + m.group(0)  # geneste lijst: oude route, elk punt op een nieuwe regel
         binnen = re.sub(r"<\s*br\s*/?\s*>", " ", binnen, flags=re.I)
         binnen = re.sub(r"<[^>]+>", "", binnen)
         binnen = re.sub(r"\s+", " ", binnen).strip()
