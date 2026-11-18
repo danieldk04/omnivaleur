@@ -1038,7 +1038,7 @@
       "pillar": "A",
       "format": "combo",
       "slug": "how-to-crosslist-from-marktplaats-to-shopify",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "crosslisten-van-marktplaats-naar-shopify",
       "priority": 116
     }
@@ -2119,6 +2119,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-build-a-reselling-inventory-from-scratch",
       "published_at": "2026-11-17T17:18:55.723035+00:00"
+    },
+    {
+      "keyword": "how to crosslist from Marktplaats to Shopify",
+      "slug": "how-to-crosslist-from-marktplaats-to-shopify",
+      "region": "nl",
+      "pillar": "A",
+      "format": "combo",
+      "action": "created",
+      "url_path": "/crosslisting/how-to-crosslist-from-marktplaats-to-shopify",
+      "published_at": "2026-11-18T16:57:40.250588+00:00"
     }
   ]
 }
