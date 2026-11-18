@@ -26,7 +26,7 @@ Elke vriend die een betaald abonnement neemt (vanaf Pro) haalt €10 per maand v
 Je eerste vriend levert je daarnaast 2 maanden gratis op. Bij 3 vrienden [NA METING: krijg je er het AI-pakket bij, foto
 naar advertentie en AI-titels]. Bij 5 vrienden heb je alles.
 
-Je vriend start met 30 dagen proef, betaalt de eerste maand de helft, en ik zet zijn eerste 100 artikelen voor hem in.
+Je vriend start met 30 dagen proef, betaalt de eerste maand de helft, en ik lees zijn voorraad in en loop de eerste artikelen met hem na tot ze online staan.
 
 Je persoonlijke link staat in je dashboard onder Uitnodigen. Wie voor 1 januari begint houdt de €10 ook daarna.
 
