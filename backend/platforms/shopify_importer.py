@@ -1261,6 +1261,7 @@ def _platte_tekst(ruwe_html: str) -> str:
     tekst = re.sub(r"\?\s*</\s*(?:strong|b)\s*>[ \t]*(?=[^\s<])", "?\n", tekst, flags=re.I)
     tekst = re.sub(r"<\s*br\s*/?\s*>", "\n", tekst, flags=re.I)
     tekst = re.sub(r"</\s*(p|div|li|h[1-6]|tr|dt|dd|summary|ul|ol|dl|details)\s*>", "\n", tekst, flags=re.I)
+    tekst = re.sub(r"<\s*(ul|ol|dl)\b[^>]*>", "\n", tekst, flags=re.I)
     tekst = re.sub(r"<\s*li[^>]*>", "- ", tekst, flags=re.I)
     tekst = re.sub(r"<\s*(p|div|h[1-6]|tr)\b[^>]*>", "\n", tekst, flags=re.I)
     tekst = re.sub(r"<[^>]+>", "", tekst)
