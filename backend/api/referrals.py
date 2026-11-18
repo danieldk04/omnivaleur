@@ -489,6 +489,93 @@ def kies_code(body: EigenCode, user=Depends(get_current_user_full)):
     return {"ok": True, "code": code, "link": link_voor(code)}
 
 
+# ── Klassement, niveaus en Founding Circle (vlag klassement_aan) ─────────────
+# Besluit Daniel 09-11-2026, rekenregels in services/klassement.py. Het bord
+# leest alle klantcodes, verwijzingen en abonnementen; dat is te veel voor elke
+# paginaopening, dus een kwartier in het geheugen. Per proces: na een deploy of
+# een andere worker begint hij opnieuw, wat alleen een verse berekening kost.
+_KLASSEMENT_GEHEUGEN: dict = {"tot": 0.0, "waarde": None}
+_KLASSEMENT_DUUR = 900
+_ABO_BROK = 100
+
+
+def _klassement_laden() -> dict:
+    import time
+    from backend.services.instellingen import KLASSEMENT_NAAM, lees
+    from backend.services.klassement import bereken
+
+    nu_ts = time.time()
+    if _KLASSEMENT_GEHEUGEN["waarde"] is not None and nu_ts < _KLASSEMENT_GEHEUGEN["tot"]:
+        return _KLASSEMENT_GEHEUGEN["waarde"]
+
+    db = get_db()
+    codes = (execute_with_retry(db.table("referral_codes").select("code, owner_user_id")).data) or []
+    eigenaar = {c["code"]: c["owner_user_id"] for c in codes if c.get("owner_user_id")}
+    verw = (execute_with_retry(
+        db.table("referrals").select("user_id, code, first_paid_at")).data) or []
+    verw = [v for v in verw if v.get("code") in eigenaar and v.get("first_paid_at")]
+    ids = sorted({v["user_id"] for v in verw})
+    abos: dict = {}
+    for i in range(0, len(ids), _ABO_BROK):
+        rijen = (execute_with_retry(
+            db.table("subscriptions").select("user_id, status, plan, stripe_subscription_id")
+            .in_("user_id", ids[i:i + _ABO_BROK])).data) or []
+        abos.update({r["user_id"]: r for r in rijen})
+
+    # Namen alleen voor wie echt een vriend heeft die betaalt: een leesvraag per klant.
+    eerste = bereken(verw, eigenaar, abos, {})
+    namen = {uid: lees(uid).get(KLASSEMENT_NAAM) for uid in eerste["per_user"]}
+    waarde = bereken(verw, eigenaar, abos, namen)
+    waarde["namen"] = namen
+    _KLASSEMENT_GEHEUGEN.update({"tot": nu_ts + _KLASSEMENT_DUUR, "waarde": waarde})
+    return waarde
+
+
+@router.get("/api/referrals/klassement")
+def mijn_klassement(user=Depends(get_current_user_full)):
+    """Bord, mijn niveau en de Founding Circle. Met de vlag uit: alleen active=false."""
+    if not settings.klassement_aan:
+        return {"active": False}
+    from backend.services.instellingen import KLASSEMENT_NAAM, lees
+    from backend.services.klassement import voor_gebruiker
+    try:
+        uitkomst = _klassement_laden()
+    except Exception as e:  # noqa: BLE001
+        logger.exception("klassement niet te laden")
+        raise HTTPException(status_code=503, detail=f"The leaderboard is not available right now ({e}).")
+    eigen = lees(user.id).get(KLASSEMENT_NAAM)
+    return {"active": True, **voor_gebruiker(uitkomst, user.id, eigen)}
+
+
+class KlassementNaam(BaseModel):
+    naam: str | None = None
+
+
+@router.put("/api/referrals/klassement/naam")
+def kies_klassement_naam(body: KlassementNaam, user=Depends(get_current_user_full)):
+    """Meedoen met een naam, of stoppen (lege naam). Een naam volgt de regels van
+    een verwijscode: geen merknamen en geen paden op de site."""
+    if not settings.klassement_aan:
+        raise HTTPException(status_code=404, detail="Not available")
+    from backend.services.instellingen import KLASSEMENT_NAAM, lees, schrijf
+    ruw = (body.naam or "").strip()
+    if ruw:
+        naam = schoon_code(ruw)
+        if not naam:
+            raise HTTPException(
+                status_code=422,
+                detail="Use 3 to 40 letters, numbers, - or _. Brand names are not allowed.")
+    else:
+        naam = None
+    schrijf(user.id, {KLASSEMENT_NAAM: naam})
+    # Teruglezen: wat er staat is wat we tonen, niet wat er is ingetikt.
+    bewaard = lees(user.id).get(KLASSEMENT_NAAM)
+    if naam and bewaard != naam:
+        raise HTTPException(status_code=500, detail="Could not save the name")
+    _KLASSEMENT_GEHEUGEN.update({"tot": 0.0, "waarde": None})
+    return {"ok": True, "name": bewaard}
+
+
 def _klanten_die_aanbrengen(klant_codes: list[dict], verwijzingen: list[dict],
                             abos: dict, klik_per_code: dict) -> dict:
     """Wat het aanbrengen door klanten zelf oplevert en kost: aanmeldingen,

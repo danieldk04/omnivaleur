@@ -98,6 +98,9 @@ class Settings(BaseSettings):
     # gratis maanden tot 01-01-2027. Staat standaard UIT: pas aan na bewijs in
     # Stripe-testmodus en een controle van de eerste echte ronde.
     referral_korting_aan: bool = False
+    # Het maandelijkse klassement, de niveaus en de Founding Circle (besluit Daniel
+    # 09-11-2026). Staat standaard UIT, los van de korting.
+    klassement_aan: bool = False
     app_url: str = "https://omnivaleur.com"
 
     secret_key: str = "change-me"

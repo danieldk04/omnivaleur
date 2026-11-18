@@ -68,6 +68,21 @@ mama van twee jongens, UGC; verkoopt waarschijnlijk kinder- en damesmode, beauty
 - Zij staat niet in de lijst met "aanmeldingen zonder voorraad die nooit betalen": ze hoeft niet te
   betalen om waarde te hebben.
 
+## Vrienden van klanten krijgen voorrang (Daniel, 18-11-2026)
+
+Draai elke ronde `python3.13 scripts/nieuwe_vrienden.py` (alleen lezen, laatste 48 uur). Elke regel is
+iemand die via de uitnodiging van een klant binnenkwam. Aan hen is in de vriendenactie beloofd: "ik zet je
+eerste 100 artikelen in". Daniel zei op 18-11: "Jij gaat dit checken zodra je de melding krijgt."
+- Zet ze apart bovenaan het rapport, met wie hen uitnodigde.
+- Loop ze door volgens Stap 3 en repareer vast wat vastzit. Het doel is dat hun eerste 100 artikelen
+  daadwerkelijk online komen. Het inlezen (scan of import) doe je voor ze klaar zodat hun voorraad er is,
+  zoals bij elke nieuwe klant. Het plaatsen zelf draait in hun eigen browser met de extensie: dat kun
+  je niet voor ze doen. Zit daar de rem (extensie niet geïnstalleerd, niet ingelogd), dan staat dat in
+  hun mailtje, met de stap die ze moeten zetten.
+- Beloof in het mailtje nooit meer dan er staat: een aantal artikelen dat wij zelf plaatsen is niet
+  gebouwd. Zeg wat wij wel doen (inlezen, nalopen, hulp bij een stilstand).
+- Staat er geen vriend in de uitvoer, schrijf dat in een regel in het rapport en ga door.
+
 ## Stap 1b: eenmalige controles (alleen op de genoemde datum, daarna laten staan als afgevinkt)
 
 - **09-10-2026, automatische Shopify-import (Daniel: "check dit morgen voor mij").** Sinds

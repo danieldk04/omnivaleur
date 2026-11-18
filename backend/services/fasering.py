@@ -24,6 +24,8 @@ from datetime import datetime, timezone
 
 ULTRA_CENTS = 4900
 
+LOS_OP = datetime(2027, 8, 1, tzinfo=timezone.utc)
+
 # (vanaf, maandprijs in centen excl. btw). De laatste stap is de gewone Ultra-prijs.
 STAPPEN = (
     (datetime(2027, 1, 1, tzinfo=timezone.utc), 2999),
@@ -74,9 +76,8 @@ def fasen_voor(huidige_fase: dict, ultra_prijs_id: str,
         **gedeeld,
     }
     fasen = [nul]
-    for n, (vanaf, prijs) in enumerate(STAPPEN):
+    for n, (_vanaf, prijs) in enumerate(STAPPEN):
         fase = {
-            "start_date": _ts(vanaf),
             "items": [{"price": ultra_prijs_id, "quantity": 1}],
             "proration_behavior": "none",
             **gedeeld,
@@ -87,7 +88,10 @@ def fasen_voor(huidige_fase: dict, ultra_prijs_id: str,
         if n + 1 < len(STAPPEN):
             fase["end_date"] = _ts(STAPPEN[n + 1][0])
         else:
-            fase["iterations"] = 1      # daarna laat het schema los: gewoon Ultra voor 49
+            # Een maand na de laatste stap laat het schema los en loopt het
+            # abonnement gewoon door op Ultra voor 49. Een einddatum en geen
+            # "iterations": die parameter bestaat niet in elke API-versie.
+            fase["end_date"] = _ts(LOS_OP)
         fasen.append(fase)
     return fasen
 

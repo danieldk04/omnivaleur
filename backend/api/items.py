@@ -231,7 +231,7 @@ def write_settings(body: dict, user_id: str = Depends(get_current_user)):
                                                VERKOOPVRAAG, schrijf)
     # De stand van de automatische Shopify-import schrijft alleen de server.
     body = {k: v for k, v in (body or {}).items()
-            if k not in ("shopify_auto_import_stand", "woocommerce_auto_import_stand")}
+            if k not in ("shopify_auto_import_stand", "woocommerce_auto_import_stand", "klassement_naam")}
     try:
         bewaard = schrijf(user_id, body)
     except Exception as e:  # noqa: BLE001

@@ -76,6 +76,6 @@ Loop beide stappen zelf af in de browser voor de livegang, zoals in CLAUDE.md st
 
 ## Nog open voor dit pakket
 
-- Het klassement en de Founding Circle bestaan nog niet; noem ze dus nog niet in een mail of venster.
+- Het klassement en de Founding Circle zijn gebouwd (18-11) maar staan uit (vlag KLASSEMENT_AAN); noem ze pas in een mail of venster als de vlag aan staat.
 - Of het AI-pakket in de mail mag staan: wacht op 19-11.
 - Per klant bepalen wat mail B zegt voor de grote drie (gefaseerd 29,99, 39, 49).

@@ -248,6 +248,12 @@ IMPORT_STAAT = "import_staat"
 # anders krijgt hij hetzelfde bericht op elke computer opnieuw (09-10-2026).
 NIEUWS_GEZIEN = "nieuws_gezien"
 
+# De naam waaronder deze verkoper op het maandelijkse klassement van de
+# uitnodigactie staat (services/klassement.py). Leeg = doet niet mee, dan is hij
+# nergens te zien. Alleen te zetten via /api/referrals/klassement/naam; een
+# naam krijgt dezelfde regels als een verwijscode (geen merknamen, geen paden).
+KLASSEMENT_NAAM = "klassement_naam"
+
 # De staat die ELKE Vinted-advertentie van deze verkoper krijgt, wat er ook bij
 # het artikel staat. Leeg = de staat van het artikel volgen. De Juiste Toon,
 # 16-10-2026: "Ik wil graag automatisch alles bij status GOED". Zijn artikelen
@@ -309,7 +315,7 @@ STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "levering": "beide", "pakket_grens": 0, "slottekst": "",
              SHOPIFY_AUTO_IMPORT: None, SHOPIFY_AUTO_IMPORT_STAND: {}, "vinted_taal": "zelf",
              WOO_AUTO_IMPORT: None, WOO_AUTO_IMPORT_STAND: {}, IMPORT_STAAT: None,
-             NIEUWS_GEZIEN: None, VINTED_STAAT: None, VINTED_PAKKET: None,
+             NIEUWS_GEZIEN: None, KLASSEMENT_NAAM: None, VINTED_STAAT: None, VINTED_PAKKET: None,
              VINTED_SLOT: "zelfde", SLOTTEKST_VINTED: "",
              MP_ZELF_VERZENDEN: None, MP_KOPERSBESCHERMING: "volg",
              VERZENDING_2DH_VAST: None, BIEDEN_STANDAARD: "volg"}
@@ -341,6 +347,9 @@ def _schoon(rauw: dict | None) -> dict:
     gezien = rauw.get(NIEUWS_GEZIEN)
     if isinstance(gezien, str) and 0 < len(gezien.strip()) <= 60:
         uit[NIEUWS_GEZIEN] = gezien.strip()
+    if rauw.get(KLASSEMENT_NAAM):
+        from backend.services.referral_codes import schoon_code
+        uit[KLASSEMENT_NAAM] = schoon_code(str(rauw[KLASSEMENT_NAAM]))
     if rauw.get(IMPORT_STAAT) in STATEN:
         uit[IMPORT_STAAT] = rauw[IMPORT_STAAT]
     if rauw.get(VINTED_STAAT) in STATEN:

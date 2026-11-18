@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=f1915b13e4"></script>
+<script src="/i18n.js?v=64600aff11"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -892,6 +892,7 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
 ::selection { background: var(--mint); color: var(--text); }
 .upd-hero { box-shadow: none; }
 .upd-balk i { min-height: 4px; }
+  .klassement-ik { background: #f1fdf6; }
 </style>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJ5BVD3GCH"></script>
@@ -5230,6 +5231,7 @@ async function announcement(btn, dryRun) {
 // woorden bij: iemand die denkt dat een aanmelding al genoeg is, voelt zich
 // bedrogen op het moment dat de maand uitblijft.
 let _referral = null;
+let _klassement = null;
 let _referralBezig = false;
 
 // `compact` haalt alleen wat de dashboardkaart nodig heeft. De volledige vraag
@@ -5250,9 +5252,33 @@ async function loadReferral(force = false, compact = false) {
   } catch (e) {
     _referral = { ready: false, detail: e.message };
   }
+  // Het klassement staat achter een eigen vlag op de server; uit = active:false.
+  if (!compact && _referral && _referral.ready) {
+    try {
+      const kr = await apiFetch(`${API}/api/referrals/klassement`);
+      _klassement = kr.ok ? await kr.json() : null;
+    } catch (e) { _klassement = null; }
+  }
   _referralBezig = false;
   renderReferral();
   renderReferralTeaser();
+}
+
+async function klassementNaam(naam, btn) {
+  const status = document.getElementById('klassement-status');
+  if (btn) btn.disabled = true;
+  try {
+    const r = await apiFetch(`${API}/api/referrals/klassement/naam`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ naam }),
+    });
+    const d = await parseJsonSafe(r).catch(() => ({}));
+    if (!r.ok) { if (status) status.textContent = d.detail || 'Could not save'; if (btn) btn.disabled = false; return; }
+    await loadReferral(true);
+  } catch (e) {
+    if (status) status.textContent = 'Could not save, try again';
+    if (btn) btn.disabled = false;
+  }
 }
 
 function referralShareText() {
@@ -5369,10 +5395,23 @@ function renderReferral() {
   const c = _referral.campaign || {};
   const nTelt = c.counting_friends || 0;
   const trap = [
-    {n: 1, tekst: `${c.reward_months || 2} free months for each friend`},
-    {n: 3, tekst: 'The AI pack: smart titles and photo to listing'},
-    {n: 5, tekst: 'All premium features, as soon as they are live'},
+    {n: 1, kop: `${c.reward_months || 2} free months`, tekst: `For each friend, plus &euro;${c.euro_per_friend} off your invoice every month.`},
+    {n: 3, kop: 'The AI pack', tekst: 'Smart titles and photo to listing.'},
+    {n: 5, kop: 'Everything', tekst: 'All premium features, as soon as they are live.'},
   ];
+  const trapKaarten = trap.map(t => {
+    const open = nTelt >= t.n;
+    const nog = Math.max(0, t.n - nTelt);
+    return `<div style="flex:1;min-width:160px;border:1px solid ${open ? '#85edbc' : 'var(--border)'};background:${open ? '#f1fdf6' : '#fff'};border-radius:10px;padding:14px 14px 12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="width:26px;height:26px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;background:${open ? 'var(--green)' : '#eaf1f6'};color:${open ? '#fff' : 'var(--muted)'}">${open ? '&#10003;' : t.n}</span>
+        <span style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:${open ? '#005f3a' : 'var(--muted)'}">${t.n === 1 ? '1 friend' : t.n + ' friends'}</span>
+      </div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px">${t.kop}</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">${t.tekst}</div>
+      <span class="status-pill" style="background:${open ? 'var(--green-bg)' : '#eaf1f6'};color:${open ? '#005f3a' : 'var(--muted)'}">${open ? 'Unlocked' : (nog === 1 ? '1 more friend' : `${nog} more friends`)}</span>
+    </div>`;
+  }).join('');
   const campagneKaart = c.active ? `
     <div class="card" style="margin-bottom:20px;border:1px solid #85edbc">
       <div style="padding:20px 22px">
@@ -5386,11 +5425,61 @@ function renderReferral() {
         <div style="font-size:12px;color:var(--muted);margin-bottom:14px">
           ${c.next_step ? `${nTelt} paying friends so far. ${c.next_step.to_go} more unlocks the next reward.` : 'You have unlocked every reward.'}
         </div>
-        ${trap.map(t => `<div style="display:flex;gap:10px;align-items:center;padding:6px 0;font-size:13px">
-          <span style="font-weight:800;color:${nTelt >= t.n ? 'var(--green)' : 'var(--muted)'}">${nTelt >= t.n ? '&#10003;' : t.n}</span>
-          <span style="${nTelt >= t.n ? 'font-weight:600' : 'color:var(--muted)'}">${t.tekst}</span></div>`).join('')}
+        <div style="display:flex;gap:12px;flex-wrap:wrap">${trapKaarten}</div>
       </div>
     </div>` : '';
+
+  // Niveaus, maandklassement en Founding Circle (vlag klassement_aan op de server).
+  const kl = _klassement && _klassement.active ? _klassement : null;
+  const NIVEAU_NAAM = { bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum' };
+  const NIVEAU_KLEUR = { bronze: '#a8672d', silver: '#7b8794', gold: '#b8860b', platinum: '#4b6cb7' };
+  let klassementKaart = '';
+  if (kl) {
+    const ik = kl.me || {};
+    const lvl = ik.level;
+    const volg = ik.next_level;
+    const niveaus = (kl.levels || []).map(l => {
+      const bereikt = (ik.friends || 0) >= l.from;
+      return `<div style="flex:1;min-width:90px;text-align:center;padding:10px 6px;border-radius:10px;border:1px solid ${bereikt ? NIVEAU_KLEUR[l.level] : 'var(--border)'};background:${bereikt ? '#fff' : '#f8fafd'}">
+        <div style="font-size:13px;font-weight:800;color:${bereikt ? NIVEAU_KLEUR[l.level] : 'var(--muted)'}">${NIVEAU_NAAM[l.level]}</div>
+        <div style="font-size:11px;color:var(--muted)">${l.from === 1 ? '1 friend' : l.from + ' friends'}</div></div>`;
+    }).join('');
+    const founding = kl.founding || {};
+    const foundingRegel = ik.founding
+      ? `<div style="font-size:13px;font-weight:700;color:#005f3a;margin-top:12px">You are in the Founding Circle.</div>`
+      : `<div style="font-size:12px;color:var(--muted);margin-top:12px">Founding Circle: the first ${founding.spots} members with ${founding.friends_needed} paying friends. ${founding.taken} of ${founding.spots} spots taken.</div>`;
+    const bord = (kl.board || []).length
+      ? `<table><thead><tr><th>#</th><th>Name</th><th style="text-align:right">New paying friends</th></tr></thead><tbody>${kl.board.map(r =>
+          `<tr class="${r.me ? 'klassement-ik' : ''}"><td style="font-weight:700">${r.rank}</td><td>${esc(r.name)}${r.me ? ' (you)' : ''}</td><td style="text-align:right;font-weight:700;color:${r.qualifies ? 'var(--green)' : 'var(--muted)'}">${r.count}</td></tr>`).join('')}</tbody></table>`
+      : `<div style="color:var(--muted);font-size:13px;padding:6px 0">Nobody is on this month's board yet.</div>`;
+    const meedoen = ik.joined
+      ? `<div style="font-size:12px;color:var(--muted);margin-top:12px">${ik.rank ? `You are listed as <b>${esc(ik.name)}</b>, rank ${ik.rank}.` : `You are listed as <b>${esc(ik.name)}</b>.`} <a href="#" onclick="klassementNaam(null);return false">Leave the leaderboard</a></div>`
+      : `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px">
+           <input id="klassement-naam-input" maxlength="40" placeholder="Pick a public name" style="width:200px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px">
+           <button class="btn btn-outline btn-sm" onclick="klassementNaam(document.getElementById('klassement-naam-input').value, this)">Join the leaderboard</button>
+           <span id="klassement-status" style="font-size:12px;color:var(--muted)">Optional. Only this name is shown, never your email.</span>
+         </div>`;
+    klassementKaart = `
+    <div class="card" style="margin-bottom:20px">
+      <div style="padding:20px 22px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+          <div style="font-size:15px;font-weight:700">Your level</div>
+          <span class="status-pill" style="background:#fff;border:1px solid ${lvl ? NIVEAU_KLEUR[lvl] : 'var(--border)'};color:${lvl ? NIVEAU_KLEUR[lvl] : 'var(--muted)'}">${lvl ? NIVEAU_NAAM[lvl] : 'No level yet'}</span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">${niveaus}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:10px">${volg ? (volg.to_go === 1 ? `1 more paying friend for ${NIVEAU_NAAM[volg.level]}.` : `${volg.to_go} more paying friends for ${NIVEAU_NAAM[volg.level]}.`) : 'You reached the top level.'}</div>
+        ${foundingRegel}
+      </div>
+      <div style="border-top:1px solid var(--border);padding:18px 22px">
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px">Leaderboard, ${esc(kl.month)}</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+          A friend counts once they have paid for 30 days. Get ${kl.threshold} new paying friends in a month to win a feature of your choice, agreed together with us. If nobody gets there, the prize rolls over to next month.
+        </div>
+        ${bord}
+        ${meedoen}
+      </div>
+    </div>`;
+  }
 
   const rijen = vrienden.length ? vrienden.map(v => {
     const st = REFERRAL_STANDEN[v.status] || REFERRAL_STANDEN.signed_up;
@@ -5405,6 +5494,7 @@ function renderReferral() {
   doel.innerHTML = `
     ${tegoedRegel}
     ${campagneKaart}
+    ${klassementKaart}
     <div class="card" style="margin-bottom:20px">
       <div style="padding:20px 22px">
         <div style="font-size:15px;font-weight:700;margin-bottom:4px">Your personal link</div>
