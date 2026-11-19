@@ -19565,3 +19565,8 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Tabblad met half Vinted-formulier staat nog open in Daniels Chrome (sluiten weigert door "Leave site?"); niets geplaatst.
 
 - 19-11-2026 (later): opvolgmail na 4 dagen toegevoegd aan `scripts/doodgelopen_opvolging.py`. Twee regels als antwoord op onze eigen eerste reactie (zelfde draad), zelfde variant (link of vraag), met afmeldregel. Alleen bij stilte: niet bij reactie, afmelding, eigen mail van Daniel erna, klant of stop in het sheet; die krijgen `klaar` met reden in het record. Opvolgingen gaan voor nieuwe mails, samen hooguit 25 per dag. Klikken van de opvolging tellen onder laag `doodgelopen2` (zelfde doel /mp). De eerste opvolging is op 23-11 aan de beurt. Echt nog niet gezien, alleen droog gedraaid en getest.
+
+## 19-11-2026: Onboarding nieuwe klanten (ochtend)
+- 5 accounts in de eerste week, 0 nieuw, 0 nieuwe vrienden via een klant. Web Store levert 1.0.428, repo 1.0.429. Mailrapport: 5 mails, 1 echt geopend (Dylan, Gmail), 0 klik, 0 antwoord.
+- Dylan (c0570d1b): opende het welkomstmailtje 18-11 20:07, daarna geen extensie en nul artikelen. Geen tweede mailtje (binnen 44 uur, niets veranderd).
+- Esther (3eeceb51): extensie stil sinds 17-11 22:05, geen nieuwe fouten; in gesprek met Daniel. Jurre, demo-account 8faba317 en creator Janina (f0cead08, stil sinds 13-11): niets veranderd. Geen mailtjes, niets gerepareerd.
