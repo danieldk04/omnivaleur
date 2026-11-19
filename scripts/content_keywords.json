@@ -1041,6 +1041,66 @@
       "status": "published",
       "nl_slug": "crosslisten-van-marktplaats-naar-shopify",
       "priority": 116
+    },
+    {
+      "keyword": "how to create a bundle on eBay for resellers",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "how-to-create-a-bundle-on-ebay-for-resellers",
+      "status": "published",
+      "nl_slug": "hoe-maak-je-een-bundel-aan-op-ebay",
+      "priority": 117
+    },
+    {
+      "keyword": "Omnivaleur vs Resylr: which crosslisting tool is better",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "slug": "omnivaleur-vs-resylr-which-crosslisting-tool-is-better",
+      "status": "pending",
+      "nl_slug": "omnivaleur-vs-resylr-welke-crosslisting-tool-is-beter",
+      "priority": 118
+    },
+    {
+      "keyword": "how to set up automatic shipping labels on 2dehands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "slug": "how-to-set-up-automatic-shipping-labels-on-2dehands",
+      "status": "pending",
+      "nl_slug": "hoe-stel-je-automatische-verzendlabels-in-op-2dehands",
+      "priority": 119
+    },
+    {
+      "keyword": "do you pay income tax when selling on eBay in Belgium",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "slug": "do-you-pay-income-tax-when-selling-on-ebay-in-belgium",
+      "status": "pending",
+      "nl_slug": "moet-je-inkomstenbelasting-betalen-bij-verkopen-op-ebay-in-belgi",
+      "priority": 120
+    },
+    {
+      "keyword": "how to source inventory for second-hand reselling in the Netherlands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "strategy",
+      "slug": "how-to-source-inventory-for-second-hand-reselling-in-the-netherlands",
+      "status": "pending",
+      "nl_slug": "hoe-vind-je-voorraaditems-voor-tweedehandsverkoop-in-nederland",
+      "priority": 121
+    },
+    {
+      "keyword": "how to crosslist from Vinted to Shopify automatically",
+      "region": "nl",
+      "pillar": "A",
+      "format": "combo",
+      "slug": "how-to-crosslist-from-vinted-to-shopify-automatically",
+      "status": "pending",
+      "nl_slug": "hoe-crosslist-je-automatisch-van-vinted-naar-shopify",
+      "priority": 122
     }
   ],
   "published": [
@@ -2129,6 +2189,16 @@
       "action": "created",
       "url_path": "/crosslisting/how-to-crosslist-from-marktplaats-to-shopify",
       "published_at": "2026-11-18T16:57:40.250588+00:00"
+    },
+    {
+      "keyword": "how to create a bundle on eBay for resellers",
+      "slug": "how-to-create-a-bundle-on-ebay-for-resellers",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-create-a-bundle-on-ebay-for-resellers",
+      "published_at": "2026-11-19T17:02:06.076190+00:00"
     }
   ]
 }
