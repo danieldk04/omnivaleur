@@ -1536,6 +1536,8 @@ _EBAY_CATEGORY_HINTS = {
     "wonen bestek": "cutlery",
     "wonen keukenbenodigdheden": "kitchen utensil",
     "wonen potten en pannen": "cookware",
+    "wonen tupperware": "tupperware",
+    "wonen blikken": "vintage tin",
     "wonen overige huis en inrichting": "home decor",
     "wonen kerst": "christmas decoration",
     "antiek curiosa en brocante": "collectables",

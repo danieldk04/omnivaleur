@@ -146,6 +146,8 @@ _NIEUWE_TAK_EN_TYPE = {
     "wonen bestek": "Cutlery",
     "wonen keukenbenodigdheden": "Kitchenware",
     "wonen potten en pannen": "Cookware",
+    "wonen tupperware": "Food Storage",
+    "wonen blikken": "Tin",
     "boeken gezondheid en voeding": "Book",
     "boeken kookboeken": "Cookbook",
     "boeken geschiedenis regio": "Book",

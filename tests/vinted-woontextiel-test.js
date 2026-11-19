@@ -82,6 +82,9 @@ function maatKiezer(bron) {
     ["wonen potten en pannen", "Emaille kookpot", "Home > Cookware & bakeware > Pots"],
     ["wonen keukenbenodigdheden", "Houten snijplank", "Home > Kitchen tools > Chopping boards"],
     ["wonen keukenbenodigdheden", "Retro keukenweegschaal", "Home > Kitchen tools > Kitchen scales"],
+    ["wonen tupperware", "Tupperware caketrommel bruin jaren 70", "Home > Kitchen tools > Food storage"],
+    ["wonen blikken", "Peijnenburg jubileum blik ontbijtkoekblik", "Home > Kitchen tools > Food storage"],
+    ["wonen blikken", "Vintage Sarah Kay XL blik 28 cm", "Home > Home accessories > Storage & organisation > Boxes"],
   ];
   console.log("Categorie op een Nederlandse Vinted, Vinted raadt een kinderslaapzak:");
   for (const [cat, titel, verwacht] of gevallen) {

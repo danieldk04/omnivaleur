@@ -361,6 +361,8 @@ _TAXONOMY = {
         "wonen bestek",
         "wonen keukenbenodigdheden",
         "wonen potten en pannen",
+        "wonen tupperware",
+        "wonen blikken",
         "wonen overige huis en inrichting",
         "wonen kerst",
     ],
@@ -2851,6 +2853,16 @@ async def _find_twins(cands: list[dict], items: list[dict], platforms_by_item: d
     pool = _twin_pool(cands[0].get("platform"), items, platforms_by_item)
     if not pool:
         return {}
+    # EERST DE FOTO (19-11-2026, Esther, hetisvintastisch). Bij haar Shopify-
+    # import vond het model plus de controle hieronder vrijwel geen van de ~180
+    # stukken die al via Marktplaats bij ons stonden; alles werd een tweede
+    # artikel en een webshopverkoop haalde de Marktplaats-advertentie nergens
+    # weg. Dezelfde foto is een zeker signaal. Zie backend/services/foto_tweeling.py.
+    foto = await _foto_tweelingen_voor(cands, pool)
+    if foto:
+        cands = [c for c in cands if c["id"] not in foto]
+        if not cands:
+            return foto
     # Sinds 23-09-2026 eerst Gemini, dan Claude (backend/services/taalmodel.py).
     from backend.services import taalmodel
 
@@ -2937,7 +2949,25 @@ async def _find_twins(cands: list[dict], items: list[dict], platforms_by_item: d
     merged = {}
     for r in results:
         merged.update(r)
+    # Een artikel dat de foto al aan een kandidaat gaf, krijgt het model niet nog eens.
+    bezet = set(foto.values())
+    merged = {k: v for k, v in merged.items() if v not in bezet}
+    merged.update(foto)
     return merged
+
+
+async def _foto_tweelingen_voor(cands: list[dict], pool: list[dict]) -> dict:
+    """Kandidaat -> artikel op een vrijwel identieke foto. Leeg bij elke storing."""
+    from backend.services.foto_tweeling import foto_tweelingen
+    try:
+        db = get_db()
+        ids = [p["id"] for p in pool]
+        rijen = await asyncio.to_thread(lambda: fetch_all_in(
+            lambda: db.table("items").select("id,photo_urls"), "id", ids))
+        return await foto_tweelingen(cands, rijen)
+    except Exception as e:  # noqa: BLE001 — nooit de import laten vallen
+        logger.warning("fototweeling: overgeslagen: %s", e)
+        return {}
 
 
 # Hoeveel modelaanroepen er hier hooguit tegelijk mogen lopen.

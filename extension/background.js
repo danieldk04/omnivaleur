@@ -603,6 +603,11 @@ const MP_CATEGORIES = {
   "wonen bestek":                               { cat1: 504, cat3: 1941 },   // Bestek
   "wonen keukenbenodigdheden":                  { cat1: 504, cat3: 1257 },   // Keukenbenodigdheden
   "wonen potten en pannen":                     { cat1: 504, cat3: 1511 },   // Potten en Pannen
+  // 19-11-2026, Esther (hetisvintastisch): "Mis o.a. ook nog de rubrieken Tupperware en blikken".
+  // Nagemeten via de openbare zoek-API van marktplaats.nl en 2dehands.be (zelfde nummers):
+  // Huis en Inrichting (504) > Keuken | Tupperware (1512); Verzamelen (895) > Blikken (899).
+  "wonen tupperware":                           { cat1: 504, cat3: 1512 },   // Keuken | Tupperware
+  "wonen blikken":                              { cat1: 895, cat3: 899 },    // Verzamelen > Blikken
   "wonen overige huis en inrichting":            { cat1: 504, cat3: 526 },   // Overige Huis en Inrichting
   "wonen kerst":                                 { cat1: 428, cat3: 436 },   // Kerst
 

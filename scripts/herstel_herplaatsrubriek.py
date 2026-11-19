@@ -38,8 +38,9 @@ async def main() -> int:
     db = get_db()
     users = [a.user_id] if a.user_id else [
         h["user_id"] for h in db.table("extension_heartbeat").select("user_id").execute().data]
-    logpad = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data",
-                          f"herstel_herplaatsrubriek_{datetime.now():%Y%m%d_%H%M}.jsonl")
+    # Buiten de repo: dit logboek bevat klantadressen en hoort niet in git.
+    logpad = os.path.expanduser(
+        f"~/.omnivaleur/herstel/herplaatsrubriek_{datetime.now():%Y%m%d_%H%M}.jsonl")
     os.makedirs(os.path.dirname(logpad), exist_ok=True)
     gezet = leeg = mis = 0
     with open(logpad, "a", encoding="utf-8") as log:
@@ -61,8 +62,7 @@ async def main() -> int:
                     leeg += 1
                     log.write(json.dumps({"job": j["id"], "url": url, "uitkomst": "geen rubriek"}) + "\n")
                     continue
-                log.write(json.dumps({"job": j["id"], "url": url, "mp_category": cat,
-                                      "oude_payload_had": None}) + "\n")
+                log.write(json.dumps({"job": j["id"], "url": url, "mp_category": cat}) + "\n")
                 if a.schrijf:
                     r = (db.table("jobs").update({"payload": {**pl, "mp_category": cat}})
                          .eq("id", j["id"]).eq("status", "pending").execute().data)

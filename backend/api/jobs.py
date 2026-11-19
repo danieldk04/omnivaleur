@@ -130,10 +130,16 @@ MINIMALE_HOBBY_VERSIE = (1, 0, 406)
 MINIMALE_KEUKEN_VERSIE = (1, 0, 427)
 _KEUKEN_RUBRIEKEN = ("wonen servies", "wonen bestek", "wonen keukenbenodigdheden",
                      "wonen potten en pannen")
+# Tupperware en blikken (19-11-2026, Esther: "Mis o.a. ook nog de rubrieken
+# Tupperware en blikken"). Zelfde regel: Marktplaats en 2dehands krijgen de
+# nummers van de server mee, alleen Vinted wacht op de extensie met het vaste pad.
+MINIMALE_TUPPERWARE_BLIK_VERSIE = (1, 0, 430)
 _RUBRIEK_VANAF_VERSIE = {"kinderen tassen": MINIMALE_KINDERTASSEN_VERSIE,
                          "kinderen luiertassen": MINIMALE_LUIERTASSEN_VERSIE,
                          "hobby kledingapplicaties en strijkemblemen": MINIMALE_HOBBY_VERSIE,
-                         **{k: MINIMALE_KEUKEN_VERSIE for k in _KEUKEN_RUBRIEKEN}}
+                         **{k: MINIMALE_KEUKEN_VERSIE for k in _KEUKEN_RUBRIEKEN},
+                         "wonen tupperware": MINIMALE_TUPPERWARE_BLIK_VERSIE,
+                         "wonen blikken": MINIMALE_TUPPERWARE_BLIK_VERSIE}
 # Gemeten 28-10-2026 op marktplaats.nl/q/strijkembleem: 60 van de ~70 staan in
 # Hobby en Vrije tijd (1099) > Kledingapplicaties en Hotfix (2855).
 _MP_NUMMERS_VAN_DE_SERVER = {
@@ -145,6 +151,10 @@ _MP_NUMMERS_VAN_DE_SERVER = {
                                   "l2_naam": "Keukenbenodigdheden"},
     "wonen potten en pannen": {"l1": 504, "l2": 1511, "l1_naam": "Huis en Inrichting",
                                "l2_naam": "Potten en Pannen"},
+    # 19-11-2026 nagemeten op beide zoek-API's (Esther, hetisvintastisch).
+    "wonen tupperware": {"l1": 504, "l2": 1512, "l1_naam": "Huis en Inrichting",
+                         "l2_naam": "Tupperware"},
+    "wonen blikken": {"l1": 895, "l2": 899, "l1_naam": "Verzamelen", "l2_naam": "Blikken"},
     "hobby kledingapplicaties en strijkemblemen": {
         "l1": 1099, "l2": 2855, "l1_naam": "Hobby en Vrije tijd",
         "l2_naam": "Kledingapplicaties en Hotfix"},

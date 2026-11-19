@@ -618,6 +618,8 @@
     "wonen bestek":                                        ["cutlery", "flatware"],
     "wonen keukenbenodigdheden":                           ["kitchen utensil", "kitchenware"],
     "wonen potten en pannen":                              ["cookware", "pan"],
+    "wonen tupperware":                                    ["food storage", "tupperware"],
+    "wonen blikken":                                       ["tin", "storage box"],
     "wonen overige huis en inrichting":                    ["home decor", "home"],
     "wonen kerst":                                         ["christmas decoration", "home decor"],
     "antiek curiosa en brocante":                          ["collectables", "antiques"],
@@ -3646,6 +3648,16 @@
       if (/voorraadpot|bewaarbak|bewaardoos|storage|trommel|\bblik\b/.test(t)) return ["Home", "Kitchen tools", "Food storage"];
       if (/spatel|garde|schep|tang|pollepel|houten lepel|keukengerei|utensil|ladle|whisk|spatula/.test(t)) return ["Home", "Kitchen tools", "Cooking utensils"];
       return ["Home", "Kitchen tools", "Speciality kitchen tools"];
+    }
+    // Tupperware en blikken (19-11-2026, Esther). Paden uit dezelfde catalogus:
+    // Tupperware is altijd voedselopslag; een blik is voedselopslag als het een
+    // voorraad-, koek- of trommelblik is, anders een sier- of opbergblik (Boxes).
+    if (cat === "wonen tupperware") return ["Home", "Kitchen tools", "Food storage"];
+    if (cat === "wonen blikken") {
+      if (/voorraad|koek|beschuit|trommel|bus\b|thee|koffie|cacao|suiker|meel|brood|snoep|storage|biscuit|cookie|canister/.test(t)) {
+        return ["Home", "Kitchen tools", "Food storage"];
+      }
+      return ["Home", "Home accessories", "Storage & organisation", "Boxes"];
     }
     return null;
   }

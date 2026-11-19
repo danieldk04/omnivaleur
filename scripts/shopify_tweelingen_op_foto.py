@@ -34,88 +34,14 @@ from __future__ import annotations
 import argparse
 import asyncio
 import collections
-import concurrent.futures as cf
-import io
 import json
 import os
-import re
 import sys
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import requests
-
-MAX_AFSTAND = 2          # phash-afstand; 0 en 2 zijn dezelfde foto, opnieuw gecomprimeerd
-TOP_TITELS = 10          # zoveel Shopify-producten per artikel naast elkaar leggen
 LEVEND = {"active", "relisting", "pending", "hidden"}
-_STOP = set("vintage retro de het een en met van in jaren voor set x cm the and of".split())
-
-
-def _woorden(t: str | None) -> set[str]:
-    return {w for w in re.findall(r"[a-z0-9]+", (t or "").lower()) if w not in _STOP and len(w) > 1}
-
-
-def _hash(url: str, klein: bool = False):
-    from PIL import Image
-    import imagehash
-    try:
-        u = url + ("&" if "?" in url else "?") + "width=256" if klein else url
-        r = requests.get(u, timeout=20)
-        r.raise_for_status()
-        return imagehash.phash(Image.open(io.BytesIO(r.content)).convert("RGB"))
-    except Exception:  # noqa: BLE001 — een foto die niet laadt bewijst niets
-        return None
-
-
-def shopify_producten(shop: str, token: str) -> list[dict]:
-    uit = []
-    for status in ("active", "draft", "archived"):
-        url = f"https://{shop}/admin/api/2024-01/products.json?limit=250&status={status}"
-        while url:
-            r = requests.get(url, headers={"X-Shopify-Access-Token": token}, timeout=60)
-            r.raise_for_status()
-            for p in r.json()["products"]:
-                uit.append({"id": str(p["id"]), "title": p["title"],
-                            "qty": sum((v.get("inventory_quantity") or 0) for v in p["variants"]),
-                            "img": [i["src"] for i in p.get("images", [])][:3]})
-            m = re.search(r'<([^>]+)>; rel="next"', r.headers.get("Link", ""))
-            url = m.group(1) if m else None
-    return uit
-
-
-def zoek_paren(items: dict, per_item: dict, producten: list[dict]) -> list[dict]:
-    """Bewezen paren (artikel op een kanaal, Shopify-product) op foto."""
-    doel = [iid for iid, ls in per_item.items()
-            if "shopify" not in ls and any(ls[p]["status"] in LEVEND for p in ls)]
-    pw = [(p, _woorden(p["title"])) for p in producten]
-
-    def een(iid):
-        w = _woorden(items[iid]["title"])
-        kand = sorted(pw, key=lambda x: -len(w & x[1]) / max(1, len(w | x[1])))[:TOP_TITELS]
-        eigen = [h for h in (_hash(f) for f in (items[iid].get("photo_urls") or [])[:2]) if h is not None]
-        if not eigen:
-            return iid, []
-        treffers = []
-        for p, _ in kand:
-            afst = min((h - e for h in (_hash(u, True) for u in p["img"]) if h is not None
-                        for e in eigen), default=99)
-            if afst <= MAX_AFSTAND:
-                treffers.append((int(afst), p))
-        return iid, treffers
-
-    with cf.ThreadPoolExecutor(12) as ex:
-        res = list(ex.map(een, doel))
-    per_product = collections.Counter(p["id"] for _, t in res for _, p in t)
-    paren = []
-    for iid, t in res:
-        if len(t) != 1:
-            continue                       # geen of meer dan één product: niet raden
-        afst, p = t[0]
-        if per_product[p["id"]] != 1:
-            continue                       # twee artikelen claimen dit product
-        paren.append({"item": iid, "product": p, "afstand": afst})
-    return paren
 
 
 async def main() -> int:
@@ -124,14 +50,8 @@ async def main() -> int:
     ap.add_argument("--schrijf", action="store_true")
     a = ap.parse_args()
     from backend.database import fetch_all, fetch_all_in, get_db
-    from backend.platforms.shopify import _shop_creds
+    from backend.services.foto_tweeling import foto_tweelingen
     db, uid = get_db(), a.user_id
-    cred = (db.table("platform_credentials").select("*").eq("user_id", uid)
-            .eq("platform", "shopify").limit(1).execute().data or [None])[0]
-    if not cred:
-        print("Geen Shopify-koppeling.")
-        return 0
-    shop, token = await _shop_creds(cred)
     items = {i["id"]: i for i in fetch_all(lambda: db.table("items")
              .select("id,title,photo_urls").eq("user_id", uid))}
     rijen = fetch_all_in(lambda: db.table("listings").select(
@@ -143,11 +63,18 @@ async def main() -> int:
         per_item.setdefault(iid, {})
     item_van_product = {r["platform_listing_id"]: r["item_id"] for r in rijen
                         if r["platform"] == "shopify" and r.get("platform_listing_id")}
-    kandidaat = {c["platform_listing_id"]: c for c in fetch_all(lambda: db.table(
-        "import_candidates").select("id,platform_listing_id,status").eq("user_id", uid)
-        .eq("platform", "shopify"))}
-    producten = shopify_producten(shop, token)
-    paren = zoek_paren(items, per_item, producten)
+    kandidaten = fetch_all(lambda: db.table("import_candidates").select(
+        "id,title,platform_listing_id,status,photo_url,photo_urls").eq("user_id", uid)
+        .eq("platform", "shopify"))
+    kandidaat = {c["platform_listing_id"]: c for c in kandidaten}
+    pool = [items[i] for i, ls in per_item.items()
+            if ls and "shopify" not in ls and any(r["status"] in LEVEND for r in ls.values())]
+    # Dezelfde vergelijking als de import zelf (imports._find_twins).
+    gevonden = await foto_tweelingen(kandidaten, pool, tijdslimiet=900)
+    per_id = {c["id"]: c for c in kandidaten}
+    paren = [{"item": iid, "product": {"id": str(per_id[cid]["platform_listing_id"]),
+                                        "title": per_id[cid]["title"]}, "afstand": "<=4"}
+             for cid, iid in gevonden.items()]
 
     plan = collections.Counter()
     acties = []

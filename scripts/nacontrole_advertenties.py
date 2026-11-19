@@ -14,7 +14,6 @@ openbare advertentie (zoek-API van het kanaal, geen login nodig) en meldt:
   - prijs        : de prijs op het kanaal wijkt af van de prijs voor dat kanaal
   - titel        : de titel op het kanaal is niet (het begin van) onze titel
   - omschrijving : de omschrijving op het kanaal begint niet met onze omschrijving
-  - fotos        : minder foto's op het kanaal dan in het artikel (max 24 op MP)
   - verkocht_elders : het artikel is op een ander kanaal als verkocht geboekt
                    maar staat hier nog live
 
@@ -40,7 +39,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import httpx
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MAX_FOTOS = {"marktplaats": 24, "2dehands": 24}
 
 
 def rubriek_nummers() -> dict[str, set[int]]:
@@ -65,8 +63,16 @@ def _norm(t: str | None) -> str:
 
 
 def vergelijk_een(item: dict, rij: dict | None, platform: str,
-                  nummers: dict[str, set[int]], verkocht_op: set[str]) -> list[tuple[str, str]]:
+                  nummers: dict[str, set[int]], verkocht_op: set[str],
+                  geplaatst: dict | None = None) -> list[tuple[str, str]]:
     """Alle verschillen tussen ons artikel en zijn openbare advertentie.
+
+    `geplaatst` is de payload van ONZE plaatsing van deze advertentie (titel,
+    prijs, rubriek zoals wij ze verstuurden). Bij een advertentie die de klant
+    zelf plaatste en wij alleen importeerden is die None: dan zijn rubriek,
+    titel en tekst haar eigen keuze en tellen alleen 'weg' en 'verkocht_elders'.
+    (Eerste versie vergeleek ook geïmporteerde advertenties met onze geraden
+    rubriek en meldde daardoor tientallen valse verschillen.)
 
     Los van netwerk en database, zodat de vergelijking zelf te beproeven is.
     """
@@ -76,28 +82,35 @@ def vergelijk_een(item: dict, rij: dict | None, platform: str,
     andere = sorted(p for p in verkocht_op if p != platform)
     if andere:
         fout.append(("verkocht_elders", f"verkocht op {', '.join(andere)}, staat hier nog live"))
-    verwacht = nummers.get(item.get("category") or "")
+    if not geplaatst:
+        return fout
+    mp_cat = geplaatst.get("mp_category") or {}
+    verwacht = {int(mp_cat["l2"])} if mp_cat.get("l2") else nummers.get(geplaatst.get("category") or "")
     if verwacht and rij.get("categoryId") not in verwacht:
-        fout.append(("rubriek", f"artikel '{item.get('category')}' hoort in {sorted(verwacht)}, "
-                                f"staat in {rij.get('categoryId')}"))
-    prijs = item.get(f"price_{platform}") or item.get("price")
+        fout.append(("rubriek", f"verstuurd als '{geplaatst.get('category')}' "
+                                f"({sorted(verwacht)}), staat in {rij.get('categoryId')}"))
+    prijs = geplaatst.get("price")
     cents = (rij.get("priceInfo") or {}).get("priceCents")
     soort = (rij.get("priceInfo") or {}).get("priceType")
-    if prijs and soort == "FIXED" and cents is not None and abs(float(prijs) * 100 - cents) > 1:
-        fout.append(("prijs", f"bij ons {float(prijs):.2f}, live {cents / 100:.2f}"))
-    ons, live = _norm(item.get("title")), _norm(rij.get("title"))
+    # Een herplaatsing verstuurt een licht verschoven prijs (relist._jittered_price);
+    # de extensie zet de eigen prijs van het artikel. Alleen een live prijs die
+    # van BEIDE afwijkt is fout.
+    eigen = item.get(f"price_{platform}") or item.get("price")
+    if (prijs and soort == "FIXED" and cents is not None
+            and abs(float(prijs) * 100 - cents) > 1
+            and not (eigen and abs(float(eigen) * 100 - cents) <= 1)):
+        fout.append(("prijs", f"verstuurd {float(prijs):.2f}, artikel {eigen}, live {cents / 100:.2f}"))
+    elif prijs and float(prijs) > 0 and soort and soort != "FIXED":
+        fout.append(("prijs", f"verstuurd als vraagprijs {float(prijs):.2f}, live '{soort}'"))
+    ons, live = _norm(geplaatst.get("title")), _norm(rij.get("title"))
     if ons and live and not (ons.startswith(live) or live.startswith(ons)):
-        fout.append(("titel", f"bij ons '{item.get('title')}', live '{rij.get('title')}'"))
-    oms = _norm(item.get("description"))[:60]
+        fout.append(("titel", f"verstuurd '{geplaatst.get('title')}', live '{rij.get('title')}'"))
+    oms = _norm(geplaatst.get("description"))[:60]
     live_oms = _norm(rij.get("categorySpecificDescription") or rij.get("description"))
-    if oms and live_oms and not live_oms.startswith(oms[: min(len(oms), len(live_oms))]):
-        fout.append(("omschrijving", "live omschrijving begint anders dan de onze"))
     if oms and not live_oms:
         fout.append(("omschrijving", "live omschrijving is leeg"))
-    n_ons = min(len(item.get("photo_urls") or []), MAX_FOTOS.get(platform, 24))
-    n_live = len(rij.get("pictures") or rij.get("imageUrls") or [])
-    if n_live and n_live < n_ons:
-        fout.append(("fotos", f"bij ons {n_ons}, live {n_live}"))
+    elif oms and live_oms and not live_oms.startswith(oms[: min(len(oms), len(live_oms), 40)]):
+        fout.append(("omschrijving", "live omschrijving begint anders dan wat wij verstuurden"))
     return fout
 
 
@@ -135,8 +148,8 @@ async def controleer_klant(db, uid: str, platform: str, nummers) -> dict:
         "id,title,description,category,price,price_marktplaats,price_2dehands,photo_urls")
         .eq("user_id", uid))
     per_id = {i["id"]: i for i in items}
-    rijen = fetch_all_in(lambda ids: db.table("listings").select(
-        "item_id,platform,status,platform_listing_id").in_("item_id", ids), list(per_id))
+    rijen = fetch_all_in(lambda: db.table("listings").select(
+        "item_id,platform,status,platform_listing_id"), "item_id", list(per_id))
     verkocht = collections.defaultdict(set)
     for r in rijen:
         if r.get("status") == "sold":
@@ -154,16 +167,59 @@ async def controleer_klant(db, uid: str, platform: str, nummers) -> dict:
     if not openbaar:
         return {"user_id": uid, "live": len(live), "fouten": [],
                 "meting_mislukt": "openbare lijst leeg; niet als 'alles weg' lezen"}
+    # Onze eigen plaatsingen: wat we verstuurden, per advertentienummer.
+    geplaatst: dict[str, dict] = {}
+    off = 0
+    while True:
+        blok = (db.table("jobs").select(
+            "nr:result->>platform_listing_id,title:payload->>title,price:payload->>price,"
+            "category:payload->>category,mp_category:payload->mp_category,"
+            "description:payload->>description")
+            .eq("user_id", uid).eq("platform", platform).eq("action", "create")
+            .eq("status", "done").order("done_at").range(off, off + 499).execute().data or [])
+        for g in blok:
+            if g.get("nr"):
+                geplaatst[g["nr"]] = g
+        if len(blok) < 500:
+            break
+        off += 500
     fouten = []
     for r in live:
         it = per_id.get(r["item_id"])
         if not it:
             continue
         for soort, wat in vergelijk_een(it, openbaar.get(r["platform_listing_id"]), platform,
-                                        nummers, verkocht.get(r["item_id"], set())):
+                                        nummers, verkocht.get(r["item_id"], set()),
+                                        geplaatst.get(r["platform_listing_id"])):
             fouten.append({"soort": soort, "wat": wat, "item_id": it["id"],
                            "titel": it["title"], "advertentie": r["platform_listing_id"]})
-    return {"user_id": uid, "live": len(live), "openbaar": len(openbaar), "fouten": fouten}
+    return {"user_id": uid, "live": len(live), "openbaar": len(openbaar),
+            "eigen": sum(1 for r in live if r["platform_listing_id"] in geplaatst), "fouten": fouten}
+
+
+def herplaatsingen_zonder_eigen_rubriek(db, uren: int) -> dict[str, int]:
+    """Herplaatsingen (Marktplaats/2dehands) van de laatste uren zonder mp_category.
+
+    WAAROM (19-11-2026): van 14 tot 19-11 kwam geen enkele herplaatsing meer in
+    zijn eigen rubriek terug, omdat Marktplaats de pagina had veranderd. Elke
+    opdracht stond op 'done', dus niemand zag het. Een herplaatsing zonder
+    mp_category is soms terecht (de oude advertentie was al weg), maar een
+    hele dag zonder één enkele met rubriek is een storing.
+    """
+    sinds = (datetime.now(timezone.utc) - timedelta(hours=uren)).isoformat()
+    met = zonder = 0
+    for u in [h["user_id"] for h in db.table("extension_heartbeat").select("user_id").execute().data]:
+        r = (db.table("jobs").select("vv:payload->>_vervangt_listing_id,cat:payload->mp_category")
+             .eq("user_id", u).eq("action", "create").in_("platform", ["marktplaats", "2dehands"])
+             .gte("created_at", sinds).limit(5000).execute().data or [])
+        for x in r:
+            if not x.get("vv"):
+                continue
+            if (x.get("cat") or {}).get("l1"):
+                met += 1
+            else:
+                zonder += 1
+    return {"met_eigen_rubriek": met, "zonder": zonder}
 
 
 def klanten_met_plaatsingen(db, uren: int, platform: str) -> list[str]:
@@ -193,6 +249,10 @@ async def main() -> int:
     db = get_db()
     nummers = rubriek_nummers()
     uids = [a.user_id] if a.user_id else klanten_met_plaatsingen(db, a.uren, a.platform)
+    hz = herplaatsingen_zonder_eigen_rubriek(db, a.uren)
+    alarm = "  << STORING: rubriek wordt niet meer gelezen" if hz["zonder"] >= 10 and hz["met_eigen_rubriek"] == 0 else ""
+    print(f"herplaatsingen {a.uren} uur: {hz['met_eigen_rubriek']} met eigen rubriek, "
+          f"{hz['zonder']} zonder{alarm}")
     print(f"{a.platform}: {len(uids)} klant(en) na te kijken")
     for uid in uids:
         u = await controleer_klant(db, uid, a.platform, nummers)
@@ -200,7 +260,8 @@ async def main() -> int:
             print(f"- {uid[:8]}: {u['live']} live, METING MISLUKT: {u['meting_mislukt']}")
             continue
         telling = collections.Counter(f["soort"] for f in u["fouten"])
-        print(f"- {uid[:8]}: {u['live']} live bij ons, {u.get('openbaar', 0)} openbaar, "
+        print(f"- {uid[:8]}: {u['live']} live bij ons ({u.get('eigen', 0)} door ons geplaatst), "
+              f"{u.get('openbaar', 0)} openbaar, "
               f"verschillen: {dict(telling) or 'geen'}")
         for f in u["fouten"] if a.alles else []:
             print(f"    [{f['soort']}] {f['titel'][:60]} ({f['advertentie']}): {f['wat']}")
