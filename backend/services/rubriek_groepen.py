@@ -53,8 +53,8 @@ logger = logging.getLogger(__name__)
 
 GROEP = 20                 # artikelen per vraag (gemeten: 40 gaf meer mislukkingen)
 OMSCHRIJVING_TEKENS = 600  # gemeten: niet slechter dan 1.500
-DAGMAX_ARTIKELEN = 3000    # ~$1,20 per dag aan Claude, noodrem
-TERUGKIJKEN_UREN = 72      # alleen artikelen van de laatste drie dagen
+DAGMAX_ARTIKELEN = 1500    # ~$0,60 per dag aan Claude, noodrem (per proces, een herstart zet hem op nul)
+TERUGKIJKEN_UREN = 36      # alleen recente artikelen; de teller per artikel is de echte rem
 PER_RONDE = 400
 GELIJKTIJDIG = 2
 
