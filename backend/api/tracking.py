@@ -108,4 +108,4 @@ def klik(code: str) -> Response:
                 {"naam": "mail_kliks", "inhoud": kliks}, on_conflict="naam").execute()
         except Exception as e:  # noqa: BLE001 — een mislukte telling mag de klik niet breken
             logger.warning("Kliktelling mislukt voor %s: %s", code, e)
-    return RedirectResponse(_KLIK_DOEL, status_code=302)
+    return RedirectResponse(doel, status_code=302)
