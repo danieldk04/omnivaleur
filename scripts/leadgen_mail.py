@@ -636,7 +636,12 @@ def _haakje(lead: dict) -> str:
     rubriek = (lead.get("verkoopt_vooral") or "").strip().lower()
     site = (lead.get("site") or "").replace("https://", "").replace(
         "http://", "").replace("www.", "").rstrip("/")
+    # Het webshopsysteem noemen we alleen als we het zeker weten en er een
+    # koppeling voor hebben (19-11-2026: "op Magento" bij een JouwWeb-winkel; de
+    # ontvanger wist meteen dat het een rondzendbrief was). Anders weglaten.
     shop = lead.get("shopsysteem")
+    if shop not in ("Shopify", "WooCommerce"):
+        shop = ""
 
     # Winkels en webshops (27-09-2026) staan niet op Marktplaats; "zag je
     # advertenties op Marktplaats" klopt daar niet. Hun eigen shop is het haakje.
