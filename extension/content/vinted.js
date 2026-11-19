@@ -3918,8 +3918,15 @@
       if (/slof|sloffen|pantoffel|slippers/.test(t)) hints = ["slippers", ...hints];
     }
 
+    // Sinds 19-11-2026 is de rubriekkiezer een knop die alleen opengaat op een
+    // echte pointerdown-reeks; een kale .click() opent niets, en dan typte de
+    // zoekterugval in het zoekvak bovenaan de site ("kids shoes") in plaats van in
+    // "Find a category". Dus openklikken zoals de boomwandeling, maar alleen als
+    // de lijst nog niet openstaat (anders klapt hij dicht).
     inp.focus();
-    inp.click();
+    if (![...document.querySelectorAll('[class*="Cell__clickable"]')].some((e) => e.offsetParent !== null)) {
+      realClickEl(inp);
+    }
     await sleep(700);
 
     const visible = (el) => !!el && (el.offsetParent !== null || el.getClientRects().length > 0);
@@ -3940,7 +3947,8 @@
     const searchBox = () => {
       const inputs = [...document.querySelectorAll('input[type="text"], input:not([type])')]
         .filter((e) => e.offsetParent !== null && e !== inp);
-      return inputs.find((e) => /find a category|zoek een categorie|categorie/i.test(e.placeholder || ""))
+      return inputs.find((e) => e.id === "catalog-search-input" || e.name === "catalog-search-input")
+        || inputs.find((e) => /find a category|zoek een categorie|categorie/i.test(e.placeholder || ""))
         || inputs.find((e) => /InputBar/.test(e.className || ""))
         || inp;  // terugval: beter iets typen dan niets
     };
