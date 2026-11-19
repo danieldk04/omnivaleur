@@ -515,6 +515,18 @@ def categorie_uit_html(ruwe: str) -> dict:
     """
     if not ruwe:
         return {}
+    # DE NIEUWE PAGINA (gemeten 19-11-2026, Esther, hetisvintastisch, m2457568776).
+    # Marktplaats zet "l1CategoryId" en "l2CategoryId" niet meer op de
+    # advertentiepagina. De rubriek staat nu in het dataLayer-blok:
+    #   "c":{"l1":{"id":895,"n":"Verzamelen"},"l2":{"id":899,"n":"Blikken"},...}
+    # Zonder deze regel gaf deze functie bij ELKE advertentie een leeg blok, en
+    # kwam elke herplaatsing in onze eigen geraden rubriek terecht: haar blikken
+    # uit Verzamelen > Blikken belandden in Antiek > Curiosa en Brocante.
+    m = re.search(r'"c"\s*:\s*\{\s*"l1"\s*:\s*\{\s*"id"\s*:\s*(\d+)\s*,\s*"n"\s*:\s*"([^"]{1,120})"'
+                  r'\s*\}\s*,\s*"l2"\s*:\s*\{\s*"id"\s*:\s*(\d+)\s*,\s*"n"\s*:\s*"([^"]{1,120})"', ruwe)
+    if m:
+        return {"l1": int(m.group(1)), "l1_naam": html.unescape(m.group(2)),
+                "l2": int(m.group(3)), "l2_naam": html.unescape(m.group(4))}
     uit: dict = {}
     for nummer, naam, sleutel in (("l1CategoryId", "l1CategoryName", "l1"),
                                   ("l2CategoryId", "l2CategoryName", "l2")):
