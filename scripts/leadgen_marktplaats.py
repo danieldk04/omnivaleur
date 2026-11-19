@@ -489,9 +489,12 @@ def enrich(args) -> None:
 
 SHOP_SYSTEMS = {
     "Shopify": r"cdn\.shopify|shopify\.com",
-    "WooCommerce": r"woocommerce|wp-content",
+    "WooCommerce": r"woocommerce",
     "Lightspeed": r"lightspeed|seoshop",
-    "Magento": r"magento",
+    # Alleen echte Magento-sporen; het kale woord komt ook in gewone tekst voor.
+    "Magento": r"Magento_|Mage\.Cookies|data-mage-init|x-magento",
+    "JouwWeb": r"jouwweb|JwStickySession",
+    "Wix": r"wixstatic\.com|X-Wix-",
     "CCVshop": r"ccvshop",
     "Mijnwebwinkel": r"mijnwebwinkel|myonlinestore",
 }
