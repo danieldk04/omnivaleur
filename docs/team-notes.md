@@ -19542,3 +19542,9 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - De 7: 0b28c1ce vijf Marktplaats-opdrachten tussen 20:40 en 21:12 (tabblad weg, onderbroken verwijdering, twee bewust overgeslagen plaatsingen, een keer omschrijving niet in de editor), daarna ging zijn computer uit. cfe8c210 en 5aae4954 elk een opdracht die na 3 dagen verliep, computers stil sinds 15-11 en 10-11. Klant.
 - Wachtrijen van 3 uur of ouder (5aae4954, c2f4538f, 6e0fe673, 3eeceb51, 8faba317, 1ba42900) horen allemaal bij extensies die al een of meer dagen niet gezien zijn. De Vinted-scan van 0b28c1ce staat sinds 21:02 op claimed omdat Chrome kort daarna stil viel.
 - Nog open, niet meetbaar: 8f91a370 is sinds gisteravond 20:56 niet terug en staat nog op 1.0.427, dus de Vinted-proef op 1.0.428 wacht. Bij 0b28c1ce kwam er na de mislukte verwijderingen geen Marktplaats-scan meer, dus of die vijf oude advertenties nog online staan is nog niet te zien.
+
+## 19-11-2026: koude mail stond stil (lijst leeg), 47 webshops toegevoegd
+
+- Gemeten: Leadmachine draait elke 30 min, maar wachtrij 0 leads, dus 0 van 50 per dag. Totaal 1648 mails naar 709 bedrijven, 88 echte reacties, 60 warm. In het leadsheet 78 van 884 op Interesse (8,8%): Marktplaats 8,8%, webshops 9,5%, winkels 8,4%, MP sieraden 15% (10 van 67), 200 tot 1000 advertenties 13%.
+- Open: 16 leads op "Jij bent aan zet" (sommige sinds september), 54 "bal bij hen" waarvan 49 ouder dan twee weken, 546 doodgelopen zonder nieuwe aanleiding.
+- Toegevoegd aan extra_leads (414 naar 461): 47 webshops uit Serper ronde 3 (120 zoekopdrachten sieraden, vintage, antiek, brocante, tweedehands kleding, retro speelgoed; 316 domeinen, 83 al bekend, 137 met e-mail, handmatig gekozen, meubels en goudkopers eruit). Bron "Google (Serper) ronde 3". Reservekopie van de oude lijst in de scratchpad. Bij ~25 tot 50 per dag zo'n 1 tot 2 dagen werk. Nog niet nagemeten of de machine ze oppakt.
