@@ -19579,3 +19579,10 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - Besluit: NIET beloven aan de 3 betalende vrienden als onderdeel van het AI-pakket. Kleur en merk zijn rond de helft goed, dat is geen 100% zeker. Niet uitrollen.
 - Goedkoopste volgende stap, zonder nieuwe bouw: alleen type, kleur en materiaal als voorstel vooraf invullen (nooit merk of maat), klant moet bevestigen, en eerst opnieuw meten op die drie velden met de sterkere model (met herhaal bij 503) tot minstens 90% kleur. Of niets doen: de sheet-regel "AI die vanaf een foto de rest invult" staat op Overwegen en is bijgewerkt.
 - Uitnodigactie-vlag (REFERRAL_KORTING_AAN) en klanten niet aangeraakt.
+
+## 19-11-2026 (avond, ochtendronde-taak om 20:30): Dagelijkse klantfouten
+- Rustig. Sinds de ochtendronde 3 nieuwe fouten bij 2 klanten, geen fout in onze code, niets gerepareerd.
+- "No tab with id": bcdf9aa4 (2dehands verlengen, 09:37) en 96e30080 (Marktplaats verwijderen en 2dehands verlengen in dezelfde seconde, 10:22, plaatsing daarna bewust overgeslagen). Tabblad weg tijdens het werk, zelfde achtergrondniveau als sinds 1-11.
+- Opgelost: 8f91a370 draait nu 1.0.428 en plaatste vandaag om 12:02 een Vinted-artikel zonder fout (gisteravond 20:49 lukte er ook al een). Het open punt van het knop-formulier is daarmee bij deze klant weg.
+- Nog open: 0b28c1ce is sinds 18-11 22:12 niet terug, dus of de vijf oude Marktplaats-advertenties nog online staan is nog niet te meten. 19deaa3a heeft een Vinted-scan wachten sinds 10:09, extensie laatst gezien 09:38; computer uit.
+- Wachtrijen van 3 uur of ouder horen allemaal bij extensies die een of meer dagen stil zijn (5aae4954 567, 0b28c1ce 157, 6e0fe673 152, c2f4538f 150, 3eeceb51 101, 8faba317 101 en kleiner).
