@@ -34,7 +34,7 @@ async def main() -> int:
     ap.add_argument("--user-id")
     a = ap.parse_args()
     from backend.database import get_db
-    from backend.services.mp_enrich import advertentie_kenmerken
+    from backend.services.mp_enrich import advertentie_kenmerken, kenmerken_via_zoeken
     db = get_db()
     users = [a.user_id] if a.user_id else [
         h["user_id"] for h in db.table("extension_heartbeat").select("user_id").execute().data]
@@ -57,6 +57,14 @@ async def main() -> int:
                 url = (rij or {}).get("platform_listing_url")
                 k = await advertentie_kenmerken(url) if url else {}
                 cat = k.get("mp_category") or {}
+                if not cat.get("l1"):
+                    # Zelfde terugval als relist.refresh_listing: een advertentie die
+                    # wij plaatsten kennen we alleen als /seller/view/ (alleen
+                    # ingelogd zichtbaar); dan zoeken op de titel waaronder hij staat.
+                    from backend.services.crosslist import _last_listed_title
+                    titel = _last_listed_title(db, j["item_id"], j["platform"], pl.get("title") or "")
+                    k = await kenmerken_via_zoeken(db, u, j["platform"], titel)
+                    cat = k.get("mp_category") or {}
                 await asyncio.sleep(1.0)   # beleefd: zie de 403-rem in mp_enrich
                 if not cat.get("l1"):
                     leeg += 1

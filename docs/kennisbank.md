@@ -17,6 +17,21 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## done-is-geen-bewijs-nacontrole
+
+*19-11-2026 — "19-11 Esther: klantfoutenronde zei \"rustig\" terwijl herplaatsingen sinds 14-11 hun rubriek kwijt waren en webshopverkopen niet doorkwamen; altijd live nakijken"*
+
+Een opdracht op 'done' bewijst niets over wat de koper ziet. Op 19-11-2026 meldde de ochtendronde "rustig", en 's avonds mailde Esther (hetisvintastisch, 3eeceb51) dat advertenties vaak verkeerd ingevuld waren en dat in haar webshop verkochte artikelen opnieuw op Marktplaats stonden. Daniel: "Hoe kan het dat je telkens zegt dat er geen fouten zijn?"
+
+Twee stille storingen tegelijk:
+1. Marktplaats zet sinds ~14-11 geen "l1CategoryId" meer op de advertentiepagina; de rubriek staat in het dataLayer-blok `"c":{"l1":{"id":..,"n":..},"l2":{...}}`. mp_enrich.categorie_uit_html gaf {} en ALLE ~800 herplaatsingen (16 klanten) kwamen in onze geraden rubriek (blikken van Verzamelen > Blikken naar Antiek > Curiosa). Gerepareerd c1d75d5d/5f8b56c6; wachtende opdrachten via scripts/herstel_herplaatsrubriek.py.
+2. Shopify-import maakte van elk product dat al via Marktplaats binnen was een tweede artikel: het taalmodel koppelde willekeurig en tweelingen.plausibel keurde echte paren af (lichtgrijs/grijs, webshopprijs). Een webshopverkoop raakte de MP-kopie niet. Nu backend/services/foto_tweeling.py (dHash, <=4 bits, één-op-één) vóór het model; op haar data oud 0, nieuw 59 van de wachtende kandidaten.
+
+**Why:** Daniel verkoopt zekerheid; een gelukte maar verkeerde plaatsing kost de klant net zo goed.
+**How to apply:** de klantfoutenroutine heeft nu STAP 2c (docs/routines/klantfouten.md): scripts/nacontrole_advertenties.py (alarm bij nul herplaatsingen met eigen rubriek, live tegen verstuurd), scripts/shopify_tweelingen_op_foto.py per Shopify-klant, en per kanaal één advertentie zelf openen. "Rustig" pas als 2, 2b en 2c niets vonden. De geplande taak verwijst alleen nog naar het routinebestand (zijn eigen kopie liep achter). Zie "omnivaleur-altijd-bewijzen".
+
+---
+
 ## build-in-public-ideeenlijst
 
 *17-11-2026 — Daniel houdt dagelijks build in public bij op Indie Hackers (dag 163 op 16-11-2026); beloften en reactie-ideeën gaan in docs/build-in-public-ideeen.md*
