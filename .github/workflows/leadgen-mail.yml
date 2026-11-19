@@ -97,6 +97,11 @@ jobs:
       # scripts/video_inhaal.py. Doet niets meer zodra alle doelen klaar zijn.
       - if: github.event.inputs.opdracht == '' || github.event.inputs.opdracht == 'tick'
         run: python scripts/video_inhaal.py --echt || true
+      # Opvolging voor doodgelopen leads (reeks C, 19-11-2026): een antwoord in de draad van
+      # de eerste mail, 1 per beurt en hooguit 25 per dag. Streng over wie NIET mag: zie
+      # scripts/doodgelopen_opvolging.py. Uitkomst: python scripts/doodgelopen_opvolging.py meting
+      - if: github.event.inputs.opdracht == '' || github.event.inputs.opdracht == 'tick'
+        run: python scripts/doodgelopen_opvolging.py --echt || true
       # Momentopname van de warme leads voor het marketingdashboard (07-10-2026);
       # hooguit eens per 3 uur, het script slaat zelf over als de vorige vers is.
       - if: github.event.inputs.opdracht == '' || github.event.inputs.opdracht == 'tick'

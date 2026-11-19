@@ -49,6 +49,9 @@ import scripts.leadgen_mail as lm  # noqa: E402
 
 NAAM = "doodgelopen_opvolging"
 LAAG = "doodgelopen"            # laagnaam in mail_opens en mail_kliks
+# De klik gaat rechtstreeks naar het productdomein: omnivaleur.nl stuurt /t/ eerst nog
+# door naar .com, een extra stap die een mailprogramma kritischer maakt.
+KLIK_HOST = "https://omnivaleur.com"
 WACHT_DAGEN = 35                # na de laatste machinemail
 DAGMAX = 25
 PER_BEURT = 1                   # de machine draait zo'n 26 keer per dag
@@ -158,7 +161,7 @@ def _plat(v) -> str:
 
 def klik_link(adres: str) -> str:
     code = base64.urlsafe_b64encode(f"{adres.lower()}|{LAAG}".encode()).rstrip(b"=").decode()
-    return f"{lm.PIXEL_HOST}/t/k/{code}"
+    return f"{KLIK_HOST}/t/k/{code}"
 
 
 def maak_tekst(adres: str, variant: str, jullie: bool, eerste: dict, gebruiker: str) -> tuple[str, str]:
