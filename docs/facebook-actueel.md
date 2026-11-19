@@ -29,7 +29,7 @@ eBay
 - Duitsland: sinds juli 2026 vast 5% voor tweedehands in sommige rubrieken, alleen voor zakelijke accounts. Particulieren betalen daar sinds 2023 niets.
 - Nederland en België: geen wijziging gevonden (controle 17-11). Frankrijk, Italië en Spanje: een bron noemt wijzigingen per 16 oktober, inhoud onbevestigd.
 
-(Controle 19-11 en 17-11, geen nieuwe verkopersregels gevonden; reacties van Daniel niet bijgewerkt want Chrome niet verbonden. Eerder: geen nieuwe verkopersregels of kosten gevonden bij Vinted, Marktplaats/2dehands of eBay.)
+(Controle 19-11 en 17-11, geen nieuwe verkopersregels gevonden; activiteitenlijst Facebook gelezen, alle nieuwe reacties komen van de reageerbot of zijn groepsberichten, dus niets nieuws om van te leren. Eerder: geen nieuwe verkopersregels of kosten gevonden bij Vinted, Marktplaats/2dehands of eBay.)
 
 ## Wat er bij Omnivaleur de afgelopen weken veranderde (alleen wat verkopers merken)
 - 16-11: nieuwe klanten starten met inlezen vanzelf en plaatsen hun eerste advertentie met één knop; verlopen 2dehands-advertenties zijn zichtbaar in het dashboard (tabblad Expired, klokje op het kanaalicoon).
