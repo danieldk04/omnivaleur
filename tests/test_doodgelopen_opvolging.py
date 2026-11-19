@@ -104,3 +104,52 @@ def test_klik_route_kent_het_doel_alleen_uit_een_vaste_lijst():
     from backend.api import tracking
     assert tracking._KLIK_DOELEN["doodgelopen"] == "https://omnivaleur.com/mp"
     assert all(v.startswith("https://omnivaleur.com/") for v in tracking._KLIK_DOELEN.values())
+
+
+# ---- opvolging na 4 dagen
+
+V1 = {"op": "2026-11-15T10:00:00", "variant": "vraag"}
+DRAAD = {"onderwerp": "Re: Vraagje over jullie Marktplaats-aanbod", "message_id": "<v1@omnivaleur.nl>",
+         "references": "<abc@omnivaleur.nl>"}
+
+
+def opv(v=None, st=None, adres="info@bedrijf.nl", **kw):
+    args = dict(antwoorden_adressen=set(), antwoorden_stammen=set(), eigen_na={}, gestopt=set())
+    args.update(kw)
+    return d.waarom_geen_opvolging(adres, {**V1, **(v or {})}, st or {}, NU, **args)
+
+
+def test_opvolging_mag_na_vier_dagen_en_wacht_ervoor():
+    assert opv() is None
+    assert opv({"op": "2026-11-18T10:00:00"}) == "wacht"
+
+
+def test_opvolging_nooit_na_reactie_afmelding_of_eigen_mail():
+    for vlag in ("afgemeld", "afgewezen", "concurrent", "bounce", "beantwoord", "soort"):
+        assert opv(st={vlag: True}) not in (None, "wacht"), vlag
+    assert opv(antwoorden_adressen={"info@bedrijf.nl"}) not in (None, "wacht")
+    assert opv(antwoorden_stammen={"bedrijf"}) not in (None, "wacht")
+    assert opv(eigen_na={"info@bedrijf.nl": datetime(2026, 11, 17).timestamp()}) not in (None, "wacht")
+    assert opv(gestopt={"info@bedrijf.nl"}) not in (None, "wacht")
+
+
+def test_opvolgbericht_is_kort_in_de_draad_en_met_afmelding():
+    for variant in ("vraag", "link"):
+        msg = d.maak_opvolging("info@bedrijf.nl", variant, DRAAD, "daniel@omnivaleur.nl")
+        assert msg["Subject"] == "Re: Vraagje over jullie Marktplaats-aanbod"
+        assert msg["In-Reply-To"] == "<v1@omnivaleur.nl>"
+        assert "<abc@omnivaleur.nl>" in msg["References"] and "<v1@omnivaleur.nl>" in msg["References"]
+        assert "mailto:daniel@omnivaleur.nl" in msg["List-Unsubscribe"]
+        plat = msg.get_body(("plain",)).get_content()
+        assert 'Stuur gewoon "stop"' in plat
+        assert len(plat.split()) < 60                        # twee regels, geen herhaalde pitch
+        assert "—" not in plat and " - " not in plat and "sorry" not in plat.lower()
+        assert ("jullie" in plat) and (" je " not in plat)
+    link = d.maak_opvolging("info@bedrijf.nl", "link", DRAAD, "daniel@omnivaleur.nl")
+    assert "https://omnivaleur.com/t/k/" in link.get_body(("plain",)).get_content()
+    assert '<a href="' in link.get_body(("html",)).get_content()
+
+
+def test_opvolgklik_kent_zijn_doel():
+    from backend.api import tracking
+    assert tracking._KLIK_DOELEN["doodgelopen2"] == "https://omnivaleur.com/mp"

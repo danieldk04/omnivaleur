@@ -85,7 +85,7 @@ _KLIK_DOEL = "https://omnivaleur.com/app"
 # Sinds 19-11-2026: de opvolgmail voor doodgelopen leads (scripts/doodgelopen_opvolging.py)
 # verwijst naar de demo. Nog steeds een vaste lijst: de laag komt uit de gedecodeerde code
 # en wijst alleen naar een doel dat hier staat, nooit naar een vrij op te geven adres.
-_KLIK_DOELEN = {"doodgelopen": "https://omnivaleur.com/mp"}
+_KLIK_DOELEN = {"doodgelopen": "https://omnivaleur.com/mp", "doodgelopen2": "https://omnivaleur.com/mp"}
 
 
 @router.get("/k/{code}")

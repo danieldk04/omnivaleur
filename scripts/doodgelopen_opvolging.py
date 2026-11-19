@@ -72,6 +72,7 @@ GRATIS_MAIL = {"gmail", "hotmail", "outlook", "live", "icloud", "yahoo", "ziggo"
                "home", "online", "casema", "chello", "upcmail", "duck", "pm"}
 
 AFMELDREGEL = 'Liever geen mail meer van me? Stuur gewoon "stop", dan hoor je niets meer.'
+AFMELDREGEL_JULLIE = 'Liever geen mail meer van me? Stuur gewoon "stop", dan horen jullie niets meer van me.'
 
 # Eén tekst per (variant, je/jullie). Geen streepjes als leesteken, geen opmaaktekens.
 KERN_JE = ("Ik mailde je eerder over Omnivaleur, de mail staat hieronder. Tik je elke "
@@ -86,6 +87,17 @@ VRAAG_JE = "Zal ik je het filmpje van een minuut sturen? :)"
 VRAAG_JULLIE = "Zal ik jullie het filmpje van een minuut sturen? :)"
 LINK_JE = "Het filmpje van een minuut staat hier:"
 LINK_JULLIE = "Het filmpje van een minuut staat hier:"
+
+# Opvolging na 4 dagen: twee regels, geen herhaling van de pitch, in de draad van onze
+# eigen eerste reactie. Alleen bij stilte; wie antwoordde of zich afmeldde krijgt hem niet.
+OPVOLG_NA_DAGEN = 4
+LAAG2 = "doodgelopen2"
+OPVOLG_VRAAG_JE = ("Nog even over mijn mailtje. Als het filmpje van een minuut je handiger "
+                   "lijkt dan nog een bericht, zeg het maar, dan stuur ik het.")
+OPVOLG_VRAAG_JULLIE = ("Nog even over mijn mailtje. Als het filmpje van een minuut jullie handiger "
+                       "lijkt dan nog een bericht, zeg het maar, dan stuur ik het.")
+OPVOLG_LINK_JE = "Nog even over mijn mailtje. Het filmpje van een minuut, mocht je het willen zien:"
+OPVOLG_LINK_JULLIE = "Nog even over mijn mailtje. Het filmpje van een minuut, mochten jullie het willen zien:"
 
 
 # ---------------------------------------------------------------- pure regels
@@ -159,8 +171,8 @@ def _plat(v) -> str:
     return re.sub(r"\s+", " ", str(v or "")).strip()
 
 
-def klik_link(adres: str) -> str:
-    code = base64.urlsafe_b64encode(f"{adres.lower()}|{LAAG}".encode()).rstrip(b"=").decode()
+def klik_link(adres: str, laag: str = LAAG) -> str:
+    code = base64.urlsafe_b64encode(f"{adres.lower()}|{laag}".encode()).rstrip(b"=").decode()
     return f"{KLIK_HOST}/t/k/{code}"
 
 
@@ -175,7 +187,7 @@ def maak_tekst(adres: str, variant: str, jullie: bool, eerste: dict, gebruiker: 
         regel_plat = VRAAG_JULLIE if jullie else VRAAG_JE
     kop = f"Op {eerste['datum']} schreef {lm.AFZENDER_NAAM} <{gebruiker}>:"
     citaat = "\n".join("> " + r if r.strip() else ">" for r in (eerste["tekst"] or "").strip().splitlines())
-    bovenaan = f"Hi,\n\n{kern}\n\n{regel_plat}\n\nGroetjes,\n\nDaniel\n\n{AFMELDREGEL}"
+    bovenaan = f"Hi,\n\n{kern}\n\n{regel_plat}\n\nGroetjes,\n\nDaniel\n\n{AFMELDREGEL_JULLIE if jullie else AFMELDREGEL}"
     plat = f"{bovenaan}\n\n{kop}\n{citaat}\n"
     # HTML: dezelfde tekst, de link als gewone zin met een klikbaar woord, plus de
     # onzichtbare pixel. Regeleindes letterlijk, zodat het eruitziet als de platte versie.
@@ -208,6 +220,69 @@ def maak_bericht(adres: str, variant: str, eerste: dict, gebruiker: str) -> Emai
     if mid:
         msg["In-Reply-To"] = mid
         msg["References"] = (_plat(eerste.get("references")) + " " + mid).strip()
+    msg.set_content(plat)
+    msg.add_alternative(html, subtype="html")
+    return msg
+
+
+def waarom_geen_opvolging(adres: str, v: dict, st: dict, nu: datetime, *,
+                          antwoorden_adressen: set[str], antwoorden_stammen: set[str],
+                          eigen_na: dict[str, float], gestopt: set[str]) -> str | None:
+    """None = opvolging mag nu, "wacht" = nog niet aan de beurt, anders de reden waarom
+    deze persoon NOOIT een opvolging krijgt (dan wordt hij als klaar genoteerd)."""
+    adres = adres.lower()
+    try:
+        op = datetime.fromisoformat(v["op"])
+    except Exception:  # noqa: BLE001
+        return "verzendtijd onbekend"
+    for vlag in VLAGGEN_NOOIT:
+        if st.get(vlag):
+            return f"vlag {vlag}"
+    if adres in gestopt:
+        return "niet meer mailen (sheet)"
+    if adres in antwoorden_adressen:
+        return "heeft teruggeschreven"
+    stam = domeinstam(adres)
+    if stam and stam in antwoorden_stammen:
+        return "ander adres van dit bedrijf schreef terug"
+    if eigen_na.get(adres, 0) > op.timestamp() + EIGEN_MAIL_MARGE:
+        return "Daniel schreef zelf daarna"
+    if (nu - op) < timedelta(days=OPVOLG_NA_DAGEN):
+        return "wacht"
+    return None
+
+
+def maak_opvolging(adres: str, variant: str, draad: dict, gebruiker: str) -> EmailMessage:
+    """Twee regels als antwoord op onze eigen eerste reactie, zelfde draad en onderwerp."""
+    onderwerp = _plat(draad["onderwerp"])
+    if not onderwerp.lower().startswith("re:"):
+        onderwerp = "Re: " + onderwerp
+    jullie = "jullie" in onderwerp.lower()
+    if variant == "link":
+        link = klik_link(adres, LAAG2)
+        regel = f"{OPVOLG_LINK_JULLIE if jullie else OPVOLG_LINK_JE} {link}"
+    else:
+        link = ""
+        regel = OPVOLG_VRAAG_JULLIE if jullie else OPVOLG_VRAAG_JE
+    plat = f"Hi,\n\n{regel}\n\nGroetjes,\n\nDaniel\n\n{AFMELDREGEL_JULLIE if jullie else AFMELDREGEL}\n"
+    veilig = escape(plat)
+    if link:
+        veilig = veilig.replace(escape(link), f'<a href="{link}">bekijk het filmpje</a>')
+    code = base64.urlsafe_b64encode(f"{adres.lower()}|{LAAG2}".encode()).rstrip(b"=").decode()
+    html = (f'<html><body style="font-family:sans-serif;white-space:pre-wrap">'
+            f'{veilig.replace(chr(10), "<br>")}'
+            f'<img src="{lm.PIXEL_HOST}/t/o/{code}" width="1" height="1" '
+            f'style="display:none" alt=""></body></html>')
+    msg = EmailMessage()
+    msg["From"] = f"{lm.AFZENDER_NAAM} <{gebruiker}>"
+    msg["To"] = adres
+    msg["Subject"] = onderwerp
+    msg["List-Unsubscribe"] = f"<mailto:{gebruiker}?subject=stop>"
+    msg["X-Omnivaleur-Reeks"] = "C2"
+    mid = _plat(draad.get("message_id"))
+    if mid:
+        msg["In-Reply-To"] = mid
+        msg["References"] = (_plat(draad.get("references")) + " " + mid).strip()
     msg.set_content(plat)
     msg.add_alternative(html, subtype="html")
     return msg
@@ -304,7 +379,8 @@ def draai(echt: bool, aantal_voorbeeld: int = 1) -> int:
         print(f"  !! NOODREM: {rem}. Er gaat niets meer uit tot dit is nagekeken.")
         return 0
     vandaag = nu.strftime("%Y-%m-%d")
-    al_vandaag = sum(1 for v in rec["verstuurd"].values() if str(v.get("op", "")).startswith(vandaag))
+    al_vandaag = sum((str(v.get("op", "")).startswith(vandaag)) + (str(v.get("opvolg", "")).startswith(vandaag))
+                     for v in rec["verstuurd"].values())
     if echt and al_vandaag >= DAGMAX:
         return 0
     gedaan = 0
@@ -314,6 +390,48 @@ def draai(echt: bool, aantal_voorbeeld: int = 1) -> int:
         antw_a, antw_s = inkomende_adressen(imap)
         eigen = eigen_mail_na(imap)
         al = set(rec["verstuurd"])
+        # Eerst de opvolgingen die aan de beurt zijn: die zijn verschuldigd, nieuwe mails
+        # kunnen wachten. Eén mail per beurt in totaal.
+        for adres, v in list(rec["verstuurd"].items()):
+            if gedaan >= (PER_BEURT if echt else aantal_voorbeeld):
+                break
+            if v.get("opvolg") or v.get("klaar"):
+                continue
+            reden = waarom_geen_opvolging(adres, v, state.get(adres, {}), nu,
+                                          antwoorden_adressen=antw_a, antwoorden_stammen=antw_s,
+                                          eigen_na=eigen, gestopt=gestopt)
+            if reden == "wacht":
+                continue
+            if not reden and lm.is_klant(adres):
+                reden = "heeft een account"
+            if reden:
+                v["klaar"] = reden          # nooit een opvolging; wordt bij de volgende schrijfbeurt bewaard
+                redenen["opvolging geschrapt: " + reden] += 1
+                if echt:
+                    lm._db_schrijf(NAAM, rec)
+                continue
+            draad = lm._laatste_verzonden_bericht(imap, adres)
+            if not draad or not draad.get("Message-ID"):
+                v["klaar"] = "eigen mail niet teruggevonden"
+                if echt:
+                    lm._db_schrijf(NAAM, rec)
+                continue
+            msg = maak_opvolging(adres, v.get("variant", "vraag"),
+                                 {"onderwerp": draad["Subject"], "message_id": draad["Message-ID"],
+                                  "references": draad.get("References")}, gebruiker)
+            if not echt:
+                print(f"\n  ZOU OPVOLGEN [{v.get('variant')}] aan {adres}\n  Onderwerp: {msg['Subject']}\n\n"
+                      f"{msg.get_body(('plain',)).get_content()}")
+                gedaan += 1
+                continue
+            with lm._postbode(gebruiker, host) as stuur:
+                stuur(msg)
+            v["opvolg"] = datetime.now().isoformat(timespec="seconds")
+            if not lm._db_schrijf(NAAM, rec):
+                print(f"!! administratie niet bijgewerkt na opvolging aan {adres}; de beurt stopt hier")
+                return gedaan + 1
+            gedaan += 1
+            print(f"  → doodgelopen-opvolging na 4 dagen [{v.get('variant')}] aan {adres}", flush=True)
         kandidaten = sorted((a for a in state if state[a].get("afgesloten")),
                             key=lambda a: state[a].get("laatste", ""))
         for adres in kandidaten:
@@ -401,10 +519,12 @@ def meting() -> None:
         c = cijfers[v.get("variant", "?")]
         st = state.get(adres, {})
         c["verstuurd"] += 1
-        if opens.get(adres, {}).get(LAAG):
+        if opens.get(adres, {}).get(LAAG) or opens.get(adres, {}).get(LAAG2):
             c["geopend"] += 1
-        if kliks.get(adres, {}).get(LAAG):
+        if kliks.get(adres, {}).get(LAAG) or kliks.get(adres, {}).get(LAAG2):
             c["geklikt"] += 1
+        if v.get("opvolg"):
+            c["opgevolgd"] += 1
         if st.get("afgemeld"):
             c["afgemeld"] += 1
         if st.get("bounce"):
@@ -420,7 +540,7 @@ def meting() -> None:
         pct = lambda k: f"{100 * c[k] / n:.1f}%" if n else "-"  # noqa: E731
         print(f"  {variant:6} n={n:3} geopend {c['geopend']} ({pct('geopend')}), "
               f"geklikt {c['geklikt']} ({pct('geklikt')}), gereageerd {c['gereageerd']} ({pct('gereageerd')}), "
-              f"nee {c['nee']}, afgemeld {c['afgemeld']}, bounce {c['bounce']}")
+              f"opgevolgd {c['opgevolgd']}, nee {c['nee']}, afgemeld {c['afgemeld']}, bounce {c['bounce']}")
     print("  Let op: opens tellen Apple Mail mee (te hoog); klikken en reacties zijn betrouwbaar.")
     rem = noodrem(rec, state)
     if rem:
