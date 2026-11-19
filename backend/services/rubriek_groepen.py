@@ -224,7 +224,12 @@ async def vul_rubrieken_in_groepen(uren: int = TERUGKIJKEN_UREN, limiet: int = P
         else:
             stand = int(item.get(_TELLER) or 0) + 1
             zonder.setdefault(min(stand, MAX_POGINGEN), []).append(item)
-    if zonder and gevuld > 0:
+    # Altijd bijhouden, ook als deze ronde niets vulde. Alleen artikelen die een
+    # antwoord kregen staan in `zonder` (geen antwoord = `continue` hierboven), dus
+    # dit kost niets bij een storing. Zonder dit bleef dezelfde partij elke 5
+    # minuten naar Claude gaan (17-11-2026). Zo is elk artikel hooguit
+    # MAX_POGINGEN keer gevraagd, en dat houdt ook na een herstart.
+    if zonder:
         await asyncio.to_thread(_schrijf_pogingen, db, zonder)
     logger.info("Rubriekgroepen: %d bekeken, %d gevuld, %d zonder uitkomst, %d zonder antwoord",
                 len(items), gevuld, sum(len(v) for v in zonder.values()),
