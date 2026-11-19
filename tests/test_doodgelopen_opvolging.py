@@ -70,7 +70,7 @@ def test_linkvariant_heeft_een_getelde_link_en_een_pixel():
     msg = d.maak_bericht("info@bedrijf.nl", "link", EERSTE, "daniel@omnivaleur.nl")
     plat = msg.get_body(("plain",)).get_content()
     html = msg.get_body(("html",)).get_content()
-    assert "/t/k/" in plat and "Zal ik" not in plat
+    assert "https://omnivaleur.com/t/k/" in plat and "Zal ik" not in plat
     assert '<a href="' in html and "/t/o/" in html
 
 
