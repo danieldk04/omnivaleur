@@ -1245,6 +1245,13 @@ def _platte_tekst(ruwe_html: str) -> str:
     tekst = str(ruwe_html or "")
     if not tekst.strip():
         return ""
+    # De broncode van Shopify heeft regelovergangen TUSSEN de tags (</h2>\n<p>, </li>\n<li>).
+    # Die telden mee als extra witregel: lege ruimte onder elke kop en tussen elk
+    # opsommingspunt (Mieneke, 18-11-2026, tweede keer). Rond blokken tellen ze niet.
+    _blok = r"(?:p|div|h[1-6]|ul|ol|li|tr|dl|dt|dd|details|summary)"
+    tekst = re.sub(r"\s*(<\s*/?\s*" + _blok + r"\b[^>]*>)\s*", r"\1", tekst, flags=re.I)
+    # Een kop is één regel direct boven zijn tekst, zonder witregel eronder.
+    tekst = re.sub(r"</\s*h[1-6]\s*>", "\x01", tekst, flags=re.I)
     # Een opsommingspunt is één regel: Shopify-editors zetten vaak <li><p>..</p></li>,
     # en dan werd het "-", regelovergang, tekst, witregel (Mieneke, 18-11-2026).
     def _opsomming(m):
@@ -1260,13 +1267,15 @@ def _platte_tekst(ruwe_html: str) -> str:
     # Vraag in vet direct gevolgd door het antwoord ("...?Ja, dit...") krijgt een regelovergang.
     tekst = re.sub(r"\?\s*</\s*(?:strong|b)\s*>[ \t]*(?=[^\s<])", "?\n", tekst, flags=re.I)
     tekst = re.sub(r"<\s*br\s*/?\s*>", "\n", tekst, flags=re.I)
-    tekst = re.sub(r"</\s*(p|div|li|h[1-6]|tr|dt|dd|summary|ul|ol|dl|details)\s*>", "\n", tekst, flags=re.I)
+    tekst = re.sub(r"</\s*(p|div|li|tr|dt|dd|summary|ul|ol|dl|details)\s*>", "\n", tekst, flags=re.I)
+    tekst = re.sub(r"<\s*h[1-6]\b[^>]*>", "\n\n", tekst, flags=re.I)
     tekst = re.sub(r"<\s*(ul|ol|dl)\b[^>]*>", "\n", tekst, flags=re.I)
     tekst = re.sub(r"<\s*li[^>]*>", "- ", tekst, flags=re.I)
     tekst = re.sub(r"<\s*(p|div|h[1-6]|tr)\b[^>]*>", "\n", tekst, flags=re.I)
     tekst = re.sub(r"<[^>]+>", "", tekst)
     tekst = _html.unescape(tekst).replace("\xa0", " ")
     tekst = re.sub(r"[ \t]+\n", "\n", tekst)
+    tekst = re.sub(r"\s*\x01\s*", "\n", tekst)
     tekst = re.sub(r"\n{3,}", "\n\n", tekst)
     return tekst.strip()
 
