@@ -282,6 +282,19 @@ def test_de_echte_categorie_wordt_van_de_pagina_gelezen():
     }
 
 
+def test_de_nieuwe_pagina_van_19_11_2026():
+    """Marktplaats zet de rubriek sinds (uiterlijk) 19-11-2026 alleen nog in het
+    dataLayer-blok. Fragment letterlijk van m2457568776 (Esther). Met de oude
+    code kwam hier {} uit en ging de herplaatsing naar onze geraden rubriek."""
+    from backend.services.mp_enrich import categorie_uit_html
+    pagina = ('({"dataLayer":[{"s":{"pn":-1},"l":{"d":-1},"m":{},"p":{"t":"VIP"},'
+              '"c":{"l1":{"id":895,"n":"Verzamelen"},"l2":{"id":899,"n":"Blikken"},'
+              '"c":{"id":899,"n":"Blikken"},"sfc":{"id":895,"n":"verzamelen"}},"u":{"li":false}')
+    assert categorie_uit_html(pagina) == {
+        "l1": 895, "l1_naam": "Verzamelen", "l2": 899, "l2_naam": "Blikken",
+    }
+
+
 def test_een_half_paar_telt_niet():
     """Met alleen een hoofdcategorie kun je geen plaatsformulier openen — en half
     raden is precies wat dit moet stoppen."""
