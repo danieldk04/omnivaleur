@@ -69,15 +69,14 @@ GRATIS_MAIL = {"gmail", "hotmail", "outlook", "live", "icloud", "yahoo", "ziggo"
                "home", "online", "casema", "chello", "upcmail", "duck", "pm"}
 
 AFMELDREGEL = 'Liever geen mail meer van me? Stuur gewoon "stop", dan hoor je niets meer.'
-AFMELDREGEL_JULLIE = 'Liever geen mail meer van me? Stuur gewoon "stop", dan hoor je niets meer.'
 
 # Eén tekst per (variant, je/jullie). Geen streepjes als leesteken, geen opmaaktekens.
-KERN_JE = ("Ik mailde je eerder over Omnivaleur, de mail staat hieronder. Zet je je advertenties "
-           "nog steeds op elk platform apart neer? Sinds die mail gaat een verkocht artikel "
+KERN_JE = ("Ik mailde je eerder over Omnivaleur, de mail staat hieronder. Tik je elke "
+           "advertentie nog steeds per platform apart over? Sinds die mail gaat een verkocht artikel "
            "vanzelf overal offline, ook bij Shopify en WooCommerce, en ik kijk zelf mee bij "
            "elk nieuw account. De eerste 7 dagen zijn gratis.")
-KERN_JULLIE = ("Ik mailde jullie eerder over Omnivaleur, de mail staat hieronder. Zetten jullie "
-               "jullie advertenties nog steeds op elk platform apart neer? Sinds die mail gaat "
+KERN_JULLIE = ("Ik mailde jullie eerder over Omnivaleur, de mail staat hieronder. Tikken jullie "
+               "elke advertentie nog steeds per platform apart over? Sinds die mail gaat "
                "een verkocht artikel vanzelf overal offline, ook bij Shopify en WooCommerce, en "
                "ik kijk zelf mee bij elk nieuw account. De eerste 7 dagen zijn gratis.")
 VRAAG_JE = "Zal ik je het filmpje van een minuut sturen? :)"
@@ -376,7 +375,16 @@ def kandidaten_tellen() -> dict:
             redenen[r] += 1
         else:
             mag.append(adres)
-    return {"mag_nu": len(mag), "redenen": dict(redenen.most_common())}
+    # Alleen wie ook in de draad van de eerste mail kan antwoorden: koude mails van
+    # 06-09 tot 26-09 gingen via Resend en staan niet in Zoho, die kunnen niet.
+    met_draad = 0
+    with imaplib.IMAP4_SSL(os.environ["IMAP_HOST"], 993) as imap:
+        imap.login(gebruiker, os.environ["MAIL_PASS"])
+        for a in mag:
+            e = eerste_mail(imap, a)
+            if e and e["message_id"]:
+                met_draad += 1
+    return {"mag_nu": len(mag), "met_draad": met_draad, "redenen": dict(redenen.most_common())}
 
 
 def meting() -> None:
