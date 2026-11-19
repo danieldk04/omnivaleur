@@ -82,13 +82,19 @@ def open_pixel(code: str, request: Request) -> Response:
 # is een veel sterker teken van lezen dan een pixel. Het doel staat vast, zodat deze
 # route nooit een open doorverwijzing naar een willekeurige site kan worden.
 _KLIK_DOEL = "https://omnivaleur.com/app"
+# Sinds 19-11-2026: de opvolgmail voor doodgelopen leads (scripts/doodgelopen_opvolging.py)
+# verwijst naar de demo. Nog steeds een vaste lijst: de laag komt uit de gedecodeerde code
+# en wijst alleen naar een doel dat hier staat, nooit naar een vrij op te geven adres.
+_KLIK_DOELEN = {"doodgelopen": "https://omnivaleur.com/mp"}
 
 
 @router.get("/k/{code}")
 def klik(code: str) -> Response:
     ontleed = _decode(code)
+    doel = _KLIK_DOEL
     if ontleed:
         adres, laag = ontleed
+        doel = _KLIK_DOELEN.get(laag, _KLIK_DOEL)
         try:
             db = get_admin_db()
             rijen = execute_with_retry(db.table("leadgen_opslag")
