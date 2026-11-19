@@ -1,4 +1,4 @@
-# Facebook-actueel (bijgewerkt 17-11-2026)
+# Facebook-actueel (bijgewerkt 19-11-2026)
 
 Dit bestand wordt elke ochtend ververst door een routine en gaat voor op alles wat je eerder
 wist. Staat hier iets anders dan in je eigen kennis over een platform: dit bestand wint. Wat hier
@@ -6,7 +6,7 @@ niet staat en je niet zeker weet: zeg het als eigen ervaring of laat het weg. Zo
 (als dat aan staat) voor een vraag over regels of kosten, gebruik dan alleen bronnen van de
 laatste maanden en noem er niets uit als feit zonder dat de bron het zelf zegt.
 
-## Platformnieuws (laatst gecontroleerd 17-11-2026)
+## Platformnieuws (laatst gecontroleerd 19-11-2026)
 
 Vinted
 - Nieuwe voorwaarden sinds 8 oktober 2026: verkopers moeten ze accepteren om te blijven verkopen.
@@ -29,7 +29,7 @@ eBay
 - Duitsland: sinds juli 2026 vast 5% voor tweedehands in sommige rubrieken, alleen voor zakelijke accounts. Particulieren betalen daar sinds 2023 niets.
 - Nederland en België: geen wijziging gevonden (controle 17-11). Frankrijk, Italië en Spanje: een bron noemt wijzigingen per 16 oktober, inhoud onbevestigd.
 
-(Controle 17-11: geen nieuwe verkopersregels of kosten gevonden bij Vinted, Marktplaats/2dehands of eBay.)
+(Controle 19-11 en 17-11, geen nieuwe verkopersregels gevonden; reacties van Daniel niet bijgewerkt want Chrome niet verbonden. Eerder: geen nieuwe verkopersregels of kosten gevonden bij Vinted, Marktplaats/2dehands of eBay.)
 
 ## Wat er bij Omnivaleur de afgelopen weken veranderde (alleen wat verkopers merken)
 - 16-11: nieuwe klanten starten met inlezen vanzelf en plaatsen hun eerste advertentie met één knop; verlopen 2dehands-advertenties zijn zichtbaar in het dashboard (tabblad Expired, klokje op het kanaalicoon).
