@@ -80,3 +80,22 @@ def test_ronde_vult_alleen_lege_rubrieken(monkeypatch):
     monkeypatch.setattr(R, "deel_in", nep)
     res = asyncio.run(R.vul_rubrieken_in_groepen())
     assert set(geschreven) == {"i0", "i2"} and res["gevuld"] == 2
+
+
+def test_ronde_zonder_enige_vulling_telt_toch_de_kans(monkeypatch):
+    """17-11-2026: de teller steeg alleen als een ronde minstens een artikel vulde.
+    Kreeg een hele ronde 'past in geen tak' terug, dan werd dezelfde partij elke
+    5 minuten opnieuw aan Claude gevraagd, drie dagen lang."""
+    items = _items(3)
+    geteld = {}
+    monkeypatch.setattr(R, "_lees_kandidaten", lambda db, u, l: items)
+    monkeypatch.setattr(R, "get_db", lambda: object())
+    import backend.services.categorie_herstel as H
+    monkeypatch.setattr(H, "_schrijf_pogingen", lambda db, zonder: geteld.update(zonder))
+
+    async def nep(its):
+        return {x["id"]: {"geen_tak": True} for x in its}
+    monkeypatch.setattr(R, "deel_in", nep)
+    res = asyncio.run(R.vul_rubrieken_in_groepen())
+    assert res["gevuld"] == 0
+    assert sum(len(v) for v in geteld.values()) == 3
