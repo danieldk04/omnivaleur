@@ -19570,3 +19570,12 @@ Aanleiding: een reactie van een Indie Hackers-lezer onder Daniels post over een 
 - 5 accounts in de eerste week, 0 nieuw, 0 nieuwe vrienden via een klant. Web Store levert 1.0.428, repo 1.0.429. Mailrapport: 5 mails, 1 echt geopend (Dylan, Gmail), 0 klik, 0 antwoord.
 - Dylan (c0570d1b): opende het welkomstmailtje 18-11 20:07, daarna geen extensie en nul artikelen. Geen tweede mailtje (binnen 44 uur, niets veranderd).
 - Esther (3eeceb51): extensie stil sinds 17-11 22:05, geen nieuwe fouten; in gesprek met Daniel. Jurre, demo-account 8faba317 en creator Janina (f0cead08, stil sinds 13-11): niets veranderd. Geen mailtjes, niets gerepareerd.
+
+## 19-11-2026: Fotometing uitkomst, foto naar advertentie is NIET goed genoeg om te beloven
+- Meting af: 110 echte klantartikelen (10 foto's niet te halen), vergeleken met wat de verkoper zelf invulde. De LaunchAgent com.omnivaleur.fotometing was NIET zelf weggegaan: `samenvatting` crashte op een modelantwoord dat een lijst was. Script gerepareerd, agent nu handmatig verwijderd.
+- gemini-3.5-flash (sterk, maar 43 van 100 vragen mislukten: 23x 503, 14x ongeldige JSON, 6x timeout; 57 antwoorden): kleur 67% goed (32/48), merk 41% (7/17), merk verzonnen waar de verkoper er geen had 8% (2/26). Maat 0/24 goed, maar die maat is streng gemeten (exacte tekst, "S" tegen "S / 36 / 8" telt fout) en het model noemt vrijwel nooit een maat.
+- gemini-3.1-flash-lite (95 antwoorden): kleur 51% (42/83), merk 52% (15/29), merk verzonnen 21% (10/47), maat 0/36, maat verzonnen 3%.
+- Voorbeelden naast elkaar: type artikel en materiaal zijn meestal goed (ring, rok, parelketting), maar merk is vaak verkeerd of verzonnen (Your Wishes werd "SIDERWINKLES"), kleur mist vaak (goud werd multi, rood boekenlegger werd zwart), kinderkleding krijgt geen maat. Een merk dat fout is bij een kledingplatform kost klanten verkopen of wordt afgekeurd.
+- Besluit: NIET beloven aan de 3 betalende vrienden als onderdeel van het AI-pakket. Kleur en merk zijn rond de helft goed, dat is geen 100% zeker. Niet uitrollen.
+- Goedkoopste volgende stap, zonder nieuwe bouw: alleen type, kleur en materiaal als voorstel vooraf invullen (nooit merk of maat), klant moet bevestigen, en eerst opnieuw meten op die drie velden met de sterkere model (met herhaal bij 503) tot minstens 90% kleur. Of niets doen: de sheet-regel "AI die vanaf een foto de rest invult" staat op Overwegen en is bijgewerkt.
+- Uitnodigactie-vlag (REFERRAL_KORTING_AAN) en klanten niet aangeraakt.

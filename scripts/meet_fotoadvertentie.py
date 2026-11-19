@@ -208,6 +208,8 @@ def samenvatting() -> int:
         antwoorden = 0
         for r in rijen:
             ai = (r.get("ai") or {}).get(model)
+            if isinstance(ai, list):        # model gaf soms een lijst met één object
+                ai = ai[0] if ai and isinstance(ai[0], dict) else None
             if not ai or "fout" in ai:
                 continue
             antwoorden += 1
