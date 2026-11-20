@@ -20,3 +20,11 @@ def test_geen_witregel_onder_kop_en_tussen_punten():
 
 def test_inline_spaties_blijven():
     assert _platte_tekst("<p>a <strong>b</strong> <em>c</em></p><p>d<br>e</p>") == "a b c\n\nd\ne"
+
+
+def test_faq_antwoord_onder_vraag_bij_br_met_attributen_en_commentaar():
+    # Echte vorm uit Mieneke's Shopify (20-11-2026): gekopieerd uit Google.
+    from backend.platforms.shopify_importer import _platte_tekst
+    html = ('<div><strong class="a">Is het echt?<!--TgQPHd|||[]--></strong>'
+            '<br data-sfc-root="c" data-complete="true">Ja, dat is het.<span></span></div>')
+    assert _platte_tekst(html) == "Is het echt?\nJa, dat is het."

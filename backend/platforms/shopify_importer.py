@@ -1247,6 +1247,9 @@ def _platte_tekst(ruwe_html: str) -> str:
     tekst = str(ruwe_html or "")
     if not tekst.strip():
         return ""
+    # Tekst die uit Google of een AI-chat is gekopieerd draagt HTML-commentaar en een
+    # <br data-...> met attributen (Mieneke, 20-11-2026: antwoord plakte aan de FAQ-vraag).
+    tekst = re.sub(r"<!--.*?-->", "", tekst, flags=re.S)
     # De broncode van Shopify heeft regelovergangen TUSSEN de tags (</h2>\n<p>, </li>\n<li>).
     # Die telden mee als extra witregel: lege ruimte onder elke kop en tussen elk
     # opsommingspunt (Mieneke, 18-11-2026, tweede keer). Rond blokken tellen ze niet.
@@ -1260,7 +1263,7 @@ def _platte_tekst(ruwe_html: str) -> str:
         binnen = m.group(1)
         if re.search(r"<\s*li\b", binnen, flags=re.I):
             return "\n" + m.group(0)  # geneste lijst: oude route, elk punt op een nieuwe regel
-        binnen = re.sub(r"<\s*br\s*/?\s*>", " ", binnen, flags=re.I)
+        binnen = re.sub(r"<\s*br\b[^>]*>", " ", binnen, flags=re.I)
         binnen = re.sub(r"<[^>]+>", "", binnen)
         binnen = re.sub(r"\s+", " ", binnen).strip()
         return f"\n- {binnen}" if binnen else ""
@@ -1268,7 +1271,7 @@ def _platte_tekst(ruwe_html: str) -> str:
     tekst = re.sub(r"<\s*li\b[^>]*>(.*?)</\s*li\s*>", _opsomming, tekst, flags=re.I | re.S)
     # Vraag in vet direct gevolgd door het antwoord ("...?Ja, dit...") krijgt een regelovergang.
     tekst = re.sub(r"\?\s*</\s*(?:strong|b)\s*>[ \t]*(?=[^\s<])", "?\n", tekst, flags=re.I)
-    tekst = re.sub(r"<\s*br\s*/?\s*>", "\n", tekst, flags=re.I)
+    tekst = re.sub(r"<\s*br\b[^>]*>", "\n", tekst, flags=re.I)
     tekst = re.sub(r"</\s*(p|div|li|tr|dt|dd|summary|ul|ol|dl|details)\s*>", "\n", tekst, flags=re.I)
     tekst = re.sub(r"<\s*h[1-6]\b[^>]*>", "\n\n", tekst, flags=re.I)
     tekst = re.sub(r"<\s*(ul|ol|dl)\b[^>]*>", "\n", tekst, flags=re.I)
