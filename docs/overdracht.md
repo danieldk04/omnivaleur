@@ -368,3 +368,5 @@ Jouw opdracht, in deze volgorde (Daniel verdeelt het werk):
 - Staan AI-onderdelen niet als "klaar" terwijl klanten ze niet kunnen gebruiken? Prijsadvies mag nergens beloofd worden.
 - Mail A en mail B: kloppen de voorbeelden (180 artikelen, 600, boven 1.500, fasering 29,99/39/49) met wat het plansysteem straks echt rekent?
 - tests/test_updates_log.py, tests/test_i18n_compleet.py en tests/test_referral_korting.py moeten groen blijven.
+
+- Aanvulling 20-11 (nacht): (a) aangebrachte vrienden moeten 14 dagen proef krijgen (Daniel); de code geeft iedereen 7 (backend/api/billing.py _get_or_create_subscription, ook expire_trials en de proef/respijt-regels en de teksten op register.html nakijken). Bouw dit, daarna "14 dagen" in mail A. (b) Mail B noemt de fasering voor accounts boven 1.500 niet meer; die ene paar klanten krijgen een aparte mail. Mail A mag naar alle klanten.
