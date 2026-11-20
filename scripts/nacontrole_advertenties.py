@@ -59,12 +59,21 @@ def rubriek_nummers() -> dict[str, set[int]]:
 
 
 def _norm(t: str | None) -> str:
-    return re.sub(r"[^a-z0-9]+", " ", (t or "").lower()).strip()
+    # HTML-opmaak eerst weg: onze omschrijving heeft vaak <br/>, de openbare tekst
+    # niet. Zonder dit werd "<br/>" het woord "br" en telde het als verschil.
+    t = re.sub(r"<[^>]+>", " ", t or "")
+    return re.sub(r"[^a-z0-9]+", " ", t.lower()).strip()
+
+
+# Prijssoorten die op Marktplaats/2dehands bij een gewone vraagprijs horen, of
+# bij een advertentie zonder vraagprijs (prijs 0 bij ons = bieden).
+BIED_SOORTEN = ("FAST_BID", "BIDDING")
 
 
 def vergelijk_een(item: dict, rij: dict | None, platform: str,
                   nummers: dict[str, set[int]], verkocht_op: set[str],
-                  geplaatst: dict | None = None) -> list[tuple[str, str]]:
+                  geplaatst: dict | None = None,
+                  bieden_aan: bool = False) -> list[tuple[str, str]]:
     """Alle verschillen tussen ons artikel en zijn openbare advertentie.
 
     `geplaatst` is de payload van ONZE plaatsing van deze advertentie (titel,
@@ -96,6 +105,17 @@ def vergelijk_een(item: dict, rij: dict | None, platform: str,
     # de extensie zet de eigen prijs van het artikel. Alleen een live prijs die
     # van BEIDE afwijkt is fout.
     eigen = item.get(f"price_{platform}") or item.get("price")
+    # MIN_BID is "vraagprijs MET bieden toestaan": juist als de klant bieden koos
+    # (eigen minimumbod op het artikel, of instelling bieden_standaard "aan").
+    # Eerste versie meldde dat als fout: 859 valse meldingen bij een klant met
+    # bieden aan (20-11-2026). Bedrag wordt dan net zo vergeleken als bij FIXED.
+    bieden_gekozen = bool(item.get("bid_percentage")) or bieden_aan
+    eigen_prijs = float(item.get("price") or 0)
+    if soort == "MIN_BID" and bieden_gekozen:
+        soort = "FIXED"
+    if (soort in BIED_SOORTEN and eigen_prijs <= 0) or (
+            soort and soort == (item.get("price_type") or "")):
+        soort = None   # geen vraagprijs bij ons, of precies de soort die de klant koos
     if (prijs and soort == "FIXED" and cents is not None
             and abs(float(prijs) * 100 - cents) > 1
             and not (eigen and abs(float(eigen) * 100 - cents) <= 1)):
@@ -106,7 +126,10 @@ def vergelijk_een(item: dict, rij: dict | None, platform: str,
     if ons and live and not (ons.startswith(live) or live.startswith(ons)):
         fout.append(("titel", f"verstuurd '{geplaatst.get('title')}', live '{rij.get('title')}'"))
     oms = _norm(geplaatst.get("description"))[:60]
-    live_oms = _norm(rij.get("categorySpecificDescription") or rij.get("description"))
+    # "description" is het begin van de tekst; categorySpecificDescription is bij
+    # sommige rubrieken een stuk uit het MIDDEN (nagemeten 20-11-2026 bij
+    # m2463611385: live tekst identiek aan de onze, csd begon bij "werking.").
+    live_oms = _norm(rij.get("description") or rij.get("categorySpecificDescription"))
     if oms and not live_oms:
         fout.append(("omschrijving", "live omschrijving is leeg"))
     elif oms and live_oms and not live_oms.startswith(oms[: min(len(oms), len(live_oms), 40)]):
@@ -145,7 +168,8 @@ async def verkoper_van(platform: str, titels: list[str]) -> int | None:
 async def controleer_klant(db, uid: str, platform: str, nummers) -> dict:
     from backend.database import fetch_all, fetch_all_in
     items = fetch_all(lambda: db.table("items").select(
-        "id,title,description,category,price,price_marktplaats,price_2dehands,photo_urls")
+        "id,title,description,category,price,price_marktplaats,price_2dehands,photo_urls,"
+        "bid_percentage,price_type")
         .eq("user_id", uid))
     per_id = {i["id"]: i for i in items}
     rijen = fetch_all_in(lambda: db.table("listings").select(
@@ -167,6 +191,13 @@ async def controleer_klant(db, uid: str, platform: str, nummers) -> dict:
     if not openbaar:
         return {"user_id": uid, "live": len(live), "fouten": [],
                 "meting_mislukt": "openbare lijst leeg; niet als 'alles weg' lezen"}
+    # Een HALVE lijst is ook een mislukte meting (20-11-2026: 2dehands gaf bij
+    # 09e089ec eerst 1.052, een uur later 100 van 1.051 terug; de "weg"-advertentie
+    # stond gewoon online). Dan niets als weg melden.
+    if len(openbaar) < 0.5 * len(live):
+        return {"user_id": uid, "live": len(live), "fouten": [],
+                "meting_mislukt": f"openbare lijst onvolledig ({len(openbaar)} van {len(live)}); "
+                                  "niet als 'weg' lezen, later opnieuw meten"}
     # Onze eigen plaatsingen: wat we verstuurden, per advertentienummer.
     geplaatst: dict[str, dict] = {}
     off = 0
@@ -183,6 +214,8 @@ async def controleer_klant(db, uid: str, platform: str, nummers) -> dict:
         if len(blok) < 500:
             break
         off += 500
+    from backend.services import instellingen
+    bieden_aan = instellingen.lees(uid).get(instellingen.BIEDEN_STANDAARD) == "aan"
     fouten = []
     for r in live:
         it = per_id.get(r["item_id"])
@@ -190,7 +223,8 @@ async def controleer_klant(db, uid: str, platform: str, nummers) -> dict:
             continue
         for soort, wat in vergelijk_een(it, openbaar.get(r["platform_listing_id"]), platform,
                                         nummers, verkocht.get(r["item_id"], set()),
-                                        geplaatst.get(r["platform_listing_id"])):
+                                        geplaatst.get(r["platform_listing_id"]),
+                                        bieden_aan):
             fouten.append({"soort": soort, "wat": wat, "item_id": it["id"],
                            "titel": it["title"], "advertentie": r["platform_listing_id"]})
     return {"user_id": uid, "live": len(live), "openbaar": len(openbaar),
