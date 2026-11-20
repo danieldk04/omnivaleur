@@ -19638,3 +19638,13 @@ Groepen zijn geclusterd (docs/facebook-groepsscan.md): resellers (eBay Resellers
 - 5 accounts in de eerste week, 0 nieuw, 0 nieuwe vrienden via een klant. Web Store levert 1.0.430, gelijk aan repo. Mailrapport: 4 mails, 1 echt geopend (Dylan, Gmail), 0 klik, 0 antwoord, 0 actie daarna.
 - Esther (3eeceb51): extensie weer actief op 1.0.430 sinds ~09:20 UTC, 180 MP actief, 3 plaatsingen vanochtend gelukt. Vinted nog steeds uitgelogd sinds 17-11 (alle Vinted-scans falen op "member id"); klantzaak, al afgemeld door de klantfoutenronde. Haar verwijderopdracht van de klantfoutenronde (apothekerspot) is om 09:01 UTC uitgevoerd. Daniel mailde haar 20-11 10:14, dus geen mailtje.
 - Dylan (c0570d1b) en Jurre (5cf1e617): nog steeds geen extensie en nul artikelen, niets veranderd sinds hun mailtje; geen tweede. Demo-account 8faba317: computer uit sinds 17-11. Creator Janina (f0cead08): stil sinds 13-11, valt vandaag uit het venster. Niets gerepareerd, geen mailtjes.
+
+## 20-11-2026 (later): onderzoek naar meer AI-onderdelen, gemeten (Claude, op vraag van Daniel)
+- Concurrenten (eigen sites, niet onafhankelijk getest): foto naar advertentie, prijsadvies, titel en beschrijving, achtergrond verwijderen, automatisch bieden. Wij hebben al vertaling per kanaal, rubriek, dubbelen, bulkopdracht, titels inkorten.
+- Prijsadvies uit eigen verkopen (scripts/meting_prijsadvies.py, 1.197 verkopen, 19 klanten): 46% binnen 20% van de echte prijs, vraagprijs zelf 82%. Niet bouwen.
+- Foto's (158): scherpte en helderheid geven valse alarmen; alleen resolutie onder 600 px is betrouwbaar.
+- Barcode: werkt voor boeken (Open Library), maar geen barcodes in de data en klein deel van de voorraad.
+- Achtergrond verwijderen (rembg, 24 foto's, met het oog nagekeken): ~17 goed, 17 s per foto op CPU. Alleen als keuze van de klant.
+- Koperbot (scripts/meting_koperbot.py, 82 GESCHREVEN berichten, optimistisch): niet veilig genoeg. Het letterlijk-citaat-in-de-advertentie-controle liet 'Zit er een vlek op?' door met 'Goede staat'. Veilig: nog beschikbaar (6/6) en oplichting markeren; de rest als concept of escaleren. Echte berichten ontbreken; biedingen en berichten worden niet gelezen door de extensie.
+- Biedingen automatisch: niet gemeten, geen data en de extensie leest alleen aantallen.
+- Besluit Daniel 20-11: AI-pakket is onderdeel van Ultra en beloning bij 3 vrienden.
