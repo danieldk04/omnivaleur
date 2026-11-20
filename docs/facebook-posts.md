@@ -6,7 +6,7 @@ Kijk bij elke post even naar "Check": dat zijn de zinnen waar jij moet bevestige
 ## 20-11-2026, cluster RESELLERS (NL), Ebay Resellers & Thrifters, Reseller Community
 Onderwerp: iets verkocht op het ene platform, nog online op het andere. Geen merknaam, geen link. De introductie en de software-verwijzing zijn alleen voor deze eerste reseller-post; volgende reseller-posts beginnen gewoon met het verhaal.
 
-> Even kort wie ik ben: ik verkoop zelf kleding online en ben sinds een tijdje bezig met software om op Vinted, Marktplaats, 2dehands en eBay tegelijk te plaatsen. Daardoor kijk ik hier veel mee en wat me opvalt is hoeveel gedoe ontstaat op het moment dat iets verkocht is.
+> Even kort wie ik ben, ik verkoop zelf kleding online en ben sinds een tijdje bezig met software om op Vinted, Marktplaats, 2dehands en eBay tegelijk te plaatsen. Daardoor kijk ik hier veel mee en wat me opvalt is hoeveel gedoe ontstaat op het moment dat iets verkocht is.
 >
 > Klassiek voorbeeld is een jas die op Vinted verkoopt, nog een dag op Marktplaats staat, en daar komt ook iemand. Dan heb je twee kopers voor één jas. Wat ik daarover las is dat je hem op de andere plekken weghaalt voor je gaat inpakken, niet erna. En zit je toch dubbel, bericht de tweede koper meteen en eerlijk, niet laten hangen. Op eBay kan herhaald annuleren volgens wat ik las zelfs gevolgen hebben voor je account.
 >
@@ -18,7 +18,7 @@ Check: "ik verkoop zelf kleding" en "bezig met software" (staat in facebook-actu
 
 EN-versie (zelfde post voor eBay Resellers & Thrifters en Reseller Community):
 
-> Quick intro: I sell clothing online myself and I've been building software to list on Vinted, Marktplaats, 2dehands and eBay at the same time. So I read along here a lot, and what keeps standing out is how much trouble starts right after something sells.
+> Quick intro, I sell clothing online myself and I've been building software to list on Vinted, Marktplaats, 2dehands and eBay at the same time. So I read along here a lot, and what keeps standing out is how much trouble starts right after something sells.
 >
 > Classic case, a jacket sells on Vinted, it's still up on Marktplaats for another day, and someone buys it there too. Now you've got two buyers for one jacket. What I read is to take it down everywhere else before you go pack it, not after. And if it already happened, message the second buyer right away and be straight about it. On eBay, repeated cancellations can apparently hurt your account.
 >
@@ -46,7 +46,7 @@ Onderwerp: activatie, gemeten op echte accounts. Merknaam mag.
 >
 > In September I went through the first 56 accounts to see who actually paid. All five paying customers had imported 118 or more items. About 38 accounts imported fewer than 30 and not one of them paid. Of the 13 with 30+ items, five paid.
 >
-> I'd been spending my time finding more leads when the leak was after signup. People who connect a marketplace but never bring in their stock just drift off. Since then I've been changing the first minutes: stock imports on its own, one click to list the first item, a help button after 10 minutes. I don't have the after-numbers yet.
+> I'd been spending my time finding more leads when the leak was after signup. People who connect a marketplace but never bring in their stock just drift off. Since then I've been changing the first minutes. Stock imports on its own now, one click to list the first item, a help button after 10 minutes. I don't have the after-numbers yet.
 >
 > What was your "imported 100 items" moment, and how did you find it?
 
