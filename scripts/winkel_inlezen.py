@@ -60,7 +60,7 @@ def rapport(te_koop: list[dict], overgeslagen: list[dict]) -> list[dict]:
     print(f"{len(artikelen)} artikelen klaar, {len(overgeslagen)} overgeslagen (uitverkocht of zonder prijs)")
     print(f"foto's: {sum(len(a['photo_urls']) for a in artikelen)} in totaal, "
           f"min {min(len(a['photo_urls']) for a in artikelen)} per artikel")
-    print(f"dubbele artikelnummers: {dubbel}")
+    print(f"dubbele artikelnummers hernoemd: {dubbel}; unieke nummers: {len({a['sku'] for a in artikelen})}")
     return artikelen
 
 
