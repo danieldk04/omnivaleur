@@ -48,8 +48,15 @@ def lees(adres: str) -> tuple[list[dict], list[dict]]:
 
 def rapport(te_koop: list[dict], overgeslagen: list[dict]) -> list[dict]:
     artikelen = [naar_artikel(p) for p in te_koop]
-    skus = [a["sku"] for a in artikelen]
-    dubbel = len(skus) - len(set(skus))
+    # Twee producten met hetzelfde artikelnummer (haar eigen vergissing, 2 van 154):
+    # een nummer is per account uniek, dus het tweede krijgt het productnummer erachter.
+    gezien: set[str] = set()
+    dubbel = 0
+    for a, p in zip(artikelen, te_koop):
+        if a["sku"] in gezien:
+            a["sku"] = f"{a['sku']}-{p['platform_listing_id']}"
+            dubbel += 1
+        gezien.add(a["sku"])
     print(f"{len(artikelen)} artikelen klaar, {len(overgeslagen)} overgeslagen (uitverkocht of zonder prijs)")
     print(f"foto's: {sum(len(a['photo_urls']) for a in artikelen)} in totaal, "
           f"min {min(len(a['photo_urls']) for a in artikelen)} per artikel")
