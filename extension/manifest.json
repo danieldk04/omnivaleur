@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Omnivaleur",
-  "version": "1.0.430",
+  "version": "1.0.431",
   "default_locale": "en",
   "description": "__MSG_extDesc__",
   "permissions": [

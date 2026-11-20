@@ -1650,6 +1650,17 @@ window.CL = (() => {
         if (p && !out.includes(p)) out.push(p);
       }
     }
+    // "WOMEN S", "MEN XL", "DAMES M": GESLACHT VOOR DE MAAT (20-11-2026, 3bfbed2c).
+    // Shopify-titels als "Trui - Women S - Very Good" leveren de maat met het
+    // geslacht erbij. Marktplaats biedt "Maat 36 (S)"; "women s" komt daar als
+    // geheel nergens in voor, dus bleef het veld leeg ("These fields were left
+    // empty on the form: size"). De kale maat "S" staat wel als los woord in
+    // "(S)". Alleen een geslachtswoord vooraan wordt eraf gehaald.
+    const geslacht = raw.match(/^(?:women'?s?|womens|woman|ladies|lady|men'?s?|mens|man|unisex|girls?|boys?|kids?|dames|dame|heren|heer|meisjes|jongens|kinderen)\s+(\S.*)$/i);
+    if (geslacht) {
+      const rest = geslacht[1].trim();
+      if (rest && !out.includes(rest)) out.push(rest);
+    }
     // KINDERMATEN EN LENGTEMATEN OP HET KALE GETAL.
     //
     // Vinted schrijft kindermaten als "10 jaar / 140 cm" en Marktplaats biedt
