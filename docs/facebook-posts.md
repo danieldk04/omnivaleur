@@ -1,25 +1,66 @@
-# Facebook-posts: conceptposten voor Daniel (nieuwste bovenaan)
+# Facebook-posts: conceptposten per cluster (nieuwste bovenaan)
 
-Daniel plaatst zelf. Per post staat de groep, de tekst en wat er daarna gemeten wordt. Regels staan in docs/facebook-lessenbank.md en docs/facebook-groepsscan.md.
+Daniel plaatst zelf en cross-post binnen het cluster. Per dag minstens 1 post; de routine zet het volgende cluster klaar (resellers, ondernemers, founders, eigen groep). Regels en schrijfstijl: docs/facebook-lessenbank.md. Groepen per cluster: docs/facebook-groepsscan.md.
+Kijk bij elke post even naar "Check": dat zijn de zinnen waar jij moet bevestigen dat ze voor jou kloppen.
 
-## 20-11-2026, post 1: #BuildInPublic (Engels), les 15 (afhankelijkheid van een platform)
-Groep: #BuildInPublic | Saas Founders | Solo Developers
+## 20-11-2026, cluster RESELLERS (NL), Ebay Resellers & Thrifters, Reseller Community
+Onderwerp: iets verkocht op het ene platform, nog online op het andere. Geen merknaam, geen link.
 
-> Etsy rejected my API access this week. I'd built everything right and it still came down to a yes from someone who's never heard of me.
+> Even kort wie ik ben: ik verkoop zelf kleding online en ben sinds een tijdje bezig met software om op Vinted, Marktplaats, 2dehands en eBay tegelijk te plaatsen. Daardoor kijk ik hier veel mee en wat me opvalt is hoeveel gedoe ontstaat op het moment dat iets verkocht is.
 >
-> What I took from it: keep your data in one neutral place and treat every marketplace as a translation on top of it. A new connection then isn't a migration.
+> Klassiek geval: jas verkoopt op Vinted, staat nog een dag op Marktplaats, en daar komt ook iemand. Dan heb je twee kopers voor één jas. Wat ik daarover las: haal hem op de andere plekken weg voor je gaat inpakken, niet erna. En zit je toch dubbel, bericht de tweede koper meteen en eerlijk, niet laten hangen. Op eBay kan herhaald annuleren volgens wat ik las zelfs gevolgen hebben voor je account.
 >
-> Anyone else depend on a platform API they don't control? How do you plan around it?
-
-Meten: reacties, nieuwe volgers, of er mensen via de groep naar Omnivaleur kijken. Brug naar Omnivaleur: geen (het verhaal zegt het al).
-
-## 20-11-2026, post 2: Beginnende ondernemers, Startende Ondernemers (NL), les 13 (voorraad voor tools)
-Groep: Beginnende ondernemers (of Startende Ondernemers; kies de groep waar jouw post nog niet in staat)
-
-> Kleine tip voor wie net begint met verkopen: koop pas een hulpmiddel zodra je genoeg voorraad hebt om het nuttig te maken.
-> Wat ik zag bij mensen die uiteindelijk bleven betalen voor zo'n tool: ze hadden allemaal ruim meer dan 100 artikelen staan. Wie er maar een paar had, had er weinig aan.
-> Dus eerst voorraad, dan pas automatiseren.
+> Het tweede dat ik steeds terugzie is geld kwijt na een verkoop. Radar had laatst een verhaal over een verkoper die 817 euro kwijt was omdat Vinted het geld aan de koper teruggaf. Foto van het inpakken en een foto van het pakje bij het afhaalpunt (Mondial Relay) bewaren kost je niks, en als de koper gaat zeuren heb je iets in handen.
 >
-> Met hoeveel artikelen ben jij echt serieus gaan verkopen?
+> Hoe doen jullie dat, hebben jullie een vaste routine na een verkoop of kijk je gewoon rond waar het nog staat?
 
-Meten: reacties en of mensen doorvragen. Brug naar Omnivaleur: geen merknaam (groep verbiedt promotie).
+Check: "ik verkoop zelf kleding" en "bezig met software" (staat in facebook-actueel als jouw echte intro). Radar-verhaal: radar.avrotros.nl, 817 euro (gevonden 20-11-2026). Eng. versie voor de Engelstalige groepen staat hieronder.
+
+EN-versie (zelfde post voor eBay Resellers & Thrifters en Reseller Community):
+
+> Quick intro: I sell clothing online myself and I've been building software to list on Vinted, Marktplaats, 2dehands and eBay at the same time. So I read along here a lot, and what keeps standing out is how much trouble starts right after something sells.
+>
+> Classic case: a jacket sells on Vinted, it's still up on Marktplaats for another day, and someone buys it there too. Now you've got two buyers for one jacket. What I read: take it down everywhere else before you go pack it, not after. And if it already happened, message the second buyer right away and be straight about it. On eBay, repeated cancellations can apparently hurt your account.
+>
+> The other thing I keep seeing is losing money after a sale. A Dutch consumer programme (Radar) ran a story about a seller who lost 817 euro because Vinted refunded the buyer. A photo of the packing and a photo of the parcel at the drop-off point costs nothing, and if the buyer starts arguing you have something to show.
+>
+> What's your routine after a sale, or do you just look around to see where it's still listed?
+
+## 20-11-2026, cluster ONDERNEMERS (NL), Startende Ondernemers, Ambitieuze Ondernemers (2x), Beginnende ondernemers
+Onderwerp: wachten op een partij die jou moet goedkeuren. Geen merknaam.
+
+> Deze week baalde ik even. Etsy heeft mijn aanvraag voor API-toegang afgewezen. Ik bouw software waarmee verkopers van tweedehands spullen op meerdere platformen tegelijk kunnen plaatsen, en best veel mensen vroegen erom of ik Etsy erbij kon doen. Nu dus even niet.
+>
+> Waarom weet ik niet, ze zeggen er weinig over. Ik heb beroep aangetekend en heb geen idee of dat gaat lukken.
+>
+> Wat ik nu doe is eigenlijk heel saai. Ik werk door aan de rest en ik zeg tegen de mensen die erom vroegen dat het stilligt, zonder datum. Liever dat dan iets beloven wat ik niet in de hand heb.
+>
+> Ik studeer er ook nog naast dus eindeloos wachten past ook niet echt haha. Hoe gaan jullie om met partijen die je moeten goedkeuren, een platform, een bank, de Kamer van Koophandel? Blijf je duwen of laat je het even liggen?
+
+Check: dat je naast je studie werkt (staat in facebook-actueel als student finance en control). Jij besluit of "even baalde ik" klopt voor jou.
+
+## 20-11-2026, cluster FOUNDERS (EN), #BuildInPublic, VibeCoders BuildInPublic
+Onderwerp: activatie, gemeten op echte accounts. Merknaam mag.
+
+> Day 165 of building Omnivaleur, a crosslisting app for European secondhand sellers (Vinted, Marktplaats, 2dehands, eBay). 93 users now.
+>
+> In September I went through the first 56 accounts to see who actually paid. All five paying customers had imported 118 or more items. About 38 accounts imported fewer than 30 and not one of them paid. Of the 13 with 30+ items, five paid.
+>
+> I'd been spending my time finding more leads when the leak was after signup. People who connect a marketplace but never bring in their stock just drift off. Since then I've been changing the first minutes: stock imports on its own, one click to list the first item, a help button after 10 minutes. I don't have the after-numbers yet.
+>
+> What was your "imported 100 items" moment, and how did you find it?
+
+Check: 93 users komt uit jouw tekst van 19-11. De cijfers 56, 5, 118, 38, 13 komen uit de meting van 27-09-2026 (memory trechter-aanmelding-tot-betalend-27-09); daarna is de groep gegroeid. "Na-cijfers" nog niet, die belofte staat in build-in-public-ideeen.md (terugkomen 30-11).
+
+## 20-11-2026, cluster EIGEN GROEP, EU Resellers: Vinted, eBay & Crosslisting Community
+Onderwerp: kennismaking en een echte vraag. Merknaam mag.
+
+> Hoi allemaal, goed dat jullie er zijn. Even waarom deze groep bestaat: ik verkoop zelf kleding online en bouw Omnivaleur, software waarmee je op Vinted, Marktplaats, 2dehands en eBay tegelijk kunt plaatsen en dubbel verkopen voorkomt. De groep is bedoeld om tips te delen, geen verkoop.
+>
+> Eén tip om mee te beginnen: bewaar altijd een foto van het pakje bij het afhaalpunt, ook bij Mondial Relay. Als de koper gaat zeuren heb je iets in handen.
+>
+> Nu jullie: op welke platformen verkopen jullie, en wat kost je de meeste tijd? Het plaatsen zelf, de vragen van kopers of controleren wat er nog online staat? Ben echt benieuwd, dan kan ik er hier meer over delen.
+>
+> (EN: which platforms do you sell on, and what eats most of your time: listing, buyer messages, or checking what's still online?)
+
+Check: Mondial Relay-tip is jouw echte reactie uit facebook-actueel. Alleen zichtbaar voor leden, dus hier mag de merknaam.
