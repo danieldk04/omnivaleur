@@ -157,7 +157,7 @@ async def billing_status(user=Depends(get_current_user_full)):
     if _is_owner_email(user.email):
         return {
             "status": "active",
-            "plan": "pro",
+            "plan": "ultra",
             "trial_ends_at": None,
             "current_period_end": None,
             "stripe_subscription_id": None,
