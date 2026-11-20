@@ -22,7 +22,7 @@ body{font-family:system-ui,sans-serif;max-width:1100px;margin:24px auto;padding:
 <script type="module">
 import { AutoModel, AutoProcessor, RawImage, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
 const log = t => document.getElementById('log').textContent = t;
-const heeftGpu = !!navigator.gpu;
+const heeftGpu = !!navigator.gpu && !/[?&]cpu=1/.test(location.search);
 let model, processor;
 async function laad() {
   if (model) return;
