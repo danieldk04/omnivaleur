@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Background removal test</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:1100px;margin:24px auto;padding:0 16px;color:#111}
+.rij{display:flex;gap:12px;margin:14px 0;align-items:flex-start;flex-wrap:wrap}
+.rij figure{margin:0;flex:1 1 300px;max-width:520px}
+.rij img,.rij canvas{width:100%;height:auto;border:1px solid #ddd;border-radius:8px;background:#fff}
+#log{font-size:13px;color:#555;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<h1>Background removal test</h1>
+<p>Runs fully in your browser. Nothing is uploaded. Model: BiRefNet lite (MIT licence), about 115 MB on first use, then cached.</p>
+<input type="file" id="f" accept="image/*" multiple>
+<p id="log">Choose one or more photos.</p>
+<div id="uit"></div>
+<script type="module">
+import { AutoModel, AutoProcessor, RawImage, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
+const log = t => document.getElementById('log').textContent = t;
+const heeftGpu = !!navigator.gpu;
+let model, processor;
+async function laad() {
+  if (model) return;
+  const t0 = performance.now();
+  log('Loading model (' + (heeftGpu ? 'WebGPU' : 'CPU, slower') + ')…');
+  const id = 'onnx-community/BiRefNet_lite-ONNX';
+  model = await AutoModel.from_pretrained(id, heeftGpu ? { device: 'webgpu', dtype: 'fp16' } : { device: 'wasm', dtype: 'fp32' });
+  processor = await AutoProcessor.from_pretrained(id);
+  log('Model loaded in ' + ((performance.now() - t0) / 1000).toFixed(1) + ' s');
+}
+async function verwerk(file) {
+  const t0 = performance.now();
+  const url = URL.createObjectURL(file);
+  const beeld = await RawImage.fromURL(url);
+  const { pixel_values } = await processor(beeld);
+  const { output_image } = await model({ input_image: pixel_values });
+  const masker = await RawImage.fromTensor(output_image[0].sigmoid().mul(255).to('uint8')).resize(beeld.width, beeld.height);
+  const c = document.createElement('canvas'); c.width = beeld.width; c.height = beeld.height;
+  const g = c.getContext('2d');
+  const orig = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = url; });
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  const tmp = document.createElement('canvas'); tmp.width = c.width; tmp.height = c.height;
+  const tg = tmp.getContext('2d'); tg.drawImage(orig, 0, 0);
+  const px = tg.getImageData(0, 0, c.width, c.height);
+  for (let i = 0; i < masker.data.length; i++) px.data[i * 4 + 3] = masker.data[i];
+  tg.putImageData(px, 0, 0);
+  g.drawImage(tmp, 0, 0);
+  const sec = ((performance.now() - t0) / 1000).toFixed(1);
+  const fig = document.createElement('div'); fig.className = 'rij';
+  fig.innerHTML = '<figure><img src="' + url + '"><figcaption>Original</figcaption></figure>';
+  const f2 = document.createElement('figure'); f2.appendChild(c);
+  const cap = document.createElement('figcaption'); cap.textContent = 'Result, ' + sec + ' s'; f2.appendChild(cap);
+  fig.appendChild(f2); document.getElementById('uit').appendChild(fig);
+  return sec;
+}
+document.getElementById('f').addEventListener('change', async e => {
+  const files = [...e.target.files]; if (!files.length) return;
+  try {
+    await laad();
+    let n = 0;
+    for (const f of files) { log('Photo ' + (++n) + ' of ' + files.length + '…'); await verwerk(f); }
+    log('Done: ' + files.length + ' photo(s).');
+  } catch (err) { log('Error: ' + (err && err.message || err)); console.error(err); }
+});
+</script>
+</body>
+</html>
