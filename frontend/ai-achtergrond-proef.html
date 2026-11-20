@@ -28,8 +28,10 @@ async function laad() {
   if (model) return;
   const t0 = performance.now();
   log('Loading model (' + (heeftGpu ? 'WebGPU' : 'CPU, slower') + ')…');
-  const id = 'onnx-community/BiRefNet_lite-ONNX';
-  model = await AutoModel.from_pretrained(id, heeftGpu ? { device: 'webgpu', dtype: 'fp16' } : { device: 'wasm', dtype: 'fp32' });
+  const id = heeftGpu ? 'jiabins0303/birefnet-lite-1024-webgpu' : 'onnx-community/BiRefNet_lite-ONNX';
+  model = await AutoModel.from_pretrained(id, heeftGpu
+    ? { device: 'webgpu', dtype: 'fp32', model_file_name: 'model_fp16' }
+    : { device: 'wasm', dtype: 'fp32' });
   processor = await AutoProcessor.from_pretrained(id);
   log('Model loaded in ' + ((performance.now() - t0) / 1000).toFixed(1) + ' s');
 }
