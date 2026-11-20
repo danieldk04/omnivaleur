@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=6562775079"></script>
+<script src="/i18n.js?v=855fe163ac"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1065,18 +1065,18 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           <div style="width:58px;height:58px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.25);font-size:32px"><img src="/assets/site/mark.png" alt="" width="44" height="24"></div>
           <div>
             <div style="font-size:11px;font-weight:900;opacity:.85">What's new</div>
-            <div id="nieuws-titel" style="font-size:24px;font-weight:900;letter-spacing:-.4px;line-height:1.15">See what has expired</div>
+            <div id="nieuws-titel" style="font-size:24px;font-weight:900;letter-spacing:-.4px;line-height:1.15">What is coming: new plans, Etsy and AI</div>
           </div>
         </div>
       </div>
       <div style="padding:20px 28px 22px">
-        <div style="font-size:14px;color:#15284b;line-height:1.6;margin-bottom:14px">Adverts on Marktplaats and 2dehands run out by themselves. Your dashboard now shows you which ones.</div>
+        <div style="font-size:14px;color:#15284b;line-height:1.6;margin-bottom:14px">From 1 January 2027 you choose a plan that fits how many items you have active. Here is what is coming, and why.</div>
         <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
-          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-clock"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>A clock on the platform icon.</b> Grey with a small clock means expired there, not sold.</div></div>
-          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-list"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>A new tab Expired under Items.</b> Everything that ran out, in one list.</div></div>
-          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-refresh"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>Back online in one click.</b> Per item, or tick several and publish them together.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-list"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>Four plans.</b> Light, Pro, Plus and Ultra, monthly or yearly with 2 months free.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-refresh"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>Etsy is upcoming.</b> It will be part of Ultra as soon as Etsy approves the connection.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-clock"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>An AI package in Ultra.</b> Change all prices with one sentence, shorter titles, and more that we are testing.</div></div>
         </div>
-        <div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:16px">Curious what else we built, and how fast? Open <a href="#" onclick="sluitNieuws();showView('nieuw');return false">What's new</a> in the menu for the full timeline.</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:16px">Read the details under <a href="#" onclick="sluitNieuws();showView('nieuw');return false">What's new</a> in the menu, together with everything we built so far.</div>
         <!-- Knoppen blijven onderin staan, ook als de lijst op een telefoon moet scrollen. -->
         <div style="position:sticky;bottom:-22px;background:#fff;padding:10px 0 4px;margin-bottom:-4px">
           <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="sluitNieuws();startRondleiding()">Show me around</button>
@@ -1094,6 +1094,12 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
        waarvan het doel niet in beeld is (telefoon, lege lijst) wordt overgeslagen.
        De teksten staan hier als HTML, zodat de vertaallaag ze vindt. -->
   <div id="rondleiding-stappen" hidden>
+    <section data-tour="plannen-en-ai">
+    <div data-view="nieuw" data-doel="#komt-eraan"><b>New: what is coming.</b> The plans from 1 January, Etsy, and what we are building and testing.</div>
+    <div data-view="nieuw" data-doel="#komt-eraan-ai"><b>The AI package.</b> What is ready, what we are building, and what we are still testing.</div>
+    <div data-view="prijs" data-doel="#plannen-vanaf-januari"><b>Your plan.</b> The new plans are explained here, next to your subscription.</div>
+    <div data-view="dashboard" data-doel=".nav-item[data-view='nieuw']">All our updates live here, newest first. Come back any time.</div>
+    </section>
     <section data-tour="verlopen-zichtbaar">
     <div data-view="items" data-doel=".items-tab[data-tab='expired']"><b>New: the tab Expired.</b> It lists every item whose advert ran out on Marktplaats or 2dehands by itself.</div>
     <div data-view="items" data-doel="#items-body .pm-dot:first-child"><b>The platform icons.</b> Grey with a small clock means the advert expired there and was not sold. Click it to put it back online.</div>
@@ -2435,6 +2441,8 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
              Stond er eerder niets: de klant landde op het prijsscherm zonder te horen of het gelukt was. -->
         <div id="billing-melding" style="display:none;margin-bottom:20px;padding:16px 18px;border-radius:8px;font-size:14px;font-weight:600;line-height:1.5"></div>
 
+        <div id="plannen-vanaf-januari" style="margin-bottom:20px;padding:12px 14px;background:#f8fafd;border:1px solid var(--border);border-radius:8px;font-size:12.5px;line-height:1.5;color:#15284b"><b>From 1 January 2027:</b> Light, Pro, Plus and Ultra, based on how many items you have active. <a href="#" onclick="showView('nieuw');return false">See the details</a></div>
+
         <!-- Account info — always visible -->
         <div class="card" style="margin-bottom:20px">
           <div class="card-header"><h2>Account</h2></div>
@@ -2672,7 +2680,24 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
             <div class="upd-balken" id="upd-balken"></div>
           </div>
         </div>
-        <div class="upd-filters" id="upd-filters">
+                <div id="komt-eraan" style="margin:18px 0 6px;border:1px solid var(--border);border-radius:8px;padding:18px 20px;background:#f8fafd">
+          <h2 style="margin:0 0 2px;font-size:19px">What is coming</h2>
+          <p style="margin:0 0 14px;font-size:13px;color:var(--muted)">Built from what sellers asked us for. We list what we are building or testing, not dates.</p>
+          <h3 style="margin:0 0 6px;font-size:14px">New plans from 1 January 2027</h3>
+          <p style="margin:0 0 6px;font-size:13px;line-height:1.55"><b>Light</b> €9.99 incl. VAT, up to 20 active items. <b>Pro</b> €19.99 excl. VAT, up to 250. <b>Plus</b> €29.99, up to 1,500. <b>Ultra</b> €49.00, unlimited, with Etsy, the newest features first, the AI package and priority support. Pay yearly and get 2 months free.</p>
+          <p style="margin:0 0 16px;font-size:12.5px;color:var(--muted);line-height:1.5">Go over your limit and everything that is online keeps working, only new items wait. The limits of Pro and Plus apply from 15 January 2027. Upgrading only costs the difference. Current customers get an email first.</p>
+          <h3 style="margin:0 0 6px;font-size:14px">Etsy: upcoming</h3>
+          <p style="margin:0 0 16px;font-size:13px;line-height:1.55">Etsy becomes a channel, included in Ultra. Etsy has to approve the connection first, so we give no date.</p>
+          <div id="komt-eraan-ai">
+            <h3 style="margin:0 0 4px;font-size:14px">The AI package, included in Ultra</h3>
+            <p style="margin:0 0 8px;font-size:12.5px;color:var(--muted);line-height:1.5">An AI function only goes live when it is right at least 95 times out of 100 on real items in our own test. If it is not, it stays out. The AI never changes anything without showing you first.</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:16px"><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Change many items with one sentence</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#e6efff;color:#0039ab">Building</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Type "all prices 10% up" or "add Free shipping to every description". You see 5 examples first, confirm, and can undo.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Shorter titles per channel</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#e6efff;color:#0039ab">Building</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Only titles that are too long for Marktplaats, 2dehands or Vinted are shortened. Brand, size and colour stay.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Background removal on photos</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#e6efff;color:#0039ab">Building</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">As an option you choose per photo, with a before and after. Never automatic.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Buyer message assistant</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#e6efff;color:#0039ab">Building</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Answers "is it still available", warns about scam messages and hands everything else to you. It never answers questions about the item by itself.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Photo check</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#fbe9c6;color:#7b4800">Testing</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Warns when a photo is too small for a marketplace.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Books, games and music from the barcode</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#fbe9c6;color:#7b4800">Testing</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Scan or type the barcode and title, author and details are filled in.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Automatic bid rules</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#fbe9c6;color:#7b4800">Testing</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Accept, decline or counter offers by your own rules.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Descriptions per channel</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#fbe9c6;color:#7b4800">Testing</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">One description, rewritten for each marketplace without losing details.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Fill in details from a photo</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#fbe9c6;color:#7b4800">Testing</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Colour, brand and size suggested from your photo.</div></div></div>
+          </div>
+          <h3 style="margin:0 0 4px;font-size:14px">Asked for, not decided yet</h3>
+          <p style="margin:0 0 8px;font-size:12.5px;color:var(--muted);line-height:1.5">The more of you ask, the sooner it moves up. Reply to any of our emails to add yours.</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px"><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Place new Shopify items without a click</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#eef1f6;color:#44546f">Asked for</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Automatically on the channels you pick.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Link Marktplaats adverts to Shopify items</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#eef1f6;color:#44546f">Asked for</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">So a sale in one place removes the other.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Spot duplicates</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#eef1f6;color:#44546f">Asked for</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">The same piece listed twice.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Update photos from your webshop</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#eef1f6;color:#44546f">Asked for</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Changed photos reach the live listings.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Holiday mode</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#eef1f6;color:#44546f">Asked for</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">All adverts on all channels paused at once.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Remove an item from one channel only</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#eef1f6;color:#44546f">Asked for</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Without touching the others.</div></div></div>
+        </div>
+<div class="upd-filters" id="upd-filters">
           <button class="upd-chip on" data-cat="all" onclick="filterUpdates('all')">All</button>
           <button class="upd-chip" data-cat="channels" onclick="filterUpdates('channels')">Channels</button>
           <button class="upd-chip" data-cat="dashboard" onclick="filterUpdates('dashboard')">Dashboard</button>
@@ -2680,7 +2705,14 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           <button class="upd-chip" data-cat="plans" onclick="filterUpdates('plans')">Plans</button>
         </div>
         <div class="upd-lijst" id="upd-lijst">
-        <article class="upd upd-nieuw" data-id="2026-11-rubriek-herplaatsen" data-datum="2026-11-19" data-cat="automation">
+                <article class="upd upd-nieuw" data-id="2026-11-plannen-en-ai" data-datum="2026-11-20" data-cat="plans">
+          <div class="upd-punt"></div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Plans</span></div>
+          <h3>Plans that grow with your stock, Etsy and an AI package</h3>
+          <p>From 1 January 2027 you choose Light, Pro, Plus or Ultra based on how many items you have active, with 2 months free when you pay yearly. Ultra includes Etsy once it is available, the newest features first, priority support and our AI package. At the top of this page you see what is ready and what we are still building or testing.</p>
+          <div class="upd-acties"><button class="btn btn-sm btn-ghost" onclick="startRondleiding('plannen-en-ai')">Show me in my dashboard</button></div>
+        </article>
+<article class="upd upd-nieuw" data-id="2026-11-rubriek-herplaatsen" data-datum="2026-11-19" data-cat="automation">
           <div class="upd-punt"></div>
           <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Automation</span></div>
           <h3>Relisted adverts stay in your own category</h3>
@@ -6142,9 +6174,9 @@ async function toonImportSeintje() {
 // nieuws_gezien, dus ook op een andere computer) én in deze browser (voor als
 // de server even niet bereikbaar is). Nooit tonen zolang de instellingen niet
 // binnen zijn: dan weten we niet of hij hem al zag.
-const NIEUWS_ID = '2026-11-verlopen-zichtbaar';
-const NIEUWS_TOUR = 'verlopen-zichtbaar';
-const NIEUWS_SINDS = '2026-11-16';
+const NIEUWS_ID = '2026-11-plannen-en-ai';
+const NIEUWS_TOUR = 'plannen-en-ai';
+const NIEUWS_SINDS = '2026-11-20';
 let _nieuwsGetoond = false;
 function _nieuwsAlGezien() {
   if ((state.settings || {}).nieuws_gezien === NIEUWS_ID) return true;

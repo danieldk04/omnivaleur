@@ -340,3 +340,8 @@ boven). Details in de kennisbank (`omnivaleur-demovideo-en-prijs`, `proefperiode
 - Gemeten op echte artikelen (gratis Gemini 3.1 flash-lite): bulk 30 opdrachten, 0 gevaarlijk uitgevoerd; titels 136 lange titels, 131 door de controle (96,3%); beschrijvingen 165, 146 door de strenge controle (88,5%, dus UIT het pakket). Foto naar advertentie niet beloven (19-11).
 - NIET gebouwd: het dashboardscherm voor de bulkopdracht en het aansluiten van titels inkorten op het plaatsen (`_mp_titel_binnen_grens` in backend/api/jobs.py is de plek). Teksten voor venster en updatelog staan klaar in docs/aankondiging-nieuwe-plannen.md.
 - Meetscript: `scripts/meting_ai_pakket.py` (steekproef, bulk, titels, beschrijvingen); de gratis sleutel geeft 500 vragen per dag per model, zet `MODEL=gemini-3.1-flash-lite` als het standaardmodel op is. Uitkomsten in ~/.omnivaleur/meting_ai/.
+
+## 20-11-2026 (later): aankondiging plannen, Etsy en AI in frontend
+- Live: blok "What is coming" bovenaan Wat is nieuw (app.html #komt-eraan), updatelogbericht 2026-11-plannen-en-ai, venster en rondleiding (plannen-en-ai), notitie #plannen-vanaf-januari boven Account, plannenblok op index.html en nl.html (#plans-next, eigen stijl in het blok zelf). Vertaald via nl.json.
+- Niets functioneels aan: NIEUWE_PLANNEN_AAN, REFERRAL_KORTING_AAN, KLASSEMENT_AAN en AI_PAKKET_AAN staan niet in Railway (uit). Bij elke volgende stap (Plus/Ultra live, AI-onderdeel af) de stand in #komt-eraan aanpassen, in beide talen, en de site.
+- Bij livegang 1 januari: Stripe-prijs-id's Plus en Ultra in Railway, vlag aan, tekst "From 1 January" in blok en notitie omzetten naar de dan geldende stand.
