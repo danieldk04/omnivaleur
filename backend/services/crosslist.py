@@ -2994,6 +2994,15 @@ def _enqueue_extension_delete(db, user_id: str, item_id: str, listing: dict, ite
 # Marktplaats free listings expire silently after 28 days.
 # We relist 1 day early to avoid gaps in visibility.
 _MARKTPLAATS_EXPIRY_DAYS = 27
+# 20-11-2026 (Daniel): automatisch herplaatsen op 2dehands, eerst als proef alleen voor
+# Voordeelsieraden (Mieneke), die op de eerste pagina's wil blijven. Een gratis
+# verlenging houdt de advertentie op zijn plek, een herplaatsing zet hem bovenaan.
+# Bij deze verkopers vervangt de herplaatsronde het verlengen; het verlengen blijft
+# alleen als vangnet voor wat de herplaatsing niet haalde. De kosten van een nieuwe
+# plaatsing zijn niet gemeten: de rem voor betalende rubrieken in api/jobs.py geldt
+# voor beide kanalen. Uitbreiden naar anderen pas na meting bij deze proef.
+RELIST_2DEHANDS_PROEF = {"09e089ec-e233-40c1-a5fa-7a56b6dea575"}
+_RELIST_2DEHANDS_VANGNET_DAGEN = 3   # zoveel dagen na de eigen termijn pakt verlengen het over
 # Zie relist_expiring_marktplaats: nooit een hele voorraad op een dag, maar wel
 # genoeg om een grote voorraad bij te houden.
 _AUTO_RELIST_DOELCYCLUS = 20
@@ -3008,7 +3017,7 @@ _AUTO_RELIST_MAX_PER_DAY = 100
 _INHAAL_MARGE_DAGEN = 14
 
 
-def _dagelijkse_relist_grens(db, user_id: str) -> int:
+def _dagelijkse_relist_grens(db, user_id: str, platform: str = "marktplaats") -> int:
     """Hoeveel advertenties deze verkoper vandaag hoogstens opnieuw geplaatst krijgt.
 
     Een vaste grens is altijd fout. Te laag en de advertenties van een grote
@@ -3040,7 +3049,7 @@ def _dagelijkse_relist_grens(db, user_id: str) -> int:
         actief = 0
         for i in range(0, len(ids), 100):
             actief += (db.table("listings").select("id", count="exact")
-                       .eq("platform", "marktplaats").eq("status", "active")
+                       .eq("platform", platform).eq("status", "active")
                        .in_("item_id", ids[i:i + 100]).execute().count or 0)
     except Exception as e:  # noqa: BLE001 — bij twijfel het veilige minimum
         logger.warning("relist cap: kon voorraad niet tellen voor %s: %s", user_id, e)
@@ -3163,6 +3172,16 @@ async def relist_op_vast_moment():
 
 
 async def relist_expiring_marktplaats(alleen_vast_moment: bool = False):
+    """Marktplaats voor iedereen, daarna 2dehands voor de proefverkopers."""
+    await _relist_ronde("marktplaats", alleen_vast_moment)
+    if RELIST_2DEHANDS_PROEF:
+        try:
+            await _relist_ronde("2dehands", alleen_vast_moment)
+        except Exception as e:  # noqa: BLE001 — de proef mag Marktplaats nooit raken
+            logger.error("Auto-relist 2dehands mislukt: %s", e)
+
+
+async def _relist_ronde(platform: str, alleen_vast_moment: bool = False):
     """
     Queue a new 'create' job for every Marktplaats listing that has been
     active for >= MARKTPLAATS_EXPIRY_DAYS days and hasn't been re-queued yet.
@@ -3180,6 +3199,8 @@ async def relist_expiring_marktplaats(alleen_vast_moment: bool = False):
     nu_open: set[str] = set()
     if alleen_vast_moment:
         nu_open = {uid for uid, m in momenten.items() if moment_staat_open(m, nu)}
+        if platform != "marktplaats":
+            nu_open &= RELIST_2DEHANDS_PROEF
         if not nu_open:
             return
 
@@ -3191,7 +3212,7 @@ async def relist_expiring_marktplaats(alleen_vast_moment: bool = False):
                                                RELIST_DAGEN_STANDAARD,
                                                alle_relist_dagen)
     dagen_per_verkoper = alle_relist_dagen()
-    if not alleen_vast_moment:
+    if not alleen_vast_moment and platform == "marktplaats":
         # Zwaar (loopt langs alle actieve advertenties) en het kan wachten: de
         # gewone ronde doet het elke zes uur ook voor de verkopers met een moment.
         await _echte_datums_ophalen(db)
@@ -3230,20 +3251,22 @@ async def relist_expiring_marktplaats(alleen_vast_moment: bool = False):
     # rijen over), en daarna zelf op leeftijd sorteren. Alleen de kolommen die
     # hieronder nodig zijn, want het zijn er duizenden.
     from backend.database import fetch_all_in
-    if alleen_vast_moment:
+    if alleen_vast_moment or platform != "marktplaats":
         # Alleen de advertenties van wie nu zijn uur heeft, niet alle duizenden.
+        # Op 2dehands alleen de proefverkopers.
+        doel = nu_open if alleen_vast_moment else RELIST_2DEHANDS_PROEF
         eigen_items = [r["id"] for r in ((await naast_de_lus(
             lambda: fetch_all_in(lambda: db.table("items").select("id"),
-                                 "user_id", sorted(nu_open)))) or [])]
+                                 "user_id", sorted(doel)))) or [])]
         listings = (await naast_de_lus(lambda: fetch_all_in(lambda: db.table("listings")
                     .select("id,item_id,listed_at,platform_listing_url")
-                    .eq("platform", "marktplaats")
+                    .eq("platform", platform)
                     .eq("status", "active")
                     .lt("listed_at", cutoff), "item_id", eigen_items))) or []
     else:
         listings = (await naast_de_lus(lambda: fetch_all(lambda: db.table("listings")
                     .select("id,item_id,listed_at,platform_listing_url")
-                    .eq("platform", "marktplaats")
+                    .eq("platform", platform)
                     .eq("status", "active")
                     .lt("listed_at", cutoff)))) or []
     if not listings:
@@ -3279,20 +3302,23 @@ async def relist_expiring_marktplaats(alleen_vast_moment: bool = False):
     per_verkoper: dict[str, int] = {}
     for row in ((await naast_de_lus(lambda: db.table("jobs")
                 .select("user_id")
-                .eq("platform", "marktplaats")
+                .eq("platform", platform)
                 .eq("action", "create")
                 .gte("created_at", vandaag)
                 .execute())).data or []):
         per_verkoper[row["user_id"]] = per_verkoper.get(row["user_id"], 0) + 1
     grens_per_verkoper: dict[str, int] = {}
 
-    logger.info("Auto-relist: %s expiring Marktplaats listings, spread per seller",
-                len(listings))
+    logger.info("Auto-relist: %s expiring %s listings, spread per seller",
+                len(listings), platform)
 
     for listing in listings:
         try:
             eigenaar = eigenaar_van.get(listing["item_id"])
             if not eigenaar:
+                continue
+
+            if platform != "marktplaats" and eigenaar not in RELIST_2DEHANDS_PROEF:
                 continue
 
             # Een vast moment gekozen: dan alleen binnen dat uur, nooit tussendoor.
@@ -3383,7 +3409,7 @@ async def relist_expiring_marktplaats(alleen_vast_moment: bool = False):
                     pass
 
             if eigenaar not in grens_per_verkoper:
-                grens = _dagelijkse_relist_grens(db, eigenaar)
+                grens = _dagelijkse_relist_grens(db, eigenaar, platform)
                 if eigenaar in momenten:
                     # Op een gekozen dag komt het werk van de dagen tot de
                     # volgende gekozen dag samen; zie dagen_per_moment.
@@ -3429,7 +3455,7 @@ async def relist_expiring_marktplaats(alleen_vast_moment: bool = False):
             # laat die tweede stap alleen door als de eerste écht gelukt is.
             from backend.services.relist import refresh_listing, RefreshError
             try:
-                await refresh_listing(listing["item_id"], "marktplaats",
+                await refresh_listing(listing["item_id"], platform,
                                       eigenaar, "relist",
                                       eigen_quotum=True)
             except RefreshError as e:
@@ -3728,6 +3754,15 @@ async def extend_expiring_2dehands():
                 continue
             if not auto_aan(eigenaar):
                 continue
+
+            # Proefverkopers krijgen herplaatsing (zie RELIST_2DEHANDS_PROEF); verlengen
+            # pakt alleen over als de herplaatsing een advertentie liet liggen.
+            if eigenaar in RELIST_2DEHANDS_PROEF:
+                from backend.services.instellingen import alle_relist_dagen
+                eigen = alle_relist_dagen().get(eigenaar, _MARKTPLAATS_EXPIRY_DAYS)
+                vangnet = (nu - timedelta(days=eigen + _RELIST_2DEHANDS_VANGNET_DAGEN)).isoformat()
+                if (listing.get("listed_at") or "") > vangnet:
+                    continue
 
             # Geen lopend abonnement, geen werk: de extensie krijgt er toch een
             # 402 op en de opdracht blijft staan tot de veger hem opruimt.

@@ -24,7 +24,7 @@ def _draai(monkeypatch, *, vast_moment, open_nu=True, aantal=5, grens=25, dagen_
     monkeypatch.setattr(crosslist, "get_db", lambda: db)
     monkeypatch.setattr(crosslist, "_echte_datums_ophalen", niets)
     monkeypatch.setattr(crosslist, "_mag_nog_werken", lambda _u: True)
-    monkeypatch.setattr(crosslist, "_dagelijkse_relist_grens", lambda _db, _u: grens)
+    monkeypatch.setattr(crosslist, "_dagelijkse_relist_grens", lambda _db, _u, _p="marktplaats": grens)
     monkeypatch.setattr(instellingen, "alle_relist_dagen", lambda: {"mieneke": 30, "jaap": 30})
     monkeypatch.setattr(instellingen, "alle_relist_momenten", lambda: {"mieneke": ZONDAG_20})
     monkeypatch.setattr(instellingen, "moment_staat_open", lambda m, _nu: open_nu)

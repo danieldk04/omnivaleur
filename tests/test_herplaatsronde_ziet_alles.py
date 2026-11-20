@@ -68,7 +68,7 @@ def _draai(monkeypatch):
     monkeypatch.setattr(crosslist, "get_db", lambda: db)
     monkeypatch.setattr(crosslist, "_echte_datums_ophalen", niets)
     monkeypatch.setattr(crosslist, "_mag_nog_werken", lambda _u: True)
-    monkeypatch.setattr(crosslist, "_dagelijkse_relist_grens", lambda _db, _u: 25)
+    monkeypatch.setattr(crosslist, "_dagelijkse_relist_grens", lambda _db, _u, _p="marktplaats": 25)
     monkeypatch.setattr(instellingen, "alle_relist_dagen", lambda: {"zilver": 30})
     monkeypatch.setattr(instellingen, "lees",
                         lambda u: {"auto_relist": u != "herplaatsen-uit", "relist_dagen": 30})
