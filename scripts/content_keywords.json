@@ -1058,7 +1058,7 @@
       "pillar": "C",
       "format": "competitor",
       "slug": "omnivaleur-vs-resylr-which-crosslisting-tool-is-better",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "omnivaleur-vs-resylr-welke-crosslisting-tool-is-beter",
       "priority": 118
     },
@@ -2199,6 +2199,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-create-a-bundle-on-ebay-for-resellers",
       "published_at": "2026-11-19T17:02:06.076190+00:00"
+    },
+    {
+      "keyword": "Omnivaleur vs Resylr: which crosslisting tool is better",
+      "slug": "omnivaleur-vs-resylr-which-crosslisting-tool-is-better",
+      "region": "nl",
+      "pillar": "C",
+      "format": "competitor",
+      "action": "created",
+      "url_path": "/vs/omnivaleur-vs-resylr-which-crosslisting-tool-is-better",
+      "published_at": "2026-11-20T16:34:04.783125+00:00"
     }
   ]
 }
