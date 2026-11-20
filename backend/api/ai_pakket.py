@@ -7,6 +7,7 @@ het aanzet.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 import uuid
@@ -103,7 +104,7 @@ async def bulk_uitvoeren(body: dict, user_id: str = Depends(get_current_user)):
         raise HTTPException(status_code=409, detail="This preview has expired. Ask again.")
     if body.get("bevestig") is not True:
         raise HTTPException(status_code=400, detail="Confirmation is required")
-    bew = ai_bulk.valideer(__import__("json").dumps(plan_op["bewerking"]))
+    bew = ai_bulk.valideer(json.dumps(plan_op["bewerking"]))
     if bew is None:
         raise HTTPException(status_code=409, detail="This preview is no longer valid. Ask again.")
     items = await asyncio.to_thread(_lees_items, user_id)
@@ -122,7 +123,8 @@ async def bulk_uitvoeren(body: dict, user_id: str = Depends(get_current_user)):
     ai_quota.bewaar(user_id, "voorbeeld", None)
     db = get_db()
     gedaan = await asyncio.to_thread(_schrijf, db, user_id, w, True)
-    prijs_ids = [i for i in gedaan if any(x["id"] == i and x["veld"].startswith("price") for x in w)]
+    prijs_set = {x["id"] for x in w if x["veld"].startswith("price")}
+    prijs_ids = [i for i in gedaan if i in prijs_set]
     if prijs_ids:
         asyncio.create_task(_prijzen_doorgeven(user_id, prijs_ids))
     return {"gewijzigd": len(gedaan), "ongedaan_id": blok["id"]}

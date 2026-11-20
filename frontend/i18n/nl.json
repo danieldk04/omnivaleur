@@ -4147,5 +4147,17 @@
  "The leaderboard is not available right now ({0}).": "Het klassement is nu niet beschikbaar ({0}).",
  "Not available": "Niet beschikbaar",
  "Use 3 to 40 letters, numbers, - or _. Brand names are not allowed.": "Gebruik 3 tot 40 letters, cijfers, - of _. Merknamen zijn niet toegestaan.",
- "Could not save the name": "De naam kon niet worden opgeslagen"
+ "Could not save the name": "De naam kon niet worden opgeslagen",
+ "Not found": "Niet gevonden",
+ "Describe the change in one short sentence": "Beschrijf de wijziging in één korte zin",
+ "Monthly limit of AI bulk edits reached": "Het maandelijkse maximum aan AI-bulkwijzigingen is bereikt",
+ "The AI is not available right now. Nothing was changed.": "De AI is nu niet beschikbaar. Er is niets gewijzigd.",
+ "Say it with one change, for example: raise all prices by 10%": "Zeg het met één wijziging, bijvoorbeeld: verhoog alle prijzen met 10%",
+ "This preview has expired. Ask again.": "Dit voorbeeld is verlopen. Vraag het opnieuw.",
+ "Confirmation is required": "Bevestiging is nodig",
+ "This preview is no longer valid. Ask again.": "Dit voorbeeld is niet meer geldig. Vraag het opnieuw.",
+ "Extra confirmation is required: some prices drop below 1 euro or more than double": "Extra bevestiging is nodig: sommige prijzen komen onder 1 euro of worden meer dan verdubbeld",
+ "Nothing to change or too many items": "Niets te wijzigen of te veel artikelen",
+ "Too much to undo safely. Select fewer items.": "Te veel om veilig ongedaan te kunnen maken. Kies minder artikelen.",
+ "Nothing to undo": "Niets om ongedaan te maken"
 }

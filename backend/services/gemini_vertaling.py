@@ -45,6 +45,8 @@ storing, dus het prijsverschil valt in het niet bij een verkeerd gespelde titel.
 from __future__ import annotations
 
 import collections
+import contextlib
+import contextvars
 import logging
 import re
 import time
@@ -122,9 +124,26 @@ def _van_google() -> list[str]:
     return namen
 
 
+_ALLEEN_LITE: contextvars.ContextVar = contextvars.ContextVar("gemini_alleen_lite", default=False)
+
+
+@contextlib.contextmanager
+def alleen_lite():
+    """Binnen dit blok alleen Flash-Lite proberen (AI-pakket, kosten: ~3x goedkoper)."""
+    token = _ALLEEN_LITE.set(True)
+    try:
+        yield
+    finally:
+        _ALLEEN_LITE.reset(token)
+
+
 def _kandidaten() -> list[str]:
     """Wie we achter elkaar proberen: beste Nederlands eerst, dan beschikbaarheid."""
     namen = _van_google()
+    if _ALLEEN_LITE.get():
+        kort = sorted((n for n in namen if "flash-lite" in n and n != _ALIAS_LITE),
+                      key=_versie, reverse=True)
+        return [n for n in dict.fromkeys([_ALIAS_LITE] + kort[:1]) if n and n not in _OPGEHEVEN]
     lite = sorted((n for n in namen if "flash-lite" in n and n != _ALIAS_LITE),
                   key=_versie, reverse=True)
     flash = sorted((n for n in namen if "flash" in n and "lite" not in n
@@ -180,8 +199,18 @@ def _vraag(model: str, opdracht: str, max_tokens: int = 4096,
     return antwoord
 
 
+# Tokens die Gemini rekende sinds de laatste herstart (20-11-2026, AI-pakket):
+# zo is de echte kost per functie te meten in plaats van te schatten.
+TOKENS: collections.Counter = collections.Counter()
+
+
 def _lees_antwoord(antwoord: httpx.Response) -> str | None:
-    kandidaten = antwoord.json().get("candidates") or []
+    _json = antwoord.json()
+    _gebruik = _json.get("usageMetadata") or {}
+    TOKENS["in"] += int(_gebruik.get("promptTokenCount") or 0)
+    TOKENS["uit"] += int(_gebruik.get("candidatesTokenCount") or 0) + int(_gebruik.get("thoughtsTokenCount") or 0)
+    TOKENS["vragen"] += 1
+    kandidaten = _json.get("candidates") or []
     if not kandidaten:
         logger.warning("Vertaalvangnet: Gemini gaf geen antwoord terug")
         return None

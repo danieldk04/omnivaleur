@@ -81,10 +81,27 @@ def steekproef(n_klanten=24, per_klant=7):
             break
     (MAP / "steekproef.json").write_text(json.dumps(uit, ensure_ascii=False))
     print(len(uit), "artikelen van", klanten, "klanten")
+    # Aparte steekproef met titels boven 60 tekens: alleen die komen voor AI-inkorten in aanmerking.
+    lang, k2 = [], 0
+    for u in users:
+        rijen = (db.table("items").select("id,user_id,title,brand,color,size")
+                 .eq("user_id", u).order("created_at", desc=True).limit(150).execute().data or [])
+        rijen = [r for r in rijen if len(r.get("title") or "") > 60]
+        if len(rijen) < 2:
+            continue
+        random.shuffle(rijen)
+        lang.extend(rijen[:10])
+        k2 += 1
+        if len(lang) >= 130:
+            break
+    (MAP / "lang.json").write_text(json.dumps(lang, ensure_ascii=False))
+    print(len(lang), "lange titels van", k2, "klanten")
 
 
 def _rem():
-    from backend.services import taalmodel
+    from backend.services import taalmodel, gemini_vertaling
+    if os.environ.get("MODEL"):     # de gratis laag geeft 500 vragen per dag PER MODEL
+        gemini_vertaling._kandidaten = lambda: [os.environ["MODEL"]]
     orig = taalmodel.vraag
 
     def traag(*a, **k):
@@ -127,16 +144,18 @@ def bulk():
 def titels():
     from backend.services import ai_tekst
     _rem()
-    items = json.loads((MAP / "steekproef.json").read_text())
+    items = json.loads((MAP / "lang.json").read_text())
     uit = []
     tel = Counter()
-    for kanaal in ("marktplaats", "vinted"):
+    for kanaal in ("marktplaats",):
         res, t = ai_tekst.zoekslimme_titels(items, kanaal)
-        tel.update({f"{kanaal}_{k}": v for k, v in t.items()})
+        tel.update({f"{kanaal}_{k}": v for k, v in t.items() if k != 'redenen'})
         for it in items:
             uit.append({"kanaal": kanaal, "id": it["id"], "oud": it["title"], "nieuw": res.get(it["id"]),
                         "merk": it.get("brand")})
-        print(kanaal, t, _tokens())
+        print(kanaal, {k: v for k, v in t.items() if k != "redenen"}, _tokens())
+        for r in t["redenen"]:
+            print("AFGEKEURD", r)
     (MAP / "titels.json").write_text(json.dumps(uit, ensure_ascii=False, indent=1))
     print(tel)
 
@@ -150,6 +169,8 @@ def beschrijvingen():
     for it in items:
         kanaal = random.choice(["marktplaats", "vinted", "ebay"])
         nieuw, t = ai_tekst.herschrijf_beschrijving(it, kanaal)
+        if nieuw is None and "reden" in t:
+            print("AFGEKEURD", it["id"][:8], t["reden"][:120])
         tel.update(t if "reden" not in t else {"afgekeurd": 1})
         uit.append({"kanaal": kanaal, "id": it["id"], "oud": it["description"], "nieuw": nieuw, **t})
         print(len(uit), dict(tel))

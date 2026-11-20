@@ -90,13 +90,14 @@ def _claude_ruimte() -> bool:
 
 def vraag(opdracht: str, *, max_tokens: int = 1024, claude_model: str = HAIKU,
           tijdslimiet: float = 30.0, wat: str = "taalvraag", denken: bool = True,
-          claude_toegestaan: bool = True) -> str:
+          claude_toegestaan: bool = True, alleen_lite: bool = False) -> str:
     """Het antwoord als tekst. Gooit TaalmodelOnbeschikbaar als niets lukte."""
     from backend.services import gemini_vertaling
 
     if gemini_vertaling.beschikbaar():
-        antwoord = gemini_vertaling.vraag(opdracht, max_tokens=max_tokens,
-                                          tijdslimiet=tijdslimiet, denken=denken)
+        with (gemini_vertaling.alleen_lite() if alleen_lite else contextlib.nullcontext()):
+            antwoord = gemini_vertaling.vraag(opdracht, max_tokens=max_tokens,
+                                              tijdslimiet=tijdslimiet, denken=denken)
         if antwoord:
             _beantwoord("gemini")
             return antwoord

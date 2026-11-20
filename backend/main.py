@@ -21,7 +21,7 @@ from pathlib import Path
 import asyncio
 import traceback
 import uuid
-from backend.api import items, listings, platforms, webhooks, jobs, uploads, shopify, auth, billing, imports, content, tools, notifications, beheer, tracking, referrals, mail_verbinding, i18n, verzending, account, bronfotos
+from backend.api import items, listings, platforms, webhooks, jobs, uploads, shopify, auth, billing, imports, content, tools, notifications, beheer, tracking, referrals, mail_verbinding, i18n, verzending, account, bronfotos, ai_pakket
 from backend.scheduler import start_scheduler, stop_scheduler
 
 FRONTEND = Path(__file__).parent.parent / "frontend"
@@ -124,6 +124,7 @@ app.include_router(mail_verbinding.router)
 app.include_router(i18n.router)
 app.include_router(account.router)
 app.include_router(bronfotos.router)
+app.include_router(ai_pakket.router, prefix="/api")
 
 
 def _taalmodel_teller() -> dict:

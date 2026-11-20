@@ -40,9 +40,9 @@ MAX_ONGEDAAN_BYTES = 1_500_000  # past het niet, dan voeren we niet uit
 VOORBEELD_N = 5
 VOORBEELD_GELDIG_S = 1800
 
-_OMHOOG = re.compile(r"\b(erbij|extra|meer|plus|omhoog|verhoog\w*|verhogen|duurder|"
+_OMHOOG = re.compile(r"\b(erbij|bij|extra|meer|plus|omhoog|verhoog\w*|verhogen|duurder|hoger|stijgen|opslag|"
                      r"raise|increase\w*|up by|higher|more|add)\b|\+", re.I)
-_OMLAAG = re.compile(r"\b(eraf|af|minder|min|omlaag|verlaag\w*|verlagen|korting|goedkoper|"
+_OMLAAG = re.compile(r"\b(eraf|af|minder|min|omlaag|verlaag\w*|verlagen|korting|goedkoper|lager|daling|afslag|"
                      r"aftrekken|lower|decrease\w*|off|discount|cheaper|less|subtract|reduce\w*)\b|[−–-]\s*\d", re.I)
 
 
@@ -130,6 +130,8 @@ def valideer(antwoord: str) -> dict | None:
 
 def _getal_staat_in(w: float, opdracht: str) -> bool:
     cijfers = {f"{abs(w):g}", f"{abs(w):.2f}", f"{abs(w):g}".replace(".", ",")}
+    if "cent" in opdracht and abs(w) < 1:      # "50 cent" is 0,5 euro
+        cijfers.add(f"{abs(w) * 100:g}")
     cijfers.add(f"{abs(w):.2f}".replace(".", ","))
     gevonden = re.findall(r"\d+(?:[.,]\d+)?", opdracht)
     return any(g in cijfers or g.replace(",", ".") in cijfers for g in gevonden)
@@ -280,7 +282,7 @@ def vraag_model(opdracht: str) -> tuple[dict | None, str]:
     try:
         antwoord = taalmodel.vraag(opdracht_voor_model(opdracht), max_tokens=300,
                                    wat="AI-bulkopdracht", denken=False,
-                                   claude_toegestaan=False)
+                                   claude_toegestaan=False, alleen_lite=True)
     except taalmodel.TaalmodelOnbeschikbaar:
         return None, "storing"
     bew = valideer(antwoord)

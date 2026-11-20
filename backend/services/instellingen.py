@@ -447,6 +447,10 @@ def _schoon(rauw: dict | None) -> dict:
         uit[VERZENDING_2DH_MODUS] = afgeleide_modus(uit)
     if rauw.get(BIEDEN_STANDAARD) in BIEDEN_STANDAARD_KEUZES:
         uit[BIEDEN_STANDAARD] = rauw[BIEDEN_STANDAARD]
+    # Verbruik en laatste ongedaan-maken van het AI-pakket. Alleen de server
+    # schrijft dit (write_settings filtert het uit elk verzoek van de klant).
+    if isinstance(rauw.get("ai_pakket"), dict):
+        uit["ai_pakket"] = rauw["ai_pakket"]
     groepen = rauw.get("vinted_groepen")
     if isinstance(groepen, list):
         uit["vinted_groepen"] = [g for g in

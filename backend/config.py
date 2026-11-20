@@ -101,6 +101,10 @@ class Settings(BaseSettings):
     # Het maandelijkse klassement, de niveaus en de Founding Circle (besluit Daniel
     # 09-11-2026). Staat standaard UIT, los van de korting.
     klassement_aan: bool = False
+    # Het AI-pakket (bulkopdracht in gewone taal, zoekslimme titels, beschrijving per
+    # kanaal; 20-11-2026). Standaard UIT: zonder deze vlag antwoorden de routes 404
+    # en doet geen enkele functie iets. Nooit aanzetten zonder besluit van Daniel.
+    ai_pakket_aan: bool = False
     app_url: str = "https://omnivaleur.com"
 
     secret_key: str = "change-me"

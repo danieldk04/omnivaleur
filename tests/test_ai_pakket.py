@@ -32,6 +32,8 @@ def test_goede_prijsopdrachten_komen_door():
     assert ok("1 euro erbij", {"actie": "prijs_bedrag", "kanaal": "alle", "waarde": 1}) is None
     assert ok("alles 10% hoger", {"actie": "prijs_procent", "kanaal": "alle", "waarde": 10}) is None
     assert ok("2,50 eraf", {"actie": "prijs_bedrag", "kanaal": "alle", "waarde": -2.5}) is None
+    assert ok("zet er overal 2 euro bij", {"actie": "prijs_bedrag", "kanaal": "alle", "waarde": 2}) is None
+    assert ok("op 2dehands 50 cent erbij", {"actie": "prijs_bedrag", "kanaal": "2dehands", "waarde": 0.5}) is None
     assert ok("zet de prijs op 15 euro", {"actie": "prijs_vast", "kanaal": "alle", "waarde": 15}) is None
 
 
@@ -267,18 +269,28 @@ def test_klant_kan_zijn_eigen_plafond_niet_zetten():
 
 # ── titels en beschrijvingen: de harde controle ─────────────────────────────
 
-ITEM = {"id": "1", "title": "(658) Ralph Lauren Polo Heren Trui Navy Maat S Excellent", "brand": "Ralph Lauren",
-        "color": "Blauw", "size": "S", "material": "Katoen", "description": "Trui, maat S, 100% katoen. Weinig gedragen."}
+ITEM = {"id": "1", "title": "(658) Ralph Lauren Polo Heren Trui Navy Maat S Excellent Condition Authentic",
+        "brand": "Ralph Lauren", "color": "Navy", "size": "S", "material": "Katoen",
+        "description": "Trui, maat S, 100% katoen. Weinig gedragen."}
 
 
 def test_titelcontrole():
     f = ai_tekst.titel_fout
-    assert f(ITEM, "marktplaats", "(658) Ralph Lauren trui heren maat S katoen") is None
-    assert "not in the item data" in f(ITEM, "marktplaats", "(658) Ralph Lauren trui prachtige maat S")
-    assert "brand" in f(ITEM, "marktplaats", "(658) trui heren maat S")
-    assert "code" in f(ITEM, "marktplaats", "Ralph Lauren trui (658) maat S")
-    assert "'s' is missing" in f(ITEM, "marktplaats", "(658) Ralph Lauren trui heren")
-    assert "longer" in f(ITEM, "marktplaats", "(658) Ralph Lauren Polo Heren Trui Navy Maat S Excellent Katoen Blauw")
+    assert f(ITEM, "marktplaats", "(658) Ralph Lauren Trui Navy Maat S") is None
+    assert "not in the original" in f(ITEM, "marktplaats", "(658) Ralph Lauren Trui Navy Maat S Katoen")
+    assert "brand" in f(ITEM, "marktplaats", "(658) Trui Navy Maat S Heren Polo")
+    assert "color" in f(ITEM, "marktplaats", "(658) Ralph Lauren Trui Heren Polo Maat S")
+    assert "code" in f(ITEM, "marktplaats", "Ralph Lauren Trui (658) Navy Maat S")
+    assert "'s' is missing" in f(ITEM, "marktplaats", "(658) Ralph Lauren Polo Heren Trui Navy")
+    assert "longer" in f(ITEM, "marktplaats", ITEM["title"])
+    assert "removed" in f(ITEM, "marktplaats", "(658) Ralph Lauren Navy S")
+
+
+def test_woorden_uit_de_velden_zijn_niet_genoeg():
+    # Meting 20-11: 'Zilveren miniatuur snotneus, 19e eeuws' werd 'Silver' omdat het
+    # materiaalveld "Silver" zei. Een woord dat niet in de oude titel stond is nu fout.
+    item = {"id": "2", "title": "Zilveren miniatuur snotneus 19e eeuws " + "x" * 30, "material": "Silver"}
+    assert ai_tekst.titel_fout(item, "marktplaats", "Silver") is not None
 
 
 def test_beschrijvingscontrole():
@@ -305,13 +317,58 @@ def test_beschrijving_tweede_poging_krijgt_de_reden_en_mislukt_veilig(monkeypatc
     assert ai_tekst.herschrijf_beschrijving(ITEM, "vinted")[0] is None      # oude tekst blijft staan
 
 
-def test_titels_alleen_goedgekeurde_voorstellen_gaan_door(monkeypatch):
+def test_titels_alleen_te_lange_titels_en_alleen_goedgekeurde_voorstellen(monkeypatch):
     from backend.services import taalmodel
-    antw = iter([json.dumps(["(658) Ralph Lauren trui heren maat S"]),
-                 json.dumps(["(658) Ralph Lauren trui heren maat S"])])
-    monkeypatch.setattr(taalmodel, "vraag", lambda *a, **k: next(antw))
-    uit, t = ai_tekst.zoekslimme_titels([ITEM], "marktplaats")
-    assert uit == {"1": "(658) Ralph Lauren trui heren maat S"} and t["goed_1"] == 1
+    kort = {"id": "k", "title": "Nike T-shirt rood L"}
+    vragen = []
+
+    def vraag(opdracht, **k):
+        vragen.append(opdracht)
+        return json.dumps(["(658) Ralph Lauren Trui Navy Maat S"])
+    monkeypatch.setattr(taalmodel, "vraag", vraag)
+    uit, t = ai_tekst.zoekslimme_titels([ITEM, kort], "marktplaats")
+    assert uit == {"1": "(658) Ralph Lauren Trui Navy Maat S"} and t["goed_1"] == 1
+    assert "Nike" not in vragen[0]                  # een titel die past wordt niet eens gevraagd
     monkeypatch.setattr(taalmodel, "vraag", lambda *a, **k: json.dumps(["Verzonnen luxe trui"]))
     uit, t = ai_tekst.zoekslimme_titels([ITEM], "marktplaats")
     assert uit == {} and t["afgekeurd"] == 1
+
+
+def test_titel_te_lang_krijgt_nog_een_ronde_met_het_aantal_tekens(monkeypatch):
+    from backend.services import taalmodel
+    prompts = []
+    antwoorden = iter([
+        json.dumps(["(658) Ralph Lauren Polo Heren Trui Navy Maat S Excellent Condition"]),   # nog te lang
+        json.dumps(["(658) Ralph Lauren Trui Navy Maat S"])])
+
+    def vraag(opdracht, **k):
+        prompts.append(opdracht)
+        return next(antwoorden)
+    monkeypatch.setattr(taalmodel, "vraag", vraag)
+    uit, t = ai_tekst.zoekslimme_titels([ITEM], "marktplaats")
+    assert uit == {"1": "(658) Ralph Lauren Trui Navy Maat S"} and t["goed_2"] == 1
+    assert "remove at least" in prompts[1] and "characters" in prompts[1]
+
+
+def test_beschrijving_mag_geen_gebrek_of_zinnen_weglaten():
+    f = ai_tekst.beschrijving_fout
+    item = {"id": "3", "title": "Jas", "description": "Mooie warme jas van wol. Let op: er zit een vlek op de mouw. "
+            "Hij is gedragen in de winter en past goed bij een spijkerbroek of een rok."}
+    assert "flaw" in f(item, "vinted", "Mooie warme jas van wol, gedragen in de winter. Past goed bij een spijkerbroek of een rok.")
+    assert "dropped" in f(item, "vinted", "Mooie warme jas van wol. Er zit een vlek op de mouw.")
+    assert f(item, "vinted", "Mooie warme jas van wol. Let op: er zit een vlek op de mouw. Gedragen in de winter, past goed bij "
+                             "een spijkerbroek of een rok.") is None
+
+
+def test_te_lang_voorstel_wordt_afgekort_maar_nooit_ten_koste_van_een_getal(monkeypatch):
+    from backend.services import taalmodel
+    oud = "Antieke Portugeze aardewerken soepterrine met onderschotel – handbeschilderd – Sacramento Cerâmica"
+    item = {"id": "p", "title": oud}
+    antw = json.dumps(["Soepterrine Antieke Portugeze aardewerken Sacramento Cerâmica"])
+    monkeypatch.setattr(taalmodel, "vraag", lambda *a, **k: antw)
+    uit, t = ai_tekst.zoekslimme_titels([item], "marktplaats")
+    assert uit == {"p": "Soepterrine Antieke Portugeze aardewerken Sacramento"} and t["goed_afgekort"] == 1
+    kaart = {"id": "q", "title": "Moise Kean /25 Purple – Panini Donruss Road to FIFA World Cup 26 – Italy – 13/25"}
+    monkeypatch.setattr(taalmodel, "vraag", lambda *a, **k: json.dumps(["Moise Kean /25 Panini Donruss Road to FIFA World Cup 26 13/25"]))
+    uit, t = ai_tekst.zoekslimme_titels([kaart], "marktplaats")
+    assert uit == {} and t["afgekeurd"] == 1       # het getal 13 zou wegvallen: dan liever niets
