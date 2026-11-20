@@ -25,6 +25,11 @@ EIGEN = {"dkresellacademy@gmail.com", "aertssen.pleun@gmail.com", "daniel@omniva
          "danieldekoning04@gmail.com"}
 GROOT = {"info@papas-plectrums.nl": "5.700", "info@goudlief.nl": "4.200",
          "info@zilverwebsite.nl": "2.900", "jannekeheijne1988@hotmail.com": "3.500"}
+# Wie ooit zei geen mail meer te willen (mailbox nagelopen 20-11: zoekwoorden stop, afmelden,
+# unsubscribe, geen mail, uitschrijven, geen interesse; en alle antwoorden van de ontvangers zelf).
+# Voeg hier elk nieuw adres aan toe. Daarnaast blokkeert de code wie bij Resend of Zoho
+# een bounce of spamklacht gaf (mail_events).
+GEEN_MAIL = {"info@frankvannuus.nl", "studioriccamente@gmail.com"}
 STATUS_OK = {"active", "trialing", "complimentary", "payment_processing", "past_due", None}
 
 A_ONDERWERP = "Een vriend uitnodigen levert je nu geld op"
@@ -76,6 +81,45 @@ Groetjes,
 
 Daniel"""
 
+# Engelse versies voor wie geen Nederlands leest (opdracht Daniel 20-11). Regel: .nl of .be,
+# of verkoop op Marktplaats of 2dehands, of een bekende Nederlandse klant = Nederlands.
+# De rest hierboven niet herkend = Engels. Taal staat nergens op de server, dus de lijst is handwerk.
+ENGELS = {"info@janinanoetzel.com", "momme@nordsonne.net", "theholsiticface@gmail.com", "hbm789@icloud.com"}
+
+A_ONDERWERP_EN = "Inviting a friend now earns you money"
+A_EN = """Hi,
+
+Daniel here. Until 1 January I give more back to anyone who brings another seller along.
+
+Every friend who takes a paid subscription (Pro or higher) takes €10 per month off your own invoice, for as long as they keep paying. Every friend also gives you 2 free months. With 3 friends you get the AI package, every AI function as soon as it goes live. With 5 friends you have Ultra: all features, Etsy as soon as it is available, the newest features first and priority support.
+
+Your friend starts with a 14 day trial and pays half for the first month. I import their stock and walk through the first items with them until they are online.
+
+Your personal link is in your dashboard under Invite friends. Anyone who joins before 1 January keeps the €10 afterwards.
+
+Best,
+
+Daniel"""
+
+B_ONDERWERP_EN = "What changes in your subscription on 1 January"
+B_EN = """Hi,
+
+Daniel here. From 1 January, Omnivaleur no longer charges all or nothing, but by the number of active items per invoice.
+
+Light: up to 20 items, €9.99 per month incl. VAT. Pro: up to 250, €19.99. Plus: up to 1,500, €29.99. Ultra: unlimited, €49, with Etsy as soon as it is available, the newest features first, the AI package and priority support. Pay yearly and you pay 10 months instead of 12.
+
+In practice it works like this. We count your active items and you are in the plan that fits. If you have 180 active items, you stay on Pro for €19.99 and nothing changes. With 600, Plus is the plan for €29.99. With more than 1,500, Ultra is the plan for €49. If you are already that high, I will email you separately about a gentle transition. With 20 items or fewer you can switch to Light for €9.99.
+
+If you go over your limit, you can keep working with what is online. Only new items are blocked, and the limits of Pro and Plus only apply from 15 January, so you have time to choose. When you upgrade you only pay the difference.
+
+If you also invite friends, your plan can get cheaper or even free: until 1 January every paying friend takes €10 per month off your invoice, and with 5 friends you have Ultra. Your link is in your dashboard under Invite friends.
+
+Questions? Just reply to this email.
+
+Best,
+
+Daniel"""
+
 
 def ontvangers():
     eig = {e.strip().lower() for e in (settings.owner_email or "").split(",") if e.strip()} | EIGEN
@@ -88,7 +132,7 @@ def ontvangers():
             break
         for u in us:
             e = (u.email or "").strip().lower()
-            if e and e not in eig and not _is_eigen_of_nep(e) and subs.get(u.id) in STATUS_OK:
+            if e and e not in eig and e not in GEEN_MAIL and not _is_eigen_of_nep(e) and subs.get(u.id) in STATUS_OK:
                 uit.append(e)
         if len(us) < 200:
             break
@@ -99,7 +143,16 @@ def ontvangers():
 def plan(adres):
     if adres in GROOT:
         return [("a", A_ONDERWERP, A), ("groot", G_ONDERWERP, G.format(n=GROOT[adres]))]
+    if adres in ENGELS:
+        return [("a", A_ONDERWERP_EN, A_EN), ("b", B_ONDERWERP_EN, B_EN)]
     return [("a", A_ONDERWERP, A), ("b", B_ONDERWERP, B)]
+
+
+def geblokkeerd(adres):
+    """Bounce of spamklacht eerder gelogd: dan niet nog eens mailen."""
+    r = get_admin_db().table("mail_events").select("type").eq("ontvanger", adres).in_(
+        "type", ["email.bounced", "email.complained", "email.suppressed"]).execute().data
+    return bool(r)
 
 
 def al(adres, soort):
@@ -130,6 +183,9 @@ def main(a):
     if cmd == "stuur" and "--echt" in a:
         for e in lijst:
             for soort, onderwerp, tekst in plan(e):
+                if geblokkeerd(e):
+                    print("GEBLOKKEERD (bounce of klacht)", e)
+                    break
                 if al(e, soort):
                     print("al gehad", e, soort)
                     continue
