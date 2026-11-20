@@ -1,6 +1,6 @@
 # Overdracht: lees dit als eerste
 
-Bijgewerkt 17-11-2026 (op verzoek van Daniel, voor de overdracht) door Daniels hoofdaccount; daarvoor 16-11-2026 22:30 door het tweede account. Eerder die dag op verzoek van Daniel: "1 op 1 met
+Aangevuld 20-11-2026 door de ochtendronde klantfouten (Daniels Mac, alleen de regel over herplaatsrubriek en Shopify-dubbelen). Bijgewerkt 17-11-2026 (op verzoek van Daniel, voor de overdracht) door Daniels hoofdaccount; daarvoor 16-11-2026 22:30 door het tweede account. Eerder die dag op verzoek van Daniel: "1 op 1 met
 wat je kunt zien, en dit elke sessie en elke dag bijhouden". Basis was de overdracht van
 15-11 (Daniels Mac), vorige daarvoor 28-10. Alles hieronder is gemeten op 15 of 16-11-2026,
 tenzij er een andere datum staat. Hoe je dit bestand zelf bijhoudt:
@@ -121,6 +121,8 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
   (dkresellacademy@gmail.com, aertssen.pleun@gmail.com).
 - Monaim heeft nu niets met Omnivaleur te maken (09-11). Noem hem nooit in een reactie of
   klanttekst.
+
+- 20-11 (klantfouten ochtend): herplaatsen van een VERLOPEN advertentie kreeg nooit zijn eigen rubriek (/seller/view-adres onleesbaar, zoek-API toont verlopen advertenties niet). mp_enrich leest nu het kortadres /m{nr}, ook als 410 (13c0a26b); 212 wachtende herplaatsingen bijgewerkt. Zilverwebsite (26cf5471): 276 webshop-dubbelen samengevoegd; 3 in de webshop verkochte stukken (2 Zilverwebsite, 1 Esther) stonden nog op MP, nu als verkocht geboekt. Nacontrole-script geeft geen valse prijs/omschrijving/weg meer. Detail in team-notes.
 
 ## Wat nu open staat (niemand hoeft te wachten op Daniel tenzij er "beslissing" staat)
 
