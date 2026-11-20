@@ -170,6 +170,7 @@ def omgeving(monkeypatch):
     monkeypatch.setattr(instellingen, "lees", lambda u: {"ai_pakket": winkel.get(u)} if winkel.get(u) else {})
     monkeypatch.setattr(instellingen, "schrijf", lambda u, w: winkel.__setitem__(u, w["ai_pakket"]))
     monkeypatch.setattr(route, "_prijzen_doorgeven", _geen_taak)
+    monkeypatch.setattr(route, "heeft_pakket", lambda u: True)
     app = FastAPI()
     app.include_router(route.router, prefix="/api")
     app.dependency_overrides[get_current_user] = lambda: "u1"

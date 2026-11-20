@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=337317d1c4"></script>
+<script src="/i18n.js?v=51c78fdc35"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Create account — Omnivaleur</title>
 <meta name="description" content="Start your 7-day free trial of Omnivaleur. No credit card required. Publish to Marktplaats, 2dehands, Vinted, eBay, Shopify and WooCommerce at once.">
@@ -50,7 +50,7 @@
        niet meer. De code zelf zit al in localStorage (assets/ref.js). -->
   <div id="uitnodiging" class="note-ok" style="display:none">
     <b>A friend invited you</b>
-    <div>Your first month is 50% off (on Pro, &euro;10.00 instead of &euro;19.99 excl. VAT). It is applied automatically when you upgrade, no code to type.</div>
+    <div>You start with a 14-day free trial. Your first month is 50% off (on Pro, &euro;10.00 instead of &euro;19.99 excl. VAT). It is applied automatically when you upgrade, no code to type.</div>
   </div>
 
   <div id="error" class="error"></div>
@@ -188,7 +188,7 @@ async function doRegister(e) {
       fetch('/api/referrals/uitnodiging/' + encodeURIComponent(refCode))
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (d) {
-          if (d && d.korting === true) document.getElementById('uitnodiging').style.display = 'block';
+          if (d && d.korting === true) { document.getElementById('uitnodiging').style.display = 'block'; var pk = document.querySelector('.perk'); if (pk) pk.textContent = '14 days free trial'; }
         })
         .catch(function () {});
     }

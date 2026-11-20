@@ -25,9 +25,27 @@ router = APIRouter(prefix="/ai-pakket", tags=["ai-pakket"])
 _LEES = "id,title,description,price," + ",".join(ai_bulk.PRIJSVELD.values())
 
 
-def _aan() -> None:
+def _aan(user_id: str | None = None) -> None:
+    """Vlag uit = 404 voor iedereen. Vlag aan = alleen wie het pakket heeft:
+    Ultra, 3 betalende vrienden, of de eigenaar."""
     if not settings.ai_pakket_aan:
         raise HTTPException(status_code=404, detail="Not found")
+    if user_id is not None and not heeft_pakket(user_id):
+        raise HTTPException(status_code=403, detail="The AI package comes with Ultra, or with 3 paying friends")
+
+
+def heeft_pakket(user_id: str) -> bool:
+    try:
+        from backend.services.light import plan_van_gebruiker
+        from backend.services.vriendenvoordeel import heeft_ai_via_vrienden
+        from backend.services.billing import is_owner_email
+        from backend.services.referral_mail import email_van
+        if is_owner_email(email_van(user_id)):
+            return True
+        return plan_van_gebruiker(user_id) == "ultra" or heeft_ai_via_vrienden(user_id)
+    except Exception:
+        logger.exception("Kon het pakket van %s niet nagaan", user_id)
+        return False
 
 
 def _lees_items(user_id: str) -> list[dict]:
@@ -37,7 +55,7 @@ def _lees_items(user_id: str) -> list[dict]:
 
 @router.get("/status")
 def status(user_id: str = Depends(get_current_user)):
-    _aan()
+    _aan(user_id)
     return {"aan": True, "plafond": ai_quota.PLAFOND,
             "gebruikt": {k: ai_quota.gebruikt(user_id, k) for k in ai_quota.PLAFOND},
             "ongedaan_mogelijk": bool(ai_quota.lees_los(user_id, "laatste"))}
@@ -45,7 +63,7 @@ def status(user_id: str = Depends(get_current_user)):
 
 @router.post("/bulk/voorbeeld")
 async def bulk_voorbeeld(body: dict, user_id: str = Depends(get_current_user)):
-    _aan()
+    _aan(user_id)
     opdracht = str((body or {}).get("opdracht") or "").strip()
     if not opdracht or len(opdracht) > 400:
         raise HTTPException(status_code=400, detail="Describe the change in one short sentence")
@@ -96,7 +114,7 @@ async def _prijzen_doorgeven(user_id: str, ids: list[str]) -> None:
 
 @router.post("/bulk/uitvoeren")
 async def bulk_uitvoeren(body: dict, user_id: str = Depends(get_current_user)):
-    _aan()
+    _aan(user_id)
     body = body or {}
     plan_op = ai_quota.lees_los(user_id, "voorbeeld")
     if (not isinstance(plan_op, dict) or plan_op.get("id") != body.get("voorbeeld_id")
@@ -132,7 +150,7 @@ async def bulk_uitvoeren(body: dict, user_id: str = Depends(get_current_user)):
 
 @router.post("/bulk/ongedaan")
 async def bulk_ongedaan(body: dict, user_id: str = Depends(get_current_user)):
-    _aan()
+    _aan(user_id)
     blok = ai_quota.lees_los(user_id, "laatste")
     if not isinstance(blok, dict) or blok.get("id") != (body or {}).get("ongedaan_id"):
         raise HTTPException(status_code=404, detail="Nothing to undo")

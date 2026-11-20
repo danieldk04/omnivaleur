@@ -71,7 +71,15 @@ def plan_van_gebruiker(user_id: str) -> str:
     except Exception:  # noqa: BLE001 — een storing mag niemand beperken
         logger.exception("Kon het plan van %s niet nagaan, geen limiet toegepast", user_id)
         return PLAN_PRO
-    return (sub or {}).get("plan") or PLAN_PRO
+    plan = (sub or {}).get("plan") or PLAN_PRO
+    # 5 betalende vrienden = Ultra (vriendenactie). Alleen omhoog, nooit omlaag.
+    try:
+        from backend.services.vriendenvoordeel import heeft_ultra_via_vrienden
+        if heeft_ultra_via_vrienden(user_id):
+            return "ultra"
+    except Exception:  # noqa: BLE001
+        logger.exception("Vriendenvoordeel niet na te gaan voor %s", user_id)
+    return plan
 
 
 def is_light(user_id: str) -> bool:
