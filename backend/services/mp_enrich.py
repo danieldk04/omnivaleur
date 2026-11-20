@@ -702,12 +702,27 @@ async def advertentie_kenmerken(url: str) -> dict:
     een leeg blok terug en valt het herplaatsen terug op de oude weg — nooit een
     fout, want een gemist kenmerk mag geen advertentie kosten.
     """
-    if not url or not re.match(r"^https://(?:www\.)?(?:marktplaats\.nl|2dehands\.be)/v/", url):
+    # VERLOPEN ADVERTENTIES (20-11-2026, klantfoutenronde). Een herplaatsing is
+    # meestal een advertentie die na 28 dagen is verlopen. Van een advertentie die
+    # wij plaatsten kennen we alleen /seller/view/{nummer} (alleen voor wie is
+    # ingelogd), en de openbare zoek-API toont een verlopen advertentie niet meer.
+    # Dus kreeg zo'n herplaatsing NOOIT zijn eigen rubriek: gemeten op 20-11 bij
+    # 31d28378 22 van 23 wachtende herplaatsingen, en van de 544 wachtende op 19-11
+    # 202 "niet te lezen". Terwijl het openbare kortadres /m{nummer} naar de
+    # advertentiepagina doorstuurt, en die pagina ook als verlopen (HTTP 410) nog
+    # precies één rubriekblok heeft: m2457113664 gaf "Kinderen en Baby's >
+    # Schoenen en Sokken", gelijk aan de paginatitel. Nagemeten in de browser op
+    # Marktplaats en 2dehands, live en verlopen.
+    kort = re.match(r"^https://(?:www\.)?(marktplaats\.nl|2dehands\.be)/seller/view/([am]\d{6,})/?$",
+                    url or "")
+    if kort:
+        url = f"https://www.{kort.group(1)}/{kort.group(2)}"
+    if not url or not re.match(r"^https://(?:www\.)?(?:marktplaats\.nl|2dehands\.be)/(?:v/|[am]\d{6,}$)", url):
         return {}
     try:
         async with httpx.AsyncClient(timeout=20, follow_redirects=True,
                                      headers={"User-Agent": UA}) as client:
-            ruwe = await _pagina(client, url)
+            ruwe = await _pagina(client, url, offline_ook=True)
     except Exception as e:  # noqa: BLE001
         logger.warning("mp_enrich: advertentiepagina niet gelezen (%s): %s", url, e)
         return {}
@@ -1108,14 +1123,21 @@ async def volledige_omschrijving(client: httpx.AsyncClient, url: str) -> str:
     return _tekst_uit_html(await _pagina(client, url))
 
 
-async def _pagina(client: httpx.AsyncClient, url: str) -> str:
-    """De ruwe HTML van één advertentiepagina, met dezelfde beleefde herkansing."""
+async def _pagina(client: httpx.AsyncClient, url: str, offline_ook: bool = False) -> str:
+    """De ruwe HTML van één advertentiepagina, met dezelfde beleefde herkansing.
+
+    `offline_ook`: ook de pagina van een verlopen of weggehaalde advertentie
+    (HTTP 410) teruggeven. Die toont nog steeds haar eigen rubriek; zie
+    advertentie_kenmerken.
+    """
     for poging in range(4):
         try:
             r = await client.get(url, headers={"Accept": "text/html"})
             if r.status_code in (403, 429, 503):
                 await asyncio.sleep(3 * (poging + 1))
                 continue
+            if r.status_code == 410 and offline_ook:
+                return r.text
             if r.status_code != 200:
                 return ""
             return r.text

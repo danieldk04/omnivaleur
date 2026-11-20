@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import collections
+import html
 import os
 import re
 import sys
@@ -62,6 +63,7 @@ def _norm(t: str | None) -> str:
     # HTML-opmaak eerst weg: onze omschrijving heeft vaak <br/>, de openbare tekst
     # niet. Zonder dit werd "<br/>" het woord "br" en telde het als verschil.
     t = re.sub(r"<[^>]+>", " ", t or "")
+    t = html.unescape(t)   # &nbsp; en &amp; werden anders de woorden "nbsp" en "amp"
     return re.sub(r"[^a-z0-9]+", " ", t.lower()).strip()
 
 

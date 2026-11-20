@@ -84,7 +84,7 @@ def _nep_netwerk(monkeypatch, catalogus=None, pagina=PAGINA, gezocht=None):
         rijen = [a for a in aanbod if not vraag or M._sleutel(a["title"]) == vraag]
         return {"listings": rijen}
 
-    async def nep_pagina(client, url):
+    async def nep_pagina(client, url, **kw):
         gezocht.append(url)
         return pagina
 
@@ -99,10 +99,49 @@ def _nep_netwerk(monkeypatch, catalogus=None, pagina=PAGINA, gezocht=None):
     return gezocht
 
 
-def test_de_oude_weg_kan_een_verkoperspagina_niet_lezen():
-    """Dit is de storing zelf: het adres dat wij bewaren geeft geen kenmerken."""
+def test_een_verkoperspagina_wordt_via_het_kortadres_gelezen(monkeypatch):
+    """Sinds 20-11-2026: /seller/view/{nummer} (alleen voor wie is ingelogd) wordt
+    het openbare kortadres /{nummer}, dat naar de advertentiepagina doorstuurt.
+    Vroeger gaf dit adres een leeg blok en raadde het herplaatsen de rubriek."""
+    gezocht = _nep_netwerk(monkeypatch)
     uit = asyncio.run(M.advertentie_kenmerken(VERKOPERSPAGINA))
-    assert uit == {}
+    assert gezocht == ["https://www.marktplaats.nl/m2439448829"]
+    assert uit["mp_category"]["l2"] == 13
+
+
+def test_2dehands_verkoperspagina_naar_2dehands_kortadres(monkeypatch):
+    gezocht = _nep_netwerk(monkeypatch)
+    asyncio.run(M.advertentie_kenmerken("https://www.2dehands.be/seller/view/m2467891373"))
+    assert gezocht == ["https://www.2dehands.be/m2467891373"]
+
+
+def test_een_vreemd_adres_wordt_niet_opgevraagd(monkeypatch):
+    gezocht = _nep_netwerk(monkeypatch)
+    assert asyncio.run(M.advertentie_kenmerken("https://example.com/seller/view/m2439448829")) == {}
+    assert gezocht == []
+
+
+# De echte verlopen pagina (m2457113664, 20-11-2026, HTTP 410), ingekort.
+VERLOPEN = ('<title>Laarzen Shoesme schoenmaat 26 (m2457113664) — Kinderkleding | Schoenen en Sokken'
+            '</title>..."c":{"l1":{"id":565,"n":"Kinderen en Baby\'s"},"l2":{"id":598,'
+            '"n":"Schoenen en Sokken"},"l3":null}...')
+
+
+class _Antwoord:
+    def __init__(self, code, tekst): self.status_code, self.text = code, tekst
+
+
+class _Client:
+    def __init__(self, code, tekst): self._a = _Antwoord(code, tekst)
+    async def get(self, *a, **k): return self._a
+
+
+def test_verlopen_pagina_geeft_haar_rubriek_alleen_als_gevraagd():
+    """Oude _pagina gaf bij 410 niets terug; voor de kenmerken mag het wel."""
+    assert asyncio.run(M._pagina(_Client(410, VERLOPEN), "u")) == ""
+    ruwe = asyncio.run(M._pagina(_Client(410, VERLOPEN), "u", offline_ook=True))
+    assert M.categorie_uit_html(ruwe) == {"l1": 565, "l1_naam": "Kinderen en Baby's",
+                                          "l2": 598, "l2_naam": "Schoenen en Sokken"}
 
 
 def test_de_advertentie_wordt_alsnog_gevonden_op_titel(monkeypatch):
