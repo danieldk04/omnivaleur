@@ -58,6 +58,6 @@ Eén post per cluster, daarna cross-posten in alle groepen van dat cluster (zie 
 | 16 | B | Referralprogramma: wat beloon je, en wanneer? Reacties op mijn post gaven als idee de beloning aan een mijlpaal van de vriend te koppelen, niet alleen aan betalen. | Wat werkte bij jou beter: geld, tegoed of product perks? | Geen | build-in-public-ideeen (Dag 165) |
 
 ## Ritme en meten
-- Per dag minimaal 1 conceptpost, door mij klaargezet in `docs/facebook-posts.md` (nieuwste bovenaan), jij plaatst. Afwisselen V, S en B volgens de regels van de groep.
+- Per dag precies 2 conceptposten voor 2 verschillende clusters (Daniel 20-11: 4 per dag is spamgevaar), klaargezet in `docs/facebook-posts.md` (nieuwste bovenaan), jij plaatst. Per cluster hooguit om de 2 dagen, per groep hooguit 1 post per dag, en dezelfde post in hooguit 2 groepen per dag. Goede posts van X, Bluesky of Indie Hackers komen als kandidaat voor cross-post.
 - Gepost wordt vastgelegd in `data/social/gedaan.jsonl` met cat "post" (platform facebook, groep, url, les-nummer). De reacties onder zo'n post tel ik mee in het blok BUILD IN PUBLIC.
 - Meten (stap 5): reacties, nieuwe leden van EU Resellers en proefaanmeldingen per post in `data/social/lessen.md`.
