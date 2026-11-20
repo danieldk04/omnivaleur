@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 # Per klant per maand. Een bulkopdracht is een vraag (~500 tokens), een titel of
 # beschrijving een vraag per artikel (in blokken van 20 gaat het per blok).
-PLAFOND = {"bulk": 30, "titels": 300, "beschrijvingen": 150}
+PLAFOND = {"bulk": 30, "titels": 300, "beschrijvingen": 150, "achtergronden": 100}
 
 
 def maand() -> str:

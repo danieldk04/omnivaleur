@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=dbb0891b28"></script>
+<script src="/i18n.js?v=a4ffd56bf0"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -2682,6 +2682,16 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           </div>
           <div id="ai-uitkomst" style="margin-top:14px"></div>
         </div>
+        <div style="background:var(--surface,#fff);border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:16px;margin-top:14px">
+          <div style="font-weight:600;margin-bottom:4px">Remove the background of the first photo</div>
+          <p style="margin:0 0 10px;color:var(--muted);font-size:14px">Select up to 10 items in My Items, then press the button. You see before and after first, and you can undo it. Listings that are already online keep their current photo.</p>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-primary" id="ai-bg-vraag" onclick="aiAchtergrondVoorbeeld()">Preview with selected items</button>
+            <span id="ai-bg-gebruikt" style="color:var(--muted);font-size:13px"></span>
+          </div>
+          <div id="ai-bg-uitkomst" style="margin-top:14px"></div>
+          <div id="ai-bg-ongedaan" style="margin-top:10px"></div>
+        </div>
         <div id="ai-ongedaan" style="margin-top:14px"></div>
       </div>
     </div><!-- /view-ai -->
@@ -4666,7 +4676,55 @@ async function aiLaad() {
     const d = await r.json();
     const g = (d.gebruikt || {}).bulk || 0, m = (d.plafond || {}).bulk;
     document.getElementById('ai-gebruikt').textContent = m ? `${g} of ${m} requests used this month` : '';
+    const bg = (d.gebruikt || {}).achtergronden || 0, bm = (d.plafond || {}).achtergronden;
+    document.getElementById('ai-bg-gebruikt').textContent = bm ? `${bg} of ${bm} photos used this month` : '';
   } catch (e) { /* stil */ }
+}
+let AI_BG_VOORBEELD = null;
+async function aiAchtergrondVoorbeeld() {
+  const uit = document.getElementById('ai-bg-uitkomst');
+  const ids = Array.from(selectedIds).slice(0, 10);
+  if (!ids.length) { uit.textContent = 'Select one or more items in My Items first.'; return; }
+  const knop = document.getElementById('ai-bg-vraag'); knop.disabled = true;
+  uit.textContent = 'Removing backgrounds… the first photo can take up to a minute.'; AI_BG_VOORBEELD = null;
+  try {
+    const r = await apiFetch(`${API}/api/ai-pakket/achtergrond/voorbeeld`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ids})});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { uit.textContent = d.detail || 'Something went wrong. Nothing was changed.'; return; }
+    if (!d.uitvoerbaar) { uit.textContent = 'None of these photos could be processed. Nothing was changed.'; return; }
+    AI_BG_VOORBEELD = d;
+    let h = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">';
+    (d.artikelen || []).forEach(x => { if (x.nieuw) h += `<div style="border:1px solid var(--border,#e5e7eb);border-radius:8px;padding:6px;font-size:12px;color:var(--muted)"><div style="display:flex;gap:4px"><img src="${aiEsc(x.oud)}" style="width:50%;border-radius:4px" alt="Before"><img src="${aiEsc(x.nieuw)}" style="width:50%;border-radius:4px" alt="After"></div>Before &rarr; after</div>`; });
+    h += '</div>';
+    const over = (d.artikelen || []).filter(x => !x.nieuw).length;
+    if (over) h += `<div style="margin-top:8px;color:var(--muted);font-size:13px">${aiEsc(over)} item(s) were skipped: no photo of ours, or the photo could not be processed.</div>`;
+    h += '<div style="margin-top:12px;display:flex;gap:8px"><button class="btn btn-primary" onclick="aiAchtergrondBevestig()">Use the new photos</button><button class="btn" onclick="aiAchtergrondAnnuleer()">Cancel</button></div>';
+    uit.innerHTML = h;
+  } catch (e) { uit.textContent = 'Something went wrong. Nothing was changed.'; }
+  finally { knop.disabled = false; aiLaad(); }
+}
+function aiAchtergrondAnnuleer() { AI_BG_VOORBEELD = null; document.getElementById('ai-bg-uitkomst').textContent = ''; }
+async function aiAchtergrondBevestig() {
+  if (!AI_BG_VOORBEELD) return;
+  const uit = document.getElementById('ai-bg-uitkomst');
+  try {
+    const r = await apiFetch(`${API}/api/ai-pakket/achtergrond/uitvoeren`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({voorbeeld_id: AI_BG_VOORBEELD.voorbeeld_id, bevestig: true})});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { uit.textContent = d.detail || 'Something went wrong. Nothing was changed.'; return; }
+    AI_BG_VOORBEELD = null;
+    uit.textContent = d.gewijzigd ? `Done. ${d.gewijzigd} photo(s) replaced.` : 'Nothing was changed: the photos were edited in the meantime.';
+    if (d.gewijzigd) document.getElementById('ai-bg-ongedaan').innerHTML = `<button class="btn" onclick="aiAchtergrondOngedaan('${aiEsc(d.ongedaan_id)}')">Undo</button>`;
+  } catch (e) { uit.textContent = 'Something went wrong. Nothing was changed.'; }
+}
+async function aiAchtergrondOngedaan(id) {
+  const uit = document.getElementById('ai-bg-uitkomst');
+  try {
+    const r = await apiFetch(`${API}/api/ai-pakket/achtergrond/ongedaan`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ongedaan_id: id})});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { uit.textContent = d.detail || 'Could not undo.'; return; }
+    document.getElementById('ai-bg-ongedaan').textContent = '';
+    uit.textContent = `Undone. ${d.teruggezet} photo(s) restored.` + (d.overgeslagen ? ` ${d.overgeslagen} were left alone because you changed them yourself.` : '');
+  } catch (e) { uit.textContent = 'Could not undo.'; }
 }
 async function aiVoorbeeld() {
   const opdracht = document.getElementById('ai-opdracht').value.trim();

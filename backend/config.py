@@ -105,6 +105,10 @@ class Settings(BaseSettings):
     # kanaal; 20-11-2026). Standaard UIT: zonder deze vlag antwoorden de routes 404
     # en doet geen enkele functie iets. Nooit aanzetten zonder besluit van Daniel.
     ai_pakket_aan: bool = False
+    # Achtergrond verwijderen (Modal, 20-11-2026): poort en gedeelde sleutel. Leeg = de
+    # functie meldt "tijdelijk niet beschikbaar" en er gaat geen foto de deur uit.
+    achtergrond_url: str = ""
+    achtergrond_sleutel: str = ""
     app_url: str = "https://omnivaleur.com"
 
     secret_key: str = "change-me"

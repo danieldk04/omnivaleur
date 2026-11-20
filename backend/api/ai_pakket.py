@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from backend.api.deps import get_current_user
 from backend.config import settings
 from backend.database import get_db, fetch_all, execute_with_retry, IN_BROK
-from backend.services import ai_bulk, ai_quota
+from backend.services import ai_bulk, ai_quota, achtergrond
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ai-pakket", tags=["ai-pakket"])
@@ -188,3 +188,137 @@ def _gelijk(a, b) -> bool:
         return float(a) == float(b)
     except (TypeError, ValueError):
         return (a or "") == (b or "")
+
+
+# ── achtergrond van de eerste foto verwijderen (Modal) ──────────────────────
+# Zelfde veilige vorm als de bulkopdracht: voorbeeld (er verandert niets), bevestigen,
+# 1 klik ongedaan. De originele foto blijft in de opslag staan; alleen het adres op
+# plek 1 wijzigt. Plaatsingen die al online staan houden hun foto; nieuwe en
+# herplaatste advertenties gebruiken de nieuwe.
+
+def _haal_foto(url: str) -> bytes:
+    import httpx
+    with httpx.Client(timeout=30.0, follow_redirects=False) as c:
+        r = c.get(url)
+    if r.status_code != 200 or not r.content or len(r.content) > achtergrond.MAX_BYTES:
+        raise ValueError("foto niet op te halen")
+    return r.content
+
+
+def _bewerk_een(user_id: str, item: dict) -> dict:
+    """Blokkerend. Geeft {'id','oud','nieuw'} of {'id','overgeslagen': reden}."""
+    from backend.services import photo_mirror
+    from backend.services.image_upload import upload_image_sync
+    import hashlib
+    fotos = item.get("photo_urls") or []
+    if not fotos or not photo_mirror.is_mirrored(fotos[0]):
+        return {"id": item["id"], "overgeslagen": "geen_eigen_foto"}
+    oud = fotos[0]
+    try:
+        uit = achtergrond.knip(_haal_foto(oud))
+    except achtergrond.NietBeschikbaar:
+        raise
+    except Exception:  # noqa: BLE001 - een foto die niet lukt mag de rest niet stoppen
+        logger.exception("Achtergrond: foto van %s niet verwerkt", item["id"])
+        return {"id": item["id"], "overgeslagen": "mislukt"}
+    naam = "ai-achtergrond/" + hashlib.sha256(uit).hexdigest()[:40] + ".jpg"
+    return {"id": item["id"], "oud": oud, "nieuw": upload_image_sync(uit, naam)}
+
+
+@router.post("/achtergrond/voorbeeld")
+async def achtergrond_voorbeeld(body: dict, user_id: str = Depends(get_current_user)):
+    _aan(user_id)
+    ids = [str(i) for i in ((body or {}).get("ids") or []) if i][:achtergrond.MAX_PER_KEER]
+    if not ids:
+        raise HTTPException(status_code=400, detail="Select at least one item")
+    if not achtergrond.ingesteld():
+        raise HTTPException(status_code=503, detail="Background removal is temporarily unavailable. Nothing was changed.")
+    if not ai_quota.ruimte(user_id, "achtergronden", len(ids)):
+        raise HTTPException(status_code=429, detail="Monthly limit of background removals reached")
+    db = get_db()
+    items = await asyncio.to_thread(lambda: fetch_all(
+        lambda: db.table("items").select("id,photo_urls").eq("user_id", user_id).in_("id", ids)))
+    resultaat, klaar = [], {}
+    for it in items:
+        try:
+            r = await asyncio.to_thread(_bewerk_een, user_id, it)
+        except achtergrond.NietBeschikbaar:
+            raise HTTPException(status_code=503, detail="Background removal is temporarily unavailable. Nothing was changed.")
+        if "nieuw" in r:
+            ai_quota.tel(user_id, "achtergronden")
+            klaar[r["id"]] = {"oud": r["oud"], "nieuw": r["nieuw"]}
+        resultaat.append(r)
+    if not klaar:
+        return {"uitvoerbaar": False, "artikelen": resultaat}
+    vid = uuid.uuid4().hex[:12]
+    ai_quota.bewaar(user_id, "foto_voorbeeld", {"id": vid, "tijd": time.time(), "items": klaar})
+    return {"uitvoerbaar": True, "voorbeeld_id": vid, "artikelen": resultaat}
+
+
+@router.post("/achtergrond/uitvoeren")
+async def achtergrond_uitvoeren(body: dict, user_id: str = Depends(get_current_user)):
+    _aan(user_id)
+    body = body or {}
+    plan_op = ai_quota.lees_los(user_id, "foto_voorbeeld")
+    if (not isinstance(plan_op, dict) or plan_op.get("id") != body.get("voorbeeld_id")
+            or time.time() - float(plan_op.get("tijd") or 0) > ai_bulk.VOORBEELD_GELDIG_S):
+        raise HTTPException(status_code=409, detail="This preview has expired. Ask again.")
+    if body.get("bevestig") is not True:
+        raise HTTPException(status_code=400, detail="Confirmation is required")
+    wens = plan_op["items"]
+    db = get_db()
+    ids = list(wens)
+
+    def _doe() -> list[str]:
+        nu = {r["id"]: r for r in fetch_all(lambda: db.table("items").select("id,photo_urls")
+                                            .eq("user_id", user_id).in_("id", ids))}
+        gedaan, blok = [], {}
+        for iid, w in wens.items():
+            fotos = list((nu.get(iid) or {}).get("photo_urls") or [])
+            # Alleen als de foto nog is zoals bij het voorbeeld; een latere wijziging van de klant wint.
+            if fotos and fotos[0] == w["oud"]:
+                blok[iid] = w
+        if not blok:
+            return []
+        ai_quota.bewaar(user_id, "laatste_foto", {"id": uuid.uuid4().hex[:12], "items": blok})
+        for iid, w in blok.items():
+            fotos = list(nu[iid]["photo_urls"]); fotos[0] = w["nieuw"]
+            rij = execute_with_retry(db.table("items").update({"photo_urls": fotos})
+                                     .eq("id", iid).eq("user_id", user_id))
+            if getattr(rij, "data", None):
+                gedaan.append(iid)
+        return gedaan
+
+    gedaan = await asyncio.to_thread(_doe)
+    ai_quota.bewaar(user_id, "foto_voorbeeld", None)
+    laatste = ai_quota.lees_los(user_id, "laatste_foto") or {}
+    return {"gewijzigd": len(gedaan), "ongedaan_id": laatste.get("id")}
+
+
+@router.post("/achtergrond/ongedaan")
+async def achtergrond_ongedaan(body: dict, user_id: str = Depends(get_current_user)):
+    _aan(user_id)
+    blok = ai_quota.lees_los(user_id, "laatste_foto")
+    if not isinstance(blok, dict) or blok.get("id") != (body or {}).get("ongedaan_id"):
+        raise HTTPException(status_code=404, detail="Nothing to undo")
+    db = get_db()
+    ids = list(blok["items"])
+
+    def _doe() -> tuple[int, int]:
+        nu = {r["id"]: r for r in fetch_all(lambda: db.table("items").select("id,photo_urls")
+                                            .eq("user_id", user_id).in_("id", ids))}
+        terug = over = 0
+        for iid, w in blok["items"].items():
+            fotos = list((nu.get(iid) or {}).get("photo_urls") or [])
+            if fotos and fotos[0] == w["nieuw"]:
+                fotos[0] = w["oud"]
+                rij = execute_with_retry(db.table("items").update({"photo_urls": fotos})
+                                         .eq("id", iid).eq("user_id", user_id))
+                terug += 1 if getattr(rij, "data", None) else 0
+            else:
+                over += 1
+        return terug, over
+
+    n, over = await asyncio.to_thread(_doe)
+    ai_quota.bewaar(user_id, "laatste_foto", None)
+    return {"teruggezet": n, "overgeslagen": over}
