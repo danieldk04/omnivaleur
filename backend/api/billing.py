@@ -104,13 +104,37 @@ def find_active_promo() -> dict | None:
     return result
 
 
+PROEFDAGEN_STANDAARD = 7
+PROEFDAGEN_VRIEND = 14
+
+
+def proefdagen_voor(user_id: str) -> int:
+    """14 dagen voor wie via de link van een klant (een vriend) binnenkwam, anders 7.
+    Creatorcodes blijven 7. Bij twijfel of een fout in de opzoeking: 7, zodat een
+    storing nooit het aanmelden breekt."""
+    try:
+        from backend.database import execute_with_retry
+        from backend.services.referral_codes import eigenaar_van_code
+        db = get_db()
+        rij = execute_with_retry(db.table("referrals").select("code").eq("user_id", user_id).limit(1))
+        data = rij.data or []
+        if not data:
+            return PROEFDAGEN_STANDAARD
+        code = eigenaar_van_code(data[0].get("code"))
+        if code and code.get("kind") == "user" and code.get("owner_user_id") != user_id:
+            return PROEFDAGEN_VRIEND
+    except Exception:
+        logger.exception("Kon proefdagen niet bepalen voor %s", user_id)
+    return PROEFDAGEN_STANDAARD
+
+
 def _get_or_create_subscription(user_id: str) -> dict:
     db = get_db()
     result = db.table("subscriptions").select("*").eq("user_id", user_id).execute()
     if result.data:
         return result.data[0]
     from datetime import datetime, timedelta, timezone
-    trial_ends_at = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    trial_ends_at = (datetime.now(timezone.utc) + timedelta(days=proefdagen_voor(user_id))).isoformat()
     try:
         new_sub = db.table("subscriptions").insert({
             "user_id": user_id,
