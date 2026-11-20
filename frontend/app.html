@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=337317d1c4"></script>
+<script src="/i18n.js?v=8ab2a75ac2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -983,6 +983,11 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
       <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 4.5a2.5 2.5 0 10-2.5 2.5H9V4.5zM11 7h2.5A2.5 2.5 0 1011 4.5V7zM3 8.5A1.5 1.5 0 014.5 7H9v3H3V8.5zM11 10V7h4.5A1.5 1.5 0 0117 8.5V10h-6zM4 11.5h5V17H5.5A1.5 1.5 0 014 15.5v-4zM11 17v-5.5h5v4a1.5 1.5 0 01-1.5 1.5H11z"/></svg>
       <span>Invite friends</span>
       <span id="nav-referral-badge" style="display:none;margin-left:auto;background:var(--mint);color:#053b2c;font-size:10px;font-weight:800;min-width:18px;height:18px;padding:0 5px;border-radius:8px;align-items:center;justify-content:center"></span>
+    </div>
+
+    <div class="nav-item" id="nav-ai" data-view="ai" onclick="showView('ai')" style="display:none">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1.5l1.9 4.6 4.6 1.9-4.6 1.9L10 14.5l-1.9-4.6L3.5 8l4.6-1.9L10 1.5z"/></svg>
+      <span>AI assistant</span>
     </div>
 
     <div class="nav-item" data-view="nieuw" onclick="showView('nieuw')">
@@ -2661,6 +2666,25 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
         </div>
       </div>
     </div><!-- /view-referral -->
+
+    <div id="view-ai" class="view">
+      <div style="max-width:760px">
+        <div class="view-header" style="margin-bottom:18px">
+          <h1>AI assistant</h1>
+          <p>Change many items with one sentence. You always see a preview first and you can undo it with one click.</p>
+        </div>
+        <div style="background:var(--surface,#fff);border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:16px">
+          <label for="ai-opdracht" style="font-weight:600;display:block;margin-bottom:6px">What should change?</label>
+          <input id="ai-opdracht" type="text" maxlength="400" style="width:100%;padding:10px;border:1px solid var(--border,#d1d5db);border-radius:8px" placeholder="For example: raise all prices by 10%">
+          <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-primary" id="ai-vraag" onclick="aiVoorbeeld()">Show preview</button>
+            <span id="ai-gebruikt" style="color:var(--muted);font-size:13px"></span>
+          </div>
+          <div id="ai-uitkomst" style="margin-top:14px"></div>
+        </div>
+        <div id="ai-ongedaan" style="margin-top:14px"></div>
+      </div>
+    </div><!-- /view-ai -->
 
     <!-- ── HELP VIEW ──────────────────────────────────────────────── -->
     <div id="view-nieuw" class="view">
@@ -4619,6 +4643,78 @@ function calcMargin() {
 // opruimronde van 09-10-2026 zijn dat er drie; ze staan als tabblad bovenin het
 // scherm van hun ouder (.subtabs), en het menu-item van de ouder licht op.
 const NAV_PARENT = { stale: 'refresh', calculator: 'analytics', protections: 'preferences' };
+
+// ── AI-assistent: bulkopdracht (voorbeeld, bevestigen, ongedaan) ──────────────
+let AI_VOORBEELD = null, AI_ONGEDAAN = null;
+function aiEsc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+async function aiToonKnop() {
+  try {
+    const r = await apiFetch(`${API}/api/ai-pakket/status`);
+    if (r.ok) document.getElementById('nav-ai').style.display = '';
+  } catch (e) { /* geen AI-pakket: knop blijft weg */ }
+}
+async function aiLaad() {
+  try {
+    const r = await apiFetch(`${API}/api/ai-pakket/status`);
+    if (!r.ok) { document.getElementById('ai-uitkomst').textContent = 'The AI assistant is not available for your account yet.'; return; }
+    const d = await r.json();
+    const g = (d.gebruikt || {}).bulk || 0, m = (d.plafond || {}).bulk;
+    document.getElementById('ai-gebruikt').textContent = m ? `${g} of ${m} requests used this month` : '';
+  } catch (e) { /* stil */ }
+}
+async function aiVoorbeeld() {
+  const opdracht = document.getElementById('ai-opdracht').value.trim();
+  const uit = document.getElementById('ai-uitkomst');
+  if (!opdracht) { uit.textContent = 'Describe the change in one short sentence.'; return; }
+  const knop = document.getElementById('ai-vraag'); knop.disabled = true;
+  uit.textContent = 'Thinking…'; AI_VOORBEELD = null;
+  try {
+    const r = await apiFetch(`${API}/api/ai-pakket/bulk/voorbeeld`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({opdracht})});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { uit.textContent = d.detail || 'Something went wrong. Nothing was changed.'; return; }
+    if (!d.begrepen) { uit.textContent = d.hint || 'I did not understand that. Nothing was changed.'; return; }
+    if (!d.uitvoerbaar) {
+      uit.textContent = d.reden === 'te_veel' ? 'That would change too many items at once. Nothing was changed.' : 'Nothing would change with that instruction.';
+      return;
+    }
+    AI_VOORBEELD = d;
+    let h = `<div style="font-weight:600;margin-bottom:8px">This changes ${aiEsc(d.wijzigingen)} values on ${aiEsc(d.artikelen)} items. Here are ${(d.voorbeeld || []).length} examples:</div>`;
+    h += '<div style="border:1px solid var(--border,#e5e7eb);border-radius:8px;overflow:hidden">';
+    (d.voorbeeld || []).forEach(x => { h += `<div style="padding:8px 10px;border-bottom:1px solid var(--border,#eee);font-size:14px"><b>${aiEsc(x.titel)}</b><br><span style="color:var(--muted)">${aiEsc(x.oud)}</span> &rarr; <span>${aiEsc(x.nieuw)}</span></div>`; });
+    h += '</div>';
+    if (d.extra_bevestiging) h += `<label style="display:block;margin-top:10px;color:#b45309"><input type="checkbox" id="ai-extra"> Some prices drop below 1 euro or more than double. I checked this.</label>`;
+    h += '<div style="margin-top:12px;display:flex;gap:8px"><button class="btn btn-primary" onclick="aiBevestig()">Confirm and change</button><button class="btn" onclick="aiAnnuleer()">Cancel</button></div>';
+    uit.innerHTML = h;
+  } catch (e) { uit.textContent = 'Something went wrong. Nothing was changed.'; }
+  finally { knop.disabled = false; aiLaad(); }
+}
+function aiAnnuleer() { AI_VOORBEELD = null; document.getElementById('ai-uitkomst').textContent = 'Cancelled. Nothing was changed.'; }
+async function aiBevestig() {
+  if (!AI_VOORBEELD) return;
+  const uit = document.getElementById('ai-uitkomst');
+  const extra = !!(document.getElementById('ai-extra') || {}).checked;
+  if (AI_VOORBEELD.extra_bevestiging && !extra) { showToast('Tick the box to confirm the extra check.'); return; }
+  uit.textContent = 'Changing…';
+  try {
+    const r = await apiFetch(`${API}/api/ai-pakket/bulk/uitvoeren`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({voorbeeld_id: AI_VOORBEELD.voorbeeld_id, bevestig: true, bevestig_extra: extra})});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { uit.textContent = d.detail || 'Something went wrong.'; return; }
+    AI_VOORBEELD = null; AI_ONGEDAAN = d.ongedaan_id;
+    uit.textContent = `Done. ${d.gewijzigd} items changed.`;
+    document.getElementById('ai-ongedaan').innerHTML = '<button class="btn" onclick="aiOngedaan()">Undo this change</button>';
+  } catch (e) { uit.textContent = 'Something went wrong.'; }
+}
+async function aiOngedaan() {
+  if (!AI_ONGEDAAN) return;
+  try {
+    const r = await apiFetch(`${API}/api/ai-pakket/bulk/ongedaan`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ongedaan_id: AI_ONGEDAAN})});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { showToast(d.detail || 'Could not undo.'); return; }
+    AI_ONGEDAAN = null; document.getElementById('ai-ongedaan').textContent = '';
+    document.getElementById('ai-uitkomst').textContent = `Undone. ${d.teruggezet} values restored` + (d.overgeslagen ? `, ${d.overgeslagen} left as you changed them since.` : '.');
+  } catch (e) { showToast('Could not undo.'); }
+}
+
 function showView(name) {
   // De startpoort: wie de voorbereiding nog niet af heeft, komt niet overal. Zie poort.js.
   if (window.OBPoort) name = OBPoort.guard(name) || name;
@@ -4641,13 +4737,14 @@ function showView(name) {
   const navName = NAV_PARENT[name] || name;
   document.querySelector('.nav-item[data-view="' + navName + '"]')?.classList.add('active');
   target.querySelectorAll('.subtab').forEach(b => b.classList.toggle('active', b.dataset.sub === name));
-  const titles = { dashboard: 'Dashboard', items: 'Items', analytics: 'Analytics', berichten: 'Messages', calculator: 'Margin calculator', refresh: 'Refresh', import: 'Import listings', stale: 'Stale stock', help: 'Help', platforms: 'Platforms', preferences: 'Preferences', protections: 'Protections', prijs: 'Account', referral: 'Earn 1 month free', nieuw: "What's new" };
+  const titles = { dashboard: 'Dashboard', items: 'Items', analytics: 'Analytics', berichten: 'Messages', calculator: 'Margin calculator', refresh: 'Refresh', import: 'Import listings', stale: 'Stale stock', help: 'Help', platforms: 'Platforms', preferences: 'Preferences', protections: 'Protections', prijs: 'Account', referral: 'Earn 1 month free', nieuw: "What's new", ai: 'AI assistant' };
   document.getElementById('topbar-title').textContent = titles[name] || name;
   // The view is already on screen at this point, so a failing renderer can only
   // leave that one screen incomplete — never blank the app. Report it plainly
   // instead of failing silently.
   try {
     if (name === 'berichten') { loadNotifications(); }
+    if (name === 'ai') { aiLaad(); }
     if (name === 'items') { clearSelection(); applyFilters(); loadRubriekAfwijkingen(); }
     if (name === 'analytics') { renderAnalytics(); }
     if (name === 'platforms') { renderPlatforms(); }
@@ -14204,6 +14301,7 @@ loadBillingStatus();
 // De verwijskaart hoort meteen op het dashboard te staan, niet pas nadat
 // iemand toevallig op het verwijsscherm is geweest.
 loadReferral(false, true);
+aiToonKnop();
 pollActivity();
 loadNotifications();
 loadExtensionStatus();
