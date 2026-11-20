@@ -345,3 +345,6 @@ boven). Details in de kennisbank (`omnivaleur-demovideo-en-prijs`, `proefperiode
 - Live: blok "What is coming" bovenaan Wat is nieuw (app.html #komt-eraan), updatelogbericht 2026-11-plannen-en-ai, venster en rondleiding (plannen-en-ai), notitie #plannen-vanaf-januari boven Account, plannenblok op index.html en nl.html (#plans-next, eigen stijl in het blok zelf). Vertaald via nl.json.
 - Niets functioneels aan: NIEUWE_PLANNEN_AAN, REFERRAL_KORTING_AAN, KLASSEMENT_AAN en AI_PAKKET_AAN staan niet in Railway (uit). Bij elke volgende stap (Plus/Ultra live, AI-onderdeel af) de stand in #komt-eraan aanpassen, in beide talen, en de site.
 - Bij livegang 1 januari: Stripe-prijs-id's Plus en Ultra in Railway, vlag aan, tekst "From 1 January" in blok en notitie omzetten naar de dan geldende stand.
+
+## 20-11-2026 (avond): vriendenactie aan en prominent
+- Trap 1/3/5 (2 maanden plus 10 euro, AI-pakket, Ultra) staat in Wat is nieuw, popup, rondleiding, Uitnodigen en op de site. REFERRAL_KORTING_AAN aan in Railway. Open: ontgrendelen van AI-pakket en Ultra bij 3 en 5 vrienden is nog niet gebouwd; mail A nog te versturen.
