@@ -19665,3 +19665,8 @@ Groepen zijn geclusterd (docs/facebook-groepsscan.md): resellers (eBay Resellers
 ## 20-11-2026 (nacht): mail B voor iedereen, overdracht (Daniel)
 - Besluit Daniel: niets per klant invullen. Mail B is een mail voor alle klanten, met voorbeelden. Mail A staat klaar, niet verstuurd. Rondleiding in het dashboard is door Daniel bekeken en goed bevonden.
 - Daniel geeft het bouwwerk (ontgrendelen bij 3 en 5 vrienden, achtergrond verwijderen, andere AI-onderdelen) aan de andere ontwikkelaar, met opdracht alles op juistheid na te lopen. Overdracht staat in docs/overdracht.md.
+
+## 20-11-2026 (nacht): mail A en B verstuurd (Daniel gaf akkoord)
+- Verstuurd met scripts/aankondiging_mail.py via Zoho vanaf daniel@omnivaleur.nl, platte tekst, een mail per adres, 25 s tempo, vastgelegd in mail_events (type omnivaleur.aankondiging_*), nooit dubbel. Ontvangers: 21 adressen = betalende klanten, mensen in proef, nieuwe aanmelders zonder abonnementsrij en een gratis meegegeven account. NIET naar 63 verlopen proeven en opgezegden. Eigen adressen eruit (ook danieldekoning04@gmail.com).
+- De vier grote accounts (Papa's Plectrums, Goudlief, Zilverwebsite, Janneke) kregen mail A plus een persoonlijke mail (fasering 29,99, 39, 49) in plaats van mail B.
+- Mail A belooft 14 dagen proef voor aangebrachte vrienden op uitdrukkelijk verzoek van Daniel, maar de code geeft nu nog 7. Eerste bouwklus voor de volgende sessie (billing.py _get_or_create_subscription, ook register.html), voordat een vriend zich aanmeldt.

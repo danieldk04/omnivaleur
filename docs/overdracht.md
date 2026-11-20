@@ -370,3 +370,5 @@ Jouw opdracht, in deze volgorde (Daniel verdeelt het werk):
 - tests/test_updates_log.py, tests/test_i18n_compleet.py en tests/test_referral_korting.py moeten groen blijven.
 
 - Aanvulling 20-11 (nacht): (a) aangebrachte vrienden moeten 14 dagen proef krijgen (Daniel); de code geeft iedereen 7 (backend/api/billing.py _get_or_create_subscription, ook expire_trials en de proef/respijt-regels en de teksten op register.html nakijken). Bouw dit, daarna "14 dagen" in mail A. (b) Mail B noemt de fasering voor accounts boven 1.500 niet meer; die ene paar klanten krijgen een aparte mail. Mail A mag naar alle klanten.
+
+- 20-11 nacht: mail A en B zijn verstuurd (21 adressen, zie team-notes). URGENT: mail A zegt 14 dagen proef voor vrienden, de code geeft 7. Bouw dit als eerste, en zet het aantal ook op register.html. Daarna ontgrendelen bij 3 en 5 vrienden, dan de AI-onderdelen.
