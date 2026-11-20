@@ -82,7 +82,11 @@ class Achtergrond:
         gegeven = request.headers.get("x-sleutel", "")
         if not sleutel or not hmac.compare_digest(sleutel, gegeven):
             return Response(status_code=401)
+        import re
         from PIL import Image
+        kleur = request.headers.get("x-kleur", "#ffffff")
+        if not re.fullmatch(r"#[0-9a-fA-F]{6}", kleur):
+            return Response(status_code=400)
         raw = await request.body()
         if not raw or len(raw) > MAX_BYTES:
             return Response(status_code=413)
@@ -97,7 +101,7 @@ class Achtergrond:
             return Response(status_code=415)
         m, _ = self.masker.local(buf0.getvalue())
         mask = Image.open(io.BytesIO(m)).convert("L")
-        wit = Image.new("RGB", im.size, (255, 255, 255)); wit.paste(im, mask=mask)
+        wit = Image.new("RGB", im.size, tuple(int(kleur[i:i + 2], 16) for i in (1, 3, 5))); wit.paste(im, mask=mask)
         buf = io.BytesIO(); wit.save(buf, "JPEG", quality=90)
         return Response(content=buf.getvalue(), media_type="image/jpeg")
 

@@ -4313,5 +4313,11 @@
  "{0} were left alone because you changed them yourself.": "{0} zijn met rust gelaten omdat je ze zelf had gewijzigd.",
  "Select at least one item": "Selecteer minstens één artikel",
  "Background removal is temporarily unavailable. Nothing was changed.": "Achtergrond verwijderen is tijdelijk niet beschikbaar. Er is niets gewijzigd.",
- "Monthly limit of background removals reached": "Maandlimiet voor achtergrond verwijderen bereikt"
+ "Monthly limit of background removals reached": "Maandlimiet voor achtergrond verwijderen bereikt",
+ "Select up to 10 items in My Items, choose a background colour and press the button. You see before and after first, and you can undo it. Listings that are already online keep their current photo.": "Selecteer maximaal 10 artikelen in Mijn artikelen, kies een achtergrondkleur en druk op de knop. Je ziet eerst voor en na, en je kunt het ongedaan maken. Advertenties die al online staan houden hun huidige foto.",
+ "Background colour": "Achtergrondkleur",
+ "Light grey": "Lichtgrijs",
+ "Your own colour": "Je eigen kleur",
+ "Choose your items and a background colour, see before and after, and undo it. Never automatic.": "Kies je artikelen en een achtergrondkleur, zie voor en na, en maak het ongedaan. Nooit automatisch.",
+ "Choose a valid background colour": "Kies een geldige achtergrondkleur"
 }

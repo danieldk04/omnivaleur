@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import io
 import logging
+import re
 import threading
 from datetime import datetime, timezone
 
@@ -31,6 +32,13 @@ MAX_PER_KEER = 10         # foto's per opdracht
 MAX_BYTES = 12 * 1024 * 1024
 _slot = threading.Lock()
 _dag = {"dag": "", "n": 0}
+
+
+STANDAARD_KLEUR = "#ffffff"
+
+
+def geldige_kleur(kleur) -> bool:
+    return isinstance(kleur, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", kleur) is not None
 
 
 class NietBeschikbaar(Exception):
@@ -70,10 +78,12 @@ def is_echte_jpeg(data: bytes) -> bool:
         return False
 
 
-def knip(foto: bytes, client: httpx.Client | None = None) -> bytes:
+def knip(foto: bytes, kleur: str = STANDAARD_KLEUR, client: httpx.Client | None = None) -> bytes:
     """Blokkerend: gebruik via asyncio.to_thread. Een tweede poging vangt een koude start."""
     if not ingesteld():
         raise NietBeschikbaar("niet ingesteld")
+    if not geldige_kleur(kleur):
+        raise ValueError("ongeldige kleur")
     if not foto or len(foto) > MAX_BYTES:
         raise ValueError("foto te groot of leeg")
     if not dag_ruimte():
@@ -87,6 +97,7 @@ def knip(foto: bytes, client: httpx.Client | None = None) -> bytes:
             try:
                 r = client.post(settings.achtergrond_url, content=foto,
                                 headers={"x-sleutel": settings.achtergrond_sleutel,
+                                         "x-kleur": kleur,
                                          "content-type": "application/octet-stream"})
             except httpx.HTTPError as e:
                 laatste = e

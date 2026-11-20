@@ -205,7 +205,7 @@ def _haal_foto(url: str) -> bytes:
     return r.content
 
 
-def _bewerk_een(user_id: str, item: dict) -> dict:
+def _bewerk_een(user_id: str, item: dict, kleur: str = achtergrond.STANDAARD_KLEUR) -> dict:
     """Blokkerend. Geeft {'id','oud','nieuw'} of {'id','overgeslagen': reden}."""
     from backend.services import photo_mirror
     from backend.services.image_upload import upload_image_sync
@@ -215,7 +215,7 @@ def _bewerk_een(user_id: str, item: dict) -> dict:
         return {"id": item["id"], "overgeslagen": "geen_eigen_foto"}
     oud = fotos[0]
     try:
-        uit = achtergrond.knip(_haal_foto(oud))
+        uit = achtergrond.knip(_haal_foto(oud), kleur)
     except achtergrond.NietBeschikbaar:
         raise
     except Exception:  # noqa: BLE001 - een foto die niet lukt mag de rest niet stoppen
@@ -231,6 +231,9 @@ async def achtergrond_voorbeeld(body: dict, user_id: str = Depends(get_current_u
     ids = [str(i) for i in ((body or {}).get("ids") or []) if i][:achtergrond.MAX_PER_KEER]
     if not ids:
         raise HTTPException(status_code=400, detail="Select at least one item")
+    kleur = (body or {}).get("kleur") or achtergrond.STANDAARD_KLEUR
+    if not achtergrond.geldige_kleur(kleur):
+        raise HTTPException(status_code=400, detail="Choose a valid background colour")
     if not achtergrond.ingesteld():
         raise HTTPException(status_code=503, detail="Background removal is temporarily unavailable. Nothing was changed.")
     if not ai_quota.ruimte(user_id, "achtergronden", len(ids)):
@@ -241,7 +244,7 @@ async def achtergrond_voorbeeld(body: dict, user_id: str = Depends(get_current_u
     resultaat, klaar = [], {}
     for it in items:
         try:
-            r = await asyncio.to_thread(_bewerk_een, user_id, it)
+            r = await asyncio.to_thread(_bewerk_een, user_id, it, kleur)
         except achtergrond.NietBeschikbaar:
             raise HTTPException(status_code=503, detail="Background removal is temporarily unavailable. Nothing was changed.")
         if "nieuw" in r:
