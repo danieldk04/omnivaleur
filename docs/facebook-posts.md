@@ -26,7 +26,7 @@ EN-versie (zelfde post voor eBay Resellers & Thrifters en Reseller Community):
 >
 > What's your routine after a sale, or do you just look around to see where it's still listed?
 
-## 20-11-2026, cluster ONDERNEMERS (NL), Startende Ondernemers, Ambitieuze Ondernemers (2x), Beginnende ondernemers
+## 20-11-2026, cluster ONDERNEMERS (NL) [GEPLAATST door Daniel 20-11, in Startende Ondernemers wacht hij op goedkeuring van de beheerder], Startende Ondernemers, Ambitieuze Ondernemers (2x), Beginnende ondernemers
 Onderwerp: wachten op een partij die jou moet goedkeuren. Geen merknaam.
 
 > Deze week baalde ik even. Etsy heeft mijn aanvraag voor API-toegang afgewezen. Ik bouw software waarmee verkopers van tweedehands spullen op meerdere platformen tegelijk kunnen plaatsen, en best veel mensen vroegen erom of ik Etsy erbij kon doen. Nu dus even niet.
@@ -39,7 +39,7 @@ Onderwerp: wachten op een partij die jou moet goedkeuren. Geen merknaam.
 
 Check: jij besluit of "even baalde ik" klopt voor jou. Studie hoort er niet meer in, je bent klaar met Finance & Control.
 
-## 20-11-2026, cluster FOUNDERS (EN), #BuildInPublic, VibeCoders BuildInPublic
+## 20-11-2026, cluster FOUNDERS (EN) [GEPLAATST door Daniel 20-11, in #BuildInPublic wacht hij op goedkeuring van de beheerder], #BuildInPublic, VibeCoders BuildInPublic
 Onderwerp: activatie, gemeten op echte accounts. Merknaam mag.
 
 > Day 165 of building Omnivaleur, a crosslisting app for European secondhand sellers (Vinted, Marktplaats, 2dehands, eBay). 93 users now.
