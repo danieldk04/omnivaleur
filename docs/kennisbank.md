@@ -17,6 +17,19 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## jouwweb-winkel-lezen
+
+*20-11-2026 — "20-11 Brocante Depot (JouwWeb): export bestaat wél, winkel lezen via sitemap en schema.org werkt (154 producten, 9 s), koude mail noemde onterecht Magento"*
+
+Mieke (brocantedepot.com) zit op JouwWeb, niet op Magento zoals onze eerste koude mail zei. Ik zei eerst dat JouwWeb geen product-export heeft: FOUT, de zoekfunctie van hun helpcentrum miste het artikel "Kan ik mijn producten toevoegen op Google Merchant Center?" (Producten, Exporteren, CSV of online feed). Zoek bij een platform altijd het artikel zelf, niet alleen de zoekresultaten.
+
+Omnivaleur heeft geen CSV- of feedimport. Wel gebouwd (20-11): `backend/platforms/webshop_lezer.py` leest een winkel via sitemap en schema.org-gegevens (alleen lezen, geen inlog) en `scripts/winkel_inlezen.py` zet het als service in één account. Gemeten op haar winkel: 154 producten, 0 mislukt.
+
+**Why:** de koude mail noemde het webshopsysteem ("op Magento") uit een leadlijst waarvan de herkomst niet te achterhalen was; de ontvanger zag meteen dat het een rondzendbrief was.
+**How to apply:** de openingszin noemt het systeem alleen bij Shopify of WooCommerce. JouwWeb en Wix worden nu herkend. Importeer nooit in een account vóór aanmelding en akkoord van de klant. Zie "klantdata-niet-op-eigen-initiatief" en "koude-mail-winkels-en-webshops".
+
+---
+
 ## ai-pakket-controle-is-geen-kwaliteit
 
 *20-11-2026 — 20-11 AI-pakket: een harde controle die slaagt bewijst niet dat de tekst goed is; plus gratis Gemini 500 per dag per model*
