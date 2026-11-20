@@ -4,11 +4,11 @@ Daniel plaatst zelf en cross-post binnen het cluster. Per dag minstens 1 post; d
 Kijk bij elke post even naar "Check": dat zijn de zinnen waar jij moet bevestigen dat ze voor jou kloppen.
 
 ## 20-11-2026, cluster RESELLERS (NL), Ebay Resellers & Thrifters, Reseller Community
-Onderwerp: iets verkocht op het ene platform, nog online op het andere. Geen merknaam, geen link.
+Onderwerp: iets verkocht op het ene platform, nog online op het andere. Geen merknaam, geen link. De introductie en de software-verwijzing zijn alleen voor deze eerste reseller-post; volgende reseller-posts beginnen gewoon met het verhaal.
 
 > Even kort wie ik ben: ik verkoop zelf kleding online en ben sinds een tijdje bezig met software om op Vinted, Marktplaats, 2dehands en eBay tegelijk te plaatsen. Daardoor kijk ik hier veel mee en wat me opvalt is hoeveel gedoe ontstaat op het moment dat iets verkocht is.
 >
-> Klassiek geval: jas verkoopt op Vinted, staat nog een dag op Marktplaats, en daar komt ook iemand. Dan heb je twee kopers voor één jas. Wat ik daarover las: haal hem op de andere plekken weg voor je gaat inpakken, niet erna. En zit je toch dubbel, bericht de tweede koper meteen en eerlijk, niet laten hangen. Op eBay kan herhaald annuleren volgens wat ik las zelfs gevolgen hebben voor je account.
+> Klassiek voorbeeld is een jas die op Vinted verkoopt, nog een dag op Marktplaats staat, en daar komt ook iemand. Dan heb je twee kopers voor één jas. Wat ik daarover las is dat je hem op de andere plekken weghaalt voor je gaat inpakken, niet erna. En zit je toch dubbel, bericht de tweede koper meteen en eerlijk, niet laten hangen. Op eBay kan herhaald annuleren volgens wat ik las zelfs gevolgen hebben voor je account.
 >
 > Het tweede dat ik steeds terugzie is geld kwijt na een verkoop. Radar had laatst een verhaal over een verkoper die 817 euro kwijt was omdat Vinted het geld aan de koper teruggaf. Foto van het inpakken en een foto van het pakje bij het afhaalpunt (Mondial Relay) bewaren kost je niks, en als de koper gaat zeuren heb je iets in handen.
 >
@@ -20,7 +20,7 @@ EN-versie (zelfde post voor eBay Resellers & Thrifters en Reseller Community):
 
 > Quick intro: I sell clothing online myself and I've been building software to list on Vinted, Marktplaats, 2dehands and eBay at the same time. So I read along here a lot, and what keeps standing out is how much trouble starts right after something sells.
 >
-> Classic case: a jacket sells on Vinted, it's still up on Marktplaats for another day, and someone buys it there too. Now you've got two buyers for one jacket. What I read: take it down everywhere else before you go pack it, not after. And if it already happened, message the second buyer right away and be straight about it. On eBay, repeated cancellations can apparently hurt your account.
+> Classic case, a jacket sells on Vinted, it's still up on Marktplaats for another day, and someone buys it there too. Now you've got two buyers for one jacket. What I read is to take it down everywhere else before you go pack it, not after. And if it already happened, message the second buyer right away and be straight about it. On eBay, repeated cancellations can apparently hurt your account.
 >
 > The other thing I keep seeing is losing money after a sale. A Dutch consumer programme (Radar) ran a story about a seller who lost 817 euro because Vinted refunded the buyer. A photo of the packing and a photo of the parcel at the drop-off point costs nothing, and if the buyer starts arguing you have something to show.
 >
@@ -35,9 +35,9 @@ Onderwerp: wachten op een partij die jou moet goedkeuren. Geen merknaam.
 >
 > Wat ik nu doe is eigenlijk heel saai. Ik werk door aan de rest en ik zeg tegen de mensen die erom vroegen dat het stilligt, zonder datum. Liever dat dan iets beloven wat ik niet in de hand heb.
 >
-> Ik studeer er ook nog naast dus eindeloos wachten past ook niet echt haha. Hoe gaan jullie om met partijen die je moeten goedkeuren, een platform, een bank, de Kamer van Koophandel? Blijf je duwen of laat je het even liggen?
+> Eindeloos wachten past ook niet echt bij mij haha. Hoe gaan jullie om met partijen die je moeten goedkeuren, een platform, een bank, de Kamer van Koophandel? Blijf je duwen of laat je het even liggen?
 
-Check: dat je naast je studie werkt (staat in facebook-actueel als student finance en control). Jij besluit of "even baalde ik" klopt voor jou.
+Check: jij besluit of "even baalde ik" klopt voor jou. Studie hoort er niet meer in, je bent klaar met Finance & Control.
 
 ## 20-11-2026, cluster FOUNDERS (EN), #BuildInPublic, VibeCoders BuildInPublic
 Onderwerp: activatie, gemeten op echte accounts. Merknaam mag.
@@ -52,15 +52,11 @@ Onderwerp: activatie, gemeten op echte accounts. Merknaam mag.
 
 Check: 93 users komt uit jouw tekst van 19-11. De cijfers 56, 5, 118, 38, 13 komen uit de meting van 27-09-2026 (memory trechter-aanmelding-tot-betalend-27-09); daarna is de groep gegroeid. "Na-cijfers" nog niet, die belofte staat in build-in-public-ideeen.md (terugkomen 30-11).
 
-## 20-11-2026, cluster EIGEN GROEP, EU Resellers: Vinted, eBay & Crosslisting Community
-Onderwerp: kennismaking en een echte vraag. Merknaam mag.
+## 20-11-2026, cluster EIGEN GROEP (Engels), EU Resellers: Vinted, eBay & Crosslisting Community
+Onderwerp: een echt verhaal en een vraag aan de leden. Alles in deze groep is Engels. Geen uitleg waarom de groep bestaat en geen introductie, er staan al posts. Geen merknaam nodig.
 
-> Hoi allemaal, goed dat jullie er zijn. Even waarom deze groep bestaat: ik verkoop zelf kleding online en bouw Omnivaleur, software waarmee je op Vinted, Marktplaats, 2dehands en eBay tegelijk kunt plaatsen en dubbel verkopen voorkomt. De groep is bedoeld om tips te delen, geen verkoop.
+> Keep hearing about parcels ending up at the wrong Mondial Relay point lately. Haven't had it happen to me yet but I always take a photo of the parcel at the drop-off point now, just in case the buyer starts complaining later.
 >
-> Eén tip om mee te beginnen: bewaar altijd een foto van het pakje bij het afhaalpunt, ook bij Mondial Relay. Als de koper gaat zeuren heb je iets in handen.
->
-> Nu jullie: op welke platformen verkopen jullie, en wat kost je de meeste tijd? Het plaatsen zelf, de vragen van kopers of controleren wat er nog online staat? Ben echt benieuwd, dan kan ik er hier meer over delen.
->
-> (EN: which platforms do you sell on, and what eats most of your time: listing, buyer messages, or checking what's still online?)
+> Has anyone here actually had one go missing? Curious what Vinted did about it, did they side with you or the buyer?
 
-Check: Mondial Relay-tip is jouw echte reactie uit facebook-actueel. Alleen zichtbaar voor leden, dus hier mag de merknaam.
+Check: de Mondial Relay-zin komt uit jouw echte reactie ("zelf nog geen pakje op de verkeerde plek gehad", facebook-actueel). "Always take a photo" geldt alleen als jij dat echt doet, anders "I'd take a photo".

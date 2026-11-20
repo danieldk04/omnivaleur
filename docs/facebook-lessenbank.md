@@ -21,6 +21,14 @@ Eén post per cluster, daarna cross-posten in alle groepen van dat cluster (zie 
 - **Founders** (B): SaaS-founders en bouwers. Infrastructuur, toegang regelen, activatie, omgaan met te weinig klanten. Merknaam mag, het is hun taal.
 - **Eigen groep** (EU Resellers): persoonlijker, vragen aan de leden, mag Omnivaleur noemen.
 
+## Variatie en vorm (Daniel 20-11-2026, tweede ronde)
+- Geen dubbele punt als leesteken in postteksten ("Klassiek geval: ..." hoort niet). Gewoon een zin, een komma of een punt.
+- Introductie (wie ik ben, waar ik mee bezig ben) alleen in de eerste post per cluster en daarna niet meer. Alleen in de eigen groep nooit, daar kent iedereen je.
+- Niet elke post over Omnivaleur. Een mooie variatie van oprechte menselijke verhalen: iets wat je tegenkwam, iets wat misging, een vraag, een mening. Omnivaleur hooguit af en toe, en alleen waar de groep het toestaat.
+- Alles in de eigen groep EU Resellers is Engels.
+- Losser mag, waar het past: een grapje, een half gedachte, een korte zin.
+- Daniel studeert niet meer: hij heeft zijn opleiding Finance & Control afgerond. Schrijf nooit over "naast mijn studie".
+
 ## Schrijven als een mens (Daniel 20-11-2026: "what I took from it" is AI-achtig)
 - Nooit: "What I took from it", "The lesson", "Key takeaway", "Here's the thing", "game changer", "Let that sink in", "In today's...", een nette samenvattende slotzin, een drieslag ("A, B en C") voor het effect, vetgedrukte kopjes met opsommingen, "Het gaat niet om X, maar om Y".
 - Wel: begin midden in iets, een concreet detail (wat er gebeurde, welk platform, welk bedrag als het in de repo staat), een korte zin tussen langere, af en toe een half gedachte of "weet niet", een kleine slordigheid (haha, iig, t), een eerlijke twijfel.
@@ -45,7 +53,7 @@ Eén post per cluster, daarna cross-posten in alle groepen van dat cluster (zie 
 | 11 | V | Plaats niet alles in één keer. Marktplaats kan je verbinding tijdelijk blokkeren als je veel advertentiepagina's snel achter elkaar opent. Rustig tempo is veiliger. | Heb jij ooit een tijdelijke blokkade op Marktplaats gehad? | Lichte brug (Calm mode) | memory pijn-luid-is-particulier, facebook-actueel |
 | 12 | V | Let op komma en punt in bedragen in je eigen sheets: "1.360" kan als 1,36 gelezen worden. Controleer je inkoop en verkoopprijs op het totaal. | Is het jou ooit gebeurd dat een bedrag in je administratie een factor 1000 klopte niet? | Geen | memory bedragveld-leest-duizendtalpunt-als-komma |
 | 13 | S | Wie begint met een hulpmiddel voor verkopen, heeft er pas wat aan met genoeg voorraad. Bij mijn klanten die betaalden stonden er allemaal meer dan 100 artikelen in. Bouw eerst je voorraad. | Hoeveel artikelen had jij toen je serieus ging verkopen? | Lichte brug | memory trechter-aanmelding-tot-betalend-27-09 (gemeten 27-09-2026) |
-| 14 | S | Als student ernaast ondernemen is pittig: zet je studie-uren echt vast in je agenda. | Hoe plan jij je verkoopuren naast werk of studie? | Geen | facebook-actueel (Daniels echte reactie) |
+| 14 | O | Ondernemen naast iets anders (werk, opleiding) is pittig: zet je uren echt vast in je agenda. Daniel heeft zijn Finance & Control afgerond, dus geen "studie" meer noemen. | Hoe plan jij je verkoopuren naast werk of studie? | Geen | facebook-actueel (Daniels echte reactie) |
 | 15 | O/B | Etsy wees mijn API-aanvraag af. Beroep aangetekend, geen idee of het lukt. Ondertussen bouwen aan de rest en de mensen die erom vroegen eerlijk vertellen waar het staat. | Hoe ga jij om met afhankelijkheid van andermans API? | Geen | team-notes (Etsy), build-in-public-ideeen (hiredov) |
 | 16 | B | Referralprogramma: wat beloon je, en wanneer? Reacties op mijn post gaven als idee de beloning aan een mijlpaal van de vriend te koppelen, niet alleen aan betalen. | Wat werkte bij jou beter: geld, tegoed of product perks? | Geen | build-in-public-ideeen (Dag 165) |
 

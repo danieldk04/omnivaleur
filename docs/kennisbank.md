@@ -17,6 +17,19 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## verlopen-advertentie-toont-nog-rubriek
+
+*20-11-2026 — "20-11: herplaatsing van een verlopen MP/2dehands-advertentie kreeg nooit eigen rubriek; kortadres /m{nr} + 410-pagina lezen werkt. Nacontrole-valkuilen MIN_BID en categorySpecificDescription"*
+
+Een herplaatsing is meestal een advertentie die na 28 dagen verliep. Van advertenties die wij plaatsten kennen we alleen /seller/view/{nr} (alleen voor ingelogden) en de openbare zoek-API toont verlopen advertenties niet. Daardoor kreeg zo'n herplaatsing nooit zijn eigen rubriek (31d28378: 22 van 23). Het openbare kortadres https://www.marktplaats.nl/m{nr} (en www.2dehands.be/m{nr}) stuurt door naar de pagina, en die geeft ook bij HTTP 410 nog precies één `"c":{"l1":..,"l2":..}`-blok. Gerepareerd in mp_enrich.advertentie_kenmerken (13c0a26b).
+
+Nacontrole-valkuilen (scripts/nacontrole_advertenties.py): MIN_BID = vraagprijs MET bieden toestaan, dus goed bij bid_percentage of instelling bieden_standaard "aan"; FAST_BID is goed bij artikelprijs 0. `categorySpecificDescription` uit de zoek-API is soms een stuk uit het MIDDEN van de tekst, gebruik `description`. Onze omschrijving heeft `<br/>` en `&nbsp;`. Een openbare lijst die ineens veel korter is (100 van 1051) is een mislukte meting, geen 951 verdwenen advertenties.
+
+**Why:** de ronde van 20-11 meldde eerst 859 valse prijsverschillen en 951 "weg"; echte verschillen gingen erin verloren.
+**How to apply:** bij een verschil eerst één advertentie in de browser openen voor je het een fout noemt. Marktplaats remt na ~3 snelle nacontroles af (403, 15 min); plan metingen niet direct achter elkaar. Zie "done-is-geen-bewijs-nacontrole".
+
+---
+
 ## done-is-geen-bewijs-nacontrole
 
 *19-11-2026 — "19-11 Esther: klantfoutenronde zei \"rustig\" terwijl herplaatsingen sinds 14-11 hun rubriek kwijt waren en webshopverkopen niet doorkwamen; altijd live nakijken"*

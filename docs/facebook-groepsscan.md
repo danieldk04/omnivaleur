@@ -6,7 +6,7 @@ Gelezen in Daniels ingelogde Chrome op 20-11-2026 (Over-pagina's van de groepen)
 - **Resellers** (post: tips en tricks, mag lang, korte introductie, geen merk): Ebay Resellers & Thrifters Group (165 d., EN, promotie verboden), Reseller Community: Tips & BOLOs (37 d., EN, geen regels gezien). De Vinted-groepen zijn linkborden en vallen hier niet onder.
 - **Ondernemers** (post: allround ondernemersvraag, geen merk): Startende Ondernemers (44 d., promotie verboden), Ambitieuze Ondernemers (50 d.), Ambitieuze ondernemers (27 d.), Beginnende ondernemers (10 d.).
 - **Founders** (post: bouwen, infrastructuur, activatie, Engels, merk mag): #BuildInPublic | Saas Founders | Solo Developers (731), VibeCoders BuildInPublic Group.
-- **Eigen groep** (persoonlijker, merk mag): EU Resellers: Vinted, eBay & Crosslisting Community (12 leden).
+- **Eigen groep** (persoonlijker, alles in het Engels, geen introductie nodig, merk mag maar hoeft niet): EU Resellers: Vinted, eBay & Crosslisting Community (12 leden).
 
 ## Groepen waar een lespost past
 | Groep | Leden | Taal | Regels voor eigen posts | Gebruik |
