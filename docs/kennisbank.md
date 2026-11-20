@@ -17,6 +17,23 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## ai-pakket-controle-is-geen-kwaliteit
+
+*20-11-2026 — 20-11 AI-pakket: een harde controle die slaagt bewijst niet dat de tekst goed is; plus gratis Gemini 500 per dag per model*
+
+AI-pakket (donker achter AI_PAKKET_AAN, 20-11-2026): het model kiest of schrijft, gewone code controleert. Drie lessen uit de meting op 165 echte artikelen van 24 klanten:
+
+- Een controle die "woorden uit de eigen velden" toestaat liet 'Zilveren miniatuur snotneus, 19e eeuws' door als 'Silver' (materiaalveld) en gaf 'Josh V pantalon' een maat uit het maatveld. Slagingspercentage 94% zag er goed uit, de titels waren slecht. Daarom mag een titelvoorstel alleen woorden uit de OUDE titel bevatten, alleen als die te lang is, en moet minstens de helft blijven.
+- Een herschreven beschrijving die door "geen nieuwe getallen, hooguit 6 nieuwe woorden" komt, kan toch zinnen of gebreken weglaten (16 van 157 hielden minder dan de helft). Nu: minstens 70% van de woorden en elk gebrekwoord (vlek, gaatje, kras) moet blijven.
+- Bulkopdracht: de veiligheid zit in het ontwerp. Tweede domme controle (bedrag staat letterlijk in de opdracht, richtingswoord klopt met teken, prijs_vast zonder richtingswoord). Gemeten 30 opdrachten: 0 gevaarlijk uitgevoerd, 2 veilig geweigerd.
+
+**Why:** Daniel verkoopt zekerheid door; een bewezen slagingspercentage zegt niets als de controle zelf te ruim is.
+**How to apply:** meet bij elke AI-functie ook de inhoud van de geslaagde antwoorden (steekproef met het oog), niet alleen het percentage.
+
+Meettechniek: de gratis Gemini-sleutel geeft 500 vragen per DAG per model (429 "generate_content_free_tier_requests"); zet MODEL=gemini-3.1-flash-lite om een ander model te gebruiken. Een achtergrondscript met nohup buffert print: gebruik python -u. Zie "omnivaleur-altijd-bewijzen".
+
+---
+
 ## verlopen-advertentie-toont-nog-rubriek
 
 *20-11-2026 — "20-11: herplaatsing van een verlopen MP/2dehands-advertentie kreeg nooit eigen rubriek; kortadres /m{nr} + 410-pagina lezen werkt. Nacontrole-valkuilen MIN_BID en categorySpecificDescription"*

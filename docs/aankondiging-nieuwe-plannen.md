@@ -77,5 +77,21 @@ Loop beide stappen zelf af in de browser voor de livegang, zoals in CLAUDE.md st
 ## Nog open voor dit pakket
 
 - Het klassement en de Founding Circle zijn gebouwd (18-11) maar staan uit (vlag KLASSEMENT_AAN); noem ze pas in een mail of venster als de vlag aan staat.
-- Of het AI-pakket in de mail mag staan: wacht op 19-11.
+- Of het AI-pakket in de mail mag staan: 20-11 gebouwd en gemeten, vlag AI_PAKKET_AAN uit. Wat er in mag zodra Daniel de vlag aanzet staat hieronder (alleen bulkopdracht en titels inkorten; foto naar advertentie en beschrijving herschrijven NIET beloven).
 - Per klant bepalen wat mail B zegt voor de grote drie (gefaseerd 29,99, 39, 49).
+
+## AI-pakket (donker sinds 20-11-2026, vlag AI_PAKKET_AAN uit): teksten klaar
+
+Wat het pakket nu echt kan, gemeten op echte artikelen. Beloof niets anders.
+
+- Wijzigingen in gewone taal voor al je artikelen tegelijk: "alle prijzen 10% omhoog", "1 euro erbij op Vinted", "zet onderaan de beschrijving ...". Je ziet eerst een voorbeeld op 5 artikelen en het totaal, bevestigt zelf, en kunt het met één klik ongedaan maken.
+- Te lange titels voor Marktplaats en 2dehands slim inkorten zonder merk, maat of getal te verliezen. Alleen als de titel te lang is.
+
+Wat NIET beloofd mag worden: een advertentie maken vanaf een foto (kleur 51 tot 67% goed, merk 41 tot 52%, maat 0%), beschrijvingen per kanaal herschrijven (88,5% haalt de controle, onder de grens).
+
+Venster (pas bij livegang, tweetalig via i18n_extract):
+Titel: Nieuw: pas al je artikelen aan in gewone taal
+Tekst: Typ wat je wilt, bijvoorbeeld "alle prijzen 10% omhoog". Je ziet eerst een voorbeeld, bevestigt zelf en kunt alles met één klik terugzetten.
+Updatelog (data-cat automation): "Wijzigingen in bulk in gewone taal. Typ een opdracht, bekijk het voorbeeld en bevestig. Ongedaan maken kan altijd." 
+Rondleiding: één stap bij het opdrachtveld, "Typ hier wat je wilt veranderen. Je ziet eerst een voorbeeld."
+Het dashboardscherm (opdrachtveld, voorbeeld, knoppen Bevestigen en Ongedaan maken) is nog NIET gebouwd; de routes onder /api/ai-pakket zijn klaar.
