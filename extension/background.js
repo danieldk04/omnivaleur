@@ -520,6 +520,8 @@ const MP_CATEGORIES = {
   "muziek artiesten en merchandise":                    { cat1: 895, cat3: 926 },   // Verzamelen | Muziek, Artiesten en Beroemdheden
   // Gemeten 28-10-2026 op marktplaats.nl/q/strijkembleem: 60 van de ~70 staan hier.
   "hobby kledingapplicaties en strijkemblemen":         { cat1: 1099, cat3: 2855 }, // Hobby en Vrije tijd | Kledingapplicaties en Hotfix
+  "hobby borduren":                                     { cat1: 1099, cat3: 1228 }, // Hobby en Vrije tijd | Borduren en Borduurmachines
+  "hobby breien en haken":                              { cat1: 1099, cat3: 1229 }, // Hobby en Vrije tijd | Breien en Haken
   "muziek percussie":                                   { cat1: 728, cat3: 739 },   // Percussie
   "muziek piano's":                                     { cat1: 728, cat3: 765 },   // Piano's
   "muziek samplers":                                    { cat1: 728, cat3: 770 },   // Samplers
@@ -608,6 +610,12 @@ const MP_CATEGORIES = {
   // Huis en Inrichting (504) > Keuken | Tupperware (1512); Verzamelen (895) > Blikken (899).
   "wonen tupperware":                           { cat1: 504, cat3: 1512 },   // Keuken | Tupperware
   "wonen blikken":                              { cat1: 895, cat3: 899 },    // Verzamelen > Blikken
+  // 20-11-2026, Esther (hetisvintastisch): "Mis spaarpotten, retro, handwerkpakketten".
+  // Nagemeten op marktplaats.nl en 2dehands.be (zelfde nummers): Verzamelen > Spaarpotten (2817),
+  // Verzamelen > Retro (1390), Hobby en Vrije tijd > Borduren en Borduurmachines (1228) en
+  // Breien en Haken (1229; borduurpakket 90 van 100 in 1228, haakpakket 100 van 100 in 1229).
+  "wonen spaarpotten":                          { cat1: 895, cat3: 2817 },   // Verzamelen > Spaarpotten
+  "wonen retro":                                { cat1: 895, cat3: 1390 },   // Verzamelen > Retro
   "wonen overige huis en inrichting":            { cat1: 504, cat3: 526 },   // Overige Huis en Inrichting
   "wonen kerst":                                 { cat1: 428, cat3: 436 },   // Kerst
 

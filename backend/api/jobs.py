@@ -134,12 +134,20 @@ _KEUKEN_RUBRIEKEN = ("wonen servies", "wonen bestek", "wonen keukenbenodigdheden
 # Tupperware en blikken"). Zelfde regel: Marktplaats en 2dehands krijgen de
 # nummers van de server mee, alleen Vinted wacht op de extensie met het vaste pad.
 MINIMALE_TUPPERWARE_BLIK_VERSIE = (1, 0, 430)
+# Spaarpotten, retro, borduren en breien/haken (20-11-2026, Esther, hetisvintastisch:
+# "Mis spaarpotten, retro, handwerkpakketten"). Zelfde regel: Marktplaats en 2dehands
+# krijgen de nummers van de server mee, alleen Vinted wacht op het vaste pad.
+MINIMALE_HANDWERK_SPAARPOT_VERSIE = (1, 0, 432)
 _RUBRIEK_VANAF_VERSIE = {"kinderen tassen": MINIMALE_KINDERTASSEN_VERSIE,
                          "kinderen luiertassen": MINIMALE_LUIERTASSEN_VERSIE,
                          "hobby kledingapplicaties en strijkemblemen": MINIMALE_HOBBY_VERSIE,
                          **{k: MINIMALE_KEUKEN_VERSIE for k in _KEUKEN_RUBRIEKEN},
                          "wonen tupperware": MINIMALE_TUPPERWARE_BLIK_VERSIE,
-                         "wonen blikken": MINIMALE_TUPPERWARE_BLIK_VERSIE}
+                         "wonen blikken": MINIMALE_TUPPERWARE_BLIK_VERSIE,
+                         "wonen spaarpotten": MINIMALE_HANDWERK_SPAARPOT_VERSIE,
+                         "wonen retro": MINIMALE_HANDWERK_SPAARPOT_VERSIE,
+                         "hobby borduren": MINIMALE_HANDWERK_SPAARPOT_VERSIE,
+                         "hobby breien en haken": MINIMALE_HANDWERK_SPAARPOT_VERSIE}
 # Gemeten 28-10-2026 op marktplaats.nl/q/strijkembleem: 60 van de ~70 staan in
 # Hobby en Vrije tijd (1099) > Kledingapplicaties en Hotfix (2855).
 _MP_NUMMERS_VAN_DE_SERVER = {
@@ -155,6 +163,13 @@ _MP_NUMMERS_VAN_DE_SERVER = {
     "wonen tupperware": {"l1": 504, "l2": 1512, "l1_naam": "Huis en Inrichting",
                          "l2_naam": "Tupperware"},
     "wonen blikken": {"l1": 895, "l2": 899, "l1_naam": "Verzamelen", "l2_naam": "Blikken"},
+    # 20-11-2026 nagemeten op beide zoek-API's (Esther, hetisvintastisch).
+    "wonen spaarpotten": {"l1": 895, "l2": 2817, "l1_naam": "Verzamelen", "l2_naam": "Spaarpotten"},
+    "wonen retro": {"l1": 895, "l2": 1390, "l1_naam": "Verzamelen", "l2_naam": "Retro"},
+    "hobby borduren": {"l1": 1099, "l2": 1228, "l1_naam": "Hobby en Vrije tijd",
+                       "l2_naam": "Borduren en Borduurmachines"},
+    "hobby breien en haken": {"l1": 1099, "l2": 1229, "l1_naam": "Hobby en Vrije tijd",
+                              "l2_naam": "Breien en Haken"},
     "hobby kledingapplicaties en strijkemblemen": {
         "l1": 1099, "l2": 2855, "l1_naam": "Hobby en Vrije tijd",
         "l2_naam": "Kledingapplicaties en Hotfix"},
@@ -2727,6 +2742,12 @@ def _vinted_schoenmaat_als_eu(payload: dict) -> dict:
 
 @router.get("/pending")
 def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depends(require_active_subscription)):
+    # Een kanaal dat de verkoper heeft losgekoppeld krijgt geen enkele opdracht,
+    # ook niet voor een oude extensiekopie: zie instellingen.KANALEN_UIT.
+    if platform is not None:
+        from backend.services import instellingen as _inst_uit
+        if _inst_uit.kanaal_uit(user_id, platform):
+            return []
     db = get_db()
     now_dt = datetime.now(timezone.utc)
     versie_van_de_kopie = None   # wat de pollende extensie zelf zegt te zijn

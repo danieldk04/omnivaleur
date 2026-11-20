@@ -1590,6 +1590,15 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     ]
     platforms = [p for p in platforms if p not in NOT_YET_AVAILABLE]
 
+    # Een losgekoppeld kanaal krijgt niets (zie instellingen.KANALEN_UIT).
+    from backend.services import instellingen as _inst_uit
+    _uit = _inst_uit.kanalen_uit(user_id)
+    if _uit:
+        results += [{"platform": p, "status": "blocked",
+                     "error": _inst_uit.kanaal_uit_melding(p)}
+                    for p in platforms if p in _uit]
+        platforms = [p for p in platforms if p not in _uit]
+
     # EEN VERKOCHT ARTIKEL WORDT NIET OPNIEUW GEPLAATST, EN DAT MOET DE VERKOPER
     # NU ZIEN (21-10-2026, Janneke).
     #

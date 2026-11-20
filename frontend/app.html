@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=8ab2a75ac2"></script>
+<script src="/i18n.js?v=dbb0891b28"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -2742,6 +2742,12 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           <button class="upd-chip" data-cat="plans" onclick="filterUpdates('plans')">Plans</button>
         </div>
         <div class="upd-lijst" id="upd-lijst">
+                <article class="upd upd-nieuw" data-id="2026-11-kanalen-loskoppelen" data-datum="2026-11-20" data-cat="channels">
+          <div class="upd-punt"></div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Channels</span></div>
+          <h3>Disconnect a channel, and new categories</h3>
+          <p>Under Platforms you can now disconnect Marktplaats, 2dehands, Vinted or Facebook Marketplace. Omnivaleur then stops placing, changing, reading and removing anything there until you reconnect. There are also new categories: Piggy Banks, Retro, Embroidery &amp; Cross-stitch and Knitting &amp; Crochet.</p>
+        </article>
                 <article class="upd upd-nieuw" data-id="2026-11-vrienden-plannen-ai" data-datum="2026-11-20" data-cat="plans">
           <div class="upd-punt"></div>
           <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Plans</span></div>
@@ -8094,6 +8100,18 @@ function renderPlatforms() {
     } else {
       action = `<span style="font-size:11px;color:var(--muted)">${cfg?.note || 'Not available yet'}</span>`;
     }
+    // Loskoppelen van de kanalen die via de extensie werken (20-11-2026).
+    if (p.type === 'extension') {
+      const losUit = ((state.settings && state.settings.kanalen_uit) || []).includes(p.id);
+      action = losUit
+        ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+             <span class="badge" style="background:#eee;color:#555">Disconnected</span>
+             <button class="btn btn-sm btn-primary" onclick="zetKanaal('${p.id}', true)">Reconnect</button>
+             <span style="font-size:11px;color:var(--muted);flex-basis:100%">Nothing is placed, changed, read or removed on this channel until you reconnect.</span>
+           </div>`
+        : `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${action}
+             <button class="btn btn-sm" onclick="zetKanaal('${p.id}', false)">Disconnect</button></div>`;
+    }
     // eBay gets an inline ship-from sub-section inside its own card, so the
     // address always reads as belonging to eBay (not a stray card in the grid).
     let extra = '';
@@ -8827,6 +8845,30 @@ async function wooNaTerugkeer() {
   _wooToonSleutels();
 }
 
+// Een kanaal dat via de extensie werkt loskoppelen of weer koppelen. Geldt meteen
+// en op de server: het kanaal krijgt dan geen opdrachten meer (zie instellingen.KANALEN_UIT).
+async function zetKanaal(platform, aan) {
+  const label = ({ marktplaats: 'Marktplaats', '2dehands': '2dehands', vinted: 'Vinted', facebook: 'Facebook Marketplace' })[platform] || platform;
+  if (!aan && !confirm(`Disconnect ${label}?\n\nOmnivaleur will stop placing, changing, reading and removing anything on ${label}. Adverts that are already there stay exactly as they are. Be aware that a sale elsewhere will not take the item down on ${label}, and a sale on ${label} is not picked up. Work that is waiting for ${label} stays waiting. You can reconnect at any time.`)) return;
+  const huidig = new Set((state.settings && state.settings.kanalen_uit) || []);
+  if (aan) huidig.delete(platform); else huidig.add(platform);
+  setBusy(true, aan ? `Reconnecting ${label}…` : `Disconnecting ${label}…`);
+  try {
+    const r = await apiFetchRetry(`${API}/api/items/settings`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kanalen_uit: [...huidig] }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+    state.settings = data;
+    renderPlatforms();
+  } catch (e) {
+    alert(`Could not change ${label}: ` + e.message);
+  } finally {
+    setBusy(false);
+  }
+}
+
 async function disconnectPlatform(platform) {
   const label = PLATFORM_LABELS[platform] || platform;
   if (!confirm(`Disconnect ${label}? You'll need to reconnect it before publishing to it again.`)) return;
@@ -8971,7 +9013,7 @@ const EBAY_PATH_HINTS = {
   sieraden:    ['jewellery', 'jewelry', 'sieraden', 'watch', 'watches', 'horloge', 'horloges', 'bags', 'tassen', 'sunglasses', 'zonnebril'],
   boeken:      ['book', 'boek', 'comic', 'strip', 'magazine', 'tijdschrift'],
   speelgoed:   ['toy', 'speelgoed', 'game', 'spel', 'puzzle', 'puzzel', 'model', 'trading card', 'verzamelkaart', 'ruilkaart'],
-  hobby:       ['hobby', 'craft', 'knutsel', 'sewing', 'naai', 'patch'],
+  hobby:       ['hobby', 'craft', 'knutsel', 'sewing', 'naai', 'patch', 'borduur', 'embroider', 'cross-stitch', 'brei', 'haak', 'knit', 'crochet'],
   fietsen:     ['bike', 'bicycle', 'cycling', 'fiets', 'wielersport'],
   sportartikelen: ['sport'],
   witgoed:     ['appliance', 'huishoud', 'kitchen', 'keuken'],
@@ -12689,6 +12731,8 @@ const CATEGORIES = {
     ["wonen potten en pannen","Pots & Pans"],
     ["wonen tupperware","Tupperware"],
     ["wonen blikken","Tins"],
+    ["wonen spaarpotten","Piggy Banks"],
+    ["wonen retro","Retro"],
     ["wonen overige huis en inrichting","Other Home & Interior"],
     ["wonen kerst","Christmas"],
   ],
@@ -13066,6 +13110,8 @@ const CATEGORIES = {
   ],
   hobby: [
     ["hobby kledingapplicaties en strijkemblemen","Iron-on Patches & Appliqués"],
+    ["hobby borduren","Embroidery & Cross-stitch"],
+    ["hobby breien en haken","Knitting & Crochet"],
   ],
   speelgoed: [
     ["speelgoed actiefiguren","Action Figures"],

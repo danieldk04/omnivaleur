@@ -126,6 +126,8 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
 
 ## Wat nu open staat (niemand hoeft te wachten op Daniel tenzij er "beslissing" staat)
 
+- 20-11 avond (Esther): rubrieken spaarpotten, retro, borduren en breien/haken gebouwd en live voor Marktplaats en 2dehands; Vinted wacht op extensie 1.0.432 (zip in dist, upload: Daniel). Loskoppelen van Marktplaats, 2dehands, Vinted en Facebook gebouwd (instelling kanalen_uit, uitgifte geeft niets meer). Beslissing Daniel: haar ~15 bestaande verkeerd ingedeelde artikelen omzetten? Schermknop nog niet in een echt dashboard bekeken. Details in team-notes 20-11 avond.
+
 - **GA4, gedaan 17-11 (Daniel, tip van een Indie Hackers-lezer), voor de andere developer:** (1) `echte_bezoeker` staat als
   belangrijke gebeurtenis; het gegevensfilter "Internal Traffic" stond al op Actief en sluit `traffic_type = internal` uit.
   (2) Nieuwe gebeurtenis `verkoper_intentie` (klik op aanmelden, inloggen of prijzen, één keer per pagina, parameter `doel`) op / en

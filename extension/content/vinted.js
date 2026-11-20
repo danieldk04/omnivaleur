@@ -620,6 +620,8 @@
     "wonen potten en pannen":                              ["cookware", "pan"],
     "wonen tupperware":                                    ["food storage", "tupperware"],
     "wonen blikken":                                       ["tin", "storage box"],
+    "wonen spaarpotten":                                   ["money box", "ornament"],
+    "wonen retro":                                         ["retro", "home decor"],
     "wonen overige huis en inrichting":                    ["home decor", "home"],
     "wonen kerst":                                         ["christmas decoration", "home decor"],
     "antiek curiosa en brocante":                          ["collectables", "antiques"],
@@ -700,6 +702,8 @@
     "muziek overige muziek en instrumenten":               ["musical instrument", "music"],
     "muziek artiesten en merchandise":                     ["music", "poster"],
     "hobby kledingapplicaties en strijkemblemen":          ["patches", "sewing"],
+    "hobby borduren":                                      ["embroidery kit", "needlecraft"],
+    "hobby breien en haken":                               ["wool & yarn", "knitting"],
     "muziek percussie":                                    ["percussion", "musical instrument"],
     "muziek piano's":                                      ["piano", "keyboard instrument"],
     "muziek samplers":                                     ["sampler", "music equipment"],
@@ -3659,6 +3663,17 @@
       }
       return ["Home", "Home accessories", "Storage & organisation", "Boxes"];
     }
+    // Spaarpotten, borduren en breien/haken (20-11-2026, Esther). Paden uit dezelfde
+    // catalogus: Vinted kent alleen "Money boxes" onder Kids > Furniture & decor, en
+    // borduurpakketten en garen onder Arts & crafts. "Retro" bestaat op Vinted niet:
+    // die rubriek zoekt op de hints en Vinted kiest zelf.
+    if (cat === "wonen spaarpotten") return ["Kids", "Furniture & decor", "Decor & keepsakes", "Money boxes"];
+    if (cat === "hobby borduren") {
+      if (/borduurring|borduurraam|embroidery hoop|spanraam/.test(t)) return ["Hobbies & collectables", "Arts & crafts", "Sewing, knitting & needlecraft", "Embroidery hoops"];
+      if (/patroon|pattern/.test(t) && !/pakket|kit/.test(t)) return ["Hobbies & collectables", "Arts & crafts", "Sewing, knitting & needlecraft", "Needlecraft patterns"];
+      return ["Hobbies & collectables", "Arts & crafts", "Sewing, knitting & needlecraft", "Embroidery kits"];
+    }
+    if (cat === "hobby breien en haken") return ["Hobbies & collectables", "Arts & crafts", "Sewing, knitting & needlecraft", "Wool & yarn"];
     return null;
   }
 

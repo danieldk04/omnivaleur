@@ -306,7 +306,19 @@ MP_KOPERSBESCHERMING_KEUZES = ("volg", "uit")
 BIEDEN_STANDAARD = "bieden_standaard"
 BIEDEN_STANDAARD_KEUZES = ("volg", "aan")
 
-STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
+# KANALEN LOSKOPPELEN (20-11-2026, Esther van hetisvintastisch: "Kan ik mijn Vinted
+# ook weer ontkoppelen? Ik ben bang voor een blokkade, ik heb dat account echt nodig";
+# Daniel: "loskoppelen moet kunnen, voor alle marketplaces"). De vier kanalen die via
+# de extensie in de eigen browser werken hebben geen koppeling om te verbreken, dus
+# loskoppelen is hier een schakelaar op de server: een kanaal in deze lijst krijgt
+# geen enkele opdracht meer uitgedeeld (plaatsen, bijwerken, verwijderen, lezen) en
+# er wordt niet naartoe gepubliceerd. De uitgifte weigert het zelf, dus het geldt ook
+# voor een oude extensiekopie. Wat al online staat blijft staan; wachtend werk blijft
+# wachten en gaat verder zodra hij weer koppelt.
+KANALEN_UIT = "kanalen_uit"
+KANALEN_UIT_GELDIG = ("marktplaats", "2dehands", "vinted", "facebook")
+
+STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, KANALEN_UIT: [], "vinted_groepen": [],
              "auto_relist": True, RELIST_MOMENT: None, "vinted_herplaatsen": False, VERKOOPVRAAG: True, WEBSHOP_MET_RUST: False, VERZENDING_2DH_WOORDEN: [],
              VERZENDING_2DH_BRIEF_ONDER: 0, VERZENDING_2DH_MODUS: "standaard",
              "fabrikant_naam": "", "fabrikant_adres": "", "fabrikant_email": "",
@@ -344,6 +356,8 @@ def _schoon(rauw: dict | None) -> dict:
     # Daarom staat herplaatsen op Vinted standaard UIT en kost het een bewuste klik.
     if "vinted_herplaatsen" in rauw:
         uit["vinted_herplaatsen"] = bool(rauw.get("vinted_herplaatsen"))
+    if isinstance(rauw.get(KANALEN_UIT), list):
+        uit[KANALEN_UIT] = [k for k in KANALEN_UIT_GELDIG if k in rauw[KANALEN_UIT]]
     gezien = rauw.get(NIEUWS_GEZIEN)
     if isinstance(gezien, str) and 0 < len(gezien.strip()) <= 60:
         uit[NIEUWS_GEZIEN] = gezien.strip()
@@ -565,6 +579,26 @@ def vinted_herplaatsen_toegestaan(user_id: str) -> bool:
     except Exception as e:  # noqa: BLE001
         logger.warning("vinted_herplaatsen niet gelezen voor %s: %s", user_id, e)
         return False
+
+
+def kanalen_uit(user_id: str) -> list[str]:
+    """De kanalen die deze verkoper heeft losgekoppeld."""
+    try:
+        return list(lees(user_id).get(KANALEN_UIT) or [])
+    except Exception as e:  # noqa: BLE001
+        logger.warning("kanalen_uit niet gelezen voor %s: %s", user_id, e)
+        return []
+
+
+def kanaal_uit(user_id: str, platform: str | None) -> bool:
+    return bool(platform) and platform in kanalen_uit(user_id)
+
+
+def kanaal_uit_melding(platform: str) -> str:
+    naam = {"marktplaats": "Marktplaats", "2dehands": "2dehands", "vinted": "Vinted",
+            "facebook": "Facebook Marketplace"}.get(platform, platform)
+    return (f"{naam} is disconnected, so nothing is placed or changed there. "
+            f"You can reconnect it under Platforms.")
 
 
 def verkoopvraag_aan(user_id: str) -> bool:

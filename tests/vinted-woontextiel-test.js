@@ -85,6 +85,11 @@ function maatKiezer(bron) {
     ["wonen tupperware", "Tupperware caketrommel bruin jaren 70", "Home > Kitchen tools > Food storage"],
     ["wonen blikken", "Peijnenburg jubileum blik ontbijtkoekblik", "Home > Kitchen tools > Food storage"],
     ["wonen blikken", "Vintage Sarah Kay XL blik 28 cm", "Home > Home accessories > Storage & organisation > Boxes"],
+    // 20-11-2026, Esther: spaarpotten, borduren en breien/haken
+    ["wonen spaarpotten", "Ikea roze Gullgris spaarpot jaren 90", "Kids > Furniture & decor > Decor & keepsakes > Money boxes"],
+    ["hobby borduren", "Borduurpakket kruissteek bloemen telpatroon", "Hobbies & collectables > Arts & crafts > Sewing, knitting & needlecraft > Embroidery kits"],
+    ["hobby borduren", "Houten borduurring 20 cm", "Hobbies & collectables > Arts & crafts > Sewing, knitting & needlecraft > Embroidery hoops"],
+    ["hobby breien en haken", "Haakpakket amigurumi konijn", "Hobbies & collectables > Arts & crafts > Sewing, knitting & needlecraft > Wool & yarn"],
   ];
   console.log("Categorie op een Nederlandse Vinted, Vinted raadt een kinderslaapzak:");
   for (const [cat, titel, verwacht] of gevallen) {

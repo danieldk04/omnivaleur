@@ -363,6 +363,8 @@ _TAXONOMY = {
         "wonen potten en pannen",
         "wonen tupperware",
         "wonen blikken",
+        "wonen spaarpotten",
+        "wonen retro",
         "wonen overige huis en inrichting",
         "wonen kerst",
     ],
@@ -750,6 +752,8 @@ _TAXONOMY = {
     # Hobby (28-10-2026): strijkemblemen, zie _strijkembleem_of_stropdas.
     "hobby": [
         "hobby kledingapplicaties en strijkemblemen",
+        "hobby borduren",
+        "hobby breien en haken",
     ],
     "fietsen": [
         "fietsen bakfietsen",
@@ -1371,6 +1375,12 @@ def _bouw_rubrieksprompt(title, description, brand) -> str:
         "  mirrors, planters, parasols, terrace heaters and Christmas\n"
         "  decorations. This is ordinary modern homeware — genuinely old or\n"
         '  collectable pieces belong in "antiek" instead.\n'
+        '  A money box or piggy bank (spaarpot, spaarvarken, huishoudspaarpot), old or\n'
+        '  new, always goes in "wonen spaarpotten". "wonen retro" is only for a\n'
+        '  household or decorative object that the text itself calls retro (or clearly\n'
+        '  1950s-1980s style) and that fits no more specific home category: a retro\n'
+        '  cushion, vase, plate or lamp stays in its own category, and clothing is never\n'
+        '  "wonen retro".\n'
         '  When you pick a "wonen" category, gender must be "wonen" too.\n'
         "- Costumes, fancy dress and folk dress are NEVER everyday clothing: lederhosen,\n"
         "  dirndl, Tyrolean outfits, carnival and Halloween outfits, cosplay and mascot\n"
@@ -1432,7 +1442,11 @@ def _bouw_rubrieksprompt(title, description, brand) -> str:
         '  When you pick a "fietsen" category, gender must be "fietsen" too.\n'
         '- The "hobby" branch is iron-on and sew-on patches, appliques and iron-on\n'
         '  letters that are NOT band or artist merchandise (those go in "muziek artiesten\n'
-        '  en merchandise"). When you pick a "hobby" category, gender must be "hobby" too.\n'
+        '  en merchandise"). It is also needlework: embroidery and cross-stitch kits,\n'
+        '  patterns, hoops and thread go in "hobby borduren"; knitting and crochet kits,\n'
+        '  yarn and needles go in "hobby breien en haken". A finished embroidered picture\n'
+        '  or cushion is NOT a kit: it stays in its antiek or wonen category.\n'
+        '  When you pick a "hobby" category, gender must be "hobby" too.\n'
         '- The "sportartikelen" branch is sports EQUIPMENT: rackets, balls, fitness\n'
         "  machines and weights, yoga mats, skis, snowboards, surfboards, golf clubs,\n"
         '  "sportartikelen fitnessapparatuur" is machines (treadmill, exercise bike, rowing\n'
