@@ -348,3 +348,23 @@ boven). Details in de kennisbank (`omnivaleur-demovideo-en-prijs`, `proefperiode
 
 ## 20-11-2026 (avond): vriendenactie aan en prominent
 - Trap 1/3/5 (2 maanden plus 10 euro, AI-pakket, Ultra) staat in Wat is nieuw, popup, rondleiding, Uitnodigen en op de site. REFERRAL_KORTING_AAN aan in Railway. Open: ontgrendelen van AI-pakket en Ultra bij 3 en 5 vrienden is nog niet gebouwd; mail A nog te versturen.
+
+## 20-11-2026 (nacht): OVERDRACHT AAN DE ANDERE ONTWIKKELAAR (Daniel, 20-11)
+Wat er gebeurde sinds Daniel weer zelf aan het roer zit (alles op main, geen losse eindjes in git):
+- 33de4f33 en 8a90ff5a: AI-pakket donker gebouwd (bulkopdracht met voorbeeld en ongedaan, titels inkorten, beschrijving per kanaal, maandplafond) achter AI_PAKKET_AAN (uit).
+- bd8a124d: metingen in scripts/meting_*.py met uitkomsten in ~/.omnivaleur/meting_ai/ (prijsadvies 46%, niet beloven; foto naar advertentie kleur 51 tot 67%, merk 41 tot 52%, maat 0%, niet beloven).
+- 2f7a178e: aankondiging plannen 1 januari, Etsy komt eraan, AI-pakket (in aanbouw / in test) in dashboard en op de site.
+- d61785e5: vriendenactie prominent (trap 1/3/5) en REFERRAL_KORTING_AAN AAN in Railway. NIEUWE_PLANNEN_AAN, KLASSEMENT_AAN en AI_PAKKET_AAN zijn nog uit. Plus- en Ultra-prijs-id's ontbreken in Railway.
+- Mail A (vrienden) en mail B (nieuwe plannen, een mail voor iedereen met voorbeelden) staan klaar in docs/aankondiging-nieuwe-plannen.md. NIET verstuurd. Mail B moet uiterlijk 1 december de deur uit (voorwaarden art. 5, 30 dagen).
+
+Jouw opdracht, in deze volgorde (Daniel verdeelt het werk):
+1. Ontgrendelen bij 3 en 5 betalende vrienden BOUWEN. Nu belooft het dashboard het (AI-pakket bij 3, Ultra bij 5, zolang zij betalen) maar er wordt niets ontgrendeld. Eerst dit, voor de achtergrondverwijdering.
+2. Achtergrond verwijderen en de andere AI-onderdelen (zie lijst "Building" en "Testing" in app.html #komt-eraan-ai). Een functie gaat pas live bij minstens 95 op 100 goed op echte artikelen. Werk de statussen in dashboard EN op de site (EN en NL) bij als iets verschuift. Open bouwwerk: scherm voor de bulkopdracht, titels inkorten koppelen aan het plaatsen (_mp_titel_binnen_grens in backend/api/jobs.py), koperbericht-assistent op echte data, waarschuwing "foto te klein".
+3. Plansysteem per 1 januari: Plus- en Ultra-prijs-id's in Railway, NIEUWE_PLANNEN_AAN aan, de tekst "From 1 January" in #komt-eraan en #plannen-vanaf-januari omzetten naar de dan geldende stand.
+
+**Controleer alles op 100% juistheid (Daniel vraagt dit expliciet), zonder fouten of misvattingen over hoe het systeem werkelijk werkt:**
+- Vriendenactie live met echt geld: wordt het tegoed per betaalde vriendenfactuur goed afgeboekt in Stripe (korting nooit hoger dan 50% van wat de vriend betaalt, Light-vriend telt niet, 2 gratis maanden vóór 1 januari, 10 euro vastgezet voor wie vóór 1 januari binnenkomt)? Draai tests/proeven/stripe_proef_vriendenkorting.py opnieuw en kijk de eerste echte vriend na in Stripe.
+- Staan alle teksten in dashboard en site gelijk aan wat de code doet (bedragen, grenzen, data, 15 januari-uitstel, "blijft online, alleen nieuwe artikelen wachten")? Ook de oude teksten die "1 maand gratis" zeiden zijn aangepast; zoek op restanten.
+- Staan AI-onderdelen niet als "klaar" terwijl klanten ze niet kunnen gebruiken? Prijsadvies mag nergens beloofd worden.
+- Mail A en mail B: kloppen de voorbeelden (180 artikelen, 600, boven 1.500, fasering 29,99/39/49) met wat het plansysteem straks echt rekent?
+- tests/test_updates_log.py, tests/test_i18n_compleet.py en tests/test_referral_korting.py moeten groen blijven.

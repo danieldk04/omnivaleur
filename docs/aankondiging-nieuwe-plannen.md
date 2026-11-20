@@ -46,9 +46,11 @@ Light: tot 20 artikelen, €9,99 per maand incl. btw. Pro: tot 250, €19,99. Pl
 €49, met Etsy zodra die er is, de nieuwste functies eerst, het AI-pakket en voorrang bij support. Kies je jaarlijks, dan
 betaal je 10 maanden in plaats van 12.
 
-Voor jou betekent dat: [PER KLANT INVULLEN: blijft €19,99, of de gefaseerde stap]. Zit je een keer boven je grens, dan
-kun je gewoon doorwerken met wat er staat. Alleen nieuwe artikelen worden dan pas geblokkeerd, en je hebt tot 15
-januari om rustig te kiezen. Bij upgraden betaal je alleen het verschil.
+Zo werkt het in de praktijk. We tellen je actieve artikelen en je zit in het plan dat daarbij past. Heb je bijvoorbeeld 180 actieve artikelen, dan blijf je op Pro voor €19,99 en verandert er niets. Heb je 600, dan is Plus het plan voor €29,99. Heb je er meer dan 1.500, dan is Ultra het plan voor €49, maar daar ga je in stappen naartoe: €29,99 tot en met maart, €39 tot en met juni en daarna €49. Heb je maximaal 20 artikelen, dan kun je overstappen naar Light voor €9,99.
+
+Zit je een keer boven je grens, dan kun je gewoon doorwerken met wat er staat. Alleen nieuwe artikelen worden dan pas geblokkeerd, en de grenzen van Pro en Plus gaan pas op 15 januari gelden, zodat je rustig kunt kiezen. Bij upgraden betaal je alleen het verschil.
+
+Nodig je daarnaast vrienden uit, dan kan je plan goedkoper worden of zelfs gratis: elke betalende vriend haalt tot 1 januari €10 per maand van je factuur, en met 5 vrienden heb je Ultra. Je link staat in je dashboard onder Vrienden uitnodigen.
 
 Vragen? Reageer gewoon op deze mail.
 
@@ -78,7 +80,7 @@ Loop beide stappen zelf af in de browser voor de livegang, zoals in CLAUDE.md st
 
 - Het klassement en de Founding Circle zijn gebouwd (18-11) maar staan uit (vlag KLASSEMENT_AAN); noem ze pas in een mail of venster als de vlag aan staat.
 - Of het AI-pakket in de mail mag staan: 20-11 gebouwd en gemeten, vlag AI_PAKKET_AAN uit. Wat er in mag zodra Daniel de vlag aanzet staat hieronder (alleen bulkopdracht en titels inkorten; foto naar advertentie en beschrijving herschrijven NIET beloven).
-- Per klant bepalen wat mail B zegt voor de grote drie (gefaseerd 29,99, 39, 49).
+- Mail B is nu één mail voor iedereen met voorbeelden (besluit Daniel 20-11); niets per klant invullen. Controleer de voorbeeldgrenzen voor het versturen tegen de dan geldende stand.
 
 ## AI-pakket (donker sinds 20-11-2026, vlag AI_PAKKET_AAN uit): teksten klaar
 

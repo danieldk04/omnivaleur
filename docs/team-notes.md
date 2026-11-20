@@ -19661,3 +19661,7 @@ Groepen zijn geclusterd (docs/facebook-groepsscan.md): resellers (eBay Resellers
 - Prominent gemaakt: blok "Invite friends" bovenaan Wat is nieuw (#komt-eraan-vrienden), popup (NIEUWS_ID 2026-11-vrienden-plannen-ai, dus iedereen ziet hem opnieuw), rondleidingsstappen naar het blok en naar Uitnodigen, updatelogbericht, menu heet nu "Invite friends", en op de openbare site (EN en NL, #plans-friends boven de plannen).
 - Gerepareerd: de trap in het dashboard beloofde bij 3 vrienden "photo to listing" (niet te beloven, gemeten 51 tot 67%), nu "elke AI-functie zodra die live gaat".
 - Open: de techniek die bij 3 en 5 vrienden de functies echt ontgrendelt bestaat nog niet (AI-pakket staat achter AI_PAKKET_AAN, plansysteem pas per 1 januari). Voor 1 januari bouwen, tot dan handmatig bijhouden wie 3 en 5 haalt. Mail A bijgewerkt in docs/aankondiging-nieuwe-plannen.md, nog niet verstuurd.
+
+## 20-11-2026 (nacht): mail B voor iedereen, overdracht (Daniel)
+- Besluit Daniel: niets per klant invullen. Mail B is een mail voor alle klanten, met voorbeelden. Mail A staat klaar, niet verstuurd. Rondleiding in het dashboard is door Daniel bekeken en goed bevonden.
+- Daniel geeft het bouwwerk (ontgrendelen bij 3 en 5 vrienden, achtergrond verwijderen, andere AI-onderdelen) aan de andere ontwikkelaar, met opdracht alles op juistheid na te lopen. Overdracht staat in docs/overdracht.md.
