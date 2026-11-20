@@ -2,6 +2,12 @@
 
 Gelezen in Daniels ingelogde Chrome op 20-11-2026 (Over-pagina's van de groepen). Daniel is lid van 48 groepen; dit zijn de bekeken groepen. Wat op de Over-pagina staat is de enige bron; of een eigen post eerst goedkeuring van een beheerder nodig heeft zie je pas bij het plaatsen.
 
+## Clusters voor cross-posten (Daniel 20-11-2026)
+- **Resellers** (post: tips en tricks, mag lang, korte introductie, geen merk): Ebay Resellers & Thrifters Group (165 d., EN, promotie verboden), Reseller Community: Tips & BOLOs (37 d., EN, geen regels gezien). De Vinted-groepen zijn linkborden en vallen hier niet onder.
+- **Ondernemers** (post: allround ondernemersvraag, geen merk): Startende Ondernemers (44 d., promotie verboden), Ambitieuze Ondernemers (50 d.), Ambitieuze ondernemers (27 d.), Beginnende ondernemers (10 d.).
+- **Founders** (post: bouwen, infrastructuur, activatie, Engels, merk mag): #BuildInPublic | Saas Founders | Solo Developers (731), VibeCoders BuildInPublic Group.
+- **Eigen groep** (persoonlijker, merk mag): EU Resellers: Vinted, eBay & Crosslisting Community (12 leden).
+
 ## Groepen waar een lespost past
 | Groep | Leden | Taal | Regels voor eigen posts | Gebruik |
 |---|---|---|---|---|

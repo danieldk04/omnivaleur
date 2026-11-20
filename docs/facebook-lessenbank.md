@@ -14,9 +14,23 @@ optionele, lichte brug naar Omnivaleur.
 - Taal van de groep (NL/BE: Nederlands, #BuildInPublic: Engels).
 - Posten gaat alleen in groepen waar eigen posts zijn toegestaan (groepsscan, stap 3). Daniel ziet elke post voor hij live gaat.
 
+## Clusters (Daniel 20-11-2026)
+Eén post per cluster, daarna cross-posten in alle groepen van dat cluster (zie docs/facebook-groepsscan.md). Per dag komt er minstens 1 post, de routine zet elke dag het volgende cluster klaar (volgorde: resellers, ondernemers, founders, eigen groep, en weer van voren).
+- **Resellers** (V): mensen die echt dagelijks verkopen en een tool als Omnivaleur kunnen gebruiken. Tips en tricks, mag langer. Wel altijd een korte introductie: wie je bent en waar je mee bezig bent (zelf kleding verkopen, software bouwen om op meerdere platformen tegelijk te plaatsen). Merknaam alleen waar de groep het toestaat.
+- **Ondernemers** (S): allround vragen, van administratie tot omgaan met partijen die jou moeten goedkeuren. Geen merknaam.
+- **Founders** (B): SaaS-founders en bouwers. Infrastructuur, toegang regelen, activatie, omgaan met te weinig klanten. Merknaam mag, het is hun taal.
+- **Eigen groep** (EU Resellers): persoonlijker, vragen aan de leden, mag Omnivaleur noemen.
+
+## Schrijven als een mens (Daniel 20-11-2026: "what I took from it" is AI-achtig)
+- Nooit: "What I took from it", "The lesson", "Key takeaway", "Here's the thing", "game changer", "Let that sink in", "In today's...", een nette samenvattende slotzin, een drieslag ("A, B en C") voor het effect, vetgedrukte kopjes met opsommingen, "Het gaat niet om X, maar om Y".
+- Wel: begin midden in iets, een concreet detail (wat er gebeurde, welk platform, welk bedrag als het in de repo staat), een korte zin tussen langere, af en toe een half gedachte of "weet niet", een kleine slordigheid (haha, iig, t), een eerlijke twijfel.
+- Eindig met één echte vraag, geen conclusie. Geen hashtags, geen emoji's behalve hooguit één.
+- Alleen "ik" voor wat Daniel echt deed (kleding verkopen, student finance en control, sinds 2024 bezig met Revaleur, Omnivaleur bouwen, Etsy-aanvraag afgewezen). Voor de rest "ik zie vaak" of "mensen vertellen" alleen als de bron het zegt.
+- Reseller-posts: eerst echte pijn, uit het web of klantvragen, niet uit de lucht. Bronnen van 20-11: Test-Aankoop-klachten, Radar (verkoper verloor 817 euro doordat Vinted het aan de koper terugstortte), Kassa (oktober 2026: klachten over verloren pakketten en geblokkeerde accounts), resellerblogs over dubbel verkopen.
+
 ## Lessen (V = verkopers, S = starters, B = build in public)
 
-| # | Cat | Les (kern) | Uitlokvraag | Brug naar Omnivaleur | Bron |
+| # | Cluster | Les (kern) | Uitlokvraag | Brug naar Omnivaleur | Bron |
 |---|---|---|---|---|---|
 | 1 | V | Marktplaats vult sommige velden zelf in voor je invult. Bij sieraden stond Materiaal al op "Zilver", dus gouden sieraden kwamen als zilver online. Kijk altijd of een voorgevuld veld klopt. | Welk veld vult een platform bij jou verkeerd voor? | Geen | memory marktplaats-zet-materiaal-zelf-op-zilver |
 | 2 | V | Op Vinted vragen dekens en kussens een verplichte maat in cm (of Overige), vloerkleden en tafelkleden niet. Wie woontextiel plaatst loopt er snel tegenaan. | Welke rubriek op Vinted gaf jou gedoe met verplichte velden? | Geen | memory vinted-woontextiel-maat-in-cm |
@@ -32,7 +46,7 @@ optionele, lichte brug naar Omnivaleur.
 | 12 | V | Let op komma en punt in bedragen in je eigen sheets: "1.360" kan als 1,36 gelezen worden. Controleer je inkoop en verkoopprijs op het totaal. | Is het jou ooit gebeurd dat een bedrag in je administratie een factor 1000 klopte niet? | Geen | memory bedragveld-leest-duizendtalpunt-als-komma |
 | 13 | S | Wie begint met een hulpmiddel voor verkopen, heeft er pas wat aan met genoeg voorraad. Bij mijn klanten die betaalden stonden er allemaal meer dan 100 artikelen in. Bouw eerst je voorraad. | Hoeveel artikelen had jij toen je serieus ging verkopen? | Lichte brug | memory trechter-aanmelding-tot-betalend-27-09 (gemeten 27-09-2026) |
 | 14 | S | Als student ernaast ondernemen is pittig: zet je studie-uren echt vast in je agenda. | Hoe plan jij je verkoopuren naast werk of studie? | Geen | facebook-actueel (Daniels echte reactie) |
-| 15 | B | Afhankelijk zijn van het platform van een ander: Etsy wees mijn API-aanvraag af. Je bouwt alles goed en wacht toch op een ja van iemand die je niet kent. Bewaar je data neutraal, zodat een nieuwe koppeling geen verhuizing wordt. | Hoe ga jij om met afhankelijkheid van andermans API? | Geen | team-notes (Etsy), build-in-public-ideeen (hiredov) |
+| 15 | O/B | Etsy wees mijn API-aanvraag af. Beroep aangetekend, geen idee of het lukt. Ondertussen bouwen aan de rest en de mensen die erom vroegen eerlijk vertellen waar het staat. | Hoe ga jij om met afhankelijkheid van andermans API? | Geen | team-notes (Etsy), build-in-public-ideeen (hiredov) |
 | 16 | B | Referralprogramma: wat beloon je, en wanneer? Reacties op mijn post gaven als idee de beloning aan een mijlpaal van de vriend te koppelen, niet alleen aan betalen. | Wat werkte bij jou beter: geld, tegoed of product perks? | Geen | build-in-public-ideeen (Dag 165) |
 
 ## Ritme en meten
