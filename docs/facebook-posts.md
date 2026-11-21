@@ -3,7 +3,7 @@
 Daniel plaatst zelf en cross-post binnen het cluster. Per dag minstens 1 post; de routine zet het volgende cluster klaar (resellers, ondernemers, founders, eigen groep). Regels en schrijfstijl: docs/facebook-lessenbank.md. Groepen per cluster: docs/facebook-groepsscan.md.
 Kijk bij elke post even naar "Check": dat zijn de zinnen waar jij moet bevestigen dat ze voor jou kloppen.
 
-## 20-11-2026, cluster RESELLERS (NL), Ebay Resellers & Thrifters, Reseller Community
+## 20-11-2026, cluster RESELLERS (NL) [KLAAR VOOR 21-11], Ebay Resellers & Thrifters, Reseller Community
 Onderwerp: iets verkocht op het ene platform, nog online op het andere. Geen merknaam, geen link. De introductie en de software-verwijzing zijn alleen voor deze eerste reseller-post; volgende reseller-posts beginnen gewoon met het verhaal.
 
 > Even kort wie ik ben, ik verkoop zelf kleding online en ben sinds een tijdje bezig met software om op Vinted, Marktplaats, 2dehands en eBay tegelijk te plaatsen. Daardoor kijk ik hier veel mee en wat me opvalt is hoeveel gedoe ontstaat op het moment dat iets verkocht is.
@@ -52,7 +52,7 @@ Onderwerp: activatie, gemeten op echte accounts. Merknaam mag.
 
 Check: 93 users komt uit jouw tekst van 19-11. De cijfers 56, 5, 118, 38, 13 komen uit de meting van 27-09-2026 (memory trechter-aanmelding-tot-betalend-27-09); daarna is de groep gegroeid. "Na-cijfers" nog niet, die belofte staat in build-in-public-ideeen.md (terugkomen 30-11).
 
-## 20-11-2026, cluster EIGEN GROEP (Engels), EU Resellers: Vinted, eBay & Crosslisting Community
+## 20-11-2026, cluster EIGEN GROEP (Engels) [KLAAR VOOR 21-11], EU Resellers: Vinted, eBay & Crosslisting Community
 Onderwerp: een echt verhaal en een vraag aan de leden. Alles in deze groep is Engels. Geen uitleg waarom de groep bestaat en geen introductie, er staan al posts. Geen merknaam nodig.
 
 > Keep hearing about parcels ending up at the wrong Mondial Relay point lately. Haven't had it happen to me yet but I always take a photo of the parcel at the drop-off point now, just in case the buyer starts complaining later.
