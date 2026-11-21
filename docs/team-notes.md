@@ -19745,3 +19745,7 @@ Groepen zijn geclusterd (docs/facebook-groepsscan.md): resellers (eBay Resellers
 ## 21-11-2026 (17:50, automatisch): Klantfouten
 - Eén fout: marktplaats scan "interrupted and couldn't finish after retries" (0b28c1ce, 1 keer). Gemeten: scan 87ed0ab4 stond sinds 15:50 klaar, is 16:36:11 opgepakt, en 16:41:14 (5 min later) afgesloten door de opschoner, zonder voortgang. Een verwijderopdracht van dezelfde klant (e39b0017, klaar sinds 16:00) is 16:37:13 opgepakt en kreeg dezelfde afsluiting 16:42. Tussen 16:00 en 16:36 pakte haar extensie niets op: computer of Chrome was uit/slapend, en ging na het oppakken weer stil. Dat is klant-eigen (computer slaapt), geen codefout bewezen. Het eerdere "Frame removed" van 16:23 (1e8454d2) is al gedekt door 1.0.434.
 - Niets gerepareerd. Open: 1.0.434 nog naar de Web Store (Daniel). Als dit bij andere klanten met actieve computer terugkomt, dan kijken naar de opschoner (STALE_CLAIM_MINUTES=5, MAX_RECLAIMS=2).
+
+## 21-11-2026 (18:20, automatisch): Klantfouten
+- Eén fout: marktplaats delete "interrupted and couldn't finish after retries" (0b28c1ce, 1 keer, 16:42 UTC). Dit is dezelfde gebeurtenis als in de ronde van 17:50: verwijderopdracht e39b0017 stond sinds 16:00 klaar, is 16:37 opgepakt en 16:42 door de opschoner afgesloten, omdat haar computer na het oppakken weer stil viel. Klant-eigen (slapende computer), geen codefout. Niets gerepareerd, geen herhaling gezien.
+- Open: bij herhaling bij klanten met een actieve computer kijken naar STALE_CLAIM_MINUTES=5 en MAX_RECLAIMS=2 in backend/api/jobs.py.
