@@ -12,7 +12,7 @@ import logging
 import time
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from backend.api.deps import get_current_user
 from backend.config import settings
@@ -325,3 +325,28 @@ async def achtergrond_ongedaan(body: dict, user_id: str = Depends(get_current_us
     n, over = await asyncio.to_thread(_doe)
     ai_quota.bewaar(user_id, "laatste_foto", None)
     return {"teruggezet": n, "overgeslagen": over}
+
+
+@router.post("/achtergrond/upload")
+async def achtergrond_upload(request: Request, kleur: str = achtergrond.STANDAARD_KLEUR,
+                             user_id: str = Depends(get_current_user)):
+    """Een eigen foto (de bytes als body): geeft de foto terug met de gekozen achtergrond.
+    Er wordt niets opgeslagen en geen artikel gewijzigd; de klant bewaart het resultaat zelf."""
+    _aan(user_id)
+    if not achtergrond.geldige_kleur(kleur):
+        raise HTTPException(status_code=400, detail="Choose a valid background colour")
+    if not achtergrond.ingesteld():
+        raise HTTPException(status_code=503, detail="Background removal is temporarily unavailable. Nothing was changed.")
+    if not ai_quota.ruimte(user_id, "achtergronden"):
+        raise HTTPException(status_code=429, detail="Monthly limit of background removals reached")
+    foto = await request.body()
+    if not foto or len(foto) > achtergrond.MAX_BYTES:
+        raise HTTPException(status_code=413, detail="That photo is too large. Maximum is 12 MB.")
+    ai_quota.tel(user_id, "achtergronden")
+    try:
+        uit = await asyncio.to_thread(achtergrond.knip, foto, kleur)
+    except achtergrond.NietBeschikbaar:
+        raise HTTPException(status_code=503, detail="Background removal is temporarily unavailable. Nothing was changed.")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="That file could not be read as a photo.")
+    return Response(content=uit, media_type="image/jpeg", headers={"Cache-Control": "no-store"})

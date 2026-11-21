@@ -4319,5 +4319,10 @@
  "Light grey": "Lichtgrijs",
  "Your own colour": "Je eigen kleur",
  "Choose your items and a background colour, see before and after, and undo it. Never automatic.": "Kies je artikelen en een achtergrondkleur, zie voor en na, en maak het ongedaan. Nooit automatisch.",
- "Choose a valid background colour": "Kies een geldige achtergrondkleur"
+ "Choose a valid background colour": "Kies een geldige achtergrondkleur",
+ "Or upload your own photos": "Of upload je eigen foto's",
+ "Choose up to 5 photos from your computer. You get them back with the background colour above, ready to download. Nothing is added to your items.": "Kies maximaal 5 foto's van je computer. Je krijgt ze terug met de achtergrondkleur hierboven, klaar om te downloaden. Er wordt niets aan je artikelen toegevoegd.",
+ "Upload photos": "Foto's uploaden",
+ "That photo is too large. Maximum is 12 MB.": "Die foto is te groot. Maximaal 12 MB.",
+ "That file could not be read as a photo.": "Dat bestand kon niet als foto gelezen worden."
 }

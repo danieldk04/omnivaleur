@@ -217,3 +217,36 @@ def test_route_geeft_de_kleur_door(omgeving, monkeypatch):
     monkeypatch.setattr(achtergrond, "knip", lambda foto, kleur="#ffffff", client=None: gezien.append(kleur) or jpeg())
     assert client.post("/api/ai-pakket/achtergrond/voorbeeld", json={"ids": ["a"], "kleur": "#e8f0f8"}).json()["uitvoerbaar"]
     assert gezien == ["#e8f0f8"]
+
+
+def test_upload_geeft_een_foto_terug_en_wijzigt_niets(omgeving, monkeypatch):
+    client, rijen, winkel = omgeving
+    gezien = []
+    monkeypatch.setattr(achtergrond, "knip", lambda foto, kleur="#ffffff", client=None: gezien.append(kleur) or jpeg((9, 9, 9)))
+    r = client.post("/api/ai-pakket/achtergrond/upload?kleur=%23f5efe6", content=jpeg(),
+                    headers={"content-type": "application/octet-stream"})
+    assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg" and r.content[:2] == b"\xff\xd8"
+    assert gezien == ["#f5efe6"] and ai_quota.gebruikt("u1", "achtergronden") == 1
+    assert rijen[0]["photo_urls"][0] == EIGEN
+
+
+def test_upload_weigert_rommelkleur_leeg_te_groot_vlag_uit_en_volle_maand(omgeving, monkeypatch):
+    client, rijen, winkel = omgeving
+    aangeroepen = []
+    monkeypatch.setattr(achtergrond, "knip", lambda *a, **k: aangeroepen.append(1) or jpeg())
+    pad = "/api/ai-pakket/achtergrond/upload"
+    assert client.post(pad + "?kleur=rood", content=jpeg()).status_code == 400
+    assert client.post(pad, content=b"").status_code == 413
+    assert client.post(pad, content=b"x" * (achtergrond.MAX_BYTES + 1)).status_code == 413
+    ai_quota.bewaar("u1", "achtergronden", ai_quota.PLAFOND["achtergronden"])
+    assert client.post(pad, content=jpeg()).status_code == 429
+    monkeypatch.setattr(settings, "ai_pakket_aan", False)
+    assert client.post(pad, content=jpeg()).status_code == 404
+    assert not aangeroepen
+
+
+def test_upload_dienst_weg_geeft_503(omgeving, monkeypatch):
+    client, rijen, _ = omgeving
+    def stuk(*a, **k): raise achtergrond.NietBeschikbaar("weg")
+    monkeypatch.setattr(achtergrond, "knip", stuk)
+    assert client.post("/api/ai-pakket/achtergrond/upload", content=jpeg()).status_code == 503
