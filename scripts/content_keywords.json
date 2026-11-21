@@ -1068,7 +1068,7 @@
       "pillar": "B",
       "format": "howto",
       "slug": "how-to-set-up-automatic-shipping-labels-on-2dehands",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "hoe-stel-je-automatische-verzendlabels-in-op-2dehands",
       "priority": 119
     },
@@ -2209,6 +2209,16 @@
       "action": "created",
       "url_path": "/vs/omnivaleur-vs-resylr-which-crosslisting-tool-is-better",
       "published_at": "2026-11-20T16:34:04.783125+00:00"
+    },
+    {
+      "keyword": "how to set up automatic shipping labels on 2dehands",
+      "slug": "how-to-set-up-automatic-shipping-labels-on-2dehands",
+      "region": "nl",
+      "pillar": "B",
+      "format": "howto",
+      "action": "created",
+      "url_path": "/reseller-tools/how-to-set-up-automatic-shipping-labels-on-2dehands",
+      "published_at": "2026-11-21T15:51:27.293212+00:00"
     }
   ]
 }
