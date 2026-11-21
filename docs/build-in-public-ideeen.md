@@ -70,6 +70,10 @@ Niets verzinnen: een cijfer staat hier alleen als het gemeten is, met datum en b
 
 | 19-11-2026 | hiredov | Referralbeloning laten afhangen van de eerste mijlpaal van de vriend (account koppelen en eerste 10 artikelen plaatsen) in plaats van alleen betalen; voor de vriend liever extra proefperiode dan geld | Past bij het referralprogramma uit Dag 165: mijlpaalregel overwegen, filtert nepaanmeldingen | Nog te overwegen |
 
+| 21-11-2026 | Gabriel Lora (Dag 168) | Geef elk plan een paar AI-listings per maand en kijk wie de limiet raakt, in plaats van AI alleen op het hoogste plan; vraag: zijn Ultra-gebruikers vooral high-volume resellers? | Meting later: wie raakt de AI-limiet. Nog niet gemeten wie Ultra neemt | Beantwoord 21-11: weet het nog niet, geen cijfer genoemd |
+
+| 21-11-2026 | Jos Vervoorn (Facebook, Startende Ondernemers) | Is een headless browser geen tijdelijke oplossing voor Etsy? (Wesley Stoep stelt ook een eigen browser voor die Claude toegang geeft tot platforms zonder API) | Niets omzeilen, eerst terugvragen bij Etsy (team-notes 17-11) | Beantwoord 21-11 |
+
 ## Gezien in reacties, geen actie nodig (17-11-2026)
 - Gabriel Lora (Dag 162): benieuwd wat het evenement oplevert, vooral uit Duitsland. Sluitopmerking, niet beantwoord. Als er een evenement in de planning staat: update schrijven met de cijfers uit Duitsland.
 
