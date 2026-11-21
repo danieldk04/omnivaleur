@@ -186,6 +186,7 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - 18-11-2026: Gekeken: 21 mails in Verzonden (3 dagen), 14 van Daniel, 11 al verwerkt; 2 nieuw, 2 met concept (1 niet vergelijkbaar, zelfde oude concept). Nieuw: rubrieknaam in concept aangepast aan wat er echt staat, verwijzing naar Help-video (1x, onder Nog te leren).
 - 19-11-2026: Gekeken: 22 mails in Verzonden (laatste 3 dagen), 14 van Daniel, 11 al verwerkt; 2 nieuw, 0 met concept. Alleen bevestigd: reparatiemelding zonder erkenning of excuus, direct de oorzaak, "binnen enkele uren", "Hoi Voornaam,"/"Hi Voornaam,", slot "Groetjes," of "Groet," met lege regel en "Daniel" zonder punt; geen nieuwe regel.
 - 20-11-2026: Gekeken: 81 mails in Verzonden (laatste 3 dagen), 10 van Daniel, 5 al verwerkt; 4 nieuw, 3 met concept. Nieuw: slotvraag om voorbeelden vervangen door vaste "Laat me weten ... meekijk", herkenzin vervangen door excuus voor eigen misser, videomail woordelijk (onder Nog te leren).
+- 21-11-2026: Gekeken: 149 mails in Verzonden (laatste 3 dagen), 13 van Daniel, 6 al verwerkt; 7 nieuw, 3 met concept (1 woordelijk). Nieuw: extra verzoek in slot geschrapt (3e keer), ":)" werd "!", weekendwens op vrijdag (3 van 7), onder Nog te leren.
 
 
 ## 28-10-2026: geen schuld aantrekken (Daniel spreekt de regel uit)
