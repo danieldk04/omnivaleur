@@ -7281,6 +7281,24 @@ async function bgDeleteVinted(job, serverUrl) {
       if (present === false) { goneAfter = true; break; }
       await sleep(1800);
     }
+    // Vinted's kastoverzicht loopt na een echte verwijdering achter: gemeten
+    // 21-11-2026 bij 96e30080: 8928958770 gaf "still in your wardrobe", een uur
+    // later gaf dezelfde opdracht "already_absent", en 8497588690 stond 12 min
+    // na de fout niet meer in de kast. Alleen als beide knoppen geklikt zijn
+    // kijken we daarom naar de advertentiepagina zelf: 404 = weg (dezelfde
+    // maatstaf als de 404-route bovenaan). Alles anders blijft een fout.
+    if (!goneAfter && !knopMislukt) {
+      const paginaStatus = await execInTab(tabId, async (u) => {
+        try {
+          const r = await fetch(u, { headers: { Accept: "text/html" }, redirect: "follow" });
+          return r.status;
+        } catch (e) { return 0; }
+      }, [url]).catch(() => 0);
+      if (paginaStatus === 404) {
+        goneAfter = true;
+        console.warn(`[Omnivaleur] bgDeleteVinted: ${listingId} staat nog in de kast maar de advertentiepagina geeft 404 — kast loopt achter, als verwijderd afgemeld.`);
+      }
+    }
     if (!goneAfter && knopMislukt) throw new Error(knopMislukt);
     if (!goneAfter) {
       const rest = await execInTab(tabId, async () => {

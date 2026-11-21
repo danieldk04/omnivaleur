@@ -31,7 +31,7 @@ const ok = (naam, v, extra) => {
 
 // Eén ronde spelen. `knopGevonden` = vond de code de verwijderknop,
 // `wegNa` = staat de advertentie na afloop nog in de kast.
-async function ronde({ knopGevonden, wegNa, eerste, kast, anderOrigin = null }) {
+async function ronde({ knopGevonden, wegNa, eerste, kast, anderOrigin = null, paginaNa = 200 }) {
   const kastAntwoorden = Array.isArray(kast) ? kast.slice() : [kast];
   const eersteAntwoord = eerste || { userId: "12345", present: true, closed: false };  // stond er nog
   const uitgevoerd = [];
@@ -49,6 +49,7 @@ async function ronde({ knopGevonden, wegNa, eerste, kast, anderOrigin = null }) 
     _mwVintedVerwijderen: () => {},
     finaliseJob: async (_s, id, status, extra) => { gemeld.push({ id, status, extra }); },
     execInTab: async (tabId, fn) => {
+      if (/text\/html/.test(String(fn)) && uitgevoerd.length >= 3) return paginaNa;  // statuscheck van de advertentiepagina
       uitgevoerd.push(fn);
       const n = uitgevoerd.length;
       if (n === 1) return eersteAntwoord;
@@ -85,6 +86,15 @@ async function ronde({ knopGevonden, wegNa, eerste, kast, anderOrigin = null }) 
 
   r = await ronde({ knopGevonden: true, wegNa: false });
   ok("geklikt maar advertentie staat er nog -> niet als geslaagd afmelden",
+     /still in your wardrobe/.test(r.fout || "") && r.gemeld.length === 0, r.fout);
+
+  r = await ronde({ knopGevonden: true, wegNa: true });
+  // 21-11-2026: de kast loopt na een echte verwijdering achter (Toon, 8928958770).
+  r = await ronde({ knopGevonden: true, wegNa: false, paginaNa: 404 });
+  ok("geklikt, kast loopt achter maar de pagina geeft 404 -> geslaagd",
+     !r.fout && r.gemeld[0]?.status === "complete", r);
+  r = await ronde({ knopGevonden: true, wegNa: false, paginaNa: 200 });
+  ok("geklikt, kast en pagina zeggen allebei 'nog online' -> fout blijft",
      /still in your wardrobe/.test(r.fout || "") && r.gemeld.length === 0, r.fout);
 
   r = await ronde({ knopGevonden: true, wegNa: true });
