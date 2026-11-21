@@ -214,6 +214,9 @@ async def health():
             "stripe_price_id": bool(_s.stripe_price_id),
             "stripe_webhook_secret": bool(_s.stripe_webhook_secret),
             "referral_korting_aan": bool(_s.referral_korting_aan),
+            "nieuwe_plannen_aan": bool(_s.nieuwe_plannen_aan),
+            "plan_prijzen": {k: bool(getattr(_s, "stripe_price_id" + k, "")) for k in
+                             ("_light", "_plus", "_ultra", "_light_jaar", "_pro_jaar", "_plus_jaar", "_ultra_jaar")},
             "supabase_key": bool(_s.supabase_key),
             # Niet óf de sleutel er is, maar wélke. Met een anon-sleutel werkt
             # bijna alles gewoon (RLS staat uit op de meeste tabellen), maar het
