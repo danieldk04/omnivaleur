@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from backend.api.deps import get_current_user
 from backend.config import settings
 from backend.database import get_db, fetch_all, execute_with_retry, IN_BROK
-from backend.services import ai_bulk, ai_quota, achtergrond
+from backend.services import ai_bulk, ai_quota, achtergrond, ai_tekst
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ai-pakket", tags=["ai-pakket"])
@@ -350,3 +350,119 @@ async def achtergrond_upload(request: Request, kleur: str = achtergrond.STANDAAR
     except ValueError:
         raise HTTPException(status_code=400, detail="That file could not be read as a photo.")
     return Response(content=uit, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
+
+# ── Kortere titels voor Marktplaats, 2dehands en Vinted (60 tekens) ─────────────
+# Zelfde patroon als de rest: voorbeeld (schrijft niets), bevestigen, ongedaan maken.
+# Alleen titels die echt te lang zijn; elk voorstel haalt eerst de harde controle in
+# ai_tekst.titel_fout (alleen woorden weghalen, merk, kleur, maat en getallen blijven).
+
+TITELS_PER_KEER = 10
+
+
+@router.post("/titels/voorbeeld")
+async def titels_voorbeeld(body: dict, user_id: str = Depends(get_current_user)):
+    _aan(user_id)
+    ids = [str(i) for i in ((body or {}).get("ids") or []) if i]
+    db = get_db()
+    if ids:
+        items = await asyncio.to_thread(lambda: fetch_all(
+            lambda: db.table("items").select("id,title,brand,color,photo_urls").eq("user_id", user_id)
+            .in_("id", ids[:IN_BROK])))
+    else:
+        alle = await asyncio.to_thread(lambda: fetch_all(
+            lambda: db.table("items").select("id,title,brand,color,photo_urls").eq("user_id", user_id)))
+        items = alle
+    grens = ai_tekst.TITEL_GRENS["marktplaats"]
+    lang = [it for it in items if ai_tekst._lengte(str(it.get("title") or "")) > grens]
+    totaal_lang = len(lang)
+    lang = lang[:TITELS_PER_KEER]
+    if not lang:
+        return {"uitvoerbaar": False, "artikelen": [], "nog_te_lang": 0}
+    if not ai_quota.ruimte(user_id, "titels", len(lang)):
+        raise HTTPException(status_code=429, detail="Monthly limit of title shortenings reached")
+    for _ in lang:
+        ai_quota.tel(user_id, "titels")
+    nieuw, tel = await asyncio.to_thread(ai_tekst.zoekslimme_titels, lang, "marktplaats")
+    if tel.get("gevraagd") and tel.get("geen_antwoord") == tel["gevraagd"]:
+        raise HTTPException(status_code=503, detail="The AI is not available right now. Nothing was changed.")
+    resultaat, klaar = [], {}
+    for it in lang:
+        n = nieuw.get(it["id"])
+        r = {"id": it["id"], "oud": it.get("title"), "foto": (it.get("photo_urls") or [None])[0]}
+        if n and n != it.get("title"):
+            r["nieuw"] = n
+            klaar[it["id"]] = {"oud": it.get("title"), "nieuw": n}
+        else:
+            r["reden"] = "no_safe_shortening"
+        resultaat.append(r)
+    if not klaar:
+        return {"uitvoerbaar": False, "artikelen": resultaat, "nog_te_lang": totaal_lang - len(lang)}
+    vid = uuid.uuid4().hex[:12]
+    ai_quota.bewaar(user_id, "titel_voorbeeld", {"id": vid, "tijd": time.time(), "items": klaar})
+    return {"uitvoerbaar": True, "voorbeeld_id": vid, "artikelen": resultaat,
+            "nog_te_lang": totaal_lang - len(lang)}
+
+
+@router.post("/titels/uitvoeren")
+async def titels_uitvoeren(body: dict, user_id: str = Depends(get_current_user)):
+    _aan(user_id)
+    body = body or {}
+    plan_op = ai_quota.lees_los(user_id, "titel_voorbeeld")
+    if (not isinstance(plan_op, dict) or plan_op.get("id") != body.get("voorbeeld_id")
+            or time.time() - float(plan_op.get("tijd") or 0) > ai_bulk.VOORBEELD_GELDIG_S):
+        raise HTTPException(status_code=409, detail="This preview has expired. Ask again.")
+    if body.get("bevestig") is not True:
+        raise HTTPException(status_code=400, detail="Confirmation is required")
+    wens = plan_op["items"]
+    ids = list(wens)
+    db = get_db()
+
+    def _doe() -> tuple[int, str | None]:
+        nu = {r["id"]: r for r in fetch_all(lambda: db.table("items").select("id,title")
+                                            .eq("user_id", user_id).in_("id", ids))}
+        blok = {i: w for i, w in wens.items() if i in nu and nu[i].get("title") == w["oud"]}
+        if not blok:
+            return 0, None
+        bid = uuid.uuid4().hex[:12]
+        # Eerst de oude titels bewaren, dan pas schrijven.
+        ai_quota.bewaar(user_id, "laatste_titel", {"id": bid, "items": blok})
+        gedaan = 0
+        for iid, w in blok.items():
+            rij = execute_with_retry(db.table("items").update({"title": w["nieuw"]})
+                                     .eq("id", iid).eq("user_id", user_id))
+            gedaan += 1 if getattr(rij, "data", None) else 0
+        return gedaan, bid
+
+    n, bid = await asyncio.to_thread(_doe)
+    ai_quota.bewaar(user_id, "titel_voorbeeld", None)
+    return {"gewijzigd": n, "overgeslagen": len(wens) - n, "ongedaan_id": bid}
+
+
+@router.post("/titels/ongedaan")
+async def titels_ongedaan(body: dict, user_id: str = Depends(get_current_user)):
+    _aan(user_id)
+    blok = ai_quota.lees_los(user_id, "laatste_titel")
+    if not isinstance(blok, dict) or blok.get("id") != (body or {}).get("ongedaan_id"):
+        raise HTTPException(status_code=404, detail="Nothing to undo")
+    ids = list(blok["items"])
+    db = get_db()
+
+    def _doe() -> tuple[int, int]:
+        nu = {r["id"]: r for r in fetch_all(lambda: db.table("items").select("id,title")
+                                            .eq("user_id", user_id).in_("id", ids))}
+        terug = over = 0
+        for iid, w in blok["items"].items():
+            # Alleen terugzetten wat nog is zoals wij het zetten: een eigen wijziging van de klant wint.
+            if iid in nu and nu[iid].get("title") == w["nieuw"]:
+                rij = execute_with_retry(db.table("items").update({"title": w["oud"]})
+                                         .eq("id", iid).eq("user_id", user_id))
+                terug += 1 if getattr(rij, "data", None) else 0
+            else:
+                over += 1
+        return terug, over
+
+    n, over = await asyncio.to_thread(_doe)
+    ai_quota.bewaar(user_id, "laatste_titel", None)
+    return {"teruggezet": n, "overgeslagen": over}

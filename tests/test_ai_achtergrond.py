@@ -250,3 +250,78 @@ def test_upload_dienst_weg_geeft_503(omgeving, monkeypatch):
     def stuk(*a, **k): raise achtergrond.NietBeschikbaar("weg")
     monkeypatch.setattr(achtergrond, "knip", stuk)
     assert client.post("/api/ai-pakket/achtergrond/upload", content=jpeg()).status_code == 503
+
+
+# ── kortere titels ──────────────────────────────────────────────────────────
+
+LANG = "Nike Air Max 90 heren sneakers maat 43 zwart wit leer nieuwstaat origineel doos"
+
+
+@pytest.fixture
+def titels(monkeypatch):
+    from backend.services import ai_tekst
+    rijen = [{"id": "l", "user_id": "u1", "title": LANG, "brand": "Nike", "color": "zwart", "photo_urls": [EIGEN]},
+             {"id": "k", "user_id": "u1", "title": "Korte titel", "photo_urls": []},
+             {"id": "z", "user_id": "ander", "title": LANG, "photo_urls": []}]
+    db = Db(rijen); winkel: dict = {}
+    monkeypatch.setattr(settings, "ai_pakket_aan", True)
+    monkeypatch.setattr(route, "get_db", lambda: db)
+    monkeypatch.setattr(instellingen, "lees", lambda u: {"ai_pakket": winkel.get(u)} if winkel.get(u) else {})
+    monkeypatch.setattr(instellingen, "schrijf", lambda u, w: winkel.__setitem__(u, w["ai_pakket"]))
+    monkeypatch.setattr(route, "heeft_pakket", lambda u: True)
+    gevraagd = []
+    def nep(items, kanaal):
+        gevraagd.extend(i["id"] for i in items)
+        return {i["id"]: "Nike Air Max 90 sneakers maat 43 zwart" for i in items}, {"gevraagd": len(items), "geen_antwoord": 0}
+    monkeypatch.setattr(ai_tekst, "zoekslimme_titels", nep)
+    app = FastAPI(); app.include_router(route.router, prefix="/api")
+    app.dependency_overrides[get_current_user] = lambda: "u1"
+    return TestClient(app), rijen, gevraagd
+
+
+def test_titels_ronde_voorbeeld_schrijft_niets_uitvoeren_en_ongedaan(titels):
+    client, rijen, gevraagd = titels
+    v = client.post("/api/ai-pakket/titels/voorbeeld", json={}).json()
+    assert v["uitvoerbaar"] and gevraagd == ["l"]                  # alleen de lange, alleen eigen
+    assert rijen[0]["title"] == LANG                               # voorbeeld schrijft niets
+    assert client.post("/api/ai-pakket/titels/uitvoeren", json={"voorbeeld_id": v["voorbeeld_id"]}).status_code == 400
+    assert rijen[0]["title"] == LANG
+    u = client.post("/api/ai-pakket/titels/uitvoeren", json={"voorbeeld_id": v["voorbeeld_id"], "bevestig": True}).json()
+    assert u["gewijzigd"] == 1 and rijen[0]["title"] == "Nike Air Max 90 sneakers maat 43 zwart"
+    assert rijen[1]["title"] == "Korte titel" and rijen[2]["title"] == LANG
+    o = client.post("/api/ai-pakket/titels/ongedaan", json={"ongedaan_id": u["ongedaan_id"]}).json()
+    assert o["teruggezet"] == 1 and rijen[0]["title"] == LANG
+
+
+def test_titel_die_de_klant_tussendoor_wijzigt_wint(titels):
+    client, rijen, _ = titels
+    v = client.post("/api/ai-pakket/titels/voorbeeld", json={"ids": ["l"]}).json()
+    rijen[0]["title"] = "Mijn eigen titel"
+    u = client.post("/api/ai-pakket/titels/uitvoeren", json={"voorbeeld_id": v["voorbeeld_id"], "bevestig": True}).json()
+    assert u["gewijzigd"] == 0 and rijen[0]["title"] == "Mijn eigen titel"
+
+
+def test_titels_ongedaan_laat_latere_eigen_wijziging_staan(titels):
+    client, rijen, _ = titels
+    v = client.post("/api/ai-pakket/titels/voorbeeld", json={"ids": ["l"]}).json()
+    u = client.post("/api/ai-pakket/titels/uitvoeren", json={"voorbeeld_id": v["voorbeeld_id"], "bevestig": True}).json()
+    rijen[0]["title"] = "Daarna zelf aangepast"
+    o = client.post("/api/ai-pakket/titels/ongedaan", json={"ongedaan_id": u["ongedaan_id"]}).json()
+    assert o["teruggezet"] == 0 and o["overgeslagen"] == 1 and rijen[0]["title"] == "Daarna zelf aangepast"
+
+
+def test_titels_maandplafond_en_vlag_uit(titels, monkeypatch):
+    client, rijen, gevraagd = titels
+    monkeypatch.setitem(ai_quota.PLAFOND, "titels", 0)
+    assert client.post("/api/ai-pakket/titels/voorbeeld", json={}).status_code == 429 and not gevraagd
+    monkeypatch.setattr(settings, "ai_pakket_aan", False)
+    assert client.post("/api/ai-pakket/titels/voorbeeld", json={}).status_code == 404
+
+
+def test_titels_niets_te_doen_en_ai_storing(titels, monkeypatch):
+    from backend.services import ai_tekst
+    client, rijen, _ = titels
+    assert client.post("/api/ai-pakket/titels/voorbeeld", json={"ids": ["k"]}).json()["uitvoerbaar"] is False
+    monkeypatch.setattr(ai_tekst, "zoekslimme_titels", lambda i, k: ({}, {"gevraagd": 1, "geen_antwoord": 1}))
+    assert client.post("/api/ai-pakket/titels/voorbeeld", json={"ids": ["l"]}).status_code == 503
+    assert rijen[0]["title"] == LANG

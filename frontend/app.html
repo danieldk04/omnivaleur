@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=dfdfe5c8b2"></script>
+<script src="/i18n.js?v=18da78039e"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1527,6 +1527,8 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           <button class="btn btn-sm btn-outline" onclick="openBulkCategory()">Change category…</button>
           <button class="btn btn-sm btn-outline" onclick="doBulkBidding()">Allow bidding…</button>
           <button class="btn btn-sm btn-outline" onclick="openBulkVerzending2dh()">2dehands shipping…</button>
+          <button class="btn btn-sm btn-outline ai-knop" style="display:none" onclick="aiNaar('foto', Array.from(selectedIds))">Remove background…</button>
+          <button class="btn btn-sm btn-outline ai-knop" style="display:none" onclick="aiNaar('titels', Array.from(selectedIds))">Shorten titles…</button>
           <button class="btn btn-sm btn-warning" onclick="bulkDelist()">Delist all</button>
           <button class="btn btn-sm btn-danger" onclick="bulkDelete()">Delete</button>
           <button class="btn btn-sm btn-ghost" onclick="clearSelection()">Deselect</button>
@@ -2687,6 +2689,7 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
         <div id="ai-kiezer" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:16px">
           <button type="button" class="ai-tegel on" data-paneel="bulk" onclick="aiKies('bulk')"><b>Change many items</b><span>Prices and descriptions, with one sentence.</span><i id="ai-gebruikt-tegel-bulk"></i></button>
           <button type="button" class="ai-tegel" data-paneel="foto" onclick="aiKies('foto')"><b>Photos</b><span>Remove the background, choose a colour, or upload your own.</span><i id="ai-gebruikt-tegel-foto"></i></button>
+          <button type="button" class="ai-tegel" data-paneel="titels" onclick="aiKies('titels')"><b>Shorter titles</b><span>Titles over 60 characters, shortened for Marktplaats, 2dehands and Vinted.</span><i id="ai-gebruikt-tegel-titels"></i></button>
         </div>
         <div class="ai-paneel on" id="ai-paneel-bulk">
         <ol class="ai-stappen"><li><b>1</b>Say what should change</li><li><b>2</b>Check the preview</li><li><b>3</b>Confirm, or undo later</li></ol>
@@ -2730,7 +2733,21 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           </div>
         </div>
         </div>
-        <p style="margin:18px 0 0;font-size:13px;color:var(--muted)">More AI tools are on the way. See what is ready, being built and being tested under <a href="#" onclick="showView('nieuw');return false">What's new</a>.</p>
+        <div class="ai-paneel" id="ai-paneel-titels">
+        <ol class="ai-stappen"><li><b>1</b>Select items, or let us pick the long ones</li><li><b>2</b>Check old and new title</li><li><b>3</b>Confirm, or undo later</li></ol>
+        <div style="background:var(--surface,#fff);border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:16px">
+          <div style="font-weight:600;margin-bottom:4px">Shorter titles for Marktplaats, 2dehands and Vinted</div>
+          <p style="margin:0 0 10px;color:var(--muted);font-size:14px">These marketplaces accept 60 characters. Without this, Omnivaleur cuts the end off at publishing. Here the AI only removes words, so brand, colour, size and numbers stay. The new title replaces the title of the item everywhere, and you can undo it.</p>
+          <div id="ai-titels-selectie" style="margin-bottom:10px;font-size:14px"></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-primary" id="ai-titels-vraag" onclick="aiTitelVoorbeeld()">Show shorter titles</button>
+            <span id="ai-titels-gebruikt" style="color:var(--muted);font-size:13px"></span>
+          </div>
+          <div id="ai-titels-uitkomst" style="margin-top:14px"></div>
+          <div id="ai-titels-ongedaan" style="margin-top:10px"></div>
+        </div>
+        </div>
+        <p style="margin:18px 0 0;font-size:13px;color:var(--muted)">Three AI tools, kept small on purpose. A new one only comes when it is right at least 95 times out of 100. See what is ready and what is next under <a href="#" onclick="showView('nieuw');return false">What's new</a>.</p>
       </div>
     </div><!-- /view-ai -->
 
@@ -2775,8 +2792,9 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           <p style="margin:0 0 16px;font-size:13px;line-height:1.55">Etsy becomes a channel, included in Ultra. Etsy has to approve the connection first, so we give no date.</p>
           <div id="komt-eraan-ai">
             <h3 style="margin:0 0 4px;font-size:14px">The AI package, included in Ultra</h3>
-            <p style="margin:0 0 8px;font-size:12.5px;color:var(--muted);line-height:1.5">An AI function only goes live when it is right at least 95 times out of 100 on real items in our own test. If it is not, it stays out. The AI never changes anything without showing you first.</p>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:16px"><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Change many items with one sentence</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#e6efff;color:#0039ab">Building</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Type "all prices 10% up" or "add Free shipping to every description". You see 5 examples first, confirm, and can undo.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Shorter titles per channel</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#e6efff;color:#0039ab">Building</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Only titles that are too long for Marktplaats, 2dehands or Vinted are shortened. Brand, size and colour stay.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Background removal on photos</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#dcf5e3;color:#0a6b2a">Ready</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Choose your items and a background colour, see before and after, and undo it. Never automatic.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Buyer message assistant</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#e6efff;color:#0039ab">Building</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Answers "is it still available", warns about scam messages and hands everything else to you. It never answers questions about the item by itself.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Photo check</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#fbe9c6;color:#7b4800">Testing</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Warns when a photo is too small for a marketplace.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Books, games and music from the barcode</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#fbe9c6;color:#7b4800">Testing</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Scan or type the barcode and title, author and details are filled in.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Automatic bid rules</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#fbe9c6;color:#7b4800">Testing</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Accept, decline or counter offers by your own rules.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Descriptions per channel</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#fbe9c6;color:#7b4800">Testing</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">One description, rewritten for each marketplace without losing details.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Fill in details from a photo</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#fbe9c6;color:#7b4800">Testing</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Colour, brand and size suggested from your photo.</div></div></div>
+            <p style="margin:0 0 8px;font-size:12.5px;color:var(--muted);line-height:1.5">Three tools, kept small on purpose. They live in the AI assistant in your menu and in Items. An AI function only goes live when it is right at least 95 times out of 100 on real items in our own test. The AI never changes anything without showing you first, and you can always undo it.</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:16px"><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Change many items with one sentence</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#dcf5e3;color:#0a6b2a">Ready</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Type "all prices 10% up" or "add Free shipping to every description". You see examples first, confirm, and can undo.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Shorter titles</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#dcf5e3;color:#0a6b2a">Ready</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Titles over 60 characters are shortened for Marktplaats, 2dehands and Vinted by removing words only. Brand, size, colour and numbers stay.</div></div><div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fff"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:13.5px;line-height:1.35">Background removal on photos</b><span style="flex-shrink:0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:#dcf5e3;color:#0a6b2a">Ready</span></div><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px">Choose items or upload your own photos, pick a background colour, see before and after, and undo it. Never automatic.</div></div></div>
+            <p style="margin:0 0 16px;font-size:12.5px;color:var(--muted);line-height:1.5">Not planned for now: AI that rewrites descriptions, answers buyers or reads details from a photo.</p>
           </div>
           <h3 style="margin:0 0 4px;font-size:14px">Asked for, not decided yet</h3>
           <p style="margin:0 0 8px;font-size:12.5px;color:var(--muted);line-height:1.5">The more of you ask, the sooner it moves up. Reply to any of our emails to add yours.</p>
@@ -4578,7 +4596,8 @@ function langeTitelBadge(item) {
     l => l.item_id === item.id && l.platform === p && l.status === 'active');
   if (kanalen.every(online)) return '';
   const tip = esc('Marktplaats and 2dehands accept at most 60 characters. When you publish, Omnivaleur shortens this title for you at a whole word, so the end is cut off. Shorten it yourself via Edit to choose what stays.');
-  return `<div class="missing-data-badge" style="background:#fbe9c6;color:#7b4800;border-color:#b4530933" title="${tip}">⚠ Title is ${titel.length} characters, Marktplaats & 2dehands allow 60</div>`;
+  const ai = AI_BESCHIKBAAR ? `<div style="margin-top:3px"><a href="#" onclick="event.stopPropagation();aiNaar('titels',['${esc(item.id)}']);return false" style="font-size:12px;font-weight:700">Shorten with AI</a></div>` : '';
+  return `<div class="missing-data-badge" style="background:#fbe9c6;color:#7b4800;border-color:#b4530933" title="${tip}">⚠ Title is ${titel.length} characters, Marktplaats & 2dehands allow 60</div>${ai}`;
 }
 
 function smartMissingBadge(item) {
@@ -4704,7 +4723,7 @@ function aiEsc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({
 async function aiToonKnop() {
   try {
     const r = await apiFetch(`${API}/api/ai-pakket/status`);
-    if (r.ok) document.getElementById('nav-ai').style.display = '';
+    if (r.ok) { document.getElementById('nav-ai').style.display = ''; AI_BESCHIKBAAR = true; document.querySelectorAll('.ai-knop').forEach(b => b.style.display = ''); try { applyFilters(false); } catch (e) { /* later */ } }
   } catch (e) { /* geen AI-pakket: knop blijft weg */ }
 }
 function aiKies(naam) {
@@ -4715,6 +4734,7 @@ function aiKies(naam) {
 }
 async function aiLaad() {
   try { aiKies(localStorage.getItem('ai-paneel') || 'bulk'); } catch (e) { aiKies('bulk'); }
+  aiTitelSelectieTekst();
   try {
     const r = await apiFetch(`${API}/api/ai-pakket/status`);
     if (!r.ok) { document.getElementById('ai-uitkomst').textContent = 'The AI assistant is not available for your account yet.'; return; }
@@ -4724,8 +4744,75 @@ async function aiLaad() {
     const bg = (d.gebruikt || {}).achtergronden || 0, bm = (d.plafond || {}).achtergronden;
     document.getElementById('ai-bg-gebruikt').textContent = bm ? `${bg} of ${bm} photos used this month` : '';
     document.getElementById('ai-gebruikt-tegel-bulk').textContent = m ? `${g} of ${m} used this month` : '';
+    const tg = (d.gebruikt || {}).titels || 0, tm = (d.plafond || {}).titels;
+    document.getElementById('ai-gebruikt-tegel-titels').textContent = tm ? `${tg} of ${tm} used this month` : '';
+    document.getElementById('ai-titels-gebruikt').textContent = tm ? `${tg} of ${tm} titles used this month` : '';
     document.getElementById('ai-gebruikt-tegel-foto').textContent = bm ? `${bg} of ${bm} photos used this month` : '';
   } catch (e) { /* stil */ }
+}
+let AI_BESCHIKBAAR = false, AI_TITELS = null, AI_TITELS_ONGEDAAN = null;
+async function aiItemsVerversen() { try { state.items = await fetchAllItems(); applyFilters(false); aiTitelSelectieTekst(); } catch (e) { /* ververst bij de volgende keer */ } }
+function aiLangeTitels() { return (state.items || []).filter(i => String(i.title || '').trim().length > MP_MAX_TITEL); }
+function aiNaar(paneel, ids) {
+  // Vanuit Items: neem de selectie mee naar het juiste AI-gereedschap.
+  if (ids) selectedIds = new Set(ids);
+  showView('ai'); aiKies(paneel);
+}
+function aiTitelSelectieTekst() {
+  const el = document.getElementById('ai-titels-selectie'); if (!el) return;
+  const lang = aiLangeTitels().length, sel = selectedIds.size;
+  el.textContent = sel ? `${sel} items selected. Only the ones with a title over 60 characters are shortened.`
+                       : `${lang} items have a title over 60 characters. We take the first 10.`;
+}
+async function aiTitelVoorbeeld() {
+  const uit = document.getElementById('ai-titels-uitkomst'), knop = document.getElementById('ai-titels-vraag');
+  const ids = Array.from(selectedIds).slice(0, 200);
+  knop.disabled = true; uit.textContent = 'Thinking…'; AI_TITELS = null;
+  try {
+    const r = await apiFetch(`${API}/api/ai-pakket/titels/voorbeeld`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ids})});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { uit.textContent = d.detail || 'Something went wrong. Nothing was changed.'; return; }
+    if (!(d.artikelen || []).length) { uit.textContent = 'No title is over 60 characters. Nothing to shorten.'; return; }
+    let h = '<div style="border:1px solid var(--border,#e5e7eb);border-radius:8px;overflow:hidden">';
+    d.artikelen.forEach(x => {
+      h += `<div style="padding:8px 10px;border-bottom:1px solid var(--border,#eee);font-size:14px"><span style="color:var(--muted)">${aiEsc(x.oud)}</span><br>` +
+        (x.nieuw ? `&rarr; <b>${aiEsc(x.nieuw)}</b> <span style="color:var(--muted);font-size:12px">(${aiEsc(x.nieuw.length)} characters)</span>`
+                 : '<span style="color:#b45309">No safe shortening found. This title stays as it is.</span>') + '</div>';
+    });
+    h += '</div>';
+    if (d.nog_te_lang) h += `<div style="margin-top:8px;font-size:13px;color:var(--muted)">${aiEsc(d.nog_te_lang)} more long titles. Do this again after confirming.</div>`;
+    if (d.uitvoerbaar) {
+      AI_TITELS = d;
+      h += '<div style="margin-top:12px;display:flex;gap:8px"><button class="btn btn-primary" onclick="aiTitelBevestig()">Confirm and change</button><button class="btn" onclick="aiTitelAnnuleer()">Cancel</button></div>';
+    }
+    uit.innerHTML = h;
+  } catch (e) { uit.textContent = 'Something went wrong. Nothing was changed.'; }
+  finally { knop.disabled = false; aiLaad(); }
+}
+function aiTitelAnnuleer() { AI_TITELS = null; document.getElementById('ai-titels-uitkomst').textContent = 'Cancelled. Nothing was changed.'; }
+async function aiTitelBevestig() {
+  if (!AI_TITELS) return;
+  const uit = document.getElementById('ai-titels-uitkomst'); uit.textContent = 'Changing…';
+  try {
+    const r = await apiFetch(`${API}/api/ai-pakket/titels/uitvoeren`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({voorbeeld_id: AI_TITELS.voorbeeld_id, bevestig: true})});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { uit.textContent = d.detail || 'Something went wrong.'; return; }
+    AI_TITELS = null; AI_TITELS_ONGEDAAN = d.ongedaan_id;
+    uit.textContent = `Done. ${d.gewijzigd} titles changed.` + (d.overgeslagen ? ` ${d.overgeslagen} left alone because you changed them in the meantime.` : '');
+    if (d.ongedaan_id) document.getElementById('ai-titels-ongedaan').innerHTML = '<button class="btn" onclick="aiTitelOngedaan()">Undo this change</button>';
+    aiItemsVerversen();
+  } catch (e) { uit.textContent = 'Something went wrong.'; }
+}
+async function aiTitelOngedaan() {
+  if (!AI_TITELS_ONGEDAAN) return;
+  try {
+    const r = await apiFetch(`${API}/api/ai-pakket/titels/ongedaan`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ongedaan_id: AI_TITELS_ONGEDAAN})});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { showToast(d.detail || 'Could not undo.'); return; }
+    AI_TITELS_ONGEDAAN = null; document.getElementById('ai-titels-ongedaan').textContent = '';
+    document.getElementById('ai-titels-uitkomst').textContent = `Undone. ${d.teruggezet} titles restored` + (d.overgeslagen ? `, ${d.overgeslagen} left as you changed them since.` : '.');
+    aiItemsVerversen();
+  } catch (e) { showToast('Could not undo.'); }
 }
 let AI_BG_VOORBEELD = null, AI_BG_KLEUR = '#ffffff';
 function aiAchtergrondKleur(k) {
