@@ -1,6 +1,6 @@
 # Overdracht: lees dit als eerste
 
-Aangevuld 20-11-2026 door de ochtendronde klantfouten (Daniels Mac, alleen de regel over herplaatsrubriek en Shopify-dubbelen). Bijgewerkt 17-11-2026 (op verzoek van Daniel, voor de overdracht) door Daniels hoofdaccount; daarvoor 16-11-2026 22:30 door het tweede account. Eerder die dag op verzoek van Daniel: "1 op 1 met
+Aangevuld 21-11-2026 door de ochtendronde klantfouten (Daniels Mac, alleen de regel over Toons halve herplaatsingen). Aangevuld 20-11-2026 door de ochtendronde klantfouten (Daniels Mac, alleen de regel over herplaatsrubriek en Shopify-dubbelen). Bijgewerkt 17-11-2026 (op verzoek van Daniel, voor de overdracht) door Daniels hoofdaccount; daarvoor 16-11-2026 22:30 door het tweede account. Eerder die dag op verzoek van Daniel: "1 op 1 met
 wat je kunt zien, en dit elke sessie en elke dag bijhouden". Basis was de overdracht van
 15-11 (Daniels Mac), vorige daarvoor 28-10. Alles hieronder is gemeten op 15 of 16-11-2026,
 tenzij er een andere datum staat. Hoe je dit bestand zelf bijhoudt:
@@ -426,3 +426,8 @@ Jouw opdracht, in deze volgorde (Daniel verdeelt het werk):
 - 21-11-2026: eigen foto's uploaden in het AI-scherm (tot 5, max 12 MB, route POST /api/ai-pakket/achtergrond/upload?kleur=, bytes als body, JPEG terug, niets opgeslagen, geen artikel gewijzigd). Telt mee in dezelfde 100 per maand en het dagplafond. Live bewezen op Daniels account: hoekpixel (232,241,248) bij lichtblauw, download "naam-no-background.jpg", ~12 s inclusief koude start. Tests in tests/test_ai_achtergrond.py.
 
 - 21-11-2026: AI-scherm herindeeld in tegels per taak (Veel artikelen tegelijk, Foto's), elk met eigen paneel, drie stappen en verbruik op de tegel; keuze onthouden in localStorage. Live gezien op Daniels account. Volgende AI-functie: titels per kanaal (ai_tekst.zoekslimme_titels, 96,3% in meting 20-11) staat klaar maar is NIET aangesloten: keuze tussen automatisch bij plaatsen (raakt `_mp_titel_binnen_grens` in jobs.py voor iedereen) of als eigen paneel met voorbeeld en bevestigen. Wacht op Daniel.
+
+## 21-11-2026: ochtendronde klantfouten (Daniels Mac)
+- Open, oorzaak niet bewezen: bij Toon (96e30080) staan 11 Marktplaats-rijen op 'active' met een advertentienummer dat bij een mislukte herplaatsing (15 en 17-11) al verwijderd is (410). Dashboard zegt live, Marktplaats heeft ze niet. Bij andere klanten gaat dezelfde situatie wel goed naar error. Wie de rij terugzet op active is nog niet gevonden (scan verklaart er hooguit een paar). Details en item-id's in team-notes 21-11. Herstel van de rijen wacht op Daniel (klantdata).
+- Open: 1ba42900 oorbellen verkocht op Vinted 15-11 staan nog op Marktplaats; een mislukte verkoopverwijdering wordt niet opnieuw geprobeerd.
+- Open: Marktplaats vult bij tapijten zelf Breedte en Lengte voor (Toon: 130/75 werd Lengte 200 cm of meer); onze extensie zet die velden niet.
