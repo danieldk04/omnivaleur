@@ -19736,3 +19736,8 @@ Groepen zijn geclusterd (docs/facebook-groepsscan.md): resellers (eBay Resellers
 ## 21-11-2026 (15:10, automatisch): Klantfouten
 - Eén fout: marktplaats scan "No tab with id" (0b28c1ce, 1 keer, extensie 1.0.432). Gemeten: de scanopdracht stond sinds 18-11 20:46 klaar (computer uit), is 21-11 14:59 opgepakt toen Chrome weer aanging, en het werktabblad was meteen weer weg (Chrome nog aan het opstarten of door de klant gesloten). Zelfde klant plaatste 15:01 gewoon een Vinted-artikel (done). Eenmalig, geen herhaling, geen codefout bewezen. Niets gerepareerd.
 - Open, niet gemeten: Vinted-scan f0493da6 van dezelfde klant staat sinds 18-11 op 'claimed'. Alleen oppakken als dit bij meer klanten terugkomt.
+
+## 21-11-2026 (17:00, automatisch): Klantfouten
+- Eén fout: marktplaats delete "Frame with ID 0 was removed" (0b28c1ce, D&G junior beertje, 1 keer, 1.0.432). De advertentie m2399104659 geeft nu 404: de verwijdering was gelukt. Mechanisme niet op de regel bewezen (het logboek zegt niet welke stap brak), maar de enige onbeschermde stap die direct na de bevestigklik draait is de bevestiglus, waar Marktplaats het overzicht ververst; zelfde patroon als Vinted 30-09.
+- Gerepareerd in extensie 1.0.434 (bgDeleteMp2dh): Frame-removed in de bevestiglus is geen fout meer, de controle op de advertentiepagina beslist (404/410 = weg, 200 = "nog online" fout). Voor-en-na-proef: tests/mp-bevestigen-frame-weg-test.js, oude code (54eb1353) faalt, nieuwe slaagt.
+- OPEN: 1.0.434 (dist/omnivaleur-extension-1.0.434.zip, bevat ook 1.0.433) moet door Daniel naar de Web Store. Als de fout met 1.0.434 terugkomt, zat de breuk in een andere stap.
