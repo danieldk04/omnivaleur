@@ -19710,3 +19710,9 @@ Groepen zijn geclusterd (docs/facebook-groepsscan.md): resellers (eBay Resellers
 
 ## 21-11-2026: Platformcontrole (middag)
 - Vinted: 6 van 7 proefartikelen gedraaid (kinderen schoenen, meisjes kleding, sneakers dames, heren overhemden, babykleding meisjes, wonen wanddecoraties): alle stappen ok, geen afwijking (wonen: maat en merk NIET gelukt, artefact bij niet-kleding). Jongens kleding, Marktplaats en 2dehands NIET gedraaid: halverwege gaf raw.githubusercontent.com in Daniels Chrome overal 404 (vanaf de Mac 200, repo is publiek), dus de loader kon de echte code niet ophalen. Lokale server als omweg bleef hangen. Geen extensiefout. Morgen opnieuw; twee dagen achter elkaar zelfde probleem = melden.
+
+## 21-11-2026 (09:40, automatisch): Klantfouten
+- Drie fouten, alle drie niet in onze code, niets gerepareerd.
+- marktplaats delete (Esther 3eeceb51, spiegel rococo, 1 keer): de advertentie was pas 3 minuten oud (geplaatst 09:12, verwijderopdracht 09:15 door een herplaatsing). Op seller/view stond de koperspagina (Bieden, geen Verwijderen). Dezelfde route slaagde 90 keer bij haar sinds 17-11. Nu geeft de openbare pagina 404 (weg), en de herplaatsing staat gepland voor 11:46. Mechanisme niet bewezen (vermoeden: verse advertentie nog niet beheerbaar); open, alleen herhaling is reden voor actie.
+- marktplaats create tafellampen (Esther): betaalde rubriek, onze eigen betaalmuur-afhandeling deed wat hij moest. Klant-eigen.
+- vinted create (1ba42900, ring "Vergulde Zilver 925 Ring met Labgemaakte Steen", artikel caaafb27): artikel heeft geen maat (size leeg, niets in de tekst) en Vinted eist een ringmaat. Klant-eigen gegeven, geen maat gegokt. Open: ringmaat-standaard alleen als Daniel dat wil.
