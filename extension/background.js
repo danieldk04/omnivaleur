@@ -6466,7 +6466,20 @@ async function bgDeleteMp2dh(job, serverUrl) {
       // Dezelfde keuze als de route via de advertentiepagina, uit dezelfde
       // functie — daar zat het gat: twee lijstjes JA-woorden die uit elkaar
       // groeiden. Zie _bevestigInVenster.
-      const res = await execInTab(tabId, _bevestigInVenster, [BEVESTIG_JA_BRON, BEVESTIG_NEE_BRON]);
+      // DE PAGINA MAG ONDER ONS VERDWIJNEN (21-11-2026, 0b28c1ce). Na de
+      // bevestigklik ververst Marktplaats het overzicht; breekt Chrome ons
+      // script dan af met "Frame with ID 0 was removed", dan was de klik al
+      // gedaan (advertentie m2399104659 gaf daarna 404). Geen fout, maar door
+      // naar de controle op de advertentiepagina hieronder: die beslist.
+      let res;
+      try {
+        res = await execInTab(tabId, _bevestigInVenster, [BEVESTIG_JA_BRON, BEVESTIG_NEE_BRON]);
+      } catch (e) {
+        if (!/frame with id \d+ was removed|frame was removed/i.test(String(e?.message || e))) throw e;
+        console.log(`[Omnivaleur] bgDelete: pagina ververste tijdens het bevestigen van "${title}" — de controle beslist`);
+        await waitForTabLoad(tabId).catch(() => {});
+        break;
+      }
 
       if (!res || !res.open) break; // dialog gone — either answered, or none appeared
       if (!res.clicked) {
