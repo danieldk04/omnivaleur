@@ -4964,7 +4964,7 @@ function showView(name) {
   const navName = NAV_PARENT[name] || name;
   document.querySelector('.nav-item[data-view="' + navName + '"]')?.classList.add('active');
   target.querySelectorAll('.subtab').forEach(b => b.classList.toggle('active', b.dataset.sub === name));
-  const titles = { dashboard: 'Dashboard', items: 'Items', analytics: 'Analytics', berichten: 'Messages', calculator: 'Margin calculator', refresh: 'Refresh', import: 'Import listings', stale: 'Stale stock', help: 'Help', platforms: 'Platforms', preferences: 'Preferences', protections: 'Protections', prijs: 'Account', referral: 'Earn 1 month free', nieuw: "What's new", ai: 'AI assistant' };
+  const titles = { dashboard: 'Dashboard', items: 'Items', analytics: 'Analytics', berichten: 'Messages', calculator: 'Margin calculator', refresh: 'Refresh', import: 'Import listings', stale: 'Stale stock', help: 'Help', platforms: 'Platforms', preferences: 'Preferences', protections: 'Protections', prijs: 'Account', referral: 'Invite friends', nieuw: "What's new", ai: 'AI assistant' };
   document.getElementById('topbar-title').textContent = titles[name] || name;
   // The view is already on screen at this point, so a failing renderer can only
   // leave that one screen incomplete — never blank the app. Report it plainly
