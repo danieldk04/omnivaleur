@@ -4324,5 +4324,17 @@
  "Choose up to 5 photos from your computer. You get them back with the background colour above, ready to download. Nothing is added to your items.": "Kies maximaal 5 foto's van je computer. Je krijgt ze terug met de achtergrondkleur hierboven, klaar om te downloaden. Er wordt niets aan je artikelen toegevoegd.",
  "Upload photos": "Foto's uploaden",
  "That photo is too large. Maximum is 12 MB.": "Die foto is te groot. Maximaal 12 MB.",
- "That file could not be read as a photo.": "Dat bestand kon niet als foto gelezen worden."
+ "That file could not be read as a photo.": "Dat bestand kon niet als foto gelezen worden.",
+ "Pick a tool. You always see a preview first, nothing changes without your OK, and you can undo it.": "Kies een hulpmiddel. Je ziet altijd eerst een voorbeeld, er verandert niets zonder jouw akkoord en je kunt het ongedaan maken.",
+ "Change many items": "Veel artikelen tegelijk aanpassen",
+ "Prices and descriptions, with one sentence.": "Prijzen en omschrijvingen, met één zin.",
+ "Remove the background, choose a colour, or upload your own.": "Achtergrond weghalen, een kleur kiezen of je eigen foto's uploaden.",
+ "Say what should change": "Zeg wat er moet veranderen",
+ "Check the preview": "Bekijk het voorbeeld",
+ "Confirm, or undo later": "Bevestig, of maak later ongedaan",
+ "Choose a background colour": "Kies een achtergrondkleur",
+ "Pick items, or upload photos": "Kies artikelen, of upload foto's",
+ "Check before and after": "Bekijk voor en na",
+ "More AI tools are on the way. See what is ready, being built and being tested under": "Er komen meer AI-hulpmiddelen aan. Zie wat klaar is, in aanbouw is en getest wordt onder",
+ "{0} of {1} used this month": "{0} van {1} gebruikt deze maand"
 }

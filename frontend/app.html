@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=ae6c1f8e61"></script>
+<script src="/i18n.js?v=dfdfe5c8b2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -2671,8 +2671,25 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
       <div style="max-width:760px">
         <div class="view-header" style="margin-bottom:18px">
           <h1>AI assistant</h1>
-          <p>Change many items with one sentence. You always see a preview first and you can undo it with one click.</p>
+          <p>Pick a tool. You always see a preview first, nothing changes without your OK, and you can undo it.</p>
         </div>
+        <style>
+          .ai-tegel{display:flex;flex-direction:column;gap:3px;text-align:left;padding:12px 14px;border:2px solid var(--border,#e5e7eb);border-radius:12px;background:var(--surface,#fff);cursor:pointer;font:inherit;color:inherit}
+          .ai-tegel b{font-size:14.5px}
+          .ai-tegel span{font-size:12.5px;color:var(--muted);line-height:1.45}
+          .ai-tegel i{font-style:normal;font-size:12px;color:var(--muted);margin-top:2px}
+          .ai-tegel.on{border-color:#1d4ed8;background:#f3f7ff}
+          .ai-paneel{display:none}
+          .ai-paneel.on{display:block}
+          .ai-stappen{margin:0 0 12px;padding:0;list-style:none;display:flex;gap:6px 14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+          .ai-stappen b{display:inline-flex;width:18px;height:18px;border-radius:50%;background:#1d4ed8;color:#fff;font-size:11px;align-items:center;justify-content:center;margin-right:5px}
+        </style>
+        <div id="ai-kiezer" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:16px">
+          <button type="button" class="ai-tegel on" data-paneel="bulk" onclick="aiKies('bulk')"><b>Change many items</b><span>Prices and descriptions, with one sentence.</span><i id="ai-gebruikt-tegel-bulk"></i></button>
+          <button type="button" class="ai-tegel" data-paneel="foto" onclick="aiKies('foto')"><b>Photos</b><span>Remove the background, choose a colour, or upload your own.</span><i id="ai-gebruikt-tegel-foto"></i></button>
+        </div>
+        <div class="ai-paneel on" id="ai-paneel-bulk">
+        <ol class="ai-stappen"><li><b>1</b>Say what should change</li><li><b>2</b>Check the preview</li><li><b>3</b>Confirm, or undo later</li></ol>
         <div style="background:var(--surface,#fff);border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:16px">
           <label for="ai-opdracht" style="font-weight:600;display:block;margin-bottom:6px">What should change?</label>
           <input id="ai-opdracht" type="text" maxlength="400" style="width:100%;padding:10px;border:1px solid var(--border,#d1d5db);border-radius:8px" placeholder="For example: raise all prices by 10%">
@@ -2682,7 +2699,11 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           </div>
           <div id="ai-uitkomst" style="margin-top:14px"></div>
         </div>
-        <div style="background:var(--surface,#fff);border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:16px;margin-top:14px">
+        <div id="ai-ongedaan" style="margin-top:14px"></div>
+        </div>
+        <div class="ai-paneel" id="ai-paneel-foto">
+        <ol class="ai-stappen"><li><b>1</b>Choose a background colour</li><li><b>2</b>Pick items, or upload photos</li><li><b>3</b>Check before and after</li></ol>
+        <div style="background:var(--surface,#fff);border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:16px">
           <div style="font-weight:600;margin-bottom:4px">Remove the background of the first photo</div>
           <p style="margin:0 0 10px;color:var(--muted);font-size:14px">Select up to 10 items in My Items, choose a background colour and press the button. You see before and after first, and you can undo it. Listings that are already online keep their current photo.</p>
           <div style="margin-bottom:10px;font-size:14px">Background colour
@@ -2708,7 +2729,8 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
             <div id="ai-bg-upuit" style="margin-top:12px"></div>
           </div>
         </div>
-        <div id="ai-ongedaan" style="margin-top:14px"></div>
+        </div>
+        <p style="margin:18px 0 0;font-size:13px;color:var(--muted)">More AI tools are on the way. See what is ready, being built and being tested under <a href="#" onclick="showView('nieuw');return false">What's new</a>.</p>
       </div>
     </div><!-- /view-ai -->
 
@@ -4685,7 +4707,14 @@ async function aiToonKnop() {
     if (r.ok) document.getElementById('nav-ai').style.display = '';
   } catch (e) { /* geen AI-pakket: knop blijft weg */ }
 }
+function aiKies(naam) {
+  if (!document.getElementById('ai-paneel-' + naam)) naam = 'bulk';
+  document.querySelectorAll('.ai-paneel').forEach(p => p.classList.toggle('on', p.id === 'ai-paneel-' + naam));
+  document.querySelectorAll('.ai-tegel').forEach(t => t.classList.toggle('on', t.dataset.paneel === naam));
+  try { localStorage.setItem('ai-paneel', naam); } catch (e) { /* mag ontbreken */ }
+}
 async function aiLaad() {
+  try { aiKies(localStorage.getItem('ai-paneel') || 'bulk'); } catch (e) { aiKies('bulk'); }
   try {
     const r = await apiFetch(`${API}/api/ai-pakket/status`);
     if (!r.ok) { document.getElementById('ai-uitkomst').textContent = 'The AI assistant is not available for your account yet.'; return; }
@@ -4694,6 +4723,8 @@ async function aiLaad() {
     document.getElementById('ai-gebruikt').textContent = m ? `${g} of ${m} requests used this month` : '';
     const bg = (d.gebruikt || {}).achtergronden || 0, bm = (d.plafond || {}).achtergronden;
     document.getElementById('ai-bg-gebruikt').textContent = bm ? `${bg} of ${bm} photos used this month` : '';
+    document.getElementById('ai-gebruikt-tegel-bulk').textContent = m ? `${g} of ${m} used this month` : '';
+    document.getElementById('ai-gebruikt-tegel-foto').textContent = bm ? `${bg} of ${bm} photos used this month` : '';
   } catch (e) { /* stil */ }
 }
 let AI_BG_VOORBEELD = null, AI_BG_KLEUR = '#ffffff';
