@@ -19774,3 +19774,6 @@ Daniel schakelt over naar de andere ontwikkelaar en eiste dat alles 1000% gelijk
 
 ## 22-11-2026 15:50: twee gaten uit de synchronisatie gedicht, werkafspraak escaleren (Daniel)
 Taak `omnivaleur-kennisoverdracht-ochtend` aangemaakt op het hoofdaccount. `workspacemcp` gerepareerd: de LaunchAgent wees naar een map zonder .env; die staat in `Handige Scripts Mac/Video Editor/google-workspace-mcp`; plist aangepast, server draait (poort 8000). Extensie 1.0.434 is door Daniel geüpload, mail B was al verstuurd. Afspraak van Daniel: actiepunten alleen als het echt essentieel is en ik niet verder kan, liefst nul.
+
+## 22-11-2026 (avond, automatisch): kennisoverdracht
+- Kennisoverdracht 22-11: niets nieuws. Geen commits na 15:25, extensie 1.0.434, health ok (commit 1a750593), bijlagen buiten git identiek aan de bronnen.
