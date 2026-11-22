@@ -161,7 +161,13 @@ async def verwerk_ontvangen_mail(*, db, naast_de_lus, handle_item_sold, bewijs, 
                                  ontvangen_op: datetime | None = None) -> dict:
     """Eén doorgestuurde mail. Geeft altijd een korte uitkomst terug, boekt alleen bij zekerheid."""
     if not is_echt_van_vinted(van, authenticatie):
-        return {"uitkomst": "genegeerd", "reden": "niet_aantoonbaar_van_vinted"}
+        # Alleen metadata, nooit inhoud: wat de ontvangende server over deze mail zei.
+        m = re.search(r"@([a-z0-9.\-]+)", (van or "").lower())
+        auth = authenticatie if isinstance(authenticatie, dict) else None
+        return {"uitkomst": "genegeerd", "reden": "niet_aantoonbaar_van_vinted",
+                "afzender_domein": m.group(1) if m else None,
+                "authenticatie": ({k: auth.get(k) for k in ("dkim", "spf", "dmarc")} if auth is not None
+                                  else f"geen_veld({type(authenticatie).__name__})")}
     mail = lees_verkoopmail(onderwerp, tekst, html)
     if not mail:
         return {"uitkomst": "genegeerd", "reden": "geen_herkende_verkoopmail"}
