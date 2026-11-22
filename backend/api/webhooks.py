@@ -217,6 +217,8 @@ async def resend_webhook(request: Request):
 
     payload = json.loads(raw)
     data = payload.get("data") or {}
+    if payload.get("type") == "email.received":
+        return await _vinted_verkoopmail_ontvangen(data, payload)
     ontvangers = data.get("to") or []
     ontvanger = (ontvangers[0] if isinstance(ontvangers, list) and ontvangers
                  else (ontvangers if isinstance(ontvangers, str) else ""))
