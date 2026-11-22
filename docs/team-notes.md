@@ -19817,3 +19817,8 @@ Let op: GitHub kan oude commits nog een tijd tonen via hun hash; volledig weg is
 
 ## 22-11-2026: aanbod "webshop zonder koppeling" overal zichtbaar (Daniel)
 Zodat niemand denkt "dit werkt niet voor mij". Gedaan: koude mail A1 in de Sheet (tab Mailteksten, na de proefzin, je en jullie), oude rij bewaard in ~/.omnivaleur/herstel/mailtekst-A1-voor-22-11.json; dashboard Import-scherm kaart bovenaan plus Help-vraag; FAQ op /marketplaces en /nl/marketplaces; zin onder de koppelingen op /nl; brein bijgewerkt. Geen updatelog of popup (klein aanbod, geen nieuwe functie). Zin in de mail is voor elke lead gelijk ("Hebben jullie ook een webshop...").
+
+## 22-11-2026 (later), Vinted-verkoopmail: doorstuurregel actief op Daniels Vinted-mailbox
+* Gmail danielsclothingshop@gmail.com stuurt sinds nu elke mail van no-reply@vinted.nl met "verkocht" of "sold" in het onderwerp door naar Daniels persoonlijke adres (`vinted-<token>@kareutalo.resend.app`). Alleen nieuwe mails, geen oude. Resend ontving al een echte mail (Googles bevestiging): ontvangst bewezen.
+* NOG NIET GEMETEN: bij de eerstvolgende echte Vinted-verkoop: (1) staat de mail in Resend > Emails > Receiving, (2) is `authentication.dkim` = pass (zo niet: het systeem negeert de mail, dan werkt deze route niet voor Gmail-doorsturen), (3) meldt Railway-log `[vinted-mail] geboekt` of `genegeerd/overgeslagen` met reden, (4) klopt de boeking in het dashboard. Pas daarna klantbreed uitrollen (instructiekaart NL/EN, plaatsklaar-stand).
+* Let op bij die eerste mail: de Vinted-titels van Daniel beginnen met een eigen nummer "(623) ..."; klantentitels doen dat niet, dus titelgenoten bij klanten blijven de zwakke plek (dan boekt het systeem bewust niets).
