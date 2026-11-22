@@ -19774,3 +19774,9 @@ Daniel schakelt over naar de andere ontwikkelaar en eiste dat alles 1000% gelijk
 
 ## 22-11-2026 15:50: twee gaten uit de synchronisatie gedicht, werkafspraak escaleren (Daniel)
 Taak `omnivaleur-kennisoverdracht-ochtend` aangemaakt op het hoofdaccount. `workspacemcp` gerepareerd: de LaunchAgent wees naar een map zonder .env; die staat in `Handige Scripts Mac/Video Editor/google-workspace-mcp`; plist aangepast, server draait (poort 8000). Extensie 1.0.434 is door Daniel geüpload, mail B was al verstuurd. Afspraak van Daniel: actiepunten alleen als het echt essentieel is en ik niet verder kan, liefst nul.
+
+## 22-11-2026: eerste sessie nieuwe ontwikkelaar (cloudsessie, Claude)
+Gelezen: overdracht.md (laatste sectie 22-11), team-notes tot 22-11, commits tot 1a75059. Extensie in git 1.0.434 (Daniel: geüpload, mail B verstuurd). Vastgepind gesprek "Auto-reacties" niet aangeraakt; geen vlaggen aangezet, geen aankondiging gestuurd.
+- Omgeving: dit is een cloudcontainer. Geen `.env`, geen Supabase-sleutel, `omnivaleur.com` geeft 403 van de proxy (host niet toegestaan). Dus geen databasemetingen, geen `/health`, geen klantfoutenronde mogelijk. Per overdracht stap 2: niet doorgaan met database-werk zonder sleutel.
+- Taak `omnivaleur-kennisoverdracht-avond` aangemaakt (dagelijks 22:25 Amsterdam, alleen repo-deel). De taken `onboarding-middag` en `klantfouten-middagronde` NIET aangemaakt: ze kunnen hier niets doen zonder sleutel en netwerk, en zouden alleen een rommelige foutronde opleveren. Aanmaken zodra sleutel en host er zijn.
+- Niet gecontroleerd: wie op de Mac `klantfouten-middagronde` en `onboarding-middag` nu draait.
