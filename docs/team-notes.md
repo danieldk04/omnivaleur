@@ -19790,3 +19790,13 @@ Taak `omnivaleur-kennisoverdracht-ochtend` aangemaakt op het hoofdaccount. `work
 
 ## 22-11-2026: X weer open, onder veiligheidsblok (Daniel)
 Daniel heft de X-pauze van 18-11 op en wil niet geblokkeerd worden. Besluit: veiligheidsblok bovenaan data/social/ronde-prompt.txt (kopie in bijlagen-buiten-git/social/). Noodrem x-stop.txt, voorcontrole op locked/suspended/verificatie, insluipen 1 per dag (dag 1-3), 2 (dag 4-7), daarna 3; nooit meer dan 1 per ronde; geen likes, volgen, herplaatsen of scripts om te plaatsen; geen Omnivaleur noemen op X de eerste 14 dagen; nacontrole of de reactie zichtbaar blijft. Eerlijk: 100% veilig bestaat niet, X kan elk account blokkeren dat automatisch reageert. De reden van de pauze van 18-11 is niet vastgelegd.
+
+## 22-11-2026, Vinted compliant: verkoopherkenning via de verkoopmail (backend klaar, nog niet aan)
+Aanleiding: Vinted verbiedt externe software op het account. Een verkoop herkennen zonder Vinted aan te raken kan via de mail die Vinted de verkoper zelf stuurt. Klant zet een doorstuurregel naar een persoonlijk adres `vinted-<24 hex>@<id>.resend.app` (Resend Receiving, geen DNS nodig).
+* `backend/services/vinted_verkoopmail.py`: leest alleen NL en EN (twee echte mails van Daniel, 30-10 en 21-11), boekt alleen bij DKIM pass + Vinted-afzender + precies één actieve Vinted-advertentie met die titel (prijs beslist alleen bij titelgenoten, nooit bij een bod). Bewijs = BEWIJS_KANAAL_ZEGT_VERKOCHT, met de echte prijs. Naam en adres van de koper worden nooit bewaard.
+* Ontvangst: `email.received` in de bestaande `/api/webhooks/resend`, adres per klant via `GET /api/vinted-mail/adres` (token in platform_credentials, platform `vinted_mail`, geen migratie nodig).
+* Extra bron: de bestaande scan blijft draaien; bij elke twijfel wordt de mail genegeerd.
+* Staat UIT zolang `VINTED_INBOUND_DOMAIN` leeg is. Aanzetten kan pas na: webhook-event `email.received` in Resend, domein invullen in Railway, en een proef met een echte doorgestuurde mail (nog nooit live gemeten: overleeft de DKIM-handtekening de doorstuurregel, en mag Resends sleutel de ontvangen mail lezen).
+* Nog te doen: instructiekaart in het dashboard (NL en EN; Gmail vraagt een bevestigingscode) en de "plaatsklaar maken"-stand.
+* Les: echte koperadressen uit screenshots nooit in testbestanden zetten, de repo is openbaar. Eerste versie van tests/test_vinted_verkoopmail.py (commits 80c4f3e3, 4aa94224) bevatte er twee; verwijderd uit de huidige stand, de historie nog niet.
+* Tests: tests/test_vinted_verkoopmail.py (23).
