@@ -19765,3 +19765,6 @@ Groepen zijn geclusterd (docs/facebook-groepsscan.md): resellers (eBay Resellers
 - Esther (3eeceb51): actief op 1.0.432, 208 MP actief, 120 Vinted, proef tot 24-11 07:36 zonder betaalmethode. Vinted-scans falen elk half uur (laatste 22-11 08:18, "Could not find your logged-in Vinted account"): ze is bij Vinted uitgelogd en heeft Vinted NIET losgekoppeld (kanalen_uit leeg). Gevolg: een verkoop op Vinted wordt niet gezien. Klant-eigen, al zo beoordeeld door de klantfoutenrondes. Daniel had 20-11 21:25 contact, dus briefing voor Daniel, geen mailtje.
 - Dylan (c0570d1b) en Jurre (5cf1e617, proef om 22-11 19:01): niets veranderd, geen tweede mailtje. Demo-account 8faba317: computer uit sinds 17-11.
 - Niets gerepareerd, geen code gewijzigd.
+
+## 22-11-2026, Vinted-voorwaarden gelezen na vraag in Facebook-groep
+Marlon (Vinted NL/BE) zei dat Vinted verbiedt om spullen ook elders aan te bieden. Officiële voorwaarden gelezen: dat staat er niet. Wel staat er een verbod op externe softwaretools (bots, scrapers) tenzij Vinted het toestaat, en op bulk verwijderen en opnieuw plaatsen. Dat raakt Omnivaleur en is een open risico, geen reden tot actie vandaag. Antwoord aan Marlon beperkt tot wat zeker is. Zie docs/facebook-actueel.md.

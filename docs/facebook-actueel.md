@@ -17,7 +17,7 @@ Vinted
 - Onbevestigd (Glossy, citeert FT van 16-11): Vinted zou een aandelenverkoop overwegen. Geen verkopersregel, niet als feit noemen.
 - Nieuwe voorwaarden bevatten ook nieuwe regels over namaakartikelen en accountmaatregelen (Value Added Resource).
 - Onbevestigd, één bron (Glossy, begin november): Britse gebruikers klagen over een maatwijziging gekoppeld aan de Amerikaanse markt. Niet als feit noemen.
-- Onbevestigd, alleen een commerciële blog (Crosslist, 16-11 opnieuw gezien; geen officiële Vinted-bron): de voorwaarden zouden apps van derden en bulk-herplaatsen verbieden. Zeg dit nooit als feit.
+- Voorwaarden van Vinted zelf gelezen op 22-11-2026 (vinted.co.uk/terms-and-conditions en vinted.nl): (1) niets verbiedt hetzelfde artikel ook op een ander platform aan te bieden; (2) verboden zijn externe softwaretools zoals bots en scrapers 'tenzij Vinted het toestaat of aanbiedt', en het verwijderen en opnieuw plaatsen van hetzelfde artikel of artikelen in bulk; (3) hetzelfde artikel twee keer op Vinted zelf is verboden (help/62). Zeg tegen mensen alleen (1), en over (2) nooit meer dan dat je het niet zeker weet.
 
 Marktplaats en 2dehands
 - Marktplaats' gebruiksvoorwaarden gelden in nieuwe versie sinds 22 juli 2026. Inhoud van de wijziging niet gevonden.
