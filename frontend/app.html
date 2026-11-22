@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=17cb80c8b8"></script>
+<script src="/i18n.js?v=3209cfa089"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1070,17 +1070,16 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           <div style="width:58px;height:58px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.25);font-size:32px"><img src="/assets/site/mark.png" alt="" width="44" height="24"></div>
           <div>
             <div style="font-size:11px;font-weight:900;opacity:.85">What's new</div>
-            <div id="nieuws-titel" style="font-size:24px;font-weight:900;letter-spacing:-.4px;line-height:1.15">What is coming: friends rewards, new plans, Etsy and AI</div>
+            <div id="nieuws-titel" style="font-size:24px;font-weight:900;letter-spacing:-.4px;line-height:1.15">All your Vinted choices, in one place</div>
           </div>
         </div>
       </div>
       <div style="padding:20px 28px 22px">
-        <div style="font-size:14px;color:#15284b;line-height:1.6;margin-bottom:14px">Invite sellers you know and unlock the new features first. From 1 January 2027 you also choose a plan that fits how many items you have active.</div>
+        <div style="font-size:14px;color:#15284b;line-height:1.6;margin-bottom:14px">Vinted's terms do not allow external tools, and Vinted watches for them. So we put everything about Vinted on one page, and you decide how you want to use it.</div>
         <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
-          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-up"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>Invite friends.</b> Every paying friend takes &euro;10 off your invoice each month. With 3 friends you unlock the AI package, with 5 friends Ultra.</div></div>
-          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-list"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>Four plans.</b> Light, Pro, Plus and Ultra, monthly or yearly with 2 months free.</div></div>
-          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-refresh"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>Etsy is upcoming.</b> It will be part of Ultra as soon as Etsy approves the connection.</div></div>
-          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-clock"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>An AI package in Ultra.</b> Change all prices with one sentence, shorter titles, and more that we are testing.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-list"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>New tab: Vinted.</b> You find it under Preferences. Refreshing and relisting, translation and condition for Vinted now live there.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-refresh"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>Your choice, any time.</b> Connect or disconnect Vinted under Platforms. Your other channels are not affected.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-clock"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>Nothing changes for you today.</b> Everything keeps working as before. Only the place of these settings moved.</div></div>
         </div>
         <div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:16px">Read the details under <a href="#" onclick="sluitNieuws();showView('nieuw');return false">What's new</a> in the menu, together with everything we built so far.</div>
         <!-- Knoppen blijven onderin staan, ook als de lijst op een telefoon moet scrollen. -->
@@ -1100,6 +1099,12 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
        waarvan het doel niet in beeld is (telefoon, lege lijst) wordt overgeslagen.
        De teksten staan hier als HTML, zodat de vertaallaag ze vindt. -->
   <div id="rondleiding-stappen" hidden>
+    <section data-tour="vinted-tabblad">
+    <div data-view="vinted" data-doel="#view-vinted .view-header"><b>New: the tab Vinted.</b> Everything about how Omnivaleur works with Vinted is on this page, under Preferences.</div>
+    <div data-view="vinted" data-doel="#view-vinted .vg-chip"><b>Refreshing and relisting.</b> Off unless you switch it on. Translation and condition for Vinted are right below it.</div>
+    <div data-view="vinted" data-doel="#vinted-platforms-link"><b>Want to stop, or start?</b> Connect or disconnect Vinted under Platforms. Your other channels keep running.</div>
+    <div data-view="dashboard" data-doel=".nav-item[data-view='nieuw']">All our updates live here, newest first. Come back any time.</div>
+    </section>
     <section data-tour="plannen-en-ai">
     <div data-view="nieuw" data-doel="#komt-eraan-vrienden"><b>Invite friends.</b> Every paying friend takes money off your invoice. With 3 friends you unlock the AI package, with 5 friends Ultra.</div>
     <div data-view="referral" data-doel="#referral-body"><b>Your link.</b> Copy your personal link here and see how far you are on the steps.</div>
@@ -1781,7 +1786,7 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           while your computer is on. Whether you use Vinted through Omnivaleur is your own decision, and these settings are how you stay in control.
         </div>
         <div style="font-size:12.5px;color:var(--muted);line-height:1.6">
-          <b>Not on Vinted yet, or want to stop?</b> Connect or disconnect Vinted under <a href="#" onclick="showView('platforms');return false">Platforms</a>.
+          <b>Not on Vinted yet, or want to stop?</b> Connect or disconnect Vinted under <a id="vinted-platforms-link" href="#" onclick="showView('platforms');return false">Platforms</a>.
           Your listings on the other channels are not affected.
         </div>
       </div>
@@ -2880,6 +2885,13 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           <button class="upd-chip" data-cat="plans" onclick="filterUpdates('plans')">Plans</button>
         </div>
         <div class="upd-lijst" id="upd-lijst">
+                <article class="upd upd-nieuw" data-id="2026-11-vinted-tabblad" data-datum="2026-11-22" data-cat="channels">
+          <div class="upd-punt"></div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Channels</span></div>
+          <h3>All your Vinted choices in one place</h3>
+          <p>Under Preferences there is a new tab, Vinted. Vinted's terms do not allow external tools and Vinted watches for them, so everything about how Omnivaleur works with Vinted now sits on one page: refreshing and relisting, translation, condition, and where to connect or disconnect Vinted. Nothing changes in how things work today. Only the place of these settings moved.</p>
+          <div class="upd-acties"><button class="btn btn-sm btn-ghost" onclick="startRondleiding('vinted-tabblad')">Show me in my dashboard</button></div>
+        </article>
                 <article class="upd upd-nieuw" data-id="2026-11-webshop-inlezen" data-datum="2026-11-22" data-cat="channels">
           <div class="upd-punt"></div>
           <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Channels</span></div>
@@ -6593,9 +6605,9 @@ async function toonImportSeintje() {
 // nieuws_gezien, dus ook op een andere computer) én in deze browser (voor als
 // de server even niet bereikbaar is). Nooit tonen zolang de instellingen niet
 // binnen zijn: dan weten we niet of hij hem al zag.
-const NIEUWS_ID = '2026-11-vrienden-plannen-ai';
-const NIEUWS_TOUR = 'plannen-en-ai';
-const NIEUWS_SINDS = '2026-11-20';
+const NIEUWS_ID = '2026-11-vinted-tabblad';
+const NIEUWS_TOUR = 'vinted-tabblad';
+const NIEUWS_SINDS = '2026-11-22';
 let _nieuwsGetoond = false;
 function _nieuwsAlGezien() {
   if ((state.settings || {}).nieuws_gezien === NIEUWS_ID) return true;
