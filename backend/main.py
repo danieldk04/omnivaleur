@@ -121,6 +121,8 @@ app.include_router(beheer.router)
 app.include_router(tracking.router)
 app.include_router(referrals.router)
 app.include_router(mail_verbinding.router)
+from backend.api import vinted_mail  # noqa: E402
+app.include_router(vinted_mail.router)
 app.include_router(i18n.router)
 app.include_router(account.router)
 app.include_router(bronfotos.router)
