@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=f6ed86bf6f"></script>
+<script src="/i18n.js?v=17cb80c8b8"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1668,7 +1668,7 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
     </div>
 
     <div id="view-protections" class="view">
-      <div class="subtabs" data-groep="voorkeuren"><button class="subtab" data-sub="preferences" onclick="showView('preferences')">Settings</button><button class="subtab" data-sub="protections" onclick="showView('protections')">Automatic protections</button></div>
+      <div class="subtabs" data-groep="voorkeuren"><button class="subtab" data-sub="preferences" onclick="showView('preferences')">Settings</button><button class="subtab" data-sub="protections" onclick="showView('protections')">Automatic protections</button><button class="subtab" data-sub="vinted" onclick="showView('vinted')">Vinted</button></div>
       <div class="view-header">
         <h1>Automatic protections</h1>
         <p>Omnivaleur handles these issues automatically — you don't have to do anything.</p>
@@ -1760,6 +1760,107 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
     </div>
 
     <!-- ── REFRESH VIEW ─────────────────────────────────────────────── -->
+    <!-- ── VINTED VIEW (22-11-2026, Daniel): alles over Vinted op één plek.
+         Vinted verbiedt in zijn voorwaarden externe software, dus de verkoper moet
+         hier in één oogopslag zien hoe Omnivaleur met Vinted werkt en waar elke
+         keuze zit. Deze schakelaars stonden verspreid onder "Upkeep" en de
+         kanaalinstellingen; hun id's zijn gelijk gebleven, dus de opslagcode is
+         dezelfde. -->
+    <div id="view-vinted" class="view">
+      <div class="subtabs" data-groep="voorkeuren"><button class="subtab" data-sub="preferences" onclick="showView('preferences')">Settings</button><button class="subtab" data-sub="protections" onclick="showView('protections')">Automatic protections</button><button class="subtab" data-sub="vinted" onclick="showView('vinted')">Vinted</button></div>
+      <div class="view-header">
+        <h1>Vinted</h1>
+        <p>Everything about how Omnivaleur works with Vinted, in one place. You can change every choice below at any time.</p>
+      </div>
+
+      <div style="background:var(--card,#fff);border:1px solid var(--border,#d0d8e1);border-radius:8px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:4px">How Omnivaleur works with Vinted</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          Vinted is a marketplace for private sellers. Its terms of use do not allow external tools, and Vinted watches for them.
+          Omnivaleur therefore never logs in to Vinted from a server: everything on Vinted happens in your own Chrome, with your own login,
+          while your computer is on. Whether you use Vinted through Omnivaleur is your own decision, and these settings are how you stay in control.
+        </div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6">
+          <b>Not on Vinted yet, or want to stop?</b> Connect or disconnect Vinted under <a href="#" onclick="showView('platforms');return false">Platforms</a>.
+          Your listings on the other channels are not affected.
+        </div>
+      </div>
+
+      <div style="background:var(--card,#fff);border:1px solid var(--border,#d0d8e1);border-radius:8px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:4px">Refreshing, relisting and language</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">The choices that decide how often and how Omnivaleur touches your Vinted listings.</div>
+        <label class="vg-chip" style="max-width:420px;margin-bottom:6px">
+          <input type="checkbox" id="vinted-herplaatsen-aan" onchange="saveVintedHerplaatsen()">
+          <span>Allow refreshing and relisting on Vinted (at my own risk)</span>
+        </label>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          Off by default. Vinted's terms since 5 October 2026 forbid using external tools and deleting and re-adding the same item.
+          Breaking them can get your Vinted account warned, restricted or blocked.
+          If you switch it on, a Vinted listing is refreshed at most once every 28 days, and a relist takes it down and brings it back 6 to 24 hours later.
+        </div>
+        <label class="vg-chip" style="max-width:420px;margin-bottom:6px">
+          <input type="checkbox" id="vinted-engels-aan" onchange="saveVintedTaal()">
+          <span>Translate my Vinted listings into English</span>
+        </label>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          Off by default: your title and description go to Vinted exactly as you wrote them.
+          Switch it on to have them translated into English, for buyers across Europe. Applies to new listings.
+          Marktplaats and 2dehands always get Dutch.
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+          <label for="vinted-staat" style="font-size:13px">Condition on Vinted</label>
+          <select id="vinted-staat" onchange="saveVintedStaat()" style="max-width:260px">
+            <option value="">Same as the item</option>
+            <option value="new_with_tags">Always: New with tags</option>
+            <option value="new">Always: New without tags</option>
+            <option value="good">Always: Very good</option>
+            <option value="fair">Always: Good</option>
+            <option value="poor">Always: Satisfactory</option>
+          </select>
+        </div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          Pick one condition for every new Vinted listing, whatever the item says. Your items themselves stay as they are,
+          and Marktplaats and 2dehands keep using the item's own condition.
+        </div>
+        <span id="vinted-status" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+
+      <div style="background:var(--card,#fff);border:1px solid var(--border,#d0d8e1);border-radius:8px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:4px">Footer text on Vinted</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          Vinted does not allow a link to your own website or a phone number in a listing. You can give Vinted a different closing text than the other channels.
+          That choice lives in <a href="#" onclick="showView('preferences');return false">Settings</a>, under "On Vinted".
+        </div>
+      </div>
+
+      <div id="vinted-mail-kaart" style="display:none;background:var(--card,#fff);border:1px solid var(--border,#d0d8e1);border-radius:8px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:4px">Notice sales through your email</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          Vinted emails you every time something sells. Forward only those emails to your personal Omnivaleur address, and Omnivaleur takes the item down on your other channels without ever looking at Vinted itself.
+          Nothing else of your mail is read. The buyer's name and address are never stored.
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+          <input id="vinted-mail-adres" type="text" readonly style="flex:1;min-width:260px;padding:8px 10px;border:1px solid var(--border,#d0d8e1);border-radius:8px;font:inherit;font-size:13px" translate="no">
+          <button class="btn btn-sm btn-primary" onclick="kopieerVintedMailAdres()">Copy address</button>
+          <span id="vinted-mail-status" style="font-size:12px;color:var(--muted)"></span>
+        </div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6">
+          <b>Gmail:</b> Settings, Forwarding and POP/IMAP, add the address above and confirm it. Then create a filter for mail from <span translate="no">no-reply@vinted.nl</span>
+          with "sold" or "verkocht" in the subject and choose "Forward it to" your Omnivaleur address. Do not forward all your mail.
+        </div>
+      </div>
+
+      <div style="background:var(--card,#fff);border:1px solid var(--border,#d0d8e1);border-radius:8px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:4px">Where do I find what?</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.8">
+          Connect or disconnect Vinted: <a href="#" onclick="showView('platforms');return false">Platforms</a><br>
+          Allow refreshing and relisting, translation, condition: on this page<br>
+          Footer text for Vinted: <a href="#" onclick="showView('preferences');return false">Settings</a>, "On Vinted"<br>
+          Which categories go to Vinted: <a href="#" onclick="showView('preferences');return false">Settings</a>, "What goes where"
+        </div>
+      </div>
+    </div>
+
     <!-- Alles wat de verkoper zélf invult staat hier bij elkaar, in de volgorde
          waarin het ertoe doet: eerst wat Marktplaats verplicht stelt (zonder dat
          plaatst hij niet), dan hoe er geleverd wordt, dan het onderhoud, en als
@@ -1767,7 +1868,7 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
          over Refresh en Platforms — vier invulvelden tussen uitleg over
          quota's en risico's, waar niemand ze zocht. -->
     <div id="view-preferences" class="view">
-      <div class="subtabs" data-groep="voorkeuren"><button class="subtab" data-sub="preferences" onclick="showView('preferences')">Settings</button><button class="subtab" data-sub="protections" onclick="showView('protections')">Automatic protections</button></div>
+      <div class="subtabs" data-groep="voorkeuren"><button class="subtab" data-sub="preferences" onclick="showView('preferences')">Settings</button><button class="subtab" data-sub="protections" onclick="showView('protections')">Automatic protections</button><button class="subtab" data-sub="vinted" onclick="showView('vinted')">Vinted</button></div>
       <div class="view-header">
         <h1>Preferences</h1>
         <p>Everything you fill in yourself, in one place. These settings apply to every listing Omnivaleur publishes or relists for you.</p>
@@ -2094,39 +2195,6 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           <input type="checkbox" id="auto-relist-aan" onchange="saveAutoRelist()">
           <span>Relist my Marktplaats listings automatically</span>
         </label>
-        <label class="vg-chip" style="max-width:420px;margin-bottom:6px">
-          <input type="checkbox" id="vinted-herplaatsen-aan" onchange="saveVintedHerplaatsen()">
-          <span>Allow refreshing and relisting on Vinted (at my own risk)</span>
-        </label>
-        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
-          Off by default. Vinted's terms since 5 October 2026 forbid using external tools and deleting and re-adding the same item.
-          Breaking them can get your Vinted account warned, restricted or blocked.
-          If you switch it on, a Vinted listing is refreshed at most once every 28 days, and a relist takes it down and brings it back 6 to 24 hours later.
-        </div>
-        <label class="vg-chip" style="max-width:420px;margin-bottom:6px">
-          <input type="checkbox" id="vinted-engels-aan" onchange="saveVintedTaal()">
-          <span>Translate my Vinted listings into English</span>
-        </label>
-        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
-          Off by default: your title and description go to Vinted exactly as you wrote them.
-          Switch it on to have them translated into English, for buyers across Europe. Applies to new listings.
-          Marktplaats and 2dehands always get Dutch.
-        </div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
-          <label for="vinted-staat" style="font-size:13px">Condition on Vinted</label>
-          <select id="vinted-staat" onchange="saveVintedStaat()" style="max-width:260px">
-            <option value="">Same as the item</option>
-            <option value="new_with_tags">Always: New with tags</option>
-            <option value="new">Always: New without tags</option>
-            <option value="good">Always: Very good</option>
-            <option value="fair">Always: Good</option>
-            <option value="poor">Always: Satisfactory</option>
-          </select>
-        </div>
-        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
-          Pick one condition for every new Vinted listing, whatever the item says. Your items themselves stay as they are,
-          and Marktplaats and 2dehands keep using the item's own condition.
-        </div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <label for="relist-dagen" style="font-size:13px">Relist after</label>
           <input type="number" id="relist-dagen" min="7" max="85" step="1" style="max-width:90px">
@@ -4725,7 +4793,7 @@ function calcMargin() {
 // Sub-views die geen eigen nav-item hebben, maar onder een ouder vallen. Sinds de
 // opruimronde van 09-10-2026 zijn dat er drie; ze staan als tabblad bovenin het
 // scherm van hun ouder (.subtabs), en het menu-item van de ouder licht op.
-const NAV_PARENT = { stale: 'refresh', calculator: 'analytics', protections: 'preferences' };
+const NAV_PARENT = { stale: 'refresh', calculator: 'analytics', protections: 'preferences', vinted: 'preferences' };
 
 // ── AI-assistent: bulkopdracht (voorbeeld, bevestigen, ongedaan) ──────────────
 let AI_VOORBEELD = null, AI_ONGEDAAN = null;
@@ -4974,7 +5042,7 @@ function showView(name) {
   const navName = NAV_PARENT[name] || name;
   document.querySelector('.nav-item[data-view="' + navName + '"]')?.classList.add('active');
   target.querySelectorAll('.subtab').forEach(b => b.classList.toggle('active', b.dataset.sub === name));
-  const titles = { dashboard: 'Dashboard', items: 'Items', analytics: 'Analytics', berichten: 'Messages', calculator: 'Margin calculator', refresh: 'Refresh', import: 'Import listings', stale: 'Stale stock', help: 'Help', platforms: 'Platforms', preferences: 'Preferences', protections: 'Protections', prijs: 'Account', referral: 'Invite friends', nieuw: "What's new", ai: 'AI assistant' };
+  const titles = { dashboard: 'Dashboard', items: 'Items', analytics: 'Analytics', berichten: 'Messages', calculator: 'Margin calculator', refresh: 'Refresh', import: 'Import listings', stale: 'Stale stock', help: 'Help', platforms: 'Platforms', preferences: 'Preferences', protections: 'Protections', vinted: 'Vinted', prijs: 'Account', referral: 'Invite friends', nieuw: "What's new", ai: 'AI assistant' };
   document.getElementById('topbar-title').textContent = titles[name] || name;
   // The view is already on screen at this point, so a failing renderer can only
   // leave that one screen incomplete — never blank the app. Report it plainly
@@ -14934,6 +15002,7 @@ async function loadRelistDagen() {
       vintedSchakel.checked = data.vinted_herplaatsen === true;
       vintedSchakel.closest('.vg-chip').classList.toggle('on', vintedSchakel.checked);
     }
+    if (typeof laadVintedMailKaart === 'function') laadVintedMailKaart();
     const taalSchakel = document.getElementById('vinted-engels-aan');
     if (taalSchakel) {
       taalSchakel.checked = data.vinted_taal === 'en';
@@ -15457,7 +15526,7 @@ async function saveFabrikant() {
 // precies het soort ding waarvan je later denkt dat je hem hebt omgezet.
 async function saveVintedHerplaatsen() {
   const schakel = document.getElementById('vinted-herplaatsen-aan');
-  const melding = document.getElementById('relist-dagen-status');
+  const melding = document.getElementById('vinted-status') || document.getElementById('relist-dagen-status');
   if (!schakel) return;
   if (schakel.checked && !confirm("Vinted's terms forbid external tools and deleting and re-adding the same item. Your Vinted account can be warned, restricted or blocked. Switch it on anyway?")) {
     schakel.checked = false;
@@ -15482,9 +15551,39 @@ async function saveVintedHerplaatsen() {
   }
 }
 
+
+// Persoonlijk adres voor doorgestuurde Vinted-verkoopmails (22-11-2026). De server
+// geeft het alleen aan wie het mag zien; krijgt het scherm iets anders dan een adres,
+// dan blijft de kaart gewoon verborgen en merkt niemand iets.
+async function laadVintedMailKaart() {
+  const kaart = document.getElementById('vinted-mail-kaart');
+  const veld = document.getElementById('vinted-mail-adres');
+  if (!kaart || !veld || veld.value) return;
+  try {
+    const r = await apiFetchRetry(`${API}/api/vinted-mail/adres`);
+    if (!r.ok) return;
+    const data = await parseJsonSafe(r);
+    if (!data || !data.adres) return;
+    veld.value = data.adres;
+    kaart.style.display = '';
+  } catch (_) { /* kaart blijft verborgen */ }
+}
+async function kopieerVintedMailAdres() {
+  const veld = document.getElementById('vinted-mail-adres');
+  const status = document.getElementById('vinted-mail-status');
+  if (!veld || !veld.value) return;
+  try {
+    await navigator.clipboard.writeText(veld.value);
+    status.textContent = 'Copied.';
+  } catch (_) {
+    veld.select();
+    status.textContent = 'Press Ctrl+C (or Cmd+C) to copy.';
+  }
+}
+
 async function saveVintedTaal() {
   const schakel = document.getElementById('vinted-engels-aan');
-  const melding = document.getElementById('relist-dagen-status');
+  const melding = document.getElementById('vinted-status') || document.getElementById('relist-dagen-status');
   if (!schakel) return;
   schakel.closest('.vg-chip').classList.toggle('on', schakel.checked);
   melding.textContent = 'Saving…';
@@ -15510,7 +15609,7 @@ async function saveVintedTaal() {
 // server zet hem vlak voor het plaatsen, zie instellingen.VINTED_STAAT.
 async function saveVintedStaat() {
   const keuze = document.getElementById('vinted-staat');
-  const melding = document.getElementById('relist-dagen-status');
+  const melding = document.getElementById('vinted-status') || document.getElementById('relist-dagen-status');
   if (!keuze) return;
   melding.textContent = 'Saving…';
   try {

@@ -169,6 +169,9 @@ class Settings(BaseSettings):
     # "abc123.resend.app" (Resend > Emails > Receiving > Receiving address). Leeg =
     # de functie staat uit en klanten krijgen geen adres (docs/team-notes.md, 22-11-2026).
     vinted_inbound_domain: str = ""
+    # Tot de eerste echte doorgestuurde Vinted-mail gemeten is (DKIM pass) ziet alleen de
+    # eigenaar de kaart en het adres. Zet op true om alle klanten het te laten zien.
+    vinted_mail_open_voor_klanten: bool = False
     # Waar antwoorden van klanten binnenkomen. Uitgaand heet alles Omnivaleur,
     # maar de postbus die Daniel daadwerkelijk leest is een andere.
     reply_to_email: str = "info@omnivaleur.com"
