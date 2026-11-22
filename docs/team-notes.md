@@ -19759,3 +19759,9 @@ Groepen zijn geclusterd (docs/facebook-groepsscan.md): resellers (eBay Resellers
 - Bijvangst: bij 96e30080 (8) en 26cf5471 (3) hangen twee LIVE Marktplaats-advertenties met dezelfde titel aan één artikel (beide 200). Een verkoop haalt ze allebei weg, dus geen dubbelverkoop, maar het zijn dubbele advertenties. c2f4538f en 6e0fe673 (beide proef sinds 16-11) delen advertentie m2436403198: vermoedelijk één persoon met twee accounts.
 - Shopify-tweelingen: Esther 1 paar gekoppeld (Brabantia Diane blik, foto's identiek, zelfde prijs; Shopify-kandidaat nu linked aan het Vinted-artikel 73b6047e; logboek ~/.omnivaleur/herstel/shopify_tweelingen_3eeceb51_20261122_0834.jsonl). Overige klanten alleen terecht overgeslagen paren.
 - Steekproef live: Marktplaats m2468584048 en 2dehands m2468585030 (19deaa3a, Suitsupply polo's) en Vinted 10913789217 (Errico Formicola overhemd): rubriek, staat, maat, merk, kleur, prijs en foto's kloppen; bieden aan klopt met zijn instelling "aan".
+
+## 22-11-2026: Onboarding nieuwe klanten (ochtend)
+- 4 accounts in de eerste week, 0 nieuw. Web Store levert 1.0.432, repo 1.0.434 (wacht op upload). Mailrapport: 3 mails, 1 echt geopend (Dylan), 0 klik, 0 antwoord, 0 actie daarna. Geen nieuwe vrienden behalve Voordeelsieraden (bewust, besluit 21-11).
+- Esther (3eeceb51): actief op 1.0.432, 208 MP actief, 120 Vinted, proef tot 24-11 07:36 zonder betaalmethode. Vinted-scans falen elk half uur (laatste 22-11 08:18, "Could not find your logged-in Vinted account"): ze is bij Vinted uitgelogd en heeft Vinted NIET losgekoppeld (kanalen_uit leeg). Gevolg: een verkoop op Vinted wordt niet gezien. Klant-eigen, al zo beoordeeld door de klantfoutenrondes. Daniel had 20-11 21:25 contact, dus briefing voor Daniel, geen mailtje.
+- Dylan (c0570d1b) en Jurre (5cf1e617, proef om 22-11 19:01): niets veranderd, geen tweede mailtje. Demo-account 8faba317: computer uit sinds 17-11.
+- Niets gerepareerd, geen code gewijzigd.
