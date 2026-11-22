@@ -308,3 +308,12 @@ def test_mail_zonder_dkim_via_het_ontvangstpunt_boekt_niets(monkeypatch):
     nep = dict(MAIL, authentication={"dkim": "gray"})
     r, boekingen = _aanroep(monkeypatch, mail=nep, tabellen=_Tabellen(CREDS, ITEMS, ACTIEF))
     assert r.status_code == 200 and boekingen == []
+
+
+def test_genegeerde_mail_meldt_wat_de_server_zei_zonder_inhoud():
+    r, boekingen = _draai(ITEMS, ACTIEF, authenticatie={"dkim": "gray", "spf": "pass"}, van="Google <forwarding-noreply@google.com>")
+    assert r["afzender_domein"] == "google.com"
+    assert r["authenticatie"] == {"dkim": "gray", "spf": "pass", "dmarc": None}
+    assert "Voorbeeld" not in str(r) and boekingen == []
+    r2, _ = _draai(ITEMS, ACTIEF, authenticatie=None)
+    assert r2["authenticatie"].startswith("geen_veld")
