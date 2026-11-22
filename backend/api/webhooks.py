@@ -242,7 +242,8 @@ async def _vinted_verkoopmail_ontvangen(data: dict, payload: dict) -> dict:
             bewijs=BEWIJS_KANAAL_ZEGT_VERKOCHT, user_id=rij[0]["user_id"],
             onderwerp=mail.get("subject"), van=mail.get("from"), tekst=mail.get("text"),
             html=mail.get("html"), authenticatie=mail.get("authentication"), ontvangen_op=ontvangen)
-        logger.info("[vinted-mail] %s (%s)", uitkomst.get("uitkomst"), uitkomst.get("reden"))
+        logger.info("[vinted-mail] %s (%s) afzender=%s authenticatie=%s", uitkomst.get("uitkomst"),
+                    uitkomst.get("reden"), uitkomst.get("afzender_domein"), uitkomst.get("authenticatie"))
         return {"status": "ok", "uitkomst": uitkomst.get("uitkomst")}
     except Exception as e:  # noqa: BLE001 — een mislukte extra bron mag nooit de rest raken
         logger.warning("[vinted-mail] verwerking mislukt: %s", e)
