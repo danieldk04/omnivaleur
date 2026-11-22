@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=3209cfa089"></script>
+<script src="/i18n.js?v=b5eb8f97f7"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -1070,16 +1070,16 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           <div style="width:58px;height:58px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.25);font-size:32px"><img src="/assets/site/mark.png" alt="" width="44" height="24"></div>
           <div>
             <div style="font-size:11px;font-weight:900;opacity:.85">What's new</div>
-            <div id="nieuws-titel" style="font-size:24px;font-weight:900;letter-spacing:-.4px;line-height:1.15">All your Vinted choices, in one place</div>
+            <div id="nieuws-titel" style="font-size:24px;font-weight:900;letter-spacing:-.4px;line-height:1.15">A safer way to use Vinted: ready to post</div>
           </div>
         </div>
       </div>
       <div style="padding:20px 28px 22px">
-        <div style="font-size:14px;color:#15284b;line-height:1.6;margin-bottom:14px">Vinted's terms do not allow external tools, and Vinted watches for them. So we put everything about Vinted on one page, and you decide how you want to use it.</div>
+        <div style="font-size:14px;color:#15284b;line-height:1.6;margin-bottom:14px">Vinted's terms do not allow external tools, and Vinted watches for them. So you now have a safer choice: let Omnivaleur prepare everything, and paste it into Vinted yourself.</div>
         <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
-          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-list"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>New tab: Vinted.</b> You find it under Preferences. Refreshing and relisting, translation and condition for Vinted now live there.</div></div>
-          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-refresh"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>Your choice, any time.</b> Connect or disconnect Vinted under Platforms. Your other channels are not affected.</div></div>
-          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-clock"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>Nothing changes for you today.</b> Everything keeps working as before. Only the place of these settings moved.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-list"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>New: Ready to post.</b> Under Preferences, Vinted, you choose how Omnivaleur works with Vinted. In Ready to post it never touches Vinted: you get the title, description, price and photos with copy buttons.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-refresh"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>Want to relist or post on Vinted automatically?</b> That is the other choice on the same page, "Automatic in my Chrome". Refreshing and relisting have their own switch there.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><span style="font-size:22px;color:var(--blue)"><svg class="ic" aria-hidden="true"><use href="#ic-clock"/></svg></span><div style="font-size:13.5px;line-height:1.5"><b>Nothing changes unless you choose it.</b> Everything keeps working as before until you pick Ready to post.</div></div>
         </div>
         <div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:16px">Read the details under <a href="#" onclick="sluitNieuws();showView('nieuw');return false">What's new</a> in the menu, together with everything we built so far.</div>
         <!-- Knoppen blijven onderin staan, ook als de lijst op een telefoon moet scrollen. -->
@@ -1099,6 +1099,12 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
        waarvan het doel niet in beeld is (telefoon, lege lijst) wordt overgeslagen.
        De teksten staan hier als HTML, zodat de vertaallaag ze vindt. -->
   <div id="rondleiding-stappen" hidden>
+    <section data-tour="vinted-plaatsklaar">
+    <div data-view="vinted" data-doel="#vinted-modus-extensie"><b>Two ways to work with Vinted.</b> Automatic in your own Chrome, as it always worked, or Ready to post. Your choice, any time.</div>
+    <div data-view="vinted" data-doel="#vinted-modus-plaatsklaar"><b>Ready to post is the safest.</b> Omnivaleur never touches Vinted. It prepares everything and you paste it yourself.</div>
+    <div data-view="vinted" data-doel="#vinted-platforms-link"><b>Want to stop completely?</b> Connect or disconnect Vinted under Platforms. Your other channels keep running.</div>
+    <div data-view="dashboard" data-doel=".nav-item[data-view='nieuw']">All our updates live here, newest first. Come back any time.</div>
+    </section>
     <section data-tour="vinted-tabblad">
     <div data-view="vinted" data-doel="#view-vinted .view-header"><b>New: the tab Vinted.</b> Everything about how Omnivaleur works with Vinted is on this page, under Preferences.</div>
     <div data-view="vinted" data-doel="#view-vinted .vg-chip"><b>Refreshing and relisting.</b> Off unless you switch it on. Translation and condition for Vinted are right below it.</div>
@@ -1789,6 +1795,33 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           <b>Not on Vinted yet, or want to stop?</b> Connect or disconnect Vinted under <a id="vinted-platforms-link" href="#" onclick="showView('platforms');return false">Platforms</a>.
           Your listings on the other channels are not affected.
         </div>
+      </div>
+
+      <div style="background:var(--card,#fff);border:2px solid var(--blue,#0649c7);border-radius:8px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:4px">How should Omnivaleur work with Vinted?</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">Pick the way that suits you. You can switch at any time, and your other channels are not affected.</div>
+        <label class="vg-chip" id="vinted-modus-extensie" style="max-width:640px;margin-bottom:6px;align-items:flex-start">
+          <input type="radio" name="vinted-modus" value="extensie" onchange="zetVintedModus('extensie')">
+          <span><b>Automatic in my Chrome</b> (how it has always worked)<br>
+            <span style="font-size:12.5px;color:var(--muted)">Omnivaleur places, changes, removes and reads your Vinted listings through the extension, in your own browser. Vinted's terms do not allow external tools, so this can get your Vinted account warned or blocked. It is your own choice.</span></span>
+        </label>
+        <label class="vg-chip" id="vinted-modus-plaatsklaar" style="max-width:640px;margin-bottom:6px;align-items:flex-start">
+          <input type="radio" name="vinted-modus" value="plaatsklaar" onchange="zetVintedModus('plaatsklaar')">
+          <span><b>Ready to post: I paste it myself</b> (safest)<br>
+            <span style="font-size:12.5px;color:var(--muted)">Omnivaleur never touches Vinted. For each item it prepares the title, description, price and photos with copy buttons, and you paste them on Vinted yourself. Sales are noticed through your Vinted emails. Refreshing and relisting on Vinted are off in this mode.</span></span>
+        </label>
+        <span id="vinted-modus-status" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+
+      <div id="vinted-klaar-kaart" style="display:none;background:var(--card,#fff);border:1px solid var(--border,#d0d8e1);border-radius:8px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:4px">Ready to post</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          Search an item, press Prepare, copy each part and paste it into Vinted's "Sell an item" page. Then press "I posted it", so Omnivaleur knows the item is on Vinted.
+        </div>
+        <input id="vinted-zoek" type="text" placeholder="Search your items" oninput="zoekVintedArtikel()" style="width:100%;max-width:420px;padding:8px 10px;border:1px solid var(--border,#d0d8e1);border-radius:8px;font:inherit;font-size:13px;margin-bottom:8px">
+        <div id="vinted-zoekresultaat" style="margin-bottom:14px"></div>
+        <div style="font-weight:600;margin-bottom:6px">To do on Vinted</div>
+        <div id="vinted-taken" style="font-size:13px"></div>
       </div>
 
       <div style="background:var(--card,#fff);border:1px solid var(--border,#d0d8e1);border-radius:8px;padding:16px 18px;margin-bottom:16px">
@@ -2885,6 +2918,13 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
           <button class="upd-chip" data-cat="plans" onclick="filterUpdates('plans')">Plans</button>
         </div>
         <div class="upd-lijst" id="upd-lijst">
+                <article class="upd upd-nieuw" data-id="2026-11-vinted-plaatsklaar" data-datum="2026-11-22" data-cat="channels">
+          <div class="upd-punt"></div>
+          <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Channels</span></div>
+          <h3>Vinted: ready to post, the safest way</h3>
+          <p>Vinted's terms do not allow external tools. Under Preferences, Vinted, you can now choose Ready to post: Omnivaleur never touches Vinted, and prepares the title, description, price and photos with copy buttons for you to paste yourself. Items that sell elsewhere show up in a list to remove from Vinted. Prefer the automatic way in your own Chrome, with refreshing and relisting? That stays available on the same page, and nothing changes unless you choose it.</p>
+          <div class="upd-acties"><button class="btn btn-sm btn-ghost" onclick="startRondleiding('vinted-plaatsklaar')">Show me in my dashboard</button></div>
+        </article>
                 <article class="upd upd-nieuw" data-id="2026-11-vinted-tabblad" data-datum="2026-11-22" data-cat="channels">
           <div class="upd-punt"></div>
           <div class="upd-meta"><span class="upd-datum"></span><span class="upd-cat">Channels</span></div>
@@ -3514,6 +3554,16 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
 </div>
 
 <!-- REFRESH MODAL (strategy + optional price drop for relist) -->
+<div id="modal-vinted-pakket" class="modal-overlay" style="display:none" onclick="closeOnOverlay(event,'modal-vinted-pakket')">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Prepare for Vinted</h3>
+      <button class="close-btn" onclick="closeModal('modal-vinted-pakket')">×</button>
+    </div>
+    <div class="modal-body" id="vinted-pakket-inhoud"></div>
+  </div>
+</div>
+
 <div id="modal-refresh" class="modal-overlay" style="display:none" onclick="closeOnOverlay(event,'modal-refresh')">
   <div class="modal">
     <div class="modal-header">
@@ -6605,8 +6655,8 @@ async function toonImportSeintje() {
 // nieuws_gezien, dus ook op een andere computer) én in deze browser (voor als
 // de server even niet bereikbaar is). Nooit tonen zolang de instellingen niet
 // binnen zijn: dan weten we niet of hij hem al zag.
-const NIEUWS_ID = '2026-11-vinted-tabblad';
-const NIEUWS_TOUR = 'vinted-tabblad';
+const NIEUWS_ID = '2026-11-vinted-plaatsklaar';
+const NIEUWS_TOUR = 'vinted-plaatsklaar';
 const NIEUWS_SINDS = '2026-11-22';
 let _nieuwsGetoond = false;
 function _nieuwsAlGezien() {
@@ -15019,6 +15069,7 @@ async function loadRelistDagen() {
       vintedSchakel.closest('.vg-chip').classList.toggle('on', vintedSchakel.checked);
     }
     if (typeof laadVintedMailKaart === 'function') laadVintedMailKaart();
+    if (typeof toonVintedModus === 'function') toonVintedModus(data.vinted_modus);
     const taalSchakel = document.getElementById('vinted-engels-aan');
     if (taalSchakel) {
       taalSchakel.checked = data.vinted_taal === 'en';
@@ -15595,6 +15646,136 @@ async function kopieerVintedMailAdres() {
     veld.select();
     status.textContent = 'Press Ctrl+C (or Cmd+C) to copy.';
   }
+}
+
+// ---- Vinted: stand "plaatsklaar" (22-11-2026) ----
+// De server doet het zware werk: in deze stand krijgt de extensie geen Vinted-opdracht
+// en geen scan (instellingen.VINTED_MODUS). Hier staat alleen de keuze en het pakket.
+function toonVintedModus(modus) {
+  const m = modus === 'plaatsklaar' ? 'plaatsklaar' : 'extensie';
+  document.getElementsByName('vinted-modus').forEach(r => {
+    r.checked = r.value === m;
+    r.closest('.vg-chip').classList.toggle('on', r.checked);
+  });
+  const kaart = document.getElementById('vinted-klaar-kaart');
+  if (kaart) kaart.style.display = m === 'plaatsklaar' ? '' : 'none';
+  if (m === 'plaatsklaar') laadVintedTaken();
+}
+async function zetVintedModus(modus) {
+  const melding = document.getElementById('vinted-modus-status');
+  if (modus === 'extensie' && !confirm("Vinted's terms do not allow external tools. With this choice Omnivaleur works on Vinted through the extension in your own browser again, and your Vinted account can be warned or blocked. Switch to automatic anyway?")) {
+    toonVintedModus(state.settings && state.settings.vinted_modus);
+    return;
+  }
+  melding.textContent = 'Saving…';
+  try {
+    const r = await apiFetchRetry(`${API}/api/items/settings`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vinted_modus: modus }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+    state.settings = { ...state.settings, ...data };
+    toonVintedModus(data.vinted_modus);
+    melding.textContent = data.vinted_modus === 'plaatsklaar'
+      ? 'Saved. Omnivaleur no longer touches Vinted. Prepare your items below.'
+      : 'Saved. Omnivaleur works on Vinted through your extension again.';
+  } catch (e) {
+    melding.textContent = `Could not save: ${e.message}`;
+    toonVintedModus(state.settings && state.settings.vinted_modus);
+  }
+}
+function zoekVintedArtikel() {
+  const q = (document.getElementById('vinted-zoek').value || '').trim().toLowerCase();
+  const uit = document.getElementById('vinted-zoekresultaat');
+  if (q.length < 2) { uit.innerHTML = ''; return; }
+  const treffers = (state.items || []).filter(i => (i.title || '').toLowerCase().includes(q)).slice(0, 8);
+  uit.innerHTML = treffers.length ? treffers.map(i =>
+    `<div style="display:flex;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border,#d0d8e1)"><span style="flex:1;font-size:13px">${esc(i.title)}</span><button class="btn btn-sm btn-primary" onclick="openVintedPakket('${i.id}')">Prepare</button></div>`).join('')
+    : '<div style="font-size:12.5px;color:var(--muted)">No items found.</div>';
+}
+async function laadVintedTaken() {
+  const uit = document.getElementById('vinted-taken');
+  if (!uit) return;
+  try {
+    const r = await apiFetchRetry(`${API}/api/vinted-klaar/taken`);
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error();
+    const werk = { create: 'Post on Vinted', delete: 'Remove from Vinted (sold elsewhere)', edit: 'Change on Vinted' };
+    uit.innerHTML = (data.taken || []).length ? data.taken.map(t =>
+      `<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border,#d0d8e1);flex-wrap:wrap"><span style="flex:1;min-width:200px"><b>${werk[t.actie] || t.actie}:</b> ${esc(t.titel)}</span>`
+      + (t.actie === 'create' ? `<button class="btn btn-sm btn-outline" onclick="openVintedPakket('${t.item_id}')">Prepare</button>` : '')
+      + `<button class="btn btn-sm btn-primary" onclick="vintedTaakKlaar('${t.job_id}')">Done</button></div>`).join('')
+      : '<div style="font-size:12.5px;color:var(--muted)">Nothing to do on Vinted right now. When an item sells elsewhere, it shows up here so you can remove it from Vinted.</div>';
+  } catch (_) {
+    uit.innerHTML = '<div style="font-size:12.5px;color:var(--muted)">The list could not be loaded. Try again in a moment.</div>';
+  }
+}
+async function vintedTaakKlaar(jobId) {
+  try {
+    const r = await apiFetchRetry(`${API}/api/vinted-klaar/taak/${jobId}/klaar`, { method: 'POST' });
+    if (!r.ok) throw new Error();
+  } catch (_) { alert('Could not save that. Try again in a moment.'); }
+  laadVintedTaken();
+}
+const VINTED_STAAT_NAAM = { new_with_tags: 'New with tags', new: 'New without tags', good: 'Very good', fair: 'Good', poor: 'Satisfactory' };
+async function openVintedPakket(itemId) {
+  const doos = document.getElementById('vinted-pakket-inhoud');
+  doos.innerHTML = '<p>Loading…</p>';
+  document.getElementById('modal-vinted-pakket').style.display = 'flex';
+  try {
+    const r = await apiFetchRetry(`${API}/api/vinted-klaar/pakket/${itemId}`);
+    const p = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(p.detail || `HTTP ${r.status}`);
+    window._vintedPakket = p;
+    const rij = (naam, id, waarde, hoog) => `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><b style="font-size:13px">${naam}</b><button class="btn btn-sm btn-outline" onclick="kopieerVintedVeld('${id}',this)">Copy</button></div><textarea id="${id}" readonly rows="${hoog}" style="width:100%;padding:8px 10px;border:1px solid var(--border,#d0d8e1);border-radius:8px;font:inherit;font-size:13px;resize:vertical">${esc(waarde)}</textarea></div>`;
+    const staat = VINTED_STAAT_NAAM[p.staat] || p.staat || '';
+    const details = [p.merk && `Brand: ${p.merk}`, p.maat && `Size: ${p.maat}`, staat && `Condition: ${staat}`, p.kleur && `Colour: ${p.kleur}`].filter(Boolean).join(' · ');
+    doos.innerHTML =
+      '<div style="font-size:12.5px;color:var(--muted);line-height:1.55;margin-bottom:12px">Open Vinted\'s "Sell an item" page in another tab, then copy each part below and paste it there.</div>'
+      + rij('Title', 'vp-titel', p.titel, 2)
+      + rij('Description', 'vp-tekst', p.omschrijving, 7)
+      + rij('Price', 'vp-prijs', p.prijs == null ? '' : String(p.prijs), 1)
+      + (details ? `<div style="font-size:12.5px;margin-bottom:12px">${esc(details)}</div>` : '')
+      + (p.fotos.length ? `<div style="margin-bottom:12px"><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${p.fotos.map(u => `<img src="${esc(u)}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:6px">`).join('')}</div><button class="btn btn-sm btn-primary" onclick="downloadVintedFotos('${p.item_id}',this)">Download photos (zip)</button></div>` : '')
+      + `<div style="border-top:1px solid var(--border,#d0d8e1);padding-top:12px"><div style="font-size:12.5px;color:var(--muted);margin-bottom:6px">When it is online on Vinted, paste its link here (optional) and press the button.</div><input id="vp-url" type="text" placeholder="https://www.vinted.nl/items/..." value="${esc(p.vinted_url || '')}" style="width:100%;padding:8px 10px;border:1px solid var(--border,#d0d8e1);border-radius:8px;font:inherit;font-size:13px;margin-bottom:8px"><button class="btn btn-sm btn-primary" onclick="vintedGeplaatst('${p.item_id}',this)">I posted it</button> <span id="vp-status" style="font-size:12px;color:var(--muted)"></span></div>`;
+  } catch (e) {
+    doos.innerHTML = `<p>Could not prepare this item: ${esc(e.message)}</p>`;
+  }
+}
+async function kopieerVintedVeld(id, knop) {
+  const v = document.getElementById(id);
+  try { await navigator.clipboard.writeText(v.value); knop.textContent = 'Copied'; }
+  catch (_) { v.select(); knop.textContent = 'Press Ctrl+C'; }
+  setTimeout(() => { knop.textContent = 'Copy'; }, 2500);
+}
+async function downloadVintedFotos(itemId, knop) {
+  knop.disabled = true;
+  try {
+    const r = await apiFetch(`${API}/api/vinted-klaar/fotos/${itemId}`);
+    if (!r.ok) { const d = await parseJsonSafe(r); throw new Error(d.detail || `HTTP ${r.status}`); }
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'vinted-photos.zip';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  } catch (e) { alert(`Could not download the photos: ${e.message}`); }
+  knop.disabled = false;
+}
+async function vintedGeplaatst(itemId, knop) {
+  const st = document.getElementById('vp-status');
+  knop.disabled = true; st.textContent = 'Saving…';
+  try {
+    const r = await apiFetchRetry(`${API}/api/vinted-klaar/geplaatst/${itemId}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: document.getElementById('vp-url').value.trim() }),
+    });
+    const d = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(d.detail || `HTTP ${r.status}`);
+    st.textContent = d.url_bewaard ? 'Saved. This item now counts as on Vinted.' : 'Saved. This item now counts as on Vinted (no valid Vinted link was filled in, which is fine).';
+    laadVintedTaken();
+  } catch (e) { st.textContent = `Could not save: ${e.message}`; }
+  knop.disabled = false;
 }
 
 async function saveVintedTaal() {

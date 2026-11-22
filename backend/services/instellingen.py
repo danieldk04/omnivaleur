@@ -316,10 +316,19 @@ BIEDEN_STANDAARD_KEUZES = ("volg", "aan")
 # voor een oude extensiekopie. Wat al online staat blijft staan; wachtend werk blijft
 # wachten en gaat verder zodra hij weer koppelt.
 KANALEN_UIT = "kanalen_uit"
+
+# VINTED PLAATSKLAAR (22-11-2026, Daniel): Vinted verbiedt externe tools op het account.
+# "extensie" (standaard, zoals het altijd was) laat de extensie plaatsen, wijzigen,
+# verwijderen en lezen. "plaatsklaar" raakt Vinted nooit meer aan: Omnivaleur maakt de
+# advertentie klaar (tekst, foto's, kopieerknoppen) en de verkoper plakt zelf. Server-
+# kant: in deze stand telt Vinted als losgekoppeld voor opdrachten en scans, zonder dat
+# de verkoper het kanaal hoeft los te koppelen (kanalen_uit zelf blijft ongemoeid).
+VINTED_MODUS = "vinted_modus"
+VINTED_MODI = ("extensie", "plaatsklaar")
 KANALEN_UIT_GELDIG = ("marktplaats", "2dehands", "vinted", "facebook")
 
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, KANALEN_UIT: [], "vinted_groepen": [],
-             "auto_relist": True, RELIST_MOMENT: None, "vinted_herplaatsen": False, VERKOOPVRAAG: True, WEBSHOP_MET_RUST: False, VERZENDING_2DH_WOORDEN: [],
+             "auto_relist": True, RELIST_MOMENT: None, "vinted_herplaatsen": False, VINTED_MODUS: "extensie", VERKOOPVRAAG: True, WEBSHOP_MET_RUST: False, VERZENDING_2DH_WOORDEN: [],
              VERZENDING_2DH_BRIEF_ONDER: 0, VERZENDING_2DH_MODUS: "standaard",
              "fabrikant_naam": "", "fabrikant_adres": "", "fabrikant_email": "",
              FABRIKANT_MEESTUREN: True,
@@ -356,6 +365,8 @@ def _schoon(rauw: dict | None) -> dict:
     # Daarom staat herplaatsen op Vinted standaard UIT en kost het een bewuste klik.
     if "vinted_herplaatsen" in rauw:
         uit["vinted_herplaatsen"] = bool(rauw.get("vinted_herplaatsen"))
+    if rauw.get(VINTED_MODUS) in VINTED_MODI:
+        uit[VINTED_MODUS] = rauw[VINTED_MODUS]
     if isinstance(rauw.get(KANALEN_UIT), list):
         uit[KANALEN_UIT] = [k for k in KANALEN_UIT_GELDIG if k in rauw[KANALEN_UIT]]
     gezien = rauw.get(NIEUWS_GEZIEN)
@@ -575,16 +586,24 @@ def vinted_herplaatsen_toegestaan(user_id: str) -> bool:
     Bij twijfel NEE: lukt het lezen van de instelling niet, dan blijft het uit.
     Dit is het enige antwoord waar elk herplaatspad op Vinted langs moet."""
     try:
-        return lees(user_id).get("vinted_herplaatsen", False) is True
+        inst = lees(user_id)
+        if inst.get(VINTED_MODUS) == "plaatsklaar":
+            return False
+        return inst.get("vinted_herplaatsen", False) is True
     except Exception as e:  # noqa: BLE001
         logger.warning("vinted_herplaatsen niet gelezen voor %s: %s", user_id, e)
         return False
 
 
 def kanalen_uit(user_id: str) -> list[str]:
-    """De kanalen die deze verkoper heeft losgekoppeld."""
+    """De kanalen die geen enkele opdracht of scan krijgen: losgekoppeld, of Vinted in
+    de stand plaatsklaar. Bij twijfel (instelling onleesbaar) blijft alles zoals het was."""
     try:
-        return list(lees(user_id).get(KANALEN_UIT) or [])
+        inst = lees(user_id)
+        uit = list(inst.get(KANALEN_UIT) or [])
+        if inst.get(VINTED_MODUS) == "plaatsklaar" and "vinted" not in uit:
+            uit.append("vinted")
+        return uit
     except Exception as e:  # noqa: BLE001
         logger.warning("kanalen_uit niet gelezen voor %s: %s", user_id, e)
         return []
@@ -594,7 +613,18 @@ def kanaal_uit(user_id: str, platform: str | None) -> bool:
     return bool(platform) and platform in kanalen_uit(user_id)
 
 
-def kanaal_uit_melding(platform: str) -> str:
+def vinted_plaatsklaar(user_id: str) -> bool:
+    try:
+        return lees(user_id).get(VINTED_MODUS) == "plaatsklaar"
+    except Exception as e:  # noqa: BLE001
+        logger.warning("vinted_modus niet gelezen voor %s: %s", user_id, e)
+        return False
+
+
+def kanaal_uit_melding(platform: str, user_id: str | None = None) -> str:
+    if platform == "vinted" and user_id and vinted_plaatsklaar(user_id):
+        return ("Vinted is in ready-to-post mode, so Omnivaleur does not touch Vinted. "
+                "Go to Preferences, Vinted, search the item and press Prepare to copy everything, then post it yourself.")
     naam = {"marktplaats": "Marktplaats", "2dehands": "2dehands", "vinted": "Vinted",
             "facebook": "Facebook Marketplace"}.get(platform, platform)
     return (f"{naam} is disconnected, so nothing is placed or changed there. "

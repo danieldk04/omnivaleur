@@ -86,7 +86,7 @@ def test_scan_op_vinted_wordt_geweigerd_in_plaatsklaar(monkeypatch):
 
 def test_melding_wijst_naar_het_pakket(monkeypatch):
     _zet(monkeypatch, vinted_modus="plaatsklaar")
-    assert "Prepare for Vinted" in inst.kanaal_uit_melding("vinted", "u")
+    assert "press Prepare" in inst.kanaal_uit_melding("vinted", "u")
     _zet(monkeypatch)
     assert "disconnected" in inst.kanaal_uit_melding("vinted", "u")
 

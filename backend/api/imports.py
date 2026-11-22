@@ -3025,6 +3025,10 @@ def start_scan(platform: str, background_tasks: BackgroundTasks,
         return _start_server_scan(user_id, background_tasks, "woocommerce")
     if platform not in SCANNABLE_PLATFORMS:
         raise HTTPException(status_code=400, detail=f"Scanning isn't available for {platform}")
+    # Een losgekoppeld kanaal (of Vinted in de stand plaatsklaar) wordt niet gescand.
+    from backend.services import instellingen as _inst_scan
+    if _inst_scan.kanaal_uit(user_id, platform):
+        raise HTTPException(status_code=409, detail=_inst_scan.kanaal_uit_melding(platform, user_id))
     db = get_db()
     # The extension now also triggers Vinted scans autonomously on a timer; avoid
     # piling up duplicate scan jobs (and opening a second tab) if one is already

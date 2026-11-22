@@ -1595,7 +1595,7 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     _uit = _inst_uit.kanalen_uit(user_id)
     if _uit:
         results += [{"platform": p, "status": "blocked",
-                     "error": _inst_uit.kanaal_uit_melding(p)}
+                     "error": _inst_uit.kanaal_uit_melding(p, user_id)}
                     for p in platforms if p in _uit]
         platforms = [p for p in platforms if p not in _uit]
 
