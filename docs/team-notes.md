@@ -19800,3 +19800,6 @@ Aanleiding: Vinted verbiedt externe software op het account. Een verkoop herkenn
 * Nog te doen: instructiekaart in het dashboard (NL en EN; Gmail vraagt een bevestigingscode) en de "plaatsklaar maken"-stand.
 * Les: echte koperadressen uit screenshots nooit in testbestanden zetten, de repo is openbaar. Eerste versie van tests/test_vinted_verkoopmail.py (commits 80c4f3e3, 4aa94224) bevatte er twee; verwijderd uit de huidige stand, de historie nog niet.
 * Tests: tests/test_vinted_verkoopmail.py (23).
+
+## 22-11-2026: X toch niet automatisch (Daniel)
+Pauze van 18-11 kwam doordat X twijfelde of Daniel een bot was. Onderzoek in X' regels (help.x.com Automation rules, docs.x.com developer-guidelines): browserautomatisering van de website kan permanente blokkade geven, reageren op zoekwoord-treffers en door AI geschreven reacties zijn niet toegestaan zonder toestemming. Menselijk tempo verandert dat niet. Besluit: de ronde komt niet meer op x.com, concepten alleen als Daniel een post plakt, hij typt zelf. Het eerdere veiligheidsblok van dezelfde dag is vervallen. Bluesky en Indie Hackers hebben hun eigen regels en zijn hier niet voor beoordeeld.
