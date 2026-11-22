@@ -496,6 +496,8 @@
   const FAQ = [
     ["Getting started", "Do I need an account on every marketplace?",
       "Yes. Omnivaleur doesn't create adverts under its own name: it publishes <b>as you</b>, on your own accounts. For Marktplaats, 2dehands, Vinted and Facebook you sign in once in the Chrome where the extension runs. eBay, Shopify and WooCommerce you connect once under <b>Platforms</b>."],
+    ["Getting started", "My webshop isn't on Shopify or WooCommerce. Can I still use Omnivaleur?",
+      "Yes. There is no direct link with other webshop systems such as JouwWeb, Wix or Magento, but we read your shop in for you at no extra cost: titles, prices, descriptions and photos of everything that is for sale. Create your account, then email us your shop address or your product export, and your items show up in your dashboard, ready to publish on the other marketplaces. One thing to know: when something sells on another marketplace, you remove it from your own webshop yourself, because we can't reach into those systems. Questions? Email info@omnivaleur.com."],
     ["Getting started", "What does “Uses your Chrome login” on Platforms mean?",
       "That this marketplace works through your own login in Chrome, not through a separate link with Omnivaleur. It does not mean you're signed in. If Omnivaleur notices you're not, the card says <b>Not signed in</b>, and a bar on the dashboard tells you too."],
     ["Getting started", "I clicked the marketplace icons: is my item published now?",
