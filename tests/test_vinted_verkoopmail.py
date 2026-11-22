@@ -201,8 +201,9 @@ def test_advertentie_al_niet_meer_actief_boekt_niets():
 
 
 def test_geen_artikel_met_die_titel_boekt_niets():
-    uitkomst, boekingen = _draai([ITEMS[1]], ACTIEF)
-    assert boekingen == []
+    # De advertentie is wel actief, alleen de titel hoort bij een ander artikel.
+    uitkomst, boekingen = _draai([ITEMS[1]], [{"item_id": "i2"}])
+    assert uitkomst["reden"] == "geen_actieve_advertentie_met_deze_titel" and boekingen == []
 
 
 def test_twee_identieke_titels_boekt_niets():
