@@ -317,3 +317,22 @@ def test_genegeerde_mail_meldt_wat_de_server_zei_zonder_inhoud():
     assert "Voorbeeld" not in str(r) and boekingen == []
     r2, _ = _draai(ITEMS, ACTIEF, authenticatie=None)
     assert r2["authenticatie"].startswith("geen_veld")
+
+
+def test_eigenaar_krijgt_mail_bij_doorgestuurde_vinted_mail(monkeypatch):
+    verstuurd = []
+    import backend.services.email as em
+    monkeypatch.setattr(em, "send_email", lambda onderwerp, tekst, **k: verstuurd.append((onderwerp, tekst)) or True)
+    monkeypatch.setattr(wh.settings, "vinted_mail_open_voor_klanten", False)
+    r, boekingen = _aanroep(monkeypatch, mail=MAIL, tabellen=_Tabellen(CREDS, ITEMS, ACTIEF))
+    assert len(verstuurd) == 1 and verstuurd[0][0] == "Vinted verkoopmail doorgestuurd: geboekt"
+    assert "dkim" in verstuurd[0][1] and "Voorbeeld" not in verstuurd[0][1] and " - " not in verstuurd[0][1]
+    # Een mail van een ander (Google): geen melding.
+    verstuurd.clear()
+    r, _ = _aanroep(monkeypatch, mail=dict(MAIL, **{"from": "Google <forwarding-noreply@google.com>"}),
+                    tabellen=_Tabellen(CREDS, ITEMS, ACTIEF))
+    assert verstuurd == []
+    # Open voor klanten: nooit meer meldingen aan Daniel.
+    monkeypatch.setattr(wh.settings, "vinted_mail_open_voor_klanten", True)
+    r, _ = _aanroep(monkeypatch, mail=MAIL, tabellen=_Tabellen(CREDS, ITEMS, ACTIEF))
+    assert verstuurd == []

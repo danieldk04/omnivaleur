@@ -244,6 +244,24 @@ async def _vinted_verkoopmail_ontvangen(data: dict, payload: dict) -> dict:
             html=mail.get("html"), authenticatie=mail.get("authentication"), ontvangen_op=ontvangen)
         logger.info("[vinted-mail] %s (%s) afzender=%s authenticatie=%s", uitkomst.get("uitkomst"),
                     uitkomst.get("reden"), uitkomst.get("afzender_domein"), uitkomst.get("authenticatie"))
+        # Zolang alleen de eigenaar dit adres heeft (de meting nog loopt) krijgt Daniel een
+        # mail bij elke doorgestuurde mail van Vinted, met precies wat de server zag. Zo hoeft
+        # niemand logboeken na te kijken om te weten of de route werkt.
+        if vm.afzender_is_vinted(mail.get("from")) and not settings.vinted_mail_open_voor_klanten:
+            import asyncio
+            from backend.services.email import send_email
+            auth = mail.get("authentication")
+            auth = {k: auth.get(k) for k in ("dkim", "spf", "dmarc")} if isinstance(auth, dict) else "veld ontbreekt"
+            tekst = (
+                "Er is een doorgestuurde mail van Vinted binnengekomen op je Omnivaleur-adres.\n\n"
+                f"Uitkomst: {uitkomst.get('uitkomst')}\n"
+                f"Reden: {uitkomst.get('reden')}\n"
+                f"Handtekening zoals de ontvangende server die zag: {auth}\n\n"
+                "Betekenis: bij uitkomst geboekt werkt de route en kan hij naar klanten. "
+                "Staat bij de handtekening iets anders dan pass voor dkim, dan overleeft de handtekening het "
+                "doorsturen niet en is deze route zo niet bruikbaar. Bij overgeslagen klopte de handtekening "
+                "maar was er geen eenduidig artikel te vinden.")
+            await asyncio.to_thread(send_email, "Vinted verkoopmail doorgestuurd: " + str(uitkomst.get("uitkomst")), tekst)
         return {"status": "ok", "uitkomst": uitkomst.get("uitkomst")}
     except Exception as e:  # noqa: BLE001 — een mislukte extra bron mag nooit de rest raken
         logger.warning("[vinted-mail] verwerking mislukt: %s", e)
