@@ -19825,3 +19825,6 @@ Zodat niemand denkt "dit werkt niet voor mij". Gedaan: koude mail A1 in de Sheet
 
 ## 22-11-2026: voorwaarden inleesservice vastgelegd (Daniel, ja op mijn voorstel)
 Webshop inlezen is gratis in de proefweek en daarna inbegrepen vanaf Pro, eenmalig per account, tot 500 artikelen (meer: samen afspreken; Light heeft het niet nodig). Vastgelegd in dashboard (Import, Help, updatelog), /marketplaces (EN+NL), /nl, brein en koude mail A1 ("tijdens je proefweek gratis"). Meer dan ~5 aanvragen per week: zelfbedieningsknop bouwen in plaats van handwerk.
+
+## 22-11-2026: Gemini Gem niet meer in gebruik (Daniel)
+Daniel gebruikt de Gemini Gem met het klantenservice-brein niet meer (hij updatete niet). Geen Drive-kopie meer bijwerken. `docs/klantenservice-brein.md` blijft als naslag voor ontwikkelaars en klantmail-concepten; alleen bijwerken als het hen helpt. CLAUDE.md is aangepast.

@@ -161,12 +161,11 @@ Brengt Daniel je een klantmail om te beantwoorden (sinds 02-10-2026):
 
 ## Het klantenservice-brein bijwerken
 
-[docs/klantenservice-brein.md](docs/klantenservice-brein.md) is de bron die
-Daniel in een Gemini Gem plakt om klantmails te beantwoorden. Verandert je
-wijziging iets aan prijs, ondersteunde kanalen, proef- of betaaltermijnen, de
-demolink, of ontstaat er een nieuwe veelvoorkomende klantvraag of bug, werk dan
-in dezelfde beurt de betreffende regel in dat bestand bij en zet de datum
-bovenaan opnieuw. Zo blijft het actueel zonder dat het Daniel iets kost.
+[docs/klantenservice-brein.md](docs/klantenservice-brein.md) was de bron voor Daniels
+Gemini Gem. Die gebruikt hij sinds 22-11-2026 niet meer, dus geen Drive-kopie bijwerken.
+Het bestand blijft als naslag voor ontwikkelaars en klantmail-concepten: verandert er iets
+aan prijs, kanalen, proef- of betaaltermijnen of voorwaarden, zet het er dan kort bij.
+Een kleine wijziging die niemand helpt, hoeft er niet in.
 
 ## Grote wijziging in het dashboard: klanten krijgen een melding
 

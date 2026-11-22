@@ -17,6 +17,17 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## gemini-gem-niet-meer-in-gebruik
+
+*22-11-2026 — Daniel gebruikt de Gemini Gem met het klantenservice-brein niet meer; brein alleen bijhouden als het Claude of de andere developer helpt, geen Drive-kopie meer*
+
+Daniel (22-11-2026): de Gemini Gem werkt niet meer mee (updatete niet) en hij gebruikt hem niet meer. `docs/klantenservice-brein.md` blijft als naslag voor Claude en de andere developer, maar hoeft niet per se bijgewerkt of naar Drive gekopieerd.
+
+**Why:** een bron bijhouden die niemand leest kost tokens en geeft schijnzekerheid.
+**How to apply:** geen Drive-kopie meer updaten, geen actiepunt "opnieuw inloggen Google" hiervoor. Werk het brein alleen bij als een wijziging (prijs, voorwaarden, kanalen) het voor een ontwikkelaar of klantmail-concepten nuttig houdt; anders overslaan. Zie "jouwweb-winkel-lezen".
+
+---
+
 ## jouwweb-winkel-lezen
 
 *22-11-2026 — "20-11 Brocante Depot (JouwWeb): export bestaat wél, winkel lezen via sitemap en schema.org werkt (154 producten, 9 s), koude mail noemde onterecht Magento"*
@@ -29,6 +40,8 @@ Omnivaleur heeft geen CSV- of feedimport. Wel gebouwd (20-11): `backend/platform
 **How to apply:** de openingszin noemt het systeem alleen bij Shopify of WooCommerce. JouwWeb en Wix worden nu herkend. Importeer nooit in een account vóór aanmelding en akkoord van de klant. Zie "klantdata-niet-op-eigen-initiatief" en "koude-mail-winkels-en-webshops".
 
 **Standaardaanbod voor elke webshop zonder koppeling (22-11, Daniel):** JouwWeb, Wix, Magento of wat dan ook zonder Shopify/WooCommerce-koppeling: wij lezen de winkel als service in. Werkwijze: (1) klant mailt een export of winkeladres, (2) vergelijk de export met `lees_winkel` (voor Brocante Depot 154 van 154 gelijk, alleen spaties in omschrijvingen verschilden, lezer is beter), (3) pas NA aanmelding `scripts/winkel_inlezen.py importeer ADRES --user-id ID` eerst zonder, dan met `--uitvoeren`. Python 3.13 (`python3.13`), systeem-python mist httpx. Nooit meegenomen: verzendbedrag en voorraad boven 1. Verkocht elders = klant haalt het zelf weg in zijn winkel (geen API). Aan klanten zeggen: "geen rechtstreekse koppeling, wel een gratis inleesservice in de proefweek".
+
+**Voorwaarden (22-11, Daniel akkoord):** gratis in de proefweek, daarna inbegrepen vanaf Pro, eenmalig per account, tot 500 artikelen (meer: samen afspreken; Light heeft het niet nodig). Staat in dashboard, Help, updatelog, /marketplaces, /nl, brein en koude mail A1. Belofte nooit zonder die grenzen doen.
 
 ---
 
