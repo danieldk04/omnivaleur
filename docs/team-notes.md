@@ -19838,3 +19838,6 @@ Daniel gebruikt de Gemini Gem met het klantenservice-brein niet meer (hij update
 
 ## 22-11-2026: Vinted plaatsklaar (stand zonder aanraking van Vinted)
 Nieuwe instelling `vinted_modus` ("extensie" standaard, of "plaatsklaar"), in `_settings`. In plaatsklaar telt Vinted voor de server als dicht (`instellingen.kanalen_uit`): geen opdrachten aan de extensie, geen scan (409), geen publicatie, herplaatsen uit. Pakket, foto-zip, "geplaatst" en takenlijst staan in `backend/api/vinted_klaar.py`; scherm onder Voorkeuren, Vinted. Bewezen met 29 proeven (mutatie getest) en live gemeten op een echt artikel (pakket 200, zip 9 foto's). Niet live omgezet op een klantaccount: de omschakeling zelf is alleen met proeven bewezen. Open: eerste echte Vinted-verkoopmail meten, daarna `VINTED_MAIL_OPEN_VOOR_KLANTEN`.
+
+## 22-11-2026 (22:30), kennisoverdracht avondvangnet
+Overdracht.md bijgewerkt met het Vinted-werk van de avond (tabblad, verkoopmail, plaatsklaar) en de X-regel. Bijlage ronde-prompt.txt opnieuw gekopieerd (X alleen door Daniel). Geplande taken (40) en LaunchAgents (6) gelijk aan de bijlagen, CLAUDE.md gelijk. Extensie 1.0.434, server commit 2ae96f98.
