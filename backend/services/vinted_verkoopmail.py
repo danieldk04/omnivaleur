@@ -75,7 +75,7 @@ def _zichtbare_tekst(tekst: str | None, html: str | None) -> str:
 
 def lees_verkoopmail(onderwerp: str | None, tekst: str | None, html: str | None) -> dict | None:
     """Geeft {'titel', 'prijs'} of None. None betekent: geen (herkenbare) verkoopmail."""
-    if not onderwerp or normaliseer_titel(onderwerp).lstrip("fwd: ").strip() == "":
+    if not onderwerp:
         return None
     onderwerp_n = normaliseer_titel(onderwerp)
     if not any(o in onderwerp_n for o in _ONDERWERPEN):
