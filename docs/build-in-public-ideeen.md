@@ -37,6 +37,8 @@ Niets verzinnen: een cijfer staat hier alleen als het gemeten is, met datum en b
 
 | Datum | Post | Wat is beloofd | Meting die nodig is | Terugkom op | Status |
 |---|---|---|---|---|---|
+| 22-11-2026 | Dag 168, prijswijziging | Aan Nino: kijken naar de nieuwsbrief The Weekly Reseller (Vinted Survival Guide) en proberen op de ResaleOS-lijst 'Best Cross-Listing Software 2026' te komen | Nieuwsbrief en lijst nalopen, contact zoeken | 29-11-2026 | Open |
+| 22-11-2026 | Dag 168, prijswijziging | Aan listdraft: bij de prijswijziging per 1 januari seizoensuitval en prijsgedreven opzeggingen apart houden | Opzeggingen rond 1 januari splitsen | 15-01-2027 | Open |
 | 21-11-2026 | Facebook Startende Ondernemers, Etsy-post | Aan Gert Pellin: uitzoeken of Etsy API-toegang via de klant zelf kan lopen (wij bouwen met mocks, klanten vragen zelf toegang aan) | Etsy-documentatie en voorwaarden lezen, kijken of onze afwijzing daarmee samenhangt | 28-11-2026 | Open |
 | 20-11-2026 | Dag 166, antwoord aan Dmytro Katyukha | Toegezegd: alle 88 reacties op de koude mail doorlopen en tellen hoeveel er een advertentie meestuurden met de vraag die op een ander kanaal te zetten, en erop terugkomen | Mail-antwoorden (88) doorlezen en tellen | 23-11-2026 | Open |
 | 16-11-2026 | Dag 163, "quick win voor nieuwe gebruikers" | Terugkomen met wat het doet in de komende weken (inventaris start vanzelf, 1 klik plaatsen van het beste artikel, helpknop na 10 minuten, gemailde link naar de computer) | Mediane tijd van aanmelding tot eerste live advertentie, voor en na 16-11 (zie `docs/routines/onboarding-nieuwe-klanten.md`, onboarding-tempo). Daarnaast: hoe vaak de helpknop wordt aangeklikt | 30-11-2026 | Open. Vanaf ~30-11 meetbaar |
@@ -49,6 +51,8 @@ Niets verzinnen: een cijfer staat hier alleen als het gemeten is, met datum en b
 
 | Datum | Van | Idee of vraag | Wat we ermee kunnen | Status |
 |---|---|---|---|---|
+| 22-11-2026 | listdraft (IH) | Bij prijsverhoging: directe mail met wat verandert in euro, optie om met jaarabonnement de huidige prijs vast te zetten vóór 1 januari | Overwegen voor de aankondiging aan bestaande klanten | Nieuw |
+| 22-11-2026 | Nino (IH) | Geef elk plan een paar AI-aanbiedingen per maand en kijk wie de limiet haalt | Test voor AI-functies op alle plannen | Nieuw |
 | 21-11-2026 | Gert Pellin (Facebook) | Etsy weigerde omdat wij een third party app zijn, geen eindklant. Bouw mocks op basis van hun documentatie, laat klanten zelf toegang aanvragen met hun eigen gebruiksreden | Mogelijke route rond de Etsy-afwijzing, eerst bij Etsy navragen of dat past bij ons beroep | Nieuw |
 | 16-11-2026 | Polymetis | Voortgang die al is gestart: checklist opent met "Account created" afgevinkt, zodat de verkoper op stap 3 van 5 landt (autowas-onderzoek: 19% tegen 34% afgerond) | Staat al live: poort met "Account created" afgevinkt, stap 2 van 5 (commit 2d15495d). Update schrijven met het effect op de tijd tot eerste advertentie | Gebouwd, effect nog te meten |
 | 16-11-2026 | Polymetis | eBay zou voor particuliere verkopers in Frankrijk en Italië de kosten naar de koper verschuiven, dus meer losse verkopers | Frankrijk en Italië als onboarding-push overwegen. Claim van reageerder, niet gecontroleerd. Daniel zit vooral in NL en BE | Idee, eerst controleren |
