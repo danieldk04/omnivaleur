@@ -126,6 +126,8 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
 
 ## Wat nu open staat (niemand hoeft te wachten op Daniel tenzij er "beslissing" staat)
 
+- 22-11 ochtend (klantfouten): Marktplaats-herplaatsingen zoeken hun eigen rubriek ALLEEN bij het aanmaken (relist.py). Remt Marktplaats af tijdens de nachtelijke reeks, dan gaan ze stil met de geraden rubriek de deur uit (01:07: 33 stuks bij 1ba42900 en 31d28378, hersteld met scripts/herstel_herplaatsrubriek.py --schrijf, 4 nog zonder). Open codewerk: dezelfde opzoeking vlak voor uitgifte ook voor Marktplaats-herplaatsingen zonder mp_category (zoals jobs._zet_rubriek_van_marktplaats voor 2dehands). Extensie 1.0.434 (bevat 1.0.433) wacht op upload door Daniel. Op Daniels Mac staan weer 2.695 .git-bestanden dataless (iCloud): pushen ging via een verse kloon in de scratchpad.
+
 - 20-11 avond (Esther): rubrieken spaarpotten, retro, borduren en breien/haken gebouwd en live voor Marktplaats en 2dehands; Vinted wacht op extensie 1.0.432 (zip in dist, upload: Daniel). Loskoppelen van Marktplaats, 2dehands, Vinted en Facebook gebouwd (instelling kanalen_uit, uitgifte geeft niets meer). Beslissing Daniel: haar ~15 bestaande verkeerd ingedeelde artikelen omzetten? Schermknop nog niet in een echt dashboard bekeken. Details in team-notes 20-11 avond.
 
 - **GA4, gedaan 17-11 (Daniel, tip van een Indie Hackers-lezer), voor de andere developer:** (1) `echte_bezoeker` staat als
