@@ -1,9 +1,9 @@
 """Verkoopherkenning via de Vinted-mail.
 
-De twee mails hieronder zijn de echte verkoopmails uit Daniels postvak (30-10 NL,
-21-11-2026 EN), met de koperadressen weggelaten. Alleen wat de herkenning nodig heeft
-staat erin; het koperadres zit er met opzet wel in om te bewijzen dat het nergens
-terechtkomt.
+De twee mails hieronder hebben de opbouw van de echte verkoopmails uit Daniels postvak
+(30-10 NL, 21-11-2026 EN). Titels, prijzen en tekst komen van Daniel zelf; de kopers zijn
+verzonnen (nooit echte persoonsgegevens in een openbare repo). Het koperadres staat er
+met opzet in om te bewijzen dat het nergens terechtkomt.
 """
 import asyncio
 from datetime import datetime, timezone
@@ -210,3 +210,101 @@ def test_twee_identieke_titels_boekt_niets():
     dubbel = ITEMS[:1] + [{"id": "i3", "title": ITEMS[0]["title"], "price": 15.0}]
     uitkomst, boekingen = _draai(dubbel, [{"item_id": "i1"}, {"item_id": "i3"}])
     assert uitkomst["reden"] == "meerdere_artikelen_met_deze_titel" and boekingen == []
+
+
+# ── het ontvangstpunt zelf: handtekening, adres, ophalen, boeken ─────────────
+
+import base64
+import hashlib
+import hmac
+import json
+import time
+
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from backend.api import webhooks as wh
+
+TOKEN = "a1b2c3d4e5f6a1b2c3d4e5f6"
+GEHEIM = "whsec_" + base64.b64encode(b"proefgeheim").decode()
+
+
+class _Tabellen:
+    def __init__(self, creds, items, listings):
+        self.creds, self.items, self.listings = creds, items, listings
+
+    def table(self, naam):
+        return _Q({"platform_credentials": self.creds, "items": self.items}.get(naam, self.listings))
+
+
+def _aanroep(monkeypatch, *, mail, tabellen, ondertekenen=True, status=200):
+    boekingen = []
+
+    async def sold(item_id, platform, sold_price=None, sold_at=None, bewijs=None):
+        boekingen.append((item_id, platform, sold_price, bewijs))
+
+    class _Antwoord:
+        status_code = status
+
+        def json(self):
+            return mail
+
+    class _Klant:
+        def __init__(self, *a, **k): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): return False
+        async def get(self, url, headers=None):
+            assert "/emails/receiving/" in url and headers["Authorization"].startswith("Bearer ")
+            return _Antwoord()
+
+    import httpx
+    monkeypatch.setattr(httpx, "AsyncClient", _Klant)
+    monkeypatch.setattr(wh, "get_admin_db", lambda: tabellen)
+    monkeypatch.setattr(wh, "naast_de_lus", _direct)
+    monkeypatch.setattr(wh, "handle_item_sold", sold)
+    monkeypatch.setattr(wh.settings, "resend_webhook_secret", GEHEIM)
+    monkeypatch.setattr(wh.settings, "resend_api_key", "re_proef")
+
+    app = FastAPI()
+    app.include_router(wh.router, prefix="/api")
+    body = json.dumps({"type": "email.received", "created_at": "2026-11-21T13:37:00Z",
+                       "data": {"email_id": "m1", "to": [f"vinted-{TOKEN}@abc.resend.app"]}}).encode()
+    sid, ts = "msg_1", str(int(time.time()))
+    sleutel = base64.b64decode(GEHEIM.split("_", 1)[1])
+    sig = base64.b64encode(hmac.new(sleutel, b"%s.%s.%s" % (sid.encode(), ts.encode(), body),
+                                    hashlib.sha256).digest()).decode()
+    kop = {"svix-id": sid, "svix-timestamp": ts, "svix-signature": f"v1,{sig if ondertekenen else 'fout'}"}
+    r = TestClient(app).post("/api/webhooks/resend", content=body, headers=kop)
+    return r, boekingen
+
+
+MAIL = {"subject": NL_ONDERWERP, "from": VAN, "text": NL_TEKST, "html": None,
+        "authentication": {"dkim": "pass", "spf": "gray", "dmarc": "pass"}}
+CREDS = [{"user_id": "u1"}]
+
+
+def test_ontvangstpunt_boekt_een_echte_mail(monkeypatch):
+    r, boekingen = _aanroep(monkeypatch, mail=MAIL, tabellen=_Tabellen(CREDS, ITEMS, ACTIEF))
+    assert r.status_code == 200 and r.json()["uitkomst"] == "geboekt"
+    assert boekingen == [("i1", "vinted", 12.0, "kanaal")]
+
+
+def test_ontvangstpunt_weigert_een_verkeerde_handtekening(monkeypatch):
+    r, boekingen = _aanroep(monkeypatch, mail=MAIL, tabellen=_Tabellen(CREDS, ITEMS, ACTIEF), ondertekenen=False)
+    assert r.status_code == 401 and boekingen == []
+
+
+def test_onbekend_adres_boekt_niets(monkeypatch):
+    r, boekingen = _aanroep(monkeypatch, mail=MAIL, tabellen=_Tabellen([], ITEMS, ACTIEF))
+    assert r.status_code == 200 and boekingen == []
+
+
+def test_mail_niet_op_te_halen_boekt_niets_en_geeft_toch_200(monkeypatch):
+    r, boekingen = _aanroep(monkeypatch, mail=MAIL, tabellen=_Tabellen(CREDS, ITEMS, ACTIEF), status=500)
+    assert r.status_code == 200 and boekingen == []
+
+
+def test_mail_zonder_dkim_via_het_ontvangstpunt_boekt_niets(monkeypatch):
+    nep = dict(MAIL, authentication={"dkim": "gray"})
+    r, boekingen = _aanroep(monkeypatch, mail=nep, tabellen=_Tabellen(CREDS, ITEMS, ACTIEF))
+    assert r.status_code == 200 and boekingen == []
