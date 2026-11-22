@@ -5057,6 +5057,10 @@ function showView(name) {
     // Alle handmatige instellingen wonen nu op één scherm; ze komen alle vier
     // uit dezelfde /api/items/settings-aanroep, dus dat is één verzoek.
     if (name === 'preferences') { loadRelistDagen(); renderVintedGroepen(); }
+    // Het Vinted-tabblad toont dezelfde schakelaars als Settings; zonder deze aanroep stonden ze
+    // op hun beginwaarde (uit) tot iemand Settings had geopend, en dat zou een aanstaande
+    // schakelaar als uitgezet laten zien.
+    if (name === 'vinted') { loadRelistDagen(); laadVintedMailKaart(); }
     if (name === 'refresh') { renderRefreshView(); loadRelistStatus(); loadRelistDagen(); }
     if (name === 'import') { renderImportScanButtons(); loadImportCandidates(); }
     if (name === 'stale') { clearSelection(); renderStaleStock(); }
