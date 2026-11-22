@@ -19777,3 +19777,8 @@ Taak `omnivaleur-kennisoverdracht-ochtend` aangemaakt op het hoofdaccount. `work
 
 ## 22-11-2026 (avond, automatisch): kennisoverdracht
 - Kennisoverdracht 22-11: niets nieuws. Geen commits na 15:25, extensie 1.0.434, health ok (commit 1a750593), bijlagen buiten git identiek aan de bronnen.
+
+## 22-11-2026 (middag): Dagelijkse klantfouten
+- 1.369 opdrachten in 24 uur, 12 op error. Twee open soorten, beide geen codefout: (1) 2dehands-verlenging bij De Juiste Toon (96e30080) voor het gouden kleed m2441297600: om 13:02 verkocht op Vinted, 13:04 van 2dehands en Marktplaats gehaald (openbare pagina 410), de verlenging liep 13:15 en veranderde terecht niets. Kleine verbetering, niet gebouwd: een verlenging voor een al verkocht artikel wordt nu nog uitgedeeld (alleen create wordt bij verkoop geannuleerd); onschuldig, alleen een loze foutregel. (2) Vinted-scan "Failed to fetch" bij Esther (3eeceb51) om 07:59, eenmalig, tussen de bekende "uitgelogd bij Vinted"-scans.
+- Geen vastlopers bij klanten die online zijn (3bfbed2c, 26cf5471, 96e30080, bcdf9aa4, 8f91a370): niets ouder dan 2 uur wachtend. Alle grote wachtrijen horen bij extensies die uit staan (5aae4954 sinds 10-11, 31d28378 17-11, 8faba317 17-11, 6e0fe673 en c2f4538f 16-11, 0b28c1ce sinds 21-11 18:26). Betaalslot: geen klant onterecht dicht. Health ok op 1a750593.
+- Ochtendronde: open punt herplaatsrubriek voor Marktplaats blijft open (niet aangeraakt). Niets gerepareerd, geen code gewijzigd.
