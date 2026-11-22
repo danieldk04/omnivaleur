@@ -254,8 +254,9 @@ Hoe de kanalen gekoppeld worden:
   de adresbalk plakken mag ook). Vroeger toonde
   het één algemene Engelse melding met alle oorzaken door elkaar.
 - Webshop zonder koppeling (JouwWeb, Wix, Magento en dergelijke, sinds 22-11-2026): er is
-  geen rechtstreekse koppeling, maar we lezen je winkel gratis voor je in tijdens de
-  proefweek. De klant maakt een account aan (de 7 dagen gaan dan in), mailt het
+  geen rechtstreekse koppeling, maar we lezen je winkel voor je in: gratis tijdens de
+  proefweek en daarna inbegrepen vanaf Pro, eenmalig per account en tot 500 artikelen
+  (Light heeft maar 20 artikelen en heeft het niet nodig; meer dan 500: samen afspreken). De klant maakt een account aan (de 7 dagen gaan dan in), mailt het
   e-mailadres van dat account en stuurt het winkeladres of de productexport (bij JouwWeb:
   Producten, Exporteren, Download). Wij zetten titel, prijs, omschrijving en foto's van
   alle artikelen die te koop zijn in het account. Uitverkochte artikelen gaan niet mee en
