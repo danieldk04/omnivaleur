@@ -17,6 +17,21 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## jouwweb-winkel-lezen
+
+*22-11-2026 — "20-11 Brocante Depot (JouwWeb): export bestaat wél, winkel lezen via sitemap en schema.org werkt (154 producten, 9 s), koude mail noemde onterecht Magento"*
+
+Mieke (brocantedepot.com) zit op JouwWeb, niet op Magento zoals onze eerste koude mail zei. Ik zei eerst dat JouwWeb geen product-export heeft: FOUT, de zoekfunctie van hun helpcentrum miste het artikel "Kan ik mijn producten toevoegen op Google Merchant Center?" (Producten, Exporteren, CSV of online feed). Zoek bij een platform altijd het artikel zelf, niet alleen de zoekresultaten.
+
+Omnivaleur heeft geen CSV- of feedimport. Wel gebouwd (20-11): `backend/platforms/webshop_lezer.py` leest een winkel via sitemap en schema.org-gegevens (alleen lezen, geen inlog) en `scripts/winkel_inlezen.py` zet het als service in één account. Gemeten op haar winkel: 154 producten, 0 mislukt.
+
+**Why:** de koude mail noemde het webshopsysteem ("op Magento") uit een leadlijst waarvan de herkomst niet te achterhalen was; de ontvanger zag meteen dat het een rondzendbrief was.
+**How to apply:** de openingszin noemt het systeem alleen bij Shopify of WooCommerce. JouwWeb en Wix worden nu herkend. Importeer nooit in een account vóór aanmelding en akkoord van de klant. Zie "klantdata-niet-op-eigen-initiatief" en "koude-mail-winkels-en-webshops".
+
+**Standaardaanbod voor elke webshop zonder koppeling (22-11, Daniel):** JouwWeb, Wix, Magento of wat dan ook zonder Shopify/WooCommerce-koppeling: wij lezen de winkel als service in. Werkwijze: (1) klant mailt een export of winkeladres, (2) vergelijk de export met `lees_winkel` (voor Brocante Depot 154 van 154 gelijk, alleen spaties in omschrijvingen verschilden, lezer is beter), (3) pas NA aanmelding `scripts/winkel_inlezen.py importeer ADRES --user-id ID` eerst zonder, dan met `--uitvoeren`. Python 3.13 (`python3.13`), systeem-python mist httpx. Nooit meegenomen: verzendbedrag en voorraad boven 1. Verkocht elders = klant haalt het zelf weg in zijn winkel (geen API). Aan klanten zeggen: "geen rechtstreekse koppeling, wel een gratis inleesservice in de proefweek".
+
+---
+
 ## alleen-escaleren-als-essentieel
 
 *22-11-2026 — Daniel 22-11: actiepunten naar hem alleen als het echt essentieel is en je niet verder kunt; liefst 0; alle logische dingen zelf doen*
@@ -36,19 +51,6 @@ Zeg ik "plaats dit", dan staat de volledige tekst in datzelfde bericht, kant-en-
 
 **Why:** Daniel 21-11-2026: hij kan een verwijzing naar een bestand of eerder bericht nooit terugvinden.
 **How to apply:** bij elk actiepunt dat een post, mail of reactie plaatsen is, de tekst zelf erbij, ook als hij hem eerder zag. Zie "rapportage-in-gewone-taal".
-
----
-
-## jouwweb-winkel-lezen
-
-*20-11-2026 — "20-11 Brocante Depot (JouwWeb): export bestaat wél, winkel lezen via sitemap en schema.org werkt (154 producten, 9 s), koude mail noemde onterecht Magento"*
-
-Mieke (brocantedepot.com) zit op JouwWeb, niet op Magento zoals onze eerste koude mail zei. Ik zei eerst dat JouwWeb geen product-export heeft: FOUT, de zoekfunctie van hun helpcentrum miste het artikel "Kan ik mijn producten toevoegen op Google Merchant Center?" (Producten, Exporteren, CSV of online feed). Zoek bij een platform altijd het artikel zelf, niet alleen de zoekresultaten.
-
-Omnivaleur heeft geen CSV- of feedimport. Wel gebouwd (20-11): `backend/platforms/webshop_lezer.py` leest een winkel via sitemap en schema.org-gegevens (alleen lezen, geen inlog) en `scripts/winkel_inlezen.py` zet het als service in één account. Gemeten op haar winkel: 154 producten, 0 mislukt.
-
-**Why:** de koude mail noemde het webshopsysteem ("op Magento") uit een leadlijst waarvan de herkomst niet te achterhalen was; de ontvanger zag meteen dat het een rondzendbrief was.
-**How to apply:** de openingszin noemt het systeem alleen bij Shopify of WooCommerce. JouwWeb en Wix worden nu herkend. Importeer nooit in een account vóór aanmelding en akkoord van de klant. Zie "klantdata-niet-op-eigen-initiatief" en "koude-mail-winkels-en-webshops".
 
 ---
 
