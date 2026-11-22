@@ -1,0 +1,6 @@
+---
+name: omnivaleur-platformcontrole
+description: Dagelijks 06:00: controleert of Vinted, Marktplaats en 2dehands hun formulieren veranderd hebben en repareert wat nodig is
+---
+
+Je werkt aan Omnivaleur in /Users/Danie/Documents/omnivaleur. Lees eerst CLAUDE.md van die repo en volg het begin-van-sessie-stuk (git log sinds 30 uur, onderaan docs/team-notes.md). Lees dan docs/routines/platformcontrole.md en volg het precies. Rondenaam: platformcontrole. Kort samengevat: draai de echte extensiecode (scripts/platformcontrole/vinted_loader.js, en voor Marktplaats en 2dehands de eigen loader) op de levende formulieren in Daniels Chrome via Claude in Chrome, zonder ooit te plaatsen, en kijk of een stap faalt. Bij een afwijking: oorzaak bewijzen, repareren (server of extensie), voor-en-na-proef, testen, committen, pushen, uitrol controleren, en Daniel rapporteren in de vier blokjes uit CLAUDE.md. Klopt alles: alleen één regel in docs/team-notes.md en geen bericht. Raak nooit klantdata aan en commit alleen je eigen bestanden.

@@ -1,6 +1,6 @@
 # Overdracht: lees dit als eerste
 
-Aangevuld 21-11-2026 door de ochtendronde klantfouten (Daniels Mac, alleen de regel over Toons halve herplaatsingen). Aangevuld 20-11-2026 door de ochtendronde klantfouten (Daniels Mac, alleen de regel over herplaatsrubriek en Shopify-dubbelen). Bijgewerkt 17-11-2026 (op verzoek van Daniel, voor de overdracht) door Daniels hoofdaccount; daarvoor 16-11-2026 22:30 door het tweede account. Eerder die dag op verzoek van Daniel: "1 op 1 met
+Volledig gesynchroniseerd 22-11-2026 15:30 door Daniels hoofdaccount (zie de laatste sectie: alle taken, chats, bijlagen buiten git). Aangevuld 21-11-2026 door de ochtendronde klantfouten (Daniels Mac, alleen de regel over Toons halve herplaatsingen). Aangevuld 20-11-2026 door de ochtendronde klantfouten (Daniels Mac, alleen de regel over herplaatsrubriek en Shopify-dubbelen). Bijgewerkt 17-11-2026 (op verzoek van Daniel, voor de overdracht) door Daniels hoofdaccount; daarvoor 16-11-2026 22:30 door het tweede account. Eerder die dag op verzoek van Daniel: "1 op 1 met
 wat je kunt zien, en dit elke sessie en elke dag bijhouden". Basis was de overdracht van
 15-11 (Daniels Mac), vorige daarvoor 28-10. Alles hieronder is gemeten op 15 of 16-11-2026,
 tenzij er een andere datum staat. Hoe je dit bestand zelf bijhoudt:
@@ -265,11 +265,12 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
 |---|---|---|
 | Klantfouten | Daniels Mac 08:00 (`ochtendronde`), **jouw account 14:00** (`middagronde`) | `docs/routines/klantfouten.md` |
 | Onboarding nieuwe klanten | Daniels Mac 11:00 (`onboarding-ochtend`), **jouw account 10:00** (`onboarding-middag`) | `docs/routines/onboarding-nieuwe-klanten.md` |
-| Platformcontrole Vinted, Marktplaats, 2dehands | Alleen Daniels Mac 10:00 (Chrome) | `docs/routines/platformcontrole.md` |
+| Platformcontrole Vinted, Marktplaats, 2dehands | Alleen Daniels Mac, om de dag 10:00 (Chrome) | `docs/routines/platformcontrole.md` |
 | Kosten en doelen (Drive-sheet "Kosten en doelen (Omnivaleur en Revaleur)") | Alleen Daniels Mac, 1e van de maand | `docs/routines/kosten-bijhouden.md` |
-| Schrijfstijl leren uit Daniels mail | Alleen Daniels Mac (Zoho), 07:15 | `docs/schrijfstijl-daniel.md` |
+| Schrijfstijl leren uit Daniels mail | Alleen Daniels Mac (Zoho), 07:15 |
+| Nachtelijke Dreaming (geheugen bijwerken), BTW-herinnering, SEO-nameting 26-11, plannen 1-1 | Alleen Daniels Mac, zie de laatste sectie voor de volledige lijst | `docs/bijlagen-buiten-git/geplande-taken/` | `docs/schrijfstijl-daniel.md` |
 | Creator-outreach status | Alleen Daniels Mac, ma en do 09:00 | `.claude/skills/creator-outreach/SKILL.md` |
-| Facebook-reactiebot bijwerken (alleen lezen) | Alleen Daniels Mac, 07:30 | `docs/routines/facebook-reactiebot.md` |
+| Facebook-reactiebot bijwerken (alleen lezen) | Alleen Daniels Mac, om de dag 07:30 | `docs/routines/facebook-reactiebot.md` |
 | Social video's | Alleen Daniels Mac, dinsdag 09:30 | `docs/routines/social-videos.md` |
 | Reageren op X, Indie Hackers, Facebook, Instagram | Alleen Daniels vastgepinde gesprek | `docs/routines/social-reageren.md` |
 | Fotometing AI-pakket | Alleen Daniels Mac (LaunchAgent, haalt zichzelf weg) | `scripts/meet_fotoadvertentie.py` |
@@ -443,3 +444,62 @@ Jouw opdracht, in deze volgorde (Daniel verdeelt het werk):
 - Restanten gevonden en gerepareerd: paginatitel Uitnodigen zei "Earn 1 month free" (nu "Invite friends"), beheerpagina zei "een maand gratis" (nu 2 gratis maanden plus 10 euro per maand).
 - Let op, mail B (verstuurd 20-11) zegt "we tellen je actieve artikelen en je zit in het plan dat daarbij past". In de code wisselt niemand automatisch van plan: boven de grens (Pro 275 voor nieuwe artikelen, vanaf 15-01) worden alleen NIEUWE artikelen geweigerd tot de klant zelf upgradet. Niet fout voor bestaande advertenties, wel losser dan de mail klinkt.
 - Niet gemeten: de Stripe-proeven (stripe_proef_*.py) zijn niet opnieuw gedraaid, ze raken de Stripe-sleutel (valkuil 11-11); eerste echte betalende vriend in Stripe nakijken staat nog open.
+
+## 22-11-2026: VOLLEDIGE SYNCHRONISATIE (Daniel schakelt over naar de andere ontwikkelaar)
+
+Op verzoek van Daniel, 22-11 rond 15:30, door zijn hoofdaccount: "echt alles, ook routines die hij niet kent, chats, informatie. Dit moet te allen tijde 1000% gesynchroniseerd zijn." Gemeten 22-11: server draait commit `ba27d0c0` (gelijk aan main), extensie in git 1.0.434 (zip in `dist/`, nog NIET geüpload, Daniel doet dat), Google-sleutel `279422aa`, `NIEUWE_PLANNEN_AAN` uit, `REFERRAL_KORTING_AAN` aan, alle prijs-id's Light/Plus/Ultra/jaar staan op ja in `/health` (dus in Railway aanwezig; de zin eerder "ontbreken in Railway" is achterhaald, 21-11 10:15).
+
+**Waar je alles terugvindt.** Alles wat tot nu toe alleen op Daniels Mac of in zijn account stond, is nu als kopie in de repo gezet onder `docs/bijlagen-buiten-git/` (zonder sleutels; gecontroleerd op sleutelpatronen):
+- `geplande-taken/`: de volledige opdracht van elke geplande taak (ook uitgeschakelde en afgeronde), met naam van het bestand = taaknaam. Dit zijn kopieën, de bron blijft `~/.claude/scheduled-tasks/<naam>/SKILL.md` op de Mac.
+- `launchagents/`: de vijf LaunchAgents en de scripts erachter (reageerronde, leadmachine-seintje, devstarter, tick).
+- `social/`: `ronde-prompt.txt` (de volledige opdracht voor de reageerronde, normaal buiten git), `lessen.md`, `voorbeelden.md`, `groepen.json`.
+- `claude-config/`: Daniels globale `CLAUDE.md` (staat normaal buiten de repo, in `/Users/Danie/`), `buildinpublic-history.md`, en de gebruikersskills `omnivaleur-taken`, `kwartaalcheck`, `btw-omzetbelasting`, `leadgen`. De skills `creator-outreach` en `interview-daniel` staan al in `.claude/skills/`.
+- `docs/kennisbank.md` (410 lessen, Omnivaleur) en nieuw `docs/kennisbank-overig.md` (150 lessen uit Daniels andere mappen, vooral Downloads: daar schrijft de nachtelijke Dreaming-taak heen). Beide komen uit `python3 scripts/export_kennisbank.py`.
+Ververs de bijlagen niet met de hand, kopieer opnieuw met `cp` vanaf de bronnen hierboven als iets verandert; de dagelijkse kennisoverdracht-taak noemt dit nu ook.
+
+### Alle geplande taken (lijst van het hoofdaccount op 22-11, `list_scheduled_tasks`)
+
+Draaien (aan):
+| Taak | Wanneer | Doet |
+|---|---|---|
+| `omnivaleur-dagelijkse-klantfouten` | dagelijks 08:00 (Opus) | `docs/routines/klantfouten.md` |
+| `omnivaleur-onboarding-nieuwe-klanten` | dagelijks 11:00 (Opus) | `docs/routines/onboarding-nieuwe-klanten.md` |
+| `omnivaleur-schrijfstijl-leren` | dagelijks 07:15 | leert uit Daniels verstuurde mail, past `docs/schrijfstijl-daniel.md` aan |
+| `omnivaleur-platformcontrole` | om de dag 10:00 (oneven dagen van de maand) | `docs/routines/platformcontrole.md` |
+| `omnivaleur-facebook-reactiebot-verversen` | om de dag 07:30 | `docs/routines/facebook-reactiebot.md`, alleen lezen |
+| `omnivaleur-creator-outreach-status` | maandag en donderdag 09:00 | skill `creator-outreach` |
+| `omnivaleur-social-videos` | dinsdag 09:00 | `docs/routines/social-videos.md` |
+| `omnivaleur-kosten-bijhouden` | 1e van de maand 09:00 | kosten én doelencheck in de Drive-sheet |
+| `nightly-dreaming-geheugen` | dagelijks 00:03, werkt in `/Users/Danie/Downloads` | leest alle gesprekken van 24 uur en schrijft geheugenbestanden naar `~/.claude/projects/-Users-Danie-Downloads/memory/` (niet naar de omnivaleur-map); nieuw in repo via `kennisbank-overig.md` |
+| `btw-kwartaal-herinnering` | 15 jan/apr/jul/okt 09:00 | Daniels BTW-aangifte (skill `btw-omzetbelasting`), niet Omnivaleur |
+| `omnivaleur-seo-nameting-26-nov` | eenmalig 26-11 09:30 | SEO-nameting van 29 en 30-10 (acht artikelen en Ahrefs) |
+| `omnivaleur-nieuwe-plannen-1-januari` | eenmalig 01-01-2027 08:00 | tekstwissel nieuwe plannen doorvoeren, Daniel de vlag laten aanzetten |
+
+Uit of afgerond (niet opnieuw aanzetten): `omnivaleur-social-reageren` (UIT sinds 08-11, de automodus blokkeert plaatsen in geplande sessies; de reageerronde draait via het vastgepinde gesprek en de LaunchAgent, zie onder), `omnivaleur-facebook-reageren` (samengevoegd daarin), `kwartaalcheck-doelen-2027` en `maandcheck-doelen-2027` (samengevoegd in kosten-bijhouden), en de eenmalige proeven en nametingen: extensieversies-nameting, gemini-gratis-sleutel-check, watchero-follow-up, egbert-verlengingen-meten, egbert-stiltes-beoordelen, facebook-groep-lidmaatschapsvragen, mp-video-meting-week-1, kostencheck-anthropic (en -week, -21-11), kostencheck-gemini-claude, google-kosten-check, mieneke-2dehands-nameting, terughaal-opvolging, fotometing-uitkomst, ai-pakket-bouwen.
+
+**Bestaan als map op de Mac, maar staan NIET in de lijst van het hoofdaccount** (niet gecontroleerd wie ze draait; waarschijnlijk het tweede account, of dood): `omnivaleur-kennisoverdracht-avond` (22:30), `omnivaleur-klantfouten-middagronde` (14:00), `omnivaleur-onboarding-nieuwe-klanten-middag` (10:00), `omnivaleur-taken-ochtend` (Google Tasks-lijst "Omnivaleur" bijwerken met wat alleen Daniel kan, via skill `omnivaleur-taken`), `daily-notion-documentation-sync` en `daily-build-in-public-x-posts` (oud, CrossList EU en Revaleur, niet Omnivaleur), `omnivaleur-building-in-public` (de routinetekst `docs/routines/building-in-public.md` is op 07-11 uit de repo gehaald; Daniel doet building in public zelf, dus dood). Controleer in jouw eigen `list_scheduled_tasks` wat jij hebt en maak ontbrekende aan zoals bovenaan staat. **Het hoofdaccount heeft `omnivaleur-kennisoverdracht-ochtend` (07:45) nog niet staan, ondanks de afspraak: maak hem op het hoofdaccount aan in de eerstvolgende sessie daar.**
+
+### Wat draait buiten geplande taken (LaunchAgents op Daniels Mac, `launchctl list`)
+- `com.omnivaleur.socialronde`: elk uur op :47 (`social_ronde_starten.sh`). Poort: 09:00 tot 22:00, minstens 4 uur na de vorige ronde, hooguit 3 per dag, slot in `/tmp/omnivaleur-ronde.lock`. Start `claude -p --chrome` met `data/social/ronde-prompt.txt` (kopie in `bijlagen-buiten-git/social/`). Antwoordt op reacties op X, Indie Hackers, Bluesky, Facebook en Instagram; X staat bewust overgeslagen sinds 18-11 (Daniel, tot hij het opheft). Loopt, laatste status 0.
+- `com.omnivaleur.leadmachine-seintje`: elk half uur, start de GitHub-mailronde (koude reeks mail 1/2/3). Loopt.
+- `com.omnivaleur.devstarter`: staat stil (exit 1), bewust sinds 06-09 (geen buglijst meer). `com.omnivaleur.leadgen.plist.uit`: uitgeschakeld. `com.omnivaleur.fotometing`: staat niet meer geladen (haalde zichzelf weg na de meting van 19-11).
+- `com.omnivaleur.workspacemcp`: MCP voor Google Workspace, **faalt nu** (exit 127, commando niet gevonden; in Claude "ECONNREFUSED"). Google Docs en Sheets via de losse Drive-koppeling werken wel. Niet gerepareerd, niet gemeten wat ervan afhangt.
+- Claude-instellingen (`~/.claude/settings.json`): hooks van claude-flow (route, geheugen, auto-push na elke Edit). De auto-push is de reden dat elke Edit los live gaat (zie "Werkafspraken").
+- MCP-koppelingen op het hoofdaccount: `zoho-mail` (Daniels mailbox; versturen alleen na ja), `garmin-coach` (privé, niets met Omnivaleur), `claude-flow`, Drive, Notion, Chrome, Apify. Het tweede account heeft deze niet automatisch.
+
+### Chats (gesprekken) op Daniels hoofdaccount
+De volledige gesprekken staan als bestanden op de Mac (`~/.claude/projects/-Users-Danie-Documents-omnivaleur/*.jsonl`) en reizen niet mee; wat ze opleverden staat in team-notes, kennisbank en hier. De lijst van 22-11 (titel, laatste activiteit):
+- **"Auto-reacties FB, X, IG (posts) en Indiehackers (Niet aankomen)" (22-11 16:10, vastgepind, Remote Control aan).** Dit is het gesprek waarin de reageerronde en de cron draaien en waar het ochtendrapport build in public staat. NIET aankomen, niet sluiten, niet in verder werken: een tweede sessie die reageert veroorzaakt dubbele reacties. Wil jij reageerwerk doen, zeg het eerst aan Daniel. Bij herstart van het gesprek moet de cron opnieuw ingesteld worden (zie `docs/routines/social-reageren.md`).
+- Terugkerende taakgesprekken (elke run is een eigen gesprek, bevat niets wat niet al in team-notes staat): klantfouten, onboarding nieuwe klanten, platformcontrole, schrijfstijl leren, Facebook-reactiebot, nightly dreaming, creator-outreach.
+- Losse werkgesprekken met Daniel, alleen titel gezien, inhoud niet opnieuw doorgelezen: "Toon" (20-11), "Voordeelsieraden" (20-11), "Omnivaleur categorieën en Vinted ontkoppeling" (20-11, Esther: zie overdrachtsregel 20-11 avond), "Reactie Brocante Depot, cold email aanscherping en Jouwweb" (20-11), "Referral systeem en features" (19-11), "Omnivaleur webshop integration inquiry" (19-11), "Cold email strategy onderzoek 19/11" (19-11), "Indiehackers post" (19-11), "Facebook communities voor Omnivaleur" (19-11), "Advertentie lay-out en opmaak" (18-11), "PC opslagruimte optimaliseren" (18-11, buiten het project, schijf 94% vol). Zoek je de achtergrond van een besluit uit zo'n gesprek en staat het niet in team-notes, vraag het Daniel: dan is het nooit opgeschreven en dat is een gat dat je meldt in team-notes.
+
+### Open punten die alleen vandaag kloppen (uit alle bronnen bij elkaar)
+1. [Daniel] Extensie 1.0.434 uploaden naar de Chrome Web Store (bevat 1.0.433 en 1.0.432: Vinted-rubrieken Esther, Vinted verwijderen kast, MP verwijderen na verversen). Daarna nameten dat klanten hem krijgen.
+2. [Daniel] Mail B (nieuwe plannen) uiterlijk 1 december de deur uit, in de repo staat als verstuurd op 20-11 (21 adressen); controleer in team-notes of dat voor ALLE bestaande klanten gold. Niet opnieuw gemeten, noem het in je eerste sessie.
+3. [jij] Plansysteem per 1 januari: `NIEUWE_PLANNEN_AAN` aanzetten kan Daniel pas na jouw nameting; de taak `omnivaleur-nieuwe-plannen-1-januari` staat op het hoofdaccount.
+4. [jij] Herplaatsrubriek vlak voor uitgifte (zie "Wat nu open staat", 22-11 ochtend), Toons 11 Marktplaats-rijen op active met verwijderd advertentienummer, 1ba42900 oorbellen op Marktplaats na verkoop op Vinted, tapijtmaten Marktplaats (zie 21-11 ochtendronde).
+5. [Daniel] Beslissing: Esthers ~15 verkeerd ingedeelde artikelen omzetten? (20-11 avond).
+6. [Daniel, DEZE WEEK] Zet `omnivaleur-kennisoverdracht-ochtend` aan op het hoofdaccount (ontbreekt nu).
+7. [Mac] `com.omnivaleur.workspacemcp` repareren of weghalen (faalt).
+8. [Mac] iCloud parkeert de repo (2.695 bestanden dataless); pushen ging op 22-11 via een verse kloon. Kennisbank noemt "icloud-parkeert-de-repo".
+9. Seo-nameting 26-11 draait zelf; uitkomst in team-notes.

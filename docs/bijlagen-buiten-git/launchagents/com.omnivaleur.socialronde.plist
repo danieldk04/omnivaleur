@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>Label</key><string>com.omnivaleur.socialronde</string>
+<key>ProgramArguments</key><array><string>/bin/zsh</string><string>/Users/Danie/Library/Application Support/omnivaleur/social_ronde_starten.sh</string></array>
+<key>StartCalendarInterval</key><dict><key>Minute</key><integer>47</integer></dict>
+<key>RunAtLoad</key><true/>
+<key>StandardErrorPath</key><string>/Users/Danie/Library/Application Support/omnivaleur/socialronde.log</string>
+</dict></plist>

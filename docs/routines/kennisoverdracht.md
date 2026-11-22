@@ -42,9 +42,16 @@ pagina die klopt "op dit moment". Deze routine houdt hem 1 op 1 gelijk aan de we
 5b. Kijk `docs/build-in-public-ideeen.md` na (Daniel, 17-11-2026): voeg toe wat uit Indie Hackers-reacties
    of Daniels posts kwam (beloften, vragen, ideeën), en zet bovenaan overdracht.md bij "Wat nu open staat"
    elke belofte die nu meetbaar is. Daniel houdt een dagelijkse build-in-public bij en gebruikt dit voor zijn updates.
-6. Commit en push naar main (`git add docs/overdracht.md docs/team-notes.md docs/kennisbank.md docs/build-in-public-ideeen.md`,
+6. Commit en push naar main (`git add docs/overdracht.md docs/team-notes.md docs/kennisbank.md docs/kennisbank-overig.md docs/bijlagen-buiten-git docs/build-in-public-ideeen.md`,
    alleen die). Verandert er niets, schrijf dan één regel in team-notes "kennisoverdracht
    <datum>: niets nieuws" en niets anders.
+
+5c. Houd `docs/bijlagen-buiten-git/` gelijk (Daniel, 22-11-2026: alles moet 1000% gesynchroniseerd zijn):
+   kopieer opnieuw wat veranderde en zet nieuwe of verwijderde geplande taken, LaunchAgents en chats in de
+   laatste sectie van overdracht.md. Bronnen: `~/.claude/scheduled-tasks/*/SKILL.md`, `~/Library/LaunchAgents/com.omnivaleur.*`,
+   `~/Library/Application Support/omnivaleur/*.sh`, `data/social/{ronde-prompt.txt,lessen.md,voorbeelden.md,groepen.json}`,
+   `/Users/Danie/CLAUDE.md`. Controleer eerst op sleutelpatronen (sk-, sb_secret_, eyJ, AIza) en nieuwe klantadressen.
+   Draai ook `python3 scripts/export_kennisbank.py` (schrijft kennisbank.md en kennisbank-overig.md) en `git add` beide.
 
 ## Regels
 

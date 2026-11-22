@@ -1,0 +1,6 @@
+---
+name: maandcheck-doelen-2027
+description: SAMENGEVOEGD op 01-11-2026 in omnivaleur-kosten-bijhouden (kosten en doelen, maandelijks). Niet meer inschakelen.
+---
+
+Draai de skill `kwartaalcheck` (Skill tool, naam: kwartaalcheck) in MAANDMODUS: een korte check, geen volledig kwartaalrapport. Lees het strategiedocument in Drive voor de actuele doelen, meet de actuele cijfers zoals de skill voorschrijft (betalende klanten uit de productiedatabase, kosten uit de sheet Omnivaleur kosten, Revaleur-winst uit Profitsheet Right), reken de som achter het eindcijfer uit en vergelijk met de tussenmijlpaal voor winst per maand. Voeg een regel toe aan het meetlog in de skillmap. Werk daarna het kopje "Stand van zaken" bovenaan het strategiedocument bij, precies zoals de skill beschrijft, en raak niets anders in het document aan. Rapporteer in het Nederlands in een regel: winst per maand, betalende klanten, voor/op schema/achter op de mijlpaal en waar het gat zit (klanten, prijs of kosten). Geen gedachtestreepjes. Stuur diezelfde regel (onder 200 tekens) als PushNotification (status proactive) en via het Telegram-script uit de skillmap. Werk vanuit /Users/Danie/Documents/omnivaleur. Wijzig geen code.

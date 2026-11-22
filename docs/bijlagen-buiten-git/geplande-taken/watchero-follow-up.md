@@ -1,0 +1,6 @@
+---
+name: watchero-follow-up
+description: Eenmalige herinnering: follow-up naar Watchero (Martijn Bax) rond 7 oktober
+---
+
+Je werkt aan Omnivaleur in /Users/Danie/Documents/omnivaleur. Lees de memory watchero-martijn-bax-follow-up.md in ~/.claude/projects/-Users-Danie-Documents-omnivaleur/memory/ en het laatste stuk van docs/team-notes.md. Martijn Bax (Watchero, info@watchero.eu) schreef op 30-09-2026 dat hij begin oktober Omnivaleur wil aanschaffen en uitproberen. Controleer in Supabase (service_role-sleutel, zoals de onboarding-routine doet) of er een account is met e-mail info@watchero.eu of een aanmelding rond watchero. Zo ja: meld dat aan Daniel, de onboarding-routine pakt hem op. Zo nee: schrijf een korte, persoonlijke follow-up in het Nederlands als platte tekst (geen opmaaktekens, geen streepjes als leesteken, aanhef 'Hi Martijn,', noem dat de eerste 7 dagen gratis zijn op https://omnivaleur.com/register en dat je hem persoonlijk door de start helpt, één vraag aan het eind). Verstuur NIETS zelf: geef de tekst aan Daniel, die verstuurt hem. Rapporteer in de vier blokjes (wat er aan de hand was, wat er veranderd is (weglaten indien niets), zekerheid in %, actiepunten met urgentielabel).

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+ <key>Label</key><string>com.omnivaleur.fotometing</string>
+ <key>ProgramArguments</key><array><string>/Library/Frameworks/Python.framework/Versions/3.13/bin/python3.13</string><string>/Users/Danie/Documents/omnivaleur/scripts/meet_fotoadvertentie.py</string><string>dag</string></array>
+ <key>WorkingDirectory</key><string>/Users/Danie/Documents/omnivaleur</string>
+ <key>StartCalendarInterval</key><dict><key>Hour</key><integer>11</integer><key>Minute</key><integer>15</integer></dict>
+ <key>StandardOutPath</key><string>/Users/Danie/.omnivaleur/meting_foto/log.txt</string>
+ <key>StandardErrorPath</key><string>/Users/Danie/.omnivaleur/meting_foto/log.txt</string>
+</dict></plist>

@@ -1,0 +1,2 @@
+2026-11-08 IG geld101 (10 min oud, 0 reacties): "Buiten het platform willen betalen of haast opdringen is voor mij altijd de rode vlag nummer één. Welk signaal viel jou als eerste op?" Bovenaan omdat eerste en omdat de post om ervaringen vroeg. Likes en antwoorden nog te meten.
+2026-11-08 X zeal_m_ (2 u oud, 1 reactie): eerste reactie van onszelf zichtbaar bovenaan, korte antwoordzin zonder pitch.

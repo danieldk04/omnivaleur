@@ -17,6 +17,17 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## posts-altijd-voluit-in-de-chat
+
+*21-11-2026 — Elke post die Daniel zelf moet plaatsen staat altijd voluit in de chat, nooit een verwijzing naar een bestand of eerder bericht*
+
+Zeg ik "plaats dit", dan staat de volledige tekst in datzelfde bericht, kant-en-klaar om te kopiëren.
+
+**Why:** Daniel 21-11-2026: hij kan een verwijzing naar een bestand of eerder bericht nooit terugvinden.
+**How to apply:** bij elk actiepunt dat een post, mail of reactie plaatsen is, de tekst zelf erbij, ook als hij hem eerder zag. Zie "rapportage-in-gewone-taal".
+
+---
+
 ## jouwweb-winkel-lezen
 
 *20-11-2026 — "20-11 Brocante Depot (JouwWeb): export bestaat wél, winkel lezen via sitemap en schema.org werkt (154 producten, 9 s), koude mail noemde onterecht Magento"*
