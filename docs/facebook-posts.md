@@ -3,6 +3,26 @@
 Daniel plaatst zelf en cross-post binnen het cluster. Per dag minstens 1 post; de routine zet het volgende cluster klaar (resellers, ondernemers, founders, eigen groep). Regels en schrijfstijl: docs/facebook-lessenbank.md. Groepen per cluster: docs/facebook-groepsscan.md.
 Kijk bij elke post even naar "Check": dat zijn de zinnen waar jij moet bevestigen dat ze voor jou kloppen.
 
+## 22-11-2026, cluster RESELLERS (NL) [KLAAR VOOR 22-11], Ebay Resellers & Thrifters, Reseller Community
+Onderwerp: verplichte maat op Vinted bij woontextiel. Geen introductie (die zat in de reseller-post van 20-11), geen merknaam, geen link.
+
+> Iets wat ik tegenkwam bij een verkoper van woontextiel. Dekens en kussens op Vinted willen een verplichte maat in cm, of je kiest Overige. Vloerkleden en tafelkleden niet. Dus je zet een deken online en snapt eerst niet waarom hij blijft hangen bij die ene verplichte maat.
+>
+> Wie veel woontextiel verkoopt weet dit vast allang haha, ik vond het gek dat het per soort anders is.
+>
+> Meet jij het gewoon uit in cm of kies je Overige? En welke rubriek gaf jou nog meer gedoe met verplichte velden?
+
+Check: "bij een verkoper" klopt alleen als jij dit zo wilt zeggen (bron: klantgeval, memory vinted-woontextiel-maat-in-cm, 16-10-2026). Maak er desnoods "las ik" van.
+
+## 22-11-2026, cluster EIGEN GROEP (Engels) [KLAAR VOOR 22-11], EU Resellers: Vinted, eBay & Crosslisting Community
+Onderwerp: Vinted-account onterecht geblokkeerd. Alles Engels, geen introductie, geen merknaam.
+
+> Been reading about Vinted accounts getting blocked for no clear reason. Test-Aankoop wrote about it in October, and it's not only scammers who get hit, honest sellers too. Which is a bit scary if all your stock lives in one place.
+>
+> Has anyone here actually lost an account? What did you do, and did you get it back?
+
+Check: Test-Aankoop 01-10-2026 staat in docs/facebook-actueel.md. Geen eigen ervaring geclaimd.
+
 ## 20-11-2026, cluster RESELLERS (NL) [KLAAR VOOR 21-11], Ebay Resellers & Thrifters, Reseller Community
 Onderwerp: iets verkocht op het ene platform, nog online op het andere. Geen merknaam, geen link. De introductie en de software-verwijzing zijn alleen voor deze eerste reseller-post; volgende reseller-posts beginnen gewoon met het verhaal.
 

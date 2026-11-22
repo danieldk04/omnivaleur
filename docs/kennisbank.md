@@ -17,6 +17,17 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## alleen-escaleren-als-essentieel
+
+*22-11-2026 — Daniel 22-11: actiepunten naar hem alleen als het echt essentieel is en je niet verder kunt; liefst 0; alle logische dingen zelf doen*
+
+Ga naar Daniel alleen als iets echt essentieel is en je zelf niet verder kunt. Probeer eerst alle logische dingen zelf: een ontbrekende taak aanmaken, een kapotte dienst repareren, een bron zoeken, nameten. Liefst staat er "Niets, klaar." bij de actiepunten.
+
+**Why:** Daniel 22-11-2026, na de overdracht: hij vroeg om "zo min mogelijk (liefst 0) actiepunten, enkel essentieel". Twee punten die ik bij hem neerlegde (ontbrekende ochtendtaak, kapotte Google-koppeling) deed ik daarna zelf in minuten.
+**How to apply:** voor je een actiepunt schrijft, vraag je af of je het zelf kunt. Echt van hem: uploaden naar de Chrome Web Store, inloggen of betalen als hijzelf, een beslissing, iets naar buiten sturen. Aanvulling op "korter-en-zelf-regelen".
+
+---
+
 ## posts-altijd-voluit-in-de-chat
 
 *21-11-2026 — Elke post die Daniel zelf moet plaatsen staat altijd voluit in de chat, nooit een verwijzing naar een bestand of eerder bericht*
