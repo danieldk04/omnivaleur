@@ -165,6 +165,10 @@ class Settings(BaseSettings):
     # begint met "whsec_"). Zonder dit weigert /api/webhooks/resend elk verzoek:
     # een open webhook laat iedereen nepgebeurtenissen in mail_events schrijven.
     resend_webhook_secret: str = ""
+    # Het ontvangstdomein voor doorgestuurde Vinted-verkoopmails, bijvoorbeeld
+    # "abc123.resend.app" (Resend > Emails > Receiving > Receiving address). Leeg =
+    # de functie staat uit en klanten krijgen geen adres (docs/team-notes.md, 22-11-2026).
+    vinted_inbound_domain: str = ""
     # Waar antwoorden van klanten binnenkomen. Uitgaand heet alles Omnivaleur,
     # maar de postbus die Daniel daadwerkelijk leest is een andere.
     reply_to_email: str = "info@omnivaleur.com"
