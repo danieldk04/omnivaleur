@@ -17,6 +17,30 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-compliance-mailroute
+
+*22-11-2026 — 22-11: Vinted verbiedt externe tools; verkoop herkennen via doorgestuurde Vinted-mail (Resend Receiving) is de route zonder Vinted aan te raken; staat op eigenaar tot DKIM live gemeten is*
+
+Vinted-voorwaarden verbieden externe software en bulk herplaatsen. Route zonder Vinted aan te raken: klant stuurt alleen Vinted-verkoopmails (from no-reply@vinted.nl, onderwerp "verkocht"/"sold") door via een Gmail-filter naar `vinted-<24 hex>@kareutalo.resend.app`; `backend/services/vinted_verkoopmail.py` boekt alleen bij DKIM pass, Vinted-afzender en precies één actieve advertentie met die titel. Vinted ondertekent als vinted.nl (gelijk aan afzender), dus Resend hoort "pass" te geven.
+
+**Why:** Daniel wil Vinted veiliger maken zonder de bestaande koppeling te breken (herplaatsen op Vinted staat sinds 06-10 al standaard uit; kanaal loskoppelen kan sinds 20-11).
+
+**How to apply:** kaart en adres zijn alleen voor de eigenaar tot de eerste echte doorgestuurde mail is gemeten (Railway-log `[vinted-mail]` met `authenticatie=`, Resend > Receiving). Dan pas `VINTED_MAIL_OPEN_VOOR_KLANTEN=true`. Open: plaatsklaar-stand (klant plakt zelf), dode `backend/platforms/vinted.py` weghalen, proef op demo-account. Zie "geen-echte-persoonsgegevens-in-openbare-repo".
+
+---
+
+## geen-echte-persoonsgegevens-in-openbare-repo
+
+*22-11-2026 — 22-11: echte koperadressen uit Vinted-screenshots stonden in een testbestand op de openbare repo; nooit echte namen of adressen in tests, de auto-push zet alles direct online*
+
+De repo omnivaleur is OPENBAAR en de auto-push zet elke wijziging meteen online. Op 22-11-2026 stonden naam, adres en e-mail van twee echte kopers (uit Daniels Vinted-verkoopmails) in tests/test_vinted_verkoopmail.py. Geschrapt met een geforceerde historieherschrijving (12 commits, akkoord van Daniel); GitHub kan oude hashes nog tonen.
+
+**Why:** een testbestand voelt privé maar is dat niet. Herschrijven van de historie kost een tweede ontwikkelaar een reset en laat sporen achter bij GitHub.
+
+**How to apply:** testvoorbeelden uit echte mails of screenshots altijd met verzonnen namen, adressen en e-mailadressen opbouwen, vóór het bestand wordt opgeslagen. Controleer vóór elke commit met `git grep` op echte persoonsgegevens uit het gesprek. Zie "klantdata-niet-op-eigen-initiatief".
+
+---
+
 ## gemini-gem-niet-meer-in-gebruik
 
 *22-11-2026 — Daniel gebruikt de Gemini Gem met het klantenservice-brein niet meer; brein alleen bijhouden als het Claude of de andere developer helpt, geen Drive-kopie meer*

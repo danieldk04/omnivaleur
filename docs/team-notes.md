@@ -19828,3 +19828,10 @@ Webshop inlezen is gratis in de proefweek en daarna inbegrepen vanaf Pro, eenmal
 
 ## 22-11-2026: Gemini Gem niet meer in gebruik (Daniel)
 Daniel gebruikt de Gemini Gem met het klantenservice-brein niet meer (hij updatete niet). Geen Drive-kopie meer bijwerken. `docs/klantenservice-brein.md` blijft als naslag voor ontwikkelaars en klantmail-concepten; alleen bijwerken als het hen helpt. CLAUDE.md is aangepast.
+
+## 22-11-2026 (avond), Vinted: eigen tabblad in Voorkeuren, melding aan klanten
+* Voorkeuren heeft een tabblad Vinted (view-vinted in frontend/app.html): uitleg hoe Omnivaleur met Vinted werkt, de schakelaars voor verversen/herplaatsen, vertaling en staat (verplaatst uit "Upkeep", zelfde id's), pointers naar Platforms (koppelen en loskoppelen) en Settings (sluittekst, categorieën), en de kaart voor de doorgestuurde verkoopmail. Die kaart ziet alleen de eigenaar tot `VINTED_MAIL_OPEN_VOOR_KLANTEN=true`.
+* Bug onderweg gevangen: het tabblad liet de schakelaars op "uit" staan tot Settings geopend was (loadRelistDagen draait nu ook bij showView('vinted')). Live gemeten: server zegt herplaatsen aan bij Daniel, scherm toont aan.
+* Klantmelding: popup "Al je Vinted-keuzes op één plek" (NIEUWS_ID 2026-11-vinted-tabblad), updatelogbericht en rondleiding vinted-tabblad (vier stappen, live afgelopen), NL en EN. Boodschap: voor klanten verandert vandaag niets, alleen de plek.
+* Gedragskeuzes Daniel 22-11: herplaatsen op Vinted standaard uit met schakelaar (bestond al), plaatsklaar-stand als extra keuze per klant waarbij de huidige standaard blijft, proefplek is het demo-account.
+* Nog open: plaatsklaar-stand bouwen (17 plekken die jobs maken, extensie raakt Vinted alleen via serveropdrachten dus een servergate volstaat, maar listing-statussen en meldingen moeten mee), dode `backend/platforms/vinted.py` en `/vinted/bootstrap`, proef op demo-account, eerste echte doorgestuurde mail meten (DKIM) en dan klantbreed openzetten.
