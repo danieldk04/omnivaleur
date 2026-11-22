@@ -205,6 +205,50 @@ def _resend_handtekening_klopt(body: bytes, headers) -> bool:
     return False
 
 
+async def _vinted_verkoopmail_ontvangen(data: dict, payload: dict) -> dict:
+    """Een doorgestuurde Vinted-verkoopmail (22-11-2026). Antwoordt altijd 200 zodat
+    Resend niet blijft herhalen; elke afwijking wordt alleen gelogd. De regels staan
+    in backend/services/vinted_verkoopmail.py. Dit is een extra bron naast de
+    bestaande verkoopdetectie en haalt niets weg."""
+    import httpx
+    from backend.services import vinted_verkoopmail as vm
+
+    try:
+        token = vm.adres_token(data.get("to"))
+        email_id = data.get("email_id") or data.get("id")
+        if not token or not email_id or not settings.resend_api_key:
+            return {"status": "ok", "genegeerd": "geen_adres_of_id"}
+        db = get_admin_db()
+        rij = (await naast_de_lus(lambda: db.table("platform_credentials").select("user_id")
+               .eq("platform", "vinted_mail").eq("extra_data->>token", token).limit(1).execute())).data
+        if not rij:
+            logger.info("[vinted-mail] onbekend adres, genegeerd")
+            return {"status": "ok", "genegeerd": "onbekend_adres"}
+        # De melding bevat alleen kopgegevens; tekst en DKIM-uitslag halen we zelf op.
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.get(f"https://api.resend.com/emails/receiving/{email_id}",
+                                 headers={"Authorization": f"Bearer {settings.resend_api_key}"})
+        if r.status_code != 200:
+            logger.warning("[vinted-mail] mail %s niet op te halen: HTTP %s", email_id, r.status_code)
+            return {"status": "ok", "genegeerd": "ophalen_mislukt"}
+        mail = r.json()
+        gebeurd = data.get("created_at") or payload.get("created_at")
+        try:
+            ontvangen = datetime.fromisoformat(str(gebeurd).replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            ontvangen = datetime.now(timezone.utc)
+        uitkomst = await vm.verwerk_ontvangen_mail(
+            db=db, naast_de_lus=naast_de_lus, handle_item_sold=handle_item_sold,
+            bewijs=BEWIJS_KANAAL_ZEGT_VERKOCHT, user_id=rij[0]["user_id"],
+            onderwerp=mail.get("subject"), van=mail.get("from"), tekst=mail.get("text"),
+            html=mail.get("html"), authenticatie=mail.get("authentication"), ontvangen_op=ontvangen)
+        logger.info("[vinted-mail] %s (%s)", uitkomst.get("uitkomst"), uitkomst.get("reden"))
+        return {"status": "ok", "uitkomst": uitkomst.get("uitkomst")}
+    except Exception as e:  # noqa: BLE001 — een mislukte extra bron mag nooit de rest raken
+        logger.warning("[vinted-mail] verwerking mislukt: %s", e)
+        return {"status": "ok", "genegeerd": "fout"}
+
+
 @router.post("/resend")
 async def resend_webhook(request: Request):
     """Bezorg-, bounce-, klacht- en open-gebeurtenissen van Resend. Elke rij gaat
