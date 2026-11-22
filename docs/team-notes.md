@@ -19803,3 +19803,8 @@ Aanleiding: Vinted verbiedt externe software op het account. Een verkoop herkenn
 
 ## 22-11-2026: X toch niet automatisch (Daniel)
 Pauze van 18-11 kwam doordat X twijfelde of Daniel een bot was. Onderzoek in X' regels (help.x.com Automation rules, docs.x.com developer-guidelines): browserautomatisering van de website kan permanente blokkade geven, reageren op zoekwoord-treffers en door AI geschreven reacties zijn niet toegestaan zonder toestemming. Menselijk tempo verandert dat niet. Besluit: de ronde komt niet meer op x.com, concepten alleen als Daniel een post plakt, hij typt zelf. Het eerdere veiligheidsblok van dezelfde dag is vervallen. Bluesky en Indie Hackers hebben hun eigen regels en zijn hier niet voor beoordeeld.
+
+## 22-11-2026, historie herschreven: koperadressen uit de openbare repo gehaald (Daniel gaf akkoord)
+Twee echte kopers (naam, adres, e-mail uit Vinted-mails) stonden in de eerste versies van tests/test_vinted_verkoopmail.py. Verwijderd uit alle commits vanaf 80c4f3e3 (12 commits kregen een nieuwe hash, inhoud verder identiek). Reservekopie van de oude stand: scratchpad van die sessie, niet bewaard in git.
+**Tweede ontwikkelaar en elke andere kopie van de repo:** haal de nieuwe historie binnen met `git fetch origin && git reset --hard origin/main` (eerst lokale wijzigingen veiligstellen). Doe je dat niet, dan duwt de auto-push de oude commits terug en staat de data er weer.
+Let op: GitHub kan oude commits nog een tijd tonen via hun hash; volledig weg is pas na opruiming door GitHub (support-verzoek).
