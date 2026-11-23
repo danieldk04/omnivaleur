@@ -19848,3 +19848,6 @@ Overdracht.md bijgewerkt met het Vinted-werk van de avond (tabblad, verkoopmail,
 
 ## 23-11-2026 (ochtend), kennisoverdracht: niets nieuws
 Sinds 22-11 22:30 alleen klantfoutenronde (geen codefout), Facebook-actueel en schrijfstijl-updates. Extensie 1.0.434, server commit 25026078 (health ok), 40 geplande taken en 6 LaunchAgents, bijlagen en CLAUDE.md gelijk.
+
+## 23-11-2026: Platformcontrole, geen afwijking
+Vinted (7 proefartikelen), Marktplaats en 2dehands (3 boekenrubrieken elk) met de echte extensiecode, niets geplaatst. Alle stappen gelijk aan 21-11 (wanddecoratie size/brand en boek halswijdte zijn de bekende artefacten). Uitslag bewaard.
