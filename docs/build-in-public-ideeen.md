@@ -37,6 +37,7 @@ Niets verzinnen: een cijfer staat hier alleen als het gemeten is, met datum en b
 
 | Datum | Post | Wat is beloofd | Meting die nodig is | Terugkom op | Status |
 |---|---|---|---|---|---|
+| 23-11-2026 | Facebook Vinted BE/NL, Daniels post 21-11 | Aan Ani Ta: uitzoeken wat Vinted precies toestaat aan tools (voorwaarden verbieden externe softwaretools zoals bots 'tenzij Vinted het toestaat') en daarop terugkomen | Vinted-voorwaarden en help-pagina's over tools lezen; plaatsklaar-stand (nog niet live) noemen zodra die voor klanten aan staat | 30-11-2026 | Open |
 | 22-11-2026 | Dag 168, prijswijziging | Aan Nino: kijken naar de nieuwsbrief The Weekly Reseller (Vinted Survival Guide) en proberen op de ResaleOS-lijst 'Best Cross-Listing Software 2026' te komen | Nieuwsbrief en lijst nalopen, contact zoeken | 29-11-2026 | Open |
 | 22-11-2026 | Dag 168, prijswijziging | Aan listdraft: bij de prijswijziging per 1 januari seizoensuitval en prijsgedreven opzeggingen apart houden | Opzeggingen rond 1 januari splitsen | 15-01-2027 | Open |
 | 21-11-2026 | Facebook Startende Ondernemers, Etsy-post | Aan Gert Pellin: uitzoeken of Etsy API-toegang via de klant zelf kan lopen (wij bouwen met mocks, klanten vragen zelf toegang aan) | Etsy-documentatie en voorwaarden lezen, kijken of onze afwijzing daarmee samenhangt | 28-11-2026 | Open |
@@ -51,6 +52,7 @@ Niets verzinnen: een cijfer staat hier alleen als het gemeten is, met datum en b
 
 | Datum | Van | Idee of vraag | Wat we ermee kunnen | Status |
 |---|---|---|---|---|
+| 23-11-2026 | Ani Ta (Facebook) | Waarschuwing: software om tegelijk te plaatsen zou verboden zijn op Vinted en je account kosten | Zelfde zorg als de Vinted-voorwaarden (externe tools). Argument voor de plaatsklaar-stand; content-onderwerp zodra dat helder is | Beantwoord, terugkomen 30-11 |
 | 22-11-2026 | listdraft (IH) | Bij prijsverhoging: directe mail met wat verandert in euro, optie om met jaarabonnement de huidige prijs vast te zetten vóór 1 januari | Overwegen voor de aankondiging aan bestaande klanten | Nieuw |
 | 22-11-2026 | Nino (IH) | Geef elk plan een paar AI-aanbiedingen per maand en kijk wie de limiet haalt | Test voor AI-functies op alle plannen | Nieuw |
 | 21-11-2026 | Gert Pellin (Facebook) | Etsy weigerde omdat wij een third party app zijn, geen eindklant. Bouw mocks op basis van hun documentatie, laat klanten zelf toegang aanvragen met hun eigen gebruiksreden | Mogelijke route rond de Etsy-afwijzing, eerst bij Etsy navragen of dat past bij ons beroep | Nieuw |
