@@ -17,6 +17,18 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## nieuwe-laptop-m1-max-verhuizing
+
+*23-11-2026 — 23-11-2026 Daniel stapt over op een MacBook M1 Max 32 GB; Claude regelt de hele verhuizing (Omnivaleur en de rest van de Mac) zelf*
+
+Daniel heeft sinds 23-11-2026 een nieuwe MacBook (M1 Max, 32 GB werkgeheugen) en wil daar voortaan op werken, voor Omnivaleur en de rest van zijn Mac. De andere developer was eerst aan zet, nu is Daniel weer aan zet en is die ander stil.
+
+**Why:** Meer werkgeheugen dan de oude Mac (eerder in de chat besproken als knelpunt). Daniel wil er niets van hoeven doen.
+
+**How to apply:** Daniel heeft alle toestemmingen gegeven om de overstap van Mac naar Mac volledig zelf voor te bereiden en uit te voeren: inventaris, overzetten, installeren, controleren. Alleen wat alleen hij kan (inloggen als hijzelf, betalen, wachtwoorden en codes) legt Claude bij hem neer. Stand en open punten staan in docs/overdracht.md en docs/team-notes.md. Zie ook "icloud-parkeert-de-repo", "cross-account-traceability" en "extensie-echt-draaien-in-chrome".
+
+---
+
 ## vinted-compliance-mailroute
 
 *22-11-2026 — 22-11: Vinted verbiedt externe tools; verkoop herkennen via doorgestuurde Vinted-mail (Resend Receiving) is de route zonder Vinted aan te raken; staat op eigenaar tot DKIM live gemeten is*

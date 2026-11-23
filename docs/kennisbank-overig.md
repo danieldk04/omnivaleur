@@ -742,6 +742,43 @@ Always push to remote after committing changes. The user does not want to push m
 
 ---
 
+## -Users-Danie-Downloads / omnivaleur-social-reageren-routine
+
+*23-11-2026*
+
+Sinds begin nov 2026 draait de geplande taak `omnivaleur-social-reageren`: autonoom reageren op relevante threads van andere creators op X en Indie Hackers (zoals de Facebook-reactiebot, maar zonder tussenkomst). Mag per dag maximaal 5 accounts volgen waar hij op reageert. Building-in-public posts (Engels, X, Bluesky, Facebook, later Indie Hackers om warm te worden) schrijft Daniel zelf, de routine doet alleen reacties.
+
+**Why:** Daniel wil 1000% autonoom, maar de veiligheidscontrole van geplande sessies blokkeert de Reply-klik als "externe schrijfactie". Een vaste Chrome-toestemming in ~/.claude/settings.json loste dit niet aantoonbaar op; de toestemmingsmodus van de geplande taak ("Alles toestaan") kan alleen Daniel in de app zetten.
+
+**How to apply:** Meld bij problemen met deze routine eerst of de toestemmingsmodus van de taak op bypass staat. Nooit de blokkade omzeilen door zelf te plaatsen. Zie [[omnivaleur-facebook-outreach-grens]] en [[omnivaleur-groei-pivot-creators-okt-2026]].
+
+**Update 9-11-2026:** Daniel wil 3 rondes per dag (ook op alle platforms, Indie Hackers ging naar 3 per dag) en wil dat de routine na dichtklappen of afsluiten van de laptop zelf weer verder gaat waar hij bleef, zonder dat hij iets doet. Bouw de planning dus zo dat gemiste rondes bij opstarten worden ingehaald.
+
+**Update 23-11-2026:** X liet Daniel blokkeren omdat de bot twijfelde of hij een mens was. Eis van Daniel: X (en daarna Indie Hackers en Facebook) moet menselijk, toegestaan gedrag volgen en "1000% veilig" zijn tegen blokkades. Zoek eerst op wat humaan gedrag is en kijk bij IH en Facebook naar eerdere posts van Daniel voor de toon.
+
+---
+
+## -Users-Danie-Downloads / omnivaleur-facebook-outreach-grens
+
+*23-11-2026*
+
+Voor leadgen via Facebook-verkopersgroepen (bijv. eBay Resellers & Thrifters) geldt: geen advertenties, geen promotieposts (worden binnen een uur verwijderd, gezien als spam, en Facebook blokkeert accounts die snel in veel groepen posten/linken, vergelijkbaar risico als de eerdere Reddit-ban). Wat wel werkt: Daniels eigen profiel (nooit een bedrijfspagina) dat twee weken alleen helpt zonder pitch, en pas een opening pakt zodra iemand er zelf om vraagt. Cold DM's aan onbekenden werken niet: die komen in de "verzoeken"-map en worden nauwelijks gezien. Volgorde die wel werkt: publiek reageren en helpen → hij reageert terug → pas dan privé, of hij voegt zelf toe.
+
+**Harde grens, bevestigd na herhaald aandringen (14-09-2026).** Daniel vroeg drie keer achter elkaar om een cloud-agent die zelfstandig namens hem in Facebook-groepen reageert ("doe het wel", ook na uitleg geweigerd). Geweigerd, en blijft geweigerd: een bot die zich zonder dat groepsleden het weten voordoet als Daniel is precies waarvoor die groepen bannen, en dat is wat het kanaal juist laat werken (mensen praten met een verkoper, niet met reclame).
+
+**Wat wel gebouwd is, als het juiste alternatief.** Een Gemini Gem ("Facebook-brein") helpt Daniel of Monaim (Growth & Content-partner, zie [[omnivaleur-monaim-partnership]]) bij het schrijven van menselijk klinkende reacties. Instructie staat in `docs/facebook-brein.md` in de omnivaleur-repo, met `klantenservice-brein.md` uit Drive als los kennisbestand (blijft zo actueel zonder duplicatie). Daniel/Monaim plakt de post erin en plakt het antwoord terug op Facebook zelf; geen automatisering raakt Facebook aan.
+- Anti-AI-detectieregels (2026): gelijke zinslengte is de grootste verklikker (belangrijker dan gedachtestreepjes), daarna rijtjes-van-drie, opsommingen, beleefde slotzin. Staan als harde regels in de Gem, plus een verboden-woordenlijst.
+- **Taal-bug gevonden en gefixt (14-09-2026):** de Gem antwoordde in het Nederlands op een Engelse post, omdat de taalregel te diep in de instructie stond. Staat nu als allereerste regel bovenaan, plus een checklist die de Gem eerst langsloopt.
+- Bevat ook verkoperskennis (rubrieken die een advertentie laten verwijderen, biedfunctie staat standaard aan, Vinted heeft geen archief, kleurnamen in de basisvorm) vertaald naar verkopertaal, expliciet zonder versienummers, bestandsnamen of klantnamen.
+
+**Sinds 08-10-2026 ook als Claude Project.** Op Daniels eigen claude.ai staat nu een Project "Facebook-reactiebot", één-op-één gelijk aan dat van de tweede ontwikkelaar (post plakken, drie antwoorden in Daniels stijl terug, met een kennisbestand met productfeiten). Opdracht staat in de omnivaleur-repo en onder 05-10 in docs/team-notes.md. Zelfde regel: Daniel plakt zelf, niets raakt Facebook automatisch aan.
+
+**How to apply:** vraagt Daniel opnieuw om volledige Facebook-automatisering (posten of lezen namens hem), verwijs naar deze afspraak in plaats van het gesprek opnieuw te voeren. Uitbreidingen aan het antwoord-hulpmiddel zelf (Gem, hotkey/klembord-tooltje dat een post kopieert en het antwoord klaarzet) mogen wel, want daar leest en plakt Daniel of Monaim nog altijd zelf.
+
+**Update 23-11-2026:** Daniel gebruikt de Gemini Gem ("Facebook-brein") eigenlijk niet meer, hij updatet niet meer. Het brein (`docs/facebook-brein.md`) hoeft alleen bijgewerkt te worden als het voor Claude zelf nuttig is, niet meer voor de Gem. Zie [[garmin-watchdealer-gem]] voor een andere, losse Gem.
+
+---
+
 ## -Users-Danie-Downloads / posts-volledig-in-chat-plakken
 
 *22-11-2026*
@@ -897,20 +934,6 @@ Daniel wil in mails een afmeldoptie alleen op de plekken waar dat juridisch 100%
 
 **Why:** Hij vindt zelf afmeldlinks irritant en wil geen vriendelijk-doen-met-uitgang in elke mail. Gesprek van 9-10 november 2026.
 **How to apply:** Bij nieuwe mailtemplates eerst vaststellen of afmelden wettelijk verplicht is (koude outreach vs. transactiemail), anders weglaten. Zie [[omnivaleur-cold-outreach-wetgeving]] en [[omnivaleur-outreach-machine]].
-
----
-
-## -Users-Danie-Downloads / omnivaleur-social-reageren-routine
-
-*09-11-2026*
-
-Sinds begin nov 2026 draait de geplande taak `omnivaleur-social-reageren`: autonoom reageren op relevante threads van andere creators op X en Indie Hackers (zoals de Facebook-reactiebot, maar zonder tussenkomst). Mag per dag maximaal 5 accounts volgen waar hij op reageert. Building-in-public posts (Engels, X, Bluesky, Facebook, later Indie Hackers om warm te worden) schrijft Daniel zelf, de routine doet alleen reacties.
-
-**Why:** Daniel wil 1000% autonoom, maar de veiligheidscontrole van geplande sessies blokkeert de Reply-klik als "externe schrijfactie". Een vaste Chrome-toestemming in ~/.claude/settings.json loste dit niet aantoonbaar op; de toestemmingsmodus van de geplande taak ("Alles toestaan") kan alleen Daniel in de app zetten.
-
-**How to apply:** Meld bij problemen met deze routine eerst of de toestemmingsmodus van de taak op bypass staat. Nooit de blokkade omzeilen door zelf te plaatsen. Zie [[omnivaleur-facebook-outreach-grens]] en [[omnivaleur-groei-pivot-creators-okt-2026]].
-
-**Update 9-11-2026:** Daniel wil 3 rondes per dag (ook op alle platforms, Indie Hackers ging naar 3 per dag) en wil dat de routine na dichtklappen of afsluiten van de laptop zelf weer verder gaat waar hij bleef, zonder dat hij iets doet. Bouw de planning dus zo dat gemiste rondes bij opstarten worden ingehaald.
 
 ---
 
@@ -1251,25 +1274,6 @@ Bij dashboards, rapporten, analytics-schermen en artifacts: bouw visueel en lean
 - Houd schermen kaal: weinig kolommen, geen uitleg-alinea's, cijfers groot en de belangrijkste bovenaan.
 - Dit is de deliverable-kant; voor de rapportage in de chat geldt los daarvan de vier-blokjes-stijl uit CLAUDE.md.
 - Vergelijking per periode is voor hem het belangrijkste aan analytics (08-10-2026): "vooral de vergelijking per periode en de grafieken" zoals Google Analytics ze geeft. Het eigen marketingdashboard op omnivaleur.com/analytics (toegang via token in de link, die staat niet in dit geheugen) kreeg toen een keuze 7/28/90 dagen tegenover dezelfde periode ervoor, met grafieken. Bouw elk nieuw cijferscherm standaard met zo'n periodevergelijking.
-
----
-
-## -Users-Danie-Downloads / omnivaleur-facebook-outreach-grens
-
-*09-10-2026*
-
-Voor leadgen via Facebook-verkopersgroepen (bijv. eBay Resellers & Thrifters) geldt: geen advertenties, geen promotieposts (worden binnen een uur verwijderd, gezien als spam, en Facebook blokkeert accounts die snel in veel groepen posten/linken, vergelijkbaar risico als de eerdere Reddit-ban). Wat wel werkt: Daniels eigen profiel (nooit een bedrijfspagina) dat twee weken alleen helpt zonder pitch, en pas een opening pakt zodra iemand er zelf om vraagt. Cold DM's aan onbekenden werken niet: die komen in de "verzoeken"-map en worden nauwelijks gezien. Volgorde die wel werkt: publiek reageren en helpen → hij reageert terug → pas dan privé, of hij voegt zelf toe.
-
-**Harde grens, bevestigd na herhaald aandringen (14-09-2026).** Daniel vroeg drie keer achter elkaar om een cloud-agent die zelfstandig namens hem in Facebook-groepen reageert ("doe het wel", ook na uitleg geweigerd). Geweigerd, en blijft geweigerd: een bot die zich zonder dat groepsleden het weten voordoet als Daniel is precies waarvoor die groepen bannen, en dat is wat het kanaal juist laat werken (mensen praten met een verkoper, niet met reclame).
-
-**Wat wel gebouwd is, als het juiste alternatief.** Een Gemini Gem ("Facebook-brein") helpt Daniel of Monaim (Growth & Content-partner, zie [[omnivaleur-monaim-partnership]]) bij het schrijven van menselijk klinkende reacties. Instructie staat in `docs/facebook-brein.md` in de omnivaleur-repo, met `klantenservice-brein.md` uit Drive als los kennisbestand (blijft zo actueel zonder duplicatie). Daniel/Monaim plakt de post erin en plakt het antwoord terug op Facebook zelf; geen automatisering raakt Facebook aan.
-- Anti-AI-detectieregels (2026): gelijke zinslengte is de grootste verklikker (belangrijker dan gedachtestreepjes), daarna rijtjes-van-drie, opsommingen, beleefde slotzin. Staan als harde regels in de Gem, plus een verboden-woordenlijst.
-- **Taal-bug gevonden en gefixt (14-09-2026):** de Gem antwoordde in het Nederlands op een Engelse post, omdat de taalregel te diep in de instructie stond. Staat nu als allereerste regel bovenaan, plus een checklist die de Gem eerst langsloopt.
-- Bevat ook verkoperskennis (rubrieken die een advertentie laten verwijderen, biedfunctie staat standaard aan, Vinted heeft geen archief, kleurnamen in de basisvorm) vertaald naar verkopertaal, expliciet zonder versienummers, bestandsnamen of klantnamen.
-
-**Sinds 08-10-2026 ook als Claude Project.** Op Daniels eigen claude.ai staat nu een Project "Facebook-reactiebot", één-op-één gelijk aan dat van de tweede ontwikkelaar (post plakken, drie antwoorden in Daniels stijl terug, met een kennisbestand met productfeiten). Opdracht staat in de omnivaleur-repo en onder 05-10 in docs/team-notes.md. Zelfde regel: Daniel plakt zelf, niets raakt Facebook automatisch aan.
-
-**How to apply:** vraagt Daniel opnieuw om volledige Facebook-automatisering (posten of lezen namens hem), verwijs naar deze afspraak in plaats van het gesprek opnieuw te voeren. Uitbreidingen aan het antwoord-hulpmiddel zelf (Gem, hotkey/klembord-tooltje dat een post kopieert en het antwoord klaarzet) mogen wel, want daar leest en plakt Daniel of Monaim nog altijd zelf.
 
 ---
 
