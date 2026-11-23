@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=b5eb8f97f7"></script>
+<script src="/i18n.js?v=0958bf11cf"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -11979,6 +11979,12 @@ function renderRefreshView() {
         statusCell = `<span class="rf-pill rf-pill-relisting"><span class="rf-spin">↻</span> New listing in ${fmtEta(msLeft)}</span>`;
       }
       actionCell = `<button class="btn btn-sm btn-outline" disabled title="Relist in progress">In progress…</button>`;
+    } else if (l.status !== 'sold_unconfirmed' && l.error_message && /^Relist skipped: the marketplace now charges/.test(l.error_message)) {
+      // Bewust overgeslagen, geen fout: de rubriek kost geld op dit kanaal, dus
+      // het weghalen van de oude advertentie zou hem voorgoed offline halen. Hij
+      // staat gewoon online; "opnieuw proberen" zou precies hetzelfde antwoord geven.
+      statusCell = `<span class="rf-pill rf-pill-cooldown" title="This category now costs money on this marketplace. Removing the old listing would take it offline for good, so it was not relisted. It is untouched and still live.">Not relisted — paid category</span>`;
+      actionCell = `<button class="btn btn-sm btn-outline" disabled title="This category costs money on this marketplace, so this listing is left as it is.">Refresh</button>`;
     } else if (l.status !== 'sold_unconfirmed' && l.error_message && /relist|delist|still live/i.test(l.error_message)) {
       // A relist whose delist failed: the item is still live, nothing was lost,
       // and a retry is safe. Surface it right here so it's not stuck silently.

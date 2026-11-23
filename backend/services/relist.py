@@ -823,6 +823,25 @@ def _check_and_increment_quota(db, user_id: str, platform: str | None = None) ->
         db.table("refresh_quota").insert({"user_id": user_id, "day": today, "count": 1}).execute()
 
 
+# Per advertentie onthouden dat de rubriek geld kost, zodat de ronde elke zes uur
+# niet voor honderden advertenties opnieuw de pagina ophaalt om hetzelfde te zien.
+# Bewust in het geheugen: na een herstart kijkt hij één keer opnieuw, en de
+# vraag zelf (_betaalde_rubriek_bekend) heeft zijn eigen geheugen van 28 dagen.
+_BETAALD_GEWEIGERD: dict[tuple, float] = {}
+_BETAALD_GEWEIGERD_UREN = 24
+
+
+def _onthoud_betaalde_rubriek(user_id: str, platform: str, item_id: str) -> None:
+    import time
+    _BETAALD_GEWEIGERD[(user_id, platform, item_id)] = time.monotonic()
+
+
+def _betaalde_rubriek_recent_geweigerd(user_id: str, platform: str, item_id: str) -> bool:
+    import time
+    toen = _BETAALD_GEWEIGERD.get((user_id, platform, item_id))
+    return bool(toen and time.monotonic() - toen < _BETAALD_GEWEIGERD_UREN * 3600)
+
+
 def rollback_refresh(rollback: dict, user_id: str) -> None:
     """
     Undo the optimistic bookkeeping a refresh does at enqueue time when the
@@ -980,6 +999,11 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
     if strategy == "relist" and platform in ("marktplaats", "2dehands"):
         if await zakelijk_vervangen_kan_niet(db, user_id, platform):
             raise RefreshError(melding_zakelijk_vervangen(platform))
+        # Eerder vandaag al gebleken dat deze advertentie in een betalende rubriek
+        # staat: niet opnieuw de pagina ophalen om hetzelfde te vinden.
+        if _betaalde_rubriek_recent_geweigerd(user_id, platform, item_id):
+            from backend.api.jobs import HERPLAATSING_BETAALDE_RUBRIEK
+            raise RefreshError(HERPLAATSING_BETAALDE_RUBRIEK)
 
     # Eerst: kunnen we deze advertentie straks überhaupt terugzetten? Zo niet,
     # dan halen we hem ook niet weg. Zie ontbreekt_voor_herplaatsen.
@@ -1247,6 +1271,48 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         # merkteken telde de dagteller ze allebei. Zie _check_and_increment_quota.
         "_handmatige_verversing": not eigen_quotum,
     }
+
+    # EEN HERPLAATSING IN EEN BEKENDE BETALENDE RUBRIEK WORDT NIET EENS KLAARGEZET.
+    #
+    # WAAROM (23-11-2026, Mieneke / Voordeelsieraden 09e089ec). Haar antieke
+    # sieraden (Marktplaats-rubriek 1826/13) staan op 2dehands in een rubriek die
+    # geld kost (sinds 12-11 bekend). De uitgifte in jobs.py nam elke herplaatsing
+    # daar terecht terug (_herplaatsing_in_betaalde_rubriek), maar pas NA het
+    # klaarzetten: de oudste advertenties, precies die rubriek, kwamen elke ronde
+    # als eerste aan de beurt, vulden de dagruimte (op 21-11 32 van 52, op 23-11
+    # 40 van 53) en stonden daarna in het scherm als "Herplaatsen mislukt". Hier
+    # dezelfde vraag, vóór er iets in de wachtrij staat: de planner slaat de
+    # advertentie over (RefreshError telt daar niet mee voor het dagquotum) en
+    # komt bij de volgende toe. Er wordt niets weggehaald.
+    if strategy == "relist" and platform in ("marktplaats", "2dehands"):
+        betaald = False
+        try:
+            from backend.api.jobs import (_betaald_gecachet, _betaalde_rubriek_bekend,
+                                          _rubriek_sleutel)
+            sleutel = _rubriek_sleutel(create_payload)
+            betaald = bool(sleutel) and await naast_de_lus(
+                lambda: _betaald_gecachet(
+                    (user_id, platform, sleutel),
+                    lambda: _betaalde_rubriek_bekend(db, user_id, platform, sleutel)))
+        except Exception as e:  # noqa: BLE001 — een rem mag het herplaatsen nooit omgooien
+            logger.warning("betaalde rubriek niet na te gaan voor item %s: %s", item_id, e)
+        if betaald:
+            from backend.api.jobs import HERPLAATSING_BETAALDE_RUBRIEK
+            _onthoud_betaalde_rubriek(user_id, platform, item_id)
+            if not eigen_quotum:
+                try:
+                    rollback_refresh(rollback, user_id)   # handmatig: quotum teruggeven
+                except Exception as e:  # noqa: BLE001
+                    logger.warning("quotum niet teruggegeven voor item %s: %s", item_id, e)
+            if listing.get("error_message") != HERPLAATSING_BETAALDE_RUBRIEK:
+                try:
+                    await _exec(db.table("listings")
+                                .update({"error_message": HERPLAATSING_BETAALDE_RUBRIEK})
+                                .eq("id", listing["id"]))
+                except Exception as e:  # noqa: BLE001
+                    logger.warning("melding niet gezet voor listing %s: %s", listing["id"], e)
+            logger.info("[relist] item %s overgeslagen: rubriek kost geld op %s", item_id, platform)
+            raise RefreshError(HERPLAATSING_BETAALDE_RUBRIEK)
 
     # ---- 2. Nu pas wegschrijven. Vanaf hier is er geen voorbereiding meer. ----
     # De verwijdering moet als eerste in de database staan: het dispatch-filter in
