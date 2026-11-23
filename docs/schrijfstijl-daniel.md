@@ -189,6 +189,7 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - 20-11-2026: Gekeken: 81 mails in Verzonden (laatste 3 dagen), 10 van Daniel, 5 al verwerkt; 4 nieuw, 3 met concept. Nieuw: slotvraag om voorbeelden vervangen door vaste "Laat me weten ... meekijk", herkenzin vervangen door excuus voor eigen misser, videomail woordelijk (onder Nog te leren).
 - 21-11-2026: Gekeken: 149 mails in Verzonden (laatste 3 dagen), 13 van Daniel, 6 al verwerkt; 7 nieuw, 3 met concept (1 woordelijk). Nieuw: extra verzoek in slot geschrapt (3e keer), ":)" werd "!", weekendwens op vrijdag (3 van 7), onder Nog te leren.
 - 22-11-2026: Gekeken: 169 mails in Verzonden (laatste 3 dagen), 11 van Daniel, 11 al verwerkt; 0 nieuw, 0 met concept. Niets te leren. Eerste poging liep vast op 8 conceptbestanden die iCloud van de schijf had gehaald; die zijn naar data/schrijfstijl/concepten-icloud-weg verplaatst.
+- 23-11-2026: Gekeken: 102 mails in Verzonden (laatste 3 dagen), 8 van Daniel, 7 al verwerkt; 1 nieuw, 1 met concept. Nieuw: "Goed nieuws:" weer geschrapt (5e keer) en "Fijn weekend!" erbij (4e keer), onder Nog te leren.
 
 
 ## 28-10-2026: geen schuld aantrekken (Daniel spreekt de regel uit)
