@@ -19854,3 +19854,6 @@ Vinted (7 proefartikelen), Marktplaats en 2dehands (3 boekenrubrieken elk) met d
 
 ## 23-11-2026: verhuizing naar MacBook M1 Max
 Daniel koopt een M1 Max (32 GB), de oude Mac (Air M2) wordt binnenkort verkocht. Claude regelt alles zonder zijn handen. Stand, gids en controlescript: docs/verhuizing-nieuwe-mac.md en scripts/verhuis_controle.sh. Gevonden: geen enkele tweede kopie van de oude Mac (geen Time Machine). Open: git-stand van garmin-coach, ZENbtw, revaleur-blog, nexus-market-terminal meten; garmin-tracker, porsche-monitor en Handige Scripts Mac hebben geen git. Les: `timeout` bestaat niet op macOS, een leeg antwoord was geen "geen remote".
+
+## 23-11-2026 (avond): nieuwe Mac nog niet bereikbaar vanuit een sessie
+Daniel meldde dat hij op de nieuwe Mac zit. Gemeten vanuit een cloudsessie: de sessie draait op Linux, `~/.omnivaleur/` en het verhuismanifest bestaan er niet, en `list_computer_folders` geeft geen enkele map (geen computer gekoppeld via Remote Control). `scripts/verhuis_controle.sh check` is dus niet gedraaid. Nog te doen: sessie starten in Claude desktop op de nieuwe Mac zelf (map omnivaleur), of de Mac koppelen via Remote Control; daarna `check` draaien. Op de oude Mac niets uitzetten of wissen.
