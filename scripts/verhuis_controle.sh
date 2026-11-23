@@ -7,7 +7,7 @@
 M="$HOME/.omnivaleur/verhuis-manifest.txt"
 REPOS=("Documents/omnivaleur" "omnivaleur-klantfouten" "Sites/kortax-dashboard" "Documents/apex-forge" "Documents/revaleur-blog" "Documents/garmin-coach" "Documents/Prediction Market Trading bot " "Documents/ZENbtw" "earshot" "huashu-motion" "huashu-art-motion" "claude-animation-skills" "Documents/hallmark" ".claude/skills/uxui-max")
 MAPPEN=(".omnivaleur" ".claude/scheduled-tasks" ".claude/skills" ".claude/projects" "garmin-tracker" "Documents/porsche-monitor" "Documents/Handige Scripts Mac" "Library/Application Support/omnivaleur")
-TELLEN() { timeout 120 find "$HOME/$1" -type f -not -path '*/node_modules/*' -not -path '*/venv/*' -not -path '*/.venv/*' -not -path '*/.git/*' 2>/dev/null | wc -l | tr -d ' '; }
+TELLEN() { find "$HOME/$1" -type f -not -path '*/node_modules/*' -not -path '*/venv/*' -not -path '*/.venv/*' -not -path '*/.git/*' 2>/dev/null | wc -l | tr -d ' '; }
 
 maak() {
   mkdir -p "$HOME/.omnivaleur"
