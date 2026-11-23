@@ -19851,3 +19851,6 @@ Sinds 22-11 22:30 alleen klantfoutenronde (geen codefout), Facebook-actueel en s
 
 ## 23-11-2026: Platformcontrole, geen afwijking
 Vinted (7 proefartikelen), Marktplaats en 2dehands (3 boekenrubrieken elk) met de echte extensiecode, niets geplaatst. Alle stappen gelijk aan 21-11 (wanddecoratie size/brand en boek halswijdte zijn de bekende artefacten). Uitslag bewaard.
+
+## 23-11-2026: verhuizing naar MacBook M1 Max
+Daniel koopt een M1 Max (32 GB), de oude Mac (Air M2) wordt binnenkort verkocht. Claude regelt alles zonder zijn handen. Stand, gids en controlescript: docs/verhuizing-nieuwe-mac.md en scripts/verhuis_controle.sh. Gevonden: geen enkele tweede kopie van de oude Mac (geen Time Machine). Open: git-stand van garmin-coach, ZENbtw, revaleur-blog, nexus-market-terminal meten; garmin-tracker, porsche-monitor en Handige Scripts Mac hebben geen git. Les: `timeout` bestaat niet op macOS, een leeg antwoord was geen "geen remote".
