@@ -1957,6 +1957,14 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     # is altijd binnen een oogwenk klaar. Wat daarna misgaat kan de extensie niet
     # meer treffen.
     fotos_wachten_sinds = (await _fotos_wachten_stempel(db, item, user_id)) if ext_platforms else None
+    if fotos_wachten_sinds:
+        # GitHub draait de geplande foto-taak te zelden; start hem nu zelf.
+        try:
+            import asyncio
+            from backend.services.bronfotos_start import start_bronfotos
+            asyncio.create_task(start_bronfotos())
+        except Exception:
+            pass
 
     for platform in ext_platforms:
         # Elk kanaal apart afgeschermd. Ging er onderweg iets mis — een
