@@ -23,6 +23,13 @@ eerste sessie zelf en zonder te vragen doet: de geplande routines aanmaken (onbo
 10:00, klantfouten 14:00), een eerste ronde draaien, en je omgeving controleren. De
 opdrachten van de routines staan in `docs/routines/`. Daniel hoeft er niet om te vragen.
 
+## Wijzigingen gaan altijd live (Daniel, 23-11-2026)
+
+Is een wijziging klaar en getest, merge hem dan zelf naar main (fast-forward, geen
+pull request nodig) en controleer daarna `https://omnivaleur.com/health`: het veld `commit`
+moet jouw commit zijn (Railway deployt vanaf main, duurt ongeveer twee minuten). Wacht
+daar niet op een vraag van Daniel op. Rode proef die jouw wijziging raakt: niet mergen.
+
 ## Elk bericht: vier blokjes plus urgentie
 
 Daniel, 19-09-2026. Elk antwoord aan hem krijgt dezelfde vorm, ook als er geen
