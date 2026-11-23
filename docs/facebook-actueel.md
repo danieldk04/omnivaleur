@@ -1,4 +1,4 @@
-# Facebook-actueel (bijgewerkt 21-11-2026)
+# Facebook-actueel (bijgewerkt 23-11-2026)
 
 Dit bestand wordt elke ochtend ververst door een routine en gaat voor op alles wat je eerder
 wist. Staat hier iets anders dan in je eigen kennis over een platform: dit bestand wint. Wat hier
@@ -6,7 +6,7 @@ niet staat en je niet zeker weet: zeg het als eigen ervaring of laat het weg. Zo
 (als dat aan staat) voor een vraag over regels of kosten, gebruik dan alleen bronnen van de
 laatste maanden en noem er niets uit als feit zonder dat de bron het zelf zegt.
 
-## Platformnieuws (laatst gecontroleerd 21-11-2026)
+## Platformnieuws (laatst gecontroleerd 23-11-2026)
 
 Vinted
 - Nieuwe voorwaarden sinds 8 oktober 2026: verkopers moeten ze accepteren om te blijven verkopen.
@@ -29,9 +29,11 @@ eBay
 - Duitsland: sinds juli 2026 vast 5% voor tweedehands in sommige rubrieken, alleen voor zakelijke accounts. Particulieren betalen daar sinds 2023 niets.
 - Nederland en België: geen wijziging gevonden (controle 17-11). Frankrijk, Italië en Spanje: een bron noemt wijzigingen per 16 oktober, inhoud onbevestigd.
 
-(Controle 21-11, 19-11 en 17-11, geen nieuwe verkopersregels gevonden; activiteitenlijst Facebook gelezen, alle nieuwe reacties komen van de reageerbot of zijn groepsberichten, dus niets nieuws om van te leren. Eerder: geen nieuwe verkopersregels of kosten gevonden bij Vinted, Marktplaats/2dehands of eBay.)
+(Controle 23-11, 21-11, 19-11 en 17-11, geen nieuwe verkopersregels gevonden; activiteitenlijst Facebook gelezen, alle nieuwe reacties komen van de reageerbot of zijn groepsberichten, dus niets nieuws om van te leren. Eerder: geen nieuwe verkopersregels of kosten gevonden bij Vinted, Marktplaats/2dehands of eBay.)
 
 ## Wat er bij Omnivaleur de afgelopen weken veranderde (alleen wat verkopers merken)
+- 22-11: Vinted-tabblad in Voorkeuren met alle Vinted-keuzes bij elkaar; CSV-export van Wix en Magento inlezen; webshop zonder koppeling wordt voor je ingelezen (inleesservice).
+- 21-11: AI-scherm herindeeld in tegels per taak; foto-achtergrond verwijderen met eigen upload; kortere AI-titels.
 - 20-11: herplaatsen van een verlopen 2dehands/Marktplaats-advertentie houdt nu de eigen rubriek; nieuwe rubrieken (spaarpotten, retro, borduren, breien/haken, Tupperware, Blikken); kanalen kun je loskoppelen (extensie 1.0.432).
 - 20-11: Marktplaats-maat: een maat met geslacht ervoor (Women S) wordt een gewone maat (extensie 1.0.431).
 - 19-11: Vinted: de rubriekkiezer opent weer met een echte klik (extensie 1.0.429).
