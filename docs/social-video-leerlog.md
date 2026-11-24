@@ -2,6 +2,12 @@
 
 Bijgehouden door de wekelijkse routine `docs/routines/social-videos.md`. Nieuwste bovenaan.
 
+## Week 48, vervolg 24-11-2026: koppeling gecontroleerd, eerste inspiratie
+- Schedchie-connector werkt (whoami, list_accounts, list_posts, get_analytics_overview gedraaid). Accounts: Instagram, Facebook (geblokkeerd: Page-eigenaar moet identiteit bevestigen, fb_checkpoint_368 sinds 3-11), YouTube, Pinterest, Threads, Bluesky. TikTok is NIET gekoppeld in Schedchie, dus TikTok-cijfers komen er niet via de connector.
+- Meting van de enige 2 video-posts (3-11 en 10-11, oude stijl): YouTube 1 weergave, Pinterest 1 impressie, Threads 9 weergaven, Instagram 7 likes en 1 reactie op de reel van 10-11. Volgers 30 dagen: +2 totaal. Niet toe te schrijven aan aanmeldingen. Conclusie: de oude stijl haalde niets; aanleiding om naar het renno-niveau te gaan.
+- renno.app (Instagram, 6.644 volgers, gemeten via Daniels Chrome, niet ingelogd): reels met 2,6 mln, 650K, 506K, 110K weergaven; de rest tussen 100 en 2.200. Dus een paar uitschieters dragen het account: patroon voor de volgende stap is veel varianten testen en de winnaars herhalen. Nog te doen: openingszinnen, lengte en tempo van de uitschieters noteren.
+- Geblokkeerd: `bash kit/setup.sh --voice` (kit, Playwright, 1 GB stemmodellen) werd door de rechtenfilter geweigerd, dus er is nog niet gerenderd.
+
 ## Week 48, dinsdag 24-11-2026 (automatische run): nog steeds geen plaatsingen, geen nieuwe video's
 Schedchie (Daniels Chrome) toont nog dezelfde 2 geplaatste posts en niets ingepland: geen enkele video uit week 46 of 47 is geplaatst, dus niets te meten en alle formats 'onzeker'. Schedchie-sleutel bestaat nog niet. Besluit: geen vijf video's erbij op een stapel ongeplaatste; leren begint zodra er plaatsingen zijn. De video's van week 46 en 47 stonden op de oude Mac en zijn niet meegekomen (`~/omnivaleur-videos` en Downloads zijn leeg op deze Mac); de code staat wel in `scripts/video/` en de scripts in `week47-scripts.json`.
 Omgeving hersteld op de nieuwe Mac (32 GB): `~/claude-animation-skills`, `~/huashu-art-motion`, `~/huashu-motion`, `~/earshot` opnieuw geklooid. Nog niet gedaan: `install.sh --voice` (kit, venv, modellen ongeveer 1 GB), earshot-venv, Chatterbox-venv. Spotify draait.
