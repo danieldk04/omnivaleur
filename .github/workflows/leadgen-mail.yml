@@ -43,7 +43,7 @@ jobs:
     # Was 30: de slimme, op-maat-geschreven concepten (Anthropic-aanroepen)
     # kosten meer tijd dan het oude sjabloon-alleen-pad, en braken de laatste
     # van de 3 rondes twee keer af nog voor hij klaar was — ontdekt 26-08-2026.
-    timeout-minutes: 55
+    timeout-minutes: 120
     env:
       TZ: Europe/Amsterdam       # zonder dit rekent de server in UTC en loopt het rooster twee uur voor
       MAIL_HOST: smtp.zoho.eu
@@ -88,9 +88,14 @@ jobs:
       # gewoon gelukt was. Een if-blok geeft die 1 niet door.
       - if: github.event.inputs.opdracht == '' || github.event.inputs.opdracht == 'tick'
         run: |
-          for i in 1 2 3; do
+          # 12 controles (24-11-2026, was 3): GitHub start de geplande ronde maar 2 a 3
+          # keer per dag en het seintje van de Mac valt weg als de Mac uit of verhuisd
+          # is (23-11 tot 24-11 ging daardoor ruim een dag bijna niets uit). Een beurt
+          # van ruim anderhalf uur dekt het dagrooster dan ook zonder Mac. De machine
+          # bepaalt zelf per tijdstip wat er uitgaat, dus meer controles = geen extra mail.
+          for i in $(seq 1 12); do
             python scripts/leadgen_mail.py tick || true
-            if [ "$i" -lt 3 ]; then sleep 420; fi
+            if [ "$i" -lt 12 ]; then sleep 420; fi
           done
       # Eenmalige inhaalronde (05-10-2026): opvolging na de video voor mensen die buiten
       # de leadlijst vielen. Idempotent, alleen overdag, hooguit 5 per beurt; zie
