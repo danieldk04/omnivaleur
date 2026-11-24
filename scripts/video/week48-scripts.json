@@ -1,0 +1,56 @@
+{
+ "sold-twice": {
+  "voice": "JBFqnCBsd6RMkjVDRZzb",
+  "lang": "en",
+  "lines": [
+   "One hoodie. Two buyers.",
+   "It sold on Vinted at nine. It sold on Marktplaats at nine fifteen.",
+   "Now you're writing a sorry message, and refunding someone.",
+   "Omnivaleur sees the first sale, and pulls it everywhere else in seconds.",
+   "No double sales. Try it free for seven days."
+  ]
+ },
+ "list-once": {
+  "voice": "21m00Tcm4TlvDq8ikWAM",
+  "lang": "en",
+  "lines": [
+   "One listing. Four marketplaces. Ten seconds.",
+   "You add the photos and the title once. That's it.",
+   "Omnivaleur puts it on Vinted, Marktplaats, eBay and your own shop.",
+   "Same item, four places, zero retyping.",
+   "List once, sell everywhere. Seven days free."
+  ]
+ },
+ "midnight": {
+  "voice": "pNInz6obpgDQGcFmaJgB",
+  "lang": "en",
+  "lines": [
+   "It's twelve forty, and you're still listing.",
+   "Same photos. Same title. Fourth app tonight.",
+   "Now picture the same evening, with Omnivaleur.",
+   "You add it once, and it's live everywhere.",
+   "Laptop closed at nine. Seven days free, link in my bio."
+  ]
+ },
+ "six-minutes": {
+  "voice": "EXAVITQu4vr4xnSDxMaL",
+  "lang": "en",
+  "lines": [
+   "Do the math on your listing time.",
+   "Four apps, ninety seconds each. Six minutes per item.",
+   "Fifty items? That's five hours of copy and paste.",
+   "Omnivaleur does it in the time it takes to tap once.",
+   "Get your five hours back. Seven days free."
+  ]
+ },
+ "verkocht-nl": {
+  "voice": "TxGEqnHWrfWFTfGW9XjX",
+  "lang": "nl",
+  "lines": [
+   "Verkocht op Vinted, maar nog online op Marktplaats?",
+   "Dan koopt iemand het twee keer, en jij moet sorry zeggen.",
+   "Omnivaleur haalt je advertentie overal weg, zodra het ergens verkocht is.",
+   "Eén keer plaatsen, overal verkopen. Zeven dagen gratis."
+  ]
+ }
+}

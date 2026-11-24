@@ -45,3 +45,11 @@ Onderzocht: AI-video's verraden zich door een monotone stem zonder emotie, sjabl
 
 ## Drie totaal verschillende formats (12-11-2026, Daniel: "duidelijkere story, sterkere haak")
 Uit het onderzoek (blogs, geen studies): resultaat of inzet in de eerste 1 tot 2 seconden, één functie per video, het echte scherm laten zien, een terugkerend personage (Duolingo-aanpak), en een verhaal met inzet, draai en einde. Gebouwd als `vA.js` (storytime met vriendin en samen eten), `vB.js` (demo eerst, geen poppetje, getallen en echt dashboard, 7 dagen gratis) en `vC.js` (hoodie met gezicht die twee keer verkocht is). Per video een andere stem: Chatterbox met een referentieclip van Kokoro (`stemtest/gen2.py`, `ref_X.wav`), dat houdt de stem gelijk binnen een video. Daniel kiest welke het wordt; de keuze en de meting van 17-11 horen in het leerlog.
+
+## Nieuwe pijplijn: geanimeerde uitleg (24-11-2026, Daniel: "niet hyperrealistisch, wel mooie, logische animaties")
+Eerst de oude 3D-route gelaten (zwaar, leek op AI). Nu 2D motion graphics: `scripts/video/motion/engine.js` (tijdlijn, bijschriften uit de woordtiming, audiocues), `kit.js` (logo-chips, stempels, telefoon, laptop, klok) en een bestand per video in `motion/videos/`. Alles is een pure functie van de tijd; scènes starten op `at('woord')` uit de stem, dus nieuwe tekst betekent nieuwe timing zonder handwerk.
+- Stem: `genvoice.py` (ElevenLabs `eleven_multilingual_v2`, premade stem-id's, scripts in `week48-scripts.json`), `words.py` voor woordtiming. Voor Nederlands `genvoice_ts.py` (with-timestamps), want Parakeet is Engels en geeft dan nepwaarden.
+- Beeld: `V=<naam> node render2.mjs video out/<naam>.silent.mp4 30` (±0,17 s per frame, 20 s in 2 minuten, vijf tegelijk kan). Eerst `stills` bekijken met `sheet.py`.
+- Geluid: `render2.mjs cues`, `audio2.py <naam> <stijl>`, `mix2.sh <naam>` (twee-pass loudnorm, doel -14 LUFS, piek onder -1,5 dBTP). Let op: `alimiter` zet het niveau zelf terug omhoog tenzij `level=0`.
+- Assets in `scripts/video/assets/` (logo's en dashboardcrop uit `frontend/assets`). Het dashboardbeeld is oud maar echt; vers vastleggen kan alleen ingelogd.
+- Valkuil: bij scènes met een grote bijschrifttekst die hetzelfde zegt, bijschrift uitzetten met `capOff(a, b)`.

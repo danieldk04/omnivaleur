@@ -239,7 +239,7 @@ niets aan wat bij Daniels eigen taken hoort. Praktisch: gebruik `/usr/local/bin/
   daar staan alleen `mails.txt`, `mails.json`, `niet_mailen.json`, `kanalen.md`; of ze in
   Daniels Zoho staan is niet gecontroleerd, die koppeling hoort bij zijn account). Daniel
   verstuurt. Antwoordconcept voor jordi.waning ook. Kanalen zonder mail: `kanalen.md`.
-- **Social video's**: week 47 heeft vijf video's klaar in Drive (Social media video's
+- **Social video's (24-11)**: nieuwe geanimeerde 2D-pijplijn met ElevenLabs-stem, week 48 heeft vijf video's in `~/Downloads/omnivaleur-week-48/` (Daniel plaatst wekelijks zelf; meting op 1-12 uit wat hij plaatst, zie `docs/video-recept.md` en leerlog). Oudere stand: week 47 heeft vijf video's klaar in Drive (Social media video's
   Claude/Week 47), nog niets geplaatst of gemeten. Schedchie-API-sleutel pas na Daniels eerste
   betaling; vanaf week 47 opnieuw vragen. Daniel plaatst alles zelf.
 - **Beslissing Daniel**: wanneer de nieuwe plannen en de vriendenactie live gaan, en de

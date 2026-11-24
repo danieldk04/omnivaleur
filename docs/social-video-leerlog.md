@@ -2,6 +2,18 @@
 
 Bijgehouden door de wekelijkse routine `docs/routines/social-videos.md`. Nieuwste bovenaan.
 
+## Week 48, 24-11-2026 (avond): nieuwe stijl, vijf geanimeerde video's gemaakt
+Daniel: niet hyperrealistisch, wel mooie, logische, pakkende animaties die de pijnpunten en de oplossing tonen; hij plaatst voortaan wekelijks zelf via Schedchie (TikTok erbij). Daarom een nieuwe pijplijn: 2D motion graphics (`scripts/video/motion/`) in plaats van 3D-poppetjes, stem van ElevenLabs (alleen TTS-endpoint, premade stemmen), echte logo's en een echte dashboardcrop. Gemaakt in `~/omnivaleur-videos/week-2026-48/`, opgeleverd in `~/Downloads/omnivaleur-week-48/` (mp4 en txt per video).
+| Video | Format | Haak | Taal | Lengte | Luidheid / piek |
+|---|---|---|---|---|---|
+| sold-twice | STORY | PIJN | EN | 19,3 s | -14,1 LUFS / -1,9 dBFS |
+| list-once | DEMO | RESULTAAT | EN | 22,1 s | -14,1 / -1,9 |
+| midnight | SKIT | INZET | EN | 19,3 s | -14,1 / -1,6 |
+| six-minutes | UITLEG | GETAL | EN | 17,0 s | -13,9 / -2,1 |
+| verkocht-nl | DIRECT | VRAAG | NL | 17,8 s | -14,2 / -1,7 |
+Kwaliteitspoort: slop-check groen op de vier Engelse scripts (de Nederlandse geeft vals rood op 'geen samentrekking', een Engelse regel), 10 stills per video bekeken, luidheid gemeten met ffmpeg (geen earshot-run), geen poppetjes dus `clip.mjs` niet nodig. Eigen fouten onderweg: Parakeet kent geen Nederlands (woordtiming liep lineair, vals); opgelost met de timestamps van ElevenLabs (`genvoice_ts.py`). Niet gedaan: stem beluisterd (kan ik niet), extra voorbeeldaccounts bekeken (alleen renno.app), cijfers (er is nog niets geplaatst).
+Hypothesen en plaatstijden (aanname, nog geen eigen data) staan per video in de txt. Advies voor de weekmeting op 1-12: wat Daniel plaatst, per video kijktijd en profielbezoeken noteren in `docs/social-video-metingen.csv`.
+
 ## Week 48, vervolg 24-11-2026: koppeling gecontroleerd, eerste inspiratie
 - Schedchie-connector werkt (whoami, list_accounts, list_posts, get_analytics_overview gedraaid). Accounts: Instagram, Facebook (geblokkeerd: Page-eigenaar moet identiteit bevestigen, fb_checkpoint_368 sinds 3-11), YouTube, Pinterest, Threads, Bluesky. TikTok is NIET gekoppeld in Schedchie, dus TikTok-cijfers komen er niet via de connector.
 - Meting van de enige 2 video-posts (3-11 en 10-11, oude stijl): YouTube 1 weergave, Pinterest 1 impressie, Threads 9 weergaven, Instagram 7 likes en 1 reactie op de reel van 10-11. Volgers 30 dagen: +2 totaal. Niet toe te schrijven aan aanmeldingen. Conclusie: de oude stijl haalde niets; aanleiding om naar het renno-niveau te gaan.

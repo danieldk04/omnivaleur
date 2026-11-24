@@ -1,0 +1,19 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>motion</title>
+<style>
+@font-face{font-family:'Montserrat';src:url('node_modules/@fontsource/montserrat/files/montserrat-latin-600-normal.woff2') format('woff2');font-weight:600}
+@font-face{font-family:'Montserrat';src:url('node_modules/@fontsource/montserrat/files/montserrat-latin-700-normal.woff2') format('woff2');font-weight:700}
+@font-face{font-family:'Montserrat';src:url('node_modules/@fontsource/montserrat/files/montserrat-latin-800-normal.woff2') format('woff2');font-weight:800}
+@font-face{font-family:'Montserrat';src:url('node_modules/@fontsource/montserrat/files/montserrat-latin-900-normal.woff2') format('woff2');font-weight:900}
+:root{--blue:#0649c7;--mint:#85edbc;--navy:#0a1936;--red:#ff4d4d;--sun:#ffc83d}
+html,body{margin:0;background:#000;overflow:hidden}
+#stage{position:relative;width:720px;height:1280px;overflow:hidden;font-family:'Montserrat',sans-serif;background:var(--navy)}
+#stage *{box-sizing:border-box}
+.a{position:absolute;left:0;top:0;will-change:transform}
+#cap{position:absolute;left:24px;right:24px;top:900px;text-align:center;font:900 82px/1.05 'Montserrat',sans-serif;color:#fff;letter-spacing:-1px;-webkit-text-stroke:12px rgba(6,14,36,.92);paint-order:stroke fill;text-shadow:0 6px 18px rgba(0,0,0,.4);height:200px;display:flex;align-items:center;justify-content:center;transform-origin:50% 50%}
+#cap b{color:var(--mint);font-weight:900}
+#vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 55%,rgba(0,0,0,.35) 100%)}
+#grain{position:absolute;inset:-40px;pointer-events:none;opacity:.07;mix-blend-mode:overlay}
+</style></head>
+<body><div id="stage"><div id="bg" class="a"></div><div id="world" class="a" style="width:720px;height:1280px"></div><div id="cap"></div><div id="vig"></div><canvas id="grain" width="400" height="700"></canvas></div>
+<script type="module" src="./motion/engine.js"></script></body></html>
