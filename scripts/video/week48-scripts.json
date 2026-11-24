@@ -52,5 +52,27 @@
    "Omnivaleur haalt je advertentie overal weg, zodra het ergens verkocht is.",
    "Eén keer plaatsen, overal verkopen. Zeven dagen gratis."
   ]
+ },
+ "tired-listing": {
+  "voice": "TxGEqnHWrfWFTfGW9XjX",
+  "lang": "en",
+  "lines": [
+   "You're tired. It's raining.",
+   "And you still have fourteen items to list on four apps.",
+   "Or you add them once with Omnivaleur, and they go live everywhere.",
+   "Then you just sit there.",
+   "Seven days free."
+  ]
+ },
+ "buyer-door": {
+  "voice": "EXAVITQu4vr4xnSDxMaL",
+  "lang": "en",
+  "lines": [
+   "Your buyer is at the door.",
+   "Your hoodie is at someone else's door.",
+   "Because it sold twice.",
+   "Omnivaleur pulls it off every app the second it sells.",
+   "Never say sorry again. Seven days free."
+  ]
  }
 }

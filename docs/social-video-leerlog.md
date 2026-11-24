@@ -2,6 +2,10 @@
 
 Bijgehouden door de wekelijkse routine `docs/routines/social-videos.md`. Nieuwste bovenaan.
 
+## Week 48, 24-11-2026 (later): poppetjes erbij, concurrentie bekeken
+Daniel miste poppetjes in de eerste vijf. Renno.app opnieuw bekeken via Daniels Chrome (niet ingelogd, alleen het reels-raster): de uitschieters (2,6 mln, 650K, 506K) zijn telkens ÉÉN poppetje in ÉÉN sfeervolle situatie met één groot attribuut (wekker 5:00, parkeermeter 2:00, bank plus regen), een tweede-persoonshaak over een gevoel ("You've never skipped a 5 AM flight", "you're tired. it's raining.") en schreefletters bovenin met één rood woord. De flops (0 tot 2.200) hebben meerdere poppetjes aan een tafel op een drukke achtergrond. Andere accounts nog niet bekeken (Instagram vraagt inlog voor zoeken).
+Gemaakt met een nieuw 2D-poppetje (`motion/char.js`, waist-up, ogen, wenkbrauwen, mond, zweet, armen): tired-listing (14,8 s, -14,1 LUFS, 1 poppetje op een bank in de regen, na de tik blij) en buyer-door (12,4 s, -14,0 LUFS, boze koper voor de deur, ander poppetje met de hoodie, verkoper ontspannen). Nog niet beluisterd; poppetjes hebben geen benen en geen loop-animaties.
+
 ## Week 48, 24-11-2026 (avond): nieuwe stijl, vijf geanimeerde video's gemaakt
 Daniel: niet hyperrealistisch, wel mooie, logische, pakkende animaties die de pijnpunten en de oplossing tonen; hij plaatst voortaan wekelijks zelf via Schedchie (TikTok erbij). Daarom een nieuwe pijplijn: 2D motion graphics (`scripts/video/motion/`) in plaats van 3D-poppetjes, stem van ElevenLabs (alleen TTS-endpoint, premade stemmen), echte logo's en een echte dashboardcrop. Gemaakt in `~/omnivaleur-videos/week-2026-48/`, opgeleverd in `~/Downloads/omnivaleur-week-48/` (mp4 en txt per video).
 | Video | Format | Haak | Taal | Lengte | Luidheid / piek |
