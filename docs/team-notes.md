@@ -19888,3 +19888,8 @@ Daniel koopt een M1 Max (32 GB), de oude Mac (Air M2) wordt binnenkort verkocht.
 
 ## 24-11-2026 (middag): Mieneke, Marktplaats m2460376057 klaargezet voor verwijdering
 - Op Daniels verzoek `crosslist.handle_item_sold(d0a887d5…, 'vinted', sold_at=11-11, bewijs=kanaal)` gedraaid. Gevolg: verwijderjob c505a631 (Marktplaats) staat pending; er kwam ook een job e7e74852 voor 2dehands (al gedelist, dus de extensie ziet "al weg"). Listing blijft 'active' tot Mieneke's extensie de job uitvoert (extensie uit sinds 23-11 22:18). Controle: status van m2460376057 en job c505a631 bij de volgende klantfoutenronde.
+
+## 24-11-2026 (avond): reageerronde op de nieuwe Mac gecontroleerd, reageergesprek vastgepind
+- De LaunchAgent `com.omnivaleur.socialronde` staat geladen en de poort staat open; `claude auth status` is nu ingelogd. Eerder vandaag liep één ronde wel (Indie Hackers-antwoord aan ipab, commit f56d9e90); de pogingen van 14:49 tot 14:56 faalden op "niet ingelogd" en "Chrome niet verbonden". Volgende poging vanzelf vanaf 17:47.
+- Het oude vastgepinde reageergesprek bestond niet op deze Mac. Deze sessie is vastgepind en heet nu "Auto-reacties FB, IG, IH, Bluesky (Niet aankomen)". Niet aankomen, geen tweede sessie die reageert. X blijft alleen door Daniel (x-stop.txt).
+- Open: de Claude-extensie in Chrome moet verbonden zijn, anders stopt elke ronde met "Chrome niet verbonden".
