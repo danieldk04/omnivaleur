@@ -19904,3 +19904,7 @@ Daniel koopt een M1 Max (32 GB), de oude Mac (Air M2) wordt binnenkort verkocht.
 
 ## 24-11-2026: social-video's, run week 48 (Claude)
 Geen nieuwe video's: Schedchie toont nog 2 geplaatste posts, geen van onze video's. Skill-mappen (animation-skills, huashu-art-motion, huashu-motion, earshot) hersteld op de nieuwe Mac; kit-setup en venvs nog niet. Oude video's van week 46/47 zijn niet meeverhuisd. Schedchie-sleutel ontbreekt nog.
+
+## 24-11-2026 (avond): koude mail, weinig reacties door gat bij de Mac-verhuizing (Claude, onderzoek, niets gewijzigd)
+- Gemeten in de run-lijst van leadgen-mail.yml: tot 22-11 ~21:50 elk half uur een ronde (seintje), daarna GitHub-planning alleen (22-11 21:47, 23-11 18:38), op 23-11 overdag en 24-11 tot 14:52 geen enkele dagronde. Het seintje (LaunchAgent leadmachine-seintje) draait pas weer sinds 24-11 14:52 op de nieuwe Mac; gh was daarvoor niet ingelogd (log). Dus ~1,5 dag vrijwel geen koude mail, reacties komen 1 tot 3 dagen later: dat verklaart de dip.
+- NIET gemeten: aantal mails per dag en wachtrijgrootte (status-run opdracht=status gestart op 24-11 ~18:20, staat in de wachtrij achter een lopende tick). Controleer of de wachtrij niet leeg is (19-11 was dat al eens zo).
