@@ -74,5 +74,64 @@
    "Omnivaleur pulls it off every app the second it sells.",
    "Never say sorry again. Seven days free."
   ]
+ },
+ "verlopen-nl": {
+  "voice": "pNInz6obpgDQGcFmaJgB",
+  "lang": "nl",
+  "lines": [
+   "Twaalf dagen lang stond mijn beste jas niet online.",
+   "Ik wist het niet. Marktplaats had hem stilletjes verwijderd.",
+   "Geen enkele koper zag hem. Twaalf dagen... niks.",
+   "Tot ik dit zag.",
+   "Omnivaleur laat verlopen advertenties bovenaan zien, en zet ze met één klik terug.",
+   "Zeven dagen gratis."
+  ]
+ },
+ "margin-3": {
+  "voice": "ErXwobaYiN019PkySvjV",
+  "lang": "en",
+  "lines": [
+   "I sold it for forty-five euros. I felt amazing.",
+   "Then I did the math.",
+   "Bought for twenty. Shipping, seven. Packaging, five. The trip to the post point, ten.",
+   "I made three euros.",
+   "Three. For a whole evening.",
+   "Omnivaleur's margin calculator shows your real profit before you list.",
+   "Skip the three euro items. Seven days free."
+  ]
+ },
+ "stale-17": {
+  "voice": "JBFqnCBsd6RMkjVDRZzb",
+  "lang": "en",
+  "lines": [
+   "Seventeen items. Zero views. For months.",
+   "They weren't bad. They were just buried under newer listings.",
+   "So I stopped listing new stuff, and did this instead.",
+   "Omnivaleur flags your stale stock, and refreshes it, so buyers can find it again.",
+   "Seven days free."
+  ]
+ },
+ "import-200": {
+  "voice": "EXAVITQu4vr4xnSDxMaL",
+  "lang": "en",
+  "lines": [
+   "I had two hundred items in my Shopify shop. And zero on Vinted.",
+   "Relisting them by hand? That's twenty hours of copy and paste.",
+   "Or... one import.",
+   "Omnivaleur reads your shop, and brings every item in. Photos, titles, sizes.",
+   "Then you list them everywhere. Seven days free."
+  ]
+ },
+ "twee-kopers-nl": {
+  "voice": "AZnzlk1XvdvUeBnXmlld",
+  "lang": "nl",
+  "lines": [
+   "Twee kopers. Eén jas. En allebei hebben ze al betaald.",
+   "Mijn telefoon trilt. Eerste koper: wanneer verstuur je hem?",
+   "Tweede koper: ik wacht nog steeds...",
+   "Ik moet iemand teleurstellen. En ik weet nog niet wie.",
+   "Omnivaleur had hem na de eerste verkoop overal weggehaald.",
+   "Dat gebeurt je niet meer. Zeven dagen gratis."
+  ]
  }
 }

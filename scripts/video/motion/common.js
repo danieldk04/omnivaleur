@@ -1,0 +1,9 @@
+import { node } from './engine.js';
+export const wall = (g, c1, c2, floor = '#3a2a22', fy = 740) => { node(g, `left:0;top:0;width:720px;height:900px;transform:none;background:linear-gradient(${c1},${c2})`); node(g, `left:0;top:${fy}px;width:720px;height:${960 - fy}px;transform:none;background:${floor}`); };
+export const mkPill = g => node(g, 'width:440px', '<div style="display:flex;align-items:center;gap:14px;justify-content:center;background:#fff;padding:14px 30px;border-radius:999px;box-shadow:0 14px 40px rgba(0,0,0,.35)"><img src="assets/mark.png" style="width:92px"><span style="font:900 42px Montserrat;color:#0a1936;letter-spacing:-1px">Omnivaleur</span></div>');
+export const ctaPill = (g, text) => node(g, 'padding:22px 44px;border-radius:999px;background:#85edbc;color:#0a1936;font:900 46px/1 Montserrat;box-shadow:0 14px 40px rgba(0,0,0,.4);white-space:nowrap', text);
+export const urlTag = g => node(g, 'font:800 30px Montserrat;color:#fff;letter-spacing:1px;text-shadow:0 3px 12px rgba(0,0,0,.5)', 'omnivaleur.com');
+export const card = (g, w, css = '') => node(g, `width:${w}px;padding:22px 24px;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(0,0,0,.5);${css}`);
+export const rel = (p, css, html = '') => { const e = node(p, 'position:relative;left:auto;top:auto;transform:none;' + css, html); e.style.position = 'relative'; e.style.left = 'auto'; e.style.top = 'auto'; return e; };
+export const finger = g => node(g, 'width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.7);border:6px solid #0649c7');
+export const phoneProp = (g, w = 150) => node(g, `width:${w}px;height:${w * 1.75}px;border-radius:28px;background:#0b1224;padding:8px;box-shadow:0 14px 34px rgba(0,0,0,.5)`, '<div class="scr" style="width:100%;height:100%;border-radius:20px;background:#fff;overflow:hidden;position:relative"></div>');

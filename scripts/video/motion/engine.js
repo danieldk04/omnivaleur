@@ -54,6 +54,9 @@ export function scene(t0, t1, build, { enter = .32, exit = .22, push = .035 } = 
   return g;
 }
 const CAPOFF = [];
+const PUNCH = [];
+export const punch = (t, a = .045) => PUNCH.push([t, a]);
+let HOTX = null;
 export const capOff = (a, b) => CAPOFF.push([a, b]);
 export const always = f => updaters.push(f);
 
@@ -85,7 +88,7 @@ function chunks(words, maxw = 3, maxc = 17) {
 }
 const HOT = /^(omnivaleur|free|gratis|sold|verkocht|everywhere|overal|once|twee|zero|geen|\d+|€.*)$/;
 function capHTML(g) {
-  return g.map(x => { const t = x.w.replace(/[.,;:]+$/, ''); return HOT.test(norm(t)) || HOT.test(t.toLowerCase()) ? `<b>${t}</b>` : t; }).join(' ');
+  return g.map(x => { const t = x.w.replace(/[.,;:]+$/, ''); return HOT.test(norm(t)) || HOT.test(t.toLowerCase()) || (HOTX && HOTX.test(norm(t))) ? `<b>${t}</b>` : t; }).join(' ');
 }
 let CAPS = [];
 function drawCaption(t) {
@@ -130,13 +133,17 @@ async function boot() {
   window.DURATION = DURATION;
   CAPS = chunks(WORDS).map(g => ({ s: g[0].s, html: capHTML(g) }));
   if (mod.mood) mood = mod.mood;
-  mod.build({ capOff, cue, node, place, scene, always, at, endOf, DURATION, E, prog, mix, cl, pop });
+  if (mod.hotWords) HOTX = new RegExp('^(' + mod.hotWords.map(w => w.toLowerCase().replace(/[^a-z0-9]/g, '')).join('|') + ')$');
+  if (mod.hotColor) document.documentElement.style.setProperty('--hot', mod.hotColor);
+  mod.build({ punch, capOff, cue, node, place, scene, always, at, endOf, DURATION, E, prog, mix, cl, pop });
   const imgs = [...document.images];
   await Promise.all(imgs.map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; })));
   await document.fonts.ready;
   const render = t => {
     drawBg(t, mood);
     updaters.forEach(f => f(t));
+    const z = PUNCH.reduce((s, [ti, a]) => s + (t >= ti ? a * Math.exp(-(t - ti) * 7) : 0), 0);
+    world.style.transformOrigin = '50% 45%'; world.style.transform = `scale(${1 + z})`;
     drawCaption(t);
     if (params.get('grain') !== '0') drawGrain(t);
     document.getElementById('stage').style.opacity = cl((DURATION - t) / .25) ;

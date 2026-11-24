@@ -2,7 +2,7 @@
 # bash mix2.sh <naam> : out/<naam>.silent.mp4 + vo + bed + sfx -> out/<naam>.mp4 (1080x1920, -14 LUFS, piek onder -1,5 dBTP)
 N=$1
 ffmpeg -y -v error -i vo/$N.mp3 -i out/$N.bed.wav -i out/$N.sfx.wav -filter_complex \
-"[0:a]aformat=sample_rates=44100:channel_layouts=stereo,highpass=f=70,asplit=2[v1][v2];[1:a]aformat=sample_rates=44100:channel_layouts=stereo[bd];[bd][v2]sidechaincompress=threshold=0.015:ratio=7:attack=15:release=350[bdd];[2:a]aformat=sample_rates=44100:channel_layouts=stereo[fx];[v1][bdd][fx]amix=inputs=3:normalize=0:duration=longest[a]" -map "[a]" out/$N.raw.wav
+"[0:a]aformat=sample_rates=44100:channel_layouts=stereo,highpass=f=70,acompressor=threshold=0.1:ratio=3:attack=5:release=90:makeup=1.5,equalizer=f=3000:width_type=q:width=1:g=2,asplit=2[v1][v2];[1:a]aformat=sample_rates=44100:channel_layouts=stereo[bd];[bd][v2]sidechaincompress=threshold=0.015:ratio=7:attack=15:release=350[bdd];[2:a]aformat=sample_rates=44100:channel_layouts=stereo[fx];[v1][bdd][fx]amix=inputs=3:normalize=0:duration=longest[a]" -map "[a]" out/$N.raw.wav
 M=$(ffmpeg -hide_banner -nostats -i out/$N.raw.wav -af loudnorm=I=-14:TP=-2:LRA=7:print_format=json -f null - 2>&1 | sed -n '/^{/,/^}/p')
 g() { echo "$M" | python3 -c "import sys,json;print(json.load(sys.stdin)['$1'])"; }
 ffmpeg -y -v error -i out/$N.silent.mp4 -i out/$N.raw.wav -filter_complex \
