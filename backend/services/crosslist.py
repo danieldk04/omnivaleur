@@ -1960,7 +1960,8 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     if fotos_wachten_sinds:
         # GitHub draait de geplande foto-taak te zelden; start hem nu zelf.
         try:
-            import asyncio
+            # NIET hier `import asyncio`: dat maakt asyncio in de hele functie een
+            # lokale naam en laat elke plaatsing crashen (UnboundLocalError, 24-11).
             from backend.services.bronfotos_start import start_bronfotos
             asyncio.create_task(start_bronfotos())
         except Exception:
