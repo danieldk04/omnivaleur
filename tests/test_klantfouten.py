@@ -356,3 +356,18 @@ def test_geen_losse_sessie_naast_een_dagronde_die_bezig_is(kast, monkeypatch):
 
     K.ronde_klaar("ochtendronde", "niets gerepareerd")
     assert len(K.signalen({}, db, NU)) == 1, "na de ronde komt wat open staat weer terug"
+
+
+def test_serverfouten_laatste_etmaal_alleen_recente():
+    import sys
+    from datetime import datetime, timedelta, timezone
+    sys.path.insert(0, "scripts")
+    import klantfouten as K
+    nu = datetime(2026, 11, 24, 12, 0, tzinfo=timezone.utc)
+    lijst = [
+        {"code": "AAAAAA", "wanneer": (nu - timedelta(hours=2)).isoformat(), "soort": "UnboundLocalError"},
+        {"code": "BBBBBB", "wanneer": (nu - timedelta(hours=30)).isoformat(), "soort": "OudeFout"},
+        {"code": "CCCCCC", "wanneer": "kapot"},
+    ]
+    assert [x["code"] for x in K.serverfouten(nu, lijst)] == ["AAAAAA"]
+    assert K.serverfouten(nu, "geen lijst") == []

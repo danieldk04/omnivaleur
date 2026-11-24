@@ -348,6 +348,24 @@ def ronde_klaar(wie: str, samenvatting: str) -> bool:
                                       "klaar": _nu().isoformat(), "samenvatting": samenvatting})
 
 
+def serverfouten(nu: datetime | None = None, lijst=None) -> list[dict]:
+    """HTTP 500-fouten van de laatste VENSTER_UUR uur, uit de lijst die backend/main.py bijhoudt.
+
+    WAAROM (24-11-2026): een plaatsing die crasht maakt nooit een job aan, dus meet() zag
+    niets en de ochtendronde meldde "geen codefout" terwijl elke plaatsing een 500 gaf
+    (lokale import asyncio, code 207C6E bij Esther). Alleen lezen."""
+    nu = nu or _nu()
+    if lijst is None:
+        lijst = A._lees("server_fouten", []) or []
+    grens = nu - timedelta(hours=VENSTER_UUR)
+    uit = []
+    for x in lijst if isinstance(lijst, list) else []:
+        t = _tijd(x.get("wanneer"))
+        if t and t >= grens:
+            uit.append(x)
+    return uit
+
+
 def main() -> None:
     A._omgeving_uit_env_bestand()
     if len(sys.argv) >= 4 and sys.argv[1] == "ronde" and sys.argv[2] == "begin":
@@ -367,6 +385,12 @@ def main() -> None:
         stand = "OPEN" if sleutel in open_ else "afgehandeld"
         print(f"  [{stand}] {sleutel}: {s['wat'][:150]} ({s['aantal']}x, "
               f"{len(s['klanten'])} klant(en))")
+    fouten = serverfouten()
+    print(f"Serverfouten (HTTP 500) laatste {VENSTER_UUR} uur: {len(fouten)} soort(en)"
+          + (" , NIET negeren: dit is code van ons, geen klantfout" if fouten else ""))
+    for x in fouten:
+        print(f"  {x.get('code')} {x.get('methode')} {x.get('pad')}: {x.get('soort')}: "
+              f"{str(x.get('bericht'))[:120]} ({x.get('aantal') or 1}x, laatst {str(x.get('wanneer'))[:16]})")
 
 
 if __name__ == "__main__":
