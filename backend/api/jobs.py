@@ -138,6 +138,11 @@ MINIMALE_TUPPERWARE_BLIK_VERSIE = (1, 0, 430)
 # "Mis spaarpotten, retro, handwerkpakketten"). Zelfde regel: Marktplaats en 2dehands
 # krijgen de nummers van de server mee, alleen Vinted wacht op het vaste pad.
 MINIMALE_HANDWERK_SPAARPOT_VERSIE = (1, 0, 432)
+# Wandlampen, kinderkamer decoratie en paraplu's (24-11-2026, Esther, hetisvintastisch:
+# "Ik mis nog rubrieken: Wandlampen, Kinderkamer decoratie, Paraplu"). Zelfde regel als
+# hierboven: Marktplaats en 2dehands krijgen de nummers van de server mee, alleen
+# Vinted wacht op de extensie met de zoekwoorden.
+MINIMALE_WAND_KINDERKAMER_PARAPLU_VERSIE = (1, 0, 435)
 _RUBRIEK_VANAF_VERSIE = {"kinderen tassen": MINIMALE_KINDERTASSEN_VERSIE,
                          "kinderen luiertassen": MINIMALE_LUIERTASSEN_VERSIE,
                          "hobby kledingapplicaties en strijkemblemen": MINIMALE_HOBBY_VERSIE,
@@ -147,7 +152,10 @@ _RUBRIEK_VANAF_VERSIE = {"kinderen tassen": MINIMALE_KINDERTASSEN_VERSIE,
                          "wonen spaarpotten": MINIMALE_HANDWERK_SPAARPOT_VERSIE,
                          "wonen retro": MINIMALE_HANDWERK_SPAARPOT_VERSIE,
                          "hobby borduren": MINIMALE_HANDWERK_SPAARPOT_VERSIE,
-                         "hobby breien en haken": MINIMALE_HANDWERK_SPAARPOT_VERSIE}
+                         "hobby breien en haken": MINIMALE_HANDWERK_SPAARPOT_VERSIE,
+                         "wonen wandlampen": MINIMALE_WAND_KINDERKAMER_PARAPLU_VERSIE,
+                         "wonen kinderkamer decoratie": MINIMALE_WAND_KINDERKAMER_PARAPLU_VERSIE,
+                         "sieraden paraplus": MINIMALE_WAND_KINDERKAMER_PARAPLU_VERSIE}
 # Gemeten 28-10-2026 op marktplaats.nl/q/strijkembleem: 60 van de ~70 staan in
 # Hobby en Vrije tijd (1099) > Kledingapplicaties en Hotfix (2855).
 _MP_NUMMERS_VAN_DE_SERVER = {
@@ -166,6 +174,14 @@ _MP_NUMMERS_VAN_DE_SERVER = {
     # 20-11-2026 nagemeten op beide zoek-API's (Esther, hetisvintastisch).
     "wonen spaarpotten": {"l1": 895, "l2": 2817, "l1_naam": "Verzamelen", "l2_naam": "Spaarpotten"},
     "wonen retro": {"l1": 895, "l2": 1390, "l1_naam": "Verzamelen", "l2_naam": "Retro"},
+    # 24-11-2026 nagemeten op beide zoek-API's en in het ingelogde plaatsformulier
+    # (Esther, hetisvintastisch): groepen 137, 154 en 197.
+    "wonen wandlampen": {"l1": 504, "l2": 1622, "l1_naam": "Huis en Inrichting",
+                         "l2_naam": "Lampen | Wandlampen"},
+    "wonen kinderkamer decoratie": {"l1": 565, "l2": 1671, "l1_naam": "Kinderen en Baby's",
+                                    "l2_naam": "Kinderkamer | Inrichting en Decoratie"},
+    "sieraden paraplus": {"l1": 1826, "l2": 3150, "l1_naam": "Sieraden, Tassen en Uiterlijk",
+                          "l2_naam": "Paraplu's"},
     "hobby borduren": {"l1": 1099, "l2": 1228, "l1_naam": "Hobby en Vrije tijd",
                        "l2_naam": "Borduren en Borduurmachines"},
     "hobby breien en haken": {"l1": 1099, "l2": 1229, "l1_naam": "Hobby en Vrije tijd",

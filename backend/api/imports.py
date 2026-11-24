@@ -310,6 +310,7 @@ _TAXONOMY = {
         "sieraden sporttassen",
         "sieraden koffers",
         "sieraden portemonnees",
+        "sieraden paraplus",
         "sieraden zonnebril dames",
         "sieraden zonnebril heren",
     ],
@@ -355,6 +356,7 @@ _TAXONOMY = {
         "wonen tafellampen",
         "wonen vloerlampen",
         "wonen hanglampen",
+        "wonen wandlampen",
         "wonen kandelaars en kaarsen",
         "wonen tafelkleden",
         "wonen servies",
@@ -365,6 +367,7 @@ _TAXONOMY = {
         "wonen blikken",
         "wonen spaarpotten",
         "wonen retro",
+        "wonen kinderkamer decoratie",
         "wonen overige huis en inrichting",
         "wonen kerst",
     ],
@@ -1292,8 +1295,8 @@ def _kledingprompt(title: str | None, description: str | None, brand: str | None
         "  category exists; otherwise pick the most likely gender.\n"
         "- Costumes, fancy dress and folk dress (lederhosen, dirndl, carnival,\n"
         "  Halloween, cosplay) go in a verkleedkleding category, never everyday clothing.\n"
-        '- The "sieraden" branch covers jewellery, watches, bags, suitcases, wallets\n'
-        "  and sunglasses. Anything worn or carried as an accessory goes there, however\n"
+        '- The "sieraden" branch covers jewellery, watches, bags, suitcases, wallets,\n'
+        "  umbrellas (paraplu) and sunglasses. Anything worn or carried as an accessory goes there, however\n"
         '  old or silver. When you pick a "sieraden" category, gender must be\n'
         '  "sieraden" too.\n'
         "- Set confidence low if you are guessing about what the item is.\n"
@@ -1381,6 +1384,11 @@ def _bouw_rubrieksprompt(title, description, brand) -> str:
         '  1950s-1980s style) and that fits no more specific home category: a retro\n'
         '  cushion, vase, plate or lamp stays in its own category, and clothing is never\n'
         '  "wonen retro".\n'
+        '  A wall lamp, wall light or sconce (wandlamp, wandlampje, wandarmatuur) goes in\n'
+        '  "wonen wandlampen", unless it is genuinely antique ("antiek lampen"). Decoration\n'
+        '  made for a baby or child room (kinderkamerdecoratie, babykamer decoratie, nursery\n'
+        '  wall art, mobiles, name letters, a nursery lamp) goes in "wonen kinderkamer\n'
+        '  decoratie"; toys stay in speelgoed and children\'s furniture is not decoration.\n'
         '  When you pick a "wonen" category, gender must be "wonen" too.\n'
         "- Costumes, fancy dress and folk dress are NEVER everyday clothing: lederhosen,\n"
         "  dirndl, Tyrolean outfits, carnival and Halloween outfits, cosplay and mascot\n"
@@ -1398,8 +1406,8 @@ def _bouw_rubrieksprompt(title, description, brand) -> str:
         "  textile — a throw, bedspread, sofa or wall cloth, often 150-300 cm wide.\n"
         '  It belongs in the "wonen" branch, normally "wonen plaids en woondekens".\n'
         '  A plain "foulard" without "grand" IS a scarf and stays an accessory.\n'
-        '- The "sieraden" branch covers jewellery, watches, bags, suitcases, wallets\n'
-        "  and sunglasses. Pick it for anything worn or carried as an accessory.\n"
+        '- The "sieraden" branch covers jewellery, watches, bags, suitcases, wallets,\n'
+        "  umbrellas (paraplu) and sunglasses. Pick it for anything worn or carried as an accessory.\n"
         '  When you pick a "sieraden" category, gender must be "sieraden" too.\n'
         '- The "games" branch is video games, game consoles and their accessories, per\n'
         '  platform: a game disc or cartridge goes in "games <platform>", the machine\n'

@@ -557,6 +557,7 @@
     "sieraden sporttassen":       ["sports bags", "gym bags", "bags"],
     "sieraden koffers":           ["suitcases", "luggage", "travel bags", "bags"],
     "sieraden portemonnees":      ["wallets", "purses", "accessories"],
+    "sieraden paraplus":          ["umbrellas", "accessories"],
     "sieraden zonnebril dames":   ["sunglasses", "glasses", "accessories"],
     "sieraden zonnebril heren":   ["sunglasses", "glasses", "accessories"],
 
@@ -612,6 +613,7 @@
     "wonen tafellampen":                                   ["table lamp", "lighting"],
     "wonen vloerlampen":                                   ["floor lamp", "lighting"],
     "wonen hanglampen":                                    ["pendant light", "lighting"],
+    "wonen wandlampen":                                    ["wall light", "lighting"],
     "wonen kandelaars en kaarsen":                         ["candle holder", "home decor"],
     "wonen tafelkleden":                                   ["tablecloth", "home textiles"],
     "wonen servies":                                       ["tableware", "dinnerware"],
@@ -622,6 +624,7 @@
     "wonen blikken":                                       ["tin", "storage box"],
     "wonen spaarpotten":                                   ["money box", "ornament"],
     "wonen retro":                                         ["retro", "home decor"],
+    "wonen kinderkamer decoratie":                         ["nursery decor", "kids room"],
     "wonen overige huis en inrichting":                    ["home decor", "home"],
     "wonen kerst":                                         ["christmas decoration", "home decor"],
     "antiek curiosa en brocante":                          ["collectables", "antiques"],

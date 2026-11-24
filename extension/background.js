@@ -243,6 +243,7 @@ const MP_CATEGORIES = {
   "sieraden koffers":           { cat1: 1826, cat3: 1348, bucketId: 201 },
   // -- Accessoires (bucketId 197) en Zonnebrillen (bucketId 203)
   "sieraden portemonnees":      { cat1: 1826, cat3: 1836, bucketId: 197 },
+  "sieraden paraplus":          { cat1: 1826, cat3: 3150, bucketId: 197 },   // Paraplu's (24-11-2026)
   "sieraden zonnebril dames":   { cat1: 1826, cat3: 627,  bucketId: 203 },
   "sieraden zonnebril heren":   { cat1: 1826, cat3: 645,  bucketId: 203 },
 
@@ -616,6 +617,11 @@ const MP_CATEGORIES = {
   // Breien en Haken (1229; borduurpakket 90 van 100 in 1228, haakpakket 100 van 100 in 1229).
   "wonen spaarpotten":                          { cat1: 895, cat3: 2817 },   // Verzamelen > Spaarpotten
   "wonen retro":                                { cat1: 895, cat3: 1390 },   // Verzamelen > Retro
+  // 24-11-2026, Esther (hetisvintastisch). Nagemeten op marktplaats.nl en 2dehands.be (zelfde
+  // nummers) en in het ingelogde plaatsformulier: Wandlampen zit in groep 137 (Lampen),
+  // Kinderkamer | Inrichting en Decoratie in groep 154, Paraplu's in groep 197 (Accessoires).
+  "wonen wandlampen":                           { cat1: 504, cat3: 1622 },   // Lampen | Wandlampen
+  "wonen kinderkamer decoratie":                { cat1: 565, cat3: 1671, bucketId: 154 }, // Kinderkamer | Inrichting en Decoratie
   "wonen overige huis en inrichting":            { cat1: 504, cat3: 526 },   // Overige Huis en Inrichting
   "wonen kerst":                                 { cat1: 428, cat3: 436 },   // Kerst
 

@@ -1486,6 +1486,7 @@ _EBAY_CATEGORY_HINTS = {
     "sieraden rugtassen": "backpack rucksack", "sieraden reistassen": "travel holdall bag",
     "sieraden sporttassen": "sports gym bag", "sieraden koffers": "suitcase luggage",
     "sieraden portemonnees": "wallet purse",
+    "sieraden paraplus": "umbrella",
     "sieraden zonnebril dames": "womens sunglasses", "sieraden zonnebril heren": "mens sunglasses",
 
     # Wonen, antiek/kunst en muziek — in augustus 2026 aan het dashboard
@@ -1530,6 +1531,7 @@ _EBAY_CATEGORY_HINTS = {
     "wonen tafellampen": "table lamp",
     "wonen vloerlampen": "floor lamp",
     "wonen hanglampen": "pendant light",
+    "wonen wandlampen": "wall light",
     "wonen kandelaars en kaarsen": "candle holder",
     "wonen tafelkleden": "tablecloth",
     "wonen servies": "tableware",
@@ -1540,6 +1542,7 @@ _EBAY_CATEGORY_HINTS = {
     "wonen blikken": "vintage tin",
     "wonen spaarpotten": "money box",
     "wonen retro": "retro vintage",
+    "wonen kinderkamer decoratie": "nursery decor",
     "wonen overige huis en inrichting": "home decor",
     "wonen kerst": "christmas decoration",
     "antiek curiosa en brocante": "collectables",

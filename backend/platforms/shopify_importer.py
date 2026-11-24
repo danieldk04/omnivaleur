@@ -150,6 +150,8 @@ _NIEUWE_TAK_EN_TYPE = {
     "wonen blikken": "Tin",
     "wonen spaarpotten": "Money Box",
     "wonen retro": "Retro",
+    "wonen wandlampen": "Wall Light",
+    "wonen kinderkamer decoratie": "Nursery Decor",
     "hobby borduren": "Embroidery Kit",
     "hobby breien en haken": "Knitting Kit",
     "boeken gezondheid en voeding": "Book",
