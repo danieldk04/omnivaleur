@@ -1,23 +1,24 @@
 import { chip, stamp, bubble, badge, hoodie, line } from '../kit.js';
 import { character, SKIN } from '../char.js';
-import { wall, mkPill, ctaPill, urlTag, card, rel, finger } from '../common.js';
+import { envWarehouse, wall, mkPill, ctaPill, urlTag, card, rel, finger } from '../common.js';
 
 export const hotColor = '#ffd23f';
 export const hotWords = ['hundred', 'zero', 'twenty', 'hours', 'import', 'everywhere', 'free', 'photos', 'titles', 'sizes'];
 export const mood = t => ({ a: '#1b2038', b: 'rgba(150,200,90,.22)', dots: 0 });
 
 export function build(K) {
-  const { punch, cue, capOff, scene, at, place, prog, E, mix, node, DURATION, pop, cl } = K;
+  const { cam, punch, cue, capOff, scene, at, place, prog, E, mix, node, DURATION, pop, cl } = K;
   const tHad = 0, tZero = at('zero'), tRel = at('Relisting') - .1, tTwenty = at('twenty'), tOr = at('Or...') - .1, tImp = at('import.'), tOmni = at('Omnivaleur') - .1, tPh = at('Photos,'), tTi = at('titles,'), tSz = at('sizes.'), tThen = at('Then') - .1, tEvery = at('everywhere.'), tSeven = at('Seven') - .1;
   [tZero, tTwenty, tImp, tPh, tTi, tSz, tEvery, tSeven].forEach(t => punch(t, .045));
   cue(tZero, 'buzz'); cue(tTwenty, 'hit'); cue(tImp, 'ding'); cue(tOmni + .4, 'whoosh'); cue(tPh, 'pop'); cue(tTi, 'pop'); cue(tSz, 'pop'); cue(tEvery, 'ding'); cue(tSeven, 'pop');
   capOff(at('Seven') + .4, DURATION);
+  cam(0, 2.7, { s: 1 }); cam(2.7, 4.2, { s: 1.5, fx: 360, fy: 700 }); cam(4.3, 6.0, { s: 1.6, fx: 360, fy: 480 }); cam(6.0, 8.0, { s: 1.2, fx: 360, fy: 300 }); cam(8.0, 9.7, { s: 1.7, fx: 360, fy: 420 }); cam(11.0, 13.0, { s: 1.15, fx: 360, fy: 450 });
   const mini = (g, n, s = 40) => Array.from({ length: n }, (_, i) => { const e = node(g, `width:${s}px;height:${s}px;border-radius:9px;background:#dfe5f2;overflow:hidden`); const h = hoodie(e, ['#3c4b73', '#e58aa8', '#2f6f7a', '#e8872a', '#6b4630'][i % 5], s - 2); h.style.left = s / 2 + 'px'; h.style.top = s / 2 + 2 + 'px'; h.style.transform = 'translate(-50%,-50%)'; return e; });
 
   // S1: 200 on Shopify, 0 on Vinted
   scene(0, tRel, (g, up) => {
-    wall(g, '#1b2038', '#2a3050', '#2a2030');
-    const me = character(g, { skin: SKIN.e, hair: '#5a3a2a', hoodie: '#e58aa8', style: 'bun', w: 400 });
+    envWarehouse(g);
+    const me = character(g, { skin: SKIN.b, hair: '#14141a', hoodie: '#2f6f7a', style: 'cap', w: 400 });
     const sh = chip(g, 'shop', 130), vi = chip(g, 'vinted', 130); const cs = badge(g, '200', { bg: '#85edbc', size: 54, pad: '10px 30px' }), cv = badge(g, '0', { bg: '#ff4d4d', fg: '#fff', size: 54, pad: '10px 36px' });
     const T = mini(g, 60, 36);
     up((t, T_) => {
@@ -30,8 +31,8 @@ export function build(K) {
 
   // S2: twenty hours
   scene(tRel, tOr, (g, up) => {
-    wall(g, '#2a1d2a', '#3a2c3a', '#2a2030');
-    const me = character(g, { skin: SKIN.e, hair: '#5a3a2a', hoodie: '#e58aa8', style: 'bun', w: 400 });
+    envWarehouse(g);
+    const me = character(g, { skin: SKIN.b, hair: '#14141a', hoodie: '#2f6f7a', style: 'cap', w: 400 });
     const big = node(g, 'font:900 250px/1 Montserrat;color:#ff4d4d;text-shadow:0 10px 40px rgba(255,77,77,.4)', '20h'); const lb = badge(g, 'copy and paste', { bg: '#fff', size: 38 });
     const ck = node(g, 'font:900 120px Montserrat', '⏳');
     up((t, T) => {
@@ -43,7 +44,7 @@ export function build(K) {
   // S3: or... one import
   scene(tOr, tOmni, (g, up) => {
     wall(g, '#18326e', '#25488f', '#2a3f78');
-    const me = character(g, { skin: SKIN.e, hair: '#5a3a2a', hoodie: '#e58aa8', style: 'bun', w: 400 });
+    const me = character(g, { skin: SKIN.b, hair: '#14141a', hoodie: '#2f6f7a', style: 'cap', w: 400 });
     const btn = node(g, 'padding:30px 70px;border-radius:999px;background:#0649c7;color:#fff;font:900 70px Montserrat;box-shadow:0 14px 40px rgba(6,73,199,.6);white-space:nowrap', 'Import');
     up((t, T) => {
       const k = prog(t, .2, .8, E.out);
@@ -55,7 +56,7 @@ export function build(K) {
   // S4: shop -> Omnivaleur -> list
   scene(tOmni, tThen, (g, up) => {
     wall(g, '#18326e', '#25488f', '#2a3f78');
-    const me = character(g, { skin: SKIN.e, hair: '#5a3a2a', hoodie: '#e58aa8', style: 'bun', w: 400 });
+    const me = character(g, { skin: SKIN.b, hair: '#14141a', hoodie: '#2f6f7a', style: 'cap', w: 400 });
     const sh = chip(g, 'shop', 120); const hub = node(g, 'width:170px;height:170px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 12px rgba(133,237,188,.35)', '<img src="assets/mark.png" style="width:120px">');
     const fly = mini(g, 14, 50); const ui = card(g, 560, 'height:300px;padding:18px 22px;font:800 28px Montserrat;color:#0a1936');
     const rows = ['Photos', 'Titles', 'Sizes'].map(l => rel(ui, 'display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:3px dashed #e1e6ee', `<span>${l}</span><b style="color:#00a368">✓ imported</b>`));
@@ -74,7 +75,7 @@ export function build(K) {
   // S5: list everywhere + CTA
   scene(tThen, DURATION + .5, (g, up) => {
     wall(g, '#2f4a8a', '#4a6fb5', '#3a4f80');
-    const me = character(g, { skin: SKIN.e, hair: '#5a3a2a', hoodie: '#e58aa8', style: 'bun', w: 400 });
+    const me = character(g, { skin: SKIN.b, hair: '#14141a', hoodie: '#2f6f7a', style: 'cap', w: 400 });
     const ch = ['vinted', 'marktplaats', 'ebay', 'shop'].map(k => chip(g, k, 120)); const ok = ch.map(() => badge(g, '✓', { size: 30 }));
     const mk = mkPill(g), cta = ctaPill(g, '7 days free'), url = urlTag(g), share = badge(g, 'Send this to a reseller', { bg: '#ffd23f', fg: '#0a1936', size: 28, pad: '12px 26px' });
     up((t, T) => {

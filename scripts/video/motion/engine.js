@@ -55,6 +55,8 @@ export function scene(t0, t1, build, { enter = .32, exit = .22, push = .035 } = 
 }
 const CAPOFF = [];
 const PUNCH = [];
+const CAMS = [];
+export const cam = (t0, t1, o = {}) => CAMS.push([t0, t1, o]);
 export const punch = (t, a = .045) => PUNCH.push([t, a]);
 let HOTX = null;
 export const capOff = (a, b) => CAPOFF.push([a, b]);
@@ -135,7 +137,7 @@ async function boot() {
   if (mod.mood) mood = mod.mood;
   if (mod.hotWords) HOTX = new RegExp('^(' + mod.hotWords.map(w => w.toLowerCase().replace(/[^a-z0-9]/g, '')).join('|') + ')$');
   if (mod.hotColor) document.documentElement.style.setProperty('--hot', mod.hotColor);
-  mod.build({ punch, capOff, cue, node, place, scene, always, at, endOf, DURATION, E, prog, mix, cl, pop });
+  mod.build({ cam, punch, capOff, cue, node, place, scene, always, at, endOf, DURATION, E, prog, mix, cl, pop });
   const imgs = [...document.images];
   await Promise.all(imgs.map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; })));
   await document.fonts.ready;
@@ -143,7 +145,9 @@ async function boot() {
     drawBg(t, mood);
     updaters.forEach(f => f(t));
     const z = PUNCH.reduce((s, [ti, a]) => s + (t >= ti ? a * Math.exp(-(t - ti) * 7) : 0), 0);
-    world.style.transformOrigin = '50% 45%'; world.style.transform = `scale(${1 + z})`;
+    let cs = 1, fx = 360, fy = 640, st = 0;
+    for (const c of CAMS) if (t >= c[0] && t < c[1]) { cs = c[2].s || 1; fx = c[2].fx ?? 360; fy = c[2].fy ?? 640; st = Math.exp(-(t - c[0]) * 9) * .04; }
+    world.style.transformOrigin = `${fx}px ${fy}px`; world.style.transform = `scale(${cs * (1 + st) + z})`;
     drawCaption(t);
     if (params.get('grain') !== '0') drawGrain(t);
     document.getElementById('stage').style.opacity = cl((DURATION - t) / .25) ;
