@@ -19901,3 +19901,6 @@ Daniel koopt een M1 Max (32 GB), de oude Mac (Air M2) wordt binnenkort verkocht.
 
 ## 24-11-2026: Egbert (Papa's Plectrums) Magento-shop niet ingelezen
 - papas-plectrums.nl staat achter Cloudflare met een bot-check (HTTP 403, `cf-mitigated: challenge`) en zijn robots.txt weert AI-bots. Dat omzeilen doen we niet. Juiste route: Egbert exporteert zijn producten uit Magento (System, Data Transfer, Export) en stuurt het CSV; daarna een importer bouwen en testen met dat bestand.
+
+## 24-11-2026: social-video's, run week 48 (Claude)
+Geen nieuwe video's: Schedchie toont nog 2 geplaatste posts, geen van onze video's. Skill-mappen (animation-skills, huashu-art-motion, huashu-motion, earshot) hersteld op de nieuwe Mac; kit-setup en venvs nog niet. Oude video's van week 46/47 zijn niet meeverhuisd. Schedchie-sleutel ontbreekt nog.

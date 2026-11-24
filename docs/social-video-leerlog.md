@@ -2,6 +2,10 @@
 
 Bijgehouden door de wekelijkse routine `docs/routines/social-videos.md`. Nieuwste bovenaan.
 
+## Week 48, dinsdag 24-11-2026 (automatische run): nog steeds geen plaatsingen, geen nieuwe video's
+Schedchie (Daniels Chrome) toont nog dezelfde 2 geplaatste posts en niets ingepland: geen enkele video uit week 46 of 47 is geplaatst, dus niets te meten en alle formats 'onzeker'. Schedchie-sleutel bestaat nog niet. Besluit: geen vijf video's erbij op een stapel ongeplaatste; leren begint zodra er plaatsingen zijn. De video's van week 46 en 47 stonden op de oude Mac en zijn niet meegekomen (`~/omnivaleur-videos` en Downloads zijn leeg op deze Mac); de code staat wel in `scripts/video/` en de scripts in `week47-scripts.json`.
+Omgeving hersteld op de nieuwe Mac (32 GB): `~/claude-animation-skills`, `~/huashu-art-motion`, `~/huashu-motion`, `~/earshot` opnieuw geklooid. Nog niet gedaan: `install.sh --voice` (kit, venv, modellen ongeveer 1 GB), earshot-venv, Chatterbox-venv. Spotify draait.
+
 ## Week 47, dinsdag 17-11-2026 (automatische run): geen nieuwe video's, geen cijfers
 Schedchie (Daniels Chrome) toont maar 2 geplaatste posts, van 3-11 en 10-11 (tekstposts, geen van onze video's). Geen enkele video uit week 46 of 47 is ingepland of geplaatst, dus er is niets te meten en geen conclusie per format mogelijk (alles 'onzeker', minder dan 3 plaatsingen). Schedchie-sleutel bestaat nog niet. Besluit: niet nog vijf video's erbij op een stapel van acht ongeplaatste; leren begint pas zodra er plaatsingen zijn. Machine ook ongeschikt voor een render nu: vrijwel geen vrij geheugen, Spotify draait, 6,4 GB schijf vrij.
 
