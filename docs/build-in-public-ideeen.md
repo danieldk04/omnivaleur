@@ -52,6 +52,9 @@ Niets verzinnen: een cijfer staat hier alleen als het gemeten is, met datum en b
 
 | Datum | Van | Idee of vraag | Wat we ermee kunnen | Status |
 |---|---|---|---|---|
+| 24-11-2026 | ipab (IH, dag 170) | Vraag: welke marktplaats was het moeilijkst te ondersteunen, de API of de plaatsingsregels? | Content-onderwerp | Beantwoord 24-11 (regels, Etsy-toegang als uitzondering) |
+| 24-11-2026 | Irshad Khan (IH, dag 170) | 'Extensie uit' heeft drie oorzaken (gebruiker zet uit, browser dicht, MV3 service worker wordt niet wakker); een heartbeat naar de backend scheidt 'geen check-in' van 'check-in maar taak mislukt'; 60 verlengverzoeken van één account samenvouwen tot één statusregel | Overwegen voor de storingsmelding van de extensie. Niet beantwoord (plafond) | Idee |
+| 24-11-2026 | mochawang (IH, dag 170) | Korte dagelijkse wachtrij met beslissingen: 60 verlengverzoeken van één account als één 'opnieuw koppelen'-taak, prioriteit voor taken waar de live advertentie kan ontbreken, bewuste overslag labelen met wat nog live staat | Overwegen. Niet beantwoord (plafond) | Idee |
 | 23-11-2026 | Ani Ta (Facebook) | Waarschuwing: software om tegelijk te plaatsen zou verboden zijn op Vinted en je account kosten | Zelfde zorg als de Vinted-voorwaarden (externe tools). Argument voor de plaatsklaar-stand; content-onderwerp zodra dat helder is | Beantwoord, terugkomen 30-11 |
 | 22-11-2026 | listdraft (IH) | Bij prijsverhoging: directe mail met wat verandert in euro, optie om met jaarabonnement de huidige prijs vast te zetten vóór 1 januari | Overwegen voor de aankondiging aan bestaande klanten | Nieuw |
 | 22-11-2026 | Nino (IH) | Geef elk plan een paar AI-aanbiedingen per maand en kijk wie de limiet haalt | Test voor AI-functies op alle plannen | Nieuw |
