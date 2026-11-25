@@ -906,6 +906,15 @@ _WOONTEXTIEL = re.compile(
 )
 
 
+# Brocante, antiek en huisdecoratie (Mieke, brocantedepot, 25-11-2026): 49 van
+# 51 Vinted-plaatsingen bleven staan op "colour (empty ...)" bij vazen,
+# kandelaars en schaaltjes zonder kleur. Vinted eist bij huisdecoratie een
+# kleur. Heeft de rubriek op Vinted geen kleurveld, dan doet de extensie niets
+# met deze waarde (fillColourVinted stopt bij "colour field was not on the
+# page" en de gatenlijst kijkt alleen naar een veld dat er is).
+_VINTED_KLEUR_RUBRIEK = re.compile(r"^(antiek|wonen|kunst|verzamelen)\b", re.I)
+
+
 def _vinted_meerkleurig_vangnet(jobs: list) -> int:
     """Vinted eist een kleur bij woontextiel. Heeft het artikel geen kleur en
     staat er een in de titel, dan sturen we die mee, en anders "Various"
@@ -923,7 +932,8 @@ def _vinted_meerkleurig_vangnet(jobs: list) -> int:
             continue
         if not isinstance(pl, dict) or str(pl.get("color") or "").strip():
             continue
-        if not _WOONTEXTIEL.search(str(pl.get("category") or "")):
+        rubriek = str(pl.get("category") or "")
+        if not (_WOONTEXTIEL.search(rubriek) or _VINTED_KLEUR_RUBRIEK.search(rubriek)):
             continue
         # Eerst een kleur uit de titel ("roodbruin", "lindegroen", "kleurrijk"):
         # de extensie kent die woorden niet allemaal, de server wel.

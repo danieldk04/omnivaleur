@@ -93,3 +93,38 @@ def test_echte_extensie_voor_en_na():
     # Zonder vangnet vindt de extensie bij deze titels niets: precies de fout van Toon.
     assert sum(1 for k in voor if not k) >= 5, voor
     assert all(na), na
+
+
+# Mieke (brocantedepot, 25-11-2026): vazen, kandelaars en schaaltjes zonder kleur,
+# 49 van 51 Vinted-plaatsingen "colour (empty ...)". Titels uit haar echte opdrachten.
+BROCANTE = [
+    ("Vaas West Germany 521-14", "antiek woonaccessoires", "Various"),
+    ("Koperen kandelaar", "antiek woonaccessoires", "Various"),
+    ("Koehoorn", "antiek woonaccessoires", "Various"),
+    ("Aardewerk kruik", "antiek woonaccessoires", "Various"),
+    ("Koperen kandelaar", "antiek curiosa en brocante", "Various"),
+]
+
+
+def test_brocante_zonder_kleur_krijgt_een_kleur():
+    for titel, rubriek, verwacht in BROCANTE:
+        jobs = [_job(titel, rubriek)]
+        assert _vinted_meerkleurig_vangnet(jobs) == 1, titel
+        assert jobs[0]["payload"]["color"] == verwacht, titel
+
+
+def test_brocante_met_eigen_kleur_of_ander_kanaal_blijft_staan():
+    jobs = [
+        _job("Vintage messing uiltjes", "antiek woonaccessoires", color="Gold"),
+        _job("Koperen kandelaar", "antiek woonaccessoires", platform="marktplaats"),
+        _job("Koperen kandelaar", "antiek woonaccessoires", action="delete"),
+    ]
+    assert _vinted_meerkleurig_vangnet(jobs) == 0
+    assert jobs[0]["payload"]["color"] == "Gold"
+    assert not jobs[1]["payload"]["color"] and not jobs[2]["payload"]["color"]
+
+
+def test_brocante_opdracht_geeft_de_extensie_een_kleur():
+    jobs = [_job("Koperen kandelaar", "antiek woonaccessoires")]
+    _vinted_meerkleurig_vangnet(jobs)
+    assert _extensie_kleuren([jobs[0]["payload"]]) == [["Various"]]
