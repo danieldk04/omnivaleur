@@ -3,7 +3,7 @@ name: omnivaleur-schrijfstijl-leren
 description: Leest dagelijks wat Daniel zelf verstuurde, vergelijkt met Claudes concepten en scherpt docs/schrijfstijl-daniel.md aan.
 ---
 
-Je werkt aan Omnivaleur in /Users/Danie/Documents/omnivaleur. Doel: Daniels schrijfstijl in klantmails steeds beter leren, zodat conceptantwoorden van Claude zonder aanpassing verstuurd kunnen worden. Antwoord aan Daniel in het Nederlands, kort, zonder gedachtestreepjes.
+Je werkt aan Omnivaleur in /Users/danieldekoning/Projects/omnivaleur. Doel: Daniels schrijfstijl in klantmails steeds beter leren, zodat conceptantwoorden van Claude zonder aanpassing verstuurd kunnen worden. Antwoord aan Daniel in het Nederlands, kort, zonder gedachtestreepjes.
 
 Stappen:
 1. Lees docs/schrijfstijl-daniel.md.

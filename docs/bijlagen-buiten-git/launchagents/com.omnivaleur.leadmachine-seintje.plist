@@ -3,10 +3,10 @@
 <plist version="1.0">
 <dict>
   <key>Label</key><string>com.omnivaleur.leadmachine-seintje</string>
-  <key>ProgramArguments</key><array><string>/bin/zsh</string><string>/Users/Danie/Library/Application Support/omnivaleur/leadmachine_seintje.sh</string></array>
+  <key>ProgramArguments</key><array><string>/bin/zsh</string><string>/Users/danieldekoning/Library/Application Support/omnivaleur/leadmachine_seintje.sh</string></array>
   <key>StartInterval</key><integer>1800</integer>
   <key>RunAtLoad</key><true/>
-  <key>StandardOutPath</key><string>/Users/Danie/Library/Application Support/omnivaleur/leadmachine_seintje.log</string>
-  <key>StandardErrorPath</key><string>/Users/Danie/Library/Application Support/omnivaleur/leadmachine_seintje.log</string>
+  <key>StandardOutPath</key><string>/Users/danieldekoning/Library/Application Support/omnivaleur/leadmachine_seintje.log</string>
+  <key>StandardErrorPath</key><string>/Users/danieldekoning/Library/Application Support/omnivaleur/leadmachine_seintje.log</string>
 </dict>
 </plist>

@@ -1,0 +1,6 @@
+---
+name: omnivaleur-leadgen-aanvullen
+description: Dagelijks de wachtrij van de koude mail meten en bijvullen als hij onder 40 leads komt
+---
+
+Je werkt aan Omnivaleur in /Users/danieldekoning/Projects/omnivaleur. Draai vanuit die map: python3 scripts/leadgen_aanvullen.py (lange stappen op de achtergrond, hij kan 40 minuten duren; hij doet niets als de wachtrij 40 of meer leads heeft). Daarna: meet met `gh run list -R danieldk04/omnivaleur --workflow=leadgen-mail.yml --limit 6` dat de koude-mailronde van de laatste 24 uur draaide; staat er een gat, geef dan een seintje door `gh workflow run leadgen-mail.yml -R danieldk04/omnivaleur -f opdracht=tick`. Blijft de wachtrij na het script onder 40, zoek dan een extra bron (zie docs/team-notes.md 19-11 Serper-rondes en de skill leadgen) en meld dat in docs/team-notes.md. Gebruik nooit `leadgen_mail.py overzetten` (overschrijft Supabase). Schrijf kort een regel in docs/team-notes.md (datum, wachtrij voor en na) en push. Geen klantmail, geen andere acties.

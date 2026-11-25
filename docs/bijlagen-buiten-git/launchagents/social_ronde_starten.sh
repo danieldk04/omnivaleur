@@ -2,7 +2,7 @@
 # Start de reageerronde zonder dat Claude Desktop open staat (LaunchAgent, elk uur).
 # Poort: 09:00-22:00, minstens 4 uur na de vorige ronde, hooguit 3 per dag.
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
-R="$HOME/Documents/omnivaleur"; D="$R/data/social"; cd "$R" || exit 1
+R="$HOME/Projects/omnivaleur"; D="$R/data/social"; cd "$R" || exit 1
 H=$(date +%H); NU=$(date +%s); VAND=$(date +%Y-%m-%d)
 [ "$H" -ge 9 ] && [ "$H" -lt 22 ] || exit 0
 LOCK=/tmp/omnivaleur-ronde.lock
@@ -19,11 +19,12 @@ N=$(grep -c "^$VAND.* start (LaunchAgent)" "$D/rondes.log" 2>/dev/null); [ "${N:
 date +'%Y-%m-%d %H:%M' > "$D/laatste-ronde.txt"
 echo "$(date +'%Y-%m-%d %H:%M') start (LaunchAgent)" >> "$D/rondes.log"
 pgrep -x "Google Chrome" >/dev/null || { open -ga "Google Chrome"; sleep 20; }
-caffeinate -i claude -p --chrome --dangerously-skip-permissions \
+CLAUDE=$(ls -d "$HOME/Library/Application Support/Claude/claude-code/"*/*/claude.app/Contents/MacOS/claude 2>/dev/null | sort -V | tail -1)
+caffeinate -i "$CLAUDE" -p --chrome --dangerously-skip-permissions \
   "Lees data/social/ronde-prompt.txt en voer de reageerronde precies zo uit. De POORT is al gepasseerd door het startscript: sla die stap over en schrijf laatste-ronde.txt niet opnieuw. VERNIEUWEN van de cron overslaan, dat doet het startscript niet nodig. Dit is een achtergrondronde zonder gesprek: sla het OCHTENDRAPPORT BUILD IN PUBLIC over (dat staat alleen in het gesprek met Daniel), maar voer het blok BUILD IN PUBLIC wel uit." \
   > /tmp/omnivaleur-ronde-uit.txt 2>&1
 cat /tmp/omnivaleur-ronde-uit.txt >> "$D/ronde-uitvoer.log"
-if grep -q "Failed to authenticate" /tmp/omnivaleur-ronde-uit.txt; then rm -f "$D/laatste-ronde.txt"; sed -i '' '$d' "$D/rondes.log"; echo "$(date +'%Y-%m-%d %H:%M') mislukt: niet ingelogd" >> "$D/rondes.log"
+if grep -qE "Failed to authenticate|Not logged in" /tmp/omnivaleur-ronde-uit.txt; then rm -f "$D/laatste-ronde.txt"; sed -i '' '$d' "$D/rondes.log"; echo "$(date +'%Y-%m-%d %H:%M') mislukt: niet ingelogd" >> "$D/rondes.log"
 elif grep -qiE "not connected|niet verbonden|niet uitgevoerd" /tmp/omnivaleur-ronde-uit.txt; then
   # Chrome-koppeling weg: deze ronde telt niet mee en de volgende poging komt pas over ~2 uur
   sed -i '' '$s/ start (LaunchAgent)$/ start-mislukt (Chrome niet verbonden)/' "$D/rondes.log"

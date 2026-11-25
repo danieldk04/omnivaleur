@@ -3,7 +3,7 @@ name: omnivaleur-seo-nameting-26-nov
 description: Eenmalige nameting op 26-11-2026 van de SEO-reparaties van 29 en 30-10-2026: beide rondes artikelen, hygiëne en Ahrefs-score.
 ---
 
-Je werkt aan Omnivaleur in /Users/Danie/Documents/omnivaleur. Lees eerst CLAUDE.md in die repo en volg de rapportagevorm (vier blokjes, Nederlands, gewone taal, nooit een streepje als leesteken, zekerheid in procenten, actiepunten met urgentielabel). Dit is een NAMETING: wijzig niets aan code, database of Cloudflare, tenzij Daniel er daarna zelf om vraagt.
+Je werkt aan Omnivaleur in /Users/danieldekoning/Projects/omnivaleur. Lees eerst CLAUDE.md in die repo en volg de rapportagevorm (vier blokjes, Nederlands, gewone taal, nooit een streepje als leesteken, zekerheid in procenten, actiepunten met urgentielabel). Dit is een NAMETING: wijzig niets aan code, database of Cloudflare, tenzij Daniel er daarna zelf om vraagt.
 
 Achtergrond: op 29-10-2026 zijn (1) de titel en omschrijving van acht artikelen herschreven en (2) de mailto-links in de footer buiten Cloudflare's e-mailherschrijving gezet (`<!--email_off-->`), omdat Ahrefs het adres /cdn-cgi/l/email-protection als kapotte link op 201 pagina's telde. Op 30-10-2026 volgden (3) een tweede ronde van acht artikelen, (4) kortere omschrijvingen op homepage, /nl, /register, /ai-info en alle toolpagina's, en (5) twitter:card en Open Graph op pagina's waar die misten. Zie docs/team-notes.md, secties "2026-10-29: Ahrefs en Search Console doorgelicht", "2026-10-29: Trustpilot..." en "2026-10-30: SEO-hygiëne en tweede ronde titels". Daar staan ook de oude titels.
 

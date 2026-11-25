@@ -1,0 +1,15 @@
+---
+name: omnivaleur-controle-nieuwe-mac-25-11
+description: Eenmalig 25-11 12:00: controleren of alle verhuisde routines en LaunchAgents vannacht en vanochtend echt gedraaid hebben, en herstellen wat faalde.
+---
+
+Je werkt voor Daniel aan Omnivaleur in /Users/danieldekoning/Projects/omnivaleur. Antwoord in het Nederlands in de vier blokjes van CLAUDE.md, kort, geen gedachtestreepjes. Context: op 24-11-2026 zijn alle routines en twee LaunchAgents opnieuw ingesteld op de nieuwe Mac (zie onderaan docs/team-notes.md, kopje 2026-11-24 routines en LaunchAgents). Daniel wil weten of alles echt gedraaid heeft.
+
+Controleer, zelf en zonder te vragen:
+1. `list_scheduled_tasks` en `list_task_runs` per taak. Verwacht tussen 24-11 15:00 en nu een run van: nightly-dreaming-geheugen (00:03), omnivaleur-schrijfstijl-leren (07:15), omnivaleur-facebook-reactiebot-verversen (07:30, alleen op oneven dagen van de maand, dus 25-11 ja), omnivaleur-kennisoverdracht-ochtend (07:45), omnivaleur-dagelijkse-klantfouten (08:00), omnivaleur-platformcontrole (10:00, 25-11 ja), omnivaleur-onboarding-nieuwe-klanten (11:00). Voor elke run: status, en lees de samenvatting; een run die startte maar vastliep, 'niet ingelogd', 'niet verbonden', 'sleutel ontbreekt' of een lege meting meldde telt als MISLUKT, ook als de status 'klaar' zegt.
+2. LaunchAgents: `launchctl list | grep omnivaleur`, `tail -30 ~/Library/Application Support/omnivaleur/leadmachine_seintje.log` (seintjes 08:00 tot 21:30 elk half uur, geen MISLUKT) en `tail -30 data/social/rondes.log` (rondes tussen 09:00 en 22:00, hooguit 3 per dag, minstens 4 uur ertussen; geen 'niet ingelogd' of 'Chrome niet verbonden').
+3. Mislukte of ontbrekende run: oorzaak vinden en zelf repareren (paden, inlog, ontbrekend bestand onder ~/.omnivaleur, Python 3.13 in /usr/local/bin). Draai de taak daarna eenmaal met `run_scheduled_task` als dat zonder risico kan (niet voor taken die mails versturen of plaatsen zonder dat het routinebestand dat toestaat, en nooit twee rondes tegelijk: het gedeelde slot `python3 scripts/klantfouten.py ronde begin <naam>` geldt). Wat alleen Daniel kan (een inlog, een wachtwoord, een bestand van zijn oude Mac) komt als actiepunt met urgentielabel en zijn tijd.
+4. Controleer dat de oude Mac niet nog steeds meedraait: staan er in docs/team-notes.md of in de logs tekenen van dubbele rondes (twee klantfouten- of onboardingrondes dezelfde dag, dubbele reacties in data/social/gedaan.jsonl)? Meld dat bovenaan als dat zo is.
+5. Controleer dat het zijpaneel 'Routines nu bezig' (mod routines-nu in ~/.claude/mods/routines-nu) nog bestaat en dat `python3 -I ~/.claude/mods/routines-nu/scripts/lopend.py` geldige JSON geeft.
+6. Zet een regel met de uitkomst onderaan docs/team-notes.md (datum 2026-11-25), commit en push alleen dat bestand.
+Noem in het rapport per taak één regel: gedraaid ja/nee, en of het lukte.

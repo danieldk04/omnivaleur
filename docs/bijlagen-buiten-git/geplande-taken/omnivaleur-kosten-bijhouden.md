@@ -1,9 +1,9 @@
 ---
 name: omnivaleur-kosten-bijhouden
-description: Op de 1e van de maand: eerst de kosten van Omnivaleur en Revaleur bijwerken in de sheet "Kosten en doelen (Omnivaleur en Revaleur)", daarna de doelencheck (kwartaalmodus in jan/apr/jul/okt, anders maandmodus) in dezelfde sheet, met één rapport en één melding.
+description: Op de 1e van de maand: kosten van Omnivaleur en Revaleur bijwerken in de Drive-sheet, daarna de doelencheck, met één rapport en één melding.
 ---
 
-Je werkt aan Omnivaleur in /Users/Danie/Documents/omnivaleur. Dit is één gecombineerde maandelijkse routine (sinds 01-11-2026): kosten en doelen horen bij elkaar en staan in dezelfde Google Sheet "Kosten en doelen (Omnivaleur en Revaleur)" (tabs Omnivaleur, Revaleur, Doelen meetlog, Uitgangspunten). Volg de stappen in deze volgorde.
+Je werkt aan Omnivaleur in /Users/danieldekoning/Projects/omnivaleur. Dit is één gecombineerde maandelijkse routine (sinds 01-11-2026): kosten en doelen horen bij elkaar en staan in dezelfde Google Sheet "Kosten en doelen (Omnivaleur en Revaleur)" (tabs Omnivaleur, Revaleur, Doelen meetlog, Uitgangspunten). Volg de stappen in deze volgorde.
 
 STAP 1, kosten. Lees docs/routines/kosten-bijhouden.md in die repo en volg het precies: alle kosten nalopen, de bunq-export (nieuwste *_exporteren.csv in ~/Downloads) is leidend voor het totaal, tab Omnivaleur en tab Revaleur gescheiden, nooit een bedrag op twee tabs tellen. Doe dit volledig af (inclusief controle van de totaalrijen en de regel in docs/team-notes.md) voordat je aan stap 2 begint, want de doelencheck leest de totalen.
 

@@ -19918,3 +19918,6 @@ Daniel koos voor geanimeerde, niet hyperrealistische video's en plaatst voortaan
 - De API-sleutel in .env is ongeldig (401). Daarom `scripts/leadgen_classify_cli.py`: beoordeling via de ingelogde Claude-opdrachtregel (Haiku), zonder API-tegoed. Nieuw `scripts/leadgen_aanvullen.py`: meet de wachtrij en vult aan als hij < 40 is (zoeken, beoordelen, sheet, samenvoegen).
 - Workflow leadgen-mail.yml: 12 controles per ronde (was 3), 120 min, zodat het rooster ook zonder seintje van de Mac gedekt is.
 - OPEN: dagelijkse geplande taak om `leadgen_aanvullen.py` te draaien kon niet worden aangemaakt (beveiliging weigerde). Marktplaats en 2dehands zijn bijna leeggetrokken (91 leads); een derde bron (Serper-webshops) is nodig voor meer dan een paar dagen. Controleer of de GitHub-secret ANTHROPIC_API_KEY nog geldig is (de .env-sleutel is het niet).
+
+## 25-11-2026: kennisoverdracht ochtend (Claude, Daniels hoofdaccount)
+Overdracht.md en bijlagen buiten git bijgewerkt voor de nieuwe Mac (15 taken, 2 LaunchAgents, social-bestanden). Sleutelscan schoon. Oude taakkopieën van de vorige Mac bewust laten staan.

@@ -1,6 +1,6 @@
 ---
 name: btw-kwartaal-herinnering
-description: Kwartaalherinnering (15e jan/apr/jul/okt) om Daniels BTW-aangifte voor het afgelopen kwartaal voor te bereiden
+description: Kwartaalherinnering (15e jan/apr/jul/okt) om Daniels BTW-aangifte voor het afgelopen kwartaal voor te bereiden.
 ---
 
 Dit is de kwartaalherinnering voor Daniels BTW-aangifte (omzetbelasting). Vandaag is het rond de 15e van de maand na een afgesloten kwartaal.

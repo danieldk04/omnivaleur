@@ -3,7 +3,7 @@ name: omnivaleur-nieuwe-plannen-1-januari
 description: Op 1 januari 2027 de tekstwissel voor de nieuwe plannen doorvoeren en Daniel de vlag laten aanzetten.
 ---
 
-Je werkt aan Omnivaleur in /Users/Danie/Documents/omnivaleur. Antwoord in het Nederlands, in de vier blokjes van CLAUDE.md, kort, geen streepjes als leesteken. Lees eerst docs/overdracht.md (onderaan) en docs/team-notes.md, en doe `git log --since="30 days ago" --oneline`.
+Je werkt aan Omnivaleur in /Users/danieldekoning/Projects/omnivaleur. Antwoord in het Nederlands, in de vier blokjes van CLAUDE.md, kort, geen streepjes als leesteken. Lees eerst docs/overdracht.md (onderaan) en docs/team-notes.md, en doe `git log --since="30 days ago" --oneline`.
 
 Doel: vandaag, 1 januari 2027, gaan de nieuwe plannen live (Light 9,99 tot 20 artikelen, Pro 19,99 tot 250, Plus 29,99 tot 1.500, Ultra 49 onbeperkt; jaarlijks 2 maanden gratis; grenzen van Pro en Plus gelden pas vanaf 15 januari; Light strikt 20; de vriendenactie met 10 euro korting loopt tot 1 januari en wie daarvoor binnenkwam houdt 10 euro). De server en alle prijs-id's staan al klaar; alleen de vlag NIEUWE_PLANNEN_AAN in Railway staat uit en alleen Daniel kan die aanzetten.
 
