@@ -68,7 +68,7 @@ def _blad_met_naam(knopen: list, trefwoorden=("jacket", "coat", "dress", "shirt"
 
 
 @router.post("/etsy/proef")
-async def etsy_proef(user=Depends(get_current_user_full)):
+async def etsy_proef(activeer: bool = False, user=Depends(get_current_user_full)):
     """Alleen voor de eigenaar: maakt een CONCEPT onder 1 euro, leest het terug en
     verwijdert het, zoals het API-testbeleid van Etsy vraagt. Het rapport staat ook
     in extra_data.proef van de koppeling."""
@@ -101,7 +101,9 @@ async def etsy_proef(user=Depends(get_current_user_full)):
         item = {"title": "test - vintage 1985 jas (API proef, wordt verwijderd)",
                 "description": "Test van de Omnivaleur-koppeling. Dit concept wordt direct verwijderd.",
                 "price": 0.5, "category": "jas", "gender": "heren", "brand": "test",
-                "origin_postal_code": "4614RG", "photo_urls": [], "_etsy_concept": True}
+                "origin_postal_code": "4614RG", "photo_urls": []}
+        if not activeer:
+            item["_etsy_concept"] = True
         foto = (db.table("items").select("photo_urls").eq("user_id", user.id)
                 .not_.is_("photo_urls", "null").limit(1).execute().data or [{}])[0].get("photo_urls") or []
         item["photo_urls"] = foto[:1]
@@ -113,6 +115,7 @@ async def etsy_proef(user=Depends(get_current_user_full)):
             r = await c.get(f"{e.ETSY_BASE}/application/listings/{res['platform_listing_id']}",
                             headers=plat._headers(token))
             rapport["concept_status"] = [r.status_code, (r.json() or {}).get("state")]
+            rapport["activeer_gevraagd"] = activeer
             ri = await c.get(f"{e.ETSY_BASE}/application/listings/{res['platform_listing_id']}/images",
                              headers=plat._headers(token))
             rapport["foto_s_op_concept"] = len((ri.json() or {}).get("results") or []) if ri.status_code == 200 else ri.status_code
