@@ -1,7 +1,7 @@
 // 3D-motor: alles is een pure functie van t. Shots wisselen op woordtimings, de camera beweegt per shot.
 import * as THREE from 'three';
 import { makeChar } from './rig.js';
-import { ctxFor, label as mkLabel, sign as mkSign, uiTex, labelTex, liveTex, omniUI } from './sets.js';
+import { ctxFor, label as mkLabel, sign as mkSign, uiTex, labelTex, liveTex, omniUI, coverTex } from './sets.js';
 
 export const E = {
   lin: t => t, out: t => 1 - Math.pow(1 - t, 3), inOut: t => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
@@ -74,7 +74,7 @@ async function boot() {
     actor(o) { const c = makeChar(style, o); scene.add(c); dyn.push(c); return c; },
     prop(obj) { scene.add(obj); dyn.push(obj); return obj; },
     label(text, o = {}) { const s = mkLabel(text, { ...o, h: (o.h || .5) * .62 }); scene.add(s); dyn.push(s); return s; },
-    sign: mkSign, uiTex, labelTex, liveTex, omniUI,
+    sign: mkSign, uiTex, labelTex, liveTex, omniUI, coverTex,
     image: url => new Promise(r => loader.load(url, t => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; r(t); })),
     stat, dolly, orbit,
     shot(t, setName, cam, fn, opts = {}) { shots.push({ t, set: setName, cam, fn, opts }); },

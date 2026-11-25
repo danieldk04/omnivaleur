@@ -4,7 +4,7 @@ export const style = 'toon';
 export const hotWords = ['sunrise', 'twelve', 'forty', 'Fourth', 'Same', 'once', 'sleep', 'nine'];
 
 export async function build(K) {
-  const { X, THREE, set, shot, actor, prop, label, W, cue, dolly, orbit, stat, pop, E, prog, lerp, liveTex, omniUI, endCard, sign, cl } = K;
+  const { X, THREE, set, shot, actor, prop, label, W, cue, dolly, orbit, stat, pop, E, prog, lerp, liveTex, omniUI, endCard, sign, cl, coverTex, image } = K;
   const PI = Math.PI;
   const night = { wall: '#3b4170', floor: '#5a4638', sky: '#101c42', skyL: '#8a9ce0', sunC: '#9fb2ff', sunI: .9, hemi: .6, lamp: '#ffd8a0', blanket: '#e07a3d', rug: '#9a4a3a' };
   set('dawn', (X, g) => { street(X, g, { sky: '#ffb88a', sunC: '#ffb060', sunI: 2.8, wall: '#f3d7b5', grass: '#8ccf6a', sun: [-8, 3.2, 6], skyL: '#ffd6b0' }); return { bg: '#ffb98c', fog: ['#ffc79c', 14, 50] }; });
@@ -13,9 +13,11 @@ export async function build(K) {
   set('calm', (X, g) => { studio(X, g, { wall: '#f6c9a0', floor: '#efe0c8' }); X.box(g, [1.8, .1, 1.1], [0, .82, -.2], '#d9b98a'); [[-.8, -.45], [.8, -.45], [-.8, .45], [.8, .45]].forEach(([a, b]) => X.box(g, [.1, .8, .1], [a, .4, -.2 + b], '#a47c48')); return { bg: '#f6c9a0' }; });
 
   const hero = actor({ skin: '#e0ac85', shirt: '#1f2a55', pants: '#2a2f45', hairStyle: 'short', sleeves: true });
-  const hood = prop(hoodieProp(X, '#3c4b73', 1.05));
+  const hood = prop(hoodieProp(X, '#3c4b73', 1.05)); hood.rotation.order = 'YXZ';
+  const dTex = coverTex(await image('assets/items-crosslisted.webp'), .92 / .56), pTex = await image('assets/platforms-connected.webp');
+  const panel = prop(new THREE.Mesh(new THREE.PlaneGeometry(2.7, 2.7 * 633 / 1200), new THREE.MeshBasicMaterial({ map: pTex })));
   const lap = prop(laptopProp(X, null, 1)); const ph = prop(phoneProp(X, null, 1.7));
-  const type = liveTex(512, 330, (x, w, h, n) => { x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.fillStyle = '#09b1ba'; x.fillRect(0, 0, w, h * .16); x.fillStyle = '#fff'; x.font = '900 34px Montserrat'; x.textBaseline = 'middle'; x.fillText('New listing', 20, h * .08); x.fillStyle = '#0a1936'; x.font = '800 30px Montserrat'; const s = 'Vintage blue hoodie, size M, like new'.slice(0, Math.floor(n)); x.fillText(s + (Math.floor(n * 2) % 2 ? '|' : ''), 20, h * .38); x.fillStyle = '#c8d0de'; x.fillRect(20, h * .55, w - 40, 14); x.fillRect(20, h * .65, w * .7, 14); x.fillRect(20, h * .75, w * .5, 14); });
+  const type = liveTex(512, 312, (x, w, h, n) => { x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.fillStyle = '#09b1ba'; x.fillRect(0, 0, w, h * .16); x.fillStyle = '#fff'; x.font = '900 34px Montserrat'; x.textBaseline = 'middle'; x.fillText('New listing', 20, h * .08); x.fillStyle = '#0a1936'; x.font = '800 30px Montserrat'; const s = 'Vintage blue hoodie, size M, like new'.slice(0, Math.floor(n)); x.fillText(s + (Math.floor(n * 2) % 2 ? '|' : ''), 20, h * .38); x.fillStyle = '#c8d0de'; x.fillRect(20, h * .55, w - 40, 14); x.fillRect(20, h * .65, w * .7, 14); x.fillRect(20, h * .75, w * .5, 14); });
   const photos = liveTex(512, 900, (x, w, h) => { x.fillStyle = '#f4f7fb'; x.fillRect(0, 0, w, h); x.fillStyle = '#0a1936'; x.font = '900 46px Montserrat'; x.fillText('Photos', 30, 60); [0, 1, 2, 3, 4, 5].forEach(i => { const cx = 30 + (i % 2) * 235, cy = 110 + Math.floor(i / 2) * 250; x.fillStyle = '#dfe6f2'; x.beginPath(); x.roundRect(cx, cy, 217, 230, 18); x.fill(); x.fillStyle = '#3c4b73'; x.beginPath(); x.roundRect(cx + 50, cy + 60, 117, 130, 18); x.fill(); x.fillRect(cx + 20, cy + 70, 40, 90); x.fillRect(cx + 157, cy + 70, 40, 90); x.beginPath(); x.arc(cx + 108, cy + 55, 26, 0, 7); x.fill(); }); });
   const clock = liveTex(512, 256, (x, w, h, s) => { x.fillStyle = '#12080a'; x.fillRect(0, 0, w, h); x.fillStyle = s.c || '#ff3b30'; x.font = '900 150px Montserrat'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(s.t, w / 2, h / 2 + 6); });
   const clockMesh = prop(new THREE.Mesh(new THREE.PlaneGeometry(1.4, .7), new THREE.MeshBasicMaterial({ map: clock.tex })));
@@ -43,14 +45,14 @@ export async function build(K) {
   // 4 Elk uur kopiëren is een uur niet verkopen
   const hrs = ['1:40', '2:40', '3:40'];
   sh(23, 'night', dolly([-.4, 2.1, 1.2], [-.9, 2.2, -.6], [-.1, 2.35, -3.36], [-.1, 2.35, -3.36], 40, 0, 0), (lt, T, a) => { a.at(clockMesh, -.1, 2.35, -3.36); clock.draw({ t: hrs[Math.min(2, Math.floor(lt / 1.3))] }); }, {});
-  sh(28, 'night', orbit([-2.4, .3, -2.2], 3, 1.4, -.6, .5, 46, .9), (lt, T, a) => { a.at(hood, -2.4, .55, -2.4, .6); }, {});
+  sh(28, 'night', orbit([-2.3, .2, -.7], 3, 1.6, -.6, .5, 46, .5), (lt, T, a) => { hood.rotation.x = -PI / 2; a.at(hood, -2.3, .3, -.7, .6); }, {});
   sh(33, 'night', dolly([1.2, 3.6, -.4], [1.5, 2.2, -.9], [1.4, .8, -2.2], [1.5, .9, -2.4], 50, 0, 0), (lt, T, a) => { a.put(hero, [1.2, 0, -1.7], PI, 'sleep', lt, { sit: 1, lean: .5 }); a.at(lap, 1.6, .87, -2.7); scr(lap, type.tex); type.draw(36); a.at(zzz, 1.2, 2.0 + Math.sin(T * 2) * .1, -1.7); }, {});
   // 5 Omnivaleur lost het op
   sh(34, 'calm', dolly([-2.4, 1.6, 4.2], [-1.0, 1.7, 3.2], [0, 1.2, -.2], [0, 1.3, -.2], 46, 0, 0), (lt, T, a) => { a.put(hero, [-.6, 0, 1.0], .35, 'point', lt); a.at(ph, .5, 1.5 + Math.sin(T * 1.7) * .05, .2, -.2); scr(ph, phUI.tex); phUI.draw({ sold: 0, rm: [0, 0, 0] }); }, {});
   cue(W(34), 'pop');
-  sh(37, 'calm', dolly([1.4, 1.5, 1.6], [.9, 1.3, 1.0], [0, .95, -.2], [0, .95, -.2], 40, 0, 0), (lt, T, a) => { a.put(hero, [-1.2, 0, .5], .6, 'type', lt, {}); a.at(lap, 0, .87, -.2); lap.userData.lid.rotation.x = -.25; scr(lap, type.tex); type.draw(36); }, {});
+  sh(37, 'calm', dolly([1.4, 1.5, 1.6], [.9, 1.3, 1.0], [0, .95, -.2], [0, .95, -.2], 40, 0, 0), (lt, T, a) => { a.put(hero, [-1.2, 0, .5], .6, 'type', lt, {}); a.at(lap, 0, .87, -.2); lap.userData.lid.rotation.x = -.25; scr(lap, dTex); }, {});
   // 6 Live op vier kanalen, terwijl je slaapt
-  sh(41, 'calm', dolly([-2.8, 1.4, 4.0], [2.8, 1.4, 4.0], [0, 1.5, 0], [0, 1.5, 0], 46, 0, 0, E.lin), (lt, T, a) => { [[45, -2.1], [46, -.7], [47, .7], [51, 2.1]].forEach(([wi, x], i) => { a.at(lblOk[i], x, 1.5 + (i % 2) * .45, 0); a.sc(lblOk[i], pop(T, t(wi, -.1), .3)); }); a.put(hero, [0, 0, 1.2], 0, 'cheer', lt, {}); }, {});
+  sh(41, 'calm', dolly([-2.8, 1.4, 4.0], [2.8, 1.4, 4.0], [0, 1.5, 0], [0, 1.5, 0], 46, 0, 0, E.lin), (lt, T, a) => { [[45, -2.1], [46, -.7], [47, .7], [51, 2.1]].forEach(([wi, x], i) => { a.at(lblOk[i], x, 1.15 + (i % 2) * .4, .3); a.sc(lblOk[i], pop(T, t(wi, -.1), .3)); }); a.at(panel, 0, 2.55, -.6); a.put(hero, [0, 0, 1.4], 0, 'cheer', lt, {}); }, {});
   cue(W(45), 'ding'); cue(W(46), 'ding'); cue(W(47), 'ding'); cue(W(51), 'ding');
   sh(52, 'bednight', dolly([-.2, 2.0, 2.2], [-1.2, 1.7, 1.2], [-2.5, 1.0, -1.7], [-2.5, 1.0, -1.7], 46, 0, -4), (lt, T, a) => { a.put(hero, [-2.5, .95, -.4], 0, 'lie', lt, {}); a.at(zzz, -2.2, 2.0 + Math.sin(T * 2) * .1, -1.2); }, {});
   // 7 Laptop dicht om negen
