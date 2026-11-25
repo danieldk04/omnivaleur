@@ -20000,3 +20000,9 @@ Daniel heeft de drie 3D-video's ingepland (rangorde C, B, A). Besluit: dinsdag 0
 - Aanleiding: Egbert (bcdf9aa4) vond Export niet. Het stond wel in zijn menu: System, Data Transfer, Export. Nagelezen in de Magento-broncode (2.4-develop): Export-pagina toont onder het formulier een lijst `export_grid` met per bestand Download en Delete; de export loopt via de wachtrij (`import_export.export`, consumer exportProcessor) en toont "Message is added to queue, wait to get your file soon". Adobe KB: bestand binnen enkele minuten in de lijst, zo niet na 10 minuten dan draait de queue-consumer/cron niet.
 - Niet vast te stellen zonder zijn omgeving: of de cron bij zijn hoster draait.
 - Op de importpagina in het dashboard staat nu een uitklapregel "Magento: hoe exporteer ik mijn producten?" (EN en NL). Geen popup of updatelog (kleine uitbreiding).
+
+## 25-11-2026: Onboarding nieuwe klanten (ochtend, tweede ronde)
+- 5 accounts in de eerste week, geen vrienden, geen creator. Web Store 1.0.434, repo 1.0.435. Mailrapport: 2 mails, 2 geopend, 0 klik, 0 antwoord.
+- karaoke-jo.nl (c75362fa): 27 artikelen op Marktplaats, vroeg 24-11 naar de prijs, onbeantwoord. Onboardingmail geweigerd door het script (koude mail binnen 44 uur), niets verstuurd; briefing aan Daniel. 11 artikelen zonder prijs.
+- 20ba676b en d74bd011: Daniel had contact 25-11, geen mailtje. d74bd011 heeft 1 artikel live op MP en 2dehands, Vinted niet ingelogd (klant-eigen). ecbceba1 en e27c1eaa: niets veranderd.
+- Niets gerepareerd, geen code gewijzigd.
