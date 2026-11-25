@@ -19960,3 +19960,8 @@ Daniel heeft de drie 3D-video's ingepland (rangorde C, B, A). Besluit: dinsdag 0
 - Brocante Depot (ecbceba1, Mieke): 153 artikelen, 86 live op Marktplaats en 2dehands, 9 op Vinted. 58 Vinted-fouten "colour (empty)" zijn van voor de kleurfix (3ecffe2f); 3 herkansingen staan pending omdat haar Chrome dicht is (extensie laatst gezien 07:09). Daniel mailde haar 25-11 09:43, dus geen mailtje. Mislukte opdrachten niet opnieuw klaargezet tot de proef van die 3 bevestigd is.
 - Kisses of the Sun (e27c1eaa, info@kissesofthesun.nl): 67 uur, nooit extensie, nul artikelen, nooit contact. Onboardingmailtje verstuurd (installeer extensie, laat inlezen).
 - Niets gerepareerd, geen code gewijzigd.
+
+## 25-11-2026 (later): Etsy-afwijzing uitgezocht, concept nieuwe aanvraag (Claude, opdracht Daniel)
+- Actuele API-voorwaarden gelezen (etsy.com/nl/legal/api, bijgewerkt 05-11-2026): doel vooraf goedgekeurd (§3), afwijzen "om welke reden dan ook" (§2), verboden o.a. verkoop omleiden, kosten voor gratis Etsy-delen, browserextensies/scrapen van Etsy-data, trademarktekst verplicht. Personal App = "deeper review", bedoeld voor beperkte schaal ook voor andere verkopers; Seller App = alleen eigen shop, automatisch.
+- De tekst van de eerste aanvraag is nergens vastgelegd (repo en sessielogs doorzocht). Reden van afwijzing dus niet vast te stellen; meest waarschijnlijk onduidelijk doel plus aanvrager/app-mismatch.
+- Concept voor een nieuwe aanvraag in docs/etsy-aanvraag-concept.md. Open besluit: Etsy gratis in elk plan (voorwaarden §5) of niet.
