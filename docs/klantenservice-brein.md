@@ -258,7 +258,7 @@ Hoe de kanalen gekoppeld worden:
   proefweek en daarna inbegrepen vanaf Pro, eenmalig per account en tot 500 artikelen
   (Light heeft maar 20 artikelen en heeft het niet nodig; meer dan 500: samen afspreken). De klant maakt een account aan (de 7 dagen gaan dan in), mailt het
   e-mailadres van dat account en stuurt het winkeladres of de productexport (bij JouwWeb:
-  Producten, Exporteren, Download). Wij zetten titel, prijs, omschrijving en foto's van
+  Producten, Exporteren, Download; bij Magento: System, Data Transfer, Export, Entity Type Products, CSV, Continue; het bestand verschijnt na een paar minuten in de lijst onder het formulier op dezelfde pagina met een Download-link, en vraagt een draaiende cron van de host). Wij zetten titel, prijs, omschrijving en foto's van
   alle artikelen die te koop zijn in het account. Uitverkochte artikelen gaan niet mee en
   verzendkosten worden niet overgenomen. Wordt er via een ander kanaal iets verkocht, dan
   haalt de klant het zelf weg uit zijn eigen webshop, want daar kan Omnivaleur niet bij.
