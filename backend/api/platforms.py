@@ -11,7 +11,7 @@ from backend.platforms.ebay import EbayPlatform
 from backend.platforms.shopify import ShopifyPlatform, is_valid_shop_domain, verify_install_hmac
 from backend.models import AIListingRequest
 from backend.services.ai_listing import generate_listing_from_photos
-from backend.api.deps import get_current_user
+from backend.api.deps import get_current_user, get_current_user_full
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,76 @@ async def etsy_callback(code: str = "", state: str = "", error: str = ""):
         return RedirectResponse("/app?etsy=mislukt", status_code=303)
     _save_credentials(user_id, "etsy", tokens)
     return RedirectResponse("/app?etsy=gekoppeld", status_code=303)
+
+
+def _blad_met_naam(knopen: list, trefwoorden=("jacket", "coat", "dress", "shirt")) -> int | None:
+    """Zoekt een bladknoop in de Etsy-taxonomie (voor de proef)."""
+    for k in knopen:
+        kinderen = k.get("children") or []
+        if kinderen:
+            gevonden = _blad_met_naam(kinderen, trefwoorden)
+            if gevonden:
+                return gevonden
+        elif any(t in (k.get("name") or "").lower() for t in trefwoorden):
+            return k["id"]
+    return None
+
+
+@router.post("/etsy/proef")
+async def etsy_proef(user=Depends(get_current_user_full)):
+    """Alleen voor de eigenaar: maakt een CONCEPT onder 1 euro, leest het terug en
+    verwijdert het, zoals het API-testbeleid van Etsy vraagt. Het rapport staat ook
+    in extra_data.proef van de koppeling."""
+    import httpx
+    from datetime import datetime, timezone
+    from backend.services.billing import is_owner_email
+    from backend.platforms import etsy as e
+    if not is_owner_email(user.email):
+        raise HTTPException(status_code=403, detail="owner only")
+    db = get_db()
+    rij = (db.table("platform_credentials").select("*").eq("user_id", user.id)
+           .eq("platform", "etsy").limit(1).execute().data or [None])[0]
+    if not rij:
+        raise HTTPException(status_code=400, detail="Etsy is not connected")
+    plat = e.EtsyPlatform()
+    rapport: dict = {"start": datetime.now(timezone.utc).isoformat()}
+    try:
+        creds = dict(rij)
+        if plat.verlopen(creds):
+            creds = await plat.refresh_credentials(creds)
+            _save_credentials(user.id, "etsy", {**creds, "extra_data": rij.get("extra_data")})
+            rapport["token_ververst"] = True
+        token = plat._token(creds)
+        async with httpx.AsyncClient(timeout=30) as c:
+            for naam, sleutel in (("keystring_en_secret", e._api_key()), ("alleen_keystring", e._keystring())):
+                r = await c.get(f"{e.ETSY_BASE}/application/openapi-ping", headers={"x-api-key": sleutel})
+                rapport[f"ping_{naam}"] = r.status_code
+            tax = await c.get(f"{e.ETSY_BASE}/application/seller-taxonomy/nodes", headers={"x-api-key": e._api_key()})
+            rapport["taxonomie_status"] = tax.status_code
+            tid = _blad_met_naam(tax.json().get("results") or []) if tax.status_code == 200 else None
+        rapport["shop_id"] = await plat._get_shop_id(token)
+        rapport["taxonomy_id"] = tid
+        if not tid:
+            raise RuntimeError("geen taxonomie-blad gevonden")
+        item = {"title": "test - Omnivaleur API proef (concept, wordt verwijderd)",
+                "description": "Test van de Omnivaleur-koppeling. Dit concept wordt direct verwijderd.",
+                "price": 0.5, "year": 1985, "etsy_taxonomy_id": tid,
+                "origin_postal_code": "4614RG", "photo_urls": []}
+        res = await plat.create_listing(item, creds)
+        rapport["concept_aangemaakt"] = res
+        async with httpx.AsyncClient(timeout=30) as c:
+            r = await c.get(f"{e.ETSY_BASE}/application/listings/{res['platform_listing_id']}",
+                            headers=plat._headers(token))
+            rapport["concept_status"] = [r.status_code, (r.json() or {}).get("state")]
+        rapport["verwijderd"] = await plat.delete_listing(res["platform_listing_id"], creds)
+        rapport["ok"] = True
+    except Exception as ex:  # noqa: BLE001
+        rapport["ok"] = False
+        rapport["fout"] = str(ex)[:800]
+    extra = dict(rij.get("extra_data") or {})
+    extra["proef"] = rapport
+    db.table("platform_credentials").update({"extra_data": extra}).eq("user_id", user.id).eq("platform", "etsy").execute()
+    return rapport
 
 
 @router.get("/ebay/auth-url")

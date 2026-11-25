@@ -46,3 +46,16 @@ def test_zonder_sleutels_een_duidelijke_fout(monkeypatch):
     monkeypatch.delenv("ETSY_CLIENT_ID", raising=False)
     with pytest.raises(RuntimeError):
         etsy.EtsyPlatform().get_authorization_url("user-1")
+
+
+def test_vintage_regel():
+    assert etsy.vintage_when_made(1985) == "1980s"
+    assert etsy.vintage_when_made(2004) == "2000_2006"
+    with pytest.raises(ValueError):
+        etsy.vintage_when_made(2015)
+    with pytest.raises(ValueError):
+        etsy.vintage_when_made(None)
+
+
+def test_api_key_header_heeft_keystring_en_secret():
+    assert etsy._api_key() == "testkey123:geheim-voor-test"
