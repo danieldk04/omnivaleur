@@ -19983,3 +19983,8 @@ Daniel heeft de drie 3D-video's ingepland (rangorde C, B, A). Besluit: dinsdag 0
 - Omschrijving (479 tekens) zegt niets over prijs. Bewust geen "free in every plan" (onwaar bij Ultra-only). Risico: §5 van de API-voorwaarden (kosten voor deel dat Etsy gratis aanbiedt) en dat het prijsblok op de site Etsy bij Ultra zet.
 - Eerste aanvraag van 16-11 bestaat mogelijk nog als app; Daniel kan in "Apps You've Made" nakijken of er twee staan.
 - Volgende stap: mail aan Etsy schrijven (Daniel stuurt). Geen reactie verwacht binnen een week; eerdere mails aan developer@etsy.com bleven onbeantwoord.
+
+## 25-11-2026: OSS-aangifte opgezet (Claude, opdracht Daniel)
+- Daniel staat sinds 1 juli 2026 in de Uniregeling (gezien in Mijn Belastingdienst Zakelijk). Eerste OSS-aangifte: Q3 2026, btw 47,96 (BE 16,31, FR 25,40, ES 6,25), sheet-item 598 staat foutief op 0.
+- Splitsing en routine: docs/routines/oss-aangifte.md. Skill btw-omzetbelasting zegt nog "geen OSS"; dat klopt vanaf Q3 2026 niet meer voor reguliere EU-verkoop.
+- Open: of Q3 gewone aangifte de 282,43 EU-verkoop bevat (suppletie). Niets ingediend.
