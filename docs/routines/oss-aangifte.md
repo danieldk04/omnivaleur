@@ -47,9 +47,11 @@ De verklaring en het versturen zijn Daniels eigen klik. Betalen apart, met de ge
 toont (niet die van de gewone aangifte). Betaalgegevens staan bewust niet in de repo.
 
 **Gewone Q3-aangifte (ingediend en betaald 20-10-2026):** 1a omzet 579 / btw 122, 4a 104/22, 4b 217/46, 5b 168, te betalen 22.
-De sheet-cijfers (marge-items + reguliere NL-items) geven 1a ongeveer 117 btw. De ingediende 122 lijkt de marge van de
-reguliere EU-items (BE, FR, ES, samen ongeveer 12 euro btw) nog te bevatten: waarschijnlijk een kleine overbetaling van 5 tot 13 euro.
-Niet exact vast te stellen omdat de ingediende grondslag (701) 14 euro boven de sheet ligt.
+De sheet-cijfers (marge-items netto + reguliere NL-items over de volle prijs) geven 1a 559 omzet / 117,43 btw.
+Verklaring van de ingediende 701 (579+122): dat is exact de som van alle POSITIEVE marges van alle 58 Q3-items
+(700,82), dus ook de reguliere en OSS-items als marge en zonder saldering van negatieve marges. Overbetaling in 1a:
+ongeveer 4 tot 5 euro (122 tegen 117). Voorbelasting op de inkoop van de reguliere NL-items is niet onderzocht.
+Tarieven BE 21, FR 20, ES 21 zijn gecontroleerd (europa.eu en andere bronnen, 25-11-2026).
 Kleine correctie (onder 1.000 euro) mag in de volgende gewone aangifte (Q4, uiterlijk 31 januari 2027); geen aparte suppletie.
 
 **Items met prijs maar zonder verkoopdatum (Daniel, 25-11-2026):** meld elk kwartaal items waar `Price Sold` is
