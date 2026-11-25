@@ -1,4 +1,4 @@
-"""Wie mag Etsy gebruiken?
+"""Wie mag Etsy gebruiken? Nu alleen de eigenaar (etsy_open_voor_ultra staat uit).
 
 Etsy gaf Omnivaleur Personal Access (25-11-2026): beperkte schaal. Daniel wil Etsy
 alleen voor Ultra, of te verdienen met 5 betalende vrienden (zelfde regel als Ultra
@@ -33,6 +33,9 @@ def _bereken(user_id: str) -> bool:
             return True
     except Exception:  # noqa: BLE001
         logger.exception("Eigenaarscontrole voor Etsy mislukt")
+    from backend.config import settings
+    if not settings.etsy_open_voor_ultra:
+        return False
     try:
         from backend.services.light import plan_van_gebruiker
         return plan_van_gebruiker(user_id) == "ultra"

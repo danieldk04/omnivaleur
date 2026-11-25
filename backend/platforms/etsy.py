@@ -112,8 +112,9 @@ def jaar_uit_item(item: dict):
     Eerst een uitdrukkelijk veld (year), daarna een jaartal of decennium in titel of
     omschrijving ("vintage 1992", "80s", "jaren 70"). Niets gevonden: None, en dan
     plaatsen we niet op Etsy: een geraden jaar maakt van tweedehands geen vintage."""
-    if item.get("year"):
-        return item["year"]
+    for sleutel in ("vintage_year", "year"):
+        if item.get(sleutel):
+            return item[sleutel]
     tekst = f"{item.get('title') or ''} {item.get('description') or ''}"
     m = _JAAR.search(tekst)
     if m:

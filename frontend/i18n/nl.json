@@ -4488,5 +4488,7 @@
  "Etsy only allows vintage items (20+ years old)": "Etsy staat alleen vintage artikelen toe (20 jaar of ouder)",
  "Etsy needs the item's year to prove it is vintage (20+ years old)": "Etsy heeft het jaar van het artikel nodig als bewijs dat het vintage is (20 jaar of ouder). Zet bijvoorbeeld 'vintage 1992' in de titel of omschrijving.",
  "Could not match this item to an Etsy category. Fill in the category (for example jacket or dress) and try again.": "Dit artikel paste niet bij een Etsy-categorie. Vul de categorie in (bijvoorbeeld jas of jurk) en probeer het opnieuw.",
- "Your Etsy shop has no shipping profile yet. Create one on Etsy (Shop Manager, Settings, Shipping settings) and try again.": "Je Etsy-winkel heeft nog geen verzendprofiel. Maak er een op Etsy (Winkelbeheer, Instellingen, Verzendinstellingen) en probeer het opnieuw."
+ "Your Etsy shop has no shipping profile yet. Create one on Etsy (Shop Manager, Settings, Shipping settings) and try again.": "Je Etsy-winkel heeft nog geen verzendprofiel. Maak er een op Etsy (Winkelbeheer, Instellingen, Verzendinstellingen) en probeer het opnieuw.",
+ "Year made": "Bouwjaar",
+ "(Etsy, vintage means 20+ years old)": "(Etsy, vintage is 20 jaar of ouder)"
 }

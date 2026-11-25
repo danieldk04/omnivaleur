@@ -113,6 +113,7 @@ def test_geen_koppeling_geeft_duidelijke_fout():
 def test_toegang_alleen_ultra_of_eigenaar(monkeypatch):
     from backend.services import etsy_toegang as t
     t._cache.clear()
+    monkeypatch.setattr(settings, "etsy_open_voor_ultra", True)
     monkeypatch.setattr("backend.services.referral_mail.email_van", lambda u: "klant@x.nl")
     monkeypatch.setattr("backend.services.billing.is_owner_email", lambda e: e == "eigenaar@x.nl")
     monkeypatch.setattr("backend.services.light.plan_van_gebruiker", lambda u: "plus")
@@ -124,3 +125,14 @@ def test_toegang_alleen_ultra_of_eigenaar(monkeypatch):
     monkeypatch.setattr("backend.services.referral_mail.email_van", lambda u: "eigenaar@x.nl")
     monkeypatch.setattr("backend.services.light.plan_van_gebruiker", lambda u: "light")
     assert t.etsy_toegang("u2") is True
+
+
+def test_jaarveld_gaat_voor_tekst_en_toegang_is_standaard_alleen_eigenaar(monkeypatch):
+    assert etsy.jaar_uit_item({"title": "jas 1999", "vintage_year": 1975}) == 1975
+    from backend.services import etsy_toegang as t
+    t._cache.clear()
+    monkeypatch.setattr("backend.services.referral_mail.email_van", lambda u: "klant@x.nl")
+    monkeypatch.setattr("backend.services.billing.is_owner_email", lambda e: False)
+    monkeypatch.setattr("backend.services.light.plan_van_gebruiker", lambda u: "ultra")
+    assert settings.etsy_open_voor_ultra is False
+    assert t.etsy_toegang("ultra-klant") is False

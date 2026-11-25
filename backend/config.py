@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     # (x-api-key en client_id), secret alleen voor het ondertekenen van de state.
     etsy_api_keystring: str = ""
     etsy_shared_secret: str = ""
+    # Etsy blijft alleen voor de eigenaar tot Daniel het openzet (25-11-2026: pas als
+    # het "1000% zeker" werkt). Zet ETSY_OPEN_VOOR_ULTRA=1 om Ultra-klanten en wie
+    # 5 betalende vrienden heeft toe te laten.
+    etsy_open_voor_ultra: bool = False
     etsy_redirect_uri: str = "https://omnivaleur.com/api/platforms/etsy/callback"
 
     ebay_app_id: str = ""

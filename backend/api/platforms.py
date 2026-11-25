@@ -68,7 +68,7 @@ def _blad_met_naam(knopen: list, trefwoorden=("jacket", "coat", "dress", "shirt"
 
 
 @router.post("/etsy/proef")
-async def etsy_proef(activeer: bool = False, user=Depends(get_current_user_full)):
+async def etsy_proef(activeer: bool = False, item_id: str = "", user=Depends(get_current_user_full)):
     """Alleen voor de eigenaar: maakt een CONCEPT onder 1 euro, leest het terug en
     verwijdert het, zoals het API-testbeleid van Etsy vraagt. Het rapport staat ook
     in extra_data.proef van de koppeling."""
@@ -107,6 +107,17 @@ async def etsy_proef(activeer: bool = False, user=Depends(get_current_user_full)
         foto = (db.table("items").select("photo_urls").eq("user_id", user.id)
                 .not_.is_("photo_urls", "null").limit(1).execute().data or [{}])[0].get("photo_urls") or []
         item["photo_urls"] = foto[:1]
+        if item_id:
+            echt = (db.table("items").select("*").eq("id", item_id).eq("user_id", user.id)
+                    .limit(1).execute().data or [None])[0]
+            if not echt:
+                raise RuntimeError("item_id hoort niet bij dit account")
+            item = {**echt, "title": echt["title"], "price": 0.5, "origin_postal_code": "4614RG",
+                    "photo_urls": (echt.get("photo_urls") or [])[:2]}
+            if not activeer:
+                item["_etsy_concept"] = True
+            rapport["artikel"] = {"id": item_id, "jaar_veld": echt.get("vintage_year"),
+                                  "jaar_gebruikt": e.jaar_uit_item(item)}
         rapport["taxonomy_id"] = await plat.taxonomie_voor(item)
         rapport["jaar_uit_titel"] = e.jaar_uit_item(item)
         res = await plat.create_listing(item, creds)

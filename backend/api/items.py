@@ -22,7 +22,7 @@ router = APIRouter(prefix="/items", tags=["items"])
 # Zolang dat niet is gebeurd horen ze uit élke opslagactie: anders breekt niet
 # alleen de nieuwe functie maar ook het gewoon bewaren van een artikel, met
 # "column items.x does not exist".
-_MIGRATIE_KOLOMMEN = ("price_type", "price_woocommerce")
+_MIGRATIE_KOLOMMEN = ("price_type", "price_woocommerce", "vintage_year")
 
 
 def _strip_missing(data: dict) -> dict:
@@ -95,6 +95,8 @@ def create_item(item: ItemCreate, user_id: str = Depends(get_current_user)):
     data = item.model_dump()
     data["id"] = str(uuid.uuid4())
     data["user_id"] = user_id
+    if item.vintage_year is not None:
+        data["vintage_year"] = item.vintage_year
     _kleur_op_de_lijst(data)
     if not data.get("sku"):
         data["sku"] = f"REV-{data['id'][:8].upper()}"
