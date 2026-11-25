@@ -1,19 +1,83 @@
 """
 Etsy v3 API integration.
-Requires: ETSY_CLIENT_ID env var + OAuth2 user token.
+Requires ETSY_API_KEYSTRING + ETSY_SHARED_SECRET env vars and an OAuth2 user token.
 """
 from __future__ import annotations
+import base64
+import hashlib
+import hmac
 import logging
 import os
+import time
+from datetime import datetime, timedelta, timezone
 import httpx
 from backend.platforms.base import PlatformBase
 
 logger = logging.getLogger(__name__)
 
-ETSY_CLIENT_ID = os.getenv("ETSY_CLIENT_ID", "")
 ETSY_BASE = "https://openapi.etsy.com/v3"
+ETSY_SCOPES = "listings_r listings_w listings_d transactions_r shops_r"
+STATE_GELDIG_SECONDEN = 15 * 60
 
-CONDITION_MAP = {"new": "not_specified", "good": "not_specified", "fair": "not_specified", "poor": "not_specified"}
+
+def _keystring() -> str:
+    # Eerst de nieuwe naam, daarna de oude variabele uit de eerste opzet.
+    from backend.config import settings
+    return settings.etsy_api_keystring or os.getenv("_keystring()", "")
+
+
+def _secret() -> str:
+    from backend.config import settings
+    return settings.etsy_shared_secret
+
+
+def _redirect_uri() -> str:
+    from backend.config import settings
+    return os.getenv("ETSY_REDIRECT_URI") or settings.etsy_redirect_uri
+
+
+def _b64(raw: bytes) -> str:
+    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+
+
+def maak_state(user_id: str, nu: int | None = None) -> str:
+    """Ondertekende state: user_id.tijd.handtekening. Geen opslag nodig tussen
+    het starten en de terugkeer van Etsy."""
+    sleutel = _secret()
+    if not sleutel:
+        raise RuntimeError("Etsy is not configured on this server (ETSY_SHARED_SECRET missing)")
+    t = str(int(nu if nu is not None else time.time()))
+    basis = f"{user_id}.{t}"
+    sig = _b64(hmac.new(sleutel.encode(), basis.encode(), hashlib.sha256).digest())
+    return f"{basis}.{sig}"
+
+
+def lees_state(state: str, nu: int | None = None) -> str:
+    """Geeft de user_id terug of gooit ValueError bij een vervalste of oude state."""
+    sleutel = _secret()
+    if not sleutel:
+        raise ValueError("Etsy is not configured")
+    try:
+        user_id, t, sig = state.rsplit(".", 2)
+        verwacht = _b64(hmac.new(sleutel.encode(), f"{user_id}.{t}".encode(), hashlib.sha256).digest())
+        if not hmac.compare_digest(sig, verwacht):
+            raise ValueError("bad signature")
+        leeftijd = (nu if nu is not None else time.time()) - int(t)
+    except (ValueError, TypeError) as e:
+        raise ValueError("invalid state") from e
+    if leeftijd < 0 or leeftijd > STATE_GELDIG_SECONDEN:
+        raise ValueError("state expired")
+    return user_id
+
+
+def _verifier(state: str) -> str:
+    # 43 tekens, afgeleid van de state: zo hoeft er niets bewaard te worden.
+    return _b64(hmac.new(_secret().encode(), ("v:" + state).encode(), hashlib.sha256).digest())
+
+
+def _met_verloop(data: dict) -> dict:
+    verloopt = datetime.now(timezone.utc) + timedelta(seconds=int(data.get("expires_in", 3600)) - 60)
+    return {**data, "token_expires_at": verloopt.isoformat()}
 
 
 class EtsyPlatform(PlatformBase):
@@ -25,53 +89,58 @@ class EtsyPlatform(PlatformBase):
     def _headers(self, token: str) -> dict:
         return {
             "Authorization": f"Bearer {token}",
-            "x-api-key": ETSY_CLIENT_ID,
+            "x-api-key": _keystring(),
             "Content-Type": "application/json",
         }
 
-    def get_authorization_url(self, state: str = "") -> str:
+    def get_authorization_url(self, user_id: str) -> str:
+        """OAuth 2.0 met PKCE S256. Etsy weigert de methode 'plain'."""
         from urllib.parse import urlencode
-        import secrets
-        code_verifier = secrets.token_urlsafe(32)
+        if not _keystring():
+            raise RuntimeError("Etsy is not configured on this server (ETSY_API_KEYSTRING missing)")
+        state = maak_state(user_id)
+        challenge = _b64(hashlib.sha256(_verifier(state).encode()).digest())
         params = {
             "response_type": "code",
-            "client_id": ETSY_CLIENT_ID,
-            "redirect_uri": os.getenv("ETSY_REDIRECT_URI", ""),
-            "scope": "listings_w listings_r",
-            "state": state or secrets.token_urlsafe(8),
-            "code_challenge": code_verifier,
-            "code_challenge_method": "plain",
+            "client_id": _keystring(),
+            "redirect_uri": _redirect_uri(),
+            "scope": ETSY_SCOPES,
+            "state": state,
+            "code_challenge": challenge,
+            "code_challenge_method": "S256",
         }
-        return f"https://www.etsy.com/oauth/connect?{urlencode(params)}", code_verifier
+        return f"https://www.etsy.com/oauth/connect?{urlencode(params)}"
 
-    async def exchange_code(self, code: str, code_verifier: str) -> dict:
-        async with httpx.AsyncClient() as c:
+    async def exchange_code(self, code: str, state: str) -> dict:
+        async with httpx.AsyncClient(timeout=30) as c:
             r = await c.post(
                 "https://api.etsy.com/v3/public/oauth/token",
                 data={
                     "grant_type": "authorization_code",
-                    "client_id": ETSY_CLIENT_ID,
-                    "redirect_uri": os.getenv("ETSY_REDIRECT_URI", ""),
+                    "client_id": _keystring(),
+                    "redirect_uri": _redirect_uri(),
                     "code": code,
-                    "code_verifier": code_verifier,
+                    "code_verifier": _verifier(state),
                 },
             )
             r.raise_for_status()
-            return r.json()
+            return _met_verloop(r.json())
 
     async def refresh_credentials(self, credentials: dict) -> dict:
-        async with httpx.AsyncClient() as c:
+        async with httpx.AsyncClient(timeout=30) as c:
             r = await c.post(
                 "https://api.etsy.com/v3/public/oauth/token",
                 data={
                     "grant_type": "refresh_token",
-                    "client_id": ETSY_CLIENT_ID,
+                    "client_id": _keystring(),
                     "refresh_token": credentials.get("refresh_token"),
                 },
             )
             r.raise_for_status()
-            data = r.json()
-            return {**credentials, "access_token": data["access_token"], "refresh_token": data.get("refresh_token")}
+            data = _met_verloop(r.json())
+            return {**credentials, "access_token": data["access_token"],
+                    "refresh_token": data.get("refresh_token") or credentials.get("refresh_token"),
+                    "token_expires_at": data["token_expires_at"]}
 
     async def _get_shop_id(self, token: str) -> str:
         async with httpx.AsyncClient() as c:
@@ -128,7 +197,7 @@ class EtsyPlatform(PlatformBase):
         img_resp.raise_for_status()
         r = await client.post(
             f"{ETSY_BASE}/application/shops/{shop_id}/listings/{listing_id}/images",
-            headers={"Authorization": f"Bearer {token}", "x-api-key": ETSY_CLIENT_ID},
+            headers={"Authorization": f"Bearer {token}", "x-api-key": _keystring()},
             files={"image": ("photo.jpg", img_resp.content, "image/jpeg")},
         )
         r.raise_for_status()

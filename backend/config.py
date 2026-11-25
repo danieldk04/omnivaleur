@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     shopify_scopes: str = "read_products,write_products,write_inventory,read_locations,read_publications,write_publications"
     shopify_redirect_uri: str = "https://omnivaleur.com/shopify-callback.html"
 
+    # Etsy Personal Access (goedgekeurd 25-11-2026). Keystring = de publieke API-sleutel
+    # (x-api-key en client_id), secret alleen voor het ondertekenen van de state.
+    etsy_api_keystring: str = ""
+    etsy_shared_secret: str = ""
+    etsy_redirect_uri: str = "https://omnivaleur.com/api/platforms/etsy/callback"
+
     ebay_app_id: str = ""
     ebay_cert_id: str = ""
     ebay_redirect_uri: str = "Daniel_de_Konin-Danielde-crossl-hnjbpa"

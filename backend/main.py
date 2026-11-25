@@ -282,6 +282,9 @@ async def health():
             # Shopify zelf ligt.
             "shopify_client_id": bool(_s.shopify_client_id),
             "shopify_client_secret": bool(_s.shopify_client_secret),
+            # Etsy: alleen ja/nee, nooit de waarde.
+            "etsy_api_keystring": bool(_s.etsy_api_keystring),
+            "etsy_shared_secret": bool(_s.etsy_shared_secret),
             "owner_email": _s.owner_email,
         },
     }

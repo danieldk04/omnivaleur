@@ -21,6 +21,36 @@ _HERPLAATS_GRENS = 50
 router = APIRouter(prefix="/platforms", tags=["platforms"])
 
 
+@router.get("/etsy/auth-url")
+async def etsy_auth_url(user_id: str = Depends(get_current_user)):
+    from backend.platforms.etsy import EtsyPlatform
+    try:
+        return {"url": EtsyPlatform().get_authorization_url(user_id)}
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/etsy/callback")
+async def etsy_callback(code: str = "", state: str = "", error: str = ""):
+    """Etsy stuurt de browser hierheen zonder inlogkop; de ondertekende state
+    zegt voor welke gebruiker dit is."""
+    from fastapi.responses import RedirectResponse
+    from backend.platforms.etsy import EtsyPlatform, lees_state
+    if error or not code:
+        return RedirectResponse("/app?etsy=geweigerd", status_code=303)
+    try:
+        user_id = lees_state(state)
+    except ValueError:
+        raise HTTPException(status_code=403, detail="invalid state")
+    try:
+        tokens = await EtsyPlatform().exchange_code(code, state)
+    except Exception as e:
+        logger.warning("Etsy-koppeling mislukt: %s", e)
+        return RedirectResponse("/app?etsy=mislukt", status_code=303)
+    _save_credentials(user_id, "etsy", tokens)
+    return RedirectResponse("/app?etsy=gekoppeld", status_code=303)
+
+
 @router.get("/ebay/auth-url")
 async def ebay_auth_url():
     try:
