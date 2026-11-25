@@ -20006,3 +20006,6 @@ Daniel heeft de drie 3D-video's ingepland (rangorde C, B, A). Besluit: dinsdag 0
 - karaoke-jo.nl (c75362fa): 27 artikelen op Marktplaats, vroeg 24-11 naar de prijs, onbeantwoord. Onboardingmail geweigerd door het script (koude mail binnen 44 uur), niets verstuurd; briefing aan Daniel. 11 artikelen zonder prijs.
 - 20ba676b en d74bd011: Daniel had contact 25-11, geen mailtje. d74bd011 heeft 1 artikel live op MP en 2dehands, Vinted niet ingelogd (klant-eigen). ecbceba1 en e27c1eaa: niets veranderd.
 - Niets gerepareerd, geen code gewijzigd.
+
+## 25-11-2026 (20:20): Etsy Personal Access goedgekeurd
+Daniel liet de ontwikkelaarsportal zien: de tweede aanvraag (app "omnivaleur") staat op status "Personal Access", 5 QPS en 5K QPD. De eerste app staat onder "Banned Apps". Goedgekeurd op de omschrijving zonder prijszin en met Commercial = Yes. Sleutel en secret horen in Railway-variabelen, niet in de repo. Risico blijft: Etsy alleen in Ultra kan onder API-voorwaarden §5 als betaalmuur gelezen worden. Mail naar developer@etsy.com (docs/etsy-mail-concept.md) is daarmee niet meer nodig; vooral de §5-vraag eruit laten om geen herbeoordeling uit te lokken. Gebruik nooit de sleutel van de geblokkeerde app.
