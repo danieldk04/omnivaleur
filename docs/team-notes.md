@@ -20018,3 +20018,6 @@ Live proef (POST /api/platforms/etsy/proef, alleen eigenaar) via de echte route:
 
 ## 25-11-2026 (22:02): Etsy activeren live getest
 Proef met activeer=true (Daniel gaf toestemming voor $0,20): listing 4625696711 ging actief (retourbeleid, foto, state active), werd teruggelezen en direct verwijderd. De hele plaatsstroom werkt dus live. Nog niet live gezien: token verversen na een uur en een echte Etsy-verkoop (polling). Eerste echte klantlisting: titel met jaar, categorie ingevuld, Etsy aanvinken.
+
+## 25-11-2026 (22:15): Etsy met jaarveld en echt artikel getest, nog alleen eigenaar
+Kolom items.vintage_year bestaat (Daniel draaide scripts/sql/items_vintage_year.sql). Echte plaatsing via het dashboard vond een bug: Etsy weigert een titel die niet met letter/cijfer begint ("(1029) White..."), opgelost met etsy_titel(). Daarna proef per artikel (item 128ad6f8..., jaar 1990, categorie taxonomy 1852, 2 foto's): concept aangemaakt, teruggelezen als draft, verwijderd. Etsy staat nog UIT voor klanten: settings.etsy_open_voor_ultra (env ETSY_OPEN_VOOR_ULTRA) is False. Open voor Ultra pas na: een echte actieve listing van een echt artikel, token-verversing na een uur gezien, en een echte Etsy-verkoop die het artikel elders afmeldt. De mislukte rij (listings.status=error) van artikel 1029 blijft staan tot de volgende poging.
