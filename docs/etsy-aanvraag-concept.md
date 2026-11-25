@@ -73,3 +73,18 @@ Prijs: de zin "free in every plan" is alleen toegestaan als dat bij livegang ook
 voor de aanvraag nemen we Etsy op in elk plan; het dashboard, de plannen en de Ultra-tekst veranderen NIET
 (geen instelling, niets doorgevoerd). Let op: wordt Etsy later toch alleen voor Ultra, dan wijkt de app af van
 het goedgekeurde doel (API-voorwaarden §3 en §5) en kan Etsy de toegang intrekken. Beslis dat voor je indient.
+
+## Definitieve versie (25-11, na lezen API-voorwaarden en API-testbeleid)
+
+Omschrijving (497 tekens), vervangt de tekst hierboven:
+
+> Omnivaleur helps second-hand and vintage sellers keep one-of-a-kind items in sync across marketplaces (Vinted, Marktplaats, eBay). With each seller's own OAuth consent, the app (1) creates listings in their own shop, only for items that qualify as vintage (20+ years), (2) reads their listings to avoid duplicates, (3) removes a listing when the item sells elsewhere, (4) reads their receipts to detect Etsy sales. No scraping, no extension on Etsy. Start: <10 sellers. Etsy is free in every plan.
+
+Gecontroleerd tegen de code en de site (25-11):
+- De extensie heeft geen Etsy-rechten in manifest.json (alleen Marktplaats, Vinted, Facebook, eigen domein):
+  de zin "no extension on Etsy" klopt.
+- Site: geen trademarktekst gevonden (moet erop), supportadres info@omnivaleur.com staat er, terms en privacy bestaan.
+- TEGENSPRAAK: de openbare site (index.html, prijsblok) zet Etsy als Ultra-voordeel. Dat botst met "free in every plan"
+  in de aanvraag. Een beoordelaar die de site opent ziet dat. Oplossen voor indienen, of de zin schrappen.
+- API-testbeleid (bijgewerkt 14-10-2021): bij testen Ontwikkelaarsmodus aan, conceptlistings of prijs onder 1 dollar,
+  "test" in shopnaam of titel, geen stockfoto's, per ongeluk gekochte testlistings annuleren.
