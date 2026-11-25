@@ -95,6 +95,21 @@ async def etsy_proef(activeer: bool = False, item_id: str = "", controleer: str 
             "state", "title", "quantity", "url", "is_private", "has_variations", "listing_type",
             "when_made", "taxonomy_id", "shipping_profile_id", "return_policy_id",
             "creation_timestamp", "state_timestamp", "fout")}}
+        try:
+            sid = await plat._get_shop_id(plat._token(creds))
+            async with httpx.AsyncClient(timeout=30) as c:
+                rs = await c.get(f"{e.ETSY_BASE}/application/shops/{sid}", headers=plat._headers(plat._token(creds)))
+                rl = await c.get(f"{e.ETSY_BASE}/application/shops/{sid}/listings", headers=plat._headers(plat._token(creds)),
+                                 params={"state": "active", "limit": 5})
+            sd = rs.json() if rs.status_code == 200 else {"fout": rs.text[:200]}
+            rapport["winkel"] = {k: v for k, v in sd.items() if k not in (
+                "announcement", "sale_message", "digital_sale_message", "title", "policy_welcome",
+                "policy_payment", "policy_shipping", "policy_refunds", "policy_additional",
+                "policy_seller_info", "policy_update_date", "image_url_760x100", "icon_url_fullxfull", "url")}
+            rapport["actieve_listings_http"] = rl.status_code
+            rapport["actieve_listings_aantal"] = (rl.json() or {}).get("count") if rl.status_code == 200 else None
+        except Exception as ex:  # noqa: BLE001
+            rapport["winkel_fout"] = str(ex)[:300]
         extra = dict(rij.get("extra_data") or {})
         extra["proef"] = rapport
         db.table("platform_credentials").update({"extra_data": extra}).eq("user_id", user.id).eq("platform", "etsy").execute()
