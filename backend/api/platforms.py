@@ -87,10 +87,8 @@ async def etsy_proef(user=Depends(get_current_user_full)):
     rapport: dict = {"start": datetime.now(timezone.utc).isoformat()}
     try:
         creds = dict(rij)
-        if plat.verlopen(creds):
-            creds = await plat.refresh_credentials(creds)
-            _save_credentials(user.id, "etsy", {**creds, "extra_data": rij.get("extra_data")})
-            rapport["token_ververst"] = True
+        rapport["token_was_verlopen"] = plat.verlopen(creds)
+        creds = await plat._vers(creds)
         token = plat._token(creds)
         async with httpx.AsyncClient(timeout=30) as c:
             for naam, sleutel in (("keystring_en_secret", e._api_key()), ("alleen_keystring", e._keystring())):
@@ -100,19 +98,24 @@ async def etsy_proef(user=Depends(get_current_user_full)):
             rapport["taxonomie_status"] = tax.status_code
             tid = _blad_met_naam(tax.json().get("results") or []) if tax.status_code == 200 else None
         rapport["shop_id"] = await plat._get_shop_id(token)
-        rapport["taxonomy_id"] = tid
-        if not tid:
-            raise RuntimeError("geen taxonomie-blad gevonden")
-        item = {"title": "test - Omnivaleur API proef (concept, wordt verwijderd)",
+        item = {"title": "test - vintage 1985 jas (API proef, wordt verwijderd)",
                 "description": "Test van de Omnivaleur-koppeling. Dit concept wordt direct verwijderd.",
-                "price": 0.5, "year": 1985, "etsy_taxonomy_id": tid,
-                "origin_postal_code": "4614RG", "photo_urls": []}
+                "price": 0.5, "category": "jas", "gender": "heren", "brand": "test",
+                "origin_postal_code": "4614RG", "photo_urls": [], "_etsy_concept": True}
+        foto = (db.table("items").select("photo_urls").eq("user_id", user.id)
+                .not_.is_("photo_urls", "null").limit(1).execute().data or [{}])[0].get("photo_urls") or []
+        item["photo_urls"] = foto[:1]
+        rapport["taxonomy_id"] = await plat.taxonomie_voor(item)
+        rapport["jaar_uit_titel"] = e.jaar_uit_item(item)
         res = await plat.create_listing(item, creds)
         rapport["concept_aangemaakt"] = res
         async with httpx.AsyncClient(timeout=30) as c:
             r = await c.get(f"{e.ETSY_BASE}/application/listings/{res['platform_listing_id']}",
                             headers=plat._headers(token))
             rapport["concept_status"] = [r.status_code, (r.json() or {}).get("state")]
+            ri = await c.get(f"{e.ETSY_BASE}/application/listings/{res['platform_listing_id']}/images",
+                             headers=plat._headers(token))
+            rapport["foto_s_op_concept"] = len((ri.json() or {}).get("results") or []) if ri.status_code == 200 else ri.status_code
         rapport["verwijderd"] = await plat.delete_listing(res["platform_listing_id"], creds)
         rapport["ok"] = True
     except Exception as ex:  # noqa: BLE001
