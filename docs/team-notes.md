@@ -19977,3 +19977,9 @@ Daniel heeft de drie 3D-video's ingepland (rangorde C, B, A). Besluit: dinsdag 0
 - Late starts: dreaming (00:03) en schrijfstijl (07:15) liepen pas 08:51 lokaal, de Mac sliep of stond uit; het zijn inhaalruns, geen gemiste dagen.
 - LaunchAgents: beide geladen (exit 0). Seintje elk half uur sinds 08:51 (gat 08:00 tot 08:51 door slaap), geen MISLUKT. Socialronde: 24-11 21:47 en eerder Chrome niet verbonden; 25-11 09:47 en 10:20 liepen allebei (33 min ertussen, tegen de regel van 4 uur; waarschijnlijk start vanuit het vastgepinde reageergesprek of RunAtLoad), geen dubbele reacties in gedaan.jsonl. Instagram is uitgelogd.
 - Oude Mac: geen tekenen van dubbele klantfouten- of onboardingrondes. Zijpaneel routines-nu bestaat en lopend.py geeft geldige JSON.
+
+## 25-11-2026 (nacht): tweede Etsy-aanvraag ingediend (Claude, opdracht Daniel)
+- Ingediend via Daniels ingelogde Chrome: app "omnivaleur", Seller Tools, kleine groep gebruikers, Commercial = Yes, listings uploaden/bewerken en verkoopdata lezen, website https://omnivaleur.com/etsy. Status direct: Pending Personal Approval, sleutel nog niet actief, 5 QPS en 5K QPD. Sleutel en geheim staan bewust niet in de repo.
+- Omschrijving (479 tekens) zegt niets over prijs. Bewust geen "free in every plan" (onwaar bij Ultra-only). Risico: §5 van de API-voorwaarden (kosten voor deel dat Etsy gratis aanbiedt) en dat het prijsblok op de site Etsy bij Ultra zet.
+- Eerste aanvraag van 16-11 bestaat mogelijk nog als app; Daniel kan in "Apps You've Made" nakijken of er twee staan.
+- Volgende stap: mail aan Etsy schrijven (Daniel stuurt). Geen reactie verwacht binnen een week; eerdere mails aan developer@etsy.com bleven onbeantwoord.
