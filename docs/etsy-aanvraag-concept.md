@@ -42,3 +42,34 @@ sellers, each connecting only their own shop. Requested access level: Personal A
 - [ ] Geen "Etsy" in de appnaam. "omnivaleur" is goed.
 - [ ] Aanvrager en Etsy-account kloppen met wie de app beheert; het geblokkeerde account eerst oplossen.
 - [ ] Opslag: Etsy-listinginhoud niet langer dan 6 uur oud tonen, overige Etsy-inhoud 24 uur (§5).
+
+## Het echte formulier (etsy.com/developers/register, geplakt door Daniel 25-11) en wat ik invul
+
+Nieuw uit het formulier zelf:
+- Etsy schrijft: gebruikers opdragen hun eigen API-sleutel te maken is tegen de API-voorwaarden. Een
+  sleutel per klant (Seller-App-route) valt dus af.
+- API-testbeleid: voldoen je Etsy-account en shop niet aan Etsy's beleid, dan "wordt je aanvraag mogelijk
+  afgewezen". Daniels account is geblokkeerd. Dat is een concrete, waarschijnlijke reden voor de afwijzing
+  van 16-11 en moet eerst opgelost zijn, ook met een perfecte tekst.
+
+Velden:
+| Veld | Antwoord | Waarom |
+|---|---|---|
+| Name | omnivaleur | Geen "Etsy" in de naam. |
+| Describe your application (max 500, alleen Etsy ziet het) | zie tekst hieronder (483 tekens) | Concreet doel, vooraf te beoordelen (§3). |
+| Website URL | omnivaleur.com, bij voorkeur een eigen Etsy-pagina met trademarktekst, support, voorwaarden, privacy | Etsy beoordeelt ook de site. |
+| Type | Seller Tools | |
+| Gebruikers | A small group of users | Eerlijk: beperkte schaal, geen "general public". |
+| Commercial? (rekenen jullie geld om de app te gebruiken) | Yes | De app is betaald; "No" zou onwaar zijn. Het Etsy-deel zelf is gratis (zie tekst). |
+| Upload or edit listings | aan | |
+| Read sales data | aan | Nodig om een Etsy-verkoop elders weg te halen. |
+| Send email | uit | We mailen niet via Etsy. |
+
+Tekst voor "Describe your application":
+
+> Omnivaleur helps second-hand and vintage sellers keep one-of-a-kind items in sync across marketplaces (Vinted, Marktplaats, eBay). With each seller's own OAuth consent, the app (1) creates listings in their own shop for vintage items, (2) reads their listings to avoid duplicates, (3) removes a listing when the item sells elsewhere, (4) reads their receipts to detect Etsy sales. No scraping, no extension on Etsy. Start: under 10 sellers. The Etsy connection is free in every plan.
+
+Prijs: de zin "free in every plan" is alleen toegestaan als dat bij livegang ook zo is. Besluit Daniel 25-11:
+voor de aanvraag nemen we Etsy op in elk plan; het dashboard, de plannen en de Ultra-tekst veranderen NIET
+(geen instelling, niets doorgevoerd). Let op: wordt Etsy later toch alleen voor Ultra, dan wijkt de app af van
+het goedgekeurde doel (API-voorwaarden §3 en §5) en kan Etsy de toegang intrekken. Beslis dat voor je indient.

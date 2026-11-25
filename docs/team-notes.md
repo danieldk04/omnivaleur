@@ -19965,3 +19965,8 @@ Daniel heeft de drie 3D-video's ingepland (rangorde C, B, A). Besluit: dinsdag 0
 - Actuele API-voorwaarden gelezen (etsy.com/nl/legal/api, bijgewerkt 05-11-2026): doel vooraf goedgekeurd (§3), afwijzen "om welke reden dan ook" (§2), verboden o.a. verkoop omleiden, kosten voor gratis Etsy-delen, browserextensies/scrapen van Etsy-data, trademarktekst verplicht. Personal App = "deeper review", bedoeld voor beperkte schaal ook voor andere verkopers; Seller App = alleen eigen shop, automatisch.
 - De tekst van de eerste aanvraag is nergens vastgelegd (repo en sessielogs doorzocht). Reden van afwijzing dus niet vast te stellen; meest waarschijnlijk onduidelijk doel plus aanvrager/app-mismatch.
 - Concept voor een nieuwe aanvraag in docs/etsy-aanvraag-concept.md. Open besluit: Etsy gratis in elk plan (voorwaarden §5) of niet.
+
+## 25-11-2026 (avond): Etsy-formulier gelezen, aanvraag zonder dashboardwijziging (Daniel)
+- Daniel plakte het echte registratieformulier. Etsy verbiedt een eigen sleutel per klant, en het API-testbeleid zegt dat een aanvraag kan worden afgewezen als het Etsy-account of de shop niet aan het beleid voldoet. Daniels account is geblokkeerd: waarschijnlijkste reden van de afwijzing van 16-11.
+- Besluit Daniel: in de aanvraag staat Etsy in elk plan, gratis; in het dashboard en de plannen verandert niets (geen instelling). Risico: later alleen Ultra wijkt af van het goedgekeurde doel (voorwaarden §3, §5).
+- Ingevulde antwoorden per veld staan in docs/etsy-aanvraag-concept.md.
