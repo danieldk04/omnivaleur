@@ -50,7 +50,7 @@ toont (niet die van de gewone aangifte). Betaalgegevens staan bewust niet in de 
 De sheet-cijfers (marge-items netto + reguliere NL-items over de volle prijs) geven 1a 559 omzet / 117,43 btw.
 Verklaring van de ingediende 701 (579+122): dat is exact de som van alle POSITIEVE marges van alle 58 Q3-items
 (700,82), dus ook de reguliere en OSS-items als marge en zonder saldering van negatieve marges. Overbetaling in 1a:
-ongeveer 4 tot 5 euro (122 tegen 117). Voorbelasting op de inkoop van de reguliere NL-items is niet onderzocht.
+ongeveer 4 tot 5 euro (122 tegen 117). Voorbelasting (5b, uit Gekko) is volgens Daniel (25-11-2026) juist; niet opnieuw nalopen.
 Tarieven BE 21, FR 20, ES 21 zijn gecontroleerd (europa.eu en andere bronnen, 25-11-2026).
 Kleine correctie (onder 1.000 euro) mag in de volgende gewone aangifte (Q4, uiterlijk 31 januari 2027); geen aparte suppletie.
 
