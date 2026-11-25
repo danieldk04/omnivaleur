@@ -136,3 +136,26 @@ def test_jaarveld_gaat_voor_tekst_en_toegang_is_standaard_alleen_eigenaar(monkey
     monkeypatch.setattr("backend.services.light.plan_van_gebruiker", lambda u: "ultra")
     assert settings.etsy_open_voor_ultra is False
     assert t.etsy_toegang("ultra-klant") is False
+
+
+def test_titel_begint_met_letter_of_cijfer():
+    assert etsy.etsy_titel("(1029) White Ralph Lauren Hoodie - Men XL - Very Good") == "White Ralph Lauren Hoodie - Men XL - Very Good"
+    assert etsy.etsy_titel("  *** Vintage jas ") == "Vintage jas"
+    assert etsy.etsy_titel("501 Levi's") == "501 Levi's"
+    assert len(etsy.etsy_titel("woord " * 60)) <= 140
+
+
+def test_titel_wordt_schoon_verstuurd(monkeypatch):
+    calls = []
+    verzonden = {}
+    handler = _nep_etsy(calls)
+
+    def vang(req):
+        if req.method == "POST" and req.url.path.endswith("/shops/99/listings"):
+            verzonden["body"] = req.content.decode()
+        return handler(req)
+
+    echt = httpx.AsyncClient
+    monkeypatch.setattr(etsy.httpx, "AsyncClient", lambda **kw: echt(transport=httpx.MockTransport(vang), **kw))
+    asyncio.run(etsy.EtsyPlatform().create_listing({**ITEM, "title": "(1029) Vintage 1990 jas"}, _creds()))
+    assert "title=Vintage+1990+jas" in verzonden["body"]

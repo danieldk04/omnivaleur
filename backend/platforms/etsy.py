@@ -87,6 +87,32 @@ def _met_verloop(data: dict) -> dict:
     return {**data, "token_expires_at": verloopt.isoformat()}
 
 
+def etsy_titel(titel: str) -> str:
+    """Etsy weigert een titel die niet met een letter of cijfer begint (live gemeten
+    25-11-2026: "(1029) White Ralph Lauren..." gaf 400). Het artikelnummer tussen
+    haakjes vooraan gaat eraf, daarna alle tekens voor de eerste letter of het cijfer."""
+    t = re.sub(r"^\s*\(\s*\d+\s*\)\s*", "", titel or "")
+    t = re.sub(r"^[^0-9A-Za-zÀ-ÿ]+", "", t)
+    t = re.sub(r"\s+", " ", t).strip()
+    if len(t) > 140:
+        t = t[:140].rsplit(" ", 1)[0] if " " in t[:140] else t[:140]
+    return t
+
+
+def _etsy_fout(r) -> str:
+    """Leesbare melding uit een Etsy-foutantwoord."""
+    try:
+        data = r.json()
+        if isinstance(data, list):
+            delen = [f"{d.get('path', '').replace(chr(92) + '/', '/')}: {d.get('message', '')}" for d in data]
+            return "; ".join(delen)
+        if isinstance(data, dict) and data.get("error"):
+            return str(data["error"])
+    except Exception:  # noqa: BLE001
+        pass
+    return (r.text or "")[:300]
+
+
 def vintage_when_made(year) -> str:
     """Etsy: vintage = 20+ jaar oud. Jonger dan dat gaat niet naar Etsy."""
     try:
@@ -374,7 +400,7 @@ class EtsyPlatform(PlatformBase):
             tags = [t for t in {(item.get("brand") or "").strip().lower(), "vintage",
                                 (item.get("category") or "").strip().lower()} if t and len(t) <= 20][:13]
             payload = {
-                "title": item["title"][:140],
+                "title": etsy_titel(item["title"]),
                 "description": (item.get("description") or "")[:65000],
                 "price": float(item["price"]),
                 "quantity": 1,
@@ -391,7 +417,7 @@ class EtsyPlatform(PlatformBase):
             headers = {"Authorization": f"Bearer {token}", "x-api-key": _api_key()}
             r = await c.post(f"{ETSY_BASE}/application/shops/{shop_id}/listings", data=payload, headers=headers)
             if r.status_code not in (200, 201):
-                raise RuntimeError(f"Etsy create listing failed {r.status_code}: {r.text}")
+                raise RuntimeError(f"Etsy create listing failed {r.status_code}: {_etsy_fout(r)}")
             listing_id = str(r.json()["listing_id"])
             uitkomst = {
                 "platform_listing_id": listing_id,
@@ -413,7 +439,7 @@ class EtsyPlatform(PlatformBase):
                 r = await c.patch(f"{ETSY_BASE}/application/shops/{shop_id}/listings/{listing_id}",
                                   data={"state": "active", "return_policy_id": beleid}, headers=headers)
                 if r.status_code not in (200, 201):
-                    raise RuntimeError(f"Etsy activate failed {r.status_code}: {r.text}")
+                    raise RuntimeError(f"Etsy activate failed {r.status_code}: {_etsy_fout(r)}")
             except Exception:
                 # Geen half werk achterlaten: een concept dat we niet kunnen afmaken weg.
                 try:
