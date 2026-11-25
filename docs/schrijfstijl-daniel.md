@@ -199,3 +199,9 @@ hieronder is "wat hij doet", nog niet "wat ik fout deed".
 - Wel: neutraal zeggen wat er speelde, dat het is opgelost, en wat de klant nu kan doen. "Dit is aangepast, je kunt het opnieuw proberen."
 
 - Afmelden in commerciële mail (Daniel, 09-11-2026): een persoonlijke mail die iets verkoopt of terughaalt (terughaalmail, opvolging, onboarding) krijgt vlak voor de groet één zin: "Liever geen mail meer? Laat het even weten, dan haal ik je meteen van de lijst." Nooit meer dan die ene zin, geen kopje, geen kleine letters. Reageert iemand dat hij wil stoppen: meteen in mail_unsubscribed zetten en nooit meer mailen. Een afmelding mag nooit een inlog vragen: dat is bij de wet een drempel en dus niet toegestaan.
+
+- Nooit de klant afraden of Omnivaleur kleiner maken (Daniel, 25-11-2026). Zinnen als "Voor jou
+  is er dan weinig extra ten opzichte van X, dus ik zou daarbij blijven" en "Goedkoper is het dus
+  niet" komen er niet in, ook niet als ze waar lijken. Zeg wat Omnivaleur doet en wat het kost,
+  noem eerlijk wat niet kan (feiten, geen oordeel over of de klant het nodig heeft), en laat de
+  klant zelf kiezen. Bij twijfel over geschiktheid: advies aan Daniel in het rapport, niet in de mail.
