@@ -100,3 +100,11 @@ Nog niet gedaan: stemmen beluisterd (kan ik niet), Blender-upgrade voor zachtere
 - Gefixt: hoodie door de verkoper (nu naast hem of boven zijn hoofd), kopers die elkaar vasthielden (nu tegenover elkaar met de hoodie ertussen), vechters door de menigte (menigte laat een gang vrij), hoodie in de pakketten (nu plat op de vloer), jas tegen Kevins borst. Schermen: textuur heeft nu precies de verhouding van het scherm (laptop 1,64, telefoon 0,57); logo houdt zijn eigen verhouding (176x96). Echte dashboardbeelden (`assets/dashboard-overview`, `items-crosslisted`, `platforms-connected`) staan via `coverTex` op laptops en een paneel in alle drie.
 - Stem: ElevenLabs `eleven_v3` met emotietags per zin (bijv. [panicked], [whispers], [deadpan]) en stability 0,3 tot 0,4; tags worden uit de woordtijden gefilterd (`genvoice_ts.py`). v3 negeert `speed`, dus `tempo.py <naam> <factor>` versnelt de mp3 en schaalt de woordtijden (A 1,15, B 1,08, C 1,22). Controle op botsingen blijft handwerk: stills bekijken met `bash chk.sh <naam> <map> <woordindex:offset,...>`.
 - Nog niet opgelost: enkele C-shots zijn heel dichtbij en donker; stemmen niet beluisterd.
+
+### Eerste indruk Daniel op de 3D-ronde (25-11-2026)
+Daniel heeft alle drie ingepland via Schedchie. Zijn voorkeur: 1) 3d-C real-kevin (storytime met terugkerend personage), 2) 3d-B toon-midnight (rustig, cinematisch), 3) 3d-A blocky-hoodie. Hij is nog niet helemaal tevreden en verwacht niet dat het volgende week in een keer goed gaat. Meting op dinsdag 01-12-2026; conclusies staan hier onder zodra er cijfers zijn.
+| Video | Stijl | Daniels rang | Uitkomst |
+|---|---|---|---|
+| 3d-A-blocky-hoodie-v2 | lowpoly, absurd | 3 | nog niet gemeten |
+| 3d-B-toon-midnight-v2 | zacht cartoon | 2 | nog niet gemeten |
+| 3d-C-real-kevin-v2 | realistischer, storytime | 1 | nog niet gemeten |

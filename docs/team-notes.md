@@ -19951,3 +19951,6 @@ Daniel wil video's zoals de goed scorende Instagram-animaties (semigenius, Dale,
 
 ## 25-11-2026 (platformcontrole): geen afwijking, gedeeltelijke ronde (Claude, geplande taak)
 - Eerste ronde op de nieuwe Mac. Vinted: kinderen schoenen EU 26, meisjes kleding 116, sneakers dames 38, heren overhemd M, alle stappen ok (alleen de bekende artefacten description/herstel). Marktplaats boeken sportboeken (/plaats/201/226): titel, prijs, staat, merk, kleur, locatie, bezorging ok; halswijdte en beschrijving zijn de bekende artefacten. Niet gedraaid: babykleding 74, niet-kledingartikel, jongens 116, 2dehands. Uitslag niet bewaard met vergelijk.py (onvolledig; data/platformcontrole bestaat nog niet op deze Mac, dus er was ook niets om mee te vergelijken). Eén tabblad, gesloten.
+
+### 25-11-2026, social video's: meting en trendronde
+Daniel heeft de drie 3D-video's ingepland (rangorde C, B, A). Besluit: dinsdag 01-12 meten via Schedchie en de lijn doortrekken; elke week een trendronde op Instagram, TikTok en Shorts, met bewuste afwisseling (helft winnaarstijl, helft nieuwe tests). Opdracht staat in `docs/routines/social-videos.md`.
