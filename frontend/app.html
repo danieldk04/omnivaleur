@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=6dbd41bcbd"></script>
+<script src="/i18n.js?v=e0535e4a99"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -6513,6 +6513,13 @@ async function _loadAllNu(opties = {}) {
   if (platformsRes.status === 'fulfilled' && Array.isArray(platformsRes.value?.connected)) {
     state.connected = platformsRes.value.connected;
     state.opnieuwKoppelen = platformsRes.value.opnieuw_koppelen || [];
+    // Etsy is er alleen voor wie toegang heeft (Ultra, of 5 betalende vrienden):
+    // voor iedereen anders blijft het "Coming soon" en uit alle lijsten.
+    state.etsyToegang = !!platformsRes.value.etsy_toegang;
+    if (state.etsyToegang) {
+      if (!PLATFORMS.includes('etsy')) PLATFORMS.push('etsy');
+      API_PLATFORMS_FE.add('etsy');
+    }
   }
   // De eigen voorkeur moet binnen zijn vóór er iets wordt ingedeeld, anders
   // oordeelt het scherm even met een lege instelling en ziet hij artikelen die
@@ -8435,7 +8442,7 @@ function renderPlatforms() {
     const ok = state.connected.includes(p.id);
     const kapot = (state.opnieuwKoppelen || []).some(k => k.platform === p.id);
     const count = state.listings.filter(l => l.platform === p.id && l.status === 'active').length;
-    const cfg = PLATFORM_CONNECT[p.id];
+    const cfg = (p.id === 'etsy' && state.etsyToegang) ? { connectable: true, connect: connectEtsy } : PLATFORM_CONNECT[p.id];
     let action = '';
     // Hier stond bij elk extensiekanaal "✓ Auto-detected", altijd. Johan Kist las
     // dat als "mijn account is gekoppeld". Zie OB.kanaalStatus in onboarding.js.
@@ -8729,6 +8736,34 @@ async function saveEbayShipFrom(btn) {
     btn.disabled = false;
   }
 }
+
+async function connectEtsy() {
+  try {
+    const res = await apiFetch(`${API}/api/platforms/etsy/auth-url`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.detail || 'Etsy is not configured yet. Contact support.');
+      return;
+    }
+    const { url } = await res.json();
+    window.location.href = url;
+  } catch (e) {
+    alert('Could not start Etsy connection: ' + e.message);
+  }
+}
+
+// Terug van Etsy: /app?etsy=gekoppeld | geweigerd | mislukt
+try {
+  const etsyUitkomst = new URLSearchParams(location.search).get('etsy');
+  if (etsyUitkomst) {
+    history.replaceState(null, '', location.pathname + location.hash);
+    setTimeout(() => {
+      if (etsyUitkomst === 'gekoppeld') showToast('Etsy is connected.');
+      else if (etsyUitkomst === 'geweigerd') showToast('Etsy connection was cancelled.');
+      else showToast('Could not connect Etsy. Try again.');
+    }, 800);
+  }
+} catch (e) {}
 
 async function connectEbay() {
   try {

@@ -24,6 +24,9 @@ router = APIRouter(prefix="/platforms", tags=["platforms"])
 @router.get("/etsy/auth-url")
 async def etsy_auth_url(user_id: str = Depends(get_current_user)):
     from backend.platforms.etsy import EtsyPlatform
+    from backend.services.etsy_toegang import etsy_toegang, GEEN_TOEGANG
+    if not etsy_toegang(user_id):
+        raise HTTPException(status_code=403, detail=GEEN_TOEGANG)
     try:
         return {"url": EtsyPlatform().get_authorization_url(user_id)}
     except RuntimeError as e:
@@ -706,7 +709,9 @@ def platform_status(user_id: str = Depends(get_current_user)):
                           "reden": reden.get("reden")})
             continue
         connected.append(r["platform"])
-    return {"connected": connected, "opnieuw_koppelen": kapot}
+    from backend.services.etsy_toegang import etsy_toegang
+    return {"connected": connected, "opnieuw_koppelen": kapot,
+            "etsy_toegang": etsy_toegang(user_id)}
 
 
 @router.delete("/{platform}/disconnect")

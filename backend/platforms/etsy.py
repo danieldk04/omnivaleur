@@ -4,6 +4,7 @@ Requires ETSY_API_KEYSTRING + ETSY_SHARED_SECRET env vars and an OAuth2 user tok
 """
 from __future__ import annotations
 import base64
+import re
 import hashlib
 import hmac
 import logging
@@ -101,6 +102,81 @@ def vintage_when_made(year) -> str:
     return "1800s" if jaar >= 1800 else "before_1700" if jaar < 1700 else "1700s"
 
 
+_JAAR = re.compile(r"(?<!\d)(19\d{2}|200[0-6])(?!\d)")
+_DECENNIUM = re.compile(r"(?<!\d)(?:19)?([2-9]0)['’]?s\b|jaren\s*(?:19)?([2-9]0)\b", re.I)
+
+
+def jaar_uit_item(item: dict):
+    """Het bouwjaar waarmee de verkoper laat zien dat het artikel vintage is.
+
+    Eerst een uitdrukkelijk veld (year), daarna een jaartal of decennium in titel of
+    omschrijving ("vintage 1992", "80s", "jaren 70"). Niets gevonden: None, en dan
+    plaatsen we niet op Etsy: een geraden jaar maakt van tweedehands geen vintage."""
+    if item.get("year"):
+        return item["year"]
+    tekst = f"{item.get('title') or ''} {item.get('description') or ''}"
+    m = _JAAR.search(tekst)
+    if m:
+        return int(m.group(1))
+    m = _DECENNIUM.search(tekst)
+    if m:
+        d = int(m.group(1) or m.group(2))
+        return 1900 + d + 5
+    return None
+
+
+_taxonomie_cache: dict = {"tot": 0.0, "bladeren": []}
+
+
+def _bladeren(knopen: list, pad: tuple = ()) -> list:
+    uit = []
+    for k in knopen:
+        naam = (k.get("name") or "")
+        nieuw = pad + (naam,)
+        kinderen = k.get("children") or []
+        if kinderen:
+            uit += _bladeren(kinderen, nieuw)
+        else:
+            uit.append((k["id"], nieuw))
+    return uit
+
+
+def _woorden(tekst: str) -> set:
+    uit = set()
+    for w in re.findall(r"[a-zà-ÿ]+", (tekst or "").lower()):
+        if len(w) > 2:
+            uit.add(w[:-1] if w.endswith("s") and len(w) > 3 else w)
+    return uit
+
+
+# Nederlandse en Engelse woorden naar de woorden die Etsy zelf gebruikt.
+_SYNONIEM = {"vest": "cardigan", "trui": "sweater", "jas": "jacket", "jack": "jacket",
+             "broek": "pant", "rok": "skirt", "jurk": "dress", "overhemd": "shirt",
+             "heren": "men", "dames": "women", "dame": "women", "man": "men", "vrouw": "women",
+             "hoodie": "sweatshirt", "gilet": "vest", "tas": "bag", "schoen": "shoe"}
+
+
+def kies_taxonomie(bladeren: list, item: dict):
+    """Kiest het Etsy-blad dat het best bij categorie, titel en doelgroep past, of None."""
+    vraag = _woorden(f"{item.get('category') or ''} {item.get('title') or ''} {item.get('gender') or ''}")
+    vraag |= {_SYNONIEM[w] for w in list(vraag) if w in _SYNONIEM}
+    if not vraag:
+        return None
+    beste, beste_score = None, 0.0
+    for tid, pad in bladeren:
+        naam_w = _woorden(pad[-1])
+        pad_w = _woorden(" ".join(pad[:-1]))
+        if not naam_w:
+            continue
+        hit_naam = len(vraag & naam_w)
+        if hit_naam == 0:
+            continue
+        score = hit_naam / len(naam_w) * 2 + len(vraag & pad_w) * 0.5
+        if score > beste_score:
+            beste, beste_score = tid, score
+    return beste
+
+
 class EtsyPlatform(PlatformBase):
     platform_name = "etsy"
 
@@ -163,6 +239,40 @@ class EtsyPlatform(PlatformBase):
                     "refresh_token": data.get("refresh_token") or credentials.get("refresh_token"),
                     "token_expires_at": data["token_expires_at"]}
 
+    async def _vers(self, credentials: dict) -> dict:
+        """Geeft inloggegevens met een geldig access token (1 uur) en bewaart het
+        verse token in de database. Zonder koppeling: duidelijke fout."""
+        if not self._token(credentials):
+            raise RuntimeError("Etsy isn't connected")
+        if not self.verlopen(credentials):
+            return credentials
+        nieuw = await self.refresh_credentials(credentials)
+        uid = credentials.get("user_id")
+        if uid:
+            try:
+                from backend.database import get_db
+                get_db().table("platform_credentials").update({
+                    "access_token": nieuw.get("access_token"),
+                    "refresh_token": nieuw.get("refresh_token"),
+                    "token_expires_at": nieuw.get("token_expires_at"),
+                }).eq("user_id", uid).eq("platform", "etsy").execute()
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"Kon ververste Etsy-token niet opslaan: {e}")
+        return nieuw
+
+    async def taxonomie_voor(self, item: dict):
+        if item.get("etsy_taxonomy_id"):
+            return int(item["etsy_taxonomy_id"])
+        if time.time() > _taxonomie_cache["tot"]:
+            async with httpx.AsyncClient(timeout=30) as c:
+                r = await c.get(f"{ETSY_BASE}/application/seller-taxonomy/nodes",
+                                headers={"x-api-key": _api_key()})
+                r.raise_for_status()
+                _taxonomie_cache["bladeren"] = _bladeren(r.json().get("results") or [])
+                # Etsy: andere inhoud maximaal 24 uur bewaren (API-voorwaarden §5).
+                _taxonomie_cache["tot"] = time.time() + 20 * 3600
+        return kies_taxonomie(_taxonomie_cache["bladeren"], item)
+
     def verlopen(self, credentials: dict) -> bool:
         t = credentials.get("token_expires_at")
         if not t:
@@ -224,15 +334,41 @@ class EtsyPlatform(PlatformBase):
             gereed = r.json()["readiness_state_id"]
         return int(verzend), int(gereed)
 
+    async def _retourbeleid(self, c, token: str, shop_id: str) -> int:
+        h = {"Authorization": f"Bearer {token}", "x-api-key": _api_key()}
+        r = await c.get(f"{ETSY_BASE}/application/shops/{shop_id}/policies/return", headers=h)
+        r.raise_for_status()
+        bestaand = r.json().get("results") or []
+        if bestaand:
+            return int(bestaand[0]["return_policy_id"])
+        # Vintage: geen retour en geen ruil. De verkoper kan dit op Etsy aanpassen.
+        r = await c.post(f"{ETSY_BASE}/application/shops/{shop_id}/policies/return", headers=h,
+                         data={"accepts_returns": "false", "accepts_exchanges": "false"})
+        if r.status_code not in (200, 201):
+            raise RuntimeError(f"Etsy return policy failed {r.status_code}: {r.text}")
+        return int(r.json()["return_policy_id"])
+
     async def create_listing(self, item: dict, credentials: dict) -> dict:
-        """Maakt een CONCEPT (draft) in de winkel van de verkoper. Alleen vintage:
-        zonder bouwjaar van 20+ jaar geleden weigeren we, Etsy verbiedt het anders."""
-        when_made = vintage_when_made(item.get("year"))
+        """Vintage-listing in de winkel van de verkoper. Concept eerst; daarna foto's
+        en pas dan actief (dat kost de verkoper de gewone Etsy-plaatsingskosten).
+        `_etsy_concept` in het artikel houdt het bij een concept (voor tests)."""
+        credentials = await self._vers(credentials)
+        when_made = vintage_when_made(jaar_uit_item(item))
+        if not (item.get("photo_urls") or item.get("_etsy_concept")):
+            raise RuntimeError("Etsy needs at least one photo")
         token = self._token(credentials)
         shop_id = await self._get_shop_id(token)
+        taxonomy_id = await self.taxonomie_voor(item)
+        if not taxonomy_id:
+            raise RuntimeError("Could not match this item to an Etsy category. "
+                               "Fill in the category (for example jacket or dress) and try again.")
+        item = {**item, **{k: v for k, v in (credentials.get("extra_data") or {}).get("etsy", {}).items()
+                           if k not in item}}
 
         async with httpx.AsyncClient(timeout=60) as c:
             verzend, gereed = await self._zorg_voor_profielen(c, token, shop_id, item)
+            tags = [t for t in {(item.get("brand") or "").strip().lower(), "vintage",
+                                (item.get("category") or "").strip().lower()} if t and len(t) <= 20][:13]
             payload = {
                 "title": item["title"][:140],
                 "description": (item.get("description") or "")[:65000],
@@ -241,31 +377,47 @@ class EtsyPlatform(PlatformBase):
                 "who_made": "someone_else",
                 "when_made": when_made,
                 "is_supply": "false",
-                "taxonomy_id": int(item["etsy_taxonomy_id"]),
+                "taxonomy_id": int(taxonomy_id),
                 "shipping_profile_id": verzend,
                 "readiness_state_id": gereed,
                 "type": "physical",
             }
-            r = await c.post(
-                f"{ETSY_BASE}/application/shops/{shop_id}/listings",
-                data=payload,
-                headers={"Authorization": f"Bearer {token}", "x-api-key": _api_key()},
-            )
+            if tags:
+                payload["tags"] = ",".join(tags)
+            headers = {"Authorization": f"Bearer {token}", "x-api-key": _api_key()}
+            r = await c.post(f"{ETSY_BASE}/application/shops/{shop_id}/listings", data=payload, headers=headers)
             if r.status_code not in (200, 201):
                 raise RuntimeError(f"Etsy create listing failed {r.status_code}: {r.text}")
             listing_id = str(r.json()["listing_id"])
-
-            for photo_url in (item.get("photo_urls") or [])[:10]:
+            uitkomst = {
+                "platform_listing_id": listing_id,
+                "platform_listing_url": f"https://www.etsy.com/listing/{listing_id}",
+            }
+            try:
+                fouten = 0
+                for foto in (item.get("photo_urls") or [])[:10]:
+                    try:
+                        await self._upload_image(c, shop_id, listing_id, foto, token)
+                    except Exception as e:  # noqa: BLE001
+                        fouten += 1
+                        logger.warning(f"Etsy image upload failed: {e}")
+                if item.get("_etsy_concept"):
+                    return {**uitkomst, "state": "draft"}
+                if fouten == len(item.get("photo_urls") or []):
+                    raise RuntimeError("Etsy accepted none of the photos")
+                beleid = await self._retourbeleid(c, token, shop_id)
+                r = await c.patch(f"{ETSY_BASE}/application/shops/{shop_id}/listings/{listing_id}",
+                                  data={"state": "active", "return_policy_id": beleid}, headers=headers)
+                if r.status_code not in (200, 201):
+                    raise RuntimeError(f"Etsy activate failed {r.status_code}: {r.text}")
+            except Exception:
+                # Geen half werk achterlaten: een concept dat we niet kunnen afmaken weg.
                 try:
-                    await self._upload_image(c, shop_id, listing_id, photo_url, token)
-                except Exception as e:
-                    logger.warning(f"Etsy image upload failed: {e}")
-
-        return {
-            "platform_listing_id": listing_id,
-            "platform_listing_url": f"https://www.etsy.com/listing/{listing_id}",
-            "state": "draft",
-        }
+                    await c.delete(f"{ETSY_BASE}/application/listings/{listing_id}", headers=headers)
+                except Exception:  # noqa: BLE001
+                    pass
+                raise
+        return {**uitkomst, "state": "active"}
 
     async def _upload_image(self, client, shop_id, listing_id, photo_url, token):
         img_resp = await client.get(photo_url)
@@ -278,13 +430,15 @@ class EtsyPlatform(PlatformBase):
         r.raise_for_status()
 
     async def delete_listing(self, platform_listing_id: str, credentials: dict) -> bool:
+        credentials = await self._vers(credentials)
         token = self._token(credentials)
         async with httpx.AsyncClient(timeout=30) as c:
             r = await c.delete(
                 f"{ETSY_BASE}/application/listings/{platform_listing_id}",
                 headers=self._headers(token),
             )
-            return r.status_code in (200, 204)
+            # 404: bestaat niet meer, dus weg. Net als bij de andere API-kanalen.
+            return r.status_code in (200, 204, 404)
 
     async def renew_listing(self, platform_listing_id: str, credentials: dict) -> dict:
         """
@@ -294,9 +448,10 @@ class EtsyPlatform(PlatformBase):
         a workaround. Works for 'sold_out' and 'expired' listings; a currently-active
         listing doesn't need renewing.
         """
+        credentials = await self._vers(credentials)
         token = self._token(credentials)
         shop_id = await self._get_shop_id(token)
-        async with httpx.AsyncClient() as c:
+        async with httpx.AsyncClient(timeout=30) as c:
             r = await c.patch(
                 f"{ETSY_BASE}/application/shops/{shop_id}/listings/{platform_listing_id}",
                 json={"state": "active", "quantity": 1},
@@ -311,14 +466,17 @@ class EtsyPlatform(PlatformBase):
             }
 
     async def get_listing_status(self, platform_listing_id: str, credentials: dict) -> str:
+        credentials = await self._vers(credentials)
         token = self._token(credentials)
-        async with httpx.AsyncClient() as c:
+        async with httpx.AsyncClient(timeout=30) as c:
             r = await c.get(
                 f"{ETSY_BASE}/application/listings/{platform_listing_id}",
                 headers=self._headers(token),
             )
             if r.status_code == 404:
                 return "not_found"
+            if r.status_code != 200:
+                raise RuntimeError(f"Etsy status check failed {r.status_code}")
             data = r.json()
             state = data.get("state", "")
             if state == "active":

@@ -864,11 +864,11 @@ _KANAALNAAM_VERKOCHT = {"marktplaats": "Marktplaats", "2dehands": "2dehands", "v
                         "facebook": "Facebook", "ebay": "eBay", "shopify": "Shopify",
                         "woocommerce": "WooCommerce"}
 # Platforms handled server-side via official API
-API_PLATFORMS = {"ebay", "shopify", "woocommerce"}
+API_PLATFORMS = {"ebay", "shopify", "woocommerce", "etsy"}
 # Built in the backend but NOT yet released — surfaced as "Coming soon" in the UI
 # and refused by publish_to_platforms so nothing half-lists. Etsy's platform code
 # exists (backend/platforms/etsy.py) but the flow isn't finished/tested.
-NOT_YET_AVAILABLE = {"etsy"}
+NOT_YET_AVAILABLE: set[str] = set()
 
 # Wat het scherm laat zien als een kanaal wordt overgeslagen omdat het artikel er
 # al op staat. Eén zin die zegt dat er NIETS is gebeurd, en wat de weg vooruit is.
@@ -1589,6 +1589,14 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
         for p in platforms if p in NOT_YET_AVAILABLE
     ]
     platforms = [p for p in platforms if p not in NOT_YET_AVAILABLE]
+
+    # Etsy: alleen Ultra (of 5 betalende vrienden) en de eigenaar. Geen toegang is
+    # een duidelijke melding, nooit een halve plaatsing.
+    if "etsy" in platforms:
+        from backend.services.etsy_toegang import etsy_toegang, GEEN_TOEGANG
+        if not await naast_de_lus(lambda: etsy_toegang(user_id)):
+            results.append({"platform": "etsy", "status": "blocked", "error": GEEN_TOEGANG})
+            platforms = [p for p in platforms if p != "etsy"]
 
     # Een losgekoppeld kanaal krijgt niets (zie instellingen.KANALEN_UIT).
     from backend.services import instellingen as _inst_uit

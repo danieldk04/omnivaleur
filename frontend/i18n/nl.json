@@ -4476,5 +4476,16 @@
  "Umbrellas": "Paraplu's",
  "Magento: how do I export my products?": "Magento: hoe exporteer ik mijn producten?",
  "In your Magento admin, go to System, then Data Transfer, then Export. Set Entity Type to Products, leave the file format on CSV and press Continue. Magento makes the file in the background. After a few minutes it shows up in the list below the form on that same page, with a Download link next to it. Email us that file. Nothing there after ten minutes? Ask your hosting provider to check that Magento's cron job is running.": "Ga in je Magento-beheer naar System, dan Data Transfer, dan Export. Zet Entity Type op Products, laat het bestandsformaat op CSV staan en klik op Continue. Magento maakt het bestand op de achtergrond. Na een paar minuten staat het in de lijst onder het formulier op diezelfde pagina, met een Download-link ernaast. Mail ons dat bestand. Staat er na tien minuten niets? Vraag je hostingpartij om te controleren of de cronjob van Magento draait.",
- "Etsy is not connected": "Etsy is niet gekoppeld"
+ "Etsy is not connected": "Etsy is niet gekoppeld",
+ "Etsy is not configured yet. Contact support.": "Etsy is nog niet ingesteld. Neem contact op met support.",
+ "Could not start Etsy connection:": "Etsy-koppeling starten lukte niet:",
+ "Etsy is connected.": "Etsy is gekoppeld.",
+ "Etsy connection was cancelled.": "De Etsy-koppeling is geannuleerd.",
+ "Could not connect Etsy. Try again.": "Etsy koppelen lukte niet. Probeer het opnieuw.",
+ "Etsy is part of the Ultra plan, or you unlock it by inviting 5 paying friends.": "Etsy hoort bij het Ultra-abonnement, of je ontgrendelt het door 5 betalende vrienden uit te nodigen.",
+ "Etsy isn't connected": "Etsy is niet gekoppeld",
+ "Etsy needs at least one photo": "Etsy heeft minstens één foto nodig",
+ "Etsy only allows vintage items (20+ years old)": "Etsy staat alleen vintage artikelen toe (20 jaar of ouder)",
+ "Etsy needs the item's year to prove it is vintage (20+ years old)": "Etsy heeft het jaar van het artikel nodig als bewijs dat het vintage is (20 jaar of ouder). Zet bijvoorbeeld 'vintage 1992' in de titel of omschrijving.",
+ "Could not match this item to an Etsy category. Fill in the category (for example jacket or dress) and try again.": "Dit artikel paste niet bij een Etsy-categorie. Vul de categorie in (bijvoorbeeld jas of jurk) en probeer het opnieuw."
 }
