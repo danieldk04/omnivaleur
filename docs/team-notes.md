@@ -19954,3 +19954,9 @@ Daniel wil video's zoals de goed scorende Instagram-animaties (semigenius, Dale,
 
 ### 25-11-2026, social video's: meting en trendronde
 Daniel heeft de drie 3D-video's ingepland (rangorde C, B, A). Besluit: dinsdag 01-12 meten via Schedchie en de lijn doortrekken; elke week een trendronde op Instagram, TikTok en Shorts, met bewuste afwisseling (helft winnaarstijl, helft nieuwe tests). Opdracht staat in `docs/routines/social-videos.md`.
+
+## 25-11-2026: Onboarding nieuwe klanten (ochtend)
+- 2 accounts in de eerste week, geen nieuwe vrienden, geen creator. Web Store 1.0.434, repo 1.0.435. Mailrapport: 1 mail, 1 echt geopend (Dylan), 0 klik, 0 antwoord.
+- Brocante Depot (ecbceba1, Mieke): 153 artikelen, 86 live op Marktplaats en 2dehands, 9 op Vinted. 58 Vinted-fouten "colour (empty)" zijn van voor de kleurfix (3ecffe2f); 3 herkansingen staan pending omdat haar Chrome dicht is (extensie laatst gezien 07:09). Daniel mailde haar 25-11 09:43, dus geen mailtje. Mislukte opdrachten niet opnieuw klaargezet tot de proef van die 3 bevestigd is.
+- Kisses of the Sun (e27c1eaa, info@kissesofthesun.nl): 67 uur, nooit extensie, nul artikelen, nooit contact. Onboardingmailtje verstuurd (installeer extensie, laat inlezen).
+- Niets gerepareerd, geen code gewijzigd.
