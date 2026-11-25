@@ -936,6 +936,8 @@ _PLATFORM_REQUIRED = {
     # it by hand. Demand them up front instead (colour is auto-inferred from the
     # title first, so this rarely trips).
     "vinted": ["category", "gender", "size", "color"],
+    # Etsy kiest zelf de categorie uit deze twee en de titel (platforms/etsy.py).
+    "etsy": ["category"],
 }
 # Non-clothing items (games, consoles, ...) live in a different Marktplaats
 # category tree that has no gender/maat/kleur attributes, so demanding those

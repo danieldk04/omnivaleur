@@ -304,6 +304,9 @@ class EtsyPlatform(PlatformBase):
         if profielen:
             verzend = profielen[0]["shipping_profile_id"]
         else:
+            if not item.get("origin_postal_code"):
+                raise RuntimeError("Your Etsy shop has no shipping profile yet. Create one on Etsy "
+                                   "(Shop Manager, Settings, Shipping settings) and try again.")
             r = await c.post(f"{ETSY_BASE}/application/shops/{shop_id}/shipping-profiles", headers=h, data={
                 "title": "Omnivaleur standard shipping",
                 "origin_country_iso": item.get("origin_country_iso", "NL"),
