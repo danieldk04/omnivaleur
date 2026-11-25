@@ -52,5 +52,10 @@ reguliere EU-items (BE, FR, ES, samen ongeveer 12 euro btw) nog te bevatten: waa
 Niet exact vast te stellen omdat de ingediende grondslag (701) 14 euro boven de sheet ligt.
 Kleine correctie (onder 1.000 euro) mag in de volgende gewone aangifte (Q4, uiterlijk 31 januari 2027); geen aparte suppletie.
 
+**Items met prijs maar zonder verkoopdatum (Daniel, 25-11-2026):** meld elk kwartaal items waar `Price Sold` is
+ingevuld en `Date Sold` leeg is, want die vallen buiten elke berekening. Uitgezonderd, door Daniel bevestigd als
+oud en niet van 2026: item 66, 67, 70, 73, 86, 105, 203, 213, 226, 277, 582, 727, 793, 814, 1270, 1298, 1299, 1300, 1314, 1316.
+Elk ander nummer zonder datum melden aan Daniel.
+
 **Sheet-controle (nieuw):** kolom AC "Binnenland verkocht?" is verborgen en moet "Nee" zijn bij elke buitenlandse
 verkoop. Item 598 (rij 599) had hem leeg, daardoor stond OSS Btw op 0. Kijk elk kwartaal naar buitenlandse verkopen met lege AC.
