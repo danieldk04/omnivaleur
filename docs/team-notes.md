@@ -19942,3 +19942,9 @@ Overdracht.md en bijlagen buiten git bijgewerkt voor de nieuwe Mac (15 taken, 2 
 
 ### 25-11-2026, social video's: 3D-stijlen
 Daniel wil video's zoals de goed scorende Instagram-animaties (semigenius, Dale, renno). Besluit: overstap van 2D naar een Three.js-pijplijn (`scripts/video/motion3d/`), Engels, absurde of spannende verhalen met duidelijke storyline, drie stijlen naast elkaar zodat Daniel kan kiezen en de routine op meting naar de winnaar toegroeit. Eerste drie gemaakt en geleverd (3d-A, 3d-B, 3d-C). Advies kwam van Opus als adviseur (Three.js boven Blender). Details in `docs/social-video-leerlog.md`.
+
+## 25-11-2026: Etsy zonder API, onderzoek (Claude, opdracht Daniel)
+- IH-reacties dag 164 gelezen: twee vaste adviezen (extensieroute zoals List Perfectly, of Etsy-klaar CSV), appeal is traag (een ontwikkelaar wachtte ±1 maand, vaak bevestigd), opnieuw aanvragen met smalle read/write-omschrijving punt voor punt tegen de API-voorwaarden.
+- Correctie op het CSV-advies: Etsy heeft zelf GEEN import van nieuwe advertenties uit een bestand (alleen bulk bewerken van bestaande). Een Etsy-klaar bestand is dus voor plakken of voor derde tools die zelf API-toegang hebben (Shop Uploader, Easy Listing Uploader), niet voor "slepen in Etsy".
+- Crosslist, Vendoo en List Perfectly doen Etsy via een extensie in de browser van de verkoper; List Perfectly vult alleen formulieren in (verkoper klikt zelf), Crosslist/Vendoo posten automatisch. Etsy-voorwaarden verbieden geautomatiseerde toegang/scraping zonder toestemming; volgens secundaire bronnen sinds 16-06-2025 ook expliciet browserextensies, en een nieuwe versie per 16-12-2026 over geautomatiseerde agents. Niet geverifieerd bij Etsy zelf.
+- Nog geen besluit over de extensieroute. Eerder besluit blijft: extensie alleen als laatste, en Daniels eigen Etsy-account is geblokkeerd.
