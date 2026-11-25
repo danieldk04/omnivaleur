@@ -68,7 +68,7 @@ def _blad_met_naam(knopen: list, trefwoorden=("jacket", "coat", "dress", "shirt"
 
 
 @router.post("/etsy/proef")
-async def etsy_proef(activeer: bool = False, item_id: str = "", user=Depends(get_current_user_full)):
+async def etsy_proef(activeer: bool = False, item_id: str = "", controleer: str = "", user=Depends(get_current_user_full)):
     """Alleen voor de eigenaar: maakt een CONCEPT onder 1 euro, leest het terug en
     verwijdert het, zoals het API-testbeleid van Etsy vraagt. Het rapport staat ook
     in extra_data.proef van de koppeling."""
@@ -85,6 +85,20 @@ async def etsy_proef(activeer: bool = False, item_id: str = "", user=Depends(get
         raise HTTPException(status_code=400, detail="Etsy is not connected")
     plat = e.EtsyPlatform()
     rapport: dict = {"start": datetime.now(timezone.utc).isoformat()}
+    if controleer:
+        # Alleen lezen: wat zegt Etsy zelf over deze listing?
+        creds = await plat._vers(dict(rij))
+        async with httpx.AsyncClient(timeout=30) as c:
+            r = await c.get(f"{e.ETSY_BASE}/application/listings/{controleer}", headers=plat._headers(plat._token(creds)))
+        d = r.json() if r.status_code == 200 else {"fout": r.text[:300]}
+        rapport["controle"] = {"http": r.status_code, **{k: d.get(k) for k in (
+            "state", "title", "quantity", "url", "is_private", "has_variations", "listing_type",
+            "when_made", "taxonomy_id", "shipping_profile_id", "return_policy_id",
+            "creation_timestamp", "state_timestamp", "fout")}}
+        extra = dict(rij.get("extra_data") or {})
+        extra["proef"] = rapport
+        db.table("platform_credentials").update({"extra_data": extra}).eq("user_id", user.id).eq("platform", "etsy").execute()
+        return rapport
     try:
         creds = dict(rij)
         rapport["token_was_verlopen"] = plat.verlopen(creds)
