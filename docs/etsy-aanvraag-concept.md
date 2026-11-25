@@ -88,3 +88,12 @@ Gecontroleerd tegen de code en de site (25-11):
   in de aanvraag. Een beoordelaar die de site opent ziet dat. Oplossen voor indienen, of de zin schrappen.
 - API-testbeleid (bijgewerkt 14-10-2021): bij testen Ontwikkelaarsmodus aan, conceptlistings of prijs onder 1 dollar,
   "test" in shopnaam of titel, geen stockfoto's, per ongeluk gekochte testlistings annuleren.
+
+## Besluit 25-11 (avond): Etsy niet voor iedereen, en wat dat betekent voor de tekst
+Daniel wil Etsy alleen in Ultra of te verdienen met vrienden uitnodigen. Dan mag de omschrijving NIET zeggen
+"Etsy is free in every plan": dat is onwaar en wijkt later af van het goedgekeurde doel (§3). Eerlijke slotzin
+(past in 500 tekens als je "Start: <10 sellers." inkort):
+> The Etsy connection is part of our top plan and can also be unlocked by inviting friends.
+Risico: API-voorwaarden §5 verbieden kosten voor een deel dat Etsy gratis aanbiedt; Etsy kan dit als betaalmuur lezen.
+Aanbevolen: eerst kort mailen naar developer@etsy.com met precies deze vraag, voordat je indient.
+De openbare Etsy-pagina (/etsy, /nl/etsy) noemt bewust geen prijs of plan.

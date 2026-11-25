@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Etsy connection | Omnivaleur</title>
+<meta name="description" content="What the Omnivaleur connection with Etsy does, which data we use and what we never do.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Omnivaleur">
+<meta property="og:title" content="Etsy connection | Omnivaleur">
+<meta property="og:description" content="What the Omnivaleur connection with Etsy does, which data we use and what we never do.">
+<meta property="og:url" content="https://omnivaleur.com/etsy">
+<meta property="og:image" content="https://omnivaleur.com/logo.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Etsy connection | Omnivaleur">
+<meta name="twitter:description" content="What the Omnivaleur connection with Etsy does, which data we use and what we never do.">
+<meta name="twitter:image" content="https://omnivaleur.com/logo.png">
+<link rel="canonical" href="https://omnivaleur.com/etsy">
+<link rel="icon" type="image/png" href="logo.png">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VJ5BVD3GCH"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-VJ5BVD3GCH', (function(){try{if(/[?&]intern=1/.test(location.search))localStorage.setItem('ov_intern','1');if(/[?&]intern=0/.test(location.search))localStorage.removeItem('ov_intern');return localStorage.getItem('ov_intern')==='1'?{traffic_type:'internal'}:{};}catch(e){return{};}})());
+</script>
+<link rel="alternate" hreflang="en" href="https://omnivaleur.com/etsy">
+<link rel="alternate" hreflang="nl" href="https://omnivaleur.com/nl/etsy">
+</head>
+<body>
+
+<!--site-nav-->
+
+<main>
+<header class="page-head on-field">
+  <div class="wrap">
+    <p class="page-label">Etsy</p>
+    <h1>Etsy connection</h1>
+    <p class="page-meta">Last updated: 25 November 2026</p>
+  </div>
+</header>
+<div class="wrap doc-band doc-grid"><div class="doc">
+<div class="doc-note">
+    <p><strong>Status:</strong> we have applied for access to the Etsy API. The connection is not available yet and we give no date.</p>
+  </div>
+
+  <h2 id="s1">What the connection does</h2>
+  <p>When a seller connects their own Etsy shop through Etsy&rsquo;s own sign-in screen (OAuth), Omnivaleur does exactly four things:</p>
+  <ul>
+    <li>Creates a listing in that seller&rsquo;s own shop, only for items that qualify for Etsy (vintage, 20 years or older).</li>
+    <li>Reads the seller&rsquo;s own listings, so no duplicates are created.</li>
+    <li>Removes or deactivates a listing as soon as the same item has sold on another channel.</li>
+    <li>Reads the seller&rsquo;s own orders, to recognise a sale on Etsy and remove the item elsewhere.</li>
+  </ul>
+
+  <h2 id="s2">What we do not do</h2>
+  <ul>
+    <li>No scraping of Etsy and no browser extension on Etsy. Only the official API.</li>
+    <li>No copying of Etsy listings to other marketplaces.</li>
+    <li>No sending of buyers to other sites. Etsy remains the sales and payment platform.</li>
+    <li>No use of Etsy data for AI training, analytics, advertising or sale to third parties.</li>
+    <li>No asking for or storing sellers&rsquo; passwords. Signing in happens at Etsy itself.</li>
+  </ul>
+
+  <h2 id="s3">Data</h2>
+  <p>We request only the permissions the four points above need and do not show or keep Etsy data longer than necessary. A seller can withdraw the connection at any time in their Etsy account. See also our <a href="/privacy">privacy policy</a> and <a href="/terms">terms</a>.</p>
+
+  <h2 id="s4">Contact and support</h2>
+  <p>Questions about the Etsy connection? Email <!--email_off--><a href="mailto:info@omnivaleur.com">info@omnivaleur.com</a><!--/email_off-->. We reply within two working days.</p>
+  <div class="doc-note">
+    <p><strong>Revaleur</strong><br>
+    Kleine Melanen 5, 4614RG Bergen op Zoom, Netherlands<br>
+    KVK: 86792423 &nbsp;·&nbsp; VAT: NL004117227B97</p>
+  </div>
+
+  <div class="doc-note">
+    <p translate="no">The term &lsquo;Etsy&rsquo; is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.</p>
+    <p>This application is provided solely by Revaleur (the &lsquo;application developer&rsquo;). Etsy, Inc. and its subsidiaries are not the application developer, do not provide the application services and make no warranty regarding the application or the data accessible through it.</p>
+  </div>
+</div>
+<aside class="doc-toc" aria-label="On this page"><p>On this page</p><ul><li><a href="#s1">What the connection does</a></li><li><a href="#s2">What we do not do</a></li><li><a href="#s3">Data</a></li><li><a href="#s4">Contact and support</a></li></ul></aside>
+</div>
+</main>
+
+<!--site-footer-->
+
+</body>
+</html>

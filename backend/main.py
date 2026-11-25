@@ -333,13 +333,24 @@ for _bestand, _pad in {"index": "/", "nl": "/nl", "privacy": "/privacy",
                        "mp-video": "/mp-video", "ai-info": "/ai-info",
                        "not-found": "/", "not-found.nl": "/nl",
                        "privacy.nl": "/nl/privacy", "terms.nl": "/nl/terms",
-                       "marketplaces.nl": "/nl/marketplaces"}.items():
+                       "marketplaces.nl": "/nl/marketplaces",
+                       "etsy": "/etsy", "etsy.nl": "/nl/etsy"}.items():
     app.get(f"/{_bestand}.html", include_in_schema=False)(_vaste_omleiding(_pad))
 
 
 @app.get("/privacy")
 async def privacy():
     return met_site_chrome("privacy.html", "en", "/privacy", wissel="/nl/privacy")
+
+
+@app.get("/etsy")
+async def etsy_page():
+    return met_site_chrome("etsy.html", "en", "/etsy", wissel="/nl/etsy")
+
+
+@app.get("/nl/etsy")
+async def etsy_page_nl():
+    return met_site_chrome("etsy.nl.html", "nl", "/nl/etsy", wissel="/etsy")
 
 
 @app.get("/terms")

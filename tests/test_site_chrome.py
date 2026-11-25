@@ -23,6 +23,7 @@ PAGINAS = [
     ("mp-video.html", "nl"), ("not-found.html", "en"),
     ("marketplaces.nl.html", "nl"), ("privacy.nl.html", "nl"),
     ("terms.nl.html", "nl"), ("not-found.nl.html", "nl"),
+    ("etsy.html", "en"), ("etsy.nl.html", "nl"),
 ]
 
 
