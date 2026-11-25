@@ -19935,3 +19935,6 @@ Overdracht.md en bijlagen buiten git bijgewerkt voor de nieuwe Mac (15 taken, 2 
 - Open: mislukte opdrachten gaan niet vanzelf opnieuw; Mieke moet Plaatsen nog een keer klikken. Eerste echte plaatsing nog niet bevestigd.
 - Correctie 25-11 ochtend: Shopify-tweelingen bij Esther (3eeceb51) vond 1x "koppelen" (Woolmark deken, zelfde stuk twee keer); gekoppeld met --schrijf (reservekopie in ~/.omnivaleur/herstel/). Alle andere klanten alleen "overgeslagen".
 - 25-11-2026 (later): besluit Daniel ("doe wat je aanraadt"): het Vinted-kleurvangnet geldt ook voor antiek, wonen, kunst en verzamelen (staat al live, 3ecffe2f). Proef op de echte plaatsing: 3 mislukte artikelen van Mieke opnieuw klaargezet via publish_to_platforms (jobs 40374391, 345b1af7 = armband, d3a3532d). Haar extensie was sinds 06:09 UTC niet gezien, dus ze staan op pending tot ze Chrome opent. Uitkomst nog te controleren; de armband (maat leeg) kan nog mislukken, oorzaak onbekend (Bracelets op Vinted heeft geen maatveld).
+
+## 25-11-2026 (ochtend): leadgen aanvullen (Claude, geplande taak)
+- Wachtrij voor 64, na 64: boven de 40, script deed niets. Koude-mailronde: laatste run schedule 25-11 01:30Z (success) en een lopende handmatige run sinds 07:51Z, geen gat in 24 uur, geen seintje nodig. Geen extra bron nodig.
