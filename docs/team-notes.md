@@ -19938,3 +19938,7 @@ Overdracht.md en bijlagen buiten git bijgewerkt voor de nieuwe Mac (15 taken, 2 
 
 ## 25-11-2026 (ochtend): leadgen aanvullen (Claude, geplande taak)
 - Wachtrij voor 64, na 64: boven de 40, script deed niets. Koude-mailronde: laatste run schedule 25-11 01:30Z (success) en een lopende handmatige run sinds 07:51Z, geen gat in 24 uur, geen seintje nodig. Geen extra bron nodig.
+
+
+### 25-11-2026, social video's: 3D-stijlen
+Daniel wil video's zoals de goed scorende Instagram-animaties (semigenius, Dale, renno). Besluit: overstap van 2D naar een Three.js-pijplijn (`scripts/video/motion3d/`), Engels, absurde of spannende verhalen met duidelijke storyline, drie stijlen naast elkaar zodat Daniel kan kiezen en de routine op meting naar de winnaar toegroeit. Eerste drie gemaakt en geleverd (3d-A, 3d-B, 3d-C). Advies kwam van Opus als adviseur (Three.js boven Blender). Details in `docs/social-video-leerlog.md`.

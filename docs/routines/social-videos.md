@@ -109,3 +109,7 @@ meld dat Daniel ze kan plaatsen. Zet een korte regel in `docs/team-notes.md`.
 Vier blokjes uit CLAUDE.md, op één scherm: wat vorige week werkte (cijfers met aanmeldingen vooraan), wat dat
 verandert voor deze week, zekerheid, en actiepunten die alleen hij kan (plaatsen, ontbrekende skills of toegang,
 een beslissing). Staat er niets open, schrijf "Niets, klaar."
+
+
+## 3D-stijlen (sinds 25-11-2026, Daniel)
+Maak video's zoals de goed scorende Instagram-animaties (semigenius, Dale, renno): 3D-poppetjes, ca. 1 shot per seconde, steeds een andere kamer en camerahoek, absurd of spannend verhaal met een duidelijke storyline, Engels tot Daniel anders zegt. Levert elke run minstens drie video's in drie stijlen (A lowpoly blokpoppetjes, B zacht cartoon, C realistischer thriller), recept in `docs/video-recept.md` onder "3D-pijplijn". Meet per stijl welke wint en bouw de volgende ronde zwaarder in de winnaar, met nieuwe verhalen en hooks op alle pijnpunten van klanten. Lever in `~/Downloads/omnivaleur-week-<nr>/` met een txt per video (haak, voice-over, caption, vastgepinde reactie, hashtags, titel, plaatstijd, hypothese).

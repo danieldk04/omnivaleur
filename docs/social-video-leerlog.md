@@ -81,3 +81,17 @@ Eerste week: plaatstijden zijn een aanname (geen eigen data). Elke video heeft e
 ## Openstaande punten
 - Geluid van proef3 gemeten met earshot op 10-11-2026 (zie recept). De zwaardere meting (herkenning of het als echte opname klinkt) vraagt een download van ongeveer 1,1 GB modellen en is nog niet gedaan.
 - Aanmeldingen per video zijn niet te bewijzen met bio-links; alleen per platform en dag.
+
+
+## 3D-stijlronde (25-11-2026, Daniel: "video's zoals deze, die scoren op Instagram")
+Referenties van Daniel: semigenius (upstairs neighbor), een Dale-verhaal en renno (5 uur 's ochtends). Geteld met ffmpeg: ca. 1 cut per seconde (semigenius 32 cuts in 34 s, Dale 35 in 59 s), steeds een andere kamer en camerahoek, 3D-poppetjes, korte captions, stem met veel intonatie. Renno heeft weinig cuts maar een bewegende 3D-camera. Mijn 2D-video's misten bewegende camera, wisselende kamers en tempo.
+Nieuwe pijplijn: Three.js (`scripts/video/motion3d/`, pagina `motion3d.html`), dezelfde render- en geluidsstraat. Drie stijlen, elk een video, Engels:
+| Video | Stijl | Referentie | Hypothese | Uitkomst |
+|---|---|---|---|---|
+| 3d-A-blocky-hoodie (37 s) | lowpoly blokpoppetjes, absurde escalatie, 30 shots | semigenius | meeste shares en kijktijd | nog niet geplaatst |
+| 3d-B-toon-midnight (26 s) | zacht cartoon-3D, rustige camera, serif-captions, 18 shots | renno | opslaan en volgers | nog niet geplaatst |
+| 3d-C-real-kevin (38 s) | realistischer licht, bewakingscamera, terugkerend personage Kevin, 33 shots | Dale | langste kijktijd en reacties | nog niet geplaatst |
+Advies Opus (advisor): Three.js boven Blender (zelfde pijplijn, geen modellen nodig); shots verwijzen naar woordindexen zodat een nieuwe voice niets breekt; geen gezichtsanimatie of physics in versie 1.
+Technisch: rendert op de Mac-GPU in 70 tot 90 ms per frame (37 s video in 1,5 min); `PAGE=motion3d.html V=<naam> node render2.mjs ...`; audio en mix ongewijzigd (`audio2.py`, `mix2.sh`, -14 LUFS). Elke video is een bestand in `motion3d/videos/` met `style` en `build(K)`.
+Routine vanaf nu: bij elke run minstens een video per stijl, meten welke stijl wint (kijktijd, shares, opslaan, volgers), en de volgende ronde zwaarder in de winnende stijl met wisselende verhalen en hooks. Een vast personage (Kevin) mag terugkomen als de C-stijl wint.
+Nog niet gedaan: stemmen beluisterd (kan ik niet), Blender-upgrade voor zachtere schaduwen, gezichtsanimatie.

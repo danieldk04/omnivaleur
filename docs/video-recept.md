@@ -53,3 +53,11 @@ Eerst de oude 3D-route gelaten (zwaar, leek op AI). Nu 2D motion graphics: `scri
 - Geluid: `render2.mjs cues`, `audio2.py <naam> <stijl>`, `mix2.sh <naam>` (twee-pass loudnorm, doel -14 LUFS, piek onder -1,5 dBTP). Let op: `alimiter` zet het niveau zelf terug omhoog tenzij `level=0`.
 - Assets in `scripts/video/assets/` (logo's en dashboardcrop uit `frontend/assets`). Het dashboardbeeld is oud maar echt; vers vastleggen kan alleen ingelogd.
 - Valkuil: bij scènes met een grote bijschrifttekst die hetzelfde zegt, bijschrift uitzetten met `capOff(a, b)`.
+
+
+## 3D-pijplijn (25-11-2026, Daniel: "zoals deze video's die op Instagram scoren")
+- Map `scripts/video/motion3d/`: `engine.js` (shots, camera, captions, eindkaart), `rig.js` (poppetje in drie stijlen: blocky, toon, real; animaties idle, walk, run, wave, panic, type, angry, cheer, point, shock, think, shrug, carry, phone, fight, sad, laugh, sleep, clap, lie, sneak), `sets.js` (kamers, straat, tuin, ruimte, studio, mensenmassa, props zoals hoodie, jas, telefoon, laptop met echte schermtextuur). Video's staan in `motion3d/videos/<naam>.js`.
+- Werkvolgorde: script in `week48-scripts.json` (voice, lines), `python3 genvoice_ts.py <naam>` (ElevenLabs met woordtimings), dan de shotlijst schrijven met woordindexen (`W(i)` uit `vo/<naam>.words.json`), stills controleren (`PAGE=motion3d.html V=<naam> node render2.mjs stills 1,3,5 stills/x` en `python3 sheet.py stills/x`), `render2.mjs cues`, `render2.mjs video`, `audio2.py <naam> <warm|lofi|speels>`, `mix2.sh <naam>`.
+- Shotregels: 1 shot per 1 tot 1,5 s, elke cut een andere camerabeweging (dolly, orbit, schuin, handheld via `shake`), steeds een andere kamer, cut op het woord (minus 0,05 s), captions 2 tot 3 woorden.
+- Valkuilen: tekst op een muur op z-fighting (zet 0,04 voor de muur); een label dicht bij de camera wordt enorm (labels zijn al 0,62 geschaald); `material.map` wisselen vraagt `needsUpdate`; zware shots met veel instanced mensen blijven snel; donkere nachtsets worden zwart zonder extra puntlicht en een lichte `hemi`.
+- Python met soundfile en scipy: `~/claude-animation-skills/kit/.venv/bin/python`.

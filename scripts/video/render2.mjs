@@ -21,7 +21,7 @@ const browser = await chromium.launch({ args: [...GL, '--ignore-gpu-blocklist'] 
 const page = await browser.newPage({ viewport: { width: 720, height: 1280 } });
 page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') console.log('[page]', m.text()); });
 page.on('pageerror', e => console.log('[pageerror]', e.message));
-await page.goto(`http://localhost:${port}/motion.html?v=${process.env.V}&render=1`);
+await page.goto(`http://localhost:${port}/${process.env.PAGE || 'motion.html'}?v=${process.env.V}&render=1`);
 await page.waitForFunction(() => window.renderAt && window.ready);
 await page.evaluate(() => window.ready);
 const shot = () => page.screenshot({ clip: { x: 0, y: 0, width: 720, height: 1280 }, type: 'png' });
