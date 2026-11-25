@@ -48,6 +48,7 @@ Niets verzinnen: een cijfer staat hier alleen als het gemeten is, met datum en b
 | 17-11-2026 | Dag 164, Etsy afgewezen | Aan Gabriel Lora toegezegd: uitzoeken wat de mensen die om Etsy vroegen verkopen en of dat vintage (20+ jaar), handmade of craft is, en daarop terugkomen | Per Etsy-vrager nagaan wat de voorraad is (klantmails, sheet Omnivaleur te bouwen) | 20-11-2026 | Open |
 | 19-11-2026 | Dag 165, referralprogramma | Aan hiredov toegezegd: tellen hoeveel gebruikers via de Facebook-groepen of informele uitnodigingen binnenkwamen en daarop terugkomen | Aanmeldbron per klant (mail, groep, doorverwijzing) uit de klantdata | 23-11-2026 | Open |
 | 19-11-2026 | Dag 162, bezoekers per land | Aan ruslann3s toegezegd: aanmeldingen per land uitsplitsen (NL, BE, buiten de EU) en daarop terugkomen | Aanmeldingen per land uit de klantdata (land van de verkoper) | 23-11-2026 | Open |
+| 25-11-2026 | Dag 170, antwoord aan GautamTalksDev | Toegezegd: per account nagaan hoeveel verkopers een uitgeschakelde extensie zelf na een dag zouden opmerken, en daarop terugkomen | extension_heartbeat per account | 28-11-2026 | Open |
 
 ## Ideeën uit reacties
 
@@ -92,3 +93,6 @@ Niets verzinnen: een cijfer staat hier alleen als het gemeten is, met datum en b
 ## Ideeën voor eigen updates (nog niet aangekondigd)
 - Voor-en-na van de eerste-minuten-loop met een vers account (zie overdracht.md, onboarding-tempo).
 - Wat de helpknop na 10 minuten daadwerkelijk doet bij echte nieuwe klanten, in aantallen.
+| 25-11-2026 | GautamTalksDev, Censtar (IH, dag 170) | Vraag: een waarschuwing aan verkopers als de extensie een dag of twee uit staat, voor de taken worden geannuleerd | Overweeg in-app melding | Beantwoord 25-11 aan Gautam (nog niet gemeten, kom erop terug) |
+| 25-11-2026 | Zane Berg (IH, dag 170) | Fouten taggen op wie moet handelen (verkoper, niemand, ik); dagelijks overzicht voor verkopers | Idee voor foutenlijst | Gezien 25-11, niet beantwoord |
+| 25-11-2026 | Nat Sortor (IH, dag 170) | Ontbrekend Vinted-kleurveld vangen voor de taak in de wachtrij komt | Idee | Gezien 25-11, niet beantwoord |
