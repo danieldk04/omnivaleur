@@ -38,3 +38,19 @@ Q4 tot nu: IT 99,00 (22%, btw 17,85), FR 45,00 (20%, btw 7,50).
 - Q3 gewone aangifte: staat de 282,43 aan reguliere EU-verkoop erin? Zo ja: suppletie.
 - Reguliere NL-verkopen (Q3 drie items, 130,00 incl.): de skill rekent alles als marge. Bij een regulier item is de
   grondslag de volle prijs, niet de marge. Boekhouder laten bevestigen.
+
+## Aangevuld 25-11-2026 na nalopen van de ingediende Q3-aangifte
+
+**Portaal (Mijn Belastingdienst Zakelijk > Btw > E-commerce > Btw-meldingen > Openen).** Veld "Btw-bedrag" is het
+btw-BEDRAG, niet de omzet (de omzet rekent het formulier zelf uit). Per land: btw-bedrag, percentage, tarief "algemeen".
+De verklaring en het versturen zijn Daniels eigen klik. Betalen apart, met de gegevens die het overzicht in het portaal
+toont (niet die van de gewone aangifte). Betaalgegevens staan bewust niet in de repo.
+
+**Gewone Q3-aangifte (ingediend en betaald 20-10-2026):** 1a omzet 579 / btw 122, 4a 104/22, 4b 217/46, 5b 168, te betalen 22.
+De sheet-cijfers (marge-items + reguliere NL-items) geven 1a ongeveer 117 btw. De ingediende 122 lijkt de marge van de
+reguliere EU-items (BE, FR, ES, samen ongeveer 12 euro btw) nog te bevatten: waarschijnlijk een kleine overbetaling van 5 tot 13 euro.
+Niet exact vast te stellen omdat de ingediende grondslag (701) 14 euro boven de sheet ligt.
+Kleine correctie (onder 1.000 euro) mag in de volgende gewone aangifte (Q4, uiterlijk 31 januari 2027); geen aparte suppletie.
+
+**Sheet-controle (nieuw):** kolom AC "Binnenland verkocht?" is verborgen en moet "Nee" zijn bij elke buitenlandse
+verkoop. Item 598 (rij 599) had hem leeg, daardoor stond OSS Btw op 0. Kijk elk kwartaal naar buitenlandse verkopen met lege AC.
