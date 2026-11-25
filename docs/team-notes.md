@@ -19921,3 +19921,9 @@ Daniel koos voor geanimeerde, niet hyperrealistische video's en plaatst voortaan
 
 ## 25-11-2026: kennisoverdracht ochtend (Claude, Daniels hoofdaccount)
 Overdracht.md en bijlagen buiten git bijgewerkt voor de nieuwe Mac (15 taken, 2 LaunchAgents, social-bestanden). Sleutelscan schoon. Oude taakkopieën van de vorige Mac bewust laten staan.
+
+## 25-11-2026 (ochtend): Dagelijkse klantfouten
+- STAP 2: 1.858 opdrachten in 24 uur. Geen HTTP 500 meer sinds de asyncio-fix (laatste 24-11 12:10Z, opgelost). Fouten: Vinted-create bij Brocante Depot (ecbceba1) 192x "colour (empty)": 80 artikelen, antiek/curiosa zonder kleur (kadertje, vaas, kruikje), elk 2x geprobeerd. Het Meerkleurig-vangnet (15-11, _vinted_meerkleurig_vangnet) geldt alleen voor woontextiel. OPEN, beslissing Daniel: vangnet uitbreiden naar antiek/woonaccessoires zonder kleur? Niet zelf gedaan (besluit van 15-11 was alleen woontextiel). Verder klant-eigen: Vinted-scan zonder login (Esther 3eeceb51, Janina f0cead08), delete "cannot be found" 8f91a370 (al weg), betaalde rubriek Antiek meubels kasten (ecbceba1), extensies offline.
+- STAP 2b: 09e089ec 17x en 26cf5471 8x maat_leeg_maar_in_tekst: bekend vals alarm (extensie 1.0.434 haalt maat uit tekst, 24-11 bevestigd). Geen kleurverschuiving.
+- STAP 2c: herplaatsingen 330 met, 57 zonder eigen rubriek (geen STORING). Die 57 zijn allemaal Marktplaats, pending sinds 04:xx UTC (96e30080 43, 31d28378 7, 1ba42900 6, 3eeceb51 1): de bekende open punt van 22-11 (opzoeking van de eigen rubriek vlak voor uitgifte ontbreekt voor Marktplaats-herplaatsingen). Nog niet uitgegeven; controle volgende ronde of ze met geraden rubriek 633 de deur uit gaan. Verschillen verder bekend (633 naar 628, eigen wijzigingen klanten). Shopify-tweelingen (6 klanten, droog): alleen "overgeslagen", niets te koppelen. Advertentie handmatig openen niet gedaan deze ronde.
+- Niets gerepareerd, geen code gewijzigd.
