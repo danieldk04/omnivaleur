@@ -76,3 +76,11 @@ Doel: een volledig geautomatiseerd systeem dat elke week beter wordt. Streef elk
 - Eigen initiatief: je mag extra controles doen en verbeteringen doorvoeren die hier niet staan, zolang ze de prestaties verbeteren, op sociale accounts alleen lezen blijven en geen kosten of risico voor Daniel meebrengen.
   Nooit zelf posten, reageren of accounts wijzigen. Wat je extra deed noem je in het rapport.
 - Daniel maakt daarnaast zelf menselijke content (gezicht of eigen stem). Neem die posts mee in de meting (zelfde accounts) en vergelijk animatie met menselijk: wat leert het ene van het andere? Noteer het in het leerlog.
+
+## Schedchie-accounts (gecontroleerd 26-11-2026)
+Groep "Omnivaleur NL" (groupId 6b07f01d87d4ece77bc618c9), alle drie verbonden en gezond:
+- Instagram `danieldevs_`, accountId 17841414777576496
+- TikTok `Danieldevs`, accountId -0003p2PBO-ByBdyPWD6vix3hacSBIYJf_No
+- YouTube `Danieldevs`, accountId UCjKSTShsYatnNS8IRuiz_2A
+De gebruikersnamen zijn dus niet "omnivaleurnl" (dat stond in de Engelse routine). Meet alleen deze drie.
+TikTok is nu in Schedchie gekoppeld (ook de EN-groep: TikTok `Omnivaleur`, accountId -000jAO5295WHmDeEmPpZ_0rAz-do__Rh_46): haal TikTok-cijfers eerst via de connector, Chrome alleen als dat niet lukt.

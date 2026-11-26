@@ -141,3 +141,5 @@ Doel: een volledig geautomatiseerd systeem dat elke week beter wordt. Streef elk
 - Eigen initiatief: je mag extra controles doen en verbeteringen doorvoeren die hier niet staan, zolang ze de prestaties verbeteren, op sociale accounts alleen lezen blijven en geen kosten of risico voor Daniel meebrengen.
   Nooit zelf posten, reageren of accounts wijzigen. Wat je extra deed noem je in het rapport.
 - Daniel maakt daarnaast zelf menselijke content (gezicht of eigen stem). Neem die posts mee in de meting (zelfde accounts) en vergelijk animatie met menselijk: wat leert het ene van het andere? Noteer het in het leerlog.
+
+Bijwerking 26-11-2026: TikTok (`Omnivaleur`) staat nu wel in Schedchie en in de connector; de zin hierboven dat TikTok niet gekoppeld is, is achterhaald. Facebook blijft platform_blocked (fb_checkpoint_368).
