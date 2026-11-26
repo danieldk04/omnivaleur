@@ -1311,9 +1311,11 @@ _BRAND_KEYWORDS = [
 def _convert(p: dict) -> dict:
     variant = p.get("variants", [{}])[0]
     images = [img["src"] for img in p.get("images", [])]
-    tags = [t.strip() for t in p.get("tags", "").split(",") if t.strip()]
-    title = p.get("title", "")
-    desc_raw = p.get("body_html", "")
+    tags = [t.strip() for t in (p.get("tags") or "").split(",") if t.strip()]
+    title = p.get("title") or ""
+    # Shopify stuurt null (geen lege tekst) voor een product zonder omschrijving
+    # (Esther 3eeceb51, 25-11-2026: hele scan faalde op één zo'n product).
+    desc_raw = p.get("body_html") or ""
     import html
     desc_text = re.sub(r"<[^>]+>", " ", desc_raw)
     desc_text = html.unescape(desc_text)

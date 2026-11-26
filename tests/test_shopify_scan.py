@@ -116,3 +116,9 @@ def test_tel_concepten_geeft_aantal_en_nul_bij_fout(monkeypatch):
 
     monkeypatch.setattr(httpx, "AsyncClient", nep_client(200, {}, fout=True))
     assert asyncio.run(shopify_scan.tel_concepten("winkel.myshopify.com", "t")) == 0
+
+
+def test_product_zonder_omschrijving_laat_de_scan_niet_crashen():
+    """Shopify stuurt null voor body_html/tags/title (Esther 3eeceb51, 25-11-2026)."""
+    regel = s.naar_scanregel(_product(body_html=None, tags=None), "x.myshopify.com", None)
+    assert regel["platform_listing_id"]
