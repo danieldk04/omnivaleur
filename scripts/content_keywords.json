@@ -1078,7 +1078,7 @@
       "pillar": "B",
       "format": "money_rules",
       "slug": "do-you-pay-income-tax-when-selling-on-ebay-in-belgium",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "moet-je-inkomstenbelasting-betalen-bij-verkopen-op-ebay-in-belgi",
       "priority": 120
     },
@@ -2219,6 +2219,16 @@
       "action": "created",
       "url_path": "/reseller-tools/how-to-set-up-automatic-shipping-labels-on-2dehands",
       "published_at": "2026-11-21T15:51:27.293212+00:00"
+    },
+    {
+      "keyword": "do you pay income tax when selling on eBay in Belgium",
+      "slug": "do-you-pay-income-tax-when-selling-on-ebay-in-belgium",
+      "region": "nl",
+      "pillar": "B",
+      "format": "money_rules",
+      "action": "created",
+      "url_path": "/reseller-tools/do-you-pay-income-tax-when-selling-on-ebay-in-belgium",
+      "published_at": "2026-11-26T18:07:23.348200+00:00"
     }
   ]
 }
