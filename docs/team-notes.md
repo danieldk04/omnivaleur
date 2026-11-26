@@ -20059,3 +20059,6 @@ Listing 4625706675 (hoodie 1029, jaar 1990) staat bij Etsy op state=active (getL
 - Beide social-videoroutines (EN dinsdag, NL donderdag): 3 tot 5 video's per week met zelf leren wat het beste aantal is, Search Console en GA4 als trendbron naast Google Trends en TikTok Creative Center, langetermijntrends, "Wat beter kan" in het rapport, eigen initiatief (alleen lezen op socials), en Daniels eigen menselijke content meenemen in de meting. Zie onderaan beide routinebestanden.
 - Schedchie gecontroleerd: NL-groep heeft Instagram danieldevs_, TikTok Danieldevs en YouTube Danieldevs, allen gezond; TikTok is ook voor EN gekoppeld. Staat in docs/routines/social-videos-nl.md.
 - NL-routine aangescherpt met conversiepunten (kleine n, snelle tests, bron-vraag bij aanmelding, AI-label, landingspagina-check).
+
+## 2026-11-26 (nacht): bron-vraag bij aanmelden (Daniel akkoord)
+- frontend/register.html heeft een optioneel keuzeveld "Waar hoorde je van ons?" (18 opties: alle social, e-mail van ons, Google, AI-assistent, vriend, community, blog, Trustpilot, anders), tweetalig. Backend `/api/auth/register` bewaart een bekend antwoord als `signup_bron` in Supabase user_metadata (geen migratie) en GA4 sign_up krijgt `bron_antwoord`. Test: tests/test_register_bron.py. Onderzoeksnotitie en eerlijke bewijsgraad staan onderaan docs/routines/social-videos-nl.md.

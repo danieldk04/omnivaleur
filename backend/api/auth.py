@@ -23,6 +23,16 @@ class AuthRequest(BaseModel):
     # landingspagina. Optioneel: zonder code is het gewoon een gebruiker die
     # zelf de weg vond.
     ref: str | None = None
+    # Antwoord op "Waar hoorde je van ons?" (optioneel). Alleen waarden uit
+    # BRON_ANTWOORDEN worden bewaard, zodat de lijst schoon blijft.
+    bron: str | None = None
+
+
+BRON_ANTWOORDEN = {
+    "instagram", "tiktok", "youtube", "pinterest", "threads", "facebook",
+    "bluesky", "x", "reddit", "indiehackers", "email", "google", "ai",
+    "vriend", "community", "blog", "trustpilot", "anders",
+}
 
 
 @router.post("/register")
@@ -32,7 +42,10 @@ async def register(body: AuthRequest):
         res = verse_auth_client().auth.sign_up({
             "email": body.email,
             "password": body.password,
-            "options": {"email_redirect_to": "https://omnivaleur.com/"},
+            "options": {
+                "email_redirect_to": "https://omnivaleur.com/",
+                **({"data": {"signup_bron": body.bron}} if body.bron in BRON_ANTWOORDEN else {}),
+            },
         })
         if res.user is None:
             raise HTTPException(status_code=400, detail="Registration failed")
