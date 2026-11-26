@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     # het "1000% zeker" werkt). Zet ETSY_OPEN_VOOR_ULTRA=1 om Ultra-klanten en wie
     # 5 betalende vrienden heeft toe te laten.
     etsy_open_voor_ultra: bool = False
+    # Testverkopers die Etsy eerder mogen (komma-gescheiden e-mailadressen), los van
+    # het plan. 26-11-2026: Mieneke (voordeelsieraden.nl) test als eerste echte verkoper.
+    etsy_testgebruikers: str = "info@voordeelsieraden.nl"
     etsy_redirect_uri: str = "https://omnivaleur.com/api/platforms/etsy/callback"
 
     ebay_app_id: str = ""

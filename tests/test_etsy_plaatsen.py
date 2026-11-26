@@ -159,3 +159,17 @@ def test_titel_wordt_schoon_verstuurd(monkeypatch):
     monkeypatch.setattr(etsy.httpx, "AsyncClient", lambda **kw: echt(transport=httpx.MockTransport(vang), **kw))
     asyncio.run(etsy.EtsyPlatform().create_listing({**ITEM, "title": "(1029) Vintage 1990 jas"}, _creds()))
     assert "title=Vintage+1990+jas" in verzonden["body"]
+
+
+def test_testverkoper_krijgt_etsy_zonder_plan(monkeypatch):
+    from backend.services import etsy_toegang as t
+    t._cache.clear()
+    monkeypatch.setattr(settings, "etsy_open_voor_ultra", False)
+    monkeypatch.setattr(settings, "etsy_testgebruikers", "Test@Winkel.nl, ander@x.nl")
+    monkeypatch.setattr("backend.services.billing.is_owner_email", lambda e: False)
+    monkeypatch.setattr("backend.services.light.plan_van_gebruiker", lambda u: "light")
+    monkeypatch.setattr("backend.services.referral_mail.email_van", lambda u: " test@winkel.nl ")
+    assert t.etsy_toegang("tester") is True
+    t._cache.clear()
+    monkeypatch.setattr("backend.services.referral_mail.email_van", lambda u: "iemand@x.nl")
+    assert t.etsy_toegang("iemand") is False

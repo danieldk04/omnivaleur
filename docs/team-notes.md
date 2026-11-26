@@ -20082,3 +20082,10 @@ Listing 4625706675 (hoodie 1029, jaar 1990) staat bij Etsy op state=active (getL
 - karaoke-jo.nl (c75362fa): 27 artikelen op MP, prijsvraag van 24-11 nog onbeantwoord, 11 zonder prijs; geen mailtje (klant wacht op antwoord), briefing aan Daniel.
 - brocantedepot (ecbceba1): alle 101 Vinted-kleurfouten dateren van 24-11 19u tot 25-11 20u, dus van voor de fix; sindsdien geen nieuwe. 82 live op MP en 2dehands, 41 op Vinted. Open vinted-scan sinds 07:21 (Chrome dicht, klant-eigen).
 - Overigen niets veranderd (Daniel had contact met 20ba676b en d74bd011; e27c1eaa zonder extensie, mailtje staat). Niets gerepareerd, niets verstuurd.
+
+## 26-11-2026 — Etsy: eerste testverkoper Mieneke (Daniel)
+Mieneke (info@voordeelsieraden.nl, geopende Etsy-winkel) stemde toe als testgebruiker. Etsy is voor haar
+aangezet via `settings.etsy_testgebruikers` (komma-gescheiden adressen, standaard haar adres), los van
+plan en los van `etsy_open_voor_ultra` (die blijft uit: voor andere klanten blijft Etsy dicht tot Daniel
+"1000% zeker" zegt). Nog te zien bij haar: openbare zichtbaarheid, token-verversing na een uur,
+verkoop op Etsy en afmelden elders, en of haar winkel al een verzendprofiel heeft (zo niet: duidelijke fout).
