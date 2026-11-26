@@ -20051,3 +20051,6 @@ Listing 4625706675 (hoodie 1029, jaar 1990) staat bij Etsy op state=active (getL
 ## 2026-11-26 (avond): Nederlandse social-videoroutine (Claude)
 - Daniel wil dezelfde routine als de Engelse, maar volledig Nederlands, wekelijks donderdag, voor het Schedchie-subaccount "Omnivaleur NL" (alleen Instagram, TikTok, YouTube). Opdracht: `docs/routines/social-videos-nl.md`, leerlog `docs/social-video-leerlog-nl.md`, metingen `docs/social-video-metingen-nl.csv` (aparte tabel, niet mengen met EN). Geplande taak `omnivaleur-social-videos-nl`, donderdag ca. 09:13, alleen Daniels Mac. Aanleveren gescheiden: `~/Downloads/omnivaleur-nl-week-WW/` en Drive `Omnivaleur/Social media video's Claude NL/Week WW`.
 - Open: Schedchie-connector gaf bij het opzetten rate-limit, dus de accountIds van het NL-subaccount zijn nog niet vastgelegd; eerste run (03-12) controleert dat. Daniel noemde "Sketchy", bedoeld is Schedchie.
+
+## 2026-11-26 (leadgen aanvullen): wachtrij 35 → 98 (Claude)
+- Marktplaats +53, 2dehands +9 nieuwe leads via leadgen_aanvullen.py. Koude-mailronde draaide binnen 24 uur (laatste schedule 00:52, nieuwe run sinds 08:06), geen seintje nodig. Geen extra bron nodig.
