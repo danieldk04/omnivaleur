@@ -37,6 +37,7 @@ Niets verzinnen: een cijfer staat hier alleen als het gemeten is, met datum en b
 
 | Datum | Post | Wat is beloofd | Meting die nodig is | Terugkom op | Status |
 |---|---|---|---|---|---|
+| 26-11-2026 | Dag 171, testen op het hoofdpad | Aan Hamilton_Neuta: een uitkomstalarm bouwen (plaatspogingen per uur boven nul maar geen succes, of succespercentage ver onder hetzelfde uur vorige week) naast de foutmeldingen | Nagaan of plaatspogingen en successen per uur al in de data staan | 03-12-2026 | Open |
 | 25-11-2026 | Dag 170, foutafhandeling | Aan Censtar en Irshad Khan: per account kijken naar extensie-uit (gesloten browser of uitgezet) en een waarschuwing na 1 tot 2 dagen overwegen | Per account nagaan wanneer de extensie voor het laatst incheckte | 28-11-2026 | Open |
 | 24-11-2026 | Dag 170, foutafhandeling | Aan ipweb3: uitzoeken of uitval bij nieuwe klanten vooral bij de installatie zit of bij verkopers die nooit beginnen, per aanmelding, en daarop terugkomen | Per aanmelding nagaan waar het stopt (python3 scripts/onboarding_tempo.py) | 27-11-2026 | Open |
 | 23-11-2026 | Facebook Vinted BE/NL, Daniels post 21-11 | Aan Ani Ta: uitzoeken wat Vinted precies toestaat aan tools (voorwaarden verbieden externe softwaretools zoals bots 'tenzij Vinted het toestaat') en daarop terugkomen | Vinted-voorwaarden en help-pagina's over tools lezen; plaatsklaar-stand (nog niet live) noemen zodra die voor klanten aan staat | 30-11-2026 | Open |
@@ -55,6 +56,7 @@ Niets verzinnen: een cijfer staat hier alleen als het gemeten is, met datum en b
 
 | Datum | Van | Idee of vraag | Wat we ermee kunnen | Status |
 |---|---|---|---|---|
+| 26-11-2026 | Hamilton_Neuta (IH, dag 171) | Alarm op uitkomsten in plaats van fouten: pogingen per uur boven nul met nul successen, of succespercentage ver onder hetzelfde uur vorige week | Bouwen naast foutalarm | Beantwoord 26-11 (toegezegd, zie Open beloften) |
 | 25-11-2026 | Censtar (IH, dag 170) | Vraag: krijgt de verkoper een waarschuwing als de extensie een dag of twee uit staat, vóór de taken geannuleerd worden? | Overwegen: waarschuwing na 1 tot 2 dagen uit | Beantwoord 25-11 (nog niet, alleen Daniel ziet het; per account kijken) |
 | 24-11-2026 | ipab (IH, dag 170) | Vraag: welke marktplaats was het moeilijkst te ondersteunen, de API of de plaatsingsregels? | Content-onderwerp | Beantwoord 24-11 (regels, Etsy-toegang als uitzondering) |
 | 24-11-2026 | Irshad Khan (IH, dag 170) | 'Extensie uit' heeft drie oorzaken (gebruiker zet uit, browser dicht, MV3 service worker wordt niet wakker); een heartbeat naar de backend scheidt 'geen check-in' van 'check-in maar taak mislukt'; 60 verlengverzoeken van één account samenvouwen tot één statusregel | Overwegen voor de storingsmelding van de extensie. | Beantwoord 25-11 (nog niet gesplitst, gaat per account kijken) |

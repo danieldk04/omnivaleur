@@ -531,3 +531,6 @@ De volledige gesprekken staan als bestanden op de Mac (`~/.claude/projects/-User
 
 ## 26-11-2026 (Claude): NL-social-videoroutine eerste run
 Drie 3D-video's gemaakt en in Downloads gezet; Drive-upload open. NL-pijplijn: zie team-notes 26-11 donderdag. Volgende run 03-12: meten en NL-onderzoek.
+
+## 26-11-2026 (middag, Claude): NL-videoronde 2 klaar en gepland door Daniel
+Zes NL-video's in Downloads en voorbeelden in Drive. Nieuwe werkwijze (dialoog, tempo, diversiteit, realisme) staat in docs/routines/social-videos-nl.md. Volgende run donderdag 03-12: meten wat Daniel plaatste, realisme-skills zoeken en testen.

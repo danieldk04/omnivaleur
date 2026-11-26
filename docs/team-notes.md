@@ -20092,3 +20092,6 @@ verkoop op Etsy en afmelden elders, en of haar winkel al een verzendprofiel heef
 
 ## 2026-11-26 (donderdag, ronde 2): NL-video's opnieuw, nu eigen verhalen (Claude)
 - Daniel: ronde 1 was een vertaling, Kevin te traag, stem te AI. Nieuw: drie eigen verhalen (sollicitatie, Sven/elf dagen, eten staat klaar) met `scripts/video/genvoice_multi.py` (meerdere stemmen per video, `weeknl-new.json`), `motion3d/videos/{sollicitatie,pensioen,eten}.js`. Levering in `~/Downloads/omnivaleur-nl-week-48/` (nr 4 t/m 6). Stem blijft premade en niet beluisterd; zie leerlog NL.
+
+## 2026-11-26 (middag): terugkoppeling Daniel op NL-ronde 2 (Claude)
+- Daniel: stemmen goed, video's top, plaatst minstens 2 van 3, wil meer snelheid, meer situaties, realistischere en diversere animaties en zoekt nog wat hij leuk vindt; data volgt uit het plaatsen. Alles staat vastgelegd onder "Leerpunten van Daniel, ronde 2" in `docs/routines/social-videos-nl.md` (en een verwijzing in de Engelse routine). Drive-connector werkt: NL-map en Week 48 aangemaakt, 720p-voorbeelden en `bijschriften-week48.txt` geupload (volledige mp4's te groot voor de connector, die staan in Downloads).

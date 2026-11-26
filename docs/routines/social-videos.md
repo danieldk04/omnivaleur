@@ -143,3 +143,7 @@ Doel: een volledig geautomatiseerd systeem dat elke week beter wordt. Streef elk
 - Daniel maakt daarnaast zelf menselijke content (gezicht of eigen stem). Neem die posts mee in de meting (zelfde accounts) en vergelijk animatie met menselijk: wat leert het ene van het andere? Noteer het in het leerlog.
 
 Bijwerking 26-11-2026: TikTok (`Omnivaleur`) staat nu wel in Schedchie en in de connector; de zin hierboven dat TikTok niet gekoppeld is, is achterhaald. Facebook blijft platform_blocked (fb_checkpoint_368).
+
+
+## Leerpunten uit de NL-routine die ook hier gelden (26-11-2026)
+Lees de sectie "Leerpunten van Daniel, ronde 2" in `docs/routines/social-videos-nl.md`: dialoog met meerdere stemmen (`genvoice_multi.py`), tempo (19 tot 26 s, een shot per seconde), geen vertalingen maar eigen verhalen, meer diversiteit en realisme, en Drive-upload via de connector met 720p-voorbeelden (limiet 7 MB). Pas dat ook op de Engelse video's toe.
