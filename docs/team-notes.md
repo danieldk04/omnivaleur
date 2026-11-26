@@ -20027,3 +20027,10 @@ Listing 4625706675 (hoodie 1029, jaar 1990) staat bij Etsy op state=active (getL
 
 ## 26-11-2026 (ochtend): kennisoverdracht (Claude, geplande taak)
 - Overdracht.md aangevuld met Etsy, OSS en Vinted-kleurvangnet van 25-11; bijlagen gesynchroniseerd (nieuw: omnivaleur-btw-oss-kwartaal, lessen.md). Server gemeten op 5eb74d42.
+
+## 26-11-2026 (ochtend, gemeten 26-11 09:15): Dagelijkse klantfouten (Claude, geplande taak)
+- STAP 2: geen HTTP 500. Eén echte fout in onze code: Shopify-scan van Esther (3eeceb51) faalde met TypeError, een van haar 2978 producten had body_html null. Gerepareerd in 6e3fbb0b (`_convert` in shopify_importer.py, test erbij, voor-en-na-proef gedaan). Overig klant-eigen: Vinted niet ingelogd, betaalde rubriek Wonen wandlampen (1x), 2dehands-overzicht onleesbaar (1x), foto-upload 90s (1x); onbekend: 2dehands-create timeout titelveld (1x).
+- STAP 2b: alleen maat_leeg_maar_in_tekst (09e089ec 11x, 26cf5471 2x), bekend vals alarm.
+- STAP 2c: herplaatsingen 166 met, 92 zonder eigen rubriek (geen STORING). Verschillen als gisteren: Goudlief 5aae4954 sjaals 633 naar 628/1679 en "weg" bij sieraden (lijst afgekapt), Esther titel/prijs/rubriek (eigen bewerkingen). Metingen mislukt: 3bfbed2c. Advertentie handmatig openen niet gedaan (geen Chrome).
+- Shopify-tweelingen: Esther 2x koppelen en 1x samenvoegen uitgevoerd (reserve ~/.omnivaleur/herstel/shopify_tweelingen_3eeceb51_20261126_0918.jsonl); overige Shopify-klanten schoon.
+- LET OP: Gemini API geeft HTTP 402 "prepayment credits depleted" (gezien in lokale run, vertaalvangnet en rubriekkeuze); Claude als reserve staat uit wegens kosten, dus val terug op woordenlijst. Tegoed aanvullen in AI Studio.
