@@ -40,6 +40,30 @@ Daniel (24-11-2026, meerdere sessies): "doe alles maximaal wat je voor mij kan d
 
 ---
 
+## -Users-danieldekoning-Projects-omnivaleur / feedback-klant-niet-afraden
+
+*25-11-2026*
+
+Daniel, 25-11-2026: zinnen als "Voor jou is er dan weinig extra ten opzichte van GoedGeplaatst, dus als dat goed werkt zou ik daarbij blijven" wil hij niet meer in klant- of leadmails.
+
+**Why:** het praat een warme lead weg van de proef; eerlijk zijn gaat over feiten (wat kan niet), niet over een oordeel of de klant het nodig heeft.
+**How to apply:** zeg wat Omnivaleur doet, kost en niet kan, nodig uit tot de gratis proef (ook naast een concurrent), en zet twijfel over geschiktheid alleen in het rapport aan Daniel. Staat ook in docs/schrijfstijl-daniel.md. Zie [[reference-elevenlabs-sleutel]] niet nodig; gerelateerd aan stijlregels in dat bestand.
+
+---
+
+## -Users-danieldekoning-Projects-omnivaleur / social-videos-3d
+
+*25-11-2026*
+
+Daniel (25-11-2026): video's zoals goed scorende Instagram-animaties (1 shot per seconde, wisselende kamers, bewegende camera, stem met intonatie). Taal voorlopig Engels, absurd/grappig mag, duidelijke storyline, nooit AI-slop. Drie stijlen (A blocky, B toon, C real) naast elkaar zodat hij kan kiezen en de routine op meting naar de winnaar groeit.
+
+Week 48: alle drie (-v2) door Daniel ingepland via Schedchie. Zijn rangorde: 1 C real-kevin, 2 B toon-midnight, 3 A blocky-hoodie. Hij is nog niet tevreden en verwacht stapsgewijze verbetering. Meting op dinsdag 01-12-2026 via Schedchie (TikTok niet gekoppeld, via Chrome), plus wekelijkse trendronde en bewuste afwisseling (helft winnaar, helft test).
+
+**Why:** de 2D-video's scoorden visueel niet mee; de referenties hebben 3D, camerabeweging en tempo.
+**How to apply:** gebruik `scripts/video/motion3d/` (recept in docs/video-recept.md, sectie 3D-pijplijn; voice via `genvoice_ts.py` met eleven_v3 en `tempo.py`; botsingen controleren met `chk.sh`). Python met audio-libs: `~/claude-animation-skills/kit/.venv/bin/python`. Bij moeilijke ontwerpvragen mag een adviseur (Opus of Fable) via Agent worden gevraagd; Daniel heeft dat toegestaan. Zie [[social-videos-animatie]].
+
+---
+
 ## -Users-danieldekoning-Projects-omnivaleur / social-videos-animatie
 
 *24-11-2026*

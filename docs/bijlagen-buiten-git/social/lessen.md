@@ -51,8 +51,5 @@ Elke reactie krijgt in gedaan.jsonl een "cat": V = Vinted/Marktplaats/2dehands/e
 - Leerresultaat 15-11 (10 metingen): korte reacties (tot 20 woorden) scoren beter dan lange, en reageren op posts ouder dan 6 uur scoort slechter. Dus: kort, en liefst binnen een paar uur na de post. Nog weinig data, blijf meten.
 - Indie Hackers proef beoordeeld 15-11: reacties blijven zichtbaar, krijgen echte antwoorden van andere makers (Ekuka, Krishna, Hossam, Jim) en er is geen waarschuwing. Proef doorzetten met het eerlijke AI-vinkje, plafond 3 per dag (antwoorden op eigen posts tellen mee).
 
-## AUTOMATISCHE INZICHTEN (gemeten 12 van 118 reacties, script scripts/social_leren.py)
-- Gemiddelde score alle reacties: 1.2 (likes + 3 per antwoord + 5 bovenaan).
-- Beter dan gemiddeld: lengte = kort (<=20 woorden) (n=5, score 1.8, +0.6). Doe dit vaker.
-- Slechter dan gemiddeld: post leeftijd = >6 uur (n=5, score 0.4, -0.8). Doe dit minder.
-- 80% van de reacties volgt de beste vorm, 20% is een bewuste proef (zet dan veld variant in gedaan.jsonl).
+## AUTOMATISCHE INZICHTEN (gemeten 0 van 8 reacties, script scripts/social_leren.py)
+- Nog te weinig metingen (0; vanaf 10 komen hier uitkomsten). Blijf elke ronde 24 uur oude reacties meten.

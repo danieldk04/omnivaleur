@@ -20024,3 +20024,6 @@ Kolom items.vintage_year bestaat (Daniel draaide scripts/sql/items_vintage_year.
 
 ## 25-11-2026 (22:20): hoodie op Etsy actief per API, maar publiek niet zichtbaar: winkel van Daniel nooit geopend
 Listing 4625706675 (hoodie 1029, jaar 1990) staat bij Etsy op state=active (getListing), maar de publieke pagina zegt "Dit item is niet beschikbaar", ook in incognito. Oorzaak vrijwel zeker: Daniels Etsy-winkel is nooit afgemaakt (Etsy toont etsy.com/your/shops/me/onboarding/screener/welcome: opstartkosten ca. 13 euro, betaalgegevens, identiteit). Daniel heeft bovendien een eerdere blokkade ("ban") op zijn Etsy-account. Gevolg: publieke zichtbaarheid is NIET bewezen. Wat wel bewezen is: OAuth, concept, foto's, activeren, status teruggelezen. Voor een echte eindtoets is een geopende winkel nodig: een testverkoper met een bestaande winkel (Personal Access staat dat toe, beperkte schaal) of Daniels winkel openen als dat lukt. Etsy blijft voor klanten UIT (ETSY_OPEN_VOOR_ULTRA niet gezet).
+
+## 26-11-2026 (ochtend): kennisoverdracht (Claude, geplande taak)
+- Overdracht.md aangevuld met Etsy, OSS en Vinted-kleurvangnet van 25-11; bijlagen gesynchroniseerd (nieuw: omnivaleur-btw-oss-kwartaal, lessen.md). Server gemeten op 5eb74d42.
