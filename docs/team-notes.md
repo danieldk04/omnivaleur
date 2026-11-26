@@ -20043,3 +20043,7 @@ Listing 4625706675 (hoodie 1029, jaar 1990) staat bij Etsy op state=active (getL
 ## 2026-11-26 (later): Trustpilot-cijfer bijgewerkt, Ahrefs gemeten (Claude)
 - index.html en nl.html: aggregateRating en zichtbare regel nu 4.1 uit 5 reviews (Trustpilot, gemeten 26-11).
 - Ahrefs, crawl van 19-11: Health Score 100 (was 53), AI Discoverability 84, links naar 4xx 0 (was 200 kapotte e-maillinks), dus de e-mailreparatie werkte. Nieuwe crawl niet gestart, de laatste is al na de reparaties. Open: 243 trage pagina's (TTFB >500 ms), 210 pagina's met validatiefout in structured data.
+
+## 2026-11-26 (middag): Ahrefs structured-data-fout opgelost (Claude)
+- Oorzaak van de 210 "Google rich results validation error": SoftwareApplication op elke blogpagina had een Offer met priceCurrency maar zonder price. Nu price 9.99 (vanaf-prijs Light), live op e48e9a28. content.py gebruikt altijd de verse functie in plaats van de opgeslagen kopie per pagina, dus geen DB-migratie nodig. Test: tests/test_software_schema_prijs.py. Ahrefs bevestigt pas na de volgende crawl.
+- Los daarvan faalt tests/test_meldingen_engels.py voor extension/content/marktplaats.js (niet door deze wijziging).
