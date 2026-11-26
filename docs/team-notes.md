@@ -20098,3 +20098,6 @@ verkoop op Etsy en afmelden elders, en of haar winkel al een verzendprofiel heef
 
 ## 2026-11-26 (middag): Daniels keuze en inspiratieaccounts (Claude)
 - Daniel plant video 4, 5 en 6 in (vond die het leukst) en wil gevarieerde content. Inspiratie voor stijl, snelheid en poppetjes: nuri.sse, renno.app (enige echte bedrijf), semigenius, evt. unecessaryideas. Staat in docs/routines/social-videos-nl.md; eerste uitlezing in de run van 03-12.
+
+## 2026-11-26 (avond): Vinted-verkoopmail, eerste echte doorgestuurde mail (Claude)
+- Eerste doorgestuurde Vinted-mail op het Omnivaleur-adres: DKIM, SPF en DMARC alle drie pass, dus het doorsturen breekt de handtekening niet en de route is bruikbaar. Uitkomst "genegeerd, geen_herkende_verkoopmail": onderwerp of tekst past niet bij de twee gemeten formaten (NL/EN verkoop). Welke stap faalde was niet te zien; de melding noemt nu de stap en het onderwerp van de mail. Zodra de volgende mail binnenkomt (of Daniel het onderwerp noemt) wordt het formaat toegevoegd. Mogelijk was het geen verkoopmail maar een andere Vinted-mail.

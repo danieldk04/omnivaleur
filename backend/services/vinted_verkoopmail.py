@@ -97,6 +97,21 @@ def lees_verkoopmail(onderwerp: str | None, tekst: str | None, html: str | None)
     return {"titel": titel, "prijs": prijs}
 
 
+def waarom_niet_herkend(onderwerp: str | None, tekst: str | None, html: str | None) -> str:
+    """Welke stap van lees_verkoopmail faalde. Alleen een stapnaam, nooit mailinhoud."""
+    if not onderwerp or not any(o in normaliseer_titel(onderwerp) for o in _ONDERWERPEN):
+        return "onderwerp_onbekend"
+    body = _zichtbare_tekst(tekst, html)
+    if not body:
+        return "geen_tekst"
+    markering = re.search("|".join(_MARKERINGEN), body, flags=re.IGNORECASE)
+    if not markering:
+        return "zin_voor_de_titel_niet_gevonden"
+    if not _PRIJS.search(body[markering.end():]):
+        return "geen_prijs_na_de_titel"
+    return "titel_of_prijs_onbruikbaar"
+
+
 def afzender_is_vinted(van: str | None) -> bool:
     m = re.search(r"@([a-z0-9.\-]+)", (van or "").lower())
     if not m:
@@ -170,7 +185,9 @@ async def verwerk_ontvangen_mail(*, db, naast_de_lus, handle_item_sold, bewijs, 
                                   else f"geen_veld({type(authenticatie).__name__})")}
     mail = lees_verkoopmail(onderwerp, tekst, html)
     if not mail:
-        return {"uitkomst": "genegeerd", "reden": "geen_herkende_verkoopmail"}
+        return {"uitkomst": "genegeerd", "reden": "geen_herkende_verkoopmail",
+                "stap": waarom_niet_herkend(onderwerp, tekst, html),
+                "onderwerp": (onderwerp or "")[:120]}
 
     items = (await naast_de_lus(lambda: db.table("items").select("id,title,price")
              .eq("user_id", user_id).ilike("title", _ilike_kern(mail["titel"])).limit(50).execute())).data or []

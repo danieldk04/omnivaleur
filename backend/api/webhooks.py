@@ -256,6 +256,8 @@ async def _vinted_verkoopmail_ontvangen(data: dict, payload: dict) -> dict:
                 "Er is een doorgestuurde mail van Vinted binnengekomen op je Omnivaleur-adres.\n\n"
                 f"Uitkomst: {uitkomst.get('uitkomst')}\n"
                 f"Reden: {uitkomst.get('reden')}\n"
+                + (f"Stap die faalde: {uitkomst.get('stap')}\nOnderwerp van de mail: {uitkomst.get('onderwerp')}\n"
+                   if uitkomst.get("stap") else "") +
                 f"Handtekening zoals de ontvangende server die zag: {auth}\n\n"
                 "Betekenis: bij uitkomst geboekt werkt de route en kan hij naar klanten. "
                 "Staat bij de handtekening iets anders dan pass voor dkim, dan overleeft de handtekening het "
