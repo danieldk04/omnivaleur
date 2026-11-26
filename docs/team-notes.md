@@ -20062,3 +20062,10 @@ Listing 4625706675 (hoodie 1029, jaar 1990) staat bij Etsy op state=active (getL
 
 ## 2026-11-26 (nacht): bron-vraag bij aanmelden (Daniel akkoord)
 - frontend/register.html heeft een optioneel keuzeveld "Waar hoorde je van ons?" (18 opties: alle social, e-mail van ons, Google, AI-assistent, vriend, community, blog, Trustpilot, anders), tweetalig. Backend `/api/auth/register` bewaart een bekend antwoord als `signup_bron` in Supabase user_metadata (geen migratie) en GA4 sign_up krijgt `bron_antwoord`. Test: tests/test_register_bron.py. Onderzoeksnotitie en eerlijke bewijsgraad staan onderaan docs/routines/social-videos-nl.md.
+
+## 2026-11-26 (middag): Ahrefs schoon, drie oorzaken gevonden (Claude)
+- Crawl 10:08 na alle fixes: Health Score 100, AI Discoverability 100, 0 fouten, 0 waarschuwingen, geen 4xx.
+- 1) SoftwareApplication op blogpagina's: Offer zonder price (nu 9.99) EN Google Software App eist aggregateRating of review (nu Trustpilot 4.1 uit 5, gelijk aan home; ook op ai-info). Die tweede eis was de echte reden van de 217 fouten. Bij een wijziging van het Trustpilot-cijfer ook backend/content/pipeline.py en ai-info.html mee.
+- 2) De publieke contentroutes waren `async def` met synchrone database-aanroepen: bij een gelijktijdige crawl blokkeerde de hele server (502 na 6 tot 16 s, ook voor klanten). Nu gewone `def` (werkdraad) plus 5 minuten geheugencache (`_gecached`, `wis_pagina_cache`). 60 gelijktijdige verzoeken: allemaal 200, traagste 1,3 s. De Ahrefs-mail van 10:00 (Health 58, 182 kapotte afbeeldingen) kwam van die eerste crawl en is dus achterhaald.
+- 3) Nederlandse blogpagina how-to-crosslist-from-marktplaats-to-shopify-nl wees naar een niet bestaande hero-afbeelding (404 op 22 pagina's): in de database omgezet naar de bestaande afbeelding. Alle 216 gepubliceerde pagina's gecontroleerd, geen ontbrekende afbeelding meer.
+- tests/test_meldingen_engels.py gaf valse alarmen op ${veld.value}; test aangepast.
