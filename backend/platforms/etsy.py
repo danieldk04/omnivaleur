@@ -173,7 +173,10 @@ def _woorden(tekst: str) -> set:
     uit = set()
     for w in re.findall(r"[a-zà-ÿ]+", (tekst or "").lower()):
         if len(w) > 2:
-            uit.add(w[:-1] if w.endswith("s") and len(w) > 3 else w)
+            if w.endswith(("ches", "shes", "xes")):
+                uit.add(w[:-2])          # brooches -> brooch
+            else:
+                uit.add(w[:-1] if w.endswith("s") and len(w) > 3 else w)
     return uit
 
 
@@ -185,9 +188,9 @@ _SYNONIEM = {"vest": "cardigan", "trui": "sweater", "jas": "jacket", "jack": "ja
              "armband": "bracelet", "armbanden": "bracelet", "ketting": "necklace", "collier": "necklace",
              "oorbel": "earring", "oorbellen": "earring", "oorbel": "earring", "broche": "brooch",
              "hanger": "pendant", "horloge": "watch", "ringen": "ring", "manchetknoop": "cufflink",
-             "kralenarmband": "bracelet", "kralenketting": "necklace"}
+             "kralenarmband": "bracelet", "kralenketting": "necklace", "slavenarmband": "bangle", "cocktailring": "statement"}
 # Woorden die zeggen dat het om kralen gaat: dan hoort "Beaded ..." bij de keuze.
-_KRALEN = re.compile(r"\b(kraal|kralen|bead|beads|beaded|kralenarmband|kralenketting|koraal|coral)\b", re.I)
+_KRALEN = re.compile(r"(kraal|kralen|bead|koraal|coral)", re.I)
 
 
 def kies_taxonomie(bladeren: list, item: dict):
@@ -195,17 +198,20 @@ def kies_taxonomie(bladeren: list, item: dict):
     vraag = _woorden(f"{item.get('category') or ''} {item.get('title') or ''} {item.get('gender') or ''}")
     # Een kralenarmband zit onder "Beaded Bracelets"; "kraal" in titel, materiaal of
     # categorie is genoeg om dat blad voor te trekken.
-    kralen = bool(_KRALEN.search(f"{item.get('title') or ''} {item.get('material') or ''} {item.get('category') or ''}"))
+    kralen = bool(_KRALEN.search(f"{item.get('title') or ''} {item.get('material') or ''} {item.get('category') or ''} {(item.get('description') or '')[:500]}"))
     vraag |= {_SYNONIEM[w] for w in list(vraag) if w in _SYNONIEM}
     if kralen:
         vraag.add("beaded")
     if not vraag:
         return None
+    # Alleen om gelijke scores uit elkaar te halen: komt een woord uit de omschrijving
+    # ("statement", "stud", "chain") in het pad voor, dan wint dat blad.
+    tekst_w = _woorden(f"{item.get('title') or ''} {(item.get('description') or '')[:600]}")
     beste, beste_score = None, 0.0
     for tid, pad in bladeren:
         # "Craft Supplies & Tools" (onder andere "Bracelet Blanks" = blanco armbanden)
         # is voor wie knutselt; een afgewerkt sieraad hoort daar nooit.
-        if pad and _woorden(pad[0]) >= {"craft", "supply"} and not item.get("is_supply"):
+        if pad and pad[0].lower().startswith("craft supplies") and not item.get("is_supply"):
             continue
         naam_w = _woorden(pad[-1])
         pad_w = _woorden(" ".join(pad[:-1]))
@@ -215,6 +221,7 @@ def kies_taxonomie(bladeren: list, item: dict):
         if hit_naam == 0:
             continue
         score = hit_naam / len(naam_w) * 2 + len(vraag & pad_w) * 0.5
+        score += min(len((tekst_w - vraag) & (naam_w | pad_w)), 3) * 0.05
         if score > beste_score:
             beste, beste_score = tid, score
     return beste
@@ -258,12 +265,14 @@ def kies_sectie(secties: list, item: dict, jaar) -> int | None:
     return None
 
 
-def _etsy_woorden(lijst, maximaal: int, lengte: int) -> list:
+def _etsy_woorden(lijst, maximaal: int, lengte: int, koppelteken: bool = True) -> list:
     """Tags/materialen zoals Etsy ze accepteert: letters, cijfers, spatie, koppelteken;
     maximaal `lengte` tekens, geen dubbelen."""
     uit, gezien = [], set()
     for t in lijst or []:
-        t = re.sub(r"[^0-9A-Za-zÀ-ÿ \-]", "", str(t)).strip().lower()
+        # Tags mogen een koppelteken hebben, materialen alleen letters, cijfers en spaties
+        # (Etsy-spec, 26-11-2026).
+        t = re.sub(r"[^0-9A-Za-zÀ-ÿ \-]" if koppelteken else r"[^0-9A-Za-zÀ-ÿ ]", " " if not koppelteken else "", str(t)).strip().lower()
         t = re.sub(r"\s+", " ", t)
         if not t or len(t) > lengte or t in gezien:
             continue
@@ -277,12 +286,14 @@ def _etsy_woorden(lijst, maximaal: int, lengte: int) -> list:
 def _basis_velden(item: dict, talen: list) -> dict:
     """Vangnet zonder taalmodel: tags, materialen en alt-tekst uit de artikelvelden."""
     ruw = [item.get("brand"), item.get("category"), item.get("color"), "vintage", "antique"]
-    ruw += re.findall(r"[A-Za-zÀ-ÿ]{4,}", item.get("title") or "")
+    ruw += [w for w in re.findall(r"[A-Za-zÀ-ÿ]{4,}", item.get("title") or "")
+            if w.lower() not in ("with", "from", "carat", "karaat", "voor", "met", "van")]
+    ruw = [r for r in ruw if r]
     mats = [m for m in re.split(r"[,/;]", item.get("material") or "") if m.strip()]
     titel = etsy_titel(item.get("title") or "")
     return {
         "tags": {t: _etsy_woorden(ruw + mats, 13, 20) for t in talen},
-        "materials": _etsy_woorden(mats, 13, 45),
+        "materials": _etsy_woorden(mats, 13, 45, koppelteken=False),
         "alt_text": {t: titel[:500] for t in talen},
     }
 
@@ -317,7 +328,7 @@ def genereer_etsy_velden(item: dict, talen: list) -> dict:
             alt = ((data.get("alt_text") or {}).get(t) or "").strip()
             if alt:
                 basis["alt_text"][t] = alt[:500]
-        mats = _etsy_woorden(data.get("materials"), 13, 45)
+        mats = _etsy_woorden(data.get("materials"), 13, 45, koppelteken=False)
         if mats:
             basis["materials"] = mats
     except Exception as e:  # noqa: BLE001
@@ -524,9 +535,11 @@ class EtsyPlatform(PlatformBase):
             # Winkeltalen: de eerste is de standaardtaal van de winkel (Mieneke: Nederlands,
             # met Engels erbij). Titel en omschrijving staan in die taal; de rest als vertaling.
             talen = ["en"]
+            ruwe_talen: dict = {}   # "en" -> "en-US": de code zoals Etsy hem in de winkel toont
             try:
                 rs = await c.get(f"{ETSY_BASE}/application/shops/{shop_id}", headers=headers)
                 if rs.status_code == 200 and rs.json().get("languages"):
+                    ruwe_talen = {str(t).split("-")[0].lower(): str(t) for t in rs.json()["languages"]}
                     talen = [str(t).split("-")[0].lower() for t in rs.json()["languages"]]
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"Etsy-winkeltalen niet gelezen: {e}")
@@ -601,24 +614,31 @@ class EtsyPlatform(PlatformBase):
                 # SKU (artikelnummer): kan alleen via de voorraad van de listing.
                 if item.get("sku"):
                     try:
-                        await self._zet_sku(c, headers, listing_id, str(item["sku"]), prijs)
+                        await self._zet_sku(c, headers, listing_id, str(item["sku"]), prijs, gereed)
                     except Exception as e:  # noqa: BLE001
                         waarschuwingen.append(f"SKU niet gezet: {e}")
                         logger.warning(f"Etsy SKU mislukt: {e}")
                 # Vertalingen (bij Mieneke de Engelse titel, omschrijving en tags onderaan).
                 for taal in extra_talen:
-                    try:
-                        rt = await c.post(
-                            f"{ETSY_BASE}/application/shops/{shop_id}/listings/{listing_id}/translations/{taal}",
-                            headers=headers,
-                            data={"title": etsy_titel(teksten[taal]["title"]),
-                                  "description": (teksten[taal].get("description") or "")[:65000],
-                                  **({"tags": ",".join(velden["tags"][taal])} if velden["tags"].get(taal) else {})})
-                        if rt.status_code not in (200, 201):
-                            raise RuntimeError(f"{rt.status_code}: {_etsy_fout(rt)}")
-                    except Exception as e:  # noqa: BLE001
-                        waarschuwingen.append(f"vertaling {taal} niet gezet: {e}")
-                        logger.warning(f"Etsy vertaling {taal} mislukt: {e}")
+                    gegevens = {"title": etsy_titel(teksten[taal]["title"]),
+                                "description": (teksten[taal].get("description") or "")[:65000],
+                                **({"tags": ",".join(velden["tags"][taal])} if velden["tags"].get(taal) else {})}
+                    fout_t = None
+                    # Eerst de korte code ("en"); weigert Etsy die, dan de code van de winkel ("en-US").
+                    for code in dict.fromkeys([taal, ruwe_talen.get(taal, taal)]):
+                        try:
+                            rt = await c.post(
+                                f"{ETSY_BASE}/application/shops/{shop_id}/listings/{listing_id}/translations/{code}",
+                                headers=headers, data=gegevens)
+                            if rt.status_code in (200, 201):
+                                fout_t = None
+                                break
+                            fout_t = f"{rt.status_code}: {_etsy_fout(rt)}"
+                        except Exception as e:  # noqa: BLE001
+                            fout_t = str(e)
+                    if fout_t:
+                        waarschuwingen.append(f"vertaling {taal} niet gezet: {fout_t}")
+                        logger.warning(f"Etsy vertaling {taal} mislukt: {fout_t}")
 
                 beleid = await self._retourbeleid(c, token, shop_id)
                 r = await c.patch(f"{ETSY_BASE}/application/shops/{shop_id}/listings/{listing_id}",
@@ -658,7 +678,7 @@ class EtsyPlatform(PlatformBase):
         except Exception as e:  # noqa: BLE001
             logger.warning(f"Etsy-rapport niet bewaard: {e}")
 
-    async def _zet_sku(self, c, headers: dict, listing_id: str, sku: str, prijs: float) -> None:
+    async def _zet_sku(self, c, headers: dict, listing_id: str, sku: str, prijs: float, gereed: int) -> None:
         r = await c.get(f"{ETSY_BASE}/application/listings/{listing_id}/inventory", headers=headers)
         r.raise_for_status()
         producten = r.json().get("products") or []
@@ -668,7 +688,9 @@ class EtsyPlatform(PlatformBase):
             for o in pr.get("offerings") or [{}]:
                 pj = o.get("price")
                 waarde = (pj.get("amount", 0) / (pj.get("divisor") or 100)) if isinstance(pj, dict) else prijs
-                aanbod.append({"price": waarde or prijs, "quantity": o.get("quantity") or 1, "is_enabled": True})
+                # Etsy-spec: price, quantity, is_enabled en readiness_state_id zijn alle vier verplicht.
+                aanbod.append({"price": waarde or prijs, "quantity": o.get("quantity") or 1,
+                               "is_enabled": True, "readiness_state_id": gereed})
             nieuw.append({"sku": sku, "property_values": [], "offerings": aanbod})
         r = await c.put(f"{ETSY_BASE}/application/listings/{listing_id}/inventory",
                         headers={**headers, "Content-Type": "application/json"}, json={"products": nieuw})

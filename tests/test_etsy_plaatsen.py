@@ -235,5 +235,32 @@ def test_plaatsen_met_sku_vertaling_rank_en_zonder_slottekst(monkeypatch):
     assert "title=Armband+NL" in bodies["lst"] and "price=25.0" in bodies["lst"] and "should_auto_renew=true" in bodies["lst"]
     assert "shop_section_id" not in bodies["lst"]  # jas: geen sectiematch
     assert bodies["inv"]["products"][0]["sku"] == "24-027.12"
+    assert bodies["inv"]["products"][0]["offerings"][0]["readiness_state_id"] == 6
     assert bodies["vert"][0].endswith("/translations/en") and "Bracelet+EN" in bodies["vert"][1]
     assert b'name="rank"' in bodies["img"][0] and b"alt nl" in bodies["img"][0]
+
+
+def test_materialen_zonder_koppelteken_tags_met():
+    assert etsy._etsy_woorden(["rose-goud", "14k"], 13, 45, koppelteken=False) == ["rose goud", "14k"]
+    assert etsy._etsy_woorden(["rose-goud"], 13, 20) == ["rose-goud"]
+
+
+def test_vertaling_valt_terug_op_winkelcode_en_us(monkeypatch):
+    calls, gezien = [], []
+    handler = _nep_etsy(calls)
+
+    def vang(req):
+        p, m = req.url.path, req.method
+        if p == "/v3/application/shops/99" and m == "GET":
+            return httpx.Response(200, json={"languages": ["nl", "en-US"]})
+        if "/translations/" in p:
+            gezien.append(p.rsplit("/", 1)[1])
+            return httpx.Response(400 if p.endswith("/en") else 201, json={"error": "x"})
+        return handler(req)
+
+    echt = httpx.AsyncClient
+    monkeypatch.setattr(etsy.httpx, "AsyncClient", lambda **kw: echt(transport=httpx.MockTransport(vang), **kw))
+    monkeypatch.setattr(etsy, "genereer_etsy_velden", lambda i, t: {"tags": {x: [] for x in t}, "materials": [], "alt_text": {}})
+    item = {**ITEM, "_etsy_teksten": {"nl": {"title": "NL", "description": "n"}, "en": {"title": "EN", "description": "e"}}}
+    res = asyncio.run(etsy.EtsyPlatform().create_listing(item, _creds()))
+    assert gezien == ["en", "en-US"] and "waarschuwingen" not in res
