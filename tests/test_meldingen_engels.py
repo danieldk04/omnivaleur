@@ -42,7 +42,8 @@ def _nederlandse_meldingen(bestand: str):
     for m in NAAR_DE_GEBRUIKER.finditer(src):
         for dubbel, backtick in TEKSTEN.findall(m.group(2)):
             tekst = dubbel or backtick
-            if NEDERLANDS.search(tekst):
+            # ${veld.value} is code, geen tekst: variabelenamen mogen Nederlands zijn
+            if NEDERLANDS.search(re.sub(r"\$\{[^}]*\}", "", tekst)):
                 uit.append((src[: m.start()].count("\n") + 1, tekst[:90]))
     return uit
 
