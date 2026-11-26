@@ -336,3 +336,10 @@ def test_eigenaar_krijgt_mail_bij_doorgestuurde_vinted_mail(monkeypatch):
     monkeypatch.setattr(wh.settings, "vinted_mail_open_voor_klanten", True)
     r, _ = _aanroep(monkeypatch, mail=MAIL, tabellen=_Tabellen(CREDS, ITEMS, ACTIEF))
     assert verstuurd == []
+
+
+def test_onderwerp_met_gekrulde_apostrof_wordt_herkend():
+    """Echte mail van 26-11-2026: 'You\u2019ve sold an item on Vinted' (gekrulde apostrof)."""
+    body = "Hello x,\n\nwatchjerker has bought\n(984) Blue Ralph Lauren Zip Vest - Men M - Very Good\n\u20ac31.99\nWe will transfer"
+    assert vm.lees_verkoopmail("You\u2019ve sold an item on Vinted", body, None) == {
+        "titel": "(984) Blue Ralph Lauren Zip Vest - Men M - Very Good", "prijs": 31.99}

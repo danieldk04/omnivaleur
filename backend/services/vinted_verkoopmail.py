@@ -58,6 +58,8 @@ def _prijs_naar_getal(tekst: str) -> float | None:
 
 def normaliseer_titel(titel: str) -> str:
     t = _html.unescape(titel or "")
+    # Vinted schrijft "You’ve" met een gekrulde apostrof (echte mail 26-11-2026).
+    t = t.replace("\u2019", "'").replace("\u2018", "'").replace("\u02bc", "'")
     t = re.sub(r"\s+", " ", t).strip().lower()
     return t
 
