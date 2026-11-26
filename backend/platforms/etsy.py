@@ -3,6 +3,7 @@ Etsy v3 API integration.
 Requires ETSY_API_KEYSTRING + ETSY_SHARED_SECRET env vars and an OAuth2 user token.
 """
 from __future__ import annotations
+import asyncio
 import base64
 import re
 import hashlib
@@ -180,17 +181,32 @@ def _woorden(tekst: str) -> set:
 _SYNONIEM = {"vest": "cardigan", "trui": "sweater", "jas": "jacket", "jack": "jacket",
              "broek": "pant", "rok": "skirt", "jurk": "dress", "overhemd": "shirt",
              "heren": "men", "dames": "women", "dame": "women", "man": "men", "vrouw": "women",
-             "hoodie": "sweatshirt", "gilet": "vest", "tas": "bag", "schoen": "shoe"}
+             "hoodie": "sweatshirt", "gilet": "vest", "tas": "bag", "schoen": "shoe",
+             "armband": "bracelet", "armbanden": "bracelet", "ketting": "necklace", "collier": "necklace",
+             "oorbel": "earring", "oorbellen": "earring", "oorbel": "earring", "broche": "brooch",
+             "hanger": "pendant", "horloge": "watch", "ringen": "ring", "manchetknoop": "cufflink",
+             "kralenarmband": "bracelet", "kralenketting": "necklace"}
+# Woorden die zeggen dat het om kralen gaat: dan hoort "Beaded ..." bij de keuze.
+_KRALEN = re.compile(r"\b(kraal|kralen|bead|beads|beaded|kralenarmband|kralenketting|koraal|coral)\b", re.I)
 
 
 def kies_taxonomie(bladeren: list, item: dict):
     """Kiest het Etsy-blad dat het best bij categorie, titel en doelgroep past, of None."""
     vraag = _woorden(f"{item.get('category') or ''} {item.get('title') or ''} {item.get('gender') or ''}")
+    # Een kralenarmband zit onder "Beaded Bracelets"; "kraal" in titel, materiaal of
+    # categorie is genoeg om dat blad voor te trekken.
+    kralen = bool(_KRALEN.search(f"{item.get('title') or ''} {item.get('material') or ''} {item.get('category') or ''}"))
     vraag |= {_SYNONIEM[w] for w in list(vraag) if w in _SYNONIEM}
+    if kralen:
+        vraag.add("beaded")
     if not vraag:
         return None
     beste, beste_score = None, 0.0
     for tid, pad in bladeren:
+        # "Craft Supplies & Tools" (onder andere "Bracelet Blanks" = blanco armbanden)
+        # is voor wie knutselt; een afgewerkt sieraad hoort daar nooit.
+        if pad and _woorden(pad[0]) >= {"craft", "supply"} and not item.get("is_supply"):
+            continue
         naam_w = _woorden(pad[-1])
         pad_w = _woorden(" ".join(pad[:-1]))
         if not naam_w:
@@ -202,6 +218,111 @@ def kies_taxonomie(bladeren: list, item: dict):
         if score > beste_score:
             beste, beste_score = tid, score
     return beste
+
+
+_TYPE_STAMMEN = (  # (woorden in titel/categorie, stam in de sectienaam van de verkoper)
+    (("bracelet", "armband", "bangle"), "armband"),
+    (("necklace", "ketting", "collier", "choker"), ("ketting", "collier")),
+    (("earring", "oorbel", "oorbellen"), "oorbel"),
+    (("brooch", "broche"), "broche"),
+    (("pendant", "hanger"), "hanger"),
+    (("ring", "ringen"), "ring"),
+)
+
+
+def kies_sectie(secties: list, item: dict, jaar) -> int | None:
+    """Het winkelsectie-id waar dit artikel in hoort, of None.
+
+    Mieneke (Voordeelsieraden) heeft secties als "Antieke Armbanden" en "Vintage
+    Armbanden". We zoeken de sectie met de soort sieraad EN de leeftijdswoord
+    (antiek = 100+ jaar, anders vintage). Geen duidelijke match: geen sectie; een
+    verkeerde sectie is erger dan geen."""
+    tekst = f"{item.get('category') or ''} {item.get('title') or ''}".lower()
+    woorden = set(re.findall(r"[a-zà-ÿ]+", tekst))
+    stammen = None
+    for sleutels, stam in _TYPE_STAMMEN:
+        if any(x.startswith(sl) for x in woorden for sl in sleutels):
+            stammen = (stam,) if isinstance(stam, str) else stam
+            break
+    if not stammen:
+        return None
+    try:
+        antiek = int(jaar) <= datetime.now(timezone.utc).year - 100
+    except (TypeError, ValueError):
+        antiek = False
+    era = "antiek" if antiek else "vintage"
+    for sec in secties or []:
+        titel = (sec.get("title") or "").lower()
+        if era in titel and any(st in titel for st in stammen):
+            return int(sec["shop_section_id"])
+    return None
+
+
+def _etsy_woorden(lijst, maximaal: int, lengte: int) -> list:
+    """Tags/materialen zoals Etsy ze accepteert: letters, cijfers, spatie, koppelteken;
+    maximaal `lengte` tekens, geen dubbelen."""
+    uit, gezien = [], set()
+    for t in lijst or []:
+        t = re.sub(r"[^0-9A-Za-zÀ-ÿ \-]", "", str(t)).strip().lower()
+        t = re.sub(r"\s+", " ", t)
+        if not t or len(t) > lengte or t in gezien:
+            continue
+        gezien.add(t)
+        uit.append(t)
+        if len(uit) >= maximaal:
+            break
+    return uit
+
+
+def _basis_velden(item: dict, talen: list) -> dict:
+    """Vangnet zonder taalmodel: tags, materialen en alt-tekst uit de artikelvelden."""
+    ruw = [item.get("brand"), item.get("category"), item.get("color"), "vintage", "antique"]
+    ruw += re.findall(r"[A-Za-zÀ-ÿ]{4,}", item.get("title") or "")
+    mats = [m for m in re.split(r"[,/;]", item.get("material") or "") if m.strip()]
+    titel = etsy_titel(item.get("title") or "")
+    return {
+        "tags": {t: _etsy_woorden(ruw + mats, 13, 20) for t in talen},
+        "materials": _etsy_woorden(mats, 13, 45),
+        "alt_text": {t: titel[:500] for t in talen},
+    }
+
+
+def genereer_etsy_velden(item: dict, talen: list) -> dict:
+    """Tags (13), materialen en alt-tekst per taal, met één klein modelverzoek.
+    Lukt dat niet, dan de eenvoudige velden uit het artikel zelf."""
+    basis = _basis_velden(item, talen)
+    try:
+        import json
+        from backend.services.crosslist import _claude_client, VERTAAL_MODEL
+        opdracht = (
+            "You write Etsy search fields for ONE vintage/antique item. Use only facts in the data.\n"
+            f"Languages needed: {', '.join(talen)} (ISO codes).\n"
+            "Return ONLY JSON: {\"tags\": {<lang>: [13 tags]}, \"materials\": [up to 6 materials in the "
+            f"FIRST language ({talen[0]})], \"alt_text\": {{<lang>: \"one factual sentence describing the main photo, "
+            "max 300 chars\"}}}.\n"
+            "Tags: exactly 13 per language, each max 20 characters, letters/digits/spaces only, lowercase, "
+            "buyer search phrases (type of jewelry, material, style, era like vintage or antique, occasion/gift, "
+            "colour). No brand-less guessing of facts that are not given.\n\n"
+            f"Title: {item.get('title')}\nCategory: {item.get('category')}\nBrand: {item.get('brand')}\n"
+            f"Material: {item.get('material')}\nColor: {item.get('color')}\n"
+            f"Description: {(item.get('description') or '')[:1500]}")
+        r = _claude_client().messages.create(model=VERTAAL_MODEL, max_tokens=2000,
+                                             messages=[{"role": "user", "content": opdracht}])
+        tekst = "".join(b.text for b in r.content if b.type == "text")
+        data = json.loads(tekst[tekst.index("{"): tekst.rindex("}") + 1])
+        for t in talen:
+            tags = _etsy_woorden((data.get("tags") or {}).get(t), 13, 20)
+            if tags:
+                basis["tags"][t] = tags
+            alt = ((data.get("alt_text") or {}).get(t) or "").strip()
+            if alt:
+                basis["alt_text"][t] = alt[:500]
+        mats = _etsy_woorden(data.get("materials"), 13, 45)
+        if mats:
+            basis["materials"] = mats
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Etsy-velden via model mislukt, eenvoudige velden gebruikt: {e}")
+    return basis
 
 
 class EtsyPlatform(PlatformBase):
@@ -397,12 +518,46 @@ class EtsyPlatform(PlatformBase):
 
         async with httpx.AsyncClient(timeout=60) as c:
             verzend, gereed = await self._zorg_voor_profielen(c, token, shop_id, item)
-            tags = [t for t in {(item.get("brand") or "").strip().lower(), "vintage",
-                                (item.get("category") or "").strip().lower()} if t and len(t) <= 20][:13]
+            headers = {"Authorization": f"Bearer {token}", "x-api-key": _api_key()}
+            waarschuwingen: list[str] = []
+
+            # Winkeltalen: de eerste is de standaardtaal van de winkel (Mieneke: Nederlands,
+            # met Engels erbij). Titel en omschrijving staan in die taal; de rest als vertaling.
+            talen = ["en"]
+            try:
+                rs = await c.get(f"{ETSY_BASE}/application/shops/{shop_id}", headers=headers)
+                if rs.status_code == 200 and rs.json().get("languages"):
+                    talen = [str(t).split("-")[0].lower() for t in rs.json()["languages"]]
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"Etsy-winkeltalen niet gelezen: {e}")
+            teksten = item.get("_etsy_teksten") or {}
+            primair = talen[0] if talen[0] in ("nl", "en") else "en"
+            tekst = teksten.get(primair) or {"title": item["title"], "description": item.get("description")}
+            extra_talen = [t for t in ("en", "nl") if t in talen and t != primair and teksten.get(t)]
+
+            velden = await asyncio.to_thread(genereer_etsy_velden, {**item, **tekst}, [primair] + [t for t in extra_talen])
+
+            secties, sectie_id = [], None
+            try:
+                rsec = await c.get(f"{ETSY_BASE}/application/shops/{shop_id}/sections", headers=headers)
+                if rsec.status_code == 200:
+                    secties = rsec.json().get("results") or []
+                    sectie_id = kies_sectie(secties, item, jaar_uit_item(item))
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"Etsy-secties niet gelezen: {e}")
+
+            prijs = float(item.get("price_etsy") or item["price"])
+            try:
+                pct = float(item.get("price_markup_pct") or 0)
+            except (TypeError, ValueError):
+                pct = 0.0
+            if pct and not item.get("price_etsy"):
+                prijs = round(prijs * (1 + pct / 100), 2)
+
             payload = {
-                "title": etsy_titel(item["title"]),
-                "description": (item.get("description") or "")[:65000],
-                "price": float(item["price"]),
+                "title": etsy_titel(tekst["title"]),
+                "description": (tekst.get("description") or "")[:65000],
+                "price": prijs,
                 "quantity": 1,
                 "who_made": "someone_else",
                 "when_made": when_made,
@@ -411,10 +566,14 @@ class EtsyPlatform(PlatformBase):
                 "shipping_profile_id": verzend,
                 "readiness_state_id": gereed,
                 "type": "physical",
+                "should_auto_renew": "true",
             }
-            if tags:
-                payload["tags"] = ",".join(tags)
-            headers = {"Authorization": f"Bearer {token}", "x-api-key": _api_key()}
+            if velden["tags"].get(primair):
+                payload["tags"] = ",".join(velden["tags"][primair])
+            if velden["materials"]:
+                payload["materials"] = ",".join(velden["materials"])
+            if sectie_id:
+                payload["shop_section_id"] = sectie_id
             r = await c.post(f"{ETSY_BASE}/application/shops/{shop_id}/listings", data=payload, headers=headers)
             if r.status_code not in (200, 201):
                 raise RuntimeError(f"Etsy create listing failed {r.status_code}: {_etsy_fout(r)}")
@@ -425,16 +584,42 @@ class EtsyPlatform(PlatformBase):
             }
             try:
                 fouten = 0
-                for foto in (item.get("photo_urls") or [])[:10]:
+                fotos = (item.get("photo_urls") or [])[:10]
+                for i, foto in enumerate(fotos):
                     try:
-                        await self._upload_image(c, shop_id, listing_id, foto, token)
+                        # rank = plek in de reeks: zonder staat de laatst geuploade foto vooraan.
+                        await self._upload_image(c, shop_id, listing_id, foto, token, rank=i + 1,
+                                                 alt_text=(velden["alt_text"].get(primair) if i == 0 else None))
                     except Exception as e:  # noqa: BLE001
                         fouten += 1
                         logger.warning(f"Etsy image upload failed: {e}")
                 if item.get("_etsy_concept"):
                     return {**uitkomst, "state": "draft"}
-                if fouten == len(item.get("photo_urls") or []):
+                if fouten == len(fotos):
                     raise RuntimeError("Etsy accepted none of the photos")
+
+                # SKU (artikelnummer): kan alleen via de voorraad van de listing.
+                if item.get("sku"):
+                    try:
+                        await self._zet_sku(c, headers, listing_id, str(item["sku"]), prijs)
+                    except Exception as e:  # noqa: BLE001
+                        waarschuwingen.append(f"SKU niet gezet: {e}")
+                        logger.warning(f"Etsy SKU mislukt: {e}")
+                # Vertalingen (bij Mieneke de Engelse titel, omschrijving en tags onderaan).
+                for taal in extra_talen:
+                    try:
+                        rt = await c.post(
+                            f"{ETSY_BASE}/application/shops/{shop_id}/listings/{listing_id}/translations/{taal}",
+                            headers=headers,
+                            data={"title": etsy_titel(teksten[taal]["title"]),
+                                  "description": (teksten[taal].get("description") or "")[:65000],
+                                  **({"tags": ",".join(velden["tags"][taal])} if velden["tags"].get(taal) else {})})
+                        if rt.status_code not in (200, 201):
+                            raise RuntimeError(f"{rt.status_code}: {_etsy_fout(rt)}")
+                    except Exception as e:  # noqa: BLE001
+                        waarschuwingen.append(f"vertaling {taal} niet gezet: {e}")
+                        logger.warning(f"Etsy vertaling {taal} mislukt: {e}")
+
                 beleid = await self._retourbeleid(c, token, shop_id)
                 r = await c.patch(f"{ETSY_BASE}/application/shops/{shop_id}/listings/{listing_id}",
                                   data={"state": "active", "return_policy_id": beleid}, headers=headers)
@@ -447,15 +632,57 @@ class EtsyPlatform(PlatformBase):
                 except Exception:  # noqa: BLE001
                     pass
                 raise
-        return {**uitkomst, "state": "active"}
+            rapport = {"listing_id": listing_id, "taxonomy_id": int(taxonomy_id),
+                       "taxonomie_pad": next((" > ".join(pd) for tid, pd in _taxonomie_cache["bladeren"]
+                                              if tid == int(taxonomy_id)), None),
+                       "talen": talen, "primair": primair, "sectie_id": sectie_id,
+                       "secties": [x.get("title") for x in secties], "prijs": prijs,
+                       "tags": velden["tags"], "materialen": velden["materials"],
+                       "sku": item.get("sku"), "waarschuwingen": waarschuwingen,
+                       "tijd": datetime.now(timezone.utc).isoformat()}
+            self._bewaar_rapport(credentials.get("user_id"), rapport)
+        return {**uitkomst, "state": "active", **({"waarschuwingen": waarschuwingen} if waarschuwingen else {})}
 
-    async def _upload_image(self, client, shop_id, listing_id, photo_url, token):
+    def _bewaar_rapport(self, uid, rapport: dict) -> None:
+        """Wat we naar Etsy stuurden, in extra_data.laatste_listing van de koppeling:
+        zo is een plaatsing na te kijken zonder Etsy-sleutels."""
+        if not uid:
+            return
+        try:
+            from backend.database import get_db
+            db = get_db()
+            rij = (db.table("platform_credentials").select("extra_data").eq("user_id", uid)
+                   .eq("platform", "etsy").limit(1).execute().data or [{}])[0]
+            extra = {**(rij.get("extra_data") or {}), "laatste_listing": rapport}
+            db.table("platform_credentials").update({"extra_data": extra}).eq("user_id", uid).eq("platform", "etsy").execute()
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Etsy-rapport niet bewaard: {e}")
+
+    async def _zet_sku(self, c, headers: dict, listing_id: str, sku: str, prijs: float) -> None:
+        r = await c.get(f"{ETSY_BASE}/application/listings/{listing_id}/inventory", headers=headers)
+        r.raise_for_status()
+        producten = r.json().get("products") or []
+        nieuw = []
+        for pr in producten or [{}]:
+            aanbod = []
+            for o in pr.get("offerings") or [{}]:
+                pj = o.get("price")
+                waarde = (pj.get("amount", 0) / (pj.get("divisor") or 100)) if isinstance(pj, dict) else prijs
+                aanbod.append({"price": waarde or prijs, "quantity": o.get("quantity") or 1, "is_enabled": True})
+            nieuw.append({"sku": sku, "property_values": [], "offerings": aanbod})
+        r = await c.put(f"{ETSY_BASE}/application/listings/{listing_id}/inventory",
+                        headers={**headers, "Content-Type": "application/json"}, json={"products": nieuw})
+        if r.status_code not in (200, 201):
+            raise RuntimeError(f"{r.status_code}: {_etsy_fout(r)}")
+
+    async def _upload_image(self, client, shop_id, listing_id, photo_url, token, rank=None, alt_text=None):
         img_resp = await client.get(photo_url)
         img_resp.raise_for_status()
         r = await client.post(
             f"{ETSY_BASE}/application/shops/{shop_id}/listings/{listing_id}/images",
             headers={"Authorization": f"Bearer {token}", "x-api-key": _api_key()},
             files={"image": ("photo.jpg", img_resp.content, "image/jpeg")},
+            data={**({"rank": str(rank)} if rank else {}), **({"alt_text": alt_text[:500]} if alt_text else {})},
         )
         r.raise_for_status()
 

@@ -1855,8 +1855,12 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     dutch_item = None
     # Per kanaal de taal; Vinted kan per verkoper Nederlands zijn.
     _taal_van = {p: taal_van_platform(p, user_id) for p in platforms}
-    need_en = any(t == "en" for t in _taal_van.values())
-    need_nl = any(t == "nl" for t in _taal_van.values())
+    # Etsy: titel en omschrijving in de standaardtaal van de winkel met de andere als
+    # vertaling (Mieneke, 26-11-2026), dus beide talen klaarzetten.
+    if "etsy" in _taal_van:
+        _taal_van["etsy"] = None
+    need_en = any(t == "en" for t in _taal_van.values()) or "etsy" in platforms
+    need_nl = any(t == "nl" for t in _taal_van.values()) or "etsy" in platforms
 
     brand = item.get("brand") or None
 
@@ -1945,6 +1949,19 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
                 _strip_text_tags(base.get("description") or ""), _slot), _slot_vinted))
             titel = _zonder_links(titel)
             return {**base, "title": titel, "description": beschrijving}
+        if platform == "etsy":
+            # Geen vaste slottekst op Etsy: internationaal publiek, verzending staat daar
+            # apart (Mieneke, 26-11-2026). Tekst zoals getypt, plus beide talen.
+            def _schoon(t):
+                return _zonder_slot_ook_ingelezen(_zonder_slot_ook_ingelezen(
+                    _strip_text_tags(t or ""), _slot), _slot_vinted) if (_slot or _slot_vinted) else _strip_text_tags(t or "")
+            teksten = {}
+            for taal, bron in (("en", english_item), ("nl", dutch_item)):
+                if bron:
+                    teksten[taal] = {"title": _strip_text_tags(bron.get("title") or ""),
+                                     "description": _schoon(bron.get("description"))}
+            return {**base, "title": titel, "description": _schoon(base.get("description")),
+                    "_etsy_teksten": teksten}
         beschrijving = omschrijving_met_slot(_strip_text_tags(base.get("description") or ""),
                                              platform, _slot, _slot_vinted)
         # Marktplaats en 2dehands rekenen voor een advertentie met een webadres

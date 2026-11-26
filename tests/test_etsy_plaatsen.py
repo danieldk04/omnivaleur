@@ -173,3 +173,67 @@ def test_testverkoper_krijgt_etsy_zonder_plan(monkeypatch):
     t._cache.clear()
     monkeypatch.setattr("backend.services.referral_mail.email_van", lambda u: "iemand@x.nl")
     assert t.etsy_toegang("iemand") is False
+
+
+def test_kralenarmband_wordt_geen_blanco_armband():
+    bladen = [(1, ("Craft Supplies & Tools", "Jewelry Making", "Bracelet Blanks")),
+              (2, ("Jewelry", "Bracelets", "Chain Bracelets")),
+              (3, ("Jewelry", "Bracelets", "Beaded Bracelets")),
+              (4, ("Jewelry", "Necklaces", "Beaded Necklaces"))]
+    item = {"title": "Vintage 2-strand blood coral bracelet with gold clasp", "category": "Armbanden",
+            "material": "bloedkoraal, goud"}
+    assert etsy.kies_taxonomie(bladen, item) == 3
+
+
+def test_sectie_antiek_of_vintage_naar_soort():
+    secties = [{"shop_section_id": 1, "title": "Armbanden"}, {"shop_section_id": 2, "title": "Antieke Armbanden"},
+               {"shop_section_id": 3, "title": "Vintage Armbanden"}, {"shop_section_id": 4, "title": "Vintage Kettingen"}]
+    it = {"title": "Bloedkoraal bracelet", "category": "Armbanden"}
+    assert etsy.kies_sectie(secties, it, 1980) == 3
+    assert etsy.kies_sectie(secties, it, 1900) == 2
+    assert etsy.kies_sectie(secties, {"title": "Vintage ring", "category": "ringen"}, 1980) is None
+
+
+def test_tags_en_materialen_zijn_etsy_proof():
+    assert etsy._etsy_woorden(["Antieke Armband!", "x" * 25, "antieke armband", "14k goud"], 13, 20) == ["antieke armband", "14k goud"]
+
+
+def test_plaatsen_met_sku_vertaling_rank_en_zonder_slottekst(monkeypatch):
+    calls, bodies = [], {}
+    handler = _nep_etsy(calls)
+
+    def vang(req):
+        p, m = req.url.path, req.method
+        if p == "/v3/application/shops/99" and m == "GET":
+            return httpx.Response(200, json={"languages": ["nl", "en"]})
+        if p.endswith("/sections"):
+            return httpx.Response(200, json={"results": [{"shop_section_id": 31, "title": "Vintage Armbanden"}]})
+        if p.endswith("/inventory") and m == "GET":
+            return httpx.Response(200, json={"products": [{"offerings": [{"price": {"amount": 2500, "divisor": 100}, "quantity": 1}]}]})
+        if p.endswith("/inventory") and m == "PUT":
+            bodies["inv"] = json.loads(req.content)
+            return httpx.Response(200, json={})
+        if "/translations/" in p:
+            bodies["vert"] = (p, req.content.decode())
+            return httpx.Response(201, json={})
+        if p.endswith("/shops/99/listings") and m == "POST":
+            bodies["lst"] = req.content.decode()
+        if p.endswith("/images"):
+            bodies.setdefault("img", []).append(req.content)
+        return handler(req)
+
+    echt = httpx.AsyncClient
+    monkeypatch.setattr(etsy.httpx, "AsyncClient", lambda **kw: echt(transport=httpx.MockTransport(vang), **kw))
+    monkeypatch.setattr(etsy, "genereer_etsy_velden", lambda i, t: {
+        "tags": {x: ["vintage"] for x in t}, "materials": ["goud"], "alt_text": {x: "alt " + x for x in t}})
+    item = {**ITEM, "sku": "24-027.12", "price_markup_pct": 25, "category": "Armbanden", "title": "Vintage 1990 armband",
+            "_etsy_teksten": {"nl": {"title": "Armband NL", "description": "nl tekst"},
+                              "en": {"title": "Bracelet EN", "description": "en text"}}}
+    item["title"] = "Vintage 1990 jas"; item["category"] = "jas"
+    res = asyncio.run(etsy.EtsyPlatform().create_listing(item, _creds()))
+    assert res["state"] == "active"
+    assert "title=Armband+NL" in bodies["lst"] and "price=25.0" in bodies["lst"] and "should_auto_renew=true" in bodies["lst"]
+    assert "shop_section_id" not in bodies["lst"]  # jas: geen sectiematch
+    assert bodies["inv"]["products"][0]["sku"] == "24-027.12"
+    assert bodies["vert"][0].endswith("/translations/en") and "Bracelet+EN" in bodies["vert"][1]
+    assert b'name="rank"' in bodies["img"][0] and b"alt nl" in bodies["img"][0]
