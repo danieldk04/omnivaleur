@@ -84,7 +84,43 @@ def _url_path(language: str, pillar: str, slug: str) -> str:
     return f"/{folder}/{slug}"
 
 
+
+# Korte geheugencache voor publieke contentpagina's (26-11-2026). Elke pagina deed drie
+# synchrone database-aanroepen; bij een crawler die tien pagina's tegelijk opvraagt gaf
+# dat 502's na 6 tot 16 seconden (Ahrefs-crawl). Gegevens blijven 5 minuten staan.
+import copy as _copy
+import time as _time
+import threading as _threading
+
+_PAGINA_CACHE: dict = {}
+_PAGINA_CACHE_TTL = 300
+_PAGINA_CACHE_LOCK = _threading.Lock()
+
+
+def _gecached(sleutel, laad):
+    nu = _time.monotonic()
+    with _PAGINA_CACHE_LOCK:
+        hit = _PAGINA_CACHE.get(sleutel)
+    if hit and nu - hit[0] < _PAGINA_CACHE_TTL:
+        return _copy.deepcopy(hit[1])
+    waarde = laad()
+    with _PAGINA_CACHE_LOCK:
+        if len(_PAGINA_CACHE) > 600:
+            _PAGINA_CACHE.clear()
+        _PAGINA_CACHE[sleutel] = (nu, _copy.deepcopy(waarde))
+    return waarde
+
+
+def wis_pagina_cache() -> None:
+    with _PAGINA_CACHE_LOCK:
+        _PAGINA_CACHE.clear()
+
+
 def _get_page(language: str, pillar: str, slug: str) -> dict | None:
+    return _gecached(("page", language, pillar, slug), lambda: _get_page_uit_db(language, pillar, slug))
+
+
+def _get_page_uit_db(language: str, pillar: str, slug: str) -> dict | None:
     db = get_db()
     db_slug = slug if language == "en" else f"{slug}-{language}"
     result = (
@@ -165,6 +201,10 @@ def _body_with_anchors(body_html: str, toc: list[dict]) -> str:
 
 
 def _related_pages(page: dict, limit: int = 3) -> list[dict]:
+    return _gecached(("verwant", page.get("language", "en"), page["pillar"], page["slug"], limit), lambda: _related_pages_uit_db(page, limit))
+
+
+def _related_pages_uit_db(page: dict, limit: int = 3) -> list[dict]:
     """
     Drie verwante artikelen voor onderaan de pagina. Eerst uit dezelfde pillar
     (die gaan over hetzelfde type vraag), aangevuld met andere. Zonder zo'n blok
@@ -305,24 +345,24 @@ def _render_page(request: Request, language: str, pillar: str, slug: str) -> HTM
 
 
 @router.get("/crosslisting/{slug}", response_class=HTMLResponse)
-async def combo_page_en(request: Request, slug: str):
+def combo_page_en(request: Request, slug: str):
     return _render_page(request, "en", "A", slug)
 
 
 @router.get("/reseller-tools/{slug}", response_class=HTMLResponse)
-async def niche_page_en(request: Request, slug: str):
+def niche_page_en(request: Request, slug: str):
     return _render_page(request, "en", "B", slug)
 
 
 @router.get("/{language}/crosslisten/{slug}", response_class=HTMLResponse)
-async def combo_page_lang(request: Request, language: str, slug: str):
+def combo_page_lang(request: Request, language: str, slug: str):
     if language not in LANGUAGES:
         raise HTTPException(status_code=404, detail="Unknown language")
     return _render_page(request, language, "A", slug)
 
 
 @router.get("/{language}/reseller-tools/{slug}", response_class=HTMLResponse)
-async def niche_page_lang(request: Request, language: str, slug: str):
+def niche_page_lang(request: Request, language: str, slug: str):
     if language not in LANGUAGES:
         raise HTTPException(status_code=404, detail="Unknown language")
     return _render_page(request, language, "B", slug)
@@ -344,7 +384,7 @@ _COMPARISON_SLUG_REDIRECTS = {
 
 
 @router.get("/vs/{slug}", response_class=HTMLResponse)
-async def comparison_page_en(request: Request, slug: str):
+def comparison_page_en(request: Request, slug: str):
     new_slug = _COMPARISON_SLUG_REDIRECTS.get(slug)
     if new_slug:
         return RedirectResponse(url=f"/vs/{new_slug}", status_code=301)
@@ -352,7 +392,7 @@ async def comparison_page_en(request: Request, slug: str):
 
 
 @router.get("/{language}/vergelijking/{slug}", response_class=HTMLResponse)
-async def comparison_page_lang(request: Request, language: str, slug: str):
+def comparison_page_lang(request: Request, language: str, slug: str):
     if language not in LANGUAGES:
         raise HTTPException(status_code=404, detail="Unknown language")
     new_slug = _COMPARISON_SLUG_REDIRECTS.get(slug)
@@ -457,12 +497,12 @@ def _render_blog_index(request: Request, language: str = "en") -> HTMLResponse:
 
 
 @router.get("/blog", response_class=HTMLResponse)
-async def blog_index_default(request: Request):
+def blog_index_default(request: Request):
     return _render_blog_index(request, "en")
 
 
 @router.get("/{language}/blog", response_class=HTMLResponse)
-async def blog_index_lang(request: Request, language: str):
+def blog_index_lang(request: Request, language: str):
     if language not in BLOG_INDEX_PATHS or language == "en":
         raise HTTPException(status_code=404, detail="Page not found")
     return _render_blog_index(request, language)
@@ -520,6 +560,7 @@ async def generate_content_page(body: dict, x_admin_secret: str | None = Header(
         raise HTTPException(status_code=400, detail="invalid region or pillar")
 
     result = await run_pipeline(keyword, region, pillar, slug)
+    wis_pagina_cache()
     if not result["success"]:
         raise HTTPException(status_code=502, detail=result.get("error", "generation failed"))
     return result
@@ -546,6 +587,7 @@ def set_content_image(body: dict, x_admin_secret: str | None = Header(default=No
         raise HTTPException(status_code=404, detail="page not found")
 
     db.table("content_pages").update({"featured_image_url": image_url}).eq("id", existing[0]["id"]).execute()
+    wis_pagina_cache()
     return {"success": True, "intent_key": intent_key, "image_url": image_url}
 
 
