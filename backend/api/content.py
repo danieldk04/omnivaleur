@@ -21,7 +21,7 @@ from backend.content.branding import (  # noqa: F401  (her-geëxporteerd voor de
     WEBSTORE_URL,
     merk_profielen,
 )
-from backend.content.pipeline import run_pipeline
+from backend.content.pipeline import run_pipeline, _software_json_ld
 from backend.database import get_db, naast_de_lus
 from backend.tools_data import sitemap_paden
 
@@ -291,7 +291,7 @@ def _render_page(request: Request, language: str, pillar: str, slug: str) -> HTM
             "org_json_ld": merk_json_ld(),
             "merk_links": MERK_LINKS,
             "faq_json_ld": faq_json_ld,
-            "software_json_ld": page.get("software_application_json_ld") or {},
+            "software_json_ld": _software_json_ld(),  # altijd vers: opgeslagen kopieen misten price (Ahrefs, 26-11)
             "article_json_ld": article_json_ld,
             "breadcrumb_json_ld": breadcrumb_json_ld,
             "language_switch": language_switch,

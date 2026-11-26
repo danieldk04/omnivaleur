@@ -105,7 +105,7 @@ def _software_json_ld() -> dict:
         "applicationCategory": "BusinessApplication",
         "operatingSystem": "Web",
         "description": "Automatically cross-list and sync listings across Marktplaats, 2dehands, Vinted, eBay, Shopify, WooCommerce and Facebook Marketplace (beta), including background inventory sync.",
-        "offers": {"@type": "Offer", "priceCurrency": "EUR"},
+        "offers": {"@type": "Offer", "price": "9.99", "priceCurrency": "EUR"},  # Google eist price; vanaf-prijs (Light)
         "featureList": [
             "Automatic cross-listing to multiple platforms",
             "Background sync of sold items",
