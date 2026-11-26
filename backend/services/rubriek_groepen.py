@@ -27,6 +27,11 @@ twintig.
 
 Een 294-artikelen-import kost daarmee ongeveer 13 cent.
 
+GEMINI EERST (26-11-2026, Daniel: "leun op gratis tegoeden, Claude als goedkope
+reserve"). Elke groepsvraag gaat eerst naar de gratis Google-sleutel; alleen als
+Gemini niets bruikbaars geeft (429, te druk, afgekapt) volgt Claude Haiku. De
+rem op Claude (DAGMAX_ARTIKELEN) blijft gelden.
+
 DRIE DINGEN DIE HIER BEWUST ZO ZIJN:
 
 1. Dezelfde regels als de enkele vraag (imports._bouw_rubrieksprompt), en
@@ -59,6 +64,9 @@ PER_RONDE = 400
 GELIJKTIJDIG = 2
 
 _DAG: dict = {"dag": None, "n": 0}
+
+# Wie beantwoordde de groepsvragen sinds de laatste herstart (zichtbaar op /health).
+TELLER: dict = {"gemini": 0, "claude": 0, "geen": 0}
 
 _SLOT = (
     'Respond with ONLY a JSON array with exactly one object per listing, in order: '
@@ -109,6 +117,15 @@ def _vraag_claude(systeem: str, gebruiker: str, n: int) -> str:
     return "".join(getattr(b, "text", "") or "" for b in (bericht.content or []))
 
 
+def _vraag_gemini(systeem: str, gebruiker: str, n: int) -> str:
+    """Eén groepsvraag aan Gemini (gratis laag). Leeg = het lukte niet."""
+    from backend.services import gemini_vertaling
+    if not gemini_vertaling.beschikbaar():
+        return ""
+    return gemini_vertaling.vraag(f"{systeem}\n\n{gebruiker}", max_tokens=60 * n + 100,
+                                  tijdslimiet=60.0, denken=False) or ""
+
+
 def _lees_antwoord(raw: str, groep: list[dict]) -> dict[str, dict]:
     """{item_id: {'gender','category'} of {'geen_tak': True}} voor wat telt.
     Een artikel dat ontbreekt in het antwoord of niet telt, staat er niet in."""
@@ -145,7 +162,8 @@ async def deel_in(items: list[dict]) -> dict[str, dict]:
     """Rubrieken voor een lijst artikelen, twintig per vraag. Geeft per artikel
     dat een antwoord kreeg {'gender','category'} of {'geen_tak': True}. Een groep
     die twee keer mislukt, ontbreekt gewoon: dan telt het niet als antwoord."""
-    if not items or not settings.anthropic_api_key:
+    from backend.services import gemini_vertaling
+    if not items or not (gemini_vertaling.beschikbaar() or settings.anthropic_api_key):
         return {}
     systeem = _systeemtekst()
     groepen = [items[i:i + GROEP] for i in range(0, len(items), GROEP)]
@@ -153,22 +171,41 @@ async def deel_in(items: list[dict]) -> dict[str, dict]:
     uit: dict[str, dict] = {}
 
     async def een(groep: list[dict]):
+        gebruiker = _gebruikertekst(groep)
+        # 1. Gemini op de gratis laag: kost niets. Een antwoord met minstens één
+        #    bruikbaar artikel telt; wat Gemini onbruikbaar vond ("low", buiten de
+        #    lijst) blijft leeg en krijgt een volgende kans, net als bij Claude.
+        try:
+            async with rem:  # niet twintig tegelijk op de gratis sleutel (429)
+                raw = await asyncio.to_thread(_vraag_gemini, systeem, gebruiker, len(groep))
+            antwoord = _lees_antwoord(raw, groep)
+            if antwoord:
+                TELLER["gemini"] += 1
+                uit.update(antwoord)
+                return
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Rubriekgroep via Gemini mislukt: %s: %s", type(e).__name__, e)
+        # 2. Claude Haiku als reserve (~$0,0004 per artikel), met dagplafond.
+        if not settings.anthropic_api_key:
+            TELLER["geen"] += 1
+            return
         if not _ruimte(len(groep)):
             logger.warning("Rubriekgroepen: dagplafond van %d artikelen bereikt", DAGMAX_ARTIKELEN)
             return
         for poging in range(2):
             try:
                 async with rem:
-                    raw = await asyncio.to_thread(
-                        _vraag_claude, systeem, _gebruikertekst(groep), len(groep))
+                    raw = await asyncio.to_thread(_vraag_claude, systeem, gebruiker, len(groep))
                 antwoord = _lees_antwoord(raw, groep)
                 if antwoord:
+                    TELLER["claude"] += 1
                     uit.update(antwoord)
                     return
             except Exception as e:  # noqa: BLE001
-                logger.warning("Rubriekgroep mislukt (poging %d): %s: %s",
+                logger.warning("Rubriekgroep via Claude mislukt (poging %d): %s: %s",
                                poging + 1, type(e).__name__, e)
             await asyncio.sleep(2)
+        TELLER["geen"] += 1
 
     await asyncio.gather(*(een(g) for g in groepen))
     return uit

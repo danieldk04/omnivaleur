@@ -46,6 +46,7 @@ def test_deel_in_splitst_in_groepen_van_twintig(monkeypatch):
         return json.dumps([{"n": k + 1, "gender": "x", "category": "antiek vazen",
                             "confidence": "high"} for k in range(n)])
     monkeypatch.setattr(R, "_vraag_claude", nep)
+    monkeypatch.setattr(R, "_vraag_gemini", lambda *a: "")
     monkeypatch.setattr(R.settings, "anthropic_api_key", "test")
     uit = asyncio.run(R.deel_in(_items(45)))
     assert sorted(aantallen) == [5, 20, 20] and len(uit) == 45
@@ -55,6 +56,7 @@ def test_mislukte_groep_telt_niet_als_antwoord(monkeypatch):
     def stuk(*a):
         raise RuntimeError("storing")
     monkeypatch.setattr(R, "_vraag_claude", stuk)
+    monkeypatch.setattr(R, "_vraag_gemini", lambda *a: "")
     monkeypatch.setattr(R.settings, "anthropic_api_key", "test")
     echte = asyncio.sleep
     monkeypatch.setattr(R.asyncio, "sleep", lambda s: echte(0))
@@ -99,3 +101,52 @@ def test_ronde_zonder_enige_vulling_telt_toch_de_kans(monkeypatch):
     res = asyncio.run(R.vul_rubrieken_in_groepen())
     assert res["gevuld"] == 0
     assert sum(len(v) for v in geteld.values()) == 3
+
+
+def _antwoord(n):
+    return json.dumps([{"n": k + 1, "gender": "x", "category": "antiek vazen",
+                        "confidence": "high"} for k in range(n)])
+
+
+def test_gemini_eerst_en_claude_blijft_ongebruikt(monkeypatch):
+    claude = []
+    monkeypatch.setattr(R, "_vraag_gemini", lambda s, g, n: _antwoord(n))
+    monkeypatch.setattr(R, "_vraag_claude", lambda *a: claude.append(1) or "")
+    monkeypatch.setattr(R.settings, "anthropic_api_key", "test")
+    R.TELLER.update(gemini=0, claude=0, geen=0)
+    uit = asyncio.run(R.deel_in(_items(25)))
+    assert len(uit) == 25 and not claude
+    assert R.TELLER["gemini"] == 2 and R.TELLER["claude"] == 0
+
+
+def test_claude_als_gemini_niets_geeft(monkeypatch):
+    monkeypatch.setattr(R, "_vraag_gemini", lambda *a: "")  # 429 of te druk
+    monkeypatch.setattr(R, "_vraag_claude", lambda s, g, n: _antwoord(n))
+    monkeypatch.setattr(R.settings, "anthropic_api_key", "test")
+    R._DAG.update(dag=None, n=0)
+    R.TELLER.update(gemini=0, claude=0, geen=0)
+    assert len(asyncio.run(R.deel_in(_items(3)))) == 3 and R.TELLER["claude"] == 1
+
+
+def test_gemini_werkt_ook_zonder_anthropic_sleutel(monkeypatch):
+    from backend.services import gemini_vertaling as G
+    monkeypatch.setattr(G, "beschikbaar", lambda: True)
+    monkeypatch.setattr(R, "_vraag_gemini", lambda s, g, n: _antwoord(n))
+    monkeypatch.setattr(R.settings, "anthropic_api_key", "")
+    assert len(asyncio.run(R.deel_in(_items(4)))) == 4
+
+
+def test_gemini_stuk_en_geen_claude_sleutel_geeft_niets(monkeypatch):
+    from backend.services import gemini_vertaling as G
+    monkeypatch.setattr(G, "beschikbaar", lambda: True)
+    monkeypatch.setattr(R, "_vraag_gemini", lambda *a: "geen json")
+    monkeypatch.setattr(R.settings, "anthropic_api_key", "")
+    assert asyncio.run(R.deel_in(_items(3))) == {}
+
+
+def test_dagplafond_remt_alleen_claude_niet_gemini(monkeypatch):
+    monkeypatch.setattr(R, "DAGMAX_ARTIKELEN", 0)
+    R._DAG.update(dag=None, n=0)
+    monkeypatch.setattr(R, "_vraag_gemini", lambda s, g, n: _antwoord(n))
+    monkeypatch.setattr(R.settings, "anthropic_api_key", "test")
+    assert len(asyncio.run(R.deel_in(_items(5)))) == 5

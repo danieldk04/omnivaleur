@@ -238,6 +238,7 @@ async def health():
                                      ("supabase_service_key", _s.supabase_service_key))
             },
             "anthropic_api_key": bool(_s.anthropic_api_key),
+            "rubriek_groepen_antwoord_door": dict(__import__("backend.services.rubriek_groepen", fromlist=["TELLER"]).TELLER),
             # Het vangnet voor het vertalen. Staat hier ja, dan blijft publiceren
             # doorlopen als het Anthropic-tegoed op is.
             "gemini_vertaalvangnet": bool(_s.google_api_key),
