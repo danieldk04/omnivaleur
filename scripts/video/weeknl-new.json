@@ -1,0 +1,25 @@
+{
+"sollicitatie": {"gap": 0.1, "lines": [
+ {"v":"liam","t":"[curious] Oké. Waar zie jij jezelf over vijf jaar?","st":0.5},
+ {"v":"callum","t":"[hesitant] Eh... nog steeds dezelfde titel aan het typen. In vier apps.","st":0.2},
+ {"v":"liam","t":"[deadpan] Dat is... geen antwoord.","st":0.5},
+ {"v":"callum","t":"[sighs] Het is wel mijn hele avond, hè. Gisteren tot half twee. Voor een hoodie van vijfenveertig euro.","st":0.2},
+ {"v":"liam","t":"[amused] Ken je Omnivaleur? Eén keer plaatsen, en het staat overal live. Zeven dagen gratis.","st":0.5},
+ {"v":"callum","t":"[stunned] En wat ga ik dan doen met al mijn avonden?","st":0.2},
+ {"v":"liam","t":"[flat] Slapen, joh.","st":0.5}]},
+"pensioen": {"gap": 0.12, "lines": [
+ {"v":"charlie","t":"[deadpan] Elf dagen per jaar. Zo lang is Sven kwijt aan het kopiëren van dezelfde titel.","st":0.4},
+ {"v":"charlie","t":"[matter-of-fact] Vijftig artikelen, vier apps, zes minuten per stuk. Vijf uur per week.","st":0.4},
+ {"v":"charlie","t":"[sighs] Over tien jaar? Tweeduizend zeshonderd uur. Sven heeft een baard.","st":0.4},
+ {"v":"charlie","t":"[dry] En nog steeds dezelfde titel.","st":0.4},
+ {"v":"charlie","t":"[brightening] Dan vindt Sven Omnivaleur. Eén keer plaatsen, overal live.","st":0.4},
+ {"v":"charlie","t":"[amused] En Sven? Sven gaat gewoon naar buiten. Zeven dagen gratis.","st":0.4}]},
+"eten": {"gap": 0.1, "lines": [
+ {"v":"jessica","t":"[calling out] Schat, het eten staat klaar!","st":0.25},
+ {"v":"daniel","t":"[distracted] Ja, ja. Nog één advertentie.","st":0.3},
+ {"v":"jessica","t":"[flat] Dat zei je een uur geleden.","st":0.25},
+ {"v":"daniel","t":"[stressed] Ja maar hij moet ook nog op Marktplaats. En eBay. En die foto's...","st":0.3},
+ {"v":"jessica","t":"[casual] Ik heb hem net even overal gezet. Omnivaleur. Tien seconden.","st":0.25},
+ {"v":"daniel","t":"[stunned] ...Ik zit hier al vier uur.","st":0.3},
+ {"v":"jessica","t":"[smirking] Eten. En zeven dagen gratis, trouwens.","st":0.25}]}
+}

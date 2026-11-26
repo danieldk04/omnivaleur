@@ -20089,3 +20089,6 @@ aangezet via `settings.etsy_testgebruikers` (komma-gescheiden adressen, standaar
 plan en los van `etsy_open_voor_ultra` (die blijft uit: voor andere klanten blijft Etsy dicht tot Daniel
 "1000% zeker" zegt). Nog te zien bij haar: openbare zichtbaarheid, token-verversing na een uur,
 verkoop op Etsy en afmelden elders, en of haar winkel al een verzendprofiel heeft (zo niet: duidelijke fout).
+
+## 2026-11-26 (donderdag, ronde 2): NL-video's opnieuw, nu eigen verhalen (Claude)
+- Daniel: ronde 1 was een vertaling, Kevin te traag, stem te AI. Nieuw: drie eigen verhalen (sollicitatie, Sven/elf dagen, eten staat klaar) met `scripts/video/genvoice_multi.py` (meerdere stemmen per video, `weeknl-new.json`), `motion3d/videos/{sollicitatie,pensioen,eten}.js`. Levering in `~/Downloads/omnivaleur-nl-week-48/` (nr 4 t/m 6). Stem blijft premade en niet beluisterd; zie leerlog NL.
