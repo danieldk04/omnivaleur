@@ -3,5 +3,7 @@ from backend.content.pipeline import _software_json_ld
 
 
 def test_offer_heeft_prijs_en_valuta():
-    offer = _software_json_ld()["offers"]
+    sw = _software_json_ld()
+    assert sw["aggregateRating"]["ratingValue"] and sw["aggregateRating"]["reviewCount"]
+    offer = sw["offers"]
     assert offer["price"] and offer["priceCurrency"] == "EUR"

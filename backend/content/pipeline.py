@@ -105,6 +105,9 @@ def _software_json_ld() -> dict:
         "applicationCategory": "BusinessApplication",
         "operatingSystem": "Web",
         "description": "Automatically cross-list and sync listings across Marktplaats, 2dehands, Vinted, eBay, Shopify, WooCommerce and Facebook Marketplace (beta), including background inventory sync.",
+        # Google (Software App) eist aggregateRating of review; zelfde Trustpilot-cijfer als de homepage
+        "aggregateRating": {"@type": "AggregateRating", "ratingValue": "4.1", "bestRating": "5",
+                            "worstRating": "1", "reviewCount": "5"},
         "offers": {"@type": "Offer", "price": "9.99", "priceCurrency": "EUR"},  # Google eist price; vanaf-prijs (Light)
         "featureList": [
             "Automatic cross-listing to multiple platforms",
