@@ -194,7 +194,8 @@ async def verwerk_ontvangen_mail(*, db, naast_de_lus, handle_item_sold, bewijs, 
     items = (await naast_de_lus(lambda: db.table("items").select("id,title,price")
              .eq("user_id", user_id).ilike("title", _ilike_kern(mail["titel"])).limit(50).execute())).data or []
     if not items:
-        return {"uitkomst": "overgeslagen", "reden": "geen_actieve_advertentie_met_deze_titel"}
+        return {"uitkomst": "overgeslagen", "reden": "geen_actieve_advertentie_met_deze_titel",
+                "titel_in_mail": mail["titel"], "artikelen_met_titel": 0}
     ids = [i["id"] for i in items]
     actief = (await naast_de_lus(lambda: db.table("listings").select("item_id")
               .eq("platform", "vinted").eq("status", "active").in_("item_id", ids).execute())).data or []
@@ -203,7 +204,8 @@ async def verwerk_ontvangen_mail(*, db, naast_de_lus, handle_item_sold, bewijs, 
                   for i in items if i["id"] in actieve_ids]
     gekozen, reden = kies_artikel(mail, kandidaten)
     if not gekozen:
-        return {"uitkomst": "overgeslagen", "reden": reden}
+        return {"uitkomst": "overgeslagen", "reden": reden, "titel_in_mail": mail["titel"],
+                "artikelen_met_titel": len(items), "waarvan_actief_op_vinted": len(kandidaten)}
 
     await handle_item_sold(gekozen["item_id"], "vinted", sold_price=mail["prijs"],
                            sold_at=ontvangen_op or datetime.now(timezone.utc), bewijs=bewijs)
