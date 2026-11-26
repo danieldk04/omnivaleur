@@ -1,6 +1,6 @@
 # Social video's maken en bijsturen (wekelijks, dinsdag)
 
-Opdracht van Daniel, 10-11-2026. Elke dinsdag lever je 4 tot 5 video's voor sociale media aan met een GROTE variatie in format, hook, stem en situatie
+Opdracht van Daniel, 10-11-2026. Elke dinsdag lever je 3 tot 5 video's voor sociale media aan met een GROTE variatie in format, hook, stem en situatie
 (catalogus: `docs/social-video-formats.md`), en je leert elke week van de cijfers van de week ervoor.
 Daniel, 12-11-2026: variatie en veel opties, leren van de echte data, altijd testen op maximale menselijkheid, hooks optimaliseren,
 over tijd vanzelf bij de best werkende opties uitkomen, en het mag nooit als AI-slop beoordeeld worden.
@@ -125,3 +125,19 @@ Dinsdag 01-12-2026 (en elke dinsdag daarna):
 4. Afwisseling: maak elke week bewust een mix. Ongeveer de helft in de stijl die het best scoorde, de rest nieuwe varianten (ander verhaalformat, andere stijl, aangesloten op een trend van die week) zodat er blijft worden geleerd. Zet in het rapport welke video een test is en welke een herhaling van een winnaar.
 5. Menselijk, niet AI-slop (Daniel): geen verzonnen resultaten of getuigenissen, echte pijnpunten van klanten, humor en een duidelijke storyline, wisselende stemintonatie (ElevenLabs v3 met emotietags, `genvoice_ts.py` plus `tempo.py`), en loop elke video na op botsende beelden (poppetjes of kleding door elkaar, uitgerekte schermen of logo's) met `chk.sh` voor je rendert.
 6. Rapporteer in de vier blokken en noem hoeveel de ElevenLabs-tekens kostten (tekens per video, rond 450 tot 650).
+
+
+## Zelflerend systeem, langetermijn en eigen initiatief (Daniel, 26-11-2026)
+Doel: een volledig geautomatiseerd systeem dat elke week beter wordt. Streef elke run naar de best mogelijke uitkomst.
+- Aantal video's: 3 tot 5 per week. Leer zelf wat het beste aantal is: noteer per week het aantal, de totale en gemiddelde cijfers per video en per platform
+  en of meer video's het gemiddelde per video drukken (publiek verzadigd, platform dempt, kwaliteit zakt) of juist het totaalbereik laten stijgen.
+  Kies het aantal voor de komende week op basis daarvan en schrijf de afweging in het leerlog (tabel "aantal per week"). Harde conclusie pas bij minstens 4 weken data.
+- Extra bronnen voor trending onderwerpen (alleen lezen): Google Search Console (`backend/services/search_console.py`: `query_window`, `get_top_pages`) en
+  Google Analytics (`backend/services/ga4.py`: `top_pages`, `social_posts`, `by_country`) voor welke zoekwoorden en pagina's bezoekers nu aanspreken;
+  verder Google Trends, TikTok Creative Center, YouTube-zoeksuggesties en tools die laten zien welke content nu relevant is. Maak van een stijgend zoekwoord of populaire pagina een video-hoek.
+  Zoek zelf verder naar bronnen die helpen en noteer welke bruikbaar bleken.
+- Lange termijn: houd per week een trendlijn bij (volgers, bereik, kijkduur, aanmeldingen per bron) en kijk naar maand-op-maand verschil, seizoen en terugkerende pieken.
+  Herken je iets wat beter kan (plaatstijd, lengte, stem, hooktype, platformkeuze, een vermoeide serie, dode formats, een meetgat), meld het Daniel in het rapport onder "Wat beter kan", ook als hij er niet om vroeg.
+- Eigen initiatief: je mag extra controles doen en verbeteringen doorvoeren die hier niet staan, zolang ze de prestaties verbeteren, op sociale accounts alleen lezen blijven en geen kosten of risico voor Daniel meebrengen.
+  Nooit zelf posten, reageren of accounts wijzigen. Wat je extra deed noem je in het rapport.
+- Daniel maakt daarnaast zelf menselijke content (gezicht of eigen stem). Neem die posts mee in de meting (zelfde accounts) en vergelijk animatie met menselijk: wat leert het ene van het andere? Noteer het in het leerlog.

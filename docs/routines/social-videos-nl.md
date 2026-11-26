@@ -15,7 +15,7 @@ alleen Instagram, TikTok en YouTube (Shorts). Doel: zoveel mogelijk views en eng
 - Dashboardbeeld: de NL-interface (`/nl`, taal Nederlands) waar het kan, anders Engels dashboard met Nederlandse bijschriften.
 - Bio-links voor NL: `/ig-nl`, `/tt-nl`, `/yt-nl` (meting in GA4 per bron en dag, zie Stap 1 van de Engelse routine).
 - Eindkaart: omnivaleur.com/nl.
-- Aantal: 4 tot 5 video's per week, drie verschillende formats en stijlen (A lowpoly, B zacht cartoon, C realistisch, 2D motion), plus minstens één format dat nog nooit gemaakt is.
+- Aantal: 3 tot 5 video's per week, drie verschillende formats en stijlen (A lowpoly, B zacht cartoon, C realistisch, 2D motion), plus minstens één format dat nog nooit gemaakt is.
 
 ## Stap 1: meten wat vorige week deed (NL-accounts)
 Zoals Engelse Stap 1, maar alleen het Schedchie-subaccount "Omnivaleur NL" (connector `list_accounts` en analytics; kies de accountIds van
@@ -60,3 +60,19 @@ Stuur de mp4's met SendUserFile. Zet een regel in `docs/team-notes.md`. Ook `doc
 
 ## Rapport aan Daniel
 Vier blokjes uit CLAUDE.md, één scherm: wat vorige week werkte (aanmeldingen vooraan), wat dat verandert, zekerheid, actiepunten die alleen hij kan.
+
+
+## Zelflerend systeem, langetermijn en eigen initiatief (Daniel, 26-11-2026)
+Doel: een volledig geautomatiseerd systeem dat elke week beter wordt. Streef elke run naar de best mogelijke uitkomst.
+- Aantal video's: 3 tot 5 per week. Leer zelf wat het beste aantal is: noteer per week het aantal, de totale en gemiddelde cijfers per video en per platform
+  en of meer video's het gemiddelde per video drukken (publiek verzadigd, platform dempt, kwaliteit zakt) of juist het totaalbereik laten stijgen.
+  Kies het aantal voor de komende week op basis daarvan en schrijf de afweging in het leerlog (tabel "aantal per week"). Harde conclusie pas bij minstens 4 weken data.
+- Extra bronnen voor trending onderwerpen (alleen lezen): Google Search Console (`backend/services/search_console.py`: `query_window`, `get_top_pages`) en
+  Google Analytics (`backend/services/ga4.py`: `top_pages`, `social_posts`, `by_country`) voor welke zoekwoorden en pagina's bezoekers nu aanspreken;
+  verder Google Trends, TikTok Creative Center, YouTube-zoeksuggesties en tools die laten zien welke content nu relevant is. Maak van een stijgend zoekwoord of populaire pagina een video-hoek.
+  Zoek zelf verder naar bronnen die helpen en noteer welke bruikbaar bleken.
+- Lange termijn: houd per week een trendlijn bij (volgers, bereik, kijkduur, aanmeldingen per bron) en kijk naar maand-op-maand verschil, seizoen en terugkerende pieken.
+  Herken je iets wat beter kan (plaatstijd, lengte, stem, hooktype, platformkeuze, een vermoeide serie, dode formats, een meetgat), meld het Daniel in het rapport onder "Wat beter kan", ook als hij er niet om vroeg.
+- Eigen initiatief: je mag extra controles doen en verbeteringen doorvoeren die hier niet staan, zolang ze de prestaties verbeteren, op sociale accounts alleen lezen blijven en geen kosten of risico voor Daniel meebrengen.
+  Nooit zelf posten, reageren of accounts wijzigen. Wat je extra deed noem je in het rapport.
+- Daniel maakt daarnaast zelf menselijke content (gezicht of eigen stem). Neem die posts mee in de meting (zelfde accounts) en vergelijk animatie met menselijk: wat leert het ene van het andere? Noteer het in het leerlog.

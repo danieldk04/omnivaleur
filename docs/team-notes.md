@@ -20054,3 +20054,6 @@ Listing 4625706675 (hoodie 1029, jaar 1990) staat bij Etsy op state=active (getL
 
 ## 2026-11-26 (leadgen aanvullen): wachtrij 35 → 98 (Claude)
 - Marktplaats +53, 2dehands +9 nieuwe leads via leadgen_aanvullen.py. Koude-mailronde draaide binnen 24 uur (laatste schedule 00:52, nieuwe run sinds 08:06), geen seintje nodig. Geen extra bron nodig.
+
+## 2026-11-26 (late avond): routines zelflerend en met meer bronnen (Claude)
+- Beide social-videoroutines (EN dinsdag, NL donderdag): 3 tot 5 video's per week met zelf leren wat het beste aantal is, Search Console en GA4 als trendbron naast Google Trends en TikTok Creative Center, langetermijntrends, "Wat beter kan" in het rapport, eigen initiatief (alleen lezen op socials), en Daniels eigen menselijke content meenemen in de meting. Zie onderaan beide routinebestanden.
