@@ -20072,3 +20072,4 @@ Listing 4625706675 (hoodie 1029, jaar 1990) staat bij Etsy op state=active (getL
 
 ## 2026-11-26 (avond): SEO-routine elke twee weken (Daniel + Claude)
 - Daniel: niet wekelijks titels wisselen, Google moet de tijd krijgen. Besluit: taak `omnivaleur-seo-tweewekelijks` (1e en 15e, 08:30 op Daniels hoofdaccount), opdracht in docs/routines/seo-tweewekelijks.md. Regels: een pagina hoogstens eens per 8 weken wijzigen, 28-dagenvensters, max 3 pagina's per ronde, leerlog docs/seo-leerlog.md, Ahrefs-crawl erbij, per kwartaal alleen voorstellen om dode pagina's samen te voegen. Geen nieuwe artikelen of zoekwoorden (die blijven bij de blogmachine en keyword_planner).
+- 26-11 (avond): concurrentieanalyse toegevoegd aan de SEO-routine (stap 4b): top 5 voor het hoofdzoekwoord per kandidaatpagina (blog of tool) vergelijken op titel, structuur, inhoud, tools en zwaktes, in het leerlog vastleggen en gebruiken voor titel en ontbrekende inhoud; nooit concurrenttekst overnemen.
