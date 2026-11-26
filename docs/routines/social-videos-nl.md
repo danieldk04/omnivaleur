@@ -117,3 +117,13 @@ Daniel plaatst minstens 2 van de 3 en wil vooral data krijgen; hij weet nog niet
 6. Drive: de Google Drive-connector werkt (map `Omnivaleur/Social media video's Claude NL/Week WW`, id van de NL-map 1TMdbJNUmxuhw4Ad6liz8axM2ceSZ8wgS). `create_file` neemt een lokaal bestand via `base64Content: sha256:<hash>:<pad>` maar max ca. 7 MB. Lever de volledige mp4 in `~/Downloads`, en zet in Drive 720p-voorbeelden (`ffmpeg ... scale=720:1280 -crf 25`, ca. 2 tot 5 MB, naam eindigt op `-voorbeeld`) plus een `bijschriften-weekWW.txt` met alle txt's. Zeg dat in het rapport.
 7. Werkvolgorde voor een nieuwe NL-video: verhaal en grap eerst (niet de pijn plus oplossing als sjabloon), dialoog schrijven, stemmen genereren en meten, shotlijst op woordindex (`W(i)`; `genvoice_multi.py` print de eerste index per regel), stills controleren, renderen met `VLANG=nl`, `audio2.py`, `mix2.sh`.
 Eerste data: Daniel plant op 26-11 minstens 2 van de volgende drie in: sollicitatiegesprek (A), Sven en de elf dagen (B), eten staat klaar (C); plus mogelijk de eerste drie. Meet volgende donderdag welke het best deed, en noteer de keuze van Daniel zelf naast de data.
+
+
+## Inspiratieaccounts en Daniels keuze (26-11-2026)
+Daniel plant 4, 5 en 6 in (sollicitatie, Sven en de elf dagen, eten staat klaar) en vond die het leukst. Hij wil gevarieerde content zoals deze.
+Vaste inspiratiebronnen om elke run de stijl van af te lezen (alleen lezen, in Daniels Chrome; kopieer geen video's, lees stijl, tempo en opbouw):
+- https://www.instagram.com/nuri.sse/
+- https://www.instagram.com/renno.app/ (voorbeeldreel https://www.instagram.com/renno.app/reel/DfVGqalBtz0/); renno is het enige echte bedrijf met winstoogmerk, dus het meest relevante voorbeeld voor conversie
+- https://www.instagram.com/semigenius/reels/
+- eventueel https://www.instagram.com/unecessaryideas/reels/
+Daniel weet van de andere accounts niet of het bedrijven zijn; behandel ze als stijlinspiratie, niet als bewezen conversie. Noteer per run per account: snelheid (sneden per seconde), type animatie en poppetjes (stijl, realisme, gezichtsuitdrukking), kamers en camerabewegingen, stem en humor, lengte, haak, en wat 3x boven het accountgemiddelde scoorde. Zet de tabel in `docs/social-video-leerlog-nl.md` en vertaal drie concrete verbeteringen naar de volgende video's (poppetjes, snelheid, animatie). Dit is de eerste stap van de realisme-opdracht hierboven.

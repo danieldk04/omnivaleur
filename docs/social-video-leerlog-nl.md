@@ -3,6 +3,9 @@
 Bijgehouden door de wekelijkse donderdagroutine `docs/routines/social-videos-nl.md`. Nieuwste bovenaan.
 Metingen: `docs/social-video-metingen-nl.csv`. Het Engelse leerlog (`docs/social-video-leerlog.md`) is startvermoeden, geen bewijs voor NL.
 
+## Keuze van Daniel, 26-11-2026
+Hij plant 4, 5 en 6 in en vond die het leukst (alle drie de dialoog- en grapvideo's boven de vertaalde ronde 1). Inspiratieaccounts voor de komende weken: nuri.sse, renno.app, semigenius, eventueel unecessaryideas (zie routine). Nog niet bekeken, dat is de eerste taak van de run van 03-12 naast het meten.
+
 ## Week 48, donderdag 26-11-2026 (ronde 2): echt nieuwe verhalen, snellere video's, menselijkere stem
 Daniel over de vertaalde ronde: Kevin (C) beviel, maar te langzaam en de stem klonk te veel AI; en het waren vertalingen. Nu drie nieuwe NL-verhalen, elk een nieuw format: sollicitatie (dialoog, A), Sven en de elf dagen (tijdsprong met droge verteller, B), eten staat klaar (relatiesketch, kruisgesneden, C).
 Stem: alleen premade stemmen beschikbaar (sleutel kan geen bibliotheek lezen); acht stemmen en twee instellingen gemeten op toonspreiding. Josh (de stem van de eerste ronde) was het vlakst (sd 3,9 halve tonen); Liam, Charlie, Callum, Jessica waren expressiever (sd 5 tot 7). Nu per personage een eigen stem (`genvoice_multi.py`), korte zinnen met herstarts en aarzelingen, stabiliteit 0,25 tot 0,5, tempo 1,18 tot 1,22 en stiltes ingekort. Gemeten: sd 4,9 / 5,6 / 7,1 halve tonen. Ik kan niet horen of het Nederlands natuurlijk klinkt: Engelse premade stemmen kunnen een accent hebben. Echte oplossing: Daniels eigen stem, of een Nederlandse stem uit de ElevenLabs-bibliotheek (vraagt een sleutel met voices_read).

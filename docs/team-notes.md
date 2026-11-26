@@ -20095,3 +20095,6 @@ verkoop op Etsy en afmelden elders, en of haar winkel al een verzendprofiel heef
 
 ## 2026-11-26 (middag): terugkoppeling Daniel op NL-ronde 2 (Claude)
 - Daniel: stemmen goed, video's top, plaatst minstens 2 van 3, wil meer snelheid, meer situaties, realistischere en diversere animaties en zoekt nog wat hij leuk vindt; data volgt uit het plaatsen. Alles staat vastgelegd onder "Leerpunten van Daniel, ronde 2" in `docs/routines/social-videos-nl.md` (en een verwijzing in de Engelse routine). Drive-connector werkt: NL-map en Week 48 aangemaakt, 720p-voorbeelden en `bijschriften-week48.txt` geupload (volledige mp4's te groot voor de connector, die staan in Downloads).
+
+## 2026-11-26 (middag): Daniels keuze en inspiratieaccounts (Claude)
+- Daniel plant video 4, 5 en 6 in (vond die het leukst) en wil gevarieerde content. Inspiratie voor stijl, snelheid en poppetjes: nuri.sse, renno.app (enige echte bedrijf), semigenius, evt. unecessaryideas. Staat in docs/routines/social-videos-nl.md; eerste uitlezing in de run van 03-12.
