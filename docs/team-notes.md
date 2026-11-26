@@ -20047,3 +20047,7 @@ Listing 4625706675 (hoodie 1029, jaar 1990) staat bij Etsy op state=active (getL
 ## 2026-11-26 (middag): Ahrefs structured-data-fout opgelost (Claude)
 - Oorzaak van de 210 "Google rich results validation error": SoftwareApplication op elke blogpagina had een Offer met priceCurrency maar zonder price. Nu price 9.99 (vanaf-prijs Light), live op e48e9a28. content.py gebruikt altijd de verse functie in plaats van de opgeslagen kopie per pagina, dus geen DB-migratie nodig. Test: tests/test_software_schema_prijs.py. Ahrefs bevestigt pas na de volgende crawl.
 - Los daarvan faalt tests/test_meldingen_engels.py voor extension/content/marktplaats.js (niet door deze wijziging).
+
+## 2026-11-26 (avond): Nederlandse social-videoroutine (Claude)
+- Daniel wil dezelfde routine als de Engelse, maar volledig Nederlands, wekelijks donderdag, voor het Schedchie-subaccount "Omnivaleur NL" (alleen Instagram, TikTok, YouTube). Opdracht: `docs/routines/social-videos-nl.md`, leerlog `docs/social-video-leerlog-nl.md`, metingen `docs/social-video-metingen-nl.csv` (aparte tabel, niet mengen met EN). Geplande taak `omnivaleur-social-videos-nl`, donderdag ca. 09:13, alleen Daniels Mac. Aanleveren gescheiden: `~/Downloads/omnivaleur-nl-week-WW/` en Drive `Omnivaleur/Social media video's Claude NL/Week WW`.
+- Open: Schedchie-connector gaf bij het opzetten rate-limit, dus de accountIds van het NL-subaccount zijn nog niet vastgelegd; eerste run (03-12) controleert dat. Daniel noemde "Sketchy", bedoeld is Schedchie.

@@ -469,6 +469,7 @@ Draaien (aan):
 | `omnivaleur-facebook-reactiebot-verversen` | om de dag 07:30 | `docs/routines/facebook-reactiebot.md`, alleen lezen |
 | `omnivaleur-creator-outreach-status` | maandag en donderdag 09:00 | skill `creator-outreach` |
 | `omnivaleur-social-videos` | dinsdag 09:00 | `docs/routines/social-videos.md` |
+| `omnivaleur-social-videos-nl` | donderdag 09:00 (sinds 26-11) | `docs/routines/social-videos-nl.md` |
 | `omnivaleur-kosten-bijhouden` | 1e van de maand 09:00 | kosten én doelencheck in de Drive-sheet |
 | `nightly-dreaming-geheugen` | dagelijks 00:03, werkt in `/Users/Danie/Downloads` | leest alle gesprekken van 24 uur en schrijft geheugenbestanden naar `~/.claude/projects/-Users-Danie-Downloads/memory/` (niet naar de omnivaleur-map); nieuw in repo via `kennisbank-overig.md` |
 | `btw-kwartaal-herinnering` | 15 jan/apr/jul/okt 09:00 | Daniels BTW-aangifte (skill `btw-omzetbelasting`), niet Omnivaleur |
