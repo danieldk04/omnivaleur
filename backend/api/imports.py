@@ -2422,6 +2422,8 @@ def _item_data_from_candidate(cand: dict, body: dict | None = None,
     # Kolom komt pas na de handmatige migratie; zonder waarde of kolom laten we hem weg.
     if body.get("price_woocommerce") is not None and kolom_bestaat("items", "price_woocommerce"):
         rij["price_woocommerce"] = body.get("price_woocommerce")
+    if body.get("price_etsy") is not None and kolom_bestaat("items", "price_etsy"):
+        rij["price_etsy"] = body.get("price_etsy")
     return rij
 
 

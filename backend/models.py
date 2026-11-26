@@ -34,6 +34,7 @@ class ItemCreate(BaseModel):
     price_ebay: Optional[float] = None
     price_shopify: Optional[float] = None
     price_woocommerce: Optional[float] = None
+    price_etsy: Optional[float] = None
     ebay_category_id: Optional[str] = None
     # Bouwjaar voor Etsy (vintage = 20+ jaar). Niet in model_dump: de kolom bestaat pas
     # na scripts/sql/items_vintage_year.sql, en imports schrijven model_dump zonder filter.
