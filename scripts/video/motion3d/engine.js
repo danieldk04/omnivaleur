@@ -36,7 +36,7 @@ function chunks(words, maxw = 3, maxc = 17) {
 }
 let HOT = null, CAPS = [], DURATION = 20;
 const capEl = document.getElementById('cap');
-const capHTML = g => g.map(x => { const t = x.w.replace(/[.,;:!?]+$/, ''); return (/^(omnivaleur|free|\d+|zero|€.*)$/.test(norm(t)) || (HOT && HOT.test(norm(t)))) ? `<b>${t}</b>` : t; }).join(' ');
+const capHTML = g => g.map(x => { const t = x.w.replace(/[.,;:!?]+$/, ''); return (/^(omnivaleur|free|gratis|nul|\d+|zero|€.*)$/.test(norm(t)) || (HOT && HOT.test(norm(t)))) ? `<b>${t}</b>` : t; }).join(' ');
 function drawCaption(t, hide) {
   let cur = null; for (let i = 0; i < CAPS.length; i++) if (t >= CAPS[i].s - .02 && (i + 1 >= CAPS.length || t < CAPS[i + 1].s - .02)) cur = CAPS[i];
   if (!cur || hide || t > DURATION - 1.45) { capEl.style.opacity = 0; return; }

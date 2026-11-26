@@ -528,3 +528,6 @@ De volledige gesprekken staan als bestanden op de Mac (`~/.claude/projects/-User
 - Vinted-kleurvangnet ook voor brocante en antiek (3ecffe2f, 25-11, Mieke/Brocante Depot); 2dehands-rubriek Antiek van Brocante Depot en Vinted-login klant-eigen. Importpagina heeft uitleg voor Magento-export (EN/NL). Schrijfstijl: klant nooit afraden.
 - Social video's: 3D-pijplijn met drie stijlen (week 48 ingepland door Daniel via Schedchie), meting dinsdag 01-12.
 - Geplande taken nu op de Mac (gemeten 26-11): ook `omnivaleur-btw-oss-kwartaal` en `omnivaleur-controle-nieuwe-mac-25-11`. Bijlage `omnivaleur-btw-oss-kwartaal.md` en `social/lessen.md` opnieuw gekopieerd; sleutelpatronen gecontroleerd, geen treffers.
+
+## 26-11-2026 (Claude): NL-social-videoroutine eerste run
+Drie 3D-video's gemaakt en in Downloads gezet; Drive-upload open. NL-pijplijn: zie team-notes 26-11 donderdag. Volgende run 03-12: meten en NL-onderzoek.

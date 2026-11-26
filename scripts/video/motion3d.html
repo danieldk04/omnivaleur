@@ -31,4 +31,5 @@ html,body{margin:0;background:#000;overflow:hidden}
 </style></head>
 <body><div id="stage"><canvas id="gl" width="720" height="1280"></canvas><div id="cctv"><div class="ts">11/20 03:14 AM</div><div class="rec">● REC</div><div class="cam">CAM 01 · FRONT DOOR</div></div><div id="vig"></div><div id="cap"></div>
 <div id="end"><div class="mk"><img src="assets/mark.png"><span>Omnivaleur</span></div><div class="cta">7 days free</div><div class="url">omnivaleur.com</div><div class="share">Send this to a seller</div></div></div>
+<script>if(new URLSearchParams(location.search).get("lang")==="nl"){const q=x=>document.querySelector(x);q("#end .cta").textContent="7 dagen gratis";q("#end .url").textContent="omnivaleur.com/nl";q("#end .share").textContent="Stuur dit naar een verkoper";q("#cctv .cam").textContent="CAM 01 · VOORDEUR";}</script>
 <script type="module" src="./motion3d/engine.js"></script></body></html>

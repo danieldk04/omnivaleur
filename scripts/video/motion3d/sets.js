@@ -1,3 +1,4 @@
+const NLX = new URLSearchParams(location.search).get('lang') === 'nl';
 // Herbruikbare sets en props, alles uit primitieve vormen (geen modellen, geen downloads).
 import * as THREE from 'three';
 import { matFactory, makeChar } from './rig.js';
@@ -185,16 +186,16 @@ export function liveTex(w, h, fn) {
 }
 // Omnivaleur-achtig scherm: een item, vier kanalen. p = { sold:0..1, rm:[0..1 x3], title, price }
 export function omniUI(x, w, h, p = {}) {
-  const rows = [['Vinted', '#09b1ba'], ['Marktplaats', '#2f6fe0'], ['eBay', '#e53238'], ['Your shop', '#6b46c1']];
+  const rows = [['Vinted', '#09b1ba'], ['Marktplaats', '#2f6fe0'], ['eBay', '#e53238'], [NLX ? 'Eigen shop' : 'Your shop', '#6b46c1']];
   x.fillStyle = '#f4f7fb'; x.fillRect(0, 0, w, h); x.fillStyle = '#0a1936'; x.fillRect(0, 0, w, h * .13);
   x.fillStyle = '#85edbc'; x.beginPath(); x.arc(w * .1, h * .065, h * .035, 0, 7); x.fill(); x.fillStyle = '#fff'; x.font = `900 ${h * .05}px Montserrat`; x.textBaseline = 'middle'; x.textAlign = 'left'; x.fillText('Omnivaleur', w * .2, h * .068);
-  x.fillStyle = '#0a1936'; x.font = `900 ${h * .055}px Montserrat`; x.fillText(p.title || 'Blue hoodie', w * .07, h * .2); x.fillStyle = '#5b6b86'; x.font = `800 ${h * .04}px Montserrat`; x.fillText(p.price || 'EUR 45', w * .07, h * .26);
+  x.fillStyle = '#0a1936'; x.font = `900 ${h * .055}px Montserrat`; x.fillText(p.title || (NLX ? 'Blauwe hoodie' : 'Blue hoodie'), w * .07, h * .2); x.fillStyle = '#5b6b86'; x.font = `800 ${h * .04}px Montserrat`; x.fillText(p.price || (NLX ? '€45' : 'EUR 45'), w * .07, h * .26);
   rows.forEach(([n, c], i) => {
     const y = h * (.31 + i * .16), rm = i === 0 ? 0 : (p.rm ? p.rm[i - 1] : 0), sold = i === 0 ? (p.sold || 0) : 0;
     x.globalAlpha = 1 - rm * .6; x.fillStyle = '#fff'; x.beginPath(); x.roundRect(w * .05, y, w * .9, h * .13, 14); x.fill(); x.fillStyle = c; x.beginPath(); x.arc(w * .13, y + h * .065, h * .035, 0, 7); x.fill();
     x.fillStyle = '#0a1936'; x.font = `900 ${h * .037}px Montserrat`; x.fillText(n, w * .21, y + h * .065);
-    const st = i === 0 ? (sold > .5 ? 'SOLD' : 'LIVE') : (rm > .5 ? 'REMOVED' : 'LIVE'), col = (st === 'LIVE') ? '#1faa6b' : (st === 'SOLD' ? '#ff4d4d' : '#8a94a8');
-    x.fillStyle = col; x.beginPath(); x.roundRect(w * .66, y + h * .033, w * .27, h * .065, 12); x.fill(); x.fillStyle = '#fff'; x.font = `900 ${h * .03}px Montserrat`; x.textAlign = 'center'; x.fillText(st, w * .795, y + h * .066); x.textAlign = 'left';
+    const st = i === 0 ? (sold > .5 ? (NLX ? 'VERKOCHT' : 'SOLD') : 'LIVE') : (rm > .5 ? (NLX ? 'WEG' : 'REMOVED') : 'LIVE'), col = (st === 'LIVE') ? '#1faa6b' : (st === 'SOLD' ? '#ff4d4d' : '#8a94a8');
+    x.fillStyle = col; x.beginPath(); x.roundRect(w * .66, y + h * .033, w * .27, h * .065, 12); x.fill(); x.fillStyle = '#fff'; x.font = `900 ${h * (NLX ? .024 : .03)}px Montserrat`; x.textAlign = 'center'; x.fillText(st, w * .795, y + h * .066); x.textAlign = 'left';
     if (rm > .1) { x.strokeStyle = '#0a1936'; x.lineWidth = 4; x.beginPath(); x.moveTo(w * .2, y + h * .065); x.lineTo(w * .2 + (w * .36) * Math.min(1, rm * 1.4), y + h * .065); x.stroke(); }
     x.globalAlpha = 1;
   });

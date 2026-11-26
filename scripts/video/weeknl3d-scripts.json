@@ -1,0 +1,48 @@
+{
+ "blocky-hoodie-nl": {
+  "voice": "TxGEqnHWrfWFTfGW9XjX",
+  "lang": "nl",
+  "model": "eleven_v3",
+  "stability": 0.3,
+  "lines": [
+   "[energetic, upbeat] Je verkoopt een hoodie op Vinted. [proud] Vijfenveertig euro. Makkelijk.",
+   "[smug] Dan denk je: ik ben een genie, en je zet hem ook op Marktplaats.",
+   "[worried] Nu staat er een koper voor je deur. [panicked] Dan nog een koper. Dan het neefje van de koper.",
+   "[angry] Allebei betaald. Allebei willen ze die ene hoodie.",
+   "[shouting] Ze vechten. De buren doen mee. De hele stad doet mee.",
+   "[dramatic whisper] Nu is de hele wereld boos op jou, om één hoodie.",
+   "[calm, relieved] Of je gebruikt Omnivaleur. Het verkoopt één keer, en haalt de advertentie overal weg, binnen seconden.",
+   "[excited] Nul dubbele verkopen. Zeven dagen gratis."
+  ]
+ },
+ "toon-midnight-nl": {
+  "voice": "21m00Tcm4TlvDq8ikWAM",
+  "lang": "nl",
+  "model": "eleven_v3",
+  "stability": 0.4,
+  "lines": [
+   "[soft, proud] Je hebt nog nooit een zonsopkomst gemist.",
+   "[tired, sighs] Maar vannacht is het twaalf uur veertig, en je typt nog steeds dezelfde titel.",
+   "[flat, weary] Vierde app. Dezelfde foto's. Dezelfde beschrijving.",
+   "[quiet, serious] Elk uur kopiëren is een uur dat je niet verkoopt.",
+   "[warm, hopeful] Omnivaleur lost dat op. Je zet het één keer erin.",
+   "[gentle, smiling] Het staat live op Vinted, Marktplaats, eBay en in je eigen shop, terwijl je slaapt.",
+   "[content] Laptop dicht om negen uur. Zeven dagen gratis."
+  ]
+ },
+ "real-kevin-nl": {
+  "voice": "JBFqnCBsd6RMkjVDRZzb",
+  "lang": "nl",
+  "model": "eleven_v3",
+  "stability": 0.3,
+  "lines": [
+   "[storyteller, amused] Dit is Kevin. Kevin verkocht een vintage leren jas op Vinted, en ook op eBay, want Kevin vindt dat slim.",
+   "[whispering, tense] Om drie uur 's nachts trilt zijn telefoon. Koper één wil hem morgen. [alarmed] Koper twee staat al buiten.",
+   "[dread] Kevin kijkt op de camera. Daar staan ze. [slowly] Allebei. Met bonnetjes in de hand.",
+   "[deadpan] Eén jas. Twee boze klanten. [matter-of-fact] Dus Kevin doet het enige wat hij kan. [whispers] Hij verstopt zich in de voorraadkast.",
+   "[sarcastic] Hij betaalt één terug, biedt de ander zijn excuses aan, en verliest zijn vijf sterren.",
+   "[hopeful] Dan vindt Kevin Omnivaleur. [calm, confident] Zodra de jas verkocht is, verdwijnt hij overal, binnen seconden.",
+   "[relieved, sleepy] Nu slaapt Kevin. [cheerful] Zeven dagen gratis."
+  ]
+ }
+}
