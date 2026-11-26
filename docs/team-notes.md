@@ -20076,3 +20076,9 @@ Listing 4625706675 (hoodie 1029, jaar 1990) staat bij Etsy op state=active (getL
 
 ## 2026-11-26 (donderdag): eerste NL-videoronde (Claude)
 - Drie NL-video's in 3D (hoodie-stad, vannacht-twaalf-uur-veertig, kevin-twee-kopers) in `~/Downloads/omnivaleur-nl-week-48/`, met txt per video. Pijplijn nu NL-vaardig: `weeknl3d-scripts.json`, `motion3d/videos/*-nl.js` (index-omzetting per zin), `VLANG=nl` voor render2.mjs (Nederlandse dashboardtekst en eindkaart omnivaleur.com/nl), `SCRIPTS=` voor genvoice_ts.py. Nog niets op NL geplaatst, dus geen meting. Drive-map NL nog te vullen door Daniel. Zie leerlog NL.
+
+## 26-11-2026: Onboarding nieuwe klanten (ochtend, tweede ronde)
+- Dezelfde 5 accounts als gisteren, geen vrienden, geen creator. Web Store 1.0.434, repo 1.0.435. Mailrapport: 2 mails, 2 geopend, 0 klik, 0 antwoord.
+- karaoke-jo.nl (c75362fa): 27 artikelen op MP, prijsvraag van 24-11 nog onbeantwoord, 11 zonder prijs; geen mailtje (klant wacht op antwoord), briefing aan Daniel.
+- brocantedepot (ecbceba1): alle 101 Vinted-kleurfouten dateren van 24-11 19u tot 25-11 20u, dus van voor de fix; sindsdien geen nieuwe. 82 live op MP en 2dehands, 41 op Vinted. Open vinted-scan sinds 07:21 (Chrome dicht, klant-eigen).
+- Overigen niets veranderd (Daniel had contact met 20ba676b en d74bd011; e27c1eaa zonder extensie, mailtje staat). Niets gerepareerd, niets verstuurd.
