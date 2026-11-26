@@ -20058,3 +20058,4 @@ Listing 4625706675 (hoodie 1029, jaar 1990) staat bij Etsy op state=active (getL
 ## 2026-11-26 (late avond): routines zelflerend en met meer bronnen (Claude)
 - Beide social-videoroutines (EN dinsdag, NL donderdag): 3 tot 5 video's per week met zelf leren wat het beste aantal is, Search Console en GA4 als trendbron naast Google Trends en TikTok Creative Center, langetermijntrends, "Wat beter kan" in het rapport, eigen initiatief (alleen lezen op socials), en Daniels eigen menselijke content meenemen in de meting. Zie onderaan beide routinebestanden.
 - Schedchie gecontroleerd: NL-groep heeft Instagram danieldevs_, TikTok Danieldevs en YouTube Danieldevs, allen gezond; TikTok is ook voor EN gekoppeld. Staat in docs/routines/social-videos-nl.md.
+- NL-routine aangescherpt met conversiepunten (kleine n, snelle tests, bron-vraag bij aanmelding, AI-label, landingspagina-check).

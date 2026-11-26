@@ -84,3 +84,15 @@ Groep "Omnivaleur NL" (groupId 6b07f01d87d4ece77bc618c9), alle drie verbonden en
 - YouTube `Danieldevs`, accountId UCjKSTShsYatnNS8IRuiz_2A
 De gebruikersnamen zijn dus niet "omnivaleurnl" (dat stond in de Engelse routine). Meet alleen deze drie.
 TikTok is nu in Schedchie gekoppeld (ook de EN-groep: TikTok `Omnivaleur`, accountId -000jAO5295WHmDeEmPpZ_0rAz-do__Rh_46): haal TikTok-cijfers eerst via de connector, Chrome alleen als dat niet lukt.
+
+## Eerlijke aanscherping voor conversie (26-11-2026, na vraag van Daniel)
+Aannemelijk uit praktijk en onze eigen data, niet hard bewezen; toets elk punt als hypothese.
+1. Bereik is niet het doel: een video die viraal gaat bij mensen die niet verkopen levert geen aanmeldingen. Meet per video het aandeel reacties en vragen van echte verkopers, en profielbezoeken; stuur bij op haken die een verkoper-pijn noemen (dubbel verkocht, verlopen advertentie, uren per dag plaatsen).
+2. Goedkope tests boven zware renders: elke 3D-video kost uren, een screenrecording of tekstvideo met echt dashboard kost minuten. Maak minstens de helft van de weekvolume als snelle variant op dezelfde haak (zelfde script, ander beeld) zodat je per haak meer meetpunten krijgt dan per stijl.
+3. Meting met kleine aantallen: vergelijk elke video met de mediaan van het eigen account, niet met anderen, en noem n erbij. Een haak is pas een winnaar na minstens drie plaatsingen of 3x de mediaan.
+4. Aanmeldingen toeschrijven: voeg bij aanmelding een vraag "Waar hoorde je van ons?" met Instagram, TikTok en YouTube toe (alleen na akkoord van Daniel, het is een wijziging aan klanttekst), en zet per video een kijkwoord/oproep in het beeld. Zonder dat blijven aanmeldingen per video niet te bewijzen.
+5. Reageren in het eerste uur en reactie-op-reactie als video is voor Daniel een groot hefboommiddel; leg in het rapport vast welke reacties kansen waren. Jij reageert niet zelf.
+6. Daniels eigen gezicht of stem: voor software die in iemands verkoopaccounts werkt is vertrouwen de bottleneck; verwacht dat menselijke video's beter converteren dan animatie en test dat expliciet (zie meting animatie versus menselijk). Raad Daniel in het rapport aan hoeveel zin dat heeft zodra er data is.
+7. Label: platforms (TikTok, YouTube) vragen een AI-label bij synthetische stem of realistische beelden. Zet het in het .txt-bestand per video en meld het als actiepunt.
+8. Hergebruik winnaars: na 4 tot 8 weken dezelfde winnende haak opnieuw met nieuw beeld; zet dezelfde video ook op Pinterest en Threads van de EN-groep als dat gratis bereik geeft.
+9. Landingspagina: controleer elke week dat `/nl` laadt, dat aanmelden werkt en dat de belofte uit de video (7 dagen gratis, list once) er letterlijk staat; een video die iets belooft wat de pagina niet toont lekt aanmeldingen.
