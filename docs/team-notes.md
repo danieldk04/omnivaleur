@@ -20214,3 +20214,8 @@ Het Revaleur-Supabaseproject (eigen project, zie revaleur/README.md) bevat nu 25
 
 ## 27-11-2026: Revaleur-testsite staat live op revaleur.pages.dev (Claude, opdracht Daniel)
 Cloudflare Pages-project `revaleur` (directe upload), 614 pagina's uit de Revaleur-database, afrekenen geeft nog de storingsmelding omdat de API (eigen Railway-dienst) nog niet draait. Stripe-sandbox getest: sessie met iDEAL, factuur met margeregeling-tekst, geen Stripe Tax. Zie revaleur/docs/deploy.md. Sleutels staan lokaal in ~/.revaleur/env (niet in git); omdraaien na livegang.
+
+## 27-11-2026 (avond): revaleur.com verhuist van Shopify naar Cloudflare, mail klaar (Claude, Daniel)
+- Registrar van revaleur.com is Tucows via Shopify (aangemaakt 05-06-2025, verloopt 05-06-2027); DNS draait op Google Cloud DNS achter Shopify. Mail `info@revaleur.com` loopt via Hostinger (MX, SPF, DKIM): niet aanraken.
+- Resend-domein revaleur.com staat (Ierland): drie records toegevoegd in Shopify-DNS, testmail vanaf info@revaleur.com kwam in de inbox. API-afzender is `Daniel van Revaleur <info@revaleur.com>`.
+- Shopify heeft het domein ontgrendeld en Daniel heeft een overdrachtscode (staat NIET in git). Cloudflare-zone `revaleur.com` is aangemaakt (nameservers savanna.ns.cloudflare.com en wilson.ns.cloudflare.com, nog niet actief) met alle 20 bestaande records overgenomen, ALLE zonder proxy, zodat Shopify en Hostinger-mail ongestoord blijven. Volgende: Daniel start de overdracht in Cloudflare (Domain Registration, Transfer Domains, betaalt ca. 10 euro), daarna wijs ik revaleur.com naar Pages (A/CNAME voor Shopify vervangen) pas na de echte proefbestelling.
