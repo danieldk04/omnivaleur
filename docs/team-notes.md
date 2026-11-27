@@ -20143,3 +20143,6 @@ Daniel zag dat de ronde op Instagram vooral onder posts zonder reacties reageerd
 - Referrals: 62 klantcodes, 3 met een klik, 11 kliks, 1 aanmelding, 1 betalende vriend (Voordeelsieraden via Zilverwebsite, tegoed 39,98). 14 creatorcodes, 103 kliks, 1 aanmelding (janina_no), 0 betalend. Trap bij 3 en 5 vrienden (AI-pakket, Ultra) ontgrendelt technisch nog niets.
 - Tegenstrijdigheid: Etsy-aanvraag zegt "gratis in elk plan" (besluit 25-11), de site zet Etsy bij Ultra. Voorwaarden §5 van Etsy. Open besluit Daniel.
 - Voorstel per plan staat als privé-artifact (https://claude.ai/artifact/LDkvYSgcRWmy2Y4TLAcK21), niets op de site of in het dashboard veranderd.
+
+## 27-11-2026: platformcontrole (geplande taak)
+- Vinted (7 proefartikelen), Marktplaats (3 rubrieken: studie en cursus, taal duits, taal engels) en 2dehands (studie en cursus): geen afwijking. Alle velden-stappen ok; vaste artefacten gelijk (Vinted boek: size/colour, Marktplaats: halswijdte en "beschrijving verdween" door de proefstub). Eerste bewaarde uitslag in data/platformcontrole, dus nog niets om mee te vergelijken. Eigen proeffout onderweg: categoriesleutel "meisjes jassen" bestaat niet, juiste sleutel is "meisjes kleding".
