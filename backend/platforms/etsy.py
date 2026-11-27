@@ -237,6 +237,211 @@ _TYPE_STAMMEN = (  # (woorden in titel/categorie, stam in de sectienaam van de v
 )
 
 
+def eigen_artikelnummer(item: dict, user_id) -> str | None:
+    """Het artikelnummer van de verkoper zelf (Mieneke, 27-11-2026: Etsy toonde
+    REV-6A626740, haar nummer is 24-027.12). Een stuk dat via Herplaatsen een kopie
+    is, krijgt een eigen REV-nummer; het origineel met dezelfde titel en foto's
+    draagt het echte nummer. Is er precies één zo'n nummer, dan gebruiken we dat."""
+    sku = str(item.get("sku") or "").strip()
+    if not sku or not (sku.upper().startswith("REV-") or sku.upper().startswith("IMP-")):
+        return sku or None
+    try:
+        from backend.database import get_db
+        if not (user_id and item.get("title")):
+            return sku
+        rijen = (get_db().table("items").select("id,sku,photo_urls").eq("user_id", user_id)
+                 .eq("title", item["title"]).limit(50).execute().data or [])
+        fotos = set(u for u in (item.get("photo_urls") or []) if u)
+        nummers = {str(r["sku"]).strip() for r in rijen
+                   if r.get("sku") and r.get("id") != item.get("id")
+                   and not str(r["sku"]).upper().startswith(("REV-", "IMP-"))
+                   and set(u for u in (r.get("photo_urls") or []) if u) == fotos}
+        if len(nummers) == 1:
+            return nummers.pop()[:32]
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Eigen artikelnummer niet gevonden: {e}")
+    return sku
+
+
+# ---------------------------------------------------------------------------
+# Eigenschappen (Etsy "attributes": materiaal, goudgehalte, edelsteen, lengte, ...)
+# Mieneke, 27-11-2026: alle "aanbevolen" opties waren goed en moesten vanzelf. Bewust
+# zonder model: alleen wat letterlijk uit titel, omschrijving, materiaal en jaar blijkt,
+# gekozen uit de lijst die Etsy zelf bij de categorie geeft. Staat het er niet, dan leeg.
+# ---------------------------------------------------------------------------
+_NL_STEEN = {
+    "koraal": "Coral", "granaat": "Garnet", "parel": "Pearl", "diamant": "Diamond",
+    "saffier": "Sapphire", "robijn": "Ruby", "smaragd": "Emerald", "amethist": "Amethyst",
+    "turkoois": "Turquoise", "barnsteen": "Amber", "opaal": "Opal", "peridoot": "Peridot",
+    "topaas": "Topaz", "aquamarijn": "Aquamarine", "citrien": "Citrine", "maansteen": "Moonstone",
+    "lapis": "Lapis lazuli", "tijgeroog": "Tiger's eye", "agaat": "Agate", "jaspis": "Jasper",
+    "toermalijn": "Tourmaline", "markasiet": "Marcasite", "onyx": "Onyx", "jade": "Jade",
+    "carneool": "Carnelian", "bergkristal": "Quartz", "rozenkwarts": "Rose quartz",
+    "malachiet": "Malachite", "granaten": "Garnet", "zirkonia": "Cubic zirconia",
+}
+_STEEN_KLEUR = {"Garnet": "Red", "Ruby": "Red", "Sapphire": "Blue", "Emerald": "Green",
+                "Amethyst": "Purple", "Turquoise": "Blue", "Peridot": "Green",
+                "Citrine": "Yellow", "Onyx": "Black"}
+_NEP = re.compile(r"(imitatie|nep\b|glas|kunststof|plastic|synthet|faux|lab[- ]?grown|gekweekt|bakeliet)", re.I)
+
+
+def _norm_waarde(tekst: str) -> str:
+    return re.sub(r"[^a-z0-9' ]", "", (tekst or "").lower()).strip()
+
+
+def kies_eigenschappen(eigenschappen: list, item: dict) -> list:
+    """Geeft [{property_id, value_ids, values, scale_id}] voor de eigenschappen die
+    uit het artikel blijken. `eigenschappen` = Etsy seller-taxonomy .../properties."""
+    tekst = " ".join(str(item.get(k) or "") for k in ("title", "material", "description", "category")).lower()
+    titel = str(item.get("title") or "")
+    per_naam = {p.get("name"): p for p in eigenschappen if p.get("supports_attributes")}
+
+    def waarde(naam, gewenst):
+        p = per_naam.get(naam)
+        if not p:
+            return None
+        for v in p.get("possible_values") or []:
+            if _norm_waarde(v["name"]) == _norm_waarde(gewenst):
+                return p, v
+        return None
+
+    uit: dict = {}
+
+    def zet(naam, gewenst_lijst):
+        gevonden = [waarde(naam, g) for g in gewenst_lijst]
+        gevonden = [g for g in gevonden if g]
+        if not gevonden:
+            return
+        p = gevonden[0][0]
+        if not p.get("is_multivalued"):
+            gevonden = gevonden[:1]
+        elif p.get("max_values_allowed"):
+            gevonden = gevonden[: int(p["max_values_allowed"])]
+        uit[p["property_id"]] = {"property_id": p["property_id"],
+                                 "value_ids": [v["value_id"] for _, v in gevonden],
+                                 "values": [v["name"] for _, v in gevonden], "scale_id": None}
+
+    # Stenen
+    stenen: list = []
+    if not _NEP.search(tekst):
+        pos = []
+        for nl, en in _NL_STEEN.items():
+            for m in re.finditer(r"(?<![a-z])(?:[a-z]*?)" + nl + r"(?!moer)", tekst):
+                if nl == "parel" and "parelmoer" in tekst[m.start():m.end() + 5]:
+                    continue
+                pos.append((m.start(), en))
+        namen = {_norm_waarde(v["name"]): v["name"]
+                 for v in (per_naam.get("Gemstone type") or {}).get("possible_values", []) if len(v["name"]) >= 4}
+        for n, orig in namen.items():
+            for m in re.finditer(r"(?<![a-z])" + re.escape(n) + r"(?![a-z])", tekst):
+                pos.append((m.start(), orig))
+        for _, en in sorted(pos):
+            if en not in stenen and waarde("Gemstone type", en):
+                stenen.append(en)
+    if len(stenen) == 1:
+        zet("Gemstone type", stenen)
+        kleur = _STEEN_KLEUR.get(stenen[0])
+        if re.search(r"roze|pink|zalm|salmon|engelenhuid|angel skin", tekst):
+            kleur = None  # roze koraal is niet rood; liever leeg dan fout
+        elif stenen[0] == "Coral" and re.search(r"bloed|\brood|\brode|\bred\b", tekst):
+            kleur = "Red"
+        if kleur:
+            zet("Gem color", [kleur])
+        if not re.search(r"\bgekweekt|lab", tekst):
+            zet("Stone source", ["Natural"])
+
+    # Goud en zilver
+    metalen: list = []
+    goud = re.search(r"(?<![a-z])(goud|gouden|geelgoud|geelgouden|witgoud|witgouden|roodgoud|roségoud|gold)(?![a-z])", tekst) \
+        or re.search(r"[a-z]*goud", tekst)
+    verguld = re.search(r"verguld|vergulde|gold[- ]?plated|doublé|goudkleurig|gold tone", tekst)
+    if goud:
+        # Gewoon "Gold" ook bij geelgoud: dat koos Mieneke zelf (Etsy: Aanbevolen Goud).
+        if re.search(r"witgoud|white gold", tekst):
+            metalen.append("White gold")
+        elif re.search(r"roségoud|rosegoud|roodgoud|rose gold", tekst):
+            metalen.append("Rose gold")
+        else:
+            metalen.append("Gold")
+    if re.search(r"(?<![a-z])(zilver|zilveren|silver|925)(?![a-z])", tekst):
+        metalen.append("Sterling silver" if re.search(r"925|sterling", tekst) else "Silver")
+    zet("Material multi", [m for m in metalen if waarde("Material multi", m)] + [s for s in stenen if waarde("Material multi", s)])
+
+    if goud and not verguld:
+        karaat = None
+        m = re.search(r"(\d{1,2})\s?(?:k\b|kt\b|karaat|carat|krt)", tekst)
+        if m:
+            karaat = f"{int(m.group(1))}k"
+        else:
+            m = re.search(r"(?<!\d)(333|375|417|585|750|916|999)(?!\d)", tekst)
+            if m:
+                karaat = {"333": "8k", "375": "9k", "417": "10k", "585": "14k", "750": "18k",
+                          "916": "22k", "999": "24k"}[m.group(1)]
+        if karaat and waarde("Gold purity", karaat):
+            zet("Gold purity", [karaat])
+            zet("Gold solidity", ["Solid gold"])
+        elif re.search(r"massief|solid gold", tekst):
+            zet("Gold solidity", ["Solid gold"])
+
+    # Maat: lengte van een armband of ketting, alleen als die er letterlijk staat.
+    pl = per_naam.get("Length")
+    if pl:
+        m = re.search(r"(?<![\d.,])(\d{1,3}(?:[.,]\d)?)\s?cm\b", titel.lower())
+        if not m:
+            m = re.search(r"(?:lengte|length|lang)\D{0,12}(\d{1,3}(?:[.,]\d)?)\s?cm\b", tekst) \
+                or re.search(r"(?<![\d.,])(\d{1,3}(?:[.,]\d)?)\s?cm\b\s*(?:lang|long|lengte)", tekst)
+        sc = next((x["scale_id"] for x in pl.get("scales") or [] if x.get("display_name") == "Centimeters"), None)
+        if m and sc:
+            uit[pl["property_id"]] = {"property_id": pl["property_id"], "value_ids": [],
+                                      "values": [m.group(1).replace(",", ".")], "scale_id": sc}
+
+    # Verstelbaar: standaard Nee (Mieneke), Ja alleen als het er staat.
+    zet("Adjustable", ["Yes" if re.search(r"verstelbaar|adjustable", tekst) else "No"])
+
+    # Kraalvorm
+    if per_naam.get("Shape") and re.search(r"kraal|kralen|bead", tekst):
+        if re.search(r"tonnetje|barrel", tekst):
+            zet("Shape", ["Barrel"])
+        elif re.search(r"druppel|teardrop", tekst):
+            zet("Shape", ["Teardrop"])
+        elif re.search(r"kaasje|kaasjes|rondel|facet|ovaal|oval|vierkant|square|disc|schijf", tekst):
+            pass
+        else:
+            zet("Shape", ["Round"])
+
+    # Stijl uit het jaar of de omschrijving
+    stijl = None
+    for woord, naam in (("art nouveau|jugendstil", "Art nouveau"), ("art deco", "Art deco"),
+                        ("victoriaans|victorian", "Victorian"), ("edwardian|edwardiaans", "Edwardian"),
+                        ("mid-century|midcentury|mid century", "Mid-century")):
+        if re.search(woord, tekst):
+            stijl = naam
+            break
+    if not stijl:
+        jaar = jaar_uit_item(item)
+        if jaar:
+            stijl = ("Victorian" if 1837 <= jaar <= 1900 else "Edwardian" if 1901 <= jaar <= 1915 else
+                     "Art deco" if 1920 <= jaar <= 1939 else "Mid-century" if 1945 <= jaar <= 1969 else None)
+    if stijl:
+        zet("Jewelry style", [stijl])
+
+    # Ontvanger (alleen als de categorie die kent)
+    if per_naam.get("Recipient"):
+        man = re.search(r"\bheren\b|\bmannen|\bmen'?s\b|\bheer\b", tekst)
+        vrouw = re.search(r"\bdames|\bvrouw|\bwomen|\bladies|\bmeisje", tekst)
+        kind = re.search(r"\bkinder|\bkids?\b|\bbaby|\bmeisjes?\b|\bjongens", titel.lower()) \
+            or (re.search(r"\bkinder|\bkids?\b|\bbaby|\bmeisjes?\b|\bjongens", tekst) and not (man or vrouw))
+        if kind:
+            zet("Recipient", ["Girls" if re.search(r"meisje", tekst) else "Unisex kids"])
+        elif man and vrouw:
+            zet("Recipient", ["Unisex adults"])
+        elif man:
+            zet("Recipient", ["Men"])
+        else:
+            zet("Recipient", ["Women"])
+    return list(uit.values())
+
+
 def kies_sectie(secties: list, item: dict, jaar) -> int | None:
     """Het winkelsectie-id waar dit artikel in hoort, of None.
 
@@ -595,6 +800,8 @@ class EtsyPlatform(PlatformBase):
                 "platform_listing_id": listing_id,
                 "platform_listing_url": f"https://www.etsy.com/listing/{listing_id}",
             }
+            etsy_sku = None
+            eigenschappen_gezet = {}
             try:
                 fouten = 0
                 fotos = (item.get("photo_urls") or [])[:10]
@@ -612,12 +819,15 @@ class EtsyPlatform(PlatformBase):
                     raise RuntimeError("Etsy accepted none of the photos")
 
                 # SKU (artikelnummer): kan alleen via de voorraad van de listing.
-                if item.get("sku"):
+                etsy_sku = await asyncio.to_thread(eigen_artikelnummer, item, credentials.get("user_id"))
+                if etsy_sku:
                     try:
-                        await self._zet_sku(c, headers, listing_id, str(item["sku"]), prijs, gereed)
+                        await self._zet_sku(c, headers, listing_id, etsy_sku, prijs, gereed)
                     except Exception as e:  # noqa: BLE001
                         waarschuwingen.append(f"SKU niet gezet: {e}")
                         logger.warning(f"Etsy SKU mislukt: {e}")
+                eigenschappen_gezet = await self._zet_eigenschappen(c, headers, shop_id, listing_id, taxonomy_id,
+                                                                    item, waarschuwingen)
                 # Vertalingen (bij Mieneke de Engelse titel, omschrijving en tags onderaan).
                 for taal in extra_talen:
                     gegevens = {"title": etsy_titel(teksten[taal]["title"]),
@@ -658,7 +868,7 @@ class EtsyPlatform(PlatformBase):
                        "talen": talen, "primair": primair, "sectie_id": sectie_id,
                        "secties": [x.get("title") for x in secties], "prijs": prijs,
                        "tags": velden["tags"], "materialen": velden["materials"],
-                       "sku": item.get("sku"), "waarschuwingen": waarschuwingen,
+                       "sku": etsy_sku, "eigenschappen": eigenschappen_gezet, "waarschuwingen": waarschuwingen,
                        "tijd": datetime.now(timezone.utc).isoformat()}
             self._bewaar_rapport(credentials.get("user_id"), rapport)
         return {**uitkomst, "state": "active", **({"waarschuwingen": waarschuwingen} if waarschuwingen else {})}
@@ -677,6 +887,37 @@ class EtsyPlatform(PlatformBase):
             db.table("platform_credentials").update({"extra_data": extra}).eq("user_id", uid).eq("platform", "etsy").execute()
         except Exception as e:  # noqa: BLE001
             logger.warning(f"Etsy-rapport niet bewaard: {e}")
+
+    async def _zet_eigenschappen(self, c, headers: dict, shop_id, listing_id, taxonomy_id, item: dict,
+                                 waarschuwingen: list) -> dict:
+        """Vult de Etsy-eigenschappen (materiaal, goudgehalte, edelsteen, lengte, ...) die uit het
+        artikel blijken. Een fout hier laat de plaatsing doorgaan: het wordt een waarschuwing."""
+        gezet: dict = {}
+        try:
+            r = await c.get(f"{ETSY_BASE}/application/seller-taxonomy/nodes/{int(taxonomy_id)}/properties",
+                            headers={"x-api-key": _api_key()})
+            r.raise_for_status()
+            lijst = r.json().get("results") or []
+        except Exception as e:  # noqa: BLE001
+            waarschuwingen.append(f"eigenschappen niet opgehaald: {e}")
+            return gezet
+        namen = {p.get("property_id"): p.get("display_name") or p.get("name") for p in lijst}
+        for keuze in kies_eigenschappen(lijst, item):
+            data = {"value_ids": ",".join(str(v) for v in keuze["value_ids"]),
+                    "values": ",".join(keuze["values"])}
+            if keuze.get("scale_id"):
+                data["scale_id"] = keuze["scale_id"]
+            naam = namen.get(keuze["property_id"]) or str(keuze["property_id"])
+            try:
+                rp = await c.put(f"{ETSY_BASE}/application/shops/{shop_id}/listings/{listing_id}/properties/{keuze['property_id']}",
+                                 headers={k: v for k, v in headers.items() if k.lower() != "content-type"}, data=data)
+                if rp.status_code in (200, 201):
+                    gezet[naam] = keuze["values"] + ([f"scale {keuze['scale_id']}"] if keuze.get("scale_id") else [])
+                else:
+                    waarschuwingen.append(f"eigenschap {naam} niet gezet: {rp.status_code}: {_etsy_fout(rp)}")
+            except Exception as e:  # noqa: BLE001
+                waarschuwingen.append(f"eigenschap {naam} niet gezet: {e}")
+        return gezet
 
     async def _zet_sku(self, c, headers: dict, listing_id: str, sku: str, prijs: float, gereed: int) -> None:
         r = await c.get(f"{ETSY_BASE}/application/listings/{listing_id}/inventory", headers=headers)

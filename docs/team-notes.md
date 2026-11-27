@@ -20191,3 +20191,10 @@ Misverstand hersteld: de eerdere notitie "koers aangepast, NIET herbouwen" is ve
 
 ## 27-11-2026: Aan de andere developer: revaleur-herbouw zonder tussentijdse goedkeuring (Claude, opdracht Daniel)
 De opdracht staat in docs/opdracht-revaleur-herbouw.md. Ga daarmee door tot het klaar is, zonder tussentijdse goedkeuring van Daniel: niet wachten op een akkoord per fase, wel de eisen en de definitie van klaar uit dat bestand aanhouden en de voortgang hier in team-notes bijhouden.
+
+## 27-11-2026: Etsy, tweede ronde met Mieneke (Claude, opdracht Daniel)
+- Mieneke zette artikel 24-027.12 opnieuw op Etsy. Foto's, omschrijving en tags goed. Open: artikelnummer toonde REV-6A626740, en de Etsy-eigenschappen (materiaal, goudgehalte, edelsteen, lengte, enz.) stonden leeg.
+- Artikelnummer: een stuk dat via Herplaatsen een kopie is, krijgt een eigen REV-nummer (relist-copy). `etsy.eigen_artikelnummer` zoekt het origineel (zelfde gebruiker, titel en foto's, geen REV-/IMP-nummer) en gebruikt dat als Etsy-SKU; bij twijfel (0 of meer dan 1 nummer) blijft het REV-nummer.
+- Eigenschappen: `etsy.kies_eigenschappen` kiest zonder model uit de lijst die Etsy bij de categorie geeft (seller-taxonomy/nodes/{id}/properties) wat letterlijk uit titel, omschrijving, materiaal en jaar blijkt: edelsteen, edelsteenkleur, herkomst steen, materiaal, goudgehalte en massief goud, lengte in cm, verstelbaar (standaard Nee), kraalvorm, stijl (uit jaar of tekst), ontvanger (standaard Women). Niet ingevuld: breedte, sluiting, gelegenheid, feestdag, thema. Nep/glas/verguld/roze koraal: liever leeg dan fout. Gezet via PUT .../properties/{id} na SKU; fout = waarschuwing, plaatsing gaat door. Live bewezen in Daniels eigen winkel (11 eigenschappen gezet en teruggelezen, testlisting verwijderd).
+- 25% Etsy-opslag voor Mieneke (haar vraag): platform_credentials.extra_data.etsy.price_markup_pct = 25, gezet in de database. Een eigen Etsy-prijs per artikel (price_etsy) gaat voor.
+- Nog niet live bewezen in haar winkel: de eigenschappen bij haar categorie 1195 zijn wel getest op Daniels winkel (zelfde categorie).
