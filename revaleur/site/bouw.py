@@ -18,7 +18,7 @@ from pathlib import Path
 SITE = Path(__file__).resolve().parent
 ROOT = SITE.parent
 DOMEIN = "https://revaleur.com"
-API = "https://api.revaleur.com/api/revaleur"
+API = "https://api-production-a52c044e.up.railway.app/api/revaleur"
 MAIL = "info@revaleur.com"
 GOUD, ROOD, INKT = "#B89A50", "#E02229", "#121212"
 

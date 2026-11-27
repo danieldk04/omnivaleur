@@ -132,6 +132,7 @@ async def checkout(body: CheckoutIn):
             metadata={"bron": "revaleur", "product_ids": ",".join(ids), "taal": body.taal},
             success_url=f"{site}{pre}/bedankt", cancel_url=f"{site}{pre}/cart",
             phone_number_collection={"enabled": True},
+            adaptive_pricing={"enabled": False},      # altijd euro's, geen omrekenkosten voor de klant
             # Factuur automatisch. Margeregeling: GEEN btw-bedrag en geen Stripe Tax (automatic_tax blijft uit),
             # wel de verplichte aanduiding (revaleur/docs/revaleur-wettelijk.md).
             invoice_creation={"enabled": True, "invoice_data": {
