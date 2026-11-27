@@ -20177,3 +20177,6 @@ Daniel gaf extra eisen: geen kwaliteitsverlies in UX/UI, geen extra onderhoud of
 
 ## 27-11-2026: Shopify-facturen Revaleur nagelopen (Claude, Daniel)
 - Billing-pagina: sinds 31-07-2026 elke maand €28,00 (daarvoor €43,80 tot €44,40, eenmalig €13,99 op 24-05). Betaalt Daniel voor apps? Nee (zijn eigen woorden), dus de €28 is alleen het plan, maandelijks gefactureerd. Apps verwijderen bespaart niets; de enige knop is het plan (jaarbetaling) onder Settings > Plan. Herbouwen blijft uitgesteld.
+
+## 27-11-2026: revaleur.com WEL herbouwen, volledige opdracht (Claude, Daniel)
+Misverstand hersteld: de eerdere notitie "koers aangepast, NIET herbouwen" is verkeerd en vervalt. Daniel wil revaleur.com herbouwen als eigen webshop, door de andere developer, die doorgaat tot het volledig live staat. Volledige opdracht met context, eisen, fases en definitie van klaar: docs/opdracht-revaleur-herbouw.md. Eisen: UX/UI minstens gelijk, geen extra onderhoud voor Daniel, bewaking via de wekelijkse sitecheck (docs/routines/revaleur-sitecheck.md). Shopify-kosten: €28 per maand is alleen het plan, geen apps.
