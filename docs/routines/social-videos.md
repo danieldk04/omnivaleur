@@ -147,3 +147,6 @@ Bijwerking 26-11-2026: TikTok (`Omnivaleur`) staat nu wel in Schedchie en in de 
 
 ## Leerpunten uit de NL-routine die ook hier gelden (26-11-2026)
 Lees de sectie "Leerpunten van Daniel, ronde 2" in `docs/routines/social-videos-nl.md`: dialoog met meerdere stemmen (`genvoice_multi.py`), tempo (19 tot 26 s, een shot per seconde), geen vertalingen maar eigen verhalen, meer diversiteit en realisme, en Drive-upload via de connector met 720p-voorbeelden (limiet 7 MB). Pas dat ook op de Engelse video's toe.
+
+## Gouden standaard (Daniel, 27-11-2026)
+Lees `docs/social-video-renno-ontleding.md` voor je een script schrijft: een analogie, een spiegel, het product als echte geanimeerde UI, een kleurboog van probleem naar oplossing, rekwisieten die het verhaal dragen, een eindkaart met een zin en een knop.

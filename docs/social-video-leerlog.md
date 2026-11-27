@@ -108,3 +108,6 @@ Daniel heeft alle drie ingepland via Schedchie. Zijn voorkeur: 1) 3d-C real-kevi
 | 3d-A-blocky-hoodie-v2 | lowpoly, absurd | 3 | nog niet gemeten |
 | 3d-B-toon-midnight-v2 | zacht cartoon | 2 | nog niet gemeten |
 | 3d-C-real-kevin-v2 | realistischer, storytime | 1 | nog niet gemeten |
+
+### Renno als gouden standaard (27-11-2026, Daniel)
+Daniel noemt "It all comes down to willpower" (@renno.app) het stereotype van wat hij wil. Volledige ontleding en principes in `docs/social-video-renno-ontleding.md`. Lees dat bestand voor elke nieuwe video en toets het script aan de negen principes.
