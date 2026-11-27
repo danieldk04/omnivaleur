@@ -1854,6 +1854,33 @@
     [/shirt|blouse|\btop\b|topje|\bpolo/i, /^tops/i],
   ];
 
+  // FLEECEJACK = EIGEN BLAD (27-11-2026, Daniel, artikel 721 Ralph Lauren).
+  // Een fleecejack stond in het dashboard onder "heren truien" en kwam daardoor
+  // bij "Other jumpers & sweaters" uit, terwijl Vinted er een eigen blad voor
+  // heeft: Clothing > Outerwear > Jackets > Fleece jackets (nagemeten in de
+  // catalogus, Men 1858 en Women 1086). Alleen een duidelijke jack-uitspraak
+  // telt: "fleece" direct naast jack/jas/vest, of "fleece" in de titel samen
+  // met een jackwoord. Geen fleece-voering, geen gilet/bodywarmer, geen trui.
+  function fleecejackPad(cat, item) {
+    const c = String(cat || "").toLowerCase().trim();
+    const g = String(item.gender || "").toLowerCase().trim();
+    const tak = /^heren\b/.test(c) || (!/^dames\b/.test(c) && /^(heren|men)$/.test(g)) ? "Men"
+      : /^dames\b/.test(c) || /^(dames|women)$/.test(g) ? "Women" : null;
+    if (!tak) return null;
+    const kaal = c.replace(/^(heren|dames)\s+/, "");
+    if (!/^(truien|hoodies|jassen|sportjassen|vesten|truien \/ vesten)$/.test(kaal)) return null;
+    const titel = `${item.title || ""} ${item.title_en || ""}`.toLowerCase();
+    const alles = `${titel} ${item.description || ""}`.toLowerCase();
+    const JACK = "jack(?:s|et|ets)?|jas|jasje|vest|vestje|cardigan|full[- ]?zip|zip[- ]?(?:through|up)";
+    if (/\b(?:trui|sweater|jumper|pullover|hoodie|sweatshirt)\b/.test(titel) && !/fleece/.test(titel)) return null;
+    if (/gilet|bodywarmer|body warmer|mouwloos|sleeveless|waistcoat/.test(titel)) return null;
+    if (/fleece[- ]?(?:lined|gevoerd|voering)|(?:lined|gevoerd) (?:with|met) fleece/.test(titel)) return null;
+    const naast = new RegExp(`fleece[- ]?(?:${JACK})\\b`);
+    const inTitel = /fleece/.test(titel) && new RegExp(`\\b(?:${JACK})\\b`).test(titel);
+    if (!naast.test(alles) && !inTitel) return null;
+    return [tak, "Clothing", "Outerwear", "Jackets", "Fleece jackets"];
+  }
+
   const job = await getJob();
   if (!job) return;
   const { id: jobId, serverUrl, payload: item } = job;
@@ -3748,7 +3775,8 @@
   }
 
   async function walkVintedCategoryPath(item, cat, gender) {
-    let pad = (typeof kinderPad === "function" && kinderPad(cat, item))
+    let pad = (typeof fleecejackPad === "function" && fleecejackPad(cat, item))
+      || (typeof kinderPad === "function" && kinderPad(cat, item))
       || (typeof textielPad === "function" && textielPad(cat, item))
       || (typeof keukenPad === "function" && keukenPad(cat, item)) || vintedPathFor(cat, gender);
     if (!pad) return false;
