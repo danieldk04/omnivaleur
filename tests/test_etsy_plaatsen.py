@@ -34,6 +34,25 @@ def test_taxonomie_kiest_passend_blad():
     assert etsy.kies_taxonomie(bladen, {"title": "iets raars", "category": "xyz"}) is None
 
 
+EIGENSCHAPPEN = [
+    {"property_id": 1, "name": "Gemstone type", "display_name": "Gemstone", "supports_attributes": True,
+     "is_multivalued": False, "scales": [], "possible_values": [{"value_id": 99, "name": "Coral"}, {"value_id": 132, "name": "Garnet"}]},
+    {"property_id": 2, "name": "Material multi", "display_name": "Materials", "supports_attributes": True,
+     "is_multivalued": True, "max_values_allowed": 5, "scales": [],
+     "possible_values": [{"value_id": 5261, "name": "Gold"}, {"value_id": 99, "name": "Coral"}, {"value_id": 246, "name": "Silver"}]},
+    {"property_id": 3, "name": "Gold purity", "display_name": "Gold purity", "supports_attributes": True,
+     "is_multivalued": True, "max_values_allowed": 5, "scales": [], "possible_values": [{"value_id": 5102, "name": "9k"}, {"value_id": 5111, "name": "14k"}]},
+    {"property_id": 4, "name": "Length", "display_name": "Bracelet length", "supports_attributes": True, "is_multivalued": False,
+     "scales": [{"scale_id": 7, "display_name": "Centimeters"}], "possible_values": []},
+    {"property_id": 5, "name": "Adjustable", "display_name": "Adjustable", "supports_attributes": True, "is_multivalued": False,
+     "scales": [], "possible_values": [{"value_id": 1066, "name": "Yes"}, {"value_id": 1067, "name": "No"}]},
+    {"property_id": 6, "name": "Recipient", "display_name": "Recipient", "supports_attributes": True, "is_multivalued": True,
+     "max_values_allowed": 5, "scales": [], "possible_values": [{"value_id": 2310, "name": "Women"}, {"value_id": 2311, "name": "Men"}]},
+    {"property_id": 7, "name": "Jewelry style", "display_name": "Style", "supports_attributes": True, "is_multivalued": False,
+     "scales": [], "possible_values": [{"value_id": 2392, "name": "Mid-century"}, {"value_id": 2399, "name": "Victorian"}]},
+]
+
+
 def _nep_etsy(calls):
     def handler(req: httpx.Request) -> httpx.Response:
         calls.append((req.method, req.url.path))
@@ -44,6 +63,10 @@ def _nep_etsy(calls):
             return httpx.Response(200, json={"results": [
                 {"id": 10, "name": "Clothing", "children": [
                     {"id": 11, "name": "Men's Clothing", "children": [{"id": 12, "name": "Jackets & Coats", "children": []}]}]}]})
+        if p.endswith("/properties") and "/seller-taxonomy/nodes/" in p:
+            return httpx.Response(200, json={"results": EIGENSCHAPPEN})
+        if "/listings/777/properties/" in p and m == "PUT":
+            return httpx.Response(200, json={})
         if "/users/" in p and p.endswith("/shops"):
             return httpx.Response(200, json={"shop_id": 99})
         if p.endswith("/shipping-profiles") and m == "GET":
@@ -280,3 +303,45 @@ def test_drie_betalende_vrienden_geven_etsy_zonder_ultra(monkeypatch):
     t._cache.clear()
     monkeypatch.setattr(settings, "etsy_open_voor_ultra", False)
     assert t.etsy_toegang("u1") is False
+
+
+def test_eigenschappen_uit_artikel_mieneke():
+    item = {"title": "Vintage 2-strengs bloedkoraal armband met 9 karaat gouden bloemsluiting (20 cm)",
+            "description": "100% natuurlijk bloedkoraal. 9 karaat geelgouden sluiting.", "vintage_year": 1960}
+    uit = {k["property_id"]: k for k in etsy.kies_eigenschappen(EIGENSCHAPPEN, item)}
+    assert uit[1]["value_ids"] == [99]                      # edelsteen koraal
+    assert uit[2]["values"] == ["Gold", "Coral"]            # materiaal, gewoon Gold bij geelgoud
+    assert uit[3]["value_ids"] == [5102]                    # 9k
+    assert uit[4]["values"] == ["20"] and uit[4]["scale_id"] == 7
+    assert uit[5]["value_ids"] == [1067]                    # verstelbaar: standaard Nee
+    assert uit[6]["value_ids"] == [2310]                    # ontvanger vrouw
+    assert uit[7]["value_ids"] == [2392]                    # 1960 = mid-century
+
+
+def test_eigenschappen_leeg_laten_als_het_niet_blijkt():
+    item = {"title": "Armband", "description": "Mooi."}
+    uit = {k["property_id"] for k in etsy.kies_eigenschappen(EIGENSCHAPPEN, item)}
+    assert 1 not in uit and 2 not in uit and 3 not in uit and 4 not in uit and 7 not in uit
+    nep = {"title": "Glaskraal armband zilver", "description": ""}
+    assert 1 not in {k["property_id"] for k in etsy.kies_eigenschappen(EIGENSCHAPPEN, nep)}
+    verguld = {"title": "Verguld armband 14k", "description": ""}
+    assert 3 not in {k["property_id"] for k in etsy.kies_eigenschappen(EIGENSCHAPPEN, verguld)}
+
+
+def test_eigen_artikelnummer_pakt_origineel(monkeypatch):
+    class Q:
+        def __init__(self, rijen): self.rijen = rijen
+        def select(self, *a): return self
+        def eq(self, *a): return self
+        def limit(self, *a): return self
+        def execute(self): return type("R", (), {"data": self.rijen})()
+    class DB:
+        def __init__(self, rijen): self.rijen = rijen
+        def table(self, n): return Q(self.rijen)
+    import backend.database as database
+    rijen = [{"id": "a", "sku": "24-027.12", "photo_urls": ["x"]}, {"id": "b", "sku": "REV-B", "photo_urls": ["x"]}]
+    monkeypatch.setattr(database, "get_db", lambda: DB(rijen))
+    assert etsy.eigen_artikelnummer({"id": "b", "sku": "REV-B", "title": "t", "photo_urls": ["x"]}, "u") == "24-027.12"
+    assert etsy.eigen_artikelnummer({"id": "z", "sku": "24-001", "title": "t"}, "u") == "24-001"
+    rijen.append({"id": "c", "sku": "24-099", "photo_urls": ["x"]})
+    assert etsy.eigen_artikelnummer({"id": "b", "sku": "REV-B", "title": "t", "photo_urls": ["x"]}, "u") == "REV-B"
