@@ -53,3 +53,4 @@ Elke reactie krijgt in gedaan.jsonl een "cat": V = Vinted/Marktplaats/2dehands/e
 
 ## AUTOMATISCHE INZICHTEN (gemeten 0 van 8 reacties, script scripts/social_leren.py)
 - Nog te weinig metingen (0; vanaf 10 komen hier uitkomsten). Blijf elke ronde 24 uur oude reacties meten.
+- 26-11: Facebook-tabblad gaf 'Cannot access a chrome-extension:// URL of different extension' op screenshot en JS; oplossing: tabblad sluiten en nieuw tabblad via tabs_context_mcp createIfEmpty. Instagram volg-feed bevatte die middag geen verkoper- of ondernemersposts (alleen nieuws, voetbal, humor).

@@ -6,13 +6,40 @@ Automatisch gemaakt door `scripts/export_kennisbank.py`. Per kopje staat de map 
 
 ## -Users-danieldekoning-Downloads / social-video-feedback-storytime
 
-*25-11-2026*
+*26-11-2026*
 
 Daniel (24-11-2026): de "buyer door video" is goed. Wil meer storytime, meer spanning en meer invalshoeken (hooks op alle bekende klantpijnpunten), kijken naar voorbeelden van andere accounts op Instagram (ingelogd) en optimaliseren voor conversie, plus een realistischere flow tussen stem en beeld.
 
 **Why:** de eerdere video's haalden nauwelijks weergaven.
 
 **How to apply:** bij nieuwe video's: haak in de eerste seconde per pijnpunt, verhaalopbouw, stemtiming strak op beeld. Aanvulling op [[social-videos-animatie]].
+
+Aanvulling 26-11-2026: let op beeldfouten (kleding die door een persoon heen gaat, laptop in widescreen-vervorming, uitgerekt Omnivaleur-logo) en verwerk echt dashboardbeeld in de video's. Ranking van de week: video met Kevin eerst, daarna 3d-B-toon-midnight-v2. Resultaten van de ingeplande posts ophalen op dinsdag 01-12-2026 en die lijn voortzetten. Build-in-public posts: kort voor X, langer voor Indie Hackers, in de stijl van zijn eerdere posts op beide platforms.
+
+---
+
+## -Users-danieldekoning-Downloads / feedback-maximale-autonomie
+
+*26-11-2026*
+
+Daniel (24-11-2026, meerdere sessies): "doe alles maximaal wat je voor mij kan doen, alleen de essentiële dingen voor mij", "je mag alles testen, ook op mijn PC", doel is zekerheid richting 100% en geen actiepunten meer voor hem. Bij een voorgesteld actiepunt dat Claude zelf kon uitvoeren zei hij gewoon "doe dit voor me".
+
+**Why:** zijn tijd is de schaarse resource; een actiepunt dat Claude zelf kan doen is verspilde tijd.
+
+**How to apply:** voer zelf uit, test en meet na (ook lokaal, ook via Chrome), en zet alleen in actiepunten wat echt alleen Daniel kan. Zie ook [[nieuwe-mac-routines-herstellen]].
+
+Aanvulling 26-11-2026 (BTW/OSS-routines): bij routines altijd 100% zeker zijn; weet je iets niet, zoek het zelf uit en escaleer alleen in de uiterste situatie. Daniel stelt steeds de vraag "weet je 100% zeker dat het klopt?"; geef dan bewijs uit de data, geen aannames. Items zonder verkoopdatum uit het verleden negeren, niet meetellen in kwartalen.
+
+---
+
+## -Users-danieldekoning-Downloads / feedback-klantmail-niet-afraden
+
+*26-11-2026*
+
+Daniel (26-11-2026), bij concepten voor leads/klanten: zinnen zoals "voor jou is er weinig extra ten opzichte van GoedGeplaatst, dus ik zou daarbij blijven" wil hij niet meer. Ook bij leads zonder budget zoekt hij een manier om waarde te bieden (bijv. referenties van andere verkopers die ze kennen) in plaats van af te haken.
+
+**Why:** hij wil de klant niet wegsturen; elke lead is potentiële omzet of een referentie.
+**How to apply:** schrijf nooit een mail die afraadt of naar een concurrent verwijst. Antwoord op de vraag, benoem wat Omnivaleur wel oplevert, en bied zo nodig een proefrol of testgebruiker aan. Zie ook [[feedback-maximale-autonomie]].
 
 ---
 
@@ -28,15 +55,22 @@ Sinds 24-11-2026 werkt Daniel op een nieuwe Mac. Wat hij van de oude terug wil, 
 
 ---
 
-## -Users-danieldekoning-Downloads / feedback-maximale-autonomie
+## -Users-danieldekoning-Projects-omnivaleur / reference-social-inspiratie-accounts
 
-*25-11-2026*
+*26-11-2026*
 
-Daniel (24-11-2026, meerdere sessies): "doe alles maximaal wat je voor mij kan doen, alleen de essentiële dingen voor mij", "je mag alles testen, ook op mijn PC", doel is zekerheid richting 100% en geen actiepunten meer voor hem. Bij een voorgesteld actiepunt dat Claude zelf kon uitvoeren zei hij gewoon "doe dit voor me".
+Daniel (26-11-2026): nuri.sse, renno.app (voorbeeldreel DfVGqalBtz0, enige echte bedrijf), semigenius/reels, evt. unecessaryideas/reels. Lees stijl, snelheid, animatie en poppetjes af, alleen lezen in zijn Chrome; niet kopiëren. Van de andere weet hij niet of het bedrijven zijn, dus geen bewezen conversie. Zie [[feedback-nl-videos-dialoog-tempo]]. Daniel plant video 4, 5, 6 (sollicitatie, Sven, eten) in.
 
-**Why:** zijn tijd is de schaarse resource; een actiepunt dat Claude zelf kan doen is verspilde tijd.
+---
 
-**How to apply:** voer zelf uit, test en meet na (ook lokaal, ook via Chrome), en zet alleen in actiepunten wat echt alleen Daniel kan. Zie ook [[nieuwe-mac-routines-herstellen]].
+## -Users-danieldekoning-Projects-omnivaleur / feedback-nl-videos-dialoog-tempo
+
+*26-11-2026*
+
+Daniel (26-11-2026) keurde vertaalde EN-video's, monoloog-stem en 45 s lengte af; de dialoogvideo's (eigen stem per personage, 19-26 s) vond hij "top" en de stemmen goed.
+
+**Why:** een stem klinkt al snel als AI-slop; dialoog, herkenbare humor en tempo overtuigen meer. Hij zoekt nog wat hij leuk vindt en wil data uit plaatsen.
+**How to apply:** nooit vertalen, altijd eigen NL-verhaal; `scripts/video/genvoice_multi.py`; tempo 1,2; meer diversiteit en realisme per run. Volledig in `docs/routines/social-videos-nl.md` onder "Leerpunten van Daniel, ronde 2". Drive-connector werkt, max 7 MB per upload (zie [[social-videos-3d]]).
 
 ---
 
