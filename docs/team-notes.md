@@ -20146,3 +20146,22 @@ Daniel zag dat de ronde op Instagram vooral onder posts zonder reacties reageerd
 
 ## 27-11-2026: platformcontrole (geplande taak)
 - Vinted (7 proefartikelen), Marktplaats (3 rubrieken: studie en cursus, taal duits, taal engels) en 2dehands (studie en cursus): geen afwijking. Alle velden-stappen ok; vaste artefacten gelijk (Vinted boek: size/colour, Marktplaats: halswijdte en "beschrijving verdween" door de proefstub). Eerste bewaarde uitslag in data/platformcontrole, dus nog niets om mee te vergelijken. Eigen proeffout onderweg: categoriesleutel "meisjes jassen" bestaat niet, juiste sleutel is "meisjes kleding".
+
+## 27-11-2026: opdracht voor de andere developer: revaleur.com van Shopify af (Claude, opdracht Daniel)
+Aanleiding: Shopify kost ca. €28 per maand en levert bijna niets op. Doel: revaleur.com op een eigen, bijna gratis webshop, zonder dat de koppeling met Omnivaleur breekt. NIETS bouwen voor je dit hebt doorgelezen; hieronder de inventarisatie en het voorstel. Prijzen komen uit het hoofd en zijn niet nagekeken: controleer ze.
+
+**Wat er nu is:** Omnivaleur koppelt aan Shopify (ywqad3-xb.myshopify.com, 241 van 315 producten gekoppeld) voor importeren, publiceren, voorraad en verkopen (`backend/platforms/shopify.py`, `backend/services/shopify_*.py`, webhook `orders/paid` in `backend/api/webhooks.py`, plus controle om de paar minuten). Er is ook al een WooCommerce-koppeling (`backend/platforms/woocommerce.py`).
+
+**Opties:** A) eigen webshop op de bestaande stack (Omnivaleur-database als catalogus, statische winkelkant op Cloudflare Pages, Stripe Checkout met iDEAL, Resend voor mail), ca. €0 per maand plus domein; geen sync meer nodig, dus geen dubbel verkopen. B) WooCommerce, ca. €5 tot 10 hosting, koppeling bestaat, maar eigen onderhoud. C) Shopify omlaag (pauzeren of Starter), ca. €5 tot 10, geen echte webshop. D) Medusa (open-source headless), meer werk dan A zonder winst.
+Advies: A. Eerst parallel draaien naast Shopify, pas daarna Shopify opzeggen.
+
+**Uit te zoeken voor je bouwt:**
+1. Margeregeling: facturen voor tweedehands kleding mogen geen btw tonen; kijk hoe Shopify dat nu doet en bouw het na.
+2. SEO en domein: 301-redirects van de oude /products/...-links.
+3. Meta-catalogus en pixel, Google Merchant-feed (Daniel draait Meta-advertenties).
+4. Verzending: labels (Sendcloud of MyParcel), trackingmail, retouren (14 dagen).
+5. Wettelijk: voorwaarden, privacy, herroepingsrecht, cookiebanner.
+6. Klantmails: orderbevestiging en verzendmail via Resend.
+7. Wat Shopify nu nog meer doet (apps, mailflows, reviews): lijst bij Daniel opvragen.
+
+**Voorwaarde:** Shopify pas opzeggen als de nieuwe winkel een echte testbestelling, een echte factuur en een werkende afmelding op de andere kanalen heeft doorstaan. Tweetalig (NL/EN), zoals alle klanttekst.
