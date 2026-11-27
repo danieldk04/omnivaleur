@@ -546,6 +546,7 @@ Zes NL-video's in Downloads en voorbeelden in Drive. Nieuwe werkwijze (dialoog, 
 - Bijlagen gesynchroniseerd 27-11: nieuw `omnivaleur-seo-tweewekelijks.md` en `omnivaleur-social-videos-nl.md`, `social/lessen.md` bijgewerkt; sleutelpatronen gecontroleerd, geen treffers. Geplande taken op de Mac (gemeten 27-11): 16 mappen in `~/.claude/scheduled-tasks`, waaronder beide nieuwe. LaunchAgents ongewijzigd (`leadmachine-seintje`, `socialronde`).
 
 ## Revaleur-webshop (27-11-2026, Claude met Daniel)
+Volledige overdracht met alle gegevens, open punten en valkuilen: [revaleur/docs/overdracht-revaleur.md](../revaleur/docs/overdracht-revaleur.md).
 Revaleur.com wordt een eigen webshop, helemaal los van Omnivaleur: alles staat in `revaleur/` (lees `revaleur/README.md`), met eigen
 Supabase, Stripe, Resend, R2 (foto's), Cloudflare Pages (site) en Railway-dienst (API `api-production-a52c044e.up.railway.app`, project
 `revaleur-api`). Test staat live op https://revaleur.pages.dev; revaleur.com wijst nog naar Shopify.
