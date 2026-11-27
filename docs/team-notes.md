@@ -20137,3 +20137,9 @@ Aanvulling 26-11-2026 (Daniel): Etsy staat nu ook bij "Different price per platf
 
 ## 27-11-2026: Instagram-reageren krijgt afwisseling met populaire posts (Daniel)
 Daniel zag dat de ronde op Instagram vooral onder posts zonder reacties reageerde. Nieuw in `data/social/ronde-prompt.txt` (blok INSTAGRAM, kopie in `docs/bijlagen-buiten-git/social/`) en `data/social/lessen.md`: per ronde minstens 1 van de 2 à 3 reacties onder een populaire post (veel likes en reacties, jonger dan ~24 uur). Eerst de bovenste 5 reacties op 'Meest relevant' lezen en hun patroon volgen (korter, specifieker, lichte vraag), alleen kiezen als de top haalbaar is, na plaatsen de positie noteren en 30 minuten later nog eens kijken. Niet gemeten of dit hoger uitkomt; de wekelijkse meting beoordeelt het.
+
+## 27-11-2026: plannen, referrals en Etsy nagelopen (Claude, opdracht Daniel)
+- Meting: 12 betalende klanten, allemaal Pro (€19,99). Op actieve artikelen: 4 passen in Pro (95 tot 216), 4 worden Plus (632 tot 1.309), 4 worden Ultra (2.919 tot 5.733). Maandomzet 240 naar ca. 396 als niemand opzegt. Nieuwe plannen staan nog uit (NIEUWE_PLANNEN_AAN uit, plan-prijzen wel aanwezig), REFERRAL_KORTING_AAN staat aan (health 27-11).
+- Referrals: 62 klantcodes, 3 met een klik, 11 kliks, 1 aanmelding, 1 betalende vriend (Voordeelsieraden via Zilverwebsite, tegoed 39,98). 14 creatorcodes, 103 kliks, 1 aanmelding (janina_no), 0 betalend. Trap bij 3 en 5 vrienden (AI-pakket, Ultra) ontgrendelt technisch nog niets.
+- Tegenstrijdigheid: Etsy-aanvraag zegt "gratis in elk plan" (besluit 25-11), de site zet Etsy bij Ultra. Voorwaarden §5 van Etsy. Open besluit Daniel.
+- Voorstel per plan staat als privé-artifact (https://claude.ai/artifact/LDkvYSgcRWmy2Y4TLAcK21), niets op de site of in het dashboard veranderd.
