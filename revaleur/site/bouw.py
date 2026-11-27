@@ -49,7 +49,8 @@ T = {
         "Rest of Europe": "Rest van Europa", "Outside Europe": "Buiten Europa",
         "Checkout is temporarily unavailable. Your cart is saved, please try again in a few minutes.":
             "Afrekenen is even niet beschikbaar. Je winkelmand blijft bewaard, probeer het over een paar minuten opnieuw.",
-        "Sorry, this item was just sold.": "Dit artikel is zojuist verkocht.",
+        "This item was just sold.": "Dit artikel is zojuist verkocht.",
+        "The price of an item changed. Please refresh the page.": "De prijs van een artikel is gewijzigd. Ververs de pagina.",
         "Checking…": "Controleren…", "Contact us": "Contact", "Policies": "Voorwaarden",
         "Shipping policy": "Verzendbeleid", "Refund policy": "Retourbeleid", "Terms of service": "Algemene voorwaarden",
         "Privacy policy": "Privacybeleid", "News": "Nieuws", "Read more": "Lees verder",
@@ -213,10 +214,12 @@ if(wm){
  land.onchange=teken;teken();
  document.getElementById('afrekenen').onclick=function(){var k=this,m=document.getElementById('fout');m.style.display='none';
   k.disabled=true;var o=k.textContent;k.textContent=wm.dataset.bezig;
-  fetch(API+'/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:get().map(function(x){return x.id}),land:land.value,taal:NL?'nl':'en'})})
+  fetch(API+'/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:get().map(function(x){return x.id}),prijzen:get().reduce(function(a,x){a[x.id]=x.p;return a},{}),land:land.value,taal:NL?'nl':'en'})})
   .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j}})})
   .then(function(r){if(r.ok&&r.j.url){location.href=r.j.url;return}
-    if(r.j&&r.j.verkocht&&r.j.verkocht.length){set(get().filter(function(x){return r.j.verkocht.indexOf(x.id)<0}));teken();m.textContent=wm.dataset.verkocht}else{m.textContent=wm.dataset.storing}
+    var d=(r.j&&r.j.detail&&typeof r.j.detail==='object')?r.j.detail:(r.j||{});
+    if(d.verkocht&&d.verkocht.length){set(get().filter(function(x){return d.verkocht.indexOf(x.id)<0}));teken();m.textContent=wm.dataset.verkocht}
+    else if(d.prijs_gewijzigd){m.textContent=wm.dataset.prijs}else{m.textContent=wm.dataset.storing}
     m.style.display='block';k.disabled=false;k.textContent=o})
   .catch(function(){m.textContent=wm.dataset.storing;m.style.display='block';k.disabled=false;k.textContent=o})};
 }
@@ -379,7 +382,7 @@ def winkelmand(taal, cat):
     t = Tx(taal)
     pr = pre(taal)
     attrs = (f'data-rm="{esc(t("Remove"))}" data-gratis="{esc(t("Free"))}" data-bezig="{esc(t("Checking…"))}" '
-             f'data-verkocht="{esc(t("Sorry, this item was just sold."))}" '
+             f'data-verkocht="{esc(t("This item was just sold."))}" data-prijs="{esc(t("The price of an item changed. Please refresh the page."))}" '
              f'data-storing="{esc(t("Checkout is temporarily unavailable. Your cart is saved, please try again in a few minutes."))}"')
     body = (f'<div class="wrap winkelmand" id="winkelmand" {attrs}><h1>{esc(t("Your cart"))}</h1>'
             f'<div class="leeg" style="display:none"><p>{esc(t("Your cart is empty"))}</p><a class="knop" href="{pr}/collections/all">{esc(t("Continue shopping"))}</a></div>'

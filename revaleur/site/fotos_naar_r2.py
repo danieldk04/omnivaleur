@@ -36,16 +36,31 @@ def _download(url: str) -> bytes:
     raise RuntimeError("download mislukt: " + url[-70:])
 
 
-def _sleutel(pid: str, n: int, url: str) -> str:
-    return f"fotos/{pid}/{n}-{hashlib.sha1(url.split('?')[0].encode()).hexdigest()[:10]}.jpg"
+def _type(data: bytes) -> tuple[str, str]:
+    """Bestandstype uit de eerste bytes, niet uit de naam: Shopify-foto's met .jpg erin zijn soms PNG of WebP, en een
+    verkeerd Content-Type laat de browser de foto blokkeren (ORB)."""
+    if data[:3] == b"\xff\xd8\xff":
+        return "jpg", "image/jpeg"
+    if data[:4] == b"\x89PNG":
+        return "png", "image/png"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "webp", "image/webp"
+    if data[:3] == b"GIF":
+        return "gif", "image/gif"
+    raise RuntimeError("geen afbeelding (onbekend bestandstype)")
+
+
+def _sleutel(pid: str, n: int, url: str, ext: str = "jpg") -> str:
+    return f"fotos/{pid}/{n}-{hashlib.sha1(url.split('?')[0].encode()).hexdigest()[:10]}.{ext}"
 
 
 def _zet_over(taak):
     pid, n, url, base = taak
-    sleutel = _sleutel(pid, n, url)
     data = _download(url)
+    ext, mime = _type(data)
+    sleutel = _sleutel(pid, n, url, ext)
     urllib.request.urlopen(_api(f"objects/{sleutel}", data=data, method="PUT",
-                                headers={"Content-Type": "image/jpeg", "Cache-Control": "public, max-age=31536000, immutable"}), timeout=60).read()
+                                headers={"Content-Type": mime, "Cache-Control": "public, max-age=31536000, immutable"}), timeout=60).read()
     return url, f"{base}/{sleutel}"
 
 
@@ -81,6 +96,26 @@ def main(maximum: int | None = None) -> None:
     print(f"{len(klaar)} foto's in R2, {fout} mislukt, {bijgewerkt} producten bijgewerkt")
 
 
+def herstel(slecht: list) -> None:
+    """Zet foto's opnieuw over waarvan het type niet klopte (src in `slecht`), vanaf het origineel (veld `orig`)."""
+    from supabase import create_client
+    base = os.environ["REVALEUR_FOTO_BASE"].rstrip("/")
+    db = create_client(os.environ["REVALEUR_SUPABASE_URL"], os.environ["REVALEUR_SUPABASE_SERVICE_KEY"])
+    n = 0
+    for p in db.table("producten").select("id,fotos").execute().data:
+        nieuw, wijz = [], False
+        for i, f in enumerate(p["fotos"]):
+            if f["src"] in slecht and f.get("orig"):
+                _, nu = _zet_over((p["id"], i, f["orig"], base))
+                f = {**f, "src": nu}
+                wijz = True
+                n += 1
+            nieuw.append(f)
+        if wijz:
+            db.table("producten").update({"fotos": nieuw}).eq("id", p["id"]).execute()
+    print(n, "foto's hersteld")
+
+
 def _veilig(t):
     try:
         return _zet_over(t)
@@ -90,4 +125,7 @@ def _veilig(t):
 
 
 if __name__ == "__main__":
+    if "--herstel" in sys.argv:
+        herstel(set(json.load(open(sys.argv[sys.argv.index("--herstel") + 1]))))
+        sys.exit(0)
     main(int(sys.argv[sys.argv.index("--max") + 1]) if "--max" in sys.argv else None)
