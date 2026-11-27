@@ -38,6 +38,26 @@ def _tekst(h: str) -> str:
     return re.sub(r"\n\s*\n+", "\n", html.unescape(re.sub(r"<[^>]+>", "", h))).strip()
 
 
+def _dedupe(producten: list) -> tuple[list, dict]:
+    """Eén artikelnummer is één stuk (Daniel, 27-11-2026): bij dubbele advertenties blijft die met de HOOGSTE prijs staan
+    (bij gelijke prijs: de met de meeste foto's, dan de nieuwste). De andere URL wordt een 301 naar de blijver."""
+    per_sku: dict = {}
+    for p in producten:
+        per_sku.setdefault(p["sku"], []).append(p)
+    blijvers, omleidingen = [], {}
+    for p in producten:
+        groep = per_sku[p["sku"]]
+        if len(groep) == 1:
+            blijvers.append(p)
+            continue
+        winnaar = max(groep, key=lambda x: (x["prijs"], len(x["fotos"]), x["gemaakt"]))
+        if p is winnaar:
+            blijvers.append(p)
+        else:
+            omleidingen[p["handle"]] = winnaar["handle"]
+    return blijvers, omleidingen
+
+
 def bouw(uitvoer: Path) -> dict:
     producten = []
     for p in _pagina("products.json", "products"):
@@ -51,6 +71,7 @@ def bouw(uitvoer: Path) -> dict:
             "fotos": [{"src": i["src"], "b": i.get("width"), "h": i.get("height")} for i in p["images"]],
             "gemaakt": p["created_at"], "tags": p["tags"],
         })
+    producten, omleidingen = _dedupe(producten)
     collecties = [{"handle": c["handle"], "titel": c["title"], "aantal": c["products_count"],
                    "omschrijving": c.get("body_html") or ""} for c in _pagina("collections.json", "collections")]
     # welke producten in welke collectie, in de volgorde van de winkel
@@ -65,7 +86,10 @@ def bouw(uitvoer: Path) -> dict:
             "datum": re.search(r"<published>(.*?)</published>", e).group(1)[:10],
             "html": html.unescape(re.search(r"<content[^>]*>(.*?)</content>", e, re.S).group(1)),
         })
-    cat = {"producten": producten, "collecties": collecties, "artikelen": artikelen}
+    houden = {p["id"] for p in producten}
+    for c in collecties:
+        c["producten"] = [i for i in dict.fromkeys(c["producten"]) if i in houden]
+    cat = {"producten": producten, "collecties": collecties, "artikelen": artikelen, "omleidingen": omleidingen}
     uitvoer.mkdir(parents=True, exist_ok=True)
     (uitvoer / "catalogus.json").write_text(json.dumps(cat, ensure_ascii=False))
     return cat

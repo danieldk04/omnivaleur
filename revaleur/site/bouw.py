@@ -494,7 +494,8 @@ def bouw(dist: Path = SITE / "dist"):
     (dist / "sitemap.xml").write_text(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{sm}</urlset>')
     (dist / "robots.txt").write_text(f"User-agent: *\nDisallow: /cart\nDisallow: /nl/cart\nDisallow: /search\nDisallow: /nl/search\nDisallow: /bedankt\nSitemap: {DOMEIN}/sitemap.xml\n")
     (dist / "_headers").write_text("/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n")
-    (dist / "_redirects").write_text("/collections/*/products/* /products/:splat 301\n/nl/collections/*/products/* /nl/products/:splat 301\n")
+    oud = "".join(f"{pr}/products/{van} {pr}/products/{naar} 301\n" for van, naar in cat.get("omleidingen", {}).items() for pr in ("", "/nl"))
+    (dist / "_redirects").write_text(oud + "/collections/*/products/* /products/:splat 301\n/nl/collections/*/products/* /nl/products/:splat 301\n")
     return len(urls)
 
 
