@@ -21,13 +21,15 @@ const browser = await chromium.launch({ args: [...GL, '--ignore-gpu-blocklist'] 
 const page = await browser.newPage({ viewport: { width: 720, height: 1280 } });
 page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') console.log('[page]', m.text()); });
 page.on('pageerror', e => console.log('[pageerror]', e.message));
-await page.goto(`http://localhost:${port}/${process.env.PAGE || 'motion.html'}?v=${process.env.V}&render=1&lang=${process.env.VLANG||''}`);
+await page.goto(`http://localhost:${port}/${process.env.PAGE || 'motion.html'}?v=${process.env.V}&render=1`);
 await page.waitForFunction(() => window.renderAt && window.ready);
 await page.evaluate(() => window.ready);
 const shot = () => page.screenshot({ clip: { x: 0, y: 0, width: 720, height: 1280 }, type: 'png' });
 
 const [mode, a, b, c, d, e] = process.argv.slice(2);
-if (mode === 'cues') { fs.writeFileSync(a, JSON.stringify({ cues: await page.evaluate(() => window.CUES), duration: await page.evaluate(() => window.DURATION) })); }
+if (mode === 'eval') { console.log(JSON.stringify(await page.evaluate(new Function('return (' + a + ')')))); }
+else if (mode === 'audit') { const r = await page.evaluate(() => window.audit()); console.log(r.length ? r.join('\n') : 'AUDIT OK: geen botsingen'); }
+else if (mode === 'cues') { fs.writeFileSync(a, JSON.stringify({ cues: await page.evaluate(() => window.CUES), duration: await page.evaluate(() => window.DURATION) })); }
 else if (mode === 'stills') {
   fs.mkdirSync(b, { recursive: true });
   for (const t of a.split(',').map(Number)) {

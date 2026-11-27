@@ -1,4 +1,3 @@
-const NLX = new URLSearchParams(location.search).get('lang') === 'nl';
 // Herbruikbare sets en props, alles uit primitieve vormen (geen modellen, geen downloads).
 import * as THREE from 'three';
 import { matFactory, makeChar } from './rig.js';
@@ -186,16 +185,16 @@ export function liveTex(w, h, fn) {
 }
 // Omnivaleur-achtig scherm: een item, vier kanalen. p = { sold:0..1, rm:[0..1 x3], title, price }
 export function omniUI(x, w, h, p = {}) {
-  const rows = [['Vinted', '#09b1ba'], ['Marktplaats', '#2f6fe0'], ['eBay', '#e53238'], [NLX ? 'Eigen shop' : 'Your shop', '#6b46c1']];
+  const rows = [['Vinted', '#09b1ba'], ['Marktplaats', '#2f6fe0'], ['eBay', '#e53238'], ['Your shop', '#6b46c1']];
   x.fillStyle = '#f4f7fb'; x.fillRect(0, 0, w, h); x.fillStyle = '#0a1936'; x.fillRect(0, 0, w, h * .13);
   x.fillStyle = '#85edbc'; x.beginPath(); x.arc(w * .1, h * .065, h * .035, 0, 7); x.fill(); x.fillStyle = '#fff'; x.font = `900 ${h * .05}px Montserrat`; x.textBaseline = 'middle'; x.textAlign = 'left'; x.fillText('Omnivaleur', w * .2, h * .068);
-  x.fillStyle = '#0a1936'; x.font = `900 ${h * .055}px Montserrat`; x.fillText(p.title || (NLX ? 'Blauwe hoodie' : 'Blue hoodie'), w * .07, h * .2); x.fillStyle = '#5b6b86'; x.font = `800 ${h * .04}px Montserrat`; x.fillText(p.price || (NLX ? '€45' : 'EUR 45'), w * .07, h * .26);
+  x.fillStyle = '#0a1936'; x.font = `900 ${h * .055}px Montserrat`; x.fillText(p.title || 'Blue hoodie', w * .07, h * .2); x.fillStyle = '#5b6b86'; x.font = `800 ${h * .04}px Montserrat`; x.fillText(p.price || 'EUR 45', w * .07, h * .26);
   rows.forEach(([n, c], i) => {
     const y = h * (.31 + i * .16), rm = i === 0 ? 0 : (p.rm ? p.rm[i - 1] : 0), sold = i === 0 ? (p.sold || 0) : 0;
     x.globalAlpha = 1 - rm * .6; x.fillStyle = '#fff'; x.beginPath(); x.roundRect(w * .05, y, w * .9, h * .13, 14); x.fill(); x.fillStyle = c; x.beginPath(); x.arc(w * .13, y + h * .065, h * .035, 0, 7); x.fill();
     x.fillStyle = '#0a1936'; x.font = `900 ${h * .037}px Montserrat`; x.fillText(n, w * .21, y + h * .065);
-    const st = i === 0 ? (sold > .5 ? (NLX ? 'VERKOCHT' : 'SOLD') : 'LIVE') : (rm > .5 ? (NLX ? 'WEG' : 'REMOVED') : 'LIVE'), col = (st === 'LIVE') ? '#1faa6b' : (st === 'SOLD' ? '#ff4d4d' : '#8a94a8');
-    x.fillStyle = col; x.beginPath(); x.roundRect(w * .66, y + h * .033, w * .27, h * .065, 12); x.fill(); x.fillStyle = '#fff'; x.font = `900 ${h * (NLX ? .024 : .03)}px Montserrat`; x.textAlign = 'center'; x.fillText(st, w * .795, y + h * .066); x.textAlign = 'left';
+    const st = i === 0 ? (sold > .5 ? 'SOLD' : 'LIVE') : (rm > .5 ? 'REMOVED' : 'LIVE'), col = (st === 'LIVE') ? '#1faa6b' : (st === 'SOLD' ? '#ff4d4d' : '#8a94a8');
+    x.fillStyle = col; x.beginPath(); x.roundRect(w * .66, y + h * .033, w * .27, h * .065, 12); x.fill(); x.fillStyle = '#fff'; x.font = `900 ${h * .03}px Montserrat`; x.textAlign = 'center'; x.fillText(st, w * .795, y + h * .066); x.textAlign = 'left';
     if (rm > .1) { x.strokeStyle = '#0a1936'; x.lineWidth = 4; x.beginPath(); x.moveTo(w * .2, y + h * .065); x.lineTo(w * .2 + (w * .36) * Math.min(1, rm * 1.4), y + h * .065); x.stroke(); }
     x.globalAlpha = 1;
   });
@@ -208,4 +207,38 @@ export function coverTex(tex, aspect, w = 1024) {
   if (ia > aspect) { sw = im.height * aspect; sx = 0; } else { sh = im.width / aspect; sy = 0; }
   x.drawImage(im, sx, sy, sw, sh, 0, 0, w, h);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+}
+
+export function stampSprite(text, color = '#e53935', o = {}) {
+  const size = o.size || 84, lines = String(text).split('\n'), c = document.createElement('canvas'), x = c.getContext('2d');
+  x.font = `900 ${size}px Montserrat`; const w = Math.ceil(Math.max(...lines.map(l => x.measureText(l).width))) + 90, h = size * lines.length * 1.02 + 70; c.width = w; c.height = Math.ceil(h);
+  x.font = `900 ${size}px Montserrat`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.strokeStyle = color; x.fillStyle = color; x.lineWidth = 9; x.beginPath(); x.roundRect(8, 8, w - 16, h - 16, 14); x.stroke(); x.lineWidth = 3; x.beginPath(); x.roundRect(24, 24, w - 48, h - 48, 8); x.stroke();
+  lines.forEach((l, i) => x.fillText(l, w / 2, 35 + size * (i + .5) * 1.02 + 4));
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false, fog: false, rotation: o.rot ?? -.16 }));
+  const hh = o.h || .5; sp.userData.base = [hh * w / h, hh]; sp.scale.set(hh * w / h, hh, 1); sp.renderOrder = 12; return sp;
+}
+export function ticketProp(X, text = 'ADMIT ONE\nSEAT 12', s = 1) {
+  const g = new THREE.Group(); const { t } = labelTex(text, { bg: '#f2c14e', fg: '#3a2a10', size: 70, radius: 10, pad: 22 });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(.62, .34), new THREE.MeshBasicMaterial({ map: t })); g.add(m);
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(.62, .34), new THREE.MeshBasicMaterial({ color: '#c9962f', side: THREE.BackSide })); back.position.z = -.002; g.add(back);
+  g.scale.setScalar(s); g.userData.noAudit = true; return g;
+}
+export function scannerProp(X, s = 1) {
+  const g = new THREE.Group(); X.box(g, [.22, .34, .1], [0, 0, 0], '#1a1d26'); const scr = X.box(g, [.16, .12, .02], [0, .08, .06], '#35e08a', { glow: true }); X.box(g, [.1, .04, .02], [0, -.08, .06], '#6b7a99'); g.userData.screen = scr; g.scale.setScalar(s); return g;
+}
+export function gate(X, g, P = {}) {
+  const { box, cyl, sph, light } = X; const o = { ground: '#262a3a', wall: '#3a3052', ...P };
+  light(g, { sun: [-4, 9, 7], sunC: '#aebdff', sunI: 2.4, hemi: .9, sky: '#7d8fe0', gnd: '#2a3050', shadow: 14 });
+  box(g, [40, .2, 30], [0, -.1, 0], o.ground); box(g, [20, .08, 4], [0, .04, -2.2], '#3a4054');
+  box(g, [13, 5.5, .7], [0, 2.75, -5], o.wall); box(g, [2.6, 3.1, .2], [0, 1.55, -4.62], '#ffd89a', { glow: true }); box(g, [3.0, .25, .5], [0, 3.25, -4.5], '#1a1626');
+  [-4.5, -3.2, 3.2, 4.5].forEach((x, i) => box(g, [.9, 1.3, .06], [x, 2.2, -4.6], ['#e85d75', '#4aa3df', '#f2c14e', '#7bd88f'][i]));
+  for (let i = 0; i < 16; i++) { const x = -7 + i * .93; sph(g, .09, [x, 3.7 + Math.sin(i * .9) * .1, -4.2], i % 2 ? '#ffe9a8' : '#ff9ad5', { glow: true }); }
+  [-1.9, 1.9].forEach(x => { cyl(g, .06, 1.0, [x, .5, -2.9], '#c9a14a'); sph(g, .1, [x, 1.02, -2.9], '#c9a14a'); }); box(g, [3.8, .06, .06], [0, .9, -2.9], '#b02a3a');
+  const pl = new THREE.PointLight('#ffb870', 16, 11, 1.5); pl.position.set(0, 3.6, -3.9); g.add(pl);
+  return { bg: '#0a1030', fog: ['#0a1030', 12, 38] };
+}
+export function colliders(g) {
+  const out = []; g.updateMatrixWorld(true);
+  g.traverse(m => { if (m.isMesh && m.geometry.type === 'BoxGeometry') { const b = new THREE.Box3().setFromObject(m); out.push(b); } });
+  return out;
 }

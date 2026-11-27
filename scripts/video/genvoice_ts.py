@@ -1,6 +1,6 @@
 import json, sys, urllib.request, os, base64
 key = open(os.path.expanduser('~/.omnivaleur/elevenlabs-sleutel.txt')).read().strip()
-S = json.load(open(os.environ.get('SCRIPTS','week48-scripts.json')))
+S = json.load(open('week48-scripts.json'))
 for name in sys.argv[1:]:
     v = S[name]; text = ' '.join(v['lines'])
     body = json.dumps({"text": text, "model_id": v.get("model","eleven_multilingual_v2"), "voice_settings": {"stability": v.get("stability",0.38), "similarity_boost": 0.75, "style": 0.4, "use_speaker_boost": True}}).encode()

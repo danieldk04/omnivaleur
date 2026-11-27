@@ -1,7 +1,7 @@
 // 3D-motor: alles is een pure functie van t. Shots wisselen op woordtimings, de camera beweegt per shot.
 import * as THREE from 'three';
 import { makeChar } from './rig.js';
-import { ctxFor, label as mkLabel, sign as mkSign, uiTex, labelTex, liveTex, omniUI, coverTex } from './sets.js';
+import { ctxFor, label as mkLabel, sign as mkSign, uiTex, labelTex, liveTex, omniUI, coverTex, stampSprite, ticketProp, scannerProp, gate, colliders } from './sets.js';
 
 export const E = {
   lin: t => t, out: t => 1 - Math.pow(1 - t, 3), inOut: t => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
@@ -36,7 +36,7 @@ function chunks(words, maxw = 3, maxc = 17) {
 }
 let HOT = null, CAPS = [], DURATION = 20;
 const capEl = document.getElementById('cap');
-const capHTML = g => g.map(x => { const t = x.w.replace(/[.,;:!?]+$/, ''); return (/^(omnivaleur|free|gratis|nul|\d+|zero|€.*)$/.test(norm(t)) || (HOT && HOT.test(norm(t)))) ? `<b>${t}</b>` : t; }).join(' ');
+const capHTML = g => g.map(x => { const t = x.w.replace(/[.,;:!?]+$/, ''); return (/^(omnivaleur|free|\d+|zero|€.*)$/.test(norm(t)) || (HOT && HOT.test(norm(t)))) ? `<b>${t}</b>` : t; }).join(' ');
 function drawCaption(t, hide) {
   let cur = null; for (let i = 0; i < CAPS.length; i++) if (t >= CAPS[i].s - .02 && (i + 1 >= CAPS.length || t < CAPS[i + 1].s - .02)) cur = CAPS[i];
   if (!cur || hide || t > DURATION - 1.45) { capEl.style.opacity = 0; return; }
@@ -61,7 +61,7 @@ async function boot() {
   if (style === 'real') { renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.35; }
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(48, 720 / 1280, .05, 200);
   const X = ctxFor(style);
-  const sets = {}, setList = [], dyn = [], shots = []; let endT = null, cctvOn = false;
+  const sets = {}, setList = [], dyn = [], shots = []; let endT = null, endO = {}, cctvOn = false; const titles = [];
   const loader = new THREE.TextureLoader();
   const K = {
     THREE, X, style, words: WORDS, DURATION, E, pop, prog, cl, lerp,
@@ -69,16 +69,19 @@ async function boot() {
     cue: (t, type = 'hit') => CUES.push([t, type]),
     set(name, fn) {
       const g = new THREE.Group(); g.position.set(setList.length * 300, 0, 0); scene.add(g);
-      const ex = fn(X, g) || {}; const s = { g, ox: g.position.x, ex, name }; sets[name] = s; setList.push(s); return s;
+      const ex = fn(X, g) || {}; const s = { g, ox: g.position.x, ex, name }; s.col = colliders(g); sets[name] = s; setList.push(s); return s;
     },
-    actor(o) { const c = makeChar(style, o); scene.add(c); dyn.push(c); return c; },
-    prop(obj) { scene.add(obj); dyn.push(obj); return obj; },
+    actor(o) { const c = makeChar(style, o); c.userData.name = o.name || 'actor'; scene.add(c); dyn.push(c); return c; },
+    prop(obj, name) { obj.userData.name = name || obj.userData.name || 'prop'; scene.add(obj); dyn.push(obj); return obj; },
     label(text, o = {}) { const s = mkLabel(text, { ...o, h: (o.h || .5) * .62 }); scene.add(s); dyn.push(s); return s; },
-    sign: mkSign, uiTex, labelTex, liveTex, omniUI, coverTex,
+    sign: mkSign, uiTex, labelTex, liveTex, omniUI, coverTex, ticketProp, scannerProp, gate,
+    stamp(text, color, o) { const s = stampSprite(text, color, o); scene.add(s); dyn.push(s); return s; },
+    title(t0, t1, html) { titles.push([t0, t1, html]); },
+    async frames(dir, n, fps, aspect) { const imgs = await Promise.all(Array.from({ length: n }, (_, i) => new Promise(r => { const im = new Image(); im.onload = () => r(im); im.src = `${dir}/${String(i).padStart(4, '0')}.jpg`; }))); const w = 1024, h = Math.round(w / aspect), c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'), tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; return { tex, draw: t => { x.drawImage(imgs[Math.min(n - 1, Math.max(0, Math.floor(t * fps)))], 0, 0, w, h); tex.needsUpdate = true; } }; },
     image: url => new Promise(r => loader.load(url, t => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; r(t); })),
     stat, dolly, orbit,
     shot(t, setName, cam, fn, opts = {}) { shots.push({ t, set: setName, cam, fn, opts }); },
-    endCard(t) { endT = t; },
+    endCard(t, o = {}) { endT = t; endO = o; },
   };
   await mod.build(K);
   shots.sort((a, b) => a.t - b.t);
@@ -110,8 +113,40 @@ async function boot() {
     const cc = !!sh.opts.cctv; if (cc !== cctvOn) { cctvOn = cc; cctvEl.style.display = cc ? 'block' : 'none'; }
     canvas.style.filter = sh.opts.filter || ''; stage.style.filter = '';
     drawCaption(T, !!sh.opts.nocap || (endT != null && T >= endT));
-    if (endT != null && T >= endT - .05) { endEl.style.display = 'block'; [...endEl.children].forEach((e, i) => { const s = pop(T, endT + i * .22, .4); e.style.opacity = s > 0 ? 1 : 0; e.style.transform = (i > 0 ? 'translateX(-50%) ' : '') + `scale(${Math.max(.001, s)})`; if (i === 0) e.style.transform = `scale(${Math.max(.001, s)})`; }); } else endEl.style.display = 'none';
+    const titleEl = document.getElementById('title'); let tt = titles.find(x => T >= x[0] && T < x[1]);
+    if (tt) { if (titleEl.dataset.k !== String(tt[0])) { titleEl.dataset.k = String(tt[0]); titleEl.innerHTML = tt[2]; } const a = prog(T, tt[0], tt[0] + .35, E.lin) * (1 - prog(T, tt[1] - .25, tt[1], E.lin)); titleEl.style.opacity = a; titleEl.style.transform = `translateY(${(1 - a) * 14}px)`; } else titleEl.style.opacity = 0;
+    if (endT != null && T >= endT - .05) {
+      endEl.style.display = 'block'; endEl.classList.toggle('flat', !!endO.flat); endEl.style.background = endO.flat ? `rgba(253,241,227,${prog(T, endT - .05, endT + .3, E.lin)})` : '';
+      const kids = [...endEl.children]; const tag = endEl.querySelector('.tag'), sub = endEl.querySelector('.sub'), note = endEl.querySelector('.note'), share = endEl.querySelector('.share');
+      tag.innerHTML = endO.tag || ''; sub.textContent = endO.sub || ''; note.textContent = endO.note || ''; share.style.display = endO.tag ? 'none' : '';
+      kids.forEach((e, i) => { const s = pop(T, endT + i * .2, .4); e.style.opacity = s > 0 ? 1 : 0; const base = (e.classList.contains('cta') || e.classList.contains('url') || e.classList.contains('share')) ? 'translateX(-50%) ' : ''; e.style.transform = base + `scale(${Math.max(.001, s)})`; });
+      if (endO.flat) { endEl.querySelector('.cta').style.top = '830px'; endEl.querySelector('.url').style.top = '930px'; }
+    } else { endEl.style.display = 'none'; }
     stage.style.opacity = cl((DURATION - T) / .25);
+  };
+  window.__dbg = { sets, dyn, shots, THREE };
+  const wp = o => o.getWorldPosition(new THREE.Vector3());
+  window.audit = () => {
+    const out = new Set();
+    shots.forEach((sh, idx) => {
+      const nxt = shots[idx + 1], d = (nxt ? nxt.t : DURATION) - sh.t, S = sets[sh.set];
+      [0.02, .2, .4, .6, .8, .97].forEach(f => {
+        const T = sh.t + d * f; render(T);
+        const actors = dyn.filter(o => o.visible && o.pose), props = dyn.filter(o => o.visible && !o.pose && !o.isSprite && !o.userData.noAudit);
+        const pts = a => ['head', 'torso', 'hips'].map(k => wp(a.userData.pts[k]));
+        for (let i = 0; i < actors.length; i++) for (let j = i + 1; j < actors.length; j++) {
+          const A = pts(actors[i]), B = pts(actors[j]); let m = 9; A.forEach(p => B.forEach(q => { m = Math.min(m, p.distanceTo(q)); }));
+          if (m < .42 && !(sh.opts.allow || []).includes('actors')) out.add(`${sh.t.toFixed(1)}s ${sh.set}: ${actors[i].userData.name} raakt ${actors[j].userData.name} (afstand ${m.toFixed(2)})`);
+        }
+        actors.forEach(a => {
+          const P = pts(a);
+          props.forEach(pr => { const b = new THREE.Box3().setFromObject(pr).expandByScalar(-.06); if (!b.isEmpty() && P.some(p => b.containsPoint(p)) && !(sh.opts.allow || []).includes(pr.userData.name) && !(pr.userData.allow || []).includes(a.userData.name)) out.add(`${sh.t.toFixed(1)}s ${sh.set}: ${a.userData.name} zit in ${pr.userData.name}`); });
+          if (S) S.col.forEach((b0, bi) => { const b = b0.clone().expandByScalar(-.04); if (b.max.x - b.min.x > 14) return; if (P.some(p => b.containsPoint(p)) && !(sh.opts.allow || []).includes('set')) out.add(`${sh.t.toFixed(1)}s ${sh.set}: ${a.userData.name} zit in decor #${bi} (${[b0.min.x, b0.min.y, b0.min.z].map(v => (v - S.ox * (0)).toFixed(1))})`); });
+        });
+      });
+    });
+    out.add('info: colliders ' + Object.values(sets).map(x => x.name + ':' + x.col.length).join(' '));
+    return [...out];
   };
   window.renderAt = t => { render(t); return true; };
   window.ready = Promise.resolve(true);

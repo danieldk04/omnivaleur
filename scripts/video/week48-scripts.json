@@ -179,5 +179,20 @@
   ],
   "model": "eleven_v3",
   "stability": 0.3
+ },
+ "ticket-doorman": {
+  "voice": "21m00Tcm4TlvDq8ikWAM",
+  "lang": "en",
+  "model": "eleven_v3",
+  "stability": 0.4,
+  "lines": [
+   "[calm, confident] You'd never sell the same concert ticket twice.",
+   "[narrating] Two people. One seat. The doorman scans it once, and the second one's out.",
+   "[knowing, a little amused] But your hoodie? You list it on Vinted, and on Marktplaats. It sells twice. Nobody scans the second ticket.",
+   "[warm, hopeful] Omnivaleur is the doorman for your listings.",
+   "[clear, steady] The moment it sells on Vinted, it's pulled from the others. In seconds.",
+   "[soft, satisfied] One sale. One happy buyer. No refunds.",
+   "[gentle, closing] Make every listing scan once. Seven days free."
+  ]
  }
 }

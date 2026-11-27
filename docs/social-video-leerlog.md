@@ -111,3 +111,10 @@ Daniel heeft alle drie ingepland via Schedchie. Zijn voorkeur: 1) 3d-C real-kevi
 
 ### Renno als gouden standaard (27-11-2026, Daniel)
 Daniel noemt "It all comes down to willpower" (@renno.app) het stereotype van wat hij wil. Volledige ontleding en principes in `docs/social-video-renno-ontleding.md`. Lees dat bestand voor elke nieuwe video en toets het script aan de negen principes.
+
+### Video D: ticket-doorman, renno-stijl (27-11-2026)
+Eerste video volgens `docs/social-video-renno-ontleding.md`: titel in de tweede persoon, analogie (concertticket, portier), spiegel (hoodie op Vinted en Marktplaats), Omnivaleur als portier, echte dashboard-UI als livebeeld, kleurboog nachtblauw naar warm, stempels als rekwisieten, terugkoppeling op het ticket, vlakke eindkaart.
+- Dashboard als livebeeld: `dash-sale.html` (de echte CSS van `frontend/demo-dashboard.html`, een verkoop op Vinted haalt de andere kanalen weg als pure functie van t) wordt door `cap_dash.mjs` in drie vormen als frames opgenomen (`wide` voor de laptop, `close` als staande kaart) en in de 3D-scene als textuur getekend (`K.frames`). Geen wachtwoorden of productie-account nodig.
+- Controle op fouten: `render2.mjs audit` zoekt poppetjes die elkaar of rekwisieten raken (het wijst grove botsingen aan, geen alles), daarna altijd stills bekijken met `chk.sh`. Dit vond: ticket met achterkant naar de camera, stempels die buiten beeld vallen (nu tweeregelig en kleiner), schermtextuur in de verkeerde verhouding, kaart die de tafel snijdt, armen die kruisen in de dragende pose.
+- Titel bovenin vraagt een kader waarin het onderwerp lager staat (camera kijkt hoger); een staande kaart (0,94) vult een telefoonscherm beter dan een breed scherm.
+- Nog niet gemeten; vergelijk met Kevin op 01-12.

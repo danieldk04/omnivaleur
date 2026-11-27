@@ -27,7 +27,7 @@ export const ANIM = {
   shock: t => ({ lx: -.5, rx: -.5, lz: .4, rz: .4, le: -.9, re: -.9, eye: 1.45, brow: -.7, mouth: -.2, open: .8, hx: -.08, y: S(t * 30) * .006 }),
   think: t => ({ rx: -1.0, re: -2.3, rz: .1, hx: .1, hy: S(t * 1.2) * .2, mouth: 0, brow: .15 }),
   shrug: t => ({ lz: .8, rz: .8, le: -1.2, re: -1.2, lx: -.4, rx: -.4, brow: -.4, mouth: -.4, hz: .12 }),
-  carry: t => ({ lx: -1.2, rx: -1.2, le: -.6, re: -.6, lz: -.1, rz: -.1 }),
+  carry: t => ({ lx: -1.2, rx: -1.2, le: -.6, re: -.6, lz: .12, rz: .12 }),
   phone: t => ({ rx: -1.15, re: -1.6, rz: .0, lx: .05, hx: .22, mouth: 0, eye: .95 }),
   fight: t => ({ lx: -1.5 + S(t * 12) * .6, rx: -1.5 - S(t * 12) * .6, le: -1.6, re: -1.6, brow: .7, mouth: -.8, open: .5, lean: .25, ll: S(t * 6) * .3, rl: -S(t * 6) * .3, y: Math.abs(S(t * 6)) * .06 }),
   sad: t => ({ hx: .45, lean: .15, lx: .1, rx: .1, mouth: -.8, brow: -.5, eye: .8 }),
@@ -80,6 +80,8 @@ export function makeChar(style, o = {}) {
   const mouthG = new THREE.Group(); mouthG.position.set(0, .1, hr + (rounded ? 0 : .13)); head.add(mouthG);
   const arc = mesh(mouthG, new THREE.TorusGeometry(.07, .014, 6, 18, PI), '#4a1f1f'); arc.castShadow = false;
   const openM = mesh(mouthG, new THREE.SphereGeometry(.07, 12, 8), '#5a1520', 0, -.01, -.01); openM.castShadow = false;
+  const mk = (g, x, y, z) => { const o = new THREE.Object3D(); o.position.set(x, y, z); g.add(o); return o; };
+  root.userData.pts = { head: mk(head, 0, .28, 0), torso: mk(torso, 0, .32, 0), hips: mk(hips, 0, 0, 0), handL: mk(arms[0].el, 0, -.36, 0), handR: mk(arms[1].el, 0, -.36, 0) };
   root.scale.setScalar(scale);
 
   root.pose = (name, t = 0, extra = {}) => {
