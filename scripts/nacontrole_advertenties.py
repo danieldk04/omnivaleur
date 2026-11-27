@@ -53,6 +53,14 @@ def rubriek_nummers() -> dict[str, set[int]]:
     bg = open(os.path.join(REPO, "extension", "background.js"), encoding="utf-8").read()
     for naam, cat3 in re.findall(r'"([a-z0-9 &\'-]+)":\s*\{\s*cat1:\s*\d+,\s*cat3:\s*(\d+)', bg):
         uit[naam].add(int(cat3))
+    # De extensie kiest bij accessoires per titelwoord een eigen rubriek (MP_ACCESSOIRES:
+    # hoeden, sjaals, riemen, tassen, stropdassen). Die zijn geen afwijking.
+    blok = re.search(r"const MP_ACCESSOIRES = \{(.*?)\n\};", bg, re.S)
+    if blok:
+        extra = {int(n) for n in re.findall(r"cat3:\s*(\d+)", blok.group(1))}
+        for naam in ("accessoires dames", "unisex accessoires", "heren accessoires"):
+            if naam in uit:
+                uit[naam] |= extra
     jobs = open(os.path.join(REPO, "backend", "api", "jobs.py"), encoding="utf-8").read()
     for naam, l2 in re.findall(r'"([a-z0-9 &\'-]+)":\s*\{"l1":\s*\d+,\s*"l2":\s*(\d+)', jobs):
         uit[naam].add(int(l2))
@@ -190,6 +198,11 @@ async def controleer_klant(db, uid: str, platform: str, nummers) -> dict:
         return {"user_id": uid, "live": len(live), "fouten": [],
                 "meting_mislukt": "verkopersnummer niet te vinden op de openbare zoekpagina"}
     openbaar = await openbare_rijen(platform, vid)
+    # openbare_rijen stopt na MAX_PAGINAS * PAGINA rijen (5000). Heeft de verkoper er
+    # meer, dan ontbreekt de staart en zou elke advertentie daarin als 'weg' gelden
+    # (27-11-2026: Goudlief, precies 5000 openbaar, 112 valse 'weg').
+    from backend.services.mp_enrich import MAX_PAGINAS, PAGINA
+    afgekapt = len(openbaar) >= MAX_PAGINAS * PAGINA
     if not openbaar:
         return {"user_id": uid, "live": len(live), "fouten": [],
                 "meting_mislukt": "openbare lijst leeg; niet als 'alles weg' lezen"}
@@ -227,10 +240,13 @@ async def controleer_klant(db, uid: str, platform: str, nummers) -> dict:
                                         nummers, verkocht.get(r["item_id"], set()),
                                         geplaatst.get(r["platform_listing_id"]),
                                         bieden_aan):
+            if afgekapt and soort == "weg":
+                continue   # lijst afgekapt: afwezig bewijst niets
             fouten.append({"soort": soort, "wat": wat, "item_id": it["id"],
                            "titel": it["title"], "advertentie": r["platform_listing_id"]})
     return {"user_id": uid, "live": len(live), "openbaar": len(openbaar),
-            "eigen": sum(1 for r in live if r["platform_listing_id"] in geplaatst), "fouten": fouten}
+            "eigen": sum(1 for r in live if r["platform_listing_id"] in geplaatst), "fouten": fouten,
+            **({"meting_beperkt": "openbare lijst afgekapt op 5000; 'weg' niet beoordeeld"} if afgekapt else {})}
 
 
 def herplaatsingen_zonder_eigen_rubriek(db, uren: int) -> dict[str, int]:
