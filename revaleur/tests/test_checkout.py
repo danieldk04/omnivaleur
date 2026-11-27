@@ -177,3 +177,21 @@ def test_mail_zonder_schuld_en_in_de_taal_van_de_klant():
     for woord in ("sorry", "onze fout", "ligt aan ons"):
         assert woord not in tekst.lower()
     assert mail.bericht({**best, "taal": "en"})[1].startswith("Hi Kim")
+
+
+def test_factuurlink_in_de_mail_als_die_er_is_en_zonder_gaat_de_mail_gewoon():
+    best = {"nummer": 5, "taal": "nl", "naam": "Kim", "totaal": 30, "verzendkosten": 0, "artikelen": [{"titel": "X", "prijs": 30}]}
+    assert "Je factuur (pdf): https://pay.stripe.com/i/x" in mail.bericht({**best, "factuur_url": "https://pay.stripe.com/i/x"})[1]
+    assert "Your invoice (pdf): https://pay.stripe.com/i/x" in mail.bericht({**best, "taal": "en", "factuur_url": "https://pay.stripe.com/i/x"})[1]
+    assert "factuur" not in mail.bericht(best)[1].lower()
+
+
+def test_factuur_url_haalt_pdf_op_en_faalt_stil(monkeypatch):
+    class F(dict):
+        pass
+    monkeypatch.setattr(rs.stripe.Invoice, "retrieve", staticmethod(lambda i, api_key=None: F(invoice_pdf="https://pdf", hosted_invoice_url="https://h")))
+    assert rs.factuur_url({"invoice": "in_1"}) == "https://pdf"
+    assert rs.factuur_url({}) is None
+    def boem(*a, **k): raise RuntimeError("x")
+    monkeypatch.setattr(rs.stripe.Invoice, "retrieve", staticmethod(boem))
+    assert rs.factuur_url({"invoice": "in_1"}) is None

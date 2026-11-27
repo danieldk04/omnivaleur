@@ -12,14 +12,14 @@ _TEKST = {
         "tekst": ("Hoi{naam},\n\nTop, je bestelling is binnen en betaald. Ik ga er direct mee aan de slag.\n\n"
                   "{regels}\n\nTotaal: {totaal} (verzending {verzend})\n\n"
                   "Je pakket gaat maandag t/m zaterdag meestal binnen 1 werkdag de deur uit. Zodra het onderweg is, "
-                  "krijg je een mail met een trackinglink.\n\nVragen? Mail gerust naar info@revaleur.com.\n\nGroet,\nDaniel\nRevaleur"),
+                  "krijg je een mail met een trackinglink.\n{factuur}Vragen? Mail gerust naar info@revaleur.com.\n\nGroet,\nDaniel\nRevaleur"),
     },
     "en": {
         "onderwerp": "Your Revaleur order is in (#{nr})",
         "tekst": ("Hi{naam},\n\nGreat news, your order is in and paid. I'm getting it ready right away.\n\n"
                   "{regels}\n\nTotal: {totaal} (shipping {verzend})\n\n"
                   "Orders ship Monday to Saturday, usually within 1 business day. As soon as your parcel is on its way, "
-                  "you'll get an email with a tracking link.\n\nQuestions? Just email info@revaleur.com.\n\nBest,\nDaniel\nRevaleur"),
+                  "you'll get an email with a tracking link.\n{factuur}Questions? Just email info@revaleur.com.\n\nBest,\nDaniel\nRevaleur"),
     },
 }
 
@@ -36,8 +36,10 @@ def bericht(bestelling: dict) -> tuple[str, str]:
     voornaam = (bestelling.get("naam") or "").split(" ")[0]
     kosten = float(bestelling.get("verzendkosten") or 0)
     verzend = _euro(kosten, taal) if kosten else ("gratis" if taal == "nl" else "free")
+    url = bestelling.get("factuur_url")
+    factuur = ((f"\nJe factuur (pdf): {url}\n\n" if taal == "nl" else f"\nYour invoice (pdf): {url}\n\n") if url else "\n")
     return (t["onderwerp"].format(nr=bestelling.get("nummer", "")),
-            t["tekst"].format(naam=f" {voornaam}" if voornaam else "", regels=regels,
+            t["tekst"].format(naam=f" {voornaam}" if voornaam else "", regels=regels, factuur=factuur,
                               totaal=_euro(float(bestelling.get("totaal") or 0), taal), verzend=verzend))
 
 

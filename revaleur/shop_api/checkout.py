@@ -169,6 +169,19 @@ async def stripe_webhook(request: Request):
     return {"genegeerd": True}
 
 
+def factuur_url(sessie: dict) -> str | None:
+    """Pdf-link van de Stripe-factuur (margeregeling-tekst), voor in de bevestigingsmail. Best effort: zonder link gaat de mail gewoon."""
+    inv = sessie.get("invoice")
+    if not inv:
+        return None
+    try:
+        f = stripe.Invoice.retrieve(inv, api_key=settings.stripe_secret_key)
+        return f.get("invoice_pdf") or f.get("hosted_invoice_url")
+    except Exception as e:  # noqa: BLE001
+        logger.warning("[revaleur] factuurlink niet op te halen: %s", e)
+        return None
+
+
 def verwerk_betaling(db, sessie: dict) -> None:
     """Idempotent: Stripe kan dezelfde melding vaker sturen."""
     from .mail import stuur_bevestiging
@@ -201,6 +214,7 @@ def verwerk_betaling(db, sessie: dict) -> None:
         db.table("bestellingen").update({"omnivaleur_gemeld_op": _nu().isoformat()}).eq("id", rij["id"]).execute()
     koppeling.bouw_site_opnieuw()
     try:
+        rij["factuur_url"] = factuur_url(sessie)
         stuur_bevestiging(rij)
         db.table("bestellingen").update({"mail_bevestiging_op": _nu().isoformat()}).eq("id", rij["id"]).execute()
     except Exception as e:  # noqa: BLE001
