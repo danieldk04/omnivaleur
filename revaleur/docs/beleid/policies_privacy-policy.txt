@@ -1,0 +1,14 @@
+Privacy policy
+ Last updated: 27 November 2026. Revaleur, Kleine Melanen 5, 4614 RG Bergen op Zoom, The Netherlands (KvK 86792423) is responsible for the processing of your personal data as described here. Contact: info@revaleur.com.
+ What we collect and why
+ When you order: your name, email address, phone number, delivery address and order details. We use these to process and ship your order, send order and tracking emails, handle returns and meet our legal duties (tax and accounting). The legal basis is performance of the contract and legal obligation.
+ When you contact us: your message and contact details, to answer you.
+ Payment details (card number, iDEAL) are entered at Stripe and are never stored by us.
+ Who processes your data for us
+ Stripe (payments and invoices), Resend (order emails), Supabase (database, EU region Frankfurt), Cloudflare (website hosting and image storage) and Railway (server). They process data only on our instructions. Some of them may process data outside the EU under standard contractual clauses. Parcel carriers receive your name, address, phone number and email to deliver your order. We do not sell your data.
+ Cookies
+ This website uses no tracking cookies. Your shopping cart is stored in your own browser (local storage) and never leaves your device until you check out. Stripe may set cookies on its payment page for security and fraud prevention.
+ How long we keep data
+ Order and invoice data: 7 years, as required by tax law. Other messages: up to 2 years.
+ Your rights
+ You can ask us for access to, correction of or deletion of your data, restriction of processing, data portability, and you can object to processing. Email info@revaleur.com; we respond within one month. You can also complain to the Dutch Data Protection Authority (Autoriteit Persoonsgegevens).

@@ -103,6 +103,9 @@ def tekst_naar_html(t):
     return "\n".join(uit + lijst)
 
 
+MAATTABEL_EN = ("Size chart and measurements\n Every item at Revaleur is measured by hand. The measurements are in the pictures of each product: usually chest width (armpit to armpit), length and sleeve length, in centimetres.\n"
+                " Vintage fits differently from modern clothing and the size on the label says little. Lay a garment that fits you well next to the photo and compare the measurements before you buy.\n"
+                " Not sure? Email info@revaleur.com with the item name and we will gladly help.")
 PAGINA_NL = {}
 _pn = SITE / "pagina_nl.json"
 if _pn.exists():
@@ -286,7 +289,7 @@ def voet(taal):
             f'<a href="{p}/policies/terms-of-service">{esc(t("Terms of service"))}</a><a href="{p}/policies/privacy-policy">{esc(t("Privacy policy"))}</a></div>'
             f'<div><strong>Revaleur</strong><a href="{p}/pages/our-mission">{esc(t("Our mission"))}</a><a href="{p}/blogs/news">{esc(t("Blog"))}</a><a href="{p}/pages/size-chart-men">{esc(t("See size chart & measurements"))}</a></div>'
             f'<div><strong>{esc(t("Contact us"))}</strong><a href="{p}/pages/contact-us">{esc(t("Contact us"))}</a><a href="mailto:{MAIL}">{MAIL}</a></div>'
-            f'<div class="klein">© {date.today().year} Revaleur · Kleine Melanen 5, 4614RG Bergen op Zoom</div></div></footer>'
+            f'<div class="klein">© {date.today().year} Revaleur · Kleine Melanen 5, 4614 RG Bergen op Zoom · KvK 86792423 · {"Btw-nr" if taal == "nl" else "VAT"} NL004117227B97 · +31 6 3745 5991</div></div></footer>'
             f'<script>window.REVALEUR_API="{API}";</script><script>{JS}</script></body></html>')
 
 
@@ -374,6 +377,10 @@ def home(cat, taal):
 
 
 def tekstpagina(titel, tekst, taal, cat, pad, omschr=""):
+    regels = [r for r in tekst.splitlines() if r.strip()]
+    if regels and len(regels[0].strip()) < 70 and not regels[0].strip().endswith((".", ":")):
+        titel = regels[0].strip().title() if regels[0].strip().isupper() else regels[0].strip()
+        tekst = "\n".join(regels[1:])
     body = f'<div class="inhoud"><h1>{esc(titel)}</h1>{tekst_naar_html(tekst)}</div>'
     return pagina(taal, pad, cat, f"{titel} – Revaleur", omschr or tekst[:150], body)
 
@@ -429,11 +436,11 @@ def _kort(h):
 
 def faq_pagina(taal, cat):
     t = Tx(taal)
-    tekst = lees_beleid("pages_contact-us")
+    tekst = PAGINA_NL.get("contact-us", "") if taal == "nl" else lees_beleid("pages_contact-us")
     vorm = (f'<form action="mailto:{MAIL}" method="post" enctype="text/plain" style="display:grid;gap:10px;max-width:520px">'
             f'<input class="veld" name="naam" placeholder="{esc(t("Name"))}"><input class="veld" type="email" name="email" placeholder="{esc(t("Email"))}" required>'
             f'<textarea class="veld" name="bericht" rows="5" placeholder="{esc(t("Comment"))}"></textarea><button class="knop">{esc(t("Send"))}</button></form>')
-    body = f'<div class="inhoud"><h1>{esc(t("Contact us"))}</h1><p>{MAIL}</p>{vorm}<hr style="margin:30px 0">{tekst_naar_html(tekst.split("Frequently Asked Questions",1)[-1])}</div>'
+    body = f'<div class="inhoud"><h1>{esc(t("Contact us"))}</h1><p>{MAIL}</p>{vorm}<hr style="margin:30px 0">{tekst_naar_html(tekst.split("Frequently Asked Questions",1)[-1] if taal == "en" else tekst)}</div>'
     return pagina(taal, "/pages/contact-us", cat, f'{t("Contact us")} – Revaleur', "", body)
 
 
@@ -479,7 +486,7 @@ def bouw(dist: Path = SITE / "dist"):
         schrijf(dist, f"{pr}/pages/our-mission/", tekstpagina(T_("Our mission"), mis or lees_beleid("pages_our-mission"), taal, cat, "/pages/our-mission"))
         schrijf(dist, f"{pr}/pages/contact-us/", faq_pagina(taal, cat))
         maat = lees_beleid("pages_size-chart-men")
-        schrijf(dist, f"{pr}/pages/size-chart-men/", tekstpagina(T_("See size chart & measurements"), PAGINA_NL.get("size-chart-men", "") if taal == "nl" and PAGINA_NL.get("size-chart-men") else (maat or "Measurements are in the product pictures."), taal, cat, "/pages/size-chart-men"))
+        schrijf(dist, f"{pr}/pages/size-chart-men/", tekstpagina(T_("See size chart & measurements"), PAGINA_NL.get("size-chart-men", "") if taal == "nl" and PAGINA_NL.get("size-chart-men") else (maat or MAATTABEL_EN), taal, cat, "/pages/size-chart-men"))
         urls += [f"{pr}/pages/our-mission", f"{pr}/pages/contact-us", f"{pr}/pages/size-chart-men"]
         schrijf(dist, f"{pr}/blogs/news/", blogindex(taal, cat))
         urls.append(f"{pr}/blogs/news")
@@ -493,6 +500,22 @@ def bouw(dist: Path = SITE / "dist"):
     idx = [{"h": p["handle"], "t": p["titel"], "m": p["merk"], "y": p["type"], "i": _foto(p["fotos"][0]["src"], 600) if p["fotos"] else "",
             "p": euro(p["prijs"], "en")} for p in cat["producten"] if p["beschikbaar"]]
     (dist / "search-index.json").write_text(json.dumps(idx, ensure_ascii=False))
+    def x(v):
+        return html.escape(str(v), quote=False)
+    items = "".join(
+        f"<item><g:id>{x(p['sku'])}-{x(p['id'])}</g:id><title>{x(p['titel'])}</title><description>{x(p['tekst'][:4900] or p['titel'])}</description>"
+        f"<link>{DOMEIN}/products/{p['handle']}</link>"
+        + (f"<g:image_link>{x(p['fotos'][0]['src'])}</g:image_link>" if p["fotos"] else "")
+        + "".join(f"<g:additional_image_link>{x(f['src'])}</g:additional_image_link>" for f in p["fotos"][1:10])
+        + f"<g:availability>{'in_stock' if p['beschikbaar'] else 'out_of_stock'}</g:availability><g:price>{p['prijs']:.2f} EUR</g:price>"
+        f"<g:brand>{x(p['merk'] or 'Revaleur')}</g:brand><g:condition>used</g:condition><g:identifier_exists>no</g:identifier_exists>"
+        f"<g:google_product_category>1604</g:google_product_category><g:product_type>{x(p['type'])}</g:product_type>"
+        f"<g:shipping><g:country>NL</g:country><g:service>Standard</g:service><g:price>0.00 EUR</g:price></g:shipping></item>"
+        for p in cat["producten"] if p["beschikbaar"])
+    (dist / "feeds").mkdir(exist_ok=True)
+    (dist / "feeds" / "google-merchant.xml").write_text(
+        '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:g="http://base.google.com/ns/1.0"><channel><title>Revaleur</title>'
+        f"<link>{DOMEIN}</link><description>Vintage designer clothing</description>{items}</channel></rss>", encoding="utf-8")
     sm = "".join(f"<url><loc>{DOMEIN}{u if u != '/' else '/'}</loc></url>" for u in urls)
     (dist / "sitemap.xml").write_text(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{sm}</urlset>')
     (dist / "robots.txt").write_text(f"User-agent: *\nDisallow: /cart\nDisallow: /nl/cart\nDisallow: /search\nDisallow: /nl/search\nDisallow: /bedankt\nSitemap: {DOMEIN}/sitemap.xml\n")
