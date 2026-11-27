@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/i18n.js?v=b89aec2451"></script>
+<script src="/i18n.js?v=86f2dca6db"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur</title>
 <meta name="robots" content="noindex, nofollow">
@@ -3170,6 +3170,7 @@ input:focus, textarea:focus, select:focus { box-shadow: none; outline: 2px solid
       <!-- Hidden EN fields kept for data compatibility -->
       <input type="hidden" id="f-title-en">
       <input type="hidden" id="f-desc-en">
+      <div id="autofill-note" style="display:none;margin:-4px 0 12px;font-size:12px;color:var(--muted)">✨ Category, colour and size were filled in from your title and description. Please check them and change anything that's wrong.</div>
       <div class="form-group">
         <label>Shopify title <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(leave empty to use main title)</span></label>
         <input id="f-shopify-title" type="text" placeholder="Leave empty to use main title">
@@ -9740,6 +9741,7 @@ function gewijzigdeVelden(nu, begin) {
 }
 
 function openAddItem() {
+  if (window.kenmerkenReset) kenmerkenReset();
   importCreateCandidateId = null;
   _bewerkBeginstand = null;
   _bedragBegin = null;
@@ -17272,6 +17274,72 @@ function renderAnalytics(force) {
       }, { passive: true });
     }
   })();
+</script>
+<script src="/kenmerken-uit-tekst.js?v=20261127a"></script>
+<script>
+// Doelgroep, categorie, kleur en maat uit titel en omschrijving invullen
+// (27-11-2026, Daniel). Alleen bij een NIEUW artikel, alleen in lege velden,
+// nooit iets wat de verkoper zelf koos of wijzigde (een echte klik of keuze telt
+// als "handmatig" en blijft dan met rust), en alleen als de tekst het
+// ondubbelzinnig zegt (zie kenmerken-uit-tekst.js: liever leeg dan fout).
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const VELDEN = ['f-gender', 'f-category', 'f-color', 'f-size'];
+  let timer = null;
+
+  VELDEN.forEach((id) => {
+    const el = $(id);
+    if (el) el.addEventListener('change', (e) => { if (e.isTrusted) el.dataset.handmatig = '1'; });
+  });
+
+  window.kenmerkenReset = function () {
+    VELDEN.forEach((id) => { const el = $(id); if (el) { delete el.dataset.handmatig; delete el.dataset.auto; } });
+    const n = $('autofill-note'); if (n) n.style.display = 'none';
+  };
+
+  // Mag dit veld door ons gevuld worden? Leeg, of nog precies wat wij er zelf zetten.
+  const mag = (id) => {
+    const el = $(id);
+    return !!el && !el.dataset.handmatig && (el.value === '' || el.value === el.dataset.auto);
+  };
+  const waarden = (id) => [...$(id).options].map((o) => o.value).filter(Boolean);
+  const zet = (id, v) => { const el = $(id); el.value = v; el.dataset.auto = v; };
+
+  function vul() {
+    const K = window.KenmerkenUitTekst;
+    if (!K || $('edit-id').value) return;                       // alleen nieuwe artikelen
+    if (typeof currentItemType === 'function' && currentItemType() !== 'clothing') return;
+    const titel = $('f-title').value, omschr = $('f-desc').value;
+    if (titel.trim().length < 3) return;
+    try {
+      let groep = $('f-gender').value;
+      if (mag('f-gender')) {
+        const g = K.doelgroep(titel);
+        if (g && g !== groep) {
+          zet('f-gender', g); groep = g;
+          updateCategoryOptions($('f-category').value);
+        }
+      }
+      if (mag('f-category')) {
+        const c = K.categorie(titel, groep, waarden('f-category'));
+        if (c && c !== $('f-category').value) { zet('f-category', c); onCategoryPicked(); }
+      }
+      if (mag('f-color')) {
+        const k = K.kleur(titel, waarden('f-color'));
+        if (k && k !== $('f-color').value) zet('f-color', k);
+      }
+      if (mag('f-size')) {
+        const m = K.maat(titel, omschr, waarden('f-size'));
+        if (m && m !== $('f-size').value) zet('f-size', m);
+      }
+    } catch (e) { console.warn('kenmerken-uit-tekst', e); }
+    const n = $('autofill-note');
+    if (n) n.style.display = ['f-category', 'f-color', 'f-size'].some((id) => $(id).dataset.auto && $(id).value === $(id).dataset.auto) ? '' : 'none';
+  }
+
+  const plan = () => { clearTimeout(timer); timer = setTimeout(vul, 600); };
+  ['f-title', 'f-desc'].forEach((id) => { const el = $(id); if (el) el.addEventListener('input', plan); });
+})();
 </script>
 <script src="/onboarding.js?v=20261106a"></script>
 <script src="/poort.js?v=20261117k"></script>

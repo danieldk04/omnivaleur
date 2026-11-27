@@ -20126,3 +20126,7 @@ Aanvulling 26-11-2026 (Daniel): Etsy staat nu ook bij "Different price per platf
 
 ## 27-11-2026: leadgen aanvullen (geplande taak)
 - Wachtrij voor 102, na 102: script deed niets (genoeg leads). Leadmachine-rondes laatste 24 uur gedraaid (00:57 schedule, 07:59 dispatch loopt), geen gat.
+
+## 27-11-2026: categorie, kleur en maat vooraf invullen uit titel en omschrijving (Claude, op verzoek van Daniel)
+- Nieuw `frontend/kenmerken-uit-tekst.js` + koppelblok onderaan `frontend/app.html`. Bij een NIEUW artikel (kleding) vult het dashboard doelgroep, categorie, kleur en maat in terwijl de verkoper titel of omschrijving typt. Regels: alleen lege velden; een echte keuze van de verkoper (isTrusted change) blijft staan en wordt nooit overschreven; categorie en kleur alleen uit de TITEL, maat uit titel of anders omschrijving; zegt de tekst twee dingen (jas én trui, twee kleuren, twee maten, titel en omschrijving die elkaar tegenspreken) dan blijft het veld leeg; sport, kinderen en merken met kleur- of kledingwoord (Jack & Jones, Red Wing, rose gold, mint condition) worden niet gegokt. Er staat een melding "Categorie, kleur en maat zijn ingevuld..." (NL in nl.json). Bewerken van bestaande artikelen blijft ongemoeid.
+- Proeven: tests/kenmerken-uit-tekst-test.js (42 gevallen), tests/test_kenmerken_invullen_formulier.py (echte Chrome tegen het echte koppelblok en de echte kleur- en maatlijsten). Geen updatelog-bericht: te klein voor "grote ontwikkeling".
