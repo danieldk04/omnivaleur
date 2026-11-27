@@ -26,7 +26,7 @@ PAGINA = """<input id=edit-id><input id=f-title><textarea id=f-desc></textarea>
 <select id=f-item-type><option value=clothing selected>c</option></select>
 <select id=f-gender><option value=''>-</option><option value=dames>W</option><option value=heren>M</option></select>
 %s %s %s
-<div id=autofill-note style='display:none'>x</div>
+<style>.af-veld{outline:1px solid green}</style><div class=form-group><label>x</label></div><div id=autofill-note style='display:none'>x</div>
 <script>
 function currentItemType(){return 'clothing'}
 const CAT={heren:['heren jassen','heren truien'],dames:['jassen','truien']};
@@ -36,6 +36,7 @@ function updateCategoryOptions(sel){const s=document.getElementById('f-category'
  if(sel) s.value=sel}
 function onCategoryPicked(){}
 updateCategoryOptions('');
+['f-gender','f-category','f-color','f-size'].forEach(i=>{const e=document.getElementById(i);const g=document.createElement('div');g.className='form-group';e.parentNode.insertBefore(g,e);g.appendChild(e)});
 </script>
 <script>%s</script><script>%s</script>"""
 
@@ -78,7 +79,8 @@ def test_vult_lege_velden(pagina):
 
 def test_handmatige_keuze_blijft(pagina):
     pagina.evaluate("kenmerkenReset(); ['f-gender','f-category','f-color','f-size'].forEach(i=>document.getElementById(i).value='')")
-    pagina.select_option("#f-color", "Red")   # echte gebruikershandeling
+    pagina.focus("#f-color")
+    pagina.keyboard.type("Red")   # echte (trusted) gebruikershandeling
     typ(pagina, "Beige Ralph Lauren Fleece Jacket - Men M")
     assert waarden(pagina)[2] == "Red"
 
@@ -95,3 +97,18 @@ def test_bewerken_blijft_ongemoeid(pagina):
     typ(pagina, "Beige Ralph Lauren Fleece Jacket - Men M")
     pagina.evaluate("document.getElementById('edit-id').value=''")
     assert waarden(pagina) == ["", "", "", ""]
+
+
+def test_groen_gemarkeerd_en_weg_na_eigen_keuze(pagina):
+    pagina.evaluate("kenmerkenReset(); ['f-gender','f-category','f-color','f-size'].forEach(i=>document.getElementById(i).value='')")
+    # de selects staan in de testpagina niet in een .form-group; zet er een omheen
+    pagina.evaluate("""['f-gender','f-category','f-color','f-size'].forEach(i=>{const e=document.getElementById(i);
+      if(!e.closest('.form-group')){const g=document.createElement('div');g.className='form-group';e.parentNode.insertBefore(g,e);g.appendChild(e)}})""")
+    typ(pagina, "Beige Ralph Lauren Fleece Jacket - Men M")
+    groen = pagina.evaluate("['f-gender','f-category','f-color','f-size'].map(i=>document.getElementById(i).closest('.form-group').classList.contains('af-veld'))")
+    assert groen == [True, True, True, True]
+    pagina.focus("#f-color")
+    pagina.keyboard.type("Red")
+    assert pagina.input_value("#f-color") == "Red"
+    groen = pagina.evaluate("['f-gender','f-category','f-color','f-size'].map(i=>document.getElementById(i).closest('.form-group').classList.contains('af-veld'))")
+    assert groen == [True, True, False, True]
