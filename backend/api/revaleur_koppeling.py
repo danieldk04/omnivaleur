@@ -44,3 +44,27 @@ async def verkocht(request: Request):
         return {"gevonden": False}
     await handle_item_sold(rij.data[0]["id"], "revaleur", sold_price=data.get("prijs"), bewijs=BEWIJS_BESTELLING)
     return {"gevonden": True}
+
+
+async def meld_aan_revaleur(db, item_id: str, sold_on_platform: str) -> bool:
+    """Omnivaleur naar Revaleur: dit artikel is elders verkocht, haal het van revaleur.com. Alleen voor Revaleurs eigen
+    artikelen, en alleen als de koppeling is ingesteld. True als Revaleur het heeft ontvangen."""
+    import httpx
+    if sold_on_platform == "revaleur" or not (settings.revaleur_api_url and settings.revaleur_koppeling_geheim):
+        return False
+    rij = await naast_de_lus(lambda: db.table("items").select("user_id,sku").eq("id", item_id).limit(1).execute())
+    if not rij.data or rij.data[0].get("user_id") != settings.revaleur_user_id or not rij.data[0].get("sku"):
+        return False
+    body = json.dumps({"sku": str(rij.data[0]["sku"])}).encode()
+    handtekening = hmac.new(settings.revaleur_koppeling_geheim.encode(), body, hashlib.sha256).hexdigest()
+    try:
+        async with httpx.AsyncClient(timeout=15) as c:
+            r = await c.post(settings.revaleur_api_url.rstrip("/") + "/api/revaleur/koppeling/afmelden", content=body,
+                             headers={"X-Revaleur-Signature": handtekening, "Content-Type": "application/json"})
+        if r.status_code >= 300:
+            logger.error("[revaleur-koppeling] Revaleur weigerde de afmelding van sku %s: %s", rij.data[0]["sku"], r.status_code)
+            return False
+        return True
+    except Exception as e:  # noqa: BLE001
+        logger.error("[revaleur-koppeling] Revaleur niet bereikt voor sku %s: %s", rij.data[0]["sku"], e)
+        return False

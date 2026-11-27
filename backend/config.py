@@ -95,6 +95,7 @@ class Settings(BaseSettings):
     # Koppeling met de losse Revaleur-webshop (revaleur/docs/koppeling.md): alleen dit geheim en het
     # gebruikers-id van Revaleur als klant van Omnivaleur. Geen Revaleur-database, -Stripe of -mail hier.
     revaleur_koppeling_geheim: str = ""
+    revaleur_api_url: str = ""   # bv. https://api.revaleur.com ; leeg = geen melding aan Revaleur
     revaleur_user_id: str = "3bfbed2c-e8a7-4b28-8870-f3581d48afc5"
     stripe_publishable_key: str = ""
     stripe_webhook_secret: str = ""

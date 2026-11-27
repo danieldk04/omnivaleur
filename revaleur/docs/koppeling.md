@@ -11,5 +11,5 @@ De enige verbinding. Twee berichten, beide met HMAC-SHA256 over de ruwe body in 
 Code: `revaleur/shop_api/koppeling.py` en `checkout.py` (Revaleur), `backend/api/revaleur_koppeling.py` (Omnivaleur).
 
 - Mislukt de melding naar Omnivaleur, dan blijft `bestellingen.omnivaleur_gemeld_op` leeg; de bestelling zelf staat vast. Een herhaalronde (nog te bouwen) probeert die opnieuw.
-- **Nog te bouwen, Omnivaleur-kant:** het bericht Omnivaleur naar Revaleur wordt nog nergens verstuurd. Daarvoor moet `handle_item_sold` na een verkoop op een ander kanaal `{sku}` posten naar het afmeldadres. Tot die tijd kan hetzelfde artikel op revaleur.com blijven staan na een verkoop elders; de checkout vangt dat niet af. Doe dit voor de omzetting.
+- Omnivaleur naar Revaleur is gebouwd (27-11-2026): `handle_item_sold` roept `meld_aan_revaleur` aan (`backend/api/revaleur_koppeling.py`). Het doet niets zolang `REVALEUR_API_URL` of `REVALEUR_KOPPELING_GEHEIM` op Omnivaleurs Railway ontbreekt, en alleen voor artikelen van de Revaleur-klant.
 - Artikelen zijn gekoppeld op `sku` (artikelnummer, uniek per artikel; Omnivaleur: `items.sku` van de Revaleur-klant).

@@ -2874,6 +2874,14 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
         else:
             raise
 
+    # Revaleur-webshop (eigen, losse webshop, revaleur/docs/koppeling.md): een verkoop op een ander kanaal
+    # haalt het artikel ook daar van de site. Nooit een reden om de verkoop hier te laten mislukken.
+    try:
+        from backend.api.revaleur_koppeling import meld_aan_revaleur
+        await meld_aan_revaleur(db, item_id, sold_on_platform)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("[sold] melding aan Revaleur mislukt voor %s: %s", item_id, e)
+
     # Verkocht betekent: nergens meer plaatsen. Stond er nog een publicatie in de
     # wachtrij (bijvoorbeeld omdat de browser toen dicht stond), dan zette de
     # extensie het item ná de verkoop alsnog online — en die verse advertentie

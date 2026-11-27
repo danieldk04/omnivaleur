@@ -62,3 +62,29 @@ def test_zonder_geheim_wordt_alles_geweigerd(opzet, monkeypatch):
 def test_onbekende_sku_geeft_geen_fout_terug_en_boekt_niets(opzet):
     assert asyncio.run(k.verkocht(_req(json.dumps({"sku": "nope"}).encode()))) == {"gevonden": False}
     assert opzet == []
+
+
+def test_verkoop_elders_wordt_aan_revaleur_gemeld_op_sku(monkeypatch):
+    monkeypatch.setattr(k.settings, "revaleur_koppeling_geheim", "g")
+    monkeypatch.setattr(k.settings, "revaleur_api_url", "https://api.revaleur.test")
+    posts = []
+
+    class C:
+        def __init__(self, **kw): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): return False
+        async def post(self, url, content=None, headers=None):
+            posts.append((url, content, headers)); return SimpleNamespace(status_code=200)
+    import httpx
+    monkeypatch.setattr(httpx, "AsyncClient", C)
+    db = _Db([{"id": "item-1", "sku": "42", "user_id": k.settings.revaleur_user_id},
+              {"id": "item-2", "sku": "7", "user_id": "iemand-anders"}])
+    assert asyncio.run(k.meld_aan_revaleur(db, "item-1", "marktplaats")) is True
+    url, body, kop = posts[0]
+    assert url == "https://api.revaleur.test/api/revaleur/koppeling/afmelden" and json.loads(body) == {"sku": "42"}
+    assert kop["X-Revaleur-Signature"] == hmac.new(b"g", body, hashlib.sha256).hexdigest()
+    assert asyncio.run(k.meld_aan_revaleur(_Db(db.rijen), "item-2", "vinted")) is False      # niet van Revaleur
+    assert asyncio.run(k.meld_aan_revaleur(_Db(db.rijen), "item-1", "revaleur")) is False    # komt van Revaleur zelf
+    assert len(posts) == 1
+    monkeypatch.setattr(k.settings, "revaleur_api_url", "")
+    assert asyncio.run(k.meld_aan_revaleur(_Db(db.rijen), "item-1", "vinted")) is False      # niet ingesteld = stil
