@@ -1,4 +1,4 @@
-# Facebook-actueel (bijgewerkt 25-11-2026)
+# Facebook-actueel (bijgewerkt 27-11-2026)
 
 Dit bestand wordt elke ochtend ververst door een routine en gaat voor op alles wat je eerder
 wist. Staat hier iets anders dan in je eigen kennis over een platform: dit bestand wint. Wat hier
@@ -6,7 +6,7 @@ niet staat en je niet zeker weet: zeg het als eigen ervaring of laat het weg. Zo
 (als dat aan staat) voor een vraag over regels of kosten, gebruik dan alleen bronnen van de
 laatste maanden en noem er niets uit als feit zonder dat de bron het zelf zegt.
 
-## Platformnieuws (laatst gecontroleerd 25-11-2026)
+## Platformnieuws (laatst gecontroleerd 27-11-2026)
 
 Vinted
 - Nieuwe voorwaarden sinds 8 oktober 2026: verkopers moeten ze accepteren om te blijven verkopen.
@@ -27,11 +27,13 @@ eBay
 - Sinds 1 november 2026 geldt in de EU een nieuwe heffing van 2 euro voor douanebehandeling bij internationale bestellingen. Dat is een kostenpost voor de koper, niet voor de verkoper (volgens een vakblog, eBay noemt het bij International Shipping). Bij verkoop aan EU-kopers op afstand zijn ook productidentificatiecodes verplicht geworden (onbevestigd voor tweedehands).
 - Frankrijk en Italië: sinds september 2026 geen verkoopkosten meer voor particulieren, de kosten zitten nu bij de koper (kopersbescherming). Spanje is een voorspelling, geen aankondiging.
 - Duitsland: sinds juli 2026 vast 5% voor tweedehands in sommige rubrieken, alleen voor zakelijke accounts. Particulieren betalen daar sinds 2023 niets.
+- Onbevestigd (één secundaire bron, geen eBay-aankondiging gevonden): valutaomrekenkosten voor verkopers gaan met 0,25 procentpunt omhoog per 1-2 december (VK 2,5 naar 2,75%; Duitsland, Frankrijk, Italië, Spanje 3 naar 3,25%).
 - Nederland en België: geen wijziging gevonden (controle 17-11). Frankrijk, Italië en Spanje: een bron noemt wijzigingen per 16 oktober, inhoud onbevestigd.
 
-(Controle 25-11: geen nieuwe verkopersregels gevonden bij Vinted, Marktplaats/2dehands of eBay; activiteitenlijst Facebook gelezen (tweede poging, Chrome was eerst niet verbonden): alle nieuwe reacties komen van de reageerbot of zijn groepsberichten, dus niets nieuws om van te leren. Controle 23-11, 21-11, 19-11 en 17-11, geen nieuwe verkopersregels gevonden; activiteitenlijst Facebook gelezen, alle nieuwe reacties komen van de reageerbot of zijn groepsberichten, dus niets nieuws om van te leren. Eerder: geen nieuwe verkopersregels of kosten gevonden bij Vinted, Marktplaats/2dehands of eBay.)
+(Controle 27-11: geen nieuwe verkopersregels bij Vinted of Marktplaats/2dehands; Facebook-activiteitenlijst niet gelezen want Chrome was niet verbonden, reacties ongewijzigd. Controle 25-11: geen nieuwe verkopersregels gevonden bij Vinted, Marktplaats/2dehands of eBay; activiteitenlijst Facebook gelezen (tweede poging, Chrome was eerst niet verbonden): alle nieuwe reacties komen van de reageerbot of zijn groepsberichten, dus niets nieuws om van te leren. Controle 23-11, 21-11, 19-11 en 17-11, geen nieuwe verkopersregels gevonden; activiteitenlijst Facebook gelezen, alle nieuwe reacties komen van de reageerbot of zijn groepsberichten, dus niets nieuws om van te leren. Eerder: geen nieuwe verkopersregels of kosten gevonden bij Vinted, Marktplaats/2dehands of eBay.)
 
 ## Wat er bij Omnivaleur de afgelopen weken veranderde (alleen wat verkopers merken)
+- 26-11: Vinted-verkoopmelding toont nu de titel uit de mail en het aantal artikelen; Etsy-koppeling uitgebreid (alleen voor de eigenaar, nog niet open voor klanten).
 - 24-11: nieuwe rubrieken wandlampen, kinderkamer decoratie en paraplu's (extensie 1.0.435); een storing waarbij plaatsingen een serverfout gaven is dezelfde dag hersteld.
 - 22-11: Vinted-tabblad in Voorkeuren met alle Vinted-keuzes bij elkaar; CSV-export van Wix en Magento inlezen; webshop zonder koppeling wordt voor je ingelezen (inleesservice).
 - 21-11: AI-scherm herindeeld in tegels per taak; foto-achtergrond verwijderen met eigen upload; kortere AI-titels.
