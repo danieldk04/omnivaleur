@@ -20184,3 +20184,7 @@ Misverstand hersteld: de eerdere notitie "koers aangepast, NIET herbouwen" is ve
 ## 27-11-2026 (avond): uitnodigblokken herontworpen (Claude, opdracht Daniel)
 - Dashboard (Vrienden uitnodigen) en openbare site (EN en NL, #plans-friends): de grijze kaartjes zijn een donkerblauw blok met mintgroene accenten. Dashboard: link en kopieer-/WhatsAppknop bovenin, groot aantal betalende vrienden, voortgangsbalk met knopen bij 1, 3 en 5, drie kaarten (gedaan, hierna, later), "Nog X ontgrendelt ...". Site: drie treden met een knop "Get my link / Pak mijn link" naar /app#referral. Bekeken in de browser op desktop, telefoon en Nederlands; niet bekeken met een echt account (nepdata in `_referral`).
 - Opgemerkt, niet aangepast: de kop boven de prijskaarten op de site zegt nog "Two plans. Everything included." terwijl eronder vier plannen staan.
+
+## 27-11-2026: Onboarding nieuwe klanten (ochtend)
+- Dezelfde 5 accounts als de vorige ronde (08:47 UTC), geen vrienden, geen creator. Web Store en repo beide 1.0.436. Mailrapport: 1 mail (kissesofthesun, 25-11), geopend, 0 klik, 0 antwoord.
+- Niets veranderd sinds de vorige ronde, niets gerepareerd, niets verstuurd. karaoke-jo.nl wacht op antwoord op de prijsvraag (11 artikelen zonder prijs); brocantedepot en kissesofthesun hebben geen actieve extensie (klant-eigen); Daniel had contact met 20ba676b en d74bd011. Tempo-meting niet gedraaid (geen maandag).
