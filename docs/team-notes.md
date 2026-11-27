@@ -20180,3 +20180,7 @@ Daniel gaf extra eisen: geen kwaliteitsverlies in UX/UI, geen extra onderhoud of
 
 ## 27-11-2026: revaleur.com WEL herbouwen, volledige opdracht (Claude, Daniel)
 Misverstand hersteld: de eerdere notitie "koers aangepast, NIET herbouwen" is verkeerd en vervalt. Daniel wil revaleur.com herbouwen als eigen webshop, door de andere developer, die doorgaat tot het volledig live staat. Volledige opdracht met context, eisen, fases en definitie van klaar: docs/opdracht-revaleur-herbouw.md. Eisen: UX/UI minstens gelijk, geen extra onderhoud voor Daniel, bewaking via de wekelijkse sitecheck (docs/routines/revaleur-sitecheck.md). Shopify-kosten: €28 per maand is alleen het plan, geen apps.
+
+## 27-11-2026 (avond): uitnodigblokken herontworpen (Claude, opdracht Daniel)
+- Dashboard (Vrienden uitnodigen) en openbare site (EN en NL, #plans-friends): de grijze kaartjes zijn een donkerblauw blok met mintgroene accenten. Dashboard: link en kopieer-/WhatsAppknop bovenin, groot aantal betalende vrienden, voortgangsbalk met knopen bij 1, 3 en 5, drie kaarten (gedaan, hierna, later), "Nog X ontgrendelt ...". Site: drie treden met een knop "Get my link / Pak mijn link" naar /app#referral. Bekeken in de browser op desktop, telefoon en Nederlands; niet bekeken met een echt account (nepdata in `_referral`).
+- Opgemerkt, niet aangepast: de kop boven de prijskaarten op de site zegt nog "Two plans. Everything included." terwijl eronder vier plannen staan.

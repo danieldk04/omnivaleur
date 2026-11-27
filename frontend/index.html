@@ -368,20 +368,30 @@
 .plans-next .pn .pn-p small{font:400 var(--text-small)/1.3 var(--font-body);color:var(--fg-2)}
 .plans-next .pn p{margin:0;font-size:var(--text-small);color:var(--fg-2)}
 .plans-next .pn-ai{margin-top:var(--space-lg)}
-.plans-next .pn-vr{border:2px solid var(--rule);border-radius:var(--radius);padding:var(--space-lg);margin-bottom:var(--space-xl,2rem)}
-.plans-next .pn-vr h3{margin:0}
-.plans-next .pn-vr .pn h4{font-size:1.1rem}
+.plans-next .pn-vr{background:linear-gradient(135deg,var(--color-ink),var(--color-field));color:var(--color-on-dark);border-radius:16px;padding:clamp(20px,4vw,40px);margin-bottom:var(--space-xl,2rem)}
+.plans-next .pn-vr h3{margin:var(--space-sm) 0 0;font-size:clamp(1.5rem,3vw,2.1rem);color:var(--color-on-dark)}
+.plans-next .pn-vr .lede{color:var(--color-on-dark-2);max-width:64ch}
+.plans-next .pn-vr .vr-tag{display:inline-block;font:800 .75rem/1 var(--font-body);letter-spacing:.07em;text-transform:uppercase;padding:6px 10px;border-radius:999px;background:var(--color-signal);color:var(--color-ink)}
+.plans-next .pn-vr .vr-steps{list-style:none;margin:var(--space-lg) 0 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-md);counter-reset:none}
+@media (max-width:760px){.plans-next .pn-vr .vr-steps{grid-template-columns:minmax(0,1fr)}}
+.plans-next .pn-vr .vr-step{position:relative;border-radius:12px;padding:var(--space-lg);background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16)}
+.plans-next .pn-vr .vr-step.top{background:var(--color-signal);color:var(--color-ink);border-color:transparent}
+.plans-next .pn-vr .vr-n{display:inline-flex;align-items:baseline;gap:6px;margin-bottom:var(--space-sm)}
+.plans-next .pn-vr .vr-n b{font:700 2.6rem/1 var(--font-display)}
+.plans-next .pn-vr .vr-n span{font:700 .8rem/1 var(--font-body);letter-spacing:.07em;text-transform:uppercase;opacity:.8}
+.plans-next .pn-vr .vr-r{font:700 1.25rem/1.2 var(--font-display);margin:0 0 var(--space-xs)}
+.plans-next .pn-vr .vr-step p:last-child{margin:0;font-size:var(--text-small);line-height:1.5;opacity:.85}
+.plans-next .pn-vr .vr-cta{display:flex;flex-wrap:wrap;gap:var(--space-md);align-items:center;margin-top:var(--space-lg)}
+.plans-next .pn-vr .vr-cta a{display:inline-block;background:var(--color-signal);color:var(--color-ink);font-weight:700;padding:12px 20px;border-radius:var(--radius);text-decoration:none}
+.plans-next .pn-vr .plans-note{margin:0;color:var(--color-on-dark-2);max-width:60ch}
 </style>
   <div class="plans-next" id="plans-next">
     <div class="pn-vr" id="plans-friends">
+      <span class="vr-tag">Until 1 January 2027</span>
       <h3>Invite friends and unlock the new features first</h3>
       <p class="lede" style="margin-top:var(--space-sm)">Until 1 January 2027, every friend who becomes a paying customer on Pro or higher takes €10 off your invoice every month, for as long as they keep paying, and gives you 2 free months. Whoever joins before 1 January keeps the €10 afterwards.</p>
-      <div class="pn-grid">
-        <div class="pn"><h4>1 friend</h4><p class="pn-p">2 free months</p><p>Plus €10 off every month. It adds up with every friend.</p></div>
-        <div class="pn"><h4>3 friends</h4><p class="pn-p">The AI package and Etsy</p><p>Every AI function below, the moment it goes live, and Etsy once it is available.</p></div>
-        <div class="pn"><h4>5 friends</h4><p class="pn-p">Ultra, everything</p><p>All Ultra features: the AI package, Etsy once it is available, the newest features first and priority support. Enough friends bring your own plan down to zero.</p></div>
-      </div>
-      <p class="plans-note">Only paying friends count, and the rewards last as long as they keep paying. You find your personal link in the dashboard under Invite friends.</p>
+      <ol class="vr-steps"><li class="vr-step"><div class="vr-n"><b>1</b><span>friend</span></div><p class="vr-r">2 free months</p><p>Plus €10 off every month. It adds up with every friend.</p></li><li class="vr-step"><div class="vr-n"><b>3</b><span>friends</span></div><p class="vr-r">The AI package and Etsy</p><p>Every AI function below, the moment it goes live, and Etsy once it is available.</p></li><li class="vr-step top"><div class="vr-n"><b>5</b><span>friends</span></div><p class="vr-r">Ultra, everything</p><p>The newest features first and priority support, on top of the AI package and Etsy. Enough friends bring your own plan down to zero.</p></li></ol>
+      <div class="vr-cta"><a href="/app#referral">Get my link</a><p class="plans-note">Only paying friends count, and the rewards last as long as they keep paying. Your personal link is in the dashboard under Invite friends.</p></div>
     </div>
     <h3>From 1 January 2027: plans that grow with your stock</h3>
     <p class="lede" style="margin-top:var(--space-sm)">Choose by the number of active items. Pay yearly and get 2 months free. Current customers get an email first.</p>
