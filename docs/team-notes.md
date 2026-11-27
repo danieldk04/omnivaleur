@@ -20211,3 +20211,6 @@ Daniel wil een duidelijke scheiding, ook in Supabase. Alles van Revaleur staat n
 
 ## 27-11-2026: Revaleur-catalogus geladen, dubbele artikelnummers samengevoegd (Claude, opdracht Daniel)
 Het Revaleur-Supabaseproject (eigen project, zie revaleur/README.md) bevat nu 250 producten (2 verkocht), 18 collecties en 30 blogartikelen, geladen met `python3 -m revaleur.site.import_shopify --naar-db`. Acht artikelnummers stonden dubbel in Shopify (721, 744, 1189, 971, 1187, 1275, 694, 1038); Daniel: één advertentie per nummer, die met de hoogste prijs blijft. De andere URL's krijgen een 301 naar de blijver (staat in `_redirects` van de bouw). Bij 1275 hingen beide Shopify-advertenties aan hetzelfde Omnivaleur-artikel. Let op: Shopify toont de weggevallen advertenties nog tot de omzetting.
+
+## 27-11-2026: Revaleur-testsite staat live op revaleur.pages.dev (Claude, opdracht Daniel)
+Cloudflare Pages-project `revaleur` (directe upload), 614 pagina's uit de Revaleur-database, afrekenen geeft nog de storingsmelding omdat de API (eigen Railway-dienst) nog niet draait. Stripe-sandbox getest: sessie met iDEAL, factuur met margeregeling-tekst, geen Stripe Tax. Zie revaleur/docs/deploy.md. Sleutels staan lokaal in ~/.revaleur/env (niet in git); omdraaien na livegang.

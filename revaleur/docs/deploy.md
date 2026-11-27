@@ -22,3 +22,9 @@ De site wijst naar `API` in `revaleur/site/bouw.py` (nu https://api.revaleur.com
 ## 3. Stripe
 Eerst alleen de sandbox (sleutels `sk_test_`). Geen Stripe Tax: Revaleur werkt onder de margeregeling, dus geen btw op de factuur
 (`automatic_tax` blijft uit; de factuur krijgt de tekst "Bijzondere regeling - gebruikte goederen").
+
+## Stand 27-11-2026
+- Cloudflare Pages-project `revaleur` bestaat (aangemaakt via de API, **directe upload**, zonder GitHub-koppeling). Testadres: https://revaleur.pages.dev
+  Opnieuw uploaden: `set -a; . ~/.revaleur/env; set +a; python3 -m revaleur.site.catalogus_uit_db && python3 -m revaleur.site.bouw && npx wrangler pages deploy revaleur/site/dist --project-name revaleur --branch main`
+- Een project met directe upload kan GEEN deploy hook hebben. Voor de omzetting moet het een Git-gekoppeld project worden (Cloudflare vraagt dan eenmalig GitHub-toestemming, dat kan alleen Daniel in de browser) of de API bouwt en uploadt zelf na een verkoop.
+- Foto's staan nog op de Shopify-CDN (af en toe een 502 vanuit de testomgeving). Naar R2 voordat Shopify stopt; R2 moet eerst aan in het Cloudflare-dashboard.
