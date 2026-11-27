@@ -59,3 +59,11 @@ ALTER TABLE artikelen ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reserveringen ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bestellingen ENABLE ROW LEVEL SECURITY;
 -- Alleen de service-sleutel (backend) leest en schrijft; er is bewust geen publieke policy.
+
+-- Alleen LEZEN van de openbare catalogus mag met de publishable key (Cloudflare-bouw). Alles met geld of klanten blijft dicht.
+DROP POLICY IF EXISTS publiek_lezen ON producten;
+CREATE POLICY publiek_lezen ON producten FOR SELECT USING (status <> 'verborgen');
+DROP POLICY IF EXISTS publiek_lezen ON collecties;
+CREATE POLICY publiek_lezen ON collecties FOR SELECT USING (true);
+DROP POLICY IF EXISTS publiek_lezen ON artikelen;
+CREATE POLICY publiek_lezen ON artikelen FOR SELECT USING (true);

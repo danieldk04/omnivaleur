@@ -132,6 +132,13 @@ async def checkout(body: CheckoutIn):
             metadata={"bron": "revaleur", "product_ids": ",".join(ids), "taal": body.taal},
             success_url=f"{site}{pre}/bedankt", cancel_url=f"{site}{pre}/cart",
             phone_number_collection={"enabled": True},
+            # Factuur automatisch. Margeregeling: GEEN btw-bedrag en geen Stripe Tax (automatic_tax blijft uit),
+            # wel de verplichte aanduiding (revaleur/docs/revaleur-wettelijk.md).
+            invoice_creation={"enabled": True, "invoice_data": {
+                "description": "Revaleur - " + ("tweedehands kleding" if body.taal == "nl" else "second-hand clothing"),
+                "footer": ("Bijzondere regeling - gebruikte goederen / Margin scheme - second-hand goods. "
+                           "Revaleur, Kleine Melanen 5, 4614RG Bergen op Zoom."),
+                "metadata": {"bron": "revaleur"}}},
         )
     except Exception as e:  # noqa: BLE001
         _geef_vrij(db, vast)

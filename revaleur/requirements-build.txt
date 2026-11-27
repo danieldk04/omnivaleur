@@ -1,0 +1,2 @@
+supabase==2.16.0
+pydantic-settings==2.5.2

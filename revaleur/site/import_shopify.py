@@ -92,6 +92,7 @@ def bouw(uitvoer: Path) -> dict:
     cat = {"producten": producten, "collecties": collecties, "artikelen": artikelen, "omleidingen": omleidingen}
     uitvoer.mkdir(parents=True, exist_ok=True)
     (uitvoer / "catalogus.json").write_text(json.dumps(cat, ensure_ascii=False))
+    (Path(__file__).parent / "omleidingen.json").write_text(json.dumps(omleidingen, indent=1, sort_keys=True))
     return cat
 
 
