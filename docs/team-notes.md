@@ -20111,3 +20111,9 @@ Aanvulling 26-11-2026 (Daniel): Etsy staat nu ook bij "Different price per platf
 
 ## 2026-11-27: kennisoverdracht ochtend
 - overdracht.md bijgewerkt (Etsy, Vinted-mail, SEO-taak, NL-video, bijlagen); server 3fe0dfd4, extensie 1.0.435. Geen nieuwe besluiten buiten wat al in team-notes staat.
+
+## 27-11-2026: Dagelijkse klantfouten (ochtendronde)
+- Harde fouten 24 uur: Vinted-scan 9x (uitgelogd, klant-eigen, afgehandeld), 1x Marktplaats content_refresh (prijs "299,00" niet leesbaar, 1 klant, onbekend). Geen 500's. Kenmerkencontrole: 7x maat_leeg_maar_in_tekst bij 09e089ec (oude extensie, bekend).
+- GEVONDEN EN GEREPAREERD: bij verkoper 5aae4954 stonden 77.689 dubbele 2dehands-extend-opdrachten (1610 artikelen, ~111 per stuk, 26-11 16:43 tot 21:xx UTC). Oorzaak: `verleng_aflopende_2dehands` las de lopende opdrachten in een keer, PostgREST kapt op 1000 af, dus elk artikel leek zonder opdracht en kreeg er bij elke aanwijzing van 2dehands weer een. Nu per blok van 50 artikelen opgevraagd; test erbij (faalt op de oude code).
+- OPEN, wacht op Daniel: de dubbele pending-opdrachten staan er nog (niet zelf verwijderd). Voorstel: alles behalve de oudste per artikel op 'cancelled'.
+- OPEN: 2c bij 5aae4954 en 3eeceb51: rubriekverschillen (bv. 'accessoires dames' 633 verstuurd, 628/1679 live) en 112 'weg' (Goudlief-oorbellen, nummers 15271570xx, niet op openbare lijst). Mechanisme niet uitgezocht deze ronde. 3bfbed2c: meting mislukt.

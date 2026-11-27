@@ -3615,9 +3615,16 @@ def verleng_aflopende_2dehands(user_id: str, aflopend, eigen_item_id: str | None
                   .execute().data or [])
     if not rijen:
         return 0
-    lopend = {r["item_id"] for r in (db.table("jobs").select("item_id")
-              .eq("user_id", user_id).eq("platform", "2dehands").eq("action", "extend")
-              .in_("status", ["pending", "claimed", "running"]).execute().data or [])}
+    # Per blok van 50 artikelen vragen, nooit alle lopende opdrachten in één keer:
+    # PostgREST kapt af op 1000 rijen en dan lijkt een artikel zonder opdracht
+    # (27-11-2026: 77.689 dubbele extend-opdrachten bij één verkoper).
+    lopend = set()
+    item_ids = sorted({r["item_id"] for r in rijen})
+    for i in range(0, len(item_ids), 50):
+        lopend |= {x["item_id"] for x in (db.table("jobs").select("item_id")
+                   .eq("user_id", user_id).eq("platform", "2dehands").eq("action", "extend")
+                   .in_("status", ["pending", "claimed", "running"])
+                   .in_("item_id", item_ids[i:i + 50]).limit(1000).execute().data or [])}
     nu = datetime.now(timezone.utc)
     n = 0
     for r in rijen:

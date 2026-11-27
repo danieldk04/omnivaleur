@@ -27,7 +27,7 @@ class _Q:
     def in_(self, k, v): self.inn[k] = list(v); return self
     def gte(self, k, v): self.gte_[k] = v; return self
     def order(self, *_a, **_k): return self
-    def limit(self, _n): return self
+    def limit(self, n): self.lim = n; return self
 
     def _waarde(self, r, k):
         if "." in k:
@@ -47,7 +47,8 @@ class _Q:
         if self.op == "update":
             for r in rijen:
                 r.update(self.v)
-        return type("R", (), {"data": list(rijen)})()
+        # Zoals PostgREST: zonder eigen limiet nooit meer dan 1000 rijen.
+        return type("R", (), {"data": list(rijen)[:getattr(self, "lim", 1000)]})()
 
 
 class _DB:
@@ -114,3 +115,16 @@ def test_peiling_alleen_voor_nieuwe_extensie_en_een_keer_per_dag(monkeypatch):
     assert db.t["jobs"][0]["user_id"] == "lynn" and db.t["jobs"][0]["payload"]["_peiling"]
     db.t["jobs"][0]["created_at"] = nu
     assert cl._peil_aflopende_2dehands() == 0, "vandaag al een verlenging: geen tweede peiling"
+
+
+def test_meer_dan_duizend_lopende_opdrachten_geeft_geen_dubbele(monkeypatch):
+    """27-11-2026: 77.689 dubbele extend-opdrachten bij een verkoper met meer dan
+    1000 lopende; de lijst lopende werd afgekapt en elk artikel kreeg er weer een."""
+    drukte = [{"user_id": "lynn", "platform": "2dehands", "action": "extend",
+               "status": "pending", "item_id": f"x{i}"} for i in range(1200)]
+    drukte.append({"user_id": "lynn", "platform": "2dehands", "action": "extend",
+                   "status": "pending", "item_id": "i1"})
+    db = _DB(listings=[_rij("m1111111", "i1")], jobs=drukte)
+    monkeypatch.setattr(cl, "get_db", lambda: db)
+    assert cl.verleng_aflopende_2dehands("lynn", [{"id": "m1111111"}]) == 0
+    assert len(db.t["jobs"]) == 1201
