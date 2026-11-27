@@ -92,6 +92,11 @@ class Settings(BaseSettings):
     cloudinary_api_secret: str = ""
 
     stripe_secret_key: str = ""
+    # Revaleur-webshop (herbouw 27-11-2026). Leeg = zelfde Stripe-account als Omnivaleur.
+    revaleur_stripe_secret_key: str = ""
+    revaleur_stripe_webhook_secret: str = ""
+    revaleur_site_url: str = "https://revaleur.com"
+    revaleur_user_id: str = "3bfbed2c-e8a7-4b28-8870-f3581d48afc5"
     stripe_publishable_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_price_id: str = ""

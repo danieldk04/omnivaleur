@@ -20191,3 +20191,11 @@ Misverstand hersteld: de eerdere notitie "koers aangepast, NIET herbouwen" is ve
 
 ## 27-11-2026: Aan de andere developer: revaleur-herbouw zonder tussentijdse goedkeuring (Claude, opdracht Daniel)
 De opdracht staat in docs/opdracht-revaleur-herbouw.md. Ga daarmee door tot het klaar is, zonder tussentijdse goedkeuring van Daniel: niet wachten op een akkoord per fase, wel de eisen en de definitie van klaar uit dat bestand aanhouden en de voortgang hier in team-notes bijhouden.
+
+## 27-11-2026: Revaleur-herbouw, stand na de eerste ronde (Claude, opdracht Daniel; ik werk als de andere developer)
+Gedaan, op branch `claude/amazing-wozniak-pizqpl`, NIET naar main: de checkout valt terug op Omnivaleurs eigen Stripe-sleutel en zou dan al echt kunnen afrekenen terwijl de site nog niet live staat. Eerst Stripe-keuze en de SQL hieronder, dan mergen.
+- Fase 1 (docs/revaleur-inventaris.md), fase 2 (docs/revaleur-ontwerp.md), wettelijk (docs/revaleur-wettelijk.md, met open punten).
+- Fase 3: `scripts/revaleur_catalogus.py` + `scripts/revaleur_bouw.py` bouwen 630 pagina's (EN+NL, zelfde URL's als Shopify, zoeken, mand, collecties met filter, blog, beleid, sitemap). Lokaal naast Shopify bekeken op desktop en mobiel; lijkt er sterk op, nog niet pixel voor pixel vergeleken.
+- Backend: `backend/api/revaleur_shop.py` (reserveren, Stripe Checkout, webhook, afmelden op alle kanalen via handle_item_sold met platform `revaleur`) + `backend/services/revaleur_mail.py`, 8 proeven in tests/test_revaleur_shop.py, allemaal groen. Rest van de suite: 91 rode proeven, identiek voor en na (komt door ontbrekende pakketten in deze omgeving).
+- Open, alleen Daniel: (1) SQL onderaan schema.sql (revaleur_reserveringen, revaleur_bestellingen) in de Supabase SQL-editor draaien; (2) Cloudflare Pages-project koppelen en Stripe-account kiezen (aanbevolen: apart Revaleur-account) met `REVALEUR_STRIPE_SECRET_KEY` en `REVALEUR_STRIPE_WEBHOOK_SECRET` op Railway; (3) boekhouder: margeregeling, zie docs/revaleur-wettelijk.md.
+- Open, ik: foto's staan nog op de Shopify-CDN en moeten naar img.omnivaleur.com (de database heeft die kopieën al) voordat Shopify stopt; factuur met margeregeling-tekst; Nederlandse beleidsteksten; 301-steekproef; Merchant- en Meta-feed; Sendcloud/MyParcel; sitecheck uitbreiden.

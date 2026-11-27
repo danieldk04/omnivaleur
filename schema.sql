@@ -407,3 +407,35 @@ CREATE TABLE IF NOT EXISTS tool_aanmeldingen (
     afgemeld_op   TIMESTAMPTZ
 );
 ALTER TABLE tool_aanmeldingen ENABLE ROW LEVEL SECURITY;
+
+-- Revaleur-webshop (herbouw 27-11-2026, zie docs/revaleur-ontwerp.md)
+-- Eén exemplaar per artikel: een reservering houdt een artikel 30 minuten vast tijdens het afrekenen.
+CREATE TABLE IF NOT EXISTS revaleur_reserveringen (
+    item_id UUID PRIMARY KEY REFERENCES items(id) ON DELETE CASCADE,
+    sessie_id TEXT NOT NULL,
+    tot TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_revaleur_reserveringen_sessie ON revaleur_reserveringen(sessie_id);
+
+CREATE TABLE IF NOT EXISTS revaleur_bestellingen (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nummer BIGINT GENERATED ALWAYS AS IDENTITY,
+    stripe_sessie TEXT UNIQUE NOT NULL,
+    betaald_op TIMESTAMPTZ DEFAULT NOW(),
+    email TEXT,
+    naam TEXT,
+    adres JSONB,
+    land TEXT,
+    taal TEXT DEFAULT 'en',
+    artikelen JSONB NOT NULL,           -- [{item_id, sku, titel, prijs}]
+    subtotaal DECIMAL(10,2),
+    verzendkosten DECIMAL(10,2),
+    totaal DECIMAL(10,2),
+    status TEXT DEFAULT 'betaald',      -- betaald, verzonden, geretourneerd
+    track_trace TEXT,
+    mail_bevestiging_op TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE revaleur_reserveringen ENABLE ROW LEVEL SECURITY;
+ALTER TABLE revaleur_bestellingen ENABLE ROW LEVEL SECURITY;
