@@ -175,6 +175,30 @@ async def verkoper_van(platform: str, titels: list[str]) -> int | None:
         return await zoek_verkoper_id(c, titels[:40], zoek_url=zoek)
 
 
+async def verkoper_via_advertentienummer(platform: str, paren: list[tuple[str, str]]) -> int | None:
+    """Terugval: het verkopersnummer van een advertentie waarvan we het NUMMER kennen.
+
+    zoek_verkoper_id vergelijkt titels en faalt als de titel op Marktplaats anders
+    staat dan bij ons (3bfbed2c, 27-11-2026: titels met (1117)-voorvoegsel). Een
+    treffer met precies ons advertentienummer is geen gok, dus één is genoeg."""
+    from backend.services.mp_enrich import UA, ZOEK_PER_PLATFORM, _json
+    zoek, basis = ZOEK_PER_PLATFORM[platform]
+    async with httpx.AsyncClient(base_url=basis, headers={"User-Agent": UA},
+                                 timeout=30, follow_redirects=True) as c:
+        for titel, nr in paren[:40]:
+            for q in (titel[:80], re.sub(r"^\(\d+\)\s*", "", titel)[:80]):
+                try:
+                    d = await _json(c, zoek, {"query": q, "limit": 30, "offset": 0})
+                except Exception:  # noqa: BLE001
+                    continue
+                for l in d.get("listings") or []:
+                    sid = (l.get("sellerInformation") or {}).get("sellerId")
+                    if l.get("itemId") == nr and sid:
+                        return int(sid)
+                await asyncio.sleep(0.3)
+    return None
+
+
 async def controleer_klant(db, uid: str, platform: str, nummers) -> dict:
     from backend.database import fetch_all, fetch_all_in
     items = fetch_all(lambda: db.table("items").select(
@@ -194,6 +218,10 @@ async def controleer_klant(db, uid: str, platform: str, nummers) -> dict:
         return {"user_id": uid, "live": 0, "fouten": []}
     titels = [per_id[r["item_id"]]["title"] for r in live if per_id.get(r["item_id"])]
     vid = await verkoper_van(platform, titels)
+    if not vid:
+        vid = await verkoper_via_advertentienummer(
+            platform, [(per_id[r["item_id"]]["title"], r["platform_listing_id"])
+                       for r in live if per_id.get(r["item_id"])])
     if not vid:
         return {"user_id": uid, "live": len(live), "fouten": [],
                 "meting_mislukt": "verkopersnummer niet te vinden op de openbare zoekpagina"}

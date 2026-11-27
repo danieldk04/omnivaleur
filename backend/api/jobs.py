@@ -283,6 +283,25 @@ def _minimale_versie_voor_rubriek(job: dict) -> tuple | None:
     return _RUBRIEK_VANAF_VERSIE.get(cat)
 
 
+# Accessoires (haarclips, sjaals, tassen, petten) die op Marktplaats in "Blouses en
+# Tunieken" (628) stonden: plaatsingen van 28 tot 31-10-2026, van voor de
+# rubriekfix van 02-11 (a3897ead). Bij een verversing las de server de rubriek van de
+# oude advertentie terug en plaatste hem daar weer neer (115 stuks bij Goudlief,
+# 27-11-2026). De echte rubriek gaat normaal voor, maar niet als hij aantoonbaar
+# niet bij het artikel past: dan kiest de extensie zelf per titelwoord.
+_ACCESSOIRE_CATEGORIEEN = ("accessoires dames", "unisex accessoires", "heren accessoires")
+_BLOUSES_L2 = 628
+
+
+def _rubriek_past_niet_bij_accessoire(categorie, mc) -> bool:
+    if str(categorie or "").strip().lower() not in _ACCESSOIRE_CATEGORIEEN:
+        return False
+    try:
+        return int((mc or {}).get("l2")) == _BLOUSES_L2
+    except (TypeError, ValueError):
+        return False
+
+
 def _mp_nummers_van_de_server(jobs: list) -> int:
     """Zet de Marktplaats-nummers in een uitgaande plaatsing waarvan de rubriek
     alleen hier bekend is. Alleen in de uitgaande opdracht, nooit in de database.
@@ -1576,6 +1595,9 @@ def _zet_rubriek_van_marktplaats(db, user_id: str, job: dict) -> bool:
 
     nieuw = dict(pl)
     uitdelen = True
+    if rubriek and _rubriek_past_niet_bij_accessoire(pl.get("category"), rubriek):
+        # Aantoonbaar verkeerde rubriek (Blouses voor een haarclip): eigen keuze.
+        rubriek = {}
     if rubriek:
         nieuw["mp_category"] = rubriek
         nieuw.pop("_rubriek_zoeken_sinds", None)
@@ -4866,7 +4888,10 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
                 # Marktplaats is dat achteraf niet te wijzigen.
                 cap_cat = captured.get("mp_category") or {}
                 if cap_cat.get("l1") and cap_cat.get("l2"):
-                    payload["mp_category"] = cap_cat
+                    if _rubriek_past_niet_bij_accessoire(payload.get("category"), cap_cat):
+                        payload.pop("mp_category", None)
+                    else:
+                        payload["mp_category"] = cap_cat
                 # Photos: prefer the fuller captured set (imports often keep only 1).
                 cap_photos = captured.get("photo_urls") or []
                 if len(cap_photos) > len(payload.get("photo_urls") or []):
