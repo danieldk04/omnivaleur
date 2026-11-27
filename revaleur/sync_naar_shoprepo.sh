@@ -7,8 +7,8 @@ T="$(mktemp -d)"
 git clone -q https://github.com/danieldk04/revaleur-shop.git "$T"
 rm -rf "$T/revaleur"; mkdir "$T/revaleur"
 (cd "$ROOT" && git archive HEAD revaleur) | tar -x -C "$T"
-# Railway (API) bouwt vanaf de root van deze repo: requirements.txt en Procfile uit revaleur/deploy
-cp "$T/revaleur/deploy/requirements.txt" "$T/revaleur/deploy/Procfile" "$T/"
+# Railway (API) bouwt vanaf de root van deze repo: requirements.txt (kopie van revaleur/requirements.txt; Railpack leest eerst alleen dat bestand) en Procfile uit revaleur/deploy
+cp "$T/revaleur/requirements.txt" "$T/requirements.txt"; cp "$T/revaleur/deploy/Procfile" "$T/"
 cd "$T"; git add -A
 if git diff --cached --quiet; then echo "niets te syncen"; else git commit -qm "Mirror van omnivaleur/revaleur $(git -C "$ROOT" rev-parse --short HEAD)" && git push -q origin main && echo "gesynct"; fi
 rm -rf "$T"
