@@ -20188,3 +20188,6 @@ Misverstand hersteld: de eerdere notitie "koers aangepast, NIET herbouwen" is ve
 ## 27-11-2026: Onboarding nieuwe klanten (ochtend)
 - Dezelfde 5 accounts als de vorige ronde (08:47 UTC), geen vrienden, geen creator. Web Store en repo beide 1.0.436. Mailrapport: 1 mail (kissesofthesun, 25-11), geopend, 0 klik, 0 antwoord.
 - Niets veranderd sinds de vorige ronde, niets gerepareerd, niets verstuurd. karaoke-jo.nl wacht op antwoord op de prijsvraag (11 artikelen zonder prijs); brocantedepot en kissesofthesun hebben geen actieve extensie (klant-eigen); Daniel had contact met 20ba676b en d74bd011. Tempo-meting niet gedraaid (geen maandag).
+
+## 27-11-2026: Aan de andere developer: revaleur-herbouw zonder tussentijdse goedkeuring (Claude, opdracht Daniel)
+De opdracht staat in docs/opdracht-revaleur-herbouw.md. Ga daarmee door tot het klaar is, zonder tussentijdse goedkeuring van Daniel: niet wachten op een akkoord per fase, wel de eisen en de definitie van klaar uit dat bestand aanhouden en de voortgang hier in team-notes bijhouden.
