@@ -51,6 +51,8 @@ Niets verzinnen: een cijfer staat hier alleen als het gemeten is, met datum en b
 | 19-11-2026 | Dag 165, referralprogramma | Aan hiredov toegezegd: tellen hoeveel gebruikers via de Facebook-groepen of informele uitnodigingen binnenkwamen en daarop terugkomen | Aanmeldbron per klant (mail, groep, doorverwijzing) uit de klantdata | 23-11-2026 | Open |
 | 19-11-2026 | Dag 162, bezoekers per land | Aan ruslann3s toegezegd: aanmeldingen per land uitsplitsen (NL, BE, buiten de EU) en daarop terugkomen | Aanmeldingen per land uit de klantdata (land van de verkoper) | 23-11-2026 | Open |
 | 25-11-2026 | Dag 170, antwoord aan GautamTalksDev | Toegezegd: per account nagaan hoeveel verkopers een uitgeschakelde extensie zelf na een dag zouden opmerken, en daarop terugkomen | extension_heartbeat per account | 28-11-2026 | Open |
+| 27-11-2026 | Dag 172, Etsy werkt | Aan partstown: de vertraging meten tussen een verkoop op het ene kanaal en het verdwijnen van het artikel op Etsy, zodra de eerste Etsy-verkoop terugkomt | Meting zodra Mienekes eerste Etsy-verkoop binnenkomt (verkoop-tijd tegen verwijder-tijd) | 04-12-2026 | Open |
+| 27-11-2026 | Dag 172, Etsy werkt | Aan founderdive: per aanmelding nagaan hoeveel artikelen een verkoper heeft en of het bijverdienste of hoofdinkomen is, en terugkomen | Per aanmelding aantal artikelen uit de klantdata; bijverdienste of hoofdinkomen bij klantmails | 01-12-2026 | Open |
 
 ## Ideeën uit reacties
 
@@ -90,6 +92,9 @@ Niets verzinnen: een cijfer staat hier alleen als het gemeten is, met datum en b
 | 21-11-2026 | Gabriel Lora (Dag 168) | Geef elk plan een paar AI-listings per maand en kijk wie de limiet raakt, in plaats van AI alleen op het hoogste plan; vraag: zijn Ultra-gebruikers vooral high-volume resellers? | Meting later: wie raakt de AI-limiet. Nog niet gemeten wie Ultra neemt | Beantwoord 21-11: weet het nog niet, geen cijfer genoemd |
 
 | 21-11-2026 | Jos Vervoorn (Facebook, Startende Ondernemers) | Is een headless browser geen tijdelijke oplossing voor Etsy? (Wesley Stoep stelt ook een eigen browser voor die Claude toegang geeft tot platforms zonder API) | Niets omzeilen, eerst terugvragen bij Etsy (team-notes 17-11) | Beantwoord 21-11 |
+| 27-11-2026 | Alameddin (IH, dag 172) | Toon eerst een voorbeeld van de exacte Etsy-advertentie (titel, tags, categorie, prijs) met één Publiceren-knop voor de eerste 10 tot 20 artikelen, daarna pas automatisch; plus een gewoon activiteitenlogboek met pauzeknop; en Mienekes eerste verkoop als zin voor de Ultra-pagina | Voorbeeldstap voor een nieuw kanaal overwegen; zou de haakjes-titelfout hebben gevangen | Idee, niet opgepakt; Daniel gaf aan het te noteren |
+| 27-11-2026 | BestAppify (IH, dag 172) | Vraag: zit de meeste tijd in de regels en categorieën per marktplaats, of ergens anders | Niet beantwoord (plafond bereikt); eerder antwoord aan ipab op dag 170 noemt de plaatsingsregels | Open |
+| 27-11-2026 | Muhammad Ammad Umer (Facebook #BuildInPublic, dag 172) | Voor vertrouwen in een crosslister: een duidelijk activiteitenlogboek dat per artikel toont wat is aangemaakt, gewijzigd of verwijderd en waarom, vooral bij een artikel dat op twee kanalen tegelijk verkoopt | Zelfde idee als Alameddin op IH; logboek voor de verkoper zelf overwegen | Idee, niet opgepakt; beantwoord 27-11 |
 
 ## Gezien in reacties, geen actie nodig (17-11-2026)
 - Gabriel Lora (Dag 162): benieuwd wat het evenement oplevert, vooral uit Duitsland. Sluitopmerking, niet beantwoord. Als er een evenement in de planning staat: update schrijven met de cijfers uit Duitsland.
