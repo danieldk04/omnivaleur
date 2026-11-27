@@ -544,3 +544,14 @@ Zes NL-video's in Downloads en voorbeelden in Drive. Nieuwe werkwijze (dialoog, 
 - Social NL: taak `omnivaleur-social-videos-nl` (donderdag, volgende run 03-12); zes NL-video's in Downloads, Daniel plaatst 4, 5 en 6. Inspiratieaccounts staan in `docs/routines/social-videos-nl.md`.
 - Schrijfstijl-routine 27-11: 10 nieuwe mails, 7 met concept.
 - Bijlagen gesynchroniseerd 27-11: nieuw `omnivaleur-seo-tweewekelijks.md` en `omnivaleur-social-videos-nl.md`, `social/lessen.md` bijgewerkt; sleutelpatronen gecontroleerd, geen treffers. Geplande taken op de Mac (gemeten 27-11): 16 mappen in `~/.claude/scheduled-tasks`, waaronder beide nieuwe. LaunchAgents ongewijzigd (`leadmachine-seintje`, `socialronde`).
+
+## Revaleur-webshop (27-11-2026, Claude met Daniel)
+Revaleur.com wordt een eigen webshop, helemaal los van Omnivaleur: alles staat in `revaleur/` (lees `revaleur/README.md`), met eigen
+Supabase, Stripe, Resend, R2 (foto's), Cloudflare Pages (site) en Railway-dienst (API `api-production-a52c044e.up.railway.app`, project
+`revaleur-api`). Test staat live op https://revaleur.pages.dev; revaleur.com wijst nog naar Shopify.
+- Gedaan en getest: catalogus in de Revaleur-database (250 producten, 8 dubbele artikelnummers samengevoegd op hoogste prijs), 614 pagina's EN+NL,
+  alle 423 oude URL's, foto's op R2 (2130, juiste types), checkout met Stripe-sandbox (iDEAL, factuur met margeregeling-tekst, EUR), reserveren
+  per artikel, webhook (idempotent, bestelling, mail, afmelden), Omnivaleur-koppeling beide kanten (ondertekend, op sku), Google Merchant-feed, beleid in NL.
+- Nog open, alleen Daniel: zie het laatste bericht van deze sessie en `revaleur/docs/deploy.md` (Stripe live, Resend-domein, DNS, Git-koppeling
+  Pages voor deploy hook, geheim en API-adres op Omnivaleurs Railway, echte testbestelling terugbetalen, Shopify 30 dagen aanhouden).
+- Sleutels staan lokaal in `~/.revaleur/env` van de sessie en als variabelen op Railway; ze hebben in een chat gestaan: omdraaien na livegang.

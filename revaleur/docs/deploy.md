@@ -28,3 +28,9 @@ Eerst alleen de sandbox (sleutels `sk_test_`). Geen Stripe Tax: Revaleur werkt o
   Opnieuw uploaden: `set -a; . ~/.revaleur/env; set +a; python3 -m revaleur.site.catalogus_uit_db && python3 -m revaleur.site.bouw && npx wrangler pages deploy revaleur/site/dist --project-name revaleur --branch main`
 - Een project met directe upload kan GEEN deploy hook hebben. Voor de omzetting moet het een Git-gekoppeld project worden (Cloudflare vraagt dan eenmalig GitHub-toestemming, dat kan alleen Daniel in de browser) of de API bouwt en uploadt zelf na een verkoop.
 - Foto's staan nog op de Shopify-CDN (af en toe een 502 vanuit de testomgeving). Naar R2 voordat Shopify stopt; R2 moet eerst aan in het Cloudflare-dashboard.
+
+## Stand 27-11-2026 (avond)
+- API draait: https://api-production-a52c044e.up.railway.app (Railway-project `revaleur-api`, account van Daniel). Opnieuw uitrollen: kopieer `revaleur/__init__.py` en `revaleur/shop_api/` naar een lege map met `requirements.txt`, een `Procfile` (`web: uvicorn revaleur.shop_api.main:app --host 0.0.0.0 --port $PORT`) en `railway up --service api`.
+- Stripe-webhook (sandbox) staat, naar de API hierboven. Voor live: nieuw webhook met de live sleutel en nieuwe `REVALEUR_STRIPE_*` op Railway.
+- Mail: nu van `onboarding@resend.dev` (alleen naar het eigen adres van de Resend-eigenaar). Voor klanten: domein revaleur.com verifiëren in Resend (DNS) en `REVALEUR_MAIL_VAN` op `Daniel van Revaleur <info@revaleur.com>` zetten.
+- Omnivaleur-kant van de koppeling staat uit tot op Omnivaleurs Railway `REVALEUR_KOPPELING_GEHEIM` (zelfde waarde als op de Revaleur-API) en `REVALEUR_API_URL` (het API-adres) staan.
