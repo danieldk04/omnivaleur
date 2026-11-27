@@ -57,7 +57,8 @@ class FakeDb:
     def __init__(self):
         self.tabellen = {"producten": [
             {"id": "p1", "sku": "1", "titel": "A", "prijs": 30.0, "fotos": [], "status": "beschikbaar"},
-            {"id": "p2", "sku": "2", "titel": "B titel", "prijs": 25.0, "fotos": [{"src": "x"}], "status": "beschikbaar"}]}
+            {"id": "p2", "sku": "2", "titel": "B titel", "prijs": 25.0, "fotos": [{"src": "x"}], "status": "beschikbaar"},
+            {"id": "p1b", "sku": "1", "titel": "A dubbel", "prijs": 35.0, "fotos": [], "status": "beschikbaar"}]}
 
     def table(self, t): return _Q(self, t)
 
@@ -132,6 +133,8 @@ def test_betaling_boekt_meldt_omnivaleur_idempotent_en_mailt(db, monkeypatch):
     rs.verwerk_betaling(db, sessie)                 # Stripe stuurt de melding twee keer
     assert gemeld == [("1", 1001, 30.0)] and len(mails) == 1 and len(builds) == 1
     assert db.tabellen["producten"][0]["status"] == "verkocht"
+    assert db.tabellen["producten"][2]["status"] == "verkocht"      # dubbele advertentie van hetzelfde stuk (sku 1) mee
+    assert db.tabellen["producten"][1]["status"] == "beschikbaar"
     assert db.tabellen["bestellingen"][0]["omnivaleur_gemeld_op"] and not db.tabellen["reserveringen"]
 
 

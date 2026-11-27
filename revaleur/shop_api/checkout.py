@@ -181,6 +181,8 @@ def verwerk_betaling(db, sessie: dict) -> None:
         "artikelen": regels, "subtotaal": round(totaal - verzend, 2), "verzendkosten": verzend, "totaal": totaal,
     }).execute().data[0]
     db.table("producten").update({"status": "verkocht"}).in_("id", ids).execute()
+    # Eén sku is één fysiek stuk: een dubbele advertentie van hetzelfde stuk verdwijnt mee.
+    db.table("producten").update({"status": "verkocht"}).in_("sku", [r["sku"] for r in regels if r["sku"]]).execute()
     db.table("reserveringen").delete().eq("sessie_id", sessie["id"]).execute()
     alles_gemeld = True
     for r in regels:

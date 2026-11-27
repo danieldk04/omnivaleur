@@ -4,7 +4,8 @@
 CREATE TABLE IF NOT EXISTS producten (
     id TEXT PRIMARY KEY,                 -- bij de import: het Shopify-product-id (blijft stabiel voor 301's)
     handle TEXT UNIQUE NOT NULL,         -- URL-deel, zoals /products/<handle>
-    sku TEXT UNIQUE NOT NULL,            -- artikelnummer; de enige sleutel naar Omnivaleur
+    sku TEXT NOT NULL,                   -- artikelnummer; de enige sleutel naar Omnivaleur. NIET uniek: Shopify had 8 nummers dubbel
+                                         -- (twee advertenties van één stuk); verkoop of afmelding geldt voor alle met dezelfde sku
     titel TEXT NOT NULL,
     merk TEXT, type TEXT,
     prijs DECIMAL(10,2) NOT NULL,
@@ -16,6 +17,8 @@ CREATE TABLE IF NOT EXISTS producten (
     gemaakt_op TIMESTAMPTZ DEFAULT NOW(),
     bijgewerkt_op TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_producten_sku ON producten(sku);
 
 CREATE TABLE IF NOT EXISTS collecties (
     handle TEXT PRIMARY KEY, titel TEXT NOT NULL, omschrijving TEXT,
