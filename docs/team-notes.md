@@ -20165,3 +20165,9 @@ Advies: A. Eerst parallel draaien naast Shopify, pas daarna Shopify opzeggen.
 7. Wat Shopify nu nog meer doet (apps, mailflows, reviews): lijst bij Daniel opvragen.
 
 **Voorwaarde:** Shopify pas opzeggen als de nieuwe winkel een echte testbestelling, een echte factuur en een werkende afmelding op de andere kanalen heeft doorstaan. Tweetalig (NL/EN), zoals alle klanttekst.
+
+## 27-11-2026 (later): Etsy op 3 betalende vrienden, vriendentrap bevestigd (Claude, besluit Daniel)
+- Besluit Daniel: vrienden uitnodigen weegt zwaarder dan een duurder plan. Etsy is er voor Ultra OF voor wie 3 betalende vrienden heeft (Pro of hoger, nu betalend). 3 vrienden = AI-pakket en Etsy, 5 vrienden = Ultra (alles). Alleen nog het kanaal zelf blijft dicht tot `etsy_open_voor_ultra` aan gaat; de vrienden-regel werkt pas dan.
+- Gebouwd: `vriendenvoordeel.heeft_etsy_via_vrienden` (DREMPEL_ETSY=3), `etsy_toegang` kijkt naar plan én vrienden, foutmelding en dashboard-/sitetekst (EN en NL) zeggen 3. Het ontgrendelen bij 3 (AI-pakket) en 5 (Ultra) bestond al in `vriendenvoordeel.py`/`light.plan_van_gebruiker`; dat staat dus niet meer open.
+- Let op: Etsy-voorwaarden §5 (geen betaling voor wat Etsy gratis biedt) blijft een risico bij elke vorm van koppeling aan plan of aantal vrienden. Niet getoetst bij Etsy.
+- Mail A bijgewerkt (3 vrienden = AI-pakket en Etsy), niet verstuurd.

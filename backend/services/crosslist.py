@@ -1592,7 +1592,7 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     ]
     platforms = [p for p in platforms if p not in NOT_YET_AVAILABLE]
 
-    # Etsy: alleen Ultra (of 5 betalende vrienden) en de eigenaar. Geen toegang is
+    # Etsy: alleen Ultra (of 3 betalende vrienden) en de eigenaar. Geen toegang is
     # een duidelijke melding, nooit een halve plaatsing.
     if "etsy" in platforms:
         from backend.services.etsy_toegang import etsy_toegang, GEEN_TOEGANG

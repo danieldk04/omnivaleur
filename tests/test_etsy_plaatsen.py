@@ -264,3 +264,19 @@ def test_vertaling_valt_terug_op_winkelcode_en_us(monkeypatch):
     item = {**ITEM, "_etsy_teksten": {"nl": {"title": "NL", "description": "n"}, "en": {"title": "EN", "description": "e"}}}
     res = asyncio.run(etsy.EtsyPlatform().create_listing(item, _creds()))
     assert gezien == ["en", "en-US"] and "waarschuwingen" not in res
+
+
+def test_drie_betalende_vrienden_geven_etsy_zonder_ultra(monkeypatch):
+    from backend.services import etsy_toegang as t
+    monkeypatch.setattr(settings, "etsy_open_voor_ultra", True)
+    monkeypatch.setattr("backend.services.referral_mail.email_van", lambda u: "klant@x.nl")
+    monkeypatch.setattr("backend.services.billing.is_owner_email", lambda e: False)
+    monkeypatch.setattr("backend.services.light.plan_van_gebruiker", lambda u: "pro")
+    for n, verwacht in ((2, False), (3, True), (5, True)):
+        t._cache.clear()
+        monkeypatch.setattr("backend.services.vriendenvoordeel.betalende_vrienden", lambda u, n=n: n)
+        assert t.etsy_toegang("u1") is verwacht
+    # Etsy zelf blijft dicht zolang de vlag uit staat, ook met genoeg vrienden.
+    t._cache.clear()
+    monkeypatch.setattr(settings, "etsy_open_voor_ultra", False)
+    assert t.etsy_toegang("u1") is False

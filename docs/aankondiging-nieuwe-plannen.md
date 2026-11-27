@@ -23,7 +23,7 @@ Hoi,
 Daniel hier. Tot 1 januari geef ik meer terug aan wie een andere verkoper meeneemt.
 
 Elke vriend die een betaald abonnement neemt (vanaf Pro) haalt €10 per maand van je eigen rekening, zolang hij betaalt.
-Elke vriend levert je daarnaast 2 maanden gratis op. Bij 3 vrienden krijg je het AI-pakket, elke AI-functie zodra die live
+Elke vriend levert je daarnaast 2 maanden gratis op. Bij 3 vrienden krijg je het AI-pakket en Etsy, elke AI-functie zodra die live
 gaat. Bij 5 vrienden heb je Ultra: alle functies, Etsy zodra die er is, de nieuwste functies eerst en voorrang bij support.
 
 Je vriend start met 14 dagen proef, betaalt de eerste maand de helft, en ik lees zijn voorraad in en loop de eerste artikelen met hem na tot ze online staan.

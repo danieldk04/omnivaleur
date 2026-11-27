@@ -1,4 +1,4 @@
-"""Wat betalende vrienden ontgrendelen: 3 vrienden = AI-pakket, 5 vrienden = Ultra.
+"""Wat betalende vrienden ontgrendelen: 3 vrienden = AI-pakket en Etsy, 5 vrienden = Ultra.
 
 Alleen een vriend die NU betaalt op Pro of hoger telt (zelfde regel als de korting,
 referral_korting.telt_mee). Stopt een vriend, dan vervalt het voordeel vanzelf
@@ -19,6 +19,7 @@ from backend.services.referral_korting import telt_mee
 logger = logging.getLogger(__name__)
 
 DREMPEL_AI = 3
+DREMPEL_ETSY = 3     # besluit Daniel 27-11-2026: Etsy op dezelfde trede als het AI-pakket
 DREMPEL_ULTRA = 5
 _TTL = 120
 _cache: dict[str, tuple[float, int]] = {}
@@ -71,3 +72,7 @@ def heeft_ultra_via_vrienden(user_id: str) -> bool:
 
 def heeft_ai_via_vrienden(user_id: str) -> bool:
     return betalende_vrienden(user_id) >= DREMPEL_AI
+
+
+def heeft_etsy_via_vrienden(user_id: str) -> bool:
+    return betalende_vrienden(user_id) >= DREMPEL_ETSY

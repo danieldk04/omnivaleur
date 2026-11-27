@@ -1,8 +1,8 @@
 """Wie mag Etsy gebruiken? Nu de eigenaar en de testverkopers (etsy_open_voor_ultra staat uit).
 
 Etsy gaf Omnivaleur Personal Access (25-11-2026): beperkte schaal. Daniel wil Etsy
-alleen voor Ultra, of te verdienen met 5 betalende vrienden (zelfde regel als Ultra
-zelf, zie light.plan_van_gebruiker). De eigenaar mag altijd, om te kunnen testen.
+voor Ultra, of te verdienen met 3 betalende vrienden (besluit 27-11-2026; 5 vrienden
+geven Ultra zelf, zie light.plan_van_gebruiker). De eigenaar mag altijd, om te kunnen testen.
 """
 from __future__ import annotations
 import logging
@@ -46,10 +46,16 @@ def _bereken(user_id: str) -> bool:
         return False
     try:
         from backend.services.light import plan_van_gebruiker
-        return plan_van_gebruiker(user_id) == "ultra"
+        if plan_van_gebruiker(user_id) == "ultra":
+            return True
     except Exception:  # noqa: BLE001
         logger.exception("Plan niet na te gaan voor Etsy-toegang")
+    try:
+        from backend.services.vriendenvoordeel import heeft_etsy_via_vrienden
+        return bool(heeft_etsy_via_vrienden(user_id))
+    except Exception:  # noqa: BLE001
+        logger.exception("Vrienden niet na te gaan voor Etsy-toegang")
         return False
 
 
-GEEN_TOEGANG = ("Etsy is part of the Ultra plan, or you unlock it by inviting 5 paying friends.")
+GEEN_TOEGANG = ("Etsy is part of the Ultra plan, or you unlock it by inviting 3 paying friends.")

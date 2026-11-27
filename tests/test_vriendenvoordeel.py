@@ -17,6 +17,7 @@ def _tel(abos, aan=True):
         n = v.betalende_vrienden("u1")
         assert v.heeft_ai_via_vrienden("u1") == (n >= 3)
         assert v.heeft_ultra_via_vrienden("u1") == (n >= 5)
+        assert v.heeft_etsy_via_vrienden("u1") == (n >= 3)
         return n
 
 
@@ -42,3 +43,9 @@ def test_storing_is_nul():
     with patch.object(settings, "referral_korting_aan", True), \
          patch("backend.services.referral_codes.codes_van", side_effect=RuntimeError("x")):
         assert v.betalende_vrienden("u1") == 0
+
+
+def test_etsy_op_drie_vrienden():
+    assert _tel([abo()] * 2) == 2
+    assert _tel([abo()] * 3) == 3
+    assert _tel([abo(), abo(), abo("light")]) == 2
