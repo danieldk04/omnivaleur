@@ -77,3 +77,8 @@ Zolang revaleur.com nog naar Shopify wijst, raakt niets de klanten. Na het omzet
 
 ## Werkwijze (CLAUDE.md van de repo)
 Rapporteer aan Daniel in vier blokjes met urgentielabels, kort. Klanttekst altijd EN en NL, nooit "sorry" in klantberichten. Merge klare, geteste wijzigingen zelf fast-forward naar main en controleer `https://omnivaleur.com/health`; Revaleur zit niet in die deploy (de API en de site rol je zelf uit). Geen pull requests nodig. Houd `docs/overdracht.md` en `docs/team-notes.md` bij.
+
+## Stand 27-11-2026 avond (bijgewerkt)
+- Stap 3 (Stripe live) KLAAR: live account `acct_1UgN3zB31GM6PwWd`, live webhook `we_1UgRj3B31GM6PwWdBaXnttyo` (4 events), live restricted key `revaleur-api-railway` (rk_live, volledige toegang behalve gevoelige bewerkingen) en de live signing secret staan op Railway (uitgerold). Test: POST /api/revaleur/checkout geeft een echte `cs_live_`-sessie. De sandbox-sleutels zijn vervangen en hoeven niet meer.
+- Nog open: iDEAL aan zetten in Stripe live (Instellingen > Betaalmethoden) controleren; stap 4 (proefbestelling) vraagt een testartikel van €1 in de Revaleur-database (geen bestaand artikel kost €1); stap 1 (domein): zie team-notes, overdracht naar Porkbun loopt, controle 29-11 10:00.
+- Sleutels omdraaien: nieuwe Stripe-sleutels zijn al vers; de rest (Supabase, Cloudflare, R2, Railway, Resend, koppelingsgeheim) volgt na de omzetting.
