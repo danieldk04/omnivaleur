@@ -20,3 +20,6 @@ data/facebook-leren/
 
 # Social reageren en building in public: lokaal logboek
 data/social/
+
+# Revaleur-herbouw: ruwe scrape (grote HTML), opnieuw te maken
+data/revaleur-inventaris/*.html
