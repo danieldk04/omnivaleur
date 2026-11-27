@@ -21,7 +21,7 @@ from pathlib import Path
 import asyncio
 import traceback
 import uuid
-from backend.api import items, listings, platforms, webhooks, jobs, uploads, shopify, auth, billing, imports, content, tools, notifications, beheer, tracking, referrals, mail_verbinding, i18n, verzending, account, bronfotos, ai_pakket, revaleur_shop
+from backend.api import items, listings, platforms, webhooks, jobs, uploads, shopify, auth, billing, imports, content, tools, notifications, beheer, tracking, referrals, mail_verbinding, i18n, verzending, account, bronfotos, ai_pakket, revaleur_koppeling
 from backend.scheduler import start_scheduler, stop_scheduler
 
 FRONTEND = Path(__file__).parent.parent / "frontend"
@@ -75,13 +75,10 @@ app.add_middleware(
         "https://www.omnivaleur.com",
         "https://omnivaleur.com",
         "https://api.omnivaleur.com",
-        # Revaleur-webshop (statisch op Cloudflare Pages) roept alleen /api/revaleur aan
-        "https://revaleur.com",
-        "https://www.revaleur.com",
         "http://localhost:3000",
         "http://localhost:8000",
     ],
-    allow_origin_regex=r"chrome-extension://.*|https://revaleur[a-z0-9-]*\.pages\.dev",
+    allow_origin_regex=r"chrome-extension://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -113,7 +110,7 @@ app.include_router(webhooks.router, prefix="/api")
 app.include_router(jobs.router, prefix="/api")
 app.include_router(uploads.router, prefix="/api")
 app.include_router(shopify.router, prefix="/api")
-app.include_router(revaleur_shop.router, prefix="/api")
+app.include_router(revaleur_koppeling.router)
 app.include_router(imports.router, prefix="/api")
 app.include_router(notifications.router, prefix="/api")
 app.include_router(verzending.router, prefix="/api")

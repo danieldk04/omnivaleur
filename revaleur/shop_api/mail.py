@@ -1,11 +1,10 @@
-"""Mails van de Revaleur-webshop, in Daniels stijl (docs/schrijfstijl-daniel.md).
+"""Mails van de Revaleur-webshop via het eigen Resend-account, in Daniels stijl (docs/schrijfstijl-daniel.md in de hoofdrepo).
 
-Nooit "sorry", "ligt aan ons" of "onze fout" (CLAUDE.md, 28-10-2026): begin met het goede
-nieuws, zeg neutraal wat er speelde en wat de klant nu kan.
+Nooit "sorry", "ligt aan ons" of "onze fout": begin met het goede nieuws, zeg neutraal wat er speelde en wat de klant nu kan.
 """
-from backend.services.email import send_email_checked
+import httpx
 
-AFZENDER_ANTWOORD = "info@revaleur.com"
+from .config import settings
 
 _TEKST = {
     "nl": {
@@ -35,8 +34,8 @@ def bericht(bestelling: dict) -> tuple[str, str]:
     t = _TEKST[taal]
     regels = "\n".join(f"- {a.get('titel')} ({_euro(a.get('prijs') or 0, taal)})" for a in bestelling.get("artikelen") or [])
     voornaam = (bestelling.get("naam") or "").split(" ")[0]
-    verzend = _euro(float(bestelling.get("verzendkosten") or 0), taal) if float(bestelling.get("verzendkosten") or 0) else (
-        "gratis" if taal == "nl" else "free")
+    kosten = float(bestelling.get("verzendkosten") or 0)
+    verzend = _euro(kosten, taal) if kosten else ("gratis" if taal == "nl" else "free")
     return (t["onderwerp"].format(nr=bestelling.get("nummer", "")),
             t["tekst"].format(naam=f" {voornaam}" if voornaam else "", regels=regels,
                               totaal=_euro(float(bestelling.get("totaal") or 0), taal), verzend=verzend))
@@ -45,5 +44,12 @@ def bericht(bestelling: dict) -> tuple[str, str]:
 def stuur_bevestiging(bestelling: dict) -> None:
     if not bestelling.get("email"):
         raise RuntimeError("bestelling zonder e-mailadres")
+    if not settings.resend_api_key:
+        raise RuntimeError("REVALEUR_RESEND_API_KEY ontbreekt")
     onderwerp, tekst = bericht(bestelling)
-    send_email_checked(onderwerp, tekst, to=bestelling["email"], reply_to=AFZENDER_ANTWOORD)
+    r = httpx.post("https://api.resend.com/emails", timeout=20,
+                   headers={"Authorization": f"Bearer {settings.resend_api_key}"},
+                   json={"from": settings.mail_van, "to": [bestelling["email"]], "subject": onderwerp, "text": tekst,
+                         "reply_to": settings.mail_antwoord})
+    if r.status_code >= 300:
+        raise RuntimeError(f"Resend weigerde de mail ({r.status_code}): {r.text[:200]}")

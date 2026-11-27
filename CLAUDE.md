@@ -102,6 +102,12 @@ precies. Rondenaam: onboarding-middag." Zet daarna in team-notes dat hij staat. 
 tweede ronde om 10:00 vangt de aanmeldingen van die nacht en ochtend; het gedeelde slot
 (`scripts/klantfouten.py ronde`) voorkomt dat twee rondes hetzelfde doen.
 
+## Revaleur staat los van Omnivaleur (Daniel, 27-11-2026)
+
+De webshop revaleur.com zit helemaal in `revaleur/` (eigen Supabaseproject, Stripe, mail en server, variabelen met `REVALEUR_`).
+Lees [revaleur/README.md](revaleur/README.md) voor je daaraan werkt. Zet niets van Revaleur in `backend/`, `schema.sql` of het
+Omnivaleur-Supabaseproject, behalve de ene koppeling (`backend/api/revaleur_koppeling.py`, zie `revaleur/docs/koppeling.md`).
+
 ## Begin elke sessie met kijken wat er veranderd is
 
 Voordat je aan wat dan ook begint — een codetaak, een vraag, een mail, een

@@ -23,6 +23,6 @@ data/social/
 
 # Revaleur-herbouw: ruwe scrape (grote HTML), opnieuw te maken
 data/revaleur-inventaris/*.html
-revaleur-site/dist/
-revaleur-site/data/
+revaleur/site/dist/
+revaleur/site/data/
 data/revaleur-inventaris/

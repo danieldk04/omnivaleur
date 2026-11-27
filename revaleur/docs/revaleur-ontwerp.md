@@ -1,5 +1,10 @@
 # Revaleur-herbouw, fase 2: ontwerp (27-11-2026)
 
+> **Bijgewerkt 27-11-2026 (Daniel: duidelijke scheiding met Omnivaleur).** Revaleur heeft een EIGEN Supabaseproject, Stripe, Resend en
+> server; de catalogus woont in Revaleurs eigen tabel `producten`, niet in Omnivaleurs `items`. Omnivaleur is alleen een kanaal via de
+> ondertekende koppeling, zie [koppeling.md](koppeling.md) en [../README.md](../README.md). Waar dit ontwerp hieronder over
+> "de Omnivaleur-database" of `handle_item_sold` spreekt, geldt dus de koppeling in plaats daarvan.
+
 ## Architectuur
 ```
 Omnivaleur-database (items, listings)  --export-->  catalogus.json  --bouw-->  statische site (EN + NL)

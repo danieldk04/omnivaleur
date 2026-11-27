@@ -1,11 +1,11 @@
 """Revaleur-herbouw: bouwt de statische winkel (EN op /, NL op /nl/) uit catalogus.json.
 
 Gebruik:
-    python3 scripts/revaleur_catalogus.py            # catalogus ophalen
-    python3 scripts/revaleur_bouw.py                 # site bouwen in revaleur-site/dist
+    python3 -m revaleur.site.import_shopify          # catalogus ophalen (later: uit de Revaleur-database)
+    python3 -m revaleur.site.bouw                    # site bouwen in revaleur/site/dist
 
 Alle URL's blijven gelijk aan Shopify (/products/x, /collections/x, /pages/x, /policies/x,
-/blogs/news/x, /nl/...), zodat zoekverkeer en advertenties niets merken. Zie docs/revaleur-ontwerp.md.
+/blogs/news/x, /nl/...), zodat zoekverkeer en advertenties niets merken. Zie revaleur/docs/revaleur-ontwerp.md.
 """
 import html
 import json
@@ -15,10 +15,10 @@ import sys
 from datetime import date
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-SITE = ROOT / "revaleur-site"
+SITE = Path(__file__).resolve().parent
+ROOT = SITE.parent
 DOMEIN = "https://revaleur.com"
-API = "https://omnivaleur.com/api/revaleur"
+API = "https://api.revaleur.com/api/revaleur"
 MAIL = "info@revaleur.com"
 GOUD, ROOD, INKT = "#B89A50", "#E02229", "#121212"
 
@@ -91,7 +91,7 @@ def pre(taal):
 
 # ---------------------------------------------------------------- statische pagina's
 def lees_beleid(naam):
-    p = ROOT / "docs" / "revaleur" / f"{naam}.txt"
+    p = ROOT / "docs" / "beleid" / f"{naam}.txt"
     return p.read_text() if p.exists() else ""
 
 

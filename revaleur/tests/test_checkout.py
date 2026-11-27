@@ -1,11 +1,11 @@
-"""Revaleur-webshop: verzendregels, reserveren, betalen, afmelden (herbouw 27-11-2026)."""
+"""Revaleur-webshop: verzendregels, reserveren, betalen, koppeling (eigen database, los van Omnivaleur)."""
 import asyncio
+import json
 from types import SimpleNamespace
 
 import pytest
 
-from backend.api import revaleur_shop as rs
-from backend.services import revaleur_mail
+from revaleur.shop_api import checkout as rs, koppeling, mail
 
 
 def test_verzendregels_volgen_het_beleid():
@@ -17,8 +17,7 @@ def test_verzendregels_volgen_het_beleid():
 
 class _Q:
     def __init__(self, db, tabel):
-        self.db, self.t, self.op, self.filt = db, tabel, "select", {}
-        self.payload = None
+        self.db, self.t, self.op, self.filt, self.payload = db, tabel, "select", {}, None
 
     def select(self, *_): self.op = "select"; return self
     def insert(self, p): self.op, self.payload = "insert", p; return self
@@ -40,9 +39,9 @@ class _Q:
         if self.op == "select":
             return SimpleNamespace(data=[dict(r) for r in rijen if self._passt(r)])
         if self.op == "insert":
-            if self.t == "revaleur_reserveringen" and any(r["item_id"] == self.payload["item_id"] for r in rijen):
+            if self.t == "reserveringen" and any(r["product_id"] == self.payload["product_id"] for r in rijen):
                 raise RuntimeError("duplicate key")
-            if self.t == "revaleur_bestellingen":
+            if self.t == "bestellingen":
                 self.payload = {"id": "b1", "nummer": 1001, **self.payload}
             rijen.append(dict(self.payload))
             return SimpleNamespace(data=[dict(self.payload)])
@@ -50,21 +49,15 @@ class _Q:
             for r in rijen:
                 if self._passt(r): r.update(self.payload)
             return SimpleNamespace(data=[])
-        if self.op == "delete":
-            rijen[:] = [r for r in rijen if not self._passt(r)]
-            return SimpleNamespace(data=[])
+        rijen[:] = [r for r in rijen if not self._passt(r)]
+        return SimpleNamespace(data=[])
 
 
 class FakeDb:
     def __init__(self):
-        self.tabellen = {
-            "listings": [{"item_id": "i1", "platform_listing_id": "p1", "status": "active", "platform": "shopify"},
-                         {"item_id": "i2", "platform_listing_id": "p2", "status": "active", "platform": "shopify"}],
-            "items": [{"id": "i1", "sku": "1", "title": "A", "shopify_title": None, "price": 30.0, "price_shopify": None,
-                       "photo_urls": [], "user_id": rs.settings.revaleur_user_id},
-                      {"id": "i2", "sku": "2", "title": "B", "shopify_title": "B titel", "price": 20.0, "price_shopify": 25.0,
-                       "photo_urls": [], "user_id": rs.settings.revaleur_user_id}],
-        }
+        self.tabellen = {"producten": [
+            {"id": "p1", "sku": "1", "titel": "A", "prijs": 30.0, "fotos": [], "status": "beschikbaar"},
+            {"id": "p2", "sku": "2", "titel": "B titel", "prijs": 25.0, "fotos": [{"src": "x"}], "status": "beschikbaar"}]}
 
     def table(self, t): return _Q(self, t)
 
@@ -74,13 +67,12 @@ def db(monkeypatch):
     d = FakeDb()
     monkeypatch.setattr(rs, "get_db", lambda: d)
     monkeypatch.setattr(rs.settings, "stripe_secret_key", "sk_test_x")
-    aanroepen = []
+    d.stripe = []
 
     def maak(**kw):
-        aanroepen.append(kw)
+        d.stripe.append(kw)
         return SimpleNamespace(id="cs_1", url="https://stripe.test/pay")
     monkeypatch.setattr(rs.stripe.checkout.Session, "create", staticmethod(maak))
-    d.stripe = aanroepen
     return d
 
 
@@ -92,10 +84,9 @@ def test_afrekenen_reserveert_en_rekent_serverprijs(db):
     r = run(rs.checkout(rs.CheckoutIn(ids=["p1", "p2"], prijzen={"p1": 30.0, "p2": 25.0}, land="NL")))
     assert r == {"url": "https://stripe.test/pay"}
     kw = db.stripe[0]
-    assert [l["price_data"]["unit_amount"] for l in kw["line_items"]] == [3000, 2500]   # price_shopify wint van price
+    assert [l["price_data"]["unit_amount"] for l in kw["line_items"]] == [3000, 2500]
     assert kw["shipping_options"][0]["shipping_rate_data"]["fixed_amount"]["amount"] == 0
-    assert {r["item_id"] for r in db.tabellen["revaleur_reserveringen"]} == {"i1", "i2"}
-    assert all(r["sessie_id"] == "cs_1" for r in db.tabellen["revaleur_reserveringen"])
+    assert all(r["sessie_id"] == "cs_1" for r in db.tabellen["reserveringen"])
 
 
 def test_tweede_koper_krijgt_verkocht_en_niets_blijft_hangen(db):
@@ -103,21 +94,20 @@ def test_tweede_koper_krijgt_verkocht_en_niets_blijft_hangen(db):
     with pytest.raises(rs.HTTPException) as e:
         run(rs.checkout(rs.CheckoutIn(ids=["p2", "p1"])))
     assert e.value.status_code == 409 and e.value.detail == {"verkocht": ["p1"]}
-    assert [r["item_id"] for r in db.tabellen["revaleur_reserveringen"]] == ["i1"]    # p2 weer vrijgegeven
+    assert [r["product_id"] for r in db.tabellen["reserveringen"]] == ["p1"]
 
 
-def test_onbekend_of_verkocht_artikel_wordt_geweigerd(db):
-    db.tabellen["listings"][0]["status"] = "sold"
+def test_verkocht_artikel_wordt_geweigerd(db):
+    db.tabellen["producten"][0]["status"] = "verkocht"
     with pytest.raises(rs.HTTPException) as e:
         run(rs.checkout(rs.CheckoutIn(ids=["p1", "p2"])))
-    assert e.value.detail == {"verkocht": ["p1"]} and not db.tabellen.get("revaleur_reserveringen")
+    assert e.value.detail == {"verkocht": ["p1"]} and not db.tabellen.get("reserveringen")
 
 
 def test_prijsverschil_wordt_nooit_stil_geind(db):
     with pytest.raises(rs.HTTPException) as e:
         run(rs.checkout(rs.CheckoutIn(ids=["p2"], prijzen={"p2": 20.0})))
     assert e.value.status_code == 409 and e.value.detail == {"prijs_gewijzigd": ["p2"]}
-    assert not db.tabellen.get("revaleur_reserveringen")
 
 
 def test_stripe_storing_geeft_artikelen_vrij(db, monkeypatch):
@@ -125,34 +115,62 @@ def test_stripe_storing_geeft_artikelen_vrij(db, monkeypatch):
     monkeypatch.setattr(rs.stripe.checkout.Session, "create", staticmethod(stuk))
     with pytest.raises(rs.HTTPException) as e:
         run(rs.checkout(rs.CheckoutIn(ids=["p1"])))
-    assert e.value.status_code == 503 and not db.tabellen["revaleur_reserveringen"]
+    assert e.value.status_code == 503 and not db.tabellen["reserveringen"]
 
 
-def test_betaling_meldt_artikelen_af_idempotent_en_mailt(db, monkeypatch):
-    verkocht, mails = [], []
-
-    async def sold(item_id, platform, sold_price=None, bewijs=None, **kw):
-        verkocht.append((item_id, platform, sold_price, bewijs))
-    import backend.services.crosslist as cl
-    monkeypatch.setattr(cl, "handle_item_sold", sold)
-    monkeypatch.setattr(revaleur_mail, "stuur_bevestiging", lambda b: mails.append(b))
-    db.tabellen["revaleur_reserveringen"] = [{"item_id": "i1", "sessie_id": "cs_9", "tot": "x"}]
+def test_betaling_boekt_meldt_omnivaleur_idempotent_en_mailt(db, monkeypatch):
+    gemeld, mails, builds = [], [], []
+    monkeypatch.setattr(koppeling, "meld_verkoop_aan_omnivaleur", lambda sku, nr, prijs: gemeld.append((sku, nr, prijs)) or True)
+    monkeypatch.setattr(koppeling, "bouw_site_opnieuw", lambda: builds.append(1))
+    monkeypatch.setattr(mail, "stuur_bevestiging", lambda b: mails.append(b))
+    db.tabellen["reserveringen"] = [{"product_id": "p1", "sessie_id": "cs_9", "tot": "x"}]
     sessie = {"id": "cs_9", "payment_status": "paid", "amount_total": 3000, "total_details": {"amount_shipping": 0},
-              "metadata": {"bron": "revaleur", "item_ids": "i1", "taal": "nl"},
+              "metadata": {"bron": "revaleur", "product_ids": "p1", "taal": "nl"},
               "customer_details": {"email": "k@x.nl", "name": "Kim Jansen"},
               "shipping_details": {"name": "Kim Jansen", "address": {"country": "NL"}}}
-    run(rs.verwerk_betaling(db, sessie))
-    run(rs.verwerk_betaling(db, sessie))          # Stripe stuurt de melding twee keer
-    assert verkocht == [("i1", "revaleur", 30.0, "bestelling")]
-    assert len(db.tabellen["revaleur_bestellingen"]) == 1 and len(mails) == 1
-    assert not db.tabellen["revaleur_reserveringen"]
+    rs.verwerk_betaling(db, sessie)
+    rs.verwerk_betaling(db, sessie)                 # Stripe stuurt de melding twee keer
+    assert gemeld == [("1", 1001, 30.0)] and len(mails) == 1 and len(builds) == 1
+    assert db.tabellen["producten"][0]["status"] == "verkocht"
+    assert db.tabellen["bestellingen"][0]["omnivaleur_gemeld_op"] and not db.tabellen["reserveringen"]
+
+
+def test_mislukte_melding_aan_omnivaleur_blijft_zichtbaar_en_blokkeert_niets(db, monkeypatch):
+    monkeypatch.setattr(koppeling, "meld_verkoop_aan_omnivaleur", lambda *a: False)
+    monkeypatch.setattr(koppeling, "bouw_site_opnieuw", lambda: None)
+    monkeypatch.setattr(mail, "stuur_bevestiging", lambda b: None)
+    sessie = {"id": "cs_8", "payment_status": "paid", "amount_total": 3000, "metadata": {"product_ids": "p1"},
+              "customer_details": {"email": "k@x.nl"}}
+    rs.verwerk_betaling(db, sessie)
+    b = db.tabellen["bestellingen"][0]
+    assert "omnivaleur_gemeld_op" not in b or not b.get("omnivaleur_gemeld_op")   # blijft leeg: opnieuw te proberen
+
+
+def test_afmelden_vraagt_geldige_handtekening(db, monkeypatch):
+    monkeypatch.setattr(koppeling.settings, "koppeling_geheim", "geheim")
+    monkeypatch.setattr(koppeling, "bouw_site_opnieuw", lambda: None)
+    body = json.dumps({"sku": "2"}).encode()
+
+    class R:
+        def __init__(self, h): self.headers = {koppeling.KOP: h}
+        async def body(self): return body
+    with pytest.raises(rs.HTTPException) as e:
+        run(rs.afmelden(R("fout")))
+    assert e.value.status_code == 401 and db.tabellen["producten"][1]["status"] == "beschikbaar"
+    run(rs.afmelden(R(koppeling.onderteken(body))))
+    assert db.tabellen["producten"][1]["status"] == "verkocht"
+
+
+def test_zonder_geheim_wordt_niets_geaccepteerd(monkeypatch):
+    monkeypatch.setattr(koppeling.settings, "koppeling_geheim", "")
+    assert not koppeling.klopt(b"x", koppeling.onderteken(b"x", "a"))
 
 
 def test_mail_zonder_schuld_en_in_de_taal_van_de_klant():
     best = {"nummer": 1001, "taal": "nl", "naam": "Kim Jansen", "totaal": 30, "verzendkosten": 0,
             "artikelen": [{"titel": "Beige fleece", "prijs": 30}]}
-    onderwerp, tekst = revaleur_mail.bericht(best)
+    onderwerp, tekst = mail.bericht(best)
     assert "#1001" in onderwerp and "Hoi Kim" in tekst and "€30,00" in tekst and "gratis" in tekst
     for woord in ("sorry", "onze fout", "ligt aan ons"):
         assert woord not in tekst.lower()
-    assert revaleur_mail.bericht({**best, "taal": "en"})[1].startswith("Hi Kim")
+    assert mail.bericht({**best, "taal": "en"})[1].startswith("Hi Kim")

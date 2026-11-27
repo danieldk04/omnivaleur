@@ -1,22 +1,21 @@
-"""Revaleur-herbouw: catalogus.json maken voor de statische winkel.
+"""Revaleur: eenmalige import uit de Shopify-winkel (en catalogus.json voor de bouw).
 
-Bron nu: de publieke Shopify-feed (`/products.json`, `/collections.json`, blog-atom), want die
-is wat klanten vandaag zien. Elk product krijgt `item_id` uit de Omnivaleur-database (via het
-Shopify-listing-id) zodat de checkout het artikel op alle kanalen kan afmelden. Na de omzetting
-komt de bron volledig uit de database (zie docs/revaleur-ontwerp.md).
+Leest alleen publieke Shopify-feeds, niets van Omnivaleur. De database van Revaleur (revaleur/sql/schema.sql) is na de
+omzetting de bron; `catalogus_uit_db.py` bouwt dan catalogus.json daaruit.
 
-Gebruik: python3 scripts/revaleur_catalogus.py [uitvoermap]   (standaard revaleur-site/data)
+Gebruik:
+    python3 -m revaleur.site.import_shopify                 # alleen revaleur/site/data/catalogus.json
+    python3 -m revaleur.site.import_shopify --naar-db       # ook laden in het Revaleur-Supabaseproject
+                                                            # (REVALEUR_SUPABASE_URL en REVALEUR_SUPABASE_SERVICE_KEY)
 """
 import html
 import json
-import os
 import re
 import sys
 import urllib.request
 from pathlib import Path
 
 BRON = "https://revaleur.com"
-REVALEUR_USER = "3bfbed2c-e8a7-4b28-8870-f3581d48afc5"
 
 
 def _get(url: str) -> str:
@@ -34,40 +33,17 @@ def _pagina(pad: str, sleutel: str) -> list:
         p += 1
 
 
-def _item_ids() -> dict:
-    """listing-id (Shopify) -> item-id. Leeg als er geen databasesleutel is."""
-    url, sleutel = os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_SERVICE_KEY")
-    if not (url and sleutel):
-        return {}
-    kop = {"apikey": sleutel, "Authorization": "Bearer " + sleutel}
-
-    def alle(pad):
-        uit, o = [], 0
-        while True:
-            r = json.loads(urllib.request.urlopen(urllib.request.Request(
-                f"{url}/rest/v1/{pad}&limit=1000&offset={o}&order=id", headers=kop), timeout=60).read())
-            uit += r
-            o += 1000
-            if len(r) < 1000:
-                return uit
-    mijn = {i["id"] for i in alle(f"items?user_id=eq.{REVALEUR_USER}&select=id")}
-    return {l["platform_listing_id"]: l["item_id"] for l in
-            alle("listings?platform=eq.shopify&status=eq.active&select=item_id,platform_listing_id")
-            if l["item_id"] in mijn}
-
-
 def _tekst(h: str) -> str:
     h = re.sub(r"<br\s*/?>|</p>|</li>", "\n", h or "")
     return re.sub(r"\n\s*\n+", "\n", html.unescape(re.sub(r"<[^>]+>", "", h))).strip()
 
 
 def bouw(uitvoer: Path) -> dict:
-    ids = _item_ids()
     producten = []
     for p in _pagina("products.json", "products"):
         v = p["variants"][0]
         producten.append({
-            "id": str(p["id"]), "item_id": ids.get(str(p["id"])), "handle": p["handle"], "titel": p["title"],
+            "id": str(p["id"]), "handle": p["handle"], "titel": p["title"],
             "merk": p["vendor"], "type": p["product_type"], "sku": v["sku"],
             "prijs": float(v["price"]), "retail": float(v["compare_at_price"]) if v["compare_at_price"] else None,
             "beschikbaar": bool(v["available"]), "beschrijving": p["body_html"] or "",
@@ -95,8 +71,26 @@ def bouw(uitvoer: Path) -> dict:
     return cat
 
 
+def naar_db(cat: dict) -> None:
+    """Laadt de catalogus in het Revaleur-project (upsert, veilig om opnieuw te draaien)."""
+    from revaleur.shop_api.db import get_db
+    db = get_db()
+    rijen = [{"id": p["id"], "handle": p["handle"], "sku": p["sku"], "titel": p["titel"], "merk": p["merk"], "type": p["type"],
+              "prijs": p["prijs"], "retail": p["retail"], "beschrijving_html": p["beschrijving"], "fotos": p["fotos"],
+              "tags": p["tags"], "status": "beschikbaar" if p["beschikbaar"] else "verkocht", "gemaakt_op": p["gemaakt"]}
+             for p in cat["producten"]]
+    for i in range(0, len(rijen), 100):
+        db.table("producten").upsert(rijen[i:i + 100]).execute()
+    db.table("collecties").upsert([{"handle": c["handle"], "titel": c["titel"], "omschrijving": c["omschrijving"],
+                                    "producten": c["producten"]} for c in cat["collecties"]]).execute()
+    db.table("artikelen").upsert([{"handle": a["handle"], "titel": a["titel"], "datum": a["datum"], "html": a["html"]}
+                                  for a in cat["artikelen"]]).execute()
+
+
 if __name__ == "__main__":
-    doel = Path(sys.argv[1] if len(sys.argv) > 1 else "revaleur-site/data")
+    doel = Path(__file__).parent / "data"
     c = bouw(doel)
-    print(len(c["producten"]), "producten,", len(c["collecties"]), "collecties,", len(c["artikelen"]), "artikelen;",
-          sum(1 for p in c["producten"] if p["item_id"]), "gekoppeld aan een databaseartikel")
+    print(len(c["producten"]), "producten,", len(c["collecties"]), "collecties,", len(c["artikelen"]), "artikelen")
+    if "--naar-db" in sys.argv:
+        naar_db(c)
+        print("geladen in het Revaleur-project")
