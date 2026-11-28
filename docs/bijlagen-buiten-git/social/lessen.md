@@ -31,6 +31,7 @@ Elke reactie krijgt in gedaan.jsonl een "cat": V = Vinted/Marktplaats/2dehands/e
 - Indie Hackers: nieuwste posts op /newest. Reactieveld is een tiptap-editor: klik op [contenteditable] via coördinaten, niet op de verborgen textarea.
 - Indie Hackers: lijst via JavaScript op a[href*="/post/"], posts <15 reacties en <24 uur. Vinkje via form_input op de select (agent-for-person); controleer textarea.value voor je plaatst. Geen verse post die past: overslaan.
 - Facebook: reageren via opmerkingsveld, verzendpijltje rechts; controleer na plaatsen. Per groep 1 per dag.
+- Instagram AFWISSELING (Daniel 27-11): per ronde minstens 1 reactie onder een POPULAIRE post (veel likes en reacties, <24 uur) naast de verse posts zonder reacties. Lees eerst de bovenste 5 reacties op 'Meest relevant', volg hun patroon, kies alleen als de top haalbaar is, noteer na plaatsen de positie en meet er later opnieuw.
 - Instagram: verse posts via instagram.com/?variant=following (JS op article/time), liefst minuten oud zonder reacties: dan ben je eerste. Hashtagpagina's tonen oude populaire posts: overslaan. Klik "Plaatsen", herlaad en controleer.
 - Geen goede post na ~12 toolaanroepen op een platform: overslaan. Totaal max 90 per ronde.
 
@@ -51,6 +52,7 @@ Elke reactie krijgt in gedaan.jsonl een "cat": V = Vinted/Marktplaats/2dehands/e
 - Leerresultaat 15-11 (10 metingen): korte reacties (tot 20 woorden) scoren beter dan lange, en reageren op posts ouder dan 6 uur scoort slechter. Dus: kort, en liefst binnen een paar uur na de post. Nog weinig data, blijf meten.
 - Indie Hackers proef beoordeeld 15-11: reacties blijven zichtbaar, krijgen echte antwoorden van andere makers (Ekuka, Krishna, Hossam, Jim) en er is geen waarschuwing. Proef doorzetten met het eerlijke AI-vinkje, plafond 3 per dag (antwoorden op eigen posts tellen mee).
 
-## AUTOMATISCHE INZICHTEN (gemeten 0 van 8 reacties, script scripts/social_leren.py)
+## AUTOMATISCHE INZICHTEN (gemeten 0 van 19 reacties, script scripts/social_leren.py)
 - Nog te weinig metingen (0; vanaf 10 komen hier uitkomsten). Blijf elke ronde 24 uur oude reacties meten.
-- 26-11: Facebook-tabblad gaf 'Cannot access a chrome-extension:// URL of different extension' op screenshot en JS; oplossing: tabblad sluiten en nieuw tabblad via tabs_context_mcp createIfEmpty. Instagram volg-feed bevatte die middag geen verkoper- of ondernemersposts (alleen nieuws, voetbal, humor).
+
+- RECHTZETTEN (27-11): onder dag 170 op IH zeiden we tegen Censtar en GautamTalksDev dat alleen Daniel ziet dat een extensie uit staat. Dat klopte niet: de verkoper krijgt na 3 uur stilte met wachtend werk een mail (extension_offline.py, hooguit 1 per 24 uur, 10:00 tot 22:00). Corrigeer dat eerlijk in een korte reactie (1 zin, met AI-vinkje) en noem wat er nog niet is: een melding bij uit staan zonder wachtend werk. Zeg nooit meer iets over wat we wel of niet hebben zonder eerst in de repo te kijken.

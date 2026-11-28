@@ -1,0 +1,6 @@
+---
+name: revaleur-domeinoverdracht-check
+description: Controleert of revaleur.com is overgegaan naar Porkbun en rondt de DNS-omzetting naar Cloudflare voor.
+---
+
+Je werkt aan Omnivaleur/Revaleur in /Users/danieldekoning/Projects/omnivaleur. Lees CLAUDE.md, revaleur/docs/overdracht-revaleur.md en de onderste regels van docs/team-notes.md (domeinoverdracht van Shopify via Porkbun naar Cloudflare-nameservers). Controleer: (1) `dig +short NS revaleur.com` en RDAP (https://rdap.org/domain/revaleur.com): staat de registrar op Porkbun en is de status niet meer 'pending transfer'? (2) Porkbun-overdrachtenpagina in Chrome 'Browser 2' (porkbun.com/account/transfers; Browser 1 is voor Stripe). (3) Mail (MX hostinger) en revaleur.com (Shopify, 200) werken nog. Is de overdracht klaar: vergelijk de DNS-records bij Porkbun met de 28 in de Cloudflare-zone, vul aan wat ontbreekt (MX, SPF, DKIM, Resend), zet dan de nameservers bij Porkbun op savanna.ns.cloudflare.com en wilson.ns.cloudflare.com, en controleer daarna mail en Shopify opnieuw. Is hij nog niet klaar: niets wijzigen, alleen team-notes bijwerken en melden. Werk team-notes bij, commit en push naar main. Rapporteer aan Daniel in vier blokjes met urgentielabels (CLAUDE.md). Geen geheimen in git, nooit Cancel transfer aanklikken, nooit betalen.
