@@ -20244,3 +20244,9 @@ Cloudflare Pages-project `revaleur` (directe upload), 614 pagina's uit de Revale
 - 28-11-2026 (ochtend, Claude, kennisoverdracht): overdracht.md bijgewerkt (server fdc013d2, extensie 1.0.436, Revaleur-stand, twee nieuwe taken). Kennisbank-export bewust niet gecommit: geheugenmap op deze Mac heeft te weinig lessen en zou bestaande lessen wissen.
 
 - 28-11-2026 (Claude, taak leadgen-aanvullen): wachtrij 65 voor en na, script deed niets (drempel 40). Koude-mailronde draait: laatste runs 00:10 en 10:21 UTC, geen gat.
+
+## 28-11-2026: Dagelijkse klantfouten (ochtendronde, Claude)
+- Jobs 24 uur: 5 open foutsoorten, elk bij 1 klant, geen serverfouten (HTTP 500: 0). Niets gerepareerd. Klant-eigen: Vinted niet ingelogd/401/wardrobe onleesbaar (3). Onbekend, niet onderzocht: Vinted create "Kies een subcategorie" 10x bij 1 klant (09e089ec? niet gecontroleerd) en Facebook-categorieveld 2x.
+- 2b: 251 plaatsingen bij 6 klanten; alleen maat_leeg_maar_in_tekst bij 09e089ec (15x, ringen), verwacht bij oude extensie (<1.0.414), niet gecontroleerd welke versie.
+- 2c: herplaatsingen 284 met eigen rubriek, 0 zonder, geen storing. Goudlief: 28 accessoires nog in 628 (was 115 op 27-11, loopt terug; check na 05-12). Verschillen bij 3eeceb51 (3 rubriek, prijs 2, titel 5) en ecbceba1: m2470802296 en twee "Commode"-advertenties tonen een andere titel dan wij verstuurden ("Antiek handdoekenrekje" staat live als "Rotan blokkenmandje", prijs 12,50 ipv 32,50): OPEN, mechanisme onbekend (mogelijk nummerkoppeling). Meting mislukt bij 26cf5471 en 96e30080 (openbare lijst onvolledig). Goudlief "weg 2544" is waarschijnlijk meetartefact (openbaar 2770 van 3404 live), niet als weg gelezen. Shopify-tweelingen niet gedraaid. Vinted/Facebook-advertentie handmatig openen niet gedaan (geen browsertoegang in deze run).
+- Open: kerststal (m2470116461) verkocht op Shopify maar nog live bij 3eeceb51: Daniel vragen of een bestelling bestaat.
